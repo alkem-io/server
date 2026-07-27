@@ -16,7 +16,7 @@ import { RegistrationService } from './registration.service';
 
 describe('RegistrationResolverMutations', () => {
   let resolver: RegistrationResolverMutations;
-  let authorizationService: { grantAccessOrFail: Mock };
+  let authorizationService: { grantAccessOrFail: Mock; isAccessGranted: Mock };
   let platformAuthorizationService: {
     getPlatformAuthorizationPolicy: Mock;
   };
@@ -177,9 +177,16 @@ describe('RegistrationResolverMutations', () => {
   });
 
   describe('deleteOrganization', () => {
-    it('should check DELETE privilege and delete organization', async () => {
+    // 027-platform-role-redesign (T041, A6, research D5, FR-007(e)): the
+    // dual-path gate — an ordinary owner keeps plain DELETE, and
+    // platform-support reaches the same mutation through its own
+    // DELETE_ORGANIZATION privilege. Neither `isAccessGranted` check alone
+    // is sufficient; either satisfies the mutation, and `grantAccessOrFail`
+    // (which throws) is only invoked when BOTH are false.
+    it('should check DELETE privilege and delete organization when neither dual-path check is pre-satisfied', async () => {
       const org = { id: 'org-1', authorization: { id: 'auth-1' } };
       organizationService.getOrganizationOrFail.mockResolvedValue(org);
+      authorizationService.isAccessGranted.mockReturnValue(false);
       authorizationService.grantAccessOrFail.mockReturnValue(undefined);
       registrationService.deleteOrganizationWithPendingMemberships.mockResolvedValue(
         org
@@ -189,12 +196,60 @@ describe('RegistrationResolverMutations', () => {
         ID: 'org-1',
       });
 
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        actorContext,
+        org.authorization,
+        AuthorizationPrivilege.DELETE
+      );
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        actorContext,
+        org.authorization,
+        AuthorizationPrivilege.DELETE_ORGANIZATION
+      );
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         org.authorization,
         AuthorizationPrivilege.DELETE,
         expect.any(String)
       );
+      expect(result).toBe(org);
+    });
+
+    it('should delete as owner via plain DELETE without calling grantAccessOrFail', async () => {
+      const org = { id: 'org-1', authorization: { id: 'auth-1' } };
+      organizationService.getOrganizationOrFail.mockResolvedValue(org);
+      authorizationService.isAccessGranted.mockImplementation(
+        (_actor, _auth, privilege) =>
+          privilege === AuthorizationPrivilege.DELETE
+      );
+      registrationService.deleteOrganizationWithPendingMemberships.mockResolvedValue(
+        org
+      );
+
+      const result = await resolver.deleteOrganization(actorContext, {
+        ID: 'org-1',
+      });
+
+      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+      expect(result).toBe(org);
+    });
+
+    it('should delete as platform-support via DELETE_ORGANIZATION without calling grantAccessOrFail', async () => {
+      const org = { id: 'org-1', authorization: { id: 'auth-1' } };
+      organizationService.getOrganizationOrFail.mockResolvedValue(org);
+      authorizationService.isAccessGranted.mockImplementation(
+        (_actor, _auth, privilege) =>
+          privilege === AuthorizationPrivilege.DELETE_ORGANIZATION
+      );
+      registrationService.deleteOrganizationWithPendingMemberships.mockResolvedValue(
+        org
+      );
+
+      const result = await resolver.deleteOrganization(actorContext, {
+        ID: 'org-1',
+      });
+
+      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
       expect(result).toBe(org);
     });
   });

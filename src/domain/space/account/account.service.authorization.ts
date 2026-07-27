@@ -10,6 +10,7 @@ import {
   CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_MANAGE,
   CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_TRANSFER_ACCEPT,
   CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ,
+  CREDENTIAL_RULE_TYPES_PLATFORM_SUPPORT_ORG_RESOURCES,
 } from '@common/constants/authorization/credential.rule.types.constants';
 import {
   AuthorizationCredential,
@@ -359,12 +360,14 @@ export class AccountAuthorizationService {
     newRules.push(globalSpacesReader);
 
     // Add privileges related to offering and accepting transfer of resources
+    // 027-platform-role-redesign (T037, A9): extended with platform-resource-admin.
     const accountResourcesManage =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT, // Later remove?
+          AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
         ],
         CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_MANAGE
       );
@@ -378,6 +381,7 @@ export class AccountAuthorizationService {
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
         ],
         CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_TRANSFER_ACCEPT
       );
@@ -385,17 +389,37 @@ export class AccountAuthorizationService {
     acceptResourceTransfers.cascade = false;
     newRules.push(acceptResourceTransfers);
 
+    // 027-platform-role-redesign (T037, A12): extended with platform-license-manager.
     const accountLicenseManage =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+          AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
         ],
         CREDENTIAL_RULE_TYPES_ACCOUNT_LICENSE_MANAGE
       );
     accountLicenseManage.cascade = false;
     newRules.push(accountLicenseManage);
+
+    // 027-platform-role-redesign (T037, A7, research C2): update the
+    // account's OWN innovation packs/hubs and full CRUD on the templates
+    // inside them, to assist the owner — genuinely NEW capability (org-owned
+    // packs/hubs sit under the account tree, outside the GLOBAL_SUPPORT
+    // platform-subtree cascade). Cascades to the account's packs/hubs/
+    // templates. Deliberately excludes deleting the pack/hub itself (A8) and
+    // moving it (A9) — FR-008(b). No legacy reacher: this privilege is new,
+    // and the only PLATFORM-side path to this capability today is the root
+    // god-mode grant (which T036 does not extend to CREATE/UPDATE/DELETE).
+    const platformSupportOrgResources =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES],
+        [AuthorizationCredential.PLATFORM_SUPPORT],
+        CREDENTIAL_RULE_TYPES_PLATFORM_SUPPORT_ORG_RESOURCES
+      );
+    platformSupportOrgResources.cascade = true;
+    newRules.push(platformSupportOrgResources);
 
     // Allow hosts (users = self mgmt, org = org admin) to manage resources in their account in a way that cascades
     const accountHostManage =

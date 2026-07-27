@@ -145,12 +145,32 @@ export class RegistrationResolverMutations {
     const organization = await this.organizationService.getOrganizationOrFail(
       deleteData.ID
     );
-    await this.authorizationService.grantAccessOrFail(
+    // 027-platform-role-redesign (T041, A6, research D5, FR-007(e)): DUAL
+    // PATH — the organization's own owner keeps ordinary DELETE (FR-023),
+    // the platform role (platform-support) reaches the same mutation
+    // through its own DELETE_ORGANIZATION privilege
+    // (organization.service.authorization.ts, T039). Neither check alone is
+    // sufficient; either satisfies the mutation. Void without T036 having
+    // narrowed the root rule to exclude DELETE — see that file's comment.
+    const canDeleteAsOwner = this.authorizationService.isAccessGranted(
       actorContext,
       organization.authorization,
-      AuthorizationPrivilege.DELETE,
-      `deleteOrg: ${organization.id}`
+      AuthorizationPrivilege.DELETE
     );
+    const canDeleteAsPlatformSupport =
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        organization.authorization,
+        AuthorizationPrivilege.DELETE_ORGANIZATION
+      );
+    if (!canDeleteAsOwner && !canDeleteAsPlatformSupport) {
+      await this.authorizationService.grantAccessOrFail(
+        actorContext,
+        organization.authorization,
+        AuthorizationPrivilege.DELETE,
+        `deleteOrg: ${organization.id}`
+      );
+    }
     return await this.registrationService.deleteOrganizationWithPendingMemberships(
       deleteData
     );

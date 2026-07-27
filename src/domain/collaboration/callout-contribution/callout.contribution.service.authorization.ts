@@ -256,6 +256,15 @@ export class CalloutContributionAuthorizationService {
         type: AuthorizationCredential.GLOBAL_ADMIN,
         resourceID: '',
       },
+      // 027-platform-role-redesign (T038, A9): appended directly to this
+      // rule's own credential list rather than the shared per-space
+      // platformRolesAccess array — that array's UPDATE filter also feeds
+      // several unrelated content-authorization consumers, and this
+      // privilege should reach only the resource-move family.
+      {
+        type: AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+        resourceID: '',
+      },
     ];
     if (roleSet) {
       const roleSetCredentials =

@@ -2,7 +2,6 @@ import { RoleChangeType } from '@alkemio/notifications-lib';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
-import { LogContext } from '@common/enums/logging.context';
 import { RoleName } from '@common/enums/role.name';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -145,7 +144,14 @@ export class PlatformRoleResolverMutations {
     );
     if (
       roleData.role === RoleName.PLATFORM_BETA_TESTER ||
-      roleData.role === RoleName.PLATFORM_VC_CAMPAIGN
+      roleData.role === RoleName.PLATFORM_VC_CAMPAIGN ||
+      // 027-platform-role-redesign (T040a): Feature Beta Tester carries the
+      // SAME beta/trial license entitlement as the legacy role it replaces
+      // (spec §Target global role model row 11). Without this, the target
+      // role would be inert once Slice B drops platform-beta-tester (FR-009,
+      // SC-007) — this is the one target role whose capability lives in a
+      // manual entitlement grant rather than an authorization policy.
+      roleData.role === RoleName.FEATURE_BETA_TESTER
     ) {
       // Also assign the user account a license plan
       // Account IS the Actor - use accountID directly as actorID
@@ -225,7 +231,8 @@ export class PlatformRoleResolverMutations {
     );
     if (
       roleData.role === RoleName.PLATFORM_BETA_TESTER ||
-      roleData.role === RoleName.PLATFORM_VC_CAMPAIGN
+      roleData.role === RoleName.PLATFORM_VC_CAMPAIGN ||
+      roleData.role === RoleName.FEATURE_BETA_TESTER // T040a
     ) {
       // Also remove the user account a license plan
       // Account IS the Actor - use accountID directly as actorID

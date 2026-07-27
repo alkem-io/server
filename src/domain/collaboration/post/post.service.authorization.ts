@@ -124,6 +124,13 @@ export class PostAuthorizationService {
         platformRolesAccess.roles,
         [AuthorizationPrivilege.UPDATE]
       );
+    // 027-platform-role-redesign (T038, A9): appended directly here rather
+    // than to the shared per-space platformRolesAccess array — see the
+    // identical comment in callout.contribution.service.authorization.ts.
+    credentials.push({
+      type: AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+      resourceID: '',
+    });
 
     if (roleSet) {
       const roleSetCredentials =

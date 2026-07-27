@@ -370,10 +370,13 @@ describe('AccountAuthorizationService', () => {
       expect(
         authorizationPolicyService.appendCredentialAuthorizationRules
       ).toHaveBeenCalled();
-      // Should create rules for global roles, auth reset, space reader, resources manage, transfer accept, license manage
+      // Should create rules for global roles, auth reset, space reader,
+      // resources manage, transfer accept, license manage, and (added by
+      // 027-platform-role-redesign T037, A7) platform-support's own-account
+      // innovation pack/hub resources rule.
       expect(
         authorizationPolicyService.createCredentialRuleUsingTypesOnly
-      ).toHaveBeenCalledTimes(6);
+      ).toHaveBeenCalledTimes(7);
       // Should create rules for host manage, create space, create VC, create innovation pack
       expect(
         authorizationPolicyService.createCredentialRule

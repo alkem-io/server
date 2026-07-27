@@ -80,7 +80,12 @@ describe('SpacePlatformRolesAccessService', () => {
         );
 
         expect(result.roles).toBeDefined();
-        expect(result.roles.length).toBe(7);
+        // 027-platform-role-redesign (T038 A16, T049 A15): additively, this
+        // policy now also grants PLATFORM_SPACES_READER (replacement for the
+        // void GLOBAL_SPACES_READER, research C1) and PLATFORM_SUPPORT
+        // (gated on the same allowPlatformSupportAsAdmin flag as legacy
+        // GLOBAL_SUPPORT) alongside every legacy role — 9, not 7.
+        expect(result.roles.length).toBe(9);
 
         const roleNames = result.roles.map(r => r.roleName);
         expect(roleNames).toContain(RoleName.ANONYMOUS);
@@ -90,6 +95,8 @@ describe('SpacePlatformRolesAccessService', () => {
         expect(roleNames).toContain(RoleName.GLOBAL_LICENSE_MANAGER);
         expect(roleNames).toContain(RoleName.GLOBAL_SUPPORT);
         expect(roleNames).toContain(RoleName.GLOBAL_SPACES_READER);
+        expect(roleNames).toContain(RoleName.PLATFORM_SPACES_READER);
+        expect(roleNames).toContain(RoleName.PLATFORM_SUPPORT);
       });
 
       it('should grant READ to anonymous users on public L0 space', () => {

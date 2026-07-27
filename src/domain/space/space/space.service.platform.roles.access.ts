@@ -86,7 +86,77 @@ export class SpacePlatformRolesAccessService {
       grantedPrivileges: [AuthorizationPrivilege.READ],
     });
 
+    // 027-platform-role-redesign (T038, A16): platform-spaces-reader
+    // replaces the void global-spaces-read (research C1) — same grant,
+    // additively alongside the legacy role above.
+    platformAccessRoles.push({
+      roleName: RoleName.PLATFORM_SPACES_READER,
+      grantedPrivileges: [AuthorizationPrivilege.READ],
+    });
+
+    // 027-platform-role-redesign (T049, A15): platform-support's in-space
+    // admin rights, gated by the SAME per-space `allowPlatformSupportAsAdmin`
+    // flag as legacy global-support — the flag is the real gate; this role
+    // is additive alongside it. Deliberately does NOT carry the legacy
+    // PLATFORM_ADMIN privilege GLOBAL_SUPPORT still gets above — this is the
+    // new role, and the point of the redesign is that it never holds the
+    // catch-all.
+    platformAccessRoles.push({
+      roleName: RoleName.PLATFORM_SUPPORT,
+      grantedPrivileges: this.getAccessPrivilegesForPlatformSupport(
+        space,
+        spaceSettings,
+        parentPlatformAccess
+      ),
+    });
+
     return { roles: platformAccessRoles };
+  }
+
+  private getAccessPrivilegesForPlatformSupport(
+    space: ISpace,
+    spaceSettings: ISpaceSettings,
+    parentPlatformAccess?: IPlatformRolesAccess
+  ): AuthorizationPrivilege[] {
+    const privileges: AuthorizationPrivilege[] = [];
+
+    if (space.level === SpaceLevel.L0) {
+      if (spaceSettings.privacy.allowPlatformSupportAsAdmin) {
+        privileges.push(
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+          AuthorizationPrivilege.GRANT
+        );
+        if (spaceSettings.collaboration?.allowGuestContributions) {
+          privileges.push(AuthorizationPrivilege.PUBLIC_SHARE);
+        }
+      }
+    } else {
+      if (!parentPlatformAccess) {
+        throw new EntityNotFoundException(
+          `Platform Support access: Parent platform access not found for space ${space.id}`,
+          LogContext.SPACES
+        );
+      }
+      const hasUpdateOnParent = this.platformAccessService.hasRolePrivilege(
+        parentPlatformAccess.roles,
+        RoleName.PLATFORM_SUPPORT,
+        AuthorizationPrivilege.UPDATE
+      );
+      if (hasUpdateOnParent) {
+        privileges.push(
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+          AuthorizationPrivilege.GRANT
+        );
+      }
+    }
+
+    return privileges;
   }
 
   private getAccessPrivilegesForSupport(

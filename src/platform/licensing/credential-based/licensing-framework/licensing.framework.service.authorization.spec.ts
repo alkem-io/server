@@ -90,6 +90,9 @@ describe('LicensingFrameworkAuthorizationService', () => {
       [
         AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
         AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+        // 027-platform-role-redesign (T040, A13): plan/entitlement-mapping
+        // definition re-anchored onto platform-settings-admin, additively.
+        AuthorizationCredential.PLATFORM_SETTINGS_ADMIN,
       ],
       CREDENTIAL_RULE_LICENSE_MANAGER
     );

@@ -93,6 +93,11 @@ export class LicensingFrameworkAuthorizationService {
     }
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
+    // 027-platform-role-redesign (T040, A13): plan/entitlement-mapping
+    // DEFINITION is re-anchored onto platform-settings-admin, additively.
+    // Distinct from A12 (license USAGE — assign/revoke plans, gated on
+    // ACCOUNT_LICENSE_MANAGE/GRANT in account.service.authorization.ts, T037),
+    // which stays with platform-license-manager.
     const licensings =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [
@@ -105,6 +110,7 @@ export class LicensingFrameworkAuthorizationService {
         [
           AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
           AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+          AuthorizationCredential.PLATFORM_SETTINGS_ADMIN,
         ],
         CREDENTIAL_RULE_LICENSE_MANAGER
       );

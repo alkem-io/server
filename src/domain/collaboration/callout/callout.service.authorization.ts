@@ -281,12 +281,15 @@ export class CalloutAuthorizationService {
       newRules.push(manageCreatedCalloutPolicy);
     }
 
+    // 027-platform-role-redesign (T038, A8): re-anchored onto
+    // platform-content-full-access, additively.
     const calloutPublishUpdate =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.UPDATE_CALLOUT_PUBLISHER],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
         ],
         CREDENTIAL_RULE_TYPES_CALLOUT_UPDATE_PUBLISHER_ADMINS
       );
