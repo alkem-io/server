@@ -401,6 +401,8 @@ export class UserService {
         enabledCapabilities: getReadOnlyDefaultCapabilityToggles(),
       },
       designVersion: DESIGN_VERSION_CURRENT_DEFAULT,
+      language: null,
+      languageOfferAnswered: false,
     };
     return settings;
   }

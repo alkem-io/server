@@ -557,6 +557,15 @@ mcp:
     # Maximum items returned in list responses
     max_response_items: ${MCP_MAX_RESPONSE_ITEMS}:100
 
+## Language detection & offer configuration (workspace#029-detect-signup-language)
+# eligible: comma-separated list of language codes the platform proactively detects,
+#           offers via the banner, and accepts as invitation suggestions.
+#           Subset of the supported languages; an empty value disables all proactive offers.
+# default:  the platform-wide fallback language.
+language:
+  eligible: ${LANGUAGE_ELIGIBLE}:nl
+  default: ${LANGUAGE_DEFAULT}:en
+
 ## Configuration of the legal / usability aspects of the platform
 platform:
   # Terms of usage that all users comply with

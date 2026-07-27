@@ -12,4 +12,7 @@ export class CreateInvitationInput {
   invitedToParent!: boolean;
 
   extraRoles?: RoleName[];
+
+  /** Optional language the inviter expects the invitee to prefer (FR-014b). */
+  suggestedLanguage?: string;
 }

@@ -45,4 +45,18 @@ export class IUserSettings extends IAuthorizable {
       'The design version this User has selected (1 = legacy design generation, deprecated and scheduled for removal; 2 = current default design generation; 3+ reserved for future generations).',
   })
   designVersion!: number;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'The interface language chosen by this User. Null = the User has never chosen a language (distinct from having chosen the platform default).',
+  })
+  language!: string | null;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description:
+      'Whether this User has answered the one-time language offer (global across all languages — FR-005a). Latched true by any language write.',
+  })
+  languageOfferAnswered!: boolean;
 }

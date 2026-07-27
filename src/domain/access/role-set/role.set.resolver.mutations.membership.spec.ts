@@ -1,5 +1,5 @@
+import { LogContext } from '@common/enums';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
-import { RoleName } from '@common/enums/role.name';
 import { RoleSetInvitationResultType } from '@common/enums/role.set.invitation.result.type';
 import { RoleSetType } from '@common/enums/role.set.type';
 import { ValidationException } from '@common/exceptions';
@@ -18,6 +18,7 @@ import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock } from 'vitest';
+import { RoleSetEligibleLanguageGuard } from './role.set.eligible.language.guard';
 import { RoleSetResolverMutationsMembership } from './role.set.resolver.mutations.membership';
 import { RoleSetService } from './role.set.service';
 import { RoleSetAuthorizationService } from './role.set.service.authorization';
@@ -36,6 +37,7 @@ describe('RoleSetResolverMutationsMembership', () => {
   let userLookupService: UserLookupService;
   let communityResolverService: CommunityResolverService;
   let authorizationPolicyService: AuthorizationPolicyService;
+  let eligibleLanguageGuard: RoleSetEligibleLanguageGuard;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -70,6 +72,9 @@ describe('RoleSetResolverMutationsMembership', () => {
     );
     authorizationPolicyService = module.get<AuthorizationPolicyService>(
       AuthorizationPolicyService
+    );
+    eligibleLanguageGuard = module.get<RoleSetEligibleLanguageGuard>(
+      RoleSetEligibleLanguageGuard
     );
   });
 
@@ -765,6 +770,233 @@ describe('RoleSetResolverMutationsMembership', () => {
       );
 
       expect(result).toBe(updatedRoleSet);
+    });
+  });
+
+  // T008 — suggestedLanguage fan-out (R-5 / R-7 mitigations, DL-8)
+  // Verifies that inviteForEntryRoleOnRoleSet threads suggestedLanguage into
+  // BOTH the Invitation (existing-actor path) and PlatformInvitation (new-email
+  // path), and that the compose-time eligible guard fires before any row is
+  // written (DL-8).
+  describe('inviteForEntryRoleOnRoleSet - suggestedLanguage fan-out (T008)', () => {
+    // Shared helpers to reduce boilerplate across the three sub-tests.
+    function setupBaseRoleSet() {
+      const mockRoleSet = {
+        id: 'rs-fan',
+        type: RoleSetType.SPACE,
+        authorization: { id: 'auth-fan' },
+        parentRoleSet: undefined,
+        license: { entitlements: [] },
+      } as any;
+      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(mockRoleSet);
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+      (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([]);
+      (
+        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
+      ).mockResolvedValue([]);
+      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
+      (
+        communityResolverService.getCommunityForRoleSet as Mock
+      ).mockResolvedValue({ id: 'comm-fan' });
+      return mockRoleSet;
+    }
+
+    it('should pass suggestedLanguage nl to CreateInvitationInput for existing actor (Invitation entity path, US5-AS7)', async () => {
+      // Batch: 1 existing actor, suggestedLanguage 'nl' — verifies the
+      // Invitation entity (DL-1) receives the suggested language.
+      const actorContext = { actorID: 'user-1' } as any;
+      setupBaseRoleSet();
+
+      // eligible set includes 'nl' — guard must pass
+      (eligibleLanguageGuard.isEligibleLanguageOrFail as Mock).mockReturnValue(
+        undefined
+      );
+
+      (actorLookupService.validateActorsAndGetTypes as Mock).mockResolvedValue(
+        new Map([['actor-1', 'user']])
+      );
+      (roleSetService.findOpenInvitation as Mock).mockResolvedValue(undefined);
+      (roleSetService.findOpenApplication as Mock).mockResolvedValue(undefined);
+      (roleSetService.isMember as Mock).mockResolvedValue(false);
+
+      const mockInvitation = {
+        id: 'inv-fan',
+        invitedActorID: 'actor-1',
+        suggestedLanguage: 'nl',
+      } as any;
+      (roleSetService.createInvitationExistingActor as Mock).mockResolvedValue(
+        mockInvitation
+      );
+      (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([
+        mockInvitation,
+      ]);
+
+      await resolver.inviteForEntryRoleOnRoleSet(actorContext, {
+        roleSetID: 'rs-fan',
+        invitedActorIDs: ['actor-1'],
+        invitedUserEmails: [],
+        extraRoles: [],
+        suggestedLanguage: 'nl',
+      } as any);
+
+      // createInvitationExistingActor must receive a CreateInvitationInput
+      // that carries suggestedLanguage: 'nl' (Invitation entity path — DL-1).
+      expect(roleSetService.createInvitationExistingActor).toHaveBeenCalledWith(
+        expect.objectContaining({ suggestedLanguage: 'nl' })
+      );
+    });
+
+    it('should pass suggestedLanguage nl to createPlatformInvitation for new email users (PlatformInvitation entity path, US5-AS7)', async () => {
+      // Batch: 2 new email users, suggestedLanguage 'nl' — verifies the
+      // PlatformInvitation entity receives the suggested language.
+      const actorContext = { actorID: 'user-1' } as any;
+      setupBaseRoleSet();
+
+      (eligibleLanguageGuard.isEligibleLanguageOrFail as Mock).mockReturnValue(
+        undefined
+      );
+
+      (actorLookupService.validateActorsAndGetTypes as Mock).mockResolvedValue(
+        new Map()
+      );
+      // Both emails are genuinely new users (not found by getUserByEmail)
+      (userLookupService.getUserByEmail as Mock).mockResolvedValue(undefined);
+
+      const platformInvitationSvc = (resolver as any).platformInvitationService;
+      (
+        platformInvitationSvc.getExistingPlatformInvitationForRoleSet as Mock
+      ).mockResolvedValue(undefined);
+
+      const mockPInv1 = {
+        id: 'pinv-1',
+        email: 'new1@test.com',
+        suggestedLanguage: 'nl',
+      } as any;
+      const mockPInv2 = {
+        id: 'pinv-2',
+        email: 'new2@test.com',
+        suggestedLanguage: 'nl',
+      } as any;
+      (roleSetService.createPlatformInvitation as Mock)
+        .mockResolvedValueOnce(mockPInv1)
+        .mockResolvedValueOnce(mockPInv2);
+
+      await resolver.inviteForEntryRoleOnRoleSet(actorContext, {
+        roleSetID: 'rs-fan',
+        invitedActorIDs: [],
+        invitedUserEmails: ['new1@test.com', 'new2@test.com'],
+        extraRoles: [],
+        suggestedLanguage: 'nl',
+      } as any);
+
+      // Both PlatformInvitation rows must receive suggestedLanguage: 'nl'
+      // (verifies the fan-out helper threads the field through — R-5 mitigation).
+      expect(roleSetService.createPlatformInvitation).toHaveBeenCalledTimes(2);
+      expect(roleSetService.createPlatformInvitation).toHaveBeenNthCalledWith(
+        1,
+        expect.anything(), // roleSet
+        'new1@test.com',
+        expect.anything(), // welcomeMessage
+        expect.anything(), // inviteToParentRoleSet
+        expect.anything(), // extraRoles
+        expect.anything(), // actorContext
+        'nl' // suggestedLanguage must be threaded through
+      );
+      expect(roleSetService.createPlatformInvitation).toHaveBeenNthCalledWith(
+        2,
+        expect.anything(),
+        'new2@test.com',
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+        'nl'
+      );
+    });
+
+    it('should send null suggestedLanguage when omitted — invitation succeeds and no language is recorded (FR-015)', async () => {
+      // Batch with no suggestedLanguage — both entity paths should receive
+      // undefined/null and the mutation must still succeed.
+      const actorContext = { actorID: 'user-1' } as any;
+      setupBaseRoleSet();
+
+      (actorLookupService.validateActorsAndGetTypes as Mock).mockResolvedValue(
+        new Map([['actor-omit', 'user']])
+      );
+      (roleSetService.findOpenInvitation as Mock).mockResolvedValue(undefined);
+      (roleSetService.findOpenApplication as Mock).mockResolvedValue(undefined);
+      (roleSetService.isMember as Mock).mockResolvedValue(false);
+
+      const mockInvitationOmit = {
+        id: 'inv-omit',
+        invitedActorID: 'actor-omit',
+        suggestedLanguage: undefined,
+      } as any;
+      (roleSetService.createInvitationExistingActor as Mock).mockResolvedValue(
+        mockInvitationOmit
+      );
+      (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([
+        mockInvitationOmit,
+      ]);
+
+      const result = await resolver.inviteForEntryRoleOnRoleSet(actorContext, {
+        roleSetID: 'rs-fan',
+        invitedActorIDs: ['actor-omit'],
+        invitedUserEmails: [],
+        extraRoles: [],
+        // no suggestedLanguage field
+      } as any);
+
+      // The guard must NOT be called when suggestedLanguage is absent
+      expect(
+        eligibleLanguageGuard.isEligibleLanguageOrFail
+      ).not.toHaveBeenCalled();
+      // The mutation must succeed and produce one invitation result
+      expect(result).toHaveLength(1);
+      // The CreateInvitationInput must carry undefined (not a stale 'nl')
+      expect(roleSetService.createInvitationExistingActor).toHaveBeenCalledWith(
+        expect.objectContaining({ suggestedLanguage: undefined })
+      );
+    });
+
+    it('should reject suggestedLanguage de before any row is written (DL-8 compose-time guard)', async () => {
+      // 'de' is in the supported set but NOT in the eligible set.
+      // isEligibleLanguageOrFail must throw a ValidationException before
+      // createInvitationExistingActor or createPlatformInvitation is called.
+      const actorContext = { actorID: 'user-1' } as any;
+      setupBaseRoleSet();
+
+      (actorLookupService.validateActorsAndGetTypes as Mock).mockResolvedValue(
+        new Map([['actor-de', 'user']])
+      );
+
+      // Simulate the guard throwing for 'de' (as it would when eligible=['nl'])
+      (
+        eligibleLanguageGuard.isEligibleLanguageOrFail as Mock
+      ).mockImplementation(() => {
+        throw new ValidationException(
+          "Suggested language 'de' is not in the eligible set [nl].",
+          LogContext.COMMUNITY
+        );
+      });
+
+      await expect(
+        resolver.inviteForEntryRoleOnRoleSet(actorContext, {
+          roleSetID: 'rs-fan',
+          invitedActorIDs: ['actor-de'],
+          invitedUserEmails: [],
+          extraRoles: [],
+          suggestedLanguage: 'de',
+        } as any)
+      ).rejects.toThrow(ValidationException);
+
+      // No invitation row must be written — the guard fires up front (DL-8)
+      expect(
+        roleSetService.createInvitationExistingActor
+      ).not.toHaveBeenCalled();
+      expect(roleSetService.createPlatformInvitation).not.toHaveBeenCalled();
     });
   });
 });

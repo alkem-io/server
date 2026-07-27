@@ -196,5 +196,7 @@ export const userSettingsData: { userSettings: IUserSettings } = {
       enabledCapabilities: [],
     },
     designVersion: DESIGN_VERSION_CURRENT_DEFAULT,
+    language: null,
+    languageOfferAnswered: false,
   },
 };
