@@ -29,10 +29,14 @@ export class PlatformWellKnownVirtualContributorsResolverMutations {
     @Args('mappingData')
     mappingData: SetPlatformWellKnownVirtualContributorInput
   ): Promise<IPlatformWellKnownVirtualContributors> {
+    // 027-platform-role-redesign (T045, A10): re-anchored off the
+    // PLATFORM_ADMIN catch-all onto PLATFORM_SETTINGS_ADMIN, whose Slice A
+    // grant set has been widened to preserve every legacy reacher of this
+    // A10 family (platform.service.authorization.ts).
     await this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN,
       `set Platform well-known Virtual Contributor: ${actorContext.actorID}`
     );
 

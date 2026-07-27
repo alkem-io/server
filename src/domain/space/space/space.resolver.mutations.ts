@@ -144,10 +144,14 @@ export class SpaceResolverMutations {
     let space = await this.spaceService.getSpaceOrFail(updateData.spaceID, {
       relations: { about: { profile: true } },
     });
+    // 027-platform-role-redesign (T048, A14): re-anchored off PLATFORM_ADMIN
+    // onto ACCOUNT_LICENSE_MANAGE (space.service.authorization.ts grants it
+    // additively to platform-license-manager, alongside legacy
+    // global-admin/global-support).
     this.authorizationService.grantAccessOrFail(
       actorContext,
       space.authorization,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE,
       `update platform settings on space: ${space.id}`
     );
 

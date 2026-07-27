@@ -134,10 +134,12 @@ describe('PlatformResolverMutations', () => {
         'https://new.com'
       );
 
+      // 027-platform-role-redesign (T045, A10): re-anchored off PLATFORM_ADMIN
+      // onto PLATFORM_SETTINGS_ADMIN.
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         mockActorContext,
         mockPlatform.authorization,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN,
         expect.any(String)
       );
       expect(result).toEqual(updatedUrls);

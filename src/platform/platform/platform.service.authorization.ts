@@ -296,14 +296,25 @@ export class PlatformAuthorizationService {
     // Allow global admins to manage the platform settings
     // Separate rule + privilege as can imagine that we later define this as a separate
     // platform role
-    // 027-platform-role-redesign (T035): re-anchored onto platform-settings-admin,
-    // additively — legacy credentials retained until Slice B (T076).
+    // 027-platform-role-redesign (T035, T045): re-anchored onto
+    // platform-settings-admin, additively — legacy credentials retained
+    // until Slice B (T076). T045 consolidates the A10 family's five
+    // surfaces (updatePlatformSettings + the 4 iframe/notification-blacklist
+    // mutations, platform.resolver.mutations.ts) onto this ONE privilege;
+    // those 4 previously rode the PLATFORM_ADMIN catch-all, whose legacy
+    // grant set (GLOBAL_ADMIN, GLOBAL_SUPPORT, GLOBAL_LICENSE_MANAGER)
+    // differs from updatePlatformSettings' own (GLOBAL_ADMIN,
+    // GLOBAL_PLATFORM_MANAGER) — so GLOBAL_SUPPORT and
+    // GLOBAL_LICENSE_MANAGER are added here too, to the union of both, never
+    // narrowing either surface's pre-existing legacy reach.
     const platformSettingsAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
           AuthorizationCredential.PLATFORM_SETTINGS_ADMIN,
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS

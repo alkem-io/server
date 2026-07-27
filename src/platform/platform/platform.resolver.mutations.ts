@@ -104,7 +104,7 @@ export class PlatformResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       platform.authorization,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN, // 027-platform-role-redesign T045: A10, re-anchored off PLATFORM_ADMIN
       `add iframe URL: ${whitelistedURL}`
     );
 
@@ -130,7 +130,7 @@ export class PlatformResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       platform.authorization,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN, // 027-platform-role-redesign T045: A10, re-anchored off PLATFORM_ADMIN
       `remove iframe URL: ${whitelistedURL}`
     );
 
@@ -157,7 +157,7 @@ export class PlatformResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       platform.authorization,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN, // 027-platform-role-redesign T045: A10, re-anchored off PLATFORM_ADMIN
       `add notification email to blacklist: ${input.email}`
     );
 
@@ -184,7 +184,7 @@ export class PlatformResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       platform.authorization,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN, // 027-platform-role-redesign T045: A10, re-anchored off PLATFORM_ADMIN
       `remove notification email from blacklist: ${input.email}`
     );
 

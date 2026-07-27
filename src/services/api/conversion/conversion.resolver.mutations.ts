@@ -55,9 +55,18 @@ export class ConversionResolverMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
+    // 027-platform-role-redesign (T044, A9): this resolver's whole space/VC
+    // move & convert family — convertSpaceL1ToSpaceL0/L2ToL1/L1ToL2,
+    // moveSpaceL1ToSpaceL0/L1ToL2/L2ToL1 (spec 030's cross-L0 moves) and
+    // convertVirtualContributorToUseKnowledgeBase — shares this ONE
+    // resolver-local policy. Additive: platform-resource-admin gains it
+    // alongside legacy global-admin.
     this.authorizationGlobalAdminPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
-        [AuthorizationRoleGlobal.GLOBAL_ADMIN],
+        [
+          AuthorizationRoleGlobal.GLOBAL_ADMIN,
+          AuthorizationRoleGlobal.PLATFORM_RESOURCE_ADMIN,
+        ],
         [AuthorizationPrivilege.PLATFORM_ADMIN],
         GLOBAL_POLICY_CONVERSION_GLOBAL_ADMINS
       );

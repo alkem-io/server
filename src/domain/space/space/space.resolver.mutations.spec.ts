@@ -205,10 +205,12 @@ describe('SpaceResolverMutations', () => {
 
       await resolver.updateSpacePlatformSettings(actorContext, updateData);
 
+      // 027-platform-role-redesign (T048, A14): re-anchored off
+      // PLATFORM_ADMIN onto ACCOUNT_LICENSE_MANAGE.
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         space.authorization,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE,
         expect.any(String)
       );
     });

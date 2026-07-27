@@ -1,5 +1,6 @@
 import {
   CREDENTIAL_RULE_LICENSE_MANAGER,
+  CREDENTIAL_RULE_LICENSE_PLAN_USAGE,
   CREDENTIAL_RULE_LICENSE_RESET,
 } from '@common/constants/authorization/credential.rule.constants';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
@@ -97,6 +98,18 @@ describe('LicensingFrameworkAuthorizationService', () => {
       CREDENTIAL_RULE_LICENSE_MANAGER
     );
 
+    // 027-platform-role-redesign (T046, A12 usage): a separate GRANT-only
+    // rule for platform-license-manager, kept apart from the CRUD/GRANT
+    // `licensings` bundle above so this role does not also acquire A13's
+    // plan/entitlement-mapping DEFINITION CRUD.
+    expect(
+      authorizationPolicyService.createCredentialRuleUsingTypesOnly
+    ).toHaveBeenCalledWith(
+      [AuthorizationPrivilege.GRANT],
+      [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
+      CREDENTIAL_RULE_LICENSE_PLAN_USAGE
+    );
+
     expect(
       authorizationPolicyService.createCredentialRuleUsingTypesOnly
     ).toHaveBeenCalledWith(
@@ -114,8 +127,12 @@ describe('LicensingFrameworkAuthorizationService', () => {
       .createCredentialRuleUsingTypesOnly.mock.results[0]
       .value as IAuthorizationPolicyRuleCredential;
     expect(createdRule.cascade).toBe(true);
-    const licenseResetRule = authorizationPolicyService
+    const licensePlanUsageRule = authorizationPolicyService
       .createCredentialRuleUsingTypesOnly.mock.results[1]
+      .value as IAuthorizationPolicyRuleCredential;
+    expect(licensePlanUsageRule.cascade).toBe(true);
+    const licenseResetRule = authorizationPolicyService
+      .createCredentialRuleUsingTypesOnly.mock.results[2]
       .value as IAuthorizationPolicyRuleCredential;
     expect(licenseResetRule.cascade).toBe(false);
     expect(

@@ -1,5 +1,6 @@
 import {
   CREDENTIAL_RULE_LICENSE_MANAGER,
+  CREDENTIAL_RULE_LICENSE_PLAN_USAGE,
   CREDENTIAL_RULE_LICENSE_RESET,
 } from '@common/constants/authorization/credential.rule.constants';
 import {
@@ -116,6 +117,24 @@ export class LicensingFrameworkAuthorizationService {
       );
     licensings.cascade = true;
     newRules.push(licensings);
+
+    // 027-platform-role-redesign (T046, A12 usage): assign/revoke license
+    // plan on an Account/Space (admin.licensing.resolver.mutations.ts) check
+    // GRANT directly on THIS authorization — kept as a separate rule from
+    // `licensings` above so platform-license-manager does NOT also acquire
+    // A13's CRUD over plan/entitlement-mapping DEFINITIONS (which stays with
+    // platform-settings-admin alone). GLOBAL_ADMIN/GLOBAL_LICENSE_MANAGER/
+    // GLOBAL_PLATFORM_MANAGER already reach GRANT here (root cascade for the
+    // first, the `licensings` rule for the other two) — this rule only adds
+    // the new role, additively.
+    const licensePlanUsage =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.GRANT],
+        [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
+        CREDENTIAL_RULE_LICENSE_PLAN_USAGE
+      );
+    licensePlanUsage.cascade = true;
+    newRules.push(licensePlanUsage);
 
     // Bulk license reset (resetLicenseOnAccounts): the verified pre-feature
     // GRANT holders on this policy {GA (root cascading GRANT), GLM, GPM} plus

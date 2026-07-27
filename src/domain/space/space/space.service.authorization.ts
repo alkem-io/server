@@ -786,12 +786,19 @@ export class SpaceAuthorizationService {
 
     // Allow global admins to manage platform settings
     // Later: to allow account admins to some settings?
+    // 027-platform-role-redesign (T048, A14): re-anchored off PLATFORM_ADMIN
+    // onto ACCOUNT_LICENSE_MANAGE. In Slice A the space-visibility mutation
+    // is still updateSpacePlatformSettings (renamed to
+    // adminUpdateSpaceVisibility only in Slice B, T078). Additive —
+    // platform-license-manager gains it, GLOBAL_ADMIN/GLOBAL_SUPPORT keep
+    // their pre-existing reach.
     const spacePlatformSettingsAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.PLATFORM_ADMIN],
+        [AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
         ],
         CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS
       );
