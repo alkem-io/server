@@ -217,6 +217,110 @@ describe('PlatformAuthorizationService', () => {
     });
   });
 
+  // workspace#032: privilege hardening for the Platform Operations Admin role.
+  describe('PLATFORM_OPERATIONS_ADMIN credential hardening', () => {
+    const collectPrivilegesGrantedToCredential = () => {
+      const granted = new Set<AuthorizationPrivilege>();
+      for (const [privileges, credentialTypes] of authorizationPolicyService
+        .createCredentialRuleUsingTypesOnly.mock.calls) {
+        if (
+          (credentialTypes as AuthorizationCredential[]).includes(
+            AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN
+          )
+        ) {
+          for (const p of privileges as AuthorizationPrivilege[]) {
+            granted.add(p);
+          }
+        }
+      }
+      for (const [privileges, criterias] of authorizationPolicyService
+        .createCredentialRule.mock.calls) {
+        if (
+          (criterias as { type: AuthorizationCredential }[]).some(
+            c => c.type === AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN
+          )
+        ) {
+          for (const p of privileges as AuthorizationPrivilege[]) {
+            granted.add(p);
+          }
+        }
+      }
+      return granted;
+    };
+
+    beforeEach(() => {
+      authorizationPolicyService.createCredentialRuleUsingTypesOnly.mockImplementation(
+        ((privileges: any, types: any, name: any) => ({
+          grantedPrivileges: privileges,
+          criterias: types,
+          name,
+          cascade: true,
+        })) as any
+      );
+      platformService.getPlatformOrFail.mockResolvedValue(mockPlatform);
+      messagingAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
+    });
+
+    it('grants the operational privilege on a dedicated non-cascading rule covering all develop-era admin credentials plus the new role', async () => {
+      await service.applyAuthorizationPolicy();
+
+      const opsRules =
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly.mock.results
+          .map(r => r.value)
+          .filter(rule =>
+            rule.grantedPrivileges?.includes(
+              AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN
+            )
+          );
+
+      expect(opsRules).toHaveLength(1);
+      const rule = opsRules[0];
+      // Additivity (FR-009): everyone passing the old PLATFORM_ADMIN gates
+      // must pass the new gate — plus the dedicated role credential.
+      expect(rule.criterias).toEqual(
+        expect.arrayContaining([
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+          AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
+        ])
+      );
+      // Operational privilege must not leak down the policy tree.
+      expect(rule.cascade).toBe(false);
+    });
+
+    it('grants the role credential exactly the operational privilege and AUTHORIZATION_RESET on the platform policy', async () => {
+      await service.applyAuthorizationPolicy();
+
+      // AUTHORIZATION_RESET backs authorizationPolicyResetOnPlatform — part
+      // of the operational family, not an elevation.
+      expect(collectPrivilegesGrantedToCredential()).toEqual(
+        new Set([
+          AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
+          AuthorizationPrivilege.AUTHORIZATION_RESET,
+        ])
+      );
+    });
+
+    it('never grants the role credential the excluded elevated privileges', async () => {
+      await service.applyAuthorizationPolicy();
+
+      const granted = collectPrivilegesGrantedToCredential();
+      for (const excluded of [
+        AuthorizationPrivilege.GRANT,
+        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN,
+        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+      ]) {
+        expect(granted).not.toContain(excluded);
+      }
+    });
+  });
+
   // 004-web-ai-assistant (FR-027): the ACCESS_VIRTUAL_ASSISTANT credential rule.
   describe('ACCESS_VIRTUAL_ASSISTANT credential rule', () => {
     it('grants ACCESS_VIRTUAL_ASSISTANT to GLOBAL_ADMIN OR ASSISTANT_ACCESS, never GLOBAL_REGISTERED', async () => {

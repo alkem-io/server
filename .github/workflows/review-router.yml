@@ -7,7 +7,7 @@ on:
 
 jobs:
   pr_metrics:
-    runs-on: [self-hosted, macOS, ARM64, apple-silicon, m4]
+    runs-on: ubuntu-latest
     steps:
     # 1. Checkout the repository code
     - name: Checkout Code

@@ -5,6 +5,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
 import { GrantAssistantActorCapabilitiesInput } from './dto/grant.assistant.actor.capabilities.input';
 import { IVirtualAssistant } from './virtual.assistant.interface';
 import { VirtualAssistantService } from './virtual.assistant.service';
@@ -26,12 +27,13 @@ export class VirtualAssistantResolverMutations {
   constructor(
     private readonly virtualAssistantService: VirtualAssistantService,
     private readonly authorizationService: AuthorizationService,
-    private readonly platformAuthorizationService: PlatformAuthorizationPolicyService
+    private readonly platformAuthorizationService: PlatformAuthorizationPolicyService,
+    private readonly platformOperationsAuditService: PlatformOperationsAuditService
   ) {}
 
   @Mutation(() => IVirtualAssistant, {
     description:
-      'Set the admin per-capability grant on the virtual-assistant actor, governing what it may do system-invoked (default read-only). Requires platform-admin.',
+      'Set the admin per-capability grant on the virtual-assistant actor, governing what it may do system-invoked (default read-only). Requires the platform-operations-admin privilege.',
   })
   async updateAssistantActorCapabilities(
     @CurrentActor() actorContext: ActorContext,
@@ -40,13 +42,41 @@ export class VirtualAssistantResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
       'updating the virtual-assistant admin capability grant'
     );
 
-    return this.virtualAssistantService.setCapabilityGrant(
-      grantData.virtualAssistantID,
-      grantData.enabledCapabilities
-    );
+    try {
+      const result = await this.virtualAssistantService.setCapabilityGrant(
+        grantData.virtualAssistantID,
+        grantData.enabledCapabilities
+      );
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'updateAssistantActorCapabilities',
+        target: {
+          virtualAssistantID: grantData.virtualAssistantID,
+          capabilities: grantData.enabledCapabilities.map(
+            toggle => `${toggle.capability}=${toggle.enabled}`
+          ),
+        },
+        outcome: 'success',
+      });
+      return result;
+    } catch (error) {
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'updateAssistantActorCapabilities',
+        target: {
+          virtualAssistantID: grantData.virtualAssistantID,
+          capabilities: grantData.enabledCapabilities.map(
+            toggle => `${toggle.capability}=${toggle.enabled}`
+          ),
+        },
+        outcome: 'failure',
+        error,
+      });
+      throw error;
+    }
   }
 }

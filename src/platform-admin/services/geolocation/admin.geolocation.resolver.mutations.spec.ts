@@ -6,6 +6,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken } from '@nestjs/typeorm';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { GeoapifyService } from '@services/external/geoapify';
+import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock, vi } from 'vitest';
@@ -18,6 +19,7 @@ describe('AdminGeoLocationMutations', () => {
   let locationService: Record<string, Mock>;
   let geoapifyService: Record<string, Mock>;
   let entityManager: Record<string, Mock>;
+  let platformOperationsAuditService: Record<string, Mock>;
 
   const actorContext = { actorID: 'actor-1' } as any as ActorContext;
 
@@ -49,6 +51,9 @@ describe('AdminGeoLocationMutations', () => {
     locationService = module.get(LocationService) as any;
     geoapifyService = module.get(GeoapifyService) as any;
     entityManager = mockEntityManager as any;
+    platformOperationsAuditService = module.get(
+      PlatformOperationsAuditService
+    ) as any;
   });
 
   it('should be defined', () => {
@@ -68,7 +73,7 @@ describe('AdminGeoLocationMutations', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         platformPolicy,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
         expect.any(String)
       );
       expect(result).toBe(false);
@@ -171,7 +176,17 @@ describe('AdminGeoLocationMutations', () => {
 
       await expect(
         resolver.adminUpdateGeoLocationData(actorContext)
-      ).rejects.toThrow('API failure');
+      ).rejects.toThrow('Failed to update GeoLocation data');
+
+      expect(
+        platformOperationsAuditService.recordOperation
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorID: actorContext.actorID,
+          action: 'adminUpdateGeoLocationData',
+          outcome: 'failure',
+        })
+      );
     });
   });
 });
