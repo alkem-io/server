@@ -27,12 +27,27 @@ export class InnovationHubResolverMutations {
   ): Promise<IInnovationHub> {
     const innovationHub =
       await this.innovationHubService.getInnovationHubOrFail(updateData.ID);
-    await this.authorizationService.grantAccessOrFail(
+    // 027-platform-role-redesign (T042, A7, research D5): dual-path — see
+    // the identical comment in innovation.pack.resolver.mutations.ts.
+    const canUpdateAsOwner = this.authorizationService.isAccessGranted(
       actorContext,
       innovationHub.authorization,
-      AuthorizationPrivilege.UPDATE,
-      'update innovation hub'
+      AuthorizationPrivilege.UPDATE
     );
+    const canUpdateAsPlatformSupport =
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        innovationHub.authorization,
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+      );
+    if (!canUpdateAsOwner && !canUpdateAsPlatformSupport) {
+      await this.authorizationService.grantAccessOrFail(
+        actorContext,
+        innovationHub.authorization,
+        AuthorizationPrivilege.UPDATE,
+        'update innovation hub'
+      );
+    }
 
     return await this.innovationHubService.updateOrFail(updateData);
   }
@@ -47,12 +62,27 @@ export class InnovationHubResolverMutations {
   ): Promise<IInnovationHub> {
     const innovationHub =
       await this.innovationHubService.getInnovationHubOrFail(deleteData.ID);
-    await this.authorizationService.grantAccessOrFail(
+    // 027-platform-role-redesign (T043, A8, research D5): dual-path — see
+    // the identical comment in innovation.pack.resolver.mutations.ts.
+    const canDeleteAsOwner = this.authorizationService.isAccessGranted(
       actorContext,
       innovationHub.authorization,
-      AuthorizationPrivilege.DELETE,
-      'delete innovation hub'
+      AuthorizationPrivilege.DELETE
     );
+    const canDeleteAsContentFullAccess =
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        innovationHub.authorization,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS
+      );
+    if (!canDeleteAsOwner && !canDeleteAsContentFullAccess) {
+      await this.authorizationService.grantAccessOrFail(
+        actorContext,
+        innovationHub.authorization,
+        AuthorizationPrivilege.DELETE,
+        'delete innovation hub'
+      );
+    }
     return await this.innovationHubService.delete(deleteData.ID);
   }
 }

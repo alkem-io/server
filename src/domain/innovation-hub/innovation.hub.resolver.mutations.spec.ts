@@ -46,6 +46,9 @@ describe('InnovationHubResolverMutations', () => {
       (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(
         existingHub
       );
+      // 027-platform-role-redesign (T042): the dual-path check calls
+      // isAccessGranted before falling through to grantAccessOrFail.
+      (authorizationService as any).isAccessGranted.mockReturnValue(false);
       (authorizationService as any).grantAccessOrFail.mockResolvedValue(
         undefined
       );
@@ -87,6 +90,7 @@ describe('InnovationHubResolverMutations', () => {
       (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(
         existingHub
       );
+      (authorizationService as any).isAccessGranted.mockReturnValue(false);
       (authorizationService as any).grantAccessOrFail.mockRejectedValue(
         new Error('Forbidden')
       );
@@ -112,6 +116,7 @@ describe('InnovationHubResolverMutations', () => {
       (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(
         existingHub
       );
+      (authorizationService as any).isAccessGranted.mockReturnValue(false);
       (authorizationService as any).grantAccessOrFail.mockResolvedValue(
         undefined
       );
@@ -153,6 +158,7 @@ describe('InnovationHubResolverMutations', () => {
       (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(
         existingHub
       );
+      (authorizationService as any).isAccessGranted.mockReturnValue(false);
       (authorizationService as any).grantAccessOrFail.mockRejectedValue(
         new Error('Forbidden')
       );

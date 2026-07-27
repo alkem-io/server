@@ -99,6 +99,9 @@ describe('SpaceResolverMutations', () => {
       } as any;
 
       vi.mocked(spaceService.getSpaceOrFail).mockResolvedValue(space);
+      // 027-platform-role-redesign (T043): the dual-path check calls
+      // isAccessGranted before falling through to grantAccessOrFail.
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(false);
       vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(
         undefined as any
       );

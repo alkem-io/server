@@ -66,12 +66,27 @@ export class CalloutContributionMoveResolverMutations {
         deleteData.ID
       );
 
-    this.authorizationService.grantAccessOrFail(
+    // 027-platform-role-redesign (T043, A8, research D5): dual-path — see
+    // the identical comment in callout.resolver.mutations.ts.
+    const canDeleteAsOwner = this.authorizationService.isAccessGranted(
       actorContext,
       contribution.authorization,
-      AuthorizationPrivilege.DELETE,
-      `move contribution: ${contribution.id}`
+      AuthorizationPrivilege.DELETE
     );
+    const canDeleteAsContentFullAccess =
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        contribution.authorization,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS
+      );
+    if (!canDeleteAsOwner && !canDeleteAsContentFullAccess) {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        contribution.authorization,
+        AuthorizationPrivilege.DELETE,
+        `move contribution: ${contribution.id}`
+      );
+    }
 
     return this.calloutContributionService.delete(contribution.id);
   }

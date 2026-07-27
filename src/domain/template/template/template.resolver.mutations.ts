@@ -43,12 +43,31 @@ export class TemplateResolverMutations {
         relations: { profile: true },
       }
     );
-    await this.authorizationService.grantAccessOrFail(
+    // 027-platform-role-redesign (T042, A7, research D5): dual-path — full
+    // template CRUD inside an org-owned innovation pack/hub is part of A7,
+    // gated via PLATFORM_SUPPORT_ORG_RESOURCES (cascaded from the account,
+    // account.service.authorization.ts T037) alongside ordinary owner UPDATE.
+    // Harmless no-op for space-owned templates, whose authorization tree
+    // never carries this privilege.
+    const canUpdateAsOwner = this.authorizationService.isAccessGranted(
       actorContext,
       template.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `update template: ${template.id}`
+      AuthorizationPrivilege.UPDATE
     );
+    const canUpdateAsPlatformSupport =
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        template.authorization,
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+      );
+    if (!canUpdateAsOwner && !canUpdateAsPlatformSupport) {
+      await this.authorizationService.grantAccessOrFail(
+        actorContext,
+        template.authorization,
+        AuthorizationPrivilege.UPDATE,
+        `update template: ${template.id}`
+      );
+    }
     return await this.templateService.updateTemplate(template, updateData);
   }
 
@@ -101,12 +120,27 @@ export class TemplateResolverMutations {
         },
       }
     );
-    await this.authorizationService.grantAccessOrFail(
+    // 027-platform-role-redesign (T042, A7): dual-path — see the identical
+    // comment on updateTemplate above.
+    const canUpdateAsOwner = this.authorizationService.isAccessGranted(
       actorContext,
       template.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `update template: ${template.id}`
+      AuthorizationPrivilege.UPDATE
     );
+    const canUpdateAsPlatformSupport =
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        template.authorization,
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+      );
+    if (!canUpdateAsOwner && !canUpdateAsPlatformSupport) {
+      await this.authorizationService.grantAccessOrFail(
+        actorContext,
+        template.authorization,
+        AuthorizationPrivilege.UPDATE,
+        `update template: ${template.id}`
+      );
+    }
 
     const space = await this.spaceLookupService.getSpaceOrFail(
       updateData.spaceID
@@ -146,12 +180,30 @@ export class TemplateResolverMutations {
         relations: { profile: true },
       }
     );
-    await this.authorizationService.grantAccessOrFail(
+    // 027-platform-role-redesign (T042, A7): template delete is part of the
+    // "full template CRUD" A7 grants platform-support inside an org-owned
+    // pack/hub — distinct from A8's pack/hub deletion, which stays
+    // gated on PLATFORM_CONTENT_FULL_ACCESS (innovation.pack/hub.resolver.
+    // mutations.ts, T043). Dual-path — see updateTemplate above.
+    const canDeleteAsOwner = this.authorizationService.isAccessGranted(
       actorContext,
       template.authorization,
-      AuthorizationPrivilege.DELETE,
-      `template delete: ${template.id}`
+      AuthorizationPrivilege.DELETE
     );
+    const canDeleteAsPlatformSupport =
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        template.authorization,
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+      );
+    if (!canDeleteAsOwner && !canDeleteAsPlatformSupport) {
+      await this.authorizationService.grantAccessOrFail(
+        actorContext,
+        template.authorization,
+        AuthorizationPrivilege.DELETE,
+        `template delete: ${template.id}`
+      );
+    }
     const usedInTemplateDefault =
       await this.templateService.isTemplateInUseInTemplateDefault(template.id);
     if (usedInTemplateDefault) {

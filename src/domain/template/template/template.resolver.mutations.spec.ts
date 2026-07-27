@@ -11,7 +11,10 @@ import { TemplateAuthorizationService } from './template.service.authorization';
 
 describe('TemplateResolverMutations', () => {
   let resolver: TemplateResolverMutations;
-  let authorizationService: { grantAccessOrFail: ReturnType<typeof vi.fn> };
+  let authorizationService: {
+    grantAccessOrFail: ReturnType<typeof vi.fn>;
+    isAccessGranted: ReturnType<typeof vi.fn>;
+  };
   let authorizationPolicyService: { saveAll: ReturnType<typeof vi.fn> };
   let spaceLookupService: { getSpaceOrFail: ReturnType<typeof vi.fn> };
   let templateAuthorizationService: {
@@ -26,7 +29,13 @@ describe('TemplateResolverMutations', () => {
   };
 
   beforeEach(() => {
-    authorizationService = { grantAccessOrFail: vi.fn() };
+    authorizationService = {
+      grantAccessOrFail: vi.fn(),
+      // 027-platform-role-redesign (T042): dual-path checks call
+      // isAccessGranted before falling through to grantAccessOrFail;
+      // default false so grantAccessOrFail's own call assertions hold.
+      isAccessGranted: vi.fn().mockReturnValue(false),
+    };
     authorizationPolicyService = { saveAll: vi.fn() };
     spaceLookupService = { getSpaceOrFail: vi.fn() };
     templateAuthorizationService = { applyAuthorizationPolicy: vi.fn() };

@@ -81,6 +81,9 @@ describe('CalloutResolverMutations', () => {
       } as any;
       vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
       vi.mocked(calloutService.deleteCallout).mockResolvedValue(callout);
+      // 027-platform-role-redesign (T043): the dual-path check calls
+      // isAccessGranted before falling through to grantAccessOrFail.
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(false);
 
       const actorContext = { actorID: 'user-1' } as any;
 

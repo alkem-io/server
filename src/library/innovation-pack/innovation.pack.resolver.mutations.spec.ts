@@ -50,6 +50,9 @@ describe('InnovationPackResolverMutations', () => {
       vi.mocked(
         innovationPackService.getInnovationPackOrFail
       ).mockResolvedValue(pack);
+      // 027-platform-role-redesign (T042/T043): the dual-path check calls
+      // isAccessGranted before falling through to grantAccessOrFail.
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(false);
       vi.mocked(authorizationService.grantAccessOrFail).mockResolvedValue(
         undefined as any
       );
@@ -79,6 +82,9 @@ describe('InnovationPackResolverMutations', () => {
       vi.mocked(
         innovationPackService.getInnovationPackOrFail
       ).mockResolvedValue(pack);
+      // 027-platform-role-redesign (T042/T043): the dual-path check calls
+      // isAccessGranted before falling through to grantAccessOrFail.
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(false);
       vi.mocked(authorizationService.grantAccessOrFail).mockResolvedValue(
         undefined as any
       );
@@ -106,6 +112,9 @@ describe('InnovationPackResolverMutations', () => {
       vi.mocked(
         innovationPackService.getInnovationPackOrFail
       ).mockResolvedValue(pack);
+      // 027-platform-role-redesign (T042/T043): the dual-path check calls
+      // isAccessGranted before falling through to grantAccessOrFail.
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(false);
       vi.mocked(authorizationService.grantAccessOrFail).mockResolvedValue(
         undefined as any
       );

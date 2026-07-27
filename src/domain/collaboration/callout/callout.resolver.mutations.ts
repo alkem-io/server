@@ -91,12 +91,30 @@ export class CalloutResolverMutations {
     @Args('deleteData') deleteData: DeleteCalloutInput
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(deleteData.ID);
-    this.authorizationService.grantAccessOrFail(
+    // 027-platform-role-redesign (T043, A8, research D5): dual-path — the
+    // owning space keeps ordinary DELETE, platform-content-full-access
+    // reaches the same mutation via its own privilege (cascaded from the
+    // root policy, T036). Neither check alone is sufficient; either
+    // satisfies the mutation.
+    const canDeleteAsOwner = this.authorizationService.isAccessGranted(
       actorContext,
       callout.authorization,
-      AuthorizationPrivilege.DELETE,
-      `delete callout: ${callout.id}`
+      AuthorizationPrivilege.DELETE
     );
+    const canDeleteAsContentFullAccess =
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        callout.authorization,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS
+      );
+    if (!canDeleteAsOwner && !canDeleteAsContentFullAccess) {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        callout.authorization,
+        AuthorizationPrivilege.DELETE,
+        `delete callout: ${callout.id}`
+      );
+    }
     return await this.calloutService.deleteCallout(deleteData.ID);
   }
 
