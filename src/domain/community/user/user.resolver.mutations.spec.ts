@@ -68,7 +68,12 @@ describe('UserResolverMutations', () => {
         AuthorizationPrivilege.UPDATE,
         expect.any(String)
       );
-      expect(userService.updateUser).toHaveBeenCalledWith(userData);
+      // 027-platform-role-redesign (T052): actorContext now passed through
+      // for the SET_SERVICE_PROFILE check.
+      expect(userService.updateUser).toHaveBeenCalledWith(
+        userData,
+        actorContext
+      );
       expect(result).toBe(updatedUser);
     });
   });

@@ -43,7 +43,7 @@ export class UserResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `userUpdate: ${user.id}`
     );
-    return await this.userService.updateUser(userData);
+    return await this.userService.updateUser(userData, actorContext);
   }
 
   @Mutation(() => IUser, {
