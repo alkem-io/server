@@ -82,6 +82,18 @@ export class AdminUserEmailChangeResolverFields {
     };
   }
 
+  // 027-platform-role-redesign (A19 sites 2+3 of 3, T050a, research C4/D23):
+  // these two fields project `platform_audit_entry` rows — they ARE the
+  // audit trail, exactly like the MCP tool (site 1) — so FR-010 requires the
+  // same privilege across every surface of one action. Re-anchored off the
+  // retiring PLATFORM_ADMIN catch-all onto PLATFORM_AUDIT_READ.
+  //
+  // KNOWN, ACCEPTED consequence (already on the Slice A human gates,
+  // repos.yaml): a Platform Users Admin who performs the email change (A4)
+  // can no longer read the resulting history here — that is separation of
+  // duties working as specified (FR-007(b): one action, one owning role).
+  // Do NOT "fix" this by also granting PLATFORM_USERS_ADMIN; it needs a
+  // sign-off, not a workaround.
   private async assertPlatformAdmin(
     actorContext: ActorContext,
     description: string
@@ -89,7 +101,7 @@ export class AdminUserEmailChangeResolverFields {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_AUDIT_READ,
       description
     );
   }
@@ -123,6 +135,15 @@ export class AdminUserEmailChangeResolverFields {
       );
     }
 
+    // email_change rows always carry a user subject (027-platform-role-redesign
+    // only relaxed subjectUserId for the NEW platform_role_assignment category,
+    // which may target an organization instead) — a missing one here is a
+    // category-mismatch write bug, not a legitimate organization-subject row.
+    if (!row.subjectUserId) {
+      throw new Error(
+        `platform_audit_entry row ${row.id} is category email_change but carries no subjectUserId`
+      );
+    }
     const subject = await this.resolveSummaryOrNull(row.subjectUserId);
     if (!subject) {
       // Per data-model.md §Retention, subject deletion may have removed the

@@ -10,8 +10,20 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 
 export interface RecordOperationInput {
-  /** The acting user — written as both initiator and subject. */
+  /** The acting user — always written as the initiator. */
   actorID: string;
+  /**
+   * 027-platform-role-redesign (D11, T025): the REAL targeted user for a
+   * per-user operational action (e.g. an avatar migration scoped to one
+   * user). Omit for a platform-wide operation (search re-index, geolocation
+   * refresh, ...) — the subject column is then written NULL, never the
+   * actor as placeholder. This is what makes SC-015's derived
+   * `initiatorUserId = subjectUserId` self-affecting predicate sound: before
+   * this field existed every row wrote the actor into both columns, so
+   * every row matched the predicate regardless of whether the action was
+   * actually self-affecting.
+   */
+  targetUserId?: string;
   /** GraphQL mutation name of the operational action. */
   action: string;
   outcome: 'success' | 'failure';
@@ -35,9 +47,16 @@ const ERROR_DETAIL_MAX_LENGTH = 500;
  * (workspace#032, FR-016). One `platform_audit_entry` row per execution,
  * regardless of which role authorized it.
  *
- * Column semantics for this category:
- * - `initiatorUserId` = `subjectUserId` = the actor: operations have no
- *   subject user, and the column is non-null.
+ * Column semantics for this category (**changed by
+ * 027-platform-role-redesign, T025/D11** — this feature edits already-
+ * delivered 032 code):
+ * - `initiatorUserId` = the actor, always.
+ * - `subjectUserId` = the REAL targeted user for a per-user operation, or
+ *   **NULL** for a platform-wide one — never the actor as a placeholder.
+ *   The old actor-in-both-columns behaviour made SC-015's derived
+ *   self-affecting predicate (`initiatorUserId = subjectUserId`) match every
+ *   operational row regardless of whether the action targeted the actor;
+ *   retiring the placeholder is a hard prerequisite for that predicate.
  * - `initiatorRole` is the fixed coarse enum tier `platform_admin` ("human
  *   admin-tier actor" — the enum only has self/platform_admin/system/service).
  *   It is NOT a claim the actor holds GLOBAL_ADMIN; the precise actor is
@@ -69,7 +88,9 @@ export class PlatformOperationsAuditService {
       }
       const entry = this.auditRepository.create({
         category: PlatformAuditCategory.PLATFORM_OPERATIONS,
-        subjectUserId: input.actorID,
+        // 027-platform-role-redesign (T025/D11): the real target, or NULL —
+        // never the actor as placeholder (subjectUserId is nullable, D13).
+        subjectUserId: input.targetUserId,
         initiatorUserId: input.actorID,
         initiatorRole: PlatformAuditInitiatorRole.PLATFORM_ADMIN,
         outcome:

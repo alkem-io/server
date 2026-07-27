@@ -4,4 +4,17 @@ export enum AuthorizationRoleGlobal {
   GLOBAL_SUPPORT = 'global-support',
   GLOBAL_ADMIN = 'global-admin',
   PLATFORM_OPERATIONS_ADMIN = 'platform-operations-admin',
+  // --- 027-platform-role-redesign: target role model (Slice A, additive) ---
+  PLATFORM_ROLES_ADMIN = 'platform-roles-admin',
+  PLATFORM_CONTENT_FULL_ACCESS = 'platform-content-full-access',
+  PLATFORM_RESOURCE_ADMIN = 'platform-resource-admin',
+  PLATFORM_SETTINGS_ADMIN = 'platform-settings-admin',
+  PLATFORM_USERS_ADMIN = 'platform-users-admin',
+  PLATFORM_SUPPORT = 'platform-support',
+  PLATFORM_LICENSE_MANAGER = 'platform-license-manager',
+  PLATFORM_SPACES_READER = 'platform-spaces-reader',
+  PLATFORM_AUDIT_READER = 'platform-audit-reader',
+  FEATURE_BETA_TESTER = 'feature-beta-tester',
+  FEATURE_VIRTUAL_ASSISTANT = 'feature-virtual-assistant',
+  FEATURE_ORGANIZATION_CREATOR = 'feature-organization-creator',
 }

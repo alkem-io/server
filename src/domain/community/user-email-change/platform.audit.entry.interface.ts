@@ -99,6 +99,66 @@ export interface PlatformOperationsAuditDetails {
 }
 
 /**
+ * `platform_role_assignment` category payload shape (027-platform-role-redesign,
+ * T020, data-model.md §6). Carries THREE event shapes, discriminated by the
+ * row's `outcome` — `role` / `targetKind` are never present alongside the
+ * `*ServiceProfile` pair:
+ *  - grant / revoke / rejection (`role_granted`, `role_revoked`,
+ *    `role_grant_rejected`): `role` + `targetKind`, and for a rejection also
+ *    `rejectedRule`.
+ *  - A21 service-profile change (`service_profile_changed`): only
+ *    `previousServiceProfile` / `newServiceProfile` — no `role`, it is a
+ *    precondition of a Platform Spaces Reader grant, not a grant itself.
+ *  - A21 rejected attempt (`role_grant_rejected`): `rejectedRule` +
+ *    `newServiceProfile` — no `role`.
+ * `seeded` marks a bootstrap-seeded row (fail-open, FR-027) vs an
+ * operator-initiated one (fail-closed, FR-018).
+ */
+export interface PlatformRoleAssignmentAuditDetails {
+  role?: string;
+  targetKind?: 'user' | 'organization';
+  rejectedRule?: string;
+  previousServiceProfile?: boolean;
+  newServiceProfile?: boolean;
+  seeded?: boolean;
+}
+
+/**
+ * `platform_user_record` category payload shape (A4/A5) — identity/account
+ * deletion & reset. The email-change flow keeps writing `email_change`
+ * category directly; this category covers the rest of the user-record family.
+ */
+export interface PlatformUserRecordAuditDetails {
+  action?: string;
+  targetUserId?: string;
+  kratosIdentityId?: string;
+}
+
+/**
+ * `platform_configuration` category payload shape (A10/A13) — platform
+ * settings and licensing-framework/plan definition changes.
+ */
+export interface PlatformConfigurationAuditDetails {
+  setting?: string;
+  previousValue?: unknown;
+  newValue?: unknown;
+  licensePlanId?: string;
+}
+
+/**
+ * `platform_resource` category payload shape (A8/A9/A12/A14) — resource
+ * moves, container deletions, visibility changes, license-usage assignment.
+ */
+export interface PlatformResourceAuditDetails {
+  resourceKind?: string;
+  resourceId?: string;
+  fromAccountId?: string;
+  toAccountId?: string;
+  visibility?: string;
+  licensePlan?: string;
+}
+
+/**
  * Cross-category shape of `platform_audit_entry.details`. Every field is
  * optional — the per-category audit-service (`UserEmailChangeAuditService`,
  * `UserPasswordChangeAuditService`, ...) enforces which keys it writes for
@@ -108,7 +168,11 @@ export interface PlatformOperationsAuditDetails {
  */
 export type PlatformAuditDetails = EmailChangeAuditDetails &
   PasswordChangeAuditDetails &
-  PlatformOperationsAuditDetails;
+  PlatformOperationsAuditDetails &
+  PlatformRoleAssignmentAuditDetails &
+  PlatformUserRecordAuditDetails &
+  PlatformConfigurationAuditDetails &
+  PlatformResourceAuditDetails;
 
 /**
  * Row shape of `platform_audit_entry`. Append-only; retained indefinitely
@@ -122,7 +186,8 @@ export interface IPlatformAuditEntry {
   updatedDate: Date;
   version?: number;
   category: PlatformAuditCategory;
-  subjectUserId: string;
+  subjectUserId?: string;
+  subjectOrganizationId?: string;
   initiatorUserId?: string;
   initiatorRole: PlatformAuditInitiatorRole;
   outcome: PlatformAuditOutcome;

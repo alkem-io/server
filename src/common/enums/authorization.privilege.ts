@@ -56,6 +56,19 @@ export enum AuthorizationPrivilege {
   TRANSFER_RESOURCE_ACCEPT = 'transfer-resource-accept',
   ACCOUNT_LICENSE_MANAGE = 'account-license-manage',
   PUBLIC_SHARE = 'public-share', // Allow sharing whiteboard content publicly for guest contributions
+
+  // --- 027-platform-role-redesign: eleven new privileges (Slice A, additive) ---
+  FEATURE_ROLE_ASSIGN = 'feature-role-assign', // low-risk Feature-role assignment (Users Admin + Roles Admin)
+  PLATFORM_CONTENT_FULL_ACCESS = 'platform-content-full-access', // controlled replacement for the root CRUD cascade — read + this privilege only
+  PLATFORM_USERS_ADMIN = 'platform-users-admin', // user-record family: email change, identity/account delete, PII read
+  PLATFORM_SUPPORT_ORG_RESOURCES = 'platform-support-org-resources', // A7 — org-owned packs/hubs update + full template CRUD
+  PLATFORM_FORUM_MANAGE = 'platform-forum-manage', // A15 — the platform forum, off the GLOBAL_SUPPORT cascade
+  DELETE_ORGANIZATION = 'delete-organization', // A6 — organization deletion, off plain DELETE
+  PLATFORM_AUDIT_READ = 'platform-audit-read', // A19 — read the platform audit trail (PII-masked)
+  PLATFORM_ROLE_HOLDERS_READ = 'platform-role-holders-read', // A20 — read `Platform …` holder lists
+  FEATURE_ROLE_HOLDERS_READ = 'feature-role-holders-read', // A20b — read `Feature …` holder lists
+  SET_SERVICE_PROFILE = 'set-service-profile', // A21 — extracted from the ordinary user update
+  UPDATE_NAMEID = 'update-nameid', // A17 — protected "dangerous update"; deferred to Slice B (T078)
 }
 
 registerEnumType(AuthorizationPrivilege, {

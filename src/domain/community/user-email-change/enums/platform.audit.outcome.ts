@@ -35,4 +35,19 @@ export enum PlatformAuditOutcome {
   // execution of an operational/maintenance mutation.
   OPERATION_SUCCEEDED = 'operation_succeeded',
   OPERATION_FAILED = 'operation_failed',
+  // --- 027-platform-role-redesign (T017/T019) ---
+  ROLE_GRANTED = 'role_granted',
+  ROLE_REVOKED = 'role_revoked',
+  /** Shared by a rejected role assignment AND a rejected A21 service-profile
+   * attempt (eighth clarification pass) — one write outcome, no new value. */
+  ROLE_GRANT_REJECTED = 'role_grant_rejected',
+  SERVICE_PROFILE_CHANGED = 'service_profile_changed',
+  CONFIGURATION_CHANGED = 'configuration_changed',
+  RESOURCE_MOVED = 'resource_moved',
+  RESOURCE_DELETED = 'resource_deleted',
+  VISIBILITY_CHANGED = 'visibility_changed',
+  LICENSE_ASSIGNED = 'license_assigned',
+  LICENSE_REVOKED = 'license_revoked',
+  IDENTITY_DELETED = 'identity_deleted',
+  ACCOUNT_RESET = 'account_reset',
 }

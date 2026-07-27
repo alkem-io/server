@@ -427,6 +427,13 @@ const STATUS_METADATA: Record<AlkemioErrorStatus, ErrorMetadata> = {
     specificCode: 118,
     userMessage: 'userMessages.system.excalidrawServerInit',
   },
+  // 027-platform-role-redesign (FR-027): fail-closed role-assignment audit
+  // write failure — the grant/revoke does not take effect.
+  [AlkemioErrorStatus.PLATFORM_ROLE_ASSIGNMENT_AUDIT_FAILED]: {
+    category: ErrorCategory.SYSTEM,
+    specificCode: 119,
+    userMessage: 'userMessages.system.platformRoleAssignmentAuditFailed',
+  },
   // ═══════════════════════════════════════════════════════════════════════════
   // 99xxx - FALLBACK: Unmapped errors
   // ═══════════════════════════════════════════════════════════════════════════
