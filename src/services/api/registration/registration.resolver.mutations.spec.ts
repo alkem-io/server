@@ -146,6 +146,9 @@ describe('RegistrationResolverMutations', () => {
         profile: { displayName: 'John' },
       };
       userService.getUserByIdOrFail.mockResolvedValue(user);
+      // 027-platform-role-redesign (T062): the dual-path check calls
+      // isAccessGranted before falling through to grantAccessOrFail.
+      authorizationService.isAccessGranted.mockReturnValue(false);
       authorizationService.grantAccessOrFail.mockReturnValue(undefined);
       registrationService.deleteUserWithPendingMemberships.mockResolvedValue(
         user

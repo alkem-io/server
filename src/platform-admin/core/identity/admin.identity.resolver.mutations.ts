@@ -26,10 +26,14 @@ export class AdminIdentityResolverMutations {
     @Args('kratosIdentityId', { type: () => UUID })
     kratosIdentityId: string
   ): Promise<boolean> {
+    // 027-platform-role-redesign (T062, A5, research D5): re-anchored off
+    // PLATFORM_SETTINGS_ADMIN onto PLATFORM_USERS_ADMIN, whose Slice A
+    // grant set preserves every legacy reacher of the A4/A5 user-record
+    // family (platform.service.authorization.ts).
     await this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN,
+      AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
       'adminIdentityDeleteKratosIdentity'
     );
 

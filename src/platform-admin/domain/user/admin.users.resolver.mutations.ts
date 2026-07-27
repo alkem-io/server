@@ -32,12 +32,14 @@ export class AdminUsersMutations {
     @CurrentActor() actorContext: ActorContext,
     @Args('userID', { type: () => UUID }) userID: string
   ): Promise<IUser> {
+    // 027-platform-role-redesign (T062, A5, research D5): re-anchored off
+    // PLATFORM_ADMIN onto PLATFORM_USERS_ADMIN.
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
     this.authorizationService.grantAccessOrFail(
       actorContext,
       platformPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
       `Remove Kratos account for User ${userID}: ${actorContext.actorID}`
     );
 

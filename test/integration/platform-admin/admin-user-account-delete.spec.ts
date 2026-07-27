@@ -65,10 +65,12 @@ describe('Platform-admin identity deletion flows', () => {
       'user-1'
     );
 
+    // 027-platform-role-redesign (T062): re-anchored off PLATFORM_ADMIN
+    // onto PLATFORM_USERS_ADMIN.
     expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
       actorContext,
       {},
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
       expect.any(String)
     );
     expect(userService.clearAuthenticationIDForUser).toHaveBeenCalled();

@@ -25,7 +25,7 @@ export class AdminUserEmailChangeResolverMutations {
 
   @Mutation(() => UserEmailChangeResult, {
     description:
-      "Change a user's login email synchronously, acting as a platform administrator. The admin is responsible for verifying the subject user's identity out-of-band — the platform does NOT send a confirmation message to the new mailbox and does NOT require the new mailbox to prove ownership. Validates uniqueness, commits Kratos → Alkemio with bounded retry, invalidates the subject's existing sessions, and sends a security-signal notification to the old address. Requires PLATFORM_ADMIN.",
+      "Change a user's login email synchronously, acting as a platform administrator. The admin is responsible for verifying the subject user's identity out-of-band — the platform does NOT send a confirmation message to the new mailbox and does NOT require the new mailbox to prove ownership. Validates uniqueness, commits Kratos → Alkemio with bounded retry, invalidates the subject's existing sessions, and sends a security-signal notification to the old address. Requires PLATFORM_USERS_ADMIN.",
   })
   async adminUserEmailChange(
     @CurrentActor() actorContext: ActorContext,
@@ -47,7 +47,7 @@ export class AdminUserEmailChangeResolverMutations {
 
   @Mutation(() => UserEmailChangeResult, {
     description:
-      'Reconcile an outstanding drift-detected state for a subject user by force-aligning Alkemio and Kratos to a canonical email chosen by the admin. Requires PLATFORM_ADMIN.',
+      'Reconcile an outstanding drift-detected state for a subject user by force-aligning Alkemio and Kratos to a canonical email chosen by the admin. Requires PLATFORM_USERS_ADMIN.',
   })
   async adminUserEmailChangeDriftResolve(
     @CurrentActor() actorContext: ActorContext,
@@ -65,6 +65,10 @@ export class AdminUserEmailChangeResolverMutations {
     );
   }
 
+  // 027-platform-role-redesign (T061, A4): re-anchored off the
+  // PLATFORM_ADMIN catch-all onto PLATFORM_USERS_ADMIN, whose Slice A
+  // grant set (platform.service.authorization.ts) preserves every legacy
+  // reacher of the A4/A5 user-record family.
   private async assertPlatformAdmin(
     actorContext: ActorContext,
     description: string
@@ -73,7 +77,7 @@ export class AdminUserEmailChangeResolverMutations {
       this.authorizationService.grantAccessOrFail(
         actorContext,
         await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy(),
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
         description
       );
     } catch {
@@ -81,7 +85,7 @@ export class AdminUserEmailChangeResolverMutations {
       // contracts/graphql.md §6.
       throw new UserEmailChangeException(
         UserEmailChangeErrorCode.EMAIL_CHANGE_UNAUTHORIZED,
-        'Caller lacks PLATFORM_ADMIN privilege for this email-change operation.',
+        'Caller lacks PLATFORM_USERS_ADMIN privilege for this email-change operation.',
         LogContext.AUTH,
         { actorID: actorContext.actorID }
       );

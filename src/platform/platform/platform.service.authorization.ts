@@ -14,6 +14,7 @@ import {
   CREDENTIAL_RULE_TYPES_PLATFORM_OPERATIONS_ADMIN,
   CREDENTIAL_RULE_TYPES_PLATFORM_READ_REGISTERED,
   CREDENTIAL_RULE_TYPES_PLATFORM_ROLE_HOLDERS_READ,
+  CREDENTIAL_RULE_TYPES_PLATFORM_USERS_ADMIN,
   CREDENTIAL_RULE_TYPES_SET_SERVICE_PROFILE,
 } from '@common/constants';
 import {
@@ -354,6 +355,33 @@ export class PlatformAuthorizationService {
       );
     setServiceProfile.cascade = false;
     credentialRules.push(setServiceProfile);
+
+    // 027-platform-role-redesign (T061/T062, A4/A5): PLATFORM_USERS_ADMIN
+    // on the PLATFORM's own authorization tree — distinct from (but the
+    // same grant set as) T060's per-USER grant in
+    // user.service.authorization.ts. Three A4/A5 surfaces check this
+    // privilege directly against the platform policy rather than against
+    // any individual user's own authorization: adminUserEmailChange /
+    // …DriftResolve (T061), adminIdentityDeleteKratosIdentity and
+    // adminUserAccountDelete (T062). Grant set is the UNION of A4's legacy
+    // reachers (today's PLATFORM_ADMIN: GLOBAL_ADMIN, GLOBAL_SUPPORT,
+    // GLOBAL_LICENSE_MANAGER) and A5's (today's PLATFORM_SETTINGS_ADMIN:
+    // adds GLOBAL_PLATFORM_MANAGER) — identical to T060's set, kept in sync
+    // deliberately.
+    const platformUsersAdmin =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_USERS_ADMIN],
+        [
+          AuthorizationCredential.PLATFORM_USERS_ADMIN,
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+          AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+        ],
+        CREDENTIAL_RULE_TYPES_PLATFORM_USERS_ADMIN
+      );
+    platformUsersAdmin.cascade = false;
+    credentialRules.push(platformUsersAdmin);
 
     // 027-platform-role-redesign (T035, A15, FR-007(e)) — the platform
     // forum's OWN privilege. NOT optional/cosmetic: the forum's only

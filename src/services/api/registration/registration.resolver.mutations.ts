@@ -114,12 +114,34 @@ export class RegistrationResolverMutations {
     const user = await this.userService.getUserByIdOrFail(deleteData.ID, {
       relations: { profile: true },
     });
-    await this.authorizationService.grantAccessOrFail(
-      actorContext,
-      user.authorization,
-      AuthorizationPrivilege.DELETE,
-      `user delete: ${user.id}`
-    );
+    // 027-platform-role-redesign (T062, A5, research D5): dual-path — off
+    // the DELETE-cascade (today's sole admin path is GLOBAL_ADMIN via the
+    // root policy's cascade), onto PLATFORM_USERS_ADMIN (T060's per-user
+    // grant, user.service.authorization.ts) additively. Plain DELETE is
+    // NOT dropped: it is also how a user deletes their OWN account
+    // (USER_SELF_MANAGEMENT, resource-scoped to that user's own ID) — that
+    // self-service path must keep working, so this is additive, not a
+    // replacement.
+    const canDeleteAsSelfOrLegacyAdmin =
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        user.authorization,
+        AuthorizationPrivilege.DELETE
+      );
+    const canDeleteAsPlatformUsersAdmin =
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        user.authorization,
+        AuthorizationPrivilege.PLATFORM_USERS_ADMIN
+      );
+    if (!canDeleteAsSelfOrLegacyAdmin && !canDeleteAsPlatformUsersAdmin) {
+      await this.authorizationService.grantAccessOrFail(
+        actorContext,
+        user.authorization,
+        AuthorizationPrivilege.DELETE,
+        `user delete: ${user.id}`
+      );
+    }
     const userDeleted =
       await this.registrationService.deleteUserWithPendingMemberships(
         deleteData
