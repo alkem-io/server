@@ -1,13 +1,18 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { PlatformConfigurationAuditModule } from '@src/platform-admin/platform-configuration-audit/platform.configuration.audit.module';
 import { LicensePlan } from './license.plan.entity';
 import { LicensePlanResolverFields } from './license.plan.resolver.fields';
 import { LicensePlanResolverMutations } from './license.plan.resolver.mutations';
 import { LicensePlanService } from './license.plan.service';
 
 @Module({
-  imports: [AuthorizationModule, TypeOrmModule.forFeature([LicensePlan])],
+  imports: [
+    AuthorizationModule,
+    PlatformConfigurationAuditModule,
+    TypeOrmModule.forFeature([LicensePlan]),
+  ],
   providers: [
     LicensePlanService,
     LicensePlanResolverFields,

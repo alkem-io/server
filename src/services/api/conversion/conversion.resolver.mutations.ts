@@ -1,5 +1,6 @@
 import { GLOBAL_POLICY_CONVERSION_GLOBAL_ADMINS } from '@common/constants/authorization/global.policy.constants';
 import { LogContext } from '@common/enums';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationRoleGlobal } from '@common/enums/authorization.credential.global';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
@@ -25,6 +26,7 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
+import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ConversionService } from './conversion.service';
 import { ConversionVcSpaceToVcKnowledgeBaseInput } from './dto/conversion.dto.vc.space.to.vc.kb';
@@ -52,6 +54,7 @@ export class ConversionResolverMutations {
     private aiServerAdapter: AiServerAdapter,
     private spaceLicenseService: SpaceLicenseService,
     private licenseService: LicenseService,
+    private readonly platformResourceAuditService: PlatformResourceAuditService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
@@ -240,6 +243,7 @@ export class ConversionResolverMutations {
       );
     }
 
+    await this.recordCrossL0MoveAudit(actorContext, savedSpace.id);
     return this.spaceService.getSpaceOrFail(savedSpace.id);
   }
 
@@ -304,6 +308,7 @@ export class ConversionResolverMutations {
       );
     }
 
+    await this.recordCrossL0MoveAudit(actorContext, savedSpace.id);
     return this.spaceService.getSpaceOrFail(savedSpace.id);
   }
 
@@ -366,6 +371,7 @@ export class ConversionResolverMutations {
       );
     }
 
+    await this.recordCrossL0MoveAudit(actorContext, savedSpace.id);
     return this.spaceService.getSpaceOrFail(savedSpace.id);
   }
 
@@ -480,6 +486,30 @@ export class ConversionResolverMutations {
     await this.authorizationPolicyService.saveAll(authorizations);
     return this.virtualContributorService.getVirtualContributorByIdOrFail(
       virtualContributor.id
+    );
+  }
+
+  /**
+   * T058 — A9's three cross-L0 moves share ONE resolver-local synthetic
+   * policy (constructor comment above) rather than the platform-wide
+   * PLATFORM_ADMIN grant set; `intendedOwners`/`legacyReachers` are the
+   * census's declared source of truth for this row (a.row.surfaces.ts).
+   * Single-path surface — no ordinary-owner branch — so every successful
+   * call is audited.
+   */
+  private async recordCrossL0MoveAudit(
+    actorContext: ActorContext,
+    spaceId: string
+  ): Promise<void> {
+    await this.platformResourceAuditService.recordEventForActor(
+      actorContext,
+      [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
+      [AuthorizationCredential.GLOBAL_ADMIN],
+      {
+        resourceKind: 'space',
+        resourceId: spaceId,
+        outcome: 'moved',
+      }
     );
   }
 

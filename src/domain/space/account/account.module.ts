@@ -23,6 +23,7 @@ import { PlatformTemplatesModule } from '@platform/platform-templates/platform.t
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
+import { PlatformResourceAuditModule } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.module';
 import { AccountHostModule } from '../account.host/account.host.module';
 import { AccountLicensePlanModule } from '../account.license.plan/account.license.plan.module';
 import { AccountLookupModule } from '../account.lookup/account.lookup.module';
@@ -57,6 +58,7 @@ import { AccountLicenseService } from './account.service.license';
     TypeOrmModule.forFeature([Account]),
     NotificationAdapterModule,
     AccountLicensePlanModule,
+    PlatformResourceAuditModule,
   ],
   providers: [
     AccountService,

@@ -21,6 +21,7 @@ import { NotificationAdapterModule } from '@services/adapters/notification-adapt
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator/url.generator.module';
+import { PlatformResourceAuditModule } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.module';
 import { InputCreatorModule } from '../input-creator/input.creator.module';
 import { ConversionResolverMutations } from './conversion.resolver.mutations';
 import { ConversionService } from './conversion.service';
@@ -50,6 +51,7 @@ import { ConversionService } from './conversion.service';
     NotificationAdapterModule,
     EntityResolverModule,
     ActivityModule,
+    PlatformResourceAuditModule,
   ],
   providers: [ConversionService, ConversionResolverMutations],
   exports: [ConversionService, ConversionResolverMutations],

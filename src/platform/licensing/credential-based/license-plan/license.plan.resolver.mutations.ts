@@ -1,3 +1,4 @@
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
@@ -8,15 +9,26 @@ import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/
 import { LicensePlanService } from '@platform/licensing/credential-based/license-plan/license.plan.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
+import { PlatformConfigurationAuditService } from '@src/platform-admin/platform-configuration-audit/platform.configuration.audit.service';
 import { DeleteLicensePlanInput } from './dto/license.plan.dto.delete';
 import { UpdateLicensePlanInput } from './dto/license.plan.dto.update';
+
+/** T058 — A13's declared owner/legacy-reachers (T040's grant). */
+const A13_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
+  AuthorizationCredential.PLATFORM_SETTINGS_ADMIN,
+];
+const A13_LEGACY_REACHERS: readonly AuthorizationCredential[] = [
+  AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+  AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+];
 
 @InstrumentResolver()
 @Resolver()
 export class LicensePlanResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private licensePlanService: LicensePlanService
+    private licensePlanService: LicensePlanService,
+    private readonly platformConfigurationAuditService: PlatformConfigurationAuditService
   ) {}
 
   @Mutation(() => ILicensePlan, {
@@ -48,7 +60,19 @@ export class LicensePlanResolverMutations {
       AuthorizationPrivilege.DELETE,
       `deleteLicensePlan: ${licensePlan.id}`
     );
-    return await this.licensePlanService.deleteLicensePlan(deleteData);
+    const deleted = await this.licensePlanService.deleteLicensePlan(deleteData);
+    // T058 — A13, single-path surface (bare DELETE on licensing-framework).
+    await this.platformConfigurationAuditService.recordChangeForActor(
+      actorContext,
+      A13_INTENDED_OWNERS,
+      A13_LEGACY_REACHERS,
+      {
+        setting: 'licensePlan',
+        licensePlanId: deleteData.ID,
+        outcome: 'success',
+      }
+    );
+    return deleted;
   }
 
   @Mutation(() => ILicensePlan, {
@@ -81,6 +105,17 @@ export class LicensePlanResolverMutations {
       `update LicensePlan: ${licensePlan.id}`
     );
 
-    return await this.licensePlanService.update(updateData);
+    const updated = await this.licensePlanService.update(updateData);
+    await this.platformConfigurationAuditService.recordChangeForActor(
+      actorContext,
+      A13_INTENDED_OWNERS,
+      A13_LEGACY_REACHERS,
+      {
+        setting: 'licensePlan',
+        licensePlanId: updateData.ID,
+        outcome: 'success',
+      }
+    );
+    return updated;
   }
 }

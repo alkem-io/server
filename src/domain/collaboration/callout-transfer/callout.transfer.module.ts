@@ -9,6 +9,7 @@ import { ActivityModule } from '@platform/activity/activity.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
+import { PlatformResourceAuditModule } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.module';
 import { CalloutModule } from '../callout/callout.module';
 import { CalloutsSetModule } from '../callouts-set/callouts.set.module';
 import { CollaborationLicenseModule } from '../collaboration/collaboration.license.module';
@@ -30,6 +31,7 @@ import { CalloutTransferService } from './callout.transfer.service';
     EntityResolverModule,
     UrlGeneratorModule,
     ActivityModule,
+    PlatformResourceAuditModule,
   ],
   providers: [CalloutTransferService, CalloutTransferResolverMutations],
   exports: [CalloutTransferService],

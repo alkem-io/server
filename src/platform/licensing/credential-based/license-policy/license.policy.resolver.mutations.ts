@@ -1,21 +1,33 @@
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
+import { PlatformConfigurationAuditService } from '@src/platform-admin/platform-configuration-audit/platform.configuration.audit.service';
 import { ILicensingCredentialBasedPolicyCredentialRule } from '../licensing-credential-based-entitlements-engine';
 import { CreateLicensePolicyCredentialRuleInput } from './dto/license.policy.dto.credential.rule.create';
 import { DeleteLicensePolicyCredentialRuleInput } from './dto/license.policy.dto.credential.rule.delete';
 import { UpdateLicensePolicyCredentialRuleInput } from './dto/license.policy.dto.credential.rule.update';
 import { LicensePolicyService } from './license.policy.service';
 
+/** T058 — A13's declared owner/legacy-reachers (T040's grant). */
+const A13_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
+  AuthorizationCredential.PLATFORM_SETTINGS_ADMIN,
+];
+const A13_LEGACY_REACHERS: readonly AuthorizationCredential[] = [
+  AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+  AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+];
+
 @InstrumentResolver()
 @Resolver()
 export class LicensePolicyResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private licensePolicyService: LicensePolicyService
+    private licensePolicyService: LicensePolicyService,
+    private readonly platformConfigurationAuditService: PlatformConfigurationAuditService
   ) {}
 
   @Mutation(() => ILicensingCredentialBasedPolicyCredentialRule, {
@@ -34,10 +46,18 @@ export class LicensePolicyResolverMutations {
       AuthorizationPrivilege.DELETE,
       `delete LicensePolicy CredentialRule: ${licensePolicy.id}`
     );
-    return await this.licensePolicyService.deleteLicensePolicyCredentialRule(
-      deleteData.ID,
-      licensePolicy
+    const deleted =
+      await this.licensePolicyService.deleteLicensePolicyCredentialRule(
+        deleteData.ID,
+        licensePolicy
+      );
+    await this.platformConfigurationAuditService.recordChangeForActor(
+      actorContext,
+      A13_INTENDED_OWNERS,
+      A13_LEGACY_REACHERS,
+      { setting: 'licensePolicyCredentialRule', outcome: 'success' }
     );
+    return deleted;
   }
 
   @Mutation(() => ILicensingCredentialBasedPolicyCredentialRule, {
@@ -57,7 +77,15 @@ export class LicensePolicyResolverMutations {
       `update LicensePolicy credential rule: ${licensePolicy.id}`
     );
 
-    return await this.licensePolicyService.updateCredentialRule(updateData);
+    const updated =
+      await this.licensePolicyService.updateCredentialRule(updateData);
+    await this.platformConfigurationAuditService.recordChangeForActor(
+      actorContext,
+      A13_INTENDED_OWNERS,
+      A13_LEGACY_REACHERS,
+      { setting: 'licensePolicyCredentialRule', outcome: 'success' }
+    );
+    return updated;
   }
 
   @Mutation(() => ILicensingCredentialBasedPolicyCredentialRule, {
@@ -77,6 +105,14 @@ export class LicensePolicyResolverMutations {
       `create LicensePolicy credential rule: ${licensePolicy.id}`
     );
 
-    return await this.licensePolicyService.createCredentialRule(createData);
+    const created =
+      await this.licensePolicyService.createCredentialRule(createData);
+    await this.platformConfigurationAuditService.recordChangeForActor(
+      actorContext,
+      A13_INTENDED_OWNERS,
+      A13_LEGACY_REACHERS,
+      { setting: 'licensePolicyCredentialRule', outcome: 'success' }
+    );
+    return created;
   }
 }

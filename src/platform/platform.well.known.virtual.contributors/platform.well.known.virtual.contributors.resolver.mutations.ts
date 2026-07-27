@@ -1,11 +1,13 @@
 import { CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { PlatformConfigurationAuditService } from '@src/platform-admin/platform-configuration-audit/platform.configuration.audit.service';
 import { PlatformWellKnownVirtualContributorMapping } from './dto/platform.well.known.virtual.contributor.dto.mapping';
 import { SetPlatformWellKnownVirtualContributorInput } from './dto/platform.well.known.virtual.contributor.dto.set';
 import { IPlatformWellKnownVirtualContributors } from './platform.well.known.virtual.contributors.interface';
@@ -17,7 +19,8 @@ export class PlatformWellKnownVirtualContributorsResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
-    private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService
+    private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService,
+    private readonly platformConfigurationAuditService: PlatformConfigurationAuditService
   ) {}
 
   @Mutation(() => IPlatformWellKnownVirtualContributors, {
@@ -45,6 +48,23 @@ export class PlatformWellKnownVirtualContributorsResolverMutations {
         mappingData.wellKnown,
         mappingData.virtualContributorID
       );
+
+    // T058 — A10, single-path surface.
+    await this.platformConfigurationAuditService.recordChangeForActor(
+      actorContext,
+      [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
+      [
+        AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+        AuthorizationCredential.GLOBAL_SUPPORT,
+        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+      ],
+      {
+        setting: `wellKnownVirtualContributor:${mappingData.wellKnown}`,
+        newValue: mappingData.virtualContributorID,
+        outcome: 'success',
+      }
+    );
 
     // Convert from Record format to DTO array format
     const mappingsArray: PlatformWellKnownVirtualContributorMapping[] =
