@@ -356,4 +356,114 @@ describe('OrganizationAuthorizationService', () => {
       }
     });
   });
+
+  // 027-platform-role-redesign (T039, T070f): DELETE_ORGANIZATION — the D5
+  // dual-path privilege that closes A6's delete half. Kept as a SEPARATE
+  // privilege from CREATE_ORGANIZATION (platform.service.authorization.ts)
+  // specifically so feature-organization-creator, which holds the create
+  // half, can never acquire the delete half.
+  describe('027-platform-role-redesign — DELETE_ORGANIZATION (T039, A6, T070f)', () => {
+    const arrange = () => {
+      const authorization = { credentialRules: [] };
+      const org = {
+        id: 'org-1',
+        accountID: 'account-1',
+        authorization,
+        profile: { id: 'profile-1' },
+        storageAggregator: { id: 'sa-1' },
+        credentials: [],
+        groups: [],
+        verification: { id: 'ver-1' },
+        roleSet: { id: 'rs-1' },
+      };
+      organizationService.getOrganizationOrFail.mockResolvedValue(org);
+      authorizationPolicyService.reset.mockReturnValue(authorization);
+      platformAuthorizationService.inheritRootAuthorizationPolicy.mockReturnValue(
+        authorization
+      );
+      authorizationPolicyService.createCredentialRuleUsingTypesOnly.mockImplementation(
+        (privileges, types, name) => ({
+          grantedPrivileges: privileges,
+          criterias: types,
+          name,
+          cascade: true,
+        })
+      );
+      authorizationPolicyService.createCredentialRule.mockImplementation(
+        (privileges, criterias, name) => ({
+          grantedPrivileges: privileges,
+          criterias,
+          name,
+          cascade: true,
+        })
+      );
+      authorizationPolicyService.appendCredentialAuthorizationRules.mockReturnValue(
+        authorization
+      );
+      authorizationPolicyService.cloneAuthorizationPolicy.mockReturnValue(
+        authorization
+      );
+      authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess.mockReturnValue(
+        authorization
+      );
+      profileAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([
+        authorization,
+      ]);
+      storageAggregatorAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        [authorization]
+      );
+      roleSetAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([
+        authorization,
+      ]);
+      userGroupAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([
+        authorization,
+      ]);
+      organizationVerificationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        authorization
+      );
+    };
+
+    it('grants EXACTLY {platform-support, global-admin, global-support}, non-cascading — NOT feature-organization-creator', async () => {
+      arrange();
+      await service.applyAuthorizationPolicy({ id: 'org-1' } as any);
+
+      const rules =
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly.mock.results
+          .map(r => r.value)
+          .filter(rule =>
+            rule.grantedPrivileges?.includes(
+              AuthorizationPrivilege.DELETE_ORGANIZATION
+            )
+          );
+      expect(rules).toHaveLength(1);
+      expect(rules[0].criterias).toEqual([
+        AuthorizationCredential.PLATFORM_SUPPORT,
+        AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_SUPPORT,
+      ]);
+      expect(rules[0].criterias).not.toContain(
+        AuthorizationCredential.FEATURE_ORGANIZATION_CREATOR
+      );
+      expect(rules[0].cascade).toBe(false);
+    });
+
+    it('never merges DELETE_ORGANIZATION with the ordinary organizationAdmin DELETE rule (the D5 dual path stays two rules, not one widened rule)', async () => {
+      arrange();
+      await service.applyAuthorizationPolicy({ id: 'org-1' } as any);
+
+      const deleteOrgRules =
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly.mock.results
+          .map(r => r.value)
+          .filter(rule =>
+            rule.grantedPrivileges?.includes(
+              AuthorizationPrivilege.DELETE_ORGANIZATION
+            )
+          );
+      for (const rule of deleteOrgRules) {
+        expect(rule.grantedPrivileges).toEqual([
+          AuthorizationPrivilege.DELETE_ORGANIZATION,
+        ]);
+      }
+    });
+  });
 });

@@ -531,4 +531,130 @@ describe('AccountAuthorizationService', () => {
       }
     });
   });
+
+  // 027-platform-role-redesign (T037, T070f): explicit exact-array
+  // assertions for the account-tree grant-set widenings.
+  describe('027-platform-role-redesign — T037 grant-set widenings (T070f)', () => {
+    const arrange = () => {
+      const mockAccount = createMockAccount();
+      (accountService.getAccountOrFail as any).mockResolvedValue(mockAccount);
+      (authorizationPolicyService.reset as any).mockReturnValue(
+        mockAccount.authorization
+      );
+      (
+        authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess as any
+      ).mockReturnValue(mockAccount.authorization);
+      (
+        platformAuthorizationService.inheritRootAuthorizationPolicy as any
+      ).mockReturnValue(mockAccount.authorization);
+      (
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly as any
+      ).mockImplementation((privileges: any, types: any, name: any) => ({
+        grantedPrivileges: privileges,
+        criterias: [...types],
+        name,
+        cascade: true,
+      }));
+      (authorizationPolicyService.createCredentialRule as any).mockReturnValue({
+        criterias: [],
+        cascade: false,
+      });
+      (
+        authorizationPolicyService.appendCredentialAuthorizationRules as any
+      ).mockReturnValue(mockAccount.authorization);
+      (authorizationPolicyService.save as any).mockResolvedValue(
+        mockAccount.authorization
+      );
+      (
+        authorizationPolicyService.cloneAuthorizationPolicy as any
+      ).mockReturnValue(mockAccount.authorization);
+      (
+        licenseAuthorizationService.applyAuthorizationPolicy as any
+      ).mockReturnValue([]);
+      (
+        storageAggregatorAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+      return mockAccount;
+    };
+
+    const rulesGranting = (privilege: AuthorizationPrivilege) =>
+      (
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly as any
+      ).mock.results
+        .map((r: any) => r.value)
+        .filter((rule: any) => rule.grantedPrivileges?.includes(privilege));
+
+    it('TRANSFER_RESOURCE_OFFER (T037, A9): {global-admin, global-support, platform-resource-admin} plus the account-admin credential, non-cascading', async () => {
+      const mockAccount = arrange();
+      await service.applyAuthorizationPolicy(mockAccount);
+
+      const rules = rulesGranting(
+        AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER
+      );
+      expect(rules).toHaveLength(1);
+      const bareCredentials = rules[0].criterias.filter(
+        (c: any) => typeof c === 'string'
+      );
+      expect(bareCredentials).toEqual([
+        AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_SUPPORT,
+        AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+      ]);
+      expect(
+        rules[0].criterias.some(
+          (c: any) => c?.type === AuthorizationCredential.ACCOUNT_ADMIN
+        )
+      ).toBe(true);
+      expect(rules[0].cascade).toBe(false);
+    });
+
+    it('TRANSFER_RESOURCE_ACCEPT (T037, A9): {global-admin, global-support, platform-resource-admin} plus the account-admin credential, non-cascading', async () => {
+      const mockAccount = arrange();
+      await service.applyAuthorizationPolicy(mockAccount);
+
+      const rules = rulesGranting(
+        AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT
+      );
+      expect(rules).toHaveLength(1);
+      const bareCredentials = rules[0].criterias.filter(
+        (c: any) => typeof c === 'string'
+      );
+      expect(bareCredentials).toEqual([
+        AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_SUPPORT,
+        AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+      ]);
+      expect(rules[0].cascade).toBe(false);
+    });
+
+    it('ACCOUNT_LICENSE_MANAGE (T037, A12): EXACTLY {global-admin, global-license-manager, platform-license-manager}, non-cascading', async () => {
+      const mockAccount = arrange();
+      await service.applyAuthorizationPolicy(mockAccount);
+
+      const rules = rulesGranting(
+        AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE
+      );
+      expect(rules).toHaveLength(1);
+      expect(rules[0].criterias).toEqual([
+        AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+        AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
+      ]);
+      expect(rules[0].cascade).toBe(false);
+    });
+
+    it('PLATFORM_SUPPORT_ORG_RESOURCES (T037, A7): EXACTLY {platform-support}, no legacy reacher — cascading to the account packs/hubs/templates', async () => {
+      const mockAccount = arrange();
+      await service.applyAuthorizationPolicy(mockAccount);
+
+      const rules = rulesGranting(
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+      );
+      expect(rules).toHaveLength(1);
+      expect(rules[0].criterias).toEqual([
+        AuthorizationCredential.PLATFORM_SUPPORT,
+      ]);
+      expect(rules[0].cascade).toBe(true);
+    });
+  });
 });

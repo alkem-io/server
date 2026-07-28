@@ -1,4 +1,5 @@
 import { RoleChangeType } from '@alkemio/notifications-lib';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import { RoleName } from '@common/enums/role.name';
@@ -157,6 +158,45 @@ describe('PlatformRoleResolverMutations', () => {
         mockRoleSet.authorization,
         AuthorizationPrivilege.GRANT,
         expect.any(String)
+      );
+    });
+
+    // 027-platform-role-redesign (T040a, T070f): FEATURE_BETA_TESTER is
+    // rule-engine-governed (a `feature-*` role), unlike its legacy
+    // PLATFORM_BETA_TESTER twin — but it MUST carry the SAME beta/trial
+    // license entitlement grant, or the target role is inert once Slice B
+    // drops platform-beta-tester (FR-009, SC-007).
+    it('grants FEATURE_BETA_TESTER (T040a) the SAME beta/trial license entitlement as legacy PLATFORM_BETA_TESTER', async () => {
+      const actorContextWithCredentials = {
+        actorID: 'actor-1',
+        // A2's intended owners (FEATURE_ROLE_ASSIGN): platform-users-admin
+        // or platform-roles-admin — required for FR-025 attribution
+        // (resolveA1A2InitiatorRole) to resolve without throwing.
+        credentials: [{ type: AuthorizationCredential.PLATFORM_ROLES_ADMIN }],
+      } as any;
+      const roleData = {
+        actorID: 'user-target',
+        role: RoleName.FEATURE_BETA_TESTER,
+      };
+
+      (actorService.grantCredentialOrFail as Mock).mockResolvedValue(undefined);
+      (accountService.getAccountOrFail as Mock).mockResolvedValue({
+        id: 'account-1',
+      });
+      (accountLicenseService.applyLicensePolicy as Mock).mockResolvedValue([]);
+      (licenseService.saveAll as Mock).mockResolvedValue([]);
+
+      await resolver.assignPlatformRoleToUser(
+        actorContextWithCredentials,
+        roleData as any
+      );
+
+      expect(actorService.grantCredentialOrFail).toHaveBeenCalledWith(
+        'account-1',
+        expect.objectContaining({
+          type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
+          resourceID: 'account-1',
+        })
       );
     });
 
