@@ -39,6 +39,9 @@ export class RoomSendMessageInput {
   // Reject a repeated document id — the same attachment must not be listed
   // twice (it would be validated/pinned/sent redundantly).
   @ArrayUnique()
-  @IsUUID('4', { each: true })
+  // Version-agnostic: file-service mints document ids as UUIDv7, while
+  // server-generated ids are UUIDv4. Pinning 'v4' here rejected every real
+  // attachment id. 'all' accepts any UUID version.
+  @IsUUID('all', { each: true })
   attachments?: string[];
 }

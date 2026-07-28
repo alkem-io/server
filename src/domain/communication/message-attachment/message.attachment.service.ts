@@ -987,6 +987,28 @@ export class MessageAttachmentService {
             );
           }
         }
+        // FIX [4] outbound dims: the inbound branch below gets imageWidth/
+        // imageHeight for free from the by-reference `ref`, but this outbound
+        // branch resolved by id via getDocumentOrFail — a DB load that leaves
+        // those TRANSIENT, file-service-owned fields (content_metadata)
+        // undefined, so MessageAttachment.width/height come back null for
+        // web-composed (document_id) attachments. Source them from file-service's
+        // by-id meta (images only — the only docs that carry dims) so
+        // resolveReadAttachment surfaces intrinsic dimensions and images render
+        // without layout reflow. Best-effort: the same isolated meta call the
+        // send path uses (short timeout, no retry, breaker-bypass); any failure
+        // leaves dims undefined and never fails (or blocks) the read.
+        if (document.mimeType?.startsWith('image/')) {
+          const meta = await this.fileServiceAdapter
+            .getDocumentMeta(document.id)
+            .catch(() => undefined);
+          if (meta?.imageWidth !== undefined) {
+            document.imageWidth = meta.imageWidth;
+          }
+          if (meta?.imageHeight !== undefined) {
+            document.imageHeight = meta.imageHeight;
+          }
+        }
         return document;
       }
       // Inbound: bucket-scoped by-reference → the re-homed conversation doc.
