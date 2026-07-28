@@ -12,6 +12,7 @@ import {
   grantedCredentials,
   isManagedPrivilege,
   PRIVILEGE_GRANTS,
+  TREE_SCOPED_PRIVILEGE_GRANTS,
 } from './privilege.grants';
 
 /**
@@ -78,6 +79,25 @@ export function reachers(
       if (isManagedPrivilege(privilege)) {
         for (const credential of grantedCredentials(privilege, slice)) {
           result.add(credential);
+        }
+      }
+
+      // Tree-scoped grants (T070m) — the three census rows whose literal
+      // gate is a baseline CRUD verb or the legacy PLATFORM_ADMIN catch-all
+      // reused too promiscuously elsewhere to manage globally (A9's
+      // cross-L0 moves, A12, A13). Scoped to the surface's OWN tree so this
+      // cannot leak into A6/A7/A8's unrelated `anyOf` gates over the same
+      // literal privileges.
+      const treeScoped =
+        TREE_SCOPED_PRIVILEGE_GRANTS[surface.tree]?.[privilege];
+      if (treeScoped) {
+        for (const credential of treeScoped.owningCredentials) {
+          result.add(credential);
+        }
+        if (slice === 'A') {
+          for (const credential of treeScoped.legacyCredentials) {
+            result.add(credential);
+          }
         }
       }
 

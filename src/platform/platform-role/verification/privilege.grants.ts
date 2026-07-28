@@ -52,7 +52,26 @@ export type ManagedPrivilege =
   | AuthorizationPrivilege.UPDATE_CALLOUT_PUBLISHER
   | AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE
   | AuthorizationPrivilege.CREATE_ORGANIZATION
-  | AuthorizationPrivilege.ACCESS_VIRTUAL_ASSISTANT;
+  | AuthorizationPrivilege.ACCESS_VIRTUAL_ASSISTANT
+  // --- T070m additions (reachability.spec.ts) — three purpose-built
+  // privileges 032 authored (not this feature), but which gate A3/A11's
+  // census rows and therefore need a mirror here too, exactly the same
+  // "re-scoped/pre-existing but still censused" argument that keeps
+  // GRANT_GLOBAL_ADMINS in this union. Slice A does not touch their grant
+  // set at all (research: A3/A11 comments); Slice B's owning-alone half is
+  // therefore identical to today's `platform-operations-admin` cell, and
+  // `owningCredentials` below is what Slice B still reads.
+  | AuthorizationPrivilege.AUTHORIZATION_RESET
+  | AuthorizationPrivilege.LICENSE_RESET
+  | AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN
+  // --- A16's cross-space read (T038). `READ` is normally EXCLUDED as a
+  // baseline CRUD verb (like CREATE/UPDATE/DELETE/GRANT below), but A16 is
+  // the ONE census row whose gate is a bare `{requires: READ}` naming a
+  // rule THIS feature authored (platform-spaces-reader's replacement for
+  // the void `global-spaces-reader`) — unlike CREATE/UPDATE/DELETE, no
+  // OTHER census `requires`/`anyOf` gate names bare READ, so adding it here
+  // cannot leak into an unrelated row the way CREATE/UPDATE/DELETE would.
+  | AuthorizationPrivilege.READ;
 
 export interface PrivilegeGrant {
   /** Documentation metadata — the authorization tree the credential rule
@@ -284,6 +303,118 @@ export const PRIVILEGE_GRANTS: Record<ManagedPrivilege, PrivilegeGrant> = {
       AuthorizationCredential.GLOBAL_ADMIN,
       AuthorizationCredential.ASSISTANT_ACCESS,
     ],
+  },
+
+  // --- A3/A11 (032, pre-existing) — see the `ManagedPrivilege` doc comment
+  // above for why these three are mirrored here despite predating this
+  // feature. All three share ONE grant set (research C3): the census's own
+  // legacyReachers array is identical across every A3/A11 surface
+  // regardless of which of these three literal privileges it checks.
+  [AuthorizationPrivilege.AUTHORIZATION_RESET]: {
+    anchor: 'platform',
+    owningCredentials: [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],
+    legacyCredentials: [
+      AuthorizationCredential.GLOBAL_ADMIN,
+      AuthorizationCredential.GLOBAL_SUPPORT,
+      AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+    ],
+  },
+  [AuthorizationPrivilege.LICENSE_RESET]: {
+    anchor: 'account',
+    owningCredentials: [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],
+    legacyCredentials: [
+      AuthorizationCredential.GLOBAL_ADMIN,
+      AuthorizationCredential.GLOBAL_SUPPORT,
+      AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+    ],
+  },
+  [AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN]: {
+    anchor: 'platform',
+    owningCredentials: [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],
+    legacyCredentials: [
+      AuthorizationCredential.GLOBAL_ADMIN,
+      AuthorizationCredential.GLOBAL_SUPPORT,
+      AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+    ],
+  },
+
+  // --- A16 (T038) — the one bare-READ exception; see the `ManagedPrivilege`
+  // doc comment above.
+  [AuthorizationPrivilege.READ]: {
+    anchor: 'space',
+    owningCredentials: [AuthorizationCredential.PLATFORM_SPACES_READER],
+    legacyCredentials: [AuthorizationCredential.GLOBAL_SPACES_READER],
+  },
+};
+
+/**
+ * 027-platform-role-redesign (T070m) — TREE-SCOPED privilege grants, for the
+ * three census rows whose literal gate is a baseline CRUD verb (or the
+ * legacy `PLATFORM_ADMIN` catch-all) reused far too promiscuously elsewhere
+ * in the codebase to add to `ManagedPrivilege` globally (research: A9's
+ * cross-L0 moves and A13's own doc comment call these out as "the
+ * documented exceptions where the enforced call site's own privilege is a
+ * bare CRUD verb rather than this feature's dedicated one"). Adding
+ * `CREATE`/`UPDATE`/`DELETE`/`GRANT` globally would make EVERY OTHER
+ * `requires`/`anyOf` gate naming them (A6, A7, A8) derive these rows' owners
+ * as reachers too — the tree scope is what keeps the derivation precise.
+ *
+ * `reachers()` consults this ONLY for the surface's own declared `tree`,
+ * on top of (never instead of) the global `ManagedPrivilege` check.
+ */
+export const TREE_SCOPED_PRIVILEGE_GRANTS: {
+  readonly [K in TreeId]?: {
+    readonly [P in AuthorizationPrivilege]?: PrivilegeGrant;
+  };
+} = {
+  'licensing-framework': {
+    // A12 — assign/revoke license plans (admin.licensing.resolver.mutations.ts).
+    [AuthorizationPrivilege.GRANT]: {
+      anchor: 'licensing-framework',
+      owningCredentials: [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
+      legacyCredentials: [
+        AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+        AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+      ],
+    },
+    // A13 — license-plan / license-policy CRUD, re-anchored (in intent,
+    // not in literal gate) onto `platform-settings-admin` (T040).
+    [AuthorizationPrivilege.CREATE]: {
+      anchor: 'licensing-framework',
+      owningCredentials: [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
+      legacyCredentials: [
+        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+        AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+      ],
+    },
+    [AuthorizationPrivilege.UPDATE]: {
+      anchor: 'licensing-framework',
+      owningCredentials: [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
+      legacyCredentials: [
+        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+        AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+      ],
+    },
+    [AuthorizationPrivilege.DELETE]: {
+      anchor: 'licensing-framework',
+      owningCredentials: [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
+      legacyCredentials: [
+        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+        AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+      ],
+    },
+  },
+  'conversion-admin-synthetic': {
+    // A9's three cross-L0 moves — the resolver-local synthetic policy
+    // (`conversion.resolver.mutations.ts`) checked against the LEGACY
+    // `PLATFORM_ADMIN` privilege, not the platform-wide grant set of the
+    // same name (they are unrelated despite the shared literal).
+    [AuthorizationPrivilege.PLATFORM_ADMIN]: {
+      anchor: 'conversion-admin-synthetic',
+      owningCredentials: [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
+      legacyCredentials: [AuthorizationCredential.GLOBAL_ADMIN],
+    },
   },
 };
 
