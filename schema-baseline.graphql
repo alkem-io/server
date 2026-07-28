@@ -4600,6 +4600,21 @@ input MoveSpaceL1ToSpaceL2Input {
   targetSpaceL1ID: UUID!
 }
 
+input MoveSpaceL2ToSpaceL1Input {
+  """
+  Send invitations to former community members who are also in the target L0 community.
+  """
+  autoInvite: Boolean = false
+  """Custom invitation message. Used only when autoInvite is true."""
+  invitationMessage: String
+  """The L2 subspace to move (stays L2)."""
+  spaceL2ID: UUID!
+  """
+  The target L1 subspace in a different L0 (new parent for the moved L2).
+  """
+  targetSpaceL1ID: UUID!
+}
+
 type Mutation {
   """Adds an Iframe Allowed URL to the Platform Settings"""
   addIframeAllowedURL(whitelistedURL: String!): [String!]!
@@ -4891,6 +4906,10 @@ type Mutation {
   Move an L1 subspace to become an L2 sub-subspace under a target L1 in a different L0 space.       The space is demoted from level 1 to level 2. All community roles are cleared.       Requires platform admin privileges.
   """
   moveSpaceL1ToSpaceL2(moveData: MoveSpaceL1ToSpaceL2Input!): Space!
+  """
+  Move an L2 sub-subspace to become an L2 subspace under a target L1 in a different L0 space.       The subspace stays at level 2 but changes both its parent L1 and its top-level L0.       All community roles (including admins) are cleared and pending invitations dropped.       Platform access rules are recomputed from the new parent hierarchy.       Requires platform admin privileges.
+  """
+  moveSpaceL2ToSpaceL1(moveData: MoveSpaceL2ToSpaceL1Input!): Space!
   """Refresh the Bodies of Knowledge on All VCs"""
   refreshAllBodiesOfKnowledge: Boolean!
   """

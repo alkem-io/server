@@ -43,6 +43,7 @@ import { ConvertSpaceL1ToSpaceL2Input } from './dto/convert.dto.space.l1.to.spac
 import { ConvertSpaceL2ToSpaceL1Input } from './dto/convert.dto.space.l2.to.space.l1.input';
 import { MoveSpaceL1ToSpaceL0Input } from './dto/move.dto.space.l1.to.space.l0.input';
 import { MoveSpaceL1ToSpaceL2Input } from './dto/move.dto.space.l1.to.space.l2.input';
+import { MoveSpaceL2ToSpaceL1Input } from './dto/move.dto.space.l2.to.space.l1.input';
 
 export class ConversionService {
   constructor(
@@ -900,6 +901,192 @@ export class ConversionService {
     return { space: savedSpace, removedActorIds };
   }
 
+  // ── Cross-L0 Move: L2 → L1 (stays L2, changes parent L0) ─────────
+
+  async moveSpaceL2ToSpaceL1OrFail(
+    moveData: MoveSpaceL2ToSpaceL1Input
+  ): Promise<MoveSpaceResult> {
+    // 1. Load source L2
+    const sourceL2 = await this.spaceService.getSpaceOrFail(
+      moveData.spaceL2ID,
+      {
+        relations: {
+          community: { roleSet: true },
+          storageAggregator: true,
+          subspaces: true,
+        },
+      }
+    );
+    if (
+      !sourceL2.community?.roleSet ||
+      !sourceL2.storageAggregator ||
+      !sourceL2.subspaces
+    ) {
+      throw new EntityNotInitializedException(
+        'Unable to locate all entities on source L2',
+        LogContext.CONVERSION
+      );
+    }
+
+    // 2. Load target L1
+    const targetL1 = await this.spaceService.getSpaceOrFail(
+      moveData.targetSpaceL1ID,
+      {
+        relations: {
+          storageAggregator: true,
+          community: { roleSet: true },
+          subspaces: true,
+        },
+      }
+    );
+    if (
+      !targetL1.storageAggregator ||
+      !targetL1.community?.roleSet ||
+      !targetL1.subspaces
+    ) {
+      throw new EntityNotInitializedException(
+        'Unable to locate all entities on target L1',
+        LogContext.CONVERSION
+      );
+    }
+
+    // 3. Load target L0
+    const targetL0 = await this.spaceService.getSpaceOrFail(
+      targetL1.levelZeroSpaceID,
+      {
+        relations: { account: true },
+      }
+    );
+    if (!targetL0.account) {
+      throw new EntityNotInitializedException(
+        'Unable to locate account on target L0',
+        LogContext.CONVERSION
+      );
+    }
+
+    // 4. Validate
+    if (sourceL2.level !== SpaceLevel.L2) {
+      throw new ValidationException(
+        'Only L2 spaces can be moved with this operation',
+        LogContext.CONVERSION
+      );
+    }
+    if (targetL1.level !== SpaceLevel.L1) {
+      throw new ValidationException(
+        'Target must be an L1 space',
+        LogContext.CONVERSION
+      );
+    }
+    if (sourceL2.levelZeroSpaceID === targetL1.levelZeroSpaceID) {
+      throw new ValidationException(
+        'Source and target are in the same L0; same-L0 lateral re-parenting of an L2 is not supported (deferred capability)',
+        LogContext.CONVERSION
+      );
+    }
+
+    // 5. Defensive leaf assert — L2 must be childless
+    if (sourceL2.subspaces.length > 0) {
+      throw new ValidationException(
+        'Cannot move: source L2 has children which exceeds max nesting depth',
+        LogContext.CONVERSION
+      );
+    }
+
+    // 6. Validate nameIDs
+    await this.validateNameIDsInTargetL0Scope(sourceL2.id, targetL0.id);
+
+    // 7. Collect community roles and actor IDs (ALL cleared for cross-L0).
+    // The wipe (steps 8/8b) is intentionally deferred to AFTER the structural
+    // transaction so a failed structural commit cannot leave the community
+    // permanently destroyed while the space remains in its old location
+    // (sec-server-1: availability-only failure mode, SC-006 / FR-008).
+    const roleSetL2 = sourceL2.community.roleSet;
+    const spaceCommunityRoles = await this.getSpaceCommunityRoles(roleSetL2);
+    const removedActorIds = this.collectRemovedActorIds(
+      spaceCommunityRoles,
+      true
+    );
+
+    // Local refs for use inside transaction callback (TypeScript narrowing)
+    const sourceStorageAggregator = sourceL2.storageAggregator;
+    const sourceCommunity = sourceL2.community;
+    const targetL1StorageAggregator = targetL1.storageAggregator;
+    const targetL1Community = targetL1.community;
+
+    // 8–12. ALL structural persistence inside a single transaction (R-2 / INV-5).
+    // Role wipe is intentionally OUTSIDE and runs AFTER this block so that a
+    // mid-transaction rollback leaves structure AND community fully intact.
+    const savedSpace = await this.entityManager.transaction(async mgr => {
+      // 8. Structural fields — level UNCHANGED (stays L2)
+      sourceL2.parentSpace = targetL1;
+      sourceL2.levelZeroSpaceID = targetL0.id;
+
+      // 9. Update storage aggregator parent (points to target L1)
+      sourceStorageAggregator.parentStorageAggregator =
+        targetL1StorageAggregator;
+
+      // 10. Update roleSet parent (points to target L1's roleSet)
+      sourceCommunity.roleSet =
+        await this.roleSetService.setParentRoleSetAndCredentials(
+          roleSetL2,
+          targetL1Community.roleSet
+        );
+
+      // 11. Sync innovation flow tagsets via the transactional manager (mgr)
+      // so that tagset writes are rolled back together with structural writes
+      // if the transaction fails (corr-server-1 / INV-5).
+      await this.syncInnovationFlowTagsetsForSubtree(
+        sourceL2.id,
+        targetL0.id,
+        mgr
+      );
+
+      // 12. Update sort order: insert at first position, shift existing children
+      // using the transactional manager so the shift is part of the same tx
+      await mgr
+        .createQueryBuilder()
+        .update(Space)
+        .set({ sortOrder: () => '"sortOrder" + 1' })
+        .where('"parentSpaceId" = :parentId', { parentId: targetL1.id })
+        .execute();
+      sourceL2.sortOrder = 0;
+
+      return mgr.save(sourceL2 as Space);
+    });
+
+    // 13. Clear ALL community roles including admins — runs AFTER a successful
+    // structural commit so a failed transaction cannot permanently destroy the
+    // community while leaving the space in its original location (sec-server-1).
+    await this.removeContributors(roleSetL2, spaceCommunityRoles);
+    for (const userAdmin of spaceCommunityRoles.userAdmins) {
+      await this.roleSetService.removeActorFromRole(
+        roleSetL2,
+        RoleName.ADMIN,
+        userAdmin.id,
+        false
+      );
+    }
+
+    // 13b. Drop pending invitations/applications
+    await this.roleSetService.removePendingInvitationsAndApplications(
+      roleSetL2.id
+    );
+
+    // 14. Post-commit service tail (outside tx by design)
+    await this.accountHostService.assignLicensePlansToSpace(
+      savedSpace.id,
+      targetL0.account.accountType
+    );
+
+    // Drop the now-stale SUBSPACE_CREATED entry on the source parent's
+    // activity log — the moved space is no longer a subspace under it.
+    await this.activityService.removeSubspaceCreatedActivityForResource(
+      savedSpace.id
+    );
+
+    return { space: savedSpace as ISpace, removedActorIds };
+  }
+
   // ── Cross-L0 Move Helpers ─────────────────────────────────────────
 
   /**
@@ -935,10 +1122,15 @@ export class ConversionService {
    * Each space's callouts are synced using that space's OWN calloutsSet
    * tagsetTemplate — not the target L0's — because L1/L2 spaces retain their
    * own innovation flow after a cross-L0 move.
+   *
+   * When `mgr` is provided (inside a transaction) all tagset saves are routed
+   * through the transactional manager so they are rolled back atomically with
+   * the structural writes if the transaction fails (corr-server-1 / INV-5).
    */
   private async syncInnovationFlowTagsetsForSubtree(
     movedSpaceId: string,
-    _targetL0Id: string
+    _targetL0Id: string,
+    mgr?: EntityManager
   ): Promise<void> {
     const descendantIds =
       await this.spaceLookupService.getAllDescendantSpaceIDs(movedSpaceId);
@@ -973,7 +1165,8 @@ export class ConversionService {
         for (const tagsetTemplate of tagsetTemplates) {
           await this.classificationService.updateTagsetTemplateOnSelectTagset(
             callout.classification.id,
-            tagsetTemplate
+            tagsetTemplate,
+            mgr
           );
         }
       }
