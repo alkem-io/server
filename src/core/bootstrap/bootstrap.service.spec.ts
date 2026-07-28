@@ -6,7 +6,9 @@ import { Account } from '@domain/space/account/account.entity';
 import { Space } from '@domain/space/space/space.entity';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
+import { PlatformRoleAssignmentRulesService } from '@platform/platform-role/platform.role.assignment.rules.service';
 import { McpApiKeyService } from '@services/mcp-server/auth/mcp-api-key.service';
+import { PlatformRoleAssignmentAuditService } from '@src/platform-admin/platform-role-assignment-audit/platform.role.assignment.audit.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -584,6 +586,78 @@ describe('BootstrapService', () => {
           },
         ])
       ).rejects.toThrow('Unable to create profiles');
+    });
+
+    // 027-platform-role-redesign (T054/T070j, FR-013/FR-028, FR-024 stateful
+    // flow 3): a seeded grant that violates the SAME rule engine the
+    // mutation path uses is FATAL — never forced through, never skipped.
+    it('T070j flow 3a: a conflicting configured grant raises a FATAL BootstrapException naming the rule', async () => {
+      mocks.userService.getUserByEmail
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'user-broken-seed',
+          email: 'broken-seed@alkem.io',
+          credentials: [],
+        });
+      const rulesService = module.get(PlatformRoleAssignmentRulesService);
+      (rulesService.evaluateSeedOrFail as any).mockImplementation(() => {
+        throw new Error(
+          'Rejected: platform-spaces-reader may only be granted to a service account'
+        );
+      });
+
+      await expect(
+        service.createUserProfiles([
+          {
+            email: 'broken-seed@alkem.io',
+            firstName: 'Broken',
+            lastName: 'Seed',
+            credentials: [{ type: 'platform-spaces-reader', resourceID: '' }],
+          },
+        ])
+      ).rejects.toThrow('Seeded credential grant rejected');
+      // Never forced through by stripping the role.
+      expect(
+        mocks.adminAuthorizationService.grantCredentialToUser
+      ).not.toHaveBeenCalled();
+    });
+
+    // FR-024 stateful flow 4: the seeded audit write is marked `seeded:
+    // true` so the SHARED writer's own fail-open branch applies (unit-proven
+    // in platform.role.assignment.audit.service.spec.ts) — the grant is
+    // applied BEFORE the write, so a failing audit store can never roll it
+    // back regardless of the writer's internal behaviour.
+    it('T070j flow 4: the grant is applied and the audit write is marked seeded (fail-open branch)', async () => {
+      mocks.userService.getUserByEmail
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'admin-new',
+          email: 'admin@alkem.io',
+          credentials: [],
+        });
+      const rulesService = module.get(PlatformRoleAssignmentRulesService);
+      (rulesService.evaluateSeedOrFail as any).mockReturnValue(undefined);
+      const auditService = module.get(PlatformRoleAssignmentAuditService);
+      (auditService.recordGrantOrRevoke as any).mockResolvedValue(undefined);
+
+      await expect(
+        service.createUserProfiles([
+          {
+            email: 'admin@alkem.io',
+            firstName: 'admin',
+            lastName: 'alkemio',
+            credentials: [{ type: 'platform-roles-admin', resourceID: '' }],
+          },
+        ])
+      ).resolves.not.toThrow();
+      expect(
+        mocks.adminAuthorizationService.grantCredentialToUser
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'platform-roles-admin' })
+      );
+      expect(auditService.recordGrantOrRevoke).toHaveBeenCalledWith(
+        expect.objectContaining({ seeded: true })
+      );
     });
   });
 
