@@ -5,7 +5,7 @@ import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { KonfigService } from './config.service';
 
 /**
- * Unit tests for language config parsing in KonfigService (contract C2 / T005).
+ * Unit tests for language config parsing in KonfigService.
  * Tests call getConfig() directly to ensure the real wiring is exercised, not
  * just an inline re-implementation of the parse logic.
  */

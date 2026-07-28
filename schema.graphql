@@ -3278,7 +3278,7 @@ type Invitation {
   """The current state of this Lifecycle."""
   state: String!
   """
-  Optional language the inviter expects the invitee to prefer (FR-014b — recorded per invitation; DL-1 ruling: present on both Invitation and PlatformInvitation).
+  Optional language the inviter expects the invitee to prefer; recorded per invitation.
   """
   suggestedLanguage: String
   """The date at which the entity was last updated."""
@@ -4341,7 +4341,7 @@ type Mutation {
   """Update the Application Form used by this RoleSet."""
   updateApplicationFormOnRoleSet(applicationFormData: UpdateApplicationFormOnRoleSetInput!): RoleSet!
   """
-  Set the admin per-capability grant on the virtual-assistant actor, governing what it may do system-invoked (default read-only). Requires platform-admin.
+  Set the admin per-capability grant on the virtual-assistant actor, governing what it may do system-invoked (default read-only). Requires the platform-operations-admin privilege.
   """
   updateAssistantActorCapabilities(grantData: GrantAssistantActorCapabilitiesInput!): VirtualAssistant!
   """Update the baseline License Plan on the specified Account."""
@@ -4863,7 +4863,7 @@ type PlatformInvitation {
   """Whether to also add the invited user to the parent community."""
   roleSetInvitedToParent: Boolean!
   """
-  Optional language the inviter expects the invitee to prefer (FR-014b — recorded per invitation; DL-1 ruling: present on both Invitation and PlatformInvitation).
+  Optional language the inviter expects the invitee to prefer; recorded per invitation.
   """
   suggestedLanguage: String
   """The date at which the entity was last updated."""
@@ -6795,7 +6795,7 @@ type UserSettings {
   """
   language: String
   """
-  Whether this User has answered the one-time language offer (global across all languages — FR-005a). Latched true by any language write.
+  Whether this User has answered the one-time language offer (global across all languages). Latched true by any language write.
   """
   languageOfferAnswered: Boolean!
   """The notification settings for this User."""
@@ -8376,7 +8376,7 @@ input InviteForEntryRoleOnRoleSetInput {
   invitedUserEmails: [String!]!
   roleSetID: UUID!
   """
-  Optional language the inviter expects the invitees to prefer (single value for the whole batch — FR-014a; must be in the eligible set at compose time — DL-8). Recorded per-invitation so per-invitee granularity later is a UI change, not a migration (FR-014b).
+  Optional language the inviter expects the invitees to prefer (single value for the whole batch). Must be in the eligible set at compose time. Recorded per-invitation so per-invitee granularity later is a UI change, not a migration.
   """
   suggestedLanguage: String
   """The welcome message to send"""
@@ -9632,11 +9632,11 @@ input UpdateUserSettingsEntityInput {
   """Settings related to Home Space."""
   homeSpace: UpdateUserSettingsHomeSpaceInput
   """
-  Set the user's interface language preference. Must be a value from the supported languages set. Any language write also latches languageOfferAnswered=true (FR-023 invariant).
+  Set the user's interface language preference. Must be a value from the supported languages set. Any language write also latches languageOfferAnswered=true.
   """
   language: String
   """
-  Mark that this User has answered the one-time language offer. One-way latch: setting false is rejected (FR-005a).
+  Mark that this User has answered the one-time language offer. One-way latch: setting false is rejected.
   """
   languageOfferAnswered: Boolean
   """Settings related to this users Notifications preferences."""

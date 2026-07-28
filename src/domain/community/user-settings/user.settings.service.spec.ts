@@ -484,8 +484,8 @@ describe('UserSettingsService', () => {
       ).toThrow(ValidationException);
     });
 
-    it('should accept a supported non-eligible language (e.g. "es") without throwing (FR-008)', () => {
-      // FR-008: the FULL supported set is allowed, not just the eligible subset
+    it('should accept a supported non-eligible language (e.g. "es") without throwing', () => {
+      // The FULL supported set is allowed, not just the eligible subset
       const settings = buildSettings({
         language: null,
         languageOfferAnswered: false,

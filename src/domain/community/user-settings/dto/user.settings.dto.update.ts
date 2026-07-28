@@ -64,7 +64,7 @@ export class UpdateUserSettingsEntityInput {
   @Field(() => String, {
     nullable: true,
     description:
-      "Set the user's interface language preference. Must be a value from the supported languages set. Any language write also latches languageOfferAnswered=true (FR-023 invariant).",
+      "Set the user's interface language preference. Must be a value from the supported languages set. Any language write also latches languageOfferAnswered=true.",
   })
   @IsOptional()
   @IsIn([...SUPPORTED_INTERFACE_LANGUAGES])
@@ -73,7 +73,7 @@ export class UpdateUserSettingsEntityInput {
   @Field(() => Boolean, {
     nullable: true,
     description:
-      'Mark that this User has answered the one-time language offer. One-way latch: setting false is rejected (FR-005a).',
+      'Mark that this User has answered the one-time language offer. One-way latch: setting false is rejected.',
   })
   @IsOptional()
   languageOfferAnswered?: boolean;

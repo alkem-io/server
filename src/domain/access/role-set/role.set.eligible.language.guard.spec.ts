@@ -4,7 +4,7 @@ import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { RoleSetEligibleLanguageGuard } from './role.set.eligible.language.guard';
 
 /**
- * Unit tests for the compose-time eligible-language guard (T006 / DL-8 / R-8).
+ * Unit tests for the compose-time eligible-language guard.
  */
 describe('RoleSetEligibleLanguageGuard', () => {
   async function buildGuard(

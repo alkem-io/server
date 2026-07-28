@@ -306,8 +306,8 @@ export class RoleSetResolverMutationsMembership {
       `create invitation RoleSet: ${roleSet.id}`
     );
 
-    // Validate suggestedLanguage against the eligible set up front (DL-8 compose-time check).
-    // Empty eligible set rejects every suggestion (config kill switch — R-8).
+    // Validate suggestedLanguage against the eligible set up front (compose-time check).
+    // An empty eligible set rejects every suggestion (config kill switch).
     if (invitationData.suggestedLanguage) {
       this.eligibleLanguageGuard.isEligibleLanguageOrFail(
         invitationData.suggestedLanguage

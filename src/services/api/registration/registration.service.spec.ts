@@ -287,7 +287,6 @@ describe('RegistrationService', () => {
       ).toHaveBeenCalledTimes(1);
     });
 
-    // T009 — registration-time language seeding (FR-016 / DL-7 / DL-8)
     describe('language seeding from platform invitations', () => {
       const freshUser = {
         id: 'user-seed',
@@ -346,11 +345,11 @@ describe('RegistrationService', () => {
         expect(userService.updateUserSettings).not.toHaveBeenCalled();
       });
 
-      it('should drop an unsupported value from the configured eligible set and skip it without throwing (3656333133)', async () => {
+      it('should drop an unsupported value from the configured eligible set and skip it without throwing', async () => {
         // Misconfigured eligible = 'nl,xx' where 'xx' is not in SUPPORTED_INTERFACE_LANGUAGES.
         // parseSupportedEligibleLanguages filters 'xx' out, so an invitation suggesting 'xx'
-        // is silently skipped (FR-018) rather than passed to updateUserSettings, which now
-        // rejects unsupported languages — seeding must not throw during registration.
+        // is silently skipped rather than passed to updateUserSettings, which rejects
+        // unsupported languages — seeding must not throw during registration.
         configService.get.mockImplementation((key: string) => {
           if (key === 'language') return { eligible: 'nl,xx', default: 'en' };
           return undefined;
@@ -375,12 +374,12 @@ describe('RegistrationService', () => {
         expect(userService.updateUserSettings).not.toHaveBeenCalled();
       });
 
-      it('should pick the latest-created eligible invitation when multiple exist (DL-7)', async () => {
+      it('should pick the latest-created eligible invitation when multiple exist', async () => {
         // Two DISTINCT eligible languages: pi-old='en' (created earlier),
         // pi-new='nl' (created later).  With eligible='nl,en', both are
         // candidates.  The latest-created one (pi-new → 'nl') must win.
         // An ascending-sort implementation would incorrectly seed 'en' and
-        // fail the assertion — this is what makes the test meaningful (R-6).
+        // fail the assertion — this is what makes the test meaningful.
         configService.get.mockImplementation((key: string) => {
           if (key === 'language') return { eligible: 'nl,en', default: 'en' };
           return undefined;
@@ -413,7 +412,7 @@ describe('RegistrationService', () => {
         // The latest-created eligible invitation (pi-new → 'nl') must be
         // selected and the call must happen exactly once.  If the sort were
         // ascending, 'en' (pi-old) would be seeded instead and this assertion
-        // would fail — proving the sort direction is correct (DL-7).
+        // would fail — proving the sort direction is correct.
         expect(userService.updateUserSettings).toHaveBeenCalledTimes(1);
         expect(userService.updateUserSettings).toHaveBeenCalledWith(freshUser, {
           language: 'nl',
@@ -465,12 +464,11 @@ describe('RegistrationService', () => {
         expect(userService.updateUserSettings).not.toHaveBeenCalled();
       });
 
-      // Regression test for corr-server-1 / spec-server-1 / qual-server-1:
-      // The real production path has user.settings === undefined because
-      // grantCredentialsAllUsersReceive fetches the user with no relations and
-      // User.settings is eager:false.  The previous guard `!user.settings →
-      // return` silently aborted seeding.  The fix reloads the user with
-      // { relations: { settings: true } } when settings is absent.
+      // Regression: the real production path has user.settings === undefined
+      // because grantCredentialsAllUsersReceive fetches the user with no
+      // relations and User.settings is eager:false.  The previous guard
+      // `!user.settings → return` silently aborted seeding.  The fix reloads
+      // the user with { relations: { settings: true } } when settings is absent.
       it('should reload settings and seed language when user.settings is not loaded (production path)', async () => {
         // Simulates what grantCredentialsAllUsersReceive returns: user WITHOUT
         // the settings relation loaded (eager:false, no options passed).

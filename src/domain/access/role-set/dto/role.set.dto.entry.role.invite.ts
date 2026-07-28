@@ -42,7 +42,7 @@ export class InviteForEntryRoleOnRoleSetInput {
   @Field(() => String, {
     nullable: true,
     description:
-      'Optional language the inviter expects the invitees to prefer (single value for the whole batch — FR-014a; must be in the eligible set at compose time — DL-8). Recorded per-invitation so per-invitee granularity later is a UI change, not a migration (FR-014b).',
+      'Optional language the inviter expects the invitees to prefer (single value for the whole batch). Must be in the eligible set at compose time. Recorded per-invitation so per-invitee granularity later is a UI change, not a migration.',
   })
   @IsOptional()
   @IsIn([...SUPPORTED_INTERFACE_LANGUAGES])

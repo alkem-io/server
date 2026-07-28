@@ -72,7 +72,7 @@ export class CreateUserSettingsInput {
   @Field(() => Boolean, {
     nullable: true,
     description:
-      'Whether this User has already answered the one-time language offer (global flag — FR-005a).',
+      'Whether this User has already answered the one-time language offer.',
   })
   @IsOptional()
   languageOfferAnswered?: boolean;

@@ -199,10 +199,10 @@ export class RegistrationService {
       );
 
     // Seed language from the latest-created platform invitation that carries an
-    // eligible suggested language (DL-7 determinism — latest-created wins).
+    // eligible suggested language (latest-created wins).
     // Must run before the loop so the settings update is complete before any
     // invitation authorization writes (no interleaving issue — both are in the
-    // same synchronous processPendingInvitations call, FR-016 / DL-12).
+    // same synchronous processPendingInvitations call).
     await this.seedLanguageFromInvitation(user, platformInvitations);
 
     const roleSetInvitations: IInvitation[] = [];
@@ -248,17 +248,17 @@ export class RegistrationService {
 
   /**
    * Seeds the new account's language setting from the latest-created platform
-   * invitation that carries an eligible suggestedLanguage (FR-016, DL-7, DL-8).
+   * invitation that carries an eligible suggestedLanguage.
    *
    * Rules:
    * - Only seeds when the account still has {language: null, languageOfferAnswered: false}
    *   (a fresh account that has not yet had a language written by any other path).
    * - Eligible = currently configured language.eligible list; an invitation whose
-   *   suggestedLanguage is no longer eligible is silently skipped (FR-018).
+   *   suggestedLanguage is no longer eligible is silently skipped.
    * - Among the invitations that pass eligibility, the latest-created (highest
-   *   createdDate) wins (DL-7 determinism).
+   *   createdDate) wins.
    * - Writing language also latches languageOfferAnswered = true via
-   *   UserSettingsService.updateSettings (T004 invariant).
+   *   UserSettingsService.updateSettings.
    */
   private async seedLanguageFromInvitation(
     user: IUser,
@@ -269,7 +269,7 @@ export class RegistrationService {
     // relations, so user.settings is undefined on the real production path —
     // User.settings is declared eager:false (user.entity.ts).  Reload with the
     // relation when it is missing so the guard below operates on real data, not
-    // on an absent proxy.  (corr-server-1 / spec-server-1 / qual-server-1)
+    // on an absent proxy.
     let settingsUser = user;
     if (!settingsUser.settings) {
       settingsUser = await this.userService.getUserByIdOrFail(user.id, {
@@ -290,17 +290,17 @@ export class RegistrationService {
     // Use the shared helper so the eligible set here matches Config.language.eligible
     // and the compose-time RoleSetEligibleLanguageGuard, and unsupported values are
     // filtered out: a stored suggestion that is not in SUPPORTED_INTERFACE_LANGUAGES is
-    // silently skipped (FR-018) rather than passed to updateUserSettings, which now
-    // rejects unsupported languages (3656333133).
+    // silently skipped rather than passed to updateUserSettings, which rejects
+    // unsupported languages.
     const eligible = parseSupportedEligibleLanguages(languageConfig?.eligible);
 
     if (eligible.length === 0) {
-      // Kill switch: empty eligible set — no seeding (FR-018).
+      // Kill switch: empty eligible set — no seeding.
       return;
     }
 
     // Sort by createdDate descending to get the latest-created invitation first
-    // (DL-7 determinism: latest-created with an eligible suggestion wins).
+    // (latest-created with an eligible suggestion wins).
     const sorted = [...platformInvitations].sort((a, b) => {
       const aTime = a.createdDate ? new Date(a.createdDate).getTime() : 0;
       const bTime = b.createdDate ? new Date(b.createdDate).getTime() : 0;
@@ -315,10 +315,10 @@ export class RegistrationService {
         // can read user.settings without hitting an undefined dereference.
         await this.userService.updateUserSettings(settingsUser, {
           language: lang,
-          // languageOfferAnswered is automatically latched by updateSettings (T004)
+          // languageOfferAnswered is automatically latched by updateSettings
         });
         this.logger.verbose?.(
-          `Seeded language '${lang}' from platform invitation for user ${settingsUser.id} (DL-7/FR-016)`,
+          `Seeded language '${lang}' from platform invitation for user ${settingsUser.id}`,
           LogContext.COMMUNITY
         );
         return;

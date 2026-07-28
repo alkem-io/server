@@ -773,12 +773,10 @@ describe('RoleSetResolverMutationsMembership', () => {
     });
   });
 
-  // T008 — suggestedLanguage fan-out (R-5 / R-7 mitigations, DL-8)
   // Verifies that inviteForEntryRoleOnRoleSet threads suggestedLanguage into
   // BOTH the Invitation (existing-actor path) and PlatformInvitation (new-email
-  // path), and that the compose-time eligible guard fires before any row is
-  // written (DL-8).
-  describe('inviteForEntryRoleOnRoleSet - suggestedLanguage fan-out (T008)', () => {
+  // path), and that the compose-time eligible guard fires before any row is written.
+  describe('inviteForEntryRoleOnRoleSet - suggestedLanguage fan-out', () => {
     // Shared helpers to reduce boilerplate across the three sub-tests.
     function setupBaseRoleSet() {
       const mockRoleSet = {
@@ -803,9 +801,9 @@ describe('RoleSetResolverMutationsMembership', () => {
       return mockRoleSet;
     }
 
-    it('should pass suggestedLanguage nl to CreateInvitationInput for existing actor (Invitation entity path, US5-AS7)', async () => {
+    it('should pass suggestedLanguage nl to CreateInvitationInput for existing actor (Invitation entity path)', async () => {
       // Batch: 1 existing actor, suggestedLanguage 'nl' — verifies the
-      // Invitation entity (DL-1) receives the suggested language.
+      // Invitation entity receives the suggested language.
       const actorContext = { actorID: 'user-1' } as any;
       setupBaseRoleSet();
 
@@ -842,13 +840,13 @@ describe('RoleSetResolverMutationsMembership', () => {
       } as any);
 
       // createInvitationExistingActor must receive a CreateInvitationInput
-      // that carries suggestedLanguage: 'nl' (Invitation entity path — DL-1).
+      // that carries suggestedLanguage: 'nl' (Invitation entity path).
       expect(roleSetService.createInvitationExistingActor).toHaveBeenCalledWith(
         expect.objectContaining({ suggestedLanguage: 'nl' })
       );
     });
 
-    it('should pass suggestedLanguage nl to createPlatformInvitation for new email users (PlatformInvitation entity path, US5-AS7)', async () => {
+    it('should pass suggestedLanguage nl to createPlatformInvitation for new email users (PlatformInvitation entity path)', async () => {
       // Batch: 2 new email users, suggestedLanguage 'nl' — verifies the
       // PlatformInvitation entity receives the suggested language.
       const actorContext = { actorID: 'user-1' } as any;
@@ -892,7 +890,7 @@ describe('RoleSetResolverMutationsMembership', () => {
       } as any);
 
       // Both PlatformInvitation rows must receive suggestedLanguage: 'nl'
-      // (verifies the fan-out helper threads the field through — R-5 mitigation).
+      // (verifies the fan-out helper threads the field through each path).
       expect(roleSetService.createPlatformInvitation).toHaveBeenCalledTimes(2);
       expect(roleSetService.createPlatformInvitation).toHaveBeenNthCalledWith(
         1,
@@ -916,7 +914,7 @@ describe('RoleSetResolverMutationsMembership', () => {
       );
     });
 
-    it('should send null suggestedLanguage when omitted — invitation succeeds and no language is recorded (FR-015)', async () => {
+    it('should send null suggestedLanguage when omitted — invitation succeeds and no language is recorded', async () => {
       // Batch with no suggestedLanguage — both entity paths should receive
       // undefined/null and the mutation must still succeed.
       const actorContext = { actorID: 'user-1' } as any;
@@ -961,7 +959,7 @@ describe('RoleSetResolverMutationsMembership', () => {
       );
     });
 
-    it('should reject suggestedLanguage de before any row is written (DL-8 compose-time guard)', async () => {
+    it('should reject suggestedLanguage de before any row is written (compose-time guard)', async () => {
       // 'de' is in the supported set but NOT in the eligible set.
       // isEligibleLanguageOrFail must throw a ValidationException before
       // createInvitationExistingActor or createPlatformInvitation is called.
@@ -992,7 +990,7 @@ describe('RoleSetResolverMutationsMembership', () => {
         } as any)
       ).rejects.toThrow(ValidationException);
 
-      // No invitation row must be written — the guard fires up front (DL-8)
+      // No invitation row must be written — the guard fires up front
       expect(
         roleSetService.createInvitationExistingActor
       ).not.toHaveBeenCalled();

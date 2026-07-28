@@ -56,7 +56,7 @@ export class IUserSettings extends IAuthorizable {
   @Field(() => Boolean, {
     nullable: false,
     description:
-      'Whether this User has answered the one-time language offer (global across all languages — FR-005a). Latched true by any language write.',
+      'Whether this User has answered the one-time language offer (global across all languages). Latched true by any language write.',
   })
   languageOfferAnswered!: boolean;
 }

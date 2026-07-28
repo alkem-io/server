@@ -7,13 +7,13 @@ import { AlkemioConfig } from '@src/types';
 
 /**
  * Validates that a `suggestedLanguage` value on an invitation input is in the
- * currently configured eligible-language set (DL-8 compose-time check).
+ * currently configured eligible-language set (compose-time check).
  *
  * Separate from the consumption-time check in registration (which silently skips
- * ineligible stored suggestions — FR-018): this guard is called once up front in
+ * ineligible stored suggestions): this guard is called once up front in
  * the invite mutation, before any invitation row is written.
  *
- * An empty eligible set rejects every suggestion (config kill-switch — R-8).
+ * An empty eligible set rejects every suggestion (config kill-switch).
  */
 @Injectable()
 export class RoleSetEligibleLanguageGuard {
@@ -41,7 +41,7 @@ export class RoleSetEligibleLanguageGuard {
     const eligible = this.getEligibleLanguages();
     if (!eligible.includes(language)) {
       throw new ValidationException(
-        'Suggested language is not in the eligible set. Only eligible languages may be suggested on an invitation (DL-8).',
+        'Suggested language is not in the eligible set. Only eligible languages may be suggested on an invitation.',
         LogContext.COMMUNITY,
         { language, eligible }
       );

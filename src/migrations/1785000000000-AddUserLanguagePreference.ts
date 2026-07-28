@@ -1,21 +1,20 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 /**
- * Add user-language-preference columns to support workspace#029-detect-signup-language.
+ * Add user-language-preference columns.
  *
- * Rules (DL-4 / R-1 — load-bearing invariants):
- * - METADATA-ONLY, ADD-ONLY: no row UPDATEs, no concrete language values written.
- * - Existing rows read {language: NULL, languageOfferAnswered: false} after up() —
- *   the languageOfferAnswered column defaults to false so no backfill is needed.
- * - The NULL language is the discriminator for "never chose a language" (US4 target).
- * - NO authorization_policy writes, NO authorizationPolicyResetAll, NO jsonb touch.
- * - safe down(): drops all four columns (each is nullable or has a server-set default).
+ * Safe schema-only migration — no row UPDATEs, no concrete language values written.
+ * Existing rows read {language: NULL, languageOfferAnswered: false} after up();
+ * the languageOfferAnswered column defaults to false so no backfill is needed.
+ * A NULL language means the user has never chosen a language.
+ * No authorization_policy writes, no authorizationPolicyResetAll, no jsonb touch.
+ * Safe down(): drops all four columns (each is nullable or has a server-set default).
  *
  * Columns added:
- *   user_settings.language             varchar(16) NULL         — chosen interface language
- *   user_settings.languageOfferAnswered boolean NOT NULL DEFAULT false — one-way latch
- *   invitation.suggestedLanguage        varchar(16) NULL         — inviter's suggested language
- *   platform_invitation.suggestedLanguage varchar(16) NULL       — inviter's suggested language
+ *   user_settings.language               varchar(16) NULL         — chosen interface language
+ *   user_settings.languageOfferAnswered  boolean NOT NULL DEFAULT false — one-way latch
+ *   invitation.suggestedLanguage         varchar(16) NULL         — inviter's suggested language
+ *   platform_invitation.suggestedLanguage varchar(16) NULL        — inviter's suggested language
  */
 export class AddUserLanguagePreference1785000000000
   implements MigrationInterface

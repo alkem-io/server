@@ -319,7 +319,7 @@ export class UserSettingsService {
       settings.designVersion = updateData.designVersion;
     }
 
-    // Language preference + one-way latch (FR-023 / R-3):
+    // Language preference + one-way latch:
     // (a) Any non-null language write latches languageOfferAnswered = true
     //     (invariant: language ≠ NULL ⇒ flag = true).
     // (b) Setting languageOfferAnswered = true without a language is the
@@ -329,7 +329,7 @@ export class UserSettingsService {
     // (d) An explicit null for either field behaves like an omitted field
     //     (no-op), matching the designVersion pattern above.
     if (updateData.language != null) {
-      // Enforce UserSettings.language ∈ SUPPORTED_INTERFACE_LANGUAGES (FR-008 / 3656016008).
+      // Enforce UserSettings.language ∈ SUPPORTED_INTERFACE_LANGUAGES.
       // DTO @IsIn catches API requests but internal callers (registration seeding,
       // reconciliation) bypass DTO validation — this service-level guard is the
       // last line of defence.
@@ -350,7 +350,7 @@ export class UserSettingsService {
     if (updateData.languageOfferAnswered != null) {
       if (updateData.languageOfferAnswered === false) {
         throw new ValidationException(
-          'languageOfferAnswered cannot be set back to false — it is a one-way latch (FR-005a / R-3)',
+          'languageOfferAnswered cannot be set back to false — it is a one-way latch',
           LogContext.COMMUNITY
         );
       }

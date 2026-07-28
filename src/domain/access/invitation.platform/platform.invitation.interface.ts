@@ -58,7 +58,7 @@ export class IPlatformInvitation extends IAuthorizable {
   @Field(() => String, {
     nullable: true,
     description:
-      'Optional language the inviter expects the invitee to prefer (FR-014b — recorded per invitation; DL-1 ruling: present on both Invitation and PlatformInvitation).',
+      'Optional language the inviter expects the invitee to prefer; recorded per invitation.',
   })
   suggestedLanguage?: string;
 }

@@ -1,12 +1,12 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 
 /**
- * Language configuration surfaced to the client via the platform Config query.
- * Contract C2 (anonymous-readable — the platform query carries no auth guard).
+ * Language configuration surfaced to the client via the platform Config query
+ * (anonymous-readable — the platform query carries no auth guard).
  *
  * eligible: the subset of supported languages the platform proactively detects,
  *           offers, and accepts as an invitation suggestion. An empty list disables
- *           all proactive offers (kill switch — DL-2 / R-8).
+ *           all proactive offers.
  * default:  the platform-wide fallback language shown when no preference is known.
  *
  * Source: alkemio.yml → language: { eligible, default }
