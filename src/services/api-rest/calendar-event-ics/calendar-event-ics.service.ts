@@ -54,7 +54,12 @@ export class CalendarEventIcsService {
       calculateCalendarEventEndDate(event).toISOString(),
       'endDate'
     );
-    validateCalendarDateRange(startDateIso, endDateIso, eventId);
+    validateCalendarDateRange(
+      startDateIso,
+      endDateIso,
+      eventId,
+      event.wholeDay
+    );
 
     const profile = await this.calendarEventService.getProfileOrFail(event);
     const description = profile.description ?? undefined;

@@ -76,6 +76,8 @@ export const CREDENTIAL_RULE_TYPES_PLATFORM_MGMT =
   'credentialRuleTypes-platformPlatformMgmt';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET =
   'credentialRuleTypes-platformPlatformAuthReset';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_OPERATIONS_ADMIN =
+  'credentialRuleTypes-platformPlatformOperationsAdmin';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_READ_REGISTERED =
   'credentialRuleTypes-platformReadRegistered';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_CREATE_ORG_FILE_UPLOAD =
@@ -104,6 +106,12 @@ export const CREDENTIAL_RULE_TYPES_INNOVATION_HUBS =
   'credentialRuleTypes-platformInnovationHubs';
 export const CREDENTIAL_RULE_AI_SERVER_GLOBAL_ADMINS =
   'credentialRuleTypes-aiServerGlobalAdmins';
+export const CREDENTIAL_RULE_AI_SERVER_AUTH_RESET =
+  'credentialRuleTypes-aiServerAuthReset';
+export const CREDENTIAL_RULE_AI_SERVER_PERSONA_CREATE =
+  'credentialRuleTypes-aiServerPersonaCreate';
+export const CREDENTIAL_RULE_TYPES_ACCOUNT_AUTH_RESET =
+  'credentialRuleTypes-accountAuthReset';
 export const CREDENTIAL_RULE_TYPES_ACCOUNT_LICENSE_MANAGE =
   'credentialRuleTypes-accountLicenseManage';
 export const CREDENTIAL_RULE_TYPES_FORUM_READ = 'credentialRuleTypes-forumRead';

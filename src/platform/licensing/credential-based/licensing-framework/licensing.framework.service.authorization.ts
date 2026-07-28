@@ -1,4 +1,7 @@
-import { CREDENTIAL_RULE_LICENSE_MANAGER } from '@common/constants/authorization/credential.rule.constants';
+import {
+  CREDENTIAL_RULE_LICENSE_MANAGER,
+  CREDENTIAL_RULE_LICENSE_RESET,
+} from '@common/constants/authorization/credential.rule.constants';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
@@ -107,6 +110,24 @@ export class LicensingFrameworkAuthorizationService {
       );
     licensings.cascade = true;
     newRules.push(licensings);
+
+    // Bulk license reset (resetLicenseOnAccounts): the verified pre-feature
+    // GRANT holders on this policy {GA (root cascading GRANT), GLM, GPM} plus
+    // the Platform Operations Admin. GS never held GRANT here and gains
+    // nothing.
+    const licenseReset =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.LICENSE_RESET],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+          AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+          AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
+        ],
+        CREDENTIAL_RULE_LICENSE_RESET
+      );
+    licenseReset.cascade = false;
+    newRules.push(licenseReset);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,

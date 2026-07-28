@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { DiffContext, indexSDL, sha256 } from '../diff/diff-core';
 import { diffEnums } from '../diff/diff-enum';
+import { diffInputs } from '../diff/diff-inputs';
 import { diffScalars } from '../diff/diff-scalar';
 import { diffTypes } from '../diff/diff-types';
 import { ChangeReport, ChangeType, ElementType } from '../model';
@@ -15,6 +16,7 @@ export function buildChangeReport(
   diffTypes(oldIdx, newIdx, ctx);
   diffEnums(oldIdx, newIdx, ctx);
   diffScalars(oldIdx, newIdx, ctx);
+  diffInputs(oldIdx, newIdx, ctx);
 
   const report: ChangeReport = {
     snapshotId: sha256(newSDL),

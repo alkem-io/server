@@ -11,12 +11,14 @@ import { Module } from '@nestjs/common';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { AuthResetModule } from '@services/auth-reset/publisher/auth-reset.module';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
+import { PlatformOperationsAuditModule } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.module';
 import { AdminAuthorizationResolverMutations } from './admin.authorization.resolver.mutations';
 import { AdminAuthorizationResolverQueries } from './admin.authorization.resolver.queries';
 import { AdminAuthorizationService } from './admin.authorization.service';
 
 @Module({
   imports: [
+    PlatformOperationsAuditModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
     ActorLookupModule,

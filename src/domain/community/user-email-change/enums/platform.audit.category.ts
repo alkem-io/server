@@ -9,4 +9,8 @@
 export enum PlatformAuditCategory {
   EMAIL_CHANGE = 'email_change',
   PASSWORD_CHANGE = 'password_change',
+  // Operational & maintenance mutation family (workspace#032): one row per
+  // execution of a gated platform-operations mutation, regardless of which
+  // role authorized it.
+  PLATFORM_OPERATIONS = 'platform_operations',
 }

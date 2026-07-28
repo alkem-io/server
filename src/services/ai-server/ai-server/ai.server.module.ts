@@ -7,6 +7,7 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { RoomIntegrationModule } from '@services/room-integration/room.integration.module';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
+import { PlatformOperationsAuditModule } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.module';
 import { AiPersonaModule } from '../ai-persona/ai.persona.module';
 import { AiPersonaEngineAdapterModule } from '../ai-persona-engine-adapter/ai.persona.engine.adapter.module';
 import { AiServer } from './ai.server.entity';
@@ -18,6 +19,7 @@ import { AiServerAuthorizationService } from './ai.server.service.authorization'
 
 @Module({
   imports: [
+    PlatformOperationsAuditModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
     AiPersonaModule,

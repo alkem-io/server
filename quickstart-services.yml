@@ -529,7 +529,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service:v0.2.2
+    image: alkemio/file-service:v0.2.3
     depends_on:
       postgres:
         condition: service_healthy
@@ -564,7 +564,7 @@ services:
   # below waits for this to complete (service_completed_successfully).
   file-backup-migrate:
     container_name: alkemio_dev_file_backup_migrate
-    image: alkemio/file-backup-service:v0.0.4
+    image: alkemio/file-backup-service:v0.0.5
     depends_on:
       postgres:
         condition: service_healthy
@@ -587,7 +587,7 @@ services:
   file-backup-service:
     container_name: alkemio_dev_file_backup_service
     hostname: file-backup-service
-    image: alkemio/file-backup-service:v0.0.4
+    image: alkemio/file-backup-service:v0.0.5
     depends_on:
       postgres:
         condition: service_healthy

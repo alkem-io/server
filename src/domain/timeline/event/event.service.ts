@@ -196,12 +196,11 @@ export class CalendarEventService {
         calendarEventData.profileData
       );
     }
-    if (calendarEventData.durationDays) {
-      calendarEvent.durationDays = calendarEventData.durationDays;
-    }
-    if (calendarEventData.durationMinutes) {
-      calendarEvent.durationMinutes = calendarEventData.durationMinutes;
-    }
+    // Assign unconditionally (like wholeDay/multipleDays/startDate below): a truthy
+    // guard would drop a legitimate 0 — e.g. a single-day whole-day event has
+    // durationMinutes 0, and shrinking a multi-day event to one day must persist.
+    calendarEvent.durationDays = calendarEventData.durationDays;
+    calendarEvent.durationMinutes = calendarEventData.durationMinutes;
     calendarEvent.wholeDay = calendarEventData.wholeDay;
     calendarEvent.multipleDays = calendarEventData.multipleDays;
     calendarEvent.startDate = calendarEventData.startDate;

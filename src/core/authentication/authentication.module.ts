@@ -4,7 +4,6 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
 import { AuthenticationService } from './authentication.service';
 
 // FR-025 — OryStrategy + OryApiStrategy retired. Auth strategies for both
@@ -13,7 +12,6 @@ import { AuthenticationService } from './authentication.service';
   imports: [
     PassportModule.register({ session: false }),
     ActorContextModule,
-    KratosModule,
     CacheModule.register(),
     JwtModule.registerAsync({
       imports: [ConfigModule],

@@ -78,6 +78,27 @@ export interface PasswordChangeAuditDetails {
 }
 
 /**
+ * Platform-operations category payload shape (workspace#032). One row per
+ * execution of a gated operational/maintenance mutation; `action` carries the
+ * GraphQL mutation name.
+ */
+export interface PlatformOperationsAuditDetails {
+  action?: string;
+  /**
+   * Allowlisted identifying fields of the operation — target IDs and safe
+   * scalars (e.g. `roomID`, `communityID`, result counts). Never a raw dump
+   * of the mutation input: each resolver names the keys it writes, so
+   * sensitive payload fields (prompts, configs, emails) cannot leak in.
+   */
+  target?: Record<string, unknown>;
+  /**
+   * Failure rows only: `<ErrorName>: <message>`, truncated — enough to
+   * attribute the failure without mirroring internals into the audit row.
+   */
+  error?: string;
+}
+
+/**
  * Cross-category shape of `platform_audit_entry.details`. Every field is
  * optional — the per-category audit-service (`UserEmailChangeAuditService`,
  * `UserPasswordChangeAuditService`, ...) enforces which keys it writes for
@@ -86,7 +107,8 @@ export interface PasswordChangeAuditDetails {
  * carry a discriminator.
  */
 export type PlatformAuditDetails = EmailChangeAuditDetails &
-  PasswordChangeAuditDetails;
+  PasswordChangeAuditDetails &
+  PlatformOperationsAuditDetails;
 
 /**
  * Row shape of `platform_audit_entry`. Append-only; retained indefinitely

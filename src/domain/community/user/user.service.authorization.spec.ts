@@ -1,4 +1,4 @@
-import { AuthorizationCredential } from '@common/enums';
+import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { ActorService } from '@domain/actor/actor/actor.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
@@ -269,6 +269,135 @@ describe('UserAuthorizationService', () => {
           resourceID: 'account-1',
         })
       );
+    });
+  });
+
+  // workspace#032: privilege hardening for the Platform Operations Admin role.
+  describe('PLATFORM_OPERATIONS_ADMIN credential hardening', () => {
+    const arrange = () => {
+      const authorization = { credentialRules: [] };
+      const user = {
+        id: 'user-1',
+        authorization,
+        profile: { id: 'profile-1', authorization: {} },
+        storageAggregator: {
+          authorization: {},
+          directStorage: { authorization: {} },
+        },
+        settings: { authorization: {} },
+      };
+      userLookupService.getUserByIdOrFail.mockResolvedValue(user);
+      authorizationPolicyService.reset.mockReturnValue(authorization);
+      platformAuthorizationService.inheritRootAuthorizationPolicy.mockReturnValue(
+        authorization
+      );
+      authorizationPolicyService.createCredentialRuleUsingTypesOnly.mockImplementation(
+        (privileges, types, name) => ({
+          grantedPrivileges: privileges,
+          criterias: types,
+          name,
+          cascade: true,
+        })
+      );
+      authorizationPolicyService.createCredentialRule.mockImplementation(
+        (privileges, criterias, name) => ({
+          grantedPrivileges: privileges,
+          criterias,
+          name,
+          cascade: true,
+        })
+      );
+      authorizationPolicyService.appendCredentialAuthorizationRules.mockReturnValue(
+        authorization
+      );
+      authorizationPolicyService.appendPrivilegeAuthorizationRules.mockReturnValue(
+        authorization
+      );
+      authorizationPolicyService.cloneAuthorizationPolicy.mockReturnValue(
+        authorization
+      );
+      authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess.mockReturnValue(
+        authorization
+      );
+      actorLookupService.getActorCredentialsOrFail.mockResolvedValue([]);
+      profileAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([
+        authorization,
+      ]);
+      userSettingsAuthorizationService.applyAuthorizationPolicy.mockReturnValue(
+        authorization
+      );
+      storageAggregatorAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        [authorization]
+      );
+    };
+
+    const privilegesGrantedToRole = () => {
+      const granted = new Set<AuthorizationPrivilege>();
+      for (const [privileges, credentialTypes] of authorizationPolicyService
+        .createCredentialRuleUsingTypesOnly.mock.calls) {
+        if (
+          credentialTypes.includes(
+            AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN
+          )
+        ) {
+          for (const p of privileges) {
+            granted.add(p);
+          }
+        }
+      }
+      for (const [privileges, criterias] of authorizationPolicyService
+        .createCredentialRule.mock.calls) {
+        if (
+          criterias.some(
+            (c: { type: AuthorizationCredential }) =>
+              c.type === AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN
+          )
+        ) {
+          for (const p of privileges) {
+            granted.add(p);
+          }
+        }
+      }
+      return granted;
+    };
+
+    it('grants the role exactly AUTHORIZATION_RESET on user policies, on a non-cascading rule', async () => {
+      arrange();
+
+      await service.applyAuthorizationPolicy('user-1');
+
+      expect(privilegesGrantedToRole()).toEqual(
+        new Set([AuthorizationPrivilege.AUTHORIZATION_RESET])
+      );
+
+      const roleRules =
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly.mock.results
+          .map(r => r.value)
+          .filter(rule =>
+            rule.criterias?.includes?.(
+              AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN
+            )
+          );
+      for (const rule of roleRules) {
+        expect(rule.cascade).toBe(false);
+      }
+    });
+
+    it('never grants the role identity/PII or admin privileges on user policies', async () => {
+      arrange();
+
+      await service.applyAuthorizationPolicy('user-1');
+
+      const granted = privilegesGrantedToRole();
+      for (const excluded of [
+        AuthorizationPrivilege.GRANT,
+        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.READ_USER_PII,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+      ]) {
+        expect(granted).not.toContain(excluded);
+      }
     });
   });
 });

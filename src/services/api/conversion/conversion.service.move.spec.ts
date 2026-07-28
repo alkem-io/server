@@ -662,4 +662,315 @@ describe('ConversionService — Cross-L0 Moves', () => {
       );
     });
   });
+
+  // ── moveSpaceL2ToSpaceL1OrFail ──────────────────────────────────
+
+  describe('moveSpaceL2ToSpaceL1OrFail', () => {
+    const makeSourceL2 = (overrides: Record<string, unknown> = {}) => ({
+      id: 'source-l2',
+      level: SpaceLevel.L2,
+      levelZeroSpaceID: 'source-l0',
+      nameID: 'source-l2-space',
+      sortOrder: 3,
+      parentSpace: { id: 'source-l1' },
+      community: { roleSet: { id: 'roleset-l2' } },
+      storageAggregator: { id: 'sa-l2', parentStorageAggregator: null },
+      subspaces: [],
+      ...overrides,
+    });
+
+    const makeTargetL2L1 = (overrides: Record<string, unknown> = {}) => ({
+      id: 'target-l1',
+      level: SpaceLevel.L1,
+      levelZeroSpaceID: 'target-l0',
+      community: { roleSet: { id: 'roleset-target-l1' } },
+      storageAggregator: { id: 'sa-target-l1' },
+      subspaces: [],
+      ...overrides,
+    });
+
+    const makeTargetL2L0 = (overrides: Record<string, unknown> = {}) => ({
+      id: 'target-l0',
+      level: SpaceLevel.L0,
+      levelZeroSpaceID: 'target-l0',
+      community: { roleSet: { id: 'roleset-target-l0' } },
+      storageAggregator: { id: 'sa-target-l0' },
+      account: { id: 'account-target', accountType: 'BASIC' },
+      ...overrides,
+    });
+
+    const setupL2HappyPathMocks = () => {
+      vi.mocked(roleSetService.getUsersWithRole).mockResolvedValue([]);
+      vi.mocked(roleSetService.getOrganizationsWithRole).mockResolvedValue([]);
+      vi.mocked(
+        roleSetService.getVirtualContributorsWithRole
+      ).mockResolvedValue([]);
+      vi.mocked(
+        namingService.getReservedNameIDsInLevelZeroSpace
+      ).mockResolvedValue([]);
+      vi.mocked(entityManager.find).mockResolvedValue([
+        { id: 'source-l2', nameID: 'source-l2-space' },
+      ]);
+      // transaction: invoke callback with a mocked mgr
+      const mgrQb = {
+        update: vi.fn().mockReturnThis(),
+        set: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        execute: vi.fn().mockResolvedValue(undefined),
+      };
+      const mgr = {
+        save: vi.fn().mockImplementation(async (s: unknown) => s),
+        createQueryBuilder: vi.fn().mockReturnValue(mgrQb),
+        find: vi.fn().mockResolvedValue([]),
+      };
+      vi.mocked(entityManager.transaction).mockImplementation(
+        async (callback: (mgr: unknown) => Promise<unknown>) => callback(mgr)
+      );
+      vi.mocked(spaceLookupService.getAllDescendantSpaceIDs).mockResolvedValue(
+        []
+      );
+      vi.mocked(
+        roleSetService.setParentRoleSetAndCredentials
+      ).mockResolvedValue({ id: 'roleset-l2' });
+      vi.mocked(calloutsSetService.getTagsetTemplatesSet).mockResolvedValue({
+        tagsetTemplates: [],
+      });
+      vi.mocked(spaceService.save).mockImplementation(async (s: unknown) => s);
+      return { mgrQb, mgr };
+    };
+
+    // S1
+    it('should reject when source is not L2', async () => {
+      vi.mocked(spaceService.getSpaceOrFail)
+        .mockResolvedValueOnce(makeSourceL2({ level: SpaceLevel.L1 }))
+        .mockResolvedValueOnce(makeTargetL2L1())
+        .mockResolvedValueOnce(makeTargetL2L0());
+
+      await expect(
+        service.moveSpaceL2ToSpaceL1OrFail({
+          spaceL2ID: 'source-l2',
+          targetSpaceL1ID: 'target-l1',
+        })
+      ).rejects.toThrow(ValidationException);
+    });
+
+    // Also S1 — reject L0 source
+    it('should reject when source is L0', async () => {
+      vi.mocked(spaceService.getSpaceOrFail)
+        .mockResolvedValueOnce(makeSourceL2({ level: SpaceLevel.L0 }))
+        .mockResolvedValueOnce(makeTargetL2L1())
+        .mockResolvedValueOnce(makeTargetL2L0());
+
+      await expect(
+        service.moveSpaceL2ToSpaceL1OrFail({
+          spaceL2ID: 'source-l2',
+          targetSpaceL1ID: 'target-l1',
+        })
+      ).rejects.toThrow(ValidationException);
+    });
+
+    // S2
+    it('should reject when target is not L1', async () => {
+      vi.mocked(spaceService.getSpaceOrFail)
+        .mockResolvedValueOnce(makeSourceL2())
+        .mockResolvedValueOnce(makeTargetL2L1({ level: SpaceLevel.L0 }))
+        .mockResolvedValueOnce(makeTargetL2L0());
+
+      await expect(
+        service.moveSpaceL2ToSpaceL1OrFail({
+          spaceL2ID: 'source-l2',
+          targetSpaceL1ID: 'target-l1',
+        })
+      ).rejects.toThrow(ValidationException);
+    });
+
+    // S3 — same-L0 guard (R-4 dissent-afterlife test)
+    it('should reject same-L0 target with the deferred-capability message and zero writes (S3/R-4)', async () => {
+      vi.mocked(spaceService.getSpaceOrFail)
+        .mockResolvedValueOnce(makeSourceL2({ levelZeroSpaceID: 'same-l0' }))
+        .mockResolvedValueOnce(makeTargetL2L1({ levelZeroSpaceID: 'same-l0' }))
+        .mockResolvedValueOnce(makeTargetL2L0({ id: 'same-l0' }));
+
+      await expect(
+        service.moveSpaceL2ToSpaceL1OrFail({
+          spaceL2ID: 'source-l2',
+          targetSpaceL1ID: 'target-l1',
+        })
+      ).rejects.toThrow('deferred capability');
+
+      expect(spaceService.save).not.toHaveBeenCalled();
+    });
+
+    // S4/INV-1..3 — happy path structural update
+    it('should keep level at L2 and re-point parent + levelZeroSpaceID (S4/INV-1..3)', async () => {
+      const sourceL2 = makeSourceL2();
+      const targetL1 = makeTargetL2L1();
+      vi.mocked(spaceService.getSpaceOrFail)
+        .mockResolvedValueOnce(sourceL2)
+        .mockResolvedValueOnce(targetL1)
+        .mockResolvedValueOnce(makeTargetL2L0());
+      setupL2HappyPathMocks();
+
+      const result = await service.moveSpaceL2ToSpaceL1OrFail({
+        spaceL2ID: 'source-l2',
+        targetSpaceL1ID: 'target-l1',
+      });
+
+      // Level MUST stay L2
+      expect(result.space.level).toBe(SpaceLevel.L2);
+      expect(result.space.parentSpace).toBe(targetL1);
+      expect(result.space.levelZeroSpaceID).toBe('target-l0');
+    });
+
+    // S5/INV-7 — wipe all roles including admins + pending invites dropped
+    it('should clear ALL community roles including admins + pending invites dropped (S5/INV-7)', async () => {
+      vi.mocked(spaceService.getSpaceOrFail)
+        .mockResolvedValueOnce(makeSourceL2())
+        .mockResolvedValueOnce(makeTargetL2L1())
+        .mockResolvedValueOnce(makeTargetL2L0());
+      setupL2HappyPathMocks();
+
+      vi.mocked(roleSetService.getUsersWithRole)
+        .mockResolvedValueOnce([{ id: 'user-member' }]) // MEMBER
+        .mockResolvedValueOnce([{ id: 'user-lead' }]) // LEAD
+        .mockResolvedValueOnce([{ id: 'user-admin' }]); // ADMIN
+
+      await service.moveSpaceL2ToSpaceL1OrFail({
+        spaceL2ID: 'source-l2',
+        targetSpaceL1ID: 'target-l1',
+      });
+
+      // Admin must be explicitly removed
+      expect(roleSetService.removeActorFromRole).toHaveBeenCalledWith(
+        expect.anything(),
+        'admin',
+        'user-admin',
+        false
+      );
+      // Pending invites must be dropped
+      expect(
+        roleSetService.removePendingInvitationsAndApplications
+      ).toHaveBeenCalledWith('roleset-l2');
+    });
+
+    // S5 — empty community → empty removedActorIds + success
+    it('empty community → empty removedActorIds + success (S5)', async () => {
+      vi.mocked(spaceService.getSpaceOrFail)
+        .mockResolvedValueOnce(makeSourceL2())
+        .mockResolvedValueOnce(makeTargetL2L1())
+        .mockResolvedValueOnce(makeTargetL2L0());
+      setupL2HappyPathMocks();
+
+      const result = await service.moveSpaceL2ToSpaceL1OrFail({
+        spaceL2ID: 'source-l2',
+        targetSpaceL1ID: 'target-l1',
+      });
+
+      expect(result.removedActorIds).toEqual([]);
+    });
+
+    // S11 — sortOrder insert-first + sibling shift via tx manager
+    it('should set sortOrder to 0 and shift siblings via tx manager (S11)', async () => {
+      vi.mocked(spaceService.getSpaceOrFail)
+        .mockResolvedValueOnce(makeSourceL2())
+        .mockResolvedValueOnce(makeTargetL2L1())
+        .mockResolvedValueOnce(makeTargetL2L0());
+      const { mgrQb } = setupL2HappyPathMocks();
+
+      const result = await service.moveSpaceL2ToSpaceL1OrFail({
+        spaceL2ID: 'source-l2',
+        targetSpaceL1ID: 'target-l1',
+      });
+
+      expect(result.space.sortOrder).toBe(0);
+      // Shift must go through the tx manager's query builder
+      expect(mgrQb.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sortOrder: expect.any(Function),
+        })
+      );
+    });
+
+    // S12 — nameID validation invoked pre-write
+    it('should reject nameID collision in target L0 scope (S12)', async () => {
+      vi.mocked(spaceService.getSpaceOrFail)
+        .mockResolvedValueOnce(makeSourceL2())
+        .mockResolvedValueOnce(makeTargetL2L1())
+        .mockResolvedValueOnce(makeTargetL2L0());
+      vi.mocked(
+        namingService.getReservedNameIDsInLevelZeroSpace
+      ).mockResolvedValue(['source-l2-space']);
+      vi.mocked(entityManager.find).mockResolvedValue([
+        { id: 'source-l2', nameID: 'source-l2-space' },
+      ]);
+
+      await expect(
+        service.moveSpaceL2ToSpaceL1OrFail({
+          spaceL2ID: 'source-l2',
+          targetSpaceL1ID: 'target-l1',
+        })
+      ).rejects.toThrow(ValidationException);
+    });
+
+    // S13/INV-4 — leaf assert
+    it('should reject when source L2 has children (leaf assert, S13/INV-4)', async () => {
+      vi.mocked(spaceService.getSpaceOrFail)
+        .mockResolvedValueOnce(
+          makeSourceL2({ subspaces: [{ id: 'unexpected-child' }] })
+        )
+        .mockResolvedValueOnce(makeTargetL2L1())
+        .mockResolvedValueOnce(makeTargetL2L0());
+
+      await expect(
+        service.moveSpaceL2ToSpaceL1OrFail({
+          spaceL2ID: 'source-l2',
+          targetSpaceL1ID: 'target-l1',
+        })
+      ).rejects.toThrow(ValidationException);
+    });
+
+    // storageAggregator + roleSet parent update
+    it('should update storageAggregator parent to target L1 and set roleSet parent', async () => {
+      const sourceL2 = makeSourceL2();
+      const targetL1 = makeTargetL2L1();
+      vi.mocked(spaceService.getSpaceOrFail)
+        .mockResolvedValueOnce(sourceL2)
+        .mockResolvedValueOnce(targetL1)
+        .mockResolvedValueOnce(makeTargetL2L0());
+      setupL2HappyPathMocks();
+
+      const result = await service.moveSpaceL2ToSpaceL1OrFail({
+        spaceL2ID: 'source-l2',
+        targetSpaceL1ID: 'target-l1',
+      });
+
+      expect(result.space.storageAggregator?.parentStorageAggregator).toBe(
+        targetL1.storageAggregator
+      );
+      expect(
+        roleSetService.setParentRoleSetAndCredentials
+      ).toHaveBeenCalledWith(
+        sourceL2.community.roleSet,
+        targetL1.community.roleSet
+      );
+    });
+
+    // Activity entry cleanup
+    it('should drop the stale SUBSPACE_CREATED activity entry', async () => {
+      vi.mocked(spaceService.getSpaceOrFail)
+        .mockResolvedValueOnce(makeSourceL2())
+        .mockResolvedValueOnce(makeTargetL2L1())
+        .mockResolvedValueOnce(makeTargetL2L0());
+      setupL2HappyPathMocks();
+
+      await service.moveSpaceL2ToSpaceL1OrFail({
+        spaceL2ID: 'source-l2',
+        targetSpaceL1ID: 'target-l1',
+      });
+
+      expect(
+        activityService.removeSubspaceCreatedActivityForResource
+      ).toHaveBeenCalledWith('source-l2');
+    });
+  });
 });

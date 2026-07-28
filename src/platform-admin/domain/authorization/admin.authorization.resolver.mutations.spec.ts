@@ -170,7 +170,7 @@ describe('AdminAuthorizationResolverMutations', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         platformPolicy,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.AUTHORIZATION_RESET,
         expect.any(String)
       );
       expect(authResetService.publishResetAll).toHaveBeenCalled();
@@ -246,7 +246,7 @@ describe('AdminAuthorizationResolverMutations', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         platformPolicy,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
         expect.any(String)
       );
       expect(

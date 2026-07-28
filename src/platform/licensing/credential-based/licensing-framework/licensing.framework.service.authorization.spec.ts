@@ -1,4 +1,7 @@
-import { CREDENTIAL_RULE_LICENSE_MANAGER } from '@common/constants/authorization/credential.rule.constants';
+import {
+  CREDENTIAL_RULE_LICENSE_MANAGER,
+  CREDENTIAL_RULE_LICENSE_RESET,
+} from '@common/constants/authorization/credential.rule.constants';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -37,7 +40,7 @@ describe('LicensingFrameworkAuthorizationService', () => {
         .mockReturnValue(mockAuthorization),
       createCredentialRuleUsingTypesOnly: vi
         .fn()
-        .mockReturnValue(credentialRule),
+        .mockImplementation(() => ({ ...credentialRule })),
       appendCredentialAuthorizationRules: vi
         .fn()
         .mockReturnValue(mockAuthorization),
@@ -91,12 +94,56 @@ describe('LicensingFrameworkAuthorizationService', () => {
       CREDENTIAL_RULE_LICENSE_MANAGER
     );
 
+    expect(
+      authorizationPolicyService.createCredentialRuleUsingTypesOnly
+    ).toHaveBeenCalledWith(
+      [AuthorizationPrivilege.LICENSE_RESET],
+      [
+        AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+        AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+        AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
+      ],
+      CREDENTIAL_RULE_LICENSE_RESET
+    );
+
     const createdRule = authorizationPolicyService
       .createCredentialRuleUsingTypesOnly.mock.results[0]
       .value as IAuthorizationPolicyRuleCredential;
     expect(createdRule.cascade).toBe(true);
+    const licenseResetRule = authorizationPolicyService
+      .createCredentialRuleUsingTypesOnly.mock.results[1]
+      .value as IAuthorizationPolicyRuleCredential;
+    expect(licenseResetRule.cascade).toBe(false);
     expect(
       licensePolicyAuthorizationService.applyAuthorizationPolicy
     ).toHaveBeenCalledWith(licensing.licensePolicy, authorization);
+  });
+
+  // workspace#032: privilege hardening for the Platform Operations Admin role.
+  it('grants PLATFORM_OPERATIONS_ADMIN exactly LICENSE_RESET on the licensing policy — never the license-manager CRUD/GRANT bundle', async () => {
+    const licensing = {
+      id: 'licensing-id',
+      authorization: { id: 'authorization' },
+      licensePolicy: {},
+    } as unknown as ILicensingFramework;
+
+    await service.applyAuthorizationPolicy(licensing, undefined);
+
+    const granted = new Set<AuthorizationPrivilege>();
+    for (const [privileges, credentialTypes] of authorizationPolicyService
+      .createCredentialRuleUsingTypesOnly.mock.calls) {
+      if (
+        credentialTypes.includes(
+          AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN
+        )
+      ) {
+        for (const p of privileges) {
+          granted.add(p);
+        }
+      }
+    }
+
+    expect(granted).toEqual(new Set([AuthorizationPrivilege.LICENSE_RESET]));
   });
 });
