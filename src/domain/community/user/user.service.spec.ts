@@ -27,6 +27,7 @@ import { QueryFailedError } from 'typeorm';
 import { type Mock, vi } from 'vitest';
 import { UserLookupService } from '../user-lookup/user.lookup.service';
 import { UserSettingsService } from '../user-settings/user.settings.service';
+import { UpdateUserInput } from './dto/user.dto.update';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
 import { UserService } from './user.service';
@@ -354,6 +355,34 @@ describe('UserService', () => {
           newServiceProfile: true,
         })
       );
+    });
+
+    // 027-platform-role-redesign (T052, A21, T070i): `serviceProfile` MUST
+    // remain a real, typed field on UpdateUserInput — removing it would be
+    // a breaking input-field removal, forbidden in the additive slice
+    // (T059's zero-breaking-changes invariant). Unlike the tests above,
+    // this one constructs a genuine UpdateUserInput (no `as any` escape
+    // hatch), so deleting the field from the DTO fails `tsc` here, not just
+    // at the resolver call site.
+    it('keeps serviceProfile as a real field on UpdateUserInput, authorized end to end', async () => {
+      const existingUser = {
+        id: 'user-1',
+        nameID: 'existing-name',
+        serviceProfile: false,
+        profile: { id: 'profile-1' },
+      } as unknown as IUser;
+      userLookupService.getUserById.mockResolvedValue(existingUser);
+      repository.save.mockResolvedValue(existingUser);
+      actorContextCacheService.deleteByActorID.mockResolvedValue(undefined);
+
+      const input: UpdateUserInput = {
+        ID: 'user-1',
+        serviceProfile: true,
+      };
+
+      await service.updateUser(input, mockActorContext);
+
+      expect(existingUser.serviceProfile).toBe(true);
     });
 
     it('should update profile when profileData provided', async () => {
