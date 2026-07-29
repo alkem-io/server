@@ -1,4 +1,5 @@
 import { RoleChangeType } from '@alkemio/notifications-lib';
+import { LogContext } from '@common/enums';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
@@ -18,6 +19,7 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { AccountService } from '@domain/space/account/account.service';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { PlatformService } from '@platform/platform/platform.service';
 import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.global.role.change';
@@ -26,6 +28,7 @@ import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
 import { resolveInitiatorRole } from '@src/platform-admin/platform-audit-attribution/resolve.initiator.role';
 import { PlatformRoleAssignmentAuditService } from '@src/platform-admin/platform-role-assignment-audit/platform.role.assignment.audit.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AssignPlatformRoleInput } from './dto/platform.role.dto.assign';
 import { RemovePlatformRoleInput } from './dto/platform.role.dto.remove';
 import {
@@ -84,7 +87,8 @@ export class PlatformRoleResolverMutations {
     private roleSetAuthorizationService: RoleSetAuthorizationService,
     private platformService: PlatformService,
     private assignmentRulesService: PlatformRoleAssignmentRulesService,
-    private roleAssignmentAuditService: PlatformRoleAssignmentAuditService
+    private roleAssignmentAuditService: PlatformRoleAssignmentAuditService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   @Mutation(() => IUser, {
@@ -493,6 +497,26 @@ export class PlatformRoleResolverMutations {
     await this.licenseService.saveAll(licenses);
   }
 
+  /**
+   * NOTE: both call sites invoke this WITHOUT awaiting (pre-existing, `bd8b9d839d`
+   * / `bd8314b35`, also on develop) — the notification is deliberately
+   * fire-and-forget so a notification outage cannot fail a role change.
+   *
+   * But a floating promise that REJECTS is an unhandled rejection, and Node's
+   * default `--unhandled-rejections=throw` turns that into a HARD PROCESS EXIT.
+   * Observed live twice during 027 verification: revoking a platform role from a
+   * user whose `profile` relation resolves null crashes the whole server with
+   * `TypeError: Cannot read properties of null (reading 'displayName')` in
+   * `NotificationExternalAdapter.getUserPayloadOrFail`.
+   *
+   * 027 did not introduce the bug but makes it routine: this feature's entire
+   * subject is platform role grant/revoke, so the path is now hot (fixture
+   * teardown revoking 13 roles across many users reproduces it every run).
+   * Containing the rejection here restores the intended fire-and-forget
+   * semantics — the failure is logged, the mutation still succeeds, the process
+   * survives. The null-profile cause itself is a separate defect in the
+   * notification adapter and is reported, not silently absorbed.
+   */
   private async notifyPlatformGlobalRoleChange(
     triggeredBy: string,
     user: IUser,
@@ -505,8 +529,16 @@ export class PlatformRoleResolverMutations {
       type: type,
       role: role,
     };
-    await this.notificationPlatformAdapter.platformGlobalRoleChanged(
-      notificationInput
-    );
+    try {
+      await this.notificationPlatformAdapter.platformGlobalRoleChanged(
+        notificationInput
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `Unable to dispatch platform global role change notification (user=${user.id}, role=${role}, type=${type}): ${error?.message}`,
+        error?.stack,
+        LogContext.NOTIFICATIONS
+      );
+    }
   }
 }
