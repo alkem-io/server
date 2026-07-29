@@ -884,6 +884,7 @@ enum AuthorizationCredential {
   ORGANIZATION_ADMIN
   ORGANIZATION_ASSOCIATE
   ORGANIZATION_OWNER
+  PLATFORM_OPERATIONS_ADMIN
   SPACE_ADMIN
   SPACE_LEAD
   SPACE_MEMBER
@@ -1004,6 +1005,7 @@ enum AuthorizationPrivilege {
   MOVE_CONTRIBUTION
   MOVE_POST
   PLATFORM_ADMIN
+  PLATFORM_OPERATIONS_ADMIN
   PLATFORM_SETTINGS_ADMIN
   PUBLIC_SHARE
   READ
@@ -2905,6 +2907,7 @@ enum CredentialType {
   ORGANIZATION_ADMIN
   ORGANIZATION_ASSOCIATE
   ORGANIZATION_OWNER
+  PLATFORM_OPERATIONS_ADMIN
   SPACE_ADMIN
   SPACE_FEATURE_MEMO_MULTI_USER
   SPACE_FEATURE_OFFICE_DOCUMENTS
@@ -5019,7 +5022,7 @@ type Mutation {
   """Update the Application Form used by this RoleSet."""
   updateApplicationFormOnRoleSet(applicationFormData: UpdateApplicationFormOnRoleSetInput!): RoleSet!
   """
-  Set the admin per-capability grant on the virtual-assistant actor, governing what it may do system-invoked (default read-only). Requires platform-admin.
+  Set the admin per-capability grant on the virtual-assistant actor, governing what it may do system-invoked (default read-only). Requires the platform-operations-admin privilege.
   """
   updateAssistantActorCapabilities(grantData: GrantAssistantActorCapabilitiesInput!): VirtualAssistant!
   """Update the baseline License Plan on the specified Account."""
@@ -6659,6 +6662,7 @@ enum RoleName {
   OWNER
   PLATFORM_ASSISTANT_ACCESS
   PLATFORM_BETA_TESTER
+  PLATFORM_OPERATIONS_ADMIN
   PLATFORM_VC_CAMPAIGN
   REGISTERED
 }
