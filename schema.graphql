@@ -1608,6 +1608,15 @@ type ActorRoles {
   spaces: [RolesResultSpace!]!
 }
 
+type AdminWhiteboardFilesResult {
+  """Errors"""
+  errors: [String!]!
+  """Successes"""
+  results: [String!]!
+  """Warnings"""
+  warns: [String!]!
+}
+
 type AiPersona {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -4016,6 +4025,10 @@ type Mutation {
   adminUpdateContributorAvatars(profileID: UUID!): Profile!
   """Updates the GeoLocation data where required on the platform."""
   adminUpdateGeoLocationData: Boolean!
+  """
+  Uploads the files from the Whiteboard content into the StorageBucket of that Whiteboard.
+  """
+  adminUploadFilesFromContentToStorageBucket: AdminWhiteboardFilesResult!
   """
   Remove the Kratos account associated with the specified User. Note: the Users profile on the platform is not deleted.
   """
