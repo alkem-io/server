@@ -3,6 +3,7 @@ import { IPlatformFeatureFlag } from '../feature-flag/platform.feature.flag.inte
 import { IApmConfig } from './apm';
 import { IAuthenticationConfig } from './authentication';
 import { IGeoConfig } from './integrations';
+import { ILanguageConfig } from './language/language.config.interface';
 import { IPlatformLocations } from './locations';
 import { ISentryConfig } from './sentry';
 import { IStorageConfig } from './storage';
@@ -51,4 +52,11 @@ export abstract class IConfig {
     description: 'Integration with a 3rd party Geo information service',
   })
   geo?: IGeoConfig;
+
+  @Field(() => ILanguageConfig, {
+    nullable: false,
+    description:
+      'Language configuration: eligible set for proactive offers and the platform default.',
+  })
+  language?: ILanguageConfig;
 }
