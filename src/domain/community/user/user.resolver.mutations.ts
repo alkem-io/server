@@ -37,13 +37,38 @@ export class UserResolverMutations {
     @Args('userData') userData: UpdateUserInput
   ): Promise<IUser> {
     const user = await this.userService.getUserByIdOrFail(userData.ID);
-    await this.authorizationService.grantAccessOrFail(
-      actorContext,
-      user.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `userUpdate: ${user.id}`
-    );
+    // 027-platform-role-redesign (A21, FR-002/FR-003): a call that touches
+    // ONLY the serviceProfile marker is Platform Roles Admin's sole-owned
+    // surface and must not require the ordinary UPDATE privilege it does
+    // NOT hold (FR-003: no user-record CRUD). Skip the blanket UPDATE gate
+    // for that narrow call shape and defer entirely to the SET_SERVICE_PROFILE
+    // check already enforced against the PLATFORM authorization policy in
+    // UserService.updateUser (T052). Any input that ALSO touches another
+    // field still goes through the ordinary UPDATE gate below, so this
+    // cannot be used to smuggle a general user-record edit through.
+    if (!this.isServiceProfileOnlyUpdate(userData)) {
+      await this.authorizationService.grantAccessOrFail(
+        actorContext,
+        user.authorization,
+        AuthorizationPrivilege.UPDATE,
+        `userUpdate: ${user.id}`
+      );
+    }
     return await this.userService.updateUser(userData, actorContext);
+  }
+
+  // 027-platform-role-redesign (A21): true only when the sole substantive
+  // field on the input is `serviceProfile` (ID is the addressing field, not
+  // a change).
+  private isServiceProfileOnlyUpdate(userData: UpdateUserInput): boolean {
+    return (
+      userData.serviceProfile !== undefined &&
+      userData.nameID === undefined &&
+      userData.profileData === undefined &&
+      userData.firstName === undefined &&
+      userData.lastName === undefined &&
+      userData.phone === undefined
+    );
   }
 
   @Mutation(() => IUser, {

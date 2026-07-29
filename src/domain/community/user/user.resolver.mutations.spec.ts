@@ -76,6 +76,55 @@ describe('UserResolverMutations', () => {
       );
       expect(result).toBe(updatedUser);
     });
+
+    // 027-platform-role-redesign (A21 fix, FR-002/FR-003): a serviceProfile-only
+    // call is Platform Roles Admin's sole-owned surface and must reach
+    // UserService.updateUser (where SET_SERVICE_PROFILE is enforced) WITHOUT
+    // requiring the ordinary UPDATE privilege the role does not hold.
+    it('should skip the UPDATE gate for a serviceProfile-only update', async () => {
+      const mockUser = { id: 'user-1', authorization: { id: 'auth-1' } };
+      const updatedUser = { id: 'user-1', serviceProfile: true };
+
+      userService.getUserByIdOrFail.mockResolvedValue(mockUser);
+      userService.updateUser.mockResolvedValue(updatedUser);
+
+      const actorContext = { actorID: 'roles-admin-1' } as any;
+      const userData = { ID: 'user-1', serviceProfile: true };
+
+      const result = await resolver.updateUser(actorContext, userData as any);
+
+      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+      expect(userService.updateUser).toHaveBeenCalledWith(
+        userData,
+        actorContext
+      );
+      expect(result).toBe(updatedUser);
+    });
+
+    it('should still require UPDATE when serviceProfile is combined with another field', async () => {
+      const mockUser = { id: 'user-1', authorization: { id: 'auth-1' } };
+      const updatedUser = { id: 'user-1' };
+
+      userService.getUserByIdOrFail.mockResolvedValue(mockUser);
+      authorizationService.grantAccessOrFail.mockResolvedValue(undefined);
+      userService.updateUser.mockResolvedValue(updatedUser);
+
+      const actorContext = { actorID: 'user-1' } as any;
+      const userData = {
+        ID: 'user-1',
+        serviceProfile: true,
+        firstName: 'Updated',
+      };
+
+      await resolver.updateUser(actorContext, userData as any);
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        mockUser.authorization,
+        AuthorizationPrivilege.UPDATE,
+        expect.any(String)
+      );
+    });
   });
 
   describe('updateUserSettings', () => {
