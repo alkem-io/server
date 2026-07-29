@@ -377,6 +377,7 @@ export class ContributionReporterService {
     space: string;
     writeActors: TypedActorSet;
     readonlyActors: TypedActorSet;
+    alkemio: boolean;
   }): void {
     this.officeDocumentAggregate(
       CONTRIBUTION_TYPE.OFFICE_DOCUMENT_CONTRIBUTION,
@@ -399,6 +400,7 @@ export class ContributionReporterService {
     space: string;
     writeActors: TypedActorSet;
     readonlyActors: TypedActorSet;
+    alkemio: boolean;
   }): void {
     this.officeDocumentAggregate(
       CONTRIBUTION_TYPE.OFFICE_DOCUMENT_VIEW,
@@ -420,6 +422,7 @@ export class ContributionReporterService {
       space: string;
       writeActors: TypedActorSet;
       readonlyActors: TypedActorSet;
+      alkemio: boolean;
     }
   ): void {
     void this.createAggregateDocument({
@@ -429,6 +432,7 @@ export class ContributionReporterService {
       space: contribution.space,
       writeActors: contribution.writeActors,
       readonlyActors: contribution.readonlyActors,
+      alkemio: contribution.alkemio,
     });
   }
 
