@@ -126,6 +126,7 @@ export const INDIRECT_ENFORCEMENT_FILES: readonly string[] = [
 
 const GA = AuthorizationCredential.GLOBAL_ADMIN;
 const GS = AuthorizationCredential.GLOBAL_SUPPORT;
+const GSM = AuthorizationCredential.GLOBAL_SUPPORT_MANAGER;
 const GLM = AuthorizationCredential.GLOBAL_LICENSE_MANAGER;
 const GPM = AuthorizationCredential.GLOBAL_PLATFORM_MANAGER;
 
@@ -694,11 +695,21 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
     // `reachers()` cannot yet derive these three correctly from the gate
     // alone — `intendedOwners`/`legacyReachers` below are the source of
     // truth for them until that is resolved.
+    // spec-server-10 fix: the resolver's OWN constructor comment says all
+    // SEVEN mutations on this file share the ONE synthetic policy — the
+    // census previously declared only the three cross-L0 moves. The three
+    // promote/demote conversions are in-scope A9 surfaces per spec §Action
+    // → owning role ("promote / demote / move a space"); declared here so
+    // `platform-resource-admin`'s reach over them is checked, not merely
+    // implied by the resolver's shared-policy comment.
     ...(
       [
         'moveSpaceL1ToSpaceL0',
         'moveSpaceL1ToSpaceL2',
         'moveSpaceL2ToSpaceL1',
+        'convertSpaceL1ToSpaceL0',
+        'convertSpaceL2ToSpaceL1',
+        'convertSpaceL1ToSpaceL2',
       ] as const
     ).map(
       (member): SurfaceRef => ({
@@ -711,6 +722,21 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
         legacyReachers: [GA],
       })
     ),
+    // spec-server-10 fix: `convertVirtualContributorToUseKnowledgeBase`
+    // rides the SAME synthetic policy as the six space moves/conversions
+    // above (same resolver, same constructor field) — it is NOT split onto
+    // its own policy, so `platform-resource-admin` reaches it too. Declared
+    // as its own A9 entry (rather than left as an undeclared side-effect of
+    // sharing the resolver) so the reach is checked, not merely implied.
+    {
+      file: 'src/services/api/conversion/conversion.resolver.mutations.ts',
+      member: 'convertVirtualContributorToUseKnowledgeBase',
+      kind: 'graphql-mutation',
+      tree: 'conversion-admin-synthetic',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_ADMIN },
+      intendedOwners: [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
+      legacyReachers: [GA],
+    },
     {
       file: 'src/domain/collaboration/callout-contribution/callout.contribution.move.resolver.mutations.ts',
       member: 'moveContributionToCallout',
@@ -724,13 +750,17 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       file: 'src/domain/collaboration/callout-transfer/callout.transfer.resolver.mutations.ts',
       member: 'transferCallout',
       kind: 'graphql-mutation',
-      tree: 'account',
+      // corr-server-9 fix: this surface is checked on the CalloutsSet's OWN
+      // authorization (callouts.set.service.authorization.ts) — a
+      // DIFFERENT credential rule, with a DIFFERENT legacy reacher, than
+      // the `account` tree the other four A9 transfer mutations share.
+      tree: 'callouts-set',
       // Both TRANSFER_RESOURCE_OFFER and TRANSFER_RESOURCE_ACCEPT are
       // literally checked (AND, not OR — GateExpr has no `allOf`).
       // `anyOf` is used here as the closest available shape purely so BOTH
       // names are visible to the derivation/drift-scan; it does not change
       // the derived reacher set because the two privileges resolve to an
-      // IDENTICAL credential set on this feature's grant sets (T037).
+      // IDENTICAL credential set on the `callouts-set` tree.
       gate: {
         anyOf: [
           AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER,
@@ -738,7 +768,10 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
         ],
       },
       intendedOwners: [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
-      legacyReachers: [GA, GS],
+      // GLOBAL_SUPPORT_MANAGER, not GLOBAL_SUPPORT (corr-server-9 fix) —
+      // the callouts-set rule's actual legacy reacher; GLOBAL_SUPPORT never
+      // reaches this surface (its account-tree grants are cascade:false).
+      legacyReachers: [GA, GSM],
     },
     ...(
       [
@@ -944,17 +977,21 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
   ],
 
   // ===== A13 — define license plans + entitlement mappings =====
-  // Contract's "~4" corrected to 5. Re-anchored via the licensing-framework
-  // `licensings` credential rule granting ordinary CRUD (not a distinctly
-  // named privilege) to `platform-settings-admin` — so the gate literally
-  // checked at each resolver is bare DELETE/UPDATE/CREATE, not
-  // PLATFORM_SETTINGS_ADMIN. Declared here as PLATFORM_SETTINGS_ADMIN
-  // (the OWNING privilege per privilege-map.md's A13 row) since that is
-  // what a reviewer means by "this row's privilege" — `reachers()` (T040d)
-  // still needs the LITERAL gate to intersect grants correctly, which for
-  // this row is one of the two documented exceptions (alongside A9's
-  // three conversion mutations) where the enforced call site's own
-  // privilege is a bare CRUD verb rather than this feature's dedicated one.
+  // Contract's "~4" corrected to 5. The gate literally checked at each
+  // resolver is bare DELETE/UPDATE/CREATE, not PLATFORM_SETTINGS_ADMIN —
+  // one of the two documented exceptions (alongside A9's three conversion
+  // mutations) where the enforced call site's own privilege is a bare CRUD
+  // verb rather than this feature's dedicated one. corr-server-7/
+  // corr-server-10 fix: that bare CRUD check is now against a
+  // resolver-local SYNTHETIC in-memory policy
+  // (`GLOBAL_POLICY_LICENSE_DEFINITION_ADMIN`) granting exactly
+  // {platform-settings-admin, global-admin, global-license-manager,
+  // global-platform-manager} — NOT `licensingFramework.authorization`,
+  // which inherits the root policy and would otherwise let
+  // `platform-content-full-access` reach these surfaces via T036a's CRUD
+  // cascade, a family SC-004's exception does not cover. GLOBAL_ADMIN is
+  // now an EXPLICIT legacy reacher (it previously reached A13 only via that
+  // same undeclared root cascade).
   A13: (
     [
       [
@@ -991,7 +1028,7 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       tree: 'licensing-framework',
       gate: { requires: literalGate },
       intendedOwners: [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
-      legacyReachers: [GLM, GPM],
+      legacyReachers: [GA, GLM, GPM],
     })
   ),
 

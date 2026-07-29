@@ -9,9 +9,12 @@ import { LicensePolicyResolverMutations } from './license.policy.resolver.mutati
 import { LicensePolicyService } from './license.policy.service';
 
 /**
- * 027-platform-role-redesign (T040, A13, T070e) — bare CREATE/UPDATE/DELETE
- * on the licensing-framework tree, single-path: every successful call is
- * audited.
+ * 027-platform-role-redesign (T040, A13, T070e) — bare CREATE/UPDATE/DELETE,
+ * single-path: every successful call is audited. corr-server-7 fix: checked
+ * against the resolver-local `licenseDefinitionPolicy`, NOT
+ * `licensePolicy.authorization` (which inherits the root policy and would
+ * let `platform-content-full-access` reach these surfaces via the root CRUD
+ * cascade).
  */
 describe('LicensePolicyResolverMutations', () => {
   let resolver: LicensePolicyResolverMutations;
@@ -52,12 +55,15 @@ describe('LicensePolicyResolverMutations', () => {
         ID: 'rule-1',
       } as any);
 
-      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
-        actorContext,
-        licensePolicy.authorization,
-        AuthorizationPrivilege.DELETE,
-        expect.any(String)
-      );
+      // Individual `toBe` (reference equality) assertions rather than one
+      // `toHaveBeenCalledWith` — the resolver-local `licenseDefinitionPolicy`
+      // is itself an auto-mocked object, and chai's deep-equal diff
+      // formatter cannot stringify it if the args ever mismatch.
+      const deleteCall = authorizationService.grantAccessOrFail.mock.calls[0];
+      expect(deleteCall[0]).toBe(actorContext);
+      expect(deleteCall[1]).toBe((resolver as any).licenseDefinitionPolicy);
+      expect(deleteCall[2]).toBe(AuthorizationPrivilege.DELETE);
+      expect(typeof deleteCall[3]).toBe('string');
       expect(
         platformConfigurationAuditService.recordChangeForActor
       ).toHaveBeenCalled();
@@ -91,12 +97,11 @@ describe('LicensePolicyResolverMutations', () => {
         ID: 'rule-1',
       } as any);
 
-      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
-        actorContext,
-        licensePolicy.authorization,
-        AuthorizationPrivilege.UPDATE,
-        expect.any(String)
-      );
+      const updateCall = authorizationService.grantAccessOrFail.mock.calls[0];
+      expect(updateCall[0]).toBe(actorContext);
+      expect(updateCall[1]).toBe((resolver as any).licenseDefinitionPolicy);
+      expect(updateCall[2]).toBe(AuthorizationPrivilege.UPDATE);
+      expect(typeof updateCall[3]).toBe('string');
       expect(
         platformConfigurationAuditService.recordChangeForActor
       ).toHaveBeenCalled();
@@ -128,12 +133,11 @@ describe('LicensePolicyResolverMutations', () => {
         type: 'x',
       } as any);
 
-      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
-        actorContext,
-        licensePolicy.authorization,
-        AuthorizationPrivilege.CREATE,
-        expect.any(String)
-      );
+      const createCall = authorizationService.grantAccessOrFail.mock.calls[0];
+      expect(createCall[0]).toBe(actorContext);
+      expect(createCall[1]).toBe((resolver as any).licenseDefinitionPolicy);
+      expect(createCall[2]).toBe(AuthorizationPrivilege.CREATE);
+      expect(typeof createCall[3]).toBe('string');
       expect(
         platformConfigurationAuditService.recordChangeForActor
       ).toHaveBeenCalled();

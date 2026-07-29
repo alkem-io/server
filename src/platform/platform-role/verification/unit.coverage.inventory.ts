@@ -319,6 +319,13 @@ export const PRIVILEGE_COVERAGE: Record<
   PrivilegeCoverageEntry
 > & {
   readonly [AuthorizationPrivilege.UPDATE_NAMEID]: PrivilegeCoverageEntry;
+  // corr-server-9 fix: TRANSFER_RESOURCE_OFFER/_ACCEPT moved out of
+  // `ManagedPrivilege` into per-tree `TREE_SCOPED_PRIVILEGE_GRANTS`
+  // (`account` and `callouts-set` carry different legacy reachers) —
+  // tracked here explicitly, same idiom as UPDATE_NAMEID, so they keep a
+  // coverage entry despite no longer being a flat managed privilege.
+  readonly [AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER]: PrivilegeCoverageEntry;
+  readonly [AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT]: PrivilegeCoverageEntry;
 } = {
   [AuthorizationPrivilege.GRANT_GLOBAL_ADMINS]: {
     ruleSpec: PLATFORM_POLICY_SPEC,

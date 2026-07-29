@@ -1,3 +1,4 @@
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ValidationException } from '@common/exceptions';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -87,6 +88,19 @@ describe('TemplateResolverMutations', () => {
         updateData
       );
       expect(result).toBe(updatedTemplate);
+      // spec-server-9 fix: A7's dual path is UPDATE ∨
+      // PLATFORM_SUPPORT_ORG_RESOURCES — assert the actual gate.
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        actorContext,
+        template.authorization,
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+      );
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        template.authorization,
+        AuthorizationPrivilege.UPDATE,
+        expect.any(String)
+      );
     });
   });
 
@@ -123,6 +137,25 @@ describe('TemplateResolverMutations', () => {
         templateAuthorizationService.applyAuthorizationPolicy
       ).toHaveBeenCalled();
       expect(authorizationPolicyService.saveAll).toHaveBeenCalled();
+      // spec-server-9 fix: same A7 dual path on the template, plus a bare
+      // READ check on the source space.
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        actorContext,
+        template.authorization,
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+      );
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        template.authorization,
+        AuthorizationPrivilege.UPDATE,
+        expect.any(String)
+      );
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        space.authorization,
+        AuthorizationPrivilege.READ,
+        expect.any(String)
+      );
     });
   });
 
@@ -153,6 +186,19 @@ describe('TemplateResolverMutations', () => {
       ).toHaveBeenCalledWith('tpl-1');
       expect(templateService.delete).toHaveBeenCalledWith(template);
       expect(result).toBe(deletedTemplate);
+      // spec-server-9 fix: deleteTemplate's dual path is DELETE ∨
+      // PLATFORM_SUPPORT_ORG_RESOURCES.
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        actorContext,
+        template.authorization,
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+      );
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        template.authorization,
+        AuthorizationPrivilege.DELETE,
+        expect.any(String)
+      );
     });
 
     it('should throw ValidationException when template is in use', async () => {

@@ -1,3 +1,4 @@
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -70,6 +71,47 @@ describe('InnovationPackResolverMutations', () => {
         expect.objectContaining({ ID: 'pack-1' })
       );
       expect(result).toBe(updatedPack);
+      // spec-server-9 fix: A7's dual path is UPDATE ∨
+      // PLATFORM_SUPPORT_ORG_RESOURCES — assert the actual gate, not just
+      // that a check happened.
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        actorContext,
+        authorization,
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+      );
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        authorization,
+        AuthorizationPrivilege.UPDATE,
+        expect.any(String)
+      );
+    });
+
+    it('platform branch: allows PLATFORM_SUPPORT_ORG_RESOURCES without an owner UPDATE grant', async () => {
+      const authorization = { id: 'auth-1' };
+      const pack = {
+        id: 'pack-1',
+        authorization,
+      } as unknown as IInnovationPack;
+      const actorContext = { agentInfo: { email: 'test@test.com' } } as any;
+
+      vi.mocked(
+        innovationPackService.getInnovationPackOrFail
+      ).mockResolvedValue(pack);
+      vi.mocked(authorizationService.isAccessGranted).mockImplementation(
+        (_ctx, _auth, privilege) =>
+          privilege === AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+      );
+      vi.mocked(innovationPackService.update).mockResolvedValue(pack);
+
+      await resolver.updateInnovationPack(actorContext, {
+        ID: 'pack-1',
+      } as any);
+
+      // Neither branch of isAccessGranted was DELETE-owner true, so the
+      // fallback grantAccessOrFail must NOT be reached.
+      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+      expect(innovationPackService.update).toHaveBeenCalled();
     });
 
     it('should use the pack id from getInnovationPackOrFail for the update call', async () => {
@@ -131,6 +173,19 @@ describe('InnovationPackResolverMutations', () => {
         ID: 'pack-1',
       });
       expect(result).toBe(pack);
+      // spec-server-9 fix: A8's dual path is DELETE ∨
+      // PLATFORM_CONTENT_FULL_ACCESS.
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        actorContext,
+        authorization,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS
+      );
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        authorization,
+        AuthorizationPrivilege.DELETE,
+        expect.any(String)
+      );
     });
   });
 });

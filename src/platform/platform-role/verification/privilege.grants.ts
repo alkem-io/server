@@ -46,8 +46,16 @@ export type ManagedPrivilege =
   | AuthorizationPrivilege.PLATFORM_AUDIT_READ
   | AuthorizationPrivilege.SET_SERVICE_PROFILE
   | AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN
-  | AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER
-  | AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT
+  // TRANSFER_RESOURCE_OFFER/_ACCEPT are DELIBERATELY ABSENT here
+  // (corr-server-9 fix): two independent credential rules — `account`
+  // (account.service.authorization.ts) and `callouts-set`
+  // (callouts.set.service.authorization.ts) — grant these two privileges
+  // with DIFFERENT legacy reacher sets (`global-support` vs
+  // `global-support-manager`). A flat, tree-independent entry here would
+  // apply ONE of those sets to every surface using either privilege
+  // regardless of tree — exactly the mistake that let `transferCallout`'s
+  // wrong legacy reacher go undetected. Declared per-tree instead, in
+  // `TREE_SCOPED_PRIVILEGE_GRANTS` below (`account` and `callouts-set`).
   | AuthorizationPrivilege.MOVE_CONTRIBUTION
   | AuthorizationPrivilege.UPDATE_CALLOUT_PUBLISHER
   | AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE
@@ -228,22 +236,6 @@ export const PRIVILEGE_GRANTS: Record<ManagedPrivilege, PrivilegeGrant> = {
     ],
   },
   // --- A9 (T037).
-  [AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER]: {
-    anchor: 'account',
-    owningCredentials: [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
-    legacyCredentials: [
-      AuthorizationCredential.GLOBAL_ADMIN,
-      AuthorizationCredential.GLOBAL_SUPPORT,
-    ],
-  },
-  [AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT]: {
-    anchor: 'account',
-    owningCredentials: [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
-    legacyCredentials: [
-      AuthorizationCredential.GLOBAL_ADMIN,
-      AuthorizationCredential.GLOBAL_SUPPORT,
-    ],
-  },
   // --- A9 (T038). `callout.contribution.service.authorization.ts` grants
   // it to `platform-resource-admin` directly PLUS whatever credentials the
   // space's own `platformRolesAccess` array carries with UPDATE — the
@@ -380,10 +372,18 @@ export const TREE_SCOPED_PRIVILEGE_GRANTS: {
     },
     // A13 — license-plan / license-policy CRUD, re-anchored (in intent,
     // not in literal gate) onto `platform-settings-admin` (T040).
+    // GLOBAL_ADMIN added to each (corr-server-7/corr-server-10 fix): the
+    // five A13 resolvers now check a resolver-local synthetic policy
+    // (`GLOBAL_POLICY_LICENSE_DEFINITION_ADMIN`) that grants bare
+    // CREATE/UPDATE/DELETE to exactly {platform-settings-admin,
+    // global-admin, global-license-manager, global-platform-manager} —
+    // NOT the entity's own (root-cascade-inheriting) authorization, so
+    // `platform-content-full-access` no longer reaches these surfaces.
     [AuthorizationPrivilege.CREATE]: {
       anchor: 'licensing-framework',
       owningCredentials: [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
       legacyCredentials: [
+        AuthorizationCredential.GLOBAL_ADMIN,
         AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
         AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
       ],
@@ -392,6 +392,7 @@ export const TREE_SCOPED_PRIVILEGE_GRANTS: {
       anchor: 'licensing-framework',
       owningCredentials: [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
       legacyCredentials: [
+        AuthorizationCredential.GLOBAL_ADMIN,
         AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
         AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
       ],
@@ -400,6 +401,7 @@ export const TREE_SCOPED_PRIVILEGE_GRANTS: {
       anchor: 'licensing-framework',
       owningCredentials: [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
       legacyCredentials: [
+        AuthorizationCredential.GLOBAL_ADMIN,
         AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
         AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
       ],
@@ -414,6 +416,58 @@ export const TREE_SCOPED_PRIVILEGE_GRANTS: {
       anchor: 'conversion-admin-synthetic',
       owningCredentials: [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
       legacyCredentials: [AuthorizationCredential.GLOBAL_ADMIN],
+    },
+  },
+  // A9 — the four account-tree resource transfers
+  // (account.resolver.mutations.ts: transferSpaceToAccount,
+  // transferInnovationHubToAccount, transferInnovationPackToAccount,
+  // transferVirtualContributorToAccount), gated on the account's own
+  // TRANSFER_RESOURCE_OFFER/_ACCEPT rule (account.service.authorization.ts).
+  // Split out of the flat `PRIVILEGE_GRANTS` (corr-server-9 fix) because
+  // `callouts-set` grants the SAME two privileges to a different legacy
+  // reacher below.
+  account: {
+    [AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER]: {
+      anchor: 'account',
+      owningCredentials: [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
+      legacyCredentials: [
+        AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_SUPPORT,
+      ],
+    },
+    [AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT]: {
+      anchor: 'account',
+      owningCredentials: [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
+      legacyCredentials: [
+        AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_SUPPORT,
+      ],
+    },
+  },
+  // A9 — `transferCallout`'s OWN authorization tree
+  // (callouts.set.service.authorization.ts), whose
+  // TRANSFER_RESOURCE_OFFER/_ACCEPT rule grants
+  // [GLOBAL_ADMIN, GLOBAL_SUPPORT_MANAGER, PLATFORM_RESOURCE_ADMIN] — NOT
+  // GLOBAL_SUPPORT (corr-server-9 fix: GLOBAL_SUPPORT_MANAGER is the ONLY
+  // legacy credential that reaches this surface; the account-tree grants
+  // above that DO include GLOBAL_SUPPORT are cascade:false and never reach
+  // the callouts-set).
+  'callouts-set': {
+    [AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER]: {
+      anchor: 'callouts-set',
+      owningCredentials: [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
+      legacyCredentials: [
+        AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_SUPPORT_MANAGER,
+      ],
+    },
+    [AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT]: {
+      anchor: 'callouts-set',
+      owningCredentials: [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
+      legacyCredentials: [
+        AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_SUPPORT_MANAGER,
+      ],
     },
   },
 };

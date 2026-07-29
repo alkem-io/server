@@ -56,19 +56,32 @@ export class CalloutContributionMoveResolverMutations {
         moveContributionData.contributionID,
         moveContributionData.calloutID
       );
-    // T058 — A9, single-path surface: every successful call is, by
-    // construction, authorized by MOVE_CONTRIBUTION.
-    await this.platformResourceAuditService.recordEventForActor(
-      actorContext,
-      [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
-      [AuthorizationCredential.GLOBAL_ADMIN],
-      {
-        resourceKind: 'callout-contribution',
-        resourceId: contribution.id,
-        toAccountId: moveContributionData.calloutID,
-        outcome: 'moved',
-      }
+    // corr-server-8 fix: MOVE_CONTRIBUTION is NOT single-path — it is also
+    // granted to the space's own ADMIN role-set credentials and to any
+    // platform role holding UPDATE access via platformRolesAccess
+    // (callout.contribution.service.authorization.ts), so an ordinary space
+    // admin reaches this mutation too. Write the audit ONLY when the actor
+    // actually holds one of A9's own platform-level credentials (FR-018a) —
+    // never derive the branch from the shared MOVE_CONTRIBUTION grant,
+    // which an ordinary admin also satisfies.
+    const isPlatformAuthorized = (actorContext.credentials ?? []).some(
+      credential =>
+        credential.type === AuthorizationCredential.PLATFORM_RESOURCE_ADMIN ||
+        credential.type === AuthorizationCredential.GLOBAL_ADMIN
     );
+    if (isPlatformAuthorized) {
+      await this.platformResourceAuditService.recordEventForActor(
+        actorContext,
+        [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
+        [AuthorizationCredential.GLOBAL_ADMIN],
+        {
+          resourceKind: 'callout-contribution',
+          resourceId: contribution.id,
+          toAccountId: moveContributionData.calloutID,
+          outcome: 'moved',
+        }
+      );
+    }
     return moved;
   }
 

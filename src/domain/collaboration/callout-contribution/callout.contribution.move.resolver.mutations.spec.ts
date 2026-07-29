@@ -1,4 +1,5 @@
 import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -52,7 +53,42 @@ describe('CalloutContributionMoveResolverMutations', () => {
   });
 
   describe('moveContributionToCallout (A9)', () => {
-    it('permitted: gates on MOVE_CONTRIBUTION and audits the move', async () => {
+    // corr-server-8 fix: MOVE_CONTRIBUTION is NOT single-path — an ordinary
+    // space ADMIN also holds it, so the audit branch is now decided from
+    // the actor's OWN held credentials, not from the shared privilege gate.
+    const platformActorContext = {
+      actorID: 'actor-1',
+      credentials: [{ type: AuthorizationCredential.PLATFORM_RESOURCE_ADMIN }],
+    } as unknown as ActorContext;
+
+    it('permitted (platform-resource-admin): gates on MOVE_CONTRIBUTION and audits the move', async () => {
+      authorizationService.grantAccessOrFail.mockReturnValue(true);
+      calloutContributionMoveService.moveContributionToCallout.mockResolvedValue(
+        contribution
+      );
+
+      await resolver.moveContributionToCallout(platformActorContext, {
+        contributionID: 'contribution-1',
+        calloutID: 'callout-2',
+      } as any);
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        platformActorContext,
+        contribution.authorization,
+        AuthorizationPrivilege.MOVE_CONTRIBUTION,
+        expect.any(String)
+      );
+      expect(
+        platformResourceAuditService.recordEventForActor
+      ).toHaveBeenCalledWith(
+        platformActorContext,
+        expect.any(Array),
+        expect.any(Array),
+        expect.objectContaining({ outcome: 'moved' })
+      );
+    });
+
+    it('permitted (ordinary space admin, no platform credential): moves but does NOT audit', async () => {
       authorizationService.grantAccessOrFail.mockReturnValue(true);
       calloutContributionMoveService.moveContributionToCallout.mockResolvedValue(
         contribution
@@ -63,20 +99,12 @@ describe('CalloutContributionMoveResolverMutations', () => {
         calloutID: 'callout-2',
       } as any);
 
-      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
-        actorContext,
-        contribution.authorization,
-        AuthorizationPrivilege.MOVE_CONTRIBUTION,
-        expect.any(String)
-      );
+      expect(
+        calloutContributionMoveService.moveContributionToCallout
+      ).toHaveBeenCalled();
       expect(
         platformResourceAuditService.recordEventForActor
-      ).toHaveBeenCalledWith(
-        actorContext,
-        expect.any(Array),
-        expect.any(Array),
-        expect.objectContaining({ outcome: 'moved' })
-      );
+      ).not.toHaveBeenCalled();
     });
 
     it('denied: propagates the authorization failure without moving or auditing', async () => {

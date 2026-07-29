@@ -1,6 +1,12 @@
+import { GLOBAL_POLICY_ADMIN_USER_EMAIL_CHANGE } from '@common/constants/authorization/global.policy.constants';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UserEmailChangeResult } from '@domain/community/user-email-change/dto/user.email.change.result';
 import {
   UserEmailChangeErrorCode,
@@ -8,7 +14,6 @@ import {
 } from '@domain/community/user-email-change/user.email.change.errors';
 import { UserEmailChangeService } from '@domain/community/user-email-change/user.email.change.service';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
 import { AdminUserEmailChangeDriftResolveInput } from './dto/admin.user.email.change.drift.resolve.dto.input';
@@ -17,11 +22,38 @@ import { AdminUserEmailChangeInput } from './dto/admin.user.email.change.dto.inp
 @InstrumentResolver()
 @Resolver()
 export class AdminUserEmailChangeResolverMutations {
+  /** 027-platform-role-redesign (sec-server-7 fix): A4's own pre-feature
+   * reacher set {GA, GS, GLM} plus the new owning role, checked against
+   * THIS resolver-local, hardcoded IN_MEMORY policy — NOT the shared
+   * `getPlatformAuthorizationPolicy()`, whose PLATFORM_USERS_ADMIN grant
+   * set is additively widened to also admit GLOBAL_PLATFORM_MANAGER, which
+   * never held these two mutations' pre-feature PLATFORM_ADMIN gate.
+   * Mirrors `accountDeletePolicy` in admin.users.resolver.mutations.ts. */
+  private emailChangePolicy: IAuthorizationPolicy;
+
   constructor(
     private readonly authorizationService: AuthorizationService,
-    private readonly platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
     private readonly userEmailChangeService: UserEmailChangeService
-  ) {}
+  ) {
+    const policy = new AuthorizationPolicy(AuthorizationPolicyType.IN_MEMORY);
+    const rule =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_USERS_ADMIN],
+        [
+          AuthorizationCredential.PLATFORM_USERS_ADMIN,
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+        ],
+        GLOBAL_POLICY_ADMIN_USER_EMAIL_CHANGE
+      );
+    this.emailChangePolicy =
+      this.authorizationPolicyService.appendCredentialAuthorizationRules(
+        policy,
+        [rule]
+      );
+  }
 
   @Mutation(() => UserEmailChangeResult, {
     description:
@@ -65,10 +97,11 @@ export class AdminUserEmailChangeResolverMutations {
     );
   }
 
-  // 027-platform-role-redesign (T061, A4): re-anchored off the
-  // PLATFORM_ADMIN catch-all onto PLATFORM_USERS_ADMIN, whose Slice A
-  // grant set (platform.service.authorization.ts) preserves every legacy
-  // reacher of the A4/A5 user-record family.
+  // 027-platform-role-redesign (T061, A4; sec-server-7 fix): checked
+  // against the resolver-local `emailChangePolicy`, NOT the shared,
+  // Slice-A-widened `getPlatformAuthorizationPolicy()` — that union also
+  // admits GLOBAL_PLATFORM_MANAGER, which never held this surface's
+  // pre-feature PLATFORM_ADMIN gate.
   private async assertPlatformAdmin(
     actorContext: ActorContext,
     description: string
@@ -76,7 +109,7 @@ export class AdminUserEmailChangeResolverMutations {
     try {
       this.authorizationService.grantAccessOrFail(
         actorContext,
-        await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy(),
+        this.emailChangePolicy,
         AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
         description
       );

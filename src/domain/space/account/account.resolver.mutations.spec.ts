@@ -1,3 +1,4 @@
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import {
   RelationshipNotFoundException,
   ValidationException,
@@ -332,6 +333,37 @@ describe('AccountResolverMutations', () => {
       expect(
         accountAuthorizationService.applyAuthorizationPolicy
       ).toHaveBeenCalledWith(account);
+      // spec-server-9 fix: assert the actual gate, not just that the
+      // resolver constructs — A3 is gated on AUTHORIZATION_RESET.
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        account.authorization,
+        AuthorizationPrivilege.AUTHORIZATION_RESET,
+        expect.any(String)
+      );
+    });
+
+    it('denies a caller lacking AUTHORIZATION_RESET', async () => {
+      const actorContext = { actorID: 'actor-1' } as any;
+      const resetData = { accountID: 'account-1' } as any;
+      const account = {
+        id: 'account-1',
+        authorization: { id: 'auth-1' },
+      } as any;
+
+      vi.mocked(accountService.getAccountOrFail).mockResolvedValue(account);
+      vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(
+        () => {
+          throw new Error('Forbidden');
+        }
+      );
+
+      await expect(
+        resolver.authorizationPolicyResetOnAccount(actorContext, resetData)
+      ).rejects.toThrow('Forbidden');
+      expect(
+        accountAuthorizationService.applyAuthorizationPolicy
+      ).not.toHaveBeenCalled();
     });
   });
 
@@ -355,6 +387,34 @@ describe('AccountResolverMutations', () => {
       expect(accountLicenseService.applyLicensePolicy).toHaveBeenCalledWith(
         'account-1'
       );
+      // spec-server-9 fix: A3's other surface — gated on LICENSE_RESET.
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        account.authorization,
+        AuthorizationPrivilege.LICENSE_RESET,
+        expect.any(String)
+      );
+    });
+
+    it('denies a caller lacking LICENSE_RESET', async () => {
+      const actorContext = { actorID: 'actor-1' } as any;
+      const resetData = { accountID: 'account-1' } as any;
+      const account = {
+        id: 'account-1',
+        authorization: { id: 'auth-1' },
+      } as any;
+
+      vi.mocked(accountService.getAccountOrFail).mockResolvedValue(account);
+      vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(
+        () => {
+          throw new Error('Forbidden');
+        }
+      );
+
+      await expect(
+        resolver.licenseResetOnAccount(actorContext, resetData)
+      ).rejects.toThrow('Forbidden');
+      expect(accountLicenseService.applyLicensePolicy).not.toHaveBeenCalled();
     });
   });
 
@@ -385,6 +445,37 @@ describe('AccountResolverMutations', () => {
       );
       expect(accountLicensePlanService.updateLicensePlan).toHaveBeenCalled();
       expect(accountService.save).toHaveBeenCalled();
+      // spec-server-9 fix: A12 is gated on ACCOUNT_LICENSE_MANAGE.
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        account.authorization,
+        AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE,
+        expect.any(String)
+      );
+    });
+
+    it('denies a caller lacking ACCOUNT_LICENSE_MANAGE', async () => {
+      const actorContext = { actorID: 'actor-1' } as any;
+      const updateData = { accountID: 'account-1' } as any;
+      const account = {
+        id: 'account-1',
+        authorization: { id: 'auth-1' },
+        baselineLicensePlan: {},
+      } as any;
+
+      vi.mocked(accountService.getAccountOrFail).mockResolvedValue(account);
+      vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(
+        () => {
+          throw new Error('Forbidden');
+        }
+      );
+
+      await expect(
+        resolver.updateBaselineLicensePlanOnAccount(actorContext, updateData)
+      ).rejects.toThrow('Forbidden');
+      expect(
+        accountLicensePlanService.updateLicensePlan
+      ).not.toHaveBeenCalled();
     });
   });
 
@@ -424,8 +515,27 @@ describe('AccountResolverMutations', () => {
         undefined as any
       );
 
+      // Captured BEFORE the call — the resolver reassigns `hub.account` to
+      // `targetAccount` in place, so `hub.account.authorization` after the
+      // call would already be the TARGET's, not the source's.
+      const sourceAuthorization = hub.account.authorization;
+
       await resolver.transferInnovationHubToAccount(actorContext, transferData);
       expect(hub.account).toBe(targetAccount);
+      // spec-server-9 fix: A9 checks TRANSFER_RESOURCE_OFFER on the source
+      // account and TRANSFER_RESOURCE_ACCEPT on the target.
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        sourceAuthorization,
+        AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER,
+        expect.any(String)
+      );
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        targetAccount.authorization,
+        AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT,
+        expect.any(String)
+      );
     });
 
     it('should throw when current account is missing', async () => {
@@ -488,9 +598,25 @@ describe('AccountResolverMutations', () => {
         .mocked(spaceService.invalidateUrlCacheForSpaceSubtree)
         .mockResolvedValue(undefined as any);
 
+      // Captured BEFORE the call — see transferInnovationHubToAccount above.
+      const sourceAuthorization = space.account.authorization;
+
       await resolver.transferSpaceToAccount(actorContext, transferData);
       expect(space.account).toBe(targetAccount);
       expect(invalidateSpy).toHaveBeenCalledWith('space-1');
+      // spec-server-9 fix — see transferInnovationHubToAccount above.
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        sourceAuthorization,
+        AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER,
+        expect.any(String)
+      );
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        targetAccount.authorization,
+        AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT,
+        expect.any(String)
+      );
     });
   });
 
@@ -533,11 +659,27 @@ describe('AccountResolverMutations', () => {
         innovationPackService.getInnovationPackOrFail
       ).mockResolvedValue(ip);
 
+      // Captured BEFORE the call — see transferInnovationHubToAccount above.
+      const sourceAuthorization = ip.account.authorization;
+
       await resolver.transferInnovationPackToAccount(
         actorContext,
         transferData
       );
       expect(ip.account).toBe(targetAccount);
+      // spec-server-9 fix — see transferInnovationHubToAccount above.
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        sourceAuthorization,
+        AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER,
+        expect.any(String)
+      );
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        targetAccount.authorization,
+        AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT,
+        expect.any(String)
+      );
     });
   });
 
@@ -574,11 +716,27 @@ describe('AccountResolverMutations', () => {
         undefined as any
       );
 
+      // Captured BEFORE the call — see transferInnovationHubToAccount above.
+      const sourceAuthorization = vc.account.authorization;
+
       await resolver.transferVirtualContributorToAccount(
         actorContext,
         transferData
       );
       expect(vc.account).toBe(targetAccount);
+      // spec-server-9 fix — see transferInnovationHubToAccount above.
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        sourceAuthorization,
+        AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER,
+        expect.any(String)
+      );
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        targetAccount.authorization,
+        AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT,
+        expect.any(String)
+      );
     });
   });
 

@@ -1,16 +1,19 @@
 import { RoleChangeType } from '@alkemio/notifications-lib';
 import { GLOBAL_POLICY_PLATFORM_ROLE_LEGACY_GRANT_GLOBAL_ADMIN } from '@common/constants/authorization/global.policy.constants';
 import { LogContext } from '@common/enums';
+import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationRoleGlobal } from '@common/enums/authorization.credential.global';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import { RoleName } from '@common/enums/role.name';
+import { ForbiddenException } from '@common/exceptions/forbidden.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
 import { ActorService } from '@domain/actor/actor/actor.service';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -103,6 +106,7 @@ export class PlatformRoleResolverMutations {
     private roleSetService: RoleSetService,
     private userLookupService: UserLookupService,
     private organizationLookupService: OrganizationLookupService,
+    private actorLookupService: ActorLookupService,
     private roleSetAuthorizationService: RoleSetAuthorizationService,
     private platformService: PlatformService,
     private assignmentRulesService: PlatformRoleAssignmentRulesService,
@@ -190,6 +194,7 @@ export class PlatformRoleResolverMutations {
       // subsequently threw (e.g. a role-set policy limit).
       await this.recordGrantSuccess(
         actorContext,
+        roleSet,
         roleData.role,
         'user',
         roleData.actorID
@@ -294,6 +299,7 @@ export class PlatformRoleResolverMutations {
       // after removeActorFromRole actually completes — see the assign side.
       await this.recordRevokeSuccess(
         actorContext,
+        roleSet,
         roleData.role,
         'user',
         roleData.actorID
@@ -348,6 +354,7 @@ export class PlatformRoleResolverMutations {
     @CurrentActor() actorContext: ActorContext,
     @Args('roleData') roleData: AssignPlatformRoleInput
   ): Promise<IOrganization> {
+    await this.assertOrganizationSurfaceOrFail(roleData.role, roleData.actorID);
     const roleSet = await this.platformService.getRoleSetOrFail();
 
     await this.evaluateGrantOrFail(
@@ -370,6 +377,7 @@ export class PlatformRoleResolverMutations {
     // after assignActorToRole actually completes.
     await this.recordGrantSuccess(
       actorContext,
+      roleSet,
       roleData.role,
       'organization',
       roleData.actorID
@@ -387,6 +395,7 @@ export class PlatformRoleResolverMutations {
     @CurrentActor() actorContext: ActorContext,
     @Args('roleData') roleData: RemovePlatformRoleInput
   ): Promise<IOrganization> {
+    await this.assertOrganizationSurfaceOrFail(roleData.role, roleData.actorID);
     const roleSet = await this.platformService.getRoleSetOrFail();
 
     await this.evaluateRevokeOrFail(
@@ -407,6 +416,7 @@ export class PlatformRoleResolverMutations {
     // after removeActorFromRole actually completes.
     await this.recordRevokeSuccess(
       actorContext,
+      roleSet,
       roleData.role,
       'organization',
       roleData.actorID
@@ -415,6 +425,49 @@ export class PlatformRoleResolverMutations {
     return await this.organizationLookupService.getOrganizationByIdOrFail(
       roleData.actorID
     );
+  }
+
+  /** 027-platform-role-redesign (sec-server-6 fix): the organization-target
+   * surface (`assignPlatformRoleToOrganization` /
+   * `removePlatformRoleFromOrganization`, T032a) has a use case ONLY for
+   * `Feature …` roles (FR-002) — `Platform …` roles are already rejected by
+   * rule 2 (`checkHolderKind`), but LEGACY `global-*` roles are members of
+   * NEITHER `PLATFORM_FAMILY_ROLES` nor `FEATURE_FAMILY_ROLES`, so rule 2
+   * never sees them and rule 1 (`checkAssignerCapability`) falls through to
+   * the shared, Slice-A-widened `GRANT_GLOBAL_ADMINS` check on
+   * `roleSet.authorization` — the same widened policy the legacy-role
+   * branch of the USER mutations deliberately avoids via
+   * `legacyGlobalAdminPolicy`. Without this guard a `platform-roles-admin`
+   * holder could mint `global-admin` (or any other legacy role) on an
+   * account they control by routing it through the organization surface.
+   * Reject anything outside `FEATURE_FAMILY_ROLES` here, before any rule
+   * evaluation, credential write or audit call.
+   *
+   * Also verifies the target actually resolves to an ORGANIZATION —
+   * `targetActorType: 'organization'` is otherwise asserted at the call
+   * site rather than verified (sec-server-8): a mismatch here would let a
+   * user-id grant/revoke land through the organization surface and file its
+   * audit row against `subjectOrganizationId` with a user's id. */
+  private async assertOrganizationSurfaceOrFail(
+    role: RoleName,
+    targetActorId: string
+  ): Promise<void> {
+    if (!FEATURE_FAMILY_ROLES.has(role)) {
+      throw new ForbiddenException(
+        `Rejected: role ${role} may not be assigned or removed through the organization surface`,
+        LogContext.PLATFORM,
+        { ruleId: 'holder-kind' }
+      );
+    }
+    const actorType =
+      await this.actorLookupService.getActorTypeByIdOrFail(targetActorId);
+    if (actorType !== ActorType.ORGANIZATION) {
+      throw new ForbiddenException(
+        `Rejected: target actor for role ${role} is not an organization`,
+        LogContext.PLATFORM,
+        { ruleId: 'holder-kind' }
+      );
+    }
   }
 
   /** Shared by both grant surfaces (user + organization): evaluate the five
@@ -471,20 +524,43 @@ export class PlatformRoleResolverMutations {
     }
   }
 
+  /** corr-server-11/spec-server-8 fix: the grant has ALREADY landed
+   * (`assignActorToRole` completed) by the time this runs. If the
+   * fail-closed success-audit write itself throws, the caller is told "the
+   * operation was NOT applied" (`PlatformRoleAssignmentAuditException`'s
+   * message) while the credential is, in fact, still granted — inverting
+   * FR-027. Compensate: revert the just-applied grant before re-throwing,
+   * so the operation's actual state matches what the caller is told. */
   private async recordGrantSuccess(
     actorContext: ActorContext,
+    roleSet: Awaited<ReturnType<PlatformService['getRoleSetOrFail']>>,
     role: RoleName,
     targetActorType: 'user' | 'organization',
     targetID: string
   ): Promise<void> {
-    await this.roleAssignmentAuditService.recordGrantOrRevoke({
-      initiatorUserId: actorContext.actorID,
-      initiatorRole: this.resolveA1A2InitiatorRole(role, actorContext),
-      targetKind: targetActorType,
-      targetId: targetID,
-      role,
-      outcome: 'granted',
-    });
+    try {
+      await this.roleAssignmentAuditService.recordGrantOrRevoke({
+        initiatorUserId: actorContext.actorID,
+        initiatorRole: this.resolveA1A2InitiatorRole(role, actorContext),
+        targetKind: targetActorType,
+        targetId: targetID,
+        role,
+        outcome: 'granted',
+      });
+    } catch (error) {
+      try {
+        await this.roleSetService.removeActorFromRole(roleSet, role, targetID);
+      } catch (compensationError) {
+        this.logger.error(
+          `Unable to compensate for a failed grant-success audit write (role=${role}, target=${targetID}): the credential remains GRANTED with no audit record. Compensation error: ${compensationError instanceof Error ? compensationError.message : String(compensationError)}`,
+          compensationError instanceof Error
+            ? compensationError.stack
+            : undefined,
+          LogContext.PLATFORM
+        );
+      }
+      throw error;
+    }
   }
 
   private async evaluateRevokeOrFail(
@@ -534,20 +610,47 @@ export class PlatformRoleResolverMutations {
     }
   }
 
+  /** corr-server-11/spec-server-8 fix: same shape as `recordGrantSuccess`
+   * above, for the revoke side — the revoke has ALREADY landed by the time
+   * this runs; a failed audit write is compensated by re-granting the role,
+   * rather than leaving the revoke applied while the caller is told it
+   * was not. */
   private async recordRevokeSuccess(
     actorContext: ActorContext,
+    roleSet: Awaited<ReturnType<PlatformService['getRoleSetOrFail']>>,
     role: RoleName,
     targetActorType: 'user' | 'organization',
     targetID: string
   ): Promise<void> {
-    await this.roleAssignmentAuditService.recordGrantOrRevoke({
-      initiatorUserId: actorContext.actorID,
-      initiatorRole: this.resolveA1A2InitiatorRole(role, actorContext),
-      targetKind: targetActorType,
-      targetId: targetID,
-      role,
-      outcome: 'revoked',
-    });
+    try {
+      await this.roleAssignmentAuditService.recordGrantOrRevoke({
+        initiatorUserId: actorContext.actorID,
+        initiatorRole: this.resolveA1A2InitiatorRole(role, actorContext),
+        targetKind: targetActorType,
+        targetId: targetID,
+        role,
+        outcome: 'revoked',
+      });
+    } catch (error) {
+      try {
+        await this.roleSetService.assignActorToRole(
+          roleSet,
+          role,
+          targetID,
+          actorContext,
+          true
+        );
+      } catch (compensationError) {
+        this.logger.error(
+          `Unable to compensate for a failed revoke-success audit write (role=${role}, target=${targetID}): the credential remains REVOKED with no audit record. Compensation error: ${compensationError instanceof Error ? compensationError.message : String(compensationError)}`,
+          compensationError instanceof Error
+            ? compensationError.stack
+            : undefined,
+          LogContext.PLATFORM
+        );
+      }
+      throw error;
+    }
   }
 
   /** FR-025 attribution for the A1/A2 assignment mutations (T058a). */

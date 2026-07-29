@@ -119,12 +119,17 @@ export class CalloutTransferResolverMutations {
 
     // T058 — A9, single-path surface (TRANSFER_RESOURCE_OFFER/_ACCEPT, both
     // required, no ordinary-owner branch).
+    // corr-server-9 fix: legacy reacher is GLOBAL_SUPPORT_MANAGER, not
+    // GLOBAL_SUPPORT — the callouts-set TRANSFER_RESOURCE_OFFER/_ACCEPT
+    // rules grant [GA, GLOBAL_SUPPORT_MANAGER, PLATFORM_RESOURCE_ADMIN]
+    // (callouts.set.service.authorization.ts); GLOBAL_SUPPORT never reaches
+    // this surface (its account-tree grants are cascade:false).
     await this.platformResourceAuditService.recordEventForActor(
       actorContext,
       [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
       [
         AuthorizationCredential.GLOBAL_ADMIN,
-        AuthorizationCredential.GLOBAL_SUPPORT,
+        AuthorizationCredential.GLOBAL_SUPPORT_MANAGER,
       ],
       {
         resourceKind: 'callout',

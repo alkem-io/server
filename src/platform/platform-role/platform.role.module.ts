@@ -1,6 +1,7 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { ActorModule } from '@domain/actor/actor/actor.module';
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { LicenseModule } from '@domain/common/license/license.module';
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
@@ -25,6 +26,7 @@ import { PlatformRoleResolverMutations } from './platform.role.resolver.mutation
     UserLookupModule,
     OrganizationLookupModule,
     ActorModule,
+    ActorLookupModule,
     RoleSetModule,
     PlatformModule,
     PlatformRoleAssignmentAuditModule,

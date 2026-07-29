@@ -9,9 +9,12 @@ import { LicensePlanResolverMutations } from './license.plan.resolver.mutations'
 import { LicensePlanService } from './license.plan.service';
 
 /**
- * 027-platform-role-redesign (T040, A13, T070e) — bare DELETE/UPDATE on the
- * licensing-framework tree, single-path (no ordinary-owner branch): every
- * successful call is audited.
+ * 027-platform-role-redesign (T040, A13, T070e) — bare DELETE/UPDATE,
+ * single-path (no ordinary-owner branch): every successful call is
+ * audited. corr-server-7 fix: checked against the resolver-local
+ * `licenseDefinitionPolicy`, NOT `licensePlan.licensingFramework.authorization`
+ * (which inherits the root policy and would let `platform-content-full-access`
+ * reach these surfaces via the root CRUD cascade).
  */
 describe('LicensePlanResolverMutations', () => {
   let resolver: LicensePlanResolverMutations;
@@ -49,12 +52,15 @@ describe('LicensePlanResolverMutations', () => {
 
       await resolver.deleteLicensePlan(actorContext, { ID: 'plan-1' } as any);
 
-      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
-        actorContext,
-        licensePlan.licensingFramework.authorization,
-        AuthorizationPrivilege.DELETE,
-        expect.any(String)
-      );
+      // Individual `toBe` (reference equality) assertions rather than one
+      // `toHaveBeenCalledWith` — the resolver-local `licenseDefinitionPolicy`
+      // is itself an auto-mocked object, and chai's deep-equal diff
+      // formatter cannot stringify it if the args ever mismatch.
+      const call = authorizationService.grantAccessOrFail.mock.calls[0];
+      expect(call[0]).toBe(actorContext);
+      expect(call[1]).toBe((resolver as any).licenseDefinitionPolicy);
+      expect(call[2]).toBe(AuthorizationPrivilege.DELETE);
+      expect(typeof call[3]).toBe('string');
       expect(
         platformConfigurationAuditService.recordChangeForActor
       ).toHaveBeenCalled();
@@ -82,12 +88,11 @@ describe('LicensePlanResolverMutations', () => {
 
       await resolver.updateLicensePlan(actorContext, { ID: 'plan-1' } as any);
 
-      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
-        actorContext,
-        licensePlan.licensingFramework.authorization,
-        AuthorizationPrivilege.UPDATE,
-        expect.any(String)
-      );
+      const call = authorizationService.grantAccessOrFail.mock.calls[0];
+      expect(call[0]).toBe(actorContext);
+      expect(call[1]).toBe((resolver as any).licenseDefinitionPolicy);
+      expect(call[2]).toBe(AuthorizationPrivilege.UPDATE);
+      expect(typeof call[3]).toBe('string');
       expect(
         platformConfigurationAuditService.recordChangeForActor
       ).toHaveBeenCalled();

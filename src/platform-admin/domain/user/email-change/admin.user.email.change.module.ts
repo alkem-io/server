@@ -1,4 +1,5 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { UserEmailChangeModule } from '@domain/community/user-email-change/user.email.change.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { Module } from '@nestjs/common';
@@ -9,6 +10,7 @@ import { AdminUserEmailChangeResolverMutations } from './admin.user.email.change
 @Module({
   imports: [
     AuthorizationModule,
+    AuthorizationPolicyModule,
     PlatformAuthorizationPolicyModule,
     UserEmailChangeModule,
     UserLookupModule,

@@ -289,3 +289,43 @@ merely documented as an intention.
       A15 given its own privilege) reviewed.
 - [ ] T070m's six reachability-model findings reviewed and accepted as
       corrections, not narrowings.
+
+---
+
+## T055 — `notifications@alkem.io`'s `global-community-read` (spec-server-13 fix)
+
+**Decision recorded, not silently dropped or silently kept.** The seeded
+credential is `AuthorizationCredential.GLOBAL_COMMUNITY_READ`
+(`'global-community-read'`) — the broad-PII-read credential consumed
+throughout `organization.service.authorization.ts`,
+`user.service.authorization.ts` and
+`virtual.contributor.service.authorization.ts`. It is **NOT** the same
+identifier as the retired `RoleName.GLOBAL_COMMUNITY_READER`
+(`'global-community-reader'`, one of Slice B's ten retired role/credential
+values per `contracts/graphql-contract.md` §Slice B) — the two differ by
+exactly the "-ER" suffix that is C1's silent-void naming mismatch. Whether
+`AuthorizationCredential.GLOBAL_COMMUNITY_READ` itself is scoped by "the
+matching ten" credential removals in Slice B is a product/data question
+this fix pass does not have the standing to answer unilaterally — the
+notifications service's actual dependency on this read grant needs
+verifying against its live API usage before either replacing it with a
+`feature-*` role or removing it outright.
+
+**Action taken now:** the seed entry in `users.json` is left AS-IS (no
+runtime behaviour change) — this is a flagged verification, not a defect to
+fix blind. **Action required before Slice B (T077/T082):** the Slice B
+implementer MUST resolve this explicitly, in one of two ways, before
+`T077` deletes any retired enum values and `T082` deletes retired
+credential rows:
+1. Verify (against the `notifications` repo's API usage) that the
+   `notifications@alkem.io` account does not actually need broad community
+   read, and drop the credential from `users.json` — or
+2. Confirm it does, and either keep `GLOBAL_COMMUNITY_READ` a live,
+   non-retired credential (i.e. it is NOT one of "the matching ten"), or
+   replace the seed entry with the appropriate `feature-*` role before the
+   credential type is deleted.
+
+Left unresolved, T082's forward-only DML would delete this account's
+`global-community-read` credential row the next time the platform seeds a
+fresh bootstrap after Slice B ships, silently withdrawing whatever read
+access the notifications integration depends on.

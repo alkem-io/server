@@ -890,18 +890,43 @@ export class UserService {
     await this.invalidateActorContextCache(response);
 
     if (serviceProfileChange) {
-      await this.platformRoleAssignmentAuditService.recordServiceProfileChange({
-        initiatorUserId: actorContext.actorID,
-        initiatorRole: resolveInitiatorRole({
-          actorCredentialTypes: actorContext.credentials?.map(
-            c => c.type as AuthorizationCredential
-          ),
-          intendedOwners: [AuthorizationCredential.PLATFORM_ROLES_ADMIN],
-        }),
-        targetUserId: user.id,
-        previousServiceProfile: serviceProfileChange.previous,
-        newServiceProfile: serviceProfileChange.next,
-      });
+      try {
+        await this.platformRoleAssignmentAuditService.recordServiceProfileChange(
+          {
+            initiatorUserId: actorContext.actorID,
+            initiatorRole: resolveInitiatorRole({
+              actorCredentialTypes: actorContext.credentials?.map(
+                c => c.type as AuthorizationCredential
+              ),
+              intendedOwners: [AuthorizationCredential.PLATFORM_ROLES_ADMIN],
+            }),
+            targetUserId: user.id,
+            previousServiceProfile: serviceProfileChange.previous,
+            newServiceProfile: serviceProfileChange.next,
+          }
+        );
+      } catch (error) {
+        // corr-server-11/spec-server-8 fix: the marker was already saved
+        // (`this.save(user)` above) by the time this fail-closed audit
+        // write can throw — leaving it applied while the caller is told
+        // "the operation was NOT applied" inverts FR-027. Compensate by
+        // reverting JUST the serviceProfile field (not the whole entity —
+        // `profileData` changes in the same call are independent and stay
+        // applied) before re-throwing.
+        try {
+          response.serviceProfile = serviceProfileChange.previous;
+          await this.save(response);
+        } catch (compensationError) {
+          this.logger.error?.(
+            `Unable to compensate for a failed service-profile audit write (user=${user.id}): serviceProfile remains ${serviceProfileChange.next} with no audit record. Compensation error: ${compensationError instanceof Error ? compensationError.message : String(compensationError)}`,
+            compensationError instanceof Error
+              ? compensationError.stack
+              : undefined,
+            LogContext.AUTH_POLICY
+          );
+        }
+        throw error;
+      }
     }
 
     return response;

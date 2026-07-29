@@ -1,3 +1,4 @@
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PlatformAuditCategory } from '@domain/community/user-email-change/enums/platform.audit.category';
@@ -93,6 +94,20 @@ describe('AuditLogAnalyzeTool', () => {
   });
 
   describe('authorization gate', () => {
+    it('checks PLATFORM_AUDIT_READ, not the retired PLATFORM_ADMIN catch-all', async () => {
+      const actorContext = createActorContext();
+      await tool.execute({ action: 'summary' }, actorContext);
+
+      // spec-server-9 fix: assert the actual privilege named at the gate —
+      // without this, re-anchoring the check back onto PLATFORM_ADMIN (or
+      // any other privilege) would pass this suite unchanged.
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        actorContext,
+        expect.anything(),
+        AuthorizationPrivilege.PLATFORM_AUDIT_READ
+      );
+    });
+
     it('denies a non-admin and never queries the audit log', async () => {
       vi.mocked(authorizationService.isAccessGranted).mockReturnValue(false);
 

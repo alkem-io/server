@@ -54,6 +54,16 @@ export type TreeId =
   | 'licensing-framework'
   | 'license-policy'
   | 'ai-server'
+  // corr-server-9 fix: `transferCallout`'s TRANSFER_RESOURCE_OFFER/_ACCEPT
+  // are checked on the CalloutsSet's OWN authorization
+  // (`callouts.set.service.authorization.ts`), a DIFFERENT credential rule
+  // — and a different legacy reacher (`global-support-manager`, not
+  // `global-support`) — than the `account`-tree rule the other four A9
+  // transfer mutations share (`account.service.authorization.ts`). The two
+  // trees cannot share one flat `PRIVILEGE_GRANTS` entry for the same
+  // privilege names (research: two independent grant sets, one privilege
+  // pair) — split into its own tree-scoped anchor.
+  | 'callouts-set'
   // Per-resolver SYNTHETIC policies — fixed, in-memory, never persisted,
   // never reset. Named per resolver so a reviewer can find the constructor
   // that builds it.

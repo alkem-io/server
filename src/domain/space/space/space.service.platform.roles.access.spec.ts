@@ -341,6 +341,82 @@ describe('SpacePlatformRolesAccessService', () => {
         );
         expect(licenseRole?.grantedPrivileges).toEqual([]);
       });
+
+      // 027-platform-role-redesign (qual-server-3 fix) — PLATFORM_SUPPORT's
+      // twin of the GLOBAL_SUPPORT cases directly above. In particular:
+      // PLATFORM_ADMIN is asserted ABSENT in every branch (the code comment
+      // above `getAccessPrivilegesForPlatformSupport` states the new role
+      // must never hold the catch-all — flipping that back on would pass
+      // silently without this assertion).
+      it('should grant PLATFORM_SUPPORT no privileges on L0 without allowPlatformSupportAsAdmin', () => {
+        const space = createSpace();
+        const result = service.createPlatformRolesAccess(
+          space,
+          defaultSettings
+        );
+
+        const platformSupportRole = result.roles.find(
+          r => r.roleName === RoleName.PLATFORM_SUPPORT
+        );
+        expect(platformSupportRole?.grantedPrivileges).toEqual([]);
+        expect(platformSupportRole?.grantedPrivileges).not.toContain(
+          AuthorizationPrivilege.PLATFORM_ADMIN
+        );
+      });
+
+      it('should grant PLATFORM_SUPPORT CRUD when allowPlatformSupportAsAdmin is true', () => {
+        const supportSettings = {
+          ...defaultSettings,
+          privacy: {
+            ...defaultSettings.privacy,
+            allowPlatformSupportAsAdmin: true,
+          },
+        };
+        const space = createSpace();
+        const result = service.createPlatformRolesAccess(
+          space,
+          supportSettings
+        );
+
+        const platformSupportRole = result.roles.find(
+          r => r.roleName === RoleName.PLATFORM_SUPPORT
+        );
+        expect(platformSupportRole?.grantedPrivileges).toEqual(
+          expect.arrayContaining([
+            AuthorizationPrivilege.CREATE,
+            AuthorizationPrivilege.READ,
+            AuthorizationPrivilege.UPDATE,
+            AuthorizationPrivilege.DELETE,
+            AuthorizationPrivilege.GRANT,
+          ])
+        );
+        expect(platformSupportRole?.grantedPrivileges).not.toContain(
+          AuthorizationPrivilege.PLATFORM_ADMIN
+        );
+      });
+
+      it('should grant PLATFORM_SUPPORT PUBLIC_SHARE when both allowPlatformSupportAsAdmin and allowGuestContributions are true', () => {
+        const settings = {
+          ...defaultSettings,
+          privacy: {
+            ...defaultSettings.privacy,
+            allowPlatformSupportAsAdmin: true,
+          },
+          collaboration: {
+            ...defaultSettings.collaboration,
+            allowGuestContributions: true,
+          },
+        };
+        const space = createSpace();
+        const result = service.createPlatformRolesAccess(space, settings);
+
+        const platformSupportRole = result.roles.find(
+          r => r.roleName === RoleName.PLATFORM_SUPPORT
+        );
+        expect(platformSupportRole?.grantedPrivileges).toContain(
+          AuthorizationPrivilege.PUBLIC_SHARE
+        );
+      });
     });
 
     describe('Subspaces (L1/L2)', () => {
@@ -471,6 +547,88 @@ describe('SpacePlatformRolesAccessService', () => {
         expect(() =>
           service.createPlatformRolesAccess(space, defaultSettings, undefined)
         ).toThrow(RelationshipNotFoundException);
+      });
+
+      // 027-platform-role-redesign (qual-server-3 fix) — PLATFORM_SUPPORT's
+      // L1/L2 parent-inheritance twin of the GLOBAL_SUPPORT cases above.
+      // Critically, this asserts the branch keys on the parent's OWN
+      // `RoleName.PLATFORM_SUPPORT` cell — the exact copy-paste slip
+      // (keying on `RoleName.GLOBAL_SUPPORT` instead) the finding named as
+      // the failure mode this test closes.
+      it('should grant PLATFORM_SUPPORT CRUD when parent has UPDATE for platform-support', () => {
+        const parentAccess: IPlatformRolesAccess = {
+          roles: [
+            {
+              roleName: RoleName.PLATFORM_SUPPORT,
+              grantedPrivileges: [AuthorizationPrivilege.UPDATE],
+            },
+          ],
+        };
+        (platformAccessService.hasRolePrivilege as any).mockImplementation(
+          (roles: any, roleName: RoleName, privilege: AuthorizationPrivilege) =>
+            roleName === RoleName.PLATFORM_SUPPORT &&
+            privilege === AuthorizationPrivilege.UPDATE
+        );
+        const space = createSpace({ level: SpaceLevel.L1 });
+        const result = service.createPlatformRolesAccess(
+          space,
+          defaultSettings,
+          parentAccess
+        );
+
+        const platformSupportRole = result.roles.find(
+          r => r.roleName === RoleName.PLATFORM_SUPPORT
+        );
+        expect(platformSupportRole?.grantedPrivileges).toEqual(
+          expect.arrayContaining([
+            AuthorizationPrivilege.CREATE,
+            AuthorizationPrivilege.READ,
+            AuthorizationPrivilege.UPDATE,
+            AuthorizationPrivilege.DELETE,
+            AuthorizationPrivilege.GRANT,
+          ])
+        );
+        expect(platformSupportRole?.grantedPrivileges).not.toContain(
+          AuthorizationPrivilege.PLATFORM_ADMIN
+        );
+        expect(platformAccessService.hasRolePrivilege).toHaveBeenCalledWith(
+          parentAccess.roles,
+          RoleName.PLATFORM_SUPPORT,
+          AuthorizationPrivilege.UPDATE
+        );
+      });
+
+      it('should NOT grant PLATFORM_SUPPORT CRUD when parent lacks UPDATE for platform-support (even if legacy GLOBAL_SUPPORT has it)', () => {
+        const parentAccess: IPlatformRolesAccess = {
+          roles: [
+            {
+              roleName: RoleName.GLOBAL_SUPPORT,
+              grantedPrivileges: [AuthorizationPrivilege.UPDATE],
+            },
+            {
+              roleName: RoleName.PLATFORM_SUPPORT,
+              grantedPrivileges: [AuthorizationPrivilege.READ],
+            },
+          ],
+        };
+        // Only GLOBAL_SUPPORT's cell carries UPDATE — PLATFORM_SUPPORT's
+        // own cell does not, and the two roles must not be conflated.
+        (platformAccessService.hasRolePrivilege as any).mockImplementation(
+          (roles: any, roleName: RoleName, privilege: AuthorizationPrivilege) =>
+            roleName === RoleName.GLOBAL_SUPPORT &&
+            privilege === AuthorizationPrivilege.UPDATE
+        );
+        const space = createSpace({ level: SpaceLevel.L1 });
+        const result = service.createPlatformRolesAccess(
+          space,
+          defaultSettings,
+          parentAccess
+        );
+
+        const platformSupportRole = result.roles.find(
+          r => r.roleName === RoleName.PLATFORM_SUPPORT
+        );
+        expect(platformSupportRole?.grantedPrivileges).toEqual([]);
       });
 
       it('should NOT grant guest READ_ABOUT on private subspace without parent READ', () => {

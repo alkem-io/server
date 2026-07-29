@@ -1,3 +1,4 @@
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
@@ -92,6 +93,19 @@ describe('TemplatesSetResolverMutations', () => {
       );
       expect(authorizationPolicyService.saveAll).toHaveBeenCalled();
       expect(result).toBe(template);
+      // spec-server-9 fix: A7's dual path is CREATE ∨
+      // PLATFORM_SUPPORT_ORG_RESOURCES — assert the actual gate.
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        actorContext,
+        templatesSet.authorization,
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+      );
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        templatesSet.authorization,
+        AuthorizationPrivilege.CREATE,
+        expect.any(String)
+      );
     });
   });
 
@@ -122,6 +136,25 @@ describe('TemplatesSetResolverMutations', () => {
       expect(templatesSetService.createTemplateFromSpace).toHaveBeenCalledWith(
         templatesSet,
         templateData
+      );
+      // spec-server-9 fix: same A7 dual path on the templates-set, plus a
+      // bare READ check on the source space.
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        actorContext,
+        templatesSet.authorization,
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+      );
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        templatesSet.authorization,
+        AuthorizationPrivilege.CREATE,
+        expect.any(String)
+      );
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        space.authorization,
+        AuthorizationPrivilege.READ,
+        expect.any(String)
       );
     });
   });
@@ -160,6 +193,18 @@ describe('TemplatesSetResolverMutations', () => {
       expect(
         templatesSetService.createTemplateFromContentSpace
       ).toHaveBeenCalledWith(templatesSet, templateData);
+      // spec-server-9 fix — see createTemplateFromSpace above.
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        actorContext,
+        templatesSet.authorization,
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+      );
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        contentSpace.authorization,
+        AuthorizationPrivilege.READ,
+        expect.any(String)
+      );
     });
   });
 });

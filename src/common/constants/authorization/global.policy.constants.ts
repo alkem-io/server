@@ -51,3 +51,29 @@ export const GLOBAL_POLICY_ADMIN_USER_ACCOUNT_DELETE =
   'globalPolicy-adminUserAccountDelete';
 export const GLOBAL_POLICY_REGISTRATION_PLATFORM_USERS_ADMIN_DELETE_USER =
   'globalPolicy-registrationPlatformUsersAdminDeleteUser';
+// 027-platform-role-redesign (sec-server-7 fix): the sec-server-4 pin above
+// covered three of the four A4/A5 surfaces sharing the widened
+// PLATFORM_USERS_ADMIN privilege (identity delete, account delete,
+// registration delete) but missed the fourth — `adminUserEmailChange` /
+// `adminUserEmailChangeDriftResolve` — which kept checking the SHARED
+// policy directly. That policy's PLATFORM_USERS_ADMIN grant set includes
+// GLOBAL_PLATFORM_MANAGER, which never held the pre-feature PLATFORM_ADMIN
+// gate on these two mutations. Pinned to A4's own pre-feature reacher set
+// {GA, GS, GLM} plus the new owning role, GLOBAL_PLATFORM_MANAGER dropped.
+export const GLOBAL_POLICY_ADMIN_USER_EMAIL_CHANGE =
+  'globalPolicy-adminUserEmailChange';
+// 027-platform-role-redesign (corr-server-7/corr-server-10 fix): A13's five
+// license-plan/license-policy definition mutations checked bare
+// CREATE/UPDATE/DELETE against `licensingFramework.authorization`, which
+// INHERITS the root policy as its parent — so the root rule's
+// `platform-content-full-access` CRUD cascade (T036a) reached these
+// surfaces too, a family SC-004's exception does not cover. Pinned to this
+// resolver-local, hardcoded IN_MEMORY policy — {platform-settings-admin,
+// global-admin, global-license-manager, global-platform-manager} — instead
+// of the entity's own (cascade-polluted) authorization tree. GLOBAL_ADMIN
+// is included here (corr-server-10): it reached A13 today only via the
+// root cascade, an implicit reach the census's `legacyReachers` omitted
+// entirely; declaring it here makes it an explicit, intentional grant
+// rather than an accident of inheritance.
+export const GLOBAL_POLICY_LICENSE_DEFINITION_ADMIN =
+  'globalPolicy-licenseDefinitionAdmin';
