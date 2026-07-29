@@ -51,7 +51,8 @@ export class NotificationRecipientsService {
         eventData.spaceID,
         eventData.userID,
         eventData.organizationID,
-        eventData.virtualContributorID
+        eventData.virtualContributorID,
+        eventData.userIDs
       );
 
     this.logger.verbose?.(
@@ -277,6 +278,10 @@ export class NotificationRecipientsService {
         return notificationSettings.user.mentioned;
       case NotificationEvent.USER_MESSAGE:
         return notificationSettings.user.messageReceived;
+      case NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT:
+        return notificationSettings.user.conversationMessageDirect;
+      case NotificationEvent.USER_CONVERSATION_MESSAGE_GROUP:
+        return notificationSettings.user.conversationMessageGroup;
       case NotificationEvent.ORGANIZATION_MESSAGE_SENDER:
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION:
         return notificationSettings.space.admin.communityApplicationReceived;
@@ -348,7 +353,8 @@ export class NotificationRecipientsService {
     spaceID?: string,
     userID?: string,
     organizationID?: string,
-    virtualContributorID?: string
+    virtualContributorID?: string,
+    userIDs?: string[]
   ): Promise<{
     privilegeRequired: AuthorizationPrivilege | undefined;
     credentialCriteria: CredentialsSearchInput[];
@@ -459,6 +465,15 @@ export class NotificationRecipientsService {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
         credentialCriteria =
           await this.getVirtualContributorCriteria(virtualContributorID);
+        break;
+      }
+      case NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT:
+      case NotificationEvent.USER_CONVERSATION_MESSAGE_GROUP: {
+        // 034-messaging-notifications (FR-005/FR-020, D-13): recipients are
+        // the (already sender-excluded) conversation members, resolved in
+        // ONE OR-combined credentials query — no per-recipient privilege
+        // check, mirroring USER_MESSAGE/USER_MENTIONED above.
+        credentialCriteria = this.getUserSelfCriteriaForUserIDs(userIDs);
         break;
       }
       default: {
@@ -715,6 +730,23 @@ export class NotificationRecipientsService {
         resourceID: userID,
       },
     ];
+  }
+
+  private getUserSelfCriteriaForUserIDs(
+    userIDs: string[] | undefined
+  ): CredentialsSearchInput[] {
+    if (!userIDs || userIDs.length === 0) {
+      throw new ValidationException(
+        'User IDs are required for notification recipients',
+        LogContext.NOTIFICATIONS
+      );
+    }
+    // One OR-combined query (FR-020) — usersWithCredentials builds an OR
+    // condition across every criteria element.
+    return userIDs.map(userID => ({
+      type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+      resourceID: userID,
+    }));
   }
 
   private async getVirtualContributorCriteria(

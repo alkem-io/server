@@ -505,6 +505,97 @@ describe('NotificationExternalAdapter', () => {
     });
   });
 
+  describe('034-messaging-notifications — buildConversationMessageDirectPayload / GroupPayload (C-2/FR-008/FR-009)', () => {
+    const HOSTILE_MESSAGE =
+      '<script>alert(1)</script> "quoted" \n newline — none of this must appear';
+
+    const mockSender = () => {
+      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue({
+        id: 'sender-1',
+        firstName: 'Alice',
+        lastName: 'Sender',
+        email: 'alice@test.com',
+        nameID: 'alice',
+        profile: { displayName: 'Alice Sender' },
+      } as any);
+      vi.mocked(urlGeneratorService.createUrlForUserNameID).mockReturnValue(
+        '/user/alice'
+      );
+      vi.mocked(urlGeneratorService.getConversationUrl).mockReturnValue(
+        'https://platform.test/?chat=conv-1'
+      );
+      vi.mocked(configService.get).mockReturnValue('https://platform.test');
+    };
+
+    const recipientUser = (id: string) =>
+      ({
+        id,
+        firstName: 'Bob',
+        lastName: 'Recipient',
+        email: `${id}@test.com`,
+        nameID: id,
+        profile: { displayName: 'Bob Recipient' },
+      }) as any;
+
+    it('buildConversationMessageDirectPayload zeroes triggeredBy.email (never the sender real address)', async () => {
+      mockSender();
+
+      const result = await adapter.buildConversationMessageDirectPayload(
+        NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
+        'sender-1',
+        [recipientUser('recipient-1')],
+        'conv-1'
+      );
+
+      expect(result.triggeredBy.email).toBe('');
+      expect(result.triggeredBy.id).toBe('sender-1');
+      // recipients[].email is the delivery address and remains populated.
+      expect(result.recipients[0].email).toBe('recipient-1@test.com');
+    });
+
+    it('buildConversationMessageDirectPayload carries no message-content field, even under a hostile-content fixture (US1-AS5)', async () => {
+      mockSender();
+
+      const result = await adapter.buildConversationMessageDirectPayload(
+        NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
+        'sender-1',
+        [recipientUser('recipient-1')],
+        'conv-1'
+      );
+
+      const serialized = JSON.stringify(result);
+      expect(serialized).not.toContain('script');
+      expect(serialized).not.toContain(HOSTILE_MESSAGE);
+      expect(result).not.toHaveProperty('message');
+      expect(result.conversation).toEqual({
+        id: 'conv-1',
+        url: 'https://platform.test/?chat=conv-1',
+      });
+      expect(result.sender).toEqual({ displayName: 'Alice Sender' });
+    });
+
+    it('buildConversationMessageGroupPayload includes conversation.displayName and zeroes triggeredBy.email', async () => {
+      mockSender();
+
+      const result = await adapter.buildConversationMessageGroupPayload(
+        NotificationEvent.USER_CONVERSATION_MESSAGE_GROUP,
+        'sender-1',
+        [recipientUser('recipient-1'), recipientUser('recipient-2')],
+        'conv-1',
+        'Project Alpha'
+      );
+
+      expect(result.triggeredBy.email).toBe('');
+      expect(result.conversation).toEqual({
+        id: 'conv-1',
+        url: 'https://platform.test/?chat=conv-1',
+        displayName: 'Project Alpha',
+      });
+      expect(result.recipients).toHaveLength(2);
+      expect(result).not.toHaveProperty('message');
+    });
+  });
+
   describe('buildPlatformUserRegisteredNotificationPayload', () => {
     it('should build user registered payload', async () => {
       vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue({

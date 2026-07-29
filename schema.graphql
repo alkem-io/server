@@ -567,6 +567,8 @@ enum NotificationEvent {
   SPACE_COMMUNITY_INVITATION_USER_PLATFORM
   SPACE_LEAD_COMMUNICATION_MESSAGE
   USER_COMMENT_REPLY
+  USER_CONVERSATION_MESSAGE_DIRECT
+  USER_CONVERSATION_MESSAGE_GROUP
   USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION
   USER_EMAIL_CHANGE_NEW_ADDRESS_NOTIFICATION
   USER_EMAIL_CHANGE_SECURITY_SIGNAL
@@ -6948,6 +6950,14 @@ type UserSettingsNotificationSpaceAdmin {
 type UserSettingsNotificationUser {
   """Receive a notification when someone replies to a comment I made."""
   commentReply: UserSettingsNotificationChannels!
+  """
+  Receive a notification when someone sends me a direct (1:1) chat message. The inApp channel is permanently OFF (enforced platform-wide) — the stored value is retained for row-shape symmetry only.
+  """
+  conversationMessageDirect: UserSettingsNotificationChannels!
+  """
+  Receive a notification when someone posts in a group chat I am a member of. The inApp channel is permanently OFF (enforced platform-wide) — the stored value is retained for row-shape symmetry only.
+  """
+  conversationMessageGroup: UserSettingsNotificationChannels!
   """The notifications settings for membership events for this User"""
   membership: UserSettingsNotificationUserMembership!
   """Receive a notification you are mentioned"""
@@ -8489,6 +8499,10 @@ input NotificationRecipientsInput {
   The ID of the specific user recipient for user-related notifications (e.g., invitations, mentions).
   """
   userID: UUID
+  """
+  Plural recipient user IDs (e.g. conversation-message events) — resolved via a single OR-combined credentials query. Bounded to at most 100 entries; larger conversations must be fanned out by the caller in bounded batches.
+  """
+  userIDs: [UUID!]
   """The ID of the Virtual Contributor to use to determine recipients."""
   virtualContributorID: UUID
 }
@@ -9769,6 +9783,14 @@ input UpdateUserSettingsNotificationSpaceInput {
 input UpdateUserSettingsNotificationUserInput {
   """Receive a notification when someone replies to a comment I made."""
   commentReply: NotificationSettingInput
+  """
+  Receive a notification when someone sends me a direct (1:1) chat message. Note: the inApp channel is permanently OFF regardless of the stored value.
+  """
+  conversationMessageDirect: NotificationSettingInput
+  """
+  Receive a notification when someone posts in a group chat I am a member of. Note: the inApp channel is permanently OFF regardless of the stored value.
+  """
+  conversationMessageGroup: NotificationSettingInput
   """Settings related to User Membership Notifications."""
   membership: UpdateUserSettingsNotificationUserMembershipInput
   """Receive a notification you are mentioned"""

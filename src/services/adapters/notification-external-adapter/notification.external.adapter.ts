@@ -72,6 +72,8 @@ import { NotificationInputCollaborationCalloutContributionCreated } from '../not
 import { NotificationInputCollaborationCalloutPostContributionComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { NotificationInputCommentReply } from '../notification-adapter/dto/space/notification.dto.input.space.communication.user.comment.reply';
 import { NotificationInputUserEmailChangeSpaceAdmin } from '../notification-adapter/dto/space/notification.dto.input.space.user.email.change';
+import { NotificationEventPayloadUserConversationMessageDirect } from './dto/user/notification.event.payload.user.conversation.message.direct';
+import { NotificationEventPayloadUserConversationMessageGroup } from './dto/user/notification.event.payload.user.conversation.message.group';
 
 interface CalloutContributionPayload {
   id: string;
@@ -971,6 +973,72 @@ export class NotificationExternalAdapter {
     };
 
     return payload;
+  }
+
+  /**
+   * 034-messaging-notifications (contract C-2, data-model.md §3, FR-008/FR-009).
+   *
+   * Deliberately does NOT reuse `buildBaseEventPayload` — that helper's
+   * `triggeredBy` carries the sender's REAL email address, which is the
+   * exact leak this feature must not repeat (the unanimous council finding
+   * against reusing `USER_MESSAGE`/its template). `triggeredBy.email` is
+   * explicitly zeroed here; `recipients[].email` remains — it is the
+   * delivery address, not exposed to other recipients. No message-content
+   * field exists anywhere in this payload.
+   */
+  async buildConversationMessageDirectPayload(
+    eventType: NotificationEvent,
+    senderActorID: string,
+    emailRecipients: IUser[],
+    conversationID: string
+  ): Promise<NotificationEventPayloadUserConversationMessageDirect> {
+    const sender = await this.getUserPayloadOrFail(senderActorID);
+    const conversationUrl =
+      this.urlGeneratorService.getConversationUrl(conversationID);
+
+    return {
+      eventType,
+      triggeredBy: { ...sender, email: '' },
+      recipients: emailRecipients.map(recipient =>
+        this.createUserPayloadFromUser(recipient)
+      ),
+      platform: { url: this.getPlatformURL() },
+      sender: { displayName: sender.profile.displayName },
+      conversation: { id: conversationID, url: conversationUrl },
+    };
+  }
+
+  /**
+   * 034-messaging-notifications — group variant. See
+   * `buildConversationMessageDirectPayload` for the `triggeredBy.email`
+   * zeroing rationale. Adds `conversation.displayName` — group email
+   * copy names the conversation.
+   */
+  async buildConversationMessageGroupPayload(
+    eventType: NotificationEvent,
+    senderActorID: string,
+    emailRecipients: IUser[],
+    conversationID: string,
+    conversationDisplayName: string
+  ): Promise<NotificationEventPayloadUserConversationMessageGroup> {
+    const sender = await this.getUserPayloadOrFail(senderActorID);
+    const conversationUrl =
+      this.urlGeneratorService.getConversationUrl(conversationID);
+
+    return {
+      eventType,
+      triggeredBy: { ...sender, email: '' },
+      recipients: emailRecipients.map(recipient =>
+        this.createUserPayloadFromUser(recipient)
+      ),
+      platform: { url: this.getPlatformURL() },
+      sender: { displayName: sender.profile.displayName },
+      conversation: {
+        id: conversationID,
+        url: conversationUrl,
+        displayName: conversationDisplayName,
+      },
+    };
   }
 
   async buildOrganizationMentionNotificationPayload(

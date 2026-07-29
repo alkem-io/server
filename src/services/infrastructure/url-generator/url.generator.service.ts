@@ -95,6 +95,18 @@ export class UrlGeneratorService {
     return `${this.endpoint_cluster}/home`;
   }
 
+  /**
+   * 034-messaging-notifications (contract C-6). Deep link used by BOTH the
+   * conversation-message email templates' primary link and the push
+   * payload's `url` — NEVER a bare home link (the existing
+   * `userToUserMessageDirect` push `url: '/'` is the anti-pattern this
+   * replaces, not the precedent). The client's unified chat surface opens
+   * the panel on this conversation on load, then strips the query param.
+   */
+  public getConversationUrl(conversationID: string): string {
+    return `${this.endpoint_cluster}/?chat=${conversationID}`;
+  }
+
   private async generateUrlForProfileNotCached(
     profile: IProfile
   ): Promise<string> {

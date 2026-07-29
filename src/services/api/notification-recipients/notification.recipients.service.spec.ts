@@ -466,6 +466,64 @@ describe('NotificationRecipientsService', () => {
       ).rejects.toThrow(NotificationEventException);
     });
 
+    describe('034-messaging-notifications — plural userIDs (T007)', () => {
+      it('resolves USER_CONVERSATION_MESSAGE_DIRECT recipients via ONE OR-combined USER_SELF_MANAGEMENT query', async () => {
+        await service.getRecipients({
+          eventType: NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
+          triggeredBy: 'sender-1',
+          userIDs: ['user-a'],
+        });
+
+        expect(userLookupService.usersWithCredentials).toHaveBeenCalledWith(
+          [
+            {
+              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+              resourceID: 'user-a',
+            },
+          ],
+          undefined,
+          expect.any(Object)
+        );
+      });
+
+      it('resolves USER_CONVERSATION_MESSAGE_GROUP recipients — N ids fold into ONE OR-combined query (no N+1)', async () => {
+        await service.getRecipients({
+          eventType: NotificationEvent.USER_CONVERSATION_MESSAGE_GROUP,
+          triggeredBy: 'sender-1',
+          userIDs: ['user-a', 'user-b', 'user-c'],
+        });
+
+        expect(userLookupService.usersWithCredentials).toHaveBeenCalledTimes(1);
+        expect(userLookupService.usersWithCredentials).toHaveBeenCalledWith(
+          [
+            {
+              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+              resourceID: 'user-a',
+            },
+            {
+              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+              resourceID: 'user-b',
+            },
+            {
+              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+              resourceID: 'user-c',
+            },
+          ],
+          undefined,
+          expect.any(Object)
+        );
+      });
+
+      it('throws ValidationException for USER_CONVERSATION_MESSAGE_DIRECT with no userIDs', async () => {
+        await expect(
+          service.getRecipients({
+            eventType: NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
+            triggeredBy: 'sender-1',
+          })
+        ).rejects.toThrow(ValidationException);
+      });
+    });
+
     describe('poll notification events (T065)', () => {
       it('(a) POLL_VOTE_CAST_ON_OWN_POLL uses USER_SELF_MANAGEMENT credential for the poll creator', async () => {
         await service.getRecipients({
@@ -623,6 +681,89 @@ describe('NotificationRecipientsService', () => {
       // Fixed { email: true, inApp: false }
       expect(result.emailRecipients).toHaveLength(1);
       expect(result.inAppRecipients).toHaveLength(0);
+    });
+
+    it('routes USER_CONVERSATION_MESSAGE_DIRECT to notification.user.conversationMessageDirect (own row)', async () => {
+      const user = {
+        id: 'user-a',
+        email: 'a@example.com',
+        settings: {
+          notification: {
+            user: {
+              messageReceived: { email: true, inApp: true, push: true },
+              conversationMessageDirect: {
+                email: false,
+                inApp: false,
+                push: true,
+              },
+              conversationMessageGroup: {
+                email: true,
+                inApp: false,
+                push: true,
+              },
+            },
+          },
+        },
+        credentials: [],
+      } as unknown as IUser;
+
+      vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+        user,
+      ]);
+      vi.mocked(userLookupService.getUsersByIds).mockImplementation(
+        async (ids: string[]) => (ids.length > 0 ? [user] : [])
+      );
+
+      const result = await service.getRecipients({
+        eventType: NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
+        triggeredBy: 'sender-1',
+        userIDs: ['user-a'],
+      });
+
+      // conversationMessageDirect.email is false — NOT the (true)
+      // messageReceived or conversationMessageGroup rows.
+      expect(result.emailRecipients).toHaveLength(0);
+      expect(result.pushRecipients).toHaveLength(1);
+    });
+
+    it('routes USER_CONVERSATION_MESSAGE_GROUP to notification.user.conversationMessageGroup (own row)', async () => {
+      const user = {
+        id: 'user-a',
+        email: 'a@example.com',
+        settings: {
+          notification: {
+            user: {
+              conversationMessageDirect: {
+                email: true,
+                inApp: false,
+                push: true,
+              },
+              conversationMessageGroup: {
+                email: false,
+                inApp: false,
+                push: false,
+              },
+            },
+          },
+        },
+        credentials: [],
+      } as unknown as IUser;
+
+      vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+        user,
+      ]);
+      vi.mocked(userLookupService.getUsersByIds).mockImplementation(
+        async (ids: string[]) => (ids.length > 0 ? [user] : [])
+      );
+
+      const result = await service.getRecipients({
+        eventType: NotificationEvent.USER_CONVERSATION_MESSAGE_GROUP,
+        triggeredBy: 'sender-1',
+        userIDs: ['user-a'],
+      });
+
+      expect(result.emailRecipients).toHaveLength(0);
+      expect(result.pushRecipients).toHaveLength(0);
     });
   });
 
