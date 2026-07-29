@@ -21,7 +21,9 @@ import { ContributionAuthorDetails } from '../types/contribution.author.details'
 import { TypedActorSet, UNKNOWN_ACTOR_TYPE } from '../types/typed.actor.set';
 import { isElasticError, isElasticResponseError } from '../utils';
 
-const isFromAlkemioTeam = (email: string) => /.*@alkem\.io/.test(email);
+// Anchored at the end so look-alike suffix domains (e.g. `x@alkem.io.example.com`)
+// are NOT treated as team addresses; the domain part is case-insensitive per RFC 5321.
+const isFromAlkemioTeam = (email: string) => /@alkem\.io$/i.test(email);
 
 type ContributionActorContext = Partial<
   Pick<ActorContext, 'actorID' | 'isAnonymous' | 'guestName'>

@@ -8,7 +8,7 @@ import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { vi } from 'vitest';
-import { UserLookupService } from './user.lookup.service';
+import { isAlkemioEmail, UserLookupService } from './user.lookup.service';
 
 describe('UserLookupService', () => {
   let service: UserLookupService;
@@ -262,5 +262,19 @@ describe('UserLookupService', () => {
 
       expect(result).toBeDefined();
     });
+  });
+});
+
+describe('isAlkemioEmail', () => {
+  it.each([
+    ['team@alkem.io', true],
+    ['Team@Alkem.IO', true], // the domain part is case-insensitive
+    ['someone@example.com', false],
+    // look-alike suffix domains must not read as team addresses
+    ['attacker@alkem.io.example.com', false],
+    ['x@alkem.iodine.net', false],
+    ['alkem.io@example.com', false],
+  ])('%s → %s', (email, expected) => {
+    expect(isAlkemioEmail(email)).toBe(expected);
   });
 });

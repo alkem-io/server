@@ -55,10 +55,12 @@ export type OfficeDocumentContributionDocument = {
    * True when the window is attributed to the Alkemio team: there is at least
    * one resolvable user actor and every user actor (across both sets) is a
    * member of the Alkemio team (by `@alkem.io` email). A window with no
-   * resolvable users, or with any non-team / unresolvable user, is `false`.
+   * resolvable users, or with any participant that cannot be vouched for — a
+   * non-team user, a user with no user row, or an actor id that resolved to no
+   * type at all — is `false`.
    * Mirrors the per-author `alkemio` flag on {@link ContributionAuthorDetails}
    * so both single-author and aggregate records can be split team vs. external
-   * in Kibana. Non-user actors (VC/org/account) never flip it.
+   * in Kibana. Actors of a known non-user type (VC/org/account) never flip it.
    */
   alkemio: boolean;
 };

@@ -620,6 +620,69 @@ describe('CollaborativeDocumentIntegrationService', () => {
         expect(arg.alkemio).toBe(false);
       });
 
+      it('is false when an actor id resolves to no type at all', async () => {
+        // `ghost` lands in the `unknown` bucket (FR-005): a participant of
+        // unknown provenance cannot be vouched for as team-internal, so the
+        // window must not be indexed as an Alkemio-team window.
+        arrange(new Map([['user-1', ActorType.USER]]), [
+          { id: 'user-1', email: 'a@alkem.io' },
+        ]);
+
+        await service.officeDocumentContributions({
+          documentId: STORAGE_DOCUMENT_ID,
+          writeActors: ['user-1', 'ghost'],
+          readonlyActors: [],
+        } as any);
+
+        // disqualified before any user lookup is issued
+        expect(userLookupService.getUsersByIds).not.toHaveBeenCalled();
+        const arg =
+          contributionReporter.officeDocumentContribution.mock.calls[0][0];
+        expect(arg.alkemio).toBe(false);
+        // ...and the record itself is still indexed, with the id preserved
+        expect(Object.values(arg.writeActors).flat()).toEqual(
+          expect.arrayContaining(['user-1', 'ghost'])
+        );
+      });
+
+      it('is false — and the record is still indexed — when the user lookup fails', async () => {
+        // The flag is analytics-only: a transient DB failure must not discard
+        // the whole contribution record.
+        arrange(new Map([['user-1', ActorType.USER]]));
+        userLookupService.getUsersByIds.mockRejectedValue(
+          new Error('connection terminated')
+        );
+
+        await service.officeDocumentContributions({
+          documentId: STORAGE_DOCUMENT_ID,
+          writeActors: ['user-1'],
+          readonlyActors: [],
+        } as any);
+
+        expect(
+          contributionReporter.officeDocumentContribution
+        ).toHaveBeenCalledTimes(1);
+        const arg =
+          contributionReporter.officeDocumentContribution.mock.calls[0][0];
+        expect(arg.alkemio).toBe(false);
+      });
+
+      it('is false for a look-alike suffix domain', async () => {
+        arrange(new Map([['user-1', ActorType.USER]]), [
+          { id: 'user-1', email: 'attacker@alkem.io.example.com' },
+        ]);
+
+        await service.officeDocumentContributions({
+          documentId: STORAGE_DOCUMENT_ID,
+          writeActors: ['user-1'],
+          readonlyActors: [],
+        } as any);
+
+        const arg =
+          contributionReporter.officeDocumentContribution.mock.calls[0][0];
+        expect(arg.alkemio).toBe(false);
+      });
+
       it('is false when the window has no user actors', async () => {
         arrange(new Map([['vc-1', ActorType.VIRTUAL_CONTRIBUTOR]]));
 

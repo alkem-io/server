@@ -414,30 +414,58 @@ export class CollaborativeDocumentIntegrationService {
    * Compute the aggregate window's `alkemio` team flag from the resolved actor
    * types: `true` only when the window has at least one user actor AND every
    * user actor resolves to an Alkemio-team (`@alkem.io`) email. Any non-team or
-   * unresolvable user (deleted between emission and indexing, or an id with no
-   * user row) drops the whole window to `false`, so filtering `alkemio:false`
-   * always retains genuine external usage. Non-user actors (VC/org/account) do
-   * not participate. `typeById` is the batch type resolution already computed
+   * unresolvable participant drops the whole window to `false` — a user-type
+   * actor with no user row (deleted between emission and indexing), an actor id
+   * that resolved to no type at all (the `unknown` bucket of FR-005), or a
+   * failed lookup. Filtering `alkemio:false` therefore always retains genuine
+   * external usage. Non-user actors of a KNOWN non-user type (VC/org/account)
+   * do not participate. `typeById` is the batch type resolution already computed
    * for the two actor sets, so this adds only ONE extra batched user lookup.
+   *
+   * Never throws: the flag is analytics-only, so a failed lookup degrades to
+   * `false` rather than discarding the whole contribution record.
    */
   private async isAlkemioTeamWindow(
     allIds: string[],
     typeById: Map<string, ActorType>
   ): Promise<boolean> {
-    const userIds = allIds.filter(id => typeById.get(id) === ActorType.USER);
+    const userIds: string[] = [];
+    for (const id of allIds) {
+      const actorType = typeById.get(id);
+      // An id absent from the type resolution is a participant of unknown
+      // provenance — it cannot be vouched for as team-internal.
+      if (actorType === undefined) {
+        return false;
+      }
+      if (actorType === ActorType.USER) {
+        userIds.push(id);
+      }
+    }
     if (userIds.length === 0) {
       return false;
     }
-    const users = await this.userLookupService.getUsersByIds(userIds, {
-      select: { id: true, email: true },
-      loadEagerRelations: false,
-    });
-    // Every user id must resolve to a team email — a missing row (unresolvable
-    // user) leaves the counts unequal and correctly reads as non-team.
-    return (
-      users.length === userIds.length &&
-      users.every(user => isAlkemioEmail(user.email))
-    );
+    try {
+      const users = await this.userLookupService.getUsersByIds(userIds, {
+        select: { id: true, email: true },
+        loadEagerRelations: false,
+      });
+      // Every user id must resolve to a team email — a missing row (unresolvable
+      // user) leaves the counts unequal and correctly reads as non-team.
+      return (
+        users.length === userIds.length &&
+        users.every(user => isAlkemioEmail(user.email))
+      );
+    } catch (e: any) {
+      this.logger.warn?.(
+        {
+          message:
+            'Unable to resolve the Alkemio team flag for a Collabora document window; defaulting to false',
+          error: e?.message,
+        },
+        LogContext.COLLAB_DOCUMENT_INTEGRATION
+      );
+      return false;
+    }
   }
 }
 
