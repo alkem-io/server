@@ -16,13 +16,22 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  *
  *   minWidth   384 ->  1536      (new floor = old ceiling)
  *   maxWidth  1536 ->  3840      (3840 CSS px @1x, 1920 CSS px @2x)
- *   minHeight   64 ->   256
- *   maxHeight  256 ->   640
- *   aspectRatio 6 ->      6      (unchanged)
+ *   minHeight   64 ->   154      (= ceil(minWidth / maxAspectRatio) = 1536/10)
+ *   maxHeight  256 ->   640      (=      maxWidth / minAspectRatio  = 3840/6)
+ *   aspectRatio 6 ->      6      (unchanged — this is the DEFAULT shape)
+ *
+ * The height bounds intentionally span the whole 6-10 aspect-ratio range that a
+ * space admin may now choose from, rather than matching a single shape. Pinning
+ * them to 6:1 would reject a legitimate 10:1 upload and vice versa.
  *
  * Data-only, idempotent, no DDL, no authorization_policy writes, no auth reset.
  * Existing `uri` values are untouched — an already-uploaded small banner keeps
  * rendering; only the NEXT upload is held to the new floor.
+ *
+ * up() deliberately does NOT write `aspectRatio`: it is now per-space user data
+ * (a space admin picks 6-10), so re-running this must not reset anyone's choice.
+ * down() DOES reset it to 6, because rolling back also restores the narrow
+ * 64-256 height bounds under which a non-6 ratio could no longer be uploaded.
  *
  * Scope note: `bannerWide` (innovation hubs) is deliberately NOT touched here.
  *
@@ -38,9 +47,8 @@ export class WidenSpaceBannerVisualConstraints1785283200000
       `UPDATE "visual" SET
          "minWidth" = 1536,
          "maxWidth" = 3840,
-         "minHeight" = 256,
-         "maxHeight" = 640,
-         "aspectRatio" = 6
+         "minHeight" = 154,
+         "maxHeight" = 640
        WHERE "name" = 'banner'`
     );
   }

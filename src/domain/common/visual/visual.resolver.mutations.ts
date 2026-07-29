@@ -28,7 +28,8 @@ export class VisualResolverMutations {
   ) {}
 
   @Mutation(() => IVisual, {
-    description: 'Updates the image URI for the specified Visual.',
+    description:
+      'Updates the image URI, alternative text and/or display aspect ratio for the specified Visual.',
   })
   async updateVisual(
     @CurrentActor() actorContext: ActorContext,

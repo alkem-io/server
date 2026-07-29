@@ -266,6 +266,44 @@ describe('VisualService', () => {
     });
   });
 
+  describe('validateAspectRatio', () => {
+    const banner = { id: 'v1', name: VisualType.BANNER } as IVisual;
+
+    it.each([
+      6, 7.3, 10,
+    ])('should not throw for an in-range banner ratio (%s)', ratio => {
+      expect(() => service.validateAspectRatio(banner, ratio)).not.toThrow();
+    });
+
+    it.each([
+      5.9, 10.1,
+    ])('should throw ValidationException for an out-of-range banner ratio (%s)', ratio => {
+      expect(() => service.validateAspectRatio(banner, ratio)).toThrow(
+        ValidationException
+      );
+    });
+
+    it('should reject any change for a fixed-shape visual type', () => {
+      const avatar = { id: 'v2', name: VisualType.AVATAR } as IVisual;
+
+      expect(() => service.validateAspectRatio(avatar, 1)).not.toThrow();
+      expect(() => service.validateAspectRatio(avatar, 1.5)).toThrow(
+        ValidationException
+      );
+    });
+
+    it('should pin an unknown visual name to its stored ratio', () => {
+      const unknown = { id: 'v3', name: 'somethingElse', aspectRatio: 4 } as
+        | IVisual
+        | any;
+
+      expect(() => service.validateAspectRatio(unknown, 4)).not.toThrow();
+      expect(() => service.validateAspectRatio(unknown, 7)).toThrow(
+        ValidationException
+      );
+    });
+  });
+
   describe('createVisualAvatar', () => {
     it('should create an avatar visual with correct constraints', () => {
       const result = service.createVisualAvatar();
@@ -291,8 +329,10 @@ describe('VisualService', () => {
       expect(result.name).toBe(VisualType.BANNER);
       expect(result.minWidth).toBe(1536);
       expect(result.maxWidth).toBe(3840);
-      expect(result.minHeight).toBe(256);
+      // Height bounds span the whole 6-10 aspect-ratio range, not just 6:1.
+      expect(result.minHeight).toBe(154);
       expect(result.maxHeight).toBe(640);
+      expect(result.aspectRatio).toBe(6);
     });
   });
 
