@@ -18,6 +18,7 @@ import { NotificationPlatformAdapter } from '@services/adapters/notification-ada
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock } from 'vitest';
+import { PlatformRoleAssignmentRulesService } from './platform.role.assignment.rules.service';
 import { PlatformRoleResolverMutations } from './platform.role.resolver.mutations';
 
 describe('PlatformRoleResolverMutations', () => {
@@ -308,6 +309,88 @@ describe('PlatformRoleResolverMutations', () => {
         expect.objectContaining({
           type: RoleChangeType.REMOVED,
         })
+      );
+    });
+  });
+
+  // 027-platform-role-redesign (T010/fix — live-verification F-1): the
+  // suite above auto-mocks `PlatformRoleAssignmentRulesService`, so it can
+  // never catch a wiring defect between the resolver and the REAL rule
+  // engine. This block wires the REAL rules service (only its
+  // `AuthorizationService` dependency is stubbed) so rule 5's revoke-path
+  // integration is actually exercised end to end, not just asserted in
+  // isolation (rules.service.spec.ts) or mocked away (suite above).
+  describe('removePlatformRoleFromUser — rule 5 real-engine integration', () => {
+    let realResolver: PlatformRoleResolverMutations;
+    let realRoleSetService: RoleSetService;
+    let realAuthorizationService: AuthorizationService;
+
+    beforeEach(async () => {
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          PlatformRoleResolverMutations,
+          PlatformRoleAssignmentRulesService,
+          MockWinstonProvider,
+        ],
+      })
+        .useMocker(defaultMockerFactory)
+        .compile();
+
+      realResolver = module.get(PlatformRoleResolverMutations);
+      realRoleSetService = module.get(RoleSetService);
+      realAuthorizationService = module.get(AuthorizationService);
+
+      (module.get(PlatformService).getRoleSetOrFail as Mock).mockResolvedValue(
+        mockRoleSet
+      );
+      (realAuthorizationService.isAccessGranted as Mock).mockReturnValue(true);
+      (realRoleSetService.removeActorFromRole as Mock).mockResolvedValue(
+        undefined
+      );
+      (
+        module.get(UserLookupService).getUserByIdOrFail as Mock
+      ).mockResolvedValue(mockUser);
+    });
+
+    it('rejects revoking PLATFORM_ROLES_ADMIN from the sole holder', async () => {
+      (realRoleSetService.countActorsWithRole as Mock).mockResolvedValue(1);
+
+      const roleData = {
+        actorID: 'user-target',
+        role: RoleName.PLATFORM_ROLES_ADMIN,
+      };
+
+      await expect(
+        realResolver.removePlatformRoleFromUser(
+          mockActorContext,
+          roleData as any
+        )
+      ).rejects.toThrow('cannot remove the last platform-roles-admin');
+
+      expect(realRoleSetService.removeActorFromRole).not.toHaveBeenCalled();
+    });
+
+    it('allows revoking PLATFORM_ROLES_ADMIN when another holder remains', async () => {
+      (realRoleSetService.countActorsWithRole as Mock).mockResolvedValue(2);
+
+      const actorContextWithCredentials = {
+        actorID: 'actor-1',
+        credentials: [{ type: AuthorizationCredential.PLATFORM_ROLES_ADMIN }],
+      } as any;
+      const roleData = {
+        actorID: 'user-target',
+        role: RoleName.PLATFORM_ROLES_ADMIN,
+      };
+
+      await realResolver.removePlatformRoleFromUser(
+        actorContextWithCredentials,
+        roleData as any
+      );
+
+      expect(realRoleSetService.removeActorFromRole).toHaveBeenCalledWith(
+        mockRoleSet,
+        RoleName.PLATFORM_ROLES_ADMIN,
+        'user-target'
       );
     });
   });

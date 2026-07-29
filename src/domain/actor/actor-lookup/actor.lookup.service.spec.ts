@@ -568,13 +568,57 @@ describe('ActorLookupService', () => {
   });
 
   describe('countActorsWithCredentials', () => {
-    it('should return count from entity manager', async () => {
-      entityManager.count.mockResolvedValue(5);
+    // Chainable QueryBuilder mock, mirroring findMentionableContributors'
+    // helper above — `where`/`andWhere`/`setParameters` return the QB
+    // itself, `getCount` resolves the final tally.
+    const makeCountQbMock = (count: number) => {
+      const qb: any = {};
+      qb.where = vi.fn(() => qb);
+      qb.andWhere = vi.fn(() => qb);
+      qb.setParameters = vi.fn(() => qb);
+      qb.getCount = vi.fn().mockResolvedValue(count);
+      return qb;
+    };
+
+    // 027-platform-role-redesign (F-1 fix): asserts a DISTINCT-actor count
+    // via an EXISTS subquery rather than a relation-join `entityManager.count`
+    // — the join form previously over-counted an actor holding more than one
+    // matching credential row, silently defeating the last-Platform-Roles-
+    // Admin guard (`role.set.service.ts#countActorsWithRole`).
+    it('returns the EXISTS-subquery getCount() result', async () => {
+      const qb = makeCountQbMock(1);
+      entityManager.createQueryBuilder.mockReturnValue(qb);
 
       const result = await service.countActorsWithCredentials({
-        type: 'admin',
+        type: 'platform-roles-admin',
+        resourceID: '',
       });
-      expect(result).toBe(5);
+
+      expect(result).toBe(1);
+      // The predicate is installed via where(callback) — an EXISTS subquery,
+      // not a plain relation-join filter.
+      expect(qb.where).toHaveBeenCalledWith(expect.any(Function));
+      expect(qb.setParameters).toHaveBeenCalledWith({
+        mcCredType: 'platform-roles-admin',
+        mcCredResourceID: '',
+      });
+      expect(qb.andWhere).not.toHaveBeenCalled();
+    });
+
+    it('adds an actor-type filter when actorTypes is provided', async () => {
+      const qb = makeCountQbMock(2);
+      entityManager.createQueryBuilder.mockReturnValue(qb);
+
+      const result = await service.countActorsWithCredentials(
+        { type: 'admin' },
+        [ActorType.USER]
+      );
+
+      expect(result).toBe(2);
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'actor.type IN (:...mcCountActorTypes)',
+        { mcCountActorTypes: [ActorType.USER] }
+      );
     });
   });
 
