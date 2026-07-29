@@ -1786,6 +1786,101 @@ describe('RoleSetService', () => {
         'actor-1'
       );
     });
+
+    // spec-server-4 fix (FR-031/SC-016): granting a `Feature …` role to an
+    // ORGANIZATION on the PLATFORM role-set must invalidate the cache of
+    // every ORGANIZATION_ADMIN/OWNER of that org too — not only the
+    // organization's own actor cache (already handled by
+    // `ActorService.grantCredentialOrFail`) — or a standing org admin keeps
+    // the OLD credential set for up to the ActorContext TTL.
+    it('invalidates the cache of every ORGANIZATION_ADMIN/OWNER when a feature-* role is granted to an ORGANIZATION on the PLATFORM role-set', async () => {
+      const roleSet = {
+        id: 'rs-platform-1',
+        type: RoleSetType.PLATFORM,
+        roles: [
+          {
+            name: RoleName.FEATURE_BETA_TESTER,
+            credential: { type: 'feature-beta-tester', resourceID: '' },
+            userPolicy: { minimum: -1, maximum: -1 },
+            organizationPolicy: { minimum: -1, maximum: -1 },
+            virtualContributorPolicy: { minimum: -1, maximum: -1 },
+          },
+        ],
+      } as any;
+
+      (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+        ActorType.ORGANIZATION
+      );
+      vi.spyOn(roleSetRepository, 'findOne').mockResolvedValue({
+        ...roleSet,
+        parentRoleSet: undefined,
+      });
+      (actorService.hasValidCredential as Mock).mockResolvedValue(false);
+      (actorService.grantCredentialOrFail as Mock).mockResolvedValue(undefined);
+      (userLookupService.usersWithCredentials as Mock).mockResolvedValue([
+        { id: 'admin-user-1' },
+        { id: 'owner-user-1' },
+      ]);
+
+      await service.assignActorToRole(
+        roleSet,
+        RoleName.FEATURE_BETA_TESTER,
+        'org-1'
+      );
+
+      expect(userLookupService.usersWithCredentials).toHaveBeenCalledWith([
+        {
+          type: AuthorizationCredential.ORGANIZATION_ADMIN,
+          resourceID: 'org-1',
+        },
+        {
+          type: AuthorizationCredential.ORGANIZATION_OWNER,
+          resourceID: 'org-1',
+        },
+      ]);
+      const actorContextCacheService = (service as any)
+        .actorContextCacheService;
+      expect(actorContextCacheService.deleteByActorID).toHaveBeenCalledWith(
+        'admin-user-1'
+      );
+      expect(actorContextCacheService.deleteByActorID).toHaveBeenCalledWith(
+        'owner-user-1'
+      );
+    });
+
+    it('does NOT invalidate org-admin caches when the PLATFORM role is granted to a USER (not an organization)', async () => {
+      const roleSet = {
+        id: 'rs-platform-1',
+        type: RoleSetType.PLATFORM,
+        roles: [
+          {
+            name: RoleName.FEATURE_BETA_TESTER,
+            credential: { type: 'feature-beta-tester', resourceID: '' },
+            userPolicy: { minimum: -1, maximum: -1 },
+            organizationPolicy: { minimum: -1, maximum: -1 },
+            virtualContributorPolicy: { minimum: -1, maximum: -1 },
+          },
+        ],
+      } as any;
+
+      (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+        ActorType.USER
+      );
+      vi.spyOn(roleSetRepository, 'findOne').mockResolvedValue({
+        ...roleSet,
+        parentRoleSet: undefined,
+      });
+      (actorService.hasValidCredential as Mock).mockResolvedValue(false);
+      (actorService.grantCredentialOrFail as Mock).mockResolvedValue(undefined);
+
+      await service.assignActorToRole(
+        roleSet,
+        RoleName.FEATURE_BETA_TESTER,
+        'user-1'
+      );
+
+      expect(userLookupService.usersWithCredentials).not.toHaveBeenCalled();
+    });
   });
 
   describe('removeActorFromRole', () => {
@@ -1859,6 +1954,57 @@ describe('RoleSetService', () => {
         .actorContextCacheService;
       expect(actorContextCacheService.deleteByActorID).toHaveBeenCalledWith(
         'actor-1'
+      );
+    });
+
+    // spec-server-4 fix (FR-031/SC-016) — revoke-direction mirror.
+    it('invalidates the cache of every ORGANIZATION_ADMIN/OWNER when a feature-* role is revoked from an ORGANIZATION on the PLATFORM role-set', async () => {
+      const roleSet = {
+        id: 'rs-platform-1',
+        type: RoleSetType.PLATFORM,
+        roles: [
+          {
+            name: RoleName.FEATURE_BETA_TESTER,
+            credential: { type: 'feature-beta-tester', resourceID: '' },
+            userPolicy: { minimum: -1, maximum: -1 },
+            organizationPolicy: { minimum: -1, maximum: -1 },
+            virtualContributorPolicy: { minimum: -1, maximum: -1 },
+          },
+        ],
+      } as any;
+
+      (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+        ActorType.ORGANIZATION
+      );
+      (actorService.revokeCredential as Mock).mockResolvedValue(undefined);
+      (userLookupService.usersWithCredentials as Mock).mockResolvedValue([
+        { id: 'admin-user-1' },
+      ]);
+      (roleSetCacheService.cleanActorMembershipCache as Mock).mockResolvedValue(
+        undefined
+      );
+
+      await service.removeActorFromRole(
+        roleSet,
+        RoleName.FEATURE_BETA_TESTER,
+        'org-1',
+        false
+      );
+
+      expect(userLookupService.usersWithCredentials).toHaveBeenCalledWith([
+        {
+          type: AuthorizationCredential.ORGANIZATION_ADMIN,
+          resourceID: 'org-1',
+        },
+        {
+          type: AuthorizationCredential.ORGANIZATION_OWNER,
+          resourceID: 'org-1',
+        },
+      ]);
+      const actorContextCacheService = (service as any)
+        .actorContextCacheService;
+      expect(actorContextCacheService.deleteByActorID).toHaveBeenCalledWith(
+        'admin-user-1'
       );
     });
 

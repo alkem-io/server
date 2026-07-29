@@ -343,7 +343,55 @@ describe('UserService', () => {
           { ID: 'user-1', serviceProfile: true } as any,
           mockActorContext
         )
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(
+        // spec-server-6 fix: matches contracts/graphql-contract.md verbatim.
+        'Forbidden: set-service-profile required to change the service-profile marker'
+      );
+      expect(existingUser.serviceProfile).toBe(false);
+      expect(repository.save).not.toHaveBeenCalled();
+      expect(
+        platformRoleAssignmentAuditService.recordServiceProfileRejected
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          targetUserId: 'user-1',
+          rejectedRule: 'SET_SERVICE_PROFILE',
+          newServiceProfile: true,
+        })
+      );
+    });
+
+    // corr-server-3/qual-server-1 fix: the test above dodges the real
+    // production shape by giving the actor a legacy `global-admin`
+    // credential — a realistic denial is an actor holding NEITHER the
+    // owning role NOR a legacy credential (that is often exactly WHY it
+    // was denied). Before the fix, `resolveInitiatorRole` would throw a raw
+    // `Error` on this empty intersection, escaping as an internal error
+    // rather than `ForbiddenException`, and silently dropping this audit
+    // row for 100% of realistic denials.
+    it('denies an actor with NO owning/legacy credential (the realistic denial shape) with ForbiddenException, and still audits the rejection', async () => {
+      const existingUser = {
+        id: 'user-1',
+        nameID: 'existing-name',
+        serviceProfile: false,
+        profile: { id: 'profile-1' },
+      } as unknown as IUser;
+      userLookupService.getUserById.mockResolvedValue(existingUser);
+      authorizationService.isAccessGranted.mockReturnValue(false);
+
+      const unprivilegedActorContext = {
+        actorID: 'actor-2',
+        credentials: [{ type: 'global-registered', resourceID: '' }],
+      } as any;
+
+      await expect(
+        service.updateUser(
+          { ID: 'user-1', serviceProfile: true } as any,
+          unprivilegedActorContext
+        )
+      ).rejects.toThrow(
+        // spec-server-6 fix: matches contracts/graphql-contract.md verbatim.
+        'Forbidden: set-service-profile required to change the service-profile marker'
+      );
       expect(existingUser.serviceProfile).toBe(false);
       expect(repository.save).not.toHaveBeenCalled();
       expect(

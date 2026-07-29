@@ -1,9 +1,6 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { RoleName } from '@common/enums/role.name';
-import {
-  ForbiddenAuthorizationPolicyException,
-  ValidationException,
-} from '@common/exceptions';
+import { ValidationException } from '@common/exceptions';
 import { PaginationInputOutOfBoundException } from '@common/exceptions/pagination/pagination.input.out.of.bounds.exception';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
@@ -328,16 +325,9 @@ describe('RoleSetResolverFields', () => {
         id: 'rs-1',
         authorization: { id: 'auth-1' },
       } as any;
-      (authorizationService.grantAccessOrFail as Mock).mockImplementation(
-        () => {
-          throw new ForbiddenAuthorizationPolicyException(
-            'denied',
-            AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ,
-            'auth-1',
-            'actor-1'
-          );
-        }
-      );
+      // spec-server-6 fix: an explicit `isAccessGranted` + throw now
+      // enforces this, not a `grantAccessOrFail` delegation.
+      (authorizationService.isAccessGranted as Mock).mockReturnValue(false);
 
       await expect(
         resolver.usersInRole(
@@ -345,12 +335,13 @@ describe('RoleSetResolverFields', () => {
           mockRoleSet,
           RoleName.PLATFORM_ROLES_ADMIN
         )
-      ).rejects.toThrow(ForbiddenAuthorizationPolicyException);
-      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+      ).rejects.toThrow(
+        `Forbidden: ${AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ} required to read holders of ${RoleName.PLATFORM_ROLES_ADMIN}`
+      );
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
         mockActorContext,
         mockRoleSet.authorization,
-        AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ,
-        expect.any(String)
+        AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ
       );
     });
 
@@ -470,18 +461,13 @@ describe('RoleSetResolverFields', () => {
         id: 'rs-1',
         authorization: { id: 'auth-1' },
       } as any;
-      (authorizationService.grantAccessOrFail as Mock).mockImplementation(
-        (_actor, _auth, privilege) => {
-          if (privilege === AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ) {
-            throw new ForbiddenAuthorizationPolicyException(
-              'denied',
-              privilege,
-              'auth-1',
-              'actor-1'
-            );
-          }
-          return true;
-        }
+      // MEMBER is an ordinary (non-target) role — still gated via
+      // `grantAccessOrFail`. PLATFORM_ROLES_ADMIN is a platform-target role
+      // — gated via `isAccessGranted` (spec-server-6 fix).
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(true);
+      (authorizationService.isAccessGranted as Mock).mockImplementation(
+        (_actor, _auth, privilege) =>
+          privilege !== AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ
       );
 
       await expect(
@@ -489,7 +475,9 @@ describe('RoleSetResolverFields', () => {
           RoleName.MEMBER,
           RoleName.PLATFORM_ROLES_ADMIN,
         ])
-      ).rejects.toThrow(ForbiddenAuthorizationPolicyException);
+      ).rejects.toThrow(
+        `Forbidden: ${AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ} required to read holders of ${RoleName.PLATFORM_ROLES_ADMIN}`
+      );
       expect(roleSetService.getUsersWithRole).not.toHaveBeenCalled();
     });
   });
@@ -520,16 +508,9 @@ describe('RoleSetResolverFields', () => {
         id: 'rs-1',
         authorization: { id: 'auth-1' },
       } as any;
-      (authorizationService.grantAccessOrFail as Mock).mockImplementation(
-        () => {
-          throw new ForbiddenAuthorizationPolicyException(
-            'denied',
-            AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ,
-            'auth-1',
-            'actor-1'
-          );
-        }
-      );
+      // spec-server-6 fix: an explicit `isAccessGranted` + throw now
+      // enforces this, not a `grantAccessOrFail` delegation.
+      (authorizationService.isAccessGranted as Mock).mockReturnValue(false);
 
       await expect(
         resolver.organizationsInRole(
@@ -537,7 +518,9 @@ describe('RoleSetResolverFields', () => {
           mockRoleSet,
           RoleName.PLATFORM_ROLES_ADMIN
         )
-      ).rejects.toThrow(ForbiddenAuthorizationPolicyException);
+      ).rejects.toThrow(
+        `Forbidden: ${AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ} required to read holders of ${RoleName.PLATFORM_ROLES_ADMIN}`
+      );
       expect(roleSetService.getOrganizationsWithRole).not.toHaveBeenCalled();
     });
 
@@ -632,18 +615,10 @@ describe('RoleSetResolverFields', () => {
         id: 'rs-1',
         authorization: { id: 'auth-1' },
       } as any;
-      (authorizationService.grantAccessOrFail as Mock).mockImplementation(
-        (_actor, _auth, privilege) => {
-          if (privilege === AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ) {
-            throw new ForbiddenAuthorizationPolicyException(
-              'denied',
-              privilege,
-              'auth-1',
-              'actor-1'
-            );
-          }
-          return true;
-        }
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(true);
+      (authorizationService.isAccessGranted as Mock).mockImplementation(
+        (_actor, _auth, privilege) =>
+          privilege !== AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ
       );
 
       await expect(
@@ -651,7 +626,9 @@ describe('RoleSetResolverFields', () => {
           RoleName.MEMBER,
           RoleName.PLATFORM_ROLES_ADMIN,
         ])
-      ).rejects.toThrow(ForbiddenAuthorizationPolicyException);
+      ).rejects.toThrow(
+        `Forbidden: ${AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ} required to read holders of ${RoleName.PLATFORM_ROLES_ADMIN}`
+      );
       expect(roleSetService.getOrganizationsWithRole).not.toHaveBeenCalled();
     });
   });

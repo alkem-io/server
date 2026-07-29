@@ -55,6 +55,7 @@ import { ISpaceSettings } from '@domain/space/space.settings/space.settings.inte
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
+import { FEATURE_FAMILY_ROLES } from '@platform/platform-role/platform.role.assignment.rules.service';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -804,6 +805,26 @@ export class RoleSetService {
         await this.actorContextCacheService.deleteByActorID(actorID);
         break;
       }
+      case RoleSetType.PLATFORM: {
+        // spec-server-4 fix (FR-031/SC-016): granting a `Feature …` role to
+        // an ORGANIZATION (T032a) only invalidates that organization's OWN
+        // actor-context cache (via `ActorService.grantCredentialOrFail`
+        // above) — but the organization's `feature-*` credential is
+        // INHERITED, at ActorContext build time, by every USER who is its
+        // ORGANIZATION_ADMIN/OWNER (T056,
+        // `expandWithOrganizationInheritedFeatureCredentials`). Without
+        // ALSO invalidating those users' caches, a standing operator with a
+        // request in the last 60s keeps the OLD (pre-grant) credential set
+        // for up to the ActorContext TTL — violating FR-031's "the newly
+        // granted role likewise works on the next request".
+        if (
+          actorType === ActorType.ORGANIZATION &&
+          FEATURE_FAMILY_ROLES.has(roleType)
+        ) {
+          await this.invalidateOrganizationInheritingActorCaches(actorID);
+        }
+        break;
+      }
     }
 
     // 6. Post-assignment side-effects (cache clears + community events /
@@ -1184,6 +1205,19 @@ export class RoleSetService {
         await this.actorContextCacheService.deleteByActorID(actorID);
         break;
       }
+      case RoleSetType.PLATFORM: {
+        // spec-server-4 fix (FR-031/SC-016) — the revoke-direction mirror
+        // of the assign-side fix above: see that comment for the full
+        // rationale. Without this, an org admin/owner keeps a revoked
+        // `feature-*` credential live for up to the ActorContext TTL.
+        if (
+          actorType === ActorType.ORGANIZATION &&
+          FEATURE_FAMILY_ROLES.has(roleType)
+        ) {
+          await this.invalidateOrganizationInheritingActorCaches(actorID);
+        }
+        break;
+      }
     }
 
     // 4. Clean cache
@@ -1193,6 +1227,34 @@ export class RoleSetService {
     );
 
     return actorID;
+  }
+
+  /** spec-server-4 fix (FR-031/SC-016): enumerates the USERS who currently
+   * hold `ORGANIZATION_ADMIN` or `ORGANIZATION_OWNER` on `organizationID`
+   * — the two credentials `expandWithOrganizationInheritedFeatureCredentials`
+   * (T056, `actor.context.service.ts`) uses to decide who inherits that
+   * organization's `feature-*` credentials — and invalidates each one's
+   * cached `ActorContext`, alongside the organization's own (already
+   * invalidated by `ActorService.grantCredentialOrFail`/`.revokeCredential`
+   * for the organization actor itself). */
+  private async invalidateOrganizationInheritingActorCaches(
+    organizationID: string
+  ): Promise<void> {
+    const inheritingUsers = await this.userLookupService.usersWithCredentials([
+      {
+        type: AuthorizationCredential.ORGANIZATION_ADMIN,
+        resourceID: organizationID,
+      },
+      {
+        type: AuthorizationCredential.ORGANIZATION_OWNER,
+        resourceID: organizationID,
+      },
+    ]);
+    await Promise.all(
+      inheritingUsers.map(user =>
+        this.actorContextCacheService.deleteByActorID(user.id)
+      )
+    );
   }
 
   public async isRoleSetAccountMatchingVcAccount(

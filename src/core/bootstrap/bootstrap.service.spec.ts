@@ -82,6 +82,10 @@ describe('BootstrapService', () => {
         authenticationID: 'kratos-1',
       }),
       getAccount: vi.fn().mockResolvedValue({ id: 'acc-1' }),
+      // corr-server-4 fix: `createUserProfiles` now reconciles the seeded
+      // `serviceProfile` marker for a pre-existing user too (not only at
+      // creation time), which calls `save`.
+      save: vi.fn().mockImplementation((user: any) => Promise.resolve(user)),
     };
     mocks.userLookupService = {
       isRegisteredUser: vi.fn().mockResolvedValue(true),

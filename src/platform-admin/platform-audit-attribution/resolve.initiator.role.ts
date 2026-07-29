@@ -102,3 +102,24 @@ export function resolveInitiatorRole(
       'when the PLATFORM privilege authorized the call, never on the owner branch.'
   );
 }
+
+/** Same attribution, but for a REJECTED attempt (corr-server-3/qual-server-1
+ * fix): the actor may legitimately hold neither the owning role nor a
+ * legacy credential — that is often exactly WHY the rejection happened, so
+ * the strict throw path above is not a defect here. Falls back to `SELF`
+ * rather than raise a second exception while already handling a rejection
+ * — a real actor attempted something, so `SELF` (not `SYSTEM`) is the
+ * honest default. Every rejection-path audit write (A1/A2's
+ * `platform.role.resolver.mutations.ts`, A21's `user.service.ts`) MUST use
+ * this wrapper, never the strict `resolveInitiatorRole` directly — the
+ * denial branch is, by construction, reachable by an actor the intersection
+ * was designed to reject. */
+export function resolveInitiatorRoleBestEffort(
+  input: ResolveInitiatorRoleInput
+): PlatformAuditInitiatorRole {
+  try {
+    return resolveInitiatorRole(input);
+  } catch {
+    return PlatformAuditInitiatorRole.SELF;
+  }
+}

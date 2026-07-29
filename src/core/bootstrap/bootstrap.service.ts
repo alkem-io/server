@@ -412,21 +412,6 @@ export class BootstrapService {
             },
           });
 
-          // T055: the seeded service account's `serviceProfile` marker MUST
-          // be set BEFORE its grant is evaluated below — rule 3 of the
-          // assignment rule engine keys on it, and a violation is FATAL
-          // (T054), so getting this order wrong means the server refuses to
-          // start rather than seeding a broken marker. Set directly on the
-          // entity (not via `updateUser`) — bootstrap is a system process,
-          // not a `SET_SERVICE_PROFILE`-gated mutation, and the platform
-          // authorization policy carrying that privilege may not even be
-          // populated yet at this point in `bootstrap()` (`ensureAuthorizationsPopulated()`
-          // runs later).
-          if (userData.serviceProfile === true) {
-            created.serviceProfile = true;
-            await this.userService.save(created);
-          }
-
           // Once all is done, reset the user authorizations
           const userAuthorizations =
             await this.userAuthorizationService.applyAuthorizationPolicy(
@@ -456,6 +441,27 @@ export class BootstrapService {
             'Unable to (re)load seeded user after creation',
             { userEmail: userData.email }
           );
+        }
+
+        // T055/corr-server-4: reconcile the seeded `serviceProfile` marker
+        // for BOTH a freshly-created user AND a pre-existing one whose
+        // marker is missing (e.g. a bootstrap run that crashed before the
+        // marker was persisted, an out-of-band credential revoke, or an
+        // account seeded before this feature). This MUST happen BEFORE
+        // `grantSeededCredentials` evaluates rule 3 below, on EVERY restart
+        // — not only at user-creation time — or a pre-existing account
+        // without the marker makes `evaluateSeedOrFail` fail fatally and
+        // the server refuses to start, on every subsequent restart, with no
+        // way to repair it (inverting FR-013b's "out-of-band lockout
+        // repaired by restart" into a permanent, restart-proof outage). Set
+        // directly on the entity (not via `updateUser`) — bootstrap is a
+        // system process, not a `SET_SERVICE_PROFILE`-gated mutation, and
+        // the platform authorization policy carrying that privilege may not
+        // even be populated yet at this point in `bootstrap()`
+        // (`ensureAuthorizationsPopulated()` runs later).
+        if (userData.serviceProfile === true && user.serviceProfile !== true) {
+          user.serviceProfile = true;
+          user = await this.userService.save(user);
         }
 
         await this.grantSeededCredentials(user, userData.credentials ?? []);
@@ -494,6 +500,21 @@ export class BootstrapService {
       (user.credentials ?? []).map(c => `${c.type}::${c.resourceID ?? ''}`)
     );
 
+    // spec-server-3/qual-server-2 fix: rule 4 (Audit Reader mutual
+    // exclusion) is otherwise INERT on this seed path — `evaluateSeedOrFail`
+    // was called without `targetHeldPlatformRoles`, so it always read an
+    // empty held-role set. Seed it from the user's EXISTING `Platform …`
+    // credentials, then update it as each credential in THIS loop is
+    // granted, so a single `users.json` entry listing two mutually
+    // exclusive Platform roles (e.g. platform-audit-reader +
+    // platform-support) on one account is caught even though neither is yet
+    // persisted when the loop starts (FR-028).
+    const heldPlatformRoles = new Set<RoleName>(
+      (user.credentials ?? [])
+        .map(c => c.type as unknown as RoleName)
+        .filter(r => PLATFORM_FAMILY_ROLES.has(r))
+    );
+
     for (const credentialData of credentialsData) {
       const key = `${credentialData.type}::${credentialData.resourceID ?? ''}`;
       if (alreadyHeld.has(key)) {
@@ -514,6 +535,7 @@ export class BootstrapService {
             role: asRole,
             targetActorType: 'user',
             targetServiceProfile: user.serviceProfile,
+            targetHeldPlatformRoles: Array.from(heldPlatformRoles),
           });
         } catch (error: any) {
           throw new BootstrapException(
@@ -530,6 +552,10 @@ export class BootstrapService {
         type: credentialData.type,
         resourceID: credentialData.resourceID,
       });
+
+      if (PLATFORM_FAMILY_ROLES.has(asRole)) {
+        heldPlatformRoles.add(asRole);
+      }
 
       if (isTargetRoleModel) {
         // FR-027: seeded writes fail OPEN — logged, never blocking startup.

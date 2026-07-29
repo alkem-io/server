@@ -90,12 +90,24 @@ export class RoleSetResolverFields {
     fieldName: string
   ): void {
     if (PLATFORM_TARGET_ROLES.has(role)) {
-      this.authorizationService.grantAccessOrFail(
+      // spec-server-6 fix: an explicit `isAccessGranted` + throw, matching
+      // `contracts/graphql-contract.md`'s declared shape verbatim — NOT a
+      // `grantAccessOrFail` delegation, whose thrown text
+      // (`Authorization: unable to grant '<priv>' privilege: ... on
+      // authorization <id> of type '<type>'`) both drifts from the
+      // contract AND leaks the internal authorization policy id/type to
+      // the caller.
+      const granted = this.authorizationService.isAccessGranted(
         actorContext,
         roleSet.authorization,
-        AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ,
-        `${fieldName}: role ${role}`
+        AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ
       );
+      if (!granted) {
+        throw new ForbiddenException(
+          `Forbidden: ${AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ} required to read holders of ${role}`,
+          LogContext.AUTH_POLICY
+        );
+      }
       return;
     }
     if (FEATURE_TARGET_ROLES.has(role)) {
@@ -110,8 +122,12 @@ export class RoleSetResolverFields {
         AuthorizationPrivilege.FEATURE_ROLE_HOLDERS_READ
       );
       if (!viaRolesAdmin && !viaFeatureAdmin) {
+        // spec-server-6 fix: `Forbidden: ` prefix to match the contract's
+        // declared error shape (`Forbidden: <privilege> required to read
+        // holders of <role>`) — both privileges are named since either
+        // satisfies this dual-reacher surface.
         throw new ForbiddenException(
-          `PLATFORM_ROLE_HOLDERS_READ or FEATURE_ROLE_HOLDERS_READ required to read holders of role: ${role}`,
+          `Forbidden: ${AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ} or ${AuthorizationPrivilege.FEATURE_ROLE_HOLDERS_READ} required to read holders of ${role}`,
           LogContext.AUTH_POLICY
         );
       }

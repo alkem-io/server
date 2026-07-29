@@ -54,7 +54,10 @@ import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { getReadOnlyDefaultCapabilityToggles } from '@services/mcp-server/capabilities/assistant.capability.classification';
 import { InstrumentService } from '@src/apm/decorators';
-import { resolveInitiatorRole } from '@src/platform-admin/platform-audit-attribution/resolve.initiator.role';
+import {
+  resolveInitiatorRole,
+  resolveInitiatorRoleBestEffort,
+} from '@src/platform-admin/platform-audit-attribution/resolve.initiator.role';
 import { PlatformRoleAssignmentAuditService } from '@src/platform-admin/platform-role-assignment-audit/platform.role.assignment.audit.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, QueryFailedError, Repository } from 'typeorm';
@@ -837,7 +840,17 @@ export class UserService {
         await this.platformRoleAssignmentAuditService.recordServiceProfileRejected(
           {
             initiatorUserId: actorContext.actorID,
-            initiatorRole: resolveInitiatorRole({
+            // corr-server-3/qual-server-1 fix: a rejected actor may
+            // legitimately hold NEITHER the owning role nor a legacy
+            // credential (that is often exactly WHY the check failed), so
+            // the strict `resolveInitiatorRole` throw path is not a defect
+            // here — the best-effort wrapper falls back to `SELF` instead
+            // of raising a second exception while already handling a
+            // rejection. Using the strict version raw made every realistic
+            // denial (any actor with no privileged credential) surface as
+            // an internal Error instead of ForbiddenException, and silently
+            // dropped this rejection audit row.
+            initiatorRole: resolveInitiatorRoleBestEffort({
               actorCredentialTypes: actorContext.credentials?.map(
                 c => c.type as AuthorizationCredential
               ),
@@ -848,9 +861,15 @@ export class UserService {
             newServiceProfile: userInput.serviceProfile,
           }
         );
+        // spec-server-6 fix: message matches
+        // `contracts/graphql-contract.md`'s declared shape verbatim
+        // (`client-web`/`test-suites` assert it exactly) — dynamic data
+        // (the user id) moves to `details`, never the message, per this
+        // repo's exception convention.
         throw new ForbiddenException(
-          `SET_SERVICE_PROFILE required to change the serviceProfile marker on user: ${user.id}`,
-          LogContext.AUTH_POLICY
+          'Forbidden: set-service-profile required to change the service-profile marker',
+          LogContext.AUTH_POLICY,
+          { userId: user.id }
         );
       }
       serviceProfileChange = {
