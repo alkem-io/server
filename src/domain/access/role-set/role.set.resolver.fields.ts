@@ -39,14 +39,15 @@ import { RoleSet } from './role.set.entity';
 import { IRoleSet } from './role.set.interface';
 import { RoleSetService } from './role.set.service';
 
-// 027-platform-role-redesign (T051, A20/A20b, D9): the 9 `Platform …` and 3
+// 027-platform-role-redesign (T051, A20/A20b, D9): the 10 `Platform …` and 3
 // `Feature …` TARGET roles this feature introduces — explicit sets, not a
 // `platform-`/`feature-` string-prefix test. A prefix test would also catch
 // the pre-existing legacy roles that happen to share the "platform-"
-// string (platform-operations-admin, platform-beta-tester,
-// platform-vc-campaign, platform-assistant-access), silently re-gating
-// their holder-list reads onto a privilege they never needed — exactly the
-// kind of narrowing Slice A forbids.
+// string (platform-beta-tester, platform-vc-campaign,
+// platform-assistant-access), silently re-gating their holder-list reads
+// onto a privilege they never needed — exactly the kind of narrowing
+// Slice A forbids. `platform-operations-admin` IS one of the 10 target
+// roles (renamed/repurposed by this feature, not a legacy holdover).
 const PLATFORM_TARGET_ROLES: ReadonlySet<RoleName> = new Set([
   RoleName.PLATFORM_ROLES_ADMIN,
   RoleName.PLATFORM_CONTENT_FULL_ACCESS,
@@ -57,6 +58,7 @@ const PLATFORM_TARGET_ROLES: ReadonlySet<RoleName> = new Set([
   RoleName.PLATFORM_LICENSE_MANAGER,
   RoleName.PLATFORM_SPACES_READER,
   RoleName.PLATFORM_AUDIT_READER,
+  RoleName.PLATFORM_OPERATIONS_ADMIN,
 ]);
 const FEATURE_TARGET_ROLES: ReadonlySet<RoleName> = new Set([
   RoleName.FEATURE_BETA_TESTER,
