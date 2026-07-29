@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MessagingPushBudgetService } from './messaging.push.budget.service';
 import { NotificationPushAdapter } from './notification.push.adapter';
 import { PushThrottleService } from './push.throttle.service';
 
@@ -20,6 +21,10 @@ const mockPushSubscriptionService = {
 };
 
 const mockPushThrottleService = {
+  isAllowed: vi.fn(),
+};
+
+const mockMessagingPushBudgetService = {
   isAllowed: vi.fn(),
 };
 
@@ -45,6 +50,10 @@ describe('NotificationPushAdapter', () => {
         {
           provide: PushThrottleService,
           useValue: mockPushThrottleService,
+        },
+        {
+          provide: MessagingPushBudgetService,
+          useValue: mockMessagingPushBudgetService,
         },
         { provide: AmqpConnection, useValue: mockAmqpConnection },
         { provide: ConfigService, useValue: mockConfigService },
@@ -103,6 +112,10 @@ describe('NotificationPushAdapter', () => {
           {
             provide: PushThrottleService,
             useValue: mockPushThrottleService,
+          },
+          {
+            provide: MessagingPushBudgetService,
+            useValue: mockMessagingPushBudgetService,
           },
           { provide: AmqpConnection, useValue: mockAmqpConnection },
           { provide: ConfigService, useValue: mockConfigService },
@@ -163,6 +176,48 @@ describe('NotificationPushAdapter', () => {
         mockPushSubscriptionService.getActiveSubscriptions
       ).toHaveBeenCalledWith(['user-1']);
       expect(mockAmqpConnection.publish).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('sendMessagingPushNotifications', () => {
+    it('gates on the messaging push budget, never the shared throttle', async () => {
+      const users = [createUser('user-1')];
+      mockMessagingPushBudgetService.isAllowed.mockResolvedValue(true);
+      mockPushSubscriptionService.getActiveSubscriptions.mockResolvedValue([
+        {
+          id: 'sub-1',
+          userId: 'user-1',
+          endpoint: 'https://push.example.com/1',
+          p256dh: 'key1',
+          auth: 'auth1',
+        },
+      ]);
+
+      await adapter.sendMessagingPushNotifications(
+        users,
+        NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
+        { title: 'Alice', body: 'Alice sent you a message', url: '/?chat=1' }
+      );
+
+      expect(mockMessagingPushBudgetService.isAllowed).toHaveBeenCalledWith(
+        'user-1'
+      );
+      expect(mockPushThrottleService.isAllowed).not.toHaveBeenCalled();
+      expect(mockAmqpConnection.publish).toHaveBeenCalledTimes(1);
+    });
+
+    it('drops recipients whose messaging push budget is exhausted', async () => {
+      mockMessagingPushBudgetService.isAllowed.mockResolvedValue(false);
+
+      await adapter.sendMessagingPushNotifications(
+        [createUser('user-1')],
+        NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
+        { title: 'Alice', body: 'Alice sent you a message', url: '/?chat=1' }
+      );
+
+      expect(
+        mockPushSubscriptionService.getActiveSubscriptions
+      ).not.toHaveBeenCalled();
     });
   });
 });

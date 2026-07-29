@@ -523,6 +523,16 @@ notifications:
   in_app:
     max_notifications_per_user: ${IN_APP_MAX_NOTIFICATIONS_PER_USER}:100
     max_retention_period_days: ${IN_APP_MAX_RETENTION_PERIOD_DAYS}:90
+  # Chat/conversation message notifications (034-messaging-notifications).
+  # NOT declared on any deployment manifest this release (Operator Ruling 3b) —
+  # the in-code defaults below govern everywhere; flipping `enabled` in
+  # production requires a deploy (risk R-9).
+  messaging:
+    enabled: ${MESSAGING_NOTIFICATIONS_ENABLED}:true
+    email_suppression_window_seconds: ${MESSAGING_EMAIL_SUPPRESSION_WINDOW_SECONDS}:300
+    push:
+      throttle:
+        max_per_minute: ${MESSAGING_PUSH_THROTTLE_MAX_PER_MINUTE}:10
 
 collaboration:
   membership:

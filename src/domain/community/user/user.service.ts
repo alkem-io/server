@@ -368,6 +368,19 @@ export class UserService {
           mentioned: { email: true, inApp: true, push: true },
           commentReply: { email: false, inApp: true, push: true },
           messageReceived: { email: true, inApp: true, push: true },
+          // 034-messaging-notifications (FR-002): email OFF, inApp OFF
+          // (permanently unsupported — enforced platform-wide regardless of
+          // this stored value, FR-003/D-2), push ON.
+          conversationMessageDirect: {
+            email: false,
+            inApp: false,
+            push: true,
+          },
+          conversationMessageGroup: {
+            email: false,
+            inApp: false,
+            push: true,
+          },
           membership: {
             spaceCommunityInvitationReceived: {
               email: true,

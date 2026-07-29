@@ -276,6 +276,15 @@ export type AlkemioConfig = {
       max_notifications_per_user: number;
       max_retention_period_days: number;
     };
+    messaging: {
+      enabled: boolean;
+      email_suppression_window_seconds: number;
+      push: {
+        throttle: {
+          max_per_minute: number;
+        };
+      };
+    };
   };
   collaboration: {
     membership: {

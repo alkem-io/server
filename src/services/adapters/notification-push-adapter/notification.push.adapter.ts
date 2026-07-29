@@ -7,6 +7,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { MessagingPushBudgetService } from './messaging.push.budget.service';
 import { PushNotificationMessage } from './push.notification.message';
 import { PushThrottleService } from './push.throttle.service';
 
@@ -17,6 +18,7 @@ export class NotificationPushAdapter {
   constructor(
     private pushSubscriptionService: PushSubscriptionService,
     private pushThrottleService: PushThrottleService,
+    private messagingPushBudgetService: MessagingPushBudgetService,
     private amqpConnection: AmqpConnection,
     private configService: ConfigService<AlkemioConfig, true>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -32,15 +34,11 @@ export class NotificationPushAdapter {
     event: NotificationEvent,
     payload: { title: string; body: string; url: string }
   ): Promise<void> {
-    if (!this.pushEnabled) {
+    if (!this.pushEnabled || pushRecipients.length === 0) {
       return;
     }
 
-    if (pushRecipients.length === 0) {
-      return;
-    }
-
-    // Filter by throttle
+    // Filter by the shared (non-messaging) throttle bucket.
     const allowedUserIds: string[] = [];
     for (const user of pushRecipients) {
       const allowed = await this.pushThrottleService.isAllowed(user.id);
@@ -49,6 +47,41 @@ export class NotificationPushAdapter {
       }
     }
 
+    await this.publishToSubscriptions(allowedUserIds, event, payload);
+  }
+
+  /**
+   * 034-messaging-notifications (FR-012/D-9). Same delivery mechanism as
+   * `sendPushNotifications`, but gated by the DISJOINT messaging push budget
+   * rather than the shared throttle — chat volume can never starve other
+   * notification types, and vice versa (independence in both directions,
+   * US4-AS2).
+   */
+  async sendMessagingPushNotifications(
+    pushRecipients: IUser[],
+    event: NotificationEvent,
+    payload: { title: string; body: string; url: string }
+  ): Promise<void> {
+    if (!this.pushEnabled || pushRecipients.length === 0) {
+      return;
+    }
+
+    const allowedUserIds: string[] = [];
+    for (const user of pushRecipients) {
+      const allowed = await this.messagingPushBudgetService.isAllowed(user.id);
+      if (allowed) {
+        allowedUserIds.push(user.id);
+      }
+    }
+
+    await this.publishToSubscriptions(allowedUserIds, event, payload);
+  }
+
+  private async publishToSubscriptions(
+    allowedUserIds: string[],
+    event: NotificationEvent,
+    payload: { title: string; body: string; url: string }
+  ): Promise<void> {
     if (allowedUserIds.length === 0) {
       return;
     }

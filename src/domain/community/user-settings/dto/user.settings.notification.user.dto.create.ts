@@ -28,6 +28,22 @@ export class CreateUserSettingsNotificationUserInput {
   @IsBoolean()
   commentReply!: CreateUserSettingsNotificationChannelsInput;
 
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
+    nullable: false,
+    description:
+      'Receive a notification when someone sends me a direct (1:1) chat message.',
+  })
+  @IsBoolean()
+  conversationMessageDirect!: CreateUserSettingsNotificationChannelsInput;
+
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
+    nullable: false,
+    description:
+      'Receive a notification when someone posts in a group chat I am a member of.',
+  })
+  @IsBoolean()
+  conversationMessageGroup!: CreateUserSettingsNotificationChannelsInput;
+
   @Field(() => CreateUserSettingsNotificationUserMembershipInput, {
     nullable: true,
     description: 'Settings related to User Membership Notifications.',
