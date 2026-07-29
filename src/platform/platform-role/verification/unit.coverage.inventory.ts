@@ -42,6 +42,12 @@ export const ASSIGNMENT_RULE_COVERAGE: Record<
   PlatformRoleAssignmentRuleViolation['ruleId'],
   AssignmentRuleCoverageEntry
 > = {
+  // spec-server-2/sec-server-1 fix (FR-015, ninth clarification pass).
+  'self-assignment': {
+    permittedSpec: ASSIGNMENT_RULES_SPEC,
+    deniedSpec: ASSIGNMENT_RULES_SPEC,
+    orderSpec: ASSIGNMENT_RULES_SPEC,
+  },
   'assigner-capability': {
     permittedSpec: ASSIGNMENT_RULES_SPEC,
     deniedSpec: ASSIGNMENT_RULES_SPEC,

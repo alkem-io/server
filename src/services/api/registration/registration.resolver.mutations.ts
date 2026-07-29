@@ -1,7 +1,13 @@
+import {
+  GLOBAL_POLICY_REGISTRATION_LEGACY_ADMIN_DELETE_USER,
+  GLOBAL_POLICY_REGISTRATION_PLATFORM_USERS_ADMIN_DELETE_USER,
+} from '@common/constants/authorization/global.policy.constants';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { AuthorizationRoleGlobal } from '@common/enums/authorization.credential.global';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CreateOrganizationInput } from '@domain/community/organization/dto/organization.dto.create';
 import { DeleteOrganizationInput } from '@domain/community/organization/dto/organization.dto.delete';
@@ -37,6 +43,28 @@ const A5_LEGACY_REACHERS: readonly AuthorizationCredential[] = [
 @InstrumentResolver()
 @Resolver()
 export class RegistrationResolverMutations {
+  /** spec-server-1 follow-through fix: `deleteUser`'s legacy-admin branch of
+   * its A5 dual-path gate checks DELETE against THIS resolver-local,
+   * hardcoded [GLOBAL_ADMIN] policy — NOT `user.authorization` — because
+   * the root content rule (FR-004, ninth analyze pass) now cascades DELETE
+   * platform-wide to `platform-content-full-access` too, and A5 is outside
+   * SC-004's single named exception (closed at A6/A7 only). Checking the
+   * merged, cascaded `user.authorization` for plain DELETE would let a
+   * Content Full Access holder delete any user account. Self-deletion is
+   * handled separately, by actor-identity comparison, never through this
+   * policy. */
+  private legacyGlobalAdminDeleteUserPolicy: IAuthorizationPolicy;
+
+  /** sec-server-4 fix: `deleteUser`'s admin branch checks PLATFORM_USERS_ADMIN
+   * against THIS resolver-local policy — scoped to `PLATFORM_USERS_ADMIN`
+   * ALONE, no legacy credentials — rather than `user.authorization`, whose
+   * PLATFORM_USERS_ADMIN grant set is additively widened (A4's email-change
+   * legacy reachers) to also admit global-support/global-license-manager/
+   * global-platform-manager. None of the three ever held deleteUser
+   * pre-feature (only GLOBAL_ADMIN, via the separate legacy-admin branch
+   * above, and self). */
+  private platformUsersAdminDeleteUserPolicy: IAuthorizationPolicy;
+
   constructor(
     private notificationPlatformAdapter: NotificationPlatformAdapter,
     private registrationService: RegistrationService,
@@ -50,7 +78,20 @@ export class RegistrationResolverMutations {
     private readonly platformUserRecordAuditService: PlatformUserRecordAuditService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
-  ) {}
+  ) {
+    this.legacyGlobalAdminDeleteUserPolicy =
+      this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
+        [AuthorizationRoleGlobal.GLOBAL_ADMIN],
+        [AuthorizationPrivilege.DELETE],
+        GLOBAL_POLICY_REGISTRATION_LEGACY_ADMIN_DELETE_USER
+      );
+    this.platformUsersAdminDeleteUserPolicy =
+      this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
+        [AuthorizationRoleGlobal.PLATFORM_USERS_ADMIN],
+        [AuthorizationPrivilege.PLATFORM_USERS_ADMIN],
+        GLOBAL_POLICY_REGISTRATION_PLATFORM_USERS_ADMIN_DELETE_USER
+      );
+  }
 
   @Mutation(() => IUser, {
     description: 'Creates a new User on the platform.',
@@ -135,22 +176,36 @@ export class RegistrationResolverMutations {
     // (USER_SELF_MANAGEMENT, resource-scoped to that user's own ID) — that
     // self-service path must keep working, so this is additive, not a
     // replacement.
-    const canDeleteAsSelfOrLegacyAdmin =
-      this.authorizationService.isAccessGranted(
-        actorContext,
-        user.authorization,
-        AuthorizationPrivilege.DELETE
-      );
+    //
+    // spec-server-1 follow-through fix: self-deletion is now checked by
+    // actor-identity comparison (equivalent to holding USER_SELF_MANAGEMENT,
+    // which every user is granted resource-scoped to their own id), and the
+    // legacy-admin path checks DELETE against `legacyGlobalAdminDeleteUserPolicy`
+    // — NOT `user.authorization` — so that Content Full Access's now-cascaded
+    // (FR-004) DELETE on the user tree cannot satisfy this branch. A5 is
+    // outside SC-004's single named exception (closed at A6/A7 only).
+    const isSelfDelete = actorContext.actorID === user.id;
+    const canDeleteAsLegacyAdmin = this.authorizationService.isAccessGranted(
+      actorContext,
+      this.legacyGlobalAdminDeleteUserPolicy,
+      AuthorizationPrivilege.DELETE
+    );
+    const canDeleteAsSelfOrLegacyAdmin = isSelfDelete || canDeleteAsLegacyAdmin;
+    // sec-server-4 fix: checked against `platformUsersAdminDeleteUserPolicy`
+    // (PLATFORM_USERS_ADMIN alone) — NOT `user.authorization`, whose
+    // PLATFORM_USERS_ADMIN grant set additively admits global-support/
+    // global-license-manager/global-platform-manager too (A4's legacy
+    // reachers), none of which ever held deleteUser pre-feature.
     const canDeleteAsPlatformUsersAdmin =
       this.authorizationService.isAccessGranted(
         actorContext,
-        user.authorization,
+        this.platformUsersAdminDeleteUserPolicy,
         AuthorizationPrivilege.PLATFORM_USERS_ADMIN
       );
     if (!canDeleteAsSelfOrLegacyAdmin && !canDeleteAsPlatformUsersAdmin) {
       await this.authorizationService.grantAccessOrFail(
         actorContext,
-        user.authorization,
+        this.legacyGlobalAdminDeleteUserPolicy,
         AuthorizationPrivilege.DELETE,
         `user delete: ${user.id}`
       );

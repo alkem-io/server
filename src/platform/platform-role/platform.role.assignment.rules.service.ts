@@ -43,6 +43,10 @@ export interface PlatformRoleAssignmentEvaluationInput {
   actorContext: ActorContext;
   roleSetAuthorization: IAuthorizationPolicy | undefined;
   targetActorType: PlatformRoleAssignmentTargetKind;
+  /** The actor id of the entity being granted/revoked the role — rule 6
+   * (self-assignment, FR-015). Not evaluated on the seed path
+   * (`evaluateSeedOrFail`), since bootstrap seeding has no acting operator. */
+  targetActorId?: string;
   /** Only meaningful when `targetActorType === 'user'` — the target's
    * `serviceProfile` flag (rule 3, A21). */
   targetServiceProfile?: boolean;
@@ -56,6 +60,7 @@ export interface PlatformRoleAssignmentEvaluationInput {
 
 export interface PlatformRoleAssignmentRuleViolation {
   ruleId:
+    | 'self-assignment'
     | 'assigner-capability'
     | 'holder-kind'
     | 'spaces-reader-service-account'
@@ -134,12 +139,36 @@ export class PlatformRoleAssignmentRulesService {
     input: PlatformRoleAssignmentEvaluationInput
   ): PlatformRoleAssignmentRuleViolation | undefined {
     return (
+      this.checkSelfAssignment(input) ??
       this.checkAssignerCapability(input) ??
       this.checkHolderKind(input) ??
       this.checkSpacesReaderServiceAccount(input) ??
       this.checkAuditReaderExclusion(input) ??
       this.checkLastRolesAdmin(input)
     );
+  }
+
+  /** Rule 6 — self-assignment: a Platform Roles Admin MUST NOT grant or
+   * revoke ANY `Platform …` or `Feature …` role on itself — self-assignment
+   * is BLOCKED, not merely recorded (FR-015, ninth clarification pass).
+   * Enforced FIRST (ahead of the per-role capability check) so the rejection
+   * names self-assignment rather than a downstream capability failure.
+   * Checked on BOTH grant and revoke. Deliberately NOT part of
+   * `evaluateSeedOrFail` — bootstrap seeding has no acting operator, and
+   * applying it there would break FR-013b break-glass recovery. */
+  private checkSelfAssignment(
+    input: PlatformRoleAssignmentEvaluationInput
+  ): PlatformRoleAssignmentRuleViolation | undefined {
+    if (
+      input.targetActorId !== undefined &&
+      input.actorContext.actorID === input.targetActorId
+    ) {
+      return {
+        ruleId: 'self-assignment',
+        message: `Rejected: self-assignment of role ${input.role} is blocked`,
+      };
+    }
+    return undefined;
   }
 
   /** Rule 1 — assigner capability. In Slice A the platform-family privilege

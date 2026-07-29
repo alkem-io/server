@@ -1,10 +1,10 @@
 import { AuthorizationPrivilege } from '@common/enums';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UserService } from '@domain/community/user/user.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { LoggerService } from '@nestjs/common';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { AdminIdentityService } from '@src/platform-admin/core/identity/admin.identity.service';
 import { AdminUsersMutations } from '@src/platform-admin/domain/user/admin.users.resolver.mutations';
@@ -29,9 +29,18 @@ describe('Platform-admin identity deletion flows', () => {
     const authorizationService = {
       grantAccessOrFail: vi.fn(),
     } as unknown as AuthorizationService;
-    const platformAuthorizationPolicyService = {
-      getPlatformAuthorizationPolicy: vi.fn().mockResolvedValue({}),
-    } as unknown as PlatformAuthorizationPolicyService;
+    // sec-server-4 fix: `AdminUsersMutations` now builds its own
+    // resolver-local `accountDeletePolicy` in its constructor via
+    // `AuthorizationPolicyService` — not `PlatformAuthorizationPolicyService`.
+    const accountDeletePolicy = { id: 'account-delete-policy' };
+    const authorizationPolicyService = {
+      createCredentialRuleUsingTypesOnly: vi.fn().mockReturnValue({
+        id: 'rule-account-delete',
+      }),
+      appendCredentialAuthorizationRules: vi
+        .fn()
+        .mockReturnValue(accountDeletePolicy),
+    } as unknown as AuthorizationPolicyService;
     const kratosService = {
       deleteIdentityByEmail: vi.fn().mockResolvedValue(undefined),
     } as unknown as KratosService;
@@ -57,7 +66,7 @@ describe('Platform-admin identity deletion flows', () => {
 
     const resolver = new AdminUsersMutations(
       authorizationService,
-      platformAuthorizationPolicyService,
+      authorizationPolicyService,
       kratosService,
       userService,
       platformUserRecordAuditService,
@@ -76,7 +85,7 @@ describe('Platform-admin identity deletion flows', () => {
     // onto PLATFORM_USERS_ADMIN.
     expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
       actorContext,
-      {},
+      accountDeletePolicy,
       AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
       expect.any(String)
     );

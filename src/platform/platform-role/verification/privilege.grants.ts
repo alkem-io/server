@@ -133,21 +133,21 @@ export const PRIVILEGE_GRANTS: Record<ManagedPrivilege, PrivilegeGrant> = {
     ],
   },
   // --- A7/A8's platform-side branch, and the root rule's own replacement
-  // grant (T036). `global-support` reaches this too in Slice A, but NOT via
-  // this credential rule — via its OWN platform-subtree cascade
-  // (`cascade.model.ts`'s `globalSupportPlatformSubtree`), which does not
-  // reach the other six root-inheritors. The root rule's own credential
-  // list additionally carries `global-admin`/`global-support` directly
+  // grant (T036, reversed at the ninth analyze pass — FR-004/SC-004,
+  // spec-server-1 fix). `global-support` deliberately does NOT reach this
+  // privilege (sec-server-3/corr-server-2 fix): its reach is (a) its OWN
+  // platform-subtree cascade (`cascade.model.ts`'s
+  // `globalSupportPlatformSubtree`, which does not reach the other six
+  // root-inheritors), and (b) per-space, flag-gated privileges — never a
+  // blanket grant of THIS privilege. The root rule's own credential list
+  // additionally carries `global-admin` directly
   // (`cascade.model.ts`'s `ROOT_CASCADE.credentialsBySlice.A`) — declared
   // there, not duplicated here, since this privilege's reachability is
   // ENTIRELY cascade-carried (no separate non-root grant exists for it).
   [AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS]: {
     anchor: 'root',
     owningCredentials: [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
-    legacyCredentials: [
-      AuthorizationCredential.GLOBAL_ADMIN,
-      AuthorizationCredential.GLOBAL_SUPPORT,
-    ],
+    legacyCredentials: [AuthorizationCredential.GLOBAL_ADMIN],
   },
   // --- A4/A5 (T035, T061/T062). Grant set is the UNION of A4's legacy
   // reachers (today's PLATFORM_ADMIN: GA/GS/GLM) and A5's (today's

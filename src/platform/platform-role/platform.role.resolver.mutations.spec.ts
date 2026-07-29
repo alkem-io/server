@@ -8,15 +8,19 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
 import { ActorService } from '@domain/actor/actor/actor.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseService } from '@domain/common/license/license.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { AccountService } from '@domain/space/account/account.service';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getEntityManagerToken } from '@nestjs/typeorm';
 import { PlatformService } from '@platform/platform/platform.service';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { type Mock } from 'vitest';
 import { PlatformRoleAssignmentRulesService } from './platform.role.assignment.rules.service';
 import { PlatformRoleResolverMutations } from './platform.role.resolver.mutations';
@@ -84,7 +88,7 @@ describe('PlatformRoleResolverMutations', () => {
       ).mockResolvedValue(undefined);
     });
 
-    it('should assign GLOBAL_ADMIN role with GRANT_GLOBAL_ADMINS privilege', async () => {
+    it('should assign GLOBAL_ADMIN role with GRANT_GLOBAL_ADMINS privilege, checked against the resolver-local un-widened policy (sec-server-2/corr-server-1 fix), NOT roleSet.authorization', async () => {
       const roleData = {
         actorID: 'user-target',
         role: RoleName.GLOBAL_ADMIN,
@@ -96,6 +100,15 @@ describe('PlatformRoleResolverMutations', () => {
       );
 
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        mockActorContext,
+        expect.anything(),
+        AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
+        expect.any(String)
+      );
+      // NOT `mockRoleSet.authorization` — the legacy-role branch is pinned
+      // to the resolver-local `legacyGlobalAdminPolicy` so T034's widening
+      // of GRANT_GLOBAL_ADMINS on the shared roleSet policy cannot reach it.
+      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalledWith(
         mockActorContext,
         mockRoleSet.authorization,
         AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
@@ -392,6 +405,84 @@ describe('PlatformRoleResolverMutations', () => {
         RoleName.PLATFORM_ROLES_ADMIN,
         'user-target'
       );
+    });
+  });
+
+  // 027-platform-role-redesign (sec-server-2/corr-server-1 fix): wires the
+  // REAL AuthorizationPolicyService + AuthorizationService so the
+  // constructor's `legacyGlobalAdminPolicy` is a genuine, hardcoded
+  // `[GLOBAL_ADMIN]` IAuthorizationPolicy — not an auto-mocked stand-in —
+  // and asserts a `platform-roles-admin`-only actor (T034's WIDENED
+  // GRANT_GLOBAL_ADMINS holder) is denied the legacy `global-admin` grant,
+  // mirroring the FR-022 pin suite in
+  // `admin.authorization.resolver.mutations.spec.ts`.
+  describe('legacy-role branch pin: assign/removePlatformRoleFrom{User} stay global-admin-only in Slice A', () => {
+    let realResolver: PlatformRoleResolverMutations;
+
+    const buildActorContext = (
+      credentialType: AuthorizationCredential
+    ): ActorContext =>
+      ({
+        actorID: 'actor-1',
+        credentials: [{ type: credentialType, resourceID: '' }],
+      }) as any as ActorContext;
+
+    beforeEach(async () => {
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          PlatformRoleResolverMutations,
+          AuthorizationPolicyService,
+          AuthorizationService,
+          MockWinstonProvider,
+          repositoryProviderMockFactory(AuthorizationPolicy),
+          {
+            provide: getEntityManagerToken('default'),
+            useValue: { find: vi.fn() },
+          },
+        ],
+      })
+        .useMocker(defaultMockerFactory)
+        .compile();
+
+      realResolver = module.get(PlatformRoleResolverMutations);
+      (module.get(PlatformService).getRoleSetOrFail as Mock).mockResolvedValue(
+        mockRoleSet
+      );
+    });
+
+    it('denies assignPlatformRoleToUser(global-admin) to a platform-roles-admin-only actor', async () => {
+      const actor = buildActorContext(
+        AuthorizationCredential.PLATFORM_ROLES_ADMIN
+      );
+      await expect(
+        realResolver.assignPlatformRoleToUser(actor, {
+          actorID: 'user-target',
+          role: RoleName.GLOBAL_ADMIN,
+        } as any)
+      ).rejects.toThrow();
+    });
+
+    it('denies removePlatformRoleFromUser(global-admin) to a platform-roles-admin-only actor', async () => {
+      const actor = buildActorContext(
+        AuthorizationCredential.PLATFORM_ROLES_ADMIN
+      );
+      await expect(
+        realResolver.removePlatformRoleFromUser(actor, {
+          actorID: 'user-target',
+          role: RoleName.GLOBAL_ADMIN,
+        } as any)
+      ).rejects.toThrow();
+    });
+
+    it('allows assignPlatformRoleToUser(global-admin) to an actor holding the legacy global-admin credential', async () => {
+      const actor = buildActorContext(AuthorizationCredential.GLOBAL_ADMIN);
+
+      await expect(
+        realResolver.assignPlatformRoleToUser(actor, {
+          actorID: 'user-target',
+          role: RoleName.GLOBAL_ADMIN,
+        } as any)
+      ).resolves.toBeDefined();
     });
   });
 });

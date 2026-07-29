@@ -216,6 +216,42 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       legacyReachers: [GA],
       lifecycle: { retiredIn: 'B' },
     },
+    // --- Legacy-role branch pin (sec-server-2/corr-server-1 fix) — the
+    // SAME two resolver mutations, but their ELSE branch (every `global-*`
+    // role, plus `platform-operations-admin`/`platform-assistant-access`):
+    // held to a resolver-local, hardcoded-to-[GLOBAL_ADMIN] IAuthorizationPolicy
+    // (`legacyGlobalAdminPolicy`), checked ahead of and instead of
+    // `roleSet.authorization` — so T034's widening of GRANT_GLOBAL_ADMINS to
+    // `platform-roles-admin` on the shared roleSet policy cannot reach
+    // legacy role assignment. Declared here (rather than only via the
+    // rule-engine-governed entries above) so `surface.drift.spec.ts`'s
+    // credential-pin check knows this file also carries a pin.
+    {
+      file: 'src/platform/platform-role/platform.role.resolver.mutations.ts',
+      member: 'assignPlatformRoleToUser',
+      kind: 'graphql-mutation',
+      tree: 'credential-admin-synthetic',
+      gate: {
+        credential: GA,
+        reason:
+          'sec-server-2/corr-server-1 fix: the legacy-role (else) branch is held ahead of the shared GRANT_GLOBAL_ADMINS check via a resolver-local, hardcoded-to-[GLOBAL_ADMIN] IAuthorizationPolicy, so Slice A widening of the shared roleSet policy cannot reach legacy role assignment.',
+      },
+      intendedOwners: [],
+      legacyReachers: [GA],
+    },
+    {
+      file: 'src/platform/platform-role/platform.role.resolver.mutations.ts',
+      member: 'removePlatformRoleFromUser',
+      kind: 'graphql-mutation',
+      tree: 'credential-admin-synthetic',
+      gate: {
+        credential: GA,
+        reason:
+          'sec-server-2/corr-server-1 fix: the legacy-role (else) branch is held ahead of the shared GRANT_GLOBAL_ADMINS check via a resolver-local, hardcoded-to-[GLOBAL_ADMIN] IAuthorizationPolicy, so Slice A widening of the shared roleSet policy cannot reach legacy role assignment.',
+      },
+      intendedOwners: [],
+      legacyReachers: [GA],
+    },
   ],
 
   // ===== A2 — assign/revoke a FEATURE role =======================
@@ -381,6 +417,26 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
       legacyReachers: [GA, GS, GLM, GPM],
     },
+    // --- Legacy-admin pin (spec-server-1 follow-through fix) — the SAME
+    // `deleteUser` mutation's legacy-admin branch, held to a resolver-local,
+    // hardcoded-to-[GLOBAL_ADMIN] IAuthorizationPolicy rather than checking
+    // bare DELETE against `user.authorization`, so the root rule's now-wider
+    // (FR-004) DELETE cascade to `platform-content-full-access` cannot
+    // satisfy it. Declared so `surface.drift.spec.ts`'s credential-pin check
+    // knows this file also carries a pin.
+    {
+      file: 'src/services/api/registration/registration.resolver.mutations.ts',
+      member: 'deleteUser',
+      kind: 'graphql-mutation',
+      tree: 'credential-admin-synthetic',
+      gate: {
+        credential: GA,
+        reason:
+          "spec-server-1 follow-through fix: the legacy-admin branch of deleteUser's A5 dual-path gate is held ahead of a bare DELETE check via a resolver-local, hardcoded-to-[GLOBAL_ADMIN] IAuthorizationPolicy, so FR-004's now-widened root DELETE cascade cannot let platform-content-full-access delete arbitrary users.",
+      },
+      intendedOwners: [],
+      legacyReachers: [GA],
+    },
     {
       file: 'src/platform-admin/domain/user/email-change/admin.user.email.change.resolver.mutations.ts',
       member: 'adminUserEmailChangeDriftResolve',
@@ -393,20 +449,30 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
   ],
 
   // ===== A5 — delete user; reset identity/account =====
-  // `deleteUser` is the D5 dual path (owner-self-delete stays on plain
-  // DELETE via USER_SELF_MANAGEMENT); the other two are replacement gates.
+  // `deleteUser` is the D5 dual path — but NOT a plain `{anyOf: [DELETE,
+  // PLATFORM_USERS_ADMIN]}` gate any more (spec-server-1 follow-through
+  // fix). Self-delete is checked by actor-identity comparison (equivalent
+  // to the resource-scoped USER_SELF_MANAGEMENT credential every user
+  // holds) and the legacy-admin path is pinned to a resolver-local,
+  // hardcoded `[GLOBAL_ADMIN]` policy — exactly the FR-022/T034a pin shape
+  // — rather than checking bare DELETE against `user.authorization`.
+  // Declaring the gate as bare `{anyOf: [DELETE, ...]}` would have the
+  // derivation intersect the root cascade's now-widened (FR-004) DELETE
+  // grant and report `platform-content-full-access` reaching this row — a
+  // real defect A5/SC-004 does NOT accept (the accepted exception is
+  // closed at A6/A7 only). The gate is therefore declared as
+  // `{requires: PLATFORM_USERS_ADMIN}` alone: GLOBAL_ADMIN's legacy reach
+  // (the pinned branch) and GLOBAL_SUPPORT/GLOBAL_LICENSE_MANAGER/
+  // GLOBAL_PLATFORM_MANAGER's reach are already fully accounted for via
+  // PLATFORM_USERS_ADMIN's own declared legacy grant set
+  // (`privilege.grants.ts`), so the derived set is unchanged and honest.
   A5: [
     {
       file: 'src/services/api/registration/registration.resolver.mutations.ts',
       member: 'deleteUser',
       kind: 'graphql-mutation',
       tree: 'user',
-      gate: {
-        anyOf: [
-          AuthorizationPrivilege.DELETE,
-          AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
-        ],
-      },
+      gate: { requires: AuthorizationPrivilege.PLATFORM_USERS_ADMIN },
       intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
       legacyReachers: [GA, GS, GLM, GPM],
     },
@@ -458,6 +524,17 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
         ],
       },
       intendedOwners: [AuthorizationCredential.PLATFORM_SUPPORT],
+      // spec-server-1 fix (ninth analyze pass, FR-004/SC-004): with the
+      // root rule's reversal to full CRUD, Content Full Access reaches
+      // plain DELETE on the organization tree via `ROOT_CASCADE` — the
+      // ONE named, accepted exception (SC-004), not a defect.
+      acceptedExtraReachers: [
+        {
+          credential: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+          reason:
+            'SC-004 accepted exception — FR-004 cascades full CRUD from the inheritance root, which satisfies the owner branch of this dual-path gate exactly as an organization owner would.',
+        },
+      ],
       legacyReachers: [GA, GS],
     },
   ],
@@ -514,6 +591,17 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
         ],
       },
       intendedOwners: [AuthorizationCredential.PLATFORM_SUPPORT],
+      // spec-server-1 fix (ninth analyze pass, FR-004/SC-004): with the
+      // root rule's reversal to full CRUD, Content Full Access now reaches
+      // ordinary UPDATE on the account tree via `ROOT_CASCADE` too — the
+      // SAME named, accepted SC-004 exception as A6.
+      acceptedExtraReachers: [
+        {
+          credential: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+          reason:
+            'SC-004 accepted exception — FR-004 cascades full CRUD from the inheritance root, which satisfies the owner branch of this dual-path gate exactly as an account owner would.',
+        },
+      ],
       // T070m finding: NOT empty — `global-admin` still holds ordinary
       // UPDATE on the account tree via the Slice-A-only legacy CRUD+GRANT
       // cascade (`LEGACY_CASCADES.globalAdminRootCrud`), so it reaches this
@@ -568,7 +656,15 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
           ],
         },
         intendedOwners: [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
-        legacyReachers: [GA, GS],
+        // sec-server-3/corr-server-2 fix: `global-support` is deliberately
+        // NOT a legacy reacher here any more — it was reachable only
+        // through the ROOT rule's PLATFORM_CONTENT_FULL_ACCESS credential
+        // list, which no longer includes it (the root rule cascading
+        // GLOBAL_SUPPORT platform-wide, bypassing the per-space
+        // `allowPlatformSupportAsAdmin` consent gate, was the widening this
+        // fix removes). `global-admin` still reaches via
+        // `LEGACY_CASCADES.globalAdminRootCrud`'s DELETE cascade.
+        legacyReachers: [GA],
       })
     ),
     {
@@ -980,12 +1076,16 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       ],
       // T070m finding: Slice A's legacy root cascade
       // (`platform.authorization.policy.service.ts`'s god-mode rule) grants
-      // plain READ on the space tree to BOTH global-admin and global-support
-      // TODAY, alongside the void `global-spaces-reader` row — all three
-      // read across spaces right now, and the additive rule requires every
-      // one of them stay reachable through Slice A. Retired outright at
-      // Slice B (T072/T081), same as every other legacy reacher.
-      legacyReachers: [AuthorizationCredential.GLOBAL_SPACES_READER, GA, GS],
+      // plain READ on the space tree to global-admin, alongside the void
+      // `global-spaces-reader` row — both read across spaces right now, and
+      // the additive rule requires each stay reachable through Slice A.
+      // `global-support` is deliberately ABSENT here (sec-server-3/
+      // corr-server-2 fix): its cross-space READ came ONLY from the root
+      // rule's now-removed GLOBAL_SUPPORT membership — it has no unconditional
+      // READ on the space tree from any other rule (only per-space,
+      // flag-gated privileges via `allowPlatformSupportAsAdmin`). Retired
+      // outright at Slice B (T072/T081), same as every other legacy reacher.
+      legacyReachers: [AuthorizationCredential.GLOBAL_SPACES_READER, GA],
     },
   ],
 

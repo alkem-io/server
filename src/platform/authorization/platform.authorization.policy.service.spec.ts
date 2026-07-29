@@ -136,40 +136,48 @@ describe('PlatformAuthorizationPolicyService', () => {
       expect(types).toEqual([AuthorizationCredential.GLOBAL_ADMIN]);
     });
 
-    it('grants platform-content-full-access EXACTLY [READ, PLATFORM_CONTENT_FULL_ACCESS] — length 2, never CREATE/UPDATE/DELETE/UPDATE_NAMEID', () => {
+    // 027-platform-role-redesign (ninth `/speckit-analyze` pass, FR-004/
+    // SC-004, spec-server-1 fix): the eleventh-pass narrowing this test used
+    // to assert was ITSELF reversed by the ninth analyze pass — Content
+    // Full Access now holds full CREATE/READ/UPDATE/DELETE, a deliberate,
+    // signed-off widening. See `a.row.surfaces.ts`'s A6/A7
+    // `acceptedExtraReachers` entries for the accepted SC-004 overlap this
+    // creates, and `reachability.spec.ts` for the derivation-level check.
+    it('grants platform-content-full-access full CREATE/READ/UPDATE/DELETE + PLATFORM_CONTENT_FULL_ACCESS — never UPDATE_NAMEID, never GLOBAL_SUPPORT', () => {
       const calls = callsFor(
         AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS
       );
       expect(calls).toHaveLength(1);
       const [privileges, types] = calls[0];
 
-      // The direct guard T070f asks for: a re-added write privilege here
-      // would silently re-open A6's and A7's owner branch (D5), and a
-      // re-added UPDATE_NAMEID would hand Content Full Access the entity
-      // renames spec row 2 denies it (A17). reachability.spec.ts (T070m)
-      // covers this indirectly via set equality; this is the direct,
-      // literal-array assertion.
       expect(privileges).toEqual([
+        AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
         AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
       ]);
-      expect(privileges).toHaveLength(2);
-      expect(privileges).not.toContain(AuthorizationPrivilege.CREATE);
-      expect(privileges).not.toContain(AuthorizationPrivilege.UPDATE);
-      expect(privileges).not.toContain(AuthorizationPrivilege.DELETE);
+      expect(privileges).toHaveLength(5);
+      // UPDATE_NAMEID stays excluded: A17 is owned by no global role
+      // (spec row 2, FR-020) — cascading it would hand Content Full Access
+      // entity renames the spec explicitly denies it.
       expect(privileges).not.toContain(AuthorizationPrivilege.UPDATE_NAMEID);
 
-      // Slice A additive reach: the rule is shared with the two legacy
-      // credentials that hold the content cascade today (T036) — they keep
-      // their own separate CRUD rule until Slice B (T076).
+      // Slice A additive reach: GLOBAL_ADMIN keeps its pre-existing content
+      // cascade through this rule too. GLOBAL_SUPPORT is deliberately
+      // ABSENT (sec-server-3/corr-server-2 fix) — unlike GLOBAL_ADMIN, it
+      // never held blanket CRUD across the seven root-inheriting trees;
+      // adding it here would bypass the per-space
+      // `allowPlatformSupportAsAdmin` consent gate for both reads and A8
+      // deletions.
       expect(types).toEqual(
         expect.arrayContaining([
           AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
           AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
         ])
       );
-      expect(types).toHaveLength(3);
+      expect(types).not.toContain(AuthorizationCredential.GLOBAL_SUPPORT);
+      expect(types).toHaveLength(2);
     });
   });
 });

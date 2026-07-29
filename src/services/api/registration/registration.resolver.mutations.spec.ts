@@ -1,15 +1,18 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
 import { UserService } from '@domain/community/user/user.service';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { type Mock } from 'vitest';
 import { RegistrationResolverMutations } from './registration.resolver.mutations';
 import { RegistrationService } from './registration.service';
@@ -139,7 +142,7 @@ describe('RegistrationResolverMutations', () => {
   });
 
   describe('deleteUser', () => {
-    it('should check DELETE privilege and delete user', async () => {
+    it('should check DELETE privilege (against the resolver-local legacy-admin policy, NOT user.authorization — spec-server-1 follow-through fix) and delete user', async () => {
       const user = {
         id: 'user-1',
         authorization: { id: 'auth-1' },
@@ -163,6 +166,18 @@ describe('RegistrationResolverMutations', () => {
 
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
+        expect.anything(),
+        AuthorizationPrivilege.DELETE,
+        expect.any(String)
+      );
+      // NOT `user.authorization` — since the root content rule now cascades
+      // DELETE platform-wide (FR-004), checking the merged, cascaded
+      // `user.authorization` here would let a Content Full Access holder
+      // delete any user account (A5 is outside SC-004's single accepted
+      // exception, closed at A6/A7 only). The legacy-admin branch is pinned
+      // to `legacyGlobalAdminDeleteUserPolicy` instead.
+      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalledWith(
+        actorContext,
         user.authorization,
         AuthorizationPrivilege.DELETE,
         expect.any(String)
@@ -176,6 +191,29 @@ describe('RegistrationResolverMutations', () => {
           user,
         })
       );
+    });
+
+    it('allows a user to delete their own account by actor-identity comparison, without consulting the legacy-admin policy', async () => {
+      const user = {
+        id: 'actor-1',
+        authorization: { id: 'auth-1' },
+        profile: { displayName: 'Self' },
+      };
+      userService.getUserByIdOrFail.mockResolvedValue(user);
+      authorizationService.isAccessGranted.mockReturnValue(false);
+      registrationService.deleteUserWithPendingMemberships.mockResolvedValue(
+        user
+      );
+      notificationPlatformAdapter.platformUserRemoved.mockResolvedValue(
+        undefined
+      );
+
+      const result = await resolver.deleteUser(actorContext, {
+        ID: 'actor-1',
+      });
+
+      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+      expect(result).toBe(user);
     });
   });
 
@@ -254,6 +292,81 @@ describe('RegistrationResolverMutations', () => {
 
       expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
       expect(result).toBe(org);
+    });
+  });
+
+  // 027-platform-role-redesign (sec-server-4 fix): wires the REAL
+  // AuthorizationPolicyService + AuthorizationService so the constructor's
+  // `platformUsersAdminDeleteUserPolicy` is a genuine, hardcoded
+  // [PLATFORM_USERS_ADMIN]-only policy — NOT `user.authorization`, whose
+  // PLATFORM_USERS_ADMIN grant set additively admits global-support/
+  // global-license-manager/global-platform-manager too (A4's legacy
+  // reachers). None of those three ever held deleteUser pre-feature.
+  describe('deleteUser — platform-users-admin pin, real-engine integration', () => {
+    let realResolver: RegistrationResolverMutations;
+    let realUserService: Record<string, Mock>;
+    let realRegistrationService: Record<string, Mock>;
+
+    const targetUser = {
+      id: 'user-target',
+      authorization: { id: 'auth-user-target' },
+      profile: { displayName: 'Target' },
+    };
+
+    const buildActorContext = (credentialType?: string): any => ({
+      actorID: 'actor-1',
+      credentials: credentialType
+        ? [{ type: credentialType, resourceID: '' }]
+        : [],
+    });
+
+    beforeEach(async () => {
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          RegistrationResolverMutations,
+          AuthorizationPolicyService,
+          AuthorizationService,
+          MockWinstonProvider,
+          repositoryProviderMockFactory(AuthorizationPolicy),
+        ],
+      })
+        .useMocker(token => {
+          if (token === ConfigService) {
+            return { get: vi.fn().mockReturnValue(500) };
+          }
+          return defaultMockerFactory(token);
+        })
+        .compile();
+
+      realResolver = module.get(RegistrationResolverMutations);
+      realUserService = module.get(UserService) as any;
+      realRegistrationService = module.get(RegistrationService) as any;
+
+      realUserService.getUserByIdOrFail.mockResolvedValue(targetUser);
+      realRegistrationService.deleteUserWithPendingMemberships.mockResolvedValue(
+        targetUser
+      );
+    });
+
+    it('denies a global-support-only actor (never held deleteUser pre-feature)', async () => {
+      const actor = buildActorContext('global-support');
+      await expect(
+        realResolver.deleteUser(actor, { ID: 'user-target' })
+      ).rejects.toThrow();
+    });
+
+    it('denies a global-license-manager-only actor (never held deleteUser pre-feature)', async () => {
+      const actor = buildActorContext('global-license-manager');
+      await expect(
+        realResolver.deleteUser(actor, { ID: 'user-target' })
+      ).rejects.toThrow();
+    });
+
+    it('allows a platform-users-admin actor (the new owning role)', async () => {
+      const actor = buildActorContext('platform-users-admin');
+      await expect(
+        realResolver.deleteUser(actor, { ID: 'user-target' })
+      ).resolves.toBeDefined();
     });
   });
 });

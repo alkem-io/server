@@ -1,29 +1,30 @@
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { UserIdentityDeletionException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { UserService } from '@domain/community/user/user.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { PlatformUserRecordAuditService } from '@src/platform-admin/platform-user-record-audit/platform.user.record.audit.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
-import { AdminIdentityResolverMutations } from './admin.identity.resolver.mutations';
-import { AdminIdentityService } from './admin.identity.service';
+import { AdminUsersMutations } from './admin.users.resolver.mutations';
 
 /**
- * 027-platform-role-redesign (T062, A5, T063, T070e) — single-path surface
- * (gated on `identityDeletePolicy`, no self-service branch): both the
- * permitted (with audit write) and denied path.
+ * 027-platform-role-redesign (T062, A5, T063) — single-path surface (gated
+ * on `accountDeletePolicy`, no self-service branch): both the permitted
+ * (with audit write) and denied path.
  */
-describe('AdminIdentityResolverMutations', () => {
-  let resolver: AdminIdentityResolverMutations;
+describe('AdminUsersMutations', () => {
+  let resolver: AdminUsersMutations;
   let authorizationService: Record<string, Mock>;
-  let adminIdentityService: Record<string, Mock>;
-  let userLookupService: Record<string, Mock>;
+  let userService: Record<string, Mock>;
+  let kratosService: Record<string, Mock>;
   let platformUserRecordAuditService: Record<string, Mock>;
 
   const actorContext = { actorID: 'actor-1' } as unknown as ActorContext;
@@ -31,30 +32,34 @@ describe('AdminIdentityResolverMutations', () => {
   beforeEach(async () => {
     vi.restoreAllMocks();
     const module: TestingModule = await Test.createTestingModule({
-      providers: [AdminIdentityResolverMutations],
+      providers: [AdminUsersMutations],
     })
       .useMocker(defaultMockerFactory)
       .compile();
 
-    resolver = module.get(AdminIdentityResolverMutations);
+    resolver = module.get(AdminUsersMutations);
     authorizationService = module.get(AuthorizationService) as any;
-    adminIdentityService = module.get(AdminIdentityService) as any;
-    userLookupService = module.get(UserLookupService) as any;
+    userService = module.get(UserService) as any;
+    kratosService = module.get(KratosService) as any;
     platformUserRecordAuditService = module.get(
       PlatformUserRecordAuditService
     ) as any;
   });
 
-  it('permitted: gates on PLATFORM_USERS_ADMIN, deletes the identity and audits the real target user', async () => {
+  it('permitted: gates on PLATFORM_USERS_ADMIN, deletes the Kratos account and audits', async () => {
     authorizationService.grantAccessOrFail.mockReturnValue(true);
-    userLookupService.getUserByAuthenticationID.mockResolvedValue({
+    userService.getUserByIdOrFail.mockResolvedValue({
+      id: 'user-1',
+      email: 'user1@example.com',
+    });
+    kratosService.deleteIdentityByEmail.mockResolvedValue(undefined);
+    userService.clearAuthenticationIDForUser.mockResolvedValue({
       id: 'user-1',
     });
-    adminIdentityService.deleteIdentity.mockResolvedValue(true);
 
-    const result = await resolver.adminIdentityDeleteKratosIdentity(
+    const result = await resolver.adminUserAccountDelete(
       actorContext,
-      'kratos-1'
+      'user-1'
     );
 
     expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
@@ -63,7 +68,7 @@ describe('AdminIdentityResolverMutations', () => {
       AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
       expect.any(String)
     );
-    expect(result).toBe(true);
+    expect(result).toEqual({ id: 'user-1' });
     expect(
       platformUserRecordAuditService.recordActionForActor
     ).toHaveBeenCalledWith(
@@ -71,10 +76,9 @@ describe('AdminIdentityResolverMutations', () => {
       expect.any(Array),
       expect.any(Array),
       expect.objectContaining({
-        action: 'adminIdentityDeleteKratosIdentity',
+        action: 'adminUserAccountDelete',
         targetUserId: 'user-1',
-        kratosIdentityId: 'kratos-1',
-        outcome: 'identity_deleted',
+        outcome: 'account_reset',
       })
     );
   });
@@ -85,27 +89,27 @@ describe('AdminIdentityResolverMutations', () => {
     });
 
     await expect(
-      resolver.adminIdentityDeleteKratosIdentity(actorContext, 'kratos-1')
+      resolver.adminUserAccountDelete(actorContext, 'user-1')
     ).rejects.toThrow('Forbidden');
-    expect(adminIdentityService.deleteIdentity).not.toHaveBeenCalled();
+    expect(kratosService.deleteIdentityByEmail).not.toHaveBeenCalled();
     expect(
       platformUserRecordAuditService.recordActionForActor
     ).not.toHaveBeenCalled();
   });
 
-  it('does not audit a FAILED identity deletion', async () => {
+  it('wraps a Kratos deletion failure in UserIdentityDeletionException and does not audit', async () => {
     authorizationService.grantAccessOrFail.mockReturnValue(true);
-    userLookupService.getUserByAuthenticationID.mockResolvedValue({
+    userService.getUserByIdOrFail.mockResolvedValue({
       id: 'user-1',
+      email: 'user1@example.com',
     });
-    adminIdentityService.deleteIdentity.mockResolvedValue(false);
-
-    const result = await resolver.adminIdentityDeleteKratosIdentity(
-      actorContext,
-      'kratos-1'
+    kratosService.deleteIdentityByEmail.mockRejectedValue(
+      new Error('kratos unavailable')
     );
 
-    expect(result).toBe(false);
+    await expect(
+      resolver.adminUserAccountDelete(actorContext, 'user-1')
+    ).rejects.toThrow(UserIdentityDeletionException);
     expect(
       platformUserRecordAuditService.recordActionForActor
     ).not.toHaveBeenCalled();
@@ -113,16 +117,16 @@ describe('AdminIdentityResolverMutations', () => {
 
   // 027-platform-role-redesign (sec-server-4 fix): wires the REAL
   // AuthorizationPolicyService + AuthorizationService so the constructor's
-  // `identityDeletePolicy` is a genuine, hardcoded
-  // [PLATFORM_USERS_ADMIN, GLOBAL_ADMIN, GLOBAL_PLATFORM_MANAGER] policy —
-  // NOT the shared platform policy, whose PLATFORM_USERS_ADMIN grant set
-  // additively widens to also admit global-support/global-license-manager
-  // (A4's legacy reachers). Asserts those two are denied THIS surface,
-  // which they never held pre-feature (PLATFORM_SETTINGS_ADMIN's reach was
-  // {GLOBAL_ADMIN, GLOBAL_PLATFORM_MANAGER} only).
-  describe('identityDeletePolicy — real-engine integration', () => {
-    let realResolver: AdminIdentityResolverMutations;
-    let realAdminIdentityService: Record<string, Mock>;
+  // `accountDeletePolicy` is a genuine, hardcoded [PLATFORM_USERS_ADMIN,
+  // GLOBAL_ADMIN, GLOBAL_SUPPORT, GLOBAL_LICENSE_MANAGER] policy — NOT the
+  // shared platform policy, whose PLATFORM_USERS_ADMIN grant set
+  // additively widens to also admit global-platform-manager (A4's legacy
+  // reacher), who never held THIS surface (legacy PLATFORM_ADMIN's reach
+  // was {GLOBAL_ADMIN, GLOBAL_SUPPORT, GLOBAL_LICENSE_MANAGER} only).
+  describe('accountDeletePolicy — real-engine integration', () => {
+    let realResolver: AdminUsersMutations;
+    let realUserService: Record<string, Mock>;
+    let realKratosService: Record<string, Mock>;
 
     const buildActorContext = (
       credentialType: AuthorizationCredential
@@ -135,7 +139,7 @@ describe('AdminIdentityResolverMutations', () => {
     beforeEach(async () => {
       const module: TestingModule = await Test.createTestingModule({
         providers: [
-          AdminIdentityResolverMutations,
+          AdminUsersMutations,
           AuthorizationPolicyService,
           AuthorizationService,
           MockWinstonProvider,
@@ -145,31 +149,40 @@ describe('AdminIdentityResolverMutations', () => {
         .useMocker(defaultMockerFactory)
         .compile();
 
-      realResolver = module.get(AdminIdentityResolverMutations);
-      realAdminIdentityService = module.get(AdminIdentityService) as any;
-      realAdminIdentityService.deleteIdentity.mockResolvedValue(true);
+      realResolver = module.get(AdminUsersMutations);
+      realUserService = module.get(UserService) as any;
+      realKratosService = module.get(KratosService) as any;
+
+      realUserService.getUserByIdOrFail.mockResolvedValue({
+        id: 'user-1',
+        email: 'user1@example.com',
+      });
+      realKratosService.deleteIdentityByEmail.mockResolvedValue(undefined);
+      realUserService.clearAuthenticationIDForUser.mockResolvedValue({
+        id: 'user-1',
+      });
     });
 
-    it('denies a global-support-only actor (never held this surface pre-feature)', async () => {
-      const actor = buildActorContext(AuthorizationCredential.GLOBAL_SUPPORT);
-      await expect(
-        realResolver.adminIdentityDeleteKratosIdentity(actor, 'kratos-1')
-      ).rejects.toThrow();
-    });
-
-    it('denies a global-license-manager-only actor (never held this surface pre-feature)', async () => {
+    it('denies a global-platform-manager-only actor (never held this surface pre-feature)', async () => {
       const actor = buildActorContext(
-        AuthorizationCredential.GLOBAL_LICENSE_MANAGER
+        AuthorizationCredential.GLOBAL_PLATFORM_MANAGER
       );
       await expect(
-        realResolver.adminIdentityDeleteKratosIdentity(actor, 'kratos-1')
+        realResolver.adminUserAccountDelete(actor, 'user-1')
       ).rejects.toThrow();
     });
 
     it('allows a global-admin actor (pre-existing legacy reach preserved)', async () => {
       const actor = buildActorContext(AuthorizationCredential.GLOBAL_ADMIN);
       await expect(
-        realResolver.adminIdentityDeleteKratosIdentity(actor, 'kratos-1')
+        realResolver.adminUserAccountDelete(actor, 'user-1')
+      ).resolves.toBeDefined();
+    });
+
+    it('allows a global-support actor (pre-existing legacy reach preserved)', async () => {
+      const actor = buildActorContext(AuthorizationCredential.GLOBAL_SUPPORT);
+      await expect(
+        realResolver.adminUserAccountDelete(actor, 'user-1')
       ).resolves.toBeDefined();
     });
 
@@ -178,7 +191,7 @@ describe('AdminIdentityResolverMutations', () => {
         AuthorizationCredential.PLATFORM_USERS_ADMIN
       );
       await expect(
-        realResolver.adminIdentityDeleteKratosIdentity(actor, 'kratos-1')
+        realResolver.adminUserAccountDelete(actor, 'user-1')
       ).resolves.toBeDefined();
     });
   });

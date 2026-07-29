@@ -86,41 +86,50 @@ export class PlatformAuthorizationPolicyService {
     credentialRules.push(globalAdmins);
 
     // 027-platform-role-redesign (T036, research D5/D6, FR-007(e), eleventh
-    // analyze pass): the replacement for the root god-mode grant, added
-    // ALONGSIDE it (removal is Slice B, T072 — never narrow before the
-    // replacement grant exists). Content Full Access gets READ everywhere
-    // plus its own privilege — deliberately NOT CREATE/UPDATE/DELETE, and
-    // NOT UPDATE_NAMEID:
-    //  - CREATE/UPDATE/DELETE are excluded because cascading them would
-    //    satisfy the OWNER branch of every dual-path gate this feature adds
-    //    (A6 `DELETE ∨ DELETE_ORGANIZATION`, A7 `UPDATE ∨
-    //    PLATFORM_SUPPORT_ORG_RESOURCES`, A8 `DELETE ∨
-    //    PLATFORM_CONTENT_FULL_ACCESS`) — a policy cannot distinguish an
-    //    owner's DELETE from an inherited one, so Content Full Access would
-    //    silently reach Support's family (delete any organization, edit any
-    //    organization's packs) no matter how the gates are written.
-    //  - UPDATE_NAMEID is excluded because A17 is owned by NO global role
-    //    (spec row 2, FR-020) — cascading it would hand Content Full Access
-    //    entity renames the spec explicitly denies it.
-    // The role loses nothing enumerated: every A8 surface is gated on
-    // PLATFORM_CONTENT_FULL_ACCESS explicitly (T043), and READ is retained
-    // so the role can see what it administers — the ONE declared FR-010
-    // exception (A16, recorded as an acceptedExtraReachers entry).
-    // Additively reaches the legacy credentials that hold the content
-    // cascade today too (global-admin via this very rule, global-support via
-    // the platform-subtree cascade in platform.service.authorization.ts) —
-    // both keep their own CRUD until Slice B (T076), which is what makes
-    // this non-breaking for existing content admins.
+    // analyze pass; REVERSED at the ninth `/speckit-analyze` pass — see
+    // FR-004/SC-004, spec-server-1 fix): the replacement for the root
+    // god-mode grant, added ALONGSIDE it (removal is Slice B, T072 — never
+    // narrow before the replacement grant exists).
+    //
+    // Content Full Access holds full CREATE/READ/UPDATE/DELETE cascaded from
+    // the inheritance root, plus its own privilege. This is a DELIBERATE,
+    // signed-off widening (ninth pass): a blanket write cascade satisfies
+    // the OWNER branch of every dual-path gate this feature adds (A6
+    // `DELETE ∨ DELETE_ORGANIZATION`, A7 `UPDATE ∨
+    // PLATFORM_SUPPORT_ORG_RESOURCES`), so this role ALSO reaches Platform
+    // Support's A6 (delete organization) and A7 (edit an organization's
+    // packs/hubs) — accepted as SC-004's single named exception rather than
+    // designed out (see `a.row.surfaces.ts`'s A6/A7 `acceptedExtraReachers`
+    // entries, which keep the derivation honest about this). UPDATE_NAMEID
+    // remains excluded: A17 is owned by NO global role (spec row 2,
+    // FR-020), so cascading it would hand Content Full Access entity
+    // renames the spec explicitly denies it.
+    //
+    // GLOBAL_SUPPORT is deliberately NOT a member of this credential list
+    // (sec-server-3/corr-server-2 fix): unlike GLOBAL_ADMIN, global-support
+    // never held blanket CRUD across the seven root-inheriting trees before
+    // this feature — its pre-existing reach was (a) the platform-SUBTREE
+    // cascade (`platform.service.authorization.ts`'s
+    // `globalSupportPlatformAdmin`, which does not cover space / account /
+    // user / organization / VC / assistant), and (b) per-space, FLAG-GATED
+    // privileges via `settings.privacy.allowPlatformSupportAsAdmin`
+    // (`space.service.platform.roles.access.ts`). Adding it here would grant
+    // every global-support holder cascading READ + PLATFORM_CONTENT_FULL_ACCESS
+    // over every space on the platform — including private ones — bypassing
+    // that per-space opt-out for both reads and A8 deletions. Global-support
+    // keeps everything it legitimately had through those two existing paths.
     const contentFullAccess =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [
+          AuthorizationPrivilege.CREATE,
           AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
           AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
         ],
         [
           AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
           AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_CONTENT_FULL_ACCESS
       );

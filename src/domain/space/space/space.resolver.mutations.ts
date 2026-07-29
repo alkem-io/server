@@ -1,9 +1,12 @@
+import { GLOBAL_POLICY_SPACE_LEGACY_NAMEID_RENAME } from '@common/constants/authorization/global.policy.constants';
 import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { AuthorizationRoleGlobal } from '@common/enums/authorization.credential.global';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseService } from '@domain/common/license/license.service';
 import {
@@ -32,6 +35,15 @@ import { SpaceLicenseService } from './space.service.license';
 @InstrumentResolver()
 @Resolver()
 export class SpaceResolverMutations {
+  /** corr-server-6 fix: `updateSpacePlatformSettings`'s `nameID` field is
+   * additionally gated against THIS resolver-local, hardcoded
+   * [GLOBAL_ADMIN, GLOBAL_SUPPORT] policy — the exact pre-existing legacy
+   * reach — so re-anchoring the mutation's PRIMARY gate onto
+   * ACCOUNT_LICENSE_MANAGE (T048/A14, additive to platform-license-manager
+   * too) cannot silently hand entity renames to a role spec.md row 2 states
+   * no global role reaches (A17, FR-020). */
+  private legacySpaceNameIdRenamePolicy: IAuthorizationPolicy;
+
   constructor(
     private contributionReporter: ContributionReporterService,
     private activityAdapter: ActivityAdapter,
@@ -44,7 +56,17 @@ export class SpaceResolverMutations {
     private spaceLicenseService: SpaceLicenseService,
     private licenseService: LicenseService,
     private readonly platformResourceAuditService: PlatformResourceAuditService
-  ) {}
+  ) {
+    this.legacySpaceNameIdRenamePolicy =
+      this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
+        [
+          AuthorizationRoleGlobal.GLOBAL_ADMIN,
+          AuthorizationRoleGlobal.GLOBAL_SUPPORT,
+        ],
+        [AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE],
+        GLOBAL_POLICY_SPACE_LEGACY_NAMEID_RENAME
+      );
+  }
 
   @Mutation(() => ISpace, {
     description: 'Updates the Space.',
@@ -194,6 +216,22 @@ export class SpaceResolverMutations {
       AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE,
       `update platform settings on space: ${space.id}`
     );
+
+    // corr-server-6 fix: `nameID` (the space's URL path) is NOT part of the
+    // ACCOUNT_LICENSE_MANAGE family the gate above admits — spec.md row 2
+    // states no global role reaches entity renames (A17, FR-020), and
+    // `platform-license-manager` must not gain it as a side effect of the
+    // above gate's additive re-anchor. Additionally require the
+    // pre-existing legacy reach (GLOBAL_ADMIN/GLOBAL_SUPPORT only) whenever
+    // `nameID` is present.
+    if (updateData.nameID !== undefined) {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        this.legacySpaceNameIdRenamePolicy,
+        AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE,
+        `rename space (nameID) via platform settings: ${space.id}`
+      );
+    }
 
     const previousVisibility = space.visibility;
     space = await this.spaceService.updateSpacePlatformSettings(

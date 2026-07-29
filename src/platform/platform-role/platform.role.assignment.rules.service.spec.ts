@@ -220,6 +220,77 @@ describe('PlatformRoleAssignmentRulesService', () => {
     });
   });
 
+  // spec-server-2/sec-server-1 fix (FR-015, ninth clarification pass): a
+  // Platform Roles Admin (or anyone) MUST NOT grant or revoke ANY Platform
+  // or Feature role on itself. Checked on both grant and revoke, FIRST in
+  // evaluation order (ahead of the per-role capability check), and
+  // deliberately absent from `evaluateSeedOrFail` (bootstrap has no acting
+  // operator; see the dedicated describe block below).
+  describe('rule 6 — self-assignment (FR-015)', () => {
+    it('fails with the exact contract message when actor === target on a GRANT', () => {
+      authorizationService.isAccessGranted.mockReturnValue(true);
+      const violation = service.evaluate(
+        baseInput({
+          action: 'grant',
+          role: RoleName.PLATFORM_CONTENT_FULL_ACCESS,
+          targetActorId: actorContext.actorID,
+        })
+      );
+      expect(violation).toEqual({
+        ruleId: 'self-assignment',
+        message:
+          'Rejected: self-assignment of role platform-content-full-access is blocked',
+      });
+    });
+
+    it('fails on a REVOKE too', () => {
+      authorizationService.isAccessGranted.mockReturnValue(true);
+      const violation = service.evaluate(
+        baseInput({
+          action: 'revoke',
+          role: RoleName.PLATFORM_ROLES_ADMIN,
+          targetActorId: actorContext.actorID,
+        })
+      );
+      expect(violation?.ruleId).toBe('self-assignment');
+    });
+
+    it('fails for a feature-* role too', () => {
+      authorizationService.isAccessGranted.mockReturnValue(true);
+      const violation = service.evaluate(
+        baseInput({
+          role: RoleName.FEATURE_BETA_TESTER,
+          targetActorId: actorContext.actorID,
+        })
+      );
+      expect(violation?.ruleId).toBe('self-assignment');
+    });
+
+    it('passes when the target is a different actor', () => {
+      const violation = service.evaluate(
+        baseInput({ targetActorId: 'someone-else' })
+      );
+      expect(violation).toBeUndefined();
+    });
+
+    it('does not evaluate at all when targetActorId is omitted (backward compatible)', () => {
+      const violation = service.evaluate(baseInput());
+      expect(violation).toBeUndefined();
+    });
+
+    it('runs FIRST — a self-assignment on a target that ALSO violates rule 2 (holder-kind) reports self-assignment', () => {
+      authorizationService.isAccessGranted.mockReturnValue(true);
+      const violation = service.evaluate(
+        baseInput({
+          role: RoleName.PLATFORM_SUPPORT,
+          targetActorType: 'organization',
+          targetActorId: actorContext.actorID,
+        })
+      );
+      expect(violation?.ruleId).toBe('self-assignment');
+    });
+  });
+
   describe('evaluation order — first failure wins', () => {
     it('reports rule 2 (holder-kind) when a target violates rules 2 AND 4 simultaneously', () => {
       // platform-* role -> organization (rule 2 violation) AND the target
