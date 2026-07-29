@@ -1,5 +1,6 @@
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { RoleName } from '@common/enums/role.name';
+import { RoleSetType } from '@common/enums/role.set.type';
 import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import {
   Inject,
@@ -72,6 +73,44 @@ export const ROLE_CREDENTIAL_MAP: Record<RoleName, AuthorizationCredential> = {
   [RoleName.GUEST]: AuthorizationCredential.GLOBAL_GUEST,
   [RoleName.ANONYMOUS]: AuthorizationCredential.GLOBAL_ANONYMOUS,
 };
+
+/**
+ * ROLE_CREDENTIAL_MAP above is keyed by `RoleName` ALONE, which is correct for
+ * the platform role-set (its role names are globally unique) but NOT for the
+ * role names shared between role-set types. `RoleName.ADMIN` is the one
+ * real collision in the model: a SPACE role-set's ADMIN is `space-admin`, an
+ * ORGANIZATION role-set's ADMIN is `organization-admin`
+ * (organization.role.definitions.ts). Every other shared name is unambiguous —
+ * MEMBER/LEAD are space-only, ASSOCIATE/OWNER organization-only.
+ *
+ * This override restores the role-set dimension that the flat map cannot carry.
+ * Without it, `RoleSetService.getCredentialForRole` resolves an ORGANIZATION
+ * ADMIN to `space-admin`, so promoting an organization admin writes the wrong
+ * credential type — which silently breaks organization-admin authorization AND
+ * the FR-002/FR-031 feature-role inheritance that filters for
+ * `organization-admin`/`organization-owner`. Live-confirmed 2026-07-29 by
+ * immediacy.it-spec.ts and org-inheritance-demotion.it-spec.ts.
+ */
+export const ROLE_CREDENTIAL_OVERRIDES_BY_ROLE_SET_TYPE: Partial<
+  Record<RoleSetType, Partial<Record<RoleName, AuthorizationCredential>>>
+> = {
+  [RoleSetType.ORGANIZATION]: {
+    [RoleName.ADMIN]: AuthorizationCredential.ORGANIZATION_ADMIN,
+  },
+};
+
+/**
+ * The canonical resolver. Prefer this over indexing ROLE_CREDENTIAL_MAP
+ * directly wherever a role-set is in hand; the bare map remains correct for
+ * platform-role-set lookups, where no override exists.
+ */
+export const resolveRoleCredential = (
+  roleName: RoleName,
+  roleSetType?: RoleSetType
+): AuthorizationCredential =>
+  (roleSetType &&
+    ROLE_CREDENTIAL_OVERRIDES_BY_ROLE_SET_TYPE[roleSetType]?.[roleName]) ||
+  ROLE_CREDENTIAL_MAP[roleName];
 
 @Injectable()
 export class PlatformRolesAccessService {

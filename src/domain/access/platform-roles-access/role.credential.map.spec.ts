@@ -1,11 +1,16 @@
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { RoleName } from '@common/enums/role.name';
+import { RoleSetType } from '@common/enums/role.set.type';
 import {
   LEGACY_PLATFORM_ROLE_SEED_DEFINITIONS,
   NEW_PLATFORM_ROLE_SEED_DEFINITIONS,
 } from '@src/migrations/utils/platform.role.seed.definitions';
 import { describe, expect, it } from 'vitest';
-import { ROLE_CREDENTIAL_MAP } from './platform.roles.access.service';
+import {
+  ROLE_CREDENTIAL_MAP,
+  ROLE_CREDENTIAL_OVERRIDES_BY_ROLE_SET_TYPE,
+  resolveRoleCredential,
+} from './platform.roles.access.service';
 
 /**
  * FR-011 / SC-008 anti-drift guard (research D14, T011). The C1 silent-void
@@ -122,5 +127,95 @@ describe('027-platform-role-redesign: ROLE_CREDENTIAL_MAP anti-drift (FR-011/SC-
     expect(actualDefects.sort()).toEqual(
       [...KNOWN_C1_DEFECT_ROLE_NAMES].sort()
     );
+  });
+
+  /**
+   * Regression cover for the role-set-type collapse found live on 2026-07-29.
+   *
+   * ROLE_CREDENTIAL_MAP is `Record<RoleName, AuthorizationCredential>` — keyed
+   * by role name ALONE. That is correct for the platform role-set, whose names
+   * are globally unique, but `RoleName.ADMIN` is shared: SPACE -> space-admin,
+   * ORGANIZATION -> organization-admin. Resolving an ORGANIZATION role-set's
+   * ADMIN through the flat map silently produced `space-admin`, so every
+   * organization-admin promotion was mis-credentialed and the FR-002/FR-031
+   * feature-role inheritance (which filters for organization-admin /
+   * organization-owner) never fired.
+   *
+   * Nothing in the suite above could catch this: it asserts the map against the
+   * PLATFORM seed definitions only, and the collapse is invisible unless the
+   * role-set dimension is asserted explicitly.
+   */
+  describe('resolveRoleCredential — role-set-type dimension', () => {
+    it('resolves ORGANIZATION ADMIN to organization-admin, not space-admin', () => {
+      expect(
+        resolveRoleCredential(RoleName.ADMIN, RoleSetType.ORGANIZATION)
+      ).toBe(AuthorizationCredential.ORGANIZATION_ADMIN);
+    });
+
+    it('resolves SPACE ADMIN to space-admin', () => {
+      expect(resolveRoleCredential(RoleName.ADMIN, RoleSetType.SPACE)).toBe(
+        AuthorizationCredential.SPACE_ADMIN
+      );
+    });
+
+    it('falls back to the flat map for every role with no role-set override', () => {
+      for (const roleName of Object.values(RoleName)) {
+        for (const roleSetType of Object.values(RoleSetType)) {
+          const overridden =
+            ROLE_CREDENTIAL_OVERRIDES_BY_ROLE_SET_TYPE[roleSetType]?.[roleName];
+          if (overridden) {
+            continue;
+          }
+          expect(
+            resolveRoleCredential(roleName, roleSetType),
+            `${roleName} on a ${roleSetType} role-set must fall through to ROLE_CREDENTIAL_MAP`
+          ).toBe(ROLE_CREDENTIAL_MAP[roleName]);
+        }
+      }
+    });
+
+    it('matches each role-set type definition file — the real anti-drift assertion', () => {
+      // Sourced from organization.role.definitions.ts / space.community.roles.ts:
+      // if either file changes a credential, this fails rather than drifting.
+      const expected: Array<[RoleSetType, RoleName, AuthorizationCredential]> =
+        [
+          [
+            RoleSetType.ORGANIZATION,
+            RoleName.ASSOCIATE,
+            AuthorizationCredential.ORGANIZATION_ASSOCIATE,
+          ],
+          [
+            RoleSetType.ORGANIZATION,
+            RoleName.ADMIN,
+            AuthorizationCredential.ORGANIZATION_ADMIN,
+          ],
+          [
+            RoleSetType.ORGANIZATION,
+            RoleName.OWNER,
+            AuthorizationCredential.ORGANIZATION_OWNER,
+          ],
+          [
+            RoleSetType.SPACE,
+            RoleName.MEMBER,
+            AuthorizationCredential.SPACE_MEMBER,
+          ],
+          [
+            RoleSetType.SPACE,
+            RoleName.LEAD,
+            AuthorizationCredential.SPACE_LEAD,
+          ],
+          [
+            RoleSetType.SPACE,
+            RoleName.ADMIN,
+            AuthorizationCredential.SPACE_ADMIN,
+          ],
+        ];
+      for (const [roleSetType, roleName, credential] of expected) {
+        expect(
+          resolveRoleCredential(roleName, roleSetType),
+          `${roleName} on a ${roleSetType} role-set`
+        ).toBe(credential);
+      }
+    });
   });
 });

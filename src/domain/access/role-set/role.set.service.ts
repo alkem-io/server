@@ -32,7 +32,7 @@ import { InvitationService } from '@domain/access/invitation/invitation.service'
 import { CreatePlatformInvitationInput } from '@domain/access/invitation.platform/dto/platform.invitation.dto.create';
 import { IPlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.interface';
 import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
-import { ROLE_CREDENTIAL_MAP } from '@domain/access/platform-roles-access/platform.roles.access.service';
+import { resolveRoleCredential } from '@domain/access/platform-roles-access/platform.roles.access.service';
 import { IActor } from '@domain/actor/actor/actor.interface';
 import { ActorService } from '@domain/actor/actor/actor.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
@@ -1869,13 +1869,17 @@ export class RoleSetService {
   ): Promise<ICredentialDefinition> {
     const roleDefinition = await this.getRoleDefinition(roleSet, roleName);
     // 027-platform-role-redesign (research C1/D3): resolve the credential
-    // TYPE through the single canonical ROLE_CREDENTIAL_MAP rather than
-    // trusting the stored row's `credential.type` verbatim — a seeded row
-    // whose type does not match what the checks expect (the C1 silent-void
-    // defect) is repaired here rather than propagated. The resourceID stays
-    // scoped to this role definition (space/org id, or '' for platform).
+    // TYPE through the single canonical map rather than trusting the stored
+    // row's `credential.type` verbatim — a seeded row whose type does not
+    // match what the checks expect (the C1 silent-void defect) is repaired
+    // here rather than propagated. The resourceID stays scoped to this role
+    // definition (space/org id, or '' for platform).
+    //
+    // MUST resolve with `roleSet.type`: the flat ROLE_CREDENTIAL_MAP is keyed
+    // by RoleName alone and maps ADMIN -> space-admin unconditionally, so an
+    // ORGANIZATION role-set's ADMIN would otherwise be mis-credentialed.
     return {
-      type: ROLE_CREDENTIAL_MAP[roleName],
+      type: resolveRoleCredential(roleName, roleSet.type),
       resourceID: roleDefinition.credential.resourceID,
     };
   }
@@ -2423,9 +2427,10 @@ export class RoleSetService {
     const role = roleSet.roles.find(rd => rd.name === roleName);
     if (!role) return null;
     // 027-platform-role-redesign (research C1/D3): same canonical-map
-    // resolution as the async twin above — see its comment.
+    // resolution as the async twin above — including the roleSet.type
+    // dimension, without which an ORGANIZATION ADMIN resolves to space-admin.
     return {
-      type: ROLE_CREDENTIAL_MAP[roleName],
+      type: resolveRoleCredential(roleName, roleSet.type),
       resourceID: role.credential.resourceID,
     };
   }
