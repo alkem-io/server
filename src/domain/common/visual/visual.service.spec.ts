@@ -289,8 +289,10 @@ describe('VisualService', () => {
       const result = service.createVisualBanner();
 
       expect(result.name).toBe(VisualType.BANNER);
-      expect(result.minWidth).toBe(384);
-      expect(result.maxWidth).toBe(1536);
+      expect(result.minWidth).toBe(1536);
+      expect(result.maxWidth).toBe(3840);
+      expect(result.minHeight).toBe(256);
+      expect(result.maxHeight).toBe(640);
     });
   });
 
