@@ -105,6 +105,7 @@ export class ConversionResolverMutations {
 
     await this.spaceService.invalidateUrlCacheForSpaceSubtree(space.id);
 
+    await this.recordResourceMoveAudit(actorContext, 'space', space.id);
     return this.spaceService.getSpaceOrFail(space.id);
   }
 
@@ -140,6 +141,7 @@ export class ConversionResolverMutations {
 
     await this.spaceService.invalidateUrlCacheForSpaceSubtree(spaceL1.id);
 
+    await this.recordResourceMoveAudit(actorContext, 'space', spaceL1.id);
     return await this.spaceService.getSpaceOrFail(spaceL1.id);
   }
 
@@ -179,6 +181,7 @@ export class ConversionResolverMutations {
 
     await this.spaceService.invalidateUrlCacheForSpaceSubtree(spaceL2.id);
 
+    await this.recordResourceMoveAudit(actorContext, 'space', spaceL2.id);
     return await this.spaceService.getSpaceOrFail(spaceL2.id);
   }
 
@@ -243,7 +246,7 @@ export class ConversionResolverMutations {
       );
     }
 
-    await this.recordCrossL0MoveAudit(actorContext, savedSpace.id);
+    await this.recordResourceMoveAudit(actorContext, 'space', savedSpace.id);
     return this.spaceService.getSpaceOrFail(savedSpace.id);
   }
 
@@ -308,7 +311,7 @@ export class ConversionResolverMutations {
       );
     }
 
-    await this.recordCrossL0MoveAudit(actorContext, savedSpace.id);
+    await this.recordResourceMoveAudit(actorContext, 'space', savedSpace.id);
     return this.spaceService.getSpaceOrFail(savedSpace.id);
   }
 
@@ -371,7 +374,7 @@ export class ConversionResolverMutations {
       );
     }
 
-    await this.recordCrossL0MoveAudit(actorContext, savedSpace.id);
+    await this.recordResourceMoveAudit(actorContext, 'space', savedSpace.id);
     return this.spaceService.getSpaceOrFail(savedSpace.id);
   }
 
@@ -484,30 +487,39 @@ export class ConversionResolverMutations {
       );
 
     await this.authorizationPolicyService.saveAll(authorizations);
+
+    await this.recordResourceMoveAudit(
+      actorContext,
+      'virtual-contributor',
+      virtualContributor.id
+    );
     return this.virtualContributorService.getVirtualContributorByIdOrFail(
       virtualContributor.id
     );
   }
 
   /**
-   * T058 — A9's three cross-L0 moves share ONE resolver-local synthetic
-   * policy (constructor comment above) rather than the platform-wide
-   * PLATFORM_ADMIN grant set; `intendedOwners`/`legacyReachers` are the
-   * census's declared source of truth for this row (a.row.surfaces.ts).
-   * Single-path surface — no ordinary-owner branch — so every successful
-   * call is audited.
+   * T058, widened by corr-server-18: ALL SEVEN mutations on this file share
+   * ONE resolver-local synthetic policy (constructor comment above) rather
+   * than the platform-wide PLATFORM_ADMIN grant set — the census
+   * (a.row.surfaces.ts, A9) declares every one of them, not just the three
+   * cross-L0 moves this helper originally covered, as a `platform-resource-
+   * admin`-owned surface. `intendedOwners`/`legacyReachers` are the
+   * census's declared source of truth for this row. Single-path surface —
+   * no ordinary-owner branch — so every successful call is audited.
    */
-  private async recordCrossL0MoveAudit(
+  private async recordResourceMoveAudit(
     actorContext: ActorContext,
-    spaceId: string
+    resourceKind: string,
+    resourceId: string
   ): Promise<void> {
     await this.platformResourceAuditService.recordEventForActor(
       actorContext,
       [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
       [AuthorizationCredential.GLOBAL_ADMIN],
       {
-        resourceKind: 'space',
-        resourceId: spaceId,
+        resourceKind,
+        resourceId,
         outcome: 'moved',
       }
     );

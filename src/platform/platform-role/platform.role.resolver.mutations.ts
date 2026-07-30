@@ -585,18 +585,19 @@ export class PlatformRoleResolverMutations {
     targetID: string,
     targetServiceProfile?: boolean
   ): Promise<void> {
-    // 027-platform-role-redesign (sec-server-11 fix): a cheap, no-DB-write
-    // probe of rule 1 (assigner capability) BEFORE getHeldPlatformRoles'
-    // ~10 `isInRole` round trips and before any rejection-audit write. An
-    // actor holding NEITHER GRANT_GLOBAL_ADMINS nor FEATURE_ROLE_ASSIGN at
-    // all is a probe, not an auditable rejected administrative attempt —
-    // any logged-in user could otherwise drive unbounded reads plus one
-    // `platform_audit_entry` INSERT per request. Callers who pass this
-    // check and then fail a LATER rule still get the full evaluate() +
-    // rejection-audit treatment below, unchanged.
+    // 027-platform-role-redesign (sec-server-11 fix, narrowed by
+    // corr-server-17/spec-server-18): a cheap, no-DB-write probe BEFORE
+    // getHeldPlatformRoles' ~10 `isInRole` round trips and before any
+    // rejection-audit write — but ONLY for an actor holding NEITHER
+    // GRANT_GLOBAL_ADMINS nor FEATURE_ROLE_ASSIGN at all (a genuine
+    // unprivileged probe; any logged-in user could otherwise drive
+    // unbounded reads plus one `platform_audit_entry` INSERT per request).
+    // A privileged actor requesting a role outside its family (e.g. a
+    // Platform Users Admin targeting a `platform-*` role) is NOT a probe —
+    // it MUST fall through to evaluateOrFail()/recordGrantRejected below so
+    // the attempt is audited and self-assignment is still checked first.
     if (
-      !this.assignmentRulesService.hasAssignerCapability(
-        role,
+      !this.assignmentRulesService.hasAnyAssignerCapability(
         actorContext,
         roleSet.authorization
       )
@@ -712,12 +713,12 @@ export class PlatformRoleResolverMutations {
     targetActorType: 'user' | 'organization',
     targetID: string
   ): Promise<void> {
-    // 027-platform-role-redesign (sec-server-11 fix): same cheap rule-1
+    // 027-platform-role-redesign (sec-server-11 fix, narrowed by
+    // corr-server-17/spec-server-18): same genuinely-unprivileged-only
     // probe as evaluateGrantOrFail, ahead of the countActorsWithRole call
     // and any rejection-audit write — see the comment there.
     if (
-      !this.assignmentRulesService.hasAssignerCapability(
-        role,
+      !this.assignmentRulesService.hasAnyAssignerCapability(
         actorContext,
         roleSet.authorization
       )

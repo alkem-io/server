@@ -412,6 +412,120 @@ describe('PlatformRoleResolverMutations', () => {
     });
   });
 
+  // 027-platform-role-redesign (corr-server-17/spec-server-18 fix): the
+  // rule-1 precheck (`hasAnyAssignerCapability`) MUST distinguish a genuinely
+  // unprivileged probe (no assignment capability of ANY kind) from a
+  // PRIVILEGED actor attempting a cross-family escalation (e.g. a Platform
+  // Users Admin — holding ONLY `FEATURE_ROLE_ASSIGN` — targeting a
+  // `platform-*` role, which requires `GRANT_GLOBAL_ADMINS`). Only the first
+  // is exempt from the rejection-audit write. Wires the REAL rules service
+  // with a privilege-discriminating `AuthorizationService.isAccessGranted`
+  // mock — the suite above auto-mocks the rules service and therefore never
+  // reaches the real precheck body.
+  describe('assignPlatformRoleToUser — rule-1 precheck audit coverage (corr-server-17/spec-server-18)', () => {
+    const buildRealModule = async (
+      grantedPrivileges: ReadonlySet<AuthorizationPrivilege>
+    ) => {
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          PlatformRoleResolverMutations,
+          PlatformRoleAssignmentRulesService,
+          MockWinstonProvider,
+        ],
+      })
+        .useMocker(defaultMockerFactory)
+        .compile();
+
+      const realResolver = module.get(PlatformRoleResolverMutations);
+      const realAuthorizationService = module.get(AuthorizationService);
+      const realRoleAssignmentAuditService = module.get(
+        PlatformRoleAssignmentAuditService
+      );
+      const realRoleSetService = module.get(RoleSetService);
+
+      (module.get(PlatformService).getRoleSetOrFail as Mock).mockResolvedValue(
+        mockRoleSet
+      );
+      (realAuthorizationService.isAccessGranted as Mock).mockImplementation(
+        (
+          _actor: unknown,
+          _policy: unknown,
+          privilege: AuthorizationPrivilege
+        ) => grantedPrivileges.has(privilege)
+      );
+      (
+        module.get(UserLookupService).getUserByIdOrFail as Mock
+      ).mockResolvedValue(mockUser);
+      (
+        realRoleAssignmentAuditService.recordGrantRejected as Mock
+      ).mockResolvedValue(undefined);
+
+      return {
+        realResolver,
+        realRoleAssignmentAuditService,
+        realRoleSetService,
+      };
+    };
+
+    it('audits a Platform Users Admin (FEATURE_ROLE_ASSIGN only) attempting to grant a platform-* role — a cross-family escalation, NOT a probe', async () => {
+      const {
+        realResolver,
+        realRoleAssignmentAuditService,
+        realRoleSetService,
+      } = await buildRealModule(
+        new Set([AuthorizationPrivilege.FEATURE_ROLE_ASSIGN])
+      );
+
+      await expect(
+        realResolver.assignPlatformRoleToUser(mockActorContext, {
+          actorID: 'user-target',
+          role: RoleName.PLATFORM_ROLES_ADMIN,
+        } as any)
+      ).rejects.toThrow(
+        'Forbidden: grant-global-admins required to assign role platform-roles-admin'
+      );
+
+      expect(
+        realRoleAssignmentAuditService.recordGrantRejected
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        realRoleAssignmentAuditService.recordGrantRejected
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          targetKind: 'user',
+          targetId: 'user-target',
+          role: RoleName.PLATFORM_ROLES_ADMIN,
+          rejectedRule: expect.stringContaining(
+            'grant-global-admins required to assign role'
+          ),
+        })
+      );
+      expect(realRoleSetService.assignActorToRole).not.toHaveBeenCalled();
+    });
+
+    it('does NOT audit a fully unprivileged caller (holds neither GRANT_GLOBAL_ADMINS nor FEATURE_ROLE_ASSIGN) — a genuine probe', async () => {
+      const {
+        realResolver,
+        realRoleAssignmentAuditService,
+        realRoleSetService,
+      } = await buildRealModule(new Set());
+
+      await expect(
+        realResolver.assignPlatformRoleToUser(mockActorContext, {
+          actorID: 'user-target',
+          role: RoleName.PLATFORM_ROLES_ADMIN,
+        } as any)
+      ).rejects.toThrow(
+        'Forbidden: grant-global-admins required to assign role platform-roles-admin'
+      );
+
+      expect(
+        realRoleAssignmentAuditService.recordGrantRejected
+      ).not.toHaveBeenCalled();
+      expect(realRoleSetService.assignActorToRole).not.toHaveBeenCalled();
+    });
+  });
+
   // 027-platform-role-redesign (sec-server-2/corr-server-1 fix): wires the
   // REAL AuthorizationPolicyService + AuthorizationService so the
   // constructor's `legacyGlobalAdminPolicy` is a genuine, hardcoded

@@ -193,19 +193,45 @@ export class PlatformRoleAssignmentRulesService {
     return undefined;
   }
 
-  /** sec-server-11 fix: a standalone, cheap (no DB round trip beyond the
-   * in-memory policy already loaded) probe of rule 1 alone — exposed so a
-   * caller (the resolver mutation) can reject a completely incapable actor
-   * BEFORE doing any more expensive work (targetHeldPlatformRoles' ~10
-   * `isInRole` calls) or writing a rejection-audit row. An actor with no
-   * assignment capability at all is a probe, not an auditable rejected
-   * administrative attempt. */
-  public hasAssignerCapability(
-    role: RoleName,
+  /** sec-server-11 fix, narrowed by corr-server-17/spec-server-18: a
+   * standalone, cheap (no DB round trip beyond the in-memory policy already
+   * loaded) probe for a GENUINE unprivileged actor — one holding NEITHER
+   * `GRANT_GLOBAL_ADMINS` NOR `FEATURE_ROLE_ASSIGN` on the role-set policy,
+   * i.e. no platform-role assignment capability of ANY kind. Exposed so a
+   * caller (the resolver mutation) can reject that actor BEFORE doing any
+   * more expensive work (targetHeldPlatformRoles' ~10 `isInRole` calls) or
+   * writing a rejection-audit row — that case is a probe, not an auditable
+   * rejected administrative attempt.
+   *
+   * Deliberately NOT role-specific: an actor that holds ONE of the two
+   * assigner privileges but not the one `role` requires (e.g. a Platform
+   * Users Admin — `FEATURE_ROLE_ASSIGN` only — attempting to grant a
+   * `platform-*` role, which requires `GRANT_GLOBAL_ADMINS`) is a
+   * privileged actor making an auditable cross-family escalation attempt,
+   * NOT a probe. That case MUST fall through to `evaluateOrFail` so
+   * `checkAssignerCapability` runs (preserving the self-assignment-first
+   * rule ordering) and `recordGrantRejected` writes the rejection row
+   * (FR-018 outcome coverage, contracts/graphql-contract.md §New error
+   * semantics). A role-specific check here previously misclassified that
+   * privileged escalation attempt as an unprivileged probe, silently
+   * dropping the audit row and skipping straight to a `ruleId:
+   * 'assigner-capability'` throw that bypassed `checkSelfAssignment`. */
+  public hasAnyAssignerCapability(
     actorContext: ActorContext,
     roleSetAuthorization: IAuthorizationPolicy | undefined
   ): boolean {
-    return this.isAssignerCapable(role, actorContext, roleSetAuthorization);
+    return (
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        roleSetAuthorization,
+        AuthorizationPrivilege.GRANT_GLOBAL_ADMINS
+      ) ||
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        roleSetAuthorization,
+        AuthorizationPrivilege.FEATURE_ROLE_ASSIGN
+      )
+    );
   }
 
   /** The privilege rule 1 requires for a given role — shared by
