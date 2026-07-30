@@ -1,4 +1,4 @@
-import { existsSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   A_ROW_GATE_COVERAGE,
@@ -6,14 +6,17 @@ import {
   ASSIGNMENT_RULE_COVERAGE,
   AUDIT_WRITER_COVERAGE,
   AuditWriterCoverageEntry,
+  MECHANISM_COVERAGE,
+  MechanismCoverageEntry,
   PRIVILEGE_COVERAGE,
+  PRIVILEGE_KEY_BY_VALUE,
   PrivilegeCoverageEntry,
   STATEFUL_FLOW_COVERAGE,
 } from './unit.coverage.inventory';
 
 /**
  * 027-platform-role-redesign (T070b, SC-018) — for EVERY declared path in
- * ALL FIVE of `unit.coverage.inventory.ts`'s Records, assert the file
+ * ALL SIX of `unit.coverage.inventory.ts`'s Records, assert the file
  * exists, is non-empty and ends `.spec.ts`. A renamed or deleted spec fails
  * HERE; a *missing entry* already failed at `tsc` (the Record's key type is
  * exhaustive). Not a self-registering runtime registry — `isolate: false`
@@ -29,6 +32,20 @@ function assertRealSpec(path: string): void {
     statSync(absolute).size,
     `spec file is empty: ${path}`
   ).toBeGreaterThan(0);
+}
+
+/** qual-server-10 fix: `assertRealSpec` plus a cheap whole-file text scan —
+ * the declared spec's content MUST mention `token` (e.g. the privilege's
+ * enum KEY name) or the entry is mis-pointed: a real, non-empty `.spec.ts`
+ * file that happens to cover something else entirely, which
+ * `assertRealSpec` alone cannot distinguish from genuine coverage. */
+function assertRealSpecCovers(path: string, token: string): void {
+  assertRealSpec(path);
+  const content = readFileSync(resolve(process.cwd(), path), 'utf-8');
+  expect(
+    content.includes(token),
+    `spec ${path} does not mention '${token}' — declared coverage looks mis-pointed`
+  ).toBe(true);
 }
 
 describe('unit.coverage.inventory (T070b — path existence)', () => {
@@ -87,12 +104,13 @@ describe('unit.coverage.inventory (T070b — path existence)', () => {
       string,
       PrivilegeCoverageEntry,
     ][]) {
-      it(`${privilege}: declared spec(s) exist`, () => {
+      it(`${privilege}: declared spec(s) exist and actually mention the privilege (qual-server-10)`, () => {
         if ('deferred' in entry) {
           expect(entry.deferred).toBe('B');
         } else {
-          assertRealSpec(entry.ruleSpec);
-          assertRealSpec(entry.grantSetSpec);
+          const token = PRIVILEGE_KEY_BY_VALUE[privilege] ?? privilege;
+          assertRealSpecCovers(entry.ruleSpec, token);
+          assertRealSpecCovers(entry.grantSetSpec, token);
         }
       });
     }
@@ -103,6 +121,22 @@ describe('unit.coverage.inventory (T070b — path existence)', () => {
       it(`${flow}: covering spec exists`, () => {
         assertRealSpec(entry.spec);
         expect(entry.drillStep.length).toBeGreaterThan(0);
+      });
+    }
+  });
+
+  // 027-platform-role-redesign (spec-server-20 fix): closes the FR-033
+  // inventory gap — the role→credential map, the organization-inheritance
+  // prefix filter and its cache invalidation, and two of the four bootstrap
+  // seeding paths previously had no entry in ANY of the five prior Records,
+  // so deleting their covering spec failed no build.
+  describe('MECHANISM_COVERAGE', () => {
+    for (const [mechanism, entry] of Object.entries(MECHANISM_COVERAGE) as [
+      string,
+      MechanismCoverageEntry,
+    ][]) {
+      it(`${mechanism}: covering spec exists`, () => {
+        assertRealSpec(entry.spec);
       });
     }
   });

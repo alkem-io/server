@@ -5,15 +5,16 @@ import type { ARowId } from './a.row.surfaces';
 import type { ManagedPrivilege } from './privilege.grants';
 
 /**
- * 027-platform-role-redesign (T070a, research D21) — FIVE exhaustive
- * `Record`s, each keyed on a union DERIVED from the runtime enumeration it
- * inventories, so the enumeration stays the single source rather than a
- * second hand-list that can silently fall out of step (D21, D26). `tsc`
- * rejects a literal missing a key — adding a rule, category, A-row,
- * privilege or owned stateful flow without an entry here is a COMPILE
- * ERROR, the strongest available form of "cannot silently grow" (research
- * D21). This file holds no runtime behaviour — it sits in `src/` rather
- * than a test folder deliberately, because neither this closure nor
+ * 027-platform-role-redesign (T070a, research D21; sixth Record added by
+ * spec-server-20) — SIX exhaustive `Record`s, each keyed on a union DERIVED
+ * from the runtime enumeration it inventories, so the enumeration stays the
+ * single source rather than a second hand-list that can silently fall out
+ * of step (D21, D26). `tsc` rejects a literal missing a key — adding a
+ * rule, category, A-row, privilege, owned stateful flow, or one of
+ * `MECHANISM_COVERAGE`'s five named mechanisms without an entry here is a
+ * COMPILE ERROR, the strongest available form of "cannot silently grow"
+ * (research D21). This file holds no runtime behaviour — it sits in `src/`
+ * rather than a test folder deliberately, because neither this closure nor
  * `unit.coverage.spec.ts` (T070b) bites unless `tsc` compiles it as part
  * of the normal build (plan.md §Structure Decision).
  */
@@ -297,6 +298,24 @@ export const A_ROW_GATE_COVERAGE: Record<ARowId, ARowGateCoverageEntry> = {
   },
 };
 
+/** qual-server-10 fix: `AuthorizationPrivilege` is a string enum whose
+ * runtime VALUE (e.g. `'move-contribution'`) is what `Object.entries`
+ * yields as the iteration key in `unit.coverage.spec.ts` — but the ENUM KEY
+ * NAME (`'MOVE_CONTRIBUTION'`) is what actually appears as literal text at
+ * every call site (`AuthorizationPrivilege.MOVE_CONTRIBUTION`), because TS
+ * source references enums by identifier, not by their string value. This
+ * reverse map lets the coverage spec assert a declared spec's FILE TEXT
+ * contains the privilege it claims to cover — the same cheap whole-file
+ * text scan `surface.drift.spec.ts` already uses — so a mis-pointed entry
+ * (declaring a spec that never mentions the privilege) fails the build
+ * instead of silently reporting false coverage. */
+export const PRIVILEGE_KEY_BY_VALUE: Record<string, string> = Object.entries(
+  AuthorizationPrivilege
+).reduce<Record<string, string>>((acc, [key, value]) => {
+  acc[value as string] = key;
+  return acc;
+}, {});
+
 // ---------------------------------------------------------------------------
 // 4. PRIVILEGE_COVERAGE — keyed on `keyof typeof PRIVILEGE_GRANTS`
 //    (`ManagedPrivilege`), NOT this feature's new-privilege union (D4) —
@@ -319,11 +338,21 @@ const PLATFORM_POLICY_SPEC =
   'src/platform/platform/platform.service.authorization.spec.ts';
 const ACCOUNT_POLICY_SPEC =
   'src/domain/space/account/account.service.authorization.spec.ts';
+// qual-server-10 fix: the four constants below previously pointed at
+// resolver/service specs that never mention the privilege they claim to
+// cover (`assertRealSpec` only checked the path existed, not its content —
+// see the strengthened check below). Repointed at the specs that actually
+// own the grant-set assertion.
 const SPACE_POLICY_SPEC =
-  'src/domain/space/space/space.resolver.mutations.spec.ts';
+  'src/domain/space/space/space.service.platform.roles.access.spec.ts';
 const ORGANIZATION_POLICY_SPEC =
-  'src/domain/community/organization/organization.resolver.mutations.spec.ts';
-const USER_POLICY_SPEC = 'src/domain/community/user/user.service.spec.ts';
+  'src/domain/community/organization/organization.service.authorization.spec.ts';
+const USER_POLICY_SPEC =
+  'src/domain/community/user/user.service.authorization.spec.ts';
+const MOVE_CONTRIBUTION_SPEC =
+  'src/domain/collaboration/callout-contribution/callout.contribution.service.authorization.spec.ts';
+const UPDATE_CALLOUT_PUBLISHER_SPEC =
+  'src/domain/collaboration/callout/callout.service.authorization.spec.ts';
 
 export const PRIVILEGE_COVERAGE: Record<
   ManagedPrivilege,
@@ -395,12 +424,12 @@ export const PRIVILEGE_COVERAGE: Record<
     grantSetSpec: ACCOUNT_POLICY_SPEC,
   },
   [AuthorizationPrivilege.MOVE_CONTRIBUTION]: {
-    ruleSpec: SPACE_POLICY_SPEC,
-    grantSetSpec: SPACE_POLICY_SPEC,
+    ruleSpec: MOVE_CONTRIBUTION_SPEC,
+    grantSetSpec: MOVE_CONTRIBUTION_SPEC,
   },
   [AuthorizationPrivilege.UPDATE_CALLOUT_PUBLISHER]: {
-    ruleSpec: SPACE_POLICY_SPEC,
-    grantSetSpec: SPACE_POLICY_SPEC,
+    ruleSpec: UPDATE_CALLOUT_PUBLISHER_SPEC,
+    grantSetSpec: UPDATE_CALLOUT_PUBLISHER_SPEC,
   },
   [AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE]: {
     ruleSpec: ACCOUNT_POLICY_SPEC,
@@ -462,5 +491,49 @@ export const STATEFUL_FLOW_COVERAGE: Record<
     spec: 'src/core/bootstrap/bootstrap.service.spec.ts',
     drillStep:
       'quickstart.md §5 — grant still lands with the audit store stopped',
+  },
+};
+
+// ---------------------------------------------------------------------------
+// 6. MECHANISM_COVERAGE (spec-server-20 fix) — FR-033's inventory names
+//    several load-bearing MECHANISMS that are neither an assignment rule,
+//    an audit category, an A-row gate, a managed privilege, nor an FR-024
+//    stateful flow, so none of the five Records above closes them: the
+//    role→credential map (FR-011, SC-008), the organization-inheritance
+//    prefix filter and its cache invalidation (FR-002/FR-031), and two of
+//    the four bootstrap seeding paths (rule evaluation, fatal conflict —
+//    the other two, idempotent re-grant and fail-open audit, are already
+//    closed by STATEFUL_FLOW_COVERAGE's flow3/flow4). Before this Record,
+//    deleting any of these five specs failed no build — the exact "covered
+//    elsewhere means covered by nothing that fails" state FR-033 exists to
+//    make impossible.
+// ---------------------------------------------------------------------------
+
+export interface MechanismCoverageEntry {
+  readonly spec: string;
+}
+
+export const MECHANISM_COVERAGE: Record<
+  | 'roleCredentialMap'
+  | 'orgInheritanceFilter'
+  | 'orgInheritanceCacheInvalidation'
+  | 'seedRuleEvaluation'
+  | 'seedFatalConflict',
+  MechanismCoverageEntry
+> = {
+  roleCredentialMap: {
+    spec: 'src/domain/access/platform-roles-access/role.credential.map.spec.ts',
+  },
+  orgInheritanceFilter: {
+    spec: 'src/core/actor-context/actor.context.service.spec.ts',
+  },
+  orgInheritanceCacheInvalidation: {
+    spec: 'src/domain/access/role-set/role.set.service.spec.ts',
+  },
+  seedRuleEvaluation: {
+    spec: 'src/platform/platform-role/platform.role.assignment.rules.service.spec.ts',
+  },
+  seedFatalConflict: {
+    spec: 'src/core/bootstrap/bootstrap.service.spec.ts',
   },
 };
