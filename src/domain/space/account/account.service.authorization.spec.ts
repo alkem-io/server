@@ -1,3 +1,4 @@
+import { AccountType } from '@common/enums/account.type';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import {
@@ -76,6 +77,11 @@ describe('AccountAuthorizationService', () => {
   const createMockAccount = (overrides: Partial<IAccount> = {}): IAccount =>
     ({
       id: 'account-1',
+      // spec-server-14 fix: defaults to ORGANIZATION so the existing suite's
+      // implicit assumption (every account gets PLATFORM_SUPPORT_ORG_RESOURCES)
+      // keeps holding for the org-hosted case it was actually written against;
+      // the new user-hosted exclusion test below overrides this explicitly.
+      accountType: AccountType.ORGANIZATION,
       authorization: {
         id: 'auth-1',
         credentialRules: [],
@@ -363,7 +369,8 @@ describe('AccountAuthorizationService', () => {
 
       const result = await (service as any).extendAuthorizationPolicy(
         mockAuth,
-        credential
+        credential,
+        AccountType.ORGANIZATION
       );
 
       expect(result).toBeDefined();
@@ -535,8 +542,8 @@ describe('AccountAuthorizationService', () => {
   // 027-platform-role-redesign (T037, T070f): explicit exact-array
   // assertions for the account-tree grant-set widenings.
   describe('027-platform-role-redesign — T037 grant-set widenings (T070f)', () => {
-    const arrange = () => {
-      const mockAccount = createMockAccount();
+    const arrange = (overrides: Partial<IAccount> = {}) => {
+      const mockAccount = createMockAccount(overrides);
       (accountService.getAccountOrFail as any).mockResolvedValue(mockAccount);
       (authorizationPolicyService.reset as any).mockReturnValue(
         mockAccount.authorization
@@ -655,6 +662,19 @@ describe('AccountAuthorizationService', () => {
         AuthorizationCredential.PLATFORM_SUPPORT,
       ]);
       expect(rules[0].cascade).toBe(true);
+    });
+
+    // spec-server-14 fix: A7 (spec row 7) and FR-008(b) grant Platform
+    // Support this right only over resources "belonging to an
+    // organization" — a USER-hosted account must not get the rule at all.
+    it('PLATFORM_SUPPORT_ORG_RESOURCES (spec-server-14 fix): NOT granted at all on a USER-hosted account', async () => {
+      const mockAccount = arrange({ accountType: AccountType.USER });
+      await service.applyAuthorizationPolicy(mockAccount);
+
+      const rules = rulesGranting(
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+      );
+      expect(rules).toHaveLength(0);
     });
   });
 });

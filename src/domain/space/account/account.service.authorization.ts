@@ -17,6 +17,7 @@ import {
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
+import { AccountType } from '@common/enums/account.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -105,7 +106,8 @@ export class AccountAuthorizationService {
 
     account.authorization = await this.extendAuthorizationPolicy(
       account.authorization,
-      accountAdminCredential
+      accountAdminCredential,
+      account.accountType
     );
 
     account.authorization = await this.authorizationPolicyService.save(
@@ -289,7 +291,8 @@ export class AccountAuthorizationService {
 
   private async extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
-    accountAdminCredential: ICredentialDefinition
+    accountAdminCredential: ICredentialDefinition,
+    accountType: AccountType
   ): Promise<IAuthorizationPolicy> {
     if (!authorization) {
       throw new EntityNotInitializedException(
@@ -420,14 +423,24 @@ export class AccountAuthorizationService {
     // moving it (A9) — FR-008(b). No legacy reacher: this privilege is new,
     // and the only PLATFORM-side path to this capability today is the root
     // god-mode grant (which T036 does not extend to CREATE/UPDATE/DELETE).
-    const platformSupportOrgResources =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES],
-        [AuthorizationCredential.PLATFORM_SUPPORT],
-        CREDENTIAL_RULE_TYPES_PLATFORM_SUPPORT_ORG_RESOURCES
-      );
-    platformSupportOrgResources.cascade = true;
-    newRules.push(platformSupportOrgResources);
+    //
+    // spec-server-14 fix: scoped to ORGANIZATION-hosted accounts only. Both
+    // A7 (spec row 7) and FR-008(b) grant Platform Support this right over
+    // resources "belonging to an organization" / "an organization's own
+    // resources" — a USER-hosted account's innovation packs/hubs are not in
+    // scope. Pushing the rule unconditionally (as before) let Platform
+    // Support edit/CRUD a user-hosted account's packs/hubs/templates too,
+    // which no artifact declares as an accepted widening.
+    if (accountType === AccountType.ORGANIZATION) {
+      const platformSupportOrgResources =
+        this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+          [AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES],
+          [AuthorizationCredential.PLATFORM_SUPPORT],
+          CREDENTIAL_RULE_TYPES_PLATFORM_SUPPORT_ORG_RESOURCES
+        );
+      platformSupportOrgResources.cascade = true;
+      newRules.push(platformSupportOrgResources);
+    }
 
     // Allow hosts (users = self mgmt, org = org admin) to manage resources in their account in a way that cascades
     const accountHostManage =
