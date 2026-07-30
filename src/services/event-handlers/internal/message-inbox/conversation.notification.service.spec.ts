@@ -320,10 +320,11 @@ describe('ConversationNotificationService', () => {
   });
 
   describe('GROUP emission (US2)', () => {
-    const groupParams = () =>
+    const groupParams = (overrides: Partial<any> = {}) =>
       directParams({
         room: { type: RoomType.CONVERSATION_GROUP, displayName: 'Team Chat' },
         memberActorIds: ['sender-1', 'user-b', 'user-c'],
+        ...overrides,
       });
 
     it('routes to USER_CONVERSATION_MESSAGE_GROUP and includes the conversation displayName', async () => {
@@ -371,6 +372,104 @@ describe('ConversationNotificationService', () => {
         expect.anything(),
         expect.anything()
       );
+    });
+
+    it('corr-server-5: substitutes a neutral label for the internal "unnamed group" placeholder, in both email and push copy', async () => {
+      mockNotificationRecipientsService.getRecipients.mockResolvedValue({
+        emailRecipients: [recipientUser('user-b')],
+        inAppRecipients: [],
+        pushRecipients: [recipientUser('user-b')],
+      });
+
+      await service.notifyConversationMessage(
+        groupParams({
+          room: {
+            type: RoomType.CONVERSATION_GROUP,
+            displayName: 'group-conversation-3-members',
+          },
+        })
+      );
+
+      expect(
+        mockNotificationExternalAdapter.buildConversationMessageGroupPayload
+      ).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+        'a group chat'
+      );
+      const [, , pushPayload] =
+        mockNotificationPushAdapter.sendMessagingPushNotifications.mock
+          .calls[0];
+      expect(pushPayload.title).toBe('a group chat');
+      expect(pushPayload.body).toBe('Alice sent a message in a group chat');
+      expect(JSON.stringify(pushPayload)).not.toContain('group-conversation');
+    });
+
+    it('corr-server-5: substitutes the neutral label for an empty/legacy-shaped displayName', async () => {
+      mockNotificationRecipientsService.getRecipients.mockResolvedValue({
+        emailRecipients: [],
+        inAppRecipients: [],
+        pushRecipients: [recipientUser('user-b')],
+      });
+
+      await service.notifyConversationMessage(
+        groupParams({
+          room: { type: RoomType.CONVERSATION_GROUP, displayName: '' },
+        })
+      );
+
+      const [, , pushPayload] =
+        mockNotificationPushAdapter.sendMessagingPushNotifications.mock
+          .calls[0];
+      expect(pushPayload.title).toBe('a group chat');
+    });
+
+    it('sec-server-4: strips control characters/newlines and clamps length in the group displayName before it reaches push/email copy', async () => {
+      const hostileName = `Alkemio Security\n${'x'.repeat(200)}: verify now`;
+      mockNotificationRecipientsService.getRecipients.mockResolvedValue({
+        emailRecipients: [recipientUser('user-b')],
+        inAppRecipients: [],
+        pushRecipients: [recipientUser('user-b')],
+      });
+
+      await service.notifyConversationMessage(
+        groupParams({
+          room: { type: RoomType.CONVERSATION_GROUP, displayName: hostileName },
+        })
+      );
+
+      const [, , , , emailDisplayName] =
+        mockNotificationExternalAdapter.buildConversationMessageGroupPayload
+          .mock.calls[0];
+      expect(emailDisplayName).not.toContain('\n');
+      expect(emailDisplayName.length).toBeLessThanOrEqual(100);
+
+      const [, , pushPayload] =
+        mockNotificationPushAdapter.sendMessagingPushNotifications.mock
+          .calls[0];
+      expect(pushPayload.title).not.toContain('\n');
+      expect(pushPayload.title.length).toBeLessThanOrEqual(100);
+    });
+
+    it('sec-server-4: strips control characters from the sender display name before it reaches push copy', async () => {
+      mockUserLookupService.getUserByIdOrFail.mockResolvedValue({
+        profile: { displayName: 'Mallory\nSubject: verify your account' },
+      });
+      mockNotificationRecipientsService.getRecipients.mockResolvedValue({
+        emailRecipients: [],
+        inAppRecipients: [],
+        pushRecipients: [recipientUser('user-b')],
+      });
+
+      await service.notifyConversationMessage(groupParams());
+
+      const [, , pushPayload] =
+        mockNotificationPushAdapter.sendMessagingPushNotifications.mock
+          .calls[0];
+      expect(pushPayload.title).not.toContain('\n');
+      expect(pushPayload.body).not.toContain('\n');
     });
   });
 

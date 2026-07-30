@@ -594,6 +594,33 @@ describe('NotificationExternalAdapter', () => {
       expect(result.recipients).toHaveLength(2);
       expect(result).not.toHaveProperty('message');
     });
+
+    it('sec-server-4: sanitizes control characters out of sender.displayName before it lands in the email payload', async () => {
+      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue({
+        id: 'sender-1',
+        firstName: 'Alice',
+        lastName: 'Sender',
+        email: 'alice@test.com',
+        nameID: 'alice',
+        profile: { displayName: 'Alice\nSubject: verify your account now' },
+      } as any);
+      vi.mocked(urlGeneratorService.createUrlForUserNameID).mockReturnValue(
+        '/user/alice'
+      );
+      vi.mocked(urlGeneratorService.getConversationUrl).mockReturnValue(
+        'https://platform.test/?chat=conv-1'
+      );
+      vi.mocked(configService.get).mockReturnValue('https://platform.test');
+
+      const result = await adapter.buildConversationMessageDirectPayload(
+        NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
+        'sender-1',
+        [recipientUser('recipient-1')],
+        'conv-1'
+      );
+
+      expect(result.sender.displayName).not.toContain('\n');
+    });
   });
 
   describe('buildPlatformUserRegisteredNotificationPayload', () => {

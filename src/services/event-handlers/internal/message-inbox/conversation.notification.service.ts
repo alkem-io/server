@@ -1,6 +1,10 @@
 import { LogContext } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
 import { NotificationEvent } from '@common/enums/notification.event';
+import {
+  getGroupDisplayNameForNotificationCopy,
+  sanitizeNotificationCopyText,
+} from '@common/utils/notification.copy.util';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { IConversation } from '@domain/communication/conversation/conversation.interface';
 import { IMessage } from '@domain/communication/message/message.interface';
@@ -255,7 +259,10 @@ export class ConversationNotificationService {
             senderActorID,
             emailRecipients,
             conversation.id,
-            room.displayName
+            // corr-server-5/sec-server-4: never surface the internal
+            // "unnamed group" placeholder or unsanitized free text as
+            // user-facing (and platform-domain-sent) email copy.
+            getGroupDisplayNameForNotificationCopy(room.displayName)
           );
 
     await this.notificationExternalAdapter.sendExternalNotifications(
@@ -282,8 +289,16 @@ export class ConversationNotificationService {
     const conversationUrl =
       this.urlGeneratorService.getConversationDeepLinkPath(conversation.id);
 
-    // D-15 — copy built ONLY from trusted fields (sender display name,
-    // conversation display name); no message-derived text anywhere.
+    // D-15 — copy built ONLY from these two user-controlled-but-bounded
+    // fields (sender display name, conversation display name); no
+    // message-derived text anywhere. corr-server-5/sec-server-4: both are
+    // caller-supplied free text (renameable by any group member), not
+    // "trusted" — the group name is normalized (placeholder/empty ->
+    // neutral fallback) and both are sanitized + length-clamped before
+    // landing in an OS push-notification title/body.
+    const groupDisplayName = getGroupDisplayNameForNotificationCopy(
+      room.displayName
+    );
     const payload =
       kind === 'DIRECT'
         ? {
@@ -292,8 +307,8 @@ export class ConversationNotificationService {
             url: conversationUrl,
           }
         : {
-            title: room.displayName,
-            body: `${senderDisplayName} sent a message in ${room.displayName}`,
+            title: groupDisplayName,
+            body: `${senderDisplayName} sent a message in ${groupDisplayName}`,
             url: conversationUrl,
           };
 
@@ -312,7 +327,12 @@ export class ConversationNotificationService {
         senderActorID,
         { relations: { profile: true } }
       );
-      return sender?.profile?.displayName ?? 'Someone';
+      const displayName = sender?.profile?.displayName;
+      // sec-server-4: the sender's profile display name is user-controlled
+      // free text and lands verbatim in a push-notification title/body.
+      return displayName
+        ? sanitizeNotificationCopyText(displayName)
+        : 'Someone';
     } catch {
       return 'Someone';
     }

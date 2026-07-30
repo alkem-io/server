@@ -37,6 +37,7 @@ import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { sanitizeNotificationCopyText } from '@common/utils/notification.copy.util';
 import { IActor } from '@domain/actor/actor/actor.interface';
 import { getActorType } from '@domain/actor/actor/actor.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
@@ -985,6 +986,11 @@ export class NotificationExternalAdapter {
    * explicitly zeroed here; `recipients[].email` remains — it is the
    * delivery address, not exposed to other recipients. No message-content
    * field exists anywhere in this payload.
+   *
+   * sec-server-4: `sender.displayName` is user-controlled profile text, NOT
+   * a trusted platform field — it is sanitized (control chars stripped,
+   * length-clamped) before landing in the email subject/body the
+   * notifications service renders.
    */
   async buildConversationMessageDirectPayload(
     eventType: NotificationEvent,
@@ -1003,7 +1009,9 @@ export class NotificationExternalAdapter {
         this.createUserPayloadFromUser(recipient)
       ),
       platform: { url: this.getPlatformURL() },
-      sender: { displayName: sender.profile.displayName },
+      sender: {
+        displayName: sanitizeNotificationCopyText(sender.profile.displayName),
+      },
       conversation: { id: conversationID, url: conversationUrl },
     };
   }
@@ -1011,8 +1019,13 @@ export class NotificationExternalAdapter {
   /**
    * 034-messaging-notifications — group variant. See
    * `buildConversationMessageDirectPayload` for the `triggeredBy.email`
-   * zeroing rationale. Adds `conversation.displayName` — group email
-   * copy names the conversation.
+   * zeroing rationale and the sender-displayName sanitization note. Adds
+   * `conversation.displayName` — group email copy names the conversation.
+   * The caller (`ConversationNotificationService`) is responsible for
+   * resolving `conversationDisplayName` via
+   * `getGroupDisplayNameForNotificationCopy` first (placeholder/empty ->
+   * neutral fallback, sec-server-4/corr-server-5); it is treated as already
+   * user-facing-safe text here.
    */
   async buildConversationMessageGroupPayload(
     eventType: NotificationEvent,
@@ -1032,7 +1045,9 @@ export class NotificationExternalAdapter {
         this.createUserPayloadFromUser(recipient)
       ),
       platform: { url: this.getPlatformURL() },
-      sender: { displayName: sender.profile.displayName },
+      sender: {
+        displayName: sanitizeNotificationCopyText(sender.profile.displayName),
+      },
       conversation: {
         id: conversationID,
         url: conversationUrl,
