@@ -5453,6 +5453,10 @@ type RelayPaginatedSpace implements ActorFull {
   account: Account!
   """The "highest" subscription active for this Space."""
   activeSubscription: SpaceSubscription
+  """
+  Count of visible activity events on this Space over the last 7 days, across all actors (excludes whiteboard-content-modified). Used to rank Spaces on the dashboard.
+  """
+  activityScore: Int!
   """The Actor representing this Space."""
   actor: Actor!
   """The authorization rules for the Actor"""
@@ -6014,6 +6018,10 @@ type Space implements ActorFull {
   account: Account!
   """The "highest" subscription active for this Space."""
   activeSubscription: SpaceSubscription
+  """
+  Count of visible activity events on this Space over the last 7 days, across all actors (excludes whiteboard-content-modified). Used to rank Spaces on the dashboard.
+  """
+  activityScore: Int!
   """The Actor representing this Space."""
   actor: Actor!
   """The authorization rules for the Actor"""
@@ -6782,6 +6790,8 @@ type UserSettings {
   communication: UserSettingsCommunication!
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """The home-dashboard view settings for this User."""
+  dashboard: UserSettingsDashboard!
   """
   The design version this User has selected (1 = legacy design generation, deprecated and scheduled for removal; 2 = current default design generation; 3+ reserved for future generations).
   """
@@ -6820,6 +6830,13 @@ type UserSettingsCommunication {
   allowOtherUsersToContactViaEmail: Boolean!
   """Allow Users to send messages to this User."""
   allowOtherUsersToSendMessages: Boolean!
+}
+
+type UserSettingsDashboard {
+  """
+  Whether the activity-feed view is shown on the home dashboard (true) or the non-activity Spaces view (false). Default true preserves the historical behaviour.
+  """
+  activityView: Boolean!
 }
 
 type UserSettingsHomeSpace {
@@ -9620,11 +9637,20 @@ input UpdateUserSettingsCommunicationInput {
   allowOtherUsersToSendMessages: Boolean
 }
 
+input UpdateUserSettingsDashboardInput {
+  """
+  Whether the activity-feed view is shown on the home dashboard (true) or the non-activity Spaces view (false).
+  """
+  activityView: Boolean
+}
+
 input UpdateUserSettingsEntityInput {
   """Settings related to the AI assistant authority for this User."""
   assistant: UpdateUserSettingsAssistantInput
   """Settings related to this users Communication preferences."""
   communication: UpdateUserSettingsCommunicationInput
+  """Settings related to the home dashboard view."""
+  dashboard: UpdateUserSettingsDashboardInput
   """
   Update the user's design version. Any integer accepted (1 = legacy design generation, deprecated and scheduled for removal; 2 = current default design generation; 3+ reserved for future generations).
   """
