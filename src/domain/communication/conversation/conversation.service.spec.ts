@@ -265,6 +265,80 @@ describe('ConversationService', () => {
     });
   });
 
+  describe('addMember (sec-server-1: consent gate)', () => {
+    const conversationId = 'conv-1';
+    const memberActorId = 'actor-c';
+
+    const mockGroupConversation = () => {
+      conversationRepo.findOne.mockResolvedValue({
+        id: conversationId,
+        room: { id: 'room-1', type: RoomType.CONVERSATION_GROUP },
+      } as any);
+      membershipRepo.count.mockResolvedValue(0); // isConversationMember -> false
+    };
+
+    it('adds a consenting user and sends the batchAddMember RPC', async () => {
+      mockGroupConversation();
+      userLookupService.getUserById.mockResolvedValue({
+        id: memberActorId,
+        settings: {
+          communication: { allowOtherUsersToSendMessages: true },
+        },
+      } as any);
+      communicationAdapter.batchAddMember.mockResolvedValue(true as any);
+
+      const result = await service.addMember(conversationId, memberActorId);
+
+      expect(result.id).toBe(conversationId);
+      expect(communicationAdapter.batchAddMember).toHaveBeenCalledWith(
+        memberActorId,
+        ['room-1']
+      );
+    });
+
+    it('throws MessagingNotEnabledException and never sends the RPC when the user does not consent to receiving messages', async () => {
+      mockGroupConversation();
+      userLookupService.getUserById.mockResolvedValue({
+        id: memberActorId,
+        settings: {
+          communication: { allowOtherUsersToSendMessages: false },
+        },
+      } as any);
+
+      await expect(
+        service.addMember(conversationId, memberActorId)
+      ).rejects.toThrow('User is not open to receiving messages');
+      expect(communicationAdapter.batchAddMember).not.toHaveBeenCalled();
+    });
+
+    it('exempts non-USER actors (e.g. a Virtual Contributor, no settings row) from the consent check', async () => {
+      mockGroupConversation();
+      userLookupService.getUserById.mockResolvedValue(null);
+      communicationAdapter.batchAddMember.mockResolvedValue(true as any);
+
+      await service.addMember(conversationId, memberActorId);
+
+      expect(communicationAdapter.batchAddMember).toHaveBeenCalledWith(
+        memberActorId,
+        ['room-1']
+      );
+    });
+
+    it('is idempotent — an already-present member is returned without a consent check or RPC', async () => {
+      conversationRepo.findOne.mockResolvedValue({
+        id: conversationId,
+        room: { id: 'room-1', type: RoomType.CONVERSATION_GROUP },
+      } as any);
+      membershipRepo.count.mockResolvedValue(1); // already a member
+
+      const result = await service.addMember(conversationId, memberActorId);
+
+      expect(result.id).toBe(conversationId);
+      expect(userLookupService.getUserById).not.toHaveBeenCalled();
+      expect(communicationAdapter.batchAddMember).not.toHaveBeenCalled();
+    });
+  });
+
   describe('removeMember (US2-AS4 live-verification fix)', () => {
     const conversationId = 'conv-1';
     const memberActorId = 'actor-c';

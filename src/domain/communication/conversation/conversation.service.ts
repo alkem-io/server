@@ -8,6 +8,7 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
+import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
 import { Actor } from '@domain/actor/actor/actor.entity';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -210,6 +211,27 @@ export class ConversationService {
     );
     if (alreadyMember) {
       return conversation;
+    }
+
+    // sec-server-1: same consent gate as GROUP creation
+    // (MessagingService.filterMembersByConsent) — a non-consenting user must
+    // never be added to a group after the fact either, or the
+    // 034-messaging-notifications pipeline will push them
+    // attacker-authored copy by default. Non-USER actors (VC, Organization,
+    // …) have no such setting and are exempt — mirrors
+    // `checkReceivingUserAccessAndSettings`'s "not a user -> skip".
+    const memberUser = await this.userLookupService.getUserById(memberActorId, {
+      relations: { settings: true },
+    });
+    if (
+      memberUser &&
+      !memberUser.settings?.communication?.allowOtherUsersToSendMessages
+    ) {
+      throw new MessagingNotEnabledException(
+        'User is not open to receiving messages',
+        LogContext.COMMUNICATION_CONVERSATION,
+        { userId: memberUser.id }
+      );
     }
 
     // Send to Matrix only — DB will be updated when room.member.updated event arrives
