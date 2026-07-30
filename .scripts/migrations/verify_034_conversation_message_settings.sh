@@ -65,6 +65,17 @@ INSERT INTO user_settings VALUES (
   '00000000-0000-0000-0000-00000000a003',
   '{"user":{"mentioned":{"push":true,"email":true,"inApp":true},"commentReply":{"push":true,"email":false,"inApp":true},"messageReceived":{"push":true,"email":true,"inApp":true},"membership":{"spaceCommunityJoined":{"push":true,"email":true,"inApp":true},"spaceCommunityInvitationReceived":{"push":true,"email":true,"inApp":true}},"conversationMessageDirect":{"push":true,"email":true,"inApp":true},"conversationMessageGroup":{"push":false,"email":true,"inApp":true}}}'
 );
+
+-- u4 (corr-server-3): the `user` object itself is entirely absent from
+-- `notification` — a bare (non-broadened) `jsonb_set(notification,
+-- '{user,<key>}', ...)` is a silent no-op against a missing parent path, so
+-- this row proves the broadened up() (which materializes `{user}` as `{}`
+-- before writing the leaf key) actually heals it instead of leaving it
+-- forever un-backfilled.
+INSERT INTO user_settings VALUES (
+  '00000000-0000-0000-0000-00000000a004',
+  '{}'
+);
 SQL
 
 # The migration's UP/DOWN statements, kept in sync with
@@ -74,11 +85,17 @@ DEFAULT_VALUE='{"push":true,"email":false,"inApp":false}'
 run_migration_up() {
 psql_db -v default_value="$DEFAULT_VALUE" >/dev/null <<'SQL'
 UPDATE user_settings
-SET notification = jsonb_set(notification, '{user,conversationMessageDirect}'::text[], :'default_value'::jsonb)
+SET notification = jsonb_set(
+  jsonb_set(notification, '{user}'::text[], COALESCE(notification -> 'user', '{}'::jsonb), true),
+  '{user,conversationMessageDirect}'::text[], :'default_value'::jsonb, true
+)
 WHERE notification -> 'user' -> 'conversationMessageDirect' IS NULL;
 
 UPDATE user_settings
-SET notification = jsonb_set(notification, '{user,conversationMessageGroup}'::text[], :'default_value'::jsonb)
+SET notification = jsonb_set(
+  jsonb_set(notification, '{user}'::text[], COALESCE(notification -> 'user', '{}'::jsonb), true),
+  '{user,conversationMessageGroup}'::text[], :'default_value'::jsonb, true
+)
 WHERE notification -> 'user' -> 'conversationMessageGroup' IS NULL;
 SQL
 }
@@ -116,6 +133,8 @@ assert_eq "u2 conversationMessageDirect -> pre-existing value PRESERVED" "$(get 
 assert_eq "u2 conversationMessageGroup  -> default (backfilled)"         "$(get 00000000-0000-0000-0000-00000000a002 conversationMessageGroup)"  "$DEFAULT_VALUE"
 assert_eq "u3 conversationMessageDirect -> pre-existing value PRESERVED" "$(get 00000000-0000-0000-0000-00000000a003 conversationMessageDirect)" '{"push":true,"email":true,"inApp":true}'
 assert_eq "u3 conversationMessageGroup  -> pre-existing value PRESERVED" "$(get 00000000-0000-0000-0000-00000000a003 conversationMessageGroup)"  '{"push":false,"email":true,"inApp":true}'
+assert_eq "u4 (missing 'user' object entirely) conversationMessageDirect -> default (non-null, healed)" "$(get 00000000-0000-0000-0000-00000000a004 conversationMessageDirect)" "$DEFAULT_VALUE"
+assert_eq "u4 (missing 'user' object entirely) conversationMessageGroup  -> default (non-null, healed)" "$(get 00000000-0000-0000-0000-00000000a004 conversationMessageGroup)"  "$DEFAULT_VALUE"
 
 echo
 echo "==> Idempotency: capturing state, re-running UP, diffing"

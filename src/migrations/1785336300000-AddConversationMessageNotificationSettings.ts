@@ -11,11 +11,21 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  *
  *  - `up`: additive-only `jsonb_set` per key, guarded by
  *    `WHERE notification -> 'user' -> '<key>' IS NULL` — never touches an
- *    existing key, safely re-runnable.
+ *    existing key, safely re-runnable. The inner `jsonb_set` additionally
+ *    materializes `notification.user` itself (`COALESCE(...,'{}'::jsonb)`)
+ *    before writing the leaf key, so a row whose `user` object is entirely
+ *    absent still gets healed (corr-server-3) — a bare `jsonb_set` on a
+ *    non-existent parent path is a silent no-op otherwise.
  *  - `down`: removes exactly the two keys via the `#-` operator.
  *
  * Ships in the SAME PR as the settings-interface fields (T006) — the
  * settings surface must never observe a missing row (US3-AS2/SC-005).
+ * Belt-and-braces: this migration is a one-shot backfill, so it cannot heal
+ * a `user_settings` row inserted by an old pod during a rolling deploy
+ * *after* it has already run. `UserSettings.applyConversationMessageNotificationDefaults`
+ * (`@AfterLoad`, user.settings.entity.ts) and the recipients-service default
+ * (notification.recipients.service.ts) are the read-side backstop for that
+ * race (corr-server-3).
  */
 export class AddConversationMessageNotificationSettings1785336300000
   implements MigrationInterface
@@ -37,9 +47,15 @@ export class AddConversationMessageNotificationSettings1785336300000
         `
         UPDATE user_settings
         SET notification = jsonb_set(
-          notification,
+          jsonb_set(
+            notification,
+            '{user}'::text[],
+            COALESCE(notification -> 'user', '{}'::jsonb),
+            true
+          ),
           '{user,${key}}'::text[],
-          $1::jsonb
+          $1::jsonb,
+          true
         )
         WHERE notification -> 'user' -> '${key}' IS NULL
         `,

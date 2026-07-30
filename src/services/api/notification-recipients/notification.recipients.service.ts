@@ -25,6 +25,15 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationRecipientsInput } from './dto/notification.recipients.dto.input';
 import { NotificationRecipientResult } from './dto/notification.recipients.dto.result';
 
+// 034-messaging-notifications (FR-004, corr-server-3): same mandated default
+// as the migration (1785336300000) and `UserSettings.applyConversationMessageNotificationDefaults`.
+const DEFAULT_CONVERSATION_MESSAGE_CHANNELS: IUserSettingsNotificationChannels =
+  Object.freeze({
+    email: false,
+    inApp: false,
+    push: true,
+  });
+
 @Injectable()
 export class NotificationRecipientsService {
   constructor(
@@ -279,9 +288,21 @@ export class NotificationRecipientsService {
       case NotificationEvent.USER_MESSAGE:
         return notificationSettings.user.messageReceived;
       case NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT:
-        return notificationSettings.user.conversationMessageDirect;
+        // corr-server-3: defend on read — a `user_settings` row that predates
+        // the two messaging keys (rolling-deploy race past the one-shot
+        // backfill migration) must never crash recipient resolution for the
+        // WHOLE batch. `UserSettings.applyConversationMessageNotificationDefaults`
+        // (@AfterLoad) already heals this for entity-loaded rows; this
+        // fallback covers any other load path (e.g. raw/partial selects).
+        return (
+          notificationSettings.user.conversationMessageDirect ??
+          DEFAULT_CONVERSATION_MESSAGE_CHANNELS
+        );
       case NotificationEvent.USER_CONVERSATION_MESSAGE_GROUP:
-        return notificationSettings.user.conversationMessageGroup;
+        return (
+          notificationSettings.user.conversationMessageGroup ??
+          DEFAULT_CONVERSATION_MESSAGE_CHANNELS
+        );
       case NotificationEvent.ORGANIZATION_MESSAGE_SENDER:
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION:
         return notificationSettings.space.admin.communityApplicationReceived;

@@ -765,6 +765,49 @@ describe('NotificationRecipientsService', () => {
       expect(result.emailRecipients).toHaveLength(0);
       expect(result.pushRecipients).toHaveLength(0);
     });
+
+    it('corr-server-3: falls back to the mandated default (email:false,inApp:false,push:true) when a row predates the conversationMessageDirect/Group keys, instead of throwing', async () => {
+      // Simulates a `user_settings` row created by an old pod during a
+      // rolling deploy AFTER the one-shot backfill migration already ran —
+      // `notification.user` exists but neither new key does.
+      const user = {
+        id: 'user-legacy',
+        email: 'legacy@example.com',
+        settings: {
+          notification: {
+            user: {
+              messageReceived: { email: true, inApp: true, push: true },
+              // conversationMessageDirect / conversationMessageGroup absent
+            },
+          },
+        },
+        credentials: [],
+      } as unknown as IUser;
+
+      vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+        user,
+      ]);
+      vi.mocked(userLookupService.getUsersByIds).mockImplementation(
+        async (ids: string[]) => (ids.length > 0 ? [user] : [])
+      );
+
+      const directResult = await service.getRecipients({
+        eventType: NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
+        triggeredBy: 'sender-1',
+        userIDs: ['user-legacy'],
+      });
+      // Default is email:false, push:true — no throw, no whole-batch loss.
+      expect(directResult.emailRecipients).toHaveLength(0);
+      expect(directResult.pushRecipients).toHaveLength(1);
+
+      const groupResult = await service.getRecipients({
+        eventType: NotificationEvent.USER_CONVERSATION_MESSAGE_GROUP,
+        triggeredBy: 'sender-1',
+        userIDs: ['user-legacy'],
+      });
+      expect(groupResult.emailRecipients).toHaveLength(0);
+      expect(groupResult.pushRecipients).toHaveLength(1);
+    });
   });
 
   describe('getRecipients - authorization policy retrieval', () => {
