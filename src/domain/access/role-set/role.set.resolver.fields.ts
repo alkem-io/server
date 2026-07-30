@@ -1,7 +1,8 @@
 import { LogContext } from '@common/enums';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { RoleName } from '@common/enums/role.name';
-import { ForbiddenException, ValidationException } from '@common/exceptions';
+import { ValidationException } from '@common/exceptions';
 import { PaginationInputOutOfBoundException } from '@common/exceptions/pagination/pagination.input.out.of.bounds.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { GraphqlGuard } from '@core/authorization';
@@ -23,6 +24,7 @@ import { IVirtualContributor } from '@domain/community/virtual-contributor/virtu
 import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { UseGuards } from '@nestjs/common';
 import { Args, Float, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { checkCredentialHolderListAccessOrFail } from '@platform/platform-role/platform.role.holder.list.access';
 import {
   AuthorizationActorHasPrivilege,
   CurrentActor,
@@ -89,48 +91,21 @@ export class RoleSetResolverFields {
     role: RoleName,
     fieldName: string
   ): void {
-    if (PLATFORM_TARGET_ROLES.has(role)) {
-      // spec-server-6 fix: an explicit `isAccessGranted` + throw, matching
-      // `contracts/graphql-contract.md`'s declared shape verbatim — NOT a
-      // `grantAccessOrFail` delegation, whose thrown text
-      // (`Authorization: unable to grant '<priv>' privilege: ... on
-      // authorization <id> of type '<type>'`) both drifts from the
-      // contract AND leaks the internal authorization policy id/type to
-      // the caller.
-      const granted = this.authorizationService.isAccessGranted(
+    if (PLATFORM_TARGET_ROLES.has(role) || FEATURE_TARGET_ROLES.has(role)) {
+      // sec-server-10 fix: delegates to the SHARED predicate
+      // (`platform.role.holder.list.access.ts`) so `actorsWithCredential`/
+      // `usersWithAuthorizationCredential` (admin.authorization.resolver.
+      // queries.ts) — a second surface reading the SAME holder-list data by
+      // credential rather than by RoleName — cannot drift from this one.
+      // `RoleName` and `AuthorizationCredential` are string-identical for
+      // every member of PLATFORM_TARGET_ROLES/FEATURE_TARGET_ROLES
+      // (research D2), so the cast is exact, not approximate.
+      checkCredentialHolderListAccessOrFail(
+        this.authorizationService,
         actorContext,
         roleSet.authorization,
-        AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ
+        role as unknown as AuthorizationCredential
       );
-      if (!granted) {
-        throw new ForbiddenException(
-          `Forbidden: ${AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ} required to read holders of ${role}`,
-          LogContext.AUTH_POLICY
-        );
-      }
-      return;
-    }
-    if (FEATURE_TARGET_ROLES.has(role)) {
-      const viaRolesAdmin = this.authorizationService.isAccessGranted(
-        actorContext,
-        roleSet.authorization,
-        AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ
-      );
-      const viaFeatureAdmin = this.authorizationService.isAccessGranted(
-        actorContext,
-        roleSet.authorization,
-        AuthorizationPrivilege.FEATURE_ROLE_HOLDERS_READ
-      );
-      if (!viaRolesAdmin && !viaFeatureAdmin) {
-        // spec-server-6 fix: `Forbidden: ` prefix to match the contract's
-        // declared error shape (`Forbidden: <privilege> required to read
-        // holders of <role>`) — both privileges are named since either
-        // satisfies this dual-reacher surface.
-        throw new ForbiddenException(
-          `Forbidden: ${AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ} or ${AuthorizationPrivilege.FEATURE_ROLE_HOLDERS_READ} required to read holders of ${role}`,
-          LogContext.AUTH_POLICY
-        );
-      }
       return;
     }
     // Ordinary (non-target) role, e.g. every per-space/organization role,

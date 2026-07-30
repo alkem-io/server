@@ -1,4 +1,5 @@
 import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { CredentialType } from '@common/enums/credential.type';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -6,6 +7,10 @@ import { IActorFull } from '@domain/actor/actor/actor.interface';
 import { UUID } from '@domain/common/scalars';
 import { IUser } from '@domain/community/user/user.interface';
 import { Args, Query, Resolver } from '@nestjs/graphql';
+import {
+  checkCredentialHolderListAccessOrFail,
+  isRoleHolderListCredential,
+} from '@platform/platform-role/platform.role.holder.list.access';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
@@ -33,12 +38,37 @@ export class AdminAuthorizationResolverQueries {
     resourceID: string | undefined,
     @CurrentActor() actorContext: ActorContext
   ): Promise<IActorFull[]> {
-    await this.authorizationService.grantAccessOrFail(
-      actorContext,
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.READ_USERS,
-      `actorsWithCredential query: ${actorContext.actorID}`
-    );
+    const platformAuthorization =
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
+    // 027-platform-role-redesign (sec-server-10 fix): a `platform-*`/
+    // `feature-*` TARGET role credential is gated by the SAME A20/A20b
+    // holder-list predicate `role.set.resolver.fields.ts` enforces — NOT
+    // the blanket `READ_USERS` every registered user holds, which this
+    // query previously (and still, for every OTHER credential type) checks.
+    // Adding the twelve new role credentials to `CredentialType` is what
+    // made this query able to name them at all; leaving `READ_USERS` as the
+    // ONLY gate would let any authenticated user enumerate every holder of
+    // those roles — the exact administrator-reconnaissance A20 exists to
+    // withhold.
+    if (
+      isRoleHolderListCredential(
+        credentialType as unknown as AuthorizationCredential
+      )
+    ) {
+      checkCredentialHolderListAccessOrFail(
+        this.authorizationService,
+        actorContext,
+        platformAuthorization,
+        credentialType as unknown as AuthorizationCredential
+      );
+    } else {
+      await this.authorizationService.grantAccessOrFail(
+        actorContext,
+        platformAuthorization,
+        AuthorizationPrivilege.READ_USERS,
+        `actorsWithCredential query: ${actorContext.actorID}`
+      );
+    }
     return await this.adminAuthorizationService.actorsWithCredential(
       credentialType,
       resourceID
@@ -55,12 +85,24 @@ export class AdminAuthorizationResolverQueries {
     credentialsCriteriaData: UsersWithAuthorizationCredentialInput,
     @CurrentActor() actorContext: ActorContext
   ): Promise<IUser[]> {
-    await this.authorizationService.grantAccessOrFail(
-      actorContext,
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.READ_USERS,
-      `authorization query: ${actorContext.actorID}`
-    );
+    const platformAuthorization =
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
+    // sec-server-10 fix: see actorsWithCredential's identical comment above.
+    if (isRoleHolderListCredential(credentialsCriteriaData.type)) {
+      checkCredentialHolderListAccessOrFail(
+        this.authorizationService,
+        actorContext,
+        platformAuthorization,
+        credentialsCriteriaData.type
+      );
+    } else {
+      await this.authorizationService.grantAccessOrFail(
+        actorContext,
+        platformAuthorization,
+        AuthorizationPrivilege.READ_USERS,
+        `authorization query: ${actorContext.actorID}`
+      );
+    }
     return await this.adminAuthorizationService.usersWithCredentials(
       credentialsCriteriaData
     );

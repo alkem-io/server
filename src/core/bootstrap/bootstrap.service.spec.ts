@@ -15,6 +15,7 @@ import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { vi } from 'vitest';
 import { BootstrapService } from './bootstrap.service';
+import * as seededUsers from './platform-template-definitions/user/users.json';
 
 describe('BootstrapService', () => {
   let service: BootstrapService;
@@ -498,6 +499,28 @@ describe('BootstrapService', () => {
     it('runs without error when users exist', async () => {
       mocks.userLookupService.isRegisteredUser.mockResolvedValue(true);
       await expect(service.bootstrapUserProfiles()).resolves.not.toThrow();
+    });
+  });
+
+  // 027-platform-role-redesign (sec-server-15 fix): a freshly-bootstrapped
+  // environment must NOT come up with zero `global-admin` holders — every
+  // `[GLOBAL_ADMIN]`-pinned policy this feature's round-1/round-2 fixes
+  // hardcoded (legacyGlobalAdminPolicy, the T034a FR-022 pin, the legacy
+  // space-nameID-rename pin) would otherwise be unreachable by anyone on a
+  // rebuilt cluster, with recovery requiring direct DB access.
+  describe('users.json seed data (sec-server-15 fix)', () => {
+    it('seeds admin@alkem.io with BOTH platform-roles-admin and global-admin', () => {
+      const admin = (seededUsers as any).default
+        ? (seededUsers as any).default.users.find(
+            (u: any) => u.email === 'admin@alkem.io'
+          )
+        : (seededUsers as any).users.find(
+            (u: any) => u.email === 'admin@alkem.io'
+          );
+      expect(admin).toBeDefined();
+      const credentialTypes = admin.credentials.map((c: any) => c.type);
+      expect(credentialTypes).toContain('platform-roles-admin');
+      expect(credentialTypes).toContain('global-admin');
     });
   });
 
