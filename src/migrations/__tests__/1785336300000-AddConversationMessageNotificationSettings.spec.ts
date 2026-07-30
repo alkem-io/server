@@ -7,9 +7,16 @@ import { AddConversationMessageNotificationSettings1785336300000 } from '../1785
  * 034-messaging-notifications (T008, contract C-5, FR-002/FR-004).
  *
  * Static-analysis + mocked-QueryRunner assertions — no DB connection needed
- * (mirrors 1784000000000-AddCalloutSelectionSettings.spec.ts). The full
- * before/after-restore behavioral check runs via
- * `pnpm run migration:validate` (out of band, requires Postgres).
+ * (mirrors 1784000000000-AddCalloutSelectionSettings.spec.ts). The real-DB
+ * before/after behavioral proof (pre-migration row -> non-null defaults,
+ * pre-existing keys never clobbered, idempotent re-run, reversible down())
+ * runs out of band against a scratch database via
+ * `.scripts/migrations/verify_034_conversation_message_settings.sh` — see
+ * that script's output for the evidence. `pnpm run migration:validate`
+ * additionally requires operator-supplied `.env` + `db/reference_schema.sql`
+ * side-car fixtures (see `.scripts/migrations/README.md`) not present in every
+ * environment, hence the dedicated verify script (same rationale as
+ * `verify_021_backfill.sh`).
  */
 describe('AddConversationMessageNotificationSettings migration (1785336300000)', () => {
   const migrationSrc = readFileSync(
