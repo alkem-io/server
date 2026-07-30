@@ -99,6 +99,21 @@ export class LicensingFrameworkAuthorizationService {
     // Distinct from A12 (license USAGE — assign/revoke plans, gated on
     // ACCOUNT_LICENSE_MANAGE/GRANT in account.service.authorization.ts, T037),
     // which stays with platform-license-manager.
+    //
+    // corr-server-13 fix: GRANT is deliberately ABSENT from this rule's
+    // privilege list. It used to be included alongside CREATE/READ/UPDATE/
+    // DELETE, which — because PLATFORM_SETTINGS_ADMIN is a member of this
+    // rule's credential list — silently handed A12's GRANT privilege
+    // (assign/revoke a license plan, admin.licensing.resolver.mutations.ts)
+    // to Platform Settings Admin, a holder A12's own declared owner/legacy-
+    // reacher lists (`A12_INTENDED_OWNERS`/`A12_LEGACY_REACHERS`) never
+    // named. That mismatch meant a platform-settings-admin holder COULD
+    // assign/revoke license plans, but every such call's audit-attribution
+    // helper threw on the empty intersection and the row silently went
+    // unwritten. GLOBAL_LICENSE_MANAGER/GLOBAL_PLATFORM_MANAGER's legacy
+    // GRANT reach (which this rule used to also carry for them) moves to
+    // `licensePlanUsage` below, alongside PLATFORM_LICENSE_MANAGER's owning
+    // grant — the single rule A12 is actually declared against.
     const licensings =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [
@@ -106,7 +121,6 @@ export class LicensingFrameworkAuthorizationService {
           AuthorizationPrivilege.READ,
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
-          AuthorizationPrivilege.GRANT,
         ],
         [
           AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
@@ -123,14 +137,23 @@ export class LicensingFrameworkAuthorizationService {
     // GRANT directly on THIS authorization — kept as a separate rule from
     // `licensings` above so platform-license-manager does NOT also acquire
     // A13's CRUD over plan/entitlement-mapping DEFINITIONS (which stays with
-    // platform-settings-admin alone). GLOBAL_ADMIN/GLOBAL_LICENSE_MANAGER/
-    // GLOBAL_PLATFORM_MANAGER already reach GRANT here (root cascade for the
-    // first, the `licensings` rule for the other two) — this rule only adds
-    // the new role, additively.
+    // platform-settings-admin alone).
+    //
+    // corr-server-13 fix: GLOBAL_LICENSE_MANAGER/GLOBAL_PLATFORM_MANAGER
+    // moved HERE from `licensings` above — that rule no longer carries
+    // GRANT at all, so their pre-existing legacy A12 reach (declared in
+    // `A12_LEGACY_REACHERS`) is preserved on the ONE rule A12 actually
+    // gates, rather than leaking onto A13's DEFINITION rule too.
+    // GLOBAL_ADMIN reaches GRANT here via the root cascade, unaffected by
+    // this change.
     const licensePlanUsage =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.GRANT],
-        [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
+        [
+          AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+          AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+        ],
         CREDENTIAL_RULE_LICENSE_PLAN_USAGE
       );
     licensePlanUsage.cascade = true;

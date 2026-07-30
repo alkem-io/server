@@ -19,12 +19,17 @@ import { LicensePolicyService } from './license.policy.service';
 
 /** T058 — A13's declared owner/legacy-reachers (T040's grant).
  * GLOBAL_ADMIN added (corr-server-10 fix): it reached A13 today only via
- * the root content cascade — an implicit reach the declaration omitted. */
+ * the root content cascade — an implicit reach the declaration omitted.
+ * GLOBAL_SUPPORT added (corr-server-12 fix): it reaches A13 via
+ * `globalSupportPlatformAdmin`'s cascade off `platform.authorization`
+ * (platform.service.authorization.ts) into `licensingFramework.authorization`
+ * — an implicit reach the declaration likewise omitted. */
 const A13_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_SETTINGS_ADMIN,
 ];
 const A13_LEGACY_REACHERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.GLOBAL_ADMIN,
+  AuthorizationCredential.GLOBAL_SUPPORT,
   AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
   AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
 ];
@@ -38,7 +43,14 @@ export class LicensePolicyResolverMutations {
    * (transitively, via the licensing framework), so the root rule's
    * `platform-content-full-access` CRUD cascade (T036a) would otherwise
    * satisfy these bare CREATE/UPDATE/DELETE checks too — a family SC-004's
-   * exception does not cover. */
+   * exception does not cover.
+   *
+   * GLOBAL_SUPPORT included (corr-server-12 fix): the licensing framework's
+   * authorization ALSO inherits `platform.authorization`, which carries
+   * `globalSupportPlatformAdmin` — a `cascade: true` rule granting
+   * global-support CRUD (platform.service.authorization.ts). Omitting it
+   * here would silently revoke a pre-feature reach, which the additive
+   * slice must not do. */
   private licenseDefinitionPolicy: IAuthorizationPolicy;
 
   constructor(
@@ -59,6 +71,7 @@ export class LicensePolicyResolverMutations {
         [
           AuthorizationCredential.PLATFORM_SETTINGS_ADMIN,
           AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
           AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
           AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
         ],

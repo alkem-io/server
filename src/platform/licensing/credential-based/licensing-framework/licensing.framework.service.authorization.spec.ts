@@ -78,6 +78,10 @@ describe('LicensingFrameworkAuthorizationService', () => {
 
     await service.applyAuthorizationPolicy(licensing, undefined);
 
+    // corr-server-13 fix: GRANT is no longer part of this CRUD bundle — it
+    // used to leak A12's GRANT privilege to PLATFORM_SETTINGS_ADMIN (a
+    // member of this rule's credential list) despite A12 declaring
+    // PLATFORM_LICENSE_MANAGER (∪ legacy) as its only owner/reachers.
     expect(
       authorizationPolicyService.createCredentialRuleUsingTypesOnly
     ).toHaveBeenCalledWith(
@@ -86,7 +90,6 @@ describe('LicensingFrameworkAuthorizationService', () => {
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
-        AuthorizationPrivilege.GRANT,
       ],
       [
         AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
@@ -99,14 +102,21 @@ describe('LicensingFrameworkAuthorizationService', () => {
     );
 
     // 027-platform-role-redesign (T046, A12 usage): a separate GRANT-only
-    // rule for platform-license-manager, kept apart from the CRUD/GRANT
-    // `licensings` bundle above so this role does not also acquire A13's
-    // plan/entitlement-mapping DEFINITION CRUD.
+    // rule, kept apart from the CRUD `licensings` bundle above so
+    // PLATFORM_SETTINGS_ADMIN does not also acquire A12's usage GRANT.
+    // corr-server-13 fix: GLOBAL_LICENSE_MANAGER/GLOBAL_PLATFORM_MANAGER's
+    // legacy A12 reach moved HERE (from `licensings`, which no longer
+    // carries GRANT at all) so it is preserved on the one rule A12 is
+    // actually declared against.
     expect(
       authorizationPolicyService.createCredentialRuleUsingTypesOnly
     ).toHaveBeenCalledWith(
       [AuthorizationPrivilege.GRANT],
-      [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
+      [
+        AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
+        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+        AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+      ],
       CREDENTIAL_RULE_LICENSE_PLAN_USAGE
     );
 
