@@ -396,5 +396,33 @@ describe('PlatformRoleAssignmentRulesService', () => {
         })
       ).not.toThrow();
     });
+
+    // 027-platform-role-redesign (T054a fix, spec-server-22): rule 4 (Audit
+    // Reader mutual exclusion) is bidirectional and MUST be exercised
+    // through `evaluateSeedOrFail` in BOTH directions — a misconfigured
+    // `users.json` entry granting the target role on TOP of the conflicting
+    // one it already holds is exactly the seed-path case FR-028 requires to
+    // be fatal, never silently forced through.
+    it('rejects a seeded grant of platform-audit-reader to an account that already holds platform-support (rule 4, bidirectional)', () => {
+      expect(() =>
+        service.evaluateSeedOrFail({
+          action: 'grant',
+          role: RoleName.PLATFORM_AUDIT_READER,
+          targetActorType: 'user',
+          targetHeldPlatformRoles: [RoleName.PLATFORM_SUPPORT],
+        })
+      ).toThrow(/mutually exclusive/);
+    });
+
+    it('rejects a seeded grant of platform-support to an account that already holds platform-audit-reader (rule 4, bidirectional)', () => {
+      expect(() =>
+        service.evaluateSeedOrFail({
+          action: 'grant',
+          role: RoleName.PLATFORM_SUPPORT,
+          targetActorType: 'user',
+          targetHeldPlatformRoles: [RoleName.PLATFORM_AUDIT_READER],
+        })
+      ).toThrow(/mutually exclusive/);
+    });
   });
 });
