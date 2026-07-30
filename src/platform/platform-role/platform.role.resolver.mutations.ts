@@ -178,6 +178,19 @@ export class PlatformRoleResolverMutations {
       );
     }
 
+    // corr-server-14 fix: captured BEFORE assignActorToRole so a failed
+    // success-audit write's compensation logic (recordGrantSuccess) knows
+    // whether the grant actually changed state or was an idempotent no-op
+    // (target already held the role) — compensating a no-op would strip a
+    // pre-existing grant the target legitimately held before this call.
+    const heldRoleBeforeGrant = isRuleEngineGoverned
+      ? await this.roleSetService.isInRole(
+          roleData.actorID,
+          roleSet,
+          roleData.role
+        )
+      : false;
+
     await this.roleSetService.assignActorToRole(
       roleSet,
       roleData.role,
@@ -197,7 +210,8 @@ export class PlatformRoleResolverMutations {
         roleSet,
         roleData.role,
         'user',
-        roleData.actorID
+        roleData.actorID,
+        heldRoleBeforeGrant
       );
     }
 
@@ -288,6 +302,17 @@ export class PlatformRoleResolverMutations {
       );
     }
 
+    // corr-server-14 fix: captured BEFORE removeActorFromRole — see the
+    // grant side's identical comment. `wasNoOp` for a revoke means the
+    // target did NOT hold the role beforehand.
+    const heldRoleBeforeRevoke = isRuleEngineGoverned
+      ? await this.roleSetService.isInRole(
+          roleData.actorID,
+          roleSet,
+          roleData.role
+        )
+      : false;
+
     await this.roleSetService.removeActorFromRole(
       roleSet,
       roleData.role,
@@ -302,7 +327,8 @@ export class PlatformRoleResolverMutations {
         roleSet,
         roleData.role,
         'user',
-        roleData.actorID
+        roleData.actorID,
+        !heldRoleBeforeRevoke
       );
     }
 
@@ -354,7 +380,11 @@ export class PlatformRoleResolverMutations {
     @CurrentActor() actorContext: ActorContext,
     @Args('roleData') roleData: AssignPlatformRoleInput
   ): Promise<IOrganization> {
-    await this.assertOrganizationSurfaceOrFail(roleData.role, roleData.actorID);
+    await this.assertOrganizationSurfaceOrFail(
+      actorContext,
+      roleData.role,
+      roleData.actorID
+    );
     const roleSet = await this.platformService.getRoleSetOrFail();
 
     await this.evaluateGrantOrFail(
@@ -363,6 +393,14 @@ export class PlatformRoleResolverMutations {
       roleData.role,
       'organization',
       roleData.actorID
+    );
+
+    // corr-server-14 fix: see the user-target grant surface's identical
+    // comment.
+    const heldRoleBeforeGrant = await this.roleSetService.isInRole(
+      roleData.actorID,
+      roleSet,
+      roleData.role
     );
 
     await this.roleSetService.assignActorToRole(
@@ -380,7 +418,8 @@ export class PlatformRoleResolverMutations {
       roleSet,
       roleData.role,
       'organization',
-      roleData.actorID
+      roleData.actorID,
+      heldRoleBeforeGrant
     );
 
     return await this.organizationLookupService.getOrganizationByIdOrFail(
@@ -395,7 +434,11 @@ export class PlatformRoleResolverMutations {
     @CurrentActor() actorContext: ActorContext,
     @Args('roleData') roleData: RemovePlatformRoleInput
   ): Promise<IOrganization> {
-    await this.assertOrganizationSurfaceOrFail(roleData.role, roleData.actorID);
+    await this.assertOrganizationSurfaceOrFail(
+      actorContext,
+      roleData.role,
+      roleData.actorID
+    );
     const roleSet = await this.platformService.getRoleSetOrFail();
 
     await this.evaluateRevokeOrFail(
@@ -404,6 +447,14 @@ export class PlatformRoleResolverMutations {
       roleData.role,
       'organization',
       roleData.actorID
+    );
+
+    // corr-server-14 fix: see the user-target revoke surface's identical
+    // comment.
+    const heldRoleBeforeRevoke = await this.roleSetService.isInRole(
+      roleData.actorID,
+      roleSet,
+      roleData.role
     );
 
     await this.roleSetService.removeActorFromRole(
@@ -419,7 +470,8 @@ export class PlatformRoleResolverMutations {
       roleSet,
       roleData.role,
       'organization',
-      roleData.actorID
+      roleData.actorID,
+      !heldRoleBeforeRevoke
     );
 
     return await this.organizationLookupService.getOrganizationByIdOrFail(
@@ -447,27 +499,73 @@ export class PlatformRoleResolverMutations {
    * `targetActorType: 'organization'` is otherwise asserted at the call
    * site rather than verified (sec-server-8): a mismatch here would let a
    * user-id grant/revoke land through the organization surface and file its
-   * audit row against `subjectOrganizationId` with a user's id. */
+   * audit row against `subjectOrganizationId` with a user's id.
+   *
+   * corr-server-15 fix: BOTH rejection branches now write a
+   * `role_grant_rejected` audit row (`ruleId: 'holder-kind'`) before
+   * throwing — this guard runs ahead of `evaluateGrantOrFail`/
+   * `evaluateRevokeOrFail`, the ONLY other places a `holder-kind` rejection
+   * gets audited (via the shared rule engine's rule 2), so the SAME logical
+   * rejection was landing in the trail when the engine caught it but NOT
+   * when this guard did — the most security-relevant rejection this
+   * feature has (the org-surface legacy-role-escalation block, sec-server-6)
+   * was the one leaving no trace. */
   private async assertOrganizationSurfaceOrFail(
+    actorContext: ActorContext,
     role: RoleName,
     targetActorId: string
   ): Promise<void> {
     if (!FEATURE_FAMILY_ROLES.has(role)) {
-      throw new ForbiddenException(
-        `Rejected: role ${role} may not be assigned or removed through the organization surface`,
-        LogContext.PLATFORM,
-        { ruleId: 'holder-kind' }
+      const message = `Rejected: role ${role} may not be assigned or removed through the organization surface`;
+      await this.recordOrganizationSurfaceRejection(
+        actorContext,
+        role,
+        targetActorId,
+        message
       );
+      throw new ForbiddenException(message, LogContext.PLATFORM, {
+        ruleId: 'holder-kind',
+      });
     }
     const actorType =
       await this.actorLookupService.getActorTypeByIdOrFail(targetActorId);
     if (actorType !== ActorType.ORGANIZATION) {
-      throw new ForbiddenException(
-        `Rejected: target actor for role ${role} is not an organization`,
-        LogContext.PLATFORM,
-        { ruleId: 'holder-kind' }
+      const message = `Rejected: target actor for role ${role} is not an organization`;
+      await this.recordOrganizationSurfaceRejection(
+        actorContext,
+        role,
+        targetActorId,
+        message
       );
+      throw new ForbiddenException(message, LogContext.PLATFORM, {
+        ruleId: 'holder-kind',
+      });
     }
+  }
+
+  /** corr-server-15 fix: shared by both `assertOrganizationSurfaceOrFail`
+   * rejection branches — same shape as `evaluateGrantOrFail`'s catch block,
+   * so both rejections of the same `holder-kind` rule land in the trail
+   * identically regardless of which code path caught it. Fail-closed: a
+   * write failure here aborts the mutation (via the caller's re-throw),
+   * matching FR-027's rejected-attempt guarantee. */
+  private async recordOrganizationSurfaceRejection(
+    actorContext: ActorContext,
+    role: RoleName,
+    targetActorId: string,
+    rejectedRule: string
+  ): Promise<void> {
+    await this.roleAssignmentAuditService.recordGrantRejected({
+      initiatorUserId: actorContext.actorID,
+      initiatorRole: this.resolveA1A2InitiatorRoleBestEffort(
+        role,
+        actorContext
+      ),
+      targetKind: 'organization',
+      targetId: targetActorId,
+      role,
+      rejectedRule,
+    });
   }
 
   /** Shared by both grant surfaces (user + organization): evaluate the five
@@ -487,6 +585,29 @@ export class PlatformRoleResolverMutations {
     targetID: string,
     targetServiceProfile?: boolean
   ): Promise<void> {
+    // 027-platform-role-redesign (sec-server-11 fix): a cheap, no-DB-write
+    // probe of rule 1 (assigner capability) BEFORE getHeldPlatformRoles'
+    // ~10 `isInRole` round trips and before any rejection-audit write. An
+    // actor holding NEITHER GRANT_GLOBAL_ADMINS nor FEATURE_ROLE_ASSIGN at
+    // all is a probe, not an auditable rejected administrative attempt —
+    // any logged-in user could otherwise drive unbounded reads plus one
+    // `platform_audit_entry` INSERT per request. Callers who pass this
+    // check and then fail a LATER rule still get the full evaluate() +
+    // rejection-audit treatment below, unchanged.
+    if (
+      !this.assignmentRulesService.hasAssignerCapability(
+        role,
+        actorContext,
+        roleSet.authorization
+      )
+    ) {
+      throw new ForbiddenException(
+        `Forbidden: ${this.assignmentRulesService.assignerPrivilegeFor(role)} required to assign role ${role}`,
+        LogContext.PLATFORM,
+        { ruleId: 'assigner-capability' }
+      );
+    }
+
     const targetHeldPlatformRoles = await this.getHeldPlatformRoles(
       roleSet,
       targetID
@@ -530,13 +651,22 @@ export class PlatformRoleResolverMutations {
    * operation was NOT applied" (`PlatformRoleAssignmentAuditException`'s
    * message) while the credential is, in fact, still granted — inverting
    * FR-027. Compensate: revert the just-applied grant before re-throwing,
-   * so the operation's actual state matches what the caller is told. */
+   * so the operation's actual state matches what the caller is told.
+   *
+   * corr-server-14 fix: `wasNoOp` is `true` when the target ALREADY held
+   * `role` before this call — `assignActorToRole` is idempotent
+   * (role.set.service.ts's `alreadyHasRole` early return) and made no state
+   * change. Compensating in that case would REVOKE a grant the target
+   * legitimately held before the mutation ever ran — never the operation's
+   * job. Skip compensation and just log the inconsistency: the audit write
+   * failed, but there is nothing to roll back. */
   private async recordGrantSuccess(
     actorContext: ActorContext,
     roleSet: Awaited<ReturnType<PlatformService['getRoleSetOrFail']>>,
     role: RoleName,
     targetActorType: 'user' | 'organization',
-    targetID: string
+    targetID: string,
+    wasNoOp: boolean
   ): Promise<void> {
     try {
       await this.roleAssignmentAuditService.recordGrantOrRevoke({
@@ -548,16 +678,28 @@ export class PlatformRoleResolverMutations {
         outcome: 'granted',
       });
     } catch (error) {
-      try {
-        await this.roleSetService.removeActorFromRole(roleSet, role, targetID);
-      } catch (compensationError) {
+      if (wasNoOp) {
         this.logger.error(
-          `Unable to compensate for a failed grant-success audit write (role=${role}, target=${targetID}): the credential remains GRANTED with no audit record. Compensation error: ${compensationError instanceof Error ? compensationError.message : String(compensationError)}`,
-          compensationError instanceof Error
-            ? compensationError.stack
-            : undefined,
+          `Failed grant-success audit write (role=${role}, target=${targetID}) for a GRANT that was ALREADY a no-op — the target held ${role} before this call, so no compensation is applied (that would revoke a pre-existing grant). Audit error: ${error instanceof Error ? error.message : String(error)}`,
+          error instanceof Error ? error.stack : undefined,
           LogContext.PLATFORM
         );
+      } else {
+        try {
+          await this.roleSetService.removeActorFromRole(
+            roleSet,
+            role,
+            targetID
+          );
+        } catch (compensationError) {
+          this.logger.error(
+            `Unable to compensate for a failed grant-success audit write (role=${role}, target=${targetID}): the credential remains GRANTED with no audit record. Compensation error: ${compensationError instanceof Error ? compensationError.message : String(compensationError)}`,
+            compensationError instanceof Error
+              ? compensationError.stack
+              : undefined,
+            LogContext.PLATFORM
+          );
+        }
       }
       throw error;
     }
@@ -570,6 +712,23 @@ export class PlatformRoleResolverMutations {
     targetActorType: 'user' | 'organization',
     targetID: string
   ): Promise<void> {
+    // 027-platform-role-redesign (sec-server-11 fix): same cheap rule-1
+    // probe as evaluateGrantOrFail, ahead of the countActorsWithRole call
+    // and any rejection-audit write — see the comment there.
+    if (
+      !this.assignmentRulesService.hasAssignerCapability(
+        role,
+        actorContext,
+        roleSet.authorization
+      )
+    ) {
+      throw new ForbiddenException(
+        `Forbidden: ${this.assignmentRulesService.assignerPrivilegeFor(role)} required to assign role ${role}`,
+        LogContext.PLATFORM,
+        { ruleId: 'assigner-capability' }
+      );
+    }
+
     let isLastPlatformRolesAdminHolder = false;
     if (role === RoleName.PLATFORM_ROLES_ADMIN) {
       const holderCount = await this.roleSetService.countActorsWithRole(
@@ -614,13 +773,20 @@ export class PlatformRoleResolverMutations {
    * above, for the revoke side — the revoke has ALREADY landed by the time
    * this runs; a failed audit write is compensated by re-granting the role,
    * rather than leaving the revoke applied while the caller is told it
-   * was not. */
+   * was not.
+   *
+   * corr-server-14 fix: `wasNoOp` is `true` when the target did NOT hold
+   * `role` before this call — `removeActorFromRole`/`revokeCredential` is
+   * idempotent and made no state change. Compensating in that case would
+   * GRANT the target a role nobody asked for. Skip compensation and just
+   * log the inconsistency. */
   private async recordRevokeSuccess(
     actorContext: ActorContext,
     roleSet: Awaited<ReturnType<PlatformService['getRoleSetOrFail']>>,
     role: RoleName,
     targetActorType: 'user' | 'organization',
-    targetID: string
+    targetID: string,
+    wasNoOp: boolean
   ): Promise<void> {
     try {
       await this.roleAssignmentAuditService.recordGrantOrRevoke({
@@ -632,22 +798,30 @@ export class PlatformRoleResolverMutations {
         outcome: 'revoked',
       });
     } catch (error) {
-      try {
-        await this.roleSetService.assignActorToRole(
-          roleSet,
-          role,
-          targetID,
-          actorContext,
-          true
-        );
-      } catch (compensationError) {
+      if (wasNoOp) {
         this.logger.error(
-          `Unable to compensate for a failed revoke-success audit write (role=${role}, target=${targetID}): the credential remains REVOKED with no audit record. Compensation error: ${compensationError instanceof Error ? compensationError.message : String(compensationError)}`,
-          compensationError instanceof Error
-            ? compensationError.stack
-            : undefined,
+          `Failed revoke-success audit write (role=${role}, target=${targetID}) for a REVOKE that was ALREADY a no-op — the target did not hold ${role} before this call, so no compensation is applied (that would grant a role nobody asked for). Audit error: ${error instanceof Error ? error.message : String(error)}`,
+          error instanceof Error ? error.stack : undefined,
           LogContext.PLATFORM
         );
+      } else {
+        try {
+          await this.roleSetService.assignActorToRole(
+            roleSet,
+            role,
+            targetID,
+            actorContext,
+            true
+          );
+        } catch (compensationError) {
+          this.logger.error(
+            `Unable to compensate for a failed revoke-success audit write (role=${role}, target=${targetID}): the credential remains REVOKED with no audit record. Compensation error: ${compensationError instanceof Error ? compensationError.message : String(compensationError)}`,
+            compensationError instanceof Error
+              ? compensationError.stack
+              : undefined,
+            LogContext.PLATFORM
+          );
+        }
       }
       throw error;
     }

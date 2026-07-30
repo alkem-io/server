@@ -178,22 +178,55 @@ export class PlatformRoleAssignmentRulesService {
   private checkAssignerCapability(
     input: PlatformRoleAssignmentEvaluationInput
   ): PlatformRoleAssignmentRuleViolation | undefined {
-    const privilegeRequired = FEATURE_FAMILY_ROLES.has(input.role)
-      ? AuthorizationPrivilege.FEATURE_ROLE_ASSIGN
-      : AuthorizationPrivilege.GRANT_GLOBAL_ADMINS;
-
-    const granted = this.authorizationService.isAccessGranted(
-      input.actorContext,
-      input.roleSetAuthorization,
-      privilegeRequired
-    );
-    if (!granted) {
+    if (
+      !this.isAssignerCapable(
+        input.role,
+        input.actorContext,
+        input.roleSetAuthorization
+      )
+    ) {
       return {
         ruleId: 'assigner-capability',
-        message: `Forbidden: ${privilegeRequired} required to assign role ${input.role}`,
+        message: `Forbidden: ${this.assignerPrivilegeFor(input.role)} required to assign role ${input.role}`,
       };
     }
     return undefined;
+  }
+
+  /** sec-server-11 fix: a standalone, cheap (no DB round trip beyond the
+   * in-memory policy already loaded) probe of rule 1 alone — exposed so a
+   * caller (the resolver mutation) can reject a completely incapable actor
+   * BEFORE doing any more expensive work (targetHeldPlatformRoles' ~10
+   * `isInRole` calls) or writing a rejection-audit row. An actor with no
+   * assignment capability at all is a probe, not an auditable rejected
+   * administrative attempt. */
+  public hasAssignerCapability(
+    role: RoleName,
+    actorContext: ActorContext,
+    roleSetAuthorization: IAuthorizationPolicy | undefined
+  ): boolean {
+    return this.isAssignerCapable(role, actorContext, roleSetAuthorization);
+  }
+
+  /** The privilege rule 1 requires for a given role — shared by
+   * `checkAssignerCapability`'s message and any caller that pre-checks
+   * `hasAssignerCapability` and needs to report the same privilege name. */
+  public assignerPrivilegeFor(role: RoleName): AuthorizationPrivilege {
+    return FEATURE_FAMILY_ROLES.has(role)
+      ? AuthorizationPrivilege.FEATURE_ROLE_ASSIGN
+      : AuthorizationPrivilege.GRANT_GLOBAL_ADMINS;
+  }
+
+  private isAssignerCapable(
+    role: RoleName,
+    actorContext: ActorContext,
+    roleSetAuthorization: IAuthorizationPolicy | undefined
+  ): boolean {
+    return this.authorizationService.isAccessGranted(
+      actorContext,
+      roleSetAuthorization,
+      this.assignerPrivilegeFor(role)
+    );
   }
 
   /** Rule 2 — holder kind: `platform-*` → user (incl. service account) only,

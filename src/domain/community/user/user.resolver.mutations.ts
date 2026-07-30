@@ -5,6 +5,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IUser } from '@domain/community/user/user.interface';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -22,6 +23,7 @@ export class UserResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
     private homeSpaceValidationService: UserSettingsHomeSpaceValidationService,
@@ -52,6 +54,29 @@ export class UserResolverMutations {
         user.authorization,
         AuthorizationPrivilege.UPDATE,
         `userUpdate: ${user.id}`
+      );
+    } else {
+      // 027-platform-role-redesign (sec-server-11 fix): gate
+      // SET_SERVICE_PROFILE HERE, in the resolver, before delegating to
+      // UserService.updateUser. `grantAccessOrFail` throws immediately, no
+      // DB write — so an unprivileged or anonymous caller (whose
+      // `actorContext.actorID` is `''` for `ActorContextService.
+      // createAnonymous`) is rejected WITHOUT reaching the redundant second
+      // `getUserByIdOrFail` lookup in `UserService.updateUser` or its
+      // fail-closed rejection-audit writer, whose INSERT previously failed
+      // on an empty-string actorID and surfaced as an internal
+      // `PlatformRoleAssignmentAuditException` instead of a clean
+      // `ForbiddenException` — with the rejection going unrecorded either
+      // way. `UserService.updateUser` keeps its OWN SET_SERVICE_PROFILE
+      // check + rejection-audit write as defense in depth for any other
+      // caller of that service method.
+      const platformAuthorization =
+        await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
+      await this.authorizationService.grantAccessOrFail(
+        actorContext,
+        platformAuthorization,
+        AuthorizationPrivilege.SET_SERVICE_PROFILE,
+        `updateUser serviceProfile-only: ${user.id}`
       );
     }
     return await this.userService.updateUser(userData, actorContext);

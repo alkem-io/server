@@ -1,4 +1,5 @@
 import { RoleChangeType } from '@alkemio/notifications-lib';
+import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
@@ -8,6 +9,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
 import { ActorService } from '@domain/actor/actor/actor.service';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseService } from '@domain/common/license/license.service';
@@ -18,6 +20,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken } from '@nestjs/typeorm';
 import { PlatformService } from '@platform/platform/platform.service';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
+import { PlatformRoleAssignmentAuditService } from '@src/platform-admin/platform-role-assignment-audit/platform.role.assignment.audit.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
@@ -27,6 +30,7 @@ import { PlatformRoleResolverMutations } from './platform.role.resolver.mutation
 
 describe('PlatformRoleResolverMutations', () => {
   let resolver: PlatformRoleResolverMutations;
+  let module: TestingModule;
   let platformService: PlatformService;
   let authorizationService: AuthorizationService;
   let roleSetService: RoleSetService;
@@ -56,7 +60,7 @@ describe('PlatformRoleResolverMutations', () => {
   beforeEach(async () => {
     vi.restoreAllMocks();
 
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [PlatformRoleResolverMutations, MockWinstonProvider],
     })
       .useMocker(defaultMockerFactory)
@@ -483,6 +487,90 @@ describe('PlatformRoleResolverMutations', () => {
           role: RoleName.GLOBAL_ADMIN,
         } as any)
       ).resolves.toBeDefined();
+    });
+  });
+
+  // 027-platform-role-redesign (qual-server-4 fix): `assertOrganizationSurfaceOrFail`
+  // — the round-2 fix for sec-server-6 (legacy-role escalation via the
+  // organization surface) and sec-server-8 (user-id through the
+  // organization surface) — previously had ZERO test coverage despite
+  // `A_ROW_GATE_COVERAGE.A2` declaring this file as its covering gate spec.
+  describe('organization-target surface guard (assertOrganizationSurfaceOrFail)', () => {
+    let actorLookupService: ActorLookupService;
+    let roleAssignmentAuditService: PlatformRoleAssignmentAuditService;
+
+    beforeEach(() => {
+      (platformService.getRoleSetOrFail as Mock).mockResolvedValue(mockRoleSet);
+      actorLookupService = module.get(ActorLookupService);
+      roleAssignmentAuditService = module.get(
+        PlatformRoleAssignmentAuditService
+      );
+    });
+
+    it('rejects assignPlatformRoleToOrganization(global-admin) with the contract message, and never touches assignActorToRole or any audit writer', async () => {
+      await expect(
+        resolver.assignPlatformRoleToOrganization(mockActorContext, {
+          actorID: 'org-target',
+          role: RoleName.GLOBAL_ADMIN,
+        } as any)
+      ).rejects.toThrow(
+        'Rejected: role global-admin may not be assigned or removed through the organization surface'
+      );
+
+      expect(roleSetService.assignActorToRole).not.toHaveBeenCalled();
+      expect(actorLookupService.getActorTypeByIdOrFail).not.toHaveBeenCalled();
+    });
+
+    it('rejects removePlatformRoleFromOrganization(platform-roles-admin — a PLATFORM_FAMILY_ROLES member) through the same guard', async () => {
+      await expect(
+        resolver.removePlatformRoleFromOrganization(mockActorContext, {
+          actorID: 'org-target',
+          role: RoleName.PLATFORM_ROLES_ADMIN,
+        } as any)
+      ).rejects.toThrow(
+        'Rejected: role platform-roles-admin may not be assigned or removed through the organization surface'
+      );
+
+      expect(roleSetService.removeActorFromRole).not.toHaveBeenCalled();
+    });
+
+    it('rejects a FEATURE_FAMILY_ROLES grant when the target actor does not resolve to an organization, before assignActorToRole', async () => {
+      (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+        ActorType.USER
+      );
+
+      await expect(
+        resolver.assignPlatformRoleToOrganization(mockActorContext, {
+          actorID: 'user-not-org',
+          role: RoleName.FEATURE_BETA_TESTER,
+        } as any)
+      ).rejects.toThrow(
+        'Rejected: target actor for role feature-beta-tester is not an organization'
+      );
+
+      expect(roleSetService.assignActorToRole).not.toHaveBeenCalled();
+    });
+
+    it('writes a role_grant_rejected audit row for the holder-kind rejection (corr-server-15 fix)', async () => {
+      await expect(
+        resolver.assignPlatformRoleToOrganization(mockActorContext, {
+          actorID: 'org-target',
+          role: RoleName.GLOBAL_ADMIN,
+        } as any)
+      ).rejects.toThrow();
+
+      expect(
+        roleAssignmentAuditService.recordGrantRejected
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          targetKind: 'organization',
+          targetId: 'org-target',
+          role: RoleName.GLOBAL_ADMIN,
+          rejectedRule: expect.stringContaining(
+            'may not be assigned or removed through the organization surface'
+          ),
+        })
+      );
     });
   });
 });
