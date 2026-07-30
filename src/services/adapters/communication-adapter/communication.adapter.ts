@@ -793,7 +793,20 @@ export class CommunicationAdapter {
     if (!response) return false;
 
     const batchResult = processBatchResponse(response);
-    const allSucceeded = isBatchOperationSuccessful(batchResult, 'all');
+    // qual-server-1: `isBatchOperationSuccessful(_, 'all')` alone is
+    // `failureCount === 0`, which is vacuously true when the Go adapter
+    // rejects the WHOLE batch (envelope `success: false`, no per-room
+    // `results` at all — e.g. actor not found / invalid param / room
+    // mapping missing, i.e. it never got as far as per-room work): both
+    // successCount and failureCount are 0, so `failureCount === 0` holds and
+    // this used to report success. Require the envelope to have succeeded
+    // AND every requested room to be individually accounted for as a
+    // success — this is exactly the false-success class commit d7fe1a3 set
+    // out to fix, re-introduced by the batch-response rework.
+    const allSucceeded =
+      response.success &&
+      isBatchOperationSuccessful(batchResult, 'all') &&
+      batchResult.successCount === roomIds.length;
 
     if (!allSucceeded) {
       this.logger.warn?.(
@@ -802,13 +815,17 @@ export class CommunicationAdapter {
       );
 
       if (options?.ensureAllSucceeded) {
+        // Prefer a per-room error; fall back to the envelope-level error
+        // (the no-results, whole-batch-rejected case above), then the
+        // generic default.
         const firstError = batchResult.itemErrors.values().next().value;
         throw CommunicationAdapterException.fromAdapterError(
           'batchRemoveMember',
-          firstError ?? {
-            code: ErrCodeInternalError,
-            message: 'One or more room removals failed',
-          },
+          firstError ??
+            response.error ?? {
+              code: ErrCodeInternalError,
+              message: 'One or more room removals failed',
+            },
           { actorID, roomCount: roomIds.length }
         );
       }
