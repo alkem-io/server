@@ -4,10 +4,9 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { AlkemioConfig } from '@src/types';
-import { json } from 'body-parser';
 import { useContainer } from 'class-validator';
 import cookieParser from 'cookie-parser';
-import { NextFunction, Request, Response } from 'express';
+import { Request, Response } from 'express';
 import session from 'express-session';
 import { renderGraphiQL } from 'graphql-helix';
 import { graphqlUploadExpress } from 'graphql-upload';
@@ -23,6 +22,7 @@ import {
 } from './core/auth/oidc/session-store.redis';
 import { BootstrapService } from './core/bootstrap/bootstrap.service';
 import { faviconMiddleware } from './core/middleware/favicon.middleware';
+import { createJsonBodyParserMiddleware } from './core/middleware/json-body-parser.middleware';
 
 /**
  * Bootstrap the full Alkemio API server (AppModule): GraphQL/Apollo, REST,
@@ -150,13 +150,7 @@ export const bootstrapServer = async () => {
   const { max_json_payload_size, port } = configService.get('hosting', {
     infer: true,
   });
-  // JSON body parsing - skip for MCP routes (MCP SDK handles its own parsing)
-  app.use((req: Request, res: Response, next: NextFunction) => {
-    if (req.path.startsWith('/rest/mcp')) {
-      return next();
-    }
-    json({ limit: max_json_payload_size })(req, res, next);
-  });
+  app.use(createJsonBodyParserMiddleware(max_json_payload_size));
 
   // Serve the GraphiQL interface at '/graphiql'
   app.use('/graphiql', (_req: Request, res: Response) => {
