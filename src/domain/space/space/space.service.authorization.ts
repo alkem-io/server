@@ -22,7 +22,10 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
-import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
+import {
+  PlatformRolesAccessService,
+  resolveRoleCredential,
+} from '@domain/access/platform-roles-access/platform.roles.access.service';
 import { IRoleSet } from '@domain/access/role-set';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
@@ -822,23 +825,36 @@ export class SpaceAuthorizationService {
       newRules.push(globalRolesReadAbout);
     }
 
-    // Allow Global Spaces Read to view Spaces
-    const privilegesForGlobalSpacesRead =
-      this.platformRolesAccessService.getPrivilegesForRole(
-        space.platformRolesAccess.roles,
-        RoleName.GLOBAL_SPACES_READER
-      );
-    if (privilegesForGlobalSpacesRead.length > 0) {
-      const globalSpacesReader =
-        this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-          this.platformRolesAccessService.getPrivilegesForRole(
-            space.platformRolesAccess.roles,
-            RoleName.GLOBAL_SPACES_READER
-          ),
-          [AuthorizationCredential.GLOBAL_SPACES_READER],
-          CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ
+    // Allow the spaces-reader roles to view Spaces.
+    //
+    // 027-platform-role-redesign (T038, A16): this rule previously wired ONLY
+    // `GLOBAL_SPACES_READER`, so `platform-spaces-reader` — which
+    // `space.service.platform.roles.access.ts` registers with the SAME
+    // `[READ]` grant — had no path into the space-tree READ cascade at all
+    // and was denied plain READ on private spaces. That breaks the Slice A
+    // additive invariant (every new role must reach what its legacy
+    // counterpart already reaches). Live-confirmed 2026-07-30 by the
+    // role-action-matrix A16 cell. Each role gets its OWN rule derived from
+    // its OWN declared privileges rather than sharing one credential list,
+    // so the two can never silently inherit each other's grants.
+    for (const spacesReaderRole of [
+      RoleName.GLOBAL_SPACES_READER,
+      RoleName.PLATFORM_SPACES_READER,
+    ]) {
+      const privilegesForSpacesRead =
+        this.platformRolesAccessService.getPrivilegesForRole(
+          space.platformRolesAccess.roles,
+          spacesReaderRole
         );
-      newRules.push(globalSpacesReader);
+      if (privilegesForSpacesRead.length > 0) {
+        const spacesReader =
+          this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+            privilegesForSpacesRead,
+            [resolveRoleCredential(spacesReaderRole)],
+            CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ
+          );
+        newRules.push(spacesReader);
+      }
     }
 
     //

@@ -350,11 +350,19 @@ export class AccountAuthorizationService {
     platformOperationsAdminReset.cascade = false;
     newRules.push(platformOperationsAdminReset);
 
-    // Allow Global Spaces Read to view Spaces + contents
+    // Allow the spaces-reader roles to view Spaces + contents.
+    // 027-platform-role-redesign (T038, A16): additively extended with
+    // platform-spaces-reader — the account tree is the second half of the
+    // same READ cascade gap found on the space tree; wiring only the space
+    // side would leave the new role able to read a space but not its
+    // account-level contents.
     const globalSpacesReader =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.READ],
-        [AuthorizationCredential.GLOBAL_SPACES_READER],
+        [
+          AuthorizationCredential.GLOBAL_SPACES_READER,
+          AuthorizationCredential.PLATFORM_SPACES_READER,
+        ],
         CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ
       );
     newRules.push(globalSpacesReader);
