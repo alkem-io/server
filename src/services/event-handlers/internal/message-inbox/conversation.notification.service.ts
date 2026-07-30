@@ -277,9 +277,10 @@ export class ConversationNotificationService {
     }
 
     const senderDisplayName = await this.getSenderDisplayName(senderActorID);
-    const conversationUrl = this.urlGeneratorService.getConversationUrl(
-      conversation.id
-    );
+    // Contract C-4 — push `url` is the bare relative deep-link path, NOT the
+    // platform-absolute form used for the email link (contract C-6).
+    const conversationUrl =
+      this.urlGeneratorService.getConversationDeepLinkPath(conversation.id);
 
     // D-15 — copy built ONLY from trusted fields (sender display name,
     // conversation display name); no message-derived text anywhere.

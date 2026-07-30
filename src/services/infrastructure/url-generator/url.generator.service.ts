@@ -96,15 +96,31 @@ export class UrlGeneratorService {
   }
 
   /**
-   * 034-messaging-notifications (contract C-6). Deep link used by BOTH the
-   * conversation-message email templates' primary link and the push
-   * payload's `url` — NEVER a bare home link (the existing
-   * `userToUserMessageDirect` push `url: '/'` is the anti-pattern this
-   * replaces, not the precedent). The client's unified chat surface opens
-   * the panel on this conversation on load, then strips the query param.
+   * 034-messaging-notifications (contract C-6). Platform-absolute deep link
+   * used by the conversation-message EMAIL templates' primary link (opened
+   * outside the app, so it needs the full origin). NEVER a bare home link
+   * (the existing `userToUserMessageDirect` push `url: '/'` is the
+   * anti-pattern this replaces, not the precedent).
+   *
+   * Do NOT reuse this for the push payload's `url` — push needs the bare
+   * relative path (contract C-4), see `getConversationDeepLinkPath()` below.
+   * The client's unified chat surface opens the panel on this conversation
+   * on load, then strips the query param.
    */
   public getConversationUrl(conversationID: string): string {
     return `${this.endpoint_cluster}/?chat=${conversationID}`;
+  }
+
+  /**
+   * 034-messaging-notifications (contract C-4). Bare relative deep-link path
+   * for the push-notification payload's `url` — distinct from C-6's
+   * platform-absolute `getConversationUrl()`, which is for the email link.
+   * Push runs in-app-origin (service worker `notificationclick` resolves it
+   * against the current origin), so no platform-url prefix here — and NEVER
+   * the bare `'/'` anti-pattern.
+   */
+  public getConversationDeepLinkPath(conversationID: string): string {
+    return `/?chat=${conversationID}`;
   }
 
   private async generateUrlForProfileNotCached(

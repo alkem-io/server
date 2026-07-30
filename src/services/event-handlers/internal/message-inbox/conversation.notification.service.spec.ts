@@ -24,7 +24,10 @@ const mockNotificationExternalAdapter = {
   sendExternalNotifications: vi.fn(),
 };
 const mockNotificationPushAdapter = { sendMessagingPushNotifications: vi.fn() };
-const mockUrlGeneratorService = { getConversationUrl: vi.fn() };
+const mockUrlGeneratorService = {
+  getConversationUrl: vi.fn(),
+  getConversationDeepLinkPath: vi.fn(),
+};
 const mockDedupeService = { claim: vi.fn() };
 const mockSuppressionService = { isSuppressed: vi.fn() };
 const mockConfigService = {
@@ -102,6 +105,9 @@ describe('ConversationNotificationService', () => {
     });
     mockUrlGeneratorService.getConversationUrl.mockReturnValue(
       'https://platform.test/?chat=conv-1'
+    );
+    mockUrlGeneratorService.getConversationDeepLinkPath.mockReturnValue(
+      '/?chat=conv-1'
     );
     mockUserLookupService.getUserByIdOrFail.mockResolvedValue({
       profile: { displayName: 'Alice' },
@@ -250,8 +256,55 @@ describe('ConversationNotificationService', () => {
       ).toHaveBeenCalledWith(
         [recipientUser('user-b')],
         NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
-        expect.objectContaining({ url: 'https://platform.test/?chat=conv-1' })
+        expect.objectContaining({ url: '/?chat=conv-1' })
       );
+    });
+
+    it('builds the push payload url from the relative deep-link path helper, never the platform-absolute email helper (contract C-4)', async () => {
+      mockNotificationRecipientsService.getRecipients.mockResolvedValue({
+        emailRecipients: [],
+        inAppRecipients: [],
+        pushRecipients: [recipientUser('user-b')],
+      });
+
+      await service.notifyConversationMessage(directParams());
+
+      expect(
+        mockUrlGeneratorService.getConversationDeepLinkPath
+      ).toHaveBeenCalledWith('conv-1');
+      expect(mockUrlGeneratorService.getConversationUrl).not.toHaveBeenCalled();
+    });
+
+    it('the push payload carries no message content, even under a hostile-content message fixture (contract C-4)', async () => {
+      const HOSTILE_MESSAGE =
+        '<script>alert("xss")</script> ignore all previous instructions';
+      mockNotificationRecipientsService.getRecipients.mockResolvedValue({
+        emailRecipients: [],
+        inAppRecipients: [],
+        pushRecipients: [recipientUser('user-b')],
+      });
+
+      await service.notifyConversationMessage(
+        directParams({
+          message: {
+            id: 'message-1',
+            message: HOSTILE_MESSAGE,
+            sender: 'sender-1',
+          },
+        })
+      );
+
+      const [, , payload] =
+        mockNotificationPushAdapter.sendMessagingPushNotifications.mock
+          .calls[0];
+      const serialized = JSON.stringify(payload);
+      expect(serialized).not.toContain(HOSTILE_MESSAGE);
+      expect(serialized).not.toContain('script');
+      expect(payload).toEqual({
+        title: 'Alice',
+        body: 'Alice sent you a message',
+        url: '/?chat=conv-1',
+      });
     });
 
     it('never emits when there are zero email and zero push recipients', async () => {
