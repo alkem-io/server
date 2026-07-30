@@ -1,10 +1,10 @@
 import { ActivityEventType } from '@common/enums/activity.event.type';
 import { DataLoaderCreator } from '@core/dataloader/creators/base';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { Activity } from '@platform/activity/activity.entity';
 import { Space } from '@domain/space/space/space.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
+import { Activity } from '@platform/activity/activity.entity';
 import DataLoader from 'dataloader';
 import { EntityManager } from 'typeorm';
 
