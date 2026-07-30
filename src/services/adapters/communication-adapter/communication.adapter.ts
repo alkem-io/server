@@ -17,6 +17,7 @@ import {
   DeleteMessageRequest,
   DeleteRoomRequest,
   DeleteSpaceRequest,
+  ErrCodeInternalError,
   GetLastMessageRequest,
   GetMessageRequest,
   GetReactionRequest,
@@ -70,6 +71,11 @@ import { CommunicationRoomResult } from '@services/adapters/communication-adapte
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CommunicationAdapterException } from './communication.adapter.exception';
+import {
+  formatBatchResultForLog,
+  isBatchOperationSuccessful,
+  processBatchResponse,
+} from './communication.adapter.response';
 import { CommunicationAddReactionToMessageInput } from './dto/communication.dto.add.reaction';
 import { CommunicationDeleteMessageInput } from './dto/communication.dto.message.delete';
 import { CommunicationSendMessageInput } from './dto/communication.dto.message.send';
@@ -750,11 +756,26 @@ export class CommunicationAdapter {
 
   /**
    * Remove an actor from multiple rooms.
+   *
+   * The RPC envelope's top-level `success` flag only reflects whether the
+   * request was processed — it can be `true` even when an individual room's
+   * kick failed (e.g. Matrix rejects the kick with a 403/M_FORBIDDEN
+   * insufficient-power-level error). The authoritative per-room outcome
+   * lives in `response.results`, so it is always consulted here rather than
+   * trusting the envelope alone.
+   *
+   * @param options.ensureAllSucceeded - When true, throws a
+   * `CommunicationAdapterException` (carrying the first per-room adapter
+   * error, if any) instead of silently returning `false` when one or more
+   * rooms failed. Defaults to false to preserve the existing best-effort
+   * behavior of bulk/fire-and-forget callers (e.g. space moves, community
+   * cleanup) that intentionally tolerate partial failures.
    */
   async batchRemoveMember(
     actorID: AlkemioActorID,
     roomIds: AlkemioRoomID[],
-    reason?: string
+    reason?: string,
+    options?: { ensureAllSucceeded?: boolean }
   ): Promise<boolean> {
     if (!this.enabled || roomIds.length === 0) return true;
 
@@ -769,7 +790,31 @@ export class CommunicationAdapter {
       errorContext: { actorID, roomCount: roomIds.length },
     });
 
-    return response?.success ?? false;
+    if (!response) return false;
+
+    const batchResult = processBatchResponse(response);
+    const allSucceeded = isBatchOperationSuccessful(batchResult, 'all');
+
+    if (!allSucceeded) {
+      this.logger.warn?.(
+        `batchRemoveMember: one or more rooms failed to remove actor ${actorID} - ${formatBatchResultForLog(batchResult)}`,
+        LogContext.COMMUNICATION
+      );
+
+      if (options?.ensureAllSucceeded) {
+        const firstError = batchResult.itemErrors.values().next().value;
+        throw CommunicationAdapterException.fromAdapterError(
+          'batchRemoveMember',
+          firstError ?? {
+            code: ErrCodeInternalError,
+            message: 'One or more room removals failed',
+          },
+          { actorID, roomCount: roomIds.length }
+        );
+      }
+    }
+
+    return allSucceeded;
   }
 
   // ============================================================================

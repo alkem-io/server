@@ -78,9 +78,43 @@ Operations that require Matrix moderator rights:
 
 <!-- Add findings here as we investigate -->
 
-### Finding 1: [Date - Author]
+### Finding 1: 2026-07-30 - workspace 034-messaging-notifications live verification (US2-AS4)
 
-_Add findings about Matrix power level API, current adapter capabilities, etc._
+Confirmed the "Kick users from rooms (future)" gap above with a live repro:
+removing a member from a **group conversation** (`ConversationService.removeMember`
+→ `CommunicationAdapter.batchRemoveMember` → Go adapter `KickUser`) fails with
+`M_FORBIDDEN (HTTP 403): You cannot kick user ... insufficient power level`,
+surfaced via the per-room `results` entry of the `batchRemoveMember` RPC
+response (fixed server-side in this same change — see below).
+
+Root cause is on the matrix-adapter side, **out of scope for the server repo**
+(different sibling, not in 034's affected-repos list): `KickUser` calls
+`getIntentForRoom`, which uses the bot's own intent when the bot is a member,
+or falls back to admin-joining the bot ("PL 100 as room creator") otherwise.
+That fallback assumes the bot *is* the room's Matrix creator; for
+group-conversation rooms the actual Matrix creator/power-level holder may be
+a different account, so an admin-join does not confer kick rights and the
+kick is rejected. `CreateRoomRequest` also has no field today for requesting
+an elevated power level for a specific member at room-creation time — adding
+one would need a coordinated change across `@alkemio/matrix-adapter-lib`,
+the Go adapter (id-mapping + Synapse power-level API calls already documented
+as adapter-internal in that repo's own CLAUDE.md), and this repo's room
+creation call. Recommend picking up "Kick users from rooms (future)" as its
+own cross-repo spec (Option A/B/C below) rather than a point patch.
+
+**What *was* fixed in server as part of this same defect report**: the
+`batchRemoveMember` RPC envelope's top-level `success` flag was being trusted
+in isolation (`response?.success ?? false`), so a rejected per-room kick like
+the one above was silently reported as an overall success — the GraphQL
+`removeConversationMember` mutation returned `true` and the group-settings
+dialog closed with no error, even though the member was never removed. Fixed
+by deriving the real per-room outcome from `results` (see
+`CommunicationAdapter.batchRemoveMember` /
+`communication.adapter.response.ts#processBatchResponse`) and having
+`ConversationService.removeMember` (the direct-kick path behind
+`removeConversationMember`/`leaveConversation`) opt into
+`ensureAllSucceeded`, which now throws a `CommunicationAdapterException`
+instead of returning an optimistic `true` when Matrix rejects the kick.
 
 ---
 

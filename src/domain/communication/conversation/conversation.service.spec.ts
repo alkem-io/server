@@ -14,6 +14,8 @@ import { VirtualActorLookupService } from '@domain/community/virtual-contributor
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { CommunicationAdapterException } from '@services/adapters/communication-adapter/communication.adapter.exception';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
@@ -32,6 +34,7 @@ describe('ConversationService', () => {
   let userLookupService: Mocked<UserLookupService>;
   let virtualActorLookupService: Mocked<VirtualActorLookupService>;
   let platformWellKnownVCService: Mocked<PlatformWellKnownVirtualContributorsService>;
+  let communicationAdapter: Mocked<CommunicationAdapter>;
   let conversationRepo: Mocked<Repository<Conversation>>;
   let membershipRepo: Mocked<Repository<ConversationMembership>>;
   let mockManagerFind: ReturnType<typeof vi.fn>;
@@ -66,6 +69,7 @@ describe('ConversationService', () => {
     platformWellKnownVCService = module.get(
       PlatformWellKnownVirtualContributorsService
     );
+    communicationAdapter = module.get(CommunicationAdapter);
     conversationRepo = module.get(getRepositoryToken(Conversation));
     membershipRepo = module.get(getRepositoryToken(ConversationMembership));
 
@@ -258,6 +262,73 @@ describe('ConversationService', () => {
       const result = await service.isConversationMember('conv-1', 'agent-1');
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('removeMember (US2-AS4 live-verification fix)', () => {
+    const conversationId = 'conv-1';
+    const memberActorId = 'actor-c';
+
+    const mockGroupConversation = () => {
+      conversationRepo.findOne.mockResolvedValue({
+        id: conversationId,
+        room: { id: 'room-1', type: RoomType.CONVERSATION_GROUP },
+      } as any);
+      membershipRepo.count.mockResolvedValue(1); // isConversationMember -> true
+    };
+
+    it('should send the batchRemoveMember RPC with ensureAllSucceeded and return the conversation on success', async () => {
+      mockGroupConversation();
+      communicationAdapter.batchRemoveMember.mockResolvedValue(true);
+
+      const result = await service.removeMember(conversationId, memberActorId);
+
+      expect(result.id).toBe(conversationId);
+      expect(communicationAdapter.batchRemoveMember).toHaveBeenCalledWith(
+        memberActorId,
+        ['room-1'],
+        undefined,
+        { ensureAllSucceeded: true }
+      );
+    });
+
+    it('should propagate the adapter exception instead of reporting a false success when Matrix rejects the kick', async () => {
+      mockGroupConversation();
+      communicationAdapter.batchRemoveMember.mockRejectedValue(
+        CommunicationAdapterException.fromAdapterError('batchRemoveMember', {
+          code: 'NOT_ALLOWED',
+          message: 'insufficient power level',
+        })
+      );
+
+      await expect(
+        service.removeMember(conversationId, memberActorId)
+      ).rejects.toThrow(CommunicationAdapterException);
+    });
+
+    it('should throw ValidationException when the conversation is not a group', async () => {
+      conversationRepo.findOne.mockResolvedValue({
+        id: conversationId,
+        room: { id: 'room-1', type: RoomType.CONVERSATION_DIRECT },
+      } as any);
+
+      await expect(
+        service.removeMember(conversationId, memberActorId)
+      ).rejects.toThrow(ValidationException);
+      expect(communicationAdapter.batchRemoveMember).not.toHaveBeenCalled();
+    });
+
+    it('should throw ValidationException when the actor is not a member', async () => {
+      conversationRepo.findOne.mockResolvedValue({
+        id: conversationId,
+        room: { id: 'room-1', type: RoomType.CONVERSATION_GROUP },
+      } as any);
+      membershipRepo.count.mockResolvedValue(0);
+
+      await expect(
+        service.removeMember(conversationId, memberActorId)
+      ).rejects.toThrow(ValidationException);
+      expect(communicationAdapter.batchRemoveMember).not.toHaveBeenCalled();
     });
   });
 

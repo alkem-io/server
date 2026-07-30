@@ -258,10 +258,17 @@ export class ConversationService {
       );
     }
 
-    // Send to Matrix only — DB will be updated when room.member.updated event arrives
-    await this.communicationAdapter.batchRemoveMember(memberActorId, [
-      conversation.room.id,
-    ]);
+    // Send to Matrix only — DB will be updated when room.member.updated event arrives.
+    // `ensureAllSucceeded` makes this throw (rather than silently report a
+    // false "success") when Matrix rejects the kick (e.g. insufficient power
+    // level) — the RPC is synchronous and the failure is already known here,
+    // so it must not be swallowed as an optimistic true.
+    await this.communicationAdapter.batchRemoveMember(
+      memberActorId,
+      [conversation.room.id],
+      undefined,
+      { ensureAllSucceeded: true }
+    );
 
     this.logger.verbose?.(
       `Sent remove-member RPC for ${memberActorId} from group conversation ${conversationId}`,
