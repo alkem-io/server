@@ -7,9 +7,6 @@
       "credentials": [
         {
           "type": "platform-roles-admin"
-        },
-        {
-          "type": "global-admin"
         }
       ]
     },

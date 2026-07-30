@@ -385,15 +385,18 @@ export class BootstrapService {
   }
 
   /**
-   * 027-platform-role-redesign (T053-T055, research C7/D12): the credential
-   * grant loop now runs on EVERY start, for EVERY configured account — not
-   * only the FIRST time the account is created. A break-glass Roles Admin
-   * or a spaces-reader service account whose seeded credential was later
-   * revoked out-of-band (or was simply never granted, on an environment
-   * seeded before this feature) is re-granted on the next restart, exactly
-   * as FR-013b's "out-of-band lockout repaired by restart" requires — and
-   * granting only what is MISSING makes this idempotent on every other
-   * restart.
+   * 027-platform-role-redesign (T053-T055, research C7/D12; narrowed by
+   * sec-server-18): the credential grant loop runs on EVERY start, for
+   * EVERY configured account, but the RESTART-TIME re-grant of a MISSING
+   * credential is scoped to the FR-013b break-glass recovery credential
+   * (`platform-roles-admin`) only — see `grantSeededCredentials`'s doc
+   * comment. A break-glass Roles Admin whose credential was revoked
+   * out-of-band (or never granted, on an environment seeded before this
+   * feature) is re-granted on the next restart, exactly as FR-013b's
+   * "out-of-band lockout repaired by restart" requires. Every OTHER seeded
+   * credential (`platform-spaces-reader`, legacy roles, …) is granted only
+   * at FIRST creation of the account — an operator's deliberate revocation
+   * of one of those is durable across restarts, not silently reverted.
    */
   async createUserProfiles(usersData: any[]) {
     try {
@@ -401,6 +404,7 @@ export class BootstrapService {
         let user = await this.userService.getUserByEmail(userData.email, {
           relations: { credentials: true },
         });
+        const isNewAccount = !user;
 
         if (!user) {
           const created = await this.userService.createUser({
@@ -464,7 +468,11 @@ export class BootstrapService {
           user = await this.userService.save(user);
         }
 
-        await this.grantSeededCredentials(user, userData.credentials ?? []);
+        await this.grantSeededCredentials(
+          user,
+          userData.credentials ?? [],
+          isNewAccount
+        );
       }
     } catch (error: any) {
       if (error instanceof BootstrapException) {
@@ -491,10 +499,26 @@ export class BootstrapService {
    * silently skipped (FR-013, FR-028). The audit write is FAIL-OPEN
    * (`seeded: true`, FR-027): the break-glass grant must not depend on a
    * healthy audit store.
+   *
+   * sec-server-18 fix: `isNewAccount` gates whether a MISSING credential is
+   * restart-eligible. Only `platform-roles-admin` (the FR-013b break-glass
+   * recovery role) is re-granted on a restart against a PRE-EXISTING
+   * account — every other credential (`platform-spaces-reader`, legacy
+   * roles, any other `Platform …`/`Feature …` role a future seed adds) is
+   * granted only when the account is being created for the first time.
+   * Before this fix, EVERY seeded credential of EVERY seeded account was
+   * silently re-applied on every restart — an operator who deliberately
+   * revoked, say, `platform-spaces-reader` from the seeded service account
+   * found it reinstated on the next pod restart, with no way to make the
+   * revocation durable through the product. FR-013b's "out-of-band lockout
+   * repaired by restart" is a guarantee about break-glass ROLES ADMIN
+   * recovery specifically (quickstart.md §5, T071) — not a blanket promise
+   * that every seeded credential is unrevokable.
    */
   private async grantSeededCredentials(
     user: IUser,
-    credentialsData: { type: AuthorizationCredential; resourceID?: string }[]
+    credentialsData: { type: AuthorizationCredential; resourceID?: string }[],
+    isNewAccount: boolean
   ): Promise<void> {
     const alreadyHeld = new Set(
       (user.credentials ?? []).map(c => `${c.type}::${c.resourceID ?? ''}`)
@@ -518,6 +542,22 @@ export class BootstrapService {
     for (const credentialData of credentialsData) {
       const key = `${credentialData.type}::${credentialData.resourceID ?? ''}`;
       if (alreadyHeld.has(key)) {
+        continue;
+      }
+
+      // sec-server-18 fix: a MISSING credential is only restart-eligible
+      // when the account is new OR the credential is the FR-013b
+      // break-glass recovery role (`platform-roles-admin`). Every other
+      // missing credential on a PRE-EXISTING account was deliberately
+      // revoked (or never granted) and stays that way — no silent
+      // reinstatement on the next restart.
+      const isBreakGlassRecoveryCredential =
+        credentialData.type === AuthorizationCredential.PLATFORM_ROLES_ADMIN;
+      if (!isNewAccount && !isBreakGlassRecoveryCredential) {
+        this.logger.verbose?.(
+          `Bootstrap: seeded credential '${credentialData.type}' is missing on pre-existing account '${user.id}' — NOT auto-reinstating (durable revocation, sec-server-18)`,
+          LogContext.BOOTSTRAP
+        );
         continue;
       }
 

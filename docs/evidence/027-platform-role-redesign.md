@@ -356,3 +356,80 @@ Left unresolved, T082's forward-only DML would delete this account's
 `global-community-read` credential row the next time the platform seeds a
 fresh bootstrap after Slice B ships, silently withdrawing whatever read
 access the notifications integration depends on.
+
+---
+
+## `users.json` god-mode reversal, and the restart-time re-grant narrowing (spec-server-19 / sec-server-18 fix)
+
+**What happened.** The round-1/round-2 hardening pass (commit `095de9d3f`,
+"sec-server-15") added `global-admin` to `admin@alkem.io` alongside
+`platform-roles-admin`, reasoning that several `[GLOBAL_ADMIN]`-pinned
+resolver-local policies (`legacyGlobalAdminPolicy` in
+`platform.role.resolver.mutations.ts`, the T034a FR-022 pin in
+`admin.authorization.resolver.mutations.ts`, and the A9 conversion
+resolver's legacy reach in `conversion.resolver.mutations.ts`) would
+otherwise be unreachable by anyone on a freshly-bootstrapped environment.
+That directly contradicted FR-013 ("no god-mode role may be reintroduced …
+the seeded account holds Platform Roles Admin only") and T055's identical
+requirement, and was flagged as spec-server-19 (spec-compliance) and,
+compounded with the always-on restart re-grant loop (T053-T055), as
+sec-server-18 (security — a non-deprovisionable, cross-space-read-capable
+seeded principal).
+
+**Decision: reverted, not merely documented as an exception.** Per this
+finding's own fix hint (option a), removing `global-admin` from the seed is
+the correct fix rather than a signed-off exception, because:
+
+- The FR-013b break-glass recovery drill (T071, `quickstart.md` §5)
+  exercises `platform-roles-admin` recovery specifically. It never requires
+  `global-admin` to be held by anyone.
+- The `[GLOBAL_ADMIN]`-pinned surfaces this seed was propping open are
+  themselves Slice-B-retiring god-mode paths (the four FR-022 credential
+  mutations, the legacy `global-*` role assignment branch, A9's legacy
+  conversion reach) — this feature exists to remove them, not to keep them
+  freshly reachable on every new environment. A fresh bootstrap being unable
+  to exercise a path that is being deleted anyway is the intended end state,
+  not a regression.
+- `admin@alkem.io` retains its actual operative capability: `platform-roles-
+  admin` can assign any `Platform …`/`Feature …` role — including
+  `platform-resource-admin`, `platform-content-full-access`, etc. — to
+  itself or another operator via the ordinary `assignPlatformRoleToUser`
+  mutation once bootstrap completes (self-assignment is blocked by rule 6,
+  so a second operator account is the intended path for functions the
+  break-glass account itself needs — separation of duties, not an
+  oversight).
+
+**Action taken:**
+1. `users.json`: `admin@alkem.io` now holds `platform-roles-admin` **only**.
+2. `bootstrap.service.spec.ts`'s `sec-server-15` seed-data test replaced
+   with one asserting exactly `['platform-roles-admin']`.
+3. `bootstrap.service.ts`'s restart-time credential re-grant — previously
+   applied uniformly to every seeded credential of every seeded account —
+   is now narrowed to the FR-013b break-glass recovery credential
+   (`platform-roles-admin`) alone. A missing NON-recovery credential
+   (`platform-spaces-reader`, any legacy role a future seed might add,
+   `notifications@alkem.io`'s `global-community-read`) on a **pre-existing**
+   account is treated as a deliberate, durable revocation and is **not**
+   silently reinstated on the next restart. A newly-created account still
+   receives every seeded credential unconditionally (first-boot semantics
+   unchanged).
+
+**Residual risk, honestly scoped.** This closes the "cannot be
+deprovisioned" abuse path in sec-server-18 (part b of its remediation) and
+removes the reintroduced god-mode account (spec-server-19, part a of its
+fix hint). It does **not** implement sec-server-18's parts (a) and (c):
+- (a) `spaces-reader@alkem.io` (and the other seeded accounts) remain a
+  compiled-in constant rather than environment-configurable — an
+  acc/production deployment cannot opt out of seeding it without a code
+  change. Config-driving the bootstrap user list is a larger, cross-cutting
+  change (touching how `bootstrap.service.ts` sources `users.json` at all)
+  that this fix pass did not undertake.
+- (c) The identity-resolve "legacy flow" link-by-email-on-first-Kratos-login
+  behavior (`identity-resolve.service.ts`) is unchanged. As the finding
+  itself notes, this property predates this feature and is shared by
+  `admin@alkem.io`/`notifications@alkem.io` too — reserving seeded emails
+  against that flow is an identity-service change orthogonal to the
+  platform-role redesign, not a regression this feature introduced.
+
+Both remain open hardening items for a follow-up piece of work, not closed
+by this fix pass.
