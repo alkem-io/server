@@ -8,6 +8,7 @@ import { GraphqlGuard } from '@core/authorization';
 import {
   ActorLoaderCreator,
   SpaceAboutLoaderCreator,
+  SpaceActivityScoreLoaderCreator,
   SpaceCollaborationLoaderCreator,
   SpaceCommunityLoaderCreator,
 } from '@core/dataloader/creators';
@@ -48,6 +49,18 @@ export class SpaceResolverFields {
     private spaceLookupService: SpaceLookupService,
     private actorLookupService: ActorLookupService
   ) {}
+
+  @ResolveField('activityScore', () => Int, {
+    nullable: false,
+    description:
+      'Count of visible activity events on this Space over the last 7 days, across all actors (excludes whiteboard-content-modified). Used to rank Spaces on the dashboard.',
+  })
+  async activityScore(
+    @Parent() space: ISpace,
+    @Loader(SpaceActivityScoreLoaderCreator) loader: ILoader<number>
+  ): Promise<number> {
+    return loader.load(space.id);
+  }
 
   @ResolveField('community', () => ICommunity, {
     nullable: false,

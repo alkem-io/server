@@ -272,58 +272,6 @@ export class ActivityService {
     });
   }
 
-  // Counts activity rows per collaboration in a time window, for the
-  // most-active-Spaces ranking and the per-Space activity score. Returns a map
-  // keyed by collaborationID (collaborations with zero matching rows are absent
-  // from the map — callers default those to 0). Defaults match the dashboard
-  // feed: visible events only, excluding whiteboard-content-modified.
-  public async countActivityForCollaborations(
-    collaborationIDs: string[],
-    since: Date,
-    options?: {
-      visibility?: boolean;
-      excludeTypes?: ActivityEventType[];
-    }
-  ): Promise<Map<string, number>> {
-    const {
-      visibility = true,
-      excludeTypes = [ActivityEventType.CALLOUT_WHITEBOARD_CONTENT_MODIFIED],
-    } = options ?? {};
-
-    if (collaborationIDs.length === 0) {
-      return new Map<string, number>();
-    }
-
-    const qb = this.activityRepository
-      .createQueryBuilder('activity')
-      .select('activity.collaborationID', 'collaborationID')
-      .addSelect('COUNT(*)', 'count')
-      .where('activity.collaborationID IN (:...collaborationIDs)', {
-        collaborationIDs,
-      })
-      .andWhere('activity.createdDate >= :since', { since })
-      .andWhere('activity.visibility = :visibility', { visibility })
-      .groupBy('activity.collaborationID');
-
-    if (excludeTypes.length > 0) {
-      qb.andWhere('activity.type NOT IN (:...excludeTypes)', { excludeTypes });
-    }
-
-    const rows = await qb.getRawMany<{
-      collaborationID: string;
-      count: string;
-    }>();
-
-    const countsByCollaboration = new Map<string, number>();
-    for (const row of rows) {
-      countsByCollaboration.set(
-        row.collaborationID,
-        Number.parseInt(row.count, 10)
-      );
-    }
-    return countsByCollaboration;
-  }
-
   async getActivityForMessage(messageID: string): Promise<IActivity | null> {
     const entry: IActivity | null = await this.activityRepository
       .createQueryBuilder('activity')
