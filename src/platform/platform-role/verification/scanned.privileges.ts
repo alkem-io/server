@@ -28,6 +28,28 @@ export const EXCLUDED_FROM_SCAN: ReadonlySet<AuthorizationPrivilege> = new Set([
 ]);
 
 /**
+ * 027-platform-role-redesign (sec-server-5 fix, round 2 of 2) — `PLATFORM_ADMIN`
+ * STAYS in `EXCLUDED_FROM_SCAN` above (globally): ~24 files across this
+ * ~3k-file codebase reference it for entirely unrelated, pre-existing
+ * purposes, so narrowing the blanket exclusion itself would flag every one
+ * of them. Instead, this allowlist powers a SEPARATE, narrow check
+ * (`surface.drift.spec.ts` rule 1b) that scans ONLY these specific
+ * credential-administration files for a `PLATFORM_ADMIN` gate-position hit
+ * and requires it to be censused — closing the exact structural gap that
+ * let sec-server-9's `grantCredentialToActor`/`revokeCredentialFromActor`
+ * survive three review rounds invisible to `SCANNED_PRIVILEGES`.
+ *
+ * Add a file here ONLY when it (a) gates on `PLATFORM_ADMIN` AND (b) writes
+ * or reads this feature's own role/credential vocabulary — not merely
+ * "any file using PLATFORM_ADMIN", which is the blast radius the blanket
+ * exclusion exists to avoid.
+ */
+export const PLATFORM_ADMIN_SCAN_ALLOWLIST: ReadonlySet<string> = new Set([
+  'src/domain/actor/actor/actor.resolver.mutations.ts',
+  'src/platform-admin/domain/authorization/admin.authorization.resolver.mutations.ts',
+]);
+
+/**
  * DERIVED from the census — every privilege named in any `A_ROW_SURFACES`
  * entry's `gate` expression, minus `EXCLUDED_FROM_SCAN`. This supersedes
  * the thirteenth analyze pass's "pin it as data" instruction: the

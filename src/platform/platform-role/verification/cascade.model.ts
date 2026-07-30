@@ -159,7 +159,17 @@ export const LEGACY_CASCADES: {
    * hangs off it (research C2) — NOT the other six root-inheritors (user /
    * organization / account / space / virtual-contributor /
    * virtual-assistant), which `global-support` reaches only via the ROOT
-   * cascade above, not this one. */
+   * cascade above, not this one.
+   *
+   * `licensing-framework` / `license-policy` added (corr-server-12 fix):
+   * `platform.service.authorization.ts` passes `platform.authorization` as
+   * the PARENT of `licensing.authorization`
+   * (`inheritParentAuthorization(licensing.authorization,
+   * platform.authorization)`), so this cascade DOES reach the licensing
+   * tree too — the model previously under-reported it, which is how
+   * corr-server-12 survived undetected: the two A13 resolvers' own
+   * `legacyReachers` disagreed with this cascade instead of being checked
+   * against it. */
   readonly globalSupportPlatformSubtree: {
     readonly credential: AuthorizationCredential;
     readonly privileges: readonly AuthorizationPrivilege[];
@@ -201,6 +211,8 @@ export const LEGACY_CASCADES: {
       'role-set',
       'storage',
       'messaging',
+      'licensing-framework',
+      'license-policy',
     ],
   },
 };

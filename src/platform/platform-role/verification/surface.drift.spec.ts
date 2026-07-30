@@ -15,6 +15,7 @@ import {
 } from './gate.model';
 import {
   EXCLUDED_FROM_SCAN,
+  PLATFORM_ADMIN_SCAN_ALLOWLIST,
   privilegeEnumKey,
   SCANNED_PRIVILEGES,
 } from './scanned.privileges';
@@ -226,6 +227,71 @@ describe('surface.drift.spec (T052a) — census vs. code', () => {
         continue;
       }
       it(`${file} is declared in A_ROW_SURFACES or INDIRECT_ENFORCEMENT_FILES`, () => {
+        expect(knownFiles.has(file)).toBe(true);
+      });
+    }
+  });
+
+  // sec-server-5 fix (round 2 of 2) — rule 1b: a NARROW, per-file scan for
+  // `PLATFORM_ADMIN` gate-position hits, restricted to
+  // `PLATFORM_ADMIN_SCAN_ALLOWLIST` so it cannot flood the ~24 unrelated
+  // files across the codebase that also reference `PLATFORM_ADMIN`. This is
+  // what would have caught sec-server-9: `grantCredentialToActor`/
+  // `revokeCredentialFromActor` gate on `PLATFORM_ADMIN`, and
+  // `PLATFORM_ADMIN` was — and, for every OTHER file, remains — wholly
+  // excluded from `SCANNED_PRIVILEGES`.
+  describe('rule 1b — PLATFORM_ADMIN hits in the allowlisted credential-admin files are censused', () => {
+    for (const file of PLATFORM_ADMIN_SCAN_ALLOWLIST) {
+      it(`${file}: any PLATFORM_ADMIN gate hit is declared in A_ROW_SURFACES or INDIRECT_ENFORCEMENT_FILES`, () => {
+        const scan = scans.get(file);
+        expect(
+          scan,
+          `PLATFORM_ADMIN_SCAN_ALLOWLIST names "${file}" but it does not exist under src/`
+        ).toBeDefined();
+        const hasPlatformAdminGate =
+          scan!.hasGateCall &&
+          /AuthorizationPrivilege\.PLATFORM_ADMIN/.test(scan!.content);
+        if (!hasPlatformAdminGate) {
+          // Nothing to check — the file no longer gates on PLATFORM_ADMIN
+          // at all (e.g. migrated off it entirely); not a drift failure.
+          return;
+        }
+        expect(knownFiles.has(file)).toBe(true);
+      });
+    }
+  });
+
+  // sec-server-5 fix (round 2 of 2) — rule 4: an INVERSE completeness check
+  // that needs no reachability baseline (unlike rules 1/2, which can only
+  // ever find privileges the census already names). Enumerates every
+  // `@Mutation`/`@Query` resolver file that either (a) writes a credential
+  // directly (`grantCredentialOrFail`/`revokeCredential` on an actor) or
+  // (b) accepts a `CredentialType`/`AuthorizationCredential`/`RoleName`-typed
+  // GraphQL argument, and fails the build for any such file absent from the
+  // census — this is the check that would have caught BOTH sec-server-9
+  // (a credential-write resolver) and sec-server-10 (a credential-typed-
+  // argument query) on its own, independent of which privilege literal, if
+  // any, happens to be scannable at the call site.
+  describe('rule 4 — credential-write / credential-argument resolvers are censused', () => {
+    const CREDENTIAL_WRITE_PATTERN =
+      /\.grantCredentialOrFail\(|\.revokeCredential\(/;
+    const CREDENTIAL_TYPED_ARG_PATTERN =
+      /@Args\([^)]*type:\s*\(\)\s*=>\s*(CredentialType|AuthorizationCredential|RoleName)\b/;
+    const RESOLVER_DECORATOR_PATTERN = /@Mutation\(|@Query\(/;
+
+    for (const file of sourceFiles) {
+      const scan = scans.get(file)!;
+      if (!RESOLVER_DECORATOR_PATTERN.test(scan.content)) {
+        continue;
+      }
+      const writesCredentials = CREDENTIAL_WRITE_PATTERN.test(scan.content);
+      const hasCredentialTypedArg = CREDENTIAL_TYPED_ARG_PATTERN.test(
+        scan.content
+      );
+      if (!writesCredentials && !hasCredentialTypedArg) {
+        continue;
+      }
+      it(`${file}: writes a credential or accepts a RoleName/CredentialType-typed argument — must be declared in A_ROW_SURFACES or INDIRECT_ENFORCEMENT_FILES`, () => {
         expect(knownFiles.has(file)).toBe(true);
       });
     }

@@ -359,6 +359,28 @@ export const TREE_SCOPED_PRIVILEGE_GRANTS: {
     readonly [P in AuthorizationPrivilege]?: PrivilegeGrant;
   };
 } = {
+  // sec-server-9 fix: `grantCredentialToActor`/`revokeCredentialFromActor`
+  // (actor.resolver.mutations.ts, A1) check bare `PLATFORM_ADMIN` on the
+  // PLATFORM tree's own authorization — the SAME literal privilege A9's
+  // conversion-admin-synthetic resolvers check, but on a DIFFERENT,
+  // UNCHANGED credential rule (`platformAdmin` in `platform.service.
+  // authorization.ts`): `{global-admin, global-support,
+  // global-license-manager}`, cascade:false, no owning role. Scoped to the
+  // `platform` tree (not the global `ManagedPrivilege` union) for the same
+  // reason A9's PLATFORM_ADMIN grant is tree-scoped — PLATFORM_ADMIN is
+  // reused far too promiscuously elsewhere in the codebase (~24 files) to
+  // manage as a flat, tree-independent entry.
+  platform: {
+    [AuthorizationPrivilege.PLATFORM_ADMIN]: {
+      anchor: 'platform',
+      owningCredentials: [],
+      legacyCredentials: [
+        AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_SUPPORT,
+        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+      ],
+    },
+  },
   'licensing-framework': {
     // A12 — assign/revoke license plans (admin.licensing.resolver.mutations.ts).
     [AuthorizationPrivilege.GRANT]: {
@@ -376,14 +398,21 @@ export const TREE_SCOPED_PRIVILEGE_GRANTS: {
     // five A13 resolvers now check a resolver-local synthetic policy
     // (`GLOBAL_POLICY_LICENSE_DEFINITION_ADMIN`) that grants bare
     // CREATE/UPDATE/DELETE to exactly {platform-settings-admin,
-    // global-admin, global-license-manager, global-platform-manager} —
-    // NOT the entity's own (root-cascade-inheriting) authorization, so
-    // `platform-content-full-access` no longer reaches these surfaces.
+    // global-admin, global-support, global-license-manager,
+    // global-platform-manager} — NOT the entity's own
+    // (root-cascade-inheriting) authorization, so `platform-content-
+    // full-access` no longer reaches these surfaces. GLOBAL_SUPPORT added
+    // (corr-server-12 fix): the synthetic policy mirrors what these
+    // resolvers checked pre-feature (`licensingFramework.authorization`),
+    // which inherits `platform.authorization`'s `globalSupportPlatformAdmin`
+    // cascade — dropping global-support from the synthetic policy would
+    // have narrowed a pre-existing reach in an additive-only slice.
     [AuthorizationPrivilege.CREATE]: {
       anchor: 'licensing-framework',
       owningCredentials: [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
       legacyCredentials: [
         AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_SUPPORT,
         AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
         AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
       ],
@@ -393,6 +422,7 @@ export const TREE_SCOPED_PRIVILEGE_GRANTS: {
       owningCredentials: [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
       legacyCredentials: [
         AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_SUPPORT,
         AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
         AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
       ],
@@ -402,6 +432,7 @@ export const TREE_SCOPED_PRIVILEGE_GRANTS: {
       owningCredentials: [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
       legacyCredentials: [
         AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_SUPPORT,
         AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
         AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
       ],

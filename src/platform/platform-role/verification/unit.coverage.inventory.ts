@@ -165,6 +165,9 @@ export const A_ROW_GATE_COVERAGE: Record<ARowId, ARowGateCoverageEntry> = {
     gateSpecs: [
       'src/platform/platform-role/platform.role.assignment.rules.service.spec.ts',
       'src/platform-admin/domain/authorization/admin.authorization.resolver.mutations.spec.ts',
+      // sec-server-9 fix: actor.resolver.mutations.ts's generic credential
+      // mutations now reject the restricted role-credential vocabulary.
+      'src/domain/actor/actor/actor.resolver.mutations.spec.ts',
     ],
   },
   A2: {
@@ -276,10 +279,18 @@ export const A_ROW_GATE_COVERAGE: Record<ARowId, ARowGateCoverageEntry> = {
     ],
   },
   A20: {
-    gateSpecs: ['src/domain/access/role-set/role.set.resolver.fields.spec.ts'],
+    // sec-server-10 fix: admin.authorization.resolver.queries.spec.ts added
+    // — the second surface reading this data by credential, not RoleName.
+    gateSpecs: [
+      'src/domain/access/role-set/role.set.resolver.fields.spec.ts',
+      'src/platform-admin/domain/authorization/admin.authorization.resolver.queries.spec.ts',
+    ],
   },
   A20b: {
-    gateSpecs: ['src/domain/access/role-set/role.set.resolver.fields.spec.ts'],
+    gateSpecs: [
+      'src/domain/access/role-set/role.set.resolver.fields.spec.ts',
+      'src/platform-admin/domain/authorization/admin.authorization.resolver.queries.spec.ts',
+    ],
   },
   A21: {
     gateSpecs: ['src/domain/community/user/user.service.spec.ts'],

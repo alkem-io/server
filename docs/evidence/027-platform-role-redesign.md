@@ -9,11 +9,18 @@ sign-off.
 
 All counts are read directly off `src/platform/platform-role/verification/a.row.surfaces.ts`
 (the executable census) as of this commit, not re-derived by hand (T068's
-explicit instruction). The census holds **99 entries** across **39 files**,
-covering **93 distinct (file, member) surfaces** (the 6-entry gap is A1's
-four `retiredIn: 'B'` credential mutations, which are declared but multiply
-into no matrix cell — privilege-map.md §"A1 carries SIX surfaces"), spanning
-**21 live A-rows** (A18 is legitimately empty — FR-020's removed bug).
+explicit instruction). The census holds **112 entries** across **39 files**,
+covering **101 distinct (file, member) surfaces**, spanning **21 live
+A-rows** (A18 is legitimately empty — FR-020's removed bug). The 11-entry
+gap between 112 and 101 is fully accounted for: **2** are A17's
+`{deferred: 'B'}` placeholders (not yet real — T078 creates them in Slice
+B), and **9** are entries that deliberately re-declare a surface another
+row already counts — `platform.role.assignment.rules.service.ts#{assign,
+remove}PlatformRoleToUser` (A1 ⊂ A2, ×2), `registration.resolver.mutations.
+ts#deleteUser` (A4/A5's dual-path gate on the SAME mutation, ×1), and the
+six `platform.role.holder.list.access.ts` members A20 and A20b share in
+full (the four holder-list field resolvers plus the two credential-based
+admin queries added by the sec-server-10 fix, ×6). 112 − 2 − 9 = 101.
 
 ---
 
@@ -28,26 +35,26 @@ re-anchoring. Read off the census's `legacyReachers` field for every A-row
 whose Slice B `intendedOwners` narrows the surface off `PLATFORM_ADMIN` /
 the two legacy cascades.
 
-| A-row | Family | Surfaces (of 99) | Reachable via root cascade | Reachable via `GLOBAL_SUPPORT` cascade |
+| A-row | Family | Surfaces (of 112) | Reachable via root cascade | Reachable via `GLOBAL_SUPPORT` cascade |
 |---|---|---:|:---:|:---:|
-| A1 | Assign/revoke a Platform role | 6 | — (role-set tree, own rule) | — |
+| A1 | Assign/revoke a Platform role | 10 | — (role-set tree, own rule) | — |
 | A2 | Assign/revoke a Feature role | 4 | — | — |
 | A3 | Authorization/license reset (032) | 10 | ✅ (legacy `GLOBAL_ADMIN`) | ✅ |
-| A4 | Change login email | 2 | ✅ | ✅ |
+| A4 | Change login email | 3 | ✅ | ✅ |
 | A5 | Delete user; reset identity/account | 3 | ✅ | ✅ |
 | A6 | Create/delete organization | 2 | ✅ (delete only) | ✅ (delete only) |
-| **A7** | **Edit org-owned pack/hub + template CRUD** | **8** | ✅ **new capability** (research C2 — org-owned packs/hubs sit under the `account` tree, which the root cascade already reaches; **T037 makes this an explicit gate, closing a path that was previously reachable ONLY by inheritance**) | ✅ |
+| **A7** | **Edit org-owned pack/hub + template CRUD** | **8** | ✅ **new capability** (research C2 — org-owned packs/hubs sit under the `account` tree, which the root cascade already reaches; **T037 makes this an explicit gate, closing a path that was previously reachable ONLY by inheritance**) — spec-server-14 fix: scoped to ORGANIZATION-hosted accounts only, not every account | ✅ |
 | A8 | Delete callout/contribution/space; delete org pack/hub; set publisher | 6 | ✅ | ✅ |
-| A9 | Move space/hub/pack/VC/callout | 9 | ✅ (2 of 9 via legacy `TRANSFER_*`; 3 of 9 via a resolver-local synthetic `PLATFORM_ADMIN` policy, not the root cascade) | partial |
+| A9 | Move space/hub/pack/VC/callout | 13 | ✅ (4 of 13 via legacy `TRANSFER_*`; 7 of 13 via a resolver-local synthetic `PLATFORM_ADMIN` policy, not the root cascade) | partial |
 | A10 | Platform settings/config | 6 | ✅ | ✅ |
 | A11 | Operational machinery (032) | 13 | ✅ | ✅ |
 | A12 | Assign/revoke license plans | 6 | ✅ | — |
-| A13 | Define license plans/entitlements | 5 | ✅ | — |
+| A13 | Define license plans/entitlements | 5 | ✅ | ✅ (corr-server-12 fix: `globalSupportPlatformAdmin`'s cascade off `platform.authorization` reaches `licensingFramework.authorization` too — the synthetic gate policy and the census both now include `global-support`) |
 | A14 | Change space visibility | 1 | ✅ | — |
 | A15 | In-space support; manage forum | 3 | — (per-space setting) | ✅ (forum only — the row this feature's FR-007(e) narrowing targets) |
 | A16 | Read across spaces | 1 | ✅ (READ only — accepted, FR-010 exception) | — |
 | A19 | Read the audit trail | 3 | ✅ | ✅ |
-| A20/A20b | Read Platform/Feature holder lists | 8 | — (role-set tree) | — |
+| A20/A20b | Read Platform/Feature holder lists | 12 | — (role-set tree) | — |
 
 **A7 confirms research C2's finding**: before T037, org-owned innovation
 packs/hubs and their templates were editable by any `GLOBAL_ADMIN` /
@@ -239,19 +246,39 @@ AssertionError: expected 'platform-license-manager' to be 'platform-support'
 ```
 Reverted; 38/38 green.
 
-**(b) Root cascade regression (T070l-d, eleventh analyze pass reproduced)** —
-added `DELETE` back to `ROOT_CASCADE.privileges`:
+**(b) Root cascade regression, re-run post-reversal (spec-server-17 fix)** —
+`ROOT_CASCADE.privileges` permanently carries `CREATE`/`READ`/`UPDATE`/`DELETE`
+since the ninth `/speckit-analyze` pass's reversal (FR-004/SC-004), so the
+ORIGINAL perturbation here ("added `DELETE` back to `ROOT_CASCADE.privileges`")
+is no longer performable — `DELETE` is already there permanently, and the
+staleness of that record is exactly what spec-server-17 flagged. Re-run as
+the still-live equivalent: added `AuthorizationPrivilege.UPDATE_NAMEID` to
+`ROOT_CASCADE.privileges` — the ONE privilege `cascade.model.ts`'s own doc
+comment says is kept off the root rule "BY DESIGN: A17 is owned by NO global
+role (spec row 2, FR-020), so cascading it would hand Content Full Access
+entity renames the spec explicitly denies it":
 
 ```
-FAIL reachability.spec.ts > A5/registration.resolver.mutations.ts#deleteUser
-     — Slice A/B
-FAIL reachability.spec.ts > A6/registration.resolver.mutations.ts#deleteOrganization
-     — Slice A/B
+FAIL reachability.spec.ts > A17 > A17/(T078, Slice B — content-entity nameID
+     protected section not yet created)#nameID (protected section of the
+     general content-entity update) [1] — Slice B: derived ≡ intendedOwners
+     ∪ acceptedExtraReachers
+Error: A17/(T078, Slice B — …)#nameID … slice B: unexpected reacher(s)
+     [platform-content-full-access] (derived=[platform-content-full-access],
+     declared=[])
+
+FAIL reachability.spec.ts > A17: EMPTY intent derives to ZERO reachers at
+     Slice B — owned by the entity admin, no global role
+AssertionError: expected [ 'platform-content-full-access' ] to have a
+     length of +0 but got 1
 ```
-`platform-content-full-access` (and, in Slice A, the two legacy CRUD
-holders) immediately re-acquire an unintended `DELETE` reach on the `user`
-and `organization` trees — exactly the class of regression T036's narrowed
-root rule exists to prevent. Reverted; 202/202 green.
+`platform-content-full-access` immediately re-acquires the entity-rename
+reach A17/FR-020 explicitly withholds from it — exactly the class of
+regression T036's narrowed root rule exists to prevent, reproduced against
+the CURRENT (post-reversal) model rather than the stale pre-reversal one.
+Reverted; 374/374 green (`unit.coverage.spec.ts` + `reachability.spec.ts` +
+`surface.drift.spec.ts`, the count having grown from 202 across the
+review-round fixes this document's earlier revision predates).
 
 **(c) Drop A16's `acceptedExtraReachers`** — removed the one declared FR-010
 exception entry:

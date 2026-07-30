@@ -1,5 +1,6 @@
 import { PlatformRoleAssignmentAuditException } from '@common/exceptions/platform.role.assignment.audit.exception';
 import { PlatformAuditInitiatorRole } from '@domain/community/user-email-change/enums/platform.audit.initiator.role';
+import { PlatformAuditOutcome } from '@domain/community/user-email-change/enums/platform.audit.outcome';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PlatformRoleAssignmentAuditService } from './platform.role.assignment.audit.service';
 
@@ -101,5 +102,67 @@ describe('PlatformRoleAssignmentAuditService', () => {
     });
 
     expect(repository.save).toHaveBeenCalledOnce();
+  });
+
+  // qual-server-9 fix: the subject-column discriminator (`subjectUserId` XOR
+  // `subjectOrganizationId`) is the ONE table change this feature spends a
+  // migration on (T026) — and had NO assertion anywhere in the repo. A swap
+  // of the two ternaries in `write()` would silently misfile every
+  // organization-target grant under `subjectUserId` and every test in this
+  // file would still pass.
+  describe('subject-column discriminator (T026)', () => {
+    it('writes subjectUserId (and leaves subjectOrganizationId unset) for a user-target grant', async () => {
+      await service.recordGrantOrRevoke({
+        initiatorUserId: 'admin-1',
+        initiatorRole: PlatformAuditInitiatorRole.PLATFORM_ROLES_ADMIN,
+        targetKind: 'user',
+        targetId: 'user-1',
+        role: 'platform-support',
+        outcome: 'granted',
+      });
+
+      expect(repository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subjectUserId: 'user-1',
+          subjectOrganizationId: undefined,
+        })
+      );
+    });
+
+    it('writes subjectOrganizationId (and leaves subjectUserId unset) for an organization-target grant', async () => {
+      await service.recordGrantOrRevoke({
+        initiatorUserId: 'admin-1',
+        initiatorRole: PlatformAuditInitiatorRole.PLATFORM_USERS_ADMIN,
+        targetKind: 'organization',
+        targetId: 'org-1',
+        role: 'feature-organization-creator',
+        outcome: 'granted',
+      });
+
+      expect(repository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subjectUserId: undefined,
+          subjectOrganizationId: 'org-1',
+        })
+      );
+    });
+  });
+
+  // qual-server-9 fix: outcome mapping had no assertion beyond
+  // `save` having been called at all — a swap of ROLE_GRANTED/ROLE_REVOKED
+  // would pass every existing test.
+  it('maps outcome: "revoked" to PlatformAuditOutcome.ROLE_REVOKED', async () => {
+    await service.recordGrantOrRevoke({
+      initiatorUserId: 'admin-1',
+      initiatorRole: PlatformAuditInitiatorRole.PLATFORM_ROLES_ADMIN,
+      targetKind: 'user',
+      targetId: 'user-1',
+      role: 'platform-support',
+      outcome: 'revoked',
+    });
+
+    expect(repository.create).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: PlatformAuditOutcome.ROLE_REVOKED })
+    );
   });
 });

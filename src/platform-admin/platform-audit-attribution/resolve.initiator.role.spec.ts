@@ -1,7 +1,10 @@
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { PlatformAuditInitiatorRole } from '@domain/community/user-email-change/enums/platform.audit.initiator.role';
 import { describe, expect, it } from 'vitest';
-import { resolveInitiatorRole } from './resolve.initiator.role';
+import {
+  resolveInitiatorRole,
+  resolveInitiatorRoleBestEffort,
+} from './resolve.initiator.role';
 
 describe('resolveInitiatorRole (FR-025, T058a)', () => {
   it('resolves the single owning role when the actor holds it', () => {
@@ -60,6 +63,39 @@ describe('resolveInitiatorRole (FR-025, T058a)', () => {
       actorCredentialTypes: [AuthorizationCredential.GLOBAL_ADMIN],
       intendedOwners: [AuthorizationCredential.PLATFORM_ROLES_ADMIN],
       legacyReachers: [AuthorizationCredential.GLOBAL_ADMIN],
+    });
+    expect(result).toBe(PlatformAuditInitiatorRole.PLATFORM_ADMIN);
+  });
+});
+
+// qual-server-9 fix: `resolveInitiatorRoleBestEffort` — the wrapper EVERY
+// rejection-path audit write in this feature MUST use instead of the strict
+// function above — had zero test coverage anywhere in the repo, despite
+// being the exact function corr-server-3/qual-server-1 added to close a
+// prior defect. A regression turning its SELF fallback into, say, SYSTEM
+// would misattribute every rejected attempt to the platform itself with no
+// failing test.
+describe('resolveInitiatorRoleBestEffort (corr-server-3/qual-server-1 fix)', () => {
+  it('falls back to SELF on a genuine empty intersection, rather than throwing', () => {
+    const result = resolveInitiatorRoleBestEffort({
+      actorCredentialTypes: [AuthorizationCredential.SPACE_MEMBER],
+      intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
+    });
+    expect(result).toBe(PlatformAuditInitiatorRole.SELF);
+  });
+
+  it('still resolves the owning role normally when the intersection is non-empty (unchanged from the strict function)', () => {
+    const result = resolveInitiatorRoleBestEffort({
+      actorCredentialTypes: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
+      intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
+    });
+    expect(result).toBe(PlatformAuditInitiatorRole.PLATFORM_USERS_ADMIN);
+  });
+
+  it('still resolves the legacy-broad fallback normally (unchanged from the strict function)', () => {
+    const result = resolveInitiatorRoleBestEffort({
+      actorCredentialTypes: [AuthorizationCredential.GLOBAL_SUPPORT],
+      intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
     });
     expect(result).toBe(PlatformAuditInitiatorRole.PLATFORM_ADMIN);
   });
