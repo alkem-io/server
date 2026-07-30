@@ -1742,7 +1742,7 @@ describe('SpaceService', () => {
         mockQb as any
       );
 
-      const result = await service.getExploreSpaces();
+      const result = await service.getExploreSpaces({ credentials: [] } as any);
 
       expect(result).toEqual([]);
     });
@@ -1768,7 +1768,7 @@ describe('SpaceService', () => {
         { id: 'space-2' },
       ] as any);
 
-      const result = await service.getExploreSpaces();
+      const result = await service.getExploreSpaces({ credentials: [] } as any);
 
       expect(result).toHaveLength(2);
       // Should preserve activity-based ordering

@@ -7,6 +7,7 @@ import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseType } from '@common/enums/license.type';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credential.based.plan.type';
+import { ActivityEventType } from '@common/enums/activity.event.type';
 import { ProfileType } from '@common/enums/profile.type';
 import { RoleName } from '@common/enums/role.name';
 import { RoleSetType } from '@common/enums/role.set.type';
@@ -27,6 +28,7 @@ import { OperationNotAllowedException } from '@common/exceptions/operation.not.a
 import { getDiff, hasOnlyAllowedFields } from '@common/utils';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { groupCredentialsByEntity } from '@services/api/roles/util/group.credentials.by.entity';
 import { PaginationArgs } from '@core/pagination';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
@@ -77,7 +79,13 @@ import { SpaceFilterService } from '@services/infrastructure/space-filter/space.
 import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 import { keyBy } from 'lodash';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
+import {
+  Brackets,
+  FindManyOptions,
+  FindOneOptions,
+  In,
+  Repository,
+} from 'typeorm';
 import { IAccount } from '../account/account.interface';
 import { ISpaceAbout } from '../space.about/space.about.interface';
 import { SpaceAboutService } from '../space.about/space.about.service';
@@ -98,6 +106,11 @@ import { orderSubspaces } from './subspace.ordering';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
+// Activity event types excluded from the most-active ranking and the per-Space
+// activity score, matching the dashboard feed's EXCLUDED_ACTIVITY_TYPES.
+const EXPLORE_SPACES_EXCLUDED_ACTIVITY_TYPES = [
+  ActivityEventType.CALLOUT_WHITEBOARD_CONTENT_MODIFIED,
+];
 
 type SpaceSortingData = {
   id: string;
@@ -802,11 +815,20 @@ export class SpaceService {
   }
 
   public async getExploreSpaces(
+    actorContext: ActorContext,
     limit = EXPLORE_SPACES_LIMIT,
     daysOld = EXPLORE_SPACES_ACTIVITY_DAYS_OLD
   ): Promise<ISpace[]> {
     const daysAgo = new Date();
     daysAgo.setDate(daysAgo.getDate() - daysOld);
+
+    // Actor scoping: public Spaces are visible to everyone; private Spaces only
+    // to the actor when they hold a Space credential for it. The member set is
+    // keyed by Space ID (== credential resourceID).
+    const credentialMap = groupCredentialsByEntity(actorContext.credentials);
+    const memberSpaceIds = Array.from(
+      credentialMap.get('spaces')?.keys() ?? []
+    );
 
     // First, get the space IDs ordered by activity count using a subquery approach
     // This avoids PostgreSQL GROUP BY issues with joined columns
@@ -814,12 +836,33 @@ export class SpaceService {
       .createQueryBuilder('s')
       .select('s.id', 'id')
       .innerJoin(Activity, 'a', 's.collaborationId = a.collaborationID')
-      .where({
-        level: SpaceLevel.L0,
+      // L0 and L1 Spaces, scored by their own collaboration (no roll-up)
+      .where('s.level IN (:...levels)', {
+        levels: [SpaceLevel.L0, SpaceLevel.L1],
+      })
+      .andWhere('s.visibility = :visibility', {
         visibility: SpaceVisibility.ACTIVE,
       })
       // activities in the past "daysOld" days
       .andWhere('a.createdDate >= :daysAgo', { daysAgo })
+      // Only visible events, excluding whiteboard-content-modified — keeps the
+      // ranking count aligned with Space.activityScore and the dashboard feed.
+      .andWhere('a.visibility = true')
+      .andWhere('a.type NOT IN (:...excludeTypes)', {
+        excludeTypes: EXPLORE_SPACES_EXCLUDED_ACTIVITY_TYPES,
+      })
+      // Privacy filter: public Space OR one the actor is a member of. Privacy
+      // lives in the JSONB `settings` column, so it is filtered via a JSONB path.
+      .andWhere(
+        new Brackets(qb => {
+          qb.where(`s.settings->'privacy'->>'mode' = :publicPrivacyMode`, {
+            publicPrivacyMode: SpacePrivacyMode.PUBLIC,
+          });
+          if (memberSpaceIds.length > 0) {
+            qb.orWhere('s.id IN (:...memberSpaceIds)', { memberSpaceIds });
+          }
+        })
+      )
       .groupBy('s.id')
       .orderBy('COUNT(a.id)', 'DESC')
       .limit(limit)
