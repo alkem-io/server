@@ -1,4 +1,5 @@
 import { RoleChangeType } from '@alkemio/notifications-lib';
+import { LogContext } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import { RoleName } from '@common/enums/role.name';
@@ -14,12 +15,14 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { AccountService } from '@domain/space/account/account.service';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { PlatformService } from '@platform/platform/platform.service';
 import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.global.role.change';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AssignPlatformRoleInput } from './dto/platform.role.dto.assign';
 import { RemovePlatformRoleInput } from './dto/platform.role.dto.remove';
 
@@ -37,7 +40,8 @@ export class PlatformRoleResolverMutations {
     private roleSetService: RoleSetService,
     private userLookupService: UserLookupService,
     private roleSetAuthorizationService: RoleSetAuthorizationService,
-    private platformService: PlatformService
+    private platformService: PlatformService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   @Mutation(() => IUser, {
@@ -195,8 +199,23 @@ export class PlatformRoleResolverMutations {
       type: type,
       role: role,
     };
-    await this.notificationPlatformAdapter.platformGlobalRoleChanged(
-      notificationInput
-    );
+    // Both call sites above invoke this WITHOUT `await`, so anything this
+    // rejects with becomes an unhandled rejection — and under Node's default
+    // `--unhandled-rejections=throw` that terminates the process rather than
+    // failing the request. Observed twice in live verification: a user row
+    // with a null profile made the payload builder throw, and the server
+    // exited mid-run. Notifying is best-effort by design; it must never be
+    // able to take the process down, whatever the adapter does next.
+    try {
+      await this.notificationPlatformAdapter.platformGlobalRoleChanged(
+        notificationInput
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `Unable to dispatch platform global role change notification (user=${user.id}, role=${role}, type=${type}): ${error?.message}`,
+        error?.stack,
+        LogContext.NOTIFICATIONS
+      );
+    }
   }
 }
