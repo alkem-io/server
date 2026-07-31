@@ -810,6 +810,23 @@ describe('TaskService — concurrent consumers', () => {
     expect(after.end).toBeDefined();
   });
 
+  it('rejects an unreachable itemsCount', async () => {
+    const task = await service.create();
+
+    // -1 would satisfy `itemsDone >= itemsCount` on the very first read, so the
+    // task would report finished having processed nothing.
+    await expect(service.setItemsCount(task.id, -1)).rejects.toThrow(
+      /non-negative integer/
+    );
+    await expect(service.setItemsCount(task.id, 2.5)).rejects.toThrow(
+      /non-negative integer/
+    );
+
+    expect((await service.getOrFail(task.id)).status).toBe(
+      TaskStatus.IN_PROGRESS
+    );
+  });
+
   it('refuses to re-count a task that already has a count', async () => {
     const task = await service.create(5);
     await service.updateTaskResults(task.id, 'first item' as any);

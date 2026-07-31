@@ -570,6 +570,16 @@ export class TaskService {
    * i.e. #6310 all over again, just via a different door.
    */
   public async setItemsCount(id: string, itemsCount: number) {
+    // A fractional target is never reachable by an integer counter, and a
+    // negative one is worse than unreachable: `itemsDone >= itemsCount` holds
+    // from the very first read, so the task reports finished before a single
+    // item has been processed.
+    if (!Number.isInteger(itemsCount) || itemsCount < 0) {
+      throw new Error(
+        `itemsCount must be a non-negative integer, received: ${itemsCount}`
+      );
+    }
+
     const existing = await this.getOrFail(id);
 
     // Stamping a count is a one-shot on a fresh task. Re-stamping one that is
