@@ -556,6 +556,7 @@ describe('TaskService', () => {
 describe('TaskService — concurrent consumers', () => {
   let service: TaskService;
   let counters: Map<string, number>;
+  let sets: Map<string, Set<string>>;
   let store: Map<string, any>;
 
   /** A cacheManager whose reads are isolated copies, like real deserialization. */
@@ -589,6 +590,17 @@ describe('TaskService — concurrent consumers', () => {
         },
         get: (key: string, cb: (e: null, v: string | null) => void) =>
           cb(null, counters.has(key) ? String(counters.get(key)) : null),
+        sadd: (
+          key: string,
+          member: string,
+          cb: (e: null, v: number) => void
+        ) => {
+          const set = sets.get(key) ?? new Set<string>();
+          sets.set(key, set);
+          const isNew = !set.has(member);
+          set.add(member);
+          cb(null, isNew ? 1 : 0);
+        },
         expire: (_k: string, _s: number, cb: (e: null, v: number) => void) =>
           cb(null, 1),
         quit: vi.fn(),
@@ -598,6 +610,7 @@ describe('TaskService — concurrent consumers', () => {
 
   beforeEach(async () => {
     counters = new Map();
+    sets = new Map();
     store = new Map();
 
     const module: TestingModule = await Test.createTestingModule({
@@ -698,6 +711,44 @@ describe('TaskService — concurrent consumers', () => {
     expect((await service.getOrFail(task.id)).status).toBe(
       TaskStatus.COMPLETED
     );
+  });
+
+  it('does not let a redelivered item settle the task early', async () => {
+    const task = await service.create(3);
+
+    // RMQ at-least-once: item A is delivered twice while B and C are still
+    // queued. Counting the duplicate would push itemsDone to 3, settle the
+    // task, and cause every later genuine update to be dropped.
+    await service.updateTaskResults(task.id, 'A' as any, true, 'reset:A');
+    await service.updateTaskResults(task.id, 'A again' as any, true, 'reset:A');
+    await service.updateTaskResults(task.id, 'B' as any, true, 'reset:B');
+
+    const midRun = await service.getOrFail(task.id);
+    expect(midRun.itemsDone).toBe(2);
+    expect(midRun.status).toBe(TaskStatus.IN_PROGRESS);
+
+    // The genuinely-last item still lands, and its failure is still honoured.
+    await service.updateTaskErrors(task.id, 'C failed' as any, true, 'reset:C');
+
+    const settled = await service.getOrFail(task.id);
+    expect(settled.itemsDone).toBe(3);
+    expect(settled.status).toBe(TaskStatus.ERRORED);
+  });
+
+  it('never lets the counter regress when Redis returns mid-run', async () => {
+    const task = await service.create(2);
+
+    // Two increments land in-object only (Redis unreachable), then Redis comes
+    // back and INCR starts from 1 — below what the task already recorded.
+    // A plain assignment would undercount and strand the task IN_PROGRESS.
+    const stored = store.get(task.id);
+    store.set(task.id, { ...stored, itemsDone: 2 });
+
+    await service.updateTaskResults(task.id, 'reconnected' as any);
+
+    const after = await service.getOrFail(task.id);
+    expect(after.itemsDone).toBeGreaterThanOrEqual(2);
+    expect(after.status).toBe(TaskStatus.COMPLETED);
   });
 
   it('refuses to re-count a task that already has a count', async () => {

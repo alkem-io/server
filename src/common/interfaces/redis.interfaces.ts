@@ -14,6 +14,16 @@ export interface RedisClientLike {
    * never reaches its target — the hang of alkem-io/server#6310.
    */
   incr(key: string, callback?: (err: Error | null, res: number) => void): void;
+  /**
+   * Atomic set-add. Returns 1 when the member was new, 0 when it was already
+   * present — which is exactly the "have I already counted this item?" test
+   * needed to make at-least-once delivery idempotent.
+   */
+  sadd(
+    key: string,
+    member: string,
+    callback?: (err: Error | null, res: number) => void
+  ): void;
   /** Raw GET — returns the counter as a string, or null when unset. */
   get(
     key: string,

@@ -49,6 +49,7 @@ export class TaskService {
   // the single process those environments actually are.
   private readonly doneKey = (id: string) => `task:${id}:itemsDone`;
   private readonly errorsKey = (id: string) => `task:${id}:errorCount`;
+  private readonly seenKey = (id: string) => `task:${id}:seen`;
 
   private redisClient(): RedisClientLike | undefined {
     const store = (this.cacheManager as Partial<RedisCache>).store as
@@ -118,6 +119,48 @@ export class TaskService {
         }
         const parsed = Number(value);
         resolve(Number.isFinite(parsed) ? parsed : undefined);
+      });
+    });
+  }
+
+  /**
+   * Claim an item for this task, exactly once.
+   *
+   * RabbitMQ is at-least-once, and `handleReset` re-publishes its retry BEFORE
+   * acking the original — so a pod dying between those two lines guarantees a
+   * redelivery. Counting that twice would push `itemsDone` to `itemsCount`
+   * while real items are still queued: the task settles early, and every
+   * genuine update after it is dropped by the terminal guard, so a run that
+   * later fails an item can still report COMPLETED.
+   *
+   * `SADD` returns 1 only for a member that was not already in the set, which
+   * makes it the claim. Returns true when the caller owns this item and should
+   * account for it, false when it is a duplicate.
+   *
+   * Without Redis (or without an item identity) there is nothing to dedupe
+   * against and every call is treated as a fresh item — the previous
+   * behaviour.
+   */
+  private async claimItem(id: string, itemKey?: string): Promise<boolean> {
+    const client = this.redisClient();
+
+    if (!client || !itemKey) {
+      return true;
+    }
+
+    return new Promise<boolean>(resolve => {
+      client.sadd(this.seenKey(id), itemKey, (err, added) => {
+        if (err) {
+          this.logger.error(
+            `Failed to claim task item '${itemKey}' on task '${id}': ${err}`,
+            err?.stack,
+            LogContext.TASKS
+          );
+          // Fail open: a dedupe outage must not stall a legitimate item.
+          resolve(true);
+          return;
+        }
+        client.expire(this.seenKey(id), TTL, () => resolve(added === 1));
       });
     });
   }
@@ -202,9 +245,19 @@ export class TaskService {
       return task;
     }
 
-    const resolved: Task = { ...task, itemsDone: done };
+    // Never below what the task already recorded — increments taken while
+    // Redis was unreachable live only in the stored object, and reporting a
+    // lower number would look like the run went backwards.
+    const resolved: Task = {
+      ...task,
+      itemsDone: Math.max(done, task.itemsDone ?? 0),
+    };
 
-    if (done >= task.itemsCount && resolved.status === TaskStatus.IN_PROGRESS) {
+    if (
+      resolved.itemsDone !== undefined &&
+      resolved.itemsDone >= task.itemsCount &&
+      resolved.status === TaskStatus.IN_PROGRESS
+    ) {
       resolved.status =
         (errorCount ?? resolved.errors.length) > 0
           ? TaskStatus.ERRORED
@@ -290,7 +343,17 @@ export class TaskService {
 
     // `atomic` is undefined only when there is no Redis to be atomic against —
     // a single-process environment, where the in-object increment is exact.
-    task.itemsDone = atomic ?? task.itemsDone + 1;
+    //
+    // Math.max, not a plain assignment: if Redis was briefly unreachable some
+    // increments landed in-object only, so a reconnected INCR starts from a
+    // value BELOW what the task has already recorded. Letting the counter
+    // regress would undercount and strand the task IN_PROGRESS — the very
+    // failure this counter exists to prevent. The counter only ever moves
+    // forward.
+    task.itemsDone =
+      atomic === undefined
+        ? task.itemsDone + 1
+        : Math.max(atomic, task.itemsDone + 1);
   }
 
   /**
@@ -298,11 +361,16 @@ export class TaskService {
    * @param id
    * @param result
    * @param completeItem Increase the itemsDone counter
+   * @param itemKey Stable identity of the item being reported, used to make
+   *   accounting idempotent under at-least-once delivery. Omit for callers
+   *   with no per-item identity (their tasks are uncounted, so there is no
+   *   target to settle early against).
    */
   public async updateTaskResults(
     id: string,
     result: TaskResult,
-    completeItem = true
+    completeItem = true,
+    itemKey?: string
   ) {
     const task = await this.getOrFail(id);
 
@@ -312,6 +380,12 @@ export class TaskService {
     // duplicate flips a COMPLETED task to ERRORED and rewrites `end` — two
     // pollers reading a minute apart would disagree about the same run.
     if (task.status !== TaskStatus.IN_PROGRESS) {
+      return;
+    }
+
+    // A redelivery of an item already counted must not advance the counter, or
+    // the task settles before the outstanding items have been processed.
+    if (!(await this.claimItem(id, itemKey))) {
       return;
     }
 
@@ -338,16 +412,26 @@ export class TaskService {
     });
   }
 
+  /**
+   * @param itemKey See {@link updateTaskResults}. An item that already reported
+   *   a result must not also report an error (or vice versa) — both claim the
+   *   same identity, and the first claim wins.
+   */
   public async updateTaskErrors(
     id: string,
     error: TaskError,
-    completeItem = true
+    completeItem = true,
+    itemKey?: string
   ) {
     const task = await this.getOrFail(id);
 
     // See updateTaskResults — a redelivered failure must not re-stamp a task
     // that has already settled.
     if (task.status !== TaskStatus.IN_PROGRESS) {
+      return;
+    }
+
+    if (!(await this.claimItem(id, itemKey))) {
       return;
     }
 
