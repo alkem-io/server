@@ -5,6 +5,8 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { Test, TestingModule } from '@nestjs/testing';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { PlatformSettingsService } from '@platform/platform-settings/platform.settings.service';
+import { PlatformConfigurationAuditService } from '@src/platform-admin/platform-configuration-audit/platform.configuration.audit.service';
+import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock } from 'vitest';
@@ -13,6 +15,7 @@ import { PlatformService } from './platform.service';
 import { PlatformAuthorizationService } from './platform.service.authorization';
 
 describe('PlatformResolverMutations', () => {
+  let module: TestingModule;
   let resolver: PlatformResolverMutations;
   let authorizationService: AuthorizationService;
   let authorizationPolicyService: AuthorizationPolicyService;
@@ -37,7 +40,7 @@ describe('PlatformResolverMutations', () => {
   beforeEach(async () => {
     vi.restoreAllMocks();
 
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [PlatformResolverMutations, MockWinstonProvider],
     })
       .useMocker(defaultMockerFactory)
@@ -212,6 +215,167 @@ describe('PlatformResolverMutations', () => {
       );
 
       expect(result).toEqual([]);
+    });
+  });
+  // ===================================================================
+  // qual-server-12 (2026-07-31) — every mutation in this file writes an
+  // audit row (T058, A3/A10), and NOT ONE of the seven call sites was
+  // asserted: each `describe` above checks the gate and the return value and
+  // stops there. Deleting every `recordChangeForActor` / `recordOperation`
+  // call in this resolver would have left the suite fully green.
+  //
+  // FR-018's promise is "no administrative change without a record", so the
+  // record is part of the mutation's contract, not incidental.
+  // ===================================================================
+  describe('audit coverage (qual-server-12)', () => {
+    const arrangeSettingsMutation = () => {
+      (platformService.getPlatformOrFail as Mock).mockResolvedValue(
+        mockPlatform
+      );
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+      (platformSettingsService.updateSettings as Mock).mockResolvedValue(
+        mockPlatform.settings
+      );
+      (platformService.savePlatform as Mock).mockResolvedValue(mockPlatform);
+      const configurationAudit = module.get(
+        PlatformConfigurationAuditService
+      ) as any;
+      configurationAudit.recordChangeForActor.mockResolvedValue(undefined);
+      return configurationAudit;
+    };
+
+    it('updatePlatformSettings records a `platformSettings` change', async () => {
+      const configurationAudit = arrangeSettingsMutation();
+
+      await resolver.updatePlatformSettings(mockActorContext, {
+        integration: { someKey: 'value' },
+      } as any);
+
+      expect(configurationAudit.recordChangeForActor).toHaveBeenCalledWith(
+        mockActorContext,
+        expect.any(Array),
+        expect.any(Array),
+        expect.objectContaining({
+          setting: 'platformSettings',
+          outcome: 'success',
+        })
+      );
+    });
+
+    // The add/remove pairs deliberately record DIFFERENT payload keys —
+    // `newValue` for an addition, `previousValue` for a removal — so the
+    // trail says what changed rather than just that something did. Asserting
+    // the key, not merely the call, is what makes these tests worth having.
+    it.each([
+      [
+        'addIframeAllowedURL',
+        'iframeAllowedUrls',
+        'newValue',
+        'https://new.example',
+        false,
+      ],
+      [
+        'removeIframeAllowedURL',
+        'iframeAllowedUrls',
+        'previousValue',
+        'https://existing.com',
+        false,
+      ],
+      [
+        'addNotificationEmailToBlacklist',
+        'notificationEmailBlacklist',
+        'newValue',
+        'new@test.com',
+        true,
+      ],
+      [
+        'removeNotificationEmailFromBlacklist',
+        'notificationEmailBlacklist',
+        'previousValue',
+        'existing@test.com',
+        true,
+      ],
+    ])('%s records a `%s` change under `%s`', async (method, setting, payloadKey, value, wrapsInInput) => {
+      const configurationAudit = arrangeSettingsMutation();
+
+      // The two blacklist mutations take `@Args('input')
+      // NotificationEmailAddressInput`, the two iframe ones a bare string.
+      await (resolver as any)[method](
+        mockActorContext,
+        wrapsInInput ? { email: value } : value
+      );
+
+      expect(configurationAudit.recordChangeForActor).toHaveBeenCalledWith(
+        mockActorContext,
+        expect.any(Array),
+        expect.any(Array),
+        expect.objectContaining({
+          setting,
+          [payloadKey]: value,
+          outcome: 'success',
+        })
+      );
+    });
+
+    // A3's reset is the one surface here that audits BOTH outcomes. The
+    // failure row is the more important of the two — an authorization reset
+    // that half-applied and threw is exactly the event an operator needs to
+    // find afterwards — and it was equally unasserted.
+    it('authorizationPolicyResetOnPlatform records a success operation', async () => {
+      (
+        platformAuthorizationPolicyService.getPlatformAuthorizationPolicy as Mock
+      ).mockResolvedValue({ id: 'pp-1' });
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+      (
+        platformAuthorizationService.applyAuthorizationPolicy as Mock
+      ).mockResolvedValue([]);
+      (authorizationPolicyService.saveAll as Mock).mockResolvedValue([]);
+      (platformService.getPlatformOrFail as Mock).mockResolvedValue(
+        mockPlatform
+      );
+      const operationsAudit = module.get(PlatformOperationsAuditService) as any;
+      operationsAudit.recordOperation.mockResolvedValue(undefined);
+
+      await resolver.authorizationPolicyResetOnPlatform(mockActorContext);
+
+      expect(operationsAudit.recordOperation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorID: mockActorContext.actorID,
+          action: 'authorizationPolicyResetOnPlatform',
+          outcome: 'success',
+        })
+      );
+    });
+
+    it('authorizationPolicyResetOnPlatform records a FAILURE operation and rethrows', async () => {
+      const resetFailure = new Error('reset exploded');
+      (
+        platformAuthorizationPolicyService.getPlatformAuthorizationPolicy as Mock
+      ).mockResolvedValue({ id: 'pp-1' });
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+      (
+        platformAuthorizationService.applyAuthorizationPolicy as Mock
+      ).mockRejectedValue(resetFailure);
+      const operationsAudit = module.get(PlatformOperationsAuditService) as any;
+      operationsAudit.recordOperation.mockResolvedValue(undefined);
+
+      await expect(
+        resolver.authorizationPolicyResetOnPlatform(mockActorContext)
+      ).rejects.toBe(resetFailure);
+
+      expect(operationsAudit.recordOperation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'authorizationPolicyResetOnPlatform',
+          outcome: 'failure',
+          error: resetFailure,
+        })
+      );
     });
   });
 });

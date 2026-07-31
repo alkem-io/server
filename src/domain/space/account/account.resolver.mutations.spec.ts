@@ -1,3 +1,4 @@
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import {
   RelationshipNotFoundException,
@@ -16,6 +17,7 @@ import { InnovationPackAuthorizationService } from '@library/innovation-pack/inn
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 import { TemporaryStorageService } from '@services/infrastructure/temporary-storage/temporary.storage.service';
+import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { AccountLicensePlanService } from '../account.license.plan/account.license.plan.service';
@@ -28,6 +30,7 @@ import { AccountAuthorizationService } from './account.service.authorization';
 import { AccountLicenseService } from './account.service.license';
 
 describe('AccountResolverMutations', () => {
+  let module: TestingModule;
   let resolver: AccountResolverMutations;
   let accountService: AccountService;
   let authorizationService: AuthorizationService;
@@ -52,7 +55,7 @@ describe('AccountResolverMutations', () => {
   beforeEach(async () => {
     vi.restoreAllMocks();
 
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [AccountResolverMutations, MockWinstonProvider],
     })
       .useMocker(defaultMockerFactory)
@@ -802,6 +805,130 @@ describe('AccountResolverMutations', () => {
           } as any
         )
       ).rejects.toThrow(ValidationException);
+    });
+  });
+  // ===================================================================
+  // qual-server-12 (2026-07-31) — five `recordEventForActor` sites in this
+  // file, none asserted. The four A9 transfers write their row only when
+  // `isA9TransferPlatformAuthorized(actorContext)` holds, and EVERY transfer
+  // test above uses `{ actorID: 'actor-1' }` with no `credentials` array —
+  // so that predicate was `false` in all of them and the audit branch never
+  // executed once.
+  //
+  // A cross-account resource transfer performed with a platform credential
+  // is precisely the "who moved my space" question FR-018 exists to answer,
+  // so both directions are pinned here: recorded for a platform actor,
+  // silent for an ordinary owner acting within their own rights.
+  // ===================================================================
+  describe('A9/A12 platform-branch audit coverage (qual-server-12)', () => {
+    const platformActor = {
+      actorID: 'actor-1',
+      credentials: [
+        {
+          type: AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+          resourceID: '',
+        },
+      ],
+    } as any;
+    const ownerActor = { actorID: 'actor-1', credentials: [] } as any;
+
+    const resourceAudit = () => module.get(PlatformResourceAuditService) as any;
+
+    const arrangeTransfer = () => {
+      const targetAccount = {
+        id: 'target-1',
+        authorization: { id: 'auth-2' },
+      } as any;
+      const withAccount = (id: string) =>
+        ({ id, account: { authorization: { id: 'auth-1' } } }) as any;
+
+      vi.mocked(accountService.getAccountOrFail).mockResolvedValue(
+        targetAccount
+      );
+      vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(
+        undefined as any
+      );
+      vi.mocked(authorizationPolicyService.saveAll).mockResolvedValue(
+        undefined as any
+      );
+      vi.mocked(
+        accountAuthorizationService.getClonedAccountAuthExtendedForChildEntities
+      ).mockResolvedValue({ id: 'cloned' } as any);
+
+      vi.mocked(innovationHubService.getInnovationHubOrFail).mockResolvedValue(
+        withAccount('hub-1')
+      );
+      vi.mocked(innovationHubService.save).mockResolvedValue(
+        withAccount('hub-1')
+      );
+      vi.mocked(
+        innovationHubAuthorizationService.applyAuthorizationPolicy
+      ).mockResolvedValue([]);
+      return targetAccount;
+    };
+
+    it('transferInnovationHubToAccount records a `moved` event for a PLATFORM actor', async () => {
+      arrangeTransfer();
+
+      await resolver.transferInnovationHubToAccount(platformActor, {
+        innovationHubID: 'hub-1',
+        targetAccountID: 'target-1',
+      } as any);
+
+      expect(resourceAudit().recordEventForActor).toHaveBeenCalledWith(
+        platformActor,
+        expect.arrayContaining([
+          AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+        ]),
+        expect.any(Array),
+        expect.objectContaining({
+          resourceKind: 'innovation-hub',
+          resourceId: 'hub-1',
+          toAccountId: 'target-1',
+          outcome: 'moved',
+        })
+      );
+    });
+
+    it('transferInnovationHubToAccount records NOTHING for an ordinary owner', async () => {
+      arrangeTransfer();
+
+      await resolver.transferInnovationHubToAccount(ownerActor, {
+        innovationHubID: 'hub-1',
+        targetAccountID: 'target-1',
+      } as any);
+
+      expect(resourceAudit().recordEventForActor).not.toHaveBeenCalled();
+    });
+
+    it('updateBaselineLicensePlanOnAccount records a `license_assigned` event (A12, single-path)', async () => {
+      const account = {
+        id: 'account-1',
+        authorization: { id: 'auth-1' },
+        baselineLicensePlan: {},
+      } as any;
+      vi.mocked(accountService.getAccountOrFail).mockResolvedValue(account);
+      vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(
+        undefined as any
+      );
+      vi.mocked(accountService.save).mockResolvedValue(account);
+      vi.mocked(accountLicenseService.applyLicensePolicy).mockResolvedValue([]);
+      vi.mocked(licenseService.saveAll).mockResolvedValue(undefined as any);
+
+      await resolver.updateBaselineLicensePlanOnAccount(platformActor, {
+        accountID: 'account-1',
+      } as any);
+
+      expect(resourceAudit().recordEventForActor).toHaveBeenCalledWith(
+        platformActor,
+        expect.any(Array),
+        expect.any(Array),
+        expect.objectContaining({
+          resourceKind: 'account-baseline-license-plan',
+          resourceId: 'account-1',
+          outcome: 'license_assigned',
+        })
+      );
     });
   });
 });

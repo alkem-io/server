@@ -11,6 +11,7 @@ import { getEntityManagerToken } from '@nestjs/typeorm';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 import { AuthResetService } from '@services/auth-reset/publisher/auth-reset.service';
+import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
@@ -19,6 +20,7 @@ import { AdminAuthorizationResolverMutations } from './admin.authorization.resol
 import { AdminAuthorizationService } from './admin.authorization.service';
 
 describe('AdminAuthorizationResolverMutations', () => {
+  let module: TestingModule;
   let resolver: AdminAuthorizationResolverMutations;
   let authorizationService: Record<string, Mock>;
   let adminAuthorizationService: Record<string, Mock>;
@@ -38,7 +40,7 @@ describe('AdminAuthorizationResolverMutations', () => {
       find: vi.fn(),
     };
 
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [
         AdminAuthorizationResolverMutations,
         MockWinstonProvider,
@@ -375,6 +377,109 @@ describe('AdminAuthorizationResolverMutations', () => {
       );
 
       expect(result).toEqual(user);
+    });
+  });
+  // ===================================================================
+  // qual-server-12 (2026-07-31) — A3/A11's four operations here each audit
+  // BOTH outcomes (eight call sites), none asserted. These are the most
+  // consequential operations on the platform: `authorizationPolicyResetAll`
+  // republishes every policy, `authorizationPlatformRolesAccessReset`
+  // recomputes visibility on every L0 space. If one of those half-runs and
+  // throws, the failure row is the only durable evidence it was ever
+  // attempted — and nothing was checking the row is written.
+  // ===================================================================
+  describe('audit coverage (qual-server-12)', () => {
+    const operationsAudit = () =>
+      module.get(PlatformOperationsAuditService) as any;
+    const platformPolicy = { id: 'platform-auth' };
+
+    beforeEach(() => {
+      platformAuthorizationPolicyService.getPlatformAuthorizationPolicy.mockResolvedValue(
+        platformPolicy
+      );
+    });
+
+    it.each([
+      [
+        'authorizationPolicyResetAll',
+        () => authResetService.publishResetAll,
+        (r: any) => r.authorizationPolicyResetAll(actorContext),
+        'reset-published',
+      ],
+      [
+        'authorizationPlatformRolesAccessReset',
+        () => entityManager.find,
+        (r: any) => r.authorizationPlatformRolesAccessReset(actorContext),
+        [],
+      ],
+      [
+        'authorizationPolicyResetToGlobalAdminsAccess',
+        () => adminAuthorizationService.resetAuthorizationPolicy,
+        (r: any) =>
+          r.authorizationPolicyResetToGlobalAdminsAccess(
+            actorContext,
+            'auth-id-1'
+          ),
+        { id: 'reset-auth' },
+      ],
+      [
+        'refreshAllBodiesOfKnowledge',
+        () => virtualContributorService.refreshAllBodiesOfKnowledge,
+        (r: any) => r.refreshAllBodiesOfKnowledge(actorContext),
+        [],
+      ],
+    ])('%s records a success operation', async (action, dep, invoke, ok) => {
+      dep().mockResolvedValue(ok);
+
+      await invoke(resolver);
+
+      expect(operationsAudit().recordOperation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorID: actorContext.actorID,
+          action,
+          outcome: 'success',
+        })
+      );
+    });
+
+    it.each([
+      [
+        'authorizationPolicyResetAll',
+        () => authResetService.publishResetAll,
+        (r: any) => r.authorizationPolicyResetAll(actorContext),
+      ],
+      [
+        'authorizationPlatformRolesAccessReset',
+        () => entityManager.find,
+        (r: any) => r.authorizationPlatformRolesAccessReset(actorContext),
+      ],
+      [
+        'authorizationPolicyResetToGlobalAdminsAccess',
+        () => adminAuthorizationService.resetAuthorizationPolicy,
+        (r: any) =>
+          r.authorizationPolicyResetToGlobalAdminsAccess(
+            actorContext,
+            'auth-id-1'
+          ),
+      ],
+      [
+        'refreshAllBodiesOfKnowledge',
+        () => virtualContributorService.refreshAllBodiesOfKnowledge,
+        (r: any) => r.refreshAllBodiesOfKnowledge(actorContext),
+      ],
+    ])('%s records a FAILURE operation and rethrows', async (action, dep, invoke) => {
+      const failure = new Error(`${action} exploded`);
+      dep().mockRejectedValue(failure);
+
+      await expect(invoke(resolver)).rejects.toBe(failure);
+
+      expect(operationsAudit().recordOperation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action,
+          outcome: 'failure',
+          error: failure,
+        })
+      );
     });
   });
 });

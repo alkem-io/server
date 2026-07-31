@@ -263,6 +263,23 @@ export class PlatformRoleResolverMutations {
     const isRuleEngineGoverned = RULE_ENGINE_GOVERNED_ROLES.has(roleData.role);
 
     if (isRuleEngineGoverned) {
+      // 027-platform-role-redesign (sec-server-20 fix, 2026-07-31): resolve
+      // the target as a USER before anything else, exactly as the grant
+      // surface already does (`assignPlatformRoleToUser` calls
+      // `getUserByIdOrFail` ahead of `evaluateGrantOrFail`). This surface
+      // asserted `targetActorType: 'user'` to the rule engine without ever
+      // checking it, and the first thing that actually verified the claim
+      // was the `getUserByIdOrFail` at the END of the method — by which
+      // point `removeActorFromRole` had already revoked the credential and
+      // `recordRevokeSuccess` had filed the row under `subjectUserId`.
+      //
+      // An organization id therefore produced: a real credential revocation,
+      // an audit row attributed to the wrong subject KIND, and an
+      // EntityNotFound thrown back to the caller — i.e. the caller is told
+      // the operation did not happen while the state change stands, and the
+      // trail disagrees with both. Verifying up front makes the mutation
+      // atomic again and costs one lookup the method already performs.
+      await this.userLookupService.getUserByIdOrFail(roleData.actorID);
       await this.evaluateRevokeOrFail(
         actorContext,
         roleSet,
@@ -380,12 +397,16 @@ export class PlatformRoleResolverMutations {
     @CurrentActor() actorContext: ActorContext,
     @Args('roleData') roleData: AssignPlatformRoleInput
   ): Promise<IOrganization> {
+    // corr-server-19 fix (2026-07-31): `getRoleSetOrFail()` is hoisted ABOVE
+    // the surface guard so the guard has a policy to probe against — see the
+    // note on `assertOrganizationSurfaceOrFail`.
+    const roleSet = await this.platformService.getRoleSetOrFail();
     await this.assertOrganizationSurfaceOrFail(
       actorContext,
+      roleSet,
       roleData.role,
       roleData.actorID
     );
-    const roleSet = await this.platformService.getRoleSetOrFail();
 
     await this.evaluateGrantOrFail(
       actorContext,
@@ -434,12 +455,14 @@ export class PlatformRoleResolverMutations {
     @CurrentActor() actorContext: ActorContext,
     @Args('roleData') roleData: RemovePlatformRoleInput
   ): Promise<IOrganization> {
+    // corr-server-19 fix (2026-07-31): see the grant surface above.
+    const roleSet = await this.platformService.getRoleSetOrFail();
     await this.assertOrganizationSurfaceOrFail(
       actorContext,
+      roleSet,
       roleData.role,
       roleData.actorID
     );
-    const roleSet = await this.platformService.getRoleSetOrFail();
 
     await this.evaluateRevokeOrFail(
       actorContext,
@@ -512,9 +535,45 @@ export class PlatformRoleResolverMutations {
    * was the one leaving no trace. */
   private async assertOrganizationSurfaceOrFail(
     actorContext: ActorContext,
+    roleSet: Awaited<ReturnType<PlatformService['getRoleSetOrFail']>>,
     role: RoleName,
     targetActorId: string
   ): Promise<void> {
+    // corr-server-19 fix (2026-07-31): the SAME narrowed, no-DB-write probe
+    // `evaluateGrantOrFail`/`evaluateRevokeOrFail` carry (sec-server-11,
+    // narrowed by corr-server-17/spec-server-18) — but this guard runs
+    // BEFORE either of them, and it WRITES an audit row before throwing.
+    //
+    // Without the probe, any authenticated user could call
+    // `assignPlatformRoleToOrganization` with a `Platform …` role and an
+    // `actorID` of their choosing: the role is not in FEATURE_FAMILY_ROLES,
+    // this guard fires, and one `platform_audit_entry` INSERT lands with an
+    // attacker-chosen subject id — before ANYTHING checked whether the
+    // caller may assign roles at all. Looped, that writes rows as fast as
+    // requests arrive, with content the attacker picks. It re-opened on the
+    // organization surface exactly what sec-server-11 closed on the user
+    // surface; this surface never got the probe because its guard sat
+    // UPSTREAM of `getRoleSetOrFail()` and so had no policy to probe
+    // against. The two call sites now resolve the role set first.
+    //
+    // The narrowing is the point: this fires ONLY for an actor holding
+    // NEITHER assigner privilege — a genuine unprivileged probe. A
+    // PRIVILEGED actor reaching outside its family (e.g. a Platform Users
+    // Admin naming a `platform-*` role) is not a probe and MUST fall
+    // through to be audited; that attempt is what the trail exists for.
+    if (
+      !this.assignmentRulesService.hasAnyAssignerCapability(
+        actorContext,
+        roleSet.authorization
+      )
+    ) {
+      throw new ForbiddenException(
+        `Forbidden: ${this.assignmentRulesService.assignerPrivilegeFor(role)} required to assign role ${role}`,
+        LogContext.PLATFORM,
+        { ruleId: 'assigner-capability' }
+      );
+    }
+
     if (!FEATURE_FAMILY_ROLES.has(role)) {
       const message = `Rejected: role ${role} may not be assigned or removed through the organization surface`;
       await this.recordOrganizationSurfaceRejection(

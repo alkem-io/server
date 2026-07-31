@@ -62,6 +62,18 @@ export const GLOBAL_POLICY_REGISTRATION_PLATFORM_USERS_ADMIN_DELETE_USER =
 // {GA, GS, GLM} plus the new owning role, GLOBAL_PLATFORM_MANAGER dropped.
 export const GLOBAL_POLICY_ADMIN_USER_EMAIL_CHANGE =
   'globalPolicy-adminUserEmailChange';
+// 027-platform-role-redesign (sec-server-23 fix): the SAME union-widening
+// defect as sec-server-4/-7, one family further along. A10's surfaces were
+// consolidated onto ONE `PLATFORM_SETTINGS_ADMIN` privilege, but they did
+// not all share a pre-feature gate: most were already on
+// PLATFORM_SETTINGS_ADMIN (pre-feature reachers {GA, GPM}), while
+// `setPlatformWellKnownVirtualContributor` was on the PLATFORM_ADMIN
+// catch-all (pre-feature reachers {GA, GS, GLM}). Consolidation therefore
+// hands each surface the UNION — and GLOBAL_PLATFORM_MANAGER gains a
+// mutation it never held. Pinned to THIS surface's own pre-feature reacher
+// set plus the new owning role; GLOBAL_PLATFORM_MANAGER dropped.
+export const GLOBAL_POLICY_PLATFORM_WELL_KNOWN_VC_SET =
+  'globalPolicy-platformWellKnownVirtualContributorSet';
 // 027-platform-role-redesign (corr-server-7/corr-server-10 fix): A13's five
 // license-plan/license-policy definition mutations checked bare
 // CREATE/UPDATE/DELETE against `licensingFramework.authorization`, which

@@ -328,6 +328,33 @@ describe('PlatformRoleResolverMutations', () => {
         })
       );
     });
+
+    // sec-server-20 (2026-07-31): this surface asserted
+    // `targetActorType: 'user'` to the rule engine without ever checking it.
+    // The first thing that verified the claim was the `getUserByIdOrFail`
+    // at the END of the method — by which point `removeActorFromRole` had
+    // already revoked the credential and `recordRevokeSuccess` had filed
+    // the row under `subjectUserId`. An organization id therefore produced
+    // a real state change, a mis-attributed audit row, AND an error telling
+    // the caller nothing happened. The lookup now runs first.
+    it('does NOT revoke or audit when the target actor is not a user (sec-server-20)', async () => {
+      (userLookupService.getUserByIdOrFail as Mock).mockRejectedValue(
+        new Error('User not found')
+      );
+
+      await expect(
+        resolver.removePlatformRoleFromUser(mockActorContext, {
+          actorID: 'organization-1',
+          role: RoleName.PLATFORM_SUPPORT,
+        } as any)
+      ).rejects.toBeDefined();
+
+      expect(roleSetService.removeActorFromRole).not.toHaveBeenCalled();
+      expect(
+        (module.get(PlatformRoleAssignmentAuditService) as any)
+          .recordRevokeSuccess
+      ).not.toHaveBeenCalled();
+    });
   });
 
   // 027-platform-role-redesign (T010/fix — live-verification F-1): the
@@ -619,6 +646,81 @@ describe('PlatformRoleResolverMutations', () => {
       roleAssignmentAuditService = module.get(
         PlatformRoleAssignmentAuditService
       );
+      // corr-server-19: the guard now opens with the sec-server-11 probe, so
+      // every test BELOW — each about a PRIVILEGED actor being rejected for
+      // a holder-kind reason — must first get past it. Without this they
+      // would be rejected one step earlier, for a different reason, and
+      // would silently stop testing what they were written to test.
+      (
+        module.get(PlatformRoleAssignmentRulesService)
+          .hasAnyAssignerCapability as Mock
+      ).mockReturnValue(true);
+    });
+
+    // corr-server-19 (2026-07-31). This guard WRITES an audit row before
+    // throwing, and it ran ahead of every assigner-capability check — so an
+    // unprivileged caller could drive one attacker-chosen
+    // `platform_audit_entry` INSERT per request. The probe must reject
+    // BEFORE the writer is reached, which is what these two assert.
+    describe('unprivileged probe rejection (corr-server-19)', () => {
+      beforeEach(() => {
+        (
+          module.get(PlatformRoleAssignmentRulesService)
+            .hasAnyAssignerCapability as Mock
+        ).mockReturnValue(false);
+        // Auto-mocked, so it returns an object that breaks the message's
+        // template interpolation — give it the real privilege name.
+        (
+          module.get(PlatformRoleAssignmentRulesService)
+            .assignerPrivilegeFor as Mock
+        ).mockReturnValue('grant-global-admins');
+      });
+
+      it('assign: rejects an actor with NO assigner capability, writing NO audit row', async () => {
+        await expect(
+          resolver.assignPlatformRoleToOrganization(mockActorContext, {
+            actorID: 'org-target',
+            role: RoleName.PLATFORM_ROLES_ADMIN,
+          } as any)
+        ).rejects.toThrow(/required to assign role/);
+
+        expect(
+          roleAssignmentAuditService.recordGrantRejected
+        ).not.toHaveBeenCalled();
+      });
+
+      it('revoke: same probe on the removal surface, writing NO audit row', async () => {
+        await expect(
+          resolver.removePlatformRoleFromOrganization(mockActorContext, {
+            actorID: 'org-target',
+            role: RoleName.PLATFORM_ROLES_ADMIN,
+          } as any)
+        ).rejects.toThrow(/required to assign role/);
+
+        expect(
+          roleAssignmentAuditService.recordGrantRejected
+        ).not.toHaveBeenCalled();
+      });
+
+      it('a PRIVILEGED cross-family attempt is NOT treated as a probe — it still audits', async () => {
+        (
+          module.get(PlatformRoleAssignmentRulesService)
+            .hasAnyAssignerCapability as Mock
+        ).mockReturnValue(true);
+
+        await expect(
+          resolver.assignPlatformRoleToOrganization(mockActorContext, {
+            actorID: 'org-target',
+            role: RoleName.PLATFORM_ROLES_ADMIN,
+          } as any)
+        ).rejects.toThrow(
+          'may not be assigned or removed through the organization surface'
+        );
+
+        expect(
+          roleAssignmentAuditService.recordGrantRejected
+        ).toHaveBeenCalled();
+      });
     });
 
     it('rejects assignPlatformRoleToOrganization(global-admin) with the contract message, and never touches assignActorToRole or any audit writer', async () => {
@@ -685,6 +787,166 @@ describe('PlatformRoleResolverMutations', () => {
           ),
         })
       );
+    });
+  });
+  // ===================================================================
+  // qual-server-11 (2026-07-31) — FR-027's fail-closed compensation.
+  //
+  // `recordGrantSuccess` / `recordRevokeSuccess` run AFTER the state change
+  // has landed. If the success-audit write throws, the caller is told the
+  // operation was NOT applied — so the resolver must undo it, or the caller's
+  // belief and the platform's state disagree with each other AND with the
+  // (absent) trail. corr-server-14 then added the inverse hazard: when the
+  // operation was an idempotent NO-OP, compensating would mutate state the
+  // mutation never touched (revoking a pre-existing grant / granting a role
+  // nobody asked for).
+  //
+  // Both branches had ZERO coverage, in this file or anywhere else: nothing
+  // would have noticed either the compensation OR the no-op guard being
+  // deleted outright. These eight tests pin the full truth table.
+  // ===================================================================
+  describe('success-audit compensation (qual-server-11, FR-027/corr-server-14)', () => {
+    const RULE_ENGINE_ROLE = RoleName.PLATFORM_SUPPORT;
+    const auditFailure = new Error('audit write failed');
+
+    // The rule engine is auto-mocked in this suite, so its two entry points
+    // must be steered explicitly: `hasAnyAssignerCapability` false would trip
+    // the sec-server-11 probe before the compensation path is ever reached.
+    // The actor needs real credentials because `resolveA1A2InitiatorRole`
+    // maps over them to attribute the audit row.
+    const compensationActorContext = {
+      actorID: 'actor-1',
+      credentials: [
+        { type: AuthorizationCredential.PLATFORM_ROLES_ADMIN, resourceID: '' },
+      ],
+    } as unknown as ActorContext;
+
+    const arrange = (opts: { heldBefore: boolean; auditThrows: boolean }) => {
+      const audit = module.get(PlatformRoleAssignmentAuditService) as any;
+      const rules = module.get(PlatformRoleAssignmentRulesService) as any;
+      rules.hasAnyAssignerCapability.mockReturnValue(true);
+      rules.evaluateOrFail.mockReturnValue(undefined);
+      (platformService.getRoleSetOrFail as Mock).mockResolvedValue(mockRoleSet);
+      (userLookupService.getUserByIdOrFail as Mock).mockResolvedValue(mockUser);
+      (roleSetService.assignActorToRole as Mock).mockResolvedValue(undefined);
+      (roleSetService.removeActorFromRole as Mock).mockResolvedValue(undefined);
+      (roleSetService.isInRole as Mock).mockResolvedValue(opts.heldBefore);
+      (
+        notificationPlatformAdapter.platformGlobalRoleChanged as Mock
+      ).mockResolvedValue(undefined);
+      audit.recordGrantOrRevoke.mockImplementation(() =>
+        opts.auditThrows ? Promise.reject(auditFailure) : Promise.resolve()
+      );
+      return audit;
+    };
+
+    const roleData = { actorID: 'user-target', role: RULE_ENGINE_ROLE } as any;
+
+    describe('grant side', () => {
+      it('COMPENSATES a real grant by revoking it, and still rethrows', async () => {
+        arrange({ heldBefore: false, auditThrows: true });
+
+        await expect(
+          resolver.assignPlatformRoleToUser(compensationActorContext, roleData)
+        ).rejects.toBe(auditFailure);
+
+        expect(roleSetService.removeActorFromRole).toHaveBeenCalledWith(
+          mockRoleSet,
+          RULE_ENGINE_ROLE,
+          'user-target'
+        );
+      });
+
+      it('does NOT compensate a NO-OP grant — that would revoke a pre-existing role (corr-server-14)', async () => {
+        arrange({ heldBefore: true, auditThrows: true });
+
+        await expect(
+          resolver.assignPlatformRoleToUser(compensationActorContext, roleData)
+        ).rejects.toBe(auditFailure);
+
+        expect(roleSetService.removeActorFromRole).not.toHaveBeenCalled();
+      });
+
+      it('rethrows the ORIGINAL audit error even when compensation itself fails', async () => {
+        arrange({ heldBefore: false, auditThrows: true });
+        (roleSetService.removeActorFromRole as Mock).mockRejectedValue(
+          new Error('compensation exploded')
+        );
+
+        await expect(
+          resolver.assignPlatformRoleToUser(compensationActorContext, roleData)
+        ).rejects.toBe(auditFailure);
+      });
+
+      it('compensates nothing when the audit write succeeds', async () => {
+        arrange({ heldBefore: false, auditThrows: false });
+
+        await resolver.assignPlatformRoleToUser(
+          compensationActorContext,
+          roleData
+        );
+
+        expect(roleSetService.removeActorFromRole).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('revoke side', () => {
+      it('COMPENSATES a real revoke by re-granting it, and still rethrows', async () => {
+        arrange({ heldBefore: true, auditThrows: true });
+
+        await expect(
+          resolver.removePlatformRoleFromUser(
+            compensationActorContext,
+            roleData
+          )
+        ).rejects.toBe(auditFailure);
+
+        expect(roleSetService.assignActorToRole).toHaveBeenCalledWith(
+          mockRoleSet,
+          RULE_ENGINE_ROLE,
+          'user-target',
+          compensationActorContext,
+          true
+        );
+      });
+
+      it('does NOT compensate a NO-OP revoke — that would grant a role nobody asked for (corr-server-14)', async () => {
+        arrange({ heldBefore: false, auditThrows: true });
+
+        await expect(
+          resolver.removePlatformRoleFromUser(
+            compensationActorContext,
+            roleData
+          )
+        ).rejects.toBe(auditFailure);
+
+        expect(roleSetService.assignActorToRole).not.toHaveBeenCalled();
+      });
+
+      it('rethrows the ORIGINAL audit error even when compensation itself fails', async () => {
+        arrange({ heldBefore: true, auditThrows: true });
+        (roleSetService.assignActorToRole as Mock).mockRejectedValue(
+          new Error('compensation exploded')
+        );
+
+        await expect(
+          resolver.removePlatformRoleFromUser(
+            compensationActorContext,
+            roleData
+          )
+        ).rejects.toBe(auditFailure);
+      });
+
+      it('compensates nothing when the audit write succeeds', async () => {
+        arrange({ heldBefore: true, auditThrows: false });
+
+        await resolver.removePlatformRoleFromUser(
+          compensationActorContext,
+          roleData
+        );
+
+        expect(roleSetService.assignActorToRole).not.toHaveBeenCalled();
+      });
     });
   });
 });

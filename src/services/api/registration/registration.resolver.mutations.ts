@@ -214,9 +214,31 @@ export class RegistrationResolverMutations {
       await this.registrationService.deleteUserWithPendingMemberships(
         deleteData
       );
-    // T063/FR-018a: audit ONLY on the PLATFORM branch — a self-service
-    // deletion is not an administrative action.
-    if (canDeleteAsPlatformUsersAdmin) {
+    // T063/FR-018a: a self-service deletion is not an administrative action
+    // and is not audited. Every OTHER deletion is.
+    //
+    // spec-server-27 fix (2026-07-31): this used to read
+    // `if (canDeleteAsPlatformUsersAdmin)`, which silently excluded the
+    // legacy `global-admin` branch — **the normal path for the whole of
+    // Slice A**, since no human holds `platform-users-admin` until they are
+    // granted it by hand (FR-012 does not migrate assignments). The result
+    // was that the single most destructive administrative action on the
+    // platform was recorded nowhere for the entire additive window, directly
+    // contradicting FR-018.
+    //
+    // The writer was always able to attribute this: `A5_LEGACY_REACHERS`
+    // exists for exactly this case and `resolveInitiatorRole` maps it to
+    // `PlatformAuditInitiatorRole.PLATFORM_ADMIN` (the FR-025 legacy
+    // carve-out). Only the resolver's condition was wrong.
+    //
+    // The condition names both branches rather than negating `isSelfDelete`
+    // alone: `resolveInitiatorRole` THROWS when the actor holds neither an
+    // owning role nor a legacy credential, so the writer must never be
+    // invoked on a call no admin branch authorized.
+    const isAdministrativeDeletion =
+      !isSelfDelete &&
+      (canDeleteAsPlatformUsersAdmin || canDeleteAsLegacyAdmin);
+    if (isAdministrativeDeletion) {
       await this.platformUserRecordAuditService.recordActionForActor(
         actorContext,
         A5_INTENDED_OWNERS,

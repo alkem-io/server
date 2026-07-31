@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
+import { PlatformUserRecordAuditService } from '@src/platform-admin/platform-user-record-audit/platform.user.record.audit.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
@@ -38,6 +39,7 @@ describe('RegistrationResolverMutations', () => {
   let accountAuthorizationService: { applyAuthorizationPolicy: Mock };
   let authorizationPolicyService: { saveAll: Mock };
   let notificationPlatformAdapter: { platformUserRemoved: Mock };
+  let platformUserRecordAuditService: { recordActionForActor: Mock };
 
   const actorContext = { actorID: 'actor-1', credentials: [] } as any;
 
@@ -67,6 +69,9 @@ describe('RegistrationResolverMutations', () => {
     authorizationPolicyService = module.get(AuthorizationPolicyService) as any;
     notificationPlatformAdapter = module.get(
       NotificationPlatformAdapter
+    ) as any;
+    platformUserRecordAuditService = module.get(
+      PlatformUserRecordAuditService
     ) as any;
   });
 
@@ -214,6 +219,90 @@ describe('RegistrationResolverMutations', () => {
 
       expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
       expect(result).toBe(user);
+    });
+
+    // ---- spec-server-27 (2026-07-31) ----------------------------------
+    // FR-018a's write boundary used to be expressed as
+    // `if (canDeleteAsPlatformUsersAdmin)`, which silently dropped the
+    // legacy `global-admin` branch — the NORMAL path for the whole of Slice
+    // A, since FR-012 migrates no assignments and no human holds
+    // `platform-users-admin` until granted it by hand. The platform's most
+    // destructive administrative action was therefore audited nowhere for
+    // the entire additive window.
+    //
+    // It survived five review rounds because NOTHING in this file asserted
+    // on the audit writer at all (qual-server-12). These three tests pin
+    // the actual rule: audited iff administrative, i.e. not self-service.
+    const deleteUserAuditSetup = (targetId: string) => {
+      const user = {
+        id: targetId,
+        authorization: { id: 'auth-1' },
+        profile: { displayName: 'Target' },
+      };
+      userService.getUserByIdOrFail.mockResolvedValue(user);
+      registrationService.deleteUserWithPendingMemberships.mockResolvedValue(
+        user
+      );
+      notificationPlatformAdapter.platformUserRemoved.mockResolvedValue(
+        undefined
+      );
+      platformUserRecordAuditService.recordActionForActor.mockResolvedValue(
+        undefined
+      );
+      return user;
+    };
+
+    /** Which of the two dual-path branches authorized the call. The resolver
+     * asks `isAccessGranted` once per branch, distinguished by privilege. */
+    const grantOnly = (privilege: AuthorizationPrivilege) =>
+      authorizationService.isAccessGranted.mockImplementation(
+        (
+          _actor: unknown,
+          _policy: unknown,
+          requested: AuthorizationPrivilege
+        ) => requested === privilege
+      );
+
+    it('audits a deletion performed on the LEGACY global-admin branch (spec-server-27) — the normal Slice A path', async () => {
+      const user = deleteUserAuditSetup('user-1');
+      grantOnly(AuthorizationPrivilege.DELETE);
+
+      await resolver.deleteUser(actorContext, { ID: 'user-1' });
+
+      expect(
+        platformUserRecordAuditService.recordActionForActor
+      ).toHaveBeenCalledWith(
+        actorContext,
+        expect.any(Array),
+        expect.any(Array),
+        expect.objectContaining({
+          action: 'deleteUser',
+          targetUserId: user.id,
+          outcome: 'identity_deleted',
+        })
+      );
+    });
+
+    it('audits a deletion performed on the PLATFORM_USERS_ADMIN branch', async () => {
+      deleteUserAuditSetup('user-1');
+      grantOnly(AuthorizationPrivilege.PLATFORM_USERS_ADMIN);
+
+      await resolver.deleteUser(actorContext, { ID: 'user-1' });
+
+      expect(
+        platformUserRecordAuditService.recordActionForActor
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('does NOT audit a self-service deletion — FR-018a: that is not an administrative action', async () => {
+      deleteUserAuditSetup('actor-1');
+      authorizationService.isAccessGranted.mockReturnValue(false);
+
+      await resolver.deleteUser(actorContext, { ID: 'actor-1' });
+
+      expect(
+        platformUserRecordAuditService.recordActionForActor
+      ).not.toHaveBeenCalled();
     });
   });
 

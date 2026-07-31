@@ -1,5 +1,6 @@
 import { SUBSCRIPTION_CALLOUT_POST_CREATED } from '@common/constants';
 import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { CalloutAllowedActors } from '@common/enums/callout.allowed.contributors';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
@@ -13,6 +14,7 @@ import { streamToBuffer } from '@common/utils/file.util';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -28,6 +30,7 @@ vi.mock('@common/utils/file.util', () => ({
 }));
 
 describe('CalloutResolverMutations', () => {
+  let module: TestingModule;
   let resolver: CalloutResolverMutations;
   let calloutService: CalloutService;
   let authorizationService: AuthorizationService;
@@ -44,7 +47,7 @@ describe('CalloutResolverMutations', () => {
     // the resolved buffer so importCollaboraDocument never touches a real stream.
     vi.mocked(streamToBuffer).mockResolvedValue(Buffer.from('test'));
 
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [
         CalloutResolverMutations,
         MockCacheManager,
@@ -754,6 +757,80 @@ describe('CalloutResolverMutations', () => {
         expect.any(String)
       );
       expect(result).toHaveLength(1);
+    });
+  });
+  // ===================================================================
+  // qual-server-12 + qual-server-13 (2026-07-31) — two `recordEventForActor`
+  // sites here, neither asserted. `deleteCallout` is an A8 DUAL-PATH surface
+  // whose existing suite stubs `isAccessGranted` to `false`, so the PLATFORM
+  // branch (and its FR-018a audit write) never executed;
+  // `updateCalloutPublishInfo` is SINGLE-path, so it must always record.
+  // ===================================================================
+  describe('A8 audit coverage (qual-server-12/13)', () => {
+    const actorContext = { actorID: 'actor-1' } as any;
+    const callout = { id: 'callout-1', authorization: { id: 'auth-1' } } as any;
+
+    const grantOnly = (privilege: AuthorizationPrivilege) =>
+      (authorizationService as any).isAccessGranted.mockImplementation(
+        (_a: any, _p: any, requested: any) => requested === privilege
+      );
+
+    const resourceAudit = () => module.get(PlatformResourceAuditService) as any;
+
+    beforeEach(() => {
+      (calloutService as any).getCalloutOrFail.mockResolvedValue(callout);
+      (calloutService as any).deleteCallout.mockResolvedValue(callout);
+      (calloutService as any).updateCalloutPublishInfo.mockResolvedValue(
+        callout
+      );
+      (authorizationService as any).grantAccessOrFail.mockReturnValue(
+        undefined
+      );
+    });
+
+    it('deleteCallout records a `deleted` event on the PLATFORM branch', async () => {
+      grantOnly(AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS);
+
+      await resolver.deleteCallout(actorContext, { ID: 'callout-1' } as any);
+
+      expect(resourceAudit().recordEventForActor).toHaveBeenCalledWith(
+        actorContext,
+        expect.arrayContaining([
+          AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+        ]),
+        expect.any(Array),
+        expect.objectContaining({
+          resourceKind: 'callout',
+          resourceId: 'callout-1',
+          outcome: 'deleted',
+        })
+      );
+    });
+
+    it('deleteCallout records NOTHING on the OWNER branch', async () => {
+      grantOnly(AuthorizationPrivilege.DELETE);
+
+      await resolver.deleteCallout(actorContext, { ID: 'callout-1' } as any);
+
+      expect(resourceAudit().recordEventForActor).not.toHaveBeenCalled();
+    });
+
+    it('updateCalloutPublishInfo always records — it is single-path', async () => {
+      await resolver.updateCalloutPublishInfo(actorContext, {
+        calloutID: 'callout-1',
+        publisherID: 'user-1',
+      } as any);
+
+      expect(resourceAudit().recordEventForActor).toHaveBeenCalledWith(
+        actorContext,
+        expect.any(Array),
+        expect.any(Array),
+        expect.objectContaining({
+          resourceKind: 'callout-publisher',
+          resourceId: 'callout-1',
+          outcome: 'visibility_changed',
+        })
+      );
     });
   });
 });
