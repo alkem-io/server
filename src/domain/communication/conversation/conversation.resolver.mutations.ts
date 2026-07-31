@@ -178,8 +178,10 @@ export class ConversationResolverMutations {
 
   @Mutation(() => Boolean, {
     description:
-      'Remove a member from a group conversation. Returns true when the RPC is sent. ' +
-      'Actual membership change arrives via MEMBER_REMOVED subscription event.',
+      'Remove a member from a group conversation. Awaits Matrix confirmation of the ' +
+      'kick and throws if it is rejected (e.g. insufficient permissions) — it does not ' +
+      'report success merely because the RPC was sent. On success, DB persistence and ' +
+      'the MEMBER_REMOVED subscription event follow asynchronously.',
   })
   async removeConversationMember(
     @CurrentActor() actorContext: ActorContext,
@@ -195,9 +197,11 @@ export class ConversationResolverMutations {
 
   @Mutation(() => Boolean, {
     description:
-      'Leave a group conversation. Returns true when the RPC is sent. ' +
-      'Actual membership change arrives via MEMBER_REMOVED subscription event. ' +
-      'If the last member leaves, the conversation is auto-deleted and a CONVERSATION_DELETED event follows.',
+      'Leave a group conversation. Awaits Matrix confirmation of the kick and throws if ' +
+      'it is rejected — it does not report success merely because the RPC was sent. On ' +
+      'success, DB persistence and the MEMBER_REMOVED subscription event follow ' +
+      'asynchronously. If the last member leaves, the conversation is auto-deleted and a ' +
+      'CONVERSATION_DELETED event follows.',
   })
   async leaveConversation(
     @CurrentActor() actorContext: ActorContext,
@@ -262,8 +266,11 @@ export class ConversationResolverMutations {
 
   /**
    * Shared logic for removing a member (or self) from a group conversation.
-   * Sends RPC to Matrix only — DB persistence and subscription events
-   * happen via room.member.updated event handler.
+   * Awaits the Matrix kick RPC (ConversationService.removeMember opts into
+   * `ensureAllSucceeded`) and lets a rejection propagate as a GraphQL error —
+   * it must never resolve `true` on a kick Matrix actually refused (US2-AS4).
+   * DB persistence and subscription events still happen asynchronously via
+   * the room.member.updated event handler once Matrix confirms the removal.
    */
   private async removeMemberAndSendRpc(
     actorContext: ActorContext,

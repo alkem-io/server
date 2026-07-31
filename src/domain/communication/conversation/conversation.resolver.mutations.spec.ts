@@ -5,6 +5,7 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { CommunicationAdapterException } from '@services/adapters/communication-adapter/communication.adapter.exception';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mocked } from 'vitest';
@@ -125,6 +126,76 @@ describe('ConversationResolverMutations', () => {
         mockConversation.authorization,
         AuthorizationPrivilege.DELETE,
         expect.any(String)
+      );
+    });
+  });
+
+  // US2-AS4 live-verification: removeConversationMember/leaveConversation must
+  // never resolve `true` when the underlying Matrix kick was rejected — the
+  // resolver has no try/catch around conversationService.removeMember, so a
+  // rejection from the service (ConversationService.removeMember opts into
+  // `ensureAllSucceeded`) must propagate as a real GraphQL error instead of
+  // being swallowed into an optimistic success.
+  describe('removeConversationMember / leaveConversation (US2-AS4)', () => {
+    const mockConversation = {
+      id: 'conv-1',
+      authorization: { id: 'auth-1' },
+    } as any;
+
+    beforeEach(() => {
+      conversationService.getConversationOrFail.mockResolvedValue(
+        mockConversation
+      );
+      authorizationService.grantAccessOrFail.mockReturnValue(undefined as any);
+    });
+
+    it('removeConversationMember returns true when the Matrix kick is confirmed', async () => {
+      conversationService.removeMember.mockResolvedValue(mockConversation);
+
+      const result = await resolver.removeConversationMember(actorContext, {
+        conversationID: 'conv-1',
+        memberID: 'member-1',
+      } as any);
+
+      expect(result).toBe(true);
+      expect(conversationService.removeMember).toHaveBeenCalledWith(
+        'conv-1',
+        'member-1'
+      );
+    });
+
+    it('removeConversationMember propagates the adapter exception instead of returning true when Matrix rejects the kick', async () => {
+      conversationService.removeMember.mockRejectedValue(
+        CommunicationAdapterException.fromAdapterError('batchRemoveMember', {
+          code: 'NOT_ALLOWED',
+          message: 'insufficient power level',
+        })
+      );
+
+      await expect(
+        resolver.removeConversationMember(actorContext, {
+          conversationID: 'conv-1',
+          memberID: 'member-1',
+        } as any)
+      ).rejects.toThrow(CommunicationAdapterException);
+    });
+
+    it('leaveConversation propagates the adapter exception instead of returning true when Matrix rejects the kick', async () => {
+      conversationService.removeMember.mockRejectedValue(
+        CommunicationAdapterException.fromAdapterError('batchRemoveMember', {
+          code: 'NOT_ALLOWED',
+          message: 'insufficient power level',
+        })
+      );
+
+      await expect(
+        resolver.leaveConversation(actorContext, {
+          conversationID: 'conv-1',
+        } as any)
+      ).rejects.toThrow(CommunicationAdapterException);
+      expect(conversationService.removeMember).toHaveBeenCalledWith(
+        'conv-1',
+        actorContext.actorID
       );
     });
   });
