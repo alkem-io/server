@@ -545,22 +545,6 @@ export class BootstrapService {
         continue;
       }
 
-      // sec-server-18 fix: a MISSING credential is only restart-eligible
-      // when the account is new OR the credential is the FR-013b
-      // break-glass recovery role (`platform-roles-admin`). Every other
-      // missing credential on a PRE-EXISTING account was deliberately
-      // revoked (or never granted) and stays that way — no silent
-      // reinstatement on the next restart.
-      const isBreakGlassRecoveryCredential =
-        credentialData.type === AuthorizationCredential.PLATFORM_ROLES_ADMIN;
-      if (!isNewAccount && !isBreakGlassRecoveryCredential) {
-        this.logger.verbose?.(
-          `Bootstrap: seeded credential '${credentialData.type}' is missing on pre-existing account '${user.id}' — NOT auto-reinstating (durable revocation, sec-server-18)`,
-          LogContext.BOOTSTRAP
-        );
-        continue;
-      }
-
       // D2: identical strings for the new `platform-*`/`feature-*` roles —
       // the two enums are nominally distinct, so the cast goes via
       // `unknown`, exactly as `platform.roles.access.service.ts` documents.
@@ -568,6 +552,14 @@ export class BootstrapService {
       const isTargetRoleModel =
         PLATFORM_FAMILY_ROLES.has(asRole) || FEATURE_FAMILY_ROLES.has(asRole);
 
+      // spec-server-24 fix: VALIDATE BEFORE SKIPPING. This block used to sit
+      // AFTER the restart-eligibility `continue` below, so on a PRE-EXISTING
+      // account a rule-violating `users.json` entry was silently skipped
+      // instead of failing startup — making the FR-028 Audit Reader mutual
+      // exclusion (and every other seed rule) unenforceable on any
+      // environment that had already been bootstrapped once, i.e. every real
+      // one. A misconfigured seed must be fatal wherever it is read, whether
+      // or not this particular start would have acted on it.
       if (isTargetRoleModel) {
         try {
           this.platformRoleAssignmentRulesService.evaluateSeedOrFail({
@@ -585,6 +577,35 @@ export class BootstrapService {
             { userId: user.id, role: asRole, cause: error?.message }
           );
         }
+      }
+
+      // A MISSING credential is restart-eligible when the account is new, OR
+      // the account is a SERVICE account, OR the credential is the FR-013b
+      // break-glass recovery role (`platform-roles-admin`).
+      //
+      // sec-server-18 established that an operator's deliberate revocation
+      // must be durable rather than silently reinstated on the next pod
+      // restart. spec-server-23 then showed that narrowing went one step too
+      // far: the spec's first clarification pass is explicit that "service
+      // accounts are re-seeded automatically — existing seeding grants their
+      // target roles on every server start; only HUMAN holders fall under
+      // manual re-grant" (FR-012). The discriminator is therefore the ACCOUNT
+      // KIND, not the credential alone. A revoked `platform-spaces-reader` on
+      // the seeded service account is a broken integration, not an operator
+      // decision to respect.
+      const isBreakGlassRecoveryCredential =
+        credentialData.type === AuthorizationCredential.PLATFORM_ROLES_ADMIN;
+      const isServiceAccount = user.serviceProfile === true;
+      if (
+        !isNewAccount &&
+        !isServiceAccount &&
+        !isBreakGlassRecoveryCredential
+      ) {
+        this.logger.verbose?.(
+          `Bootstrap: seeded credential '${credentialData.type}' is missing on pre-existing human account '${user.id}' — NOT auto-reinstating (durable revocation, sec-server-18)`,
+          LogContext.BOOTSTRAP
+        );
+        continue;
       }
 
       await this.adminAuthorizationService.grantCredentialToUser({
