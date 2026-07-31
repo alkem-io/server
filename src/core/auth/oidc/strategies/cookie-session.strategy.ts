@@ -2,15 +2,18 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { getCorrelationId } from '@core/middleware/correlation-id.middleware';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { AlkemioConfig } from '@src/types';
 import { randomUUID } from 'crypto';
 import type { Request } from 'express';
+import type { Redis } from 'ioredis';
 import { Strategy } from 'passport-custom';
 import { isAbsoluteTtlExceeded } from '../absolute-ttl.guard';
 import { emitAudit } from '../audit';
+import { OIDC_REDIS_CLIENT } from '../oidc.tokens';
+import { addSessionToSubIndex } from '../session-index.redis';
 import type {
   AlkemioSessionPayload,
   SessionStoreHandle,
@@ -39,13 +42,20 @@ export class CookieSessionStrategy extends PassportStrategy(
    * path uses the sid express-session already parsed for us.
    */
   private readonly sessionCookieName: string;
+  private readonly logger = new Logger(CookieSessionStrategy.name);
 
   constructor(
     @Inject(SESSION_STORE_HANDLE)
     private readonly sessionStore: SessionStoreHandle,
     private readonly authService: AuthenticationService,
     private readonly actorContextService: ActorContextService,
-    configService: ConfigService<AlkemioConfig, true>
+    configService: ConfigService<AlkemioConfig, true>,
+    // server#6315 — used only by the self-healing index write below. Optional
+    // so test harnesses that construct this strategy directly keep working;
+    // when absent the self-heal is skipped and nothing else changes.
+    @Optional()
+    @Inject(OIDC_REDIS_CLIENT)
+    private readonly redis?: Redis
   ) {
     super();
     this.sessionCookieName = configService.get(
@@ -118,6 +128,23 @@ export class CookieSessionStrategy extends PassportStrategy(
       );
     }
 
+    // server#6315 / FR-002a — self-healing index write. Sessions minted before
+    // the per-subject index shipped are absent from it and therefore
+    // unrevocable; that is precisely the population carrying the #6315 bug.
+    // Registering the session here makes it revocable from its holder's very
+    // next request, with no migration and no keyspace scan.
+    //
+    // Placement is load-bearing: this sits AFTER the tombstone and absolute-TTL
+    // branches above, so a dead session is never re-indexed (keyspace invariant
+    // I5). Re-indexing a tombstone would resurrect a dead sid into the listing
+    // on every request from a stale tab.
+    //
+    // Deliberately NOT awaited: the request must not pay for index maintenance
+    // (SC-011b) and must not fail if Redis hiccups (FR-006). It is unawaited,
+    // not unobserved — the catch logs, because a silent failure path is
+    // forbidden outright by the engineering constitution.
+    this.reindexSession(sid, payload);
+
     const ctx: CookieSessionContext = {
       sub: payload.sub,
       alkemio_actor_id: payload.alkemio_actor_id ?? null,
@@ -148,6 +175,33 @@ export class CookieSessionStrategy extends PassportStrategy(
       expiry: payload.expires_at * 1000,
       absoluteExpiry: payload.absolute_expires_at * 1000,
       issuedAt: payload.created_at * 1000,
+    });
+  }
+
+  /**
+   * server#6315 / FR-002a — fire-and-forget membership top-up for the
+   * per-subject session index.
+   *
+   * `SADD` is idempotent, so for an already-indexed session this is a no-op
+   * write; the cost only matters for sessions that predate the index. Returns
+   * `void` rather than a promise on purpose, so a caller cannot accidentally
+   * start awaiting it and put Redis on the request's critical path.
+   */
+  private reindexSession(sid: string, payload: AlkemioSessionPayload): void {
+    if (!this.redis || !payload.sub) return;
+    void addSessionToSubIndex(
+      this.redis,
+      payload.sub,
+      sid,
+      payload.absolute_expires_at
+    ).catch(error => {
+      // Unawaited, but never unobserved — silent failure paths are forbidden.
+      this.logger.warn(
+        `Failed to self-heal subject session index (sub=${payload.sub}, sid=${sid}): ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        CookieSessionStrategy.name
+      );
     });
   }
 }

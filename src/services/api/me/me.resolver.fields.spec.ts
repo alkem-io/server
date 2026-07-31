@@ -1,16 +1,24 @@
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { createMock } from '@golevelup/ts-vitest';
+import { Logger } from '@nestjs/common';
 import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
 import { MeResolverFields } from './me.resolver.fields';
 import { MeService } from './me.service';
 
 const actorContext = { actorID: 'user-123', isAnonymous: false } as any;
+const anonymousActorContext = { actorID: '' } as any;
 
 describe('MeResolverFields', () => {
   let resolver: MeResolverFields;
+  let meService: ReturnType<typeof createMock<MeService>>;
+  let inAppNotificationService: ReturnType<
+    typeof createMock<InAppNotificationService>
+  >;
+  let warnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    const meService = createMock<MeService>();
+    warnSpy = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+    meService = createMock<MeService>();
     meService.getCommunityInvitationsCountForUser.mockResolvedValue(3);
     meService.getCommunityInvitationsForUser.mockResolvedValue([]);
     meService.getCommunityApplicationsForUser.mockResolvedValue([]);
@@ -23,7 +31,7 @@ describe('MeResolverFields', () => {
       id: 'user-123',
     } as any);
 
-    const inAppNotificationService = createMock<InAppNotificationService>();
+    inAppNotificationService = createMock<InAppNotificationService>();
     inAppNotificationService.getPaginatedNotifications.mockResolvedValue({
       items: [],
     } as any);
@@ -68,59 +76,170 @@ describe('MeResolverFields', () => {
     expect(result?.id).toBe('user-123');
   });
 
-  it('should throw when actorID is missing for notifications', async () => {
-    await expect(
-      resolver.notificationsInApp({ actorID: '' } as any, {} as any)
-    ).rejects.toThrow();
+  describe('notifications degradation', () => {
+    it('should return the empty page when actorID is missing, without throwing', async () => {
+      const result = await resolver.notificationsInApp(
+        anonymousActorContext,
+        {} as any
+      );
+      expect(result).toEqual({
+        total: 0,
+        items: [],
+        pageInfo: { hasNextPage: false, hasPreviousPage: false },
+      });
+    });
+
+    it('should emit a warn log when degrading notifications', async () => {
+      await resolver.notificationsInApp(anonymousActorContext, {} as any);
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('me.notifications')
+      );
+    });
+
+    it('should not call the in-app notification service when actorID is missing', async () => {
+      await resolver.notificationsInApp(anonymousActorContext, {} as any);
+      expect(
+        inAppNotificationService.getPaginatedNotifications
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should return notifications when authenticated', async () => {
+      const result = await resolver.notificationsInApp(actorContext, {} as any);
+      expect(result).toBeDefined();
+      expect(
+        inAppNotificationService.getPaginatedNotifications
+      ).toHaveBeenCalledWith(actorContext.actorID, {}, undefined);
+    });
   });
 
-  it('should return notifications when authenticated', async () => {
-    const result = await resolver.notificationsInApp(actorContext, {} as any);
-    expect(result).toBeDefined();
+  describe('notificationsUnreadCount degradation', () => {
+    it('should return 0 when actorID is missing, without throwing', async () => {
+      const result = await resolver.notificationsUnreadCount(
+        anonymousActorContext
+      );
+      expect(result).toBe(0);
+    });
+
+    it('should emit a warn log when degrading notificationsUnreadCount', async () => {
+      await resolver.notificationsUnreadCount(anonymousActorContext);
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('me.notificationsUnreadCount')
+      );
+    });
+
+    it('should not call the in-app notification service when actorID is missing', async () => {
+      await resolver.notificationsUnreadCount(anonymousActorContext);
+      expect(
+        inAppNotificationService.getRawNotificationsUnreadCount
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should return unread count when authenticated', async () => {
+      const result = await resolver.notificationsUnreadCount(actorContext);
+      expect(result).toBe(5);
+      expect(
+        inAppNotificationService.getRawNotificationsUnreadCount
+      ).toHaveBeenCalledWith(actorContext.actorID);
+    });
   });
 
-  it('should throw when actorID is missing for notificationsUnreadCount', async () => {
-    await expect(
-      resolver.notificationsUnreadCount({ actorID: '' } as any)
-    ).rejects.toThrow();
+  describe('communityInvitationsCount degradation', () => {
+    it('should return 0 when actorID is missing, without throwing', async () => {
+      const result = await resolver.communityInvitationsCount(
+        anonymousActorContext,
+        []
+      );
+      expect(result).toBe(0);
+    });
+
+    it('should emit a warn log when degrading communityInvitationsCount', async () => {
+      await resolver.communityInvitationsCount(anonymousActorContext, []);
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('me.communityInvitationsCount')
+      );
+    });
+
+    it('should not call meService when actorID is missing', async () => {
+      await resolver.communityInvitationsCount(anonymousActorContext, []);
+      expect(
+        meService.getCommunityInvitationsCountForUser
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should return invitations count when authenticated', async () => {
+      const result = await resolver.communityInvitationsCount(actorContext, []);
+      expect(result).toBe(3);
+      expect(
+        meService.getCommunityInvitationsCountForUser
+      ).toHaveBeenCalledWith(actorContext.actorID, []);
+    });
   });
 
-  it('should return unread count when authenticated', async () => {
-    const result = await resolver.notificationsUnreadCount(actorContext);
-    expect(result).toBe(5);
+  describe('communityInvitations degradation', () => {
+    it('should return an empty array when actorID is missing, without throwing', async () => {
+      const result = await resolver.communityInvitations(
+        anonymousActorContext,
+        []
+      );
+      expect(result).toEqual([]);
+    });
+
+    it('should emit a warn log when degrading communityInvitations', async () => {
+      await resolver.communityInvitations(anonymousActorContext, []);
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('me.communityInvitations')
+      );
+    });
+
+    it('should not call meService when actorID is missing', async () => {
+      await resolver.communityInvitations(anonymousActorContext, []);
+      expect(meService.getCommunityInvitationsForUser).not.toHaveBeenCalled();
+    });
+
+    it('should return invitations when authenticated', async () => {
+      const result = await resolver.communityInvitations(actorContext, []);
+      expect(result).toEqual([]);
+      expect(meService.getCommunityInvitationsForUser).toHaveBeenCalledWith(
+        actorContext.actorID,
+        []
+      );
+    });
   });
 
-  it('should throw when actorID is missing for communityInvitationsCount', async () => {
-    await expect(
-      resolver.communityInvitationsCount({ actorID: '' } as any, [])
-    ).rejects.toThrow();
-  });
+  describe('communityApplications degradation', () => {
+    it('should return an empty array when actorID is missing, without throwing', async () => {
+      const result = await resolver.communityApplications(
+        anonymousActorContext,
+        []
+      );
+      expect(result).toEqual([]);
+    });
 
-  it('should return invitations count when authenticated', async () => {
-    const result = await resolver.communityInvitationsCount(actorContext, []);
-    expect(result).toBe(3);
-  });
+    it('should emit a warn log when degrading communityApplications', async () => {
+      await resolver.communityApplications(anonymousActorContext, []);
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('me.communityApplications')
+      );
+    });
 
-  it('should throw when actorID is missing for communityInvitations', async () => {
-    await expect(
-      resolver.communityInvitations({ actorID: '' } as any, [])
-    ).rejects.toThrow();
-  });
+    it('should not call meService when actorID is missing', async () => {
+      await resolver.communityApplications(anonymousActorContext, []);
+      expect(meService.getCommunityApplicationsForUser).not.toHaveBeenCalled();
+    });
 
-  it('should return invitations when authenticated', async () => {
-    const result = await resolver.communityInvitations(actorContext, []);
-    expect(result).toEqual([]);
-  });
-
-  it('should throw when actorID is missing for communityApplications', async () => {
-    await expect(
-      resolver.communityApplications({ actorID: '' } as any, [])
-    ).rejects.toThrow();
-  });
-
-  it('should return applications when authenticated', async () => {
-    const result = await resolver.communityApplications(actorContext, []);
-    expect(result).toEqual([]);
+    it('should return applications when authenticated', async () => {
+      const result = await resolver.communityApplications(actorContext, []);
+      expect(result).toEqual([]);
+      expect(meService.getCommunityApplicationsForUser).toHaveBeenCalledWith(
+        actorContext.actorID,
+        []
+      );
+    });
   });
 
   it('should return spaceMembershipsHierarchical', async () => {
@@ -141,14 +260,24 @@ describe('MeResolverFields', () => {
     expect(result).toEqual([]);
   });
 
-  it('should throw when actorID is missing for conversations', async () => {
-    await expect(
-      resolver.conversations({ actorID: '' } as any)
-    ).rejects.toThrow();
-  });
+  describe('conversations degradation', () => {
+    it('should return the empty container when actorID is missing, without throwing', async () => {
+      const result = await resolver.conversations(anonymousActorContext);
+      expect(result).toEqual({});
+    });
 
-  it('should return conversations result when authenticated', async () => {
-    const result = await resolver.conversations(actorContext);
-    expect(result).toBeDefined();
+    it('should emit a warn log when degrading conversations', async () => {
+      await resolver.conversations(anonymousActorContext);
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('me.conversations')
+      );
+    });
+
+    it('should return conversations result when authenticated', async () => {
+      const result = await resolver.conversations(actorContext);
+      expect(result).toBeDefined();
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
   });
 });

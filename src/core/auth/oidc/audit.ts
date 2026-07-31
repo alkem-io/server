@@ -1,5 +1,7 @@
 // audit emitter. PII-/IP-minimal JSON records to stdout in local-dev;
 
+import type { SessionRevocationReason } from './revocation/session-revocation.types';
+
 export type AuditOutcome = 'success' | 'failure' | 'warn';
 
 export type AuditEvent = {
@@ -15,6 +17,9 @@ export type AuditEvent = {
   granted_scope?: string | null;
   truncated_input?: string | null;
   rp_id?: string | null;
+  // server#6315 — closed-set cause of a subject-scoped revocation. Present only
+  // on the `session.revocation.*` / `session.revoked` event types.
+  reason?: SessionRevocationReason | null;
 };
 
 export type AuditEventType =
@@ -34,7 +39,18 @@ export type AuditEventType =
   | 'session.refresh.rotated'
   | 'session.refresh.temporarily_unavailable'
   | 'session.refresh_persistent_failure'
-  | 'session.ended';
+  | 'session.ended'
+  // server#6315 — subject-scoped revocation (account deleted, password
+  // changed, admin force-revoke, …). These records are the ISO 27001 A.5.18 /
+  // A.8.15 and SOC 2 CC6.2 evidence that access was actually removed.
+  //
+  // Deliberately NOT folded into `session.ended`: that one means the holder
+  // signed themselves out. Overloading it would destroy the distinction
+  // between voluntary sign-out and enforced revocation — which is precisely
+  // the distinction an auditor is looking for.
+  | 'session.revocation.initiated'
+  | 'session.revoked'
+  | 'session.revocation.completed';
 
 export type AuditInput = Omit<AuditEvent, 'timestamp'> & { timestamp?: string };
 
