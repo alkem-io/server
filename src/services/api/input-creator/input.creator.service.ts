@@ -625,10 +625,17 @@ export class InputCreatorService {
   }
 
   /**
-   * Template-capture strip (workspace#025, FR-017 / US5-AS5):
-   * Collection-kind callouts in CUSTOM mode must NOT serialize their selected
-   * ids into the template — the template must be AUTO so a space created from
-   * it self-populates from its own members/subspaces.
+   * Template-capture strip (workspace#025):
+   *
+   * - Selection strip (025, FR-017 / US5-AS5): collection-kind callouts in
+   *   CUSTOM mode must NOT serialize their selected ids into the template — the
+   *   template must be AUTO so a space created from it self-populates from its
+   *   own members/subspaces.
+   *
+   * - Map-view strip: a CONTRIBUTORS callout with a
+   *   stored mapView must NOT carry that camera position into the template — the
+   *   view was framed on the origin space's community and would wrongly open
+   *   every derived space's map on that city. Template ⇒ automatic framing.
    *
    * Deep-copies the settings object to avoid mutating the live callout in
    * memory. Non-collection kinds are returned unchanged.
@@ -648,10 +655,22 @@ export class InputCreatorService {
     // Deep-copy so the live callout object is not mutated in memory.
     const copy = JSON.parse(JSON.stringify(settings));
     if (copy?.framing) {
+      // 025: Reset selection to AUTO for all collection kinds.
       copy.framing.selection = {
         mode: CalloutSelectionMode.AUTO,
         selectedIds: [],
       };
+
+      // Strip the admin-fixed map view from CONTRIBUTORS templates.
+      // The view is host-space-specific; templates must produce automatic
+      // framing. SPACES callouts have no mapView, so this branch is a no-op
+      // for them.
+      if (
+        framingType === CalloutFramingType.CONTRIBUTORS &&
+        copy.framing.contributors
+      ) {
+        delete copy.framing.contributors.mapView;
+      }
     }
     return copy;
   }
