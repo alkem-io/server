@@ -56,8 +56,12 @@ export class SpaceResolverFields {
       'Count of visible activity events on this Space over the last 7 days, across all actors (excludes whiteboard-content-modified). Used to rank Spaces on the dashboard.',
   })
   async activityScore(
-    @Parent() space: ISpace,
-    @Loader(SpaceActivityScoreLoaderCreator) loader: ILoader<number>
+    @Parent() space: Space,
+    @Loader(SpaceActivityScoreLoaderCreator, {
+      parentClassRef: Space,
+      checkParentPrivilege: AuthorizationPrivilege.READ,
+    })
+    loader: ILoader<number>
   ): Promise<number> {
     return loader.load(space.id);
   }

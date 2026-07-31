@@ -1,12 +1,16 @@
 import { ActivityEventType } from '@common/enums/activity.event.type';
-import { DataLoaderCreator } from '@core/dataloader/creators/base';
+import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
+import {
+  DataLoaderCreator,
+  DataLoaderCreatorOptions,
+} from '@core/dataloader/creators/base';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Space } from '@domain/space/space/space.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { Activity } from '@platform/activity/activity.entity';
 import DataLoader from 'dataloader';
-import { EntityManager } from 'typeorm';
+import { EntityManager, In } from 'typeorm';
 
 // Fixed 7-day window for the dashboard "activity score" — the only window the
 // client consumes. Event types excluded match the dashboard feed
@@ -29,14 +33,25 @@ export class SpaceActivityScoreLoaderCreator
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  public create(): ILoader<number> {
-    return new DataLoader<string, number>(
-      spaceIds => this.batchLoad(spaceIds),
-      { cache: true, name: 'SpaceActivityScoreLoader' }
-    );
+  public create(
+    options: DataLoaderCreatorOptions<
+      number,
+      Space
+    > = {} as DataLoaderCreatorOptions<number, Space>
+  ): ILoader<number | ForbiddenAuthorizationPolicyException> {
+    return new DataLoader<
+      string,
+      number | ForbiddenAuthorizationPolicyException
+    >(spaceIds => this.batchLoad(spaceIds, options), {
+      cache: options.cache ?? true,
+      name: 'SpaceActivityScoreLoader',
+    });
   }
 
-  private async batchLoad(spaceIds: readonly string[]): Promise<number[]> {
+  private async batchLoad(
+    spaceIds: readonly string[],
+    options: DataLoaderCreatorOptions<number, Space>
+  ): Promise<(number | ForbiddenAuthorizationPolicyException)[]> {
     if (spaceIds.length === 0) {
       return [];
     }
@@ -90,7 +105,35 @@ export class SpaceActivityScoreLoaderCreator
       }
     }
 
+    // Authorization: when the field resolver asks us to gate on the parent
+    // Space's privilege (`@Loader(SpaceActivityScoreLoaderCreator, { checkParentPrivilege })`),
+    // load the Spaces (their `authorization` policy is eager on the entity) and
+    // check before returning a real count for that key. Without this, activity
+    // volume for private Spaces would leak to anyone who can merely enumerate
+    // Space IDs (e.g. via the unguarded `spaces`/`exploreSpaces` queries).
+    const deniedById = new Map<string, ForbiddenAuthorizationPolicyException>();
+    if (options.checkParentPrivilege) {
+      const spaces = await this.manager.find(Space, {
+        where: { id: In([...spaceIds]) },
+      });
+      for (const space of spaces) {
+        try {
+          options.authorize(space, options.checkParentPrivilege);
+        } catch (e) {
+          if (e instanceof ForbiddenAuthorizationPolicyException) {
+            deniedById.set(space.id, e);
+          } else {
+            throw e;
+          }
+        }
+      }
+    }
+
     return spaceIds.map(id => {
+      const denied = deniedById.get(id);
+      if (denied) {
+        return denied;
+      }
       const collaborationId = collaborationBySpace.get(id);
       return collaborationId
         ? (countByCollaboration.get(collaborationId) ?? 0)
