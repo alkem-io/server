@@ -1,6 +1,6 @@
 import { JoinRuleInvite } from '@alkemio/matrix-adapter-lib';
 import { UUID_LENGTH } from '@common/constants';
-import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { ActivityEventType } from '@common/enums/activity.event.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
@@ -28,6 +28,7 @@ import { OperationNotAllowedException } from '@common/exceptions/operation.not.a
 import { getDiff, hasOnlyAllowedFields } from '@common/utils';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PaginationArgs } from '@core/pagination';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
@@ -124,6 +125,7 @@ export class SpaceService {
   constructor(
     private actorService: ActorService,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private authorizationService: AuthorizationService,
     private spacesFilterService: SpaceFilterService,
     private spaceAboutService: SpaceAboutService,
     private communityService: CommunityService,
@@ -879,8 +881,32 @@ export class SpaceService {
       where: { id: In(spaceIds) },
     });
 
+    // Authoritative READ check. The privacy Brackets above are a coarse,
+    // own-Space-only pre-filter kept purely to bound the ranking query - they
+    // cannot cheaply encode the full ancestor-aware/parent-membership
+    // authorization model (e.g. a PUBLIC L1 subspace of a PRIVATE L0 parent is
+    // NOT world-readable, but a member of that private parent CAN read it).
+    // `space.authorization` is eager-loaded and is the same policy every other
+    // Space-reading path enforces, so re-check READ against it here before
+    // returning any row — this is what actually determines FR-006 compliance.
+    const authorizedSpaces = spaces.filter(space => {
+      try {
+        return this.authorizationService.isAccessGranted(
+          actorContext,
+          space.authorization,
+          AuthorizationPrivilege.READ
+        );
+      } catch (error) {
+        this.logger.warn?.(
+          `getExploreSpaces: unable to evaluate READ access for space '${space.id}'; excluding from results: ${error}`,
+          LogContext.SPACES
+        );
+        return false;
+      }
+    });
+
     // Preserve the activity-based ordering from the first query
-    const spaceMap = new Map(spaces.map(space => [space.id, space]));
+    const spaceMap = new Map(authorizedSpaces.map(space => [space.id, space]));
     return spaceIds
       .map(id => spaceMap.get(id))
       .filter((space): space is Space => space !== undefined);
