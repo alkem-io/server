@@ -50,6 +50,7 @@ export class TaskService {
   private readonly doneKey = (id: string) => `task:${id}:itemsDone`;
   private readonly errorsKey = (id: string) => `task:${id}:errorCount`;
   private readonly seenKey = (id: string) => `task:${id}:seen`;
+  private readonly endKey = (id: string) => `task:${id}:end`;
 
   private redisClient(): RedisClientLike | undefined {
     const store = (this.cacheManager as Partial<RedisCache>).store as
@@ -141,6 +142,38 @@ export class TaskService {
    * against and every call is treated as a fresh item — the previous
    * behaviour.
    */
+  /**
+   * Record the task's terminal timestamp where it cannot be clobbered.
+   *
+   * `end` lives on the Task object, and every consumer writes that whole
+   * object back — so a slower consumer holding a copy taken before the task
+   * settled will write `end: undefined` straight over the stamp. The result is
+   * a COMPLETED task with no end time. SETNX keeps the FIRST stamp, and the
+   * read overlay restores it, so the clobber becomes invisible.
+   */
+  private async stampEnd(id: string, end: number): Promise<void> {
+    const client = this.redisClient();
+
+    if (!client) {
+      return;
+    }
+
+    return new Promise<void>(resolve => {
+      client.setnx(this.endKey(id), String(end), err => {
+        if (err) {
+          this.logger.error(
+            `Failed to stamp end for task '${id}': ${err}`,
+            err?.stack,
+            LogContext.TASKS
+          );
+          resolve();
+          return;
+        }
+        client.expire(this.endKey(id), TTL, () => resolve());
+      });
+    });
+  }
+
   private async claimItem(id: string, itemKey?: string): Promise<boolean> {
     const client = this.redisClient();
 
@@ -224,9 +257,9 @@ export class TaskService {
    * fields — are the source of truth for progress, and for whether a counted
    * task has finished.
    *
-   * `end` is deliberately NOT fabricated here: it is stamped by whichever
-   * consumer saw the last item, and a derived value would differ on every
-   * read.
+   * `end` is never invented here either — it is read back from the SETNX stamp
+   * (see {@link stampEnd}), so a stale write that cleared it cannot leave a
+   * terminal task without an end time.
    */
   private async withAuthoritativeCounters(task: Task): Promise<Task> {
     // An uncounted task has no target to reach — it is terminated explicitly
@@ -235,9 +268,10 @@ export class TaskService {
       return task;
     }
 
-    const [done, errorCount] = await Promise.all([
+    const [done, errorCount, storedEnd] = await Promise.all([
       this.readCounter(this.doneKey(task.id)),
       this.readCounter(this.errorsKey(task.id)),
+      this.readCounter(this.endKey(task.id)),
     ]);
 
     // No Redis (or no increments yet): the in-object counter is all there is.
@@ -251,6 +285,7 @@ export class TaskService {
     const resolved: Task = {
       ...task,
       itemsDone: Math.max(done, task.itemsDone ?? 0),
+      end: task.end ?? storedEnd,
     };
 
     if (
@@ -405,6 +440,8 @@ export class TaskService {
         task,
         errorCount > 0 ? TaskStatus.ERRORED : TaskStatus.COMPLETED
       );
+      // Outside the cached object, where a stale write cannot erase it.
+      await this.stampEnd(id, task.end as number);
     }
 
     await this.cacheManager.set(task.id, task, {
@@ -446,6 +483,7 @@ export class TaskService {
     // not terminate the task; the remaining items are still being processed.
     if (this.isFullyAccountedFor(task)) {
       this.finish(task, TaskStatus.ERRORED);
+      await this.stampEnd(id, task.end as number);
     }
 
     await this.cacheManager.set(task.id, task, {

@@ -601,6 +601,18 @@ describe('TaskService — concurrent consumers', () => {
           set.add(member);
           cb(null, isNew ? 1 : 0);
         },
+        setnx: (
+          key: string,
+          value: string,
+          cb: (e: null, v: number) => void
+        ) => {
+          if (counters.has(key)) {
+            cb(null, 0);
+            return;
+          }
+          counters.set(key, Number(value));
+          cb(null, 1);
+        },
         expire: (_k: string, _s: number, cb: (e: null, v: number) => void) =>
           cb(null, 1),
         quit: vi.fn(),
@@ -748,6 +760,27 @@ describe('TaskService — concurrent consumers', () => {
 
     const after = await service.getOrFail(task.id);
     expect(after.itemsDone).toBeGreaterThanOrEqual(2);
+    expect(after.status).toBe(TaskStatus.COMPLETED);
+  });
+
+  it('keeps the end timestamp when a stale consumer writes over it', async () => {
+    const task = await service.create(1);
+
+    await service.updateTaskResults(task.id, 'done' as any);
+    const settled = await service.getOrFail(task.id);
+    expect(settled.status).toBe(TaskStatus.COMPLETED);
+    expect(settled.end).toBeDefined();
+
+    // A slower consumer writes back a copy taken before the task settled, in
+    // which `end` is still undefined — erasing the stamp in the cached object.
+    store.set(task.id, {
+      ...structuredClone(store.get(task.id)),
+      end: undefined,
+    });
+
+    // The SETNX stamp survives outside the object, so readers still see it.
+    const after = await service.getOrFail(task.id);
+    expect(after.end).toBe(settled.end);
     expect(after.status).toBe(TaskStatus.COMPLETED);
   });
 

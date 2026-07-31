@@ -24,6 +24,15 @@ export interface RedisClientLike {
     member: string,
     callback?: (err: Error | null, res: number) => void
   ): void;
+  /**
+   * Set only if absent. Returns 1 when this call created the key — used to let
+   * exactly one consumer stamp a task's terminal timestamp.
+   */
+  setnx(
+    key: string,
+    value: string,
+    callback?: (err: Error | null, res: number) => void
+  ): void;
   /** Raw GET — returns the counter as a string, or null when unset. */
   get(
     key: string,
