@@ -9,7 +9,12 @@ import { ClientProxy } from '@nestjs/microservices';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { TaskService } from '@services/task/task.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager } from 'typeorm';
+import {
+  EntityManager,
+  EntityTarget,
+  FindOptionsSelect,
+  ObjectLiteral,
+} from 'typeorm';
 import { AuthResetEventPayload } from '../auth-reset.payload.interface';
 import { RESET_EVENT_TYPE } from '../reset.event.type';
 
@@ -24,18 +29,56 @@ export class AuthResetService {
     private logger: LoggerService
   ) {}
 
+  /**
+   * Publishes the full platform reset and returns the id of the task tracking it.
+   *
+   * The task is created with its true `itemsCount` **before** the first message
+   * is emitted. Without that count the task can never reach a terminal status,
+   * so the id it hands back is useless as a completion signal for the operators
+   * our migration notes tell to run this.
+   */
   public async publishResetAll(taskId?: string) {
-    const task = taskId ? { id: taskId } : await this.taskService.create();
-
     try {
-      await this.publishAuthorizationResetAllAccounts(task.id);
-      await this.publishAuthorizationResetAllOrganizations(task.id);
-      await this.publishAuthorizationResetAllUsers(task.id);
+      // Fetch the three id sets ONCE, up front. This is what makes the count
+      // trustworthy: the ids counted are exactly the ids emitted. A separate
+      // COUNT(*) could drift from the subsequent SELECT (a row created or
+      // deleted in between), leaving the task permanently one item short of
+      // its target — i.e. hanging, which is the very bug being fixed here.
+      // It is also cheaper than the status quo: 3 id-only selects instead of
+      // the 5 the per-entity publishers each ran on their own.
+      const [accountIds, organizationIds, userIds] = await Promise.all([
+        this.findAllIds(Account),
+        this.findAllIds(Organization),
+        this.findAllIds(User),
+      ]);
+
+      // Accounts and organizations are each reset twice (authorization AND
+      // licence); users once. The platform and AI-server resets deliberately
+      // carry no task id, so the subscriber never accounts for them — counting
+      // them here would leave the task 3 items short forever.
+      const itemsCount =
+        accountIds.length * 2 + organizationIds.length * 2 + userIds.length;
+
+      const task = taskId
+        ? { id: taskId }
+        : await this.taskService.create(itemsCount);
+
+      // The pre-fetched ids are handed down so the publishers below re-use them
+      // instead of re-querying (and possibly emitting a different number of
+      // messages than the count promised).
+      await this.publishAuthorizationResetAllAccounts(task.id, accountIds);
+      await this.publishAuthorizationResetAllOrganizations(
+        task.id,
+        organizationIds
+      );
+      await this.publishAuthorizationResetAllUsers(task.id, userIds);
       await this.publishAuthorizationResetPlatform();
       await this.publishAuthorizationResetAiServer();
       // And reset licenses
-      await this.publishLicenseResetAllAccounts(task.id);
-      await this.publishLicenseResetAllOrganizations(task.id);
+      await this.publishLicenseResetAllAccounts(task.id, accountIds);
+      await this.publishLicenseResetAllOrganizations(task.id, organizationIds);
+
+      return task.id;
     } catch (error) {
       throw new BaseException(
         `Error while initializing authorization reset: ${error}`,
@@ -43,120 +86,130 @@ export class AuthResetService {
         AlkemioErrorStatus.AUTHORIZATION_RESET
       );
     }
-
-    return task.id;
   }
 
-  public async publishAuthorizationResetAllAccounts(taskId?: string) {
-    const accounts = await this.manager.find(Account, {
-      select: { id: true },
+  /** Select just the ids of every row of an entity. */
+  private async findAllIds<T extends ObjectLiteral & { id: string }>(
+    entity: EntityTarget<T>
+  ): Promise<string[]> {
+    const rows = await this.manager.find(entity, {
+      select: { id: true } as FindOptionsSelect<T>,
     });
+
+    return rows.map(({ id }) => id);
+  }
+
+  /** Emit one reset event per id, all tagged with the same tracking task. */
+  private emitResetEvents(
+    ids: string[],
+    type: RESET_EVENT_TYPE,
+    taskId: string
+  ): void {
+    ids.forEach(id =>
+      this.authResetQueue.emit<any, AuthResetEventPayload>(type, {
+        id,
+        type,
+        task: taskId,
+      })
+    );
+  }
+
+  /**
+   * @param taskId Track against an existing task instead of creating one.
+   * @param accountIds Pre-fetched ids, supplied by {@link publishResetAll} so the
+   *   aggregate task's `itemsCount` matches the messages actually emitted.
+   *   Omitted when this publisher is invoked standalone.
+   */
+  public async publishAuthorizationResetAllAccounts(
+    taskId?: string,
+    accountIds?: string[]
+  ) {
+    const ids = accountIds ?? (await this.findAllIds(Account));
 
     const task = taskId
       ? { id: taskId }
-      : await this.taskService.create(accounts.length);
+      : await this.taskService.create(ids.length);
 
-    accounts.forEach(({ id }) =>
-      this.authResetQueue.emit<any, AuthResetEventPayload>(
-        RESET_EVENT_TYPE.AUTHORIZATION_RESET_ACCOUNT,
-        {
-          id,
-          type: RESET_EVENT_TYPE.AUTHORIZATION_RESET_ACCOUNT,
-          task: task.id,
-        }
-      )
+    this.emitResetEvents(
+      ids,
+      RESET_EVENT_TYPE.AUTHORIZATION_RESET_ACCOUNT,
+      task.id
     );
 
     return task.id;
   }
 
-  public async publishLicenseResetAllAccounts(taskId?: string) {
-    const accounts = await this.manager.find(Account, {
-      select: { id: true },
-    });
+  /** @see publishAuthorizationResetAllAccounts for the parameters. */
+  public async publishLicenseResetAllAccounts(
+    taskId?: string,
+    accountIds?: string[]
+  ) {
+    const ids = accountIds ?? (await this.findAllIds(Account));
 
     const task = taskId
       ? { id: taskId }
-      : await this.taskService.create(accounts.length);
+      : await this.taskService.create(ids.length);
 
-    accounts.forEach(({ id }) =>
-      this.authResetQueue.emit<any, AuthResetEventPayload>(
-        RESET_EVENT_TYPE.LICENSE_RESET_ACCOUNT,
-        {
-          id,
-          type: RESET_EVENT_TYPE.LICENSE_RESET_ACCOUNT,
-          task: task.id,
-        }
-      )
+    this.emitResetEvents(ids, RESET_EVENT_TYPE.LICENSE_RESET_ACCOUNT, task.id);
+
+    return task.id;
+  }
+
+  /** @see publishAuthorizationResetAllAccounts for the parameters. */
+  public async publishLicenseResetAllOrganizations(
+    taskId?: string,
+    organizationIds?: string[]
+  ) {
+    const ids = organizationIds ?? (await this.findAllIds(Organization));
+
+    const task = taskId
+      ? { id: taskId }
+      : await this.taskService.create(ids.length);
+
+    this.emitResetEvents(
+      ids,
+      RESET_EVENT_TYPE.LICENSE_RESET_ORGANIZATION,
+      task.id
     );
 
     return task.id;
   }
 
-  public async publishLicenseResetAllOrganizations(taskId?: string) {
-    const organizations = await this.manager.find(Organization, {
-      select: { id: true },
-    });
+  /** @see publishAuthorizationResetAllAccounts for the parameters. */
+  public async publishAuthorizationResetAllUsers(
+    taskId?: string,
+    userIds?: string[]
+  ) {
+    const ids = userIds ?? (await this.findAllIds(User));
 
     const task = taskId
       ? { id: taskId }
-      : await this.taskService.create(organizations.length);
+      : await this.taskService.create(ids.length);
 
-    organizations.forEach(({ id }) =>
-      this.authResetQueue.emit<any, AuthResetEventPayload>(
-        RESET_EVENT_TYPE.LICENSE_RESET_ORGANIZATION,
-        {
-          id,
-          type: RESET_EVENT_TYPE.LICENSE_RESET_ORGANIZATION,
-          task: task.id,
-        }
-      )
+    this.emitResetEvents(
+      ids,
+      RESET_EVENT_TYPE.AUTHORIZATION_RESET_USER,
+      task.id
     );
 
     return task.id;
   }
 
-  public async publishAuthorizationResetAllUsers(taskId?: string) {
-    const users = await this.manager.find(User, {
-      select: { id: true },
-    });
+  /** @see publishAuthorizationResetAllAccounts for the parameters. */
+  public async publishAuthorizationResetAllOrganizations(
+    taskId?: string,
+    organizationIds?: string[]
+  ) {
+    const ids = organizationIds ?? (await this.findAllIds(Organization));
 
     const task = taskId
       ? { id: taskId }
-      : await this.taskService.create(users.length);
+      : await this.taskService.create(ids.length);
 
-    users.forEach(({ id }) =>
-      this.authResetQueue.emit<any, AuthResetEventPayload>(
-        RESET_EVENT_TYPE.AUTHORIZATION_RESET_USER,
-        {
-          id,
-          type: RESET_EVENT_TYPE.AUTHORIZATION_RESET_USER,
-          task: task.id,
-        }
-      )
-    );
-
-    return task.id;
-  }
-
-  public async publishAuthorizationResetAllOrganizations(taskId?: string) {
-    const organizations = await this.manager.find(Organization, {
-      select: { id: true },
-    });
-
-    const task = taskId
-      ? { id: taskId }
-      : await this.taskService.create(organizations.length);
-
-    organizations.forEach(({ id }) =>
-      this.authResetQueue.emit<any, AuthResetEventPayload>(
-        RESET_EVENT_TYPE.AUTHORIZATION_RESET_ORGANIZATION,
-        {
-          id,
-          type: RESET_EVENT_TYPE.AUTHORIZATION_RESET_ORGANIZATION,
-          task: task.id,
-        }
-      )
+    this.emitResetEvents(
+      ids,
+      RESET_EVENT_TYPE.AUTHORIZATION_RESET_ORGANIZATION,
+      task.id
     );
 
     return task.id;
