@@ -97,23 +97,33 @@ export class AuthResetService {
       // its target is waiting forever.
       if (task) {
         try {
+          // Task errors are surfaced to operators through the `task` query, so
+          // this string stays stable and free of interpolated internals. The
+          // diagnosis lives in the log line and in the exception details below.
           await this.taskService.completeWithError(
             task.id,
-            `Reset publishing failed before all events were emitted: ${error}`
+            'Reset publishing failed before all events were emitted'
           );
-        } catch (completionError) {
+        } catch (completionError: any) {
           this.logger.error(
             `Failed to mark task '${task.id}' as errored: ${completionError}`,
-            undefined,
+            completionError?.stack,
             LogContext.AUTH
           );
         }
       }
 
-      throw new BaseException(
+      this.logger.error(
         `Error while initializing authorization reset: ${error}`,
+        (error as Error)?.stack,
+        LogContext.AUTH
+      );
+
+      throw new BaseException(
+        'Error while initializing authorization reset',
         LogContext.AUTH,
-        AlkemioErrorStatus.AUTHORIZATION_RESET
+        AlkemioErrorStatus.AUTHORIZATION_RESET,
+        { originalException: error }
       );
     }
   }

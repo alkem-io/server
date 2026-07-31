@@ -699,6 +699,20 @@ describe('TaskService — concurrent consumers', () => {
       TaskStatus.COMPLETED
     );
   });
+
+  it('refuses to re-count a task that already has a count', async () => {
+    const task = await service.create(5);
+    await service.updateTaskResults(task.id, 'first item' as any);
+
+    // Re-stamping would reset itemsDone to 0 under a consumer that has already
+    // reported progress — corrupting the counter the terminal status is
+    // derived from.
+    await expect(service.setItemsCount(task.id, 99)).rejects.toThrow(
+      /already has an itemsCount/
+    );
+
+    expect((await service.getOrFail(task.id)).itemsCount).toBe(5);
+  });
 });
 
 function createMockTask(overrides?: Partial<Task>): Task {

@@ -235,10 +235,10 @@ export class TaskService {
     };
 
     // A counted task with nothing to do is already finished: no item update
-    // will ever arrive to move it out of IN_PROGRESS.
+    // will ever arrive to move it out of IN_PROGRESS. Routed through finish()
+    // so every terminal transition in this service stamps `end` the same way.
     if (itemsCount === 0) {
-      task.status = TaskStatus.COMPLETED;
-      task.end = now;
+      this.finish(task, TaskStatus.COMPLETED);
     }
 
     await this.cacheManager.set<Task>(task.id, task, {
@@ -381,16 +381,28 @@ export class TaskService {
   public async setItemsCount(id: string, itemsCount: number) {
     const existing = await this.getOrFail(id);
 
+    // Stamping a count is a one-shot on a fresh task. Re-stamping one that is
+    // already counted would reset `itemsDone` to zero underneath consumers
+    // that have already reported progress, silently corrupting the very
+    // counter the terminal status is derived from — so refuse rather than
+    // corrupt.
+    if (existing.itemsCount !== undefined) {
+      throw new Error(
+        `Task '${id}' already has an itemsCount (${existing.itemsCount}); refusing to re-count it`
+      );
+    }
+
     // `itemsCount` is readonly on the interface, so rebuild rather than cast
     // the guarantee away.
     const task: Task = {
       ...existing,
       itemsCount,
       itemsDone: 0,
-      ...(itemsCount === 0
-        ? { status: TaskStatus.COMPLETED, end: new Date().getTime() }
-        : {}),
     };
+
+    if (itemsCount === 0) {
+      this.finish(task, TaskStatus.COMPLETED);
+    }
 
     await this.cacheManager.set(task.id, task, {
       ttl: TTL,
