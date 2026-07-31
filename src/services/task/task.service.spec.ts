@@ -540,6 +540,167 @@ describe('TaskService', () => {
   });
 });
 
+/**
+ * Competing consumers (issue #6310, round 2).
+ *
+ * The auth-reset queue is consumed by up to 10 pods at once (prefetchCount: 1
+ * in main.worker.ts, REPLICAS=10 in the infra-ops autoscaler), all sharing one
+ * Redis. These tests model that: every `get` hands back its OWN deserialized
+ * copy of the task, and all consumers read before any of them write — which is
+ * exactly what makes a read-modify-write lose increments.
+ *
+ * With `task.itemsDone += 1` the counter lands on 1 instead of 10, the target
+ * is never reached, and the task hangs forever — the very bug being fixed.
+ * These pass only because the counter is an atomic Redis INCR.
+ */
+describe('TaskService — concurrent consumers', () => {
+  let service: TaskService;
+  let counters: Map<string, number>;
+  let store: Map<string, any>;
+
+  /** A cacheManager whose reads are isolated copies, like real deserialization. */
+  const makeSharedCache = () => ({
+    get: vi.fn(async (key: string) => {
+      // Snapshot FIRST, then yield. This is the order that matters: every
+      // consumer reads the same state before any of them gets to write, which
+      // is exactly how a read-modify-write loses increments in production.
+      // (Yielding before the read would let each consumer run to completion in
+      // its own microtask drain — no overlap, and the test would pass against
+      // the very bug it is supposed to catch.)
+      const value = store.get(key);
+      await new Promise(resolve => setTimeout(resolve, 0));
+      return value === undefined ? undefined : structuredClone(value);
+    }),
+    set: vi.fn(async (key: string, value: any) => {
+      store.set(key, structuredClone(value));
+      return 'OK';
+    }),
+    del: vi.fn(),
+    reset: vi.fn(),
+    wrap: vi.fn(),
+    // The bit that matters: a real atomic INCR behind cacheManager.store.
+    store: {
+      name: 'redis',
+      getClient: () => ({
+        incr: (key: string, cb: (e: null, v: number) => void) => {
+          const next = (counters.get(key) ?? 0) + 1;
+          counters.set(key, next);
+          cb(null, next);
+        },
+        get: (key: string, cb: (e: null, v: string | null) => void) =>
+          cb(null, counters.has(key) ? String(counters.get(key)) : null),
+        expire: (_k: string, _s: number, cb: (e: null, v: number) => void) =>
+          cb(null, 1),
+        quit: vi.fn(),
+      }),
+    },
+  });
+
+  beforeEach(async () => {
+    counters = new Map();
+    store = new Map();
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        TaskService,
+        { provide: CACHE_MANAGER, useValue: makeSharedCache() },
+        MockWinstonProvider,
+      ],
+    }).compile();
+
+    service = module.get<TaskService>(TaskService);
+  });
+
+  it('does not lose increments when 10 consumers finish at once', async () => {
+    const task = await service.create(10);
+
+    await Promise.all(
+      Array.from({ length: 10 }, (_, i) =>
+        service.updateTaskResults(task.id, `reset ${i}` as any)
+      )
+    );
+
+    const settled = await service.getOrFail(task.id);
+
+    expect(settled.itemsDone).toBe(10);
+    expect(settled.status).toBe(TaskStatus.COMPLETED);
+  });
+
+  it('reports COMPLETED even if a stale consumer clobbers the stored status', async () => {
+    const task = await service.create(2);
+
+    await Promise.all([
+      service.updateTaskResults(task.id, 'a' as any),
+      service.updateTaskResults(task.id, 'b' as any),
+    ]);
+
+    // Simulate the lost update the counters exist to survive: a slow pod writes
+    // its stale IN_PROGRESS copy back over the terminal one.
+    store.set(task.id, {
+      ...structuredClone(store.get(task.id)),
+      status: TaskStatus.IN_PROGRESS,
+      itemsDone: 1,
+    });
+
+    const resolved = await service.getOrFail(task.id);
+
+    // The Redis counter cannot be clobbered, so it — not the stored field —
+    // decides.
+    expect(resolved.itemsDone).toBe(2);
+    expect(resolved.status).toBe(TaskStatus.COMPLETED);
+  });
+
+  it('settles as ERRORED when any item failed, not COMPLETED', async () => {
+    const task = await service.create(3);
+
+    await Promise.all([
+      service.updateTaskResults(task.id, 'ok' as any),
+      service.updateTaskErrors(task.id, 'boom' as any),
+      service.updateTaskResults(task.id, 'ok' as any),
+    ]);
+
+    const settled = await service.getOrFail(task.id);
+
+    expect(settled.itemsDone).toBe(3);
+    expect(settled.status).toBe(TaskStatus.ERRORED);
+  });
+
+  it('ignores a redelivered item after the task has settled', async () => {
+    const task = await service.create(1);
+
+    await service.updateTaskResults(task.id, 'ok' as any);
+    expect((await service.getOrFail(task.id)).status).toBe(
+      TaskStatus.COMPLETED
+    );
+
+    // RabbitMQ is at-least-once: handleReset publishes its retry before acking
+    // the original, so a pod dying in between gets the item redelivered. That
+    // must not resurrect a settled task or re-stamp its `end`.
+    const endBefore = (await service.getOrFail(task.id)).end;
+    await service.updateTaskErrors(task.id, 'late duplicate' as any);
+
+    const after = await service.getOrFail(task.id);
+    expect(after.status).toBe(TaskStatus.COMPLETED);
+    expect(after.end).toBe(endBefore);
+  });
+
+  it('stamps a count onto an externally created task', async () => {
+    const task = await service.create(); // uncounted, as external callers make it
+    expect(task.itemsCount).toBeUndefined();
+
+    await service.setItemsCount(task.id, 2);
+
+    await Promise.all([
+      service.updateTaskResults(task.id, 'a' as any),
+      service.updateTaskResults(task.id, 'b' as any),
+    ]);
+
+    expect((await service.getOrFail(task.id)).status).toBe(
+      TaskStatus.COMPLETED
+    );
+  });
+});
+
 function createMockTask(overrides?: Partial<Task>): Task {
   const now = Date.now();
   return {

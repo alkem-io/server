@@ -243,6 +243,11 @@ describe('AuthResetService', () => {
     beforeEach(() => {
       // All find calls return empty arrays by default
       entityManager.find.mockResolvedValue([]);
+      // A caller-supplied task is adopted, not created: it is stamped with the
+      // computed itemsCount so it has a target to reach.
+      taskService.setItemsCount.mockImplementation(
+        async (id: string) => ({ id }) as any
+      );
     });
 
     it('should use provided taskId and return it', async () => {
@@ -250,6 +255,20 @@ describe('AuthResetService', () => {
 
       expect(result).toBe('existing-task');
       expect(taskService.create).not.toHaveBeenCalled();
+    });
+
+    it('stamps a caller-supplied task with the computed itemsCount (issue #6310)', async () => {
+      // Regression: the taskId branch used to discard the count it had just
+      // computed, leaving the caller's task with no target — the original hang,
+      // reached through a different door.
+      entityManager.find
+        .mockResolvedValueOnce([{ id: 'a1' }, { id: 'a2' }]) // accounts   x2
+        .mockResolvedValueOnce([{ id: 'o1' }]) // orgs       x2
+        .mockResolvedValueOnce([{ id: 'u1' }, { id: 'u2' }]); // users      x1
+
+      await service.publishResetAll('caller-task');
+
+      expect(taskService.setItemsCount).toHaveBeenCalledWith('caller-task', 8);
     });
 
     it('should create a task when no taskId is provided', async () => {

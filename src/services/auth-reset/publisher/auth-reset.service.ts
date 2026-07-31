@@ -38,6 +38,13 @@ export class AuthResetService {
    * our migration notes tell to run this.
    */
   public async publishResetAll(taskId?: string) {
+    // Declared OUTSIDE the try so the catch can reach it. If a publisher throws
+    // partway through — the RMQ channel dropping while the licence resets are
+    // emitted, say — the remaining messages are never sent, so the task can
+    // never reach its target. Left alone it would sit IN_PROGRESS forever and
+    // permanently pollute getAll(IN_PROGRESS); it has to be failed explicitly.
+    let task: { id: string } | undefined;
+
     try {
       // Fetch the three id sets ONCE, up front. This is what makes the count
       // trustworthy: the ids counted are exactly the ids emitted. A separate
@@ -53,14 +60,19 @@ export class AuthResetService {
       ]);
 
       // Accounts and organizations are each reset twice (authorization AND
-      // licence); users once. The platform and AI-server resets deliberately
-      // carry no task id, so the subscriber never accounts for them — counting
-      // them here would leave the task 3 items short forever.
+      // licence); users once. The two platform-level resets emitted below
+      // (AUTHORIZATION_RESET_PLATFORM, AUTHORIZATION_RESET_AI_SERVER)
+      // deliberately carry no task id, so the subscriber never accounts for
+      // them — counting them here would leave the task 2 items short forever.
       const itemsCount =
         accountIds.length * 2 + organizationIds.length * 2 + userIds.length;
 
-      const task = taskId
-        ? { id: taskId }
+      // A caller-supplied task was necessarily created without a count (every
+      // external creator calls taskService.create() with no argument), so it
+      // has to be told the total — otherwise the count computed just above is
+      // thrown away and the task has no target to reach.
+      task = taskId
+        ? await this.taskService.setItemsCount(taskId, itemsCount)
         : await this.taskService.create(itemsCount);
 
       // The pre-fetched ids are handed down so the publishers below re-use them
@@ -80,6 +92,24 @@ export class AuthResetService {
 
       return task.id;
     } catch (error) {
+      // Fail the task explicitly if it got as far as being created. Whatever
+      // was not emitted will never arrive, so waiting for the counter to reach
+      // its target is waiting forever.
+      if (task) {
+        try {
+          await this.taskService.completeWithError(
+            task.id,
+            `Reset publishing failed before all events were emitted: ${error}`
+          );
+        } catch (completionError) {
+          this.logger.error(
+            `Failed to mark task '${task.id}' as errored: ${completionError}`,
+            undefined,
+            LogContext.AUTH
+          );
+        }
+      }
+
       throw new BaseException(
         `Error while initializing authorization reset: ${error}`,
         LogContext.AUTH,
