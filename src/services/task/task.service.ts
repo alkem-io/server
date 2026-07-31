@@ -125,24 +125,6 @@ export class TaskService {
   }
 
   /**
-   * Claim an item for this task, exactly once.
-   *
-   * RabbitMQ is at-least-once, and `handleReset` re-publishes its retry BEFORE
-   * acking the original — so a pod dying between those two lines guarantees a
-   * redelivery. Counting that twice would push `itemsDone` to `itemsCount`
-   * while real items are still queued: the task settles early, and every
-   * genuine update after it is dropped by the terminal guard, so a run that
-   * later fails an item can still report COMPLETED.
-   *
-   * `SADD` returns 1 only for a member that was not already in the set, which
-   * makes it the claim. Returns true when the caller owns this item and should
-   * account for it, false when it is a duplicate.
-   *
-   * Without Redis (or without an item identity) there is nothing to dedupe
-   * against and every call is treated as a fresh item — the previous
-   * behaviour.
-   */
-  /**
    * Record the task's terminal timestamp where it cannot be clobbered.
    *
    * `end` lives on the Task object, and every consumer writes that whole
@@ -174,6 +156,24 @@ export class TaskService {
     });
   }
 
+  /**
+   * Claim an item for this task, exactly once.
+   *
+   * RabbitMQ is at-least-once, and `handleReset` re-publishes its retry BEFORE
+   * acking the original — so a pod dying between those two lines guarantees a
+   * redelivery. Counting that twice would push `itemsDone` to `itemsCount`
+   * while real items are still queued: the task settles early, and every
+   * genuine update after it is dropped by the terminal guard, so a run that
+   * later fails an item can still report COMPLETED.
+   *
+   * `SADD` returns 1 only for a member that was not already in the set, which
+   * makes it the claim. Returns true when the caller owns this item and should
+   * account for it, false when it is a duplicate.
+   *
+   * Without Redis (or without an item identity) there is nothing to dedupe
+   * against and every call is treated as a fresh item — the previous
+   * behaviour.
+   */
   private async claimItem(id: string, itemKey?: string): Promise<boolean> {
     const client = this.redisClient();
 
