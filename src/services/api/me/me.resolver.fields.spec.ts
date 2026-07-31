@@ -281,7 +281,9 @@ describe('MeResolverFields', () => {
     // added a log line. The real degradation is asserted in
     // me.conversations.resolver.fields.spec.ts, which owns the fields inside.
     it('should not log for the empty container, which is the same either way', async () => {
-      await resolver.conversations(anonymousActorContext);
+      const result = await resolver.conversations(anonymousActorContext);
+
+      expect(result).toEqual({});
       expect(logger.verbose).not.toHaveBeenCalled();
     });
 

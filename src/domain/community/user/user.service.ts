@@ -608,6 +608,10 @@ export class UserService {
           // Scrubbed, not raw: a stack begins with the error's own message, so
           // logging it unredacted defeats a redacted `message` entirely. The
           // revocation service exports the guarded pair precisely for this.
+          //
+          // One policy for the whole deletion path — every catch below uses
+          // the same pair. The remaining calls hit the same Kratos client, so
+          // they can surface the same material in an error message.
           redactStack(error),
           LogContext.AUTH
         );
@@ -652,9 +656,9 @@ export class UserService {
             message: 'Failed to clear actor metadata from Kratos identity',
             userID: id,
             authenticationID: user.authenticationID,
-            error: error?.message,
+            error: redactError(error),
           },
-          error?.stack,
+          redactStack(error),
           LogContext.AUTH
         );
       }
@@ -668,9 +672,9 @@ export class UserService {
               message: 'Failed to delete Kratos identity during user deletion',
               userID: id,
               authenticationID: user.authenticationID,
-              error: error?.message,
+              error: redactError(error),
             },
-            error?.stack,
+            redactStack(error),
             LogContext.AUTH
           );
         }
