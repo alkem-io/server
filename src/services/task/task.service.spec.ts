@@ -288,7 +288,7 @@ describe('TaskService', () => {
       });
     });
 
-    it('should set status to COMPLETED when all items are done', async () => {
+    it('should set status to ERRORED when all items are done', async () => {
       const task = createMockTask({
         itemsCount: 1,
         itemsDone: 0,
@@ -299,7 +299,8 @@ describe('TaskService', () => {
       await service.updateTaskErrors(task.id, 'final-error');
 
       expect(task.itemsDone).toBe(1);
-      expect(task.status).toBe(TaskStatus.COMPLETED);
+      // A run that lost items is not a successful run.
+      expect(task.status).toBe(TaskStatus.ERRORED);
     });
 
     it('should not increment itemsDone when completeItem is false', async () => {
@@ -322,6 +323,134 @@ describe('TaskService', () => {
       await expect(
         service.updateTaskErrors('missing', 'error')
       ).rejects.toThrow("Task 'missing' not found");
+    });
+  });
+
+  // Regression coverage for #6310: `authorizationPolicyResetAll` handed back a
+  // task that could never reach COMPLETED, while the error path completed it on
+  // the first failure. The two update paths must agree on when a task is done.
+  describe('terminal status (issue #6310)', () => {
+    const primeTask = (task: Task) => {
+      (cacheManager.get as Mock).mockResolvedValue(task);
+      (cacheManager.set as Mock).mockResolvedValue('ok');
+    };
+
+    it('should NOT complete an uncounted task on an error', async () => {
+      // The exact shape `create()` produces with no itemsCount — where
+      // `undefined === undefined` used to be read as "all items are done".
+      const task = createMockTask({
+        itemsCount: undefined,
+        itemsDone: undefined,
+      });
+      primeTask(task);
+
+      await service.updateTaskErrors(task.id, 'boom');
+
+      expect(task.status).toBe(TaskStatus.IN_PROGRESS);
+      expect(task.end).toBeUndefined();
+      expect(task.errors).toHaveLength(1);
+    });
+
+    it('should NOT complete an uncounted task after many errors', async () => {
+      const task = createMockTask({
+        itemsCount: undefined,
+        itemsDone: undefined,
+      });
+      primeTask(task);
+
+      await service.updateTaskErrors(task.id, 'boom-1');
+      await service.updateTaskErrors(task.id, 'boom-2');
+      await service.updateTaskErrors(task.id, 'boom-3');
+
+      expect(task.status).toBe(TaskStatus.IN_PROGRESS);
+      // An uncounted task is only ever terminated explicitly.
+      await service.complete(task.id, TaskStatus.ERRORED);
+      expect(task.status).toBe(TaskStatus.ERRORED);
+    });
+
+    it('should NOT complete an uncounted task on a result either', async () => {
+      const task = createMockTask({
+        itemsCount: undefined,
+        itemsDone: undefined,
+      });
+      primeTask(task);
+
+      await service.updateTaskResults(task.id, 'ok');
+
+      expect(task.status).toBe(TaskStatus.IN_PROGRESS);
+    });
+
+    it('should reach COMPLETED when itemsDone reaches itemsCount', async () => {
+      const task = createMockTask({ itemsCount: 3, itemsDone: 0 });
+      primeTask(task);
+
+      await service.updateTaskResults(task.id, 'item-1');
+      expect(task.status).toBe(TaskStatus.IN_PROGRESS);
+
+      await service.updateTaskResults(task.id, 'item-2');
+      expect(task.status).toBe(TaskStatus.IN_PROGRESS);
+
+      await service.updateTaskResults(task.id, 'item-3');
+
+      expect(task.itemsDone).toBe(3);
+      expect(task.status).toBe(TaskStatus.COMPLETED);
+      expect(task.end).toBeGreaterThan(0);
+    });
+
+    it('should stay IN_PROGRESS when an early item errors, then end ERRORED', async () => {
+      const task = createMockTask({ itemsCount: 3, itemsDone: 0 });
+      primeTask(task);
+
+      // The inverted path: the first error used to flip status to COMPLETED.
+      await service.updateTaskErrors(task.id, 'item-1 failed');
+      expect(task.status).toBe(TaskStatus.IN_PROGRESS);
+
+      await service.updateTaskResults(task.id, 'item-2 ok');
+      expect(task.status).toBe(TaskStatus.IN_PROGRESS);
+
+      // Last item lands on the SUCCESS path, but the run lost an item.
+      await service.updateTaskResults(task.id, 'item-3 ok');
+
+      expect(task.itemsDone).toBe(3);
+      expect(task.status).toBe(TaskStatus.ERRORED);
+      expect(task.end).toBeGreaterThan(0);
+    });
+
+    it('should end ERRORED when the last item is the failing one', async () => {
+      const task = createMockTask({ itemsCount: 2, itemsDone: 0 });
+      primeTask(task);
+
+      await service.updateTaskResults(task.id, 'item-1 ok');
+      expect(task.status).toBe(TaskStatus.IN_PROGRESS);
+
+      await service.updateTaskErrors(task.id, 'item-2 failed');
+
+      expect(task.itemsDone).toBe(2);
+      expect(task.status).toBe(TaskStatus.ERRORED);
+    });
+
+    it('should still terminate if the counter overshoots itemsCount', async () => {
+      const task = createMockTask({ itemsCount: 1, itemsDone: 2 });
+      primeTask(task);
+
+      await service.updateTaskResults(task.id, 'stray item');
+
+      // `>=`, not `===` — an overshoot must not step over the terminal check.
+      expect(task.status).toBe(TaskStatus.COMPLETED);
+    });
+
+    it('should create a zero-item task already COMPLETED', async () => {
+      (cacheManager.get as Mock).mockResolvedValueOnce([]);
+      (cacheManager.set as Mock).mockResolvedValue('ok');
+
+      // Nothing to reset means no item update will ever arrive to move it out
+      // of IN_PROGRESS.
+      const result = await service.create(0);
+
+      expect(result.itemsCount).toBe(0);
+      expect(result.itemsDone).toBe(0);
+      expect(result.status).toBe(TaskStatus.COMPLETED);
+      expect(result.end).toBeGreaterThan(0);
     });
   });
 

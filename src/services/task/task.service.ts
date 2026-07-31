@@ -74,15 +74,58 @@ export class TaskService {
       action: 'auth-reset',
       status: TaskStatus.IN_PROGRESS, // may not be accurate atm,
       itemsCount,
-      itemsDone: itemsCount && 0,
+      // An explicit count opts the task into progress tracking, so it starts at
+      // zero. Without a count the task is unbounded and `itemsDone` stays
+      // undefined — such a task is terminated explicitly via `complete()` /
+      // `completeWithError()`, never by the counters.
+      // NB: this used to read `itemsCount && 0`, which returns the *left*
+      // operand when it is falsy — correct only by accident, and unreadable.
+      itemsDone: itemsCount === undefined ? undefined : 0,
       results: [],
       errors: [],
     };
+
+    // A counted task with nothing to do is already finished: no item update
+    // will ever arrive to move it out of IN_PROGRESS.
+    if (itemsCount === 0) {
+      task.status = TaskStatus.COMPLETED;
+      task.end = now;
+    }
+
     await this.cacheManager.set<Task>(task.id, task, {
       ttl: TTL,
     });
     await this.addTaskToList(task);
     return task;
+  }
+
+  /**
+   * Whether every item this task was created for has been accounted for —
+   * i.e. it is a *counted* task and its counter has reached the target.
+   *
+   * An uncounted task (no `itemsCount`) is never "finished" by this rule: it
+   * has no target to reach, so it can only be terminated explicitly. This is
+   * the guard that must be applied identically on the success and the error
+   * path — omitting it on one of them made `undefined === undefined` true and
+   * completed an uncounted task on its very first error.
+   */
+  private isFullyAccountedFor(task: Task): boolean {
+    return (
+      task.itemsCount !== undefined &&
+      task.itemsDone !== undefined &&
+      // `>=` rather than `===` so an over-count (a racing extra item) still
+      // terminates the task instead of stepping over the equality and hanging.
+      task.itemsDone >= task.itemsCount
+    );
+  }
+
+  /** Move a fully-accounted-for task into its terminal state. */
+  private finish(
+    task: Task,
+    status: TaskStatus.COMPLETED | TaskStatus.ERRORED
+  ) {
+    task.status = status;
+    task.end = new Date().getTime();
   }
 
   /**
@@ -102,11 +145,16 @@ export class TaskService {
       task.itemsDone += 1;
     }
 
-    if (task.itemsCount && task.itemsCount === task.itemsDone) {
-      task.status = TaskStatus.COMPLETED;
-    }
-
     task.results.unshift(`[${new Date().toISOString()}]::${result}`);
+
+    if (this.isFullyAccountedFor(task)) {
+      // Every item is in, but some of them failed — a run that lost items is
+      // not a successful run, so it settles as ERRORED.
+      this.finish(
+        task,
+        task.errors.length > 0 ? TaskStatus.ERRORED : TaskStatus.COMPLETED
+      );
+    }
 
     await this.cacheManager.set(task.id, task, {
       ttl: TTL,
@@ -124,11 +172,13 @@ export class TaskService {
       task.itemsDone += 1;
     }
 
-    if (task.itemsCount === task.itemsDone) {
-      task.status = TaskStatus.COMPLETED;
-    }
-
     task.errors.unshift(error);
+
+    // Only once the LAST item is accounted for — an error on item 1 of N must
+    // not terminate the task; the remaining items are still being processed.
+    if (this.isFullyAccountedFor(task)) {
+      this.finish(task, TaskStatus.ERRORED);
+    }
 
     await this.cacheManager.set(task.id, task, {
       ttl: TTL,
