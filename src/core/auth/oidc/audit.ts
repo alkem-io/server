@@ -35,6 +35,12 @@ export type AuditEventType =
   // anonymous fall-through.
   | 'auth.cookie.session_terminated'
   | 'auth.cookie.absolute_ttl_exceeded'
+  // server#6315 — the subject-level revocation marker rejected this request.
+  // Distinct from `session_terminated`, which means this session's own payload
+  // carries a tombstone. This one fires when the payload looks healthy but the
+  // subject was revoked after the session was minted: the resurrected-tombstone
+  // race and the never-indexed (pre-deployment) population.
+  | 'auth.cookie.subject_revoked'
   | 'session.regenerated'
   | 'session.refresh.rotated'
   | 'session.refresh.temporarily_unavailable'

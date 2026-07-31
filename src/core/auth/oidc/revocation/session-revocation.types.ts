@@ -80,9 +80,32 @@ export type SessionRevocationReport = {
    * conflating them would inflate the audit trail with sessions it did not end.
    */
   revokedCount: number;
+  /**
+   * Counts ONLY `outcome === 'failed'` — sessions whose LOCAL teardown did not
+   * land, i.e. sessions that may still be alive.
+   *
+   * Deliberately disjoint from `revokedCount` and from
+   * `tokenRevocationFailedCount`. A session that was tombstoned locally but
+   * whose refresh grant could not be revoked upstream is a `revoked` session
+   * with a failed remote leg — counting it here too would make one entry appear
+   * in two buckets and read, in the audit summary, as a session that survived.
+   */
   failedCount: number;
+  /**
+   * Sessions that were torn down locally but whose RFC 7009 call did not
+   * succeed. Not an access-control failure — FR-013 makes the local teardown
+   * authoritative — but it is a completeness gap worth its own number in the
+   * compliance evidence.
+   */
+  tokenRevocationFailedCount: number;
   /** True iff no entry failed locally and none failed remotely. */
   complete: boolean;
+  /**
+   * Whether the subject-level revocation marker was written. False for
+   * `exceptSid` (scoped) revocations, which must not reject the surviving
+   * session, and false if the marker write itself failed.
+   */
+  subjectMarked: boolean;
 };
 
 export type RevokeAllForSubOptions = {

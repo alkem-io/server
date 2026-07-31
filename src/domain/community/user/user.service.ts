@@ -15,7 +15,11 @@ import { FormatNotSupportedException } from '@common/exceptions/format.not.suppo
 import { validateEmail } from '@common/utils';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { ActorContextCacheService } from '@core/actor-context/actor.context.cache.service';
-import { OidcSessionRevocationService } from '@core/auth/oidc/revocation/oidc-session-revocation.service';
+import {
+  OidcSessionRevocationService,
+  redactError,
+  redactStack,
+} from '@core/auth/oidc/revocation/oidc-session-revocation.service';
 import { KratosSessionData } from '@core/authentication/kratos.session';
 import { applyUserFilter } from '@core/filtering/filters';
 import { UserFilterInput } from '@core/filtering/input-types';
@@ -599,9 +603,12 @@ export class UserService {
               'Failed to revoke OIDC sessions during user deletion; the deletion still stands',
             userID: id,
             authenticationID: user.authenticationID,
-            error: error?.message,
+            error: redactError(error),
           },
-          error?.stack,
+          // Scrubbed, not raw: a stack begins with the error's own message, so
+          // logging it unredacted defeats a redacted `message` entirely. The
+          // revocation service exports the guarded pair precisely for this.
+          redactStack(error),
           LogContext.AUTH
         );
       }
@@ -619,9 +626,9 @@ export class UserService {
               'Failed to invalidate Kratos identity sessions during user deletion; the deletion still stands',
             userID: id,
             authenticationID: user.authenticationID,
-            error: error?.message,
+            error: redactError(error),
           },
-          error?.stack,
+          redactStack(error),
           LogContext.AUTH
         );
       }

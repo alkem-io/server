@@ -83,14 +83,19 @@ describe('cross-service subject contract (trap 7)', () => {
 
     const sets = new Map<string, Set<string>>();
     const redis = {
-      sadd: async (key: string, member: string) => {
+      // The index write is one EVAL; this reproduces just the SADD half, which
+      // is all this contract test needs.
+      eval: async (
+        _script: string,
+        _numKeys: number,
+        key: string,
+        member: string
+      ) => {
         const set = sets.get(key) ?? new Set<string>();
         set.add(member);
         sets.set(key, set);
         return 1;
       },
-      ttl: async () => -2,
-      expire: async () => 1,
       smembers: async (key: string) => [...(sets.get(key) ?? [])],
     } as any;
 

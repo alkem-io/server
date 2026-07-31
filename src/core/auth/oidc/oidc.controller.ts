@@ -2,17 +2,19 @@ import {
   Controller,
   Get,
   Inject,
-  Logger,
+  LoggerService,
   Optional,
   Query,
   Req,
   Res,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { LogContext } from '@src/common/enums';
 import { AlkemioConfig } from '@src/types';
 import { randomUUID, timingSafeEqual } from 'crypto';
 import type { Request, Response } from 'express';
 import type { Redis } from 'ioredis';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { generators, type TokenSet } from 'openid-client';
 import {
   CORRELATION_ID_HEADER,
@@ -97,12 +99,16 @@ export class OidcController {
   // default in alkemio.yml); stamped onto the session at login as
   // `absolute_expires_at`.
   private readonly sessionAbsoluteTtlS: number;
-  // server#6315 — index-maintenance failures are logged, never thrown (FR-006).
-  private readonly logger = new Logger(OidcController.name);
-
   constructor(
     private readonly oidcService: OidcService,
     configService: ConfigService<AlkemioConfig, true>,
+    // server#6315 — index-maintenance failures are logged, never thrown
+    // (FR-006). Winston + LogContext rather than `new Logger()`: these are the
+    // records an operator greps for by `LogContext.AUTH` when a revocation
+    // misses a session, and a bare Nest logger does not reach the configured
+    // transports or APM.
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
     // FR-022c — sessionStore optional because some test harnesses replace
     // OidcController via custom providers and don't wire SESSION_STORE_HANDLE.
     // When absent, tearDownSession falls back to legacy destroy-only behaviour
@@ -143,11 +149,14 @@ export class OidcController {
     try {
       await addSessionToSubIndex(this.redis, sub, sid, absoluteExpiresAt);
     } catch (error) {
-      this.logger.warn(
-        `Failed to add session to subject index (sub=${sub}): ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-        OidcController.name
+      this.logger.warn?.(
+        {
+          message: 'Failed to add session to subject index',
+          sub,
+          sid,
+          failureReason: error instanceof Error ? error.message : String(error),
+        },
+        LogContext.AUTH
       );
     }
   }
@@ -160,11 +169,14 @@ export class OidcController {
     try {
       await removeSessionFromSubIndex(this.redis, sub, sid);
     } catch (error) {
-      this.logger.warn(
-        `Failed to prune session from subject index (sub=${sub}): ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-        OidcController.name
+      this.logger.warn?.(
+        {
+          message: 'Failed to prune session from subject index',
+          sub,
+          sid,
+          failureReason: error instanceof Error ? error.message : String(error),
+        },
+        LogContext.AUTH
       );
     }
   }
@@ -310,6 +322,20 @@ export class OidcController {
     const clientId = client.metadata.client_id ?? '';
     const targetReturnTo = validateReturnTo(preAuth.returnTo).value;
 
+    // server#6315 — `regenerate()` below destroys the current Redis session and
+    // mints a fresh sid. Capture the OUTGOING pair first: the old sid is still
+    // a member of its subject's index, and nothing else will ever remove it —
+    // the paths that call `deindexSession` are logout and revocation, neither
+    // of which runs on a re-login.
+    //
+    // Left behind, every re-login adds one phantom member. Beyond leaking
+    // entries, a later revocation emits one `session.revoked` audit record per
+    // phantom with `outcome=success`, padding the compliance trail with
+    // sessions that had already ceased to exist.
+    const previousSid = req.sessionID;
+    const previousSub =
+      typeof req.session?.sub === 'string' ? req.session.sub : null;
+
     await new Promise<void>((resolve, reject) => {
       req.session.regenerate(err => {
         if (err) return reject(err);
@@ -329,6 +355,13 @@ export class OidcController {
         req.session.save(saveErr => (saveErr ? reject(saveErr) : resolve()));
       });
     });
+
+    // Retire the sid `regenerate()` just destroyed. Guarded on the sid actually
+    // having changed so a session store that reuses the id cannot make this
+    // un-index the session we are in the middle of establishing.
+    if (previousSid && previousSid !== req.sessionID) {
+      await this.deindexSession(previousSub, previousSid);
+    }
 
     // server#6315 / FR-002 — register the new session in its subject's index so
     // it can be revoked later. Without this there is no way to get from a

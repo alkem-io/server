@@ -254,10 +254,22 @@ with their individual outcomes.
   ever revokes it). The listing must expire by itself no later than the last
   session it names, so it cannot accumulate forever.
 - **A session established before this capability shipped.** It is absent from
-  its account's listing and therefore initially unrevocable. Its holder's next
-  authenticated request self-heals the listing (FR-002a), after which the
-  session is revocable normally. Until that request happens the session remains
-  unrevocable — a bounded, documented residual exposure, not a silent one.
+  its account's listing, so a revocation enumerates nothing for it. Two
+  mechanisms cover it, and the second is what closes the gap rather than
+  documenting it:
+  1. Its holder's next authenticated request self-heals the listing (FR-002a),
+     after which it is revocable through the listing like any other session.
+  2. Independently of the listing, revocation records an **account-level
+     revocation marker** carrying the moment it happened. Every authenticated
+     request checks it and is refused if the session was established before
+     that moment. This needs neither listing membership nor an intact session
+     record, so a session that was never listed is still refused on its very
+     next request — including one deleted before it ever made one.
+- **A session record is rewritten by a request that was already in flight when
+  the revocation ran.** The in-flight request holds the pre-revocation state and
+  persists it afterwards, erasing the per-session teardown; by then the session
+  has also left the account's listing, so a retry cannot find it either. The
+  account-level marker is unaffected by both and still refuses the session.
 - **The self-healing write itself fails** (store briefly unreachable). The
   request is unaffected — it is never awaited. The next request retries it.
 - **A revoked session's holder returns after the refusal marker has lapsed.**

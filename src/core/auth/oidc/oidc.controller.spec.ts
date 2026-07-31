@@ -1,6 +1,6 @@
-import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { describe, expect, it, vi } from 'vitest';
 import { OidcController } from './oidc.controller';
 import { OidcService } from './oidc.service';
@@ -29,17 +29,20 @@ function makeFakeRedis(opts?: {
   sremImpl?: () => Promise<number>;
 }) {
   const calls: { cmd: string; args: unknown[] }[] = [];
-  const sadd = vi.fn((key: string, member: string) => {
-    calls.push({ cmd: 'sadd', args: [key, member] });
-    return opts?.saddImpl ? opts.saddImpl() : Promise.resolve(1);
-  });
+  // The membership write is a single EVAL now (atomic SADD + TTL roll), so the
+  // knob that used to shape `sadd` shapes the script call instead.
+  const sadd = vi.fn(
+    (_script: string, _n: number, key: string, member: string) => {
+      calls.push({ cmd: 'eval', args: [key, member] });
+      return opts?.saddImpl ? opts.saddImpl() : Promise.resolve(1);
+    }
+  );
   const srem = vi.fn((key: string, member: string) => {
     calls.push({ cmd: 'srem', args: [key, member] });
     return opts?.sremImpl ? opts.sremImpl() : Promise.resolve(1);
   });
-  const ttl = vi.fn(() => Promise.resolve(-2));
-  const expire = vi.fn(() => Promise.resolve(1));
-  return { redis: { sadd, srem, ttl, expire } as any, calls, sadd, srem };
+  const get = vi.fn(() => Promise.resolve(null));
+  return { redis: { eval: sadd, srem, get } as any, calls, sadd, srem };
 }
 
 /** Hand-rolled express-shaped Response fake — no precedent in this repo for
@@ -137,6 +140,7 @@ async function buildController(opts?: {
   };
 
   const providers: any[] = [
+    MockWinstonProvider,
     OidcController,
     { provide: OidcService, useValue: oidcService },
     { provide: ConfigService, useValue: { get: vi.fn(() => COOKIE_CONFIG) } },
@@ -198,7 +202,104 @@ describe('OidcController — callback registers the new session (FR-002)', () =>
     await controller.callback(state, 'auth-code', req, res);
 
     expect(res.redirectedTo).toBe('/dashboard');
-    expect(sadd).toHaveBeenCalledWith(subIndexKey('sub-1'), 'sid-1');
+    expect(sadd).toHaveBeenCalledWith(
+      expect.stringContaining("redis.call('SADD'"),
+      1,
+      subIndexKey('sub-1'),
+      'sid-1',
+      expect.any(String)
+    );
+  });
+
+  // `regenerate()` destroys the old Redis session and mints a new sid. Nothing
+  // else ever removes the old sid from the index — logout and revocation are
+  // the only de-index paths and neither runs on a re-login — so without this
+  // each re-login leaves a phantom member behind. Phantoms leak entries AND
+  // pad the audit trail: a later revocation emits one `session.revoked` record
+  // per phantom, with outcome=success, for sessions that no longer existed.
+  it('de-indexes the sid that regenerate() destroyed, on re-login', async () => {
+    const { redis, srem } = makeFakeRedis();
+    const { controller, fakeClient } = await buildController({ redis });
+
+    const state = 'state-2';
+    const nonce = 'nonce-2';
+    const issuedAt = Math.floor(Date.now() / 1000);
+    const preAuthJws = await signPreAuthCookie(
+      {
+        state,
+        nonce,
+        code_verifier: 'verifier-2',
+        returnTo: '/dashboard',
+        issued_at: issuedAt,
+      },
+      PRE_AUTH_KEY
+    );
+
+    fakeClient.callback.mockResolvedValue({
+      access_token: 'at',
+      id_token: 'idt',
+      refresh_token: 'rt',
+      expires_at: issuedAt + 600,
+      scope: 'openid profile',
+      claims: () => ({ sub: 'sub-1', nonce, alkemio_actor_id: 'actor-1' }),
+    });
+
+    // A browser that already holds a session for this subject signs in again.
+    const req = makeReq({
+      sessionID: 'old-sid',
+      cookies: { [PRE_AUTH_COOKIE_NAME]: preAuthJws },
+      session: makeSession({ sub: 'sub-1' }),
+    });
+    // Mirror express-session: regenerate rotates the id.
+    req.session.regenerate = vi.fn((cb: (err?: unknown) => void) => {
+      req.sessionID = 'sid-1';
+      cb();
+    });
+    const res = makeRes();
+
+    await controller.callback(state, 'auth-code', req, res);
+
+    expect(srem).toHaveBeenCalledWith(subIndexKey('sub-1'), 'old-sid');
+  });
+
+  it('does not de-index when the session id did not actually change', async () => {
+    const { redis, srem } = makeFakeRedis();
+    const { controller, fakeClient } = await buildController({ redis });
+
+    const state = 'state-3';
+    const nonce = 'nonce-3';
+    const issuedAt = Math.floor(Date.now() / 1000);
+    const preAuthJws = await signPreAuthCookie(
+      {
+        state,
+        nonce,
+        code_verifier: 'verifier-3',
+        returnTo: '/dashboard',
+        issued_at: issuedAt,
+      },
+      PRE_AUTH_KEY
+    );
+
+    fakeClient.callback.mockResolvedValue({
+      access_token: 'at',
+      id_token: 'idt',
+      refresh_token: 'rt',
+      expires_at: issuedAt + 600,
+      scope: 'openid profile',
+      claims: () => ({ sub: 'sub-1', nonce, alkemio_actor_id: 'actor-1' }),
+    });
+
+    const req = makeReq({
+      cookies: { [PRE_AUTH_COOKIE_NAME]: preAuthJws },
+      session: makeSession({ sub: 'sub-1' }),
+    });
+    const res = makeRes();
+
+    await controller.callback(state, 'auth-code', req, res);
+
+    // Guarded on the id having changed, so a store that reuses the id cannot
+    // make this un-index the session being established.
+    expect(srem).not.toHaveBeenCalled();
   });
 });
 
@@ -293,7 +394,9 @@ describe('OidcController — index failures are swallowed and logged (FR-006)', 
       saddImpl: () => Promise.reject(new Error('redis unreachable')),
     });
     const { controller, fakeClient } = await buildController({ redis });
-    const warnSpy = vi.spyOn(Logger.prototype, 'warn');
+    const warnSpy = MockWinstonProvider.useValue.warn as ReturnType<
+      typeof vi.fn
+    >;
 
     const state = 'state-2';
     const nonce = 'nonce-2';
@@ -327,10 +430,8 @@ describe('OidcController — index failures are swallowed and logged (FR-006)', 
     expect(res.redirectedTo).toBe('/dashboard'); // login still succeeded
     expect(warnSpy).toHaveBeenCalled();
     expect(
-      warnSpy.mock.calls.some(call => String(call[0]).includes('sub-fail'))
+      warnSpy.mock.calls.some((call: any[]) => call[0]?.sub === 'sub-fail')
     ).toBe(true);
-
-    warnSpy.mockRestore();
   });
 
   it('does not fail logout when the index prune rejects, and logs a warn', async () => {
@@ -338,7 +439,9 @@ describe('OidcController — index failures are swallowed and logged (FR-006)', 
       sremImpl: () => Promise.reject(new Error('redis unreachable')),
     });
     const { controller } = await buildController({ redis });
-    const warnSpy = vi.spyOn(Logger.prototype, 'warn');
+    const warnSpy = MockWinstonProvider.useValue.warn as ReturnType<
+      typeof vi.fn
+    >;
 
     const idToken = 'id-token-value';
     const req = makeReq({
@@ -354,8 +457,8 @@ describe('OidcController — index failures are swallowed and logged (FR-006)', 
     expect(res.redirectedTo).toContain('oauth2/sessions/logout'); // logout still completed
     expect(warnSpy).toHaveBeenCalled();
     expect(
-      warnSpy.mock.calls.some(call =>
-        String(call[0]).includes('sub-logout-fail')
+      warnSpy.mock.calls.some(
+        (call: any[]) => call[0]?.sub === 'sub-logout-fail'
       )
     ).toBe(true);
 

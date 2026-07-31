@@ -1,3 +1,4 @@
+import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { ConfigService } from '@nestjs/config';
@@ -40,6 +41,11 @@ import { OidcSessionRevocationService } from './oidc-session-revocation.service'
  */
 
 const SUB = 'a1b2c3d4-0000-0000-0000-000000000001';
+// The seeded sessions carry a real actor id on purpose: with a null one,
+// `CookieSessionStrategy.validate` returns an ANONYMOUS context, which is
+// non-null — so every `not.toBeNull()` assertion in this file would pass for a
+// session that never authenticated at all.
+const ACTOR_ID = 'actor-1';
 const COOKIE_NAME = 'alkemio_session';
 const DISPLAY_NAME = 'Deleted Person';
 const EMAIL = 'deleted.person@example.com';
@@ -83,6 +89,44 @@ function makeSharedRedis() {
         ttls.set(key, seconds);
         return 1;
       },
+      /**
+       * Interprets the two index Lua scripts. The atomic SADD + TTL roll and
+       * the later-timestamp-wins revocation marker both live inside EVAL now,
+       * so a fake that only recorded the call would test nothing.
+       */
+      eval: async (
+        script: string,
+        _numKeys: number,
+        key: string,
+        ...args: any[]
+      ) => {
+        if (script.includes("redis.call('SADD'")) {
+          const [member, candidateRaw] = args as [string, string];
+          const set = sets.get(key) ?? new Set<string>();
+          const added = set.has(member) ? 0 : 1;
+          set.add(member);
+          sets.set(key, set);
+          const candidate = Math.max(1, Number(candidateRaw));
+          const current = ttls.get(key) ?? -1;
+          if (current < 0 || candidate > current) ttls.set(key, candidate);
+          return added;
+        }
+        if (script.includes("redis.call('GET', KEYS[1])")) {
+          const [revokedAtRaw, ttlRaw] = args as [string, string];
+          const candidate = Number(revokedAtRaw);
+          const raw = strings.get(key);
+          const existing = raw === undefined ? null : Number(raw);
+          const nextTtl = Math.max(1, Number(ttlRaw));
+          if (existing === null || candidate > existing) {
+            strings.set(key, String(candidate));
+            ttls.set(key, nextTtl);
+          } else if (nextTtl > (ttls.get(key) ?? -1)) {
+            ttls.set(key, nextTtl);
+          }
+          return 1;
+        }
+        throw new Error(`fake redis: unrecognised script\n${script}`);
+      },
     } as any,
   };
 }
@@ -96,7 +140,7 @@ function seedPayload(sid: string): AlkemioSessionPayload {
     expires_at: nowS + 600,
     absolute_expires_at: nowS + 30 * 24 * 3600,
     sub: SUB,
-    alkemio_actor_id: null,
+    alkemio_actor_id: ACTOR_ID,
     refresh_failure_count: 0,
     refresh_failure_streak_started_at: null,
     created_at: nowS,
@@ -151,7 +195,15 @@ async function buildStack(sids: string[]) {
       },
       {
         provide: AuthenticationService,
-        useValue: { createActorContext: vi.fn() },
+        useValue: {
+          createActorContext: vi.fn(async () =>
+            Object.assign(new ActorContext(), {
+              actorID: ACTOR_ID,
+              isAnonymous: false,
+              credentials: [],
+            })
+          ),
+        },
       },
       {
         provide: ActorContextService,
@@ -159,7 +211,19 @@ async function buildStack(sids: string[]) {
           createAnonymous: vi.fn(() => ({ actorID: '', isAnonymous: true })),
         },
       },
-      { provide: ConfigService, useValue: { get: vi.fn(() => COOKIE_NAME) } },
+      {
+        provide: ConfigService,
+        useValue: {
+          // Path-aware: the strategy asks for `…cookie.name` (a string), the
+          // revocation service asks for `…cookie` (the object) to read
+          // `absolute_ttl_s` for the marker TTL.
+          get: vi.fn((path: string) =>
+            path.endsWith('.cookie')
+              ? { name: COOKIE_NAME, absolute_ttl_s: 2_592_000 }
+              : COOKIE_NAME
+          ),
+        },
+      },
       { provide: WINSTON_MODULE_NEST_PROVIDER, useValue: logger },
     ],
   }).compile();
@@ -199,11 +263,13 @@ describe('revocation ends access (SC-001)', () => {
   it('a live session authenticates BEFORE revocation', async () => {
     const { strategy } = await buildStack(['sid-1']);
 
-    // Baseline. Without this the test below could pass for the wrong reason —
-    // e.g. a broken fixture that never authenticated in the first place.
-    await expect(
-      strategy.validate(requestFor('sid-1'))
-    ).resolves.not.toBeNull();
+    // Baseline. `not.toBeNull()` is NOT enough here: an anonymous fall-through
+    // also resolves to a non-null ActorContext, so a fixture that never
+    // authenticated would satisfy it and every "still works" assertion below
+    // would be vacuous. Assert the identity.
+    await expect(strategy.validate(requestFor('sid-1'))).resolves.toMatchObject(
+      { actorID: ACTOR_ID, isAnonymous: false }
+    );
   });
 
   it('the next request after revocation is REJECTED, not silently anonymised', async () => {
@@ -331,7 +397,7 @@ describe('revocation leaves other subjects alone', () => {
     // FR-005 — the blast radius is exactly one subject.
     await expect(
       strategy.validate(requestFor('sid-other'))
-    ).resolves.not.toBeNull();
+    ).resolves.toMatchObject({ actorID: ACTOR_ID, isAnonymous: false });
     expect(await shared.client.smembers(`alkemio:sub:${otherSub}`)).toEqual([
       'sid-other',
     ]);
@@ -352,7 +418,7 @@ describe('revocation with exceptSid keeps the named session usable (SC-011)', ()
 
     await expect(
       strategy.validate(requestFor('sid-keep'))
-    ).resolves.not.toBeNull();
+    ).resolves.toMatchObject({ actorID: ACTOR_ID, isAnonymous: false });
     await expect(
       strategy.validate(requestFor('sid-drop'))
     ).rejects.toBeInstanceOf(CookieSessionInvalidError);
@@ -374,5 +440,73 @@ describe('revocation survives an authorization-server outage (FR-013)', () => {
     await expect(strategy.validate(requestFor('sid-1'))).rejects.toBeInstanceOf(
       CookieSessionInvalidError
     );
+  });
+});
+
+/**
+ * The two ways a session can outlive `revokeAllForSub` even when it ran
+ * successfully. Both are why the subject-level marker exists; neither is
+ * reachable by the per-session tombstone alone.
+ */
+describe('revocation holds against a resurrected tombstone and an unindexed session', () => {
+  it('stays revoked when an in-flight request writes the live payload back', async () => {
+    const { strategy, revocation, shared } = await buildStack(['sid-1']);
+    const livePayload = shared.strings.get(SESSION_KEY_PREFIX + 'sid-1');
+
+    await revocation.revokeAllForSub(SUB, 'account_deleted');
+
+    // Simulate the race precisely: a request that loaded the session BEFORE the
+    // revocation now persists it — `req.session.save()` on /refresh, or the
+    // lazy idle renewal firing at response end. express-session owns this key,
+    // so the write lands and the tombstone is gone.
+    await shared.client.set(SESSION_KEY_PREFIX + 'sid-1', livePayload!);
+    const restored = JSON.parse(
+      shared.strings.get(SESSION_KEY_PREFIX + 'sid-1')!
+    );
+    expect(restored.terminated_at).toBeFalsy(); // the tombstone really is gone
+    // …and the sid is already out of the index, so a retry could not find it.
+    expect(await shared.client.smembers(`alkemio:sub:${SUB}`)).toEqual([]);
+
+    // The marker is the only remaining record of the revocation. It is enough.
+    await expect(strategy.validate(requestFor('sid-1'))).rejects.toMatchObject({
+      errorCode: 'subject_revoked',
+    });
+  });
+
+  it('revokes a live session that was never in the index', async () => {
+    // The pre-deployment population: minted before the index shipped, and the
+    // self-heal has not run for it yet. `revokeAllForSub` enumerates nothing,
+    // so without the marker this session keeps full access to the absolute
+    // ceiling — exactly the #6315 defect, surviving its own fix.
+    const { strategy, revocation, shared } = await buildStack([]);
+    await shared.client.set(
+      SESSION_KEY_PREFIX + 'sid-unindexed',
+      JSON.stringify(seedPayload('sid-unindexed'))
+    );
+
+    const report = await revocation.revokeAllForSub(SUB, 'account_deleted');
+
+    expect(report.entries).toEqual([]); // the index genuinely knew nothing
+    expect(report.subjectMarked).toBe(true);
+    await expect(
+      strategy.validate(requestFor('sid-unindexed'))
+    ).rejects.toMatchObject({ errorCode: 'subject_revoked' });
+  });
+
+  it('lets a session created AFTER the revocation authenticate', async () => {
+    // What keeps the marker from being a permanent ban on the subject.
+    const { strategy, revocation, shared } = await buildStack([]);
+    await revocation.revokeAllForSub(SUB, 'account_deleted');
+
+    const fresh = seedPayload('sid-fresh');
+    fresh.created_at = Math.floor(Date.now() / 1000) + 5; // minted afterwards
+    await shared.client.set(
+      SESSION_KEY_PREFIX + 'sid-fresh',
+      JSON.stringify(fresh)
+    );
+
+    await expect(
+      strategy.validate(requestFor('sid-fresh'))
+    ).resolves.toMatchObject({ actorID: ACTOR_ID, isAnonymous: false });
   });
 });

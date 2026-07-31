@@ -1,20 +1,22 @@
 import { MessagingService } from '@domain/communication/messaging/messaging.service';
-import { Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { LogContext } from '@src/common/enums';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { type Mocked } from 'vitest';
 import { MeConversationsResolverFields } from './me.conversations.resolver.fields';
 
 describe('MeConversationsResolverFields', () => {
   let resolver: MeConversationsResolverFields;
   let messagingService: Mocked<MessagingService>;
+  let module: TestingModule;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
 
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [
         MeConversationsResolverFields,
         MockCacheManager,
@@ -42,17 +44,19 @@ describe('MeConversationsResolverFields', () => {
     expect(result).toEqual([]);
   });
 
-  it('should emit a warn log when degrading conversations to its empty value', async () => {
-    const warnSpy = vi
-      .spyOn(Logger.prototype, 'warn')
-      .mockImplementation(() => {});
+  it('should emit a verbose log when degrading conversations to its empty value', async () => {
+    // Verbose, not warn: an empty actorID is the ordinary state for every
+    // anonymous visitor, and the SPA queries `me` on essentially every page
+    // load. At WARN this is pure alert noise for an expected condition.
+    const logger = module.get(WINSTON_MODULE_NEST_PROVIDER);
     const actorContext = { actorID: '' } as any;
 
     await resolver.conversations(actorContext, {} as any);
 
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('me.conversations.conversations')
+    expect(logger.verbose).toHaveBeenCalledTimes(1);
+    expect(logger.verbose).toHaveBeenCalledWith(
+      expect.stringContaining('me.conversations.conversations'),
+      LogContext.AUTH
     );
   });
 

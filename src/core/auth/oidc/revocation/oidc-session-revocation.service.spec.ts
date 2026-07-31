@@ -5,7 +5,7 @@ import type { AuditEvent } from '../audit';
 import { OidcService } from '../oidc.service';
 import { OIDC_REDIS_CLIENT } from '../oidc.tokens';
 import { refreshLockKey } from '../refresh-lock';
-import { subIndexKey } from '../session-index.redis';
+import { subIndexKey, subRevokedKey } from '../session-index.redis';
 import type { AlkemioSessionPayload } from '../session-store.redis';
 import { SESSION_STORE_HANDLE } from '../strategies/cookie-session.errors';
 import { OidcSessionRevocationService } from './oidc-session-revocation.service';
@@ -57,6 +57,7 @@ async function buildHarness(options?: {
   markTerminatedImpl?: (sid: string) => Promise<void>;
   smembersImpl?: () => Promise<string[]>;
   sremImpl?: () => Promise<number>;
+  markerImpl?: () => Promise<number>;
   revocationEndpoint?: string | undefined;
   issuerThrows?: boolean;
 }) {
@@ -83,9 +84,16 @@ async function buildHarness(options?: {
       order.push(`del:${key}`);
       return 1;
     }),
-    sadd: vi.fn(),
-    ttl: vi.fn(),
-    expire: vi.fn(),
+    // The subject revocation marker (and the index write) go through EVAL.
+    // `markerImpl` lets a test make the marker write fail without disturbing
+    // the per-session teardown, which must continue regardless.
+    eval: vi.fn(async (_script: string, _n: number, key: string) => {
+      commands.push({ cmd: 'eval', args: [key] });
+      order.push(`eval:${key}`);
+      if (options?.markerImpl) return options.markerImpl();
+      return 1;
+    }),
+    get: vi.fn(async () => null),
   };
 
   const sessionStore = {
@@ -292,22 +300,33 @@ describe('revokeAllForSub — contract C4: full per-session teardown', () => {
 
     // Read-before-mutate matters: markTerminated blanks every token field, so
     // this is the only chance to capture the refresh token we revoke upstream.
+    // The subject marker is written FIRST — before any per-session teardown —
+    // so a request already in flight cannot resurrect a tombstone into a
+    // session that has already left the index and is therefore unfindable.
     expect(h.order).toEqual([
+      `eval:${subRevokedKey(SUB)}`,
       'get:sid-1',
       'markTerminated:sid-1',
-      `del:${refreshLockKey('sid-1')}`,
       'srem:sid-1',
     ]);
   });
 
-  it('clears the refresh lock so nothing keyed to a dead session lingers', async () => {
+  // Deliberately asserts the ABSENCE of the DEL. The refresh mutex in
+  // production is the in-process `refreshInFlight` Map — `acquireRefreshLock`
+  // has no production caller — so the Redis lock key is never written and
+  // deleting it is a wasted round trip per session. It is also unsafe to
+  // reinstate naively: `releaseRefreshLock` is an owner-checked
+  // compare-and-delete precisely so a lock cannot be stolen, and an
+  // unconditional DEL here would let two refreshes rotate one grant the moment
+  // the Redis mutex is wired up.
+  it('does not blind-delete the refresh lock key', async () => {
     const h = await buildHarness();
     stdoutSpy = captureAudit(h);
     okFetch();
 
     await h.service.revokeAllForSub(SUB, 'account_deleted');
 
-    expect(h.redis.del).toHaveBeenCalledWith(refreshLockKey('sid-1'));
+    expect(h.redis.del).not.toHaveBeenCalledWith(refreshLockKey('sid-1'));
   });
 
   it('completes the local teardown BEFORE contacting the authorization server', async () => {
@@ -479,7 +498,12 @@ describe('revokeAllForSub — contract C6: RFC 7009 remote revocation', () => {
     expect(report.complete).toBe(false);
   });
 
-  it('degrades to a failed remote leg when discovery has not completed', async () => {
+  // `skipped`, not `failed`: nothing was attempted. `initDiscovery` is
+  // fire-and-forget with an indefinite retry, so an unresolved endpoint is
+  // routine in dev, CI and restart waves — reporting it as a failure would mark
+  // every revocation incomplete and audit a fully successful local teardown as
+  // `outcome=failure`.
+  it('reports the remote leg as skipped when discovery has not completed', async () => {
     const h = await buildHarness({ issuerThrows: true });
     stdoutSpy = captureAudit(h);
     const fetchSpy = okFetch();
@@ -489,10 +513,12 @@ describe('revokeAllForSub — contract C6: RFC 7009 remote revocation', () => {
     // The identity chain may still be settling at boot; that must not throw.
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(h.sessionStore.markTerminated).toHaveBeenCalledTimes(1);
-    expect(report.entries[0].tokenRevocation).toBe('failed');
+    expect(report.entries[0].tokenRevocation).toBe('skipped');
+    // and the run is still reported complete, because nothing actually failed
+    expect(report.complete).toBe(true);
   });
 
-  it('degrades to a failed remote leg when no revocation_endpoint is advertised', async () => {
+  it('reports the remote leg as skipped when no revocation_endpoint is advertised', async () => {
     const h = await buildHarness({ revocationEndpoint: undefined });
     stdoutSpy = captureAudit(h);
     const fetchSpy = okFetch();
@@ -500,7 +526,8 @@ describe('revokeAllForSub — contract C6: RFC 7009 remote revocation', () => {
     const report = await h.service.revokeAllForSub(SUB, 'account_deleted');
 
     expect(fetchSpy).not.toHaveBeenCalled();
-    expect(report.entries[0].tokenRevocation).toBe('failed');
+    expect(report.entries[0].tokenRevocation).toBe('skipped');
+    expect(report.complete).toBe(true);
   });
 
   it('skips the remote leg when the session held no refresh token', async () => {
@@ -755,11 +782,16 @@ describe('revokeAllForSub — audit trail', () => {
     const perSession = h.auditRecords.filter(
       r => r.event_type === 'session.revoked'
     );
-    expect(perSession.map(r => r.outcome)).toEqual([
+    // Compared as a multiset: sessions are torn down with bounded concurrency,
+    // so emission order within a run is not deterministic — and it carries no
+    // meaning either, since each record is independently correlated. What must
+    // hold is that every session produced exactly one record with the right
+    // outcome.
+    expect(perSession.map(r => r.outcome).sort()).toEqual([
+      'failure', // failed
       'success', // revoked
       'success', // already_terminated
       'success', // already_absent
-      'failure', // failed
     ]);
   });
 
@@ -794,7 +826,9 @@ describe('revokeAllForSub — audit trail', () => {
     const completed = h.auditRecords.at(-1);
     expect(completed?.event_type).toBe('session.revocation.completed');
     expect(completed?.outcome).toBe('failure');
-    expect(completed?.truncated_input).toBe('revoked=1 failed=1 total=2');
+    expect(completed?.truncated_input).toBe(
+      'revoked=1 failed=1 token_revocation_failed=0 subject_marked=true total=2'
+    );
   });
 
   it('marks completed a success when everything succeeded', async () => {
@@ -807,7 +841,8 @@ describe('revokeAllForSub — audit trail', () => {
     expect(h.auditRecords.at(-1)).toMatchObject({
       event_type: 'session.revocation.completed',
       outcome: 'success',
-      truncated_input: 'revoked=2 failed=0 total=2',
+      truncated_input:
+        'revoked=2 failed=0 token_revocation_failed=0 subject_marked=true total=2',
     });
   });
 
@@ -932,5 +967,93 @@ describe('revokeAllForSub — consumer compatibility', () => {
     expect(report.correlationId).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
     );
+  });
+});
+
+/**
+ * The subject-level revocation marker, at the service boundary.
+ *
+ * It is written BEFORE any per-session teardown, which is what makes it a
+ * defence against the resurrected-tombstone race: an in-flight request can put
+ * the live payload back over a tombstone, and by then the sid has already left
+ * the index, so no retry could find it. The marker does not depend on either.
+ */
+describe('revokeAllForSub — subject revocation marker', () => {
+  it('writes the marker for a full-scope revocation', async () => {
+    const h = await buildHarness();
+    stdoutSpy = captureAudit(h);
+    okFetch();
+
+    const report = await h.service.revokeAllForSub(SUB, 'account_deleted');
+
+    expect(h.redis.eval).toHaveBeenCalledWith(
+      expect.stringContaining("redis.call('GET', KEYS[1])"),
+      1,
+      subRevokedKey(SUB),
+      expect.any(String),
+      expect.any(String)
+    );
+    expect(report.subjectMarked).toBe(true);
+  });
+
+  // The marker rejects by SUBJECT, so it cannot tell the surviving session
+  // apart from the rest. A scoped revocation therefore relies on the index
+  // alone — correct for the password-change flow, whose sessions are all
+  // post-index by construction.
+  it('does NOT write the marker for a scoped (exceptSid) revocation', async () => {
+    const h = await buildHarness({ sids: ['sid-1', 'sid-2'] });
+    stdoutSpy = captureAudit(h);
+    okFetch();
+
+    const report = await h.service.revokeAllForSub(SUB, 'password_changed', {
+      exceptSid: 'sid-2',
+    });
+
+    expect(h.redis.eval).not.toHaveBeenCalled();
+    expect(report.subjectMarked).toBe(false);
+  });
+
+  // Best-effort with respect to the teardown, but never silent: the teardown is
+  // the leg that actually ends access for every indexed session, so a marker
+  // failure must not abort it.
+  it('continues the per-session teardown when the marker write fails', async () => {
+    const h = await buildHarness({
+      markerImpl: () => Promise.reject(new Error('redis unreachable')),
+    });
+    stdoutSpy = captureAudit(h);
+    okFetch();
+
+    const report = await h.service.revokeAllForSub(SUB, 'account_deleted');
+
+    expect(report.subjectMarked).toBe(false);
+    expect(h.sessionStore.markTerminated).toHaveBeenCalledTimes(1);
+    expect(report.revokedCount).toBe(1);
+    expect(h.logger.error).toHaveBeenCalled();
+  });
+});
+
+describe('revokeAllForSub — report counters partition the entries', () => {
+  // A session tombstoned locally whose upstream grant survived is a `revoked`
+  // session with a failed remote leg. Counting it under `failedCount` too made
+  // one entry appear in two buckets and read, in the audit summary, as a
+  // session that was still alive.
+  it('does not count one session as both revoked and failed', async () => {
+    const h = await buildHarness();
+    stdoutSpy = captureAudit(h);
+    mockFetch(async () => ({ ok: false, status: 500 }));
+
+    const report = await h.service.revokeAllForSub(SUB, 'account_deleted');
+
+    expect(report.revokedCount).toBe(1);
+    expect(report.failedCount).toBe(0);
+    expect(report.tokenRevocationFailedCount).toBe(1);
+    expect(report.revokedCount + report.failedCount).toBe(
+      report.entries.filter(
+        e => e.outcome === 'revoked' || e.outcome === 'failed'
+      ).length
+    );
+    // Still incomplete — a remote gap is a completeness gap, just not an
+    // access-control one.
+    expect(report.complete).toBe(false);
   });
 });

@@ -2,18 +2,20 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { getCorrelationId } from '@core/middleware/correlation-id.middleware';
-import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import { Inject, Injectable, LoggerService, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
+import { LogContext } from '@src/common/enums';
 import { AlkemioConfig } from '@src/types';
 import { randomUUID } from 'crypto';
 import type { Request } from 'express';
 import type { Redis } from 'ioredis';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Strategy } from 'passport-custom';
 import { isAbsoluteTtlExceeded } from '../absolute-ttl.guard';
 import { emitAudit } from '../audit';
 import { OIDC_REDIS_CLIENT } from '../oidc.tokens';
-import { addSessionToSubIndex } from '../session-index.redis';
+import { addSessionToSubIndex, getSubRevokedAt } from '../session-index.redis';
 import type {
   AlkemioSessionPayload,
   SessionStoreHandle,
@@ -42,7 +44,6 @@ export class CookieSessionStrategy extends PassportStrategy(
    * path uses the sid express-session already parsed for us.
    */
   private readonly sessionCookieName: string;
-  private readonly logger = new Logger(CookieSessionStrategy.name);
 
   constructor(
     @Inject(SESSION_STORE_HANDLE)
@@ -50,9 +51,12 @@ export class CookieSessionStrategy extends PassportStrategy(
     private readonly authService: AuthenticationService,
     private readonly actorContextService: ActorContextService,
     configService: ConfigService<AlkemioConfig, true>,
-    // server#6315 — used only by the self-healing index write below. Optional
-    // so test harnesses that construct this strategy directly keep working;
-    // when absent the self-heal is skipped and nothing else changes.
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    // server#6315 — the subject revocation marker read and the self-healing
+    // index write. Optional so test harnesses that construct this strategy
+    // directly keep working; when absent both are skipped and nothing else
+    // changes.
     @Optional()
     @Inject(OIDC_REDIS_CLIENT)
     private readonly redis?: Redis
@@ -108,6 +112,32 @@ export class CookieSessionStrategy extends PassportStrategy(
         error_code: reason,
       });
       throw new CookieSessionInvalidError(reason, correlationId);
+    }
+
+    // server#6315 — subject-level revocation marker.
+    //
+    // The per-session tombstone above is necessary but not sufficient: it lives
+    // in a key express-session also writes, so an in-flight request can put the
+    // live payload back over it, and it only exists for sessions the index knew
+    // about in the first place. This check is keyed by subject and so survives
+    // both. See `session-index.redis.ts` for the full argument.
+    //
+    // Costs one awaited Redis GET on the authenticated request path — stated
+    // plainly rather than dressed up as free, because it IS on the critical
+    // path (unlike the fire-and-forget self-heal below). A revocation check has
+    // to be synchronous to be a control at all.
+    const revokedAt = await this.readSubRevokedAt(payload.sub, correlationId);
+    if (revokedAt !== null && revokedAt >= payload.created_at) {
+      emitAudit({
+        event_type: 'auth.cookie.subject_revoked',
+        outcome: 'failure',
+        sub: payload.sub || null,
+        client_id: payload.client_id || null,
+        correlation_id: correlationId,
+        request_id: requestId,
+        error_code: 'subject_revoked',
+      });
+      throw new CookieSessionInvalidError('subject_revoked', correlationId);
     }
 
     // FR-020a state-(b) — absolute 14-day ceiling breached. Authoritative
@@ -179,13 +209,48 @@ export class CookieSessionStrategy extends PassportStrategy(
   }
 
   /**
+   * Read the subject revocation marker.
+   *
+   * **Fails open**, deliberately, and this is the one judgement call in the
+   * check. A hard Redis outage never reaches here — `sessionStore.get` above
+   * would already have thrown `SessionStoreUnavailableError` → 503 — so a
+   * rejection at this point means Redis is up and this single command failed:
+   * rare and transient. Failing closed would sign out every user on the
+   * platform for the duration of such a blip, to defend a window the tombstone
+   * already covers for every indexed session. The failure is logged, never
+   * swallowed.
+   */
+  private async readSubRevokedAt(
+    sub: string,
+    correlationId: string
+  ): Promise<number | null> {
+    if (!this.redis || !sub) return null;
+    try {
+      return await getSubRevokedAt(this.redis, sub);
+    } catch (error) {
+      this.logger.warn?.(
+        {
+          message:
+            'Failed to read the subject revocation marker; allowing the request',
+          sub,
+          correlationId,
+          failureReason: error instanceof Error ? error.message : String(error),
+        },
+        LogContext.AUTH
+      );
+      return null;
+    }
+  }
+
+  /**
    * server#6315 / FR-002a — fire-and-forget membership top-up for the
    * per-subject session index.
    *
-   * `SADD` is idempotent, so for an already-indexed session this is a no-op
-   * write; the cost only matters for sessions that predate the index. Returns
-   * `void` rather than a promise on purpose, so a caller cannot accidentally
-   * start awaiting it and put Redis on the request's critical path.
+   * One Redis round trip (an `EVAL` doing `SADD` plus a conditional TTL roll),
+   * issued for every authenticated request so that sessions predating the index
+   * become revocable from their holder's next request. Returns `void` rather
+   * than a promise on purpose, so a caller cannot accidentally start awaiting
+   * it and put Redis on the request's critical path.
    */
   private reindexSession(sid: string, payload: AlkemioSessionPayload): void {
     if (!this.redis || !payload.sub) return;
@@ -196,11 +261,14 @@ export class CookieSessionStrategy extends PassportStrategy(
       payload.absolute_expires_at
     ).catch(error => {
       // Unawaited, but never unobserved — silent failure paths are forbidden.
-      this.logger.warn(
-        `Failed to self-heal subject session index (sub=${payload.sub}, sid=${sid}): ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-        CookieSessionStrategy.name
+      this.logger.warn?.(
+        {
+          message: 'Failed to self-heal subject session index',
+          sub: payload.sub,
+          sid,
+          failureReason: error instanceof Error ? error.message : String(error),
+        },
+        LogContext.AUTH
       );
     });
   }

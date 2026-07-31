@@ -1,10 +1,15 @@
 import {
   addSessionToSubIndex,
+  clearSubRevoked,
   dropSubIndex,
+  getSubRevokedAt,
   listSessionsForSub,
+  markSubRevoked,
   removeSessionFromSubIndex,
   SUB_INDEX_KEY_PREFIX,
+  SUB_REVOKED_KEY_PREFIX,
   subIndexKey,
+  subRevokedKey,
 } from './session-index.redis';
 
 const SUB = 'a1b2c3d4-0000-0000-0000-000000000001';
@@ -25,6 +30,7 @@ function makeFakeRedis(initial?: {
 }) {
   const calls: Call[] = [];
   const sets = new Map<string, Set<string>>();
+  const strings = new Map<string, string>();
   if (initial?.members) sets.set(subIndexKey(SUB), new Set(initial.members));
   let ttl = initial?.ttl ?? -2;
 
@@ -62,8 +68,55 @@ function makeFakeRedis(initial?: {
     }),
     del: vi.fn(async (key: string) => {
       calls.push({ cmd: 'del', args: [key] });
+      strings.delete(key);
       return sets.delete(key) ? 1 : 0;
     }),
+    get: vi.fn(async (key: string) => {
+      calls.push({ cmd: 'get', args: [key] });
+      return strings.get(key) ?? null;
+    }),
+    /**
+     * Interprets the two Lua scripts rather than recording them.
+     *
+     * The properties worth testing now live INSIDE the scripts — initialise a
+     * missing TTL, extend only when the candidate is longer, never shorten,
+     * later revocation timestamp wins. Asserting that `eval` was called would
+     * prove none of them, so the fake reproduces the semantics and the specs
+     * assert the resulting state.
+     */
+    eval: vi.fn(
+      async (script: string, _n: number, key: string, ...args: any[]) => {
+        calls.push({ cmd: 'eval', args: [key, ...args] });
+
+        if (script.includes("redis.call('SADD'")) {
+          const [member, candidateRaw] = args as [string, string];
+          const set = sets.get(key) ?? new Set<string>();
+          const added = set.has(member) ? 0 : 1;
+          set.add(member);
+          sets.set(key, set);
+          const candidate = Math.max(1, Number(candidateRaw));
+          if (ttl < 0 || candidate > ttl) ttl = candidate;
+          return added;
+        }
+
+        if (script.includes("redis.call('GET', KEYS[1])")) {
+          const [revokedAtRaw, ttlRaw] = args as [string, string];
+          const candidate = Number(revokedAtRaw);
+          const raw = strings.get(key);
+          const existing = raw === undefined ? null : Number(raw);
+          const nextTtl = Math.max(1, Number(ttlRaw));
+          if (existing === null || candidate > existing) {
+            strings.set(key, String(candidate));
+            ttl = nextTtl;
+          } else if (nextTtl > ttl) {
+            ttl = nextTtl;
+          }
+          return 1;
+        }
+
+        throw new Error(`fake redis: unrecognised script\n${script}`);
+      }
+    ),
   };
 
   return { redis: redis as any, calls, sets, getTtl: () => ttl };
@@ -89,14 +142,17 @@ describe('addSessionToSubIndex', () => {
   // Keyspace invariant I1. A SADD without an EXPIRE leaks the key forever:
   // Redis sets have no per-member expiry, so an index that is never revoked
   // would outlive every session it names.
-  it('always pairs SADD with an EXPIRE (invariant I1)', async () => {
-    const { redis, calls } = makeFakeRedis();
+  it('always pairs the SADD with an expiry, in ONE round trip (invariant I1)', async () => {
+    const { redis, calls, sets, getTtl } = makeFakeRedis();
 
     await addSessionToSubIndex(redis, SUB, 'sid-1', NOW_S + 3600);
 
-    expect(calls.map(c => c.cmd)).toEqual(['sadd', 'ttl', 'expire']);
-    expect(calls[0].args).toEqual([subIndexKey(SUB), 'sid-1']);
-    expect(calls[2].args).toEqual([subIndexKey(SUB), 3600]);
+    // One command, not three. A client-side SADD/TTL/EXPIRE could die between
+    // the first and the last and leave the key immortal — the exact leak this
+    // invariant exists to prevent — and it runs on every authenticated request.
+    expect(calls.map(c => c.cmd)).toEqual(['eval']);
+    expect([...(sets.get(subIndexKey(SUB)) ?? [])]).toEqual(['sid-1']);
+    expect(getTtl()).toBe(3600);
   });
 
   // Keyspace invariant I2. The single most damaging way to get this wrong:
@@ -105,50 +161,48 @@ describe('addSessionToSubIndex', () => {
   it('never shortens the TTL when a later-expiring session joins (invariant I2)', async () => {
     // Existing key already expires in 2 hours; the joining session's own
     // ceiling is only 1 hour away.
-    const { redis, calls } = makeFakeRedis({ members: ['sid-1'], ttl: 7200 });
+    const { redis, getTtl } = makeFakeRedis({ members: ['sid-1'], ttl: 7200 });
 
     await addSessionToSubIndex(redis, SUB, 'sid-2', NOW_S + 3600);
 
-    const expire = calls.find(c => c.cmd === 'expire');
-    expect(expire?.args[1]).toBe(7200);
+    expect(getTtl()).toBe(7200);
   });
 
   it('extends the TTL when the joining session outlives the current expiry', async () => {
-    const { redis, calls } = makeFakeRedis({ members: ['sid-1'], ttl: 3600 });
+    const { redis, getTtl } = makeFakeRedis({ members: ['sid-1'], ttl: 3600 });
 
     await addSessionToSubIndex(redis, SUB, 'sid-2', NOW_S + 7200);
 
-    const expire = calls.find(c => c.cmd === 'expire');
-    expect(expire?.args[1]).toBe(7200);
+    expect(getTtl()).toBe(7200);
   });
 
   it.each([
     ['no key (-2)', -2],
     ['key without expiry (-1)', -1],
   ])('treats a %s TTL sentinel as "no TTL to preserve"', async (_label, t) => {
-    const { redis, calls } = makeFakeRedis({ ttl: t });
+    const { redis, getTtl } = makeFakeRedis({ ttl: t });
 
     await addSessionToSubIndex(redis, SUB, 'sid-1', NOW_S + 600);
 
-    expect(calls.find(c => c.cmd === 'expire')?.args[1]).toBe(600);
+    expect(getTtl()).toBe(600);
   });
 
   // A computed TTL of 0 or less would be read by Redis as "delete now",
   // silently dropping a set we just wrote to.
   it('floors the TTL at 1 second for an already-expired ceiling', async () => {
-    const { redis, calls } = makeFakeRedis();
+    const { redis, getTtl } = makeFakeRedis();
 
     await addSessionToSubIndex(redis, SUB, 'sid-1', NOW_S - 500);
 
-    expect(calls.find(c => c.cmd === 'expire')?.args[1]).toBe(1);
+    expect(getTtl()).toBe(1);
   });
 
   it('floors the TTL at 1 second for a non-finite ceiling', async () => {
-    const { redis, calls } = makeFakeRedis();
+    const { redis, getTtl } = makeFakeRedis();
 
     await addSessionToSubIndex(redis, SUB, 'sid-1', Number.NaN);
 
-    expect(calls.find(c => c.cmd === 'expire')?.args[1]).toBe(1);
+    expect(getTtl()).toBe(1);
   });
 
   // FR-002a relies on this: the self-healing write runs on every authenticated
@@ -266,5 +320,104 @@ describe('keyspace safety (invariant I4)', () => {
 
     const keys = new Set(calls.map(c => String(c.args[0])));
     expect([...keys]).toEqual([subIndexKey(SUB)]);
+  });
+});
+
+/**
+ * The subject-level revocation marker.
+ *
+ * It exists because the per-session tombstone is not a trustworthy record that
+ * a revocation happened: express-session can write a live payload back over a
+ * tombstone, and sessions minted before the index shipped are not in it at all.
+ * The marker is keyed by subject and read on every request, so neither gap
+ * reaches it.
+ */
+describe('subject revocation marker', () => {
+  it('namespaces alongside the other subject-scoped keys', () => {
+    expect(SUB_REVOKED_KEY_PREFIX).toBe('alkemio:subrevoked:');
+    expect(subRevokedKey(SUB)).toBe(`alkemio:subrevoked:${SUB}`);
+  });
+
+  it('round-trips the revocation timestamp', async () => {
+    const { redis } = makeFakeRedis();
+
+    await markSubRevoked(redis, SUB, NOW_S, 2_592_000);
+
+    await expect(getSubRevokedAt(redis, SUB)).resolves.toBe(NOW_S);
+  });
+
+  it('returns null when the subject has never been revoked', async () => {
+    const { redis } = makeFakeRedis();
+
+    await expect(getSubRevokedAt(redis, SUB)).resolves.toBeNull();
+  });
+
+  // If an earlier timestamp could overwrite a later one, the later revocation
+  // would silently re-admit every session it was meant to kill.
+  it('keeps the LATER timestamp when two revocations race', async () => {
+    const { redis } = makeFakeRedis();
+
+    await markSubRevoked(redis, SUB, NOW_S + 100, 2_592_000);
+    await markSubRevoked(redis, SUB, NOW_S, 2_592_000); // the straggler
+
+    await expect(getSubRevokedAt(redis, SUB)).resolves.toBe(NOW_S + 100);
+  });
+
+  it('advances the timestamp when a genuinely later revocation lands', async () => {
+    const { redis } = makeFakeRedis();
+
+    await markSubRevoked(redis, SUB, NOW_S, 2_592_000);
+    await markSubRevoked(redis, SUB, NOW_S + 100, 2_592_000);
+
+    await expect(getSubRevokedAt(redis, SUB)).resolves.toBe(NOW_S + 100);
+  });
+
+  // TTL is the absolute session ceiling: past it, no session old enough to be
+  // affected can still exist, so the marker has nothing left to reject.
+  it('expires with the absolute session ceiling', async () => {
+    const { redis, getTtl } = makeFakeRedis();
+
+    await markSubRevoked(redis, SUB, NOW_S, 2_592_000);
+
+    expect(getTtl()).toBe(2_592_000);
+  });
+
+  it('never writes a non-positive TTL, which Redis reads as "delete now"', async () => {
+    const { redis, getTtl } = makeFakeRedis();
+
+    await markSubRevoked(redis, SUB, NOW_S, 0);
+
+    expect(getTtl()).toBe(1);
+  });
+
+  it('is a no-op without a subject', async () => {
+    const { redis, calls } = makeFakeRedis();
+
+    await markSubRevoked(redis, '', NOW_S, 600);
+    await expect(getSubRevokedAt(redis, '')).resolves.toBeNull();
+
+    expect(calls).toEqual([]);
+  });
+
+  it('clears on request, for operator remediation', async () => {
+    const { redis } = makeFakeRedis();
+
+    await markSubRevoked(redis, SUB, NOW_S, 600);
+    await clearSubRevoked(redis, SUB);
+
+    await expect(getSubRevokedAt(redis, SUB)).resolves.toBeNull();
+  });
+
+  it('never issues a wildcard, KEYS or SCAN', async () => {
+    const { redis, calls } = makeFakeRedis();
+
+    await markSubRevoked(redis, SUB, NOW_S, 600);
+    await getSubRevokedAt(redis, SUB);
+    await clearSubRevoked(redis, SUB);
+
+    expect(calls.some(c => c.cmd === 'keys' || c.cmd === 'scan')).toBe(false);
+    for (const call of calls) {
+      for (const arg of call.args) expect(String(arg)).not.toContain('*');
+    }
   });
 });

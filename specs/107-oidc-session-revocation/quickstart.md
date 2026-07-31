@@ -14,7 +14,7 @@ Everything security-critical in this feature is covered by unit and
 service-level specs that mock Redis, Kratos and `fetch`. No Docker required.
 
 ```bash
-cd /home/svetoslav/Documents/alkemio/server-story-6315-oidc-session-revocation-cascade
+cd <repository-root>
 pnpm install
 
 # The feature's own specs

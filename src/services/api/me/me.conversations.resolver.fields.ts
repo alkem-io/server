@@ -2,15 +2,19 @@ import { CurrentActor } from '@common/decorators';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { IConversation } from '@domain/communication/conversation/conversation.interface';
 import { MessagingService } from '@domain/communication/messaging/messaging.service';
-import { Logger } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { LogContext } from '@src/common/enums';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MeConversationsResult } from './dto/me.conversations.result';
 
 @Resolver(() => MeConversationsResult)
 export class MeConversationsResolverFields {
-  private readonly logger = new Logger(MeConversationsResolverFields.name);
-
-  constructor(private readonly messagingService: MessagingService) {}
+  constructor(
+    private readonly messagingService: MessagingService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
+  ) {}
 
   @ResolveField(() => [IConversation], {
     nullable: false,
@@ -22,8 +26,9 @@ export class MeConversationsResolverFields {
     @Parent() _parent: MeConversationsResult
   ): Promise<IConversation[]> {
     if (!actorContext.actorID) {
-      this.logger.warn(
-        'Degrading me.conversations.conversations to its empty value: request has no resolved actor'
+      this.logger.verbose?.(
+        'Degrading me.conversations.conversations to its empty value: request has no resolved actor',
+        LogContext.AUTH
       );
       return [];
     }

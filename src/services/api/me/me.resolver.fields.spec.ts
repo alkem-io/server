@@ -1,7 +1,7 @@
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { createMock } from '@golevelup/ts-vitest';
-import { Logger } from '@nestjs/common';
 import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
+import { LogContext } from '@src/common/enums';
 import { MeResolverFields } from './me.resolver.fields';
 import { MeService } from './me.service';
 
@@ -14,10 +14,14 @@ describe('MeResolverFields', () => {
   let inAppNotificationService: ReturnType<
     typeof createMock<InAppNotificationService>
   >;
-  let warnSpy: ReturnType<typeof vi.spyOn>;
+  // A plain stub injected as the resolver's logger. Deliberately NOT a
+  // `vi.spyOn(Logger.prototype, …)`: vitest runs with `isolate: false`, so a
+  // prototype spy that is never restored leaks a no-op logger into every later
+  // spec file sharing the worker.
+  let logger: { verbose: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
-    warnSpy = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+    logger = { verbose: vi.fn() };
     meService = createMock<MeService>();
     meService.getCommunityInvitationsCountForUser.mockResolvedValue(3);
     meService.getCommunityInvitationsForUser.mockResolvedValue([]);
@@ -42,7 +46,8 @@ describe('MeResolverFields', () => {
     resolver = new MeResolverFields(
       meService,
       userLookupService,
-      inAppNotificationService
+      inAppNotificationService,
+      logger as any
     );
   });
 
@@ -89,11 +94,12 @@ describe('MeResolverFields', () => {
       });
     });
 
-    it('should emit a warn log when degrading notifications', async () => {
+    it('should emit a verbose log when degrading notifications', async () => {
       await resolver.notificationsInApp(anonymousActorContext, {} as any);
-      expect(warnSpy).toHaveBeenCalledTimes(1);
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('me.notifications')
+      expect(logger.verbose).toHaveBeenCalledTimes(1);
+      expect(logger.verbose).toHaveBeenCalledWith(
+        expect.stringContaining('me.notifications'),
+        LogContext.AUTH
       );
     });
 
@@ -121,11 +127,12 @@ describe('MeResolverFields', () => {
       expect(result).toBe(0);
     });
 
-    it('should emit a warn log when degrading notificationsUnreadCount', async () => {
+    it('should emit a verbose log when degrading notificationsUnreadCount', async () => {
       await resolver.notificationsUnreadCount(anonymousActorContext);
-      expect(warnSpy).toHaveBeenCalledTimes(1);
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('me.notificationsUnreadCount')
+      expect(logger.verbose).toHaveBeenCalledTimes(1);
+      expect(logger.verbose).toHaveBeenCalledWith(
+        expect.stringContaining('me.notificationsUnreadCount'),
+        LogContext.AUTH
       );
     });
 
@@ -154,11 +161,12 @@ describe('MeResolverFields', () => {
       expect(result).toBe(0);
     });
 
-    it('should emit a warn log when degrading communityInvitationsCount', async () => {
+    it('should emit a verbose log when degrading communityInvitationsCount', async () => {
       await resolver.communityInvitationsCount(anonymousActorContext, []);
-      expect(warnSpy).toHaveBeenCalledTimes(1);
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('me.communityInvitationsCount')
+      expect(logger.verbose).toHaveBeenCalledTimes(1);
+      expect(logger.verbose).toHaveBeenCalledWith(
+        expect.stringContaining('me.communityInvitationsCount'),
+        LogContext.AUTH
       );
     });
 
@@ -187,11 +195,12 @@ describe('MeResolverFields', () => {
       expect(result).toEqual([]);
     });
 
-    it('should emit a warn log when degrading communityInvitations', async () => {
+    it('should emit a verbose log when degrading communityInvitations', async () => {
       await resolver.communityInvitations(anonymousActorContext, []);
-      expect(warnSpy).toHaveBeenCalledTimes(1);
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('me.communityInvitations')
+      expect(logger.verbose).toHaveBeenCalledTimes(1);
+      expect(logger.verbose).toHaveBeenCalledWith(
+        expect.stringContaining('me.communityInvitations'),
+        LogContext.AUTH
       );
     });
 
@@ -219,11 +228,12 @@ describe('MeResolverFields', () => {
       expect(result).toEqual([]);
     });
 
-    it('should emit a warn log when degrading communityApplications', async () => {
+    it('should emit a verbose log when degrading communityApplications', async () => {
       await resolver.communityApplications(anonymousActorContext, []);
-      expect(warnSpy).toHaveBeenCalledTimes(1);
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('me.communityApplications')
+      expect(logger.verbose).toHaveBeenCalledTimes(1);
+      expect(logger.verbose).toHaveBeenCalledWith(
+        expect.stringContaining('me.communityApplications'),
+        LogContext.AUTH
       );
     });
 
@@ -266,18 +276,19 @@ describe('MeResolverFields', () => {
       expect(result).toEqual({});
     });
 
-    it('should emit a warn log when degrading conversations', async () => {
+    // No log assertion for this field. The guard that used to sit here was
+    // dead — both branches returned the same empty envelope, so it only ever
+    // added a log line. The real degradation is asserted in
+    // me.conversations.resolver.fields.spec.ts, which owns the fields inside.
+    it('should not log for the empty container, which is the same either way', async () => {
       await resolver.conversations(anonymousActorContext);
-      expect(warnSpy).toHaveBeenCalledTimes(1);
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('me.conversations')
-      );
+      expect(logger.verbose).not.toHaveBeenCalled();
     });
 
     it('should return conversations result when authenticated', async () => {
       const result = await resolver.conversations(actorContext);
       expect(result).toBeDefined();
-      expect(warnSpy).not.toHaveBeenCalled();
+      expect(logger.verbose).not.toHaveBeenCalled();
     });
   });
 });

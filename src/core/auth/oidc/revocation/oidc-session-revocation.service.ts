@@ -8,9 +8,9 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { emitAudit } from '../audit';
 import { OidcService } from '../oidc.service';
 import { OIDC_REDIS_CLIENT } from '../oidc.tokens';
-import { refreshLockKey } from '../refresh-lock';
 import {
   listSessionsForSub,
+  markSubRevoked,
   removeSessionFromSubIndex,
 } from '../session-index.redis';
 import type { SessionStoreHandle } from '../session-store.redis';
@@ -40,6 +40,17 @@ import type {
 const TOKEN_REVOCATION_TIMEOUT_MS = 3000;
 
 /**
+ * How many sessions are torn down at once.
+ *
+ * The 3 s bound above governs ONE remote call; awaiting the sessions strictly
+ * in turn multiplies it by the session count, so a subject with a dozen devices
+ * could stall `deleteUser` for the better part of a minute whenever Hydra is
+ * black-holed. Five keeps worst-case latency at ceil(N/5) x 3 s while leaving
+ * Redis load flat — the loop is not the bottleneck, the remote leg is.
+ */
+const REVOCATION_CONCURRENCY = 5;
+
+/**
  * Subject-scoped session revocation (server#6315).
  *
  * The primitive behind four call sites, only one of which exists today:
@@ -65,6 +76,12 @@ const TOKEN_REVOCATION_TIMEOUT_MS = 3000;
 @Injectable()
 export class OidcSessionRevocationService {
   private readonly webClientId: string;
+  /**
+   * Marker TTL: the absolute session ceiling. Past it, no session old enough to
+   * be affected by the revocation can still exist, so the marker has nothing
+   * left to reject.
+   */
+  private readonly sessionAbsoluteTtlS: number;
 
   constructor(
     @Inject(OIDC_REDIS_CLIENT) private readonly redis: Redis,
@@ -79,6 +96,10 @@ export class OidcSessionRevocationService {
       'identity.authentication.providers.oidc.web_client_id',
       { infer: true }
     );
+    this.sessionAbsoluteTtlS = configService.get(
+      'identity.authentication.providers.oidc.cookie',
+      { infer: true }
+    ).absolute_ttl_s;
   }
 
   /**
@@ -110,7 +131,9 @@ export class OidcSessionRevocationService {
         entries: [],
         revokedCount: 0,
         failedCount: 0,
+        tokenRevocationFailedCount: 0,
         complete: true,
+        subjectMarked: false,
       };
     }
 
@@ -130,18 +153,48 @@ export class OidcSessionRevocationService {
       truncated_input: String(sids.length),
     });
 
+    // The subject-level marker, written BEFORE the per-session teardown.
+    //
+    // Order matters twice over. It closes the race described in
+    // `session-index.redis.ts`: a request already in flight can overwrite a
+    // tombstone with the live payload it loaded earlier, and once the sid has
+    // been pruned from the index no retry can find it again. Writing the marker
+    // first means that resurrected payload is still rejected on its next
+    // request. It also covers sessions the index never knew about — the
+    // pre-index population that the self-heal has not reached yet.
+    //
+    // NOT written for a scoped (`exceptSid`) revocation: the marker rejects by
+    // subject, so it cannot distinguish the session that must survive. A
+    // password change therefore relies on the index alone, which is correct for
+    // it — that flow's sessions are all post-index by construction.
+    const subjectMarked = opts?.exceptSid
+      ? false
+      : await this.markSubjectRevoked(sub, reason, correlationId);
+
+    // Bounded concurrency, not a plain sequential await: see
+    // REVOCATION_CONCURRENCY. Order within the report is preserved because each
+    // batch is collected in slice order.
     const entries: SessionRevocationEntry[] = [];
-    for (const sid of sids) {
+    for (let i = 0; i < sids.length; i += REVOCATION_CONCURRENCY) {
+      const batch = sids.slice(i, i + REVOCATION_CONCURRENCY);
       entries.push(
-        await this.revokeOne(sid, sub, reason, correlationId, opts?.exceptSid)
+        ...(await Promise.all(
+          batch.map(sid =>
+            this.revokeOne(sid, sub, reason, correlationId, opts?.exceptSid)
+          )
+        ))
       );
     }
 
+    // The three counters PARTITION the entries — no entry is counted twice.
+    // `failedCount` therefore means exactly "sessions that may still be alive",
+    // which is what an auditor reads it as.
     const revokedCount = entries.filter(e => e.outcome === 'revoked').length;
-    const failedCount = entries.filter(
-      e => e.outcome === 'failed' || e.tokenRevocation === 'failed'
+    const failedCount = entries.filter(e => e.outcome === 'failed').length;
+    const tokenRevocationFailedCount = entries.filter(
+      e => e.tokenRevocation === 'failed'
     ).length;
-    const complete = failedCount === 0;
+    const complete = failedCount === 0 && tokenRevocationFailedCount === 0;
 
     emitAudit({
       event_type: 'session.revocation.completed',
@@ -151,7 +204,7 @@ export class OidcSessionRevocationService {
       correlation_id: correlationId,
       request_id: correlationId,
       reason,
-      truncated_input: `revoked=${revokedCount} failed=${failedCount} total=${entries.length}`,
+      truncated_input: `revoked=${revokedCount} failed=${failedCount} token_revocation_failed=${tokenRevocationFailedCount} subject_marked=${subjectMarked} total=${entries.length}`,
     });
 
     return {
@@ -161,8 +214,47 @@ export class OidcSessionRevocationService {
       entries,
       revokedCount,
       failedCount,
+      tokenRevocationFailedCount,
       complete,
+      subjectMarked,
     };
+  }
+
+  /**
+   * Write the subject-level revocation marker. Best-effort with respect to the
+   * caller — a marker failure must not abort the per-session teardown, which is
+   * the leg that actually ends access for every indexed session — but never
+   * silent: the failure is logged and surfaced in the report as
+   * `subjectMarked: false`.
+   */
+  private async markSubjectRevoked(
+    sub: string,
+    reason: SessionRevocationReason,
+    correlationId: string
+  ): Promise<boolean> {
+    try {
+      await markSubRevoked(
+        this.redis,
+        sub,
+        Math.floor(Date.now() / 1000),
+        this.sessionAbsoluteTtlS
+      );
+      return true;
+    } catch (error) {
+      this.logger.error?.(
+        {
+          message:
+            'Failed to write the subject revocation marker; per-session teardown continues',
+          sub,
+          reason,
+          correlationId,
+          failureReason: redactError(error),
+        },
+        redactStack(error),
+        LogContext.AUTH
+      );
+      return false;
+    }
   }
 
   private async revokeOne(
@@ -249,9 +341,23 @@ export class OidcSessionRevocationService {
         sub,
         client_id: payload.client_id,
       });
-      // FR-011 — nothing keyed to a dead session may linger.
-      await this.redis.del(refreshLockKey(sid));
-      await removeSessionFromSubIndex(this.redis, sub, sid);
+
+      // ── The tombstone landed. Access to this session has ENDED. ───────────
+      // Everything below is bookkeeping, and none of it may downgrade the
+      // outcome. Pruning through `pruneQuietly` rather than calling
+      // `removeSessionFromSubIndex` directly is what keeps a Redis blip during
+      // the SREM from reporting a session as `failed` — i.e. as still alive —
+      // when it is provably 401'ing. The compliance evidence has to distinguish
+      // "access not removed" from "index tidy-up did not finish".
+      //
+      // FR-011 note: there is deliberately no `DEL` of the refresh lock here.
+      // The refresh mutex in production is the in-process `refreshInFlight`
+      // Map, so the Redis lock key is never written and deleting it is a no-op
+      // round trip. Worse, `releaseRefreshLock` is an owner-checked
+      // compare-and-delete precisely so a lock cannot be stolen; an
+      // unconditional `DEL` here would defeat that the moment the Redis mutex
+      // is wired up, letting two refreshes rotate the same grant at once.
+      await this.pruneQuietly(sub, sid);
 
       // FR-013 — the local teardown above has already landed, so whatever
       // happens here the session is dead on this platform.
@@ -392,7 +498,15 @@ export class OidcSessionRevocationService {
         },
         LogContext.AUTH
       );
-      return 'failed';
+      // `skipped`, not `failed`. Nothing was attempted, so nothing failed —
+      // and the distinction is not pedantry. `initDiscovery` is fire-and-forget
+      // with an indefinite retry, so an unreachable Hydra at boot leaves this
+      // endpoint unresolved for a while; in dev, CI and restart waves that is
+      // routine. Reporting it as a failure would mark every revocation
+      // incomplete and audit a teardown that fully succeeded locally as
+      // `outcome=failure`. Evidence that cries wolf is worse than none, because
+      // the auditor can no longer pick out the real failures.
+      return 'skipped';
     }
 
     try {
@@ -471,11 +585,21 @@ export function redactStack(
   return scrub(error.stack, secrets).slice(0, 4000);
 }
 
+/**
+ * Below this length a value is too generic to search-and-replace safely: a
+ * 3-character string occurs inside ordinary words, so scrubbing it would
+ * shred the surrounding message. The floor is 4, not 8 — `secrets` carries a
+ * cached display name as well as tokens, and short real names ("Bo", "Ana")
+ * were sailing straight through an 8-character gate. Names that short are
+ * accepted as unscrubbable; the two backstop patterns never matched a personal
+ * name anyway, so the gate was the whole defence for them.
+ */
+const MIN_SCRUBBABLE_SECRET_LENGTH = 4;
+
 function scrub(input: string, secrets: string[]): string {
   let out = input;
   for (const secret of secrets) {
-    // Short values are not secrets worth matching and would corrupt the text.
-    if (!secret || secret.length < 8) continue;
+    if (!secret || secret.length < MIN_SCRUBBABLE_SECRET_LENGTH) continue;
     out = out.split(secret).join('***');
   }
   return (
