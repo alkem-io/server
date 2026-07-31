@@ -51,6 +51,7 @@ export class TaskService {
   private readonly errorsKey = (id: string) => `task:${id}:errorCount`;
   private readonly seenKey = (id: string) => `task:${id}:seen`;
   private readonly endKey = (id: string) => `task:${id}:end`;
+  private readonly terminalKey = (id: string) => `task:${id}:terminal`;
 
   private redisClient(): RedisClientLike | undefined {
     const store = (this.cacheManager as Partial<RedisCache>).store as
@@ -104,22 +105,65 @@ export class TaskService {
     });
   }
 
-  /** Read a counter key, or undefined when unset / no Redis. */
-  private async readCounter(key: string): Promise<number | undefined> {
+  /** Read a raw string key, or undefined when unset / no Redis. */
+  private async readString(key: string): Promise<string | undefined> {
     const client = this.redisClient();
 
     if (!client) {
       return undefined;
     }
 
-    return new Promise<number | undefined>(resolve => {
+    return new Promise<string | undefined>(resolve => {
       client.get(key, (err, value) => {
-        if (err || value === null || value === undefined) {
-          resolve(undefined);
+        resolve(
+          err || value === null || value === undefined ? undefined : value
+        );
+      });
+    });
+  }
+
+  /** Read a counter key, or undefined when unset / no Redis. */
+  private async readCounter(key: string): Promise<number | undefined> {
+    const value = await this.readString(key);
+
+    if (value === undefined) {
+      return undefined;
+    }
+
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  /**
+   * Record an EXPLICIT terminal state where a stale write cannot undo it.
+   *
+   * `complete()` / `completeWithError()` set the status on the cached object,
+   * but a consumer that read the task just before them still holds a copy
+   * saying IN_PROGRESS — and writing that copy back resurrects the task. For a
+   * task terminated explicitly *because publishing failed*, the counter will
+   * never reach `itemsCount` (the remaining events were never emitted), so the
+   * counter-derived path cannot repair it and the task hangs. First stamp
+   * wins, and the read overlay reapplies it.
+   */
+  private async stampTerminal(id: string, status: TaskStatus): Promise<void> {
+    const client = this.redisClient();
+
+    if (!client) {
+      return;
+    }
+
+    return new Promise<void>(resolve => {
+      client.setnx(this.terminalKey(id), String(status), err => {
+        if (err) {
+          this.logger.error(
+            `Failed to stamp terminal status for task '${id}': ${err}`,
+            err?.stack,
+            LogContext.TASKS
+          );
+          resolve();
           return;
         }
-        const parsed = Number(value);
-        resolve(Number.isFinite(parsed) ? parsed : undefined);
+        client.expire(this.terminalKey(id), TTL, () => resolve());
       });
     });
   }
@@ -262,30 +306,55 @@ export class TaskService {
    * terminal task without an end time.
    */
   private async withAuthoritativeCounters(task: Task): Promise<Task> {
-    // An uncounted task has no target to reach — it is terminated explicitly
-    // via complete()/completeWithError(), so there is nothing to derive.
-    if (task.itemsCount === undefined) {
+    // Without Redis there is no out-of-band state to overlay, and nothing to
+    // be clobbered by — a single process owns the object outright. Return it
+    // by identity rather than as a copy, so callers keep mutating the same
+    // instance they will write back.
+    if (!this.redisClient()) {
       return task;
     }
 
-    const [done, errorCount, storedEnd] = await Promise.all([
+    const [terminal, storedEnd] = await Promise.all([
+      this.readString(this.terminalKey(task.id)),
+      this.readCounter(this.endKey(task.id)),
+    ]);
+
+    const base: Task = { ...task, end: task.end ?? storedEnd };
+
+    // An explicitly-terminated task outranks whatever the cached object says.
+    // This is what survives a slow consumer writing its pre-termination copy
+    // back over the terminal one — and it is the ONLY repair available when
+    // publishing failed part-way, because the counter can then never reach
+    // itemsCount for the derivation below to fire.
+    if (
+      base.status === TaskStatus.IN_PROGRESS &&
+      (terminal === TaskStatus.COMPLETED || terminal === TaskStatus.ERRORED)
+    ) {
+      base.status = terminal;
+    }
+
+    // An uncounted task has no target to reach — it is terminated explicitly
+    // via complete()/completeWithError(), so there is nothing more to derive.
+    if (task.itemsCount === undefined) {
+      return base;
+    }
+
+    const [done, errorCount] = await Promise.all([
       this.readCounter(this.doneKey(task.id)),
       this.readCounter(this.errorsKey(task.id)),
-      this.readCounter(this.endKey(task.id)),
     ]);
 
     // No Redis (or no increments yet): the in-object counter is all there is.
     if (done === undefined) {
-      return task;
+      return base;
     }
 
     // Never below what the task already recorded — increments taken while
     // Redis was unreachable live only in the stored object, and reporting a
     // lower number would look like the run went backwards.
     const resolved: Task = {
-      ...task,
+      ...base,
       itemsDone: Math.max(done, task.itemsDone ?? 0),
-      end: task.end ?? storedEnd,
     };
 
     if (
@@ -539,8 +608,11 @@ export class TaskService {
   ) {
     const task = await this.getOrFail(id);
 
-    task.status = status;
-    task.end = new Date().getTime();
+    this.finish(task, status);
+    // Outside the cached object: a consumer that read this task just before
+    // now still holds an IN_PROGRESS copy and will write it back.
+    await this.stampTerminal(id, status);
+    await this.stampEnd(id, task.end as number);
 
     await this.cacheManager.set(task.id, task, {
       ttl: TTL,
@@ -551,8 +623,9 @@ export class TaskService {
     const task = await this.getOrFail(id);
 
     task.errors.unshift(error);
-    task.status = TaskStatus.ERRORED;
-    task.end = new Date().getTime();
+    this.finish(task, TaskStatus.ERRORED);
+    await this.stampTerminal(id, TaskStatus.ERRORED);
+    await this.stampEnd(id, task.end as number);
 
     await this.cacheManager.set(task.id, task, {
       ttl: TTL,

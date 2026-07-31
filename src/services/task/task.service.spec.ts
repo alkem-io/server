@@ -555,7 +555,7 @@ describe('TaskService', () => {
  */
 describe('TaskService — concurrent consumers', () => {
   let service: TaskService;
-  let counters: Map<string, number>;
+  let counters: Map<string, string>;
   let sets: Map<string, Set<string>>;
   let store: Map<string, any>;
 
@@ -583,13 +583,16 @@ describe('TaskService — concurrent consumers', () => {
     store: {
       name: 'redis',
       getClient: () => ({
+        // Redis values are strings, so the fake stores strings too — coercing
+        // to Number here would turn a terminal status like 'errored' into NaN
+        // and quietly hide the very clobber these tests check for.
         incr: (key: string, cb: (e: null, v: number) => void) => {
-          const next = (counters.get(key) ?? 0) + 1;
-          counters.set(key, next);
+          const next = Number(counters.get(key) ?? 0) + 1;
+          counters.set(key, String(next));
           cb(null, next);
         },
         get: (key: string, cb: (e: null, v: string | null) => void) =>
-          cb(null, counters.has(key) ? String(counters.get(key)) : null),
+          cb(null, counters.has(key) ? (counters.get(key) as string) : null),
         sadd: (
           key: string,
           member: string,
@@ -610,7 +613,7 @@ describe('TaskService — concurrent consumers', () => {
             cb(null, 0);
             return;
           }
-          counters.set(key, Number(value));
+          counters.set(key, value);
           cb(null, 1);
         },
         expire: (_k: string, _s: number, cb: (e: null, v: number) => void) =>
@@ -782,6 +785,29 @@ describe('TaskService — concurrent consumers', () => {
     const after = await service.getOrFail(task.id);
     expect(after.end).toBe(settled.end);
     expect(after.status).toBe(TaskStatus.COMPLETED);
+  });
+
+  it('keeps an explicit terminal state when a stale consumer writes over it', async () => {
+    // publishResetAll emitted some events, then threw — so it fails the task
+    // explicitly. The counter can NEVER reach itemsCount (the rest were never
+    // emitted), so the counter-derived path cannot repair a clobber here.
+    const task = await service.create(10);
+    await service.updateTaskResults(task.id, 'one item got through' as any);
+    await service.completeWithError(task.id, 'publishing failed');
+
+    expect((await service.getOrFail(task.id)).status).toBe(TaskStatus.ERRORED);
+
+    // A consumer that read the task before it was failed writes its stale
+    // IN_PROGRESS copy back.
+    store.set(task.id, {
+      ...structuredClone(store.get(task.id)),
+      status: TaskStatus.IN_PROGRESS,
+      end: undefined,
+    });
+
+    const after = await service.getOrFail(task.id);
+    expect(after.status).toBe(TaskStatus.ERRORED);
+    expect(after.end).toBeDefined();
   });
 
   it('refuses to re-count a task that already has a count', async () => {
