@@ -60,12 +60,14 @@ CMD_JSON="$(docker inspect "$IMAGE" --format '{{json .Config.Cmd}}')"
 pass "CMD is [\"dist/main.js\"]"
 
 # --- US1-AS1: no shell / package manager / /wait ---------------------------
+SHELL_PROBE_LOG="$(mktemp)"
+trap 'rm -f "$SHELL_PROBE_LOG"' EXIT
 for bin in /bin/sh /bin/bash apk apt pnpm /wait; do
-  if docker run --rm --entrypoint "$bin" "$IMAGE" >/tmp/shell-probe.$$ 2>&1; then
+  if docker run --rm --entrypoint "$bin" "$IMAGE" >"$SHELL_PROBE_LOG" 2>&1; then
     fail "expected '$bin' to be absent/unexecutable, but it ran"
   fi
-  rm -f /tmp/shell-probe.$$
 done
+rm -f "$SHELL_PROBE_LOG"
 pass "no shell / package manager / /wait binary is executable"
 
 # --- US1-AS2: no src/, no ts-node, node_modules is prod-only ---------------

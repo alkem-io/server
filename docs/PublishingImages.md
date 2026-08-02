@@ -13,7 +13,7 @@ To automaticly trigger the build up to dockerhub the following steps should be t
 Since `workspace#026-distroless-runtime-images`, the production image is built by a
 three-stage `Dockerfile`:
 
-1. **`builder`** — `node:22.21.1-bookworm-slim` (glibc/Debian 12, matches the repo's
+1. **`builder`** — `node:22.21.1-trixie-slim` (glibc/Debian 13, matches the repo's
    Volta pin). Installs the full dependency set (incl. dev) and compiles TypeScript
    (`pnpm run build` → `dist/`).
 2. **`proddeps`** — the **same glibc base**, a fresh `pnpm install --frozen-lockfile --prod`.
@@ -22,7 +22,7 @@ three-stage `Dockerfile`:
    they silently fail to load (musl artifacts are ABI-incompatible with glibc).
    `package.json`'s `pnpm.supportedArchitectures.libc: ["glibc"]` reinforces this by
    preventing musl-variant optional dependencies from ever being resolved.
-3. **`runtime`** — `gcr.io/distroless/nodejs22-debian12:nonroot`, digest-pinned. No
+3. **`runtime`** — `gcr.io/distroless/nodejs22-debian13:nonroot`, digest-pinned. No
    shell, no package manager, no `/wait` binary, no `src/` sources, no dev
    dependencies. Runs as UID 65532 (`nonroot`). Entrypoint is the distroless `node`
    binary; `CMD ["dist/main.js"]`.

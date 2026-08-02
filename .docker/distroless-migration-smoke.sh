@@ -52,13 +52,15 @@ pass "fresh PostgreSQL 17.5 is ready"
 DB_ENV=(-e DATABASE_HOST="$PG_NAME" -e DATABASE_PORT=5432 -e DATABASE_USERNAME=alkemio \
   -e DATABASE_PASSWORD="$PG_PASSWORD" -e DATABASE_NAME=alkemio)
 
+MIGRATION_LOG="$(mktemp)"
+
 START_TS=$(date +%s)
 docker run --rm --network "$NET_NAME" "${DB_ENV[@]}" \
   --entrypoint /nodejs/bin/node "$IMAGE" \
   ./node_modules/typeorm/cli.js migration:run --dataSource dist/config/migration.config.js \
-  > /tmp/migration-run.$$.log 2>&1 \
-  || { cat /tmp/migration-run.$$.log; rm -f /tmp/migration-run.$$.log; fail "migration:run (compiled, no shell) exited non-zero"; }
-rm -f /tmp/migration-run.$$.log
+  > "$MIGRATION_LOG" 2>&1 \
+  || { cat "$MIGRATION_LOG"; rm -f "$MIGRATION_LOG"; fail "migration:run (compiled, no shell) exited non-zero"; }
+rm -f "$MIGRATION_LOG"
 END_TS=$(date +%s)
 ELAPSED=$((END_TS - START_TS))
 pass "migration:run completed with zero shell involvement in ${ELAPSED}s (SC-006 budget: <300s)"
