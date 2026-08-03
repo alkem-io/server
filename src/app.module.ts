@@ -14,6 +14,7 @@ import { AuthenticationModule } from '@core/authentication/authentication.module
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { GraphqlGuardModule } from '@core/authorization/graphql.guard.module';
 import { BootstrapModule } from '@core/bootstrap/bootstrap.module';
+import { createRedisCacheStore } from '@core/cache/cache.store.factory';
 import { LoaderCreatorModule } from '@core/dataloader/creators/loader.creator.module';
 import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
 import {
@@ -42,7 +43,7 @@ import { Cipher, EncryptionModule } from '@hedger/nestjs-encryption';
 import { LibraryModule } from '@library/library/library.module';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { CacheModule } from '@nestjs/cache-manager';
-import { MiddlewareConsumer, Module } from '@nestjs/common';
+import { LoggerService, MiddlewareConsumer, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -104,10 +105,9 @@ import {
   SubscriptionsTransportWsWebsocket,
   WebsocketContext,
 } from '@src/types';
-import * as redisStore from 'cache-manager-redis-store';
 import { print } from 'graphql/language/printer';
 import { CloseCode } from 'graphql-ws';
-import { WinstonModule } from 'nest-winston';
+import { WINSTON_MODULE_NEST_PROVIDER, WinstonModule } from 'nest-winston';
 import { join } from 'path';
 import { ApmApolloPlugin } from './apm/plugins';
 import { PlatformAdminModule } from './platform-admin/admin/platform.admin.module';
@@ -139,21 +139,23 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
       global: true,
     }),
     ScheduleModule.forRoot(),
+    // Cache construction is delegated to the shared factory so that this block
+    // and the identical one in auth-reset.worker.module.ts cannot drift apart
+    // again — they were byte-identical copies, and both crashed the process on
+    // any Redis blip (#6330). Do not inline a `store` here.
     CacheModule.registerAsync({
       isGlobal: true,
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService<AlkemioConfig, true>) => {
-        const { host, port, timeout } = configService.get('storage.redis', {
-          infer: true,
-        });
-        return {
-          store: redisStore,
-          host,
-          port,
-          redisOptions: { connectTimeout: timeout * 1000 }, // Connection timeout in milliseconds
-        };
-      },
-      inject: [ConfigService],
+      useFactory: async (
+        configService: ConfigService<AlkemioConfig, true>,
+        logger: LoggerService
+      ) => ({
+        store: createRedisCacheStore(
+          configService.get('storage.redis', { infer: true }),
+          logger
+        ),
+      }),
+      inject: [ConfigService, WINSTON_MODULE_NEST_PROVIDER],
     }),
     TypeOrmModule.forRootAsync({
       name: 'default',

@@ -293,12 +293,23 @@ pnpm test -- src/core/cache/cache.store.factory.spec.ts
 
 ## Results log
 
+> **§1–§6 were NOT executed by the automated SDD run.** Every one of them
+> requires `docker stop alkemio_dev_redis`, and that container is shared with the
+> OIDC session store, the file services and the auth-reset scaler. The
+> developer's dev stack was live at the time (21 containers up), so stopping it
+> would have disrupted an environment the run was told not to touch. The
+> procedure is written out above for a human to run; the table is left blank
+> rather than filled in with claims nobody verified.
+>
+> §7 **was** executed and is recorded below.
+
 | § | Criterion | Requirement | Result |
 |---|---|---|---|
-| 1 | Defect reproduces on `develop` | — | |
-| 2 | API survives the outage, one record, requests answered | AC1 · FR-001, FR-005, FR-006 | |
-| 3 | Automatic recovery, no restart, 2 records per cycle | AC4 · FR-011 – FR-014 | |
-| 4 | Boots with Redis already down | US1-4 | |
-| 5 | Worker survives, no log flood | AC2 · FR-002, FR-010a | |
-| 6 | `deleteUser` succeeds with Redis down | AC5 · SC-006 | |
-| 7 | Tests / build / lint green; new tests fail on `develop` | SC-007 | |
+| 1 | Defect reproduces on `develop` | — | *not run — needs a disposable stack* |
+| 2 | API survives the outage, one record, requests answered | AC1 · FR-001, FR-005, FR-006 | *not run — needs a disposable stack* |
+| 3 | Automatic recovery, no restart, 2 records per cycle | AC4 · FR-011 – FR-014 | *not run — needs a disposable stack* |
+| 4 | Boots with Redis already down | US1-4 | *not run — needs a disposable stack* |
+| 5 | Worker survives, no log flood | AC2 · FR-002, FR-010a | *not run — needs a disposable stack* |
+| 6 | `deleteUser` succeeds with Redis down | AC5 · SC-006 | *not run — needs a disposable stack* |
+| 7 | Tests / build / lint green | — | **PASS** — 7457 passed / 7 skipped; build exit 0; lint exit 0 |
+| 7 | New tests fail against the unfixed behaviour | SC-007 | **PASS** — 11 targeted failures with the fix reverted, 0 with it restored |

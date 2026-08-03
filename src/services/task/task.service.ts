@@ -74,6 +74,28 @@ export class TaskService {
   }
 
   /**
+   * True while the cache connection is known to be down.
+   *
+   * These counter operations run in a loop across up to 10 autoscaled worker
+   * replicas, so during a Redis outage their per-operation error logging is a
+   * flood in its own right — independent of the cache store's. The shared
+   * connection reporter has already emitted exactly one record for the loss;
+   * that is the signal worth keeping (#6330, FR-010a).
+   *
+   * Suppression only. The counter behaviour below is deliberately unchanged:
+   * every callback still resolves rather than rejecting, and callers still fall
+   * back to the in-object counter. An absent signal means "no information", so
+   * we log exactly as before.
+   */
+  private cacheConnectionDown(): boolean {
+    const store = (this.cacheManager as Partial<RedisCache>).store as
+      | Partial<RedisStore>
+      | undefined;
+
+    return store?.connectionSignal?.isDown === true;
+  }
+
+  /**
    * Atomically increment a counter key and return its NEW value. The TTL is
    * refreshed on every increment so a long-running reset cannot outlive its
    * own counter and silently restart from zero.
@@ -91,11 +113,13 @@ export class TaskService {
     return new Promise<number | undefined>(resolve => {
       client.incr(key, (err, value) => {
         if (err) {
-          this.logger.error(
-            `Failed to increment task counter '${key}': ${err}`,
-            err?.stack,
-            LogContext.TASKS
-          );
+          if (!this.cacheConnectionDown()) {
+            this.logger.error(
+              `Failed to increment task counter '${key}': ${err}`,
+              err?.stack,
+              LogContext.TASKS
+            );
+          }
           resolve(undefined);
           return;
         }
@@ -155,11 +179,13 @@ export class TaskService {
     return new Promise<void>(resolve => {
       client.setnx(this.terminalKey(id), String(status), err => {
         if (err) {
-          this.logger.error(
-            `Failed to stamp terminal status for task '${id}': ${err}`,
-            err?.stack,
-            LogContext.TASKS
-          );
+          if (!this.cacheConnectionDown()) {
+            this.logger.error(
+              `Failed to stamp terminal status for task '${id}': ${err}`,
+              err?.stack,
+              LogContext.TASKS
+            );
+          }
           resolve();
           return;
         }
@@ -187,11 +213,13 @@ export class TaskService {
     return new Promise<void>(resolve => {
       client.setnx(this.endKey(id), String(end), err => {
         if (err) {
-          this.logger.error(
-            `Failed to stamp end for task '${id}': ${err}`,
-            err?.stack,
-            LogContext.TASKS
-          );
+          if (!this.cacheConnectionDown()) {
+            this.logger.error(
+              `Failed to stamp end for task '${id}': ${err}`,
+              err?.stack,
+              LogContext.TASKS
+            );
+          }
           resolve();
           return;
         }
