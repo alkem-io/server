@@ -96,8 +96,16 @@ Via the admin UI, or:
 mutation { deleteUser(deleteData: { ID: "<user-uuid>" }) { id } }
 ```
 
-Note: **do not** set `deleteIdentity`. The point of FR-025 is that revocation
-happens either way.
+Note: revocation is unconditional — FR-025 means it happens whatever
+`deleteIdentity` says, so either value exercises the cascade.
+
+Beware the default: the schema declares `deleteIdentity: Boolean = true`, so
+**omitting** it deletes the Kratos identity too. To keep the identity alive —
+which you need for the "not a permanent ban" check in §4.6 — pass it explicitly:
+
+```graphql
+mutation { deleteUser(deleteData: { ID: "<user-uuid>", deleteIdentity: false }) { id } }
+```
 
 ### 4.4 Assert — this is the actual test
 
@@ -107,11 +115,20 @@ redis-cli SMEMBERS alkemio:sub:<authenticationID>
 # → (empty array)
 
 # b) Each session is a tombstone, not a live payload, and not deleted
-redis-cli GET alkemio:sid:<sid> | jq '{terminated_at, terminated_reason, request_context_cache, refresh_token}'
+redis-cli GET alkemio:sid:<sid> | jq '{terminated_at, terminated_reason, cookie, refresh_token}'
 # → terminated_at: <epoch ms>
 #    terminated_reason: "account_deleted"
-#    request_context_cache: null      ← the GDPR Art. 17 half of the fix
 #    refresh_token: ""
+#    cookie: {...}                    ← MUST be present, see below
+
+# `cookie` is not decoration. express-session inflates this payload on every
+# request BEFORE any strategy runs, and dereferences `cookie.expires`. A
+# tombstone without it throws inside the middleware — every route 500s
+# (including /login and /logout) instead of returning the 401 below.
+#
+# `request_context_cache` is NOT a useful assertion here: nothing in the code
+# ever populates it, so it reads `null` on live sessions too. Erasure of the
+# display name and email comes from deleting the DB row, not from the tombstone.
 
 # c) The refresh mutex is gone
 redis-cli EXISTS alkemio:sid:<sid>:refresh-lock
@@ -120,9 +137,15 @@ redis-cli EXISTS alkemio:sid:<sid>:refresh-lock
 
 In the browser, on **both** devices, reload:
 
-- `GET /api/auth/oidc/id-token-hint` → **401** (was 200 before this change).
 - Any `/api/private/graphql` call → **401 UNAUTHENTICATED**, not an anonymous 200.
+  This is the *only* probe that proves the fix — see the warning below.
 - The SPA renders **signed-out**, not "signed in with no account".
+
+> Do **not** use `GET /api/auth/oidc/id-token-hint` as the pass signal. It
+> returns 401 for an anonymous caller as well, so it cannot tell a revoked
+> session (the fix) from a destroyed one (the bug). Compare instead:
+> a live session answers `me { id }` with `me-<actorId>`, a destroyed/expired one
+> answers **200** with `me-`, and a revoked one **401 UNAUTHENTICATED**.
 
 The 401 rather than a silent anonymous 200 is the entire behavioural difference
 between `markTerminated` and `destroy`, and it is what makes the client flip
@@ -138,6 +161,23 @@ without any client change (WS4 is empty).
 Expect `session.revocation.initiated` → two × `session.revoked` →
 `session.revocation.completed`. Confirm no field of any record contains a token
 value.
+
+### 4.6 The marker is not a permanent ban on the subject
+
+Only meaningful if you deleted with `deleteIdentity: false` (§4.3), so the Kratos
+identity is still there to log in with. Sign in again as the same person.
+
+Expect the login to **succeed**. The marker is still in Redis, but it stores a
+`revoked_at` rather than a flag, and this session's `created_at` is later — so it
+is unaffected:
+
+```bash
+redis-cli GET alkemio:subrevoked:<authenticationID>   # still set
+redis-cli GET alkemio:sid:<new-sid> | jq .created_at  # > the value above
+```
+
+A 401 loop here would mean the comparison is inverted, locking every
+deleted-then-recreated subject out for the marker's full 30-day TTL.
 
 ---
 
@@ -169,13 +209,20 @@ provided", plus a nulled-out `me`.
 
 | Scenario | How | Expected |
 |---|---|---|
-| Redis down at deletion | `docker stop <redis>` then delete a user | Deletion **succeeds**; `session.revoked`/`completed` audited `failure`; error log |
+| Redis down at deletion — **BLOCKED**, see below | `docker stop <redis>` then delete a user | Deletion **succeeds**; `session.revoked`/`completed` audited `failure`; error log |
 | Hydra down | stop Hydra, keep Redis | Deletion succeeds; tombstone **still written**; `error_code: token_revocation_failed` |
 | User never linked to Kratos | delete a user with `authenticationID IS NULL` | Deletion succeeds; **no** audit record, **no** error |
 | Repeat revocation | delete, then re-run revocation for the same sub | All entries `already_absent` / `already_terminated`; `complete: true` |
 
 Together these are FR-013, FR-015, FR-017, FR-027 and SC-004 — the properties
 that stop a security control from becoming an availability incident.
+
+> **The Redis-down row cannot be run today** (server#6330). Stopping Redis kills
+> the whole Node process — an unhandled `error` event from the legacy
+> `redis@3.1.2` client behind `cache-manager-redis-store`, unrelated to this
+> feature's `ioredis` client. There is no surviving process for the deletion to
+> succeed in. FR-013's local guarantee is still covered at unit level in
+> `user.service.delete.spec.ts`; re-run this row by hand once #6330 lands.
 
 ---
 
