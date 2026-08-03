@@ -311,16 +311,88 @@ than an aborted command the caller can see fail.
 
 ## Results log
 
+Executed 2026-08-03 against the local stack, build at `b39a19298`.
+
 | # | Case | Guards | Result |
 |---|---|---|---|
-| 1 | Redis down at boot → one loss record | Finding 1 · FR-015/016 | |
-| 2 | Cache adds no ~1 s per op during outage | Finding 11 · FR-009 | |
-| 3 | Reachable Redis, failing write → one warn | Findings 3, 8 | |
-| 4 | `CLIENT PAUSE` → 1 s ceiling + warn | FR-009a · Finding 3 | |
-| 5 | Worker: zero per-item claim errors | Finding 2 · FR-010a · AC2 | |
-| 6 | `mget` quiet during outage | Finding 6 | |
-| 7 | No key without a TTL | Finding 7 | |
-| 8 | One registration site | Finding 10 · SC-005 | |
-| 9 | 3 cycles, 2 records each, no leak | SC-004 | |
-| 10 | Known failures recorded | — | |
-| 11 | Offline-queue decision | Finding 4 · FR-009 | |
+| 1 | Redis down at boot → one loss record | Finding 1 · FR-015/016 | **PASS** — see run record |
+| 2 | Cache adds no ~1 s per op during outage | Finding 11 · FR-009 | **PASS** (indirect — see MT-4 timings) |
+| 3 | Reachable Redis, failing write → one warn | Findings 3, 8 | **PASS** |
+| 4 | `CLIENT PAUSE` → 1 s ceiling + warn | FR-009a · Finding 3 | **PASS** |
+| 5 | Worker: zero per-item claim errors | Finding 2 · FR-010a · AC2 | *not run* — needs an auth-reset over a real item set |
+| 6 | `mget` quiet during outage | Finding 6 | *not run* — needs an authenticated membership query |
+| 7 | No key without a TTL | Finding 7 | **INCONCLUSIVE** — cache-manager keyspace was empty; one no-TTL `alkemio:sid:` key found, owned by the session store, not this factory |
+| 8 | One registration site | Finding 10 · SC-005 | **PASS** — 1 `registerAsync`, 2 consumers |
+| 9 | 3 cycles, 2 records each, no leak | SC-004 | **PASS** |
+| 10 | Known failures recorded | — | **CONFIRMED** — 401 after ~42 s reproduced; 279 unhandled ioredis error lines in one outage |
+| 11 | Offline-queue decision | Finding 4 · FR-009 | *open* |
+
+### Run record — 2026-08-03
+
+**MT-1, the discriminating case.** Redis pointed at the container's *direct*
+published port (not host `:6379`, which is a Traefik TCP route that accepts and
+then fails — that accept is what routes through `on_info_cmd` and produced the
+misleading evidence in the original walk). Container stopped, nothing listening,
+then `node dist/main`:
+
+```
+WARN [cache] Cache connection lost; cache reads will miss through to the source of
+truth until it returns. Reason: Redis connection to localhost:32845 failed -
+connect ECONNREFUSED 127.0.0.1:32845 (code: ECONNREFUSED).
+```
+
+`ECONNREFUSED` means no TCP connection was ever accepted, so `on_info_cmd`
+cannot have run, and `on_error` (`index.js:341`) does not emit with a
+`retry_strategy` configured. **Only the `reconnecting` listener can have
+produced this record.** Server booted and listened on `:4000` with Redis absent
+(US1 scenario 4). Count held at exactly 1 over a 75 s window (FR-017).
+
+**MT-9.** Three `docker stop`/`start` cycles: **delta exactly 2 `[cache]`
+records per cycle**, PID `3243257` unchanged throughout, `connected_clients`
+flat at 5. Healthy baseline for comparison: `200` in 30 ms, and **zero** records
+at boot when Redis is up — the ordinary startup connect is correctly silent.
+
+*Minor observation*: over the Traefik route the loss record reads `Reason:
+unknown.` — `reconnecting` carries no `error` on a clean peer close. Diagnostic
+quality is lower than the direct-socket case, which named `ECONNREFUSED`.
+
+**MT-3 / MT-4.** No anonymous GraphQL path writes to the cache-manager store
+(`{ spaces { id } }`, `{ platform { … } }` etc. left `DBSIZE` at 27), so these
+were driven against the **real compiled factory** (`dist/core/cache/cache.store.factory.js`)
+pointed at the live Redis:
+
+```
+--- baseline (healthy) ---              set 2ms -> "OK"   get 1ms -> "v1"   del 1ms -> 1
+                                        warns: 0
+
+--- MT-3: maxmemory=1 -------------------------------------------------------
+WARN [cache] Cache write failed while the connection was up; the cached entry may
+be stale. Reason: OOM command not allowed when used memory > 'maxmemory'. (code: OOM).
+set 1ms -> undefined     get 1ms -> null          new warns: 1
+
+--- MT-4: CLIENT PAUSE 4000 -------------------------------------------------
+WARN [cache] Cache write failed … Reason: timed out after 1000ms.
+set 1001ms -> undefined
+WARN [cache] Cache invalidation failed … Reason: timed out after 1000ms.
+del 1000ms -> undefined
+get 1001ms -> undefined                           new warns: 2  (reads stay silent)
+
+--- after pause expiry ---              set 1ms -> "OK"   get 0ms -> "v4"
+```
+
+Confirms in one run: the 1 s ceiling fires at 1001/1000/1001 ms against a
+connected-but-silent server (FR-009a); mutations report exactly one warn each
+and reads report none (Findings 3, 8); failures return `undefined` rather than
+throwing; and the store recovers with no intervention. Three records total, no
+flood.
+
+**MT-10a, quantified.** During the MT-1 outage the process emitted **279**
+`[ioredis] Unhandled error event: connect ECONNREFUSED` lines — against **one**
+`[cache]` record. The unhardened `ioredis` clients are both the log flood and
+the ~42 s `401 session_store_unavailable` stall (reproduced: 37.9 s / 42.0 s /
+42.0 s). Everything this feature owns behaved; everything next to it did not.
+
+**Also noticed, outside scope**: the Redis container runs `--maxmemory-policy
+allkeys-lru` (k8s mirrors this at 256 mb), and the OIDC session store shares
+database 0. Under memory pressure, LRU eviction can evict **live sessions**.
+Worth its own look alongside the ioredis hardening.
