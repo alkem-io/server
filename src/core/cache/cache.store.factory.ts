@@ -1,4 +1,5 @@
 import {
+  CacheConnectionSignal,
   RedisClientLike,
   RedisStore,
 } from '@common/interfaces/redis.interfaces';
@@ -75,9 +76,17 @@ export type RedisCacheConfig = {
 export const cacheRetryStrategy = (options: { attempt: number }): number =>
   Math.min(options.attempt * RETRY_BASE_DELAY_MS, RETRY_MAX_DELAY_MS);
 
-const clientOptions = (config: RedisCacheConfig) => ({
+const clientOptions = (config: RedisCacheConfig, defaultTtl?: number) => ({
   host: config.host,
   port: config.port,
+
+  // `cache-manager-redis-store` reads its fallback TTL straight off the client
+  // options (`redisCache.options.ttl`) and applies it to any `set` made without
+  // an explicit one. cache-manager passes its configured default into the store
+  // factory, so it is forwarded here: dropping it silently turns such a write
+  // into a key with NO expiry, in the same Redis database the OIDC session
+  // store lives in, evictable only by a FLUSHDB.
+  ...(defaultTtl === undefined ? {} : { ttl: defaultTtl }),
 
   // `connect_timeout` is a trap. In redis@3.1.2 it is not only a connect
   // timeout: it is also the *total retry budget* (index.js:580 — once
@@ -104,11 +113,12 @@ const clientOptions = (config: RedisCacheConfig) => ({
  * `store`. `cache-manager@5` invokes it as `await factory(args)`.
  */
 export const createRedisCacheStore =
-  (config: RedisCacheConfig, logger: LoggerService) => (): RedisStore => {
+  (config: RedisCacheConfig, logger: LoggerService) =>
+  (args?: { ttl?: number }): RedisStore => {
     const reporter = new CacheConnectionReporter(logger);
 
     const store = (redisStore as unknown as RedisStoreConstructor).create(
-      clientOptions(config)
+      clientOptions(config, args?.ttl)
     );
 
     // THE line. Everything else here is quality-of-degradation; this is what
@@ -117,10 +127,37 @@ export const createRedisCacheStore =
     // emit could go unobserved. Spec FR-003.
     const client = store.getClient() as unknown as ObservableRedisClient;
     client.on('error', error => reporter.reportError(error));
+
+    // NOT redundant with the line above. `redis@3.1.2` re-emits a socket
+    // failure as `'error'` only when no `retry_strategy` is configured
+    // (index.js:341) — and we configure one. So the ordinary outage
+    // (ECONNREFUSED, peer close, `docker stop redis`) produces `reconnecting`
+    // events and no `error` event at all: without this listener the loss would
+    // never be logged and `isDown` would never flip, which is exactly the
+    // signal FR-015..FR-019 and FR-010a are built on.
+    client.on('reconnecting', params => reporter.reportError(params?.error));
     client.on('ready', () => reporter.reportReady());
 
-    return failSoft(store, reporter);
+    return failSoft(store, reporter, connectionSignal(client, reporter));
   };
+
+/**
+ * The live connection state, taken from the client wherever possible.
+ *
+ * `redis@3.1.2` maintains `ready` as the authoritative flag, so prefer it: the
+ * reporter's boolean is a report of the last *transition seen*, and a one-off
+ * non-connection `'error'` would latch it down for the life of the process
+ * (see the note on `CacheConnectionReporter.isDown`). The reporter remains the
+ * fallback for clients that do not expose `ready`, including test doubles.
+ */
+const connectionSignal = (
+  client: ObservableRedisClient,
+  reporter: CacheConnectionReporter
+): CacheConnectionSignal => ({
+  get isDown(): boolean {
+    return typeof client.ready === 'boolean' ? !client.ready : reporter.isDown;
+  },
+});
 
 /**
  * Make cache failures look like cache misses.
@@ -139,49 +176,125 @@ export const createRedisCacheStore =
  */
 const failSoft = (
   store: RedisStore,
-  reporter: CacheConnectionReporter
-): RedisStore => ({
-  // Spread first so `name`, `getClient`, `isCacheableValue` and anything else
-  // the store exposes survive untouched. TaskService reaches through
-  // `getClient()` for server-side atomic counters and guards on its presence;
-  // losing it would reintroduce the lost-update hang of #6310.
-  ...store,
+  reporter: CacheConnectionReporter,
+  signal: CacheConnectionSignal
+): RedisStore => {
+  // A mutation that quietly failed against a REACHABLE Redis is the one case
+  // the single transition record cannot cover: the entry survives, subsequent
+  // reads succeed, and the caller is handed data it believes it just
+  // invalidated — a stale ActorContext or role set is served for the rest of
+  // its TTL. Gated on the live signal, so a real outage stays at one record.
+  const onMutationFailure =
+    (operation: string) =>
+    (error: unknown): void => {
+      if (signal.isDown) {
+        return;
+      }
+      reporter.reportOperationFailure(operation, error);
+    };
 
-  // Published on the store for the same reason `getClient` is: TaskService
-  // bypasses the cache interface to issue server-side atomic commands, and needs
-  // to know when the connection is down so it can stop logging once per failed
-  // counter operation. Read-only — a suppression signal, never a gate on whether
-  // to attempt an operation (see the getter's own note). Spec FR-010a.
-  connectionSignal: reporter,
+  return {
+    // Spread first so `name`, `getClient`, `isCacheableValue` and anything else
+    // the store exposes survive untouched. TaskService reaches through
+    // `getClient()` for server-side atomic counters and guards on its presence;
+    // losing it would reintroduce the lost-update hang of #6310.
+    ...store,
 
-  // A failed read is indistinguishable from a cold cache, which every consumer
-  // already handles — that is the whole reason this is safe.
-  get: <T>(...args: unknown[]): Promise<T | undefined> =>
-    guard(() => store.get<T>(...args)),
+    // Published on the store for the same reason `getClient` is: TaskService
+    // bypasses the cache interface to issue server-side atomic commands, and
+    // needs to know when the connection is down so it can stop logging once per
+    // failed counter operation. A narrow read-only view rather than the
+    // reporter itself, so a consumer cannot call `reportReady()` and corrupt
+    // the shared outage state. Spec FR-010a.
+    connectionSignal: signal,
 
-  // The third argument is forwarded UNMODIFIED. It is a `{ ttl: seconds }`
-  // object under the v4 types this repo compiles against, and reinterpreting it
-  // is exactly the silent 1000x TTL bug that ruled out swapping the store.
-  set: (...args: unknown[]): Promise<void> =>
-    guard(() => store.set(...args)) as Promise<void>,
+    // A failed read is indistinguishable from a cold cache, which every consumer
+    // already handles — that is the whole reason this is safe.
+    get: <T>(...args: unknown[]): Promise<T | undefined> =>
+      guard(() => store.get<T>(...args), signal),
 
-  del: (...args: unknown[]): Promise<void> =>
-    guard(() => store.del?.(...args)) as Promise<void>,
+    // The third argument is forwarded UNMODIFIED. It is a `{ ttl: seconds }`
+    // object under the v4 types this repo compiles against, and reinterpreting it
+    // is exactly the silent 1000x TTL bug that ruled out swapping the store.
+    set: (...args: unknown[]): Promise<void> =>
+      guard(
+        () => store.set(...args),
+        signal,
+        onMutationFailure('write')
+      ) as Promise<void>,
 
-  reset: (...args: unknown[]): Promise<void> =>
-    guard(() => store.reset?.(...args)) as Promise<void>,
-});
+    del: (...args: unknown[]): Promise<void> =>
+      guard(
+        () => store.del?.(...args),
+        signal,
+        onMutationFailure('invalidation')
+      ) as Promise<void>,
+
+    reset: (...args: unknown[]): Promise<void> =>
+      guard(
+        () => store.reset?.(...args),
+        signal,
+        onMutationFailure('reset')
+      ) as Promise<void>,
+
+    // The multi-key and introspection methods are NOT covered by the spread
+    // alone: `RoleSetCacheService` calls `store.mget` directly on every batched
+    // membership lookup, so leaving it unwrapped means that path keeps its old
+    // behaviour — a rejection per request during an outage, and no ceiling at
+    // all against a connected-but-silent server.
+    mget: (...args: unknown[]): Promise<unknown[]> =>
+      guard(() => store.mget?.(...args), signal).then(result =>
+        // Shape-preserving fallback: callers index the result positionally, so
+        // a bare `undefined` would turn a cache miss into a TypeError.
+        Array.isArray(result) ? result : args.map(() => undefined)
+      ),
+
+    mset: (...args: unknown[]): Promise<void> =>
+      guard(
+        () => store.mset?.(...args),
+        signal,
+        onMutationFailure('write')
+      ) as Promise<void>,
+
+    keys: (...args: unknown[]): Promise<string[]> =>
+      guard(() => store.keys?.(...args), signal).then(result =>
+        Array.isArray(result) ? result : []
+      ),
+
+    ttl: (...args: unknown[]): Promise<number> =>
+      guard(() => store.ttl?.(...args), signal).then(result =>
+        // -1 is node_redis' "no expiry known", the safest thing to claim about
+        // a key we could not reach.
+        typeof result === 'number' ? result : -1
+      ),
+  } as RedisStore;
+};
 
 /**
- * Run a store operation; on any failure or overrun, yield `fallback`.
+ * Run a store operation; on any failure or overrun, yield `undefined`.
  *
- * Nothing is logged here. Per-operation logging during an outage is the flood
- * this feature exists to avoid — the reporter has already emitted exactly one
- * record for the connection loss, which is the signal that matters. Spec FR-017.
+ * `onUnexpectedFailure` is invoked only for mutations, and its caller gates it
+ * on the connection being up — per-operation logging during an outage is the
+ * flood this feature exists to avoid, and the reporter has already emitted
+ * exactly one record for the connection loss. Spec FR-017.
  */
 const guard = async <T>(
-  operation: () => Promise<T> | undefined
+  operation: () => Promise<T> | undefined,
+  signal: CacheConnectionSignal,
+  onUnexpectedFailure?: (error: unknown) => void
 ): Promise<T | undefined> => {
+  // A known-disconnected client rejects without touching the network
+  // (`enable_offline_queue: false`), so arming and clearing a timer per
+  // operation would be pure overhead on one of the hottest paths in the
+  // process, for the entire duration of an outage.
+  if (signal.isDown) {
+    try {
+      return await operation();
+    } catch {
+      return undefined;
+    }
+  }
+
   let timer: NodeJS.Timeout | undefined;
 
   try {
@@ -194,8 +307,16 @@ const guard = async <T>(
 
     const result = await Promise.race([Promise.resolve(operation()), timeout]);
 
-    return result === TIMED_OUT ? undefined : (result as T | undefined);
-  } catch {
+    if (result === TIMED_OUT) {
+      onUnexpectedFailure?.(
+        new Error(`timed out after ${CACHE_OPERATION_TIMEOUT_MS}ms`)
+      );
+      return undefined;
+    }
+
+    return result as T | undefined;
+  } catch (error) {
+    onUnexpectedFailure?.(error);
     return undefined;
   } finally {
     if (timer) {
@@ -207,8 +328,14 @@ const guard = async <T>(
 const TIMED_OUT = Symbol('cache-operation-timed-out');
 
 type ObservableRedisClient = RedisClientLike & {
+  /** `redis@3.1.2`'s authoritative connection flag. */
+  readonly ready?: boolean;
   on(event: 'error', listener: (error: unknown) => void): void;
   on(event: 'ready', listener: () => void): void;
+  on(
+    event: 'reconnecting',
+    listener: (params?: { error?: unknown }) => void
+  ): void;
 };
 
 type RedisStoreConstructor = {

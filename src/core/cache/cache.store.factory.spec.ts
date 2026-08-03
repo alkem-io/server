@@ -40,8 +40,8 @@ vi.mock('cache-manager-redis-store', () => ({
 describe('createRedisCacheStore', () => {
   let logger: LoggerService;
 
-  const build = (): RedisStore =>
-    createRedisCacheStore({ host: 'localhost', port: 6379 }, logger)();
+  const build = (args?: { ttl?: number }): RedisStore =>
+    createRedisCacheStore({ host: 'localhost', port: 6379 }, logger)(args);
 
   beforeEach(() => {
     fakeClient = createFakeClient();
@@ -92,14 +92,41 @@ describe('createRedisCacheStore', () => {
       expect(fakeClient.listenerCount('ready')).toBe(1);
     });
 
-    it('constructs without throwing when the host is unreachable', () => {
+    it('does not wait on the connection before returning the store', () => {
       // Boot must survive Redis already being down (US1 scenario 4). The client
-      // connects asynchronously; construction must not wait on it or rethrow.
-      createSpy.mockImplementation(() => fakeStore);
+      // connects asynchronously, so the factory must hand back a usable store
+      // synchronously — never a promise, and never after a connect attempt.
+      const store = createRedisCacheStore(
+        { host: 'no-such-host', port: 6379 },
+        logger
+      )();
 
-      expect(() =>
-        createRedisCacheStore({ host: 'no-such-host', port: 6379 }, logger)()
-      ).not.toThrow();
+      expect(store).toBeDefined();
+      expect(store).not.toBeInstanceOf(Promise);
+      expect(store.name).toBe('redis');
+    });
+
+    it('reports a loss signalled only as `reconnecting`, with no error event', () => {
+      // THE second regression test. `redis@3.1.2` re-emits a socket failure as
+      // `'error'` ONLY when no retry_strategy is configured (index.js:341) —
+      // and this factory configures one. So the ordinary outage (ECONNREFUSED,
+      // `docker stop redis`) produces reconnecting events and NO error event.
+      // Listening for `error` alone makes an outage completely silent, and
+      // leaves `isDown` false so TaskService never suppresses its own flood.
+      const store = build();
+
+      fakeClient.emit('reconnecting', {
+        delay: 250,
+        attempt: 1,
+        error: new Error('ECONNREFUSED'),
+      });
+
+      expect(logger.warn).toHaveBeenCalledTimes(1);
+      expect(store.connectionSignal?.isDown).toBe(true);
+
+      fakeClient.emit('ready');
+      expect(logger.warn).toHaveBeenCalledTimes(2);
+      expect(store.connectionSignal?.isDown).toBe(false);
     });
 
     it('reports the outage once, however many retries fail', () => {
@@ -271,7 +298,7 @@ describe('createRedisCacheStore', () => {
       expect(fakeStore.set).toHaveBeenCalledWith('key', 'value', { ttl: 3600 });
     });
 
-    it('does not log per failed operation', async () => {
+    it('does not log per failed read', async () => {
       fakeStore.get = vi.fn().mockRejectedValue(new Error('NR_CLOSED'));
       const store = build();
 
@@ -280,9 +307,62 @@ describe('createRedisCacheStore', () => {
       }
 
       // The reporter owns the signal. Logging here too would reproduce the
-      // flood from the other direction.
+      // flood from the other direction, and a failed read is a miss anyway.
       expect(logger.error).not.toHaveBeenCalled();
       expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    it('reports an invalidation that failed against a REACHABLE cache', async () => {
+      // The one case the transition record cannot cover: the connection is up,
+      // the DEL failed, the entry survives and every later read serves it. A
+      // silently-swallowed invalidation is a stale ActorContext / role set for
+      // the rest of its TTL, with no signal anywhere.
+      fakeStore.del = vi.fn().mockRejectedValue(new Error('LOADING'));
+      const store = build();
+
+      await expect(store.del?.('k')).resolves.toBeUndefined();
+
+      expect(logger.warn).toHaveBeenCalledTimes(1);
+      expect(
+        (logger.warn as ReturnType<typeof vi.fn>).mock.calls[0][0]
+      ).toMatch(/invalidation/);
+    });
+
+    it('stays silent about mutations once the outage has been reported', async () => {
+      fakeStore.del = vi.fn().mockRejectedValue(new Error('NR_CLOSED'));
+      const store = build();
+
+      fakeClient.emit('error', new Error('ECONNREFUSED'));
+      (logger.warn as ReturnType<typeof vi.fn>).mockClear();
+
+      for (let i = 0; i < 20; i++) {
+        await store.del?.('k');
+      }
+
+      expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    it('fails mget soft, preserving the positional shape callers index into', async () => {
+      // RoleSetCacheService reads `cacheManager.store.mget` directly, so the
+      // spread alone left that path rejecting per request during an outage —
+      // and with no ceiling against a connected-but-silent server.
+      fakeStore.mget = vi.fn().mockRejectedValue(new Error('NR_CLOSED'));
+      const store = build();
+
+      await expect(store.mget?.('a', 'b', 'c')).resolves.toEqual([
+        undefined,
+        undefined,
+        undefined,
+      ]);
+    });
+
+    it("forwards cache-manager's default ttl to the client", () => {
+      // `cache-manager-redis-store` reads its fallback TTL off the client
+      // options. Dropping it makes any `set` without an explicit ttl a key with
+      // NO expiry, in the database the OIDC session store shares.
+      build({ ttl: 5000 });
+
+      expect(createSpy.mock.calls[0][0].ttl).toBe(5000);
     });
   });
 });

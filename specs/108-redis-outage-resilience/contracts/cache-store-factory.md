@@ -1,7 +1,7 @@
 # Contract: Cache store factory
 
 **Module**: `src/core/cache/cache.store.factory.ts`
-**Consumers**: `src/app.module.ts`, `src/core/bootstrap/auth-reset.worker.module.ts`
+**Consumers**: `src/core/cache/redis.cache.module.ts` (the single `CacheModule.registerAsync`, imported by `src/app.module.ts` and `src/core/bootstrap/auth-reset.worker.module.ts`)
 **Satisfies**: FR-003, FR-005 – FR-009a, FR-011 – FR-014, FR-020, FR-021
 
 This is an **internal** contract. It defines no HTTP route, no GraphQL field and
@@ -15,7 +15,7 @@ constructed, and the guarantees that seam owes its callers.
 export function createRedisCacheStore(
   config: { host: string; port: number },   // NOTE: `timeout` is deliberately NOT accepted
   logger: LoggerService
-): CacheStoreFactory;
+): (args?: { ttl?: number }) => RedisStore;  // `args` is what cache-manager passes in — see G7
 ```
 
 **On the absent `timeout`.** `storage.redis` also carries a `timeout` field, and
@@ -85,6 +85,20 @@ unobserved.
 unobserved `'error'` on an `EventEmitter` is an uncaught exception, which is the
 entire defect. This is the single load-bearing guarantee of the feature (FR-003).
 
+### G2a — The loss transition is taken from `reconnecting`, not only from `error`
+
+A `reconnecting` listener is attached alongside the `error` one, and both feed
+the same reporter (which deduplicates).
+
+*Why*: `redis@3.1.2` re-emits a socket failure as `'error'` **only when no
+`retry_strategy` is configured** (`redis/index.js:341`) — and G5 configures one.
+So the ordinary outage (ECONNREFUSED, peer close, `docker stop redis`) reaches
+the client as `reconnecting` and never as `error`. Listening for `error` alone
+satisfies FR-003 but leaves FR-015 – FR-019 unmet in the very scenario they were
+written for: the outage would be logged nowhere, and `isDown` (G9) would stay
+`false`, so `TaskService` would never suppress its own per-operation flood
+(FR-010a).
+
 ### G3 — No store operation ever rejects
 
 `get`, `set`, `del` and `reset` on the returned store resolve under all
@@ -96,6 +110,18 @@ conditions:
 | `set` | resolves | The write is abandoned; the source of truth is authoritative (FR-006) |
 | `del` | resolves | Nothing to invalidate if nothing is cached (FR-007) |
 | `reset` | resolves | Same (FR-007) |
+| `mget` | resolves an array of `undefined`, one per requested key | `RoleSetCacheService` reads `store.mget` **directly**, so the spread alone left that path rejecting once per request during an outage, with no ceiling; the fallback is shaped because callers index it positionally |
+| `mset` | resolves | Same as `set` |
+| `keys` | resolves `[]` | An unreachable keyspace is an empty one for every current caller |
+| `ttl` | resolves `-1` | node_redis' "no expiry known" — the safest claim about a key we could not reach |
+
+A mutation (`set` / `del` / `mset` / `reset`) that fails while the connection
+signal reports the cache **up** emits exactly one `warn`. This is the one case
+the transition record of G2a cannot cover: the entry survives, later reads
+succeed, and a caller is handed data it believes it just invalidated — a stale
+`ActorContext` or role set for the rest of its TTL, with no other signal. Reads
+stay silent (a failed read is a miss), and everything stays silent once the
+outage has been reported, so the flood ceiling of FR-017 still holds.
 
 Failures are caught **broadly**, not matched against an error-code allow-list
 (FR-008). The observed vocabulary alone spans `AbortError`/`NR_CLOSED`,
@@ -152,6 +178,20 @@ cache-manager interface, and guards on `typeof store?.getClient === 'function'`
 (`task.service.ts:56-67`). Breaking this would reintroduce server#6310's lost-update
 hang. FR-010.
 
+### G9 — The published connection signal is read-only and cannot latch
+
+`store.connectionSignal.isDown` is a narrow accessor object, not the reporter
+itself, so a consumer cannot call `reportReady()` and corrupt the shared outage
+state. Its value is read from the client's own `ready` flag whenever the client
+exposes one, falling back to the reporter otherwise.
+
+*Why*: the reporter's boolean records the last transition *seen*. A one-off,
+non-connection `'error'` — a parser fatal, a `Ready check failed`, a reply error
+emitted with no callback — would latch it to `true` for the life of the process,
+since it is cleared only by a `ready` event and a client that never disconnected
+never emits one again. `TaskService` would then suppress every genuine Redis
+error for the rest of the run.
+
 ### G7 — TTL semantics are untouched
 
 The wrapper delegates to the **same** legacy store object, whose `set` has the
@@ -165,6 +205,13 @@ whose native `set` third argument is a bare number of **milliseconds**. A
 v5-native store would reinterpret every TTL by a factor of 1000 or drop it — with
 no compiler error, because the types in play are v4's, and no test signal, because
 a wrong TTL still reads back correctly. See plan.md D1 and research R4. SC-008.
+
+The factory also forwards cache-manager's own default TTL — the `args.ttl` it is
+invoked with — onto the client options, because `cache-manager-redis-store` reads
+its fallback TTL from `redisCache.options.ttl` and applies it to any `set` made
+without an explicit one. Dropping it would turn such a write into a key with **no
+expiry**, in the same Redis database the OIDC session store uses, evictable only
+by a `FLUSHDB`.
 
 ### G8 — No new configuration
 

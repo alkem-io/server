@@ -14,7 +14,7 @@ import { AuthenticationModule } from '@core/authentication/authentication.module
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { GraphqlGuardModule } from '@core/authorization/graphql.guard.module';
 import { BootstrapModule } from '@core/bootstrap/bootstrap.module';
-import { createRedisCacheStore } from '@core/cache/cache.store.factory';
+import { redisCacheModule } from '@core/cache/redis.cache.module';
 import { LoaderCreatorModule } from '@core/dataloader/creators/loader.creator.module';
 import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
 import {
@@ -42,8 +42,7 @@ import { TemplateApplierModule } from '@domain/template/template-applier/templat
 import { Cipher, EncryptionModule } from '@hedger/nestjs-encryption';
 import { LibraryModule } from '@library/library/library.module';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
-import { CacheModule } from '@nestjs/cache-manager';
-import { LoggerService, MiddlewareConsumer, Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -107,7 +106,7 @@ import {
 } from '@src/types';
 import { print } from 'graphql/language/printer';
 import { CloseCode } from 'graphql-ws';
-import { WINSTON_MODULE_NEST_PROVIDER, WinstonModule } from 'nest-winston';
+import { WinstonModule } from 'nest-winston';
 import { join } from 'path';
 import { ApmApolloPlugin } from './apm/plugins';
 import { PlatformAdminModule } from './platform-admin/admin/platform.admin.module';
@@ -139,24 +138,10 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
       global: true,
     }),
     ScheduleModule.forRoot(),
-    // Cache construction is delegated to the shared factory so that this block
-    // and the identical one in auth-reset.worker.module.ts cannot drift apart
-    // again — they were byte-identical copies, and both crashed the process on
-    // any Redis blip (#6330). Do not inline a `store` here.
-    CacheModule.registerAsync({
-      isGlobal: true,
-      imports: [ConfigModule],
-      useFactory: async (
-        configService: ConfigService<AlkemioConfig, true>,
-        logger: LoggerService
-      ) => ({
-        store: createRedisCacheStore(
-          configService.get('storage.redis', { infer: true }),
-          logger
-        ),
-      }),
-      inject: [ConfigService, WINSTON_MODULE_NEST_PROVIDER],
-    }),
+    // One shared definition, imported here and by auth-reset.worker.module.ts.
+    // They were byte-identical copies, and both crashed the process on any
+    // Redis blip (#6330). Do not inline a `store` anywhere else.
+    redisCacheModule(),
     TypeOrmModule.forRootAsync({
       name: 'default',
       imports: [ConfigModule],

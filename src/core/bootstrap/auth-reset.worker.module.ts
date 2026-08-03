@@ -1,16 +1,15 @@
 import configuration from '@config/configuration';
 import { WinstonConfigService } from '@config/winston.config';
 import { GraphqlGuardModule } from '@core/authorization/graphql.guard.module';
-import { createRedisCacheStore } from '@core/cache/cache.store.factory';
+import { redisCacheModule } from '@core/cache/redis.cache.module';
 import { Cipher, EncryptionModule } from '@hedger/nestjs-encryption';
-import { CacheModule } from '@nestjs/cache-manager';
-import { LoggerService, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
 import { AlkemioConfig } from '@src/types';
-import { WINSTON_MODULE_NEST_PROVIDER, WinstonModule } from 'nest-winston';
+import { WinstonModule } from 'nest-winston';
 import { join } from 'path';
 import { WorkerEventBusModule } from './worker.event-bus.module';
 
@@ -55,24 +54,11 @@ import { WorkerEventBusModule } from './worker.event-bus.module';
     // graph injects SchedulerRegistry, and omitting it means the only @Cron in
     // the graph (PushSubscriptionService stale-subscription cleanup) is never
     // wired, so the worker runs reset work ONLY. Do not add it back.
-    // Identical to AppModule's block, and now identical BY CONSTRUCTION rather
-    // than by copy-paste -- both delegate to the same factory. The previous two
-    // copies each built an unguarded redis client, so a Redis blip killed this
-    // worker exactly as it killed the API (#6330).
-    CacheModule.registerAsync({
-      isGlobal: true,
-      imports: [ConfigModule],
-      useFactory: async (
-        configService: ConfigService<AlkemioConfig, true>,
-        logger: LoggerService
-      ) => ({
-        store: createRedisCacheStore(
-          configService.get('storage.redis', { infer: true }),
-          logger
-        ),
-      }),
-      inject: [ConfigService, WINSTON_MODULE_NEST_PROVIDER],
-    }),
+    // Literally the same module definition AppModule imports, so the two can no
+    // longer drift. The previous two copies each built an unguarded redis
+    // client, so a Redis blip killed this worker exactly as it killed the API
+    // (#6330).
+    redisCacheModule(),
     TypeOrmModule.forRootAsync({
       name: 'default',
       imports: [ConfigModule],

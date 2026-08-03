@@ -296,6 +296,18 @@ pnpm test -- src/core/cache/cache.store.factory.spec.ts
 > §7 was executed by the automated SDD run. **§2 and §3 were executed
 > afterwards, by hand, against the shared dev stack** on 2026-08-03 — see the
 > run record below. §1, §4, §5 and §6 remain unrun.
+>
+> **Amended after code review (PR #6331).** The "Cache connection lost" record
+> observed in §2 arrived via `on_info_cmd`'s ready-check path
+> (`redis/index.js:432`), which emits unconditionally — *not* via the socket
+> path (`index.js:341`), which emits only when no `retry_strategy` is
+> configured, and one is. So that record was a timing race on an `INFO` being in
+> flight when the container stopped, and §2 could not have distinguished a
+> working detector from a broken one. A `reconnecting` listener now covers the
+> socket path. The case that discriminates the two is **§4 (Redis down at
+> boot)**, which was never run — it is written up as MT-1 in
+> [`manual-tests-review-fixes.md`](./manual-tests-review-fixes.md), together with
+> the cases for the other nine review findings.
 
 | § | Criterion | Requirement | Result |
 |---|---|---|---|

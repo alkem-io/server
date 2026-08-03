@@ -932,6 +932,27 @@ describe('TaskService — cache connection down', () => {
     expect(outageLogger.error).not.toHaveBeenCalled();
   });
 
+  it('does not log per failed item claim while the connection is down', async () => {
+    // The claim runs once per ITEM, not once per task, so it is the highest
+    // -frequency counter operation of the lot — an auth-reset over tens of
+    // thousands of items would emit that many records per replica. Note the
+    // itemKey: without one `claimItem` short-circuits and never reaches SADD,
+    // which is exactly why this path was missed.
+    await buildService(true);
+
+    const task = await outageService.create(10);
+    for (let i = 0; i < 10; i++) {
+      await outageService.updateTaskResults(
+        task.id,
+        `reset ${i}` as any,
+        true,
+        `item-${i}`
+      );
+    }
+
+    expect(outageLogger.error).not.toHaveBeenCalled();
+  });
+
   it('still logs when there is no outage signal', async () => {
     // No suppression signal => no information => log exactly as before. A
     // blanket silence here would hide genuine, non-connectivity Redis errors.

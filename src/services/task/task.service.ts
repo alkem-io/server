@@ -256,11 +256,17 @@ export class TaskService {
     return new Promise<boolean>(resolve => {
       client.sadd(this.seenKey(id), itemKey, (err, added) => {
         if (err) {
-          this.logger.error(
-            `Failed to claim task item '${itemKey}' on task '${id}': ${err}`,
-            err?.stack,
-            LogContext.TASKS
-          );
+          // Suppressed during an outage exactly like the counter paths above,
+          // and for a stronger reason: this one runs once per ITEM, so an
+          // auth-reset over tens of thousands of items would emit that many
+          // records per replica — the flood FR-010a exists to remove.
+          if (!this.cacheConnectionDown()) {
+            this.logger.error(
+              `Failed to claim task item '${itemKey}' on task '${id}': ${err}`,
+              err?.stack,
+              LogContext.TASKS
+            );
+          }
           // Fail open: a dedupe outage must not stall a legitimate item.
           resolve(true);
           return;

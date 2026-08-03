@@ -31,12 +31,19 @@ export class CacheConnectionReporter {
   constructor(private readonly logger: LoggerService) {}
 
   /**
-   * Call on every client `error` event.
+   * Call on every client `error` event, AND on every `reconnecting` event.
    *
-   * Registering *some* handler is what stops the process dying — an
+   * Registering *some* handler for `error` is what stops the process dying — an
    * `EventEmitter` that emits `'error'` with no listener throws it as an
    * uncaught exception, which is the entirety of alkem-io/server#6330. This
    * class is what makes that handler useful rather than merely present.
+   *
+   * `reconnecting` is not redundant with it. `redis@3.1.2` only re-emits a
+   * socket failure as `'error'` when NO `retry_strategy` is configured
+   * (index.js:341) — and `cache.store.factory.ts` configures one, precisely so
+   * the client never gives up. So the ordinary outage (ECONNREFUSED, peer
+   * close) reaches us as `reconnecting` and NEVER as `error`; listening only
+   * for `error` would make a Redis outage completely silent.
    */
   public reportError(error: unknown): void {
     if (this.reportedDown) {
@@ -49,6 +56,25 @@ export class CacheConnectionReporter {
     // node_redis error can carry the failing command's arguments.
     this.logger.warn?.(
       `Cache connection lost; cache reads will miss through to the source of truth until it returns. ${describe(error)}`,
+      LogContext.CACHE
+    );
+  }
+
+  /**
+   * Report a single operation that failed while the connection was believed to
+   * be UP.
+   *
+   * Deliberately not deduplicated: the whole point is that this is not the
+   * outage path. Callers must gate it on the live connection signal, so during
+   * a real outage it is never reached and the one transition record above
+   * remains the only output. What it catches is the case the transition record
+   * cannot: a reachable Redis that refuses or overruns individual commands —
+   * where a swallowed `del` leaves an authorization entry stale and no other
+   * signal exists.
+   */
+  public reportOperationFailure(operation: string, error: unknown): void {
+    this.logger.warn?.(
+      `Cache ${operation} failed while the connection was up; the cached entry may be stale. ${describe(error)}`,
       LogContext.CACHE
     );
   }
@@ -69,17 +95,18 @@ export class CacheConnectionReporter {
   }
 
   /**
-   * True while the connection is known to be down.
+   * True while an outage has been reported and no recovery has been seen.
    *
-   * This is a *log-suppression* signal, and nothing else. Do not gate cache
-   * operations on it: the client already refuses commands while disconnected
-   * (`enable_offline_queue: false`), so gating here would add a second copy of
-   * that state whose only possible contribution is to be stale — suppressing
-   * operations against a Redis that had already recovered.
+   * This is a *log-suppression* signal, and nothing else — never a gate on
+   * whether to attempt an operation.
    *
-   * Its one consumer is `TaskService`, which bypasses the store to reach the
-   * client directly for server-side atomic counters and would otherwise log
-   * once per failed counter operation (FR-010a).
+   * It is only the FALLBACK view of the connection state. The authoritative one
+   * is the client's own `ready` flag, which `cache.store.factory.ts` prefers
+   * when the client exposes it: a one-off, non-connection `'error'` (a parser
+   * fatal, a `Ready check failed`, a reply error emitted with no callback)
+   * would otherwise latch this boolean to `true` for the life of the process,
+   * because it is only cleared by a `ready` event and a client that never
+   * disconnected never emits one again.
    */
   public get isDown(): boolean {
     return this.reportedDown;
