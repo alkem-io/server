@@ -385,9 +385,11 @@ describe('AuthInterceptor', () => {
           // `url` is required: getRequest treats a request without method+url
           // as a non-HTTP transport and skips authentication altogether, so
           // omitting it makes these tests pass without exercising anything.
+          // An ordinary guarded route. NOT one of the auth entry points, which
+          // are exempted below and would pass through instead of rejecting.
           getRequest: vi.fn().mockReturnValue({
-            method: 'GET',
-            url: '/api/auth/oidc/login',
+            method: 'POST',
+            url: '/api/private/graphql',
             headers: { cookie: 'alkemio_session_sandbox=s%3Adead' },
           }),
           getResponse: vi.fn().mockReturnValue(res),
@@ -481,6 +483,59 @@ describe('AuthInterceptor', () => {
       ).rejects.toThrow('redis unreachable');
 
       expect(res.cookie).not.toHaveBeenCalled();
+    });
+
+    // Clearing the cookie alone leaves one broken click: the clear rides on the
+    // rejected response, so a browser whose FIRST action after a revocation is
+    // hitting /login sees a 401 page and must try again. These routes exist to
+    // fix exactly that state, so they proceed as anonymous.
+    describe('auth entry points stay reachable', () => {
+      const entryPointCtx = (url: string, res: any) =>
+        ({
+          getType: vi.fn().mockReturnValue('http'),
+          switchToHttp: vi.fn().mockReturnValue({
+            getRequest: vi.fn().mockReturnValue({
+              method: 'GET',
+              url,
+              headers: { cookie: 'alkemio_session_sandbox=s%3Adead' },
+            }),
+            getResponse: vi.fn().mockReturnValue(res),
+          }),
+        }) as unknown as ExecutionContext;
+
+      it.each([
+        '/api/auth/oidc/login',
+        '/api/auth/oidc/login?returnTo=https%3A%2F%2Falkem.io%2Fhome',
+        '/api/auth/oidc/callback?code=abc&state=xyz',
+        '/api/auth/oidc/logout',
+      ])('passes through as anonymous: %s', async url => {
+        const res = mockRes();
+        rejectWith(new CookieSessionInvalidError('account_deleted', 'c'));
+
+        await expect(
+          withConfig(COOKIE).intercept(entryPointCtx(url, res), mockNext)
+        ).resolves.toBeDefined();
+
+        // Still clears — the browser must not keep presenting the dead cookie.
+        expect(res.cookie).toHaveBeenCalled();
+        expect(mockNext.handle).toHaveBeenCalled();
+      });
+
+      it.each([
+        '/api/auth/oidc/id-token-hint',
+        '/api/auth/oidc/refresh',
+        '/api/private/graphql',
+        // A prefix match would wave this through; an exact-path match does not.
+        '/api/auth/oidc/login/../id-token-hint',
+        // Nor can the path be smuggled in via the query string.
+        '/api/private/graphql?next=/api/auth/oidc/login',
+      ])('still rejects: %s', async url => {
+        rejectWith(new CookieSessionInvalidError('subject_revoked', 'c'));
+
+        await expect(
+          withConfig(COOKIE).intercept(entryPointCtx(url, mockRes()), mockNext)
+        ).rejects.toThrow();
+      });
     });
 
     it('still returns 401 when no cookie config is available', async () => {

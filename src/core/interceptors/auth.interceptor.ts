@@ -65,6 +65,30 @@ function getReqRes(req: IncomingMessage | undefined): Response | undefined {
   return (req as unknown as { res?: Response } | undefined)?.res;
 }
 
+/**
+ * The OIDC routes that exist to establish or tear down a session, and so must
+ * stay reachable when the caller's current session has just been rejected.
+ *
+ * Deliberately a closed list of exact paths rather than a prefix match: a
+ * prefix would also cover `/api/auth/oidc/id-token-hint` and `/refresh`, which
+ * DO read the session and must keep 401'ing. Matched against the path only —
+ * `req.url` carries the query string (`/login?returnTo=…`), and a substring
+ * test on the raw URL would let `?next=/api/auth/oidc/login` smuggle any route
+ * past the check.
+ */
+const AUTH_ENTRY_POINT_PATHS = new Set([
+  '/api/auth/oidc/login',
+  '/api/auth/oidc/callback',
+  '/api/auth/oidc/logout',
+]);
+
+function isAuthEntryPoint(req: IncomingMessage | undefined): boolean {
+  const url = req?.url;
+  if (typeof url !== 'string') return false;
+  const path = url.split('?')[0].replace(/\/+$/, '') || '/';
+  return AUTH_ENTRY_POINT_PATHS.has(path);
+}
+
 @Injectable()
 export class AuthInterceptor implements NestInterceptor {
   /**
@@ -150,6 +174,26 @@ export class AuthInterceptor implements NestInterceptor {
             getResponse(context, isGraphql, req),
             this.sessionCookie
           );
+
+          // …and the routes whose entire job is to fix this state are let
+          // through as anonymous rather than 401'd.
+          //
+          // Clearing the cookie alone leaves one broken click: a browser whose
+          // FIRST action after a revocation is hitting /login gets a 401 JSON
+          // page, because the clear rides on that same rejected response. The
+          // cookie is gone by then, so a second attempt succeeds — but "click
+          // sign in twice" is not a fixed sign-in. Measured on a running
+          // platform, which is the only reason this branch exists.
+          //
+          // Safe by construction: none of these three routes reads an
+          // authenticated actor. `/login` builds an authorize URL and redirects,
+          // `/callback` regenerates the session from scratch, and `/logout`
+          // tears down whatever is left. Continuing as anonymous is what they
+          // would do for a first-time visitor anyway.
+          if (isAuthEntryPoint(req)) {
+            req.user = this.resolveUnauthenticated(req);
+            return next.handle();
+          }
         }
         if (isGraphql) {
           // GraphQL semantics: throw AuthenticationException (extends BaseException
