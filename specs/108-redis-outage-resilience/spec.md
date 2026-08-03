@@ -40,6 +40,14 @@ and keep issuing requests. The process must remain alive and requests must
 continue to be answered from the source of truth. Fully testable on its own and
 delivers the entire availability benefit by itself.
 
+**Scope boundary**: "the user notices nothing" is the outcome for **cache-served
+paths**, which is what this story changes. It does not extend to the independent
+OIDC session store on the same Redis (see Out of Scope): that connection fails
+closed and currently rejects every request with `401 session_store_unavailable`
+during an outage, so until [#6332](https://github.com/alkem-io/server/issues/6332)
+lands a user *will* still notice. This story removes the process death and the
+cache-path failures — a necessary part of the outcome above, not the whole of it.
+
 **Acceptance Scenarios**:
 
 1. **Given** the API process is running and answering requests, **When** Redis
@@ -360,8 +368,20 @@ manual quickstart.
 ### Measurable Outcomes
 
 - **SC-001**: With the cache server stopped, the platform serves **100%** of the
-  requests it served before the stop, with zero process exits, over a continuous
-  10-minute observation window.
+  requests it served before the stop **on cache-dependent paths**, with zero
+  process exits, over a continuous 10-minute observation window.
+  - *Scope, and why it is narrowed*: this criterion covers the general cache
+    layer, which is what this feature owns. It explicitly **excludes** the
+    independent `ioredis`-backed OIDC session store, which shares the same Redis
+    but is a separate connection owned by another subsystem and already listed
+    under Out of Scope. That store fails closed and today rejects **every**
+    request — authenticated or not — with `401 session_store_unavailable` after
+    ~38–42 s during an outage. Until that is fixed, whole-platform request
+    success during a Redis outage is **not achievable by this feature alone**,
+    and this criterion must not be read as claiming otherwise. Tracked as
+    [#6332](https://github.com/alkem-io/server/issues/6332).
+  - *Status*: **not established.** The required continuous 10-minute window was
+    never run — see [plan.md](./plan.md) §"Live verification — actual outcome".
 - **SC-002**: The number of operator restarts required to recover from a complete
   cache outage is **zero**, down from one per affected process today.
 - **SC-003**: After the cache server returns, cached reads are being served again

@@ -437,11 +437,37 @@ Two properties the wrapper must have:
   command sits in `command_queue`, and nothing times it out. A 1-second
   `Promise.race` covers it.
 
-**Surface to wrap**: only `get`, `set`, `del`, `reset` are in the store contract
-that `cache-manager@5` consumes for these call paths, and consumer usage
-(`get` 79 / `set` 66 / `del` 32 / `reset` 0 / `mget`,`mset`,`mdel`,`keys`,`ttl` 0)
-confirms nothing else is exercised. The wrapper preserves every other property of
-the store object — critically `name` and `getClient` — by spreading the original.
+**Surface to wrap**: `get`, `set`, `del` and `reset` are the store contract that
+`cache-manager@5` consumes for the ordinary call paths — but they are **not** the
+whole exposed surface, and the naive inventory is misleading here. Consumer usage
+through the cache interface is `get` 79 / `set` 66 / `del` 32 / `reset` 0.
+
+The correction that matters: **`mget` is reached directly on the store object**,
+bypassing `cache-manager` entirely. `RoleSetCacheService`
+(`src/domain/access/role-set/role.set.service.cache.ts:57`) reads
+`this.cacheManager.store.mget` and calls it on every batched membership lookup.
+Counting only `cacheManager.*` call sites misses it, and leaving it unwrapped
+would leave one of the hottest authorization paths with its pre-fix behaviour —
+a rejection per request during an outage, and no ceiling at all against a
+connected-but-silent server.
+
+So the wrapped surface is `get`, `set`, `del`, `reset`, `mget`, `mset`, `keys`
+and `ttl`. `mset`, `keys` and `ttl` have **0** consumers today and are wrapped
+defensively: they are one `store.` dereference away from being used exactly as
+`mget` already is, and FR-020 exists so a later change cannot silently
+reintroduce the gap. `mdel` is neither used nor wrapped — no consumer, and it is
+not part of the surface driven here; if one appears it must be added to the
+wrapper and to this list.
+
+Every fallback is **shape-preserving**, because these callers consume results
+positionally or structurally rather than as a single optional value: `mget`
+yields an array of `undefined` of the requested arity (a bare `undefined` would
+turn a cache miss into a `TypeError` at the call site), `keys` yields `[]`, `ttl`
+yields `-1` — node_redis' "no expiry known", the safest claim about a key we
+could not reach.
+
+The wrapper preserves every other property of the store object — critically
+`name` and `getClient` — by spreading the original.
 
 **`reset()` note**: the legacy store implements `reset()` as `FLUSHDB`
 (`dist/index.js:185`). The cache shares database 0 with the OIDC session store

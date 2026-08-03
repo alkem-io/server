@@ -103,9 +103,14 @@ source, `@golevelup/ts-vitest` for mocks. Style references named in the story:
 (SC-008). While Redis is down, ≤1 s added latency on a cache-touching path and
 0 s once the outage is detected (SC-009).
 
-**Constraints**: No new required configuration (FR-021). No consumer changes. No
-TTL semantics change (the constraint that decided D1). The auth-reset worker's
-deliberate module omissions must survive untouched.
+**Constraints**: No new required configuration (FR-021). No cache read/write
+consumer changes — every consumer inherits fail-soft at the cache layer and none
+is edited for it; the single exception is `TaskService`, whose **logging** T011
+suppresses during a known outage (FR-010a), because it bypasses the store to
+drive the raw client and so cannot inherit anything. Its counter behaviour,
+fallback and existing coverage are untouched. No TTL semantics change (the
+constraint that decided D1). The auth-reset worker's deliberate module omissions
+must survive untouched.
 
 **Scale/Scope**: ~3k TypeScript files in the repo. This change is **2 new source
 files** (factory, reporter), **2 new spec files**, and edits to **7 existing
@@ -124,7 +129,7 @@ files**: `src/app.module.ts`, `src/core/bootstrap/auth-reset.worker.module.ts`,
 | **2. Modular NestJS Boundaries** | PASS — the new factory lives in `src/core/`, which the constitution designates for "core, cross-cutting abstractions". It is a plain exported function, not a module, so it adds no provider surface and no dependency edge. It *removes* one import edge (`CacheModule` from `AuthenticationModule`). No circular dependency is introduced. |
 | **3. GraphQL Schema as Stable Contract** | PASS — not applicable. No resolver, DTO or schema change; `schema.graphql` is untouched. |
 | **4. Explicit Data & Event Flow** | PASS — no write path, no domain event, no repository access is involved. |
-| **5. Observability & Operational Readiness** | PASS, and this is the principle the feature most directly serves. Structured Winston logging with an explicit `LogContext` (FR-018). **"Silent failure paths are forbidden"** is honoured precisely: every cache failure mode is reported — but *once per state transition* rather than once per occurrence, which is what makes the signal usable instead of a flood (FR-015 – FR-017). No new health indicator is added; the module exposes no new external surface, and the existing readiness probe already reports cache reachability — documented in the spec's Out of Scope with reasoning, exactly as this principle asks. |
+| **5. Observability & Operational Readiness** | PASS, and this is the principle the feature most directly serves. Structured Winston logging with an explicit `LogContext` (FR-018). **"Silent failure paths are forbidden"** is honoured at the level that carries the information — the *connection*, not the individual operation. The policy is deliberately asymmetric and worth stating exactly, because two of its three branches are silent by design: (a) connection-state transitions are always reported, exactly once each, whatever the outage duration (FR-015 – FR-017 — this is what makes the signal usable rather than a flood of ~720 records per client per hour); (b) a **mutation** that fails while the connection is believed **up** is reported per occurrence, because it is the one case the transition record cannot cover — a swallowed `del` leaves an authorization entry stale with no other signal; (c) failed **reads**, and *any* operation while the connection is known down, are silent — a failed read is indistinguishable from a cold cache, which every consumer already handles, and per-operation logging during an outage is precisely the flood this feature exists to prevent. So no *state change* goes unreported, while an absorbed miss is correctly not treated as a failure at all. No new health indicator is added; the module exposes no new external surface, and the existing readiness probe already reports cache reachability — documented in the spec's Out of Scope with reasoning, exactly as this principle asks. |
 | **6. Code Quality with Pragmatic Testing** | PASS — risk-based. New tests target the resilience factory only, and are constructed to **fail against `develop`** (FR-027). No trivial pass-through coverage, no snapshot tests, no placeholders. |
 | **7. API Consistency & Evolution Discipline** | PASS — no public API surface changes. |
 | **8. Secure-by-Design Integration** | PASS, and materially advanced. This principle requires every external service integration to have "timeout, retry policy, and circuit-breaker rationale" — the cache integration currently has **none of the three**, which is the defect. This change supplies all three with rationale in research R6/R7. FR-019 forbids credentials in the new records. |
@@ -286,8 +291,39 @@ Re-evaluated in the table above. No gate moved; no violations.
 | FR-009a — 1 s ceiling | Unit with fake timers: store method never settles; assert resolution at the ceiling. |
 | FR-012/13 — backoff shape | Unit: call `retry_strategy` across attempts; assert always numeric, monotonic to the 5 s cap, never an `Error`. |
 | FR-022 — the inert declaration is gone | Existing suite stays green; `AuthenticationService` resolves unchanged. |
-| FR-001/FR-002, US1/US2/US3/US5 — real processes survive a real outage | **Manual**, per [quickstart.md](./quickstart.md). Not unit-testable without a live Redis; `docs/testing-flakiness.md` is explicit that adding one is an anti-pattern here. |
+| FR-001/FR-002, US1/US2/US3/US5 — real processes survive a real outage | **Manual**, per [quickstart.md](./quickstart.md). Not unit-testable without a live Redis; `docs/testing-flakiness.md` is explicit that adding one is an anti-pattern here. **Partially executed — see the outcome below; SC-001 and SC-009 are NOT established by it.** |
 | SC-008 — no healthy-path change | Existing suite must stay green; TTL semantics unchanged **by construction**, since the store object is the same one. |
+
+### Live verification — actual outcome
+
+Recorded here rather than left to the run notes, because two success criteria are
+**not** met and the plan must not imply otherwise. Full record in
+[quickstart.md](./quickstart.md) §"Run record" and
+[manual-tests-review-fixes.md](./manual-tests-review-fixes.md).
+
+| Criterion | Status | Detail |
+|---|---|---|
+| §2 — API survives, cache degrades, one record | **PARTIAL** | The process stayed alive and the cache degraded exactly as designed — the core of US1/FR-001 held. |
+| **SC-001** — 100% of requests served over a continuous **10-minute** window | **NOT ESTABLISHED** | The sustained 10-minute observation window was never run; the walk was shorter. The criterion is unproven, not disproven. |
+| **SC-009** — no request delayed >1 s by the cache | **FAILED** | Every request returned `401 session_store_unavailable` after ~38–42 s (reproduced 37.9 / 42.0 s). |
+| §3 — recovery | **PASS** | |
+| §4, §5, §6 — boot-with-Redis-down, worker flood, `deleteUser` | **NOT RUN** | |
+
+**The SC-009 failure is not in this feature's code path.** It comes from the
+separate `ioredis`-backed OIDC session store, which fails closed and is
+constructed with no `error` listener and no tuned timeout at
+`main.server.ts:105`, `oidc-core.module.ts:46` and `health.module.ts:37`. That
+store is explicitly out of scope here (it is an independent connection owned by
+another subsystem), which is why the failure is **recorded rather than silently
+fixed** — widening this resilience fix to cover it would have been a second,
+unreviewed change. It is tracked as
+[#6332](https://github.com/alkem-io/server/issues/6332).
+
+**Resulting resiliency risk, stated plainly**: until #6332 lands, a Redis outage
+still degrades the platform severely — this feature prevents the *process death*
+and the cache-path 500s, but the session store will still reject requests. The
+crash fix is a strict and necessary improvement; it is not, on its own,
+sufficient for the availability outcome SC-001 describes.
 
 ## Exit gates
 

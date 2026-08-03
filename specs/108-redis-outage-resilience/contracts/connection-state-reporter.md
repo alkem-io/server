@@ -14,8 +14,17 @@ into a pair of events, so that a Redis outage is *diagnosable* rather than
 export class CacheConnectionReporter {
   constructor(logger: LoggerService);
 
-  /** Call on every client 'error'. Records only the first of an outage. */
+  /**
+   * Call on every client 'error' AND on every 'reconnecting'.
+   * Records only the first of an outage.
+   */
   reportError(error: unknown): void;
+
+  /**
+   * Record ONE operation that failed while the connection was believed up.
+   * Deliberately NOT deduplicated — callers gate it on the live signal.
+   */
+  reportOperationFailure(operation: string, error: unknown): void;
 
   /** Call on every client 'ready'. Records only the recovery from an outage. */
   reportReady(): void;
@@ -78,8 +87,8 @@ handling.
 
 ### G5 — `isDown` is a suppression signal, not a control signal
 
-`isDown` exists so a second consumer can suppress *its own logging*. It must not
-be used to decide whether to attempt an operation.
+`isDown` exists so a consumer can suppress *its own logging*. It must not be used
+to decide whether to attempt an operation.
 
 *Why*: the client already knows whether it is connected, and with
 `enable_offline_queue: false` it rejects commands immediately while disconnected
@@ -87,23 +96,66 @@ be used to decide whether to attempt an operation.
 that state would create a consistency bug — a stale `isDown === true` would
 suppress operations against a Redis that had already recovered — for no benefit.
 
-The fail-soft store wrapper deliberately does **not** read `isDown`. It is
-state-free: it catches what it catches and logs nothing per operation.
+The fail-soft store wrapper **does** read the connection signal, for two
+non-control purposes only, and never to decide whether to attempt an operation:
+
+1. to gate the per-operation mutation record of G6 (so a real outage stays at the
+   single transition record of G1); and
+2. to skip arming the per-operation timeout timer while the connection is
+   already known to be down — the client rejects instantly in that state, so the
+   timer would be pure overhead on a hot path for the whole outage.
+
+It reads that state through the read-only `CacheConnectionSignal`, **not** through
+the reporter, so no consumer can call `reportReady()` and corrupt the shared
+outage state. That signal prefers the client's own authoritative `ready` flag and
+falls back to `isDown` only when the client does not expose one — see
+[data-model.md](../data-model.md) and G7 of
+[cache-store-factory.md](./cache-store-factory.md).
+
+### G6 — Connected-state operation failures are recorded per occurrence
+
+`reportOperationFailure(operation, error)` is **not** deduplicated, and that is
+deliberate: it is not the outage path. It exists for the one case the single
+transition record of G1 cannot cover — a *reachable* Redis that refuses or
+overruns an individual mutation, where a swallowed `del` leaves an authorization
+entry stale and no other signal exists.
+
+| Property | Rule |
+|---|---|
+| Cardinality | One record per failed mutation. No suppression, no dedup. |
+| Gating | Callers **must** check the live connection signal first and skip the call while it reports down (FR-017). During a real outage this method is therefore never reached. |
+| Scope | Mutations only (`set`, `del`, `reset`, `mset`) and their timeouts. Failed **reads** are silent — a failed read is indistinguishable from a cold cache, which every consumer already handles. |
+| Level | `warn`, for the same reason as G1: a degradation the platform absorbs. |
+| Content | Message and `code` only, exactly as G3. The `operation` label is a fixed vocabulary (`write`, `invalidation`, `reset`) — never a key, value or user-supplied string, so record cardinality stays bounded and no cached content can leak. |
 
 ## Consumer obligations
 
 ### `cache.store.factory.ts`
 
-Wires both listeners at construction, before returning:
+Wires all three listeners at construction, before returning:
 
 ```ts
 client.on('error', err => reporter.reportError(err));
+client.on('reconnecting', params => reporter.reportError(params?.error));
 client.on('ready', () => reporter.reportReady());
 ```
 
 The `'error'` registration is what stops the process dying
 (cache-store-factory.md G2). The reporter is the handler, but any handler would
 do for survival — the reporter is what makes the handler *useful*.
+
+The `'reconnecting'` registration is **not** redundant with it, and omitting it
+makes the ordinary outage completely silent. `redis@3.1.2` re-emits a socket
+failure as `'error'` only when **no** `retry_strategy` is configured
+(`index.js:341`) — and the factory configures one, precisely so the client never
+gives up (FR-012, FR-013). So the common outage (ECONNREFUSED, peer close,
+`docker stop redis`) arrives as `reconnecting` and never as `error`. Without this
+listener nothing would be logged and `isDown` would never flip, which is the
+signal FR-010a and FR-015 – FR-019 are built on.
+
+Both are routed to `reportError`, so G1's dedup makes a reconnect storm — one
+event per retry, ~1 every 5 s at the capped backoff — still cost exactly one
+record.
 
 ### `task.service.ts`
 
@@ -130,3 +182,7 @@ counter logic, the fallback and their existing coverage in
 | T5 | `isDown` is `false` initially, `true` after an error, `false` after ready | G2, G5 |
 | T6 | No record contains anything beyond the error's message and code | G3 |
 | T7 | Every record goes through the injected logger with a `LogContext` | G4 |
+| T8 | A `reconnecting` event with no preceding `error` still produces exactly 1 record, and 50 consecutive `reconnecting` events still produce exactly 1 | G1 — the ordinary outage, which never emits `error` at all |
+| T9 | `reportOperationFailure` called N times produces N records — it is not deduplicated | G6 |
+| T10 | A mutation failing while the signal reports **up** produces a record; the same failure while it reports **down** produces none | G6 — the gating obligation, FR-017 |
+| T11 | No `reportOperationFailure` record contains anything beyond the operation label, message and code | G6, G3 |

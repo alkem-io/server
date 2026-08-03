@@ -183,9 +183,19 @@ duration of the outage. Total `[cache]` records for the worker: **one**.
 grep -c "Failed to claim task item" <worker log>   # expect 0
 ```
 
-**Fail signature:** one line per item. The unit suite cannot catch this — its
-outage test calls `updateTaskResults` without an `itemKey`, which short-circuits
-before the `SADD`. → **Finding 2 · FR-010a**
+**Fail signature:** one line per item. → **Finding 2 · FR-010a**
+
+**Unit coverage:** the gap this described is now closed.
+`src/services/task/task.service.spec.ts` ("does not log per failed item claim
+while the connection is down") passes an explicit `itemKey`, so it reaches the
+failing `SADD` inside `claimItem` and asserts zero `logger.error` calls. That was
+the original miss — without an `itemKey`, `claimItem` short-circuits before the
+`SADD` and the path is never exercised.
+
+What the unit test cannot establish is **worker-scale** behaviour: that the
+suppression holds across a real auth-reset over a real item set, driven by up to
+10 autoscaled replicas against one shared Redis, where the flood would actually
+be felt. That is what this live check is for.
 
 Also record here: the worker **process stays alive** and keeps draining the
 queue (this is `quickstart.md` §5, never run).

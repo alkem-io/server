@@ -65,22 +65,49 @@ logging without duplicating the state machine.
 
 | Consumer | Why it needs the signal |
 |---|---|
-| The fail-soft store wrapper | Nothing — it is deliberately state-free. It catches whatever it catches and does not log per operation at all. |
+| The fail-soft store wrapper | Two things, neither of them a decision to attempt or skip an operation: it gates the per-mutation failure record on the connection being **up** (so an outage stays at one record), and it skips arming the 1 s timeout timer while the connection is already known **down** (the client rejects instantly there, so the timer is pure overhead on a hot path for the whole outage). It reads the read-only `connectionSignal`, never the reporter. |
 | `TaskService` | It bypasses the store and drives the raw client for server-side atomic counters. Its three error paths (`task.service.ts:96`, `:172`, `:198`) log at **error** level *per failed operation*; the auth-reset worker drives these in a loop, so during an outage they flood independently of the store. FR-010a. |
 
 `TaskService`'s counter *behaviour* is untouched — every callback already
 `resolve()`s rather than rejecting, and callers already fall back to in-object
 counters when the helper yields `undefined`. Only the log volume changes.
 
-### Client connection state (not ours)
+### Client connection state (not ours) — and `connectionSignal`
 
-`redis@3.1.2` maintains `client.connected` and `client.ready` internally. The
-feature **reads** neither. This is a deliberate simplification worth recording:
-with `enable_offline_queue: false`, a command issued while disconnected is
-rejected immediately by the client itself (research R6.4), so the wrapper does
-not need to consult connection state before deciding whether to attempt an
-operation. Duplicating the client's own state would create a
-consistency problem for no benefit.
+`redis@3.1.2` maintains `client.connected` and `client.ready` internally, and
+`ready` is the **authoritative** flag. The feature never duplicates it; it reads
+it, behind one small read-only view:
+
+```ts
+type CacheConnectionSignal = { readonly isDown: boolean };
+
+// cache.store.factory.ts
+get isDown() {
+  return typeof client.ready === 'boolean' ? !client.ready : reporter.isDown;
+}
+```
+
+**Why the client's flag is preferred over the reporter's boolean.** The reporter
+records the last *transition seen*. A one-off non-connection `'error'` — a parser
+fatal, a `Ready check failed`, a reply error emitted with no callback — would
+latch `reportedDown = true` for the life of the process, because it is cleared
+only by a `ready` event and a client that never disconnected never emits one
+again. Every gate hung off that boolean would then be wrong forever. The
+reporter therefore remains the **fallback**, for clients that do not expose
+`ready` (including test doubles).
+
+**What the signal is used for**, in both consumers: suppressing *logging*, plus
+skipping the per-operation timer while already down. Never to decide whether to
+attempt an operation — with `enable_offline_queue: false` a command issued while
+disconnected is rejected immediately by the client itself (research R6.4), so
+gating attempts on a second copy of that state would buy nothing and risk
+suppressing work against a Redis that had already recovered.
+
+It is published on the store object (alongside `getClient()`) because
+`TaskService` bypasses the cache interface for server-side atomic counters and
+needs the same signal. A narrow read-only view is exposed rather than the
+reporter itself, so a consumer cannot call `reportReady()` and corrupt the
+shared outage state. FR-010a.
 
 ## Data flow
 
@@ -109,13 +136,38 @@ consumer ──get──▶ cache-manager v5 ──▶ fail-soft wrapper ──�
 And, entirely independently of any request:
 
 ```text
-client 'error' ──▶ CacheConnectionReporter ──▶ [first time only] logger.warn(…, LogContext.CACHE)
-                                          └──▶ reportedDown = true
+client 'reconnecting'  ─┐   ← the NORMAL outage path: ECONNREFUSED, peer close,
+  (once per retry)      │     `docker stop redis`. One per retry attempt,
+                        │     ~1 every 5 s at the capped backoff.
+                        ├──▶ reporter.reportError ──▶ [first time only] logger.warn(…, LogContext.CACHE)
+client 'error'         ─┘                       └──▶ reportedDown = true
+  (rarer — see below)
+
+client 'ready' ────────────▶ reporter.reportReady ─▶ [only if down] logger.warn(…, LogContext.CACHE)
+                                                └──▶ reportedDown = false
 ```
 
-The two flows are decoupled on purpose. The crash comes from the second flow —
-an asynchronous emit with no command in flight — which is exactly why a
-request-path decorator alone could never have fixed it (research R5-C).
+**`reconnecting`, not `error`, is the ordinary transition.** `redis@3.1.2`
+re-emits a socket failure as `'error'` only when **no** `retry_strategy` is
+configured (`index.js:341`), and this feature configures one so the client never
+gives up (FR-012, FR-013). A routine outage therefore produces a stream of
+`reconnecting` events and no `error` event at all. Listening only for `'error'`
+would leave the common case unlogged and `isDown` permanently `false` — the
+failure mode this design is most exposed to, and why both events are wired.
+
+`'error'` still matters and is still what stops the crash: an `EventEmitter`
+emitting `'error'` with no listener throws it as an uncaught exception, which is
+the entirety of #6330. It carries the non-socket failures (parser fatals, ready
+-check failures) and the socket failures of any client configured without a retry
+strategy.
+
+Both routes converge on `reportError`, so the dedup in G1 holds regardless of
+which fires, and a full outage-and-recovery cycle still costs exactly 2 records.
+
+The request flow and this one are decoupled on purpose. The crash comes from
+this second flow — an asynchronous emit with no command in flight — which is
+exactly why a request-path decorator alone could never have fixed it
+(research R5-C).
 
 ## Key relationships
 
@@ -124,12 +176,15 @@ AppModule ─────────────┐
                        ├──▶ createRedisCacheStore(config, logger) ──▶ store factory fn
 AuthResetWorkerModule ─┘                    │
                                             ├──▶ CacheConnectionReporter  (1 per client)
-                                            ├──▶ redis client + 'error'/'ready' listeners
+                                            ├──▶ redis client + 'error'/'reconnecting'/'ready' listeners
                                             └──▶ fail-soft wrapper over the legacy store
                                                           │
                                                           ├──▶ getClient()  (preserved verbatim)
                                                           │         └──▶ TaskService atomic counters
-                                                          └──▶ get/set/del/reset  (fail-soft)
+                                                          ├──▶ connectionSignal  (read-only)
+                                                          │         └──▶ TaskService log suppression
+                                                          └──▶ get/set/del/reset/mget/mset/keys/ttl
+                                                                    │        (fail-soft)
                                                                     └──▶ 17 cache consumer services
 ```
 
