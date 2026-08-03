@@ -1,6 +1,8 @@
 import { AUTH_RESET_SERVICE } from '@common/constants';
 import { AlkemioErrorStatus } from '@common/enums';
 import { BaseException } from '@common/exceptions/base.exception';
+import { Organization } from '@domain/community/organization';
+import { User } from '@domain/community/user/user.entity';
 import { Account } from '@domain/space/account/account.entity';
 import { ClientProxy } from '@nestjs/microservices';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -241,6 +243,11 @@ describe('AuthResetService', () => {
     beforeEach(() => {
       // All find calls return empty arrays by default
       entityManager.find.mockResolvedValue([]);
+      // A caller-supplied task is adopted, not created: it is stamped with the
+      // computed itemsCount so it has a target to reach.
+      taskService.setItemsCount.mockImplementation(
+        async (id: string) => ({ id }) as any
+      );
     });
 
     it('should use provided taskId and return it', async () => {
@@ -248,6 +255,20 @@ describe('AuthResetService', () => {
 
       expect(result).toBe('existing-task');
       expect(taskService.create).not.toHaveBeenCalled();
+    });
+
+    it('stamps a caller-supplied task with the computed itemsCount (issue #6310)', async () => {
+      // Regression: the taskId branch used to discard the count it had just
+      // computed, leaving the caller's task with no target — the original hang,
+      // reached through a different door.
+      entityManager.find
+        .mockResolvedValueOnce([{ id: 'a1' }, { id: 'a2' }]) // accounts   x2
+        .mockResolvedValueOnce([{ id: 'o1' }]) // orgs       x2
+        .mockResolvedValueOnce([{ id: 'u1' }, { id: 'u2' }]); // users      x1
+
+      await service.publishResetAll('caller-task');
+
+      expect(taskService.setItemsCount).toHaveBeenCalledWith('caller-task', 8);
     });
 
     it('should create a task when no taskId is provided', async () => {
@@ -273,13 +294,15 @@ describe('AuthResetService', () => {
 
       await service.publishResetAll('t1');
 
-      expect(spy1).toHaveBeenCalledWith('t1');
-      expect(spy2).toHaveBeenCalledWith('t1');
-      expect(spy3).toHaveBeenCalledWith('t1');
+      // Each per-entity publisher now receives the ids fetched once up front,
+      // so the emitted messages match the count the task was created with.
+      expect(spy1).toHaveBeenCalledWith('t1', []);
+      expect(spy2).toHaveBeenCalledWith('t1', []);
+      expect(spy3).toHaveBeenCalledWith('t1', []);
       expect(spy4).toHaveBeenCalled();
       expect(spy5).toHaveBeenCalled();
-      expect(spy6).toHaveBeenCalledWith('t1');
-      expect(spy7).toHaveBeenCalledWith('t1');
+      expect(spy6).toHaveBeenCalledWith('t1', []);
+      expect(spy7).toHaveBeenCalledWith('t1', []);
     });
 
     it('should throw BaseException when a sub-method fails', async () => {
@@ -295,6 +318,66 @@ describe('AuthResetService', () => {
           AlkemioErrorStatus.AUTHORIZATION_RESET
         );
       }
+    });
+
+    // Regression coverage for #6310: the aggregate task was created with NO
+    // itemsCount, so it could never reach a terminal status and the id handed
+    // back to the operator was useless as a completion signal.
+    describe('itemsCount (issue #6310)', () => {
+      const mockFindByEntity = (
+        accounts: { id: string }[],
+        organizations: { id: string }[],
+        users: { id: string }[]
+      ) =>
+        entityManager.find.mockImplementation(async (entity: any) => {
+          if (entity === Account) return accounts;
+          if (entity === Organization) return organizations;
+          if (entity === User) return users;
+          return [];
+        });
+
+      it('should create the task with the total number of tracked items', async () => {
+        mockFindByEntity(
+          [{ id: 'acc-1' }, { id: 'acc-2' }],
+          [{ id: 'org-1' }, { id: 'org-2' }, { id: 'org-3' }],
+          [{ id: 'usr-1' }, { id: 'usr-2' }, { id: 'usr-3' }, { id: 'usr-4' }]
+        );
+        taskService.create.mockResolvedValue({ id: 'counted-task' } as any);
+
+        await service.publishResetAll();
+
+        // accounts x2 (authorization + licence) = 4
+        // organizations x2 (authorization + licence) = 6
+        // users x1 = 4
+        expect(taskService.create).toHaveBeenCalledWith(14);
+      });
+
+      it('should count exactly the messages that carry the task id', async () => {
+        mockFindByEntity([{ id: 'acc-1' }], [{ id: 'org-1' }], [{ id: 'u-1' }]);
+        taskService.create.mockResolvedValue({ id: 'counted-task' } as any);
+
+        await service.publishResetAll();
+
+        const [[itemsCount]] = taskService.create.mock.calls;
+        // The platform / AI-server resets are emitted WITHOUT a task, so the
+        // subscriber never accounts for them — counting them would leave the
+        // task permanently short and hanging in IN_PROGRESS.
+        const trackedEmits = authResetQueue.emit.mock.calls.filter(
+          ([, payload]: [unknown, any]) => payload?.task === 'counted-task'
+        );
+        expect(trackedEmits).toHaveLength(itemsCount as number);
+        expect(itemsCount).toBe(5);
+      });
+
+      it('should fetch each entity id set only once', async () => {
+        mockFindByEntity([{ id: 'acc-1' }], [{ id: 'org-1' }], [{ id: 'u-1' }]);
+
+        await service.publishResetAll('t1');
+
+        // Counting and emitting must read the SAME rows: a second query could
+        // return a different set and desync itemsCount from the emitted work.
+        expect(entityManager.find).toHaveBeenCalledTimes(3);
+      });
     });
   });
 });
