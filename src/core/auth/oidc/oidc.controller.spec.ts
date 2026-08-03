@@ -13,7 +13,17 @@ import { SESSION_STORE_HANDLE } from './strategies/cookie-session.errors';
 // FR-006). See specs/107-oidc-session-revocation/spec.md and
 // contracts/redis-keyspace.md.
 
-const COOKIE_CONFIG = { name: 'alkemio_session', absolute_ttl_s: 2_592_000 };
+// `domain` is set here on purpose. Every deployed environment configures one
+// (OIDC_SESSION_COOKIE_DOMAIN); only local dev leaves it empty. With it absent
+// from the fixture, a clear that omits Domain looks identical to one that
+// includes it, and the bug below was invisible to this suite for exactly that
+// reason — the login SET carried Domain=… while every clear omitted it, so
+// sign-out silently left the session cookie in the browser.
+const COOKIE_CONFIG = {
+  name: 'alkemio_session',
+  absolute_ttl_s: 2_592_000,
+  domain: 'alkem.io',
+};
 const PRE_AUTH_KEY = new TextEncoder().encode(
   'test-only-pre-auth-signing-key-0000000000000000'
 );
@@ -360,6 +370,37 @@ describe('OidcController — index pruning on session end (FR-003)', () => {
 
     expect(srem).toHaveBeenCalledWith(subIndexKey('sub-normal'), 'sid-1');
     expect(res.redirectedTo).toContain('oauth2/sessions/logout');
+  });
+
+  // server#6315 — a Set-Cookie only clears an existing cookie when name, domain
+  // and path all match; otherwise the browser keeps the original and stores a
+  // second one. Confirmed against a running server with a domain configured:
+  // the logout clear carried no Domain while the login set did, so the session
+  // cookie survived sign-out in every environment that configures one.
+  it('clears the session cookie with the SAME domain it was set with', async () => {
+    const { redis } = makeFakeRedis();
+    const { controller } = await buildController({ redis });
+
+    const req = makeReq({
+      cookies: { [COOKIE_CONFIG.name]: 's:sid-1.sig' },
+      session: makeSession({ sub: 'sub-normal', id_token: 'id-token-value' }),
+    });
+    const res = makeRes();
+
+    await controller.logout('id-token-value', undefined, req, res);
+
+    const cleared = res.cookies.find(
+      (c: { name: string; value: string }) =>
+        c.name === COOKIE_CONFIG.name && c.value === ''
+    );
+    expect(cleared).toBeDefined();
+    expect(cleared?.opts).toMatchObject({
+      domain: COOKIE_CONFIG.domain,
+      path: '/',
+      maxAge: 0,
+      httpOnly: true,
+      sameSite: 'lax',
+    });
   });
 });
 

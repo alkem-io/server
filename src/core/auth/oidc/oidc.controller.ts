@@ -32,6 +32,7 @@ import {
   verifyPreAuthCookie,
 } from './pre-auth-cookie';
 import { validateReturnTo } from './returnto-validator';
+import { sessionCookieClearOptions } from './session-cookie';
 import {
   addSessionToSubIndex,
   removeSessionFromSubIndex,
@@ -99,6 +100,15 @@ export class OidcController {
   // default in alkemio.yml); stamped onto the session at login as
   // `absolute_expires_at`.
   private readonly sessionAbsoluteTtlS: number;
+  /**
+   * server#6315 — the cookie's `domain`, which every clear on this controller
+   * used to omit. A clear whose domain does not match the set silently creates
+   * a second cookie and leaves the original alive, so with a domain configured
+   * (every deployed environment) sign-out did not actually sign the browser out.
+   * Verified on a running server: the login set carried `Domain=…`, the logout
+   * clear did not.
+   */
+  private readonly sessionCookieDomain: string | undefined;
   constructor(
     private readonly oidcService: OidcService,
     configService: ConfigService<AlkemioConfig, true>,
@@ -131,6 +141,7 @@ export class OidcController {
     );
     this.sessionCookieName = cookie.name;
     this.sessionAbsoluteTtlS = cookie.absolute_ttl_s;
+    this.sessionCookieDomain = cookie.domain || undefined;
   }
 
   /**
@@ -607,13 +618,15 @@ export class OidcController {
         // but functionally correct.
       }
     }
-    res.cookie(this.sessionCookieName, '', {
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-      secure: this.oidcService.getCookieSecure(),
-      maxAge: 0,
-    });
+    res.cookie(
+      this.sessionCookieName,
+      '',
+      sessionCookieClearOptions({
+        name: this.sessionCookieName,
+        secure: this.oidcService.getCookieSecure(),
+        domain: this.sessionCookieDomain,
+      })
+    );
   }
 
   @Get('id-token-hint')
@@ -683,13 +696,15 @@ export class OidcController {
         res.status(204).end();
         return;
       }
-      res.cookie(this.sessionCookieName, '', {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: this.oidcService.getCookieSecure(),
-        maxAge: 0,
-      });
+      res.cookie(
+        this.sessionCookieName,
+        '',
+        sessionCookieClearOptions({
+          name: this.sessionCookieName,
+          secure: this.oidcService.getCookieSecure(),
+          domain: this.sessionCookieDomain,
+        })
+      );
       const fallback =
         typeof postLogoutRedirectUri === 'string' && postLogoutRedirectUri
           ? postLogoutRedirectUri
@@ -729,13 +744,15 @@ export class OidcController {
     });
     await this.deindexSession(sub, logoutSid);
 
-    res.cookie(this.sessionCookieName, '', {
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-      secure: this.oidcService.getCookieSecure(),
-      maxAge: 0,
-    });
+    res.cookie(
+      this.sessionCookieName,
+      '',
+      sessionCookieClearOptions({
+        name: this.sessionCookieName,
+        secure: this.oidcService.getCookieSecure(),
+        domain: this.sessionCookieDomain,
+      })
+    );
 
     emitAudit({
       event_type: 'session.ended',
