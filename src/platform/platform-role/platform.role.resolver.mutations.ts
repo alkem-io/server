@@ -187,35 +187,52 @@ export class PlatformRoleResolverMutations {
     await this.licenseService.saveAll(licenses);
   }
 
-  private async notifyPlatformGlobalRoleChange(
+  private notifyPlatformGlobalRoleChange(
     triggeredBy: string,
     user: IUser,
     type: RoleChangeType,
     role: string
-  ) {
+  ): void {
     const notificationInput: NotificationInputPlatformGlobalRoleChange = {
       triggeredBy,
       userID: user.id,
       type: type,
       role: role,
     };
-    // Both call sites above invoke this WITHOUT `await`, so anything this
-    // rejects with becomes an unhandled rejection — and under Node's default
-    // `--unhandled-rejections=throw` that terminates the process rather than
-    // failing the request. Observed twice in live verification: a user row
-    // with a null profile made the payload builder throw, and the server
-    // exited mid-run. Notifying is best-effort by design; it must never be
-    // able to take the process down, whatever the adapter does next.
-    try {
-      await this.notificationPlatformAdapter.platformGlobalRoleChanged(
+    this.dispatchNotification(
+      this.notificationPlatformAdapter.platformGlobalRoleChanged(
         notificationInput
-      );
-    } catch (error: any) {
-      this.logger.error(
-        `Unable to dispatch platform global role change notification (user=${user.id}, role=${role}, type=${type}): ${error?.message}`,
-        error?.stack,
+      ),
+      'platformGlobalRoleChanged'
+    );
+  }
+
+  /**
+   * Wraps a fire-and-forget notification dispatch with a `.catch` so an
+   * unhandled rejection from a downstream notification adapter (e.g. a user
+   * row with a null profile → TypeError while building the payload) does not
+   * crash the Node process.
+   *
+   * The notification is still side-effectful: failures are logged at ERROR
+   * with structured details so monitoring can pick them up. Notifications
+   * are intentionally not awaited at the resolver level; we don't want a
+   * downstream notification problem to fail the user-facing mutation.
+   */
+  private dispatchNotification(
+    promise: Promise<unknown>,
+    eventLabel: string
+  ): void {
+    void promise.catch(error => {
+      const stack = error instanceof Error ? (error.stack ?? '') : '';
+      this.logger.error?.(
+        {
+          message: 'Notification dispatch failed',
+          event: eventLabel,
+          error: String(error),
+        },
+        stack,
         LogContext.NOTIFICATIONS
       );
-    }
+    });
   }
 }
