@@ -330,6 +330,154 @@ describe('NotificationExternalAdapter', () => {
     });
   });
 
+  // A user row with a null profile used to make these payload builders throw a
+  // TypeError, which — dispatched fire-and-forget — reached Node's default
+  // `--unhandled-rejections=throw` and killed the server outright.
+  describe('display name resolution with an incomplete user row', () => {
+    const buildRemovedPayloadFor = (subject: any, recipient: any) =>
+      adapter.buildPlatformUserRemovedNotificationPayload(
+        NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED,
+        'admin-1',
+        [recipient],
+        subject
+      );
+
+    beforeEach(() => {
+      vi.mocked(configService.get).mockReturnValue('https://platform.test');
+      vi.mocked(urlGeneratorService.createUrlForUserNameID).mockReturnValue(
+        '/user/1'
+      );
+    });
+
+    it('should build every payload slot without throwing when profiles are null', async () => {
+      // Covers all three patched dereferences at once: the subject user, the
+      // triggering user (fetched), and each recipient.
+      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue({
+        id: 'admin-1',
+        firstName: 'Admin',
+        lastName: 'User',
+        email: 'admin@test.com',
+        nameID: 'admin-user',
+        profile: null,
+      } as any);
+
+      const result = await buildRemovedPayloadFor(
+        {
+          id: 'removed-1',
+          firstName: 'Removed',
+          lastName: 'User',
+          email: 'removed@test.com',
+          nameID: 'removed-user',
+          profile: null,
+        },
+        {
+          id: 'recipient-1',
+          firstName: null,
+          lastName: null,
+          email: 'recipient@test.com',
+          nameID: 'recipient',
+          profile: null,
+        }
+      );
+
+      expect(result.user.displayName).toBe('Removed User');
+      expect(result.triggeredBy.profile.displayName).toBe('Admin User');
+      expect(result.recipients[0].profile.displayName).toBe(
+        'recipient@test.com'
+      );
+    });
+
+    it('should prefer the profile display name over the fallbacks', async () => {
+      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue({
+        id: 'admin-1',
+        firstName: 'Admin',
+        lastName: 'User',
+        email: 'admin@test.com',
+        nameID: 'admin-user',
+        profile: { displayName: 'Preferred Name' },
+      } as any);
+
+      const result = await buildRemovedPayloadFor(
+        {
+          email: 'removed@test.com',
+          firstName: 'Removed',
+          lastName: 'User',
+          profile: { displayName: 'Removed Display' },
+        },
+        {
+          id: 'recipient-1',
+          email: 'recipient@test.com',
+          nameID: 'recipient',
+          profile: { displayName: 'Recipient Display' },
+        }
+      );
+
+      expect(result.user.displayName).toBe('Removed Display');
+      expect(result.triggeredBy.profile.displayName).toBe('Preferred Name');
+      expect(result.recipients[0].profile.displayName).toBe(
+        'Recipient Display'
+      );
+    });
+
+    it('should fall through an empty display name and blank names to the email', async () => {
+      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue({
+        id: 'admin-1',
+        firstName: '  ',
+        lastName: '',
+        email: 'admin@test.com',
+        nameID: 'admin-user',
+        profile: { displayName: '' },
+      } as any);
+
+      const result = await buildRemovedPayloadFor(
+        {
+          email: 'removed@test.com',
+          firstName: undefined,
+          lastName: undefined,
+          profile: undefined,
+        },
+        {
+          id: 'recipient-1',
+          firstName: '',
+          lastName: '',
+          email: 'recipient@test.com',
+          nameID: 'recipient',
+          profile: { displayName: '' },
+        }
+      );
+
+      expect(result.user.displayName).toBe('removed@test.com');
+      expect(result.triggeredBy.profile.displayName).toBe('admin@test.com');
+      expect(result.recipients[0].profile.displayName).toBe(
+        'recipient@test.com'
+      );
+    });
+
+    it('should build the global role change payload for a user with no profile', async () => {
+      // The exact live path: revoking a platform role from an incomplete row.
+      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue({
+        id: 'user-1',
+        firstName: 'Test',
+        lastName: 'User',
+        email: 'test@test.com',
+        nameID: 'test-user',
+        profile: null,
+      } as any);
+
+      const result =
+        await adapter.buildPlatformGlobalRoleChangedNotificationPayload(
+          NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED,
+          'admin-1',
+          [],
+          'user-1',
+          'REMOVED' as any,
+          'GLOBAL_ADMIN'
+        );
+
+      expect(result.triggeredBy.profile.displayName).toBe('Test User');
+    });
+  });
+
   describe('buildSpaceCommunityApplicationCreatedNotificationPayload', () => {
     it('should build application payload with applicant', async () => {
       vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue({
