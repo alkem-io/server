@@ -112,6 +112,11 @@ const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
 const EXPLORE_SPACES_EXCLUDED_ACTIVITY_TYPES = [
   ActivityEventType.CALLOUT_WHITEBOARD_CONTENT_MODIFIED,
 ];
+// The ranking query's privacy Brackets are a coarse pre-filter; the authoritative
+// READ check afterwards can still drop candidates (e.g. a PUBLIC L1 subspace of a
+// PRIVATE L0 the actor can't read). Over-fetch candidates so those drops don't
+// leave the caller with fewer than `limit` readable Spaces, then slice to `limit`.
+const EXPLORE_SPACES_OVERFETCH_FACTOR = 3;
 
 type SpaceSortingData = {
   id: string;
@@ -867,7 +872,7 @@ export class SpaceService {
       )
       .groupBy('s.id')
       .orderBy('COUNT(a.id)', 'DESC')
-      .limit(limit)
+      .limit(limit * EXPLORE_SPACES_OVERFETCH_FACTOR)
       .getRawMany<{ id: string }>();
 
     if (spaceIdsWithActivity.length === 0) {
@@ -905,11 +910,13 @@ export class SpaceService {
       }
     });
 
-    // Preserve the activity-based ordering from the first query
+    // Preserve the activity-based ordering from the first query, then apply the
+    // caller's limit — the query over-fetched candidates to survive READ drops.
     const spaceMap = new Map(authorizedSpaces.map(space => [space.id, space]));
     return spaceIds
       .map(id => spaceMap.get(id))
-      .filter((space): space is Space => space !== undefined);
+      .filter((space): space is Space => space !== undefined)
+      .slice(0, limit);
   }
 
   async getSpace(

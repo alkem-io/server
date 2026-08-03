@@ -318,7 +318,10 @@ export class UserSettingsService {
       // Legacy rows are backfilled by migration, but guard defensively so a
       // partial settings object can't throw on the nested assignment.
       settings.dashboard = settings.dashboard ?? { activityView: true };
-      if (updateData.dashboard.activityView !== undefined) {
+      // `!= null` (not `!== undefined`): the input field is a nullable Boolean, so a
+      // client can send `null`; treat that as "no change" rather than persisting null
+      // into the NOT NULL `activityView`.
+      if (updateData.dashboard.activityView != null) {
         settings.dashboard.activityView = updateData.dashboard.activityView;
       }
     }

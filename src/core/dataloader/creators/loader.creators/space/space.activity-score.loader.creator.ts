@@ -13,9 +13,11 @@ import DataLoader from 'dataloader';
 import { EntityManager, In } from 'typeorm';
 
 // Fixed 7-day window for the dashboard "activity score" — the only window the
-// client consumes. Event types excluded match the dashboard feed
-// (whiteboard-content-modified is noise), keeping this count aligned with the
-// most-active ranking in SpaceService.getExploreSpaces.
+// client consumes. The excluded event types and the visibility=true filter
+// mirror SpaceService.getExploreSpaces so a Space's score is counted on the
+// same events its most-active ranking uses. (The time window is independent:
+// getExploreSpaces takes a caller-supplied daysOld; the dashboard passes 7 to
+// both, but that alignment is the caller's, not enforced here.)
 const ACTIVITY_SCORE_DAYS_OLD = 7;
 const EXCLUDED_ACTIVITY_TYPES = [
   ActivityEventType.CALLOUT_WHITEBOARD_CONTENT_MODIFIED,

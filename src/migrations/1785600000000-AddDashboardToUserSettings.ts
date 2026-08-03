@@ -21,6 +21,9 @@ export class AddDashboardToUserSettings1785600000000
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    // Destructive rollback: dropping the column permanently deletes every user's
+    // stored dashboard preferences (activityView). There is no backup — a
+    // subsequent up() re-adds the column with the default, not the prior values.
     await queryRunner.query(
       `ALTER TABLE "user_settings" DROP COLUMN "dashboard"`
     );
