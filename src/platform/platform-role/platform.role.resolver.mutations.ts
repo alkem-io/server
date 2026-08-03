@@ -1,4 +1,5 @@
 import { RoleChangeType } from '@alkemio/notifications-lib';
+import { LogContext } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import { RoleName } from '@common/enums/role.name';
@@ -14,12 +15,14 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { AccountService } from '@domain/space/account/account.service';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { PlatformService } from '@platform/platform/platform.service';
 import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.global.role.change';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AssignPlatformRoleInput } from './dto/platform.role.dto.assign';
 import { RemovePlatformRoleInput } from './dto/platform.role.dto.remove';
 
@@ -37,7 +40,8 @@ export class PlatformRoleResolverMutations {
     private roleSetService: RoleSetService,
     private userLookupService: UserLookupService,
     private roleSetAuthorizationService: RoleSetAuthorizationService,
-    private platformService: PlatformService
+    private platformService: PlatformService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   @Mutation(() => IUser, {
@@ -183,20 +187,52 @@ export class PlatformRoleResolverMutations {
     await this.licenseService.saveAll(licenses);
   }
 
-  private async notifyPlatformGlobalRoleChange(
+  private notifyPlatformGlobalRoleChange(
     triggeredBy: string,
     user: IUser,
     type: RoleChangeType,
     role: string
-  ) {
+  ): void {
     const notificationInput: NotificationInputPlatformGlobalRoleChange = {
       triggeredBy,
       userID: user.id,
       type: type,
       role: role,
     };
-    await this.notificationPlatformAdapter.platformGlobalRoleChanged(
-      notificationInput
+    this.dispatchNotification(
+      this.notificationPlatformAdapter.platformGlobalRoleChanged(
+        notificationInput
+      ),
+      'platformGlobalRoleChanged'
     );
+  }
+
+  /**
+   * Wraps a fire-and-forget notification dispatch with a `.catch` so an
+   * unhandled rejection from a downstream notification adapter (e.g. a user
+   * row with a null profile → TypeError while building the payload) does not
+   * crash the Node process.
+   *
+   * The notification is still side-effectful: failures are logged at ERROR
+   * with structured details so monitoring can pick them up. Notifications
+   * are intentionally not awaited at the resolver level; we don't want a
+   * downstream notification problem to fail the user-facing mutation.
+   */
+  private dispatchNotification(
+    promise: Promise<unknown>,
+    eventLabel: string
+  ): void {
+    void promise.catch(error => {
+      const stack = error instanceof Error ? (error.stack ?? '') : '';
+      this.logger.error?.(
+        {
+          message: 'Notification dispatch failed',
+          event: eventLabel,
+          error: String(error),
+        },
+        stack,
+        LogContext.NOTIFICATIONS
+      );
+    });
   }
 }

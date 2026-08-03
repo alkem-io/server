@@ -883,7 +883,7 @@ export class NotificationExternalAdapter {
     );
     const result: NotificationEventPayloadPlatformUserRemoved = {
       user: {
-        displayName: user.profile.displayName,
+        displayName: this.resolveUserDisplayName(user),
         email: user.email,
       },
       ...basePayload,
@@ -1237,7 +1237,7 @@ export class NotificationExternalAdapter {
       lastName: user.lastName,
       email: user.email,
       profile: {
-        displayName: user.profile.displayName,
+        displayName: this.resolveUserDisplayName(user),
         url: userURL,
       },
       type: ActorType.USER,
@@ -1252,11 +1252,36 @@ export class NotificationExternalAdapter {
       lastName: user.lastName,
       email: user.email,
       profile: {
-        displayName: user.profile.displayName,
+        displayName: this.resolveUserDisplayName(user),
         url: this.urlGeneratorService.createUrlForUserNameID(user.nameID),
       },
       type: ActorType.USER,
     };
+  }
+
+  /**
+   * A notification payload must never be the thing that takes a request — or
+   * the process — down.
+   *
+   * Every caller of the three payload builders that read `profile.displayName`
+   * loads the user with `relations: { profile: true }`, so a null profile means
+   * the ROW is incomplete, not that the relation was forgotten. Dereferencing
+   * it unguarded turned one such row into a `TypeError`, and because
+   * `notifyPlatformGlobalRoleChange` invokes its builder without `await` and
+   * without a catch, that rejection reached Node's default
+   * `--unhandled-rejections=throw` and killed the server outright — observed
+   * twice during live verification of workspace#027-platform-role-redesign,
+   * once via role revocation and once via `createDiscussion`.
+   *
+   * Falls back to the user's name, then their email, so the notification still
+   * carries a usable human identifier instead of failing to send.
+   */
+  private resolveUserDisplayName(user: IUser): string {
+    return (
+      user.profile?.displayName ||
+      `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() ||
+      user.email
+    );
   }
 
   private getPlatformURL(): string {
