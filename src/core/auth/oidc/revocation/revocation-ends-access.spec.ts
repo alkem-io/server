@@ -131,11 +131,41 @@ function makeSharedRedis() {
   };
 }
 
+/**
+ * An ID token shaped like the real one.
+ *
+ * This matters for the erasure test below. In production the personal data in a
+ * session payload lives HERE — the issuer's ID token carries `email`,
+ * `given_name`, `family_name` and `display_name` as ordinary, decodable JWT
+ * claims, and the raw token string is what gets persisted to
+ * `alkemio:sid:<sid>`. A fixture using an opaque `id-<sid>` stub would let the
+ * erasure assertion pass while never exercising the field that actually holds
+ * the PII.
+ */
+function makeIdToken(sid: string): string {
+  const b64url = (o: object) =>
+    Buffer.from(JSON.stringify(o)).toString('base64url');
+  return [
+    b64url({ alg: 'RS256', typ: 'JWT', kid: 'test' }),
+    b64url({
+      sub: SUB,
+      aud: 'alkemio-web',
+      sid,
+      email: EMAIL,
+      email_verified: true,
+      display_name: DISPLAY_NAME,
+      given_name: 'Deleted',
+      family_name: 'Person',
+    }),
+    'signature-not-verified-here',
+  ].join('.');
+}
+
 function seedPayload(sid: string): AlkemioSessionPayload {
   const nowS = Math.floor(Date.now() / 1000);
   return {
     access_token: `access-${sid}`,
-    id_token: `id-${sid}`,
+    id_token: makeIdToken(sid),
     refresh_token: `refresh-${sid}`,
     expires_at: nowS + 600,
     absolute_expires_at: nowS + 30 * 24 * 3600,
@@ -145,8 +175,10 @@ function seedPayload(sid: string): AlkemioSessionPayload {
     refresh_failure_streak_started_at: null,
     created_at: nowS,
     client_id: 'alkemio-web',
-    // The PII whose survival past a deletion is the GDPR Art. 17 half of the
-    // defect: it lives in the session payload for up to the 30-day ceiling.
+    // Reserved and never populated in production (see the field's declaration
+    // in `session-store.redis.ts`). Seeded here only so the tombstone's
+    // defensive null-out is covered; it is NOT the carrier this feature's
+    // GDPR Art. 17 obligation turns on — `id_token` above is.
     request_context_cache: { display_name: DISPLAY_NAME, email: EMAIL },
     terminated_at: null,
     terminated_reason: null,
@@ -339,14 +371,30 @@ describe('revocation ends access (SC-001)', () => {
 });
 
 describe('revocation erases the cached personal data (SC-003)', () => {
-  // GDPR Art. 17. The session payload caches display name and email; before
-  // this feature they survived a deletion in Redis for up to the 30-day
-  // absolute ceiling. The tombstone is what discards them, which is the
-  // strongest single argument for `markTerminated` over `destroy`.
+  // FR-010 / GDPR Art. 17. Ordinary deletion drops the Postgres row, but this
+  // feature deliberately KEEPS the Redis session record alive for the
+  // tombstone's 5 minutes so the next request gets a 401 instead of an
+  // anonymous 200. That surviving record is a copy of personal data outliving
+  // the erasure, so the tombstone has to scrub it as well as mark it dead —
+  // the strongest single argument for `markTerminated` over `destroy`.
+  //
+  // The carrier is `id_token`: a JWT whose payload decodes to email, display
+  // name and both name parts. Asserting on the serialised payload string
+  // catches it wherever it lives, so this test cannot be fooled by moving the
+  // PII between fields.
   it('leaves no display name or email in the session store', async () => {
     const { shared, revocation } = await buildStack(['sid-1']);
 
     const before = shared.strings.get(`${SESSION_KEY_PREFIX}sid-1`) ?? '';
+    const claims = JSON.parse(
+      Buffer.from(
+        JSON.parse(before).id_token.split('.')[1],
+        'base64url'
+      ).toString()
+    );
+    // Guard the guard: prove the fixture really carries the PII in the ID
+    // token, so the "not.toContain" assertions below mean something.
+    expect(claims).toMatchObject({ email: EMAIL, display_name: DISPLAY_NAME });
     expect(before).toContain(DISPLAY_NAME);
     expect(before).toContain(EMAIL);
 
@@ -355,7 +403,11 @@ describe('revocation erases the cached personal data (SC-003)', () => {
     const after = shared.strings.get(`${SESSION_KEY_PREFIX}sid-1`) ?? '';
     expect(after).not.toContain(DISPLAY_NAME);
     expect(after).not.toContain(EMAIL);
-    expect(JSON.parse(after).request_context_cache).toBeNull();
+    const tombstone = JSON.parse(after);
+    expect(tombstone.id_token).toBe('');
+    expect(tombstone.access_token).toBe('');
+    expect(tombstone.alkemio_actor_id).toBeNull();
+    expect(tombstone.request_context_cache).toBeNull();
   });
 
   it('blanks every token field on the tombstone', async () => {

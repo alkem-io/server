@@ -127,8 +127,11 @@ redis-cli TTL alkemio:sub:<kratos-identity-uuid>
 # Inspect one session (contains PII — treat accordingly)
 redis-cli GET alkemio:sid:<sid>
 
-# Confirm a revocation landed: terminated_at set, request_context_cache null
-redis-cli GET alkemio:sid:<sid> | jq '{terminated_at, terminated_reason, request_context_cache}'
+# Confirm a revocation landed: tombstoned, and the PII-bearing token blanked.
+# `request_context_cache` is NOT the probe — it is reserved and never written,
+# so it reads null on live sessions too. `id_token` is the field that carries
+# email / display_name / given_name / family_name (FR-010, GDPR Art. 17).
+redis-cli GET alkemio:sid:<sid> | jq '{terminated_at, terminated_reason, id_token, access_token, cookie}'
 ```
 
 Emergency manual revocation, should it ever be needed before server#6073 ships a

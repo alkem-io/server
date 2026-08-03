@@ -63,7 +63,10 @@ GIVEN  a live session sid belonging to sub
 WHEN   revokeAllForSub runs
 THEN   sessionStore.markTerminated(sid, reason, { sub, client_id }) is called
 AND    sessionStore.destroy is NOT called
-AND    the resulting payload has terminated_at set and request_context_cache null
+AND    the resulting payload has terminated_at set, id_token and access_token
+       blanked (FR-010: that is where the session's PII lives), and a cookie
+       field preserved (without it express-session throws before any strategy
+       runs and the 401 becomes a 500)
 ```
 
 FR-009, FR-010, trap 1. **This is the single most important assertion in the

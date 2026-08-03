@@ -28,6 +28,16 @@ export type AlkemioSessionPayload = {
   last_extended_at?: number | null;
   created_at: number;
   client_id: string;
+  // RESERVED — declared with the original OIDC session layer as a slot for
+  // per-request display name / email, and never populated by anything since.
+  // It is set to `null` at login and read only defensively (revocation scrubs
+  // it, the tombstone nulls it) so a future writer is safe.
+  //
+  // Do NOT treat it as the session's personal data for GDPR Art. 17 purposes:
+  // it is `null` on live sessions, so asserting it is null after a revocation
+  // proves nothing. The PII a session record actually carries is in `id_token`
+  // — a JWT with email / display_name / given_name / family_name claims — which
+  // the tombstone blanks. See `revocation-ends-access.spec.ts`.
   request_context_cache?: { display_name?: string; email?: string } | null;
   // FR-022c — when set, the session has been torn down by the BFF (e.g. due
   // to persistent refresh failure). Strategy treats payload as invalid;

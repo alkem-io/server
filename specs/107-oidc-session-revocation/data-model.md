@@ -37,7 +37,8 @@ through the existing `SessionStoreHandle`. Fields that matter here:
 | `client_id` | carried into the audit record |
 | `refresh_token` | captured **before** tombstoning, passed to RFC 7009, never logged |
 | `absolute_expires_at` | drives the index key's TTL roll-forward |
-| `request_context_cache` | the cached PII the tombstone destroys (FR-010) |
+| `id_token` | the session's actual PII carrier (email / name claims); blanked by the tombstone (FR-010) |
+| `request_context_cache` | RESERVED, never written; the tombstone nulls it defensively |
 | `terminated_at` / `terminated_reason` | the tombstone; `terminated_at` set ⇒ idempotent no-op |
 
 ### 2.2 Existing — `alkemio:sid:<sid>:refresh-lock` (unchanged shape)
@@ -248,8 +249,8 @@ field; no field is removed or retyped.
 | **`reason`** | `SessionRevocationReason` | **NEW optional field** |
 
 Explicitly absent, and asserted absent by a test (FR-021, SC-006):
-`access_token`, `id_token`, `refresh_token`, cookie values, and the contents of
-`request_context_cache`.
+`access_token`, `id_token` (and any claim decoded from it), `refresh_token`,
+cookie values, and the contents of `request_context_cache`.
 
 ---
 

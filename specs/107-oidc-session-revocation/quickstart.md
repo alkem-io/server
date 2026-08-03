@@ -126,9 +126,17 @@ redis-cli GET alkemio:sid:<sid> | jq '{terminated_at, terminated_reason, cookie,
 # tombstone without it throws inside the middleware — every route 500s
 # (including /login and /logout) instead of returning the 401 below.
 #
-# `request_context_cache` is NOT a useful assertion here: nothing in the code
-# ever populates it, so it reads `null` on live sessions too. Erasure of the
-# display name and email comes from deleting the DB row, not from the tombstone.
+# FR-010 (GDPR Art. 17) — assert on `id_token`, NOT `request_context_cache`.
+# Nothing in the code has ever populated `request_context_cache`, so it reads
+# `null` on live sessions too and proves nothing. The personal data that
+# actually survives in a session record is inside the ID token, which carries
+# email / given_name / family_name / display_name as decodable JWT claims:
+redis-cli GET alkemio:sid:<sid> | jq '{id_token, access_token, alkemio_actor_id}'
+# → id_token: ""   access_token: ""   alkemio_actor_id: null
+#
+# That blanking is the erasure. Verify it on a LIVE session first — decode
+# `.id_token` and confirm the claims are there — so the empty string after
+# revocation means something.
 
 # c) The refresh mutex is gone
 redis-cli EXISTS alkemio:sid:<sid>:refresh-lock
