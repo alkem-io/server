@@ -842,6 +842,129 @@ describe('TaskService — concurrent consumers', () => {
   });
 });
 
+/**
+ * Redis outage behaviour — alkem-io/server#6330.
+ *
+ * The counter path reaches past the cache interface to issue server-side atomic
+ * commands, so it has to survive an outage on its own terms: keep working (via
+ * the in-object fallback), never throw, and — the part that is new — stop
+ * logging once per failed operation, because the auth-reset worker drives these
+ * in a loop across up to 10 replicas.
+ */
+describe('TaskService — cache connection down', () => {
+  let outageService: TaskService;
+  let outageLogger: LoggerService;
+
+  /** A client whose every command fails, as it does with the connection lost. */
+  const failingClient = () => ({
+    incr: (_k: string, cb: (e: Error) => void) =>
+      cb(new Error("INCR can't be processed. Stream not writeable.")),
+    get: (_k: string, cb: (e: Error) => void) =>
+      cb(new Error("GET can't be processed. Stream not writeable.")),
+    sadd: (_k: string, _m: string, cb: (e: Error) => void) =>
+      cb(new Error("SADD can't be processed. Stream not writeable.")),
+    setnx: (_k: string, _v: string, cb: (e: Error) => void) =>
+      cb(new Error("SETNX can't be processed. Stream not writeable.")),
+    expire: (_k: string, _s: number, cb: (e: Error) => void) =>
+      cb(new Error("EXPIRE can't be processed. Stream not writeable.")),
+    quit: vi.fn(),
+  });
+
+  const buildService = async (isDown: boolean) => {
+    const objects = new Map<string, any>();
+
+    const cache = {
+      get: vi.fn(async (key: string) => objects.get(key)),
+      set: vi.fn(async (key: string, value: any) => {
+        objects.set(key, structuredClone(value));
+      }),
+      del: vi.fn(),
+      reset: vi.fn(),
+      wrap: vi.fn(),
+      store: {
+        name: 'redis',
+        getClient: failingClient,
+        // What the shared factory publishes on the store.
+        connectionSignal: { isDown },
+      },
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        TaskService,
+        { provide: CACHE_MANAGER, useValue: cache },
+        MockWinstonProvider,
+      ],
+    }).compile();
+
+    outageService = module.get<TaskService>(TaskService);
+    outageLogger = module.get<LoggerService>(WINSTON_MODULE_NEST_PROVIDER);
+  };
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('still completes task work when every Redis command fails', async () => {
+    await buildService(true);
+
+    const task = await outageService.create(2);
+
+    // The behavioural guarantee: falls back to the in-object counter rather
+    // than throwing. Without it a Redis outage would take the worker down too.
+    await expect(
+      outageService.updateTaskResults(task.id, 'reset 1' as any)
+    ).resolves.not.toThrow();
+
+    await expect(outageService.getOrFail(task.id)).resolves.toBeDefined();
+  });
+
+  it('does not log per failed counter operation while the connection is down', async () => {
+    await buildService(true);
+
+    const task = await outageService.create(10);
+    for (let i = 0; i < 10; i++) {
+      await outageService.updateTaskResults(task.id, `reset ${i}` as any);
+    }
+
+    // The shared reporter has already emitted exactly one record for the
+    // connection loss. Ten more per replica is a second incident, not a signal.
+    expect(outageLogger.error).not.toHaveBeenCalled();
+  });
+
+  it('does not log per failed item claim while the connection is down', async () => {
+    // The claim runs once per ITEM, not once per task, so it is the highest
+    // -frequency counter operation of the lot — an auth-reset over tens of
+    // thousands of items would emit that many records per replica. Note the
+    // itemKey: without one `claimItem` short-circuits and never reaches SADD,
+    // which is exactly why this path was missed.
+    await buildService(true);
+
+    const task = await outageService.create(10);
+    for (let i = 0; i < 10; i++) {
+      await outageService.updateTaskResults(
+        task.id,
+        `reset ${i}` as any,
+        true,
+        `item-${i}`
+      );
+    }
+
+    expect(outageLogger.error).not.toHaveBeenCalled();
+  });
+
+  it('still logs when there is no outage signal', async () => {
+    // No suppression signal => no information => log exactly as before. A
+    // blanket silence here would hide genuine, non-connectivity Redis errors.
+    await buildService(false);
+
+    const task = await outageService.create(2);
+    await outageService.updateTaskResults(task.id, 'reset 1' as any);
+
+    expect(outageLogger.error).toHaveBeenCalled();
+  });
+});
+
 function createMockTask(overrides?: Partial<Task>): Task {
   const now = Date.now();
   return {

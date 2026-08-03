@@ -49,8 +49,26 @@ export interface RedisCache extends Cache {
   store: RedisStore;
 }
 
+/**
+ * Whether the cache connection is currently known to be down.
+ *
+ * A *log-suppression* signal and nothing more. Consumers must not gate cache
+ * operations on it — the client already refuses commands while disconnected, so
+ * a second copy of that state could only ever be stale. See
+ * `src/core/cache/cache.connection.reporter.ts`.
+ */
+export interface CacheConnectionSignal {
+  readonly isDown: boolean;
+}
+
 export interface RedisStore extends Store {
   name: 'redis';
   getClient: () => RedisClientLike;
   isCacheableValue: (value: any) => boolean;
+  /**
+   * Present only on stores built by `createRedisCacheStore`. Optional because
+   * unit tests and any non-Redis store legitimately have none — callers must
+   * treat its absence as "no suppression information", not as an error.
+   */
+  connectionSignal?: CacheConnectionSignal;
 }
