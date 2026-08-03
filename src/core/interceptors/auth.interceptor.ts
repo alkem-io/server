@@ -2,6 +2,7 @@ import { LogContext } from '@common/enums';
 import { AuthenticationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
+import { clearSessionCookie } from '@core/auth/oidc/session-cookie';
 import {
   BearerValidationError,
   CookieSessionInvalidError,
@@ -20,15 +21,76 @@ import {
   HttpStatus,
   Injectable,
   NestInterceptor,
+  Optional,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { GqlExecutionContext } from '@nestjs/graphql';
+import { AlkemioConfig } from '@src/types';
+import type { Response } from 'express';
 import { IncomingMessage } from 'http';
 import passport from 'passport';
 import { Observable } from 'rxjs';
 
+/**
+ * Reach the response object for either transport.
+ *
+ * Order matters, and the `req.res` fallback is the one that actually fires for
+ * GraphQL. This app's Apollo context factory returns `{ req: ctx.req }` and
+ * deliberately does NOT put `res` in the context (`app.module.ts`), so the
+ * textbook `getContext().res` is `undefined` for every GraphQL request — i.e.
+ * for nearly all traffic this interceptor guards. Express hangs the response
+ * off the request, so `req.res` reaches it without changing the shared GraphQL
+ * config.
+ *
+ * Returns `undefined` for graphql-ws subscriptions, which have no response to
+ * write a header to. That is expected, not a failure.
+ */
+function getResponse(
+  context: ExecutionContext,
+  isGraphql: boolean,
+  req: IncomingMessage | undefined
+): Response | undefined {
+  try {
+    if (isGraphql) {
+      const gqlContext = GqlExecutionContext.create(context).getContext();
+      return gqlContext?.res ?? (gqlContext?.req as any)?.res ?? getReqRes(req);
+    }
+    return context.switchToHttp().getResponse() ?? getReqRes(req);
+  } catch {
+    return getReqRes(req);
+  }
+}
+
+function getReqRes(req: IncomingMessage | undefined): Response | undefined {
+  return (req as unknown as { res?: Response } | undefined)?.res;
+}
+
 @Injectable()
 export class AuthInterceptor implements NestInterceptor {
-  constructor(private readonly actorContextService: ActorContextService) {}
+  /**
+   * server#6315 — attributes for expiring the session cookie on a rejected
+   * session. Optional so the several test harnesses that construct this
+   * interceptor directly keep working; when absent the cookie is simply not
+   * cleared and nothing else changes.
+   */
+  private readonly sessionCookie: {
+    name: string;
+    secure: boolean;
+    domain?: string;
+  } | null;
+
+  constructor(
+    private readonly actorContextService: ActorContextService,
+    @Optional() configService?: ConfigService<AlkemioConfig, true>
+  ) {
+    const cookie = configService?.get(
+      'identity.authentication.providers.oidc.cookie',
+      { infer: true }
+    );
+    this.sessionCookie = cookie
+      ? { name: cookie.name, secure: cookie.secure, domain: cookie.domain }
+      : null;
+  }
 
   async intercept(
     context: ExecutionContext,
@@ -62,6 +124,33 @@ export class AuthInterceptor implements NestInterceptor {
           (err as { errorCode?: string }).errorCode ?? 'unauthenticated';
         const isGraphql =
           context.getType<ContextType | 'graphql'>() === 'graphql';
+
+        // server#6315 — a rejected cookie session takes its cookie with it.
+        //
+        // Without this the browser keeps presenting a cookie the server will
+        // never accept again, and since this interceptor is global that 401
+        // covers EVERY route — including `/api/auth/oidc/login`. The holder is
+        // then unable to sign in again, as themselves or as anyone else on that
+        // machine, with no recovery but clearing cookies by hand. The lockout
+        // lasts as long as the rejected payload lives: 5 minutes for a
+        // tombstone, but up to the full 14-day idle window for a session the
+        // subject-revocation marker rejects (its payload is untouched and
+        // healthy — see CookieSessionStrategy).
+        //
+        // Only for `CookieSessionInvalidError`. A `BearerValidationError` is
+        // about an Authorization header and has no business clearing cookies.
+        //
+        // Deliberately NOT done for `SessionStoreUnavailableError`: that path
+        // has its own filter which re-asserts the cookie precisely so the jar
+        // stays warm across a transient Redis outage. Clearing on a blip would
+        // sign the whole platform out. "Session ended" clears; "store briefly
+        // unreachable" does not, and this is the line between them.
+        if (err instanceof CookieSessionInvalidError && this.sessionCookie) {
+          clearSessionCookie(
+            getResponse(context, isGraphql, req),
+            this.sessionCookie
+          );
+        }
         if (isGraphql) {
           // GraphQL semantics: throw AuthenticationException (extends BaseException
           // → GraphQLError) so the GraphQL errors envelope carries

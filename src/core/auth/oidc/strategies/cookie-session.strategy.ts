@@ -15,7 +15,11 @@ import { Strategy } from 'passport-custom';
 import { isAbsoluteTtlExceeded } from '../absolute-ttl.guard';
 import { emitAudit } from '../audit';
 import { OIDC_REDIS_CLIENT } from '../oidc.tokens';
-import { addSessionToSubIndex, getSubRevokedAt } from '../session-index.redis';
+import {
+  addSessionToSubIndex,
+  getSubRevokedAt,
+  removeSessionFromSubIndex,
+} from '../session-index.redis';
 import type {
   AlkemioSessionPayload,
   SessionStoreHandle,
@@ -137,6 +141,25 @@ export class CookieSessionStrategy extends PassportStrategy(
         request_id: requestId,
         error_code: 'subject_revoked',
       });
+      // server#6315 — retire the payload the marker just condemned.
+      //
+      // Unlike a tombstone, this payload is untouched and healthy: the marker
+      // rejects it by subject, so the record itself carries no evidence it is
+      // dead and keeps its ordinary TTL — up to the full 14-day idle window.
+      // Left in place it would be re-read, re-audited and re-rejected on every
+      // request for a fortnight, and because the rejection is global it also
+      // blocks `/api/auth/oidc/login`, so the holder cannot sign in again.
+      // Destroying it makes this the LAST request that pays the check: the next
+      // one finds no payload and resolves as an ordinary anonymous visitor.
+      //
+      // No tombstone is written in its place. A tombstone is how a session that
+      // was alive announces it has ended; this one has already been announced
+      // by the marker, and re-terminating it would only reinstate the same
+      // 401-everything state for another 5 minutes.
+      //
+      // Best-effort: a failure here must not turn the 401 into a 500, so the
+      // rejection below stands either way. Never awaited into the outcome.
+      await this.retireRevokedSession(sid, payload.sub, correlationId);
       throw new CookieSessionInvalidError('subject_revoked', correlationId);
     }
 
@@ -239,6 +262,59 @@ export class CookieSessionStrategy extends PassportStrategy(
         LogContext.AUTH
       );
       return null;
+    }
+  }
+
+  /**
+   * server#6315 — drop a session the subject-revocation marker has condemned,
+   * plus its index membership.
+   *
+   * Awaited, unlike the self-heal below, and the difference is deliberate: this
+   * runs at most once per session (the whole point is that the next request
+   * finds nothing) whereas the self-heal runs on every authenticated request.
+   * Awaiting also keeps the ordering honest — the 401 this request returns is
+   * then guaranteed to be the last one that session can produce.
+   *
+   * Every failure mode is swallowed after logging. The request is being
+   * rejected either way; a Redis hiccup during cleanup must not escalate a
+   * deliberate 401 into a 500, which would take out `/login` just as thoroughly
+   * as the state this method exists to clear.
+   */
+  private async retireRevokedSession(
+    sid: string,
+    sub: string,
+    correlationId: string
+  ): Promise<void> {
+    try {
+      await this.sessionStore.destroy(sid);
+    } catch (error) {
+      this.logger.warn?.(
+        {
+          message:
+            'Failed to destroy a subject-revoked session; it will be rejected again on the next request',
+          sid,
+          sub,
+          correlationId,
+          failureReason: error instanceof Error ? error.message : String(error),
+        },
+        LogContext.AUTH
+      );
+    }
+    if (!this.redis || !sub) return;
+    try {
+      await removeSessionFromSubIndex(this.redis, sub, sid);
+    } catch (error) {
+      this.logger.warn?.(
+        {
+          message:
+            'Failed to prune a subject-revoked session from the subject index',
+          sid,
+          sub,
+          correlationId,
+          failureReason: error instanceof Error ? error.message : String(error),
+        },
+        LogContext.AUTH
+      );
     }
   }
 

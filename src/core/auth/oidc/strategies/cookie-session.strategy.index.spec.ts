@@ -51,6 +51,7 @@ describe('CookieSessionStrategy self-healing subject index', () => {
     /** Epoch-seconds to return from the subject revocation marker, if any. */
     subRevokedAt?: number | null;
     getImpl?: () => Promise<string | null>;
+    sremImpl?: () => Promise<number>;
   }) {
     const calls: { cmd: string; args: unknown[] }[] = [];
     // The index write is one EVAL now; `saddImpl` still names the knob because
@@ -67,34 +68,44 @@ describe('CookieSessionStrategy self-healing subject index', () => {
       const v = opts?.subRevokedAt;
       return Promise.resolve(v === undefined || v === null ? null : String(v));
     });
+    // server#6315 — a marker-rejected session prunes its own index membership
+    // on the way out, so the fake needs SREM as well as the index write.
+    const srem = vi.fn((key: string, member: string) => {
+      calls.push({ cmd: 'srem', args: [key, member] });
+      return opts?.sremImpl ? opts.sremImpl() : Promise.resolve(1);
+    });
     return {
-      redis: { eval: evalFn, get } as any,
+      redis: { eval: evalFn, get, srem } as any,
       calls,
       sadd: evalFn,
       eval: evalFn,
       get,
+      srem,
     };
   }
 
   const buildStrategy = async (
     payload: AlkemioSessionPayload | null,
-    redis?: unknown
+    redis?: unknown,
+    sessionStoreOverride?: Record<string, unknown>
   ) => {
     const cachedContext = new ActorContext();
     cachedContext.actorID = 'actor-1';
     cachedContext.isAnonymous = false;
     cachedContext.credentials = [];
 
+    const sessionStore = sessionStoreOverride ?? {
+      get: vi.fn().mockResolvedValue(payload),
+      destroy: vi.fn(),
+      markTerminated: vi.fn(),
+    };
+
     const providers: any[] = [
       CookieSessionStrategy,
       MockWinstonProvider,
       {
         provide: SESSION_STORE_HANDLE,
-        useValue: {
-          get: vi.fn().mockResolvedValue(payload),
-          destroy: vi.fn(),
-          markTerminated: vi.fn(),
-        },
+        useValue: sessionStore,
       },
       {
         provide: AuthenticationService,
@@ -125,7 +136,7 @@ describe('CookieSessionStrategy self-healing subject index', () => {
       providers,
     }).compile();
 
-    return { strategy: module.get(CookieSessionStrategy) };
+    return { strategy: module.get(CookieSessionStrategy), sessionStore };
   };
 
   const request = { sessionID: 'sid-1', cookies: {} } as any;
@@ -293,6 +304,90 @@ describe('CookieSessionStrategy self-healing subject index', () => {
 
       await expect(strategy.validate(request)).resolves.toMatchObject({
         actorID: 'actor-1',
+      });
+    });
+
+    // server#6315 — a marker-rejected payload is healthy and keeps its own TTL
+    // (up to the 14-day idle window), so left alone it would be re-read and
+    // re-rejected on every request for a fortnight. Because the rejection is
+    // global it also blocks /api/auth/oidc/login, i.e. the holder cannot sign
+    // in again as anyone. Retiring the payload makes this the LAST request the
+    // session can fail.
+    describe('retires the session it just condemned', () => {
+      it('destroys the payload and prunes its index membership', async () => {
+        const payload = buildPayload();
+        const { redis, srem } = makeFakeRedis({
+          subRevokedAt: payload.created_at + 1,
+        });
+        const { strategy, sessionStore } = await buildStrategy(payload, redis);
+
+        await expect(strategy.validate(request)).rejects.toMatchObject({
+          errorCode: 'subject_revoked',
+        });
+
+        expect(sessionStore.destroy).toHaveBeenCalledWith('sid-1');
+        expect(srem).toHaveBeenCalledWith(subIndexKey(SUB), 'sid-1');
+      });
+
+      it('does NOT write a tombstone in its place', async () => {
+        // A tombstone would reinstate the same 401-everything state for another
+        // 5 minutes, for a session the marker has already dealt with.
+        const payload = buildPayload();
+        const { redis } = makeFakeRedis({
+          subRevokedAt: payload.created_at + 1,
+        });
+        const { strategy, sessionStore } = await buildStrategy(payload, redis);
+
+        await expect(strategy.validate(request)).rejects.toThrow();
+
+        expect(sessionStore.markTerminated).not.toHaveBeenCalled();
+      });
+
+      it('still rejects when the destroy itself fails', async () => {
+        // Best-effort cleanup: a Redis hiccup here must not turn a deliberate
+        // 401 into a 500, which would take out /login just as thoroughly as the
+        // state this retirement exists to clear.
+        const payload = buildPayload();
+        const { redis } = makeFakeRedis({
+          subRevokedAt: payload.created_at + 1,
+        });
+        const { strategy } = await buildStrategy(payload, redis, {
+          get: vi.fn().mockResolvedValue(payload),
+          destroy: vi.fn().mockRejectedValue(new Error('redis unreachable')),
+          markTerminated: vi.fn(),
+        });
+
+        await expect(strategy.validate(request)).rejects.toBeInstanceOf(
+          CookieSessionInvalidError
+        );
+      });
+
+      it('still rejects when the index prune fails', async () => {
+        const payload = buildPayload();
+        const { redis } = makeFakeRedis({
+          subRevokedAt: payload.created_at + 1,
+          sremImpl: () => Promise.reject(new Error('redis unreachable')),
+        });
+        const { strategy } = await buildStrategy(payload, redis);
+
+        await expect(strategy.validate(request)).rejects.toMatchObject({
+          errorCode: 'subject_revoked',
+        });
+      });
+
+      it('leaves an admitted session payload alone', async () => {
+        // The retirement must fire only on the rejection branch — destroying a
+        // healthy post-revocation session would sign out a legitimate user.
+        const payload = buildPayload();
+        const { redis } = makeFakeRedis({
+          subRevokedAt: payload.created_at - 1,
+        });
+        const { strategy, sessionStore } = await buildStrategy(payload, redis);
+
+        await expect(strategy.validate(request)).resolves.toMatchObject({
+          actorID: 'actor-1',
+        });
+        expect(sessionStore.destroy).not.toHaveBeenCalled();
       });
     });
 
