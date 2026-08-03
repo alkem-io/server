@@ -356,6 +356,38 @@ describe('createRedisCacheStore', () => {
       ]);
     });
 
+    it('fails keys soft, yielding an empty list rather than undefined', async () => {
+      // Callers iterate the result. A bare `undefined` would turn an outage
+      // into a TypeError at the call site instead of the empty result set an
+      // unreachable cache honestly represents.
+      fakeStore.keys = vi
+        .fn()
+        .mockRejectedValue(new Error('CONNECTION_BROKEN'));
+      const store = build();
+
+      await expect(store.keys?.('prefix:*')).resolves.toEqual([]);
+    });
+
+    it('fails ttl soft, reporting "no expiry known" rather than a bogus number', async () => {
+      // -1 is node_redis' own "no expiry known". Falling back to `undefined`
+      // (or worse, 0 — "already expired") would let a caller act on a TTL that
+      // was never actually read.
+      fakeStore.ttl = vi.fn().mockRejectedValue(new Error('NR_CLOSED'));
+      const store = build();
+
+      await expect(store.ttl?.('key')).resolves.toBe(-1);
+    });
+
+    it('turns a failing multi-key write into a no-op', async () => {
+      // `mset` is a mutation, so unlike the reads above it must resolve rather
+      // than reject: a rejection here propagates out of the cache layer and
+      // 500s a request the database could have answered.
+      fakeStore.mset = vi.fn().mockRejectedValue(new Error('NR_CLOSED'));
+      const store = build();
+
+      await expect(store.mset?.('a', 1, 'b', 2)).resolves.toBeUndefined();
+    });
+
     it("forwards cache-manager's default ttl to the client", () => {
       // `cache-manager-redis-store` reads its fallback TTL off the client
       // options. Dropping it makes any `set` without an explicit ttl a key with
