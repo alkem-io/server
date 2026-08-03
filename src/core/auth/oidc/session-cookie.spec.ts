@@ -40,6 +40,21 @@ describe('sessionCookieClearOptions', () => {
     expect(opts.secure).toBe(false);
   });
 
+  it('passes a leading-dot domain through verbatim', () => {
+    // The deployed shape, observed on dev: the session cookie is a DOMAIN
+    // cookie whose domain reads `.dev-alkem.io` in the browser. Whatever
+    // `OIDC_SESSION_COOKIE_DOMAIN` holds — with or without the leading dot —
+    // must reach the clear exactly as it reached the set, since both read the
+    // same config key. Normalising it here (stripping or adding a dot) would
+    // reintroduce the very mismatch this helper exists to prevent.
+    const opts = sessionCookieClearOptions({
+      name: 'alkemio_session',
+      secure: true,
+      domain: '.dev-alkem.io',
+    });
+    expect(opts.domain).toBe('.dev-alkem.io');
+  });
+
   it('carries the per-environment cookie name through untouched', () => {
     // Envs suffix the name (alkemio_session_sandbox). Hardcoding the default
     // makes every clear a no-op outside local dev.
