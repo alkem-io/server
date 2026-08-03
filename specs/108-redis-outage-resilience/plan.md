@@ -2,7 +2,7 @@
 
 **Branch**: `story/6330-redis-outage-crash` | **Date**: 2026-08-03 | **Spec**: [spec.md](./spec.md)
 
-**Input**: Feature specification from `/specs/107-redis-outage-resilience/spec.md`
+**Input**: Feature specification from `/specs/108-redis-outage-resilience/spec.md`
 
 **Story**: [alkem-io/server#6330](https://github.com/alkem-io/server/issues/6330)
 
@@ -107,8 +107,12 @@ source, `@golevelup/ts-vitest` for mocks. Style references named in the story:
 TTL semantics change (the constraint that decided D1). The auth-reset worker's
 deliberate module omissions must survive untouched.
 
-**Scale/Scope**: ~3k TypeScript files in the repo; this change is 1 new source
-file plus a small reporter, 2 new spec files, and edits to 5 existing files.
+**Scale/Scope**: ~3k TypeScript files in the repo. This change is **2 new source
+files** (factory, reporter), **2 new spec files**, and edits to **7 existing
+files**: `src/app.module.ts`, `src/core/bootstrap/auth-reset.worker.module.ts`,
+`src/core/authentication/authentication.module.ts`,
+`src/common/enums/logging.context.ts`, `src/common/interfaces/redis.interfaces.ts`,
+`src/services/task/task.service.ts`, `src/services/task/task.service.spec.ts`.
 
 ## Constitution Check
 
@@ -139,7 +143,7 @@ No gate moved from PASS.
 ### Documentation (this feature)
 
 ```text
-specs/107-redis-outage-resilience/
+specs/108-redis-outage-resilience/
 ├── spec.md                      # /speckit-specify + /speckit-clarify
 ├── plan.md                      # This file
 ├── research.md                  # Phase 0 — R1..R9, decisions D1..D10
@@ -172,7 +176,8 @@ src/
 │   ├── enums/logging.context.ts                  # EDIT — add a CACHE context if absent
 │   └── interfaces/redis.interfaces.ts            # EDIT — minimal type extension only
 └── services/task/
-    └── task.service.ts                           # EDIT — suppress per-failure log flood only
+    ├── task.service.ts                           # EDIT — suppress per-failure log flood only
+    └── task.service.spec.ts                      # EDIT — cover the disconnected-client fallback
 ```
 
 **Structure Decision**: the factory goes in **`src/core/cache/`**. The

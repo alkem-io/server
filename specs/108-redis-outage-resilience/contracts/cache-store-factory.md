@@ -13,10 +13,25 @@ constructed, and the guarantees that seam owes its callers.
 
 ```ts
 export function createRedisCacheStore(
-  config: { host: string; port: number; timeout: number },
+  config: { host: string; port: number },   // NOTE: `timeout` is deliberately NOT accepted
   logger: LoggerService
 ): CacheStoreFactory;
 ```
+
+**On the absent `timeout`.** `storage.redis` also carries a `timeout` field, and
+the obvious-looking thing is to accept it and pass it through. The factory
+deliberately does **not** accept it, so that nobody can wire it up by reflex. In
+`redis@3.1.2`, `connect_timeout` doubles as the *total retry budget*
+(`redis/index.js:580`) — honouring the configured 60 s would make the client
+permanently abandon Redis after a minute of outage, which is the exact failure
+this feature exists to remove (FR-013, research R6.2). The value has in fact never
+been applied, because it is currently passed under an `ioredis` key name that
+`redis@3.1.2` ignores (research R6.1). Call sites may still pass the whole
+`storage.redis` object — TypeScript's structural typing accepts the extra field
+on a non-literal — but the factory body cannot see `timeout`, so it cannot be
+wired up without a deliberate signature change that a reviewer will notice. The
+now-dead configuration key is recorded in plan.md Follow-Up 3 rather than quietly
+repurposed here.
 
 `CacheStoreFactory` is the shape `cache-manager@5.7.6` accepts as `store` and
 invokes as `await factory(args)` — verified in `cache-manager/dist/caching.js`:

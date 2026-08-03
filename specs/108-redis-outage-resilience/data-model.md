@@ -1,6 +1,6 @@
 # Phase 1 Data Model: Redis outage resilience
 
-**Feature**: `107-redis-outage-resilience` · **Story**: [server#6330](https://github.com/alkem-io/server/issues/6330)
+**Feature**: `108-redis-outage-resilience` · **Story**: [server#6330](https://github.com/alkem-io/server/issues/6330)
 
 ## Persistence
 

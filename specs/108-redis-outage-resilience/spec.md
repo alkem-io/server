@@ -444,9 +444,11 @@ Recorded explicitly, with reasons, rather than left implicit:
   release with any other service.
 - No database schema change, no data migration, and no public API contract change.
 - Verification of the P3 story depends on the existing manual quickstart for the
-  OIDC session revocation cascade
-  (`../agents-hq/specs/107-oidc-session-revocation/quickstart.md` §6), which this
-  story unblocks.
+  OIDC session revocation cascade — `specs/107-oidc-session-revocation/quickstart.md`
+  §6, **in this repository**, currently on the unmerged
+  `story/6315-oidc-session-revocation-cascade` branch. (The story text cites it as
+  a workspace path; it is not there. Corrected during `/speckit-analyze`.) This
+  story unblocks that check.
 
 ## Traceability
 

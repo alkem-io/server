@@ -1,6 +1,6 @@
 # Quickstart: verifying Redis outage resilience
 
-**Feature**: `107-redis-outage-resilience` · **Story**: [server#6330](https://github.com/alkem-io/server/issues/6330)
+**Feature**: `108-redis-outage-resilience` · **Story**: [server#6330](https://github.com/alkem-io/server/issues/6330)
 **Satisfies**: FR-028 — the written procedure for the properties that are not unit-testable
 
 ## Why this document exists
@@ -112,8 +112,22 @@ curl -s -o /dev/null -w 'total=%{time_total}s\n' http://localhost:3000/api/auth/
 # expect: well under 1s
 ```
 
-**Pass criteria**: process alive, requests answered, one log record, no request
-slower than ~1 s. → **AC1 / US1 / FR-001, FR-005, FR-006**
+- **Sustained observation — SC-001 requires a continuous 10-minute window**, not a
+  spot check. A process that survives 20 requests and dies at minute 4 has not
+  passed. Leave the outage running and poll:
+
+```bash
+end=$((SECONDS+600))
+while [ $SECONDS -lt $end ]; do
+  curl -s -o /dev/null -w '%{http_code} ' http://localhost:3000/api/auth/oidc/id-token-hint
+  sleep 10
+done; echo
+# expect: 401 for all 60 samples — no 502, no gap, process still alive at the end
+```
+
+**Pass criteria**: process alive for the full 10 minutes, all samples answered,
+exactly one log record for the whole window, no request slower than ~1 s.
+→ **AC1 / US1 / FR-001, FR-005, FR-006, FR-017 · SC-001, SC-004, SC-009**
 
 ---
 
@@ -219,8 +233,10 @@ docker start alkemio_dev_redis
 
 This is the check that could not be run before this fix, because the process died
 before the mutation could complete. It corresponds to
-`../agents-hq/specs/107-oidc-session-revocation/quickstart.md §6`
-("Redis down at deletion → deletion succeeds").
+`specs/107-oidc-session-revocation/quickstart.md` §6 ("Redis down at deletion →
+deletion succeeds") — **in this repository**, on the unmerged
+`story/6315-oidc-session-revocation-cascade` branch, not in the workspace repo as
+the story text suggests.
 
 ```bash
 # 1. Register a user and confirm they have an active session.

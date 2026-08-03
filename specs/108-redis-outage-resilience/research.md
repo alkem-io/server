@@ -1,6 +1,6 @@
 # Phase 0 Research: Redis outage resilience
 
-**Feature**: `107-redis-outage-resilience` · **Story**: [server#6330](https://github.com/alkem-io/server/issues/6330)
+**Feature**: `108-redis-outage-resilience` · **Story**: [server#6330](https://github.com/alkem-io/server/issues/6330)
 **Date**: 2026-08-03 · **Base**: `develop` @ `bc8d51a86`
 
 Every claim below was verified against the checked-out tree and the installed
