@@ -190,8 +190,12 @@ describe('buildSessionStore.markTerminated — express-session compatibility', (
 
     const tombstone = readTombstone(store, 'sid-2');
     expect(tombstone.cookie).toBeDefined();
-    // Must not already be expired, or express-session discards the tombstone
-    // before the strategy can reject it — silently restoring anonymous access.
+    // A sane future expiry, so the synthesised object looks like the cookie it
+    // stands in for. NOT because express-session would otherwise discard the
+    // tombstone: its load path (`store.get` → session found → `inflate`) has no
+    // expiry branch at all in 1.19.0, and a cookie the browser considered
+    // expired would not have been sent in the first place. The load-bearing
+    // property is that `cookie` EXISTS — see the sibling test.
     expect(new Date(tombstone.cookie.expires).getTime()).toBeGreaterThan(
       Date.now()
     );

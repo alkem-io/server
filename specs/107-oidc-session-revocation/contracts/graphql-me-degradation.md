@@ -85,7 +85,8 @@ formerly-authenticated states. Recorded here so a reviewer does not re-open it.
 
 ## Logging (FR-030)
 
-Every degraded field emits exactly one **warn**-level line before returning:
+Every degraded field emits exactly one **verbose**-level line before returning
+(`logger.verbose`; the specs assert verbose, so this is not a warn):
 
 ```
 Degrading me.<field> to its empty value: request has no resolved actor
@@ -130,4 +131,4 @@ Issued with a request carrying no resolved actor:
 - `errors` is **absent** (SC-008),
 - `me.id === "me-"`,
 - every count is `0`, every list is `[]`, `notifications.total` is `0`,
-- seven warn lines were emitted.
+- seven verbose lines were emitted.

@@ -43,8 +43,11 @@ through the existing `SessionStoreHandle`. Fields that matter here:
 
 ### 2.2 Existing — `alkemio:sid:<sid>:refresh-lock` (unchanged shape)
 
-`refresh-lock.ts:16`. Deleted as part of revocation (FR-011) so nothing keyed to
-a dead session lingers.
+`refresh-lock.ts:16`. **Not** touched by revocation, despite FR-011's wording:
+the production mutex is the in-process `refreshInFlight` map, so this key is
+never written, and an unconditional `DEL` would defeat the owner-checked
+compare-and-delete in `releaseRefreshLock` if the Redis mutex were ever wired
+up. The key carries its own TTL. See `contracts/redis-keyspace.md`.
 
 ### 2.3 NEW — `alkemio:sub:<sub>`
 

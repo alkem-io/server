@@ -138,9 +138,9 @@ redis-cli GET alkemio:sid:<sid> | jq '{id_token, access_token, alkemio_actor_id}
 # `.id_token` and confirm the claims are there — so the empty string after
 # revocation means something.
 
-# c) The refresh mutex is gone
-redis-cli EXISTS alkemio:sid:<sid>:refresh-lock
-# → 0
+# c) The refresh mutex is NOT touched — do not assert it is gone.
+# The production mutex is the in-process map, so this key is normally absent
+# anyway; revocation deliberately leaves it alone (see redis-keyspace.md).
 ```
 
 In the browser, on **both** devices, reload:
@@ -209,7 +209,8 @@ query { me { id
 provided", plus a nulled-out `me`.
 
 **After**: no `errors` key at all; `me.id === "me-"`; every count `0`; every list
-`[]`; `notifications.total` `0`. Seven warn lines in the server log.
+`[]`; `notifications.total` `0`. Seven **verbose** lines in the server log — the
+resolvers use `logger.verbose`, so raise the log level if you want to see them.
 
 ---
 

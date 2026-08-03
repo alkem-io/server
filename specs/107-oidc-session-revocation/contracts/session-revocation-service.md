@@ -80,12 +80,19 @@ For each non-excepted member sid, in order:
 1. `get(sid)` → capture `client_id` and `refresh_token` **before** any mutation
    (the tombstone blanks them).
 2. `markTerminated(sid, reason, { sub, client_id })`.
-3. `DEL alkemio:sid:<sid>:refresh-lock` (FR-011).
-4. `SREM alkemio:sub:<sub> sid`.
-5. RFC 7009 revoke of the captured refresh token (see C6).
+3. `SREM alkemio:sub:<sub> sid`.
+4. RFC 7009 revoke of the captured refresh token (see C6).
 
-Step ordering is load-bearing: the local teardown (2–4) completes before the
-remote call (5), so a remote failure cannot leave the session alive (FR-013,
+The refresh lock is deliberately NOT deleted, despite FR-011's wording. In
+production the refresh mutex is the in-process `refreshInFlight` map, so the
+Redis lock key is never written and deleting it is a no-op round trip. Worse,
+`releaseRefreshLock` is an owner-checked compare-and-delete precisely so a lock
+cannot be stolen; an unconditional `DEL` here would defeat that the moment the
+Redis mutex is wired up. See the rationale inline in
+`OidcSessionRevocationService` and the keyspace table in `redis-keyspace.md`.
+
+Step ordering is load-bearing: the local teardown (2–3) completes before the
+remote call (4), so a remote failure cannot leave the session alive (FR-013,
 §5.6.5 of the design input — *prefer local certainty over remote completeness*).
 
 ### C5 — Idempotency and stale members

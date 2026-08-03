@@ -169,11 +169,17 @@ export class AuthInterceptor implements NestInterceptor {
         // stays warm across a transient Redis outage. Clearing on a blip would
         // sign the whole platform out. "Session ended" clears; "store briefly
         // unreachable" does not, and this is the line between them.
-        if (err instanceof CookieSessionInvalidError && this.sessionCookie) {
-          clearSessionCookie(
-            getResponse(context, isGraphql, req),
-            this.sessionCookie
-          );
+        if (err instanceof CookieSessionInvalidError) {
+          // The clear needs the cookie's attributes; the pass-through below
+          // does not. Keeping them in one guard made a missing ConfigService
+          // silently 401 the auth entry points too, contradicting the
+          // "absent config changes nothing else" contract on `sessionCookie`.
+          if (this.sessionCookie) {
+            clearSessionCookie(
+              getResponse(context, isGraphql, req),
+              this.sessionCookie
+            );
+          }
 
           // …and the routes whose entire job is to fix this state are let
           // through as anonymous rather than 401'd.

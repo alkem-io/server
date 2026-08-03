@@ -536,6 +536,21 @@ describe('AuthInterceptor', () => {
           withConfig(COOKIE).intercept(entryPointCtx(url, mockRes()), mockNext)
         ).rejects.toThrow();
       });
+
+      it('passes entry points through even with no cookie config', async () => {
+        // The pass-through needs no cookie attributes — only the clear does. When
+        // they shared a guard, a missing ConfigService silently 401'd /login too,
+        // which contradicts the "absent config changes nothing else" contract.
+        rejectWith(new CookieSessionInvalidError('account_deleted', 'c'));
+
+        await expect(
+          withConfig(undefined).intercept(
+            entryPointCtx('/api/auth/oidc/login', mockRes()),
+            mockNext
+          )
+        ).resolves.toBeDefined();
+        expect(mockNext.handle).toHaveBeenCalled();
+      });
     });
 
     it('still returns 401 when no cookie config is available', async () => {
