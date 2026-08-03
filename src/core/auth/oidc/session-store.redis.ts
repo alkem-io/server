@@ -1,5 +1,6 @@
 import RedisStore from 'connect-redis';
 import type { Redis } from 'ioredis';
+import { SessionStoreUnavailableError } from './strategies/cookie-session.errors';
 
 export const SESSION_KEY_PREFIX = 'alkemio:sid:';
 // Session TTLs are NOT hardcoded here — both the sliding idle window
@@ -79,7 +80,7 @@ export function buildOidcSessionRedisStore(
   client: Redis,
   idleTtlS: number
 ): RedisStore {
-  return new RedisStore({
+  const store = new RedisStore({
     client,
     prefix: SESSION_KEY_PREFIX,
     ttl: (sess: { absolute_expires_at?: number } | undefined) => {
@@ -93,6 +94,60 @@ export function buildOidcSessionRedisStore(
     },
     disableTouch: true,
   });
+
+  return typeStoreFailures(store);
+}
+
+/**
+ * server#6332 FR-016a — make a failed store read announce WHAT it is.
+ *
+ * `express-session` calls `store.get(req.sessionID, cb)` for any request
+ * presenting a session cookie — before any authentication code runs — and on
+ * error calls `next(err)`. Whatever `connect-redis` hands back is whatever
+ * ioredis rejected with, so without this the error reaching the Express chain
+ * is an anonymous `Error` and the middleware that answers 503 cannot recognise
+ * it. On `develop` there was no such middleware at all and the error reached
+ * Express's default handler as an HTML 500.
+ *
+ * Typed HERE, at the one place that knows a store call just failed, rather than
+ * by pattern-matching ioredis's error vocabulary inside the error handler —
+ * that is the guess the cache contract (G3) explicitly refused to make for
+ * `redis@3.1.2`, and it is no more reliable here.
+ *
+ * Only the three callback methods express-session actually invokes are wrapped,
+ * and the store object is mutated in place rather than spread into a new one:
+ * `connect-redis` sniffs the client's shape and express-session probes the
+ * store's methods, so preserving object identity and the prototype chain is
+ * safer than reconstructing it.
+ */
+function typeStoreFailures(store: RedisStore): RedisStore {
+  for (const method of ['get', 'set', 'destroy'] as const) {
+    const original = store[method] as
+      | ((...args: unknown[]) => unknown)
+      | undefined;
+    if (typeof original !== 'function') {
+      continue;
+    }
+
+    (store as unknown as Record<string, unknown>)[method] = function (
+      ...args: unknown[]
+    ) {
+      const callback = args[args.length - 1];
+      if (typeof callback !== 'function') {
+        return original.apply(this, args);
+      }
+
+      const wrapped = (err: unknown, ...rest: unknown[]) =>
+        (callback as (...cbArgs: unknown[]) => unknown)(
+          err ? new SessionStoreUnavailableError(err) : err,
+          ...rest
+        );
+
+      return original.apply(this, [...args.slice(0, -1), wrapped]);
+    };
+  }
+
+  return store;
 }
 
 // FR-018 — lazy idle renewal. A naive rolling session re-issues the cookie and

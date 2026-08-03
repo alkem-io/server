@@ -15,6 +15,7 @@ import { Strategy } from 'passport-custom';
 import { isAbsoluteTtlExceeded } from '../absolute-ttl.guard';
 import { emitAudit } from '../audit';
 import { OIDC_REDIS_CLIENT } from '../oidc.tokens';
+import { resolveCookieSessionId } from '../session-id.resolver';
 import {
   addSessionToSubIndex,
   getSubRevokedAt,
@@ -73,16 +74,26 @@ export class CookieSessionStrategy extends PassportStrategy(
   }
 
   async validate(req: Request): Promise<ActorContext | null> {
-    // express-session has already parsed and signature-verified the cookie by
-    // the time this strategy runs; `req.sessionID` is the bare sid that
-    // matches the Redis key suffix. Reading `req.cookies[name]` directly
-    // would yield the signed wire value (`s:<sid>.<sig>`) which never
-    // matches a Redis key and silently degrades every request to anonymous.
-    const sid =
-      typeof req.sessionID === 'string' && req.sessionID.length > 0
-        ? req.sessionID
-        : req.cookies?.[this.sessionCookieName];
-    if (typeof sid !== 'string' || sid.length === 0) return null;
+    // server#6332 D1 — do NOT read `req.sessionID` directly. express-session
+    // assigns one to EVERY request, generating a fresh random id when no
+    // session cookie was sent (`saveUninitialized: false` governs only whether
+    // it is later PERSISTED). Trusting it means issuing a store lookup for a
+    // key that cannot exist: harmless while Redis is up — a wasted GET
+    // returning null — but a tens-of-seconds hang and then a 401 while it is
+    // down, for a request that needed no session in the first place.
+    //
+    // `resolveCookieSessionId` returns a sid only when the request actually
+    // presented the session cookie AND express-session derived that sid from
+    // it. `null` means anonymous, and we return WITHOUT touching the store:
+    // that is what makes a Redis outage a degradation rather than a total
+    // outage. It also drops the old `req.cookies[name]` fallback, which was
+    // both dead (the raw value is the signed form `s:<sid>.<sig>`, which never
+    // matches a Redis key — as the comment above it used to say) and the wrong
+    // shape to keep: a lookup key derived from client-supplied bytes is a
+    // session-forgery vector waiting for someone to "fix" the prefix handling.
+    // Spec FR-001..FR-005.
+    const sid = resolveCookieSessionId(req, this.sessionCookieName);
+    if (sid === null) return null;
 
     let payload: AlkemioSessionPayload | null;
     try {

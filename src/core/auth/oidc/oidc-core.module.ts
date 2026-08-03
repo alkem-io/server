@@ -1,7 +1,9 @@
-import { Module } from '@nestjs/common';
+import { createRedisClient } from '@core/redis/redis.client.factory';
+import { LoggerService, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types';
-import Redis from 'ioredis';
+import type Redis from 'ioredis';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { OidcService } from './oidc.service';
 import { OIDC_REDIS_CLIENT } from './oidc.tokens';
 import { OidcSessionRevocationService } from './revocation/oidc-session-revocation.service';
@@ -38,12 +40,20 @@ import { SESSION_STORE_HANDLE } from './strategies/cookie-session.errors';
     OidcService,
     {
       provide: OIDC_REDIS_CLIENT,
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService<AlkemioConfig, true>) => {
-        const { host, port } = configService.get('storage.redis', {
-          infer: true,
-        });
-        return new Redis({ host, port: Number(port) });
+      inject: [ConfigService, WINSTON_MODULE_NEST_PROVIDER],
+      useFactory: (
+        configService: ConfigService<AlkemioConfig, true>,
+        logger: LoggerService
+      ) => {
+        // server#6332 — was `new Redis({ host, port })`. ioredis defaults then
+        // applied (`enableOfflineQueue: true`, `maxRetriesPerRequest: 20`),
+        // which is what turned a Redis outage into a ~42s hang on every
+        // request. The factory is now the only construction site. FR-007.
+        return createRedisClient(
+          configService.get('storage.redis', { infer: true }),
+          logger,
+          { purpose: 'oidc' }
+        );
       },
     },
     {

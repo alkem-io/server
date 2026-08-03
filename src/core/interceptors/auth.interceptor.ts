@@ -1,5 +1,8 @@
 import { LogContext } from '@common/enums';
-import { AuthenticationException } from '@common/exceptions';
+import {
+  AuthenticationException,
+  SessionStoreUnavailableException,
+} from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { clearSessionCookie } from '@core/auth/oidc/session-cookie';
@@ -7,6 +10,8 @@ import {
   BearerValidationError,
   CookieSessionInvalidError,
 } from '@core/auth/oidc/strategies/auth.errors';
+import { SessionStoreUnavailableError } from '@core/auth/oidc/strategies/cookie-session.errors';
+import { applyStoreUnavailableResponse } from '@core/auth/oidc/strategies/cookie-session.exception-filter';
 import {
   AUTH_STRATEGY_NON_INTERACTIVE_LOGIN,
   AUTH_STRATEGY_OIDC_COOKIE_SESSION,
@@ -101,6 +106,16 @@ export class AuthInterceptor implements NestInterceptor {
     name: string;
     secure: boolean;
     domain?: string;
+    /**
+     * server#6332 — carried so the store-unavailable path can RE-ASSERT the
+     * cookie with its real lifetime. Re-asserting without it silently
+     * downgrades a persistent cookie to a browser-session one, which is a
+     * different way of losing the session than clearing it, not a milder one.
+     */
+    maxAge?: number;
+    sameSite: 'lax';
+    path: '/';
+    httpOnly: true;
   } | null;
 
   constructor(
@@ -112,7 +127,15 @@ export class AuthInterceptor implements NestInterceptor {
       { infer: true }
     );
     this.sessionCookie = cookie
-      ? { name: cookie.name, secure: cookie.secure, domain: cookie.domain }
+      ? {
+          name: cookie.name,
+          secure: cookie.secure,
+          domain: cookie.domain,
+          maxAge: cookie.idle_ttl_s ? cookie.idle_ttl_s * 1000 : undefined,
+          sameSite: 'lax',
+          path: '/',
+          httpOnly: true,
+        }
       : null;
   }
 
@@ -224,9 +247,39 @@ export class AuthInterceptor implements NestInterceptor {
           HttpStatus.UNAUTHORIZED
         );
       }
-      // Other errors (e.g. SessionStoreUnavailableError → handled by its own
-      // exception filter; AuthenticationException — rethrow to keep current
-      // semantics).
+      // server#6332 D3 — the GraphQL arm.
+      //
+      // Adding `SessionStoreUnavailableError` to the passport callback's
+      // allow-list above is necessary but NOT sufficient: the filter that would
+      // then catch it (`CookieSessionStoreUnavailableFilter`) reads
+      // `host.switchToHttp()`, which on a GraphQL request returns the GraphQL
+      // root and args rather than a request and response. So the filter serves
+      // REST and this branch serves GraphQL, both driven from one shared
+      // definition of the wire shape so they cannot drift (FR-021).
+      //
+      // The auth entry points are deliberately NOT special-cased here, unlike
+      // the rejected-session path above: `/callback` and `/logout` genuinely
+      // need the store, and letting `/login` through during an outage would
+      // only produce a sign-in that cannot complete. 503 + Retry-After is the
+      // honest answer for all three (FR-022).
+      if (
+        err instanceof SessionStoreUnavailableError &&
+        context.getType<ContextType | 'graphql'>() === 'graphql'
+      ) {
+        if (this.sessionCookie) {
+          applyStoreUnavailableResponse(
+            req,
+            getResponse(context, true, req),
+            this.sessionCookie
+          );
+        }
+        throw new SessionStoreUnavailableException(LogContext.AUTH);
+      }
+
+      // Other errors (e.g. SessionStoreUnavailableError on a REST route →
+      // handled by its own exception filter, which is reachable there now that
+      // the allow-list preserves the type; AuthenticationException — rethrow to
+      // keep current semantics).
       throw err;
     }
     req.user = resolved ?? this.resolveUnauthenticated(req);
@@ -341,9 +394,20 @@ const passportAuthenticate = async (req: IncomingMessage) => {
         if (err) {
           // FR-024b — preserve known auth-error types so the interceptor can
           // discriminate them via `instanceof`. Wrap only unknown errors.
+          //
+          // server#6332 D3 — `SessionStoreUnavailableError` was absent from
+          // this list, and THAT is the whole defect. It was wrapped into
+          // `AuthenticationException` here, ~120 lines before the outer catch
+          // whose comment claims the error reaches its own exception filter. By
+          // the time that catch ran the type was already gone, so
+          // `@Catch(SessionStoreUnavailableError)` never matched and a store
+          // outage surfaced as 401 UNAUTHENTICATED / 11101 instead of 503.
+          // The comment described the intended design; this line is what makes
+          // it real.
           if (
             err instanceof BearerValidationError ||
-            err instanceof CookieSessionInvalidError
+            err instanceof CookieSessionInvalidError ||
+            err instanceof SessionStoreUnavailableError
           ) {
             reject(err);
             return;

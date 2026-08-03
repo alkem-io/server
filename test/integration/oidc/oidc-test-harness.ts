@@ -20,6 +20,7 @@ import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import cookieParser from 'cookie-parser';
+import { createHmac } from 'crypto';
 import express, {
   type NextFunction,
   type Request,
@@ -132,6 +133,7 @@ export type OidcHarness = {
     payload?: Partial<Parameters<typeof signPreAuthCookie>[0]>
   ): Promise<string>;
   sessionStore: ToggleableSessionStore;
+  seedSession(sid: string, data?: Record<string, unknown>): Promise<void>;
   simulateRedisFailure(): void;
   simulateRedisRecovery(): void;
 };
@@ -272,8 +274,18 @@ export async function createOidcHarness(
   const app = moduleRef.createNestApplication();
   app.use(cookieParser());
   app.use(express.json());
+  // server#6332 — express-session needs a store it can actually FIND the
+  // session in. With the default MemoryStore empty, `store.get(sid)` misses and
+  // express-session calls `generate()`, which REASSIGNS `req.sessionID` to a
+  // fresh random id. The cookie-session strategy now requires the presented
+  // cookie to account for `req.sessionID`, so a regenerated id means "no
+  // session presented" and the request resolves anonymous — correct behaviour,
+  // but it means a spec that wants to exercise a store-dependent path must
+  // first seed the sid here (see `seedSession` on the returned harness).
+  const expressSessionStore = new session.MemoryStore();
   app.use(
     session({
+      store: expressSessionStore,
       secret: SESSION_SIGNING_KEY,
       name: 'alkemio_session',
       resave: false,
@@ -359,6 +371,32 @@ export async function createOidcHarness(
     oidcService,
     sessionCookieName: 'alkemio_session',
     sessionStore,
+    /**
+     * Make express-session recognise `sid`, so it preserves it as
+     * `req.sessionID` instead of generating a replacement.
+     *
+     * This models a browser holding a live session: the cookie unsigns, the
+     * middleware finds the session, and the sid survives into the strategy —
+     * which is the precondition for reaching the session store at all.
+     */
+    seedSession(sid: string, data: Record<string, unknown> = {}) {
+      return new Promise<void>((resolve, reject) => {
+        expressSessionStore.set(
+          sid,
+          {
+            cookie: {
+              originalMaxAge: 30 * 60 * 1000,
+              expires: new Date(Date.now() + 30 * 60 * 1000),
+              httpOnly: true,
+              path: '/',
+              sameSite: 'lax',
+            },
+            ...data,
+          } as never,
+          err => (err ? reject(err) : resolve())
+        );
+      });
+    },
     simulateRedisFailure() {
       sessionStore.setFailing(true);
     },
@@ -381,6 +419,31 @@ export async function createOidcHarness(
 
 export function cookieHeader(name: string, value: string): string {
   return `${name}=${encodeURIComponent(value)}; Path=${PRE_AUTH_COOKIE_PATH}`;
+}
+
+/**
+ * Produce a session cookie value express-session will actually ACCEPT.
+ *
+ * server#6332 — the cookie-session strategy no longer reads the session store
+ * for a request whose cookie does not account for `req.sessionID`. A bare,
+ * unsigned sid (which several specs used to send) is now correctly treated as
+ * "no session presented" and resolves anonymous WITHOUT touching the store. To
+ * exercise a store-dependent path a spec must present the real signed wire form.
+ *
+ * This reimplements `cookie-signature`'s `sign()` — `val + '.' + HMAC-SHA256
+ * base64 with trailing '=' stripped` — rather than importing it: it is a
+ * transitive dependency of express-session, not resolvable directly under
+ * pnpm's strict layout, and this feature adds no dependency.
+ */
+export function signSessionCookie(
+  sid: string,
+  secret: string = SESSION_SIGNING_KEY
+): string {
+  const mac = createHmac('sha256', secret)
+    .update(sid)
+    .digest('base64')
+    .replace(/=+$/, '');
+  return `s:${sid}.${mac}`;
 }
 
 export function extractCookie(
