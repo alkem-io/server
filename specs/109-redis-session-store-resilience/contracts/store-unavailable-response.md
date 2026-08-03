@@ -174,3 +174,11 @@ Each must fail against `develop` @ `caa1a0d33` where marked (FR-031).
 | U6 | `CookieSessionInvalidError` still yields 401 **with** cookie clearance | FR-006 regression guard | no (guard) |
 | U7 | The express error middleware answers 503 for a typed store failure and calls `next(err)` for anything else | FR-016a | **yes** |
 | U8 | All three paths produce the same status, `Retry-After` and cookie treatment | FR-021 | **yes** |
+| U9 | `/api/auth/oidc/{login,callback,logout}` are **not** special-cased for an unreachable store: each answers 503 + `Retry-After`, rather than the entry-point passthrough they receive for a *rejected* session | FR-022, G6 | **yes** |
+
+U9 exists because G6 was otherwise the only guarantee in this contract with no
+assertion behind it. `isAuthEntryPoint` already exempts these routes from one
+condition, and extending that exemption to this one is an easy reflex for a future
+reader; the test is what stops it. It equally catches the opposite mistake —
+letting `/login` through during an outage, which only produces a sign-in that
+cannot complete.

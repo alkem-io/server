@@ -36,6 +36,21 @@ container, so stopping it is a **total** outage, not a partial one.
 
 Two terminals: one running the server, one issuing commands.
 
+### On ports — this matters for comparability
+
+| Origin | What it is | Used below for |
+|---|---|---|
+| `localhost:4000` | the server's own GraphQL port (`alkemio.yml`: `port: ${GRAPHQL_PORT}:4000`) | **all GraphQL probes** |
+| `localhost:3000` | the Traefik/Oathkeeper gateway in front of it | the REST route, as `108-redis-outage-resilience` used |
+
+The GraphQL probes deliberately hit `:4000` **because that is where the issue's
+recorded evidence was measured** — the `2.29 s / 32.55 s / 42.04 s` baseline this
+feature is judged against. Running the "after" measurement through the gateway
+while the "before" was taken direct would not be a like-for-like comparison, and
+the gateway has its own dependencies that could mask or add latency. The REST
+check stays on `:3000` because that is the path a browser actually takes and the
+path 108 verified.
+
 ---
 
 ## §1 — Reproduce all three defects on `develop` first
@@ -52,7 +67,7 @@ Baseline, everything healthy:
 ```bash
 # D1 probe — a query that needs no authentication and sends no cookies
 curl -s -o /dev/null -w '%{http_code} %{time_total}s\n' \
-  -X POST http://localhost:3000/graphql \
+  -X POST http://localhost:4000/graphql \
   -H 'Content-Type: application/json' \
   -d '{"query":"{ platform { id } }"}'
 # expect: 200  ~0.02s
@@ -70,7 +85,7 @@ cookie-less query three times:
 ```bash
 for i in 1 2 3; do
   curl -s -o /tmp/d1.json -w '%{http_code} %{time_total}s\n' \
-    -X POST http://localhost:3000/graphql \
+    -X POST http://localhost:4000/graphql \
     -H 'Content-Type: application/json' \
     -d '{"query":"{ platform { id } }"}'
 done
@@ -90,7 +105,7 @@ cookie in a jar from an interactive login (`.claude/commands/interactive-login.m
 ```bash
 curl -s -b /tmp/alkemio.jar -o /tmp/d3.json -D /tmp/d3.headers \
   -w '%{http_code} %{time_total}s\n' \
-  -X POST http://localhost:3000/graphql \
+  -X POST http://localhost:4000/graphql \
   -H 'Content-Type: application/json' \
   -d '{"query":"{ me { user { id } } }"}'
 grep -i 'retry-after\|set-cookie' /tmp/d3.headers
@@ -119,9 +134,16 @@ cd - && git worktree remove ../server-6332-baseline --force
 
 The honest form of this check runs the *new* specs against the *old* code.
 
+**Note the pathspec.** Every spec in this repository is co-located with the code
+it covers, as `src/**/*.spec.ts`. A naive `git stash push -- src/` would therefore
+stash the new specs along with the fix and prove nothing at all; the exclusion is
+what makes this check mean what it says.
+
 ```bash
 # from the story worktree, with the change applied
-git stash push -- src/                       # keep the specs, revert the fix
+git stash push -- 'src/' ':(exclude)src/**/*.spec.ts'   # revert the fix, KEEP the specs
+git status --short src/ | grep -c '\.spec\.ts'          # sanity: the specs are still here
+
 pnpm test -- src/core/redis src/core/auth/oidc/session-id.resolver.spec.ts \
              src/core/auth/oidc/strategies/cookie-session.strategy.spec.ts \
              src/core/interceptors/auth.interceptor.spec.ts
@@ -149,7 +171,7 @@ Server running from the story branch, Redis healthy:
 ```bash
 pnpm start:dev
 curl -s -o /dev/null -w '%{http_code} %{time_total}s\n' \
-  -X POST http://localhost:3000/graphql \
+  -X POST http://localhost:4000/graphql \
   -H 'Content-Type: application/json' -d '{"query":"{ platform { id } }"}'
 # baseline: 200, ~0.02s
 docker stop alkemio_dev_redis
@@ -160,7 +182,7 @@ Now the same request, ten times:
 ```bash
 for i in $(seq 10); do
   curl -s -o /dev/null -w '%{http_code} %{time_total}s\n' \
-    -X POST http://localhost:3000/graphql \
+    -X POST http://localhost:4000/graphql \
     -H 'Content-Type: application/json' -d '{"query":"{ platform { id } }"}'
 done
 ```
@@ -180,7 +202,7 @@ With Redis still stopped and the session cookie jar from §1:
 ```bash
 curl -s -b /tmp/alkemio.jar -o /tmp/s4.json -D /tmp/s4.headers \
   -w '%{http_code} %{time_total}s\n' \
-  -X POST http://localhost:3000/graphql \
+  -X POST http://localhost:4000/graphql \
   -H 'Content-Type: application/json' -d '{"query":"{ me { user { id } } }"}'
 
 grep -i 'retry-after' /tmp/s4.headers            # expect: Retry-After: 5
@@ -221,7 +243,7 @@ Leave Redis down for **at least 3 minutes**, sampling every 10 s:
 for i in $(seq 18); do
   printf '%s ' "$(date +%T)"
   curl -s -o /dev/null -w '%{http_code} %{time_total}s\n' \
-    -X POST http://localhost:3000/graphql \
+    -X POST http://localhost:4000/graphql \
     -H 'Content-Type: application/json' -d '{"query":"{ platform { id } }"}'
   sleep 10
 done
@@ -233,7 +255,7 @@ Then recover:
 docker start alkemio_dev_redis
 sleep 5
 curl -s -b /tmp/alkemio.jar -o /dev/null -w '%{http_code} %{time_total}s\n' \
-  -X POST http://localhost:3000/graphql \
+  -X POST http://localhost:4000/graphql \
   -H 'Content-Type: application/json' -d '{"query":"{ me { user { id } } }"}'
 pgrep -f 'node.*dist/main' | diff - /tmp/pid.before && echo 'SAME PID'
 ```

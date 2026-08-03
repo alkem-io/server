@@ -58,8 +58,10 @@ in < 1 s during an outage, against a measured 42.04 s.
 change; no GraphQL schema change; `107-oidc-session-revocation`'s session-resolution
 semantics unchanged; the `redis@3.1.2` cache layer delivered by #6331 not modified.
 
-**Scale/Scope**: ~9 source files touched, 2 new source modules, 1 new error-status
-entry, 5 new/extended spec files. Estimated ~450 LOC production + ~500 LOC test.
+**Scale/Scope**: 13 existing source files modified, 3 new source modules (the
+`ioredis` factory, its connection reporter, the sid resolver), 1 new exception
+class, 1 new error-status entry, 6 new/extended spec files. Estimated ~450 LOC
+production + ~500 LOC test. Task breakdown: 46 tasks across 7 phases.
 
 ## Constitution Check
 
@@ -115,6 +117,7 @@ src/
 │   │   ├── session-id.resolver.spec.ts          # NEW
 │   │   ├── oidc-core.module.ts                  # MOD — OIDC_REDIS_CLIENT via factory
 │   │   ├── session-store.redis.ts               # MOD — type store failures (FR-016a)
+│   │   ├── oidc.tokens.ts                       # MOD — stale `new Redis()` note
 │   │   ├── forward-auth.resolver.service.ts     # MOD — use the shared resolver
 │   │   └── strategies/
 │   │       ├── cookie-session.strategy.ts       # MOD — D1 gate, drop the raw-cookie fallback
@@ -132,6 +135,7 @@ src/
 │       ├── error.status.metadata.ts             # MOD — SYSTEM/119 → 14119
 │       ├── session-store-unavailable.exception.ts # NEW
 │       └── index.ts                             # MOD — export
+├── <i18n resources>                             # MOD — userMessages.system.sessionStoreUnavailable
 └── main.server.ts                               # MOD — session client via factory,
                                                  #       error middleware after session
 ```
