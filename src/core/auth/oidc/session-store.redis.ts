@@ -158,10 +158,31 @@ export function buildSessionStore(redis: Redis): SessionStoreHandle {
       // sub/client_id. If the key still holds a payload, prefer its values.
       const raw = await redis.get(SESSION_KEY_PREFIX + sessionId);
       const now = Date.now();
-      const base: Partial<AlkemioSessionPayload> = raw
+      const base: Partial<AlkemioSessionPayload> & { cookie?: unknown } = raw
         ? (JSON.parse(raw) as AlkemioSessionPayload)
         : {};
-      const tombstone: AlkemioSessionPayload = {
+      const tombstone: AlkemioSessionPayload & { cookie?: unknown } = {
+        // express-session owns this key, and `Store.createSession` dereferences
+        // `sess.cookie.expires` on EVERY request BEFORE any Passport strategy
+        // runs. A tombstone written without `cookie` therefore throws
+        // `TypeError: Cannot read properties of undefined (reading 'expires')`
+        // inside the session middleware — the request 500s and the 401 this
+        // tombstone exists to produce is never reached. Worse, the crash is
+        // upstream of routing, so /logout, /refresh and even /login all 500 for
+        // the tombstone's whole lifetime, leaving the holder with no recovery
+        // path short of clearing cookies by hand.
+        //
+        // Carry the original cookie through untouched. The synthetic fallback
+        // covers the documented case where the caller already destroyed the key
+        // (no base payload to copy from); its expiry matches the tombstone's own
+        // TTL so express-session does not treat the inflated session as expired
+        // before the strategy gets to reject it.
+        cookie: base.cookie ?? {
+          originalMaxAge: SESSION_TOMBSTONE_TTL_S * 1000,
+          expires: new Date(now + SESSION_TOMBSTONE_TTL_S * 1000).toISOString(),
+          httpOnly: true,
+          path: '/',
+        },
         access_token: '',
         id_token: '',
         refresh_token: '',

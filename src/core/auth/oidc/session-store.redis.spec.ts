@@ -1,6 +1,7 @@
 import {
   buildOidcSessionRedisStore,
   buildSessionRenewalMiddleware,
+  buildSessionStore,
   SESSION_KEY_PREFIX,
 } from './session-store.redis';
 
@@ -119,5 +120,80 @@ describe('buildSessionRenewalMiddleware', () => {
     const dead: any = { sub: 'u1', terminated_at: 123, cookie: { maxAge: 1 } };
     run(dead);
     expect(dead.last_extended_at).toBeUndefined();
+  });
+});
+
+// Regression guard for a defect found by exercising a real revocation against a
+// running platform (server#6315). Every unit test in this feature passed while
+// account deletion returned HTTP 500 rather than 401, because they all call the
+// strategy directly and so skip express-session entirely.
+//
+// express-session's `Store.createSession` reads `sess.cookie.expires` on every
+// request BEFORE any strategy runs. A tombstone written without `cookie` throws
+// `TypeError: Cannot read properties of undefined (reading 'expires')` inside
+// the middleware — upstream of routing, so /graphql, /logout, /refresh and even
+// /login all 500 for the tombstone's full 5-minute lifetime, and the holder has
+// no recovery path but clearing cookies by hand.
+describe('buildSessionStore.markTerminated — express-session compatibility', () => {
+  function makeRedis(store: Record<string, string>) {
+    return {
+      get: vi.fn(async (key: string) => store[key] ?? null),
+      set: vi.fn(async (key: string, val: string) => {
+        store[key] = val;
+        return 'OK';
+      }),
+      del: vi.fn(async (key: string) => {
+        delete store[key];
+        return 1;
+      }),
+    } as any;
+  }
+
+  const readTombstone = (store: Record<string, string>, sid: string) =>
+    JSON.parse(store[SESSION_KEY_PREFIX + sid]);
+
+  it('carries the live payload cookie through to the tombstone', async () => {
+    const cookie = {
+      originalMaxAge: 1209600000,
+      expires: '2026-09-01T00:00:00.000Z',
+      httpOnly: true,
+      path: '/',
+    };
+    const store: Record<string, string> = {
+      [SESSION_KEY_PREFIX + 'sid-1']: JSON.stringify({
+        sub: 'kratos-id',
+        client_id: 'alkemio-web',
+        created_at: 1700000000,
+        cookie,
+      }),
+    };
+
+    await buildSessionStore(makeRedis(store)).markTerminated(
+      'sid-1',
+      'account_deleted'
+    );
+
+    const tombstone = readTombstone(store, 'sid-1');
+    expect(tombstone.terminated_reason).toBe('account_deleted');
+    // The load-bearing assertion: without this the 401 is a 500.
+    expect(tombstone.cookie).toEqual(cookie);
+  });
+
+  it('synthesises an unexpired cookie when the payload was already destroyed', async () => {
+    const store: Record<string, string> = {};
+
+    await buildSessionStore(makeRedis(store)).markTerminated(
+      'sid-2',
+      'account_deleted',
+      { sub: 'kratos-id', client_id: 'alkemio-web' }
+    );
+
+    const tombstone = readTombstone(store, 'sid-2');
+    expect(tombstone.cookie).toBeDefined();
+    // Must not already be expired, or express-session discards the tombstone
+    // before the strategy can reject it — silently restoring anonymous access.
+    expect(new Date(tombstone.cookie.expires).getTime()).toBeGreaterThan(
+      Date.now()
+    );
   });
 });
