@@ -605,15 +605,16 @@ describe('server#6332 — store-unreachable is 503, never 401 (D3)', () => {
   });
 
   const build = () =>
-    new AuthInterceptor(
-      actorContextService,
-      { get: vi.fn().mockReturnValue(COOKIE) } as any
-    );
+    new AuthInterceptor(actorContextService, {
+      get: vi.fn().mockReturnValue(COOKIE),
+    } as any);
 
   const rejectWith = (err: Error) =>
-    vi.spyOn(passport, 'authenticate').mockImplementation(
-      (_s: any, _o: any, callback: any) => (_req: any) => callback(err)
-    );
+    vi
+      .spyOn(passport, 'authenticate')
+      .mockImplementation(
+        (_s: any, _o: any, callback: any) => (_req: any) => callback(err)
+      );
 
   const mockRes = () => ({
     cookie: vi.fn(),

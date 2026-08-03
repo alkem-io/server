@@ -315,14 +315,56 @@ nothing waits tens of seconds.
 
 | § | Criterion | Requirement | Result |
 |---|---|---|---|
-| 1 | All three defects reproduce on `develop` @ `caa1a0d33` | — | *fill in* |
-| 2 | New specs fail before the fix, pass after | FR-031 · SC-010 | *fill in* |
-| 3 | Anonymous traffic unaffected by the outage | US1 · FR-001 – FR-003 · SC-001 | *fill in* |
-| 4 | Signed-in request → fast 503 + `Retry-After`, cookie preserved | US2 · FR-016 – FR-021 · SC-002 – SC-004 | *fill in* |
-| 5 | 3-minute outage survived, one record per transition, automatic recovery | US2, US3 · FR-012, FR-023 – FR-027 · SC-005 – SC-007 | *fill in* |
-| 6 | No client outside the factory; 107's behaviour intact | SC-008, SC-009 | *fill in* |
-| 7 | 108 §2 SC-009 now passes | SC-011 | *fill in* |
-| — | Tests / build / lint green | — | *fill in* |
+| 1 | All three defects reproduce on `develop` @ `caa1a0d33` | — | **PASSED** (statically, 2026-08-03/04) — every anchor re-verified present on `caa1a0d33`: the strategy resolves `req.sessionID` then unconditionally calls `sessionStore.get(sid)`; `oidc-core.module.ts:46` and `main.server.ts:105` are both bare `new Redis({host, port})` while `health.module.ts:37` already carried the four fail-fast options; the interceptor allow-list preserves only `BearerValidationError` and `CookieSessionInvalidError`. Live re-measurement not re-run — see the note below. |
+| 2 | New specs fail before the fix, pass after | FR-031 · SC-010 | **PASSED** (2026-08-04) — see the FR-031 record below. |
+| 3 | Anonymous traffic unaffected by the outage | US1 · FR-001 – FR-003 · SC-001 | **NOT RUN** — requires stopping the shared dev Redis. See note. |
+| 4 | Signed-in request → fast 503 + `Retry-After`, cookie preserved | US2 · FR-016 – FR-021 · SC-002 – SC-004 | **NOT RUN** — same. Covered at unit level by U1–U4 and U9. |
+| 5 | 3-minute outage survived, one record per transition, automatic recovery | US2, US3 · FR-012, FR-023 – FR-027 · SC-005 – SC-007 | **NOT RUN** — same. Covered at unit level by F6–F8 and the reporter specs. |
+| 6 | No client outside the factory; 107's behaviour intact | SC-008, SC-009 | **PASSED** — SC-009 is enforced *continuously* by the F10 structural guard in `redis.client.factory.spec.ts`, not merely checked once by hand. SC-008: the OIDC suite passes with no spec rewritten to accommodate this change beyond presenting a signed cookie — which is the behaviour change itself, not an accommodation of it. |
+| 7 | 108 §2 SC-009 now passes | SC-011 | **NOT RUN** — requires the live outage. |
+| — | Tests / build / lint green | — | **PASSED** (2026-08-04) — `pnpm test` 686 files / 7700+ tests; `pnpm run build`; `pnpm run lint` (typecheck:native + biome). |
+
+### Why §3, §4, §5 and §7 were not run
+
+They require `docker stop alkemio_dev_redis` for at least three minutes. On the
+machine this was implemented on, that container is shared by ~20 running services
+(Synapse, Kratos, Hydra, the OIDC service, the collaboration services), so
+stopping it is not a scoped test action — it is an outage of a working
+environment. These criteria are therefore recorded as **NOT RUN**, not as passed,
+and the PR is opened as a draft naming them as the outstanding verification.
+
+This is deliberate. The entire reason this feature exists is that
+`108-redis-outage-resilience` recorded its SC-009 as **FAILED** rather than
+rewording the criterion to match what happened. Recording "not run" as "passed"
+would be the same failure of discipline, one step earlier.
+
+To close them, run §3–§5 and §7 against a disposable stack.
+
+### FR-031 / SC-010 — the regression specs observed FAILING against `caa1a0d33`
+
+Run 2026-08-04. Method: `git checkout caa1a0d33 -- src/ test/`, then **delete the
+four new source modules** — a pathspec checkout restores tracked files but does
+NOT remove files that did not exist at that commit, a trap worth naming because
+without the deletion the factory survives and the check quietly passes for the
+wrong reason — then restore the new spec files on top and run.
+
+```
+Test Files  6 failed (6)
+     Tests  28 failed | 42 passed (70)
+```
+
+| Spec | Observed failure on `caa1a0d33` |
+|---|---|
+| `session-id.resolver.spec.ts` | `Cannot find module './session-id.resolver'` — the guard does not exist |
+| `redis.client.factory.spec.ts` | `Cannot find module './redis.client.factory'` — no shared seam; this file also carries the F10 SC-009 guard |
+| `redis.connection.reporter.spec.ts` | `Cannot find module './redis.connection.reporter'` — no transition reporting at all |
+| `cookie-session.strategy.spec.ts` (**FR-028**) | all three "performs ZERO store operations" cases fail — the pre-fix strategy calls `sessionStore.get()` for cookie-less requests |
+| `auth.interceptor.spec.ts` (**FR-030**) | U1, U2, U3, U9 and the cookie re-assertion all fail — the error is wrapped into `AuthenticationException` (401 / 11101) before the 503 arm is reachable |
+| `cookie-session.exception-filter.spec.ts` | `applyStoreUnavailableResponse is not a function` — no shared wire-shape definition; the shipped `send503` re-asserted only 3 of the 6 cookie attributes |
+
+The 42 that passed are the deliberate guards — U5, U6 and the pre-existing
+behaviour they pin — which must pass on *both* sides of the fix, precisely
+because they assert what must NOT change.
 
 Record failures as **FAILED** with the observed values. Do not reword a criterion
 to match what happened — that discipline is what produced this feature.
