@@ -293,23 +293,69 @@ pnpm test -- src/core/cache/cache.store.factory.spec.ts
 
 ## Results log
 
-> **§1–§6 were NOT executed by the automated SDD run.** Every one of them
-> requires `docker stop alkemio_dev_redis`, and that container is shared with the
-> OIDC session store, the file services and the auth-reset scaler. The
-> developer's dev stack was live at the time (21 containers up), so stopping it
-> would have disrupted an environment the run was told not to touch. The
-> procedure is written out above for a human to run; the table is left blank
-> rather than filled in with claims nobody verified.
->
-> §7 **was** executed and is recorded below.
+> §7 was executed by the automated SDD run. **§2 and §3 were executed
+> afterwards, by hand, against the shared dev stack** on 2026-08-03 — see the
+> run record below. §1, §4, §5 and §6 remain unrun.
 
 | § | Criterion | Requirement | Result |
 |---|---|---|---|
-| 1 | Defect reproduces on `develop` | — | *not run — needs a disposable stack* |
-| 2 | API survives the outage, one record, requests answered | AC1 · FR-001, FR-005, FR-006 | *not run — needs a disposable stack* |
-| 3 | Automatic recovery, no restart, 2 records per cycle | AC4 · FR-011 – FR-014 | *not run — needs a disposable stack* |
-| 4 | Boots with Redis already down | US1-4 | *not run — needs a disposable stack* |
-| 5 | Worker survives, no log flood | AC2 · FR-002, FR-010a | *not run — needs a disposable stack* |
-| 6 | `deleteUser` succeeds with Redis down | AC5 · SC-006 | *not run — needs a disposable stack* |
+| 1 | Defect reproduces on `develop` | — | *not run — the crash is already evidenced by the #6330 report* |
+| 2 | API survives the outage, one record, requests answered | AC1 · FR-001, FR-005, FR-006 | **PARTIAL** — process survived and the cache degraded correctly; **SC-009 FAILED** (see run record) |
+| 3 | Automatic recovery, no restart, 2 records per cycle | AC4 · FR-011 – FR-014 | **PASS** — same PID, second record, 200 in 3 ms |
+| 4 | Boots with Redis already down | US1-4 | *not run* |
+| 5 | Worker survives, no log flood | AC2 · FR-002, FR-010a | *not run* |
+| 6 | `deleteUser` succeeds with Redis down | AC5 · SC-006 | *not run — server#6315 was abandoned, so the check it was blocking no longer exists* |
 | 7 | Tests / build / lint green | — | **PASS** — 7457 passed / 7 skipped; build exit 0; lint exit 0 |
 | 7 | New tests fail against the unfixed behaviour | SC-007 | **PASS** — 11 targeted failures with the fix reverted, 0 with it restored |
+
+### Run record — 2026-08-03, §2 and §3, shared dev stack
+
+Build from this branch at `8333e6ea7`, `node dist/main` as PID 2963681 on
+`:4000`. Redis was `alkemio_dev_redis`; note that `:6379` is a Traefik-published
+route to that same container (verified with a marker key written on one port and
+read back on the other), so `docker stop` is a total outage, not a partial one.
+Outage window 18:00:22 → 18:03:45, i.e. **3 m 23 s**.
+
+**What passed**
+
+| Observation | Evidence |
+|---|---|
+| Process survived the outage | PID 2963681 before, during and after — no exit, no restart |
+| The crash signature is now handled, not fatal | `WARN [cache] Cache connection lost … Ready check failed: Redis connection lost and command aborted. (code: UNCERTAIN_STATE)` — the exact `AbortError` from the #6330 report, arriving as one log record |
+| Exactly one record per transition (FR-017, SC-004) | 2 `[cache]` records for the whole cycle: one on loss, one on `Cache connection re-established; caching has resumed.` No per-retry flood over 3 m 23 s |
+| Automatic recovery (AC4, FR-011–FR-014) | After `docker start`, same PID, `200` in 3.5 ms / 2.7 ms / 6.4 ms with no operator action |
+
+**What failed — SC-009, and it is not the cache's fault**
+
+`§2`'s pass criteria require *"no request slower than ~1 s"* and requests
+answered normally. Neither held:
+
+- Every request during the outage returned **HTTP 401 `session_store_unavailable`**
+  (`UNAUTHENTICATED`, numericCode 11101) — including **unauthenticated** queries
+  that answered `200` seconds earlier. `{ platform { id } }` went `200` → `401`
+  → `200` across the cycle.
+- Requests took roughly **42 seconds** each during the outage, not the sub-second
+  fail-fast SC-009 specifies. A 10-request loop that takes 13 s normally ran past
+  a 120 s ceiling.
+
+The cause is outside this feature. The rejection is raised by the OIDC
+cookie-session strategy — `src/core/auth/oidc/strategies/cookie-session.errors.ts`
+and its exception filter — reached via `src/core/interceptors/auth.interceptor.ts:213`.
+That path uses **`ioredis`**, not the cache client this feature hardens, and it is
+**pre-existing on `develop`**: both files are present there unmodified, and this
+branch changes neither.
+
+So the two halves of #6330's "Expected behavior" split cleanly:
+
+- *"a Redis outage should not terminate the process"* — **fixed and demonstrated.**
+- *"a Redis outage should be a degradation"* — **not yet true at the platform
+  level.** The process now survives, but the session store fails closed, so the
+  API is still effectively unavailable during a Redis outage. It fails without
+  crashing instead of failing by crashing.
+
+This is a separate defect in a separate subsystem and is **not** in scope here;
+it needs its own story. Recorded rather than silently fixed, and SC-009 is left
+marked FAILED rather than quietly reworded to match what was observed.
+
+**Not established**: SC-001 requires a continuous **10-minute** outage window.
+This run observed 3 m 23 s. Process survival beyond that is untested.
