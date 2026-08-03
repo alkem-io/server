@@ -18,6 +18,7 @@ import { AuthenticationService } from '@core/authentication/authentication.servi
 import { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import cookieParser from 'cookie-parser';
 import express, {
   type NextFunction,
@@ -202,6 +203,7 @@ export async function createOidcHarness(
   const moduleRef = await Test.createTestingModule({
     controllers: [OidcController],
     providers: [
+      MockWinstonProvider,
       { provide: OidcService, useValue: oidcService },
       { provide: SESSION_STORE_HANDLE, useValue: sessionStore },
       {

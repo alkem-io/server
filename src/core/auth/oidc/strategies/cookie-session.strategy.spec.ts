@@ -3,6 +3,7 @@ import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { describe, expect, it, vi } from 'vitest';
 import type { AlkemioSessionPayload } from '../session-store.redis';
 import { SESSION_STORE_HANDLE } from './cookie-session.errors';
@@ -35,6 +36,7 @@ describe('CookieSessionStrategy session-lifetime stamping', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        MockWinstonProvider,
         CookieSessionStrategy,
         {
           provide: SESSION_STORE_HANDLE,
