@@ -212,14 +212,38 @@ describe('resolveCookieSessionId', () => {
       ).toBeNull();
     });
 
-    it('falls back to the RAW value when decoding fails, as express-session does', () => {
-      // Pins the fallback, not just the absence of a throw. `cookie@0.7.2`'s
-      // `tryDecode` returns the undecoded string on URIError, and
-      // express-session parses this very header with it — so raw is what the
-      // middleware saw when it derived `sessionID`. Returning null here instead
-      // would make a request anonymous that express-session had already
-      // authenticated, which is the silent auth outage the header fallback
-      // exists to prevent. Flip the catch to `return null` and this goes red.
+    it('a decode failure yields no session, because the middleware rejected it too', () => {
+      // The PRODUCTION shape, and the one that matters. Appending `%zz` breaks
+      // `decodeURIComponent`, but it also breaks the MAC: `cookie@0.7.2`'s
+      // `tryDecode` hands express-session the undecoded string, `unsign` then
+      // compares the HMAC of `<sid>` against `<mac>%zz`, fails, and the
+      // middleware GENERATES A FRESH `sessionID`. So the request arrives with a
+      // sessionID that did not come from this cookie, and the resolver must
+      // refuse it — no store read for a cookie the middleware already rejected.
+      expect(
+        resolveCookieSessionId(
+          {
+            sessionID: 'freshly-generated-sid',
+            headers: { cookie: `${COOKIE}=${signed(SID)}%zz` },
+          },
+          COOKIE
+        )
+      ).toBeNull();
+    });
+
+    it('compares the RAW value when decoding fails, as express-session does', () => {
+      // Pins the fallback, not just the absence of a throw: `cookie@0.7.2`'s
+      // `tryDecode` returns the undecoded string on URIError and
+      // express-session parses this very header with it, so raw is the value
+      // the middleware compared. Flip the catch to `return null` and this goes
+      // red.
+      //
+      // Deliberately NOT claimed here: that this rescues a request
+      // express-session had authenticated. It cannot — a value that fails
+      // `decodeURIComponent` also fails `unsign` (see the case above), and a
+      // legitimately signed cookie is base64/base64url, which never contains
+      // `%` at all. What the fallback buys is that our view of the header is
+      // byte-identical to the middleware's, so the two can never disagree.
       expect(
         resolveCookieSessionId(
           {

@@ -116,8 +116,26 @@ export const bootstrapServer = async () => {
   const sessionRedis = createRedisClient(redisConfig, logger, {
     purpose: 'session',
   });
-  const idleTtlS = oidcConfig.cookie.idle_ttl_s;
-  const sessionStore = buildOidcSessionRedisStore(sessionRedis, idleTtlS);
+  // Boot guard — `idle_ttl_s` is typed `number` but arrives from YAML with env
+  // substitution, so it is only a number if the operator supplied one. A
+  // non-numeric `OIDC_SESSION_COOKIE_IDLE_TTL_S` stays a string, and the two
+  // things that consume it both fail SILENTLY rather than loudly:
+  // `idle_ttl_s * 1000` becomes NaN, so the cookie is issued with no maxAge —
+  // downgrading a 14-day persistent cookie to a browser-session one, a
+  // security-relevant change nobody would notice — and the store's TTL
+  // computation collapses to NaN, so connect-redis writes `EX NaN`.
+  // Refuse to start instead. Same posture as the non-interactive-login guard.
+  const idleTtlS = Number(oidcConfig.cookie.idle_ttl_s);
+  if (!Number.isFinite(idleTtlS) || idleTtlS <= 0) {
+    throw new Error(
+      'identity.authentication.providers.oidc.cookie.idle_ttl_s must be a finite positive number of seconds (check OIDC_SESSION_COOKIE_IDLE_TTL_S)'
+    );
+  }
+  const sessionStore = buildOidcSessionRedisStore(
+    sessionRedis,
+    idleTtlS,
+    logger
+  );
   const sessionMiddleware = session({
     store: sessionStore,
     secret: oidcConfig.session_signing_key,

@@ -1,3 +1,5 @@
+import { LogContext } from '@common/enums';
+import type { LoggerService } from '@nestjs/common';
 import RedisStore from 'connect-redis';
 import type { Redis } from 'ioredis';
 import { SessionStoreUnavailableError } from './strategies/cookie-session.errors';
@@ -78,11 +80,42 @@ export type SessionStoreHandle = {
 // key on every read; renewal happens lazily and explicitly instead.
 export function buildOidcSessionRedisStore(
   client: Redis,
-  idleTtlS: number
+  idleTtlS: number,
+  logger?: LoggerService
 ): RedisStore {
   const store = new RedisStore({
     client,
     prefix: SESSION_KEY_PREFIX,
+    // A corrupt payload is NOT a store outage, and the difference is not
+    // cosmetic: `connect-redis`'s `get()` wraps the client call AND
+    // `serializer.parse(data)` in one try/catch, so a `JSON.parse` SyntaxError
+    // arrives at the callback indistinguishable from ECONNREFUSED. Left alone,
+    // `typeStoreFailures` below would type it as SessionStoreUnavailableError
+    // and we would answer 503 + `Retry-After: 5` — telling the client to come
+    // back in five seconds for a payload that will NEVER parse, forever.
+    //
+    // Returning `undefined` instead routes it down express-session's
+    // session-not-found path: a fresh session is generated, the request
+    // resolves anonymous (401 on anything protected), and the next save
+    // replaces the unreadable key. Retry-stable, and self-healing.
+    serializer: {
+      stringify: JSON.stringify,
+      parse: (raw: string) => {
+        try {
+          return JSON.parse(raw);
+        } catch (err) {
+          logger?.warn?.(
+            {
+              message:
+                'Discarding an unparseable session payload; treating it as no session',
+              reason: err instanceof Error ? err.message : String(err),
+            },
+            LogContext.AUTH
+          );
+          return undefined;
+        }
+      },
+    },
     ttl: (sess: { absolute_expires_at?: number } | undefined) => {
       const nowS = Math.floor(Date.now() / 1000);
       const ceilingRemainingS =

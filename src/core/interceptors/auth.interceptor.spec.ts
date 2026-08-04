@@ -649,14 +649,25 @@ describe('server#6332 — store-unreachable is 503, never 401 (D3)', () => {
   it('U1 — preserves SessionStoreUnavailableError instead of wrapping it', async () => {
     rejectWith(new SessionStoreUnavailableError(new Error('ECONNREFUSED')));
 
+    // Distinguishable sentinel rather than `undefined`: mapping a RESOLVED
+    // intercept to `undefined` would make the negative assertion below pass
+    // vacuously (`undefined?.constructor?.name` is `undefined`, which is not
+    // 'AuthenticationException'), so a regression that SWALLOWS the store
+    // error and lets the request continue as an anonymous actor would satisfy
+    // the one assertion this docblock calls the boundary.
+    const SWALLOWED = Symbol('intercept resolved instead of throwing');
+
     const error = await build()
       .intercept(gqlCtx(mockRes()), mockNext)
       .then(
-        () => undefined,
+        () => SWALLOWED,
         (e: unknown) => e
       );
 
-    // It must NOT have become an authentication failure. On develop this is
+    // The store failure must surface, not be absorbed into an anonymous request.
+    expect(error).not.toBe(SWALLOWED);
+
+    // And it must NOT have become an authentication failure. On develop this is
     // exactly what it became.
     expect((error as Error)?.constructor?.name).not.toBe(
       'AuthenticationException'

@@ -33,7 +33,7 @@ different client from the cache's `redis@3.1.2`), and is entirely pre-existing o
 
 The measured signature on `develop` @ `8a15aee5b` + #6331 (server PID 3038709):
 
-```
+```text
 baseline (cookie-less { platform { id } })   200   0.025 s
 docker stop alkemio_dev_redis
       401   2.29 s
@@ -333,7 +333,11 @@ shared factory, and that the factory's defaults match the fail-fast contract.
 ### Key Entities
 
 - **Session cookie**: what the client presents. Signed; its raw wire value is not a
-  store key. Its presence — and only its presence — authorises a store lookup.
+  store key. What authorises a store lookup is not its presence but its
+  *acceptance*: the session middleware must have verified the signature and
+  derived `req.sessionID` from this cookie. A presented-but-rejected cookie
+  authorises nothing — FR-005 and User Story 1 scenario 4 require zero store calls
+  for it, which a presence-only rule would permit.
 - **Session identifier (sid)**: the unsigned identifier the session middleware
   derives from an accepted cookie. The only legitimate store-lookup key. Generated
   fresh for every request that has no accepted cookie, which is the entire cause of
@@ -365,9 +369,11 @@ shared factory, and that the factory's defaults match the fail-fast contract.
   session cookie; the presented cookie is re-asserted.
 - **SC-005**: When the store is restarted, requests return to normal within one
   retry interval, on the same process, with no restart and no operator action.
-- **SC-006**: Across a store outage of at least three minutes, the session layer
-  emits exactly two log records — one loss, one recovery — regardless of the number
-  of reconnection attempts.
+- **SC-006**: Across a store outage of at least three minutes, each client
+  connection emits exactly two log records — one loss, one recovery — regardless of
+  the number of reconnection attempts. Scoped per client because the session and
+  OIDC clients carry independent reporters, so a shared outage correctly produces
+  one pair each rather than one pair in total.
 - **SC-007**: The process survives the entire outage on a single PID, with no
   unhandled `error` event and no raw console output from the Redis client.
 - **SC-008**: Every session-resolution behaviour specified by

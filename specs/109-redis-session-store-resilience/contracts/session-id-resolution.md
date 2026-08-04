@@ -131,4 +131,4 @@ Each must fail against `develop` @ `caa1a0d33` where it targets D1 (FR-031).
 | S7 | cookie `s:<sid>` with no `.` separator | `null` | G3 (trailing dot) |
 | S8 | `sessionID` is a strict prefix of the cookie's sid | `null` | G3 (trailing dot) |
 | S9 | `req.cookies` absent, `headers.cookie` carries the signed cookie | `sid` | G4 |
-| S10 | strategy-level: cookie-less request performs **zero** calls on the session-store mock | G1 / **FR-028** |
+| S10 | strategy-level: cookie-less request | **zero** calls on the session-store mock | G1 / **FR-028** |

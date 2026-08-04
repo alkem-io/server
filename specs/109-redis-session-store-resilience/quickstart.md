@@ -372,11 +372,12 @@ D1 guarantee restated: no cookie ⇒ no store read ⇒ a fast honest `401` about
 *authentication*, not a hang about *infrastructure*.
 
 **§5 · SC-005/006/007 — sustained outage and recovery.** 18/18 samples `200`
-across the full window (11:50:33 → 11:53:23), every one under 8 ms. Same PID
+across the probe window (11:50:33 → 11:53:23, nested inside the 11:50:03 →
+11:54:03 outage), every one under 8 ms. Same PID
 (614140) before and after — no crash, no restart. Transition records for the
 whole cycle: **exactly six**, one loss and one recovery per client —
 
-```
+```text
 11:50:03 WARN [auth]  Redis connection lost (session); … ECONNREFUSED 127.0.0.1:6399
 11:50:03 WARN [auth]  Redis connection lost (oidc);    … ECONNREFUSED 127.0.0.1:6399
 11:50:03 WARN [cache] Cache connection lost; cache reads will miss through …
@@ -439,9 +440,12 @@ asked for the same key.
 reproduces the pre-fix hang at 9015 ms — confirming both that the defect is real
 and that `enableOfflineQueue: false` is what removes it.
 
-This does **not** close SC-002 in full: it measures the Redis client, not an
-end-to-end HTTP request, so the request-level budget still needs the live walk.
-It is recorded here as partial evidence, not as the criterion.
+On its own this did **not** close SC-002: it measures the Redis client, not an
+end-to-end HTTP request. It is kept here as the isolated client-level evidence —
+useful because it names the *mechanism* (`enableOfflineQueue: false`) and shows
+the bare client reproducing the hang side by side. The request-level half was
+closed afterwards by the live outage walk above, which measured 2.3 ms on the
+GraphQL path and 1.3 ms on REST.
 
 ### FR-031 / SC-010 — the regression specs observed FAILING against `caa1a0d33`
 
@@ -451,7 +455,7 @@ NOT remove files that did not exist at that commit, a trap worth naming because
 without the deletion the factory survives and the check quietly passes for the
 wrong reason — then restore the new spec files on top and run.
 
-```
+```text
 Test Files  6 failed (6)
      Tests  28 failed | 42 passed (70)
 ```

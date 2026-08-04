@@ -51,7 +51,7 @@ invariant, not merely the deletion of dead code (research R7).
 
 Unchanged from `107-oidc-session-revocation`, restated so the boundary is explicit:
 
-```
+```text
 S1 → store.get(sid)
        ├─ null                       → anonymous                       (FR-024b state a)
        ├─ payload.terminated_at      → CookieSessionInvalidError → 401  (FR-022c state b)

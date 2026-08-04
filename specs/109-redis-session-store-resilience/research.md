@@ -224,7 +224,7 @@ The cookie's wire value is `s:<sid>.<signature>` — `express-session` writes it
 `'s:' + signature.sign(val, secret)` (`:671`), and `cookie-signature`'s `sign`
 returns `val + '.' + hmac`. So for an **accepted** cookie:
 
-```
+```text
 req.cookies[name] === 's:' + req.sessionID + '.' + <hmac>
 ```
 
