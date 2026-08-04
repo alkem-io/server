@@ -337,6 +337,24 @@ describe('ConversationService', () => {
       expect(userLookupService.getUserById).not.toHaveBeenCalled();
       expect(communicationAdapter.batchAddMember).not.toHaveBeenCalled();
     });
+
+    it('sec-server-10: throws ValidationException and never sends the RPC once the group is at the member cap', async () => {
+      conversationRepo.findOne.mockResolvedValue({
+        id: conversationId,
+        room: { id: 'room-1', type: RoomType.CONVERSATION_GROUP },
+      } as any);
+      membershipRepo.count
+        .mockResolvedValueOnce(0) // isConversationMember -> not yet a member
+        .mockResolvedValueOnce(100); // current total membership == cap
+
+      await expect(
+        service.addMember(conversationId, memberActorId)
+      ).rejects.toThrow(
+        'Group conversation has reached the maximum member count'
+      );
+      expect(userLookupService.getUserById).not.toHaveBeenCalled();
+      expect(communicationAdapter.batchAddMember).not.toHaveBeenCalled();
+    });
   });
 
   describe('removeMember (US2-AS4 live-verification fix)', () => {
@@ -366,7 +384,7 @@ describe('ConversationService', () => {
       );
     });
 
-    it('should propagate the adapter exception instead of reporting a false success when Matrix rejects the kick', async () => {
+    it('sec-server-11: falls back to authoritative local removal (never throws) when Matrix rejects the kick', async () => {
       mockGroupConversation();
       communicationAdapter.batchRemoveMember.mockRejectedValue(
         CommunicationAdapterException.fromAdapterError('batchRemoveMember', {
@@ -374,10 +392,26 @@ describe('ConversationService', () => {
           message: 'insufficient power level',
         })
       );
+      membershipRepo.delete.mockResolvedValue({} as any);
+
+      const result = await service.removeMember(conversationId, memberActorId);
+
+      expect(result.id).toBe(conversationId);
+      expect(membershipRepo.delete).toHaveBeenCalledWith({
+        conversationId,
+        actorID: memberActorId,
+      });
+    });
+
+    it('sec-server-11: propagates a non-adapter error (e.g. a transport/programming error) rather than swallowing it', async () => {
+      mockGroupConversation();
+      const unexpected = new Error('unexpected failure');
+      communicationAdapter.batchRemoveMember.mockRejectedValue(unexpected);
 
       await expect(
         service.removeMember(conversationId, memberActorId)
-      ).rejects.toThrow(CommunicationAdapterException);
+      ).rejects.toThrow(unexpected);
+      expect(membershipRepo.delete).not.toHaveBeenCalled();
     });
 
     it('should throw ValidationException when the conversation is not a group', async () => {

@@ -1,3 +1,4 @@
+import { CONVERSATION_GROUP_MEMBER_COUNT_MAX } from '@common/constants';
 import { LogContext } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
@@ -24,6 +25,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { CommunicationAdapterException } from '@services/adapters/communication-adapter/communication.adapter.exception';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
 import { EntityManager, FindOneOptions, In, Repository } from 'typeorm';
 import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
@@ -213,6 +215,23 @@ export class ConversationService {
       return conversation;
     }
 
+    // sec-server-10: CreateConversationInput.memberIDs bounds membership at
+    // creation time, but without this check a group could still be grown
+    // past CONVERSATION_GROUP_MEMBER_COUNT_MAX one addMember RPC at a time —
+    // and every added member becomes a notification-fan-out target for
+    // every future message.
+    const currentMemberCount =
+      await this.conversationMembershipRepository.count({
+        where: { conversationId },
+      });
+    if (currentMemberCount >= CONVERSATION_GROUP_MEMBER_COUNT_MAX) {
+      throw new ValidationException(
+        'Group conversation has reached the maximum member count',
+        LogContext.COMMUNICATION_CONVERSATION,
+        { conversationId, maxMembers: CONVERSATION_GROUP_MEMBER_COUNT_MAX }
+      );
+    }
+
     // sec-server-1: same consent gate as GROUP creation
     // (MessagingService.filterMembersByConsent) — a non-consenting user must
     // never be added to a group after the fact either, or the
@@ -280,17 +299,45 @@ export class ConversationService {
       );
     }
 
-    // Send to Matrix only — DB will be updated when room.member.updated event arrives.
-    // `ensureAllSucceeded` makes this throw (rather than silently report a
-    // false "success") when Matrix rejects the kick (e.g. insufficient power
-    // level) — the RPC is synchronous and the failure is already known here,
-    // so it must not be swallowed as an optimistic true.
-    await this.communicationAdapter.batchRemoveMember(
-      memberActorId,
-      [conversation.room.id],
-      undefined,
-      { ensureAllSucceeded: true }
-    );
+    try {
+      // Send to Matrix only — DB will be updated when room.member.updated
+      // event arrives. `ensureAllSucceeded` makes this throw (rather than
+      // silently report a false "success") when Matrix rejects the kick
+      // (e.g. insufficient power level) — the RPC is synchronous and the
+      // failure is already known here, so it must not be swallowed as an
+      // optimistic true.
+      await this.communicationAdapter.batchRemoveMember(
+        memberActorId,
+        [conversation.room.id],
+        undefined,
+        { ensureAllSucceeded: true }
+      );
+    } catch (error) {
+      if (error instanceof CommunicationAdapterException) {
+        // sec-server-11: group-conversation kicks are known to be rejected
+        // by Matrix with M_FORBIDDEN/insufficient-power-level for rooms
+        // whose Matrix-side creator/power-level holder differs from the
+        // bot account — a matrix-adapter defect, out of scope for this repo
+        // (see docs/matrix-admin-reflection.md, Finding 1). Until that
+        // lands, Alkemio must stay authoritative for its OWN membership and
+        // notification targeting: a user must always have a way to leave
+        // (or be removed from) a group conversation on the Alkemio side,
+        // even when the underlying Matrix kick is rejected — otherwise
+        // consent, once bypassed by enrollment into a group, could never be
+        // withdrawn per-conversation short of a global settings toggle.
+        // Remove the local membership row (notification recipients are
+        // re-read from this table at send time — this alone stops all
+        // further targeting) and log the Matrix-side divergence for manual
+        // reconciliation, rather than surfacing the failure to the caller.
+        this.logger.warn?.(
+          `removeMember: Matrix kick rejected for actor ${memberActorId} in conversation ${conversationId} (${error.message}) — proceeding with authoritative local removal; Matrix-side room membership may now diverge, see docs/matrix-admin-reflection.md`,
+          LogContext.COMMUNICATION_CONVERSATION
+        );
+        await this.persistMemberRemoved(conversationId, memberActorId);
+        return conversation;
+      }
+      throw error;
+    }
 
     this.logger.verbose?.(
       `Sent remove-member RPC for ${memberActorId} from group conversation ${conversationId}`,
