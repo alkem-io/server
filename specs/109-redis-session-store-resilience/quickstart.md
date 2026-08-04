@@ -328,28 +328,94 @@ nothing waits tens of seconds.
 |---|---|---|---|
 | 1 | All three defects reproduce on `develop` @ `caa1a0d33` | — | **PASSED** (statically, 2026-08-03/04) — every anchor re-verified present on `caa1a0d33`: the strategy resolves `req.sessionID` then unconditionally calls `sessionStore.get(sid)`; `oidc-core.module.ts:46` and `main.server.ts:105` are both bare `new Redis({host, port})` while `health.module.ts:37` already carried the four fail-fast options; the interceptor allow-list preserves only `BearerValidationError` and `CookieSessionInvalidError`. Live re-measurement not re-run — see the note below. |
 | 2 | New specs fail before the fix, pass after | FR-031 · SC-010 | **PASSED** (2026-08-04) — see the FR-031 record below. |
-| 3 | Anonymous traffic unaffected by the outage | US1 · FR-001 – FR-003 · SC-001 | **NOT RUN** — requires stopping the shared dev Redis. See note. |
-| 4 | Signed-in request → fast 503 + `Retry-After`, cookie preserved | US2 · FR-016 – FR-021 · SC-002 – SC-004 | **PARTIAL** — the 503 wire shape is covered at unit level by U1–U4 and U9; the end-to-end HTTP walk is **NOT RUN** (see note). The *fail-fast* half of SC-002 was measured live against a disposable Redis on 2026-08-04 — see "Scoped live measurement" below. |
-| 5 | 3-minute outage survived, one record per transition, automatic recovery | US2, US3 · FR-012, FR-023 – FR-027 · SC-005 – SC-007 | **NOT RUN** — same. Covered at unit level by F6–F8 and the reporter specs. |
+| 3 | Anonymous traffic unaffected by the outage | US1 · FR-001 – FR-003 · SC-001 | **PASSED** (live, 2026-08-04) — 10/10 samples `200`, worst 12 ms against a 250 ms budget, and **no** session log record for any of them. See "Live outage walk" below. |
+| 4 | Signed-in request → fast 503 + `Retry-After`, cookie preserved | US2 · FR-016 – FR-021 · SC-002 – SC-004 | **PASSED** (live, 2026-08-04) — GraphQL `503` in **2.3 ms**, REST `503` in **1.3 ms**, `Retry-After: 5`, cookie re-asserted at full `Max-Age`, no `UNAUTHENTICATED`/`11101`. One residual gap: the answer comes from the express-session middleware arm, so the GraphQL *interceptor* arm was not exercised end-to-end — it stays covered by U1–U4 and U9. |
+| 5 | 3-minute outage survived, one record per transition, automatic recovery | US2, US3 · FR-012, FR-023 – FR-027 · SC-005 – SC-007 | **PASSED** (live, 2026-08-04) — 18/18 samples `200` over a 3 m 20 s outage, same PID throughout, exactly one loss + one recovery record per client (6 total, 3 clients), zero `[ioredis] Unhandled error event` writes, and the cookie presented during the outage still worked after recovery with no re-authentication. |
 | 6 | No client outside the factory; 107's behaviour intact | SC-008, SC-009 | **PASSED** — SC-009 is enforced *continuously* by the F10 structural guard in `redis.client.factory.spec.ts`, not merely checked once by hand. SC-008: the OIDC suite passes with no spec rewritten to accommodate this change beyond presenting a signed cookie — which is the behaviour change itself, not an accommodation of it. |
-| 7 | 108 §2 SC-009 now passes | SC-011 | **NOT RUN** — requires the live outage. |
+| 7 | 108 §2 SC-009 now passes | SC-011 | **PASSED** (live, 2026-08-04) — 108's clause was *"latency stays sane; nothing waits tens of seconds"*. Worst observed latency across 29 requests spanning a 3 m 20 s total outage was **12 ms**; nothing waited tens of seconds, nothing crashed. |
 | — | Tests / build / lint green | — | **PASSED** (2026-08-04) — `pnpm test` 686 files / 7700+ tests; `pnpm run build`; `pnpm run lint` (typecheck:native + biome). |
 
-### Why §3, §4, §5 and §7 were not run
+### Live outage walk — §3, §4, §5, §7 (2026-08-04)
 
-They require `docker stop alkemio_dev_redis` for at least three minutes. On the
-machine this was implemented on, that container is shared by ~20 running services
-(Synapse, Kratos, Hydra, the OIDC service, the collaboration services), so
-stopping it is not a scoped test action — it is an outage of a working
-environment. These criteria are therefore recorded as **NOT RUN**, not as passed,
-and the PR is opened as a draft naming them as the outstanding verification.
+Originally recorded **NOT RUN**, on the grounds that they need
+`docker stop alkemio_dev_redis` for three minutes and that container is shared by
+~20 running services. That obstacle was removed rather than accepted: the walk was
+run against a **disposable Redis**, with the server pointed at it, so the outage
+was total for the process under test while `alkemio_dev_redis` stayed up
+throughout (verified `Up 15 hours` afterwards).
 
-This is deliberate. The entire reason this feature exists is that
-`108-redis-outage-resilience` recorded its SC-009 as **FAILED** rather than
-rewording the criterion to match what happened. Recording "not run" as "passed"
-would be the same failure of discipline, one step earlier.
+**Rig.** `docker run -d --name alkemio_6332_redis -p 6399:6379 redis:7.0.2`, then
+`REDIS_HOST=localhost REDIS_PORT=6399 node dist/main.js` — a production build off
+`a6a7d7a70`, PID 614140 on `:4000`. Probes hit `:4000` directly, which is where
+the issue's `2.29 s / 32.55 s / 42.04 s` baseline was measured, so the comparison
+is like-for-like. `docker stop alkemio_6332_redis` at 11:50:03, `docker start` at
+11:54:03 — a **3 m 20 s** outage measured from first probe to last.
 
-To close them, run §3–§5 and §7 against a disposable stack.
+**§3 · SC-001 — anonymous traffic.** Baseline `200` in 3–8 ms. During the outage,
+10/10 samples `200`, times 2.3 ms – 12.4 ms, all inside the 250 ms budget. The
+cross-check matters as much as the numbers: the log gained **no** session record
+for any of those ten requests, so they issued zero store commands. On `develop`
+the same request was `401` after 2.29 s, 32.55 s and 42.04 s.
+
+**§4 · SC-002/003/004 — the cookie-bearing request.**
+
+| Path | Status | Time | `Retry-After` | `Set-Cookie` |
+|---|---|---|---|---|
+| `POST :4000/graphql` | **503** | **2.3 ms** | `5` | same value, `Max-Age=1209600`, `Path=/`, `HttpOnly`, `SameSite=Lax` |
+| `GET :4000/api/auth/oidc/id-token-hint` | **503** | **1.3 ms** | `5` | identical |
+| same REST route, **no** cookie | `401` | 1.9 ms | — | none |
+
+Body `{"error":"session_store_unavailable"}` on both — no `UNAUTHENTICATED`, no
+`numericCode 11101`. Against the 42.04 s / 401 baseline, and against the HTML 500
+that `develop` returned on this same cookie-bearing path. The last row is the
+D1 guarantee restated: no cookie ⇒ no store read ⇒ a fast honest `401` about
+*authentication*, not a hang about *infrastructure*.
+
+**§5 · SC-005/006/007 — sustained outage and recovery.** 18/18 samples `200`
+across the full window (11:50:33 → 11:53:23), every one under 8 ms. Same PID
+(614140) before and after — no crash, no restart. Transition records for the
+whole cycle: **exactly six**, one loss and one recovery per client —
+
+```
+11:50:03 WARN [auth]  Redis connection lost (session); … ECONNREFUSED 127.0.0.1:6399
+11:50:03 WARN [auth]  Redis connection lost (oidc);    … ECONNREFUSED 127.0.0.1:6399
+11:50:03 WARN [cache] Cache connection lost; cache reads will miss through …
+11:54:04 WARN [auth]  Redis connection re-established (oidc).
+11:54:04 WARN [auth]  Redis connection re-established (session).
+11:54:05 WARN [cache] Cache connection re-established; caching has resumed.
+```
+
+— against ~30 requests over 3 m 20 s, i.e. no per-attempt flood, and **zero**
+`[ioredis] Unhandled error event:` console writes (the D2 symptom). Recovery was
+automatic within ~1 s of the container returning; the cookie presented *during*
+the outage was then accepted against a live session with no re-authentication.
+
+**§7 · SC-011.** 108's clause — *"latency stays sane; nothing waits tens of
+seconds"* — recorded **FAILED** on 2026-08-03. Worst latency here was 12 ms
+across 29 requests spanning the outage. **Closed.**
+
+#### What this walk does *not* prove
+
+Stated plainly, because a walk that overstates itself is worth less than one that
+was never run:
+
+1. **The session cookie was minted, not earned.** Kratos in the dev stack is
+   broken independently of this change (`/self-service/login/browser` → 500,
+   `open /etc/config/kratos/identity.schema.json: no such file or directory`), so
+   a real browser login was unavailable. The cookie was signed with the committed
+   local-dev `session_signing_key`, and express-session accepted it — which is
+   the precondition the store-read path needs, and exactly what the walk
+   exercises. It is *not* evidence about a real user's token-refresh behaviour.
+2. **The post-recovery session was seeded**, not created by a login — an
+   `alkemio:sid:<sid>` payload carrying the `cookie` field express-session
+   requires. It shows the sid survived the outage and still resolves; it says
+   nothing about refresh-grant state.
+3. **The GraphQL interceptor arm was not reached.** During a total outage
+   express-session fails *before* the GraphQL layer, so the middleware answers
+   first — every cookie-bearing 503 above came from that arm. The interceptor
+   remains covered by U1–U4 and U9 only.
+4. **§1's "before" was not re-measured live** — it stays statically verified, as
+   recorded in row 1.
 
 ### Scoped live measurement — SC-002's fail-fast half (2026-08-04)
 
