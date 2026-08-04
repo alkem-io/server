@@ -7,6 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types';
 import type { NextFunction, Request, Response } from 'express';
+import { readPresentedCookie } from '../session-id.resolver';
 import { SessionStoreUnavailableError } from './cookie-session.errors';
 
 /**
@@ -84,21 +85,33 @@ export function applyStoreUnavailableResponse(
   // Deliberately a structural shape rather than an express `Request`: the
   // AuthInterceptor holds an `IncomingMessage`, and widening here is more
   // honest than casting there.
-  req: { cookies?: Record<string, unknown> } | undefined,
+  req:
+    | { cookies?: Record<string, unknown>; headers?: { cookie?: string } }
+    | undefined,
   res: Response | undefined,
   cookie: SessionCookieAttributes
-): void {
-  if (!res) {
+): boolean {
+  if (!res || typeof res.cookie !== 'function') {
     // The GraphQL path can legitimately have no express response to hand (this
     // application's Apollo context factory returns `{ req }` and never `res`).
     // The status still reaches the client through the exception's
     // `extensions.http.status`; only the header and cookie are lost, and
     // failing to answer at all would be worse.
-    return;
+    return false;
   }
 
-  const presented = req?.cookies?.[cookie.name];
-  if (typeof presented === 'string' && presented.length > 0) {
+  // A response that has already been flushed cannot be rewritten: `setHeader`
+  // and `cookie` both throw `ERR_HTTP_HEADERS_SENT`, and one of the callers
+  // reaches here from a `setImmediate` (express-session defers `next(err)` for
+  // a failed `store.set` / `store.destroy` on the `res.end` path), where a
+  // throw is an UNCAUGHT exception and kills the process. `clearSessionCookie`
+  // guards the same way for the same reason.
+  if (res.headersSent) {
+    return false;
+  }
+
+  const presented = readPresentedCookie(req ?? {}, cookie.name);
+  if (presented !== null) {
     // The RAW SIGNED value exactly as presented, so no re-signing occurs and
     // the signing secret is not needed at the response site. If no cookie was
     // presented, none is set — we do not invent one.
@@ -117,6 +130,7 @@ export function applyStoreUnavailableResponse(
   }
 
   res.setHeader('Retry-After', '5');
+  return true;
 }
 
 /** The transport-specific body shared by the two non-GraphQL paths. */
@@ -146,7 +160,18 @@ export class CookieSessionStoreUnavailableFilter implements ExceptionFilter {
   catch(_exception: SessionStoreUnavailableError, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const res = ctx.getResponse<Response>();
-    applyStoreUnavailableResponse(ctx.getRequest<Request>(), res, this.cookie);
+    // `applyStoreUnavailableResponse` deliberately tolerates an absent or
+    // already-flushed response; the status/body write has to agree with it or
+    // the two disagree about whether there is a response to write at all.
+    if (
+      !applyStoreUnavailableResponse(
+        ctx.getRequest<Request>(),
+        res,
+        this.cookie
+      )
+    ) {
+      return;
+    }
     res.status(503).json(STORE_UNAVAILABLE_BODY);
   }
 }
@@ -172,7 +197,18 @@ export const cookieSessionStoreUnavailableMiddleware =
       return;
     }
 
-    applyStoreUnavailableResponse(req, res, normalise(cookie));
+    // The response may already be on the wire. `express-session` does not only
+    // read the store on the way IN: a failed `store.set` / `store.destroy` on
+    // the `res.end` path is reported with `defer(next, err)`, i.e. from a
+    // `setImmediate` AFTER the headers have been flushed. Writing there throws
+    // `ERR_HTTP_HEADERS_SENT` with no request-scoped catch above it, which is
+    // an uncaught exception and takes the process down — turning the outage
+    // this middleware exists to soften into a crash loop. Hand it to express's
+    // final handler, which knows how to deal with a half-sent response.
+    if (!applyStoreUnavailableResponse(req, res, normalise(cookie))) {
+      next(err);
+      return;
+    }
     res.status(503).json(STORE_UNAVAILABLE_BODY);
   };
 

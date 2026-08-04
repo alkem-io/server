@@ -44,9 +44,12 @@ export class CookieSessionStrategy extends PassportStrategy(
   AUTH_STRATEGY_OIDC_COOKIE_SESSION
 ) {
   /**
-   * Per-env session cookie name resolved from `oidc.cookie.name`. Only used
-   * by the rare `req.sessionID`-missing fallback path below; the primary
-   * path uses the sid express-session already parsed for us.
+   * Per-env session cookie name resolved from `oidc.cookie.name`.
+   *
+   * server#6332 — this is now on the PRIMARY path for every request, not a
+   * rare fallback: `resolveCookieSessionId` needs it to decide whether the
+   * request presented a session cookie at all, and a request that did not must
+   * never reach the session store.
    */
   private readonly sessionCookieName: string;
 

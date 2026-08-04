@@ -11,7 +11,11 @@ import {
   CookieSessionInvalidError,
 } from '@core/auth/oidc/strategies/auth.errors';
 import { SessionStoreUnavailableError } from '@core/auth/oidc/strategies/cookie-session.errors';
-import { applyStoreUnavailableResponse } from '@core/auth/oidc/strategies/cookie-session.exception-filter';
+import {
+  applyStoreUnavailableResponse,
+  type SessionCookieAttributes,
+  sessionCookieAttributesFrom,
+} from '@core/auth/oidc/strategies/cookie-session.exception-filter';
 import {
   AUTH_STRATEGY_NON_INTERACTIVE_LOGIN,
   AUTH_STRATEGY_OIDC_COOKIE_SESSION,
@@ -101,22 +105,18 @@ export class AuthInterceptor implements NestInterceptor {
    * session. Optional so the several test harnesses that construct this
    * interceptor directly keep working; when absent the cookie is simply not
    * cleared and nothing else changes.
+   *
+   * server#6332 — now the FULL attribute set, so the store-unavailable path can
+   * RE-ASSERT the cookie exactly as it was issued. Re-asserting without
+   * `maxAge` silently downgrades a persistent cookie to a browser-session one,
+   * which is a different way of losing the session than clearing it, not a
+   * milder one.
+   *
+   * Derived through `sessionCookieAttributesFrom` rather than restated here:
+   * `main.server.ts`, the REST filter and this interceptor must all emit the
+   * same `Set-Cookie`, and a second local derivation is how they drift.
    */
-  private readonly sessionCookie: {
-    name: string;
-    secure: boolean;
-    domain?: string;
-    /**
-     * server#6332 — carried so the store-unavailable path can RE-ASSERT the
-     * cookie with its real lifetime. Re-asserting without it silently
-     * downgrades a persistent cookie to a browser-session one, which is a
-     * different way of losing the session than clearing it, not a milder one.
-     */
-    maxAge?: number;
-    sameSite: 'lax';
-    path: '/';
-    httpOnly: true;
-  } | null;
+  private readonly sessionCookie: SessionCookieAttributes | null;
 
   constructor(
     private readonly actorContextService: ActorContextService,
@@ -127,15 +127,7 @@ export class AuthInterceptor implements NestInterceptor {
       { infer: true }
     );
     this.sessionCookie = cookie
-      ? {
-          name: cookie.name,
-          secure: cookie.secure,
-          domain: cookie.domain,
-          maxAge: cookie.idle_ttl_s ? cookie.idle_ttl_s * 1000 : undefined,
-          sameSite: 'lax',
-          path: '/',
-          httpOnly: true,
-        }
+      ? sessionCookieAttributesFrom({ cookie })
       : null;
   }
 

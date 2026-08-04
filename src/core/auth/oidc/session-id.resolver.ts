@@ -36,7 +36,7 @@ export const resolveCookieSessionId = (
   },
   cookieName: string
 ): string | null => {
-  const raw = readRawCookie(req, cookieName);
+  const raw = readPresentedCookie(req, cookieName);
   if (!raw) {
     // No cookie presented: row 1 of the decision table (rows 2 and 4 are
     // handled below). This single branch is the whole of FR-001, and the reason
@@ -73,7 +73,8 @@ export const resolveCookieSessionId = (
 };
 
 /**
- * Cookie presence from the parsed cookies, with the raw header as a fallback.
+ * The presented cookie value, from the parsed cookies, with the raw header as a
+ * fallback. `null` when the request did not carry it.
  *
  * `req.cookies` is populated by `cookie-parser`, which `main.server.ts`
  * registers before the session middleware and replays onto WebSocket upgrades.
@@ -81,8 +82,14 @@ export const resolveCookieSessionId = (
  * LOUDLY rather than silently making every request anonymous — a resilience fix
  * that introduces a silent total-auth-outage mode would be a poor trade. It is
  * also what `express-session` itself treats as authoritative.
+ *
+ * Exported because the store-unavailable response site
+ * (`cookie-session.exception-filter.ts`) has to answer the SAME question when
+ * it re-asserts the cookie: reading only `req.cookies` there would silently
+ * drop the `Set-Cookie` on exactly the requests this fallback exists to keep
+ * working, which is the "session ended" wire shape FR-020 forbids.
  */
-const readRawCookie = (
+export const readPresentedCookie = (
   req: {
     cookies?: Record<string, unknown>;
     headers?: { cookie?: string };

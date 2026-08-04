@@ -137,9 +137,18 @@ function typeStoreFailures(store: RedisStore): RedisStore {
         return original.apply(this, args);
       }
 
+      // Wrap once. `connect-redis`'s `set()` delegates to `this.destroy(sid, cb)`
+      // when the computed TTL is <= 0, and `this` is the mutated store — so
+      // without this guard that path produces
+      // `SessionStoreUnavailableError(SessionStoreUnavailableError(err))` and
+      // buries the original ioredis error two `cause` levels down.
       const wrapped = (err: unknown, ...rest: unknown[]) =>
         (callback as (...cbArgs: unknown[]) => unknown)(
-          err ? new SessionStoreUnavailableError(err) : err,
+          err
+            ? err instanceof SessionStoreUnavailableError
+              ? err
+              : new SessionStoreUnavailableError(err)
+            : err,
           ...rest
         );
 

@@ -52,13 +52,14 @@ type FakeResponse = ReturnType<typeof buildRes>;
  * a double that lacks the method could only ever fail by throwing, which is a
  * much weaker signal than an explicit `not.toHaveBeenCalled()`.
  */
-const buildRes = () => {
+const buildRes = (headersSent = false) => {
   const res = {
     cookie: vi.fn(),
     setHeader: vi.fn(),
     json: vi.fn(),
     clearCookie: vi.fn(),
     status: vi.fn(),
+    headersSent,
   };
   // `res.status(503).json(body)` is a chain — the double has to return itself.
   res.status.mockImplementation(() => res);
@@ -275,6 +276,53 @@ describe('applyStoreUnavailableResponse (U4)', () => {
     expect(res.setHeader).toHaveBeenCalledWith('Retry-After', '5');
   });
 
+  it('writes nothing to a response whose headers are already sent', () => {
+    // `express-session` does not only read the store on the way IN: a failed
+    // `store.set` / `store.destroy` on the `res.end` path is reported with
+    // `defer(next, err)` — a `setImmediate` that runs AFTER the headers have
+    // been flushed. `res.setHeader`/`res.cookie` throw `ERR_HTTP_HEADERS_SENT`
+    // there, with no request-scoped catch above it, so the throw is an
+    // UNCAUGHT exception and takes the process down. A resilience fix that
+    // turns a Redis outage into a crash loop is worse than the outage.
+    const res = buildRes(true);
+
+    expect(() =>
+      applyStoreUnavailableResponse(
+        { cookies: { alkemio_session: PRESENTED } },
+        asRes(res),
+        PROD_COOKIE
+      )
+    ).not.toThrow();
+
+    expect(res.cookie).not.toHaveBeenCalled();
+    expect(res.setHeader).not.toHaveBeenCalled();
+    expect(res.clearCookie).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the raw Cookie header when req.cookies is unpopulated', () => {
+    // `resolveCookieSessionId` has this fallback precisely because
+    // `cookie-parser` may not have run (WS upgrades, middleware reordering).
+    // Reading only `req.cookies` HERE would silently drop the Set-Cookie on
+    // exactly those requests — a store-unavailable response with no cookie
+    // re-assertion is the "session ended" wire shape FR-020 forbids.
+    const res = buildRes();
+    applyStoreUnavailableResponse(
+      {
+        headers: {
+          cookie: `other=1; alkemio_session=${encodeURIComponent(PRESENTED)}`,
+        },
+      },
+      asRes(res),
+      PROD_COOKIE
+    );
+
+    expect(res.cookie).toHaveBeenCalledWith(
+      'alkemio_session',
+      PRESENTED,
+      expect.objectContaining({ secure: true, maxAge: 1_209_600_000 })
+    );
+  });
+
   it('tolerates a missing response without throwing', () => {
     // This application's Apollo context factory returns `{ req }` and never
     // `res`, so the GraphQL path legitimately has no express response to hand.
@@ -433,6 +481,33 @@ describe('cookieSessionStoreUnavailableMiddleware (U7)', () => {
     });
     expect(res.clearCookie).not.toHaveBeenCalled();
     expect(next).not.toHaveBeenCalled();
+  });
+
+  it('hands a typed failure to next() untouched once the headers are sent', () => {
+    // The `res.end` path: `express-session` reports a failed `store.set` /
+    // `store.destroy` with `defer(next, err)`, i.e. from a `setImmediate` after
+    // the response has been flushed. Writing there throws
+    // `ERR_HTTP_HEADERS_SENT` with nothing to catch it — an uncaught exception
+    // that kills the process. Express's final handler knows how to deal with a
+    // half-sent response; this middleware does not, so it must defer.
+    const res = buildRes(true);
+    const next = vi.fn();
+    const err = new SessionStoreUnavailableError(new Error('ECONNREFUSED'));
+
+    expect(() =>
+      cookieSessionStoreUnavailableMiddleware(PROD_COOKIE)(
+        err,
+        { cookies: { alkemio_session: PRESENTED } } as unknown as Request,
+        asRes(res),
+        next as unknown as NextFunction
+      )
+    ).not.toThrow();
+
+    expect(next).toHaveBeenCalledWith(err);
+    expect(res.status).not.toHaveBeenCalled();
+    expect(res.json).not.toHaveBeenCalled();
+    expect(res.setHeader).not.toHaveBeenCalled();
+    expect(res.cookie).not.toHaveBeenCalled();
   });
 
   it('passes any other error straight to next() and writes no response', () => {
