@@ -125,10 +125,15 @@ export const bootstrapServer = async () => {
   // security-relevant change nobody would notice — and the store's TTL
   // computation collapses to NaN, so connect-redis writes `EX NaN`.
   // Refuse to start instead. Same posture as the non-interactive-login guard.
+  // Integer, not merely finite: `connect-redis` hands a FUNCTION-form `ttl`
+  // straight to `client.set(key, val, ttl)` with no normalisation — note that
+  // its own cookie-derived branch does `Math.ceil(ms / 1000)` for exactly this
+  // reason — so a fractional value reaches Redis as a non-integer `EX` and
+  // every session write fails.
   const idleTtlS = Number(oidcConfig.cookie.idle_ttl_s);
-  if (!Number.isFinite(idleTtlS) || idleTtlS <= 0) {
+  if (!Number.isInteger(idleTtlS) || idleTtlS <= 0) {
     throw new Error(
-      'identity.authentication.providers.oidc.cookie.idle_ttl_s must be a finite positive number of seconds (check OIDC_SESSION_COOKIE_IDLE_TTL_S)'
+      'identity.authentication.providers.oidc.cookie.idle_ttl_s must be a positive integer number of seconds (check OIDC_SESSION_COOKIE_IDLE_TTL_S)'
     );
   }
   const sessionStore = buildOidcSessionRedisStore(

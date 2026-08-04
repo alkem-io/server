@@ -122,8 +122,13 @@ export function buildOidcSessionRedisStore(
         typeof sess?.absolute_expires_at === 'number'
           ? sess.absolute_expires_at - nowS
           : idleTtlS;
-      // At least 1s so connect-redis writes an EX (0/negative would delete).
-      return Math.max(1, Math.min(idleTtlS, ceilingRemainingS));
+      // At least 1s so connect-redis writes an EX (0/negative would delete),
+      // and floored so the result is always an integer: connect-redis passes a
+      // function-form ttl to `client.set` unnormalised, and Redis rejects a
+      // fractional EX. `idleTtlS` is integer-guarded at boot, but
+      // `absolute_expires_at` arrives from the stored payload, so the floor is
+      // what makes that path safe too.
+      return Math.max(1, Math.floor(Math.min(idleTtlS, ceilingRemainingS)));
     },
     disableTouch: true,
   });
