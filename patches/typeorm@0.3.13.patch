@@ -1,0 +1,23 @@
+diff --git a/driver/mysql/MysqlDriver.js b/driver/mysql/MysqlDriver.js
+index 8eb53e26989be1cb517478a3c2f4855ea576d754..82513704363b2e06023110d787629c4fe6a7202c 100644
+--- a/driver/mysql/MysqlDriver.js
++++ b/driver/mysql/MysqlDriver.js
+@@ -974,6 +974,18 @@ class MysqlDriver {
+             trace: options.trace,
+             multipleStatements: options.multipleStatements,
+             flags: options.flags,
++            // CVE-2025-60542 (GHSA-q2pj-6v73-8rgj) backport: mysql/mysql2 default
++            // stringifyObjects to false, which lets a crafted nested-object input
++            // to repository.save/update inject raw SQL. Upstream fix (typeorm
++            // commit d57fe3b, released 0.3.26) sets this implicitly to true;
++            // `options.extra.stringifyObjects` (spread last, below) can still
++            // override it, preserving the documented escape hatch. This codebase
++            // never configures a mysql/mariadb DataSource (postgres-only; mysql2
++            // is not even an installed dependency) so the vulnerable path is
++            // unreachable here — patched anyway for defense-in-depth since the
++            // upstream fix could not be rebased onto this fork's pinned commit
++            // (see server/.docker/verification/US5-AS1-cve-remediation.md).
++            stringifyObjects: true,
+         }, {
+             host: credentials.host,
+             user: credentials.username,
