@@ -20,6 +20,7 @@ import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import cookieParser from 'cookie-parser';
+import { createHmac } from 'crypto';
 import express, {
   type NextFunction,
   type Request,
@@ -132,17 +133,42 @@ export type OidcHarness = {
     payload?: Partial<Parameters<typeof signPreAuthCookie>[0]>
   ): Promise<string>;
   sessionStore: ToggleableSessionStore;
+  seedSession(sid: string, data?: Record<string, unknown>): Promise<void>;
   simulateRedisFailure(): void;
   simulateRedisRecovery(): void;
+  /**
+   * Per-method call counts on the EXPRESS-SESSION store — the one the session
+   * middleware drives itself, ahead of any authentication code. FR-028's "zero
+   * store operations" is a claim about the whole request, so it can only be
+   * asserted here; the strategy-level obligation cannot observe these.
+   */
+  expressSessionStoreCalls: {
+    get: number;
+    set: number;
+    touch: number;
+    destroy: number;
+  };
+  resetExpressSessionStoreCalls(): void;
 };
 
 export type ToggleableSessionStore = SessionStoreHandle & {
   setFailing(failing: boolean): void;
   put(sid: string, payload: AlkemioSessionPayload): void;
+  /**
+   * Per-method call counts on the OIDC session-store handle — where defect D1
+   * actually lived. `express-session` never issues a `store.get` for a request
+   * that presents no cookie (it calls `generate()` outright), so counting only
+   * the express-session store would leave a D1 regression invisible; the
+   * strategy's `sessionStore.get(sid)` is the call that used to happen for
+   * every anonymous request.
+   */
+  calls: { get: number; destroy: number; markTerminated: number };
+  resetCalls(): void;
 };
 
 function buildToggleableSessionStore(): ToggleableSessionStore {
   const data = new Map<string, AlkemioSessionPayload>();
+  const calls = { get: 0, destroy: 0, markTerminated: 0 };
   let failing = false;
   const failOrPass = <T>(): Promise<T> => {
     if (failing) {
@@ -153,6 +179,12 @@ function buildToggleableSessionStore(): ToggleableSessionStore {
     return undefined as unknown as Promise<T>;
   };
   return {
+    calls,
+    resetCalls() {
+      calls.get = 0;
+      calls.destroy = 0;
+      calls.markTerminated = 0;
+    },
     setFailing(value) {
       failing = value;
     },
@@ -160,16 +192,19 @@ function buildToggleableSessionStore(): ToggleableSessionStore {
       data.set(sid, payload);
     },
     async get(sid) {
+      calls.get += 1;
       if (failing) {
         await failOrPass<never>();
       }
       return data.get(sid) ?? null;
     },
     async destroy(sid) {
+      calls.destroy += 1;
       if (failing) await failOrPass<never>();
       data.delete(sid);
     },
     async markTerminated(sid, reason, context) {
+      calls.markTerminated += 1;
       if (failing) await failOrPass<never>();
       const existing = data.get(sid);
       data.set(sid, {
@@ -272,8 +307,39 @@ export async function createOidcHarness(
   const app = moduleRef.createNestApplication();
   app.use(cookieParser());
   app.use(express.json());
+  // server#6332 — express-session needs a store it can actually FIND the
+  // session in. With the default MemoryStore empty, `store.get(sid)` misses and
+  // express-session calls `generate()`, which REASSIGNS `req.sessionID` to a
+  // fresh random id. The cookie-session strategy now requires the presented
+  // cookie to account for `req.sessionID`, so a regenerated id means "no
+  // session presented" and the request resolves anonymous — correct behaviour,
+  // but it means a spec that wants to exercise a store-dependent path must
+  // first seed the sid here (see `seedSession` on the returned harness).
+  const expressSessionStore = new session.MemoryStore();
+  // server#6332 FR-001 / FR-028 / SC-001 — count what the SESSION MIDDLEWARE
+  // does, not only what the strategy does. `express-session` calls
+  // `store.get(req.sessionID)` itself, before any authentication code runs, so
+  // the strategy-level S10 obligation cannot see it: a regression that made
+  // every cookie-less request hit Redis again would leave S10 green. Counting
+  // here is the only place the "zero store operations" claim can be asserted
+  // for the WHOLE request.
+  const expressSessionStoreCalls = { get: 0, set: 0, touch: 0, destroy: 0 };
+  for (const method of ['get', 'set', 'touch', 'destroy'] as const) {
+    const original = (
+      expressSessionStore as unknown as Record<string, unknown>
+    )[method];
+    if (typeof original !== 'function') {
+      continue;
+    }
+    (expressSessionStore as unknown as Record<string, unknown>)[method] =
+      function (...args: unknown[]) {
+        expressSessionStoreCalls[method] += 1;
+        return (original as (...a: unknown[]) => unknown).apply(this, args);
+      };
+  }
   app.use(
     session({
+      store: expressSessionStore,
       secret: SESSION_SIGNING_KEY,
       name: 'alkemio_session',
       resave: false,
@@ -359,6 +425,39 @@ export async function createOidcHarness(
     oidcService,
     sessionCookieName: 'alkemio_session',
     sessionStore,
+    expressSessionStoreCalls,
+    resetExpressSessionStoreCalls() {
+      expressSessionStoreCalls.get = 0;
+      expressSessionStoreCalls.set = 0;
+      expressSessionStoreCalls.touch = 0;
+      expressSessionStoreCalls.destroy = 0;
+    },
+    /**
+     * Make express-session recognise `sid`, so it preserves it as
+     * `req.sessionID` instead of generating a replacement.
+     *
+     * This models a browser holding a live session: the cookie unsigns, the
+     * middleware finds the session, and the sid survives into the strategy —
+     * which is the precondition for reaching the session store at all.
+     */
+    seedSession(sid: string, data: Record<string, unknown> = {}) {
+      return new Promise<void>((resolve, reject) => {
+        expressSessionStore.set(
+          sid,
+          {
+            cookie: {
+              originalMaxAge: 30 * 60 * 1000,
+              expires: new Date(Date.now() + 30 * 60 * 1000),
+              httpOnly: true,
+              path: '/',
+              sameSite: 'lax',
+            },
+            ...data,
+          } as never,
+          err => (err ? reject(err) : resolve())
+        );
+      });
+    },
     simulateRedisFailure() {
       sessionStore.setFailing(true);
     },
@@ -381,6 +480,31 @@ export async function createOidcHarness(
 
 export function cookieHeader(name: string, value: string): string {
   return `${name}=${encodeURIComponent(value)}; Path=${PRE_AUTH_COOKIE_PATH}`;
+}
+
+/**
+ * Produce a session cookie value express-session will actually ACCEPT.
+ *
+ * server#6332 — the cookie-session strategy no longer reads the session store
+ * for a request whose cookie does not account for `req.sessionID`. A bare,
+ * unsigned sid (which several specs used to send) is now correctly treated as
+ * "no session presented" and resolves anonymous WITHOUT touching the store. To
+ * exercise a store-dependent path a spec must present the real signed wire form.
+ *
+ * This reimplements `cookie-signature`'s `sign()` — `val + '.' + HMAC-SHA256
+ * base64 with trailing '=' stripped` — rather than importing it: it is a
+ * transitive dependency of express-session, not resolvable directly under
+ * pnpm's strict layout, and this feature adds no dependency.
+ */
+export function signSessionCookie(
+  sid: string,
+  secret: string = SESSION_SIGNING_KEY
+): string {
+  const mac = createHmac('sha256', secret)
+    .update(sid)
+    .digest('base64')
+    .replace(/=+$/, '');
+  return `s:${sid}.${mac}`;
 }
 
 export function extractCookie(

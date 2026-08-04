@@ -272,7 +272,9 @@ async function buildStack(sids: string[]) {
 function requestFor(sid: string): Request {
   return {
     sessionID: sid,
-    cookies: { [COOKIE_NAME]: sid },
+    // server#6332 — the signed wire form, not the bare sid: the strategy now
+    // requires the presented cookie to account for `req.sessionID`.
+    cookies: { [COOKIE_NAME]: `s:${sid}.harness-signature` },
   } as unknown as Request;
 }
 

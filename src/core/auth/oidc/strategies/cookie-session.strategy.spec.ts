@@ -29,6 +29,11 @@ describe('CookieSessionStrategy session-lifetime stamping', () => {
   const buildStrategy = async (payload: AlkemioSessionPayload | null) => {
     // The instance createActorContext resolves — stands in for the shared
     // actorID-keyed cached ActorContext.
+    const sessionStore = {
+      get: vi.fn().mockResolvedValue(payload),
+      destroy: vi.fn(),
+      markTerminated: vi.fn(),
+    };
     const cachedContext = new ActorContext();
     cachedContext.actorID = 'actor-1';
     cachedContext.isAnonymous = false;
@@ -40,11 +45,7 @@ describe('CookieSessionStrategy session-lifetime stamping', () => {
         CookieSessionStrategy,
         {
           provide: SESSION_STORE_HANDLE,
-          useValue: {
-            get: vi.fn().mockResolvedValue(payload),
-            destroy: vi.fn(),
-            markTerminated: vi.fn(),
-          },
+          useValue: sessionStore,
         },
         {
           provide: AuthenticationService,
@@ -72,10 +73,20 @@ describe('CookieSessionStrategy session-lifetime stamping', () => {
     return {
       strategy: module.get(CookieSessionStrategy),
       cachedContext,
+      sessionStore,
     };
   };
 
-  const request = { sessionID: 'sid-1', cookies: {} } as any;
+  // server#6332 — the strategy now refuses to read the session store unless the
+  // request actually PRESENTED the session cookie and express-session derived
+  // this sid from it. So the harness must present the signed wire form
+  // `s:<sid>.<sig>`; a bare sid or an empty cookie jar is, correctly, anonymous
+  // now. The signature is never verified here (express-session already did
+  // that upstream) — only the `s:<sid>.` prefix is checked.
+  const request = {
+    sessionID: 'sid-1',
+    cookies: { alkemio_session: 's:sid-1.harness-signature' },
+  } as any;
 
   it('stamps expiry / absoluteExpiry / issuedAt from the payload, converted to ms', async () => {
     const payload = buildPayload();
@@ -118,5 +129,136 @@ describe('CookieSessionStrategy session-lifetime stamping', () => {
     const result = await strategy.validate(request);
 
     expect(result).toBeNull();
+  });
+});
+
+/**
+ * Regression coverage for defect D1 of alkem-io/server#6332 — contract
+ * obligation S10, spec FR-028.
+ *
+ * THE assertion of this feature. Every one of these cases FAILS on `develop`
+ * @ caa1a0d33, where the strategy reads `req.sessionID` unconditionally and so
+ * issues a `sessionStore.get()` for a key that cannot exist. While Redis is up
+ * that is an invisible wasted round trip; while it is down it is a
+ * tens-of-seconds hang and then a 401, for a request that needed no session at
+ * all — which is the difference between "signed-in users cannot authenticate"
+ * and "the platform is down".
+ *
+ * Note what is asserted: the CALL COUNT, not the return value. The pre-fix code
+ * also resolves these requests to anonymous — just via Redis first — so a
+ * return-value assertion would pass on `develop` and prove nothing. FR-031.
+ */
+describe('CookieSessionStrategy — anonymous requests never touch the store (FR-028)', () => {
+  const NOW_S = 1_800_000_000;
+
+  const buildPayload = (): AlkemioSessionPayload => ({
+    access_token: 'at',
+    id_token: 'idt',
+    refresh_token: 'rt',
+    expires_at: NOW_S + 600,
+    absolute_expires_at: NOW_S + 2_592_000,
+    sub: 'kratos-identity-id',
+    alkemio_actor_id: 'actor-1',
+    refresh_failure_count: 0,
+    refresh_failure_streak_started_at: null,
+    created_at: NOW_S - 3600,
+    client_id: 'alkemio-web',
+  });
+
+  const build = async () => {
+    const sessionStore = {
+      get: vi.fn().mockResolvedValue(buildPayload()),
+      destroy: vi.fn(),
+      markTerminated: vi.fn(),
+    };
+    const cachedContext = new ActorContext();
+    cachedContext.actorID = 'actor-1';
+    cachedContext.isAnonymous = false;
+    cachedContext.credentials = [];
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        MockWinstonProvider,
+        CookieSessionStrategy,
+        { provide: SESSION_STORE_HANDLE, useValue: sessionStore },
+        {
+          provide: AuthenticationService,
+          useValue: {
+            createActorContext: vi.fn().mockResolvedValue(cachedContext),
+          },
+        },
+        {
+          provide: ActorContextService,
+          useValue: {
+            createAnonymous: vi
+              .fn()
+              .mockReturnValue(
+                Object.assign(new ActorContext(), { isAnonymous: true })
+              ),
+          },
+        },
+        {
+          provide: ConfigService,
+          useValue: { get: vi.fn().mockReturnValue('alkemio_session') },
+        },
+      ],
+    }).compile();
+
+    return { strategy: module.get(CookieSessionStrategy), sessionStore };
+  };
+
+  it('performs ZERO store operations for a request with no session cookie', async () => {
+    const { strategy, sessionStore } = await build();
+
+    // Exactly the shape express-session produces for a cookie-less request:
+    // a freshly generated sessionID, and an empty cookie jar.
+    const result = await strategy.validate({
+      sessionID: 'generated-for-this-very-request',
+      cookies: {},
+    } as never);
+
+    expect(sessionStore.get).not.toHaveBeenCalled();
+    expect(sessionStore.destroy).not.toHaveBeenCalled();
+    expect(sessionStore.markTerminated).not.toHaveBeenCalled();
+    expect(result).toBeNull();
+  });
+
+  it('performs ZERO store operations when the request carries no cookies at all', async () => {
+    const { strategy, sessionStore } = await build();
+
+    const result = await strategy.validate({
+      sessionID: 'generated-for-this-very-request',
+    } as never);
+
+    expect(sessionStore.get).not.toHaveBeenCalled();
+    expect(result).toBeNull();
+  });
+
+  it('performs ZERO store operations when the cookie fails to account for the sid (FR-005)', async () => {
+    const { strategy, sessionStore } = await build();
+
+    // express-session discarded a bad-signature cookie and generated a fresh
+    // sid. A presence-only guard would pass here and read the store anyway.
+    const result = await strategy.validate({
+      sessionID: 'freshly-generated',
+      cookies: { alkemio_session: 's:somebody-elses-sid.sig' },
+    } as never);
+
+    expect(sessionStore.get).not.toHaveBeenCalled();
+    expect(result).toBeNull();
+  });
+
+  it('still reads the store when the cookie DOES account for the sid', async () => {
+    // The guard against over-correcting: it would be trivial to satisfy every
+    // assertion above by never reading the store at all.
+    const { strategy, sessionStore } = await build();
+
+    const result = await strategy.validate({
+      sessionID: 'sid-1',
+      cookies: { alkemio_session: 's:sid-1.signature' },
+    } as never);
+
+    expect(sessionStore.get).toHaveBeenCalledWith('sid-1');
+    expect(result?.isAnonymous).toBe(false);
   });
 });

@@ -3,6 +3,7 @@ import {
   BearerValidationError,
   CookieSessionInvalidError,
 } from '@core/auth/oidc/strategies/auth.errors';
+import { SessionStoreUnavailableError } from '@core/auth/oidc/strategies/cookie-session.errors';
 import { type CallHandler, type ExecutionContext } from '@nestjs/common';
 import { GqlExecutionContext } from '@nestjs/graphql';
 // We need to mock passport at module level since it's imported statically.
@@ -562,5 +563,221 @@ describe('AuthInterceptor', () => {
         withConfig(undefined).intercept(httpCtx(mockRes()), mockNext)
       ).rejects.toThrow();
     });
+  });
+});
+
+/**
+ * Regression coverage for defect D3 of alkem-io/server#6332 — contract
+ * obligations U1, U2, U3, U6 and U9 of
+ * `specs/109-redis-session-store-resilience/contracts/store-unavailable-response.md`.
+ *
+ * On `develop` @ caa1a0d33 the passport callback's allow-list preserved only
+ * `BearerValidationError` and `CookieSessionInvalidError`, so
+ * `SessionStoreUnavailableError` was wrapped into `AuthenticationException`
+ * ~120 lines BEFORE the outer catch whose own comment claims the error reaches
+ * its own exception filter. By the time that catch ran the type was already
+ * gone, `@Catch(SessionStoreUnavailableError)` never matched, and a store
+ * outage surfaced as 401 UNAUTHENTICATED / numericCode 11101.
+ *
+ * That is not cosmetic: a single-page application reads 401 as "your session is
+ * invalid, sign in again" and 503 + Retry-After as "come back in five seconds",
+ * so any Redis blip presented as a forced logout or a redirect loop.
+ */
+describe('server#6332 — store-unreachable is 503, never 401 (D3)', () => {
+  let actorContextService: ActorContextService;
+  let mockNext: CallHandler;
+
+  const COOKIE = {
+    name: 'alkemio_session_sandbox',
+    secure: true,
+    domain: 'alkem.io',
+    idle_ttl_s: 1_209_600, // 14 days
+  };
+
+  const PRESENTED = 's:live-sid.a-valid-looking-signature';
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    actorContextService = {
+      createAnonymous: vi.fn().mockReturnValue({ isAnonymous: true }),
+    } as unknown as ActorContextService;
+    mockNext = { handle: vi.fn().mockReturnValue(of('ok')) };
+  });
+
+  const build = () =>
+    new AuthInterceptor(actorContextService, {
+      get: vi.fn().mockReturnValue(COOKIE),
+    } as any);
+
+  const rejectWith = (err: Error) =>
+    vi
+      .spyOn(passport, 'authenticate')
+      .mockImplementation(
+        (_s: any, _o: any, callback: any) => (_req: any) => callback(err)
+      );
+
+  const mockRes = () => ({
+    cookie: vi.fn(),
+    setHeader: vi.fn(),
+    headersSent: false,
+  });
+
+  /**
+   * The REAL GraphQL context shape in this app: `app.module.ts` returns
+   * `{ req }` from the Apollo context factory and never `res`, so the response
+   * is reachable only through `req.res`.
+   */
+  const gqlCtx = (res: any, url = '/api/private/graphql') => {
+    const req = {
+      method: 'POST',
+      url,
+      headers: {},
+      cookies: { [COOKIE.name]: PRESENTED },
+      res,
+    };
+    const ctx = {
+      getType: vi.fn().mockReturnValue('graphql'),
+    } as unknown as ExecutionContext;
+    vi.spyOn(GqlExecutionContext, 'create').mockReturnValue({
+      getContext: vi.fn().mockReturnValue({ req }),
+    } as any);
+    return ctx;
+  };
+
+  // U1 — the allow-list fix itself, asserted at the boundary where the defect
+  // lived. If the type is lost here, every assertion below is unreachable.
+  it('U1 — preserves SessionStoreUnavailableError instead of wrapping it', async () => {
+    rejectWith(new SessionStoreUnavailableError(new Error('ECONNREFUSED')));
+
+    // Distinguishable sentinel rather than `undefined`: mapping a RESOLVED
+    // intercept to `undefined` would make the negative assertion below pass
+    // vacuously (`undefined?.constructor?.name` is `undefined`, which is not
+    // 'AuthenticationException'), so a regression that SWALLOWS the store
+    // error and lets the request continue as an anonymous actor would satisfy
+    // the one assertion this docblock calls the boundary.
+    const SWALLOWED = Symbol('intercept resolved instead of throwing');
+
+    const error = await build()
+      .intercept(gqlCtx(mockRes()), mockNext)
+      .then(
+        () => SWALLOWED,
+        (e: unknown) => e
+      );
+
+    // The store failure must surface, not be absorbed into an anonymous request.
+    expect(error).not.toBe(SWALLOWED);
+
+    // And it must NOT have become an authentication failure. On develop this is
+    // exactly what it became.
+    expect((error as Error)?.constructor?.name).not.toBe(
+      'AuthenticationException'
+    );
+  });
+
+  it('U2 — answers 503 / numericCode 14119, not 401 / 11101 (FR-030)', async () => {
+    rejectWith(new SessionStoreUnavailableError(new Error('ECONNREFUSED')));
+
+    const error: any = await build()
+      .intercept(gqlCtx(mockRes()), mockNext)
+      .then(
+        () => undefined,
+        (e: unknown) => e
+      );
+
+    // Apollo Server 4 reads `extensions.http.status` to override the wire HTTP
+    // status; without it Apollo answers 200 with an errors envelope and SC-003
+    // (which asserts the WIRE status) would be unmeetable.
+    expect(error?.extensions?.http?.status).toBe(503);
+    expect(error?.extensions?.code).toBe('SESSION_STORE_UNAVAILABLE');
+    expect(error?.extensions?.numericCode).toBe(14119);
+
+    // The two codes the defect produced, explicitly excluded — band 11 means
+    // "we decided about your identity", band 14 means "our infrastructure
+    // failed", and keeping them apart is the point of the whole feature.
+    expect(error?.extensions?.code).not.toBe('UNAUTHENTICATED');
+    expect(error?.extensions?.numericCode).not.toBe(11101);
+  });
+
+  it('U3 — sets Retry-After: 5 on the response', async () => {
+    const res = mockRes();
+    rejectWith(new SessionStoreUnavailableError(new Error('ECONNREFUSED')));
+
+    await expect(build().intercept(gqlCtx(res), mockNext)).rejects.toThrow();
+
+    expect(res.setHeader).toHaveBeenCalledWith('Retry-After', '5');
+  });
+
+  it('re-asserts the presented cookie with its full attributes, never clearing it', async () => {
+    const res = mockRes();
+    rejectWith(new SessionStoreUnavailableError(new Error('ECONNREFUSED')));
+
+    await expect(build().intercept(gqlCtx(res), mockNext)).rejects.toThrow();
+
+    expect(res.cookie).toHaveBeenCalledWith(
+      COOKIE.name,
+      PRESENTED, // the raw signed value exactly as presented — no re-signing
+      expect.objectContaining({
+        secure: true,
+        domain: 'alkem.io',
+        maxAge: COOKIE.idle_ttl_s * 1000,
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+      })
+    );
+
+    // The distinction this feature exists to preserve: "session ended" clears,
+    // "store briefly unreachable" re-asserts. A max-age=0 here would sign the
+    // whole platform out on a Redis blip.
+    const [, , options] = (res.cookie as any).mock.calls[0];
+    expect(options.maxAge).not.toBe(0);
+  });
+
+  // U6 — the guard against over-correcting. It would be easy to satisfy every
+  // assertion above by never clearing the cookie for anything, which would
+  // reintroduce the #6315 lockout this file already tests for.
+  it('U6 — a genuinely rejected session still 401s AND still clears the cookie', async () => {
+    const res = mockRes();
+    rejectWith(new CookieSessionInvalidError('account_deleted', 'corr-9'));
+
+    const error: any = await build()
+      .intercept(gqlCtx(res), mockNext)
+      .then(
+        () => undefined,
+        (e: unknown) => e
+      );
+
+    expect(error?.extensions?.http?.status).toBe(401);
+    expect(res.cookie).toHaveBeenCalledWith(
+      COOKIE.name,
+      '',
+      expect.objectContaining({ maxAge: 0 })
+    );
+  });
+
+  // U9 — FR-022 / contract G6. `isAuthEntryPoint` already exempts these routes
+  // from a REJECTED session; extending that exemption to an UNREACHABLE store
+  // is an easy reflex, and wrong. /callback and /logout genuinely need the
+  // store, and letting /login through during an outage only produces a sign-in
+  // that cannot complete.
+  it.each([
+    '/api/auth/oidc/login',
+    '/api/auth/oidc/callback',
+    '/api/auth/oidc/logout',
+  ])('U9 — %s answers 503 rather than passing through as anonymous', async url => {
+    const res = mockRes();
+    rejectWith(new SessionStoreUnavailableError(new Error('ECONNREFUSED')));
+
+    const error: any = await build()
+      .intercept(gqlCtx(res, url), mockNext)
+      .then(
+        () => undefined,
+        (e: unknown) => e
+      );
+
+    expect(error?.extensions?.http?.status).toBe(503);
+    expect(res.setHeader).toHaveBeenCalledWith('Retry-After', '5');
+    // Emphatically NOT let through to the resolver as an anonymous actor.
+    expect(mockNext.handle).not.toHaveBeenCalled();
   });
 });

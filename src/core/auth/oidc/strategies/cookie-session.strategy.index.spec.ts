@@ -139,7 +139,16 @@ describe('CookieSessionStrategy self-healing subject index', () => {
     return { strategy: module.get(CookieSessionStrategy), sessionStore };
   };
 
-  const request = { sessionID: 'sid-1', cookies: {} } as any;
+  // server#6332 — the strategy now refuses to read the session store unless the
+  // request actually PRESENTED the session cookie and express-session derived
+  // this sid from it. So the harness must present the signed wire form
+  // `s:<sid>.<sig>`; a bare sid or an empty cookie jar is, correctly, anonymous
+  // now. The signature is never verified here (express-session already did
+  // that upstream) — only the `s:<sid>.` prefix is checked.
+  const request = {
+    sessionID: 'sid-1',
+    cookies: { alkemio_session: 's:sid-1.harness-signature' },
+  } as any;
 
   // Lets the fire-and-forget `.catch()` chain inside reindexSession settle
   // before we assert on it, without touching fake timers (real epoch offsets
