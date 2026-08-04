@@ -318,7 +318,7 @@ nothing waits tens of seconds.
 | 1 | All three defects reproduce on `develop` @ `caa1a0d33` | — | **PASSED** (statically, 2026-08-03/04) — every anchor re-verified present on `caa1a0d33`: the strategy resolves `req.sessionID` then unconditionally calls `sessionStore.get(sid)`; `oidc-core.module.ts:46` and `main.server.ts:105` are both bare `new Redis({host, port})` while `health.module.ts:37` already carried the four fail-fast options; the interceptor allow-list preserves only `BearerValidationError` and `CookieSessionInvalidError`. Live re-measurement not re-run — see the note below. |
 | 2 | New specs fail before the fix, pass after | FR-031 · SC-010 | **PASSED** (2026-08-04) — see the FR-031 record below. |
 | 3 | Anonymous traffic unaffected by the outage | US1 · FR-001 – FR-003 · SC-001 | **NOT RUN** — requires stopping the shared dev Redis. See note. |
-| 4 | Signed-in request → fast 503 + `Retry-After`, cookie preserved | US2 · FR-016 – FR-021 · SC-002 – SC-004 | **NOT RUN** — same. Covered at unit level by U1–U4 and U9. |
+| 4 | Signed-in request → fast 503 + `Retry-After`, cookie preserved | US2 · FR-016 – FR-021 · SC-002 – SC-004 | **PARTIAL** — the 503 wire shape is covered at unit level by U1–U4 and U9; the end-to-end HTTP walk is **NOT RUN** (see note). The *fail-fast* half of SC-002 was measured live against a disposable Redis on 2026-08-04 — see "Scoped live measurement" below. |
 | 5 | 3-minute outage survived, one record per transition, automatic recovery | US2, US3 · FR-012, FR-023 – FR-027 · SC-005 – SC-007 | **NOT RUN** — same. Covered at unit level by F6–F8 and the reporter specs. |
 | 6 | No client outside the factory; 107's behaviour intact | SC-008, SC-009 | **PASSED** — SC-009 is enforced *continuously* by the F10 structural guard in `redis.client.factory.spec.ts`, not merely checked once by hand. SC-008: the OIDC suite passes with no spec rewritten to accommodate this change beyond presenting a signed cookie — which is the behaviour change itself, not an accommodation of it. |
 | 7 | 108 §2 SC-009 now passes | SC-011 | **NOT RUN** — requires the live outage. |
@@ -339,6 +339,32 @@ rewording the criterion to match what happened. Recording "not run" as "passed"
 would be the same failure of discipline, one step earlier.
 
 To close them, run §3–§5 and §7 against a disposable stack.
+
+### Scoped live measurement — SC-002's fail-fast half (2026-08-04)
+
+The one claim that does **not** need the shared stack is the load-bearing one:
+that the factory's option set turns a disconnected client from a multi-second
+hang into an immediate rejection. That was measured directly, against a
+throwaway `redis:7-alpine` on port **63799** — never `alkemio_dev_redis`, which
+was left running untouched throughout.
+
+Two clients were built against the same throwaway instance: one with the exact
+option set from `src/core/redis/redis.client.factory.ts`, one with `develop`'s
+bare `new Redis({ host, port })`. The container was then stopped and both were
+asked for the same key.
+
+| Client | Redis up | Redis down | Failure mode |
+|---|---|---|---|
+| factory-tuned | 0 ms `OK` | **1 ms** | `Stream isn't writeable and enableOfflineQueue options is false` |
+| bare (`develop`) | 0 ms `OK` | **9015 ms** | `Reached the max retries per request limit (which is 20)` |
+
+→ **SC-002 fail-fast: PASSED** (1 ms, budget < 1000 ms), and the bare client
+reproduces the pre-fix hang at 9015 ms — confirming both that the defect is real
+and that `enableOfflineQueue: false` is what removes it.
+
+This does **not** close SC-002 in full: it measures the Redis client, not an
+end-to-end HTTP request, so the request-level budget still needs the live walk.
+It is recorded here as partial evidence, not as the criterion.
 
 ### FR-031 / SC-010 — the regression specs observed FAILING against `caa1a0d33`
 
