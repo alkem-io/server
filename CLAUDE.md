@@ -261,12 +261,18 @@ Key rules:
 - PostgreSQL 17.5 — existing `innovation_flow_state.settings` JSONB column. **No DDL**; data backfill only. (story/6138-persist-phase-tab-visibility)
 - TypeScript 5.3 on Node.js 22 LTS (Volta-pinned 22.21.1) + NestJS 10, TypeORM 0.3 (custom fork `pkg.pr.new/antst/typeorm`), Apollo Server 4, GraphQL 16, class-validator / class-transformer, Winston (story/6177-adding-additional-tabs-in-l0-space)
 - PostgreSQL 17.5 — existing `innovation_flow.settings` (`json` column) carrying `minimumNumberOfStates` / `maximumNumberOfStates`. No DDL; data backfill only (raise max 4→8 on L0 flows). Join path for the migration: `space.level = 0` → `space.collaborationId` → `collaboration.innovationFlowId` → `innovation_flow.settings`. (story/6177-adding-additional-tabs-in-l0-space)
+- TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1) + NestJS 10, `ioredis` 5.10, `connect-redis`/`express-session`, `openid-client` 5.7 (discovery, read-only), `@ory/kratos-client`, Node global `fetch` + `AbortSignal.timeout` for the RFC 7009 call — no new dependency (story/6315-oidc-session-revocation-cascade)
+- Redis only — two key families: the existing `alkemio:sid:<sid>` session payloads and the new `alkemio:sub:<sub>` per-subject index sets. PostgreSQL untouched: no entity change, no migration (story/6315-oidc-session-revocation-cascade)
+- TypeScript 5.3 on Node.js 22 LTS (Volta-pinned 22.21.1) + NestJS 10, `@nestjs/cache-manager@2.3.0` → `cache-manager@5.7.6` at **runtime** but `@types/cache-manager@4.0.6` at **compile time** — they disagree about `set`'s third argument (v4 object-of-seconds vs v5 milliseconds), so read `specs/108-redis-outage-resilience/research.md` R4 before touching the cache store; `cache-manager-redis-store@2.0.0` → `redis@3.1.2`; Winston. `ioredis@5.10.1` is a separate, unrelated client owned by the OIDC session store and the health probe. (story/6330-redis-outage-crash)
+- No persistence change — no schema, no migration, no GraphQL surface. Every cache is constructed through the single factory `src/core/cache/cache.store.factory.ts`, registered exactly once in `src/core/cache/redis.cache.module.ts`; import `redisCacheModule()` rather than calling `CacheModule.register*` anywhere else. Note that `redis@3.1.2` only re-emits socket failures as `'error'` when no `retry_strategy` is set — with one configured, an outage surfaces as `reconnecting`, so both events must be listened for. (story/6330-redis-outage-crash)
 
 ## Recent Changes
+- 107-oidc-session-revocation (server#6315): per-subject Redis session index (`alkemio:sub:<sub>`) + `OidcSessionRevocationService.revokeAllForSub` — tombstones (never destroys) every session for a subject, clears its refresh lock, and revokes its refresh grant at Hydra via RFC 7009. Wired unconditionally into `deleteUser` post-commit alongside the pre-existing-but-never-called `kratosService.invalidateAllIdentitySessions`; `me` sub-resolvers degrade to empty values on an empty `actorID`. No DDL, no migration, no GraphQL schema change.
 - 028-migrate-biome-linting: Migrated from ESLint + Prettier to Biome for linting and formatting
 - 027-vitest-migration: Migrated from Jest to Vitest for testing
 
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan
+shell commands, and other important information, read the current plan at
+`specs/107-oidc-session-revocation/plan.md`.
 <!-- SPECKIT END -->

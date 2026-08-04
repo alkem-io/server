@@ -77,7 +77,7 @@ describe('PlatformResolverMutations', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         mockActorContext,
         platformPolicy,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.AUTHORIZATION_RESET,
         expect.any(String)
       );
       expect(result).toBe(mockPlatform);

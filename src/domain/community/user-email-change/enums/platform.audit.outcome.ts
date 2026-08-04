@@ -31,4 +31,8 @@ export enum PlatformAuditOutcome {
   // Kratos-side password change and recorded it; the platform is not the
   // source of truth for the credential itself.
   OBSERVED = 'observed',
+  // Platform-operations category (workspace#032): terminal outcome of one
+  // execution of an operational/maintenance mutation.
+  OPERATION_SUCCEEDED = 'operation_succeeded',
+  OPERATION_FAILED = 'operation_failed',
 }

@@ -469,4 +469,205 @@ describe('ConversionResolverMutations', () => {
       ).not.toHaveBeenCalled();
     });
   });
+
+  // Regression guard for the anonymous-visibility leak: a cross-L0 move must
+  // recompute platformRolesAccess from the NEW target hierarchy BEFORE the
+  // authorization policy is re-applied — otherwise a public L1 moved into a
+  // private L0 keeps stale anonymous READ. Mirrors the moveSpaceL2ToSpaceL1
+  // recompute proof above.
+  describe('moveSpaceL1ToSpaceL0', () => {
+    const setupMoveL1L0HappyPath = (
+      platformRolesAccessFromTarget = { roles: ['REGISTERED'] }
+    ) => {
+      const savedSpaceId = 'saved-l1-space';
+      const movedSpace = {
+        id: savedSpaceId,
+        levelZeroSpaceID: 'target-l0',
+        platformRolesAccess: { roles: [] }, // old value before recompute
+      };
+      const savedSpace = { ...movedSpace };
+      const targetParentL0 = {
+        id: 'target-l0',
+        platformRolesAccess: platformRolesAccessFromTarget,
+      };
+
+      authorizationService.grantAccessOrFail.mockReturnValue(undefined);
+      (conversionService as any).moveSpaceL1ToSpaceL0OrFail.mockResolvedValue({
+        space: movedSpace,
+        removedActorIds: ['actor-removed'],
+      });
+      spaceService.save.mockResolvedValue(savedSpace);
+      // getSpaceOrFail sequence: 1. targetParentL0 (recompute), 2. moved space
+      // with parentSpace.authorization (getParentSpaceAuthorization), 3. return.
+      spaceService.getSpaceOrFail
+        .mockResolvedValueOnce(targetParentL0)
+        .mockResolvedValueOnce({
+          id: savedSpaceId,
+          parentSpace: { authorization: { id: 'parent-auth' } },
+        })
+        .mockResolvedValue({ id: savedSpaceId });
+      (spaceService as any).updatePlatformRolesAccessRecursively = vi
+        .fn()
+        .mockImplementation(async (space: any, parentAccess: any) => {
+          space.platformRolesAccess = parentAccess;
+          return space;
+        });
+      spaceAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([]);
+      authorizationPolicyService.saveAll.mockResolvedValue(undefined);
+      (conversionService as any).invalidateUrlCachesForSubtree = vi
+        .fn()
+        .mockResolvedValue(undefined);
+      (conversionService as any).moveRoomsService = {
+        handleRoomsDuringMove: vi.fn().mockResolvedValue(undefined),
+      };
+      (conversionService as any).dispatchAutoInvitesAfterMove = vi
+        .fn()
+        .mockResolvedValue(undefined);
+
+      return { movedSpace, targetParentL0 };
+    };
+
+    it('should reject non-PLATFORM_ADMIN before any service call', async () => {
+      authorizationService.grantAccessOrFail.mockImplementation(() => {
+        throw new Error('Unauthorized');
+      });
+
+      await expect(
+        resolver.moveSpaceL1ToSpaceL0(actorContext, {
+          spaceL1ID: 'space-l1',
+          targetSpaceL0ID: 'target-l0',
+        })
+      ).rejects.toThrow('Unauthorized');
+
+      expect(
+        (conversionService as any).moveSpaceL1ToSpaceL0OrFail
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should recompute platformRolesAccess from target L0 BEFORE applyAuthorizationPolicy', async () => {
+      const targetPlatformAccess = { roles: ['REGISTERED', 'ANONYMOUS'] };
+      const { movedSpace } = setupMoveL1L0HappyPath(targetPlatformAccess);
+
+      await resolver.moveSpaceL1ToSpaceL0(actorContext, {
+        spaceL1ID: 'space-l1',
+        targetSpaceL0ID: 'target-l0',
+      });
+
+      expect(
+        (spaceService as any).updatePlatformRolesAccessRecursively
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ id: movedSpace.id }),
+        targetPlatformAccess
+      );
+
+      const recomputeOrder = (spaceService as any)
+        .updatePlatformRolesAccessRecursively.mock.invocationCallOrder[0];
+      const authPolicyOrder =
+        spaceAuthorizationService.applyAuthorizationPolicy.mock
+          .invocationCallOrder[0];
+      expect(recomputeOrder).toBeLessThan(authPolicyOrder);
+
+      const recomputeCallArgs = (spaceService as any)
+        .updatePlatformRolesAccessRecursively.mock.calls[0];
+      expect(recomputeCallArgs[1]).toBe(targetPlatformAccess);
+    });
+  });
+
+  describe('moveSpaceL1ToSpaceL2', () => {
+    const setupMoveL1L2HappyPath = (
+      platformRolesAccessFromTarget = { roles: ['REGISTERED'] }
+    ) => {
+      const savedSpaceId = 'saved-l1-l2-space';
+      const movedSpace = {
+        id: savedSpaceId,
+        levelZeroSpaceID: 'target-l0',
+        platformRolesAccess: { roles: [] }, // old value before recompute
+      };
+      const savedSpace = { ...movedSpace };
+      const targetParentL1 = {
+        id: 'target-l1',
+        platformRolesAccess: platformRolesAccessFromTarget,
+      };
+
+      authorizationService.grantAccessOrFail.mockReturnValue(undefined);
+      (conversionService as any).moveSpaceL1ToSpaceL2OrFail.mockResolvedValue({
+        space: movedSpace,
+        removedActorIds: ['actor-removed'],
+      });
+      spaceService.save.mockResolvedValue(savedSpace);
+      // getSpaceOrFail sequence: 1. targetParentL1 (recompute), 2. moved space
+      // with parentSpace.authorization (getParentSpaceAuthorization), 3. return.
+      spaceService.getSpaceOrFail
+        .mockResolvedValueOnce(targetParentL1)
+        .mockResolvedValueOnce({
+          id: savedSpaceId,
+          parentSpace: { authorization: { id: 'parent-auth' } },
+        })
+        .mockResolvedValue({ id: savedSpaceId });
+      (spaceService as any).updatePlatformRolesAccessRecursively = vi
+        .fn()
+        .mockImplementation(async (space: any, parentAccess: any) => {
+          space.platformRolesAccess = parentAccess;
+          return space;
+        });
+      spaceAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([]);
+      authorizationPolicyService.saveAll.mockResolvedValue(undefined);
+      (conversionService as any).invalidateUrlCachesForSubtree = vi
+        .fn()
+        .mockResolvedValue(undefined);
+      (conversionService as any).moveRoomsService = {
+        handleRoomsDuringMove: vi.fn().mockResolvedValue(undefined),
+      };
+      (conversionService as any).dispatchAutoInvitesAfterMove = vi
+        .fn()
+        .mockResolvedValue(undefined);
+
+      return { movedSpace, targetParentL1 };
+    };
+
+    it('should reject non-PLATFORM_ADMIN before any service call', async () => {
+      authorizationService.grantAccessOrFail.mockImplementation(() => {
+        throw new Error('Unauthorized');
+      });
+
+      await expect(
+        resolver.moveSpaceL1ToSpaceL2(actorContext, {
+          spaceL1ID: 'space-l1',
+          targetSpaceL1ID: 'target-l1',
+        })
+      ).rejects.toThrow('Unauthorized');
+
+      expect(
+        (conversionService as any).moveSpaceL1ToSpaceL2OrFail
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should recompute platformRolesAccess from target L1 BEFORE applyAuthorizationPolicy', async () => {
+      const targetPlatformAccess = { roles: ['REGISTERED', 'ANONYMOUS'] };
+      const { movedSpace } = setupMoveL1L2HappyPath(targetPlatformAccess);
+
+      await resolver.moveSpaceL1ToSpaceL2(actorContext, {
+        spaceL1ID: 'space-l1',
+        targetSpaceL1ID: 'target-l1',
+      });
+
+      expect(
+        (spaceService as any).updatePlatformRolesAccessRecursively
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ id: movedSpace.id }),
+        targetPlatformAccess
+      );
+
+      const recomputeOrder = (spaceService as any)
+        .updatePlatformRolesAccessRecursively.mock.invocationCallOrder[0];
+      const authPolicyOrder =
+        spaceAuthorizationService.applyAuthorizationPolicy.mock
+          .invocationCallOrder[0];
+      expect(recomputeOrder).toBeLessThan(authPolicyOrder);
+
+      const recomputeCallArgs = (spaceService as any)
+        .updatePlatformRolesAccessRecursively.mock.calls[0];
+      expect(recomputeCallArgs[1]).toBe(targetPlatformAccess);
+    });
+  });
 });

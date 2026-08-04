@@ -117,6 +117,7 @@ enum AuthorizationCredential {
   ORGANIZATION_ADMIN
   ORGANIZATION_ASSOCIATE
   ORGANIZATION_OWNER
+  PLATFORM_OPERATIONS_ADMIN
   SPACE_ADMIN
   SPACE_LEAD
   SPACE_MEMBER
@@ -224,6 +225,7 @@ enum AuthorizationPrivilege {
   MOVE_CONTRIBUTION
   MOVE_POST
   PLATFORM_ADMIN
+  PLATFORM_OPERATIONS_ADMIN
   PLATFORM_SETTINGS_ADMIN
   PUBLIC_SHARE
   READ
@@ -379,6 +381,7 @@ enum CredentialType {
   ORGANIZATION_ADMIN
   ORGANIZATION_ASSOCIATE
   ORGANIZATION_OWNER
+  PLATFORM_OPERATIONS_ADMIN
   SPACE_ADMIN
   SPACE_FEATURE_MEMO_MULTI_USER
   SPACE_FEATURE_OFFICE_DOCUMENTS
@@ -747,6 +750,7 @@ enum RoleName {
   OWNER
   PLATFORM_ASSISTANT_ACCESS
   PLATFORM_BETA_TESTER
+  PLATFORM_OPERATIONS_ADMIN
   PLATFORM_VC_CAMPAIGN
   REGISTERED
 }
@@ -1870,6 +1874,18 @@ type CalloutContributionsCountOutput {
   whiteboard: Float!
 }
 
+"""
+Admin-fixed initial map view for a Contributors-collection callout's map. Absent/null ⇒ automatic framing (fit to plotted contributors; Europe fallback).
+"""
+type CalloutContributorsMapView {
+  """Map center latitude. Finite, within [-90, 90]."""
+  latitude: Float!
+  """Map center longitude. Finite, within [-180, 180]."""
+  longitude: Float!
+  """Map zoom level. Finite, within [0, 22]."""
+  zoom: Float!
+}
+
 type CalloutContributorsSettings {
   """
   The contributor types included in this contributor-collection callout. At least one.
@@ -1881,6 +1897,10 @@ type CalloutContributorsSettings {
   defaultContributorType: ActorType!
   """The default display mode (list or map)."""
   defaultView: ContributorCollectionView!
+  """
+  Admin-fixed initial map view. Absent/null ⇒ automatic framing (fit to plotted contributors; Europe fallback).
+  """
+  mapView: CalloutContributorsMapView
 }
 
 type CalloutFraming {
@@ -2274,6 +2294,10 @@ type Config {
   featureFlags: [PlatformFeatureFlag!]!
   """Integration with a 3rd party Geo information service"""
   geo: Geo!
+  """
+  Language configuration: eligible set for proactive offers and the platform default.
+  """
+  language: LanguageConfig!
   """Platform related locations."""
   locations: PlatformLocations!
   """Sentry (client monitoring) related configuration."""
@@ -2442,6 +2466,15 @@ type CreateCalloutContributionDefaultsData {
   whiteboardContent: WhiteboardContent
 }
 
+type CreateCalloutContributorsMapViewData {
+  """Map center latitude. Finite, within [-90, 90]."""
+  latitude: Float!
+  """Map center longitude. Finite, within [-180, 180]."""
+  longitude: Float!
+  """Map zoom level. Finite, within [0, 22]."""
+  zoom: Float!
+}
+
 type CreateCalloutContributorsSettingsData {
   """The contributor types to include. At least one type is required."""
   contributorTypes: [ActorType!]!
@@ -2453,6 +2486,10 @@ type CreateCalloutContributorsSettingsData {
   The default display mode. Defaults to LIST; MAP requires a locatable contributor type.
   """
   defaultView: ContributorCollectionView
+  """
+  Admin-fixed initial map view. When omitted, the callout opens on automatic framing.
+  """
+  mapView: CreateCalloutContributorsMapViewData
 }
 
 type CreateCalloutData {
@@ -3269,6 +3306,10 @@ type Invitation {
   nextEvents: [String!]!
   """The current state of this Lifecycle."""
   state: String!
+  """
+  Optional language the inviter expects the invitee to prefer; recorded per invitation.
+  """
+  suggestedLanguage: String
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
   welcomeMessage: String
@@ -3330,6 +3371,15 @@ type KratosIdentity {
   lastName: String
   """The current verification status of the email address."""
   verificationStatus: String!
+}
+
+type LanguageConfig {
+  """The platform-wide default interface language."""
+  default: String!
+  """
+  Languages the platform proactively detects, offers, and allows as invitation suggestions — subset of the supported set; empty = all proactive offers disabled.
+  """
+  eligible: [String!]!
 }
 
 type LatestReleaseDiscussion {
@@ -4320,7 +4370,7 @@ type Mutation {
   """Update the Application Form used by this RoleSet."""
   updateApplicationFormOnRoleSet(applicationFormData: UpdateApplicationFormOnRoleSetInput!): RoleSet!
   """
-  Set the admin per-capability grant on the virtual-assistant actor, governing what it may do system-invoked (default read-only). Requires platform-admin.
+  Set the admin per-capability grant on the virtual-assistant actor, governing what it may do system-invoked (default read-only). Requires the platform-operations-admin privilege.
   """
   updateAssistantActorCapabilities(grantData: GrantAssistantActorCapabilitiesInput!): VirtualAssistant!
   """Update the baseline License Plan on the specified Account."""
@@ -4841,6 +4891,10 @@ type PlatformInvitation {
   roleSetExtraRoles: [RoleName!]!
   """Whether to also add the invited user to the parent community."""
   roleSetInvitedToParent: Boolean!
+  """
+  Optional language the inviter expects the invitee to prefer; recorded per invitation.
+  """
+  suggestedLanguage: String
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
   welcomeMessage: String
@@ -6765,6 +6819,14 @@ type UserSettings {
   homeSpace: UserSettingsHomeSpace!
   """The ID of the entity"""
   id: UUID!
+  """
+  The interface language chosen by this User. Null = the User has never chosen a language (distinct from having chosen the platform default).
+  """
+  language: String
+  """
+  Whether this User has answered the one-time language offer (global across all languages). Latched true by any language write.
+  """
+  languageOfferAnswered: Boolean!
   """The notification settings for this User."""
   notification: UserSettingsNotification!
   """The privacy settings for this User"""
@@ -7505,6 +7567,15 @@ input CreateCalloutContributionInput {
   whiteboard: CreateWhiteboardInput
 }
 
+input CreateCalloutContributorsMapViewInput {
+  """Map center latitude. Finite, within [-90, 90]."""
+  latitude: Float!
+  """Map center longitude. Finite, within [-180, 180]."""
+  longitude: Float!
+  """Map zoom level. Finite, within [0, 22]."""
+  zoom: Float!
+}
+
 input CreateCalloutContributorsSettingsInput {
   """The contributor types to include. At least one type is required."""
   contributorTypes: [ActorType!]!
@@ -7516,6 +7587,10 @@ input CreateCalloutContributorsSettingsInput {
   The default display mode. Defaults to LIST; MAP requires a locatable contributor type.
   """
   defaultView: ContributorCollectionView
+  """
+  Admin-fixed initial map view. When omitted, the callout opens on automatic framing.
+  """
+  mapView: CreateCalloutContributorsMapViewInput
 }
 
 input CreateCalloutFramingInput {
@@ -8342,6 +8417,10 @@ input InviteForEntryRoleOnRoleSetInput {
   invitedActorIDs: [UUID!]!
   invitedUserEmails: [String!]!
   roleSetID: UUID!
+  """
+  Optional language the inviter expects the invitees to prefer (single value for the whole batch). Must be in the eligible set at compose time. Recorded per-invitation so per-invitee granularity later is a UI change, not a migration.
+  """
+  suggestedLanguage: String
   """The welcome message to send"""
   welcomeMessage: String
 }
@@ -8898,6 +8977,10 @@ input UpdateCalloutContributorsSettingsInput {
   The default display mode. Defaults to LIST; MAP requires a locatable contributor type.
   """
   defaultView: ContributorCollectionView
+  """
+  Admin-fixed initial map view. Omitted ⇒ stored view unchanged; explicit null ⇒ clear to automatic framing.
+  """
+  mapView: CreateCalloutContributorsMapViewInput
 }
 
 input UpdateCalloutEntityInput {
@@ -9594,6 +9677,14 @@ input UpdateUserSettingsEntityInput {
   designVersion: Int
   """Settings related to Home Space."""
   homeSpace: UpdateUserSettingsHomeSpaceInput
+  """
+  Set the user's interface language preference. Must be a value from the supported languages set. Any language write also latches languageOfferAnswered=true.
+  """
+  language: String
+  """
+  Mark that this User has answered the one-time language offer. One-way latch: setting false is rejected.
+  """
+  languageOfferAnswered: Boolean
   """Settings related to this users Notifications preferences."""
   notification: UpdateUserSettingsNotificationInput
   """Settings related to Privacy."""

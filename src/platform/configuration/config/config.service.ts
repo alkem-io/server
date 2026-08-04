@@ -1,5 +1,9 @@
+import {
+  parseSupportedEligibleLanguages,
+  resolveSupportedDefaultLanguage,
+} from '@common/constants/supported.languages';
 import { PlatformFeatureFlagName } from '@common/enums/platform.feature.flag.name';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types';
 import { IAuthenticationProviderConfig } from './authentication/providers/authentication.provider.config.interface';
@@ -8,6 +12,8 @@ import { IConfig } from './config.interface';
 
 @Injectable()
 export class KonfigService {
+  private readonly logger = new Logger(KonfigService.name);
+
   constructor(private configService: ConfigService<AlkemioConfig, true>) {}
 
   async getConfig(): Promise<IConfig> {
@@ -31,6 +37,34 @@ export class KonfigService {
     const fileConfig = this.configService.get('storage.file', {
       infer: true,
     });
+    const languageConfig = this.configService.get('language', { infer: true });
+    const eligibleRaw: string = languageConfig?.eligible ?? '';
+    // parseSupportedEligibleLanguages handles split/trim/dedup and filters to
+    // SUPPORTED_INTERFACE_LANGUAGES. Warn on any value that gets dropped.
+    const eligible = parseSupportedEligibleLanguages(eligibleRaw);
+    if (eligibleRaw) {
+      const parsedRaw = eligibleRaw
+        .split(',')
+        .map((s: string) => s.trim())
+        .filter((s: string) => s.length > 0);
+      for (const lang of parsedRaw) {
+        if (!eligible.includes(lang)) {
+          this.logger.warn(
+            `Configured eligible language '${lang}' is not in SUPPORTED_INTERFACE_LANGUAGES and will be ignored.`
+          );
+        }
+      }
+    }
+    // resolveSupportedDefaultLanguage falls back to 'en' and warns when the
+    // configured LANGUAGE_DEFAULT is set but not in the supported set (3655923899).
+    const rawDefault = languageConfig?.default;
+    const resolvedDefault = resolveSupportedDefaultLanguage(rawDefault);
+    if (rawDefault !== undefined && resolvedDefault !== rawDefault) {
+      this.logger.warn(
+        `Configured default language '${rawDefault}' is not in SUPPORTED_INTERFACE_LANGUAGES; falling back to 'en'.`
+      );
+    }
+
     return {
       authentication: {
         providers: await this.getAuthenticationProvidersConfig(),
@@ -133,6 +167,10 @@ export class KonfigService {
         file: {
           maxFileSize: fileConfig?.max_file_size,
         },
+      },
+      language: {
+        eligible,
+        default: resolvedDefault,
       },
     };
   }

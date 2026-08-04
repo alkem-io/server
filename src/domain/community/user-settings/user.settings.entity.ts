@@ -1,3 +1,4 @@
+import { TINY_TEXT_LENGTH } from '@common/constants';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Column, Entity } from 'typeorm';
 import { IUserSettingsAssistant } from './user.settings.assistant.interface';
@@ -33,4 +34,10 @@ export class UserSettings extends AuthorizableEntity implements IUserSettings {
 
   @Column('int', { nullable: false, default: DESIGN_VERSION_CURRENT_DEFAULT })
   designVersion!: number;
+
+  @Column('varchar', { length: TINY_TEXT_LENGTH, nullable: true })
+  language!: string | null;
+
+  @Column('boolean', { nullable: false, default: false })
+  languageOfferAnswered!: boolean;
 }

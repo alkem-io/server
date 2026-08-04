@@ -9,8 +9,12 @@ export const MockTaskService: ValueProvider<PublicPart<TaskService>> = {
     updateTaskErrors: vi.fn(),
     updateTaskResults: vi.fn(),
     create: vi.fn(),
+    setItemsCount: vi.fn(),
     get: vi.fn(),
+    getOrFail: vi.fn(),
     getAll: vi.fn(),
     getTaskList: vi.fn(),
+    complete: vi.fn(),
+    completeWithError: vi.fn(),
   },
 };

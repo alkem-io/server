@@ -358,6 +358,11 @@ services:
 
   rabbitmq:
     container_name: alkemio_dev_rabbitmq
+    # The Erlang node name is derived from the hostname, and the node name is
+    # the mnesia sub-directory name. Without pinning it, Docker uses the random
+    # container id, so every `compose up` orphans the previous node directory
+    # under ~/.docker-conf/rabbitmq/data and that directory is never reclaimed.
+    hostname: rmq
     image: rabbitmq:3.9.13-management
     restart: always
     networks:
@@ -369,6 +374,9 @@ services:
       - RABBITMQ_SECURE_PASSWORD=yes
       - RABBITMQ_DEFAULT_USER=alkemio-admin
       - RABBITMQ_DEFAULT_PASS=alkemio!
+      # Ra (Raft) pre-allocates its write-ahead log at boot, ~280MB by default.
+      # The dev stack only declares classic queues, so cap it at 32MB.
+      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-ra wal_max_size_bytes 33554432
     healthcheck:
       test: rabbitmq-diagnostics check_port_connectivity
       interval: 30s
@@ -382,7 +390,7 @@ services:
       [
         'bash',
         '-c',
-        'chmod 400 /var/lib/rabbitmq/.erlang.cookie; rabbitmq-server --hostname rmq',
+        'chmod 400 /var/lib/rabbitmq/.erlang.cookie; rabbitmq-server',
       ]
 
   notification:
@@ -529,7 +537,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service:v0.2.2
+    image: alkemio/file-service:v0.2.3
     depends_on:
       postgres:
         condition: service_healthy
@@ -564,7 +572,7 @@ services:
   # below waits for this to complete (service_completed_successfully).
   file-backup-migrate:
     container_name: alkemio_dev_file_backup_migrate
-    image: alkemio/file-backup-service:v0.0.4
+    image: alkemio/file-backup-service:v0.0.5
     depends_on:
       postgres:
         condition: service_healthy
@@ -587,7 +595,7 @@ services:
   file-backup-service:
     container_name: alkemio_dev_file_backup_service
     hostname: file-backup-service
-    image: alkemio/file-backup-service:v0.0.4
+    image: alkemio/file-backup-service:v0.0.5
     depends_on:
       postgres:
         condition: service_healthy
