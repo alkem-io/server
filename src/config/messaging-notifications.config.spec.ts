@@ -18,9 +18,15 @@ describe('messaging notifications configuration defaults', () => {
       process.env.MESSAGING_EMAIL_SUPPRESSION_WINDOW_SECONDS;
     origEnv.MESSAGING_PUSH_THROTTLE_MAX_PER_MINUTE =
       process.env.MESSAGING_PUSH_THROTTLE_MAX_PER_MINUTE;
+    origEnv.MESSAGING_EMAIL_BUDGET_MAX_PER_WINDOW =
+      process.env.MESSAGING_EMAIL_BUDGET_MAX_PER_WINDOW;
+    origEnv.MESSAGING_EMAIL_BUDGET_WINDOW_SECONDS =
+      process.env.MESSAGING_EMAIL_BUDGET_WINDOW_SECONDS;
     delete process.env.MESSAGING_NOTIFICATIONS_ENABLED;
     delete process.env.MESSAGING_EMAIL_SUPPRESSION_WINDOW_SECONDS;
     delete process.env.MESSAGING_PUSH_THROTTLE_MAX_PER_MINUTE;
+    delete process.env.MESSAGING_EMAIL_BUDGET_MAX_PER_WINDOW;
+    delete process.env.MESSAGING_EMAIL_BUDGET_WINDOW_SECONDS;
     delete process.env.ALKEMIO_CONFIG_PATH;
   });
 
@@ -66,6 +72,8 @@ describe('messaging notifications configuration defaults', () => {
     process.env.MESSAGING_NOTIFICATIONS_ENABLED = 'false';
     process.env.MESSAGING_EMAIL_SUPPRESSION_WINDOW_SECONDS = '120';
     process.env.MESSAGING_PUSH_THROTTLE_MAX_PER_MINUTE = '5';
+    process.env.MESSAGING_EMAIL_BUDGET_MAX_PER_WINDOW = '7';
+    process.env.MESSAGING_EMAIL_BUDGET_WINDOW_SECONDS = '60';
 
     const factory = await loadConfiguration();
     const result = factory();
@@ -75,5 +83,17 @@ describe('messaging notifications configuration defaults', () => {
       result.notifications.messaging.email_suppression_window_seconds
     ).toBe(120);
     expect(result.notifications.messaging.push.throttle.max_per_minute).toBe(5);
+    expect(result.notifications.messaging.email.budget.max_per_window).toBe(7);
+    expect(result.notifications.messaging.email.budget.window_seconds).toBe(60);
+  });
+
+  it('sec-server-10: defaults the global email budget to 20 per 3600s (1h) when absent', async () => {
+    const factory = await loadConfiguration();
+    const result = factory();
+
+    expect(result.notifications.messaging.email.budget.max_per_window).toBe(20);
+    expect(result.notifications.messaging.email.budget.window_seconds).toBe(
+      3600
+    );
   });
 });

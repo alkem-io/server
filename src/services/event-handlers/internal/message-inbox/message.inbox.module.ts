@@ -20,6 +20,7 @@ import { MessagingRedisModule } from '@services/infrastructure/redis-client/mess
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator/url.generator.module';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { ConversationNotificationDedupeService } from './conversation.notification.dedupe.service';
+import { ConversationNotificationEmailBudgetService } from './conversation.notification.email.budget.service';
 import { ConversationNotificationService } from './conversation.notification.service';
 import { ConversationNotificationSuppressionService } from './conversation.notification.suppression.service';
 import { MessageInboxService } from './message.inbox.service';
@@ -57,6 +58,7 @@ import { VcInvocationService } from './vc.invocation.service';
     ConversationNotificationService,
     ConversationNotificationDedupeService,
     ConversationNotificationSuppressionService,
+    ConversationNotificationEmailBudgetService,
   ],
   exports: [MessageInboxService],
 })

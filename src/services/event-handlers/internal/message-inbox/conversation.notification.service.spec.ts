@@ -12,6 +12,7 @@ import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConversationNotificationDedupeService } from './conversation.notification.dedupe.service';
+import { ConversationNotificationEmailBudgetService } from './conversation.notification.email.budget.service';
 import { ConversationNotificationService } from './conversation.notification.service';
 import { ConversationNotificationSuppressionService } from './conversation.notification.suppression.service';
 
@@ -30,6 +31,7 @@ const mockUrlGeneratorService = {
 };
 const mockDedupeService = { claim: vi.fn() };
 const mockSuppressionService = { isSuppressed: vi.fn() };
+const mockEmailBudgetService = { isAllowed: vi.fn() };
 const mockConfigService = {
   get: vi.fn((key: string): boolean | undefined => {
     if (key === 'notifications.messaging.enabled') return true;
@@ -69,6 +71,10 @@ describe('ConversationNotificationService', () => {
           provide: ConversationNotificationSuppressionService,
           useValue: mockSuppressionService,
         },
+        {
+          provide: ConversationNotificationEmailBudgetService,
+          useValue: mockEmailBudgetService,
+        },
         { provide: ConfigService, useValue: mockConfigService },
         MockWinstonProvider,
       ],
@@ -98,6 +104,7 @@ describe('ConversationNotificationService', () => {
     mockActorLookupService.getActorTypeById.mockResolvedValue(ActorType.USER);
     mockDedupeService.claim.mockResolvedValue(true);
     mockSuppressionService.isSuppressed.mockResolvedValue(false);
+    mockEmailBudgetService.isAllowed.mockResolvedValue(true);
     mockNotificationRecipientsService.getRecipients.mockResolvedValue({
       emailRecipients: [],
       inAppRecipients: [],
@@ -539,6 +546,53 @@ describe('ConversationNotificationService', () => {
         expect.anything(),
         expect.anything()
       );
+    });
+  });
+
+  describe('global per-user email budget (sec-server-10)', () => {
+    it('drops recipients whose GLOBAL email budget is exhausted from the email payload but never from push', async () => {
+      mockNotificationRecipientsService.getRecipients.mockResolvedValue({
+        emailRecipients: [recipientUser('user-b')],
+        inAppRecipients: [],
+        pushRecipients: [recipientUser('user-b')],
+      });
+      mockEmailBudgetService.isAllowed.mockResolvedValue(false);
+
+      await service.notifyConversationMessage(directParams());
+
+      expect(
+        mockNotificationExternalAdapter.sendExternalNotifications
+      ).not.toHaveBeenCalled();
+      expect(
+        mockNotificationPushAdapter.sendMessagingPushNotifications
+      ).toHaveBeenCalledWith(
+        [recipientUser('user-b')],
+        expect.anything(),
+        expect.anything()
+      );
+    });
+
+    it('checks the suppression window and the global budget for every candidate concurrently, not sequentially', async () => {
+      mockNotificationRecipientsService.getRecipients.mockResolvedValue({
+        emailRecipients: [recipientUser('user-b'), recipientUser('user-c')],
+        inAppRecipients: [],
+        pushRecipients: [],
+      });
+      let inFlight = 0;
+      let maxInFlight = 0;
+      mockSuppressionService.isSuppressed.mockImplementation(async () => {
+        inFlight++;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await Promise.resolve();
+        inFlight--;
+        return false;
+      });
+
+      await service.notifyConversationMessage(
+        directParams({ memberActorIds: ['sender-1', 'user-b', 'user-c'] })
+      );
+
+      expect(maxInFlight).toBeGreaterThan(1);
     });
   });
 });

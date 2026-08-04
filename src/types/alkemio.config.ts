@@ -284,6 +284,12 @@ export type AlkemioConfig = {
           max_per_minute: number;
         };
       };
+      email: {
+        budget: {
+          max_per_window: number;
+          window_seconds: number;
+        };
+      };
     };
   };
   collaboration: {

@@ -533,6 +533,14 @@ notifications:
     push:
       throttle:
         max_per_minute: ${MESSAGING_PUSH_THROTTLE_MAX_PER_MINUTE}:10
+    # sec-server-10: a GLOBAL, per-user email budget — independent of the
+    # per-(recipient, conversation) suppression window above, which resets
+    # whenever a new conversation is created and therefore cannot alone cap
+    # total conversation-message email volume to one user.
+    email:
+      budget:
+        max_per_window: ${MESSAGING_EMAIL_BUDGET_MAX_PER_WINDOW}:20
+        window_seconds: ${MESSAGING_EMAIL_BUDGET_WINDOW_SECONDS}:3600
 
 collaboration:
   membership:

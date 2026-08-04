@@ -219,5 +219,26 @@ describe('NotificationPushAdapter', () => {
         mockPushSubscriptionService.getActiveSubscriptions
       ).not.toHaveBeenCalled();
     });
+
+    it('sec-server-10: checks the messaging push budget for every recipient concurrently, not sequentially', async () => {
+      let inFlight = 0;
+      let maxInFlight = 0;
+      mockMessagingPushBudgetService.isAllowed.mockImplementation(async () => {
+        inFlight++;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await Promise.resolve();
+        inFlight--;
+        return true;
+      });
+      mockPushSubscriptionService.getActiveSubscriptions.mockResolvedValue([]);
+
+      await adapter.sendMessagingPushNotifications(
+        [createUser('user-1'), createUser('user-2'), createUser('user-3')],
+        NotificationEvent.USER_CONVERSATION_MESSAGE_GROUP,
+        { title: 'Team', body: 'Alice sent a message', url: '/?chat=1' }
+      );
+
+      expect(maxInFlight).toBeGreaterThan(1);
+    });
   });
 });

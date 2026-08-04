@@ -4205,7 +4205,7 @@ type Mutation {
   """
   joinRoleSet(joinData: JoinAsEntryRoleOnRoleSetInput!): RoleSet!
   """
-  Leave a group conversation. Returns true when the RPC is sent. Actual membership change arrives via MEMBER_REMOVED subscription event. If the last member leaves, the conversation is auto-deleted and a CONVERSATION_DELETED event follows.
+  Leave a group conversation. Awaits Matrix confirmation of the kick and throws if it is rejected — it does not report success merely because the RPC was sent. On success, DB persistence and the MEMBER_REMOVED subscription event follow asynchronously. If the last member leaves, the conversation is auto-deleted and a CONVERSATION_DELETED event follows.
   """
   leaveConversation(leaveData: LeaveConversationInput!): Boolean!
   """Reset the License with Entitlements on the specified Account."""
@@ -4243,7 +4243,7 @@ type Mutation {
   """Empties the CommunityGuidelines."""
   removeCommunityGuidelinesContent(communityGuidelinesData: RemoveCommunityGuidelinesContentInput!): CommunityGuidelines!
   """
-  Remove a member from a group conversation. Returns true when the RPC is sent. Actual membership change arrives via MEMBER_REMOVED subscription event.
+  Remove a member from a group conversation. Awaits Matrix confirmation of the kick and throws if it is rejected (e.g. insufficient permissions) — it does not report success merely because the RPC was sent. On success, DB persistence and the MEMBER_REMOVED subscription event follow asynchronously.
   """
   removeConversationMember(memberData: RemoveConversationMemberInput!): Boolean!
   """Remove the default callout template from an InnovationFlowState."""
@@ -7720,7 +7720,7 @@ input CreateConversationInput {
   """
   displayName: String
   """
-  IDs of members to add. For DIRECT: exactly 1 ID. For GROUP: 1+ IDs. Creator is auto-included.
+  IDs of members to add. For DIRECT: exactly 1 ID. For GROUP: 1+ IDs, up to 100. Creator is auto-included.
   """
   memberIDs: [UUID!]!
   """

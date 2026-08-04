@@ -116,6 +116,25 @@ by deriving the real per-room outcome from `results` (see
 `ensureAllSucceeded`, which now throws a `CommunicationAdapterException`
 instead of returning an optimistic `true` when Matrix rejects the kick.
 
+### Finding 1 addendum: 2026-08-04 — sec-server-11 (security review)
+
+The `ensureAllSucceeded` fix above closed the false-success gap but opened a
+worse one once 034 also made group conversations a default-on push channel:
+a user enrolled into a group by anyone else had **no way to leave**, because
+the same known Matrix-side kick rejection now surfaced as a hard GraphQL
+error on `removeConversationMember`/`leaveConversation` — the member row
+(and therefore their notification targeting, since recipients are re-read
+from that table at send time) stayed forever. Fixed by making
+`ConversationService.removeMember` authoritative on the Alkemio side: it
+still attempts the Matrix kick and still surfaces genuine transport/programming
+errors, but when the adapter reports a rejected kick
+(`CommunicationAdapterException`) it now removes the local membership row
+directly (`persistMemberRemoved`) and logs the Matrix-side divergence for
+manual reconciliation, returning success to the caller instead of throwing.
+This is the documented interim mitigation (Option "make the Alkemio side
+authoritative" below) — the underlying power-level defect described above is
+still open and still needs its own cross-repo fix.
+
 ---
 
 ### Finding 2: [Date - Author]

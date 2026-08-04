@@ -66,13 +66,18 @@ export class NotificationPushAdapter {
       return;
     }
 
-    const allowedUserIds: string[] = [];
-    for (const user of pushRecipients) {
-      const allowed = await this.messagingPushBudgetService.isAllowed(user.id);
-      if (allowed) {
-        allowedUserIds.push(user.id);
-      }
-    }
+    // sec-server-10: check the messaging push budget for every recipient
+    // concurrently rather than sequentially (previously one Redis round
+    // trip per recipient, awaited one at a time).
+    const allowances = await Promise.all(
+      pushRecipients.map(async user => ({
+        userId: user.id,
+        allowed: await this.messagingPushBudgetService.isAllowed(user.id),
+      }))
+    );
+    const allowedUserIds = allowances
+      .filter(allowance => allowance.allowed)
+      .map(allowance => allowance.userId);
 
     await this.publishToSubscriptions(allowedUserIds, event, payload);
   }

@@ -24,6 +24,7 @@ import {
   classifyConversationMessage,
 } from './conversation.notification.classification';
 import { ConversationNotificationDedupeService } from './conversation.notification.dedupe.service';
+import { ConversationNotificationEmailBudgetService } from './conversation.notification.email.budget.service';
 import { ConversationNotificationSuppressionService } from './conversation.notification.suppression.service';
 
 // FR-020: bounds the plural recipient-lookup input; conversations larger
@@ -76,6 +77,7 @@ export class ConversationNotificationService {
     private readonly urlGeneratorService: UrlGeneratorService,
     private readonly dedupeService: ConversationNotificationDedupeService,
     private readonly suppressionService: ConversationNotificationSuppressionService,
+    private readonly emailBudgetService: ConversationNotificationEmailBudgetService,
     private configService: ConfigService<AlkemioConfig, true>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
@@ -230,17 +232,26 @@ export class ConversationNotificationService {
     }
 
     // FR-011/D-8 — email-only leading-edge suppression window, per
-    // (recipient, conversation). Fails open (send + log) on store errors.
-    const emailRecipients: IUser[] = [];
-    for (const user of emailCandidates) {
-      const suppressed = await this.suppressionService.isSuppressed(
-        user.id,
-        conversation.id
-      );
-      if (!suppressed) {
-        emailRecipients.push(user);
-      }
-    }
+    // (recipient, conversation) — AND sec-server-10 — a GLOBAL per-user
+    // email budget that the per-conversation suppression window alone
+    // cannot provide (it resets whenever a new conversation is created).
+    // Both are checked here. sec-server-10: previously a sequential
+    // await-in-a-for-loop (one Redis round trip per recipient); now issued
+    // concurrently across recipients — still bounded by RECIPIENT_BATCH_SIZE
+    // per resolveRecipients() call. Both stores fail open (send + log) on
+    // errors.
+    const decisions = await Promise.all(
+      emailCandidates.map(async user => {
+        const [suppressed, budgetAllowed] = await Promise.all([
+          this.suppressionService.isSuppressed(user.id, conversation.id),
+          this.emailBudgetService.isAllowed(user.id),
+        ]);
+        return { user, allowed: !suppressed && budgetAllowed };
+      })
+    );
+    const emailRecipients = decisions
+      .filter(decision => decision.allowed)
+      .map(decision => decision.user);
 
     if (emailRecipients.length === 0) {
       return;
