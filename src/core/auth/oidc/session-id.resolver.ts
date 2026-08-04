@@ -38,9 +38,10 @@ export const resolveCookieSessionId = (
 ): string | null => {
   const raw = readRawCookie(req, cookieName);
   if (!raw) {
-    // No cookie presented: rows 1 and 4 of the decision table. This single
-    // branch is the whole of FR-001, and the reason a Redis outage stops being
-    // a total outage — anonymous traffic no longer depends on Redis at all.
+    // No cookie presented: row 1 of the decision table (rows 2 and 4 are
+    // handled below). This single branch is the whole of FR-001, and the reason
+    // a Redis outage stops being a total outage — anonymous traffic no longer
+    // depends on Redis at all.
     return null;
   }
 
@@ -106,9 +107,39 @@ const readRawCookie = (
     if (part.slice(0, separator).trim() !== cookieName) {
       continue;
     }
-    const value = decodeURIComponent(part.slice(separator + 1).trim());
+    const value = decodeCookieValue(part.slice(separator + 1).trim());
     return value.length > 0 ? value : null;
   }
 
   return null;
+};
+
+/**
+ * Percent-decode a cookie value, never throwing.
+ *
+ * `decodeURIComponent` raises `URIError` on malformed input — `%zz`, a trailing
+ * `%`, a truncated multi-byte sequence. This runs on the path EVERY request
+ * takes, so an unguarded decode lets any client turn a malformed `Cookie`
+ * header into a 500. On a change whose whole thesis is "degrade, do not
+ * reject", that would be this issue's own defect reintroduced one function
+ * along.
+ *
+ * The fallback is the RAW value, not `null`. `express-session` parses this same
+ * header with the `cookie` package, whose `tryDecode` returns the undecoded
+ * string on exactly this failure, so returning raw keeps our predicate agreeing
+ * with the middleware whose `sessionID` we are testing against. Returning
+ * `null` would instead make a request anonymous that express-session had
+ * already authenticated — the silent total-auth-outage mode that the header
+ * fallback in `readRawCookie` exists specifically to avoid.
+ *
+ * No forgery surface is added: this value is only ever used as a PREDICATE, and
+ * the sid returned to callers is always `req.sessionID`. See
+ * `resolveCookieSessionId`.
+ */
+const decodeCookieValue = (value: string): string => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 };

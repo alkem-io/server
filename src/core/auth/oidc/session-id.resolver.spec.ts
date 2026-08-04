@@ -191,6 +191,45 @@ describe('resolveCookieSessionId', () => {
         )
       ).toBeNull();
     });
+
+    it('does not throw on a malformed percent-escape in the header', () => {
+      // `decodeURIComponent('%zz')` raises URIError. This is the path EVERY
+      // request takes, so before the guard any client could turn a malformed
+      // Cookie header into a 500 — the same "reject rather than degrade"
+      // failure this issue exists to remove, one function along.
+      expect(() =>
+        resolveCookieSessionId(
+          { sessionID: SID, headers: { cookie: `${COOKIE}=%zz` } },
+          COOKIE
+        )
+      ).not.toThrow();
+
+      expect(
+        resolveCookieSessionId(
+          { sessionID: SID, headers: { cookie: `${COOKIE}=%zz` } },
+          COOKIE
+        )
+      ).toBeNull();
+    });
+
+    it('falls back to the RAW value when decoding fails, as express-session does', () => {
+      // Pins the fallback, not just the absence of a throw. `cookie@0.7.2`'s
+      // `tryDecode` returns the undecoded string on URIError, and
+      // express-session parses this very header with it — so raw is what the
+      // middleware saw when it derived `sessionID`. Returning null here instead
+      // would make a request anonymous that express-session had already
+      // authenticated, which is the silent auth outage the header fallback
+      // exists to prevent. Flip the catch to `return null` and this goes red.
+      expect(
+        resolveCookieSessionId(
+          {
+            sessionID: SID,
+            headers: { cookie: `${COOKIE}=${signed(SID)}%zz` },
+          },
+          COOKIE
+        )
+      ).toBe(SID);
+    });
   });
 
   describe('purity (G5)', () => {
