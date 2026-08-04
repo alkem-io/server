@@ -191,6 +191,82 @@ describe('createRedisClient', () => {
     });
   });
 
+  // -------------------------------------------------------------- behaviour
+
+  /**
+   * FR-029. Everything above asserts the *options*; this asserts the
+   * *behaviour* they exist to produce. The distinction is the whole feature:
+   * `enableOfflineQueue: false` appearing in `client.options` proves ioredis was
+   * configured, not that a command against a down store comes back fast — and
+   * "comes back fast" is the requirement. A configuration assertion would still
+   * pass if a future ioredis changed what the flag does.
+   *
+   * No server is involved: port 1 has nothing listening, so the client lands in
+   * `reconnecting` — which is precisely the state a real outage produces, and
+   * the state in which `develop` parked the command for ~42 s.
+   */
+  describe('fail-fast behaviour, not just fail-fast options (FR-029)', () => {
+    /** Generous vs the ~42 s regression; the observed value is 0-1 ms. */
+    const CEILING_MS = 250;
+
+    const reconnecting = async (): Promise<Redis> => {
+      const client = build({ purpose: 'session' });
+      // Wait for the first connect failure, which is what moves the client out
+      // of `connecting` and into the retry loop.
+      await new Promise<void>(resolve => client.once('error', () => resolve()));
+      return client;
+    };
+
+    it('rejects a command against a disconnected client instead of queueing it', async () => {
+      const client = await reconnecting();
+
+      const started = Date.now();
+      await expect(client.get('alkemio:sid:nobody')).rejects.toThrow(
+        /enableOfflineQueue/i
+      );
+      const elapsed = Date.now() - started;
+
+      // The error names the offline queue rather than the retry limit. That
+      // wording is the difference between the two failure modes: "Reached the
+      // max retries per request limit" is what `develop` produced, after
+      // parking the command for seconds first.
+      //
+      // The status is asserted as a SET, not a single value: the retry loop may
+      // already have begun the next attempt by the time the rejection is
+      // observed, so both `reconnecting` and `connecting` are correct here.
+      // Pinning one label would make this test flaky on a fast machine without
+      // making it stricter — what matters is that the client is not `ready`.
+      expect(['reconnecting', 'connecting']).toContain(client.status);
+      expect(elapsed).toBeLessThan(CEILING_MS);
+    });
+
+    it('stays fast across repeated commands for the whole outage', async () => {
+      // The regression was not a one-off cost paid at the transition: every
+      // request during the window paid it. One fast rejection followed by a
+      // slow second one would still be an outage.
+      const client = await reconnecting();
+
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const started = Date.now();
+        await expect(client.get('alkemio:sid:nobody')).rejects.toThrow();
+        expect(Date.now() - started).toBeLessThan(CEILING_MS);
+      }
+    });
+
+    it('rejects immediately once the client has been closed', async () => {
+      // The other disconnected state: `end` rather than `reconnecting`, reached
+      // on shutdown. It must not hang either.
+      const client = build({ purpose: 'session', lazyConnect: true });
+      client.disconnect();
+
+      const started = Date.now();
+      await expect(client.get('alkemio:sid:nobody')).rejects.toThrow();
+
+      expect(client.status).toBe('end');
+      expect(Date.now() - started).toBeLessThan(CEILING_MS);
+    });
+  });
+
   // ------------------------------------------------------------------- retry
 
   describe('reconnection policy (F6, G5)', () => {

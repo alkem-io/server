@@ -417,7 +417,8 @@ const STATUS_METADATA: Record<AlkemioErrorStatus, ErrorMetadata> = {
   // UNAUTHENTICATED (AUTHORIZATION/101 -> 11101), which told a SPA the user's
   // session was invalid and to sign in again; the truth is "come back in five
   // seconds". Moving it from band 11 to band 14 is the vocabulary half of that
-  // fix. 119 is the one free slot in the SYSTEM band (110-118 and 120 taken).
+  // fix. 119 was the one free slot in the SYSTEM band (101-118 and 120 were
+  // already taken); with this entry the band is contiguously full 101-120.
   //
   // STORAGE_SERVICE_UNAVAILABLE was deliberately NOT reused: it names a
   // different subsystem and its user-facing message would mislead.

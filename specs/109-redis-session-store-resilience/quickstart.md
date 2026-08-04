@@ -278,15 +278,26 @@ pgrep -f 'node.*dist/main' | diff - /tmp/pid.before && echo 'SAME PID'
 ## §6 — SC-008/SC-009: nothing else moved
 
 ```bash
-# SC-009 — no ioredis client outside the factory
-grep -rn "new Redis(" src/ --include='*.ts' | grep -v 'redis.client.factory.ts'
-# expect: no output
+# SC-009 — no ioredis client outside the factory.
+# The authoritative check is the F10 structural guard, which walks src/ and
+# strips comments before matching. Run it directly:
+pnpm test -- src/core/redis/redis.client.factory.spec.ts
 
 # SC-008 — 107-oidc-session-revocation's behaviour is untouched
 pnpm test -- src/core/auth/oidc
 ```
 
-**Pass criteria**: the grep is empty; the OIDC suite is green with no spec in it
+> **Do not use a bare `grep -rn "new Redis(" src/` for this.** It reports 5 hits
+> on the fixed tree and 0 of them are constructions — they are the prose in
+> `main.server.ts`, `oidc-core.module.ts`, `health.module.ts`, `oidc.tokens.ts`
+> and the guard's own fixture, each of which says "was `new Redis({host, port})`"
+> or "never `new Redis()`". A comment-blind grep therefore fails on exactly the
+> tree that satisfies the criterion, which is why the shipped guard strips
+> comments instead. An earlier revision of this quickstart prescribed that grep
+> and recorded §6 as PASSED without running it; the check text was wrong, not the
+> implementation.
+
+**Pass criteria**: the F10 guard is green; the OIDC suite is green with no spec in it
 rewritten to accommodate this change other than the two harnesses that must now
 present a session cookie (`cookie-session.strategy.spec.ts`,
 `cookie-session.strategy.index.spec.ts`) — which is the behaviour change itself,
