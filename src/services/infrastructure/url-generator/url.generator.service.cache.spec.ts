@@ -144,6 +144,26 @@ describe('UrlGeneratorCacheService', () => {
       expect(deletedKeys).toHaveLength(4); // dedup + null skipped
     });
 
+    it('sweeps framing memos, collabora documents and calendar events too', async () => {
+      entityManager.connection.query.mockResolvedValue([]);
+
+      await service.revokeUrlCachesForCalloutsInSpaces(['space-a']);
+
+      const [sql] = entityManager.connection.query.mock.calls[0];
+      // These four joins are the ones that were missing while their profiles
+      // still resolved to a space-derived URL.
+      expect(sql).toContain('"memo" fm          ON fm."id" = cf."memoId"');
+      expect(sql).toContain(
+        '"collabora_document" fcd ON fcd."id" = cf."collaboraDocumentId"'
+      );
+      expect(sql).toContain(
+        '"collabora_document" cd ON cd."id" = cc."collaboraDocumentId"'
+      );
+      expect(sql).toContain(
+        '"calendar_event" ce ON ce."calendarId" = t."calendarId"'
+      );
+    });
+
     it('logs and continues when a single revoke fails', async () => {
       entityManager.connection.query.mockResolvedValue([
         { profileId: 'p-1' },
