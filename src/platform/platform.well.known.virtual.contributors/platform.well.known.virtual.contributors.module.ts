@@ -1,3 +1,4 @@
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -11,6 +12,11 @@ import { PlatformWellKnownVirtualContributorsService } from './platform.well.kno
   imports: [
     TypeOrmModule.forFeature([Platform]),
     AuthorizationModule,
+    // sec-server-23: the resolver builds a resolver-local pinned policy via
+    // `AuthorizationPolicyService.createCredentialRuleUsingTypesOnly`, so the
+    // module that exports it has to be imported here. Unit specs provide the
+    // service themselves, so only a real boot catches its absence.
+    AuthorizationPolicyModule,
     PlatformAuthorizationPolicyModule,
     PlatformConfigurationAuditModule,
   ],

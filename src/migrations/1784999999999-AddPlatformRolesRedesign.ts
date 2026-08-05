@@ -18,10 +18,10 @@ import { NEW_PLATFORM_ROLE_SEED_DEFINITIONS } from './utils/platform.role.seed.d
  * of `1784818834950-PlatformOperationsAdminRole`. Idempotent per-row
  * (skip-if-present) so a partially-applied prior run is safe to re-run.
  */
-export class AddPlatformRolesRedesign1785000000000
+export class AddPlatformRolesRedesign1784999999999
   implements MigrationInterface
 {
-  name = 'AddPlatformRolesRedesign1785000000000';
+  name = 'AddPlatformRolesRedesign1784999999999';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     const platformRows: { roleSetId: string | null }[] =
