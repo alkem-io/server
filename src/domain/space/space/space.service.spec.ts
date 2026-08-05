@@ -609,6 +609,38 @@ describe('SpaceService', () => {
         LogContext.SPACES
       );
     });
+
+    it('revokes in bounded batches rather than fanning the whole subtree out at once', async () => {
+      const rootId = 'space-root';
+      // Each space contributes 4 profile ids plus its space-keyed ids, so 20
+      // spaces is comfortably more than one batch.
+      const childIds = Array.from({ length: 19 }, (_, i) => `space-${i}`);
+      const allIds = [rootId, ...childIds];
+
+      stubDescendants(childIds);
+      vi.spyOn(spaceRepository, 'find').mockResolvedValue(
+        allIds.map(spaceWithProfiles) as any
+      );
+
+      let inFlight = 0;
+      let maxInFlight = 0;
+      revokeSpy.mockImplementation(async () => {
+        inFlight++;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        // Yield so every revoke started in the same batch overlaps.
+        await Promise.resolve();
+        inFlight--;
+      });
+
+      await service.invalidateUrlCacheForSpaceSubtree(rootId);
+
+      const totalIds = allIds.flatMap(expectedCacheIds).length;
+      expect(totalIds).toBeGreaterThan(50);
+      // Every entry is still swept...
+      expect(revokeSpy).toHaveBeenCalledTimes(totalIds);
+      // ...but never more than one batch is in flight at a time.
+      expect(maxInFlight).toBeLessThanOrEqual(50);
+    });
   });
 
   describe('shouldUpdateAuthorizationPolicy', () => {

@@ -99,6 +99,11 @@ import { orderSubspaces } from './subspace.ordering';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
+// How many URL cache entries invalidateUrlCacheForSpaceSubtree revokes at once.
+// A deep subtree produces spaces x (profiles + space-keyed entries) ids; this
+// keeps the sweep parallel without fanning the whole set onto the cache backend
+// in one go.
+const SPACE_URL_CACHE_REVOKE_BATCH_SIZE = 50;
 
 type SpaceSortingData = {
   id: string;
@@ -1036,34 +1041,45 @@ export class SpaceService {
       loadEagerRelations: false,
     });
 
-    // Started concurrently rather than one round trip at a time, and each revoke
-    // is independently isolated below, so one unreachable key cannot abort the
-    // rest. The sweep as a whole still waits for the slowest revoke — Promise.all
-    // bounds it by the slowest single entry instead of by their sum.
-    await Promise.all(
-      spaces.flatMap(space =>
-        this.getUrlCacheIdsForSpace(space).map(async cacheId => {
-          try {
-            await this.urlGeneratorCacheService.revokeUrlCache(cacheId);
-          } catch (error) {
-            const stack = error instanceof Error ? (error.stack ?? '') : '';
-            this.logger.error(
-              {
-                message: 'Failed to invalidate URL cache for space subtree',
-                // The space that owns the entry — for a descendant this is not
-                // the subtree root, so both are logged to keep an incident
-                // traceable to the space whose URL is now stale.
-                spaceId: space.id,
-                subtreeRootSpaceId: spaceId,
-                cacheId,
-              },
-              stack,
-              LogContext.SPACES
-            );
-          }
-        })
-      )
+    // Revoked in bounded batches rather than one round trip at a time: a deep
+    // subtree yields spaces x (profiles + space-keyed entries) ids, so a single
+    // Promise.all over all of them would fan out unbounded onto the cache
+    // backend. Each revoke is independently isolated below, so one unreachable
+    // key can abort neither its batch nor the sweep.
+    const revocations = spaces.flatMap(space =>
+      this.getUrlCacheIdsForSpace(space).map(cacheId => async () => {
+        try {
+          await this.urlGeneratorCacheService.revokeUrlCache(cacheId);
+        } catch (error) {
+          const stack = error instanceof Error ? (error.stack ?? '') : '';
+          this.logger.error(
+            {
+              message: 'Failed to invalidate URL cache for space subtree',
+              // The space that owns the entry — for a descendant this is not
+              // the subtree root, so both are logged to keep an incident
+              // traceable to the space whose URL is now stale.
+              spaceId: space.id,
+              subtreeRootSpaceId: spaceId,
+              cacheId,
+            },
+            stack,
+            LogContext.SPACES
+          );
+        }
+      })
     );
+
+    for (
+      let i = 0;
+      i < revocations.length;
+      i += SPACE_URL_CACHE_REVOKE_BATCH_SIZE
+    ) {
+      await Promise.all(
+        revocations
+          .slice(i, i + SPACE_URL_CACHE_REVOKE_BATCH_SIZE)
+          .map(revoke => revoke())
+      );
+    }
 
     await this.urlGeneratorCacheService.revokeUrlCachesForContentInSpaces(
       allSpaceIds
