@@ -1006,7 +1006,11 @@ export class SpaceService {
           this.logger.error(
             {
               message: 'Failed to invalidate URL cache for space subtree',
-              spaceId,
+              // The space that owns the profile — for a descendant this is not
+              // the subtree root, so both are logged to keep an incident
+              // traceable to the space whose URL is now stale.
+              spaceId: space.id,
+              subtreeRootSpaceId: spaceId,
               profileId,
             },
             stack,
