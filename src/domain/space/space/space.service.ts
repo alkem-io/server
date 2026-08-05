@@ -1036,8 +1036,10 @@ export class SpaceService {
       loadEagerRelations: false,
     });
 
-    // Revoked concurrently: each revoke is independently isolated below, so one
-    // unreachable key can neither abort nor slow down the rest of the subtree.
+    // Started concurrently rather than one round trip at a time, and each revoke
+    // is independently isolated below, so one unreachable key cannot abort the
+    // rest. The sweep as a whole still waits for the slowest revoke — Promise.all
+    // bounds it by the slowest single entry instead of by their sum.
     await Promise.all(
       spaces.flatMap(space =>
         this.getUrlCacheIdsForSpace(space).map(async cacheId => {
@@ -1063,7 +1065,7 @@ export class SpaceService {
       )
     );
 
-    await this.urlGeneratorCacheService.revokeUrlCachesForCalloutsInSpaces(
+    await this.urlGeneratorCacheService.revokeUrlCachesForContentInSpaces(
       allSpaceIds
     );
   }

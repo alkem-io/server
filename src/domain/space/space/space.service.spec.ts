@@ -153,7 +153,7 @@ describe('SpaceService', () => {
       // Mock the URL cache service - use direct assignment for mock objects
       const revokeUrlCacheSpy = vi.fn().mockResolvedValue(undefined);
       urlGeneratorCacheService.revokeUrlCache = revokeUrlCacheSpy;
-      (urlGeneratorCacheService as any).revokeUrlCachesForCalloutsInSpaces = vi
+      (urlGeneratorCacheService as any).revokeUrlCachesForContentInSpaces = vi
         .fn()
         .mockResolvedValue(undefined);
 
@@ -268,7 +268,7 @@ describe('SpaceService', () => {
       // Mock the URL cache service - use direct assignment for mock objects
       const revokeUrlCacheSpy = vi.fn().mockResolvedValue(undefined);
       urlGeneratorCacheService.revokeUrlCache = revokeUrlCacheSpy;
-      (urlGeneratorCacheService as any).revokeUrlCachesForCalloutsInSpaces = vi
+      (urlGeneratorCacheService as any).revokeUrlCachesForContentInSpaces = vi
         .fn()
         .mockResolvedValue(undefined);
 
@@ -422,7 +422,7 @@ describe('SpaceService', () => {
       revokeSpy = vi.fn().mockResolvedValue(undefined);
       revokeCalloutsSpy = vi.fn().mockResolvedValue(undefined);
       (urlGeneratorCacheService as any).revokeUrlCache = revokeSpy;
-      (urlGeneratorCacheService as any).revokeUrlCachesForCalloutsInSpaces =
+      (urlGeneratorCacheService as any).revokeUrlCachesForContentInSpaces =
         revokeCalloutsSpy;
     });
 
