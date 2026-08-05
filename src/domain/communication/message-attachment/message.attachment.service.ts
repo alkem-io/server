@@ -1031,21 +1031,27 @@ export class MessageAttachmentService {
   }
 
   /**
-   * Resolve an attachment's intrinsic image dimensions, CHEAPEST SOURCE FIRST.
+   * Resolve an attachment's intrinsic image dimensions: MOST AUTHORITATIVE of
+   * the zero-cost sources, and a network call only as a last resort.
    *
    * This runs on an UNBOUNDED read path: `Message.attachments` is a
    * `@ResolveField` and `roomService.getMessages(room)` returns a room's ENTIRE
    * history unpaginated, so anything issued here fans out once PER ATTACHMENT
-   * PER VIEWER PER PAGE LOAD. The precedence therefore exists to make the
-   * network call the rare exception, not the rule:
+   * PER VIEWER PER PAGE LOAD. Hence: both in-hand sources are consulted first,
+   * and the network call stays the rare exception, not the rule.
    *
-   *  1. `ReceivedAttachment.width`/`height` — the event's own `info.w`/`info.h`.
-   *     ALREADY IN HAND (matrix-adapter populates them on every read path, live
-   *     sync and history parse alike; for web-composed media the server put them
-   *     there in the first place) and exactly what Element renders, so this is
-   *     both the zero-cost and the parity-correct answer.
-   *  2. Dims the resolution already returned — the inbound by-reference lookup's
-   *     `DocumentReferenceResult` carries them. Still zero extra I/O.
+   *  1. Dims the resolution already returned — the inbound by-reference
+   *     lookup's `DocumentReferenceResult`. WINS where present: these are
+   *     file-service's own measurement of the stored bytes, so they are
+   *     authoritative, and the lookup already happened (zero extra I/O).
+   *  2. `ReceivedAttachment.width`/`height` — the event's own `info.w`/`info.h`,
+   *     also ALREADY IN HAND (matrix-adapter populates them on every read path,
+   *     live sync and history parse alike). These are what Element renders, and
+   *     for web-composed media the server put them there from file-service in
+   *     the first place — but for inbound (Element-origin) media they are
+   *     asserted by the SENDING CLIENT and therefore unverified, which is why
+   *     (1) outranks them when we have it. In practice this is the source that
+   *     serves the outbound branch, where (1) never exists.
    *  3. ONLY if neither produced anything AND the content is an image: one
    *     `getDocumentMeta` round-trip. That call deliberately BYPASSES the shared
    *     file-service circuit breaker (justified on the hard-bounded send path:
@@ -1053,6 +1059,10 @@ export class MessageAttachmentService {
    *     an unconditional call would be an unbounded, uncached, unbatched N+1
    *     that burns its full timeout per attachment while file-service is
    *     degraded, starving the uploads/downloads the breaker protects.
+   *
+   * (Application order in the body is the REVERSE of this list, because
+   * `applyImageDims` overwrites with any defined value — so the
+   * highest-precedence source is applied last.)
    *
    * Best-effort throughout: dims are a cosmetic rendering hint (they avoid
    * layout reflow), so EVERY failure degrades to "no dims" and must never fail
