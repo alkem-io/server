@@ -50,10 +50,12 @@ export class UrlGeneratorCacheService {
     return url;
   }
 
-  // Revokes the per-profile URL cache for every callout, framing whiteboard,
-  // and contribution (post / link / whiteboard / memo) reachable from the given
-  // spaces. Used after a space subtree changes parent so that the URLs surfaced
-  // in the activity log stop pointing at the old path.
+  // Revokes the per-profile URL cache for every space-path-derived profile that
+  // is N-per-space: callouts, framing content (whiteboard / memo / collabora
+  // document), contributions (post / link / whiteboard / memo / collabora
+  // document) and calendar events. Used after a space subtree changes parent so
+  // that the URLs surfaced in the activity log and in notifications stop
+  // pointing at the old path.
   public async revokeUrlCachesForCalloutsInSpaces(
     spaceIds: string[]
   ): Promise<void> {
@@ -120,6 +122,45 @@ export class UrlGeneratorCacheService {
         JOIN "callout" c        ON c."calloutsSetId" = co."calloutsSetId"
         JOIN "callout_contribution" cc ON cc."calloutId" = c."id"
         JOIN "memo" m           ON m."id" = cc."memoId"
+        WHERE s."id" = ANY($1)
+
+        UNION ALL
+
+        SELECT fm."profileId" AS "profileId"
+        FROM "space" s
+        JOIN "collaboration" co ON co."id" = s."collaborationId"
+        JOIN "callout" c        ON c."calloutsSetId" = co."calloutsSetId"
+        JOIN "callout_framing" cf ON cf."id" = c."framingId"
+        JOIN "memo" fm          ON fm."id" = cf."memoId"
+        WHERE s."id" = ANY($1)
+
+        UNION ALL
+
+        SELECT fcd."profileId" AS "profileId"
+        FROM "space" s
+        JOIN "collaboration" co ON co."id" = s."collaborationId"
+        JOIN "callout" c        ON c."calloutsSetId" = co."calloutsSetId"
+        JOIN "callout_framing" cf ON cf."id" = c."framingId"
+        JOIN "collabora_document" fcd ON fcd."id" = cf."collaboraDocumentId"
+        WHERE s."id" = ANY($1)
+
+        UNION ALL
+
+        SELECT cd."profileId" AS "profileId"
+        FROM "space" s
+        JOIN "collaboration" co ON co."id" = s."collaborationId"
+        JOIN "callout" c        ON c."calloutsSetId" = co."calloutsSetId"
+        JOIN "callout_contribution" cc ON cc."calloutId" = c."id"
+        JOIN "collabora_document" cd ON cd."id" = cc."collaboraDocumentId"
+        WHERE s."id" = ANY($1)
+
+        UNION ALL
+
+        SELECT ce."profileId" AS "profileId"
+        FROM "space" s
+        JOIN "collaboration" co ON co."id" = s."collaborationId"
+        JOIN "timeline" t       ON t."id" = co."timelineId"
+        JOIN "calendar_event" ce ON ce."calendarId" = t."calendarId"
         WHERE s."id" = ANY($1)
         `,
         [spaceIds]
