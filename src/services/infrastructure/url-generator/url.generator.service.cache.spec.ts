@@ -166,6 +166,32 @@ describe('UrlGeneratorCacheService', () => {
       );
     });
 
+    it('revokes the profile each of the four new sources returns', async () => {
+      // The join assertions above prove the SQL reaches these tables; this
+      // proves a row coming back from any of them is actually revoked, which is
+      // the behaviour the sweep exists for.
+      entityManager.connection.query.mockResolvedValue([
+        { profileId: 'p-framing-memo' },
+        { profileId: 'p-framing-collabora' },
+        { profileId: 'p-contribution-collabora' },
+        { profileId: 'p-calendar-event' },
+      ]);
+      cacheManager.del.mockResolvedValue(undefined);
+
+      await service.revokeUrlCachesForContentInSpaces(['space-a']);
+
+      const deletedKeys = cacheManager.del.mock.calls.map(c => c[0]);
+      expect(deletedKeys).toEqual(
+        expect.arrayContaining([
+          '@url:urlGeneratorId:p-framing-memo',
+          '@url:urlGeneratorId:p-framing-collabora',
+          '@url:urlGeneratorId:p-contribution-collabora',
+          '@url:urlGeneratorId:p-calendar-event',
+        ])
+      );
+      expect(deletedKeys).toHaveLength(4);
+    });
+
     it('logs and continues when a single revoke fails', async () => {
       entityManager.connection.query.mockResolvedValue([
         { profileId: 'p-1' },
