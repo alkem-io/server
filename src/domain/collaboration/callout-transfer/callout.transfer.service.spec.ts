@@ -27,7 +27,7 @@ describe('CalloutTransferService', () => {
   let profileService: ProfileService;
   let tagsetService: TagsetService;
   let storageAggregatorResolverService: StorageAggregatorResolverService;
-  let _classificationService: ClassificationService;
+  let classificationService: ClassificationService;
   let _urlGeneratorCacheService: UrlGeneratorCacheService;
   let activityService: ActivityService;
   let entityManager: EntityManager;
@@ -54,7 +54,7 @@ describe('CalloutTransferService', () => {
     storageAggregatorResolverService = module.get(
       StorageAggregatorResolverService
     );
-    _classificationService = module.get(ClassificationService);
+    classificationService = module.get(ClassificationService);
     _urlGeneratorCacheService = module.get(UrlGeneratorCacheService);
     activityService = module.get(ActivityService);
     entityManager = module.get(EntityManager);
@@ -150,6 +150,68 @@ describe('CalloutTransferService', () => {
       expect(callout.calloutsSet).toBe(targetCalloutsSet);
       expect(calloutService.save).toHaveBeenCalledWith(callout);
       expect(result).toBe(finalCallout);
+    });
+
+    // Regression coverage for story #6021: a cross-space transfer must hand the
+    // destination's flow-state template to the classification, so the Callout
+    // either keeps a state the destination knows or is reset to its default.
+    // Without this the Callout keeps a state no destination phase matches and
+    // disappears from the destination (same symptom as #4970).
+    it('should reclassify the callout against the destination flow-state template', async () => {
+      const callout = {
+        id: 'callout-1',
+        nameID: 'my-callout',
+        calloutsSet: { id: 'source-cs' },
+      } as any;
+
+      const destinationFlowStateTemplate = {
+        id: 'tt-flow-state',
+        name: TagsetReservedName.FLOW_STATE,
+        allowedValues: ['EXPLORE', 'DEFINE', 'BRAINSTORM'],
+        defaultSelectedValue: 'EXPLORE',
+      };
+
+      vi.mocked(
+        storageAggregatorResolverService.getStorageAggregatorForCalloutsSet
+      ).mockResolvedValue(storageAggregator);
+      vi.mocked(calloutService.save).mockResolvedValue(callout);
+      vi.mocked(calloutService.getCalloutOrFail)
+        .mockResolvedValueOnce({
+          id: 'callout-1',
+          framing: { profile: { storageBucket: { id: 'sb-1' } } },
+          contributions: [],
+        } as any) // updateStorageAggregator
+        .mockResolvedValueOnce(calloutForUrlCaches as any) // revokeUrlCaches
+        .mockResolvedValueOnce({
+          id: 'callout-1',
+          framing: {
+            profile: {
+              id: 'profile-1',
+              tagsets: [
+                {
+                  id: 'ts-default',
+                  name: TagsetReservedName.DEFAULT,
+                  tags: [],
+                },
+              ],
+            },
+          },
+        } as any) // updateTagsetsFromTemplates
+        .mockResolvedValueOnce(calloutForClassification as any) // updateClassificationFromTemplates
+        .mockResolvedValueOnce(callout); // final return
+
+      vi.mocked(calloutsSetService.getTagsetTemplatesSet).mockResolvedValue({
+        tagsetTemplates: [destinationFlowStateTemplate],
+      } as any);
+      vi.mocked(
+        profileService.convertTagsetTemplatesToCreateTagsetInput
+      ).mockReturnValue([]);
+
+      await service.transferCallout(callout, targetCalloutsSet);
+
+      expect(
+        classificationService.updateTagsetTemplateOnSelectTagset
+      ).toHaveBeenCalledWith('classification-1', destinationFlowStateTemplate);
     });
 
     it('should update storage buckets for all contribution types', async () => {
