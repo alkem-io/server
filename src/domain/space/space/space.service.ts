@@ -961,9 +961,14 @@ export class SpaceService {
   /**
    * Invalidates URL cache entries for a space and all of its descendant spaces.
    * Used after operations that change a space's URL path (transfer, L1↔L0/L2 conversion).
-   * Sweeps space-about profiles AND every callout/contribution profile reachable
-   * from those spaces — activity-log entries surface callout-derived URLs, so the
-   * inner sweep is what keeps them from pointing at the old path.
+   * Sweeps space-about profiles, the innovation-flow profile of each space, AND
+   * every callout/contribution profile reachable from those spaces — activity-log
+   * entries surface callout-derived URLs, so the inner sweep is what keeps them
+   * from pointing at the old path.
+   *
+   * Note: innovation flow *states* carry no Profile (displayName/description are
+   * plain columns on `innovation_flow_state`), so they hold no URL cache entry
+   * and need no sweep.
    */
   public async invalidateUrlCacheForSpaceSubtree(
     spaceId: string
@@ -972,30 +977,42 @@ export class SpaceService {
       await this.spaceLookupService.getAllDescendantSpaceIDs(spaceId);
     const allSpaceIds = [spaceId, ...descendantIds];
 
+    // Both relations below are 1:1 all the way down, so this stays a single row
+    // per space. Eager relations are suppressed: only profile ids are read here.
     const spaces = await this.spaceRepository.find({
       where: { id: In(allSpaceIds) },
-      relations: { about: { profile: true } },
+      relations: {
+        about: { profile: true },
+        collaboration: { innovationFlow: { profile: true } },
+      },
+      loadEagerRelations: false,
     });
 
     for (const space of spaces) {
-      const profileId = space.about?.profile?.id;
-      if (!profileId) {
-        continue;
-      }
+      const profileIds = [
+        space.about?.profile?.id,
+        space.collaboration?.innovationFlow?.profile?.id,
+      ];
 
-      try {
-        await this.urlGeneratorCacheService.revokeUrlCache(profileId);
-      } catch (error) {
-        const stack = error instanceof Error ? (error.stack ?? '') : '';
-        this.logger.error(
-          {
-            message: 'Failed to invalidate URL cache for space subtree',
-            spaceId,
-            profileId,
-          },
-          stack,
-          LogContext.SPACES
-        );
+      for (const profileId of profileIds) {
+        if (!profileId) {
+          continue;
+        }
+
+        try {
+          await this.urlGeneratorCacheService.revokeUrlCache(profileId);
+        } catch (error) {
+          const stack = error instanceof Error ? (error.stack ?? '') : '';
+          this.logger.error(
+            {
+              message: 'Failed to invalidate URL cache for space subtree',
+              spaceId,
+              profileId,
+            },
+            stack,
+            LogContext.SPACES
+          );
+        }
       }
     }
 
