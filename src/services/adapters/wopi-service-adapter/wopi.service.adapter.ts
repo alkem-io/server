@@ -69,7 +69,8 @@ export class WopiServiceAdapter {
   async issueToken(
     documentId: string,
     actorID: string,
-    actorName?: string
+    actorName?: string,
+    lang?: string
   ): Promise<WopiTokenResult> {
     const url = `${this.baseUrl}/wopi/token`;
 
@@ -85,7 +86,10 @@ export class WopiServiceAdapter {
         // so arbitrary-Unicode names need no encoding. The WOPI service maps it
         // to the WOPI CheckFileInfo UserFriendlyName. Omitted when unknown
         // (e.g. anonymous), letting the WOPI service keep its own fallback.
-        { documentId, actorName },
+        // lang is the actor's Alkemio profile language; omitted when the actor
+        // has none set (e.g. a guest, or a User who never chose one), letting
+        // Collabora fall back to its own browser-locale detection.
+        { documentId, actorName, lang },
         {
           headers: {
             [HEADER_ACTOR_ID]: actorID,

@@ -21,6 +21,12 @@ describe('CollaboraDocumentResolverQueries', () => {
     resolver = module.get(CollaboraDocumentResolverQueries);
     collaboraDocumentService = module.get(CollaboraDocumentService);
     authorizationService = module.get(AuthorizationService);
+
+    // Platform default language (language.default in alkemio.yml) — the
+    // fallback resolveActorLanguage always returns when there's no explicit
+    // account preference.
+    const configService = (resolver as any).configService;
+    vi.mocked(configService.get).mockReturnValue('en');
   });
 
   it('should be defined', () => {
@@ -93,6 +99,8 @@ describe('CollaboraDocumentResolverQueries', () => {
         profile: { displayName: 'Alice Anderson' },
         nameID: 'alice',
       } as any);
+      const userService = (resolver as any).userService;
+      vi.mocked(userService.getUserByIdOrFail).mockResolvedValue(undefined);
 
       const actorContext = { actorID: 'user-1', isGuest: false } as any;
       await resolver.collaboraEditorUrl(actorContext, 'collab-doc-1');
@@ -101,7 +109,8 @@ describe('CollaboraDocumentResolverQueries', () => {
       expect(collaboraDocumentService.getEditorUrl).toHaveBeenCalledWith(
         'collab-doc-1',
         'user-1',
-        'Alice Anderson'
+        'Alice Anderson',
+        'en'
       );
     });
 
@@ -122,6 +131,8 @@ describe('CollaboraDocumentResolverQueries', () => {
       vi.mocked(actorLookupService.getActorById).mockRejectedValue(
         new Error('db down')
       );
+      const userService = (resolver as any).userService;
+      vi.mocked(userService.getUserByIdOrFail).mockResolvedValue(undefined);
 
       const actorContext = { actorID: 'user-1', isGuest: false } as any;
       const result = await resolver.collaboraEditorUrl(
@@ -133,7 +144,8 @@ describe('CollaboraDocumentResolverQueries', () => {
       expect(collaboraDocumentService.getEditorUrl).toHaveBeenCalledWith(
         'collab-doc-1',
         'user-1',
-        undefined
+        undefined,
+        'en'
       );
       expect(result).toEqual({
         editorUrl: 'https://collabora/editor',
@@ -160,6 +172,8 @@ describe('CollaboraDocumentResolverQueries', () => {
         profile: { displayName: '  ' },
         nameID: '',
       } as any);
+      const userService = (resolver as any).userService;
+      vi.mocked(userService.getUserByIdOrFail).mockResolvedValue(undefined);
 
       const actorContext = { actorID: 'user-1', isGuest: false } as any;
       await resolver.collaboraEditorUrl(actorContext, 'collab-doc-1');
@@ -168,7 +182,8 @@ describe('CollaboraDocumentResolverQueries', () => {
       expect(collaboraDocumentService.getEditorUrl).toHaveBeenCalledWith(
         'collab-doc-1',
         'user-1',
-        undefined
+        undefined,
+        'en'
       );
     });
 
@@ -186,6 +201,7 @@ describe('CollaboraDocumentResolverQueries', () => {
       });
 
       const actorLookupService = (resolver as any).actorLookupService;
+      const userService = (resolver as any).userService;
       const actorContext = {
         actorID: 'guest-abc',
         isGuest: true,
@@ -194,11 +210,122 @@ describe('CollaboraDocumentResolverQueries', () => {
       await resolver.collaboraEditorUrl(actorContext, 'collab-doc-1');
 
       expect(actorLookupService.getActorById).not.toHaveBeenCalled();
+      // Guests have no UserSettings — no lookup attempted, but they still get
+      // the platform default language rather than no override at all.
+      expect(userService.getUserByIdOrFail).not.toHaveBeenCalled();
       expect(collaboraDocumentService.getEditorUrl).toHaveBeenCalledWith(
         'collab-doc-1',
         'guest-abc',
-        'Guest Bob'
+        'Guest Bob',
+        'en'
       );
+    });
+
+    it("forwards an authenticated user's Alkemio profile language to the WOPI service", async () => {
+      vi.mocked(
+        collaboraDocumentService.getCollaboraDocumentOrFail
+      ).mockResolvedValue({
+        id: 'collab-doc-1',
+        authorization: { id: 'auth-1' },
+        profile: { displayName: 'Quarterly Report' },
+      } as any);
+      vi.mocked(collaboraDocumentService.getEditorUrl).mockResolvedValue({
+        editorUrl: 'https://collabora/editor',
+        accessTokenTTL: 3600,
+      });
+
+      const actorLookupService = (resolver as any).actorLookupService;
+      vi.mocked(actorLookupService.getActorById).mockResolvedValue(undefined);
+
+      const userService = (resolver as any).userService;
+      vi.mocked(userService.getUserByIdOrFail).mockResolvedValue({
+        settings: { language: 'bg' },
+      } as any);
+
+      const actorContext = { actorID: 'user-1', isGuest: false } as any;
+      await resolver.collaboraEditorUrl(actorContext, 'collab-doc-1');
+
+      expect(userService.getUserByIdOrFail).toHaveBeenCalledWith('user-1', {
+        relations: { settings: true },
+      });
+      expect(collaboraDocumentService.getEditorUrl).toHaveBeenCalledWith(
+        'collab-doc-1',
+        'user-1',
+        undefined,
+        'bg'
+      );
+    });
+
+    it('falls back to the platform default language for an authenticated User who never chose one', async () => {
+      vi.mocked(
+        collaboraDocumentService.getCollaboraDocumentOrFail
+      ).mockResolvedValue({
+        id: 'collab-doc-1',
+        authorization: { id: 'auth-1' },
+        profile: { displayName: 'Quarterly Report' },
+      } as any);
+      vi.mocked(collaboraDocumentService.getEditorUrl).mockResolvedValue({
+        editorUrl: 'https://collabora/editor',
+        accessTokenTTL: 3600,
+      });
+
+      const actorLookupService = (resolver as any).actorLookupService;
+      vi.mocked(actorLookupService.getActorById).mockResolvedValue(undefined);
+
+      // `null` = has never chosen a language, distinct from a failed lookup.
+      const userService = (resolver as any).userService;
+      vi.mocked(userService.getUserByIdOrFail).mockResolvedValue({
+        settings: { language: null },
+      } as any);
+
+      const actorContext = { actorID: 'user-1', isGuest: false } as any;
+      await resolver.collaboraEditorUrl(actorContext, 'collab-doc-1');
+
+      expect(collaboraDocumentService.getEditorUrl).toHaveBeenCalledWith(
+        'collab-doc-1',
+        'user-1',
+        undefined,
+        'en'
+      );
+    });
+
+    it('falls back to the platform default language for non-User actors (organizations, virtual contributors)', async () => {
+      vi.mocked(
+        collaboraDocumentService.getCollaboraDocumentOrFail
+      ).mockResolvedValue({
+        id: 'collab-doc-1',
+        authorization: { id: 'auth-1' },
+        profile: { displayName: 'Quarterly Report' },
+      } as any);
+      vi.mocked(collaboraDocumentService.getEditorUrl).mockResolvedValue({
+        editorUrl: 'https://collabora/editor',
+        accessTokenTTL: 3600,
+      });
+
+      const actorLookupService = (resolver as any).actorLookupService;
+      vi.mocked(actorLookupService.getActorById).mockResolvedValue(undefined);
+
+      const userService = (resolver as any).userService;
+      vi.mocked(userService.getUserByIdOrFail).mockRejectedValue(
+        new Error('not a User actor')
+      );
+
+      const actorContext = { actorID: 'org-1', isGuest: false } as any;
+      const result = await resolver.collaboraEditorUrl(
+        actorContext,
+        'collab-doc-1'
+      );
+
+      expect(collaboraDocumentService.getEditorUrl).toHaveBeenCalledWith(
+        'collab-doc-1',
+        'org-1',
+        undefined,
+        'en'
+      );
+      expect(result).toEqual({
+        editorUrl: 'https://collabora/editor',
+        accessTokenTTL: 3600,
+      });
     });
   });
 
