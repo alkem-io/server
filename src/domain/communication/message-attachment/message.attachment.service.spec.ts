@@ -120,6 +120,10 @@ describe('MessageAttachmentService', () => {
     authorizationPolicyService.save.mockResolvedValue({
       id: 'minted-auth',
     } as any);
+    // Real signature is `Promise<DocumentReferenceResult | null>`; default to the
+    // "no meta" answer so a test that does not care about dims never picks up a
+    // deep-mock proxy as a width/height value.
+    fileServiceAdapter.getDocumentMeta.mockResolvedValue(null);
   });
 
   // --- T009 outbound validation ---
@@ -2134,6 +2138,184 @@ describe('MessageAttachmentService', () => {
 
       // The whole query did NOT reject; only the failing attachment is omitted.
       expect(result).toEqual([expect.objectContaining({ id: 'doc-good' })]);
+    });
+  });
+
+  // --- read-path image dimensions (anti-N+1 + gate ordering) ---
+
+  describe('resolveMessageAttachments — image dimensions', () => {
+    const outboundDoc = {
+      id: 'doc-1',
+      createdBy: 'sender-1',
+      displayName: 'pic.png',
+      mimeType: 'image/png',
+      size: 1000,
+      temporaryLocation: false,
+      storageBucket: { id: CONV_BUCKET },
+      authorization: { id: 'doc-auth' },
+    };
+
+    const readOutbound = (raw: Record<string, unknown>) =>
+      service.resolveMessageAttachments(
+        {
+          id: 'm1',
+          sender: 'sender-1',
+          storageBucketId: CONV_BUCKET,
+          rawAttachments: [raw],
+        } as any,
+        {} as any
+      );
+
+    beforeEach(() => {
+      documentService.getDocumentOrFail.mockResolvedValue(outboundDoc as any);
+      documentService.getPubliclyAccessibleURL.mockReturnValue(
+        'https://docs/doc-1'
+      );
+      authorizationService.isAccessGranted.mockReturnValue(true);
+    });
+
+    it('ANTI-N+1: an outbound image whose event carries dims surfaces them WITHOUT calling getDocumentMeta', async () => {
+      // This is the whole point of the restructure. `Message.attachments` is a
+      // @ResolveField and getMessages returns a room's ENTIRE history
+      // unpaginated, so a per-attachment meta GET is an unbounded, uncached,
+      // unbatched N+1 (and getDocumentMeta bypasses the shared circuit breaker).
+      // The event already carries info.w/info.h — assert the ABSENCE of the call.
+      const result = await readOutbound({
+        document_id: 'doc-1',
+        display_name: 'pic.png',
+        mime_type: 'image/png',
+        size: 1000,
+        width: 800,
+        height: 600,
+      });
+
+      expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
+      expect(result).toEqual([
+        expect.objectContaining({ id: 'doc-1', width: 800, height: 600 }),
+      ]);
+    });
+
+    it('falls back to getDocumentMeta ONLY when the event carries no dims', async () => {
+      fileServiceAdapter.getDocumentMeta.mockResolvedValue({
+        id: 'doc-1',
+        imageWidth: 320,
+        imageHeight: 240,
+      } as any);
+
+      const result = await readOutbound({
+        document_id: 'doc-1',
+        display_name: 'pic.png',
+        mime_type: 'image/png',
+        size: 1000,
+      });
+
+      expect(fileServiceAdapter.getDocumentMeta).toHaveBeenCalledWith('doc-1');
+      expect(result).toEqual([
+        expect.objectContaining({ id: 'doc-1', width: 320, height: 240 }),
+      ]);
+    });
+
+    it('a failing getDocumentMeta still resolves the attachment (dims undefined, no throw)', async () => {
+      fileServiceAdapter.getDocumentMeta.mockRejectedValue(
+        new Error('file-service down')
+      );
+
+      const result = await readOutbound({
+        document_id: 'doc-1',
+        display_name: 'pic.png',
+        mime_type: 'image/png',
+        size: 1000,
+      });
+
+      expect(fileServiceAdapter.getDocumentMeta).toHaveBeenCalledWith('doc-1');
+      expect(result).toEqual([
+        expect.objectContaining({
+          id: 'doc-1',
+          width: undefined,
+          height: undefined,
+        }),
+      ]);
+    });
+
+    it('non-image mime: no meta round-trip at all', async () => {
+      documentService.getDocumentOrFail.mockResolvedValue({
+        ...outboundDoc,
+        id: 'doc-pdf',
+        displayName: 'doc.pdf',
+        mimeType: 'application/pdf',
+      } as any);
+
+      const result = await readOutbound({
+        document_id: 'doc-pdf',
+        display_name: 'doc.pdf',
+        mime_type: 'application/pdf',
+        size: 1000,
+      });
+
+      expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
+      expect(result).toEqual([
+        expect.objectContaining({
+          id: 'doc-pdf',
+          width: undefined,
+          height: undefined,
+        }),
+      ]);
+    });
+
+    it('GATE ORDERING: an attachment the viewer cannot READ costs no meta round-trip', async () => {
+      // Dims resolution must run AFTER the READ gate — otherwise every denied
+      // attachment still bills file-service a request.
+      authorizationService.isAccessGranted.mockReturnValue(false);
+
+      const result = await readOutbound({
+        document_id: 'doc-1',
+        display_name: 'pic.png',
+        mime_type: 'image/png',
+        size: 1000,
+      });
+
+      expect(result).toEqual([]);
+      expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
+    });
+
+    it('inbound: the event dims take precedence over the by-reference dims, and still no meta call', async () => {
+      fileServiceAdapter.getDocumentByReference.mockResolvedValue({
+        id: 'doc-rehomed',
+        imageWidth: 111,
+        imageHeight: 222,
+      } as any);
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-rehomed',
+        createdBy: 'sender-1',
+        displayName: 'pic.png',
+        mimeType: 'image/png',
+        size: 1000,
+        authorization: { id: 'doc-auth' },
+      } as any);
+
+      const result = await service.resolveMessageAttachments(
+        {
+          id: 'm1',
+          sender: 'sender-1',
+          storageBucketId: CONV_BUCKET,
+          rawAttachments: [
+            {
+              media_id: 'media-1',
+              display_name: 'pic.png',
+              mime_type: 'image/png',
+              size: 1000,
+              width: 800,
+              height: 600,
+            },
+          ],
+        } as any,
+        {} as any
+      );
+
+      expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
+      expect(result).toEqual([
+        expect.objectContaining({ width: 800, height: 600 }),
+      ]);
     });
   });
 });

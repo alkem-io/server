@@ -109,6 +109,31 @@ export const sanitizeAttachmentDisplayName = (
 };
 
 /**
+ * Anything in this feature that may carry intrinsic image dimensions. The two
+ * sides of the boundary name the SAME two numbers differently: file-service
+ * shapes (`Document`, `DocumentReferenceResult`) use `imageWidth`/`imageHeight`,
+ * the Matrix/wire shapes (`ReceivedAttachment`, `CommunicationMessageAttachment`,
+ * `IMessageAttachment`) use `width`/`height`. `applyImageDims` reads both.
+ */
+interface ImageDimsSource {
+  width?: number;
+  height?: number;
+  imageWidth?: number;
+  imageHeight?: number;
+}
+
+/**
+ * The outcome of read-path document resolution: the resolved document plus any
+ * dimensions the resolution ALREADY had in hand (the inbound by-reference
+ * lookup returns them on its `DocumentReferenceResult`), so surfacing dims
+ * costs zero extra I/O on that branch.
+ */
+interface ResolvedAttachmentDocument {
+  document: IDocument;
+  dims?: ImageDimsSource;
+}
+
+/**
  * Conversation media attachments (feature 013-matrix-media-file-service).
  *
  * Owns: outbound attachment resolution+validation (web compose), the EAGER
@@ -326,8 +351,7 @@ export class MessageAttachmentService {
         const meta = await this.fileServiceAdapter
           .getDocumentMeta(ref.documentId)
           .catch(() => undefined);
-        ref.width = meta?.imageWidth;
-        ref.height = meta?.imageHeight;
+        this.applyImageDims(ref, meta);
       })
     );
 
@@ -947,9 +971,11 @@ export class MessageAttachmentService {
 
   /**
    * Resolve a single raw attachment for read (T012): document resolution +
-   * ownership gate (via resolveAttachmentDocument) followed by the READ-gate.
-   * Returns null when the document cannot be resolved or the viewer cannot read
-   * it, so the caller drops it from the resolved set.
+   * ownership gate (via resolveAttachmentDocument), then the READ-gate, and
+   * ONLY THEN image dimensions (applyReadImageDims) — so an attachment the
+   * viewer cannot read costs no dimension work at all. Returns null when the
+   * document cannot be resolved or the viewer cannot read it, so the caller
+   * drops it from the resolved set.
    */
   private async resolveReadAttachment(
     raw: ReceivedAttachment,
@@ -963,15 +989,16 @@ export class MessageAttachmentService {
     // undefined and the full bucket is lazy-loaded inside resolveAttachmentDocument
     // only if an inbound miss actually needs a re-home; on the history path the
     // full bucket is already resolved and threaded through to skip that query.
-    const document = await this.resolveAttachmentDocument(
+    const resolved = await this.resolveAttachmentDocument(
       raw,
       bucketId,
       senderActorID,
       bucketForRehome
     );
-    if (!document) {
+    if (!resolved) {
       return null;
     }
+    const { document } = resolved;
 
     // READ-gate: non-members are denied (FR-007).
     if (
@@ -984,15 +1011,77 @@ export class MessageAttachmentService {
       return null;
     }
 
-    return {
+    const attachment: IMessageAttachment = {
       id: document.id,
       url: this.documentService.getPubliclyAccessibleURL(document),
       displayName: document.displayName,
       mimeType: document.mimeType,
       size: document.size,
-      width: document.imageWidth,
-      height: document.imageHeight,
+      // Explicitly present (rather than omitted) so the shape is stable whether
+      // or not dims resolve below.
+      width: undefined,
+      height: undefined,
     };
+
+    // Dimensions resolve AFTER the READ gate on purpose: a denied attachment
+    // must cost NOTHING (see applyReadImageDims).
+    await this.applyReadImageDims(attachment, raw, resolved.dims);
+
+    return attachment;
+  }
+
+  /**
+   * Resolve an attachment's intrinsic image dimensions, CHEAPEST SOURCE FIRST.
+   *
+   * This runs on an UNBOUNDED read path: `Message.attachments` is a
+   * `@ResolveField` and `roomService.getMessages(room)` returns a room's ENTIRE
+   * history unpaginated, so anything issued here fans out once PER ATTACHMENT
+   * PER VIEWER PER PAGE LOAD. The precedence therefore exists to make the
+   * network call the rare exception, not the rule:
+   *
+   *  1. `ReceivedAttachment.width`/`height` — the event's own `info.w`/`info.h`.
+   *     ALREADY IN HAND (matrix-adapter populates them on every read path, live
+   *     sync and history parse alike; for web-composed media the server put them
+   *     there in the first place) and exactly what Element renders, so this is
+   *     both the zero-cost and the parity-correct answer.
+   *  2. Dims the resolution already returned — the inbound by-reference lookup's
+   *     `DocumentReferenceResult` carries them. Still zero extra I/O.
+   *  3. ONLY if neither produced anything AND the content is an image: one
+   *     `getDocumentMeta` round-trip. That call deliberately BYPASSES the shared
+   *     file-service circuit breaker (justified on the hard-bounded send path:
+   *     <= MAX_MESSAGE_ATTACHMENTS per request), so it must stay a rarity here —
+   *     an unconditional call would be an unbounded, uncached, unbatched N+1
+   *     that burns its full timeout per attachment while file-service is
+   *     degraded, starving the uploads/downloads the breaker protects.
+   *
+   * Best-effort throughout: dims are a cosmetic rendering hint (they avoid
+   * layout reflow), so EVERY failure degrades to "no dims" and must never fail
+   * — or block — the read.
+   */
+  private async applyReadImageDims(
+    attachment: IMessageAttachment,
+    raw: ReceivedAttachment,
+    resolvedDims: ImageDimsSource | undefined
+  ): Promise<void> {
+    // Applied lowest-precedence FIRST so the event's own dims win.
+    this.applyImageDims(attachment, resolvedDims);
+    this.applyImageDims(attachment, raw);
+    if (attachment.width !== undefined || attachment.height !== undefined) {
+      return; // dims already in hand — no round-trip
+    }
+    if (!attachment.mimeType?.startsWith('image/')) {
+      return; // only images carry dims
+    }
+    // try/catch rather than `.catch(() => undefined)` so a SYNCHRONOUS throw is
+    // caught too: a throw escaping here would be caught by the per-attachment
+    // guard in resolveMessageAttachments and DROP the attachment from the read.
+    let meta: ImageDimsSource | null | undefined;
+    try {
+      meta = await this.fileServiceAdapter.getDocumentMeta(attachment.id);
+    } catch {
+      meta = undefined; // best-effort — never fail (or block) a read
+    }
+    this.applyImageDims(attachment, meta);
   }
 
   /**
@@ -1012,6 +1101,31 @@ export class MessageAttachmentService {
     return !!senderActorID && document.createdBy === senderActorID;
   }
 
+  /**
+   * The ONE place "transfer intrinsic image dimensions from a source onto a
+   * target" lives. This idiom used to be open-coded at three sites (outbound
+   * send ref, inbound by-reference carry-over, outbound read) with subtly
+   * different guards and field names; a single helper means a future dims
+   * source — or a change to the never-clobber rule — is one edit.
+   *
+   * Reads EITHER naming (`width`/`height` or `imageWidth`/`imageHeight`, see
+   * ImageDimsSource) and NEVER writes `undefined` over a value already present,
+   * so it is safe to layer lowest-precedence-source-first.
+   */
+  private applyImageDims(
+    target: { width?: number; height?: number },
+    source: ImageDimsSource | null | undefined
+  ): void {
+    const width = source?.width ?? source?.imageWidth;
+    const height = source?.height ?? source?.imageHeight;
+    if (width !== undefined) {
+      target.width = width;
+    }
+    if (height !== undefined) {
+      target.height = height;
+    }
+  }
+
   private async resolveAttachmentDocument(
     raw: ReceivedAttachment,
     storageBucketId: string | undefined,
@@ -1022,7 +1136,7 @@ export class MessageAttachmentService {
     // (history path); when absent (fast path) the bucket is loaded LAZILY below,
     // and ONLY when an inbound re-home is actually needed.
     bucketForRehome?: IStorageBucket
-  ): Promise<IDocument | null> {
+  ): Promise<ResolvedAttachmentDocument | null> {
     // Both branches require the message's bucket: the inbound branch keys the
     // by-reference lookup by it, and the outbound branch needs it to verify
     // ownership (M5). Without it we cannot safely resolve anything.
@@ -1090,29 +1204,13 @@ export class MessageAttachmentService {
             );
           }
         }
-        // FIX [4] outbound dims: the inbound branch below gets imageWidth/
-        // imageHeight for free from the by-reference `ref`, but this outbound
-        // branch resolved by id via getDocumentOrFail — a DB load that leaves
-        // those TRANSIENT, file-service-owned fields (content_metadata)
-        // undefined, so MessageAttachment.width/height come back null for
-        // web-composed (document_id) attachments. Source them from file-service's
-        // by-id meta (images only — the only docs that carry dims) so
-        // resolveReadAttachment surfaces intrinsic dimensions and images render
-        // without layout reflow. Best-effort: the same isolated meta call the
-        // send path uses (short timeout, no retry, breaker-bypass); any failure
-        // leaves dims undefined and never fails (or blocks) the read.
-        if (document.mimeType?.startsWith('image/')) {
-          const meta = await this.fileServiceAdapter
-            .getDocumentMeta(document.id)
-            .catch(() => undefined);
-          if (meta?.imageWidth !== undefined) {
-            document.imageWidth = meta.imageWidth;
-          }
-          if (meta?.imageHeight !== undefined) {
-            document.imageHeight = meta.imageHeight;
-          }
-        }
-        return document;
+        // Dims are NOT resolved here. This branch has no dims in hand (the
+        // getDocumentOrFail DB load leaves the TRANSIENT, file-service-owned
+        // imageWidth/imageHeight undefined), and the only remaining source is a
+        // network round-trip — which must not run before the READ gate, and
+        // must not run at all when the event already carries the dimensions.
+        // See applyReadImageDims, called AFTER the gate in resolveReadAttachment.
+        return { document };
       }
       // Inbound: bucket-scoped by-reference → the re-homed conversation doc.
       // `media_id` is attacker-influenceable too, so the same ownership gate
@@ -1202,20 +1300,11 @@ export class MessageAttachmentService {
         }
         // FIX [4] inbound dims: imageWidth/imageHeight are TRANSIENT,
         // file-service-owned fields (content_metadata) — the getDocumentOrFail DB
-        // load above leaves them undefined. The by-reference `ref` already carries
-        // them (DocumentReferenceResult), so carry them over (only when present) so
-        // resolveReadAttachment surfaces the intrinsic dimensions on the
-        // MessageAttachment. Without them the m.image event / read resolution reach
-        // clients with no width/height and images render with layout reflow. These
-        // are transient runtime fields on the entity, safe to assign — zero extra
-        // I/O (the ref was already fetched for resolution).
-        if (ref.imageWidth !== undefined) {
-          document.imageWidth = ref.imageWidth;
-        }
-        if (ref.imageHeight !== undefined) {
-          document.imageHeight = ref.imageHeight;
-        }
-        return document;
+        // load above leaves them undefined. The by-reference `ref` we already
+        // fetched for resolution DOES carry them (DocumentReferenceResult), so
+        // hand it back as a ZERO-I/O dims source; applyReadImageDims layers it
+        // under the event's own dims after the READ gate.
+        return { document, dims: ref };
       }
     } catch (error) {
       this.logger.warn?.(
