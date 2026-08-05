@@ -502,8 +502,11 @@ describe('SpaceService', () => {
         spaceWithProfiles(childId),
       ] as any);
 
+      // The throwing profile belongs to the DESCENDANT, not the subtree root:
+      // that is the only case that tells the owning space apart from the root
+      // argument in the error log.
       revokeSpy.mockImplementation(async (profileId: string) => {
-        if (profileId === `flow-profile-${rootId}`) {
+        if (profileId === `flow-profile-${childId}`) {
           throw new Error('cache unavailable');
         }
       });
@@ -513,14 +516,17 @@ describe('SpaceService', () => {
       // The failure is isolated: every other profile is still swept and the
       // callout sweep still runs.
       expect(revokeSpy).toHaveBeenCalledTimes(4);
-      expect(revokeSpy).toHaveBeenCalledWith(`profile-${childId}`);
-      expect(revokeSpy).toHaveBeenCalledWith(`flow-profile-${childId}`);
+      expect(revokeSpy).toHaveBeenCalledWith(`profile-${rootId}`);
+      expect(revokeSpy).toHaveBeenCalledWith(`flow-profile-${rootId}`);
       expect(revokeCalloutsSpy).toHaveBeenCalledWith([rootId, childId]);
+      // The log names the space that actually owns the stale profile, and still
+      // carries the root the sweep was invoked for.
       expect(logger.error).toHaveBeenCalledWith(
         expect.objectContaining({
           message: 'Failed to invalidate URL cache for space subtree',
-          spaceId: rootId,
-          profileId: `flow-profile-${rootId}`,
+          spaceId: childId,
+          subtreeRootSpaceId: rootId,
+          profileId: `flow-profile-${childId}`,
         }),
         expect.any(String),
         LogContext.SPACES
