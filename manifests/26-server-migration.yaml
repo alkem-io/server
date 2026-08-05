@@ -12,11 +12,31 @@ spec:
       template:
         spec:
           restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            seccompProfile:
+              type: RuntimeDefault
           containers:
             - name: alkemio-server
               image: rg.nl-ams.scw.cloud/alkemio/alkemio-server:latest
-              command: ["pnpm", "run", "migration:run"]
+              # Requires alkemio/server images built from feature 026 (distroless era) or later —
+              # pnpm/ts-node no longer exist in the runtime image; this command works only against
+              # images containing compiled dist/ output.
+              # NOTE: `command:` fully replaces the image's OCI Entrypoint, so k8s does a raw exec
+              # lookup of argv[0] on $PATH — the distroless nodejs runtime's ENTRYPOINT
+              # (/nodejs/bin/node) lives outside $PATH by design, so a bare "node" argv[0] fails with
+              # `exec: "node": executable file not found in $PATH`. Use the absolute binary path
+              # instead (matches server/.docker/distroless-migration-smoke.sh's
+              # `--entrypoint /nodejs/bin/node`).
+              command: ["/nodejs/bin/node", "./node_modules/typeorm/cli.js", "migration:run", "--dataSource", "dist/config/migration.config.js"]
               imagePullPolicy: Always
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
               env:
                 # Map POSTGRES_USER/PASSWORD to DATABASE_USERNAME/PASSWORD for the server
                 - name: DATABASE_USERNAME
