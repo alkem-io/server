@@ -444,9 +444,16 @@ const STATUS_METADATA: Record<AlkemioErrorStatus, ErrorMetadata> = {
   },
   // 027-platform-role-redesign (FR-027): fail-closed role-assignment audit
   // write failure — the grant/revoke does not take effect.
+  //
+  // 121, not 119: this branch and 109-redis-session-store-resilience each
+  // claimed the last free SYSTEM slot independently, and 109 merged to develop
+  // first. `SESSION_STORE_UNAVAILABLE = 14119` is by now asserted in
+  // `auth.interceptor.spec.ts` and published across that feature's spec,
+  // data-model and response contract, so it keeps 119 and this one moves.
+  // Nothing outside this file referenced 14119 for the audit failure.
   [AlkemioErrorStatus.PLATFORM_ROLE_ASSIGNMENT_AUDIT_FAILED]: {
     category: ErrorCategory.SYSTEM,
-    specificCode: 119,
+    specificCode: 121,
     userMessage: 'userMessages.system.platformRoleAssignmentAuditFailed',
   },
   // ═══════════════════════════════════════════════════════════════════════════
