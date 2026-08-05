@@ -151,16 +151,18 @@ describe('UrlGeneratorCacheService', () => {
 
       const [sql] = entityManager.connection.query.mock.calls[0];
       // These four joins are the ones that were missing while their profiles
-      // still resolved to a space-derived URL.
-      expect(sql).toContain('"memo" fm          ON fm."id" = cf."memoId"');
-      expect(sql).toContain(
-        '"collabora_document" fcd ON fcd."id" = cf."collaboraDocumentId"'
+      // still resolved to a space-derived URL. Matched on the join shape rather
+      // than an exact substring: the SQL is column-aligned for readability, so
+      // asserting the padding would break on a reformat that changes nothing.
+      expect(sql).toMatch(/"memo"\s+fm\s+ON\s+fm\."id"\s*=\s*cf\."memoId"/);
+      expect(sql).toMatch(
+        /"collabora_document"\s+fcd\s+ON\s+fcd\."id"\s*=\s*cf\."collaboraDocumentId"/
       );
-      expect(sql).toContain(
-        '"collabora_document" cd ON cd."id" = cc."collaboraDocumentId"'
+      expect(sql).toMatch(
+        /"collabora_document"\s+cd\s+ON\s+cd\."id"\s*=\s*cc\."collaboraDocumentId"/
       );
-      expect(sql).toContain(
-        '"calendar_event" ce ON ce."calendarId" = t."calendarId"'
+      expect(sql).toMatch(
+        /"calendar_event"\s+ce\s+ON\s+ce\."calendarId"\s*=\s*t\."calendarId"/
       );
     });
 
