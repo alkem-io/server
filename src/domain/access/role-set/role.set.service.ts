@@ -1619,7 +1619,8 @@ export class RoleSetService {
     welcomeMessage: string,
     roleSetInvitedToParent: boolean,
     extraRoles: RoleName[],
-    actorContext: ActorContext
+    actorContext: ActorContext,
+    suggestedLanguage?: string
   ): Promise<IPlatformInvitation> {
     const externalInvitationInput: CreatePlatformInvitationInput = {
       roleSetID: roleSet.id,
@@ -1628,6 +1629,7 @@ export class RoleSetService {
       roleSetInvitedToParent,
       roleSetExtraRoles: extraRoles,
       createdBy: actorContext.actorID,
+      suggestedLanguage,
     };
     const externalInvitation =
       await this.platformInvitationService.createPlatformInvitation(

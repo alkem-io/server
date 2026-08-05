@@ -8,16 +8,13 @@ import { APP_FILTER } from '@nestjs/core';
 import { PassportModule } from '@nestjs/passport';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { AlkemioConfig } from '@src/types';
-import Redis from 'ioredis';
 import { createRemoteJWKSet } from 'jose';
 import { AssistantForwardAuthController } from './assistant-forward-auth.controller';
 import { parseBearerAudAllowList } from './bearer-aud-allow-list';
 import { ForwardAuthController } from './forward-auth.controller';
 import { ForwardAuthResolverService } from './forward-auth.resolver.service';
 import { OidcController } from './oidc.controller';
-import { OidcService } from './oidc.service';
-import { buildSessionStore } from './session-store.redis';
-import { SESSION_STORE_HANDLE } from './strategies/cookie-session.errors';
+import { OidcCoreModule } from './oidc-core.module';
 import { CookieSessionStoreUnavailableFilter } from './strategies/cookie-session.exception-filter';
 import { CookieSessionStrategy } from './strategies/cookie-session.strategy';
 import {
@@ -31,6 +28,11 @@ import {
 @Module({
   imports: [
     ConfigModule,
+    // server#6315 — OidcService, the shared Redis client, SESSION_STORE_HANDLE
+    // and OidcSessionRevocationService now live here so UserModule can reach
+    // the revocation service without importing OidcModule (which would be a
+    // cycle). Re-exported below, so this module's public surface is unchanged.
+    OidcCoreModule,
     PassportModule,
     AuthenticationModule,
     ActorContextModule,
@@ -44,19 +46,7 @@ import {
     AssistantForwardAuthController,
   ],
   providers: [
-    OidcService,
     ForwardAuthResolverService,
-    {
-      provide: SESSION_STORE_HANDLE,
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService<AlkemioConfig, true>) => {
-        const { host, port } = configService.get('storage.redis', {
-          infer: true,
-        });
-        const client = new Redis({ host, port: Number(port) });
-        return buildSessionStore(client);
-      },
-    },
     CookieSessionStrategy,
     {
       provide: BEARER_JWKS_HANDLE,
@@ -105,6 +95,6 @@ import {
       useClass: CookieSessionStoreUnavailableFilter,
     },
   ],
-  exports: [OidcService],
+  exports: [OidcCoreModule],
 })
 export class OidcModule {}

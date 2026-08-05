@@ -74,6 +74,7 @@ export enum AlkemioErrorStatus {
   DOCUMENT_DELETE_FAILED = 'DOCUMENT_DELETE_FAILED',
   STORAGE_UPLOAD_FAILED = 'STORAGE_UPLOAD_FAILED',
   STORAGE_SERVICE_UNAVAILABLE = 'STORAGE_SERVICE_UNAVAILABLE',
+  SESSION_STORE_UNAVAILABLE = 'SESSION_STORE_UNAVAILABLE',
   URL_RESOLVER_ERROR = 'URL_RESOLVER_ERROR',
   // 027-platform-role-redesign: fail-closed role-assignment audit write
   // failure — the grant/revoke does not take effect (FR-027).

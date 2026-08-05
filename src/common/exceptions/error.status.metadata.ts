@@ -412,6 +412,21 @@ const STATUS_METADATA: Record<AlkemioErrorStatus, ErrorMetadata> = {
     specificCode: 120,
     userMessage: 'userMessages.system.storageServiceUnavailable',
   },
+  // server#6332 — the session store being unreachable is INFRASTRUCTURE
+  // unavailability, not an authorization outcome. It previously surfaced as
+  // UNAUTHENTICATED (AUTHORIZATION/101 -> 11101), which told a SPA the user's
+  // session was invalid and to sign in again; the truth is "come back in five
+  // seconds". Moving it from band 11 to band 14 is the vocabulary half of that
+  // fix. 119 was the one free slot in the SYSTEM band (101-118 and 120 were
+  // already taken); with this entry the band is contiguously full 101-120.
+  //
+  // STORAGE_SERVICE_UNAVAILABLE was deliberately NOT reused: it names a
+  // different subsystem and its user-facing message would mislead.
+  [AlkemioErrorStatus.SESSION_STORE_UNAVAILABLE]: {
+    category: ErrorCategory.SYSTEM,
+    specificCode: 119,
+    userMessage: 'userMessages.system.sessionStoreUnavailable',
+  },
   [AlkemioErrorStatus.EXCALIDRAW_AMQP_RESULT_ERROR]: {
     category: ErrorCategory.SYSTEM,
     specificCode: 116,

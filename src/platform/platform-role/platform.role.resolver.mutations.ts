@@ -957,48 +957,52 @@ export class PlatformRoleResolverMutations {
     await this.licenseService.saveAll(licenses);
   }
 
-  /**
-   * NOTE: both call sites invoke this WITHOUT awaiting (pre-existing, `bd8b9d839d`
-   * / `bd8314b35`, also on develop) — the notification is deliberately
-   * fire-and-forget so a notification outage cannot fail a role change.
-   *
-   * But a floating promise that REJECTS is an unhandled rejection, and Node's
-   * default `--unhandled-rejections=throw` turns that into a HARD PROCESS EXIT.
-   * Observed live twice during 027 verification: revoking a platform role from a
-   * user whose `profile` relation resolves null crashes the whole server with
-   * `TypeError: Cannot read properties of null (reading 'displayName')` in
-   * `NotificationExternalAdapter.getUserPayloadOrFail`.
-   *
-   * 027 did not introduce the bug but makes it routine: this feature's entire
-   * subject is platform role grant/revoke, so the path is now hot (fixture
-   * teardown revoking 13 roles across many users reproduces it every run).
-   * Containing the rejection here restores the intended fire-and-forget
-   * semantics — the failure is logged, the mutation still succeeds, the process
-   * survives. The null-profile cause itself is a separate defect in the
-   * notification adapter and is reported, not silently absorbed.
-   */
-  private async notifyPlatformGlobalRoleChange(
+  private notifyPlatformGlobalRoleChange(
     triggeredBy: string,
     user: IUser,
     type: RoleChangeType,
     role: string
-  ) {
+  ): void {
     const notificationInput: NotificationInputPlatformGlobalRoleChange = {
       triggeredBy,
       userID: user.id,
       type: type,
       role: role,
     };
-    try {
-      await this.notificationPlatformAdapter.platformGlobalRoleChanged(
+    this.dispatchNotification(
+      this.notificationPlatformAdapter.platformGlobalRoleChanged(
         notificationInput
-      );
-    } catch (error: any) {
-      this.logger.error(
-        `Unable to dispatch platform global role change notification (user=${user.id}, role=${role}, type=${type}): ${error?.message}`,
-        error?.stack,
+      ),
+      'platformGlobalRoleChanged'
+    );
+  }
+
+  /**
+   * Wraps a fire-and-forget notification dispatch with a `.catch` so an
+   * unhandled rejection from a downstream notification adapter (e.g. a user
+   * row with a null profile → TypeError while building the payload) does not
+   * crash the Node process.
+   *
+   * The notification is still side-effectful: failures are logged at ERROR
+   * with structured details so monitoring can pick them up. Notifications
+   * are intentionally not awaited at the resolver level; we don't want a
+   * downstream notification problem to fail the user-facing mutation.
+   */
+  private dispatchNotification(
+    promise: Promise<unknown>,
+    eventLabel: string
+  ): void {
+    void promise.catch(error => {
+      const stack = error instanceof Error ? (error.stack ?? '') : '';
+      this.logger.error?.(
+        {
+          message: 'Notification dispatch failed',
+          event: eventLabel,
+          error: String(error),
+        },
+        stack,
         LogContext.NOTIFICATIONS
       );
-    }
+    });
   }
 }

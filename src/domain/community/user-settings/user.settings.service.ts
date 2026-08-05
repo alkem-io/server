@@ -1,3 +1,7 @@
+import {
+  isSupportedInterfaceLanguage,
+  SUPPORTED_INTERFACE_LANGUAGES,
+} from '@common/constants/supported.languages';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { LogContext } from '@common/enums/logging.context';
 import {
@@ -38,6 +42,8 @@ export class UserSettingsService {
       },
       designVersion:
         settingsData.designVersion ?? DESIGN_VERSION_CURRENT_DEFAULT,
+      language: settingsData.language ?? null,
+      languageOfferAnswered: settingsData.languageOfferAnswered ?? false,
     });
     settings.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.USER_SETTINGS
@@ -311,6 +317,45 @@ export class UserSettingsService {
     // unsupported — the column is NOT NULL with a default of 2).
     if (updateData.designVersion != null) {
       settings.designVersion = updateData.designVersion;
+    }
+
+    // Language preference + one-way latch:
+    // (a) Any non-null language write latches languageOfferAnswered = true
+    //     (invariant: language ≠ NULL ⇒ flag = true).
+    // (b) Setting languageOfferAnswered = true without a language is the
+    //     decline path (stores the answered flag, leaves language null).
+    // (c) Setting languageOfferAnswered = false is rejected — the latch is
+    //     one-way; un-answering is not a valid state transition.
+    // (d) An explicit null for either field behaves like an omitted field
+    //     (no-op), matching the designVersion pattern above.
+    if (updateData.language != null) {
+      // Enforce UserSettings.language ∈ SUPPORTED_INTERFACE_LANGUAGES.
+      // DTO @IsIn catches API requests but internal callers (registration seeding,
+      // reconciliation) bypass DTO validation — this service-level guard is the
+      // last line of defence.
+      if (!isSupportedInterfaceLanguage(updateData.language)) {
+        throw new ValidationException(
+          'Language is not supported',
+          LogContext.COMMUNITY,
+          {
+            language: updateData.language,
+            supported: [...SUPPORTED_INTERFACE_LANGUAGES],
+          }
+        );
+      }
+      settings.language = updateData.language;
+      settings.languageOfferAnswered = true;
+    }
+
+    if (updateData.languageOfferAnswered != null) {
+      if (updateData.languageOfferAnswered === false) {
+        throw new ValidationException(
+          'languageOfferAnswered cannot be set back to false — it is a one-way latch',
+          LogContext.COMMUNITY
+        );
+      }
+      // true: latch the flag (decline path — no language written)
+      settings.languageOfferAnswered = true;
     }
 
     return settings;

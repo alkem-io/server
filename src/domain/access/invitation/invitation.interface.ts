@@ -30,4 +30,11 @@ export class IInvitation extends IAuthorizable {
       'Additional roles to assign to the Actor, in addition to the entry Role.',
   })
   extraRoles!: RoleName[];
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'Optional language the inviter expects the invitee to prefer; recorded per invitation.',
+  })
+  suggestedLanguage?: string;
 }

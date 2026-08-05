@@ -27,6 +27,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { RoleModule } from '../role/role.module';
 import { RoleSetMembershipStatusDataLoader } from './role.set.data.loader.membership.status';
 import { RoleSetActorRolesDataLoader } from './role.set.data.loaders.actor.roles';
+import { RoleSetEligibleLanguageGuard } from './role.set.eligible.language.guard';
 import { RoleSet } from './role.set.entity';
 import { RoleSetResolverFields } from './role.set.resolver.fields';
 import { RoleSetResolverFieldsPublic } from './role.set.resolver.fields.public';
@@ -74,6 +75,7 @@ import { RoleSetServiceLifecycleInvitation } from './role.set.service.lifecycle.
     RoleSetService,
     RoleSetAuthorizationService,
     RoleSetLicenseService,
+    RoleSetEligibleLanguageGuard,
     RoleSetResolverMutations,
     RoleSetResolverMutationsMembership,
     RoleSetResolverFields,
@@ -88,6 +90,7 @@ import { RoleSetServiceLifecycleInvitation } from './role.set.service.lifecycle.
     RoleSetService,
     RoleSetAuthorizationService,
     RoleSetLicenseService,
+    RoleSetEligibleLanguageGuard,
     RoleSetActorRolesDataLoader,
     RoleSetMembershipStatusDataLoader,
   ],

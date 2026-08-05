@@ -1,6 +1,7 @@
 import { RoleChangeType } from '@alkemio/notifications-lib';
 import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { LogContext } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import { RoleName } from '@common/enums/role.name';
@@ -16,6 +17,7 @@ import { LicenseService } from '@domain/common/license/license.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { AccountService } from '@domain/space/account/account.service';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
+import { LoggerService } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken } from '@nestjs/typeorm';
 import { PlatformService } from '@platform/platform/platform.service';
@@ -24,6 +26,7 @@ import { PlatformRoleAssignmentAuditService } from '@src/platform-admin/platform
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { type Mock } from 'vitest';
 import { PlatformRoleAssignmentRulesService } from './platform.role.assignment.rules.service';
 import { PlatformRoleResolverMutations } from './platform.role.resolver.mutations';
@@ -41,6 +44,7 @@ describe('PlatformRoleResolverMutations', () => {
   let licenseService: LicenseService;
   let notificationPlatformAdapter: NotificationPlatformAdapter;
   let roleSetAuthorizationService: RoleSetAuthorizationService;
+  let logger: LoggerService;
 
   const mockActorContext = {
     actorID: 'actor-1',
@@ -77,6 +81,7 @@ describe('PlatformRoleResolverMutations', () => {
     licenseService = module.get(LicenseService);
     notificationPlatformAdapter = module.get(NotificationPlatformAdapter);
     roleSetAuthorizationService = module.get(RoleSetAuthorizationService);
+    logger = module.get<LoggerService>(WINSTON_MODULE_NEST_PROVIDER);
   });
 
   describe('assignPlatformRoleToUser', () => {
@@ -238,6 +243,38 @@ describe('PlatformRoleResolverMutations', () => {
           type: RoleChangeType.ADDED,
           role: RoleName.GLOBAL_ADMIN,
         })
+      );
+    });
+
+    // The notification is dispatched fire-and-forget, so a rejection that
+    // escapes would become an unhandled rejection and — under Node's default
+    // `--unhandled-rejections=throw` — take the whole process down rather than
+    // fail the request. Notifying is best-effort; it must stay contained.
+    it('should contain a notification dispatch failure and log it', async () => {
+      const roleData = {
+        actorID: 'user-target',
+        role: RoleName.GLOBAL_ADMIN,
+      };
+      (
+        notificationPlatformAdapter.platformGlobalRoleChanged as Mock
+      ).mockRejectedValue(
+        new TypeError("Cannot read properties of null (reading 'displayName')")
+      );
+
+      await expect(
+        resolver.assignPlatformRoleToUser(mockActorContext, roleData as any)
+      ).resolves.toBe(mockUser);
+
+      await vi.waitFor(() =>
+        expect(logger.error).toHaveBeenCalledWith(
+          {
+            message: 'Notification dispatch failed',
+            event: 'platformGlobalRoleChanged',
+            error: expect.stringContaining('TypeError'),
+          },
+          expect.any(String),
+          LogContext.NOTIFICATIONS
+        )
       );
     });
   });

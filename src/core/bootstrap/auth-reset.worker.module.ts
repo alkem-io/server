@@ -1,15 +1,14 @@
 import configuration from '@config/configuration';
 import { WinstonConfigService } from '@config/winston.config';
 import { GraphqlGuardModule } from '@core/authorization/graphql.guard.module';
+import { redisCacheModule } from '@core/cache/redis.cache.module';
 import { Cipher, EncryptionModule } from '@hedger/nestjs-encryption';
-import { CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
 import { AlkemioConfig } from '@src/types';
-import * as redisStore from 'cache-manager-redis-store';
 import { WinstonModule } from 'nest-winston';
 import { join } from 'path';
 import { WorkerEventBusModule } from './worker.event-bus.module';
@@ -55,22 +54,11 @@ import { WorkerEventBusModule } from './worker.event-bus.module';
     // graph injects SchedulerRegistry, and omitting it means the only @Cron in
     // the graph (PushSubscriptionService stale-subscription cleanup) is never
     // wired, so the worker runs reset work ONLY. Do not add it back.
-    CacheModule.registerAsync({
-      isGlobal: true,
-      imports: [ConfigModule],
-      useFactory: async (configService: ConfigService<AlkemioConfig, true>) => {
-        const { host, port, timeout } = configService.get('storage.redis', {
-          infer: true,
-        });
-        return {
-          store: redisStore,
-          host,
-          port,
-          redisOptions: { connectTimeout: timeout * 1000 },
-        };
-      },
-      inject: [ConfigService],
-    }),
+    // Literally the same module definition AppModule imports, so the two can no
+    // longer drift. The previous two copies each built an unguarded redis
+    // client, so a Redis blip killed this worker exactly as it killed the API
+    // (#6330).
+    redisCacheModule(),
     TypeOrmModule.forRootAsync({
       name: 'default',
       imports: [ConfigModule],
