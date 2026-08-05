@@ -670,29 +670,29 @@ class FileServiceStorageProvider(StorageProvider):
         try:
             # treq serialises the multipart body as form-fields (`data`) THEN
             # files, preserving dict insertion order — so storageBucketId /
-            # externalReference / skipImageProcessing precede the file part, which
-            # file-service requires (it reads the metadata fields before consuming
-            # the streamed file).
+            # externalReference / displayName / skipImageProcessing (every
+            # metadata part) precede the file part, which file-service requires
+            # (it reads the metadata fields before consuming the streamed file).
             files = {"file": (media_id, stream)}
             data = {
                 "storageBucketId": self.matrix_media_bucket_id,
                 "externalReference": media_id,
                 # file-service requires a non-empty displayName (NOT NULL column).
                 # The storage provider runs below the Matrix event layer, so the
-                # only identifier available here is the opaque media_id — this
-                # staging name is a PLACEHOLDER.
+                # only identifier available here is the opaque media_id — the
+                # human filename lives in the event `body`, which is not visible
+                # from this layer. This staging name is therefore a PLACEHOLDER.
                 #
-                # The human filename (the event `body`) is restored by the server
-                # on the inbound re-home MOVE: it sends a sanitized `displayName`
-                # on the same PATCH that re-buckets the row (see
-                # MessageAttachmentService.rehomeOne /
+                # The server restores the human filename on the inbound re-home
+                # MOVE: it sends a sanitized `displayName` on the same PATCH that
+                # re-buckets the row (see MessageAttachmentService.rehomeOne /
                 # sanitizeAttachmentDisplayName). NOTE the re-share COPY path
-                # (media already homed in another conversation) does NOT yet
-                # rename — `CopyDocumentInput` has no displayName field — so a
-                # re-shared copy still inherits this media-id placeholder.
+                # (media already homed in another conversation) does NOT rename —
+                # file-service's CopyDocumentInput carries no displayName field —
+                # so a re-shared copy still inherits this media-id placeholder.
                 #
                 # No authorizationId is sent — the staging doc is created with
-                # NULL auth and the server mints one on re-home.
+                # NULL auth and the server mints the real one on re-home.
                 "displayName": media_id,
                 "skipImageProcessing": "true",  # VERBATIM — read-back is exact
             }

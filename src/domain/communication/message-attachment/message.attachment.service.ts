@@ -1063,9 +1063,23 @@ export class MessageAttachmentService {
     raw: ReceivedAttachment,
     resolvedDims: ImageDimsSource | undefined
   ): Promise<void> {
-    // Applied lowest-precedence FIRST so the event's own dims win.
-    this.applyImageDims(attachment, resolvedDims);
+    // Applied lowest-precedence FIRST (applyImageDims overwrites with any
+    // defined value), so `resolvedDims` wins where it exists.
+    //
+    // Trust order: `raw` dims come from the Matrix event's `info.w`/`info.h`,
+    // which the SENDING CLIENT asserts — for inbound (Element-origin) media that
+    // is unverified, attacker-influenceable input. `resolvedDims` comes from the
+    // by-reference lookup, i.e. file-service's own measurement of the stored
+    // bytes, so it is authoritative and is already in hand (zero extra I/O).
+    // Preferring it costs nothing and keeps a lying client from distorting a
+    // viewer's layout.
+    //
+    // This does NOT reintroduce the read-path N+1: `resolvedDims` is only ever
+    // set on the inbound by-reference branch (whose lookup already happened).
+    // The outbound branch leaves it undefined, so the event's dims stand and no
+    // round-trip is made.
     this.applyImageDims(attachment, raw);
+    this.applyImageDims(attachment, resolvedDims);
     if (attachment.width !== undefined || attachment.height !== undefined) {
       return; // dims already in hand — no round-trip
     }

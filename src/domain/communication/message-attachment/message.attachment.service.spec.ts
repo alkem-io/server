@@ -2278,7 +2278,7 @@ describe('MessageAttachmentService', () => {
       expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
     });
 
-    it('inbound: the event dims take precedence over the by-reference dims, and still no meta call', async () => {
+    it('inbound: the by-reference (file-service) dims OUTRANK the event dims, and still no meta call', async () => {
       fileServiceAdapter.getDocumentByReference.mockResolvedValue({
         id: 'doc-rehomed',
         imageWidth: 111,
@@ -2312,9 +2312,13 @@ describe('MessageAttachmentService', () => {
         {} as any
       );
 
+      // The event asserts 800x600; file-service MEASURED 111x222 on the stored
+      // bytes. For inbound (Element-origin) media the event's info.w/h is
+      // unverified client input, so the authoritative measurement must win — and
+      // it is already in hand, so this costs no extra round-trip.
       expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
       expect(result).toEqual([
-        expect.objectContaining({ width: 800, height: 600 }),
+        expect.objectContaining({ width: 111, height: 222 }),
       ]);
     });
   });
