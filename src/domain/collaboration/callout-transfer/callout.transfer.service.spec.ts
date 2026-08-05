@@ -152,11 +152,11 @@ describe('CalloutTransferService', () => {
       expect(result).toBe(finalCallout);
     });
 
-    // Regression coverage for story #6021: a cross-space transfer must hand the
-    // destination's flow-state template to the classification, so the Callout
-    // either keeps a state the destination knows or is reset to its default.
-    // Without this the Callout keeps a state no destination phase matches and
-    // disappears from the destination (same symptom as #4970).
+    // Transfer-boundary coverage for story #6021. ClassificationService is
+    // mocked here, so this pins only the boundary: the templates handed to the
+    // classification must be read from the *target* CalloutsSet, never the
+    // source. The resolution of the resulting tag lives in
+    // `classification.service.spec.ts` ("destination default resolution").
     it('should reclassify the callout against the destination flow-state template', async () => {
       const callout = {
         id: 'callout-1',
@@ -209,6 +209,13 @@ describe('CalloutTransferService', () => {
 
       await service.transferCallout(callout, targetCalloutsSet);
 
+      // Templates must come from the target CalloutsSet, not the source one.
+      expect(calloutsSetService.getTagsetTemplatesSet).toHaveBeenCalledWith(
+        'target-cs'
+      );
+      expect(calloutsSetService.getTagsetTemplatesSet).not.toHaveBeenCalledWith(
+        'source-cs'
+      );
       expect(
         classificationService.updateTagsetTemplateOnSelectTagset
       ).toHaveBeenCalledWith('classification-1', destinationFlowStateTemplate);

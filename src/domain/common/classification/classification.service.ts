@@ -17,6 +17,10 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { CreateTagsetInput } from '../tagset';
 import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
+import {
+  matchAllowedValue,
+  resolveDefaultTags,
+} from '../tagset-template/tagset.template.utils';
 import { CreateClassificationInput } from './dto/classification.dto.create';
 import { UpdateClassificationInput } from './dto/classification.dto.update';
 import { UpdateClassificationSelectTagsetValueInput } from './dto/classification.dto.update.select.tagset.value';
@@ -202,77 +206,39 @@ export class ClassificationService {
       tagsetTemplate.name
     );
 
-    const defaultTags = this.resolveDefaultTags(tagsetTemplate);
-
     if (existingTagset) {
       existingTagset.tagsetTemplate = tagsetTemplate;
-      // Preserve current value when it is still valid in the target template;
-      // only fall back to the default when the current value is not allowed.
-      const currentValue = existingTagset.tags?.[0];
-      const isCurrentValueValid =
-        currentValue != null &&
-        currentValue !== '' &&
-        tagsetTemplate.allowedValues?.includes(currentValue);
-      existingTagset.tags = isCurrentValueValid ? [currentValue] : defaultTags;
+      // Preserve the current value when the target template still allows it —
+      // matched case-insensitively, because that is how
+      // `filterCalloutsByClassificationTagsets` matches phase filters, and
+      // normalised to the template's spelling so the stored value stays
+      // canonical. Only fall back to the default when there is no match at all.
+      const matchedValue = matchAllowedValue(
+        tagsetTemplate.allowedValues,
+        existingTagset.tags?.[0]
+      );
+      existingTagset.tags = matchedValue
+        ? [matchedValue]
+        : resolveDefaultTags(tagsetTemplate);
       return await this.tagsetService.save(existingTagset, mgr);
     }
 
     // Target callouts set has a template not present in the source classification;
     // create a new tagset for it
     const classification = await this.getClassificationOrFail(classificationID);
+    // Tagsets are already loaded above; hand them over so addTagsetOnClassification
+    // does not re-query them.
+    classification.tagsets = tagsets;
     return await this.addTagsetOnClassification(
       classification,
       {
         name: tagsetTemplate.name,
         type: tagsetTemplate.type,
-        tags: defaultTags,
+        tags: resolveDefaultTags(tagsetTemplate),
         tagsetTemplate,
       },
       mgr
     );
-  }
-
-  /**
-   * Resolves the value a SELECT_ONE tagset must fall back to when its current
-   * value has no match in the target TagsetTemplate.
-   *
-   * `defaultSelectedValue` is only usable when it is itself one of the
-   * template's `allowedValues`. It is a nullable column, and
-   * `TagsetTemplateService.updateTagsetTemplateDefinition` only overwrites it
-   * when the update carries a truthy value — so a template whose allowedValues
-   * were replaced can be left pointing at a value that no longer exists, and
-   * older templates may carry no default at all.
-   *
-   * Trusting it blindly leaves the tagset holding a value the target does not
-   * know about (or, worse, no value at all). For a Callout's `flow-state`
-   * classification that means it matches none of the destination's phases, so
-   * after a cross-space transfer the Callout is filtered out of every tab and
-   * appears to have vanished (story #6021, and the same root cause as #4970).
-   *
-   * The first allowed value is the destination's default state — the same
-   * convention used by `CalloutsSetService.moveCalloutsToDefaultFlowState` and
-   * by the flow-state template bootstrap in `CollaborationService`.
-   *
-   * Empty strings are discarded: a `simple-array` column persisted from an
-   * empty array reads back as `['']`, which is not a selectable value.
-   */
-  private resolveDefaultTags(tagsetTemplate: ITagsetTemplate): string[] {
-    const allowedValues = (tagsetTemplate.allowedValues ?? []).filter(
-      allowedValue => allowedValue !== ''
-    );
-    const defaultSelectedValue = tagsetTemplate.defaultSelectedValue;
-
-    if (allowedValues.length === 0) {
-      // Nothing to validate against (e.g. a free-form template): keep whatever
-      // default the template declares.
-      return defaultSelectedValue ? [defaultSelectedValue] : [];
-    }
-
-    if (defaultSelectedValue && allowedValues.includes(defaultSelectedValue)) {
-      return [defaultSelectedValue];
-    }
-
-    return [allowedValues[0]];
   }
 
   // Note: provided data has priority when it comes to tags

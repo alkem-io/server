@@ -54,6 +54,15 @@ describe('ClassificationService', () => {
     authorizationPolicyService = module.get(AuthorizationPolicyService);
   });
 
+  // `Classification.create` / `Classification.findOne` are statics on a shared
+  // module-level class and the suite runs with `isolate: false` (see
+  // docs/testing-flakiness.md §4): `clearMocks` only clears call data, so
+  // without an explicit restore the last spy installed here would leak into
+  // whichever spec file the worker picks up next.
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   describe('createClassification', () => {
     it('should create a classification with tagsets from templates', () => {
       const templates: ITagsetTemplate[] = [
@@ -606,6 +615,42 @@ describe('ClassificationService', () => {
         await service.updateTagsetTemplateOnSelectTagset('cls-1', template);
 
         expect(existingTagset.tags).toEqual(['EXPLORE']);
+      });
+
+      it('should keep a current value that differs from the allowed value only in casing', async () => {
+        // `filterCalloutsByClassificationTagsets` matches phase filters
+        // case-insensitively, so a destination state that differs only in
+        // casing is a match for the client: resetting here would needlessly
+        // move the Callout off its state. The template's spelling wins.
+        const existingTagset = arrangeFlowStateTagset(['explore']);
+
+        const template = {
+          name: TagsetReservedName.FLOW_STATE,
+          type: TagsetType.SELECT_ONE,
+          allowedValues: ['EXPLORE', 'DEFINE'],
+          defaultSelectedValue: 'DEFINE',
+        } as unknown as ITagsetTemplate;
+
+        await service.updateTagsetTemplateOnSelectTagset('cls-1', template);
+
+        expect(existingTagset.tags).toEqual(['EXPLORE']);
+      });
+
+      it('should keep the declared default when the template constrains nothing', async () => {
+        const existingTagset = arrangeFlowStateTagset(['HOME']);
+
+        // A free-form template has no allowedValues to validate against, so
+        // there is no basis on which to reject the declared default.
+        const template = {
+          name: TagsetReservedName.FLOW_STATE,
+          type: TagsetType.SELECT_ONE,
+          allowedValues: [],
+          defaultSelectedValue: 'DEFINE',
+        } as unknown as ITagsetTemplate;
+
+        await service.updateTagsetTemplateOnSelectTagset('cls-1', template);
+
+        expect(existingTagset.tags).toEqual(['DEFINE']);
       });
 
       it('should still prefer an explicit defaultSelectedValue that is allowed', async () => {
