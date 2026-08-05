@@ -987,8 +987,9 @@ export class SpaceService {
   /**
    * Every UrlGenerator cache entry a single space owns directly — the profiles
    * whose URL is derived from the space path, plus the space-id-keyed entries.
-   * Callout/contribution content is swept separately (one SQL pass for the whole
-   * subtree) because it is N-per-space.
+   * The space's N-per-space content — callouts, framing and contribution content,
+   * and calendar events — is swept separately by
+   * `revokeUrlCachesForContentInSpaces`, in one SQL pass for the whole subtree.
    */
   private getUrlCacheIdsForSpace(space: Space): string[] {
     const profileIds = [
