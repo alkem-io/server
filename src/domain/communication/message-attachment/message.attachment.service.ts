@@ -36,6 +36,79 @@ import { IMessage } from '../message/message.interface';
 import { IMessageAttachment } from './message.attachment.interface';
 
 /**
+ * file-service's `displayName` contract on `PATCH /internal/file/:id`, mirrored
+ * here (see sanitizeAttachmentDisplayName). The cap is measured in UTF-8 BYTES,
+ * NOT UTF-16 code units.
+ */
+const DISPLAY_NAME_MAX_BYTES = 512;
+
+/**
+ * Truncate to at most `maxBytes` UTF-8 bytes WITHOUT splitting a multi-byte
+ * character: walk the cut point back off any UTF-8 continuation byte
+ * (`0b10xxxxxx`), which would otherwise decode to a U+FFFD replacement char.
+ */
+const clampToUtf8Bytes = (value: string, maxBytes: number): string => {
+  const bytes = Buffer.from(value, 'utf8');
+  if (bytes.byteLength <= maxBytes) {
+    return value;
+  }
+  let end = maxBytes;
+  while (end > 0 && (bytes[end] & 0xc0) === 0x80) {
+    end--;
+  }
+  return bytes.subarray(0, end).toString('utf8');
+};
+
+/**
+ * Sanitize a Matrix event's human filename (`ReceivedAttachment.display_name`,
+ * i.e. the event `body`) into something file-service will ACCEPT (feature 013).
+ *
+ * WHY THIS IS NOT OPTIONAL: `display_name` is attacker-influenceable — it comes
+ * verbatim off a Matrix event any room member (or any federated homeserver) can
+ * craft. file-service validates `displayName` on PATCH (non-empty /
+ * non-whitespace, <= 512 BYTES, no path separators `/` or `\`, no control
+ * characters < 0x20 or DEL) and REJECTS the whole request otherwise. The
+ * inbound re-home sends `displayName` on the SAME atomic PATCH as
+ * `authorizationId` / `createdBy` / `externalReference`, so an unsanitized
+ * crafted filename would fail the entire re-home and leave the attachment
+ * permanently invisible — a trivially-triggered denial of service. Sanitizing
+ * server-side keeps the re-home unconditionally well-formed.
+ *
+ * Rules (deliberately mirroring file-service's, nothing more):
+ *  - control characters (C0 `< 0x20` and DEL `0x7f`) are DROPPED;
+ *  - path separators `/` and `\` are REPLACED with `_` (keeps the name
+ *    readable rather than silently gluing segments together);
+ *  - the result is trimmed, then clamped to 512 UTF-8 BYTES on a character
+ *    boundary, then trimmed again (a clamp can expose trailing whitespace);
+ *  - if nothing survives (empty / whitespace-only / control-only input) we fall
+ *    back to `fallback` — the existing staging name, i.e. the Synapse media id.
+ *
+ * Iteration is by CODE POINT (`for..of`) so astral characters (emoji, CJK
+ * extension planes) are never split into lone surrogates.
+ */
+export const sanitizeAttachmentDisplayName = (
+  displayName: string | undefined | null,
+  fallback: string
+): string => {
+  if (typeof displayName !== 'string') {
+    return fallback;
+  }
+  let cleaned = '';
+  for (const character of displayName) {
+    const code = character.codePointAt(0) as number;
+    if (code < 0x20 || code === 0x7f) {
+      continue; // C0 control character or DEL — rejected by file-service
+    }
+    cleaned += character === '/' || character === '\\' ? '_' : character;
+  }
+  const clamped = clampToUtf8Bytes(
+    cleaned.trim(),
+    DISPLAY_NAME_MAX_BYTES
+  ).trim();
+  return clamped.length > 0 ? clamped : fallback;
+};
+
+/**
  * Conversation media attachments (feature 013-matrix-media-file-service).
  *
  * Owns: outbound attachment resolution+validation (web compose), the EAGER
@@ -720,6 +793,23 @@ export class MessageAttachmentService {
 
     const documentAuthId = await this.mintDocumentAuth(bucket);
 
+    // Human filename (Element <-> web parity). The Synapse media-storage provider
+    // runs BELOW the Matrix event layer: the only identifier it has when it
+    // mints the staging row is the opaque `media_id`, so every staging document
+    // is named e.g. `zQtvVFbLNbcuMwYqRLWCWNfR` with no extension. The event
+    // `body` — the real filename the sender chose — reaches us here as
+    // `attachment.display_name`, so the re-home is the FIRST (and only) point
+    // that can restore it. Without this an Element-sent `holiday.jpg` shows in
+    // the web client as the raw media id and downloads as an extension-less,
+    // unopenable file. SANITIZED because `display_name` is attacker-
+    // influenceable and file-service hard-rejects a malformed name — which,
+    // riding this same atomic PATCH, would fail the whole re-home (see
+    // sanitizeAttachmentDisplayName).
+    const displayName = sanitizeAttachmentDisplayName(
+      attachment.display_name,
+      mediaId
+    );
+
     // The auth-owning try covers the atomic placement unit (the MOVE, or the COPY
     // that creates the row + points it at documentAuthId). On failure the minted-
     // but-unused auth is cleaned up. Both placements land the document DURABLE in
@@ -740,6 +830,8 @@ export class MessageAttachmentService {
           authorizationId: documentAuthId,
           createdBy: senderActorID,
           externalReference: mediaId,
+          // Restore the human filename over the provider's media-id placeholder.
+          displayName,
           temporaryLocation: false,
         });
       } else {
@@ -752,6 +844,17 @@ export class MessageAttachmentService {
         // such rows by `externalReference`, not by content, so two distinct
         // media_ids with identical bytes each get their own row instead of
         // collapsing and dropping the second one's reference.
+        //
+        // TODO(013): the re-shared copy INHERITS the source row's displayName —
+        // for a re-share of still-staged Element media that is the opaque
+        // `media_id`, not the human filename, so this branch loses the
+        // Element<->web filename parity the MOVE branch above restores.
+        // `CopyDocumentInput` has no `displayName` field yet; adding one is a
+        // file-service change (`POST /internal/file/copy`). Once it exists, pass
+        // the same sanitized `displayName` here. Deliberately NOT worked around
+        // with a follow-up PATCH round-trip: that would make the placement
+        // non-atomic (a partial failure would leave a copied-but-misnamed row)
+        // for a cosmetic field.
         await this.fileServiceAdapter.copyDocument({
           sourceId: canonical.id,
           destinationBucketId: bucket.id,

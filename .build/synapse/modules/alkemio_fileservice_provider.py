@@ -679,10 +679,20 @@ class FileServiceStorageProvider(StorageProvider):
                 "externalReference": media_id,
                 # file-service requires a non-empty displayName (NOT NULL column).
                 # The storage provider runs below the Matrix event layer, so the
-                # only identifier available is the opaque media_id; the human
-                # filename (event `body`) is applied by the server on inbound
-                # re-home. No authorizationId is sent — the staging doc is created
-                # with NULL auth and the server mints one on re-home.
+                # only identifier available here is the opaque media_id — this
+                # staging name is a PLACEHOLDER.
+                #
+                # The human filename (the event `body`) is restored by the server
+                # on the inbound re-home MOVE: it sends a sanitized `displayName`
+                # on the same PATCH that re-buckets the row (see
+                # MessageAttachmentService.rehomeOne /
+                # sanitizeAttachmentDisplayName). NOTE the re-share COPY path
+                # (media already homed in another conversation) does NOT yet
+                # rename — `CopyDocumentInput` has no displayName field — so a
+                # re-shared copy still inherits this media-id placeholder.
+                #
+                # No authorizationId is sent — the staging doc is created with
+                # NULL auth and the server mints one on re-home.
                 "displayName": media_id,
                 "skipImageProcessing": "true",  # VERBATIM — read-back is exact
             }

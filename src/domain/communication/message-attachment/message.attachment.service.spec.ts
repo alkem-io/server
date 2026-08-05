@@ -20,7 +20,10 @@ import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mocked } from 'vitest';
 import { Conversation } from '../conversation/conversation.entity';
 import { Room } from '../room/room.entity';
-import { MessageAttachmentService } from './message.attachment.service';
+import {
+  MessageAttachmentService,
+  sanitizeAttachmentDisplayName,
+} from './message.attachment.service';
 
 const MATRIX_MEDIA_BUCKET = 'matrix-media-bucket';
 const CONV_BUCKET = 'conv-bucket';
@@ -639,6 +642,90 @@ describe('MessageAttachmentService', () => {
         })
       );
       expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
+    });
+
+    it('MOVE restores the human filename over the provider media-id placeholder', async () => {
+      // The Synapse storage provider names every staging row after the opaque
+      // media_id (it runs below the Matrix event layer). The re-home MOVE is the
+      // only point that can restore the event `body`, so without this an
+      // Element-sent holiday.jpg shows up as `media-1` and downloads
+      // extension-less.
+      fileServiceAdapter.getDocumentByReference
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'doc-staging',
+          displayName: 'media-1',
+          storageBucketId: MATRIX_MEDIA_BUCKET,
+          mimeType: 'image/jpeg',
+        } as any);
+
+      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
+        {
+          media_id: 'media-1',
+          display_name: 'holiday.jpg',
+          mime_type: 'image/jpeg',
+          size: 1,
+        },
+      ]);
+
+      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith(
+        'doc-staging',
+        expect.objectContaining({ displayName: 'holiday.jpg' })
+      );
+    });
+
+    it('MOVE sanitizes a crafted display_name instead of letting file-service reject the whole re-home', async () => {
+      // display_name comes verbatim off an attacker-influenceable Matrix event.
+      // It rides the SAME atomic PATCH as authorizationId/createdBy/
+      // externalReference, so an unsanitized malformed name would fail the
+      // entire re-home and make the attachment permanently invisible.
+      fileServiceAdapter.getDocumentByReference
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'doc-staging',
+          storageBucketId: MATRIX_MEDIA_BUCKET,
+          mimeType: 'image/png',
+        } as any);
+
+      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
+        {
+          media_id: 'media-1',
+          display_name: '../../etc/pas swd\n',
+          mime_type: 'image/png',
+          size: 1,
+        },
+      ]);
+
+      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith(
+        'doc-staging',
+        expect.objectContaining({ displayName: '.._.._etc_passwd' })
+      );
+    });
+
+    it('MOVE falls back to the staging media id when display_name sanitizes to nothing', async () => {
+      fileServiceAdapter.getDocumentByReference
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'doc-staging',
+          storageBucketId: MATRIX_MEDIA_BUCKET,
+          mimeType: 'image/png',
+        } as any);
+
+      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
+        {
+          media_id: 'media-1',
+          display_name: '   ',
+          mime_type: 'image/png',
+          size: 1,
+        },
+      ]);
+
+      // Never send an empty displayName — file-service rejects it (NOT NULL /
+      // non-whitespace), which would fail the whole re-home.
+      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith(
+        'doc-staging',
+        expect.objectContaining({ displayName: 'media-1' })
+      );
     });
 
     it('COPIES (re-share) when the media is already homed elsewhere; the copy is born durable → NO separate pin', async () => {
@@ -2048,5 +2135,79 @@ describe('MessageAttachmentService', () => {
       // The whole query did NOT reject; only the failing attachment is omitted.
       expect(result).toEqual([expect.objectContaining({ id: 'doc-good' })]);
     });
+  });
+});
+
+// --- Finding A: inbound filename sanitization ---
+
+describe('sanitizeAttachmentDisplayName', () => {
+  const FALLBACK = 'zQtvVFbLNbcuMwYqRLWCWNfR'; // a Synapse media_id
+
+  it('passes an ordinary filename through untouched', () => {
+    expect(sanitizeAttachmentDisplayName('holiday.jpg', FALLBACK)).toBe(
+      'holiday.jpg'
+    );
+  });
+
+  it('neutralises BOTH path separators (file-service rejects `/` and `\\`)', () => {
+    expect(sanitizeAttachmentDisplayName('../../etc/passwd', FALLBACK)).toBe(
+      '.._.._etc_passwd'
+    );
+    expect(
+      sanitizeAttachmentDisplayName('C:\\Windows\\evil.exe', FALLBACK)
+    ).toBe('C:_Windows_evil.exe');
+  });
+
+  it('strips control characters (C0 and DEL)', () => {
+    expect(
+      sanitizeAttachmentDisplayName('ho\u0000li\u001fday\u007f.jpg', FALLBACK)
+    ).toBe('holiday.jpg');
+    // A newline is a control character too — dropping it keeps the PATCH valid.
+    expect(sanitizeAttachmentDisplayName('a\nb.png', FALLBACK)).toBe('ab.png');
+  });
+
+  it('trims surrounding whitespace', () => {
+    expect(sanitizeAttachmentDisplayName('  spaced.png  ', FALLBACK)).toBe(
+      'spaced.png'
+    );
+  });
+
+  it('leaves a name at exactly the 512-byte cap alone', () => {
+    const exact = 'a'.repeat(512);
+    expect(sanitizeAttachmentDisplayName(exact, FALLBACK)).toBe(exact);
+    expect(sanitizeAttachmentDisplayName(`${exact}bbb`, FALLBACK)).toBe(exact);
+  });
+
+  it('clamps to 512 BYTES (not code units) without splitting a multi-byte character', () => {
+    // The cap is BYTES, and 3-byte characters do not tile it: 300 of them = 900
+    // bytes, and the 512-byte cut lands INSIDE character 171 — a naive slice
+    // would emit a truncated sequence that decodes to a replacement character.
+    // Only 170 whole characters (510 bytes) fit.
+    expect(Buffer.byteLength('日', 'utf8')).toBe(3);
+    const result = sanitizeAttachmentDisplayName('日'.repeat(300), FALLBACK);
+    expect(Buffer.byteLength(result, 'utf8')).toBeLessThanOrEqual(512);
+    expect(result).toBe('日'.repeat(170));
+    expect(result).not.toContain('\uFFFD');
+
+    // Astral (4-byte) characters must survive intact too — never split into a
+    // lone surrogate. The leading 'a' pushes the cut off the 4-byte grid so the
+    // walk-back is genuinely exercised: 1 + 127*4 = 509 bytes fit.
+    const emoji = sanitizeAttachmentDisplayName(
+      `a${'😀'.repeat(200)}`,
+      FALLBACK
+    );
+    expect(Buffer.byteLength(emoji, 'utf8')).toBeLessThanOrEqual(512);
+    expect(emoji).toBe(`a${'😀'.repeat(127)}`);
+    expect(emoji).not.toContain('\uFFFD');
+  });
+
+  it('falls back to the staging name when nothing survives sanitization', () => {
+    expect(sanitizeAttachmentDisplayName('', FALLBACK)).toBe(FALLBACK);
+    expect(sanitizeAttachmentDisplayName('    ', FALLBACK)).toBe(FALLBACK);
+    expect(sanitizeAttachmentDisplayName('\u0000\u0001\u007f', FALLBACK)).toBe(
+      FALLBACK
+    );
+    expect(sanitizeAttachmentDisplayName(undefined, FALLBACK)).toBe(FALLBACK);
+    expect(sanitizeAttachmentDisplayName(null, FALLBACK)).toBe(FALLBACK);
   });
 });
