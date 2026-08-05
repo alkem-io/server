@@ -152,7 +152,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "chore: update schema baseline" -S
+          git commit -m "chore: update schema baseline" -S -s
           # One long-lived branch, rebuilt on every run from the current develop
           # tip, so a single open PR is refreshed instead of a new one per run.
           branch="schema-baseline/develop"
