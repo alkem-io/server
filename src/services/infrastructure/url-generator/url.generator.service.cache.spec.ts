@@ -111,9 +111,9 @@ describe('UrlGeneratorCacheService', () => {
     });
   });
 
-  describe('revokeUrlCachesForCalloutsInSpaces', () => {
+  describe('revokeUrlCachesForContentInSpaces', () => {
     it('is a no-op when no spaces are provided', async () => {
-      await service.revokeUrlCachesForCalloutsInSpaces([]);
+      await service.revokeUrlCachesForContentInSpaces([]);
 
       expect(entityManager.connection.query).not.toHaveBeenCalled();
       expect(cacheManager.del).not.toHaveBeenCalled();
@@ -130,7 +130,7 @@ describe('UrlGeneratorCacheService', () => {
       ]);
       cacheManager.del.mockResolvedValue(undefined);
 
-      await service.revokeUrlCachesForCalloutsInSpaces(['space-a', 'space-b']);
+      await service.revokeUrlCachesForContentInSpaces(['space-a', 'space-b']);
 
       expect(entityManager.connection.query).toHaveBeenCalledTimes(1);
       const [, params] = entityManager.connection.query.mock.calls[0];
@@ -147,7 +147,7 @@ describe('UrlGeneratorCacheService', () => {
     it('sweeps framing memos, collabora documents and calendar events too', async () => {
       entityManager.connection.query.mockResolvedValue([]);
 
-      await service.revokeUrlCachesForCalloutsInSpaces(['space-a']);
+      await service.revokeUrlCachesForContentInSpaces(['space-a']);
 
       const [sql] = entityManager.connection.query.mock.calls[0];
       // These four joins are the ones that were missing while their profiles
@@ -173,7 +173,7 @@ describe('UrlGeneratorCacheService', () => {
         .mockRejectedValueOnce(new Error('boom'))
         .mockResolvedValueOnce(undefined);
 
-      await service.revokeUrlCachesForCalloutsInSpaces(['space-a']);
+      await service.revokeUrlCachesForContentInSpaces(['space-a']);
 
       expect(cacheManager.del).toHaveBeenCalledTimes(2);
       expect(logger.error).toHaveBeenCalled();

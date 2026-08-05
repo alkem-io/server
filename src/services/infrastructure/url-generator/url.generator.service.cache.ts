@@ -56,7 +56,7 @@ export class UrlGeneratorCacheService {
   // document) and calendar events. Used after a space subtree changes parent so
   // that the URLs surfaced in the activity log and in notifications stop
   // pointing at the old path.
-  public async revokeUrlCachesForCalloutsInSpaces(
+  public async revokeUrlCachesForContentInSpaces(
     spaceIds: string[]
   ): Promise<void> {
     if (spaceIds.length === 0) {
