@@ -73,7 +73,10 @@ import { NotificationInputCollaborationCalloutContributionCreated } from '../not
 import { NotificationInputCollaborationCalloutPostContributionComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { NotificationInputCommentReply } from '../notification-adapter/dto/space/notification.dto.input.space.communication.user.comment.reply';
 import { NotificationInputUserEmailChangeSpaceAdmin } from '../notification-adapter/dto/space/notification.dto.input.space.user.email.change';
-import { NotificationEventPayloadUserConversationMessageDirect } from './dto/user/notification.event.payload.user.conversation.message.direct';
+import {
+  ConversationDigestEntryPayload,
+  NotificationEventPayloadUserConversationMessageDirect,
+} from './dto/user/notification.event.payload.user.conversation.message.direct';
 import { NotificationEventPayloadUserConversationMessageGroup } from './dto/user/notification.event.payload.user.conversation.message.group';
 
 interface CalloutContributionPayload {
@@ -978,81 +981,82 @@ export class NotificationExternalAdapter {
 
   /**
    * 034-messaging-notifications (contract C-2, data-model.md §3, FR-008/FR-009).
+   * REVISED for Operator Ruling R4 / D-22 — a per-recipient DIGEST.
    *
    * Deliberately does NOT reuse `buildBaseEventPayload` — that helper's
    * `triggeredBy` carries the sender's REAL email address, which is the
    * exact leak this feature must not repeat (the unanimous council finding
    * against reusing `USER_MESSAGE`/its template). `triggeredBy.email` is
    * explicitly zeroed here; `recipients[].email` remains — it is the
-   * delivery address, not exposed to other recipients. No message-content
-   * field exists anywhere in this payload.
+   * delivery address, and there is exactly ONE recipient on a digest.
    *
-   * sec-server-4: `sender.displayName` is user-controlled profile text, NOT
-   * a trusted platform field — it is sanitized (control chars stripped,
-   * length-clamped) before landing in the email subject/body the
-   * notifications service renders.
+   * On `triggeredBy`: a digest has no single sender — it is assembled at fire
+   * time from the recipient's unread signal, and the arrival path stores only
+   * conversation ids (data-model §5), never a sender. `triggeredBy` is
+   * therefore filled with the RECIPIENT's own (email-zeroed) payload purely to
+   * satisfy `BaseEventPayload`'s non-optional field. It identifies nobody else
+   * and templates MUST NOT render it — the digest names counterparts via
+   * `senders[]`. See the deviation note in the feature report.
+   *
+   * sec-server-4: entry display names are user-controlled profile/room text,
+   * NOT trusted platform fields — the caller sanitizes them
+   * (`sanitizeNotificationCopyText` / `getGroupDisplayNameForNotificationCopy`)
+   * before they reach this builder, and they are re-sanitized here so the
+   * builder is safe on its own.
    */
   async buildConversationMessageDirectPayload(
     eventType: NotificationEvent,
-    senderActorID: string,
-    emailRecipients: IUser[],
-    conversationID: string
+    recipient: IUser,
+    entries: ConversationDigestEntryPayload[]
   ): Promise<NotificationEventPayloadUserConversationMessageDirect> {
-    const sender = await this.getUserPayloadOrFail(senderActorID);
-    const conversationUrl =
-      this.urlGeneratorService.getConversationUrl(conversationID);
+    const recipientPayload = this.createUserPayloadFromUser(recipient);
+    const senders = entries.map(entry => this.sanitizeDigestEntry(entry));
 
     return {
       eventType,
-      triggeredBy: { ...sender, email: '' },
-      recipients: emailRecipients.map(recipient =>
-        this.createUserPayloadFromUser(recipient)
-      ),
+      triggeredBy: { ...recipientPayload, email: '' },
+      recipients: [recipientPayload],
       platform: { url: this.getPlatformURL() },
-      sender: {
-        displayName: sanitizeNotificationCopyText(sender.profile.displayName),
-      },
-      conversation: { id: conversationID, url: conversationUrl },
+      senders,
+      totalCount: senders.reduce((total, entry) => total + entry.count, 0),
     };
   }
 
   /**
-   * 034-messaging-notifications — group variant. See
-   * `buildConversationMessageDirectPayload` for the `triggeredBy.email`
-   * zeroing rationale and the sender-displayName sanitization note. Adds
-   * `conversation.displayName` — group email copy names the conversation.
-   * The caller (`ConversationNotificationService`) is responsible for
-   * resolving `conversationDisplayName` via
-   * `getGroupDisplayNameForNotificationCopy` first (placeholder/empty ->
-   * neutral fallback, sec-server-4/corr-server-5); it is treated as already
-   * user-facing-safe text here.
+   * 034-messaging-notifications — group digest variant. See
+   * `buildConversationMessageDirectPayload` for the `triggeredBy` and
+   * sanitization rationale.
+   *
+   * The group digest names CONVERSATIONS, not people: there is deliberately
+   * no sender-identity field anywhere on this payload (FR-018a).
    */
   async buildConversationMessageGroupPayload(
     eventType: NotificationEvent,
-    senderActorID: string,
-    emailRecipients: IUser[],
-    conversationID: string,
-    conversationDisplayName: string
+    recipient: IUser,
+    entries: ConversationDigestEntryPayload[]
   ): Promise<NotificationEventPayloadUserConversationMessageGroup> {
-    const sender = await this.getUserPayloadOrFail(senderActorID);
-    const conversationUrl =
-      this.urlGeneratorService.getConversationUrl(conversationID);
+    const recipientPayload = this.createUserPayloadFromUser(recipient);
+    const conversations = entries.map(entry => this.sanitizeDigestEntry(entry));
 
     return {
       eventType,
-      triggeredBy: { ...sender, email: '' },
-      recipients: emailRecipients.map(recipient =>
-        this.createUserPayloadFromUser(recipient)
-      ),
+      triggeredBy: { ...recipientPayload, email: '' },
+      recipients: [recipientPayload],
       platform: { url: this.getPlatformURL() },
-      sender: {
-        displayName: sanitizeNotificationCopyText(sender.profile.displayName),
-      },
-      conversation: {
-        id: conversationID,
-        url: conversationUrl,
-        displayName: conversationDisplayName,
-      },
+      conversations,
+      totalCount: conversations.reduce(
+        (total, entry) => total + entry.count,
+        0
+      ),
+    };
+  }
+
+  private sanitizeDigestEntry(
+    entry: ConversationDigestEntryPayload
+  ): ConversationDigestEntryPayload {
+    return {
+      ...entry,
+      displayName: sanitizeNotificationCopyText(entry.displayName),
     };
   }
 

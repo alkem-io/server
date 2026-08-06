@@ -22,6 +22,21 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
  * created the key (count === 1), with the TTL expressed in seconds (ioredis'
  * `expire` takes seconds, unlike cache-manager's milliseconds — the other
  * half of the original bug).
+ *
+ * SECOND fix (034 review): the key was `push:throttle:{userId}` — no epoch
+ * component. INCR and EXPIRE are two commands, so if the process dies, the
+ * connection drops, or Redis fails between them, the counter is left with NO
+ * TTL and the key never expires. That user is then throttled PERMANENTLY,
+ * with no self-healing path short of manual intervention. Suffixing the key
+ * with the epoch minute makes the window addressable by time: a stranded key
+ * belongs to a minute that will never be written to again, and the very next
+ * minute starts from a fresh key at zero. The conditional EXPIRE is kept so
+ * stranded keys are still reclaimed in the normal case.
+ *
+ * 034/R4 note: messaging notifications no longer participate in this bucket
+ * AT ALL (D-21 deleted the parallel messaging budget; the FR-011b delay cap
+ * bounds messaging volume by construction). This service now governs only
+ * NON-messaging pushes, which continue to depend on it.
  */
 @Injectable()
 export class PushThrottleService {
@@ -39,7 +54,10 @@ export class PushThrottleService {
   }
 
   async isAllowed(userId: string): Promise<boolean> {
-    const key = `push:throttle:${userId}`;
+    // Fixed one-minute epoch bucket. The suffix is what makes a lost EXPIRE
+    // self-heal instead of throttling the user forever.
+    const epochMinute = Math.floor(Date.now() / 60000);
+    const key = `push:throttle:${userId}:${epochMinute}`;
 
     try {
       // Atomic increment — no read-modify-write race across replicas.

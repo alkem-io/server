@@ -1,35 +1,28 @@
 import { LogContext } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
 import { NotificationEvent } from '@common/enums/notification.event';
-import {
-  getGroupDisplayNameForNotificationCopy,
-  sanitizeNotificationCopyText,
-} from '@common/utils/notification.copy.util';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { IConversation } from '@domain/communication/conversation/conversation.interface';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IUser } from '@domain/community/user/user.interface';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { NotificationExternalAdapter } from '@services/adapters/notification-external-adapter/notification.external.adapter';
-import { NotificationPushAdapter } from '@services/adapters/notification-push-adapter/notification.push.adapter';
 import { NotificationRecipientsService } from '@services/api/notification-recipients/notification.recipients.service';
-import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ConversationDigestSchedulerService } from './conversation.digest.scheduler.service';
 import {
-  ConversationMessageKind,
-  classifyConversationMessage,
-} from './conversation.notification.classification';
+  DigestKind,
+  digestKindFromMessageKind,
+  notificationEventForDigestKind,
+} from './conversation.digest.track';
+import { classifyConversationMessage } from './conversation.notification.classification';
 import { ConversationNotificationDedupeService } from './conversation.notification.dedupe.service';
-import { ConversationNotificationEmailBudgetService } from './conversation.notification.email.budget.service';
-import { ConversationNotificationSuppressionService } from './conversation.notification.suppression.service';
 
 // FR-020: bounds the plural recipient-lookup input; conversations larger
-// than this are fanned out internally in bounded batches rather than
-// failing (mirrors NOTIFICATION_RECIPIENTS_USER_IDS_MAX on the DTO).
+// than this are fanned out internally in bounded batches (mirrors
+// NOTIFICATION_RECIPIENTS_USER_IDS_MAX on the DTO).
 const RECIPIENT_BATCH_SIZE = 100;
 
 // Bot/assistant sender types (D-11) — explicit list, never a default branch.
@@ -48,17 +41,29 @@ export interface NotifyConversationMessageParams {
 }
 
 /**
- * 034-messaging-notifications — the new conversation-notification branch
+ * 034-messaging-notifications — the conversation-notification ARRIVAL path
  * (US1/US2/US4). Deliberately separate from `MessageNotificationService`
- * (untouched — D-3: mentions/replies stay OFF inside chats; the guard at the
- * call site is branched, not removed).
+ * (untouched — D-3: mentions/replies stay OFF inside chats).
  *
- * Pipeline per message (data-model.md §8):
- *   kill switch → classify (Ruling 2) → sender guard (D-11) → dedupe (D-12)
- *   → resolve recipients (own settings row per FR-002) → email suppression
- *   (FR-011, email only) → emit DIRECT/GROUP wire event (Ruling 1) → push
- *   via the disjoint messaging budget (FR-012). In-app is never touched —
- *   permanently OFF, enforced at the adapter boundary (FR-003/D-2).
+ * **Operator Ruling R4**: this path NO LONGER SENDS ANYTHING. Message
+ * arrival arms a per-recipient debounce timer; a periodic sweep decides, at
+ * fire time, what is still unread and dispatches at most one digest
+ * (`ConversationDigestFlushService`). Two things follow, and both are the
+ * point of R4:
+ *
+ *  - the shipped model *lost information* (dropped messages were never
+ *    summarised) — the digest reports everything still unread;
+ *  - the shipped model *ignored presence* (a user reading a conversation was
+ *    still emailed) — checking unread-at-fire-time IS the presence signal.
+ *
+ * Pipeline per message (data-model §8.1) — guard order preserved:
+ *   kill switch → classify (Ruling 2) → bot sender (D-11) → dedupe (D-12)
+ *   → resolve recipients (own settings row per FR-002) → ARM one timer per
+ *   (recipient, channel).
+ *
+ * No send, no template render, no unread check, no push. The entire output of
+ * this class is Redis writes. In-app is never touched — permanently OFF,
+ * enforced at the adapter boundary (FR-003/D-2).
  *
  * The whole method is wrapped in try/catch (FR-014): a notification-pipeline
  * failure must never affect message delivery, counts, subscriptions, or VC
@@ -70,14 +75,9 @@ export class ConversationNotificationService {
 
   constructor(
     private readonly actorLookupService: ActorLookupService,
-    private readonly userLookupService: UserLookupService,
     private readonly notificationRecipientsService: NotificationRecipientsService,
-    private readonly notificationExternalAdapter: NotificationExternalAdapter,
-    private readonly notificationPushAdapter: NotificationPushAdapter,
-    private readonly urlGeneratorService: UrlGeneratorService,
     private readonly dedupeService: ConversationNotificationDedupeService,
-    private readonly suppressionService: ConversationNotificationSuppressionService,
-    private readonly emailBudgetService: ConversationNotificationEmailBudgetService,
+    private readonly digestSchedulerService: ConversationDigestSchedulerService,
     private configService: ConfigService<AlkemioConfig, true>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
@@ -140,7 +140,8 @@ export class ConversationNotificationService {
       return;
     }
 
-    // FR-013/D-12 — at-most-one dispatch per message event.
+    // FR-013/D-12 — at-most-one ARM per message event. Still on the arrival
+    // path: a redelivered message event must not re-anchor the debounce.
     const claimed = await this.dedupeService.claim(message.id);
     if (!claimed) {
       return;
@@ -154,11 +155,12 @@ export class ConversationNotificationService {
       return;
     }
 
-    const event =
-      kind === 'DIRECT'
-        ? NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT
-        : NotificationEvent.USER_CONVERSATION_MESSAGE_GROUP;
+    const digestKind = digestKindFromMessageKind(kind);
+    const event = notificationEventForDigestKind(digestKind);
 
+    // FR-023 (first half) — settings are evaluated when the timer is armed
+    // AND again at fire time. This decides WHICH tracks exist for this
+    // message; the flush re-checks before dispatching.
     const { emailCandidates, pushCandidates } = await this.resolveRecipients(
       event,
       senderActorID,
@@ -166,23 +168,35 @@ export class ConversationNotificationService {
     );
 
     await Promise.all([
-      this.dispatchEmail(
-        kind,
-        event,
-        senderActorID,
-        conversation,
-        room,
-        emailCandidates
-      ),
-      this.dispatchPush(
-        kind,
-        event,
-        senderActorID,
-        conversation,
-        room,
-        pushCandidates
-      ),
+      this.armAll('email', digestKind, emailCandidates, conversation.id),
+      this.armAll('push', digestKind, pushCandidates, conversation.id),
     ]);
+  }
+
+  /**
+   * FR-011/FR-011a — one timer per (recipient, channel, kind). Armed
+   * concurrently: each arm is a single Redis round trip and they are
+   * independent, and the set is bounded by RECIPIENT_BATCH_SIZE per lookup.
+   */
+  private async armAll(
+    channel: 'email' | 'push',
+    kind: DigestKind,
+    recipients: IUser[],
+    conversationId: string
+  ): Promise<void> {
+    if (recipients.length === 0) {
+      return;
+    }
+    const now = Date.now();
+    await Promise.all(
+      recipients.map(recipient =>
+        this.digestSchedulerService.arm(
+          { channel, kind, userId: recipient.id },
+          conversationId,
+          now
+        )
+      )
+    );
   }
 
   /**
@@ -217,136 +231,6 @@ export class ConversationNotificationService {
       emailCandidates: [...emailById.values()],
       pushCandidates: [...pushById.values()],
     };
-  }
-
-  private async dispatchEmail(
-    kind: ConversationMessageKind,
-    event: NotificationEvent,
-    senderActorID: string,
-    conversation: IConversation,
-    room: IRoom,
-    emailCandidates: IUser[]
-  ): Promise<void> {
-    if (emailCandidates.length === 0) {
-      return;
-    }
-
-    // FR-011/D-8 — email-only leading-edge suppression window, per
-    // (recipient, conversation) — AND sec-server-10 — a GLOBAL per-user
-    // email budget that the per-conversation suppression window alone
-    // cannot provide (it resets whenever a new conversation is created).
-    // Both are checked here. sec-server-10: previously a sequential
-    // await-in-a-for-loop (one Redis round trip per recipient); now issued
-    // concurrently across recipients — still bounded by RECIPIENT_BATCH_SIZE
-    // per resolveRecipients() call. Both stores fail open (send + log) on
-    // errors.
-    const decisions = await Promise.all(
-      emailCandidates.map(async user => {
-        const [suppressed, budgetAllowed] = await Promise.all([
-          this.suppressionService.isSuppressed(user.id, conversation.id),
-          this.emailBudgetService.isAllowed(user.id),
-        ]);
-        return { user, allowed: !suppressed && budgetAllowed };
-      })
-    );
-    const emailRecipients = decisions
-      .filter(decision => decision.allowed)
-      .map(decision => decision.user);
-
-    if (emailRecipients.length === 0) {
-      return;
-    }
-
-    const payload =
-      kind === 'DIRECT'
-        ? await this.notificationExternalAdapter.buildConversationMessageDirectPayload(
-            event,
-            senderActorID,
-            emailRecipients,
-            conversation.id
-          )
-        : await this.notificationExternalAdapter.buildConversationMessageGroupPayload(
-            event,
-            senderActorID,
-            emailRecipients,
-            conversation.id,
-            // corr-server-5/sec-server-4: never surface the internal
-            // "unnamed group" placeholder or unsanitized free text as
-            // user-facing (and platform-domain-sent) email copy.
-            getGroupDisplayNameForNotificationCopy(room.displayName)
-          );
-
-    await this.notificationExternalAdapter.sendExternalNotifications(
-      event,
-      payload
-    );
-  }
-
-  private async dispatchPush(
-    kind: ConversationMessageKind,
-    event: NotificationEvent,
-    senderActorID: string,
-    conversation: IConversation,
-    room: IRoom,
-    pushCandidates: IUser[]
-  ): Promise<void> {
-    if (pushCandidates.length === 0) {
-      return;
-    }
-
-    const senderDisplayName = await this.getSenderDisplayName(senderActorID);
-    // Contract C-4 — push `url` is the bare relative deep-link path, NOT the
-    // platform-absolute form used for the email link (contract C-6).
-    const conversationUrl =
-      this.urlGeneratorService.getConversationDeepLinkPath(conversation.id);
-
-    // D-15 — copy built ONLY from these two user-controlled-but-bounded
-    // fields (sender display name, conversation display name); no
-    // message-derived text anywhere. corr-server-5/sec-server-4: both are
-    // caller-supplied free text (renameable by any group member), not
-    // "trusted" — the group name is normalized (placeholder/empty ->
-    // neutral fallback) and both are sanitized + length-clamped before
-    // landing in an OS push-notification title/body.
-    const groupDisplayName = getGroupDisplayNameForNotificationCopy(
-      room.displayName
-    );
-    const payload =
-      kind === 'DIRECT'
-        ? {
-            title: senderDisplayName,
-            body: `${senderDisplayName} sent you a message`,
-            url: conversationUrl,
-          }
-        : {
-            title: groupDisplayName,
-            body: `${senderDisplayName} sent a message in ${groupDisplayName}`,
-            url: conversationUrl,
-          };
-
-    // FR-012 — messaging push budget is DISJOINT from the shared throttle
-    // bucket in both directions; sendMessagingPushNotifications applies it.
-    await this.notificationPushAdapter.sendMessagingPushNotifications(
-      pushCandidates,
-      event,
-      payload
-    );
-  }
-
-  private async getSenderDisplayName(senderActorID: string): Promise<string> {
-    try {
-      const sender = await this.userLookupService.getUserByIdOrFail(
-        senderActorID,
-        { relations: { profile: true } }
-      );
-      const displayName = sender?.profile?.displayName;
-      // sec-server-4: the sender's profile display name is user-controlled
-      // free text and lands verbatim in a push-notification title/body.
-      return displayName
-        ? sanitizeNotificationCopyText(displayName)
-        : 'Someone';
-    } catch {
-      return 'Someone';
-    }
   }
 
   private chunk<T>(items: T[], size: number): T[][] {

@@ -19,10 +19,11 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { MessagingRedisModule } from '@services/infrastructure/redis-client/messaging-redis.module';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator/url.generator.module';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
+import { ConversationDigestFlushService } from './conversation.digest.flush.service';
+import { ConversationDigestSchedulerService } from './conversation.digest.scheduler.service';
+import { ConversationDigestSweepService } from './conversation.digest.sweep.service';
 import { ConversationNotificationDedupeService } from './conversation.notification.dedupe.service';
-import { ConversationNotificationEmailBudgetService } from './conversation.notification.email.budget.service';
 import { ConversationNotificationService } from './conversation.notification.service';
-import { ConversationNotificationSuppressionService } from './conversation.notification.suppression.service';
 import { MessageInboxService } from './message.inbox.service';
 import { MessageNotificationService } from './message.notification.service';
 import { VcInvocationService } from './vc.invocation.service';
@@ -57,8 +58,10 @@ import { VcInvocationService } from './vc.invocation.service';
     VcInvocationService,
     ConversationNotificationService,
     ConversationNotificationDedupeService,
-    ConversationNotificationSuppressionService,
-    ConversationNotificationEmailBudgetService,
+    // 034/R4 — the debounced-digest pipeline (arm on arrival, sweep, flush).
+    ConversationDigestSchedulerService,
+    ConversationDigestFlushService,
+    ConversationDigestSweepService,
   ],
   exports: [MessageInboxService],
 })

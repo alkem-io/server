@@ -123,6 +123,21 @@ export class UrlGeneratorService {
     return `/?chat=${conversationID}`;
   }
 
+  /**
+   * 034-messaging-notifications (R4, data-model §9.2). The chat surface with
+   * NO conversation selected — the push `url` for a digest covering MORE than
+   * one conversation.
+   *
+   * Deliberately the same `?chat=` param with an empty value rather than a
+   * bare `'/'`: it opens the unified chat panel (which is the point) without
+   * guessing which of the several unread conversations the recipient meant.
+   * Picking one would be a guess, and the home page would not open chat at
+   * all.
+   */
+  public getChatSurfaceDeepLinkPath(): string {
+    return '/?chat=';
+  }
+
   private async generateUrlForProfileNotCached(
     profile: IProfile
   ): Promise<string> {

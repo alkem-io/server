@@ -13,6 +13,18 @@ export type McpConfig = {
   };
 };
 
+/**
+ * 034-messaging-notifications (Operator Ruling R4, data-model §6). One
+ * debounce track: `quiet_period_seconds` is the reset window, and
+ * `max_delay_seconds` is the FR-011b cap measured from the recipient's first
+ * un-notified message on that track. Effective fire time is
+ * `min(lastMessage + quiet, firstMessage + maxDelay)`.
+ */
+export type MessagingDigestTrackConfig = {
+  quiet_period_seconds: number;
+  max_delay_seconds: number;
+};
+
 export type AlkemioConfig = {
   authorization: {
     chunk: number;
@@ -278,16 +290,24 @@ export type AlkemioConfig = {
     };
     messaging: {
       enabled: boolean;
-      email_suppression_window_seconds: number;
-      push: {
-        throttle: {
-          max_per_minute: number;
+      /**
+       * 034-messaging-notifications / Operator Ruling R4. Debounce windows
+       * for the four per-recipient digest tracks, plus the sweep that flushes
+       * them. Validated at boot by `buildDigestConfig` — per track
+       * `quiet_period_seconds <= max_delay_seconds`, and
+       * `sweep_interval_seconds <= min(quiet periods)`.
+       */
+      digest: {
+        sweep_interval_seconds: number;
+        max_dispatch_attempts: number;
+        retry_backoff_seconds: number;
+        push: {
+          direct: MessagingDigestTrackConfig;
+          group: MessagingDigestTrackConfig;
         };
-      };
-      email: {
-        budget: {
-          max_per_window: number;
-          window_seconds: number;
+        email: {
+          direct: MessagingDigestTrackConfig;
+          group: MessagingDigestTrackConfig;
         };
       };
     };

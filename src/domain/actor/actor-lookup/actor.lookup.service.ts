@@ -298,6 +298,45 @@ export class ActorLookupService {
   }
 
   /**
+   * 034-messaging-notifications (R4, data-model §5.3) — bulk profile display
+   * names for a set of actor ids, in ONE query.
+   *
+   * The digest flush needs the counterpart's display name for every DIRECT
+   * conversation in a digest; resolving them one at a time would reintroduce
+   * exactly the per-conversation fan-out the batch unread lookup exists to
+   * avoid. Deliberately type-agnostic — a 1:1 counterpart may be a user or a
+   * virtual contributor, and both have a profile.
+   *
+   * Tolerant like {@link getActorTypesByIds}: invalid or unresolvable ids are
+   * simply absent from the map, and callers substitute their own fallback
+   * copy rather than seeing an exception.
+   */
+  async getActorDisplayNamesByIds(ids: string[]): Promise<Map<string, string>> {
+    const result = new Map<string, string>();
+    if (ids.length === 0) {
+      return result;
+    }
+    const validIds = ids.filter(id => isUUID(id));
+    if (validIds.length === 0) {
+      return result;
+    }
+
+    const actors = await this.entityManager.find(Actor, {
+      where: { id: In(validIds) },
+      relations: { profile: true },
+      loadEagerRelations: false,
+    });
+
+    for (const actor of actors) {
+      const displayName = actor.profile?.displayName;
+      if (displayName) {
+        result.set(actor.id, displayName);
+      }
+    }
+    return result;
+  }
+
+  /**
    * Get authorization policy for any actor without loading the full entity.
    * Works for User, Organization, VirtualContributor, Space, Account.
    * Use when you only need the authorization policy.

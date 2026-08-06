@@ -837,6 +837,62 @@ export class ConversationService {
   }
 
   /**
+   * 034-messaging-notifications (R4, data-model §5.3) — bulk variant of
+   * `getConversationOrFail` for the digest flush path, which resolves every
+   * pending conversation for one recipient-track at once.
+   *
+   * ONE query regardless of how many conversations are pending. Conversations
+   * that no longer exist are simply absent from the result — the flush drops
+   * them rather than failing the whole digest (US2-AS4).
+   *
+   * @param conversationIds - UUIDs of the conversations to resolve
+   * @returns The conversations that still exist, with their room loaded
+   */
+  async getConversationsByIds(
+    conversationIds: string[]
+  ): Promise<IConversation[]> {
+    if (conversationIds.length === 0) {
+      return [];
+    }
+    return await this.conversationRepository.find({
+      where: { id: In(conversationIds) },
+      relations: { room: true },
+    });
+  }
+
+  /**
+   * 034-messaging-notifications (R4) — bulk variant of
+   * `getConversationMemberActorIds`, so the digest flush can check
+   * "is the recipient still a member?" for every pending conversation in ONE
+   * query rather than one per conversation.
+   *
+   * @param conversationIds - UUIDs of the conversations
+   * @returns Map of conversation ID -> member actor IDs (absent conversations
+   * are simply missing from the map)
+   */
+  async getMemberActorIdsForConversations(
+    conversationIds: string[]
+  ): Promise<Map<string, string[]>> {
+    const result = new Map<string, string[]>();
+    if (conversationIds.length === 0) {
+      return result;
+    }
+    const memberships = await this.conversationMembershipRepository.find({
+      where: { conversationId: In(conversationIds) },
+      select: ['conversationId', 'actorID'],
+    });
+    for (const membership of memberships) {
+      const existing = result.get(membership.conversationId);
+      if (existing) {
+        existing.push(membership.actorID);
+      } else {
+        result.set(membership.conversationId, [membership.actorID]);
+      }
+    }
+    return result;
+  }
+
+  /**
    * Find all conversations that don't have a room.
    * Used by admin migration to bulk-create rooms for legacy conversations.
    * @returns Array of conversations without rooms
