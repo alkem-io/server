@@ -42,7 +42,7 @@ const mockCommunicationAdapter = { batchGetUnreadCounts: vi.fn() };
 const mockExternalAdapter = {
   buildConversationMessageDirectPayload: vi.fn(),
   buildConversationMessageGroupPayload: vi.fn(),
-  sendExternalNotifications: vi.fn(),
+  sendExternalNotificationsAwaited: vi.fn(),
 };
 const mockPushAdapter = { sendMessagingPushNotifications: vi.fn() };
 const mockUrlGenerator = {
@@ -59,7 +59,7 @@ describe('ConversationDigestFlushService (R4, data-model §5.3)', () => {
     // `clearAllMocks` clears CALLS but not implementations, and several tests
     // below install a rejecting/recording dispatch. Reset those explicitly so
     // one test's failure injection cannot leak into the next.
-    mockExternalAdapter.sendExternalNotifications.mockReset();
+    mockExternalAdapter.sendExternalNotificationsAwaited.mockReset();
     mockPushAdapter.sendMessagingPushNotifications.mockReset();
 
     mockScheduler.readAndClear.mockResolvedValue({
@@ -120,7 +120,7 @@ describe('ConversationDigestFlushService (R4, data-model §5.3)', () => {
 
   const noDispatch = () => {
     expect(
-      mockExternalAdapter.sendExternalNotifications
+      mockExternalAdapter.sendExternalNotificationsAwaited
     ).not.toHaveBeenCalled();
     expect(
       mockPushAdapter.sendMessagingPushNotifications
@@ -218,7 +218,9 @@ describe('ConversationDigestFlushService (R4, data-model §5.3)', () => {
 
       await service.flush(EMAIL_TRACK);
 
-      expect(mockExternalAdapter.sendExternalNotifications).toHaveBeenCalled();
+      expect(
+        mockExternalAdapter.sendExternalNotificationsAwaited
+      ).toHaveBeenCalled();
     });
 
     it('a room missing from the response map is treated as unread, not as read', async () => {
@@ -226,7 +228,9 @@ describe('ConversationDigestFlushService (R4, data-model §5.3)', () => {
 
       await service.flush(EMAIL_TRACK);
 
-      expect(mockExternalAdapter.sendExternalNotifications).toHaveBeenCalled();
+      expect(
+        mockExternalAdapter.sendExternalNotificationsAwaited
+      ).toHaveBeenCalled();
     });
   });
 
@@ -321,7 +325,7 @@ describe('ConversationDigestFlushService (R4, data-model §5.3)', () => {
         ]
       );
       expect(
-        mockExternalAdapter.sendExternalNotifications
+        mockExternalAdapter.sendExternalNotificationsAwaited
       ).toHaveBeenCalledWith(
         NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
         expect.anything()
@@ -401,7 +405,7 @@ describe('ConversationDigestFlushService (R4, data-model §5.3)', () => {
         order.push('readAndClear');
         return { conversationIds: ['conv-1'], firstAtMs: 1_000_000 };
       });
-      mockExternalAdapter.sendExternalNotifications.mockImplementation(
+      mockExternalAdapter.sendExternalNotificationsAwaited.mockImplementation(
         async () => {
           order.push('dispatch');
         }
@@ -427,7 +431,7 @@ describe('ConversationDigestFlushService (R4, data-model §5.3)', () => {
 
   describe('bounded dispatch retry (§5.4)', () => {
     it('re-arms with the drained conversations and the original anchor when dispatch throws', async () => {
-      mockExternalAdapter.sendExternalNotifications.mockRejectedValue(
+      mockExternalAdapter.sendExternalNotificationsAwaited.mockRejectedValue(
         new Error('rabbit down')
       );
 
@@ -443,7 +447,7 @@ describe('ConversationDigestFlushService (R4, data-model §5.3)', () => {
     });
 
     it('drops after the retry budget is exhausted rather than looping forever', async () => {
-      mockExternalAdapter.sendExternalNotifications.mockRejectedValue(
+      mockExternalAdapter.sendExternalNotificationsAwaited.mockRejectedValue(
         new Error('rabbit down')
       );
       mockScheduler.reArm.mockResolvedValue(false);

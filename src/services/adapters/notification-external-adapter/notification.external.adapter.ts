@@ -67,6 +67,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { AlkemioConfig } from '@src/types';
+import { defaultIfEmpty, lastValueFrom } from 'rxjs';
 import { NotificationInputUserEmailChangeGlobalAdmin } from '../notification-adapter/dto/platform/notification.dto.input.platform.user.email.change';
 import { NotificationInputCollaborationCalloutComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.comment';
 import { NotificationInputCollaborationCalloutContributionCreated } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.contribution.created';
@@ -103,6 +104,37 @@ export class NotificationExternalAdapter {
     payload: any
   ): Promise<void> {
     this.notificationsClient.emit<number>(event, payload);
+  }
+
+  /**
+   * Awaited publish: resolves only once the broker has accepted the event, and
+   * REJECTS if it has not.
+   *
+   * `sendExternalNotifications` above neither awaits nor subscribes to the
+   * observable `emit` returns, so a broker outage is invisible to its caller.
+   * That is tolerable for callers that emit and move on, but not for the
+   * 034 digest flush: it drains the recipient's pending-conversation set and
+   * the FR-011b cap anchor from Redis BEFORE dispatching, and reArms only when
+   * dispatch throws. With a dispatch that cannot throw, a broker blip during a
+   * sweep tick silently destroyed every email digest due in that window and
+   * the whole §5.4 retry design was dead code on the email channel.
+   *
+   * Subscribing is safe here even though `ClientProxy.emit` returns an
+   * already-`connect()`ed connectable: its source is a `defer(async ...)`, so
+   * nothing can be pushed before this synchronous subscription attaches.
+   * `defaultIfEmpty` guards the case where the transport completes without
+   * emitting, which would otherwise reject with rxjs's EmptyError and be
+   * misread as a publish failure.
+   */
+  public async sendExternalNotificationsAwaited(
+    event: NotificationEvent,
+    payload: any
+  ): Promise<void> {
+    await lastValueFrom(
+      this.notificationsClient
+        .emit<number>(event, payload)
+        .pipe(defaultIfEmpty(undefined as unknown as number))
+    );
   }
 
   /**

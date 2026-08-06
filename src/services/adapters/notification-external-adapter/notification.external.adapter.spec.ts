@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { EMPTY, of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { NotificationExternalAdapter } from './notification.external.adapter';
 
@@ -62,6 +63,63 @@ describe('NotificationExternalAdapter', () => {
         NotificationEvent.USER_MESSAGE,
         payload
       );
+    });
+
+    it('resolves even when the broker rejects, so emit-and-forget callers are unaffected', async () => {
+      notificationsClient.emit.mockReturnValue(
+        throwError(() => new Error('broker down'))
+      );
+
+      await expect(
+        adapter.sendExternalNotifications(NotificationEvent.USER_MESSAGE, {})
+      ).resolves.toBeUndefined();
+    });
+  });
+
+  // The 034 digest flush drains its Redis state BEFORE dispatching and reArms
+  // only when dispatch throws. With the emit-and-forget publish above, a broker
+  // outage could never reach the caller, so the digest was destroyed silently
+  // and the §5.4 retry design was dead code on the email channel. These assert
+  // the failure actually propagates — the flush spec cannot, because there the
+  // adapter is a mock that can be made to reject regardless of the real code.
+  describe('sendExternalNotificationsAwaited', () => {
+    it('resolves once the broker has accepted the event', async () => {
+      notificationsClient.emit.mockReturnValue(of(1));
+
+      await expect(
+        adapter.sendExternalNotificationsAwaited(
+          NotificationEvent.USER_MESSAGE,
+          { test: 'data' }
+        )
+      ).resolves.toBeUndefined();
+      expect(notificationsClient.emit).toHaveBeenCalledWith(
+        NotificationEvent.USER_MESSAGE,
+        { test: 'data' }
+      );
+    });
+
+    it('REJECTS when the broker publish fails', async () => {
+      notificationsClient.emit.mockReturnValue(
+        throwError(() => new Error('broker down'))
+      );
+
+      await expect(
+        adapter.sendExternalNotificationsAwaited(
+          NotificationEvent.USER_MESSAGE,
+          {}
+        )
+      ).rejects.toThrow('broker down');
+    });
+
+    it('does not reject when the transport completes without emitting', async () => {
+      notificationsClient.emit.mockReturnValue(EMPTY);
+
+      await expect(
+        adapter.sendExternalNotificationsAwaited(
+          NotificationEvent.USER_MESSAGE,
+          {}
+        )
+      ).resolves.toBeUndefined();
     });
   });
 

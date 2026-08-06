@@ -371,7 +371,11 @@ export class ConversationDigestFlushService {
               recipient,
               entries
             );
-      await this.notificationExternalAdapter.sendExternalNotifications(
+      // AWAITED deliberately: the plain `sendExternalNotifications` never
+      // surfaces a broker failure, which made the reArm/max_dispatch_attempts
+      // machinery below unreachable for email and silently dropped digests
+      // whose Redis state `readAndClear` had already destroyed.
+      await this.notificationExternalAdapter.sendExternalNotificationsAwaited(
         event,
         payload
       );
