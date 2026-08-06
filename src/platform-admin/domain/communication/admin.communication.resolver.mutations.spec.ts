@@ -145,18 +145,19 @@ describe('AdminCommunicationResolverMutations', () => {
   // decision — if you are here because a test failed, get sign-off before
   // updating the expectations.
   describe('authorization policy', () => {
-    it('grants the comms gate to GLOBAL_ADMIN and PLATFORM_OPERATIONS_ADMIN only', () => {
+    // 027-platform-role-redesign (T074/T076, Slice B): narrowed. `global-admin`
+    // and the `PLATFORM_ADMIN` privilege are both gone from this synthetic
+    // policy — they only ever preserved the develop-era grant verbatim while the
+    // feature ran additively, and the resolver gates always checked
+    // PLATFORM_OPERATIONS_ADMIN.
+    it('grants the comms gate to PLATFORM_OPERATIONS_ADMIN alone', () => {
       expect(
         authorizationPolicyService.createGlobalRolesAuthorizationPolicy
       ).toHaveBeenCalledWith(
-        [
-          AuthorizationRoleGlobal.GLOBAL_ADMIN,
-          AuthorizationRoleGlobal.PLATFORM_OPERATIONS_ADMIN,
-        ],
+        [AuthorizationRoleGlobal.PLATFORM_OPERATIONS_ADMIN],
         [
           AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
           AuthorizationPrivilege.GRANT,
-          AuthorizationPrivilege.PLATFORM_ADMIN,
         ],
         GLOBAL_POLICY_ADMIN_COMMUNICATION_GRANT
       );
@@ -166,9 +167,9 @@ describe('AdminCommunicationResolverMutations', () => {
       const [roles] =
         authorizationPolicyService.createGlobalRolesAuthorizationPolicy.mock
           .calls[0];
-      expect(roles).not.toContain(AuthorizationRoleGlobal.GLOBAL_SUPPORT);
+      expect(roles).not.toContain(AuthorizationRoleGlobal.PLATFORM_SUPPORT);
       expect(roles).not.toContain(
-        AuthorizationRoleGlobal.GLOBAL_COMMUNITY_READ
+        AuthorizationRoleGlobal.PLATFORM_SPACES_READER
       );
     });
 

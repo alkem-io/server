@@ -92,9 +92,16 @@ describe('UserService', () => {
   // global-admin credential so resolveInitiatorRole's attribution helper
   // (called whenever serviceProfile is set) has a legitimate reacher to
   // resolve against, rather than throwing on an empty intersection.
+  // 027-platform-role-redesign (T077, Slice B): the fixture credential was the
+  // raw string `'global-admin'`, which no mechanical enum substitution could
+  // reach. A21's service-profile audit resolves the initiator from the actor's
+  // credentials against the surface's `intendedOwners`
+  // (`[platform-roles-admin]`), and with the legacy union now empty a
+  // non-owning credential throws rather than falling back — so the fixture must
+  // hold the owning role.
   const mockActorContext = {
     actorID: 'actor-1',
-    credentials: [{ type: 'global-admin', resourceID: '' }],
+    credentials: [{ type: 'platform-roles-admin', resourceID: '' }],
   } as any;
 
   beforeEach(async () => {
@@ -753,108 +760,10 @@ describe('UserService', () => {
     });
   });
 
-  describe('updateUserPlatformSettings', () => {
-    it('should update nameID when new value provided', async () => {
-      const user = {
-        id: 'user-1',
-        nameID: 'old-name',
-        email: 'test@example.com',
-      } as unknown as IUser;
-      userLookupService.getUserById.mockResolvedValue(user);
-      repository.count.mockResolvedValue(0);
-      repository.save.mockResolvedValue(user);
-
-      await service.updateUserPlatformSettings({
-        userID: 'user-1',
-        nameID: 'new-name',
-      } as any);
-      expect(user.nameID).toBe('new-name');
-    });
-
-    it('should not update nameID when same value', async () => {
-      const user = {
-        id: 'user-1',
-        nameID: 'same-name',
-        email: 'test@example.com',
-      } as unknown as IUser;
-      userLookupService.getUserById.mockResolvedValue(user);
-      repository.save.mockResolvedValue(user);
-
-      await service.updateUserPlatformSettings({
-        userID: 'user-1',
-        nameID: 'same-name',
-      } as any);
-      expect(repository.count).not.toHaveBeenCalled();
-    });
-
-    it('should update email when new value provided', async () => {
-      const user = {
-        id: 'user-1',
-        nameID: 'name',
-        email: 'old@example.com',
-      } as unknown as IUser;
-      userLookupService.getUserById.mockResolvedValue(user);
-      userLookupService.isRegisteredUser.mockResolvedValue(false);
-      repository.save.mockResolvedValue(user);
-
-      await service.updateUserPlatformSettings({
-        userID: 'user-1',
-        email: 'new@example.com',
-      } as any);
-      expect(user.email).toBe('new@example.com');
-    });
-
-    it('should normalize email to lowercase and trim', async () => {
-      const user = {
-        id: 'user-1',
-        nameID: 'name',
-        email: 'old@example.com',
-      } as unknown as IUser;
-      userLookupService.getUserById.mockResolvedValue(user);
-      userLookupService.isRegisteredUser.mockResolvedValue(false);
-      repository.save.mockResolvedValue(user);
-
-      await service.updateUserPlatformSettings({
-        userID: 'user-1',
-        email: '  NEW@EXAMPLE.COM  ',
-      } as any);
-      expect(user.email).toBe('new@example.com');
-    });
-
-    it('should throw ValidationException when email already taken', async () => {
-      const user = {
-        id: 'user-1',
-        nameID: 'name',
-        email: 'old@example.com',
-      } as unknown as IUser;
-      userLookupService.getUserById.mockResolvedValue(user);
-      userLookupService.isRegisteredUser.mockResolvedValue(true);
-
-      await expect(
-        service.updateUserPlatformSettings({
-          userID: 'user-1',
-          email: 'taken@example.com',
-        } as any)
-      ).rejects.toThrow(ValidationException);
-    });
-
-    it('should not update email when same value after normalization', async () => {
-      const user = {
-        id: 'user-1',
-        nameID: 'name',
-        email: 'test@example.com',
-      } as unknown as IUser;
-      userLookupService.getUserById.mockResolvedValue(user);
-      repository.save.mockResolvedValue(user);
-
-      await service.updateUserPlatformSettings({
-        userID: 'user-1',
-        email: 'TEST@EXAMPLE.COM',
-      } as any);
-      // isRegisteredUser should not be called if emails match after normalization
-      expect(userLookupService.isRegisteredUser).not.toHaveBeenCalled();
-    });
-  });
+  // 027-platform-role-redesign (T078, FR-020): the `updateUserPlatformSettings`
+  // suites are gone with the mutation. `nameID` is covered by the actor
+  // service's `updateNameID`; `email` has no replacement by design — writing
+  // user.email directly was the bug FR-020 removes.
 
   describe('clearAuthenticationIDForUser', () => {
     it('should return user unchanged when authenticationID is falsy', async () => {
@@ -1036,42 +945,6 @@ describe('UserService', () => {
 
       await service.updateUser({ ID: 'user-1' } as any, mockActorContext);
       expect(profileService.updateProfile).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('updateUserPlatformSettings edge cases', () => {
-    it('should throw ValidationException when new nameID is already taken', async () => {
-      const user = {
-        id: 'user-1',
-        nameID: 'old-name',
-        email: 'test@example.com',
-      } as unknown as IUser;
-      userLookupService.getUserById.mockResolvedValue(user);
-      repository.count.mockResolvedValue(1);
-
-      await expect(
-        service.updateUserPlatformSettings({
-          userID: 'user-1',
-          nameID: 'taken-name',
-        } as any)
-      ).rejects.toThrow(ValidationException);
-    });
-
-    it('should not update when neither nameID nor email provided', async () => {
-      const user = {
-        id: 'user-1',
-        nameID: 'name',
-        email: 'test@example.com',
-      } as unknown as IUser;
-      userLookupService.getUserById.mockResolvedValue(user);
-      repository.save.mockResolvedValue(user);
-
-      const result = await service.updateUserPlatformSettings({
-        userID: 'user-1',
-      } as any);
-      expect(result).toBeDefined();
-      expect(repository.count).not.toHaveBeenCalled();
-      expect(userLookupService.isRegisteredUser).not.toHaveBeenCalled();
     });
   });
 

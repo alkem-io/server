@@ -271,7 +271,14 @@ export const A_ROW_GATE_COVERAGE: Record<ARowId, ARowGateCoverageEntry> = {
       'src/domain/space/space/space.service.platform.roles.access.spec.ts',
     ],
   },
-  A17: { deferred: 'B' },
+  // T078/T083a: the deferral is spent — both surfaces exist and each has its
+  // own gate spec.
+  A17: {
+    gateSpecs: [
+      'src/domain/actor/actor/actor.resolver.mutations.spec.ts',
+      'src/domain/space/space/space.resolver.mutations.spec.ts',
+    ],
+  },
   A18: { retired: true },
   A19: {
     gateSpecs: [
@@ -319,7 +326,7 @@ export const PRIVILEGE_KEY_BY_VALUE: Record<string, string> = Object.entries(
 // ---------------------------------------------------------------------------
 // 4. PRIVILEGE_COVERAGE — keyed on `keyof typeof PRIVILEGE_GRANTS`
 //    (`ManagedPrivilege`), NOT this feature's new-privilege union (D4) —
-//    that closes `GRANT_GLOBAL_ADMINS` in BY CONSTRUCTION (it is
+//    that closes `PLATFORM_ROLES_ASSIGN` in BY CONSTRUCTION (it is
 //    re-scoped, not new, and would otherwise have no key to hang on — the
 //    fourteenth/fifteenth-pass finding). `UPDATE_NAMEID` is added as an
 //    EXPLICIT extra key alongside — it is deliberately excluded from
@@ -345,6 +352,11 @@ const ACCOUNT_POLICY_SPEC =
 // own the grant-set assertion.
 const SPACE_POLICY_SPEC =
   'src/domain/space/space/space.service.platform.roles.access.spec.ts';
+// T078/A17: the rename rule lives on the space's own authorization service,
+// deliberately apart from the platform-roles-access path SPACE_POLICY_SPEC
+// covers — the whole point of A17 is that no platform role reaches it.
+const SPACE_AUTHORIZATION_SPEC =
+  'src/domain/space/space/space.service.authorization.spec.ts';
 const ORGANIZATION_POLICY_SPEC =
   'src/domain/community/organization/organization.service.authorization.spec.ts';
 const USER_POLICY_SPEC =
@@ -367,7 +379,7 @@ export const PRIVILEGE_COVERAGE: Record<
   readonly [AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER]: PrivilegeCoverageEntry;
   readonly [AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT]: PrivilegeCoverageEntry;
 } = {
-  [AuthorizationPrivilege.GRANT_GLOBAL_ADMINS]: {
+  [AuthorizationPrivilege.PLATFORM_ROLES_ASSIGN]: {
     ruleSpec: PLATFORM_POLICY_SPEC,
     grantSetSpec: PLATFORM_POLICY_SPEC,
   },
@@ -462,7 +474,14 @@ export const PRIVILEGE_COVERAGE: Record<
     ruleSpec: SPACE_POLICY_SPEC,
     grantSetSpec: SPACE_POLICY_SPEC,
   },
-  [AuthorizationPrivilege.UPDATE_NAMEID]: { deferred: 'B' },
+  // T078/T083a: rule + grant set both landed. The rule is asserted on the
+  // actor resolver (the privilege is checked against the ACTOR's own policy);
+  // the grant set on the space policy, where the rename rule is deliberately
+  // kept separate from the space-admin rule that also admits platform roles.
+  [AuthorizationPrivilege.UPDATE_NAMEID]: {
+    ruleSpec: 'src/domain/actor/actor/actor.resolver.mutations.spec.ts',
+    grantSetSpec: SPACE_AUTHORIZATION_SPEC,
+  },
 };
 
 // ---------------------------------------------------------------------------

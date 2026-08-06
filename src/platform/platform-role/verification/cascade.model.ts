@@ -93,12 +93,12 @@ export type TreeId =
  * (`allowPlatformSupportAsAdmin`). Adding it here would bypass that
  * per-space consent gate platform-wide.
  *
- * `Slice B` (T072) deletes the legacy `global-admin` CRUD+GRANT rule
- * entirely and narrows this rule's credential list to
- * `platform-content-full-access` alone — update THIS declaration in the
- * same commit as that task, so `reachability.spec.ts` (T070m) re-derives
- * against the Slice B shape rather than silently checking the Slice A one
- * forever.
+ * `Slice B` (T072, DONE) deleted the legacy `global-admin` CRUD+GRANT rule
+ * entirely and narrowed this rule's credential list to
+ * `platform-content-full-access` alone. Both slices stay declared here on
+ * purpose: `reachability.spec.ts` (T070m) asserts derived ≡ intended in
+ * BOTH, so the Slice A shape remains the checked history of what was
+ * removed rather than dead prose.
  */
 export const ROOT_CASCADE: {
   readonly privileges: readonly AuthorizationPrivilege[];
@@ -130,89 +130,26 @@ export const ROOT_CASCADE: {
     'virtual-assistant',
   ],
   credentialsBySlice: {
-    A: [
-      AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
-      AuthorizationCredential.GLOBAL_ADMIN,
-    ],
+    A: [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
     B: [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
   },
 };
 
 /**
- * The two legacy cascades that exist ONLY in Slice A — both deleted at
- * Slice B (T072 for the root's CRUD+GRANT half, T073 for the platform
- * subtree), which is why there is no `credentialsBySlice` field here: at
- * Slice B, neither credential reaches anything through EITHER cascade (the
- * rows are dropped outright at T076/T077, not merely narrowed).
+ * 027-platform-role-redesign (T083a, Slice B): `LEGACY_CASCADES` is DELETED.
+ *
+ * It modelled the two cascades that existed only while the feature ran
+ * additively — `global-admin`'s root CRUD+GRANT god mode (removed at T072) and
+ * `global-support`'s platform-subtree CRUD (removed at T073) — so that
+ * `reachers()` could derive each surface's Slice A reacher set and
+ * `reachability.spec.ts` could check the census's `legacyReachers` against it
+ * rather than trusting it.
+ *
+ * Both cascades are gone from the code AND both credentials are gone from
+ * `AuthorizationCredential` (T077), so the model is no longer expressible, let
+ * alone checkable. Every census surface now declares `legacyReachers: []` and
+ * `reachers()` derives the same empty set from `ROOT_CASCADE` alone. Do not
+ * reintroduce this constant to "document what used to be reachable": a
+ * cascade model that cannot fail a build is prose, and prose about a deleted
+ * grant path belongs in the spec, not in the verification layer.
  */
-export const LEGACY_CASCADES: {
-  /** `global-admin`'s root CRUD+GRANT god-mode rule
-   * (`platform.authorization.policy.service.ts`, deleted at T072). */
-  readonly globalAdminRootCrud: {
-    readonly credential: AuthorizationCredential;
-    readonly privileges: readonly AuthorizationPrivilege[];
-    readonly trees: readonly TreeId[];
-  };
-  /** `global-support`'s platform-SUBTREE CRUD cascade
-   * (`platform.service.authorization.ts`'s `globalSupportPlatformAdmin`
-   * rule, deleted at T073). Reaches `platform` itself and everything that
-   * hangs off it (research C2) — NOT the other six root-inheritors (user /
-   * organization / account / space / virtual-contributor /
-   * virtual-assistant), which `global-support` reaches only via the ROOT
-   * cascade above, not this one.
-   *
-   * `licensing-framework` / `license-policy` added (corr-server-12 fix):
-   * `platform.service.authorization.ts` passes `platform.authorization` as
-   * the PARENT of `licensing.authorization`
-   * (`inheritParentAuthorization(licensing.authorization,
-   * platform.authorization)`), so this cascade DOES reach the licensing
-   * tree too — the model previously under-reported it, which is how
-   * corr-server-12 survived undetected: the two A13 resolvers' own
-   * `legacyReachers` disagreed with this cascade instead of being checked
-   * against it. */
-  readonly globalSupportPlatformSubtree: {
-    readonly credential: AuthorizationCredential;
-    readonly privileges: readonly AuthorizationPrivilege[];
-    readonly trees: readonly TreeId[];
-  };
-} = {
-  globalAdminRootCrud: {
-    credential: AuthorizationCredential.GLOBAL_ADMIN,
-    privileges: [
-      AuthorizationPrivilege.CREATE,
-      AuthorizationPrivilege.READ,
-      AuthorizationPrivilege.UPDATE,
-      AuthorizationPrivilege.DELETE,
-      AuthorizationPrivilege.GRANT,
-    ],
-    trees: [
-      'platform',
-      'user',
-      'organization',
-      'account',
-      'space',
-      'virtual-contributor',
-      'virtual-assistant',
-    ],
-  },
-  globalSupportPlatformSubtree: {
-    credential: AuthorizationCredential.GLOBAL_SUPPORT,
-    privileges: [
-      AuthorizationPrivilege.CREATE,
-      AuthorizationPrivilege.READ,
-      AuthorizationPrivilege.UPDATE,
-      AuthorizationPrivilege.DELETE,
-    ],
-    trees: [
-      'platform',
-      'forum',
-      'library',
-      'templates-manager',
-      'role-set',
-      'storage',
-      'messaging',
-      'licensing-framework',
-      'license-policy',
-    ],
-  },
-};

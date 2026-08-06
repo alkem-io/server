@@ -45,7 +45,7 @@ export class PlatformAdminResolverFields {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
       'platformAdmin Accounts'
     );
 
@@ -63,7 +63,7 @@ export class PlatformAdminResolverFields {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
       'platformAdmin InnovationHubs'
     );
 
@@ -83,7 +83,7 @@ export class PlatformAdminResolverFields {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
       'platformAdmin InnovationPacks'
     );
 
@@ -102,7 +102,7 @@ export class PlatformAdminResolverFields {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
       'platformAdmin Spaces'
     );
 
@@ -128,7 +128,7 @@ export class PlatformAdminResolverFields {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
       'platformAdmin Users'
     );
 
@@ -154,7 +154,7 @@ export class PlatformAdminResolverFields {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES,
       'platformAdmin Organizations'
     );
     return this.platformAdminService.getAllOrganizations(
@@ -176,7 +176,7 @@ export class PlatformAdminResolverFields {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
       'platformAdmin Virtual Contributors'
     );
 
@@ -194,7 +194,7 @@ export class PlatformAdminResolverFields {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
       'platformAdmin VirtualAssistant'
     );
 
@@ -213,7 +213,7 @@ export class PlatformAdminResolverFields {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
       'platformAdmin Communication'
     );
     return {} as PlatformAdminCommunicationQueryResults;
@@ -229,7 +229,7 @@ export class PlatformAdminResolverFields {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
       'platformAdmin Identity'
     );
     return {} as PlatformAdminIdentityQueryResults;

@@ -189,53 +189,8 @@ describe('SpaceResolverMutations', () => {
     });
   });
 
-  describe('updateSpacePlatformSettings', () => {
-    it('should authorize, update platform settings, and reset auth policy', async () => {
-      const actorContext = { actorID: 'actor-1' } as any;
-      const updateData = { spaceID: 'space-1', nameID: 'new-name' } as any;
-      const space = {
-        id: 'space-1',
-        authorization: { id: 'auth-1' },
-        about: { profile: { displayName: 'Test' } },
-      } as any;
-
-      vi.mocked(spaceService.getSpaceOrFail).mockResolvedValue(space);
-      vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(
-        undefined as any
-      );
-      vi.mocked(spaceService.updateSpacePlatformSettings).mockResolvedValue(
-        space
-      );
-      vi.mocked(spaceService.save).mockResolvedValue(space);
-      vi.mocked(
-        spaceAuthorizationService.applyAuthorizationPolicy
-      ).mockResolvedValue([]);
-      vi.mocked(authorizationPolicyService.saveAll).mockResolvedValue(
-        undefined as any
-      );
-
-      await resolver.updateSpacePlatformSettings(actorContext, updateData);
-
-      // 027-platform-role-redesign (T048, A14): re-anchored off
-      // PLATFORM_ADMIN onto ACCOUNT_LICENSE_MANAGE.
-      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
-        actorContext,
-        space.authorization,
-        AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE,
-        expect.any(String)
-      );
-      // corr-server-6 fix: a SECOND, additional check for the nameID
-      // rename — NOT against `space.authorization` (the widened,
-      // platform-license-manager-inclusive policy).
-      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
-        actorContext,
-        expect.not.objectContaining({ id: 'auth-1' }),
-        AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE,
-        expect.any(String)
-      );
-    });
-
-    it('does not perform the additional nameID check when nameID is absent (visibility-only call)', async () => {
+  describe('adminUpdateSpaceVisibility (T078, A14)', () => {
+    it('checks ACCOUNT_LICENSE_MANAGE once — the second, nameID-only check is gone with the field', async () => {
       const actorContext = { actorID: 'actor-1' } as any;
       const updateData = { spaceID: 'space-1', visibility: 'public' } as any;
       const space = {
@@ -248,7 +203,7 @@ describe('SpaceResolverMutations', () => {
       vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(
         undefined as any
       );
-      vi.mocked(spaceService.updateSpacePlatformSettings).mockResolvedValue(
+      vi.mocked(spaceService.adminUpdateSpaceVisibility).mockResolvedValue(
         space
       );
       vi.mocked(spaceService.save).mockResolvedValue(space);
@@ -259,41 +214,53 @@ describe('SpaceResolverMutations', () => {
         undefined as any
       );
 
-      await resolver.updateSpacePlatformSettings(actorContext, updateData);
+      await resolver.adminUpdateSpaceVisibility(actorContext, updateData);
 
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        space.authorization,
+        AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE,
+        expect.any(String)
+      );
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledTimes(1);
     });
   });
 
-  // 027-platform-role-redesign (corr-server-6 fix): wires the REAL
-  // AuthorizationPolicyService + AuthorizationService so the constructor's
-  // `legacySpaceNameIdRenamePolicy` is a genuine, hardcoded
-  // `[GLOBAL_ADMIN, GLOBAL_SUPPORT]` IAuthorizationPolicy, and asserts a
-  // `platform-license-manager`-only actor — who now legitimately reaches
-  // the mutation's PRIMARY ACCOUNT_LICENSE_MANAGE gate (T048's additive
-  // re-anchor) — is still denied a `nameID` rename, while GLOBAL_ADMIN
-  // (the pre-existing legacy reacher) is allowed.
-  describe('updateSpacePlatformSettings — nameID legacy pin, real-engine integration', () => {
+  // 027-platform-role-redesign (T078, Slice B): corr-server-6's legacy-pin
+  // suite is replaced, not deleted. The pin it exercised is gone because the
+  // rename left this mutation entirely — so the question worth asking with a
+  // REAL AuthorizationPolicyService/AuthorizationService is now the A17
+  // invariant itself: `UPDATE_NAMEID` is held by NO global credential, so a
+  // rename through `updateSpace`'s protected section is denied even to
+  // `global-admin`, the credential that could do it in every prior slice.
+  describe('updateSpace protected nameID section — real-engine integration (T078/A17)', () => {
     let realResolver: SpaceResolverMutations;
     let realSpaceService: Record<string, Mock>;
     let realSpaceAuthorizationService: Record<string, Mock>;
 
     const space = {
       id: 'space-1',
-      // The space's OWN policy carries ACCOUNT_LICENSE_MANAGE for
-      // [GLOBAL_ADMIN, GLOBAL_SUPPORT, PLATFORM_LICENSE_MANAGER] — mirrors
-      // `space.service.authorization.ts`'s `spacePlatformSettingsAdmin` rule
-      // (T048) closely enough to exercise the real AuthorizationService.
+      // The space's OWN policy grants ordinary UPDATE broadly — and
+      // UPDATE_NAMEID to nobody, which is the point.
       authorization: (() => {
         const policy = new AuthorizationPolicy(
           AuthorizationPolicyType.SPACE
         ) as any;
         policy.credentialRules = [
           {
-            grantedPrivileges: [AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE],
+            grantedPrivileges: [
+              AuthorizationPrivilege.UPDATE,
+              AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE,
+            ],
             criterias: [
-              { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
-              { type: AuthorizationCredential.GLOBAL_SUPPORT, resourceID: '' },
+              {
+                type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+                resourceID: '',
+              },
+              {
+                type: AuthorizationCredential.PLATFORM_SUPPORT,
+                resourceID: '',
+              },
               {
                 type: AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
                 resourceID: '',
@@ -345,43 +312,46 @@ describe('SpaceResolverMutations', () => {
       ) as any;
 
       realSpaceService.getSpaceOrFail.mockResolvedValue(space);
-      realSpaceService.updateSpacePlatformSettings.mockResolvedValue(space);
+      realSpaceService.update.mockResolvedValue(space);
+      realSpaceService.adminUpdateSpaceVisibility.mockResolvedValue(space);
       realSpaceService.save.mockResolvedValue(space);
       realSpaceAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
         []
       );
     });
 
-    it('denies a platform-license-manager-only actor from renaming nameID', async () => {
+    it('denies a platform-license-manager-only actor the nameID rename', async () => {
       const actor = buildActorContext(
         AuthorizationCredential.PLATFORM_LICENSE_MANAGER
       );
       await expect(
-        realResolver.updateSpacePlatformSettings(actor, {
-          spaceID: 'space-1',
+        realResolver.updateSpace(actor, {
+          ID: 'space-1',
           nameID: 'squatted-url',
         } as any)
       ).rejects.toThrow();
     });
 
-    it('allows a global-admin actor to rename nameID (pre-existing legacy reach preserved)', async () => {
-      const actor = buildActorContext(AuthorizationCredential.GLOBAL_ADMIN);
-      await expect(
-        realResolver.updateSpacePlatformSettings(actor, {
-          spaceID: 'space-1',
-          nameID: 'new-url',
-        } as any)
-      ).resolves.toBeDefined();
-    });
-
-    it('allows a platform-license-manager-only actor to update visibility (nameID absent)', async () => {
+    it('denies even global-admin the nameID rename — no global role holds UPDATE_NAMEID (A17)', async () => {
       const actor = buildActorContext(
-        AuthorizationCredential.PLATFORM_LICENSE_MANAGER
+        AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS
       );
       await expect(
-        realResolver.updateSpacePlatformSettings(actor, {
-          spaceID: 'space-1',
-          visibility: 'public',
+        realResolver.updateSpace(actor, {
+          ID: 'space-1',
+          nameID: 'new-url',
+        } as any)
+      ).rejects.toThrow();
+    });
+
+    it('allows an ordinary update when nameID is absent — the protected section does not gate the rest', async () => {
+      const actor = buildActorContext(
+        AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS
+      );
+      await expect(
+        realResolver.updateSpace(actor, {
+          ID: 'space-1',
+          about: { profile: { displayName: 'Renamed display name' } },
         } as any)
       ).resolves.toBeDefined();
     });

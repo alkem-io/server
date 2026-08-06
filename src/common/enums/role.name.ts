@@ -6,18 +6,11 @@ export enum RoleName {
   ADMIN = 'admin',
   ASSOCIATE = 'associate',
   OWNER = 'owner',
-  GLOBAL_ADMIN = 'global-admin',
-  GLOBAL_SUPPORT = 'global-support', // Platform management; can be allowed to act as a SpaceAdmin depending on Space settings
-  GLOBAL_LICENSE_MANAGER = 'global-license-manager',
-  GLOBAL_COMMUNITY_READER = 'global-community-reader',
-  GLOBAL_SPACES_READER = 'global-spaces-reader',
-  GLOBAL_PLATFORM_MANAGER = 'global-platform-manager',
-  GLOBAL_SUPPORT_MANAGER = 'global-support-manager',
   PLATFORM_OPERATIONS_ADMIN = 'platform-operations-admin', // operational & maintenance actions on the platform
-  PLATFORM_BETA_TESTER = 'platform-beta-tester',
-  PLATFORM_VC_CAMPAIGN = 'platform-vc-campaign',
-  PLATFORM_ASSISTANT_ACCESS = 'platform-assistant-access',
-  // --- 027-platform-role-redesign: target role model (Slice A, additive) ---
+  // --- 027-platform-role-redesign: target role model ---
+  // T077 (Slice B): the ten legacy global role names are removed outright, no
+  // `@deprecated` window (FR-029). `registered` below is untouched — it is the
+  // baseline non-admin tier, not part of the decomposed admin vocabulary.
   /** Sole authority assigning `Platform …` roles; assigns `Feature …` roles too; role/holder-list read; service-profile marker. */
   PLATFORM_ROLES_ADMIN = 'platform-roles-admin',
   /** Full access across all platform content. Convention-limited, not enforced (FR-004). */

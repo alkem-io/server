@@ -61,7 +61,7 @@ export class ForumResolverMutations {
       await this.authorizationService.grantAccessOrFail(
         actorContext,
         platformAuthorization,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_FORUM_MANAGE,
         `User not authorized to create discussion with ${ForumDiscussionCategory.RELEASES} category.`
       );
     }

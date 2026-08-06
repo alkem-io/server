@@ -579,7 +579,7 @@ describe('LookupResolverFields', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         platformAuth,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
         expect.any(String)
       );
     });

@@ -43,7 +43,7 @@ import { vi } from 'vitest';
 import { Account } from '../account/account.entity';
 import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '../account/constants';
 import { SpaceAbout } from '../space.about';
-import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
+import { AdminUpdateSpaceVisibilityInput } from './dto/space.dto.admin.update.visibility';
 import { Space } from './space.entity';
 import { SpaceService } from './space.service';
 
@@ -77,7 +77,7 @@ describe('SpaceService', () => {
     expect(service).toBeDefined();
   });
 
-  describe('updateSpacePlatformSettings', () => {
+  describe('adminUpdateSpaceVisibility + the protected nameID section (T078)', () => {
     it('should invalidate URL cache when nameID is updated for L0 space', async () => {
       // Arrange
       const spaceId = 'space-1';
@@ -110,10 +110,7 @@ describe('SpaceService', () => {
         },
       } as Space;
 
-      const updateData: UpdateSpacePlatformSettingsInput = {
-        spaceID: spaceId,
-        nameID: newNameID,
-      };
+      const updateData = { spaceID: spaceId, nameID: newNameID };
 
       // Mock the naming service to return empty reserved nameIDs
       const mockNamingService = {
@@ -151,7 +148,10 @@ describe('SpaceService', () => {
         .mockResolvedValue(undefined);
 
       // Act
-      await service.updateSpacePlatformSettings(mockSpace, updateData);
+      await (service as any).applyProtectedNameIDUpdate(
+        mockSpace,
+        updateData.nameID
+      );
 
       // Assert
       expect(mockSpace.nameID).toBe(newNameID);
@@ -214,10 +214,7 @@ describe('SpaceService', () => {
         },
       } as Space;
 
-      const updateData: UpdateSpacePlatformSettingsInput = {
-        spaceID: subspaceId,
-        nameID: newNameID,
-      };
+      const updateData = { spaceID: subspaceId, nameID: newNameID };
 
       // Mock the naming service to return empty reserved nameIDs
       const mockNamingService = {
@@ -259,7 +256,10 @@ describe('SpaceService', () => {
         .mockResolvedValue(undefined);
 
       // Act
-      await service.updateSpacePlatformSettings(mockSubspace, updateData);
+      await (service as any).applyProtectedNameIDUpdate(
+        mockSubspace,
+        updateData.nameID
+      );
 
       // Assert
       expect(mockSubspace.nameID).toBe(newNameID);
@@ -283,7 +283,7 @@ describe('SpaceService', () => {
         visibility: SpaceVisibility.ACTIVE,
       } as Space;
 
-      const updateData: UpdateSpacePlatformSettingsInput = {
+      const updateData: AdminUpdateSpaceVisibilityInput = {
         spaceID: spaceId,
         visibility: SpaceVisibility.INACTIVE,
       };
@@ -308,13 +308,13 @@ describe('SpaceService', () => {
       urlGeneratorCacheService.revokeUrlCache = revokeUrlCacheSpy;
 
       // Act
-      await service.updateSpacePlatformSettings(mockSpace, updateData);
+      await service.adminUpdateSpaceVisibility(mockSpace, updateData);
 
       // Assert
       expect(mockSpace.visibility).toBe(SpaceVisibility.INACTIVE);
     });
 
-    it('should not invalidate URL cache when nameID is not changed', async () => {
+    it('should not invalidate URL cache for a visibility-only update', async () => {
       // Arrange
       const spaceId = 'space-1';
       const nameID = 'same-space-name';
@@ -327,7 +327,7 @@ describe('SpaceService', () => {
         visibility: SpaceVisibility.ACTIVE,
       } as Space;
 
-      const updateData: UpdateSpacePlatformSettingsInput = {
+      const updateData: AdminUpdateSpaceVisibilityInput = {
         spaceID: spaceId,
         visibility: SpaceVisibility.DEMO, // Only changing visibility, not nameID
       };
@@ -353,7 +353,7 @@ describe('SpaceService', () => {
       urlGeneratorCacheService.revokeUrlCache = revokeUrlCacheSpy;
 
       // Act
-      await service.updateSpacePlatformSettings(mockSpace, updateData);
+      await service.adminUpdateSpaceVisibility(mockSpace, updateData);
 
       // Assert
       expect(revokeUrlCacheSpy).not.toHaveBeenCalled();
@@ -1400,7 +1400,7 @@ describe('SpaceService', () => {
       } as any;
 
       await expect(
-        service.updateSpacePlatformSettings(mockSpace, {
+        service.adminUpdateSpaceVisibility(mockSpace, {
           spaceID: 'space-1',
           visibility: SpaceVisibility.INACTIVE,
         })

@@ -529,7 +529,6 @@ describe('AccountAuthorizationService', () => {
       const granted = privilegesGrantedToRole();
       for (const excluded of [
         AuthorizationPrivilege.GRANT,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
@@ -603,8 +602,6 @@ describe('AccountAuthorizationService', () => {
         (c: any) => typeof c === 'string'
       );
       expect(bareCredentials).toEqual([
-        AuthorizationCredential.GLOBAL_ADMIN,
-        AuthorizationCredential.GLOBAL_SUPPORT,
         AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
       ]);
       expect(
@@ -627,8 +624,6 @@ describe('AccountAuthorizationService', () => {
         (c: any) => typeof c === 'string'
       );
       expect(bareCredentials).toEqual([
-        AuthorizationCredential.GLOBAL_ADMIN,
-        AuthorizationCredential.GLOBAL_SUPPORT,
         AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
       ]);
       expect(rules[0].cascade).toBe(false);
@@ -643,8 +638,6 @@ describe('AccountAuthorizationService', () => {
       );
       expect(rules).toHaveLength(1);
       expect(rules[0].criterias).toEqual([
-        AuthorizationCredential.GLOBAL_ADMIN,
-        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
         AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
       ]);
       expect(rules[0].cascade).toBe(false);

@@ -62,33 +62,30 @@ export class SpacePlatformRolesAccessService {
       ),
     });
 
+    // 027-platform-role-redesign (T076/T077) — the four legacy per-space role
+    // entries are gone. Where each capability went:
+    //
+    //  - `global-admin`'s blanket CRUD+GRANT: nowhere here. Platform-wide
+    //    content access is the root content rule's cascading CRUD to
+    //    `platform-content-full-access` (FR-004), not a per-space grant.
+    //  - `global-license-manager`: RE-ANCHORED onto `platform-license-manager`
+    //    below, same privileges. It is not dropped, because A12/A14 (license
+    //    usage, space visibility) are unexercisable if the owner cannot read a
+    //    space's license.
+    //  - `global-support`: replaced by the `platform-support` entry below
+    //    (T049). Deliberately NOT carrying legacy Support's unconditional
+    //    L0 `READ_LICENSE`/`READ_ABOUT` — spec row 7 bounds Support's reach by
+    //    the per-space `allowPlatformSupportAsAdmin` flag, and an
+    //    unconditional read is exactly the standing access that bound removes.
+    //  - `global-spaces-read`: replaced by `platform-spaces-reader` below. It
+    //    was the C1 void role — it named a credential string no check read.
     platformAccessRoles.push({
-      roleName: RoleName.GLOBAL_ADMIN,
-      grantedPrivileges: this.getAccessPrivilegesForGlobalAdmin(),
-    });
-
-    platformAccessRoles.push({
-      roleName: RoleName.GLOBAL_LICENSE_MANAGER,
+      roleName: RoleName.PLATFORM_LICENSE_MANAGER,
       grantedPrivileges: this.getAccessPrivilegesForLicenseManagers(space),
     });
 
-    platformAccessRoles.push({
-      roleName: RoleName.GLOBAL_SUPPORT,
-      grantedPrivileges: this.getAccessPrivilegesForSupport(
-        space,
-        spaceSettings,
-        parentPlatformAccess
-      ),
-    });
-
-    platformAccessRoles.push({
-      roleName: RoleName.GLOBAL_SPACES_READER,
-      grantedPrivileges: [AuthorizationPrivilege.READ],
-    });
-
     // 027-platform-role-redesign (T038, A16): platform-spaces-reader
-    // replaces the void global-spaces-read (research C1) — same grant,
-    // additively alongside the legacy role above.
+    // replaces the void global-spaces-read (research C1).
     platformAccessRoles.push({
       roleName: RoleName.PLATFORM_SPACES_READER,
       grantedPrivileges: [AuthorizationPrivilege.READ],
@@ -157,71 +154,6 @@ export class SpacePlatformRolesAccessService {
     }
 
     return privileges;
-  }
-
-  private getAccessPrivilegesForSupport(
-    space: ISpace,
-    spaceSettings: ISpaceSettings,
-    parentPlatformAccess?: IPlatformRolesAccess
-  ): AuthorizationPrivilege[] {
-    const privileges: AuthorizationPrivilege[] = [];
-
-    if (space.level === SpaceLevel.L0) {
-      privileges.push(
-        AuthorizationPrivilege.READ_LICENSE,
-        AuthorizationPrivilege.READ_ABOUT,
-        AuthorizationPrivilege.PLATFORM_ADMIN
-      );
-
-      // Setting only valid on L0 spaces
-      if (spaceSettings.privacy.allowPlatformSupportAsAdmin) {
-        privileges.push(
-          AuthorizationPrivilege.CREATE,
-          AuthorizationPrivilege.READ,
-          AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.DELETE,
-          AuthorizationPrivilege.GRANT
-        );
-
-        // This privilege is granted on all admins of space with setting enabled
-        if (spaceSettings.collaboration?.allowGuestContributions) {
-          privileges.push(AuthorizationPrivilege.PUBLIC_SHARE);
-        }
-      }
-    } else {
-      if (!parentPlatformAccess) {
-        throw new EntityNotFoundException(
-          `Support access: Parent platform access not found for space ${space.id}`,
-          LogContext.SPACES
-        );
-      }
-      const hasUpdateOnParent = this.platformAccessService.hasRolePrivilege(
-        parentPlatformAccess.roles,
-        RoleName.GLOBAL_SUPPORT,
-        AuthorizationPrivilege.UPDATE
-      );
-      if (hasUpdateOnParent) {
-        privileges.push(
-          AuthorizationPrivilege.CREATE,
-          AuthorizationPrivilege.READ,
-          AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.DELETE,
-          AuthorizationPrivilege.GRANT
-        );
-      }
-    }
-
-    return privileges;
-  }
-
-  private getAccessPrivilegesForGlobalAdmin(): AuthorizationPrivilege[] {
-    return [
-      AuthorizationPrivilege.CREATE,
-      AuthorizationPrivilege.READ,
-      AuthorizationPrivilege.UPDATE,
-      AuthorizationPrivilege.DELETE,
-      AuthorizationPrivilege.GRANT,
-    ];
   }
 
   private getAccessPrivilegesForLicenseManagers(

@@ -2,7 +2,7 @@ import { AuthorizationCredential } from '@common/enums/authorization.credential'
 import { RoleName } from '@common/enums/role.name';
 import { RoleSetType } from '@common/enums/role.set.type';
 import {
-  LEGACY_PLATFORM_ROLE_SEED_DEFINITIONS,
+  BASELINE_PLATFORM_ROLE_SEED_DEFINITIONS,
   NEW_PLATFORM_ROLE_SEED_DEFINITIONS,
 } from '@src/migrations/utils/platform.role.seed.definitions';
 import { describe, expect, it } from 'vitest';
@@ -42,7 +42,7 @@ import {
  */
 describe('027-platform-role-redesign: ROLE_CREDENTIAL_MAP anti-drift (FR-011/SC-008)', () => {
   const allSeedDefinitions = [
-    ...LEGACY_PLATFORM_ROLE_SEED_DEFINITIONS,
+    ...BASELINE_PLATFORM_ROLE_SEED_DEFINITIONS,
     ...NEW_PLATFORM_ROLE_SEED_DEFINITIONS,
   ];
 
@@ -118,15 +118,28 @@ describe('027-platform-role-redesign: ROLE_CREDENTIAL_MAP anti-drift (FR-011/SC-
     }
   });
 
-  it('records exactly the two known C1 legacy defects — repaired structurally, not by data migration (research D1, T069)', () => {
-    const actualDefects = LEGACY_PLATFORM_ROLE_SEED_DEFINITIONS.filter(def => {
-      const mapped = ROLE_CREDENTIAL_MAP[roleNameFor(def.name)];
-      return mapped !== def.credentialType;
-    }).map(def => def.name);
+  // 027-platform-role-redesign (T077/T081, Slice B): INVERTED, and this is the
+  // C1 defect's actual end. The test used to assert that exactly two seeded rows
+  // (`global-spaces-reader`, `global-community-reader`) named a `credential.type`
+  // no `AuthorizationCredential` member carried — the silent void this whole
+  // feature exists to close. Research D1 chose to fix it structurally rather
+  // than with a repair migration, and T081 removed both rows from the seed while
+  // T077 removed their enum members. There is nothing left to diverge, so the
+  // assertion is now that the set is EMPTY — a stronger claim than the old one,
+  // and one that fails if any future seed row reintroduces a void credential.
+  it('has NO seed row whose credential diverges from the map — the C1 void is closed by removal (research D1, T069/T081)', () => {
+    const actualDefects = BASELINE_PLATFORM_ROLE_SEED_DEFINITIONS.filter(
+      def => {
+        const mapped = ROLE_CREDENTIAL_MAP[roleNameFor(def.name)];
+        return mapped !== def.credentialType;
+      }
+    ).map(def => def.name);
 
-    expect(actualDefects.sort()).toEqual(
-      [...KNOWN_C1_DEFECT_ROLE_NAMES].sort()
-    );
+    expect(actualDefects).toEqual([]);
+    // And neither retired defect name survives anywhere in the vocabulary.
+    for (const retired of KNOWN_C1_DEFECT_ROLE_NAMES) {
+      expect(Object.values(RoleName)).not.toContain(retired);
+    }
   });
 
   /**

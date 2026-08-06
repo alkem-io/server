@@ -51,7 +51,13 @@ export class OrganizationVerificationAuthorizationService {
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const globalAdmin =
+    // 027-platform-role-redesign (T076, Slice B): re-anchored off
+    // `{global-admin, global-support, global-community-read}` onto Platform
+    // Support, which spec §Target global role model row 7 gives the
+    // "organization lifecycle". Verifying an organization is part of that
+    // lifecycle, and it is the one place on this tree where GRANT is legitimate
+    // — the verification state machine issues the verified credential.
+    const platformSupportVerify =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [
           AuthorizationPrivilege.CREATE,
@@ -60,14 +66,10 @@ export class OrganizationVerificationAuthorizationService {
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
         ],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_COMMUNITY_READ,
-        ],
+        [AuthorizationCredential.PLATFORM_SUPPORT],
         CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS_ALL
       );
-    newRules.push(globalAdmin);
+    newRules.push(platformSupportVerify);
 
     const orgAdmin = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.READ, AuthorizationPrivilege.UPDATE],

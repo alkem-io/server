@@ -53,7 +53,7 @@ describe('PlatformAdminResolverFields', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         platformPolicy,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
         'platformAdmin InnovationHubs'
       );
       expect(result).toEqual(hubs);
@@ -70,7 +70,7 @@ describe('PlatformAdminResolverFields', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         platformPolicy,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
         'platformAdmin InnovationPacks'
       );
       expect(result).toEqual(packs);
@@ -99,7 +99,7 @@ describe('PlatformAdminResolverFields', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         platformPolicy,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
         'platformAdmin Spaces'
       );
       expect(result).toEqual(spaces);
@@ -117,7 +117,7 @@ describe('PlatformAdminResolverFields', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         platformPolicy,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
         'platformAdmin Users'
       );
       expect(result).toEqual(paginatedUsers);
@@ -149,7 +149,7 @@ describe('PlatformAdminResolverFields', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         platformPolicy,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES,
         'platformAdmin Organizations'
       );
       expect(result).toEqual(paginatedOrgs);
@@ -167,7 +167,7 @@ describe('PlatformAdminResolverFields', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         platformPolicy,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
         'platformAdmin Virtual Contributors'
       );
       expect(result).toEqual(vcs);
@@ -181,7 +181,7 @@ describe('PlatformAdminResolverFields', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         platformPolicy,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
         'platformAdmin Communication'
       );
       expect(result).toEqual({});
@@ -195,7 +195,7 @@ describe('PlatformAdminResolverFields', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         platformPolicy,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
         'platformAdmin Identity'
       );
       expect(result).toEqual({});

@@ -251,7 +251,17 @@ describe('InnovationHubAuthorizationService', () => {
       expect(result).toBeDefined();
     });
 
-    it('should set cascade to true on innovation hub admin credential rule', async () => {
+    // 027-platform-role-redesign (T076, Slice B): INVERTED. The rule whose
+    // cascade this asserted is DELETED — it granted blanket CRUD to
+    // `{global-admin, global-support}` over an innovation hub. An innovation hub
+    // is platform content, and Content Full Access already reaches it with
+    // cascading CRUD from the inheritance root (FR-004), so re-anchoring the
+    // rule would have granted the same role twice and hidden the second grant
+    // from `privilege.grants.ts`. Support's reach over an ORGANISATION's hubs is
+    // A7's `PLATFORM_SUPPORT_ORG_RESOURCES`, granted on the account tree.
+    //
+    // The assertion is therefore that no credential rule is built here at all.
+    it('builds no blanket admin credential rule — hub content reach is the root cascade (T076)', async () => {
       // Arrange
       const hubInput = { id: 'hub-1' } as IInnovationHub;
       const hubWithProfile = {
@@ -290,7 +300,10 @@ describe('InnovationHubAuthorizationService', () => {
       await service.applyAuthorizationPolicy(hubInput, mockParentAuthorization);
 
       // Assert
-      expect(credentialRule.cascade).toBe(true);
+      expect(
+        (authorizationPolicyService as any).createCredentialRuleUsingTypesOnly
+      ).not.toHaveBeenCalled();
+      expect(credentialRule.cascade).toBe(false);
     });
   });
 });

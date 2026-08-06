@@ -162,19 +162,29 @@ describe('reachability.spec.ts (T070m, FR-034/SC-019)', () => {
     }
   });
 
-  it("A1's four FR-022 credential mutations: Slice A derived set is EXACTLY {global-admin} — the pin holding, not the widening leaking through", () => {
-    const pinnedSurfaces = A_ROW_SURFACES.A1.filter(
-      s =>
-        s.lifecycle &&
-        typeof s.lifecycle === 'object' &&
-        'retiredIn' in s.lifecycle
+  // 027-platform-role-redesign (T080/T083a, Slice B): this replaces the
+  // Slice A assertion that A1's four FR-022 credential mutations derived to
+  // EXACTLY {global-admin} — the pin holding rather than T034's widening
+  // leaking through. Those four surfaces no longer exist, so the question no
+  // longer does either. What IS still checkable is that nothing is left
+  // MARKED for retirement: `retiredIn: 'B'` is a promise the census makes to
+  // a future reader, and a surface still carrying it after Slice B has
+  // shipped means a mutation outlived the deletion that was supposed to take
+  // it. Scanned across every A-row, not just A1, so a marker added elsewhere
+  // is caught too.
+  it('no census surface is still marked retiredIn: B — every Slice B retirement actually happened', () => {
+    const stillMarked = Object.entries(A_ROW_SURFACES).flatMap(
+      ([aRow, surfaces]) =>
+        surfaces
+          .filter(
+            s =>
+              s.lifecycle &&
+              typeof s.lifecycle === 'object' &&
+              'retiredIn' in s.lifecycle
+          )
+          .map(s => `${aRow}:${s.member}`)
     );
-    expect(pinnedSurfaces).toHaveLength(4);
-    for (const surface of pinnedSurfaces) {
-      const derived = reachers(surface, 'A');
-      expect(derived).toEqual(surface.legacyReachers);
-      expect(derived).toHaveLength(1);
-    }
+    expect(stillMarked).toEqual([]);
   });
 
   // ---------------------------------------------------------------------

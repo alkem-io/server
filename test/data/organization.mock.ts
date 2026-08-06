@@ -31,7 +31,10 @@ export const organizationData: { organization: IOrganization } = {
           {
             name: '1',
             criterias: [
-              { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
+              {
+                type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+                resourceID: '',
+              },
             ],
             grantedPrivileges: [
               AuthorizationPrivilege.CREATE,
@@ -45,7 +48,10 @@ export const organizationData: { organization: IOrganization } = {
           {
             name: '2',
             criterias: [
-              { type: AuthorizationCredential.GLOBAL_SUPPORT, resourceID: '' },
+              {
+                type: AuthorizationCredential.PLATFORM_SUPPORT,
+                resourceID: '',
+              },
             ],
             grantedPrivileges: [
               AuthorizationPrivilege.CREATE,
@@ -96,7 +102,10 @@ export const organizationData: { organization: IOrganization } = {
         {
           name: '1',
           criterias: [
-            { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
+            {
+              type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+              resourceID: '',
+            },
           ],
           grantedPrivileges: [
             AuthorizationPrivilege.CREATE,
@@ -110,7 +119,7 @@ export const organizationData: { organization: IOrganization } = {
         {
           name: '2',
           criterias: [
-            { type: AuthorizationCredential.GLOBAL_SUPPORT, resourceID: '' },
+            { type: AuthorizationCredential.PLATFORM_SUPPORT, resourceID: '' },
           ],
           grantedPrivileges: [
             AuthorizationPrivilege.GRANT,

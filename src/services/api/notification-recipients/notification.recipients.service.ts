@@ -749,18 +749,29 @@ export class NotificationRecipientsService {
     ];
   }
 
+  /**
+   * 027-platform-role-redesign (T076): the three legacy global credentials that
+   * used to define "platform admin" for NOTIFICATION RECIPIENT purposes are
+   * gone. This is a notification-routing question, not an authorization one —
+   * "who should be told when something platform-wide happens" — so it resolves
+   * to the roles that act on those events: Support (organization lifecycle,
+   * forum), Users Admin (user records) and Content Full Access (content).
+   * Deliberately NOT the whole 13: Audit Reader must never be a recipient (it
+   * reviews the trail, it does not operate), and Spaces Reader is a service
+   * account with no inbox.
+   */
   private getGlobalAdminCriteria(): CredentialsSearchInput[] {
     return [
       {
-        type: AuthorizationCredential.GLOBAL_ADMIN,
+        type: AuthorizationCredential.PLATFORM_SUPPORT,
         resourceID: '',
       },
       {
-        type: AuthorizationCredential.GLOBAL_SUPPORT,
+        type: AuthorizationCredential.PLATFORM_USERS_ADMIN,
         resourceID: '',
       },
       {
-        type: AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+        type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
         resourceID: '',
       },
     ];

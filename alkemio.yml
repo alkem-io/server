@@ -99,17 +99,6 @@ search:
   # uploaded can always be parsed. Raising it above that has no effect.
   collabora_document_max_source_size: ${SEARCH_COLLABORA_DOCUMENT_MAX_SOURCE_SIZE}:15728640
 
-licensing:
-  wingback:
-    enabled: ${LICENSING_WINGBACK_ENABLED}:false
-    key: ${LICENSING_WINGBACK_API_KEY}
-    endpoint: ${LICENSING_WINGBACK_API_ENDPOINT}
-    retries: ${LICENSING_WINGBACK_RETRY}:3
-    timeout: ${LICENSING_WINGBACK_TIMEOUT}:30000
-    webhook_secret:
-      name: ${LICENSING_WINGBACK_WEBHOOK_SECRET_NAME}:wb-secret
-      value: ${LICENSING_WINGBACK_WEBHOOK_SECRET_VALUE}
-
 ## identity ##
 
 # Defines all authentication and authorization configuration.

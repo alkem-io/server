@@ -194,20 +194,25 @@ export class AdminAuthorizationService {
     const updatedAuthorization =
       this.extendAuthorizationPolicyWithAuthorizationReset(authorization);
 
-    // Also grant READ, UPDATE, DELETE to global admins
-    const globalAdminsReadUpdateDelete =
+    // 027-platform-role-redesign (T076): re-anchored off `global-admin` onto
+    // Platform Content Full Access — spec §Target global role model row 2 owns
+    // "the platform-content administration surface", which is what READ/UPDATE/
+    // DELETE on the platform entity is. `AUTHORIZATION_RESET` is NOT in this
+    // list and never was: it is Operations Admin's, granted by the dedicated
+    // reset rule above (A3).
+    const platformContentReadUpdateDelete =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [
           AuthorizationPrivilege.READ,
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
         ],
-        [AuthorizationCredential.GLOBAL_ADMIN],
+        [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
         CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS
       );
-    globalAdminsReadUpdateDelete.cascade = false;
+    platformContentReadUpdateDelete.cascade = false;
 
-    updatedAuthorization.credentialRules.push(globalAdminsReadUpdateDelete);
+    updatedAuthorization.credentialRules.push(platformContentReadUpdateDelete);
     return await this.authorizationPolicyService.save(updatedAuthorization);
   }
 
@@ -217,11 +222,7 @@ export class AdminAuthorizationService {
     const globalAdminsAuthorizationReset =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.AUTHORIZATION_RESET],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
-        ],
+        [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],
         CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS
       );
     globalAdminsAuthorizationReset.cascade = false;

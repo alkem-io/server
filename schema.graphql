@@ -102,21 +102,12 @@ enum AuthenticationType {
 
 enum AuthorizationCredential {
   ACCOUNT_ADMIN
-  ASSISTANT_ACCESS
-  BETA_TESTER
   FEATURE_BETA_TESTER
   FEATURE_ORGANIZATION_CREATOR
   FEATURE_VIRTUAL_ASSISTANT
-  GLOBAL_ADMIN
   GLOBAL_ANONYMOUS
-  GLOBAL_COMMUNITY_READ
   GLOBAL_GUEST
-  GLOBAL_LICENSE_MANAGER
-  GLOBAL_PLATFORM_MANAGER
   GLOBAL_REGISTERED
-  GLOBAL_SPACES_READER
-  GLOBAL_SUPPORT
-  GLOBAL_SUPPORT_MANAGER
   ORGANIZATION_ADMIN
   ORGANIZATION_ASSOCIATE
   ORGANIZATION_OWNER
@@ -137,7 +128,6 @@ enum AuthorizationCredential {
   SPACE_SUBSPACE_ADMIN
   USER_GROUP_MEMBER
   USER_SELF_MANAGEMENT
-  VC_CAMPAIGN
 }
 
 enum AuthorizationPolicyType {
@@ -235,16 +225,15 @@ enum AuthorizationPrivilege {
   FILE_DELETE
   FILE_UPLOAD
   GRANT
-  GRANT_GLOBAL_ADMINS
   LICENSE_RESET
   MOVE_CONTRIBUTION
   MOVE_POST
-  PLATFORM_ADMIN
   PLATFORM_AUDIT_READ
   PLATFORM_CONTENT_FULL_ACCESS
   PLATFORM_FORUM_MANAGE
   PLATFORM_OPERATIONS_ADMIN
   PLATFORM_ROLE_HOLDERS_READ
+  PLATFORM_ROLES_ASSIGN
   PLATFORM_SETTINGS_ADMIN
   PLATFORM_SUPPORT_ORG_RESOURCES
   PLATFORM_USERS_ADMIN
@@ -389,21 +378,12 @@ enum ConversationEventType {
 enum CredentialType {
   ACCOUNT_ADMIN
   ACCOUNT_LICENSE_PLUS
-  ASSISTANT_ACCESS
-  BETA_TESTER
   FEATURE_BETA_TESTER
   FEATURE_ORGANIZATION_CREATOR
   FEATURE_VIRTUAL_ASSISTANT
-  GLOBAL_ADMIN
   GLOBAL_ANONYMOUS
-  GLOBAL_COMMUNITY_READ
   GLOBAL_GUEST
-  GLOBAL_LICENSE_MANAGER
-  GLOBAL_PLATFORM_MANAGER
   GLOBAL_REGISTERED
-  GLOBAL_SPACES_READER
-  GLOBAL_SUPPORT
-  GLOBAL_SUPPORT_MANAGER
   ORGANIZATION_ADMIN
   ORGANIZATION_ASSOCIATE
   ORGANIZATION_OWNER
@@ -433,7 +413,6 @@ enum CredentialType {
   SPACE_SUBSPACE_ADMIN
   USER_GROUP_MEMBER
   USER_SELF_MANAGEMENT
-  VC_CAMPAIGN
 }
 
 """
@@ -775,20 +754,11 @@ enum RoleName {
   FEATURE_BETA_TESTER
   FEATURE_ORGANIZATION_CREATOR
   FEATURE_VIRTUAL_ASSISTANT
-  GLOBAL_ADMIN
-  GLOBAL_COMMUNITY_READER
-  GLOBAL_LICENSE_MANAGER
-  GLOBAL_PLATFORM_MANAGER
-  GLOBAL_SPACES_READER
-  GLOBAL_SUPPORT
-  GLOBAL_SUPPORT_MANAGER
   GUEST
   LEAD
   MEMBER
   OWNER
-  PLATFORM_ASSISTANT_ACCESS
   PLATFORM_AUDIT_READER
-  PLATFORM_BETA_TESTER
   PLATFORM_CONTENT_FULL_ACCESS
   PLATFORM_LICENSE_MANAGER
   PLATFORM_OPERATIONS_ADMIN
@@ -798,7 +768,6 @@ enum RoleName {
   PLATFORM_SPACES_READER
   PLATFORM_SUPPORT
   PLATFORM_USERS_ADMIN
-  PLATFORM_VC_CAMPAIGN
   REGISTERED
 }
 
@@ -1930,9 +1899,6 @@ type CalloutContributionsCountOutput {
   whiteboard: Float!
 }
 
-"""
-Admin-fixed initial map view for a Contributors-collection callout's map. Absent/null ⇒ automatic framing (fit to plotted contributors; Europe fallback).
-"""
 type CalloutContributorsMapView {
   """Map center latitude. Finite, within [-90, 90]."""
   latitude: Float!
@@ -2523,7 +2489,9 @@ type CreateCalloutContributionDefaultsData {
 }
 
 type CreateCalloutContributorsMapViewData {
-  """Map center latitude. Finite, within [-90, 90]."""
+  """
+  Map center latitude. Finite, within [-90, 90]. MapLibre throws on values outside this range.
+  """
   latitude: Float!
   """Map center longitude. Finite, within [-180, 180]."""
   longitude: Float!
@@ -4071,6 +4039,8 @@ type Mutation {
   adminUpdateContributorAvatars(profileID: UUID!): Profile!
   """Updates the GeoLocation data where required on the platform."""
   adminUpdateGeoLocationData: Boolean!
+  """Update the visibility of the specified Space."""
+  adminUpdateSpaceVisibility(updateData: AdminUpdateSpaceVisibilityInput!): Space!
   """
   Uploads the files from the Whiteboard content into the StorageBucket of that Whiteboard.
   """
@@ -4087,10 +4057,6 @@ type Mutation {
   Reconcile an outstanding drift-detected state for a subject user by force-aligning Alkemio and Kratos to a canonical email chosen by the admin. Requires PLATFORM_USERS_ADMIN.
   """
   adminUserEmailChangeDriftResolve(adminUserEmailChangeDriftResolveData: AdminUserEmailChangeDriftResolveInput!): UserEmailChangeResult!
-  """Create a test customer on wingback."""
-  adminWingbackCreateTestCustomer: String!
-  """Get wingback customer entitlements."""
-  adminWingbackGetCustomerEntitlements(customerID: String!): [LicensingGrantedEntitlement!]!
   """Reset the Authorization Policy on the specified AiServer."""
   aiServerAuthorizationPolicyReset: AiServer!
   """Creates a new AiPersona on the aiServer."""
@@ -4207,8 +4173,6 @@ type Mutation {
   createUser(userData: CreateUserInput!): User!
   """Creates a new VirtualContributor on an Account."""
   createVirtualContributor(virtualContributorData: CreateVirtualContributorOnAccountInput!): VirtualContributor!
-  """Creates an account in Wingback"""
-  createWingbackAccount(accountID: UUID!): String!
   """Removes the specified Application."""
   deleteApplication(deleteData: DeleteApplicationInput!): Application!
   """Deletes the specified CalendarEvent."""
@@ -4277,10 +4241,6 @@ type Mutation {
   eventOnOrganizationVerification(eventData: OrganizationVerificationEventInput!): OrganizationVerification!
   """Grant a credential to an Actor."""
   grantCredentialToActor(actorID: UUID!, credentialType: CredentialType!, resourceID: UUID): Credential!
-  """Grants an authorization credential to an Organization."""
-  grantCredentialToOrganization(grantCredentialData: GrantOrganizationAuthorizationCredentialInput!): Organization!
-  """Grants an authorization credential to a User."""
-  grantCredentialToUser(grantCredentialData: GrantAuthorizationCredentialInput!): User!
   """
   Import an existing file as a CollaboraDocument contribution on the callout. file-service-go sniffs the MIME from content and rejects formats Collabora cannot edit.
   """
@@ -4383,10 +4343,6 @@ type Mutation {
   resetLicenseOnAccounts: Boolean!
   """Revoke a credential from an Actor."""
   revokeCredentialFromActor(actorID: UUID!, credentialType: CredentialType!, resourceID: UUID): Boolean!
-  """Removes an authorization credential from an Organization."""
-  revokeCredentialFromOrganization(revokeCredentialData: RevokeOrganizationAuthorizationCredentialInput!): Organization!
-  """Removes an authorization credential from a User."""
-  revokeCredentialFromUser(revokeCredentialData: RevokeAuthorizationCredentialInput!): User!
   """Revokes the specified LicensePlan on an Account."""
   revokeLicensePlanFromAccount(planData: RevokeLicensePlanFromAccount!): Account!
   """Revokes the specified LicensePlan on a Space."""
@@ -4431,6 +4387,10 @@ type Mutation {
   Disable a push notification subscription for the current user. The subscription is retained but will not receive notifications until re-enabled.
   """
   unsubscribeFromPushNotifications(subscriptionData: UnsubscribeFromPushNotificationsInput!): PushSubscription!
+  """
+  Update the nameID (URL path) of the specified Actor. A protected update: renaming repoints every inbound link to the entity.
+  """
+  updateActorNameID(updateData: UpdateActorNameIDInput!): Actor!
   """Update the Application Form used by this RoleSet."""
   updateApplicationFormOnRoleSet(applicationFormData: UpdateApplicationFormOnRoleSetInput!): RoleSet!
   """
@@ -4497,8 +4457,6 @@ type Mutation {
   updateNotificationState(notificationData: UpdateNotificationStateInput!): NotificationEventInAppState!
   """Updates the specified Organization."""
   updateOrganization(organizationData: UpdateOrganizationInput!): Organization!
-  """Updates the specified Organization platform settings."""
-  updateOrganizationPlatformSettings(organizationData: UpdateOrganizationPlatformSettingsInput!): Organization!
   """Updates one of the Setting on an Organization"""
   updateOrganizationSettings(settingsData: UpdateOrganizationSettingsInput!): Organization!
   """Updates one of the Setting on the Platform"""
@@ -4519,8 +4477,6 @@ type Mutation {
   updateReference(referenceData: UpdateReferenceInput!): Reference!
   """Updates the Space."""
   updateSpace(spaceData: UpdateSpaceInput!): Space!
-  """Update the platform settings, such as nameID, of the specified Space."""
-  updateSpacePlatformSettings(updateData: UpdateSpacePlatformSettingsInput!): Space!
   """Updates one of the Setting on a Space"""
   updateSpaceSettings(settingsData: UpdateSpaceSettingsInput!): Space!
   """
@@ -4545,10 +4501,6 @@ type Mutation {
   updateUser(userData: UpdateUserInput!): User!
   """Updates the specified User Group."""
   updateUserGroup(userGroupData: UpdateUserGroupInput!): UserGroup!
-  """
-  Update the platform settings, such as nameID, email, for the specified User.
-  """
-  updateUserPlatformSettings(updateData: UpdateUserPlatformSettingsInput!): User!
   """Updates one of the Setting on a User"""
   updateUserSettings(settingsData: UpdateUserSettingsInput!): User!
   """Updates the specified VirtualContributor."""
@@ -7412,6 +7364,13 @@ input AddVisualToMediaGalleryInput {
   visualType: VisualType!
 }
 
+input AdminUpdateSpaceVisibilityInput {
+  """The Space whose visibility is to be updated."""
+  spaceID: UUID!
+  """Visibility of the Space, only on L0 spaces."""
+  visibility: SpaceVisibility!
+}
+
 input AdminUserEmailChangeDriftResolveInput {
   """
   The admin-chosen canonical email. MUST equal either the old or new email recorded on the drift_detected audit entry. Both sides are force-aligned to this value.
@@ -7632,7 +7591,9 @@ input CreateCalloutContributionInput {
 }
 
 input CreateCalloutContributorsMapViewInput {
-  """Map center latitude. Finite, within [-90, 90]."""
+  """
+  Map center latitude. Finite, within [-90, 90]. MapLibre throws on values outside this range.
+  """
   latitude: Float!
   """Map center longitude. Finite, within [-180, 180]."""
   longitude: Float!
@@ -8427,22 +8388,6 @@ input GrantAssistantActorCapabilitiesInput {
   virtualAssistantID: UUID!
 }
 
-input GrantAuthorizationCredentialInput {
-  """The resource to which this credential is tied."""
-  resourceID: UUID
-  type: AuthorizationCredential!
-  """The user to whom the credential is being granted."""
-  userID: UUID!
-}
-
-input GrantOrganizationAuthorizationCredentialInput {
-  """The Organization to whom the credential is being granted."""
-  organizationID: UUID!
-  """The resource to which this credential is tied."""
-  resourceID: UUID
-  type: AuthorizationCredential!
-}
-
 input ImportCollaboraDocumentInput {
   """
   The ID of the Callout to attach the imported document to as a new contribution.
@@ -8737,14 +8682,6 @@ input ReplaceCollaboraDocumentInput {
   ID: UUID!
 }
 
-input RevokeAuthorizationCredentialInput {
-  """The resource to which access is being removed."""
-  resourceID: String!
-  type: AuthorizationCredential!
-  """The user from whom the credential is being removed."""
-  userID: UUID!
-}
-
 input RevokeLicensePlanFromAccount {
   """The ID of the Account to assign the LicensePlan to."""
   accountID: UUID!
@@ -8761,14 +8698,6 @@ input RevokeLicensePlanFromSpace {
   licensingID: UUID
   """The ID of the Space to assign the LicensePlan to."""
   spaceID: UUID!
-}
-
-input RevokeOrganizationAuthorizationCredentialInput {
-  """The Organization from whom the credential is being removed."""
-  organizationID: UUID!
-  """The resource to which access is being removed."""
-  resourceID: UUID
-  type: AuthorizationCredential!
 }
 
 input RolesActorInput {
@@ -8966,6 +8895,13 @@ input TransferCalloutInput {
 input UnsubscribeFromPushNotificationsInput {
   """The ID of the push subscription to remove."""
   subscriptionID: UUID!
+}
+
+input UpdateActorNameIDInput {
+  """The Actor (User, Organization or VirtualContributor) to rename."""
+  actorID: UUID!
+  """The new URL path (nameID) for the Actor."""
+  nameID: NameID!
 }
 
 input UpdateAiPersonaInput {
@@ -9431,13 +9367,6 @@ input UpdateOrganizationInput {
   website: String
 }
 
-input UpdateOrganizationPlatformSettingsInput {
-  """Upate the URL path for the Organization."""
-  nameID: NameID!
-  """The ID of the Organization to update."""
-  organizationID: UUID!
-}
-
 input UpdateOrganizationSettingsEntityInput {
   """"""
   membership: UpdateOrganizationSettingsMembershipInput
@@ -9551,15 +9480,10 @@ input UpdateSpaceInput {
   """Update the Space About information."""
   about: UpdateSpaceAboutInput
   ID: UUID!
-}
-
-input UpdateSpacePlatformSettingsInput {
-  """Upate the URL path for the Space."""
+  """
+  Update the URL path (nameID) for the Space. Protected: additionally requires the UPDATE_NAMEID privilege.
+  """
   nameID: NameID
-  """The identifier for the Space whose license etc is to be updated."""
-  spaceID: UUID!
-  """Visibility of the Space, only on L0 spaces."""
-  visibility: SpaceVisibility
 }
 
 input UpdateSpaceSettingsCollaborationInput {
@@ -9702,16 +9626,6 @@ input UpdateUserInput {
   profileData: UpdateProfileInput
   """Set this user profile as being used as a service account or not."""
   serviceProfile: Boolean
-}
-
-input UpdateUserPlatformSettingsInput {
-  email: String
-  """Upate the URL path for the User."""
-  nameID: NameID
-  """
-  The identifier for the User whose platform managed information is to be updated.
-  """
-  userID: String!
 }
 
 input UpdateUserSettingsAssistantInput {

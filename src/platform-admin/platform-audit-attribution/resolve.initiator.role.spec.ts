@@ -26,12 +26,20 @@ describe('resolveInitiatorRole (FR-025, T058a)', () => {
     expect(result).toBe(PlatformAuditInitiatorRole.PLATFORM_USERS_ADMIN);
   });
 
-  it('falls back to platform_admin for a LEGACY BROAD credential (Slice A additive union, guaranteed from day one)', () => {
-    const result = resolveInitiatorRole({
-      actorCredentialTypes: [AuthorizationCredential.GLOBAL_SUPPORT],
-      intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
-    });
-    expect(result).toBe(PlatformAuditInitiatorRole.PLATFORM_ADMIN);
+  // 027-platform-role-redesign (T077, Slice B): INVERTED. This asserted that a
+  // legacy broad credential resolved to the `platform_admin` carve-out. The
+  // three credentials that could are gone and `DEFAULT_LEGACY_BROAD_CREDENTIALS`
+  // is empty, so the fallback is unreachable — which is precisely how T018 said
+  // the carve-out would expire. The assertion is now that it HAS expired: an
+  // actor holding a real role that is not this surface's owner gets an
+  // FR-034-class throw, not a silent attribution to a retired coarse tier.
+  it('the platform_admin carve-out has expired — a non-owning role no longer falls back to it', () => {
+    expect(() =>
+      resolveInitiatorRole({
+        actorCredentialTypes: [AuthorizationCredential.PLATFORM_SUPPORT],
+        intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
+      })
+    ).toThrow(/empty intersection/);
   });
 
   it('falls back to system when there is no actor at all (bootstrap-seeded)', () => {
@@ -53,16 +61,18 @@ describe('resolveInitiatorRole (FR-025, T058a)', () => {
   it('respects a narrowed per-surface legacyReachers set (e.g. A1: only global-admin, not global-support/license-manager)', () => {
     expect(() =>
       resolveInitiatorRole({
-        actorCredentialTypes: [AuthorizationCredential.GLOBAL_SUPPORT],
+        actorCredentialTypes: [AuthorizationCredential.PLATFORM_SUPPORT],
         intendedOwners: [AuthorizationCredential.PLATFORM_ROLES_ADMIN],
-        legacyReachers: [AuthorizationCredential.GLOBAL_ADMIN],
+        legacyReachers: [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
       })
     ).toThrow(/empty intersection/);
 
     const result = resolveInitiatorRole({
-      actorCredentialTypes: [AuthorizationCredential.GLOBAL_ADMIN],
+      actorCredentialTypes: [
+        AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+      ],
       intendedOwners: [AuthorizationCredential.PLATFORM_ROLES_ADMIN],
-      legacyReachers: [AuthorizationCredential.GLOBAL_ADMIN],
+      legacyReachers: [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
     });
     expect(result).toBe(PlatformAuditInitiatorRole.PLATFORM_ADMIN);
   });
@@ -92,11 +102,17 @@ describe('resolveInitiatorRoleBestEffort (corr-server-3/qual-server-1 fix)', () 
     expect(result).toBe(PlatformAuditInitiatorRole.PLATFORM_USERS_ADMIN);
   });
 
-  it('still resolves the legacy-broad fallback normally (unchanged from the strict function)', () => {
+  // T077 (Slice B): the best-effort twin of the inverted test above. With the
+  // legacy union empty it no longer has a fallback to resolve, so it does what
+  // it is FOR — degrades instead of throwing. `self` is its documented
+  // last-resort attribution, and the point of this function existing at all
+  // (corr-server-3/qual-server-1) is that an audit write must never take down
+  // the operation it is recording.
+  it('degrades to self rather than throwing, now that the legacy-broad fallback is empty', () => {
     const result = resolveInitiatorRoleBestEffort({
-      actorCredentialTypes: [AuthorizationCredential.GLOBAL_SUPPORT],
+      actorCredentialTypes: [AuthorizationCredential.PLATFORM_SUPPORT],
       intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
     });
-    expect(result).toBe(PlatformAuditInitiatorRole.PLATFORM_ADMIN);
+    expect(result).toBe(PlatformAuditInitiatorRole.SELF);
   });
 });

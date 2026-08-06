@@ -17,7 +17,9 @@ import {
   PLATFORM_FAMILY_ROLES,
 } from '@platform/platform-role/platform.role.assignment.rules.service';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { IActor } from './actor.interface';
 import { ActorService } from './actor.service';
+import { UpdateActorNameIDInput } from './dto/actor.dto.update.nameid';
 
 /**
  * 027-platform-role-redesign (sec-server-9 fix) — the twelve new `platform-*`
@@ -82,7 +84,7 @@ export class ActorResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_ROLES_ASSIGN,
       'grantCredentialToActor mutation'
     );
 
@@ -111,7 +113,7 @@ export class ActorResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_ROLES_ASSIGN,
       'revokeCredentialFromActor mutation'
     );
 
@@ -121,6 +123,45 @@ export class ActorResolverMutations {
     });
     await this.cleanRoleSetMembershipCache(actorID, credentialType, resourceID);
     return revoked;
+  }
+
+  /**
+   * 027-platform-role-redesign (T078, FR-020, A17) — the single, generic
+   * rename entry point for actors, replacing the `nameID` field that used to
+   * ride `updateUserPlatformSettings` and `updateOrganizationPlatformSettings`
+   * (both retired in this slice: a nameID is not a platform *setting*).
+   *
+   * Gated on `UPDATE_NAMEID` against the ACTOR'S OWN authorization policy, not
+   * the platform policy. That is the whole point of A17: renaming is owned by
+   * the entity admin, and **no global platform role reaches it** — Content
+   * Full Access included, which spec §Target global role model row 2
+   * explicitly denies entity renames and which T072's root rule therefore
+   * does not carry `UPDATE_NAMEID`. A17's declared intent set is empty, and
+   * `reachability.spec.ts` asserts the derived set is empty to match.
+   */
+  @Mutation(() => IActor, {
+    description:
+      'Update the nameID (URL path) of the specified Actor. A protected update: renaming repoints every inbound link to the entity.',
+  })
+  async updateActorNameID(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('updateData') updateData: UpdateActorNameIDInput
+  ): Promise<IActor> {
+    const actor = await this.actorService.getActorOrFail(updateData.actorID, {
+      relations: { authorization: true },
+    });
+
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      actor.authorization,
+      AuthorizationPrivilege.UPDATE_NAMEID,
+      `update nameID on actor: ${actor.id}`
+    );
+
+    return await this.actorService.updateNameID(
+      updateData.actorID,
+      updateData.nameID
+    );
   }
 
   /** sec-server-9 fix: reject any `platform-*`/`feature-*` role credential

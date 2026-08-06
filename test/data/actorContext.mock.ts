@@ -13,7 +13,7 @@ export const actorContextData: { actorContext: ActorContext } = {
     credentials: [
       {
         resourceID: '',
-        type: AuthorizationCredential.GLOBAL_ADMIN,
+        type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
       },
     ],
     authenticationID: '',

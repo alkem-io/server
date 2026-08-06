@@ -341,7 +341,9 @@ describe('CalloutContributionAuthorizationService', () => {
     // at a file that never mentions the privilege. Assert the EXACT
     // credential set passed to `createCredentialRule` for the
     // MOVE_CONTRIBUTION rule.
-    it('grants MOVE_CONTRIBUTION to platform-resource-admin alongside legacy global-admin (qual-server-10)', async () => {
+    // 027-platform-role-redesign (T076, Slice B): the "alongside legacy
+    // global-admin" half is gone — Resource Admin owns A9 alone (FR-007(d)).
+    it('grants MOVE_CONTRIBUTION to platform-resource-admin ALONE (qual-server-10, narrowed by T076)', async () => {
       const contribution = makeContribution();
 
       vi.mocked(
@@ -380,16 +382,11 @@ describe('CalloutContributionAuthorizationService', () => {
       const credentials = moveContributionCall?.[1] as {
         type: AuthorizationCredential;
       }[];
-      expect(credentials).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            type: AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
-          }),
-          expect.objectContaining({
-            type: AuthorizationCredential.GLOBAL_ADMIN,
-          }),
-        ])
-      );
+      expect(credentials).toEqual([
+        expect.objectContaining({
+          type: AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+        }),
+      ]);
     });
   });
 });

@@ -138,7 +138,7 @@ export class VirtualContributorResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       virtualContributor.authorization,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
       `virtualContributor platform settings update: ${virtualContributor.id}`
     );
 

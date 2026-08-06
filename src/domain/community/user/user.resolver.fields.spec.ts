@@ -292,7 +292,7 @@ describe('UserResolverFields', () => {
         actorID: 'actor-1',
         credentials: [
           {
-            type: AuthorizationCredential.GLOBAL_COMMUNITY_READ,
+            type: AuthorizationCredential.PLATFORM_SPACES_READER,
           },
         ],
       } as any;

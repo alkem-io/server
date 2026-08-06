@@ -172,7 +172,7 @@ export class PlatformRoleAssignmentRulesService {
   }
 
   /** Rule 1 — assigner capability. In Slice A the platform-family privilege
-   * is still spelled `GRANT_GLOBAL_ADMINS` (renamed `PLATFORM_ROLES_ASSIGN`
+   * is still spelled `PLATFORM_ROLES_ASSIGN` (renamed `PLATFORM_ROLES_ASSIGN`
    * only at Slice B, T075) — checked against the enum member, not the
    * string, so the rename is a one-line diff. */
   private checkAssignerCapability(
@@ -196,7 +196,7 @@ export class PlatformRoleAssignmentRulesService {
   /** sec-server-11 fix, narrowed by corr-server-17/spec-server-18: a
    * standalone, cheap (no DB round trip beyond the in-memory policy already
    * loaded) probe for a GENUINE unprivileged actor — one holding NEITHER
-   * `GRANT_GLOBAL_ADMINS` NOR `FEATURE_ROLE_ASSIGN` on the role-set policy,
+   * `PLATFORM_ROLES_ASSIGN` NOR `FEATURE_ROLE_ASSIGN` on the role-set policy,
    * i.e. no platform-role assignment capability of ANY kind. Exposed so a
    * caller (the resolver mutation) can reject that actor BEFORE doing any
    * more expensive work (targetHeldPlatformRoles' ~10 `isInRole` calls) or
@@ -206,7 +206,7 @@ export class PlatformRoleAssignmentRulesService {
    * Deliberately NOT role-specific: an actor that holds ONE of the two
    * assigner privileges but not the one `role` requires (e.g. a Platform
    * Users Admin — `FEATURE_ROLE_ASSIGN` only — attempting to grant a
-   * `platform-*` role, which requires `GRANT_GLOBAL_ADMINS`) is a
+   * `platform-*` role, which requires `PLATFORM_ROLES_ASSIGN`) is a
    * privileged actor making an auditable cross-family escalation attempt,
    * NOT a probe. That case MUST fall through to `evaluateOrFail` so
    * `checkAssignerCapability` runs (preserving the self-assignment-first
@@ -224,7 +224,7 @@ export class PlatformRoleAssignmentRulesService {
       this.authorizationService.isAccessGranted(
         actorContext,
         roleSetAuthorization,
-        AuthorizationPrivilege.GRANT_GLOBAL_ADMINS
+        AuthorizationPrivilege.PLATFORM_ROLES_ASSIGN
       ) ||
       this.authorizationService.isAccessGranted(
         actorContext,
@@ -240,7 +240,7 @@ export class PlatformRoleAssignmentRulesService {
   public assignerPrivilegeFor(role: RoleName): AuthorizationPrivilege {
     return FEATURE_FAMILY_ROLES.has(role)
       ? AuthorizationPrivilege.FEATURE_ROLE_ASSIGN
-      : AuthorizationPrivilege.GRANT_GLOBAL_ADMINS;
+      : AuthorizationPrivilege.PLATFORM_ROLES_ASSIGN;
   }
 
   private isAssignerCapable(

@@ -30,7 +30,7 @@ export class PlatformAdminCommunicationResolverFields {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
       'platformAdmin communicationMembership'
     );
 
@@ -50,7 +50,7 @@ export class PlatformAdminCommunicationResolverFields {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
       'platformAdmin communication OrphanedUsage'
     );
     return await this.adminCommunicationService.orphanedUsage();

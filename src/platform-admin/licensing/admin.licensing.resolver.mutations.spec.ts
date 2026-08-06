@@ -53,33 +53,6 @@ describe('AdminLicensingResolverMutations', () => {
     expect(resolver).toBeDefined();
   });
 
-  describe('createWingbackAccount', () => {
-    it('should check authorization and create wingback account', async () => {
-      const account = { id: 'acc-1', authorization: { id: 'auth-1' } };
-      accountService.getAccountOrFail.mockResolvedValue(account);
-      accountLicenseService.createWingbackAccount.mockResolvedValue(
-        'wingback-id'
-      );
-
-      const result = await resolver.createWingbackAccount(
-        actorContext,
-        'acc-1'
-      );
-
-      expect(accountService.getAccountOrFail).toHaveBeenCalledWith('acc-1');
-      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
-        actorContext,
-        account.authorization,
-        AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE,
-        expect.any(String)
-      );
-      expect(accountLicenseService.createWingbackAccount).toHaveBeenCalledWith(
-        'acc-1'
-      );
-      expect(result).toBe('wingback-id');
-    });
-  });
-
   describe('assignLicensePlanToAccount', () => {
     it('should use provided licensingID when specified', async () => {
       const licensing = {

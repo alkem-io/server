@@ -309,24 +309,25 @@ export class AccountAuthorizationService {
         AuthorizationPrivilege.READ
       );
 
-    // Allow global admins/support/license-manager to manage platform
-    // settings and transfer resources. AUTHORIZATION_RESET and LICENSE_RESET
-    // moved to the dedicated reset rule below, which grants them to the same
-    // three roles plus the new Platform Operations Admin.
+    // 027-platform-role-redesign (T074/T076): the legacy
+    // `{global-admin, global-support, global-license-manager}` grant of
+    // `PLATFORM_ADMIN` + the four account-level CREATE_* privileges is
+    // re-anchored onto Platform Content Full Access, which spec §Target global
+    // role model row 2 gives "content — full create/read/update/delete across
+    // all platform content, plus the platform-content administration surface".
+    // Creating a space / hub / pack / VC on someone else's account is exactly
+    // that surface. `PLATFORM_ADMIN` itself is gone from the privilege list —
+    // the catch-all is retired and every gate that read it now names its own
+    // family's privilege.
     const manageGlobalRoles =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [
-          AuthorizationPrivilege.PLATFORM_ADMIN,
           AuthorizationPrivilege.CREATE_SPACE,
           AuthorizationPrivilege.CREATE_INNOVATION_HUB,
           AuthorizationPrivilege.CREATE_INNOVATION_PACK,
           AuthorizationPrivilege.CREATE_VIRTUAL,
         ],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
+        [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
         CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE_GLOBAL_ROLES
       );
     manageGlobalRoles.cascade = false;
@@ -342,12 +343,7 @@ export class AccountAuthorizationService {
           AuthorizationPrivilege.AUTHORIZATION_RESET,
           AuthorizationPrivilege.LICENSE_RESET,
         ],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-          AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
-        ],
+        [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],
         CREDENTIAL_RULE_TYPES_ACCOUNT_AUTH_RESET
       );
     platformOperationsAdminReset.cascade = false;
@@ -362,10 +358,7 @@ export class AccountAuthorizationService {
     const globalSpacesReader =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.READ],
-        [
-          AuthorizationCredential.GLOBAL_SPACES_READER,
-          AuthorizationCredential.PLATFORM_SPACES_READER,
-        ],
+        [AuthorizationCredential.PLATFORM_SPACES_READER],
         CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ
       );
     newRules.push(globalSpacesReader);
@@ -375,11 +368,7 @@ export class AccountAuthorizationService {
     const accountResourcesManage =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT, // Later remove?
-          AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
-        ],
+        [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
         CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_MANAGE
       );
     accountResourcesManage.criterias.push(accountAdminCredential);
@@ -389,11 +378,7 @@ export class AccountAuthorizationService {
     const acceptResourceTransfers =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
-        ],
+        [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
         CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_TRANSFER_ACCEPT
       );
     acceptResourceTransfers.criterias.push(accountAdminCredential);
@@ -404,11 +389,7 @@ export class AccountAuthorizationService {
     const accountLicenseManage =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-          AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
-        ],
+        [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
         CREDENTIAL_RULE_TYPES_ACCOUNT_LICENSE_MANAGE
       );
     accountLicenseManage.cascade = false;

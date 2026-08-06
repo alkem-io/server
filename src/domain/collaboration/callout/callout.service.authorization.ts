@@ -210,10 +210,11 @@ export class CalloutAuthorizationService {
     clonedParent.credentialRules = newRules;
 
     // Add in who should READ
-    const criteriasWithReadAccess: ICredentialDefinition[] = [
-      { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
-      { type: AuthorizationCredential.GLOBAL_SUPPORT, resourceID: '' },
-    ];
+    // 027-platform-role-redesign (T076): the two legacy global credentials are
+    // gone. Platform-wide read now arrives through the root content rule
+    // (`platform-content-full-access` holds cascading READ) and, per space,
+    // through `platformRolesAccess` below — no hardcoded global reader here.
+    const criteriasWithReadAccess: ICredentialDefinition[] = [];
 
     if (callout.calloutsSet?.collaboration?.space) {
       const space = callout.calloutsSet.collaboration.space;
@@ -286,11 +287,7 @@ export class CalloutAuthorizationService {
     const calloutPublishUpdate =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.UPDATE_CALLOUT_PUBLISHER],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
-        ],
+        [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
         CREDENTIAL_RULE_TYPES_CALLOUT_UPDATE_PUBLISHER_ADMINS
       );
     calloutPublishUpdate.cascade = false;

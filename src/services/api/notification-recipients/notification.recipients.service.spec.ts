@@ -200,7 +200,10 @@ describe('NotificationRecipientsService', () => {
           },
         },
         credentials: [
-          { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
+          {
+            type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+            resourceID: '',
+          },
         ],
       } as unknown as IUser;
 
@@ -289,25 +292,35 @@ describe('NotificationRecipientsService', () => {
       );
     });
 
-    it('should use global admin criteria for PLATFORM_ADMIN_SPACE_CREATED', async () => {
+    // 027-platform-role-redesign (T076, Slice B): the recipient set moved off
+    // `{global-admin, global-support, global-license-manager}`. This is a
+    // notification-ROUTING question — who should be told when something
+    // platform-wide happens — so it resolves to the roles that act on those
+    // events. Audit Reader is deliberately excluded (it reviews the trail, it
+    // does not operate) and so is Spaces Reader (a service account with no
+    // inbox); asserting the exact array is what keeps either from creeping in.
+    it('routes PLATFORM_ADMIN_SPACE_CREATED to the operating roles — never Audit Reader or Spaces Reader', async () => {
       await service.getRecipients({
         eventType: NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED,
       });
 
-      expect(userLookupService.usersWithCredentials).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            type: AuthorizationCredential.GLOBAL_ADMIN,
-          }),
-          expect.objectContaining({
-            type: AuthorizationCredential.GLOBAL_SUPPORT,
-          }),
-          expect.objectContaining({
-            type: AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-          }),
-        ]),
-        undefined,
-        expect.any(Object)
+      const [criteria] = (
+        userLookupService.usersWithCredentials as unknown as {
+          mock: { calls: [{ type: AuthorizationCredential }[]][] };
+        }
+      ).mock.calls[0];
+      const types = criteria.map(c => c.type);
+
+      expect(types).toEqual([
+        AuthorizationCredential.PLATFORM_SUPPORT,
+        AuthorizationCredential.PLATFORM_USERS_ADMIN,
+        AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+      ]);
+      expect(types).not.toContain(
+        AuthorizationCredential.PLATFORM_AUDIT_READER
+      );
+      expect(types).not.toContain(
+        AuthorizationCredential.PLATFORM_SPACES_READER
       );
     });
 

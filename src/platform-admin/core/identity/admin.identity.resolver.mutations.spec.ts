@@ -151,7 +151,7 @@ describe('AdminIdentityResolverMutations', () => {
     });
 
     it('denies a global-support-only actor (never held this surface pre-feature)', async () => {
-      const actor = buildActorContext(AuthorizationCredential.GLOBAL_SUPPORT);
+      const actor = buildActorContext(AuthorizationCredential.PLATFORM_SUPPORT);
       await expect(
         realResolver.adminIdentityDeleteKratosIdentity(actor, 'kratos-1')
       ).rejects.toThrow();
@@ -159,18 +159,28 @@ describe('AdminIdentityResolverMutations', () => {
 
     it('denies a global-license-manager-only actor (never held this surface pre-feature)', async () => {
       const actor = buildActorContext(
-        AuthorizationCredential.GLOBAL_LICENSE_MANAGER
+        AuthorizationCredential.PLATFORM_LICENSE_MANAGER
       );
       await expect(
         realResolver.adminIdentityDeleteKratosIdentity(actor, 'kratos-1')
       ).rejects.toThrow();
     });
 
-    it('allows a global-admin actor (pre-existing legacy reach preserved)', async () => {
-      const actor = buildActorContext(AuthorizationCredential.GLOBAL_ADMIN);
+    // 027-platform-role-redesign (T076, Slice B): INVERTED. This asserted that a
+    // legacy credential kept its pre-feature reach through the additive slice.
+    // T076 dropped every legacy credential from this surface's grant set, so the
+    // assertion becomes the denial — and that denial is the FR-007(d) guarantee
+    // itself: the user-record family is held by Platform Users Admin ALONE.
+    // Content Full Access is the sharpest case: FR-004 cascades it full CRUD
+    // platform-wide, and A5 is outside SC-004's named exception (closed at
+    // A6/A7), so it must still be refused here.
+    it('DENIES a platform-content-full-access actor — identity deletion is the user-record family', async () => {
+      const actor = buildActorContext(
+        AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS
+      );
       await expect(
         realResolver.adminIdentityDeleteKratosIdentity(actor, 'kratos-1')
-      ).resolves.toBeDefined();
+      ).rejects.toThrow();
     });
 
     it('allows a platform-users-admin actor (the new owning role)', async () => {

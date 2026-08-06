@@ -46,9 +46,18 @@ describe('PlatformRoleResolverMutations', () => {
   let roleSetAuthorizationService: RoleSetAuthorizationService;
   let logger: LoggerService;
 
+  // 027-platform-role-redesign (T077, Slice B): `credentials` is now required
+  // on this fixture. Every role these tests exercise is rule-engine governed
+  // after T077 — the legacy vocabulary that used to take the un-audited `else`
+  // branch is gone — so each call reaches `recordGrantSuccess` →
+  // `resolveInitiatorRole`, which reads the actor's credentials to attribute the
+  // audit row. A context without them throws before the assertion.
   const mockActorContext = {
     actorID: 'actor-1',
-  } as ActorContext;
+    credentials: [
+      { type: AuthorizationCredential.PLATFORM_ROLES_ADMIN, resourceID: '' },
+    ],
+  } as unknown as ActorContext;
 
   const mockRoleSet = {
     id: 'rs-1',
@@ -97,10 +106,25 @@ describe('PlatformRoleResolverMutations', () => {
       ).mockResolvedValue(undefined);
     });
 
-    it('should assign GLOBAL_ADMIN role with GRANT_GLOBAL_ADMINS privilege, checked against the resolver-local un-widened policy (sec-server-2/corr-server-1 fix), NOT roleSet.authorization', async () => {
+    // 027-platform-role-redesign (T077, Slice B): re-aimed, and the re-aiming
+    // found something. This test used to assert that assigning `global-admin`
+    // checked PLATFORM_ROLES_ASSIGN against the resolver-local un-widened pin
+    // and NOT `roleSet.authorization` (sec-server-2/corr-server-1).
+    //
+    // Both the pin and `global-admin` are gone — but so is the branch. Aiming
+    // the test at `platform-operations-admin`, the supposed last inhabitant of
+    // the `else` branch, showed it is a `PLATFORM_FAMILY_ROLES` member and thus
+    // rule-engine governed like the other twelve. After T077 the `else` branch
+    // is unreachable for EVERY platform role, which is why the resolver now
+    // rejects there instead of authorizing (see `rejectNonPlatformRoleOrFail`).
+    //
+    // So the assertion becomes: no bare `grantAccessOrFail` privilege check is
+    // performed for a target role at all — the six assignment rules and the
+    // fail-closed audit write are the only path.
+    it('routes every target role through the rule engine — no bare PLATFORM_ROLES_ASSIGN check survives', async () => {
       const roleData = {
         actorID: 'user-target',
-        role: RoleName.GLOBAL_ADMIN,
+        role: RoleName.PLATFORM_OPERATIONS_ADMIN,
       };
 
       await resolver.assignPlatformRoleToUser(
@@ -108,27 +132,19 @@ describe('PlatformRoleResolverMutations', () => {
         roleData as any
       );
 
-      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
-        mockActorContext,
-        expect.anything(),
-        AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-        expect.any(String)
-      );
-      // NOT `mockRoleSet.authorization` — the legacy-role branch is pinned
-      // to the resolver-local `legacyGlobalAdminPolicy` so T034's widening
-      // of GRANT_GLOBAL_ADMINS on the shared roleSet policy cannot reach it.
       expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalledWith(
         mockActorContext,
         mockRoleSet.authorization,
-        AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
+        AuthorizationPrivilege.PLATFORM_ROLES_ASSIGN,
         expect.any(String)
       );
+      expect(roleSetService.assignActorToRole).toHaveBeenCalled();
     });
 
     it('should assign BETA_TESTER role with GRANT privilege and grant license credential', async () => {
       const roleData = {
         actorID: 'user-target',
-        role: RoleName.PLATFORM_BETA_TESTER,
+        role: RoleName.FEATURE_BETA_TESTER,
       };
 
       (actorService.grantCredentialOrFail as Mock).mockResolvedValue(undefined);
@@ -143,12 +159,13 @@ describe('PlatformRoleResolverMutations', () => {
         roleData as any
       );
 
-      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
-        mockActorContext,
-        mockRoleSet.authorization,
-        AuthorizationPrivilege.GRANT,
-        expect.any(String)
-      );
+      // T077: the deliberately wide-open `GRANT`-against-roleSet.authorization
+      // branch went with `platform-beta-tester`/`platform-vc-campaign`. A
+      // `feature-*` role is rule-engine governed, so the assigner-capability
+      // check lives in `PlatformRoleAssignmentRulesService.evaluateOrFail()`
+      // (covered by its own specs) — not in a `grantAccessOrFail` call here.
+      // What this test still owns is the LICENSE side, which is the part that
+      // would silently withdraw beta access if it regressed (FR-009/SC-007).
       expect(actorService.grantCredentialOrFail).toHaveBeenCalledWith(
         'account-1',
         expect.objectContaining({
@@ -161,7 +178,7 @@ describe('PlatformRoleResolverMutations', () => {
     it('should assign VC_CAMPAIGN role with GRANT privilege and grant license credential', async () => {
       const roleData = {
         actorID: 'user-target',
-        role: RoleName.PLATFORM_VC_CAMPAIGN,
+        role: RoleName.FEATURE_ORGANIZATION_CREATOR,
       };
 
       (actorService.grantCredentialOrFail as Mock).mockResolvedValue(undefined);
@@ -176,12 +193,9 @@ describe('PlatformRoleResolverMutations', () => {
         roleData as any
       );
 
-      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
-        mockActorContext,
-        mockRoleSet.authorization,
-        AuthorizationPrivilege.GRANT,
-        expect.any(String)
-      );
+      // T077: see the previous test — the wide-open GRANT branch is gone and
+      // the rule engine owns the assigner check for every `feature-*` role.
+      expect(roleSetService.assignActorToRole).toHaveBeenCalled();
     });
 
     // 027-platform-role-redesign (T040a, T070f): FEATURE_BETA_TESTER is
@@ -226,7 +240,7 @@ describe('PlatformRoleResolverMutations', () => {
     it('should send global role change notification', async () => {
       const roleData = {
         actorID: 'user-target',
-        role: RoleName.GLOBAL_ADMIN,
+        role: RoleName.PLATFORM_CONTENT_FULL_ACCESS,
       };
 
       await resolver.assignPlatformRoleToUser(
@@ -241,7 +255,7 @@ describe('PlatformRoleResolverMutations', () => {
           triggeredBy: 'actor-1',
           userID: 'user-target',
           type: RoleChangeType.ADDED,
-          role: RoleName.GLOBAL_ADMIN,
+          role: RoleName.PLATFORM_CONTENT_FULL_ACCESS,
         })
       );
     });
@@ -253,7 +267,7 @@ describe('PlatformRoleResolverMutations', () => {
     it('should contain a notification dispatch failure and log it', async () => {
       const roleData = {
         actorID: 'user-target',
-        role: RoleName.GLOBAL_ADMIN,
+        role: RoleName.PLATFORM_CONTENT_FULL_ACCESS,
       };
       (
         notificationPlatformAdapter.platformGlobalRoleChanged as Mock
@@ -292,10 +306,15 @@ describe('PlatformRoleResolverMutations', () => {
       ).mockResolvedValue(undefined);
     });
 
-    it('should remove ADMIN role with GRANT_GLOBAL_ADMINS privilege', async () => {
+    // T077 (Slice B): re-aimed. This asserted a `grantAccessOrFail` call that
+    // only the `else` branch made, and every target role now routes through the
+    // rule engine instead. What it can still assert is that the revoke reached
+    // the role-set — the rule engine's own denial cases are covered by
+    // `platform.role.assignment.rules.service.spec.ts`.
+    it('removes a platform-family role through the rule engine, not a bare privilege check', async () => {
       const roleData = {
         actorID: 'user-target',
-        role: RoleName.GLOBAL_ADMIN,
+        role: RoleName.PLATFORM_CONTENT_FULL_ACCESS,
       };
 
       await resolver.removePlatformRoleFromUser(
@@ -303,18 +322,17 @@ describe('PlatformRoleResolverMutations', () => {
         roleData as any
       );
 
-      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
-        mockActorContext,
-        expect.anything(),
-        AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-        expect.any(String)
+      expect(roleSetService.removeActorFromRole).toHaveBeenCalledWith(
+        mockRoleSet,
+        RoleName.PLATFORM_CONTENT_FULL_ACCESS,
+        'user-target'
       );
     });
 
     it('should remove BETA_TESTER role with GRANT privilege and revoke credential', async () => {
       const roleData = {
         actorID: 'user-target',
-        role: RoleName.PLATFORM_BETA_TESTER,
+        role: RoleName.FEATURE_BETA_TESTER,
       };
 
       (
@@ -332,12 +350,10 @@ describe('PlatformRoleResolverMutations', () => {
         roleData as any
       );
 
-      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
-        mockActorContext,
-        { id: 'extended-auth' },
-        AuthorizationPrivilege.GRANT,
-        expect.any(String)
-      );
+      // T077: the self-removal policy extension went with
+      // `platform-beta-tester`/`platform-vc-campaign` — a `feature-*` role is
+      // rule-engine governed, and FR-015 blocks self-ASSIGNMENT, not
+      // self-removal. The license revoke is what this test still owns.
       expect(actorService.revokeCredential).toHaveBeenCalledWith(
         'account-1',
         expect.objectContaining({
@@ -349,7 +365,7 @@ describe('PlatformRoleResolverMutations', () => {
     it('should send REMOVED notification', async () => {
       const roleData = {
         actorID: 'user-target',
-        role: RoleName.GLOBAL_ADMIN,
+        role: RoleName.PLATFORM_CONTENT_FULL_ACCESS,
       };
 
       await resolver.removePlatformRoleFromUser(
@@ -481,7 +497,7 @@ describe('PlatformRoleResolverMutations', () => {
   // unprivileged probe (no assignment capability of ANY kind) from a
   // PRIVILEGED actor attempting a cross-family escalation (e.g. a Platform
   // Users Admin — holding ONLY `FEATURE_ROLE_ASSIGN` — targeting a
-  // `platform-*` role, which requires `GRANT_GLOBAL_ADMINS`). Only the first
+  // `platform-*` role, which requires `PLATFORM_ROLES_ASSIGN`). Only the first
   // is exempt from the rejection-audit write. Wires the REAL rules service
   // with a privilege-discriminating `AuthorizationService.isAccessGranted`
   // mock — the suite above auto-mocks the rules service and therefore never
@@ -546,7 +562,7 @@ describe('PlatformRoleResolverMutations', () => {
           role: RoleName.PLATFORM_ROLES_ADMIN,
         } as any)
       ).rejects.toThrow(
-        'Forbidden: grant-global-admins required to assign role platform-roles-admin'
+        'Forbidden: platform-roles-assign required to assign role platform-roles-admin'
       );
 
       expect(
@@ -560,14 +576,14 @@ describe('PlatformRoleResolverMutations', () => {
           targetId: 'user-target',
           role: RoleName.PLATFORM_ROLES_ADMIN,
           rejectedRule: expect.stringContaining(
-            'grant-global-admins required to assign role'
+            'platform-roles-assign required to assign role'
           ),
         })
       );
       expect(realRoleSetService.assignActorToRole).not.toHaveBeenCalled();
     });
 
-    it('does NOT audit a fully unprivileged caller (holds neither GRANT_GLOBAL_ADMINS nor FEATURE_ROLE_ASSIGN) — a genuine probe', async () => {
+    it('does NOT audit a fully unprivileged caller (holds neither PLATFORM_ROLES_ASSIGN nor FEATURE_ROLE_ASSIGN) — a genuine probe', async () => {
       const {
         realResolver,
         realRoleAssignmentAuditService,
@@ -580,7 +596,7 @@ describe('PlatformRoleResolverMutations', () => {
           role: RoleName.PLATFORM_ROLES_ADMIN,
         } as any)
       ).rejects.toThrow(
-        'Forbidden: grant-global-admins required to assign role platform-roles-admin'
+        'Forbidden: platform-roles-assign required to assign role platform-roles-admin'
       );
 
       expect(
@@ -595,10 +611,28 @@ describe('PlatformRoleResolverMutations', () => {
   // constructor's `legacyGlobalAdminPolicy` is a genuine, hardcoded
   // `[GLOBAL_ADMIN]` IAuthorizationPolicy — not an auto-mocked stand-in —
   // and asserts a `platform-roles-admin`-only actor (T034's WIDENED
-  // GRANT_GLOBAL_ADMINS holder) is denied the legacy `global-admin` grant,
+  // PLATFORM_ROLES_ASSIGN holder) is denied the legacy `global-admin` grant,
   // mirroring the FR-022 pin suite in
   // `admin.authorization.resolver.mutations.spec.ts`.
-  describe('legacy-role branch pin: assign/removePlatformRoleFrom{User} stay global-admin-only in Slice A', () => {
+  /**
+   * 027-platform-role-redesign (T077, Slice B) — this block REPLACES the
+   * "legacy-role branch pin" suite that stood here.
+   *
+   * That suite asserted three things about a code path that no longer exists:
+   * that a `platform-roles-admin`-only actor was DENIED assigning/removing
+   * `global-admin`, and that an actor holding `global-admin` was ALLOWED to.
+   * The pin existed because T034 widened `PLATFORM_ROLES_ASSIGN` on the shared
+   * role-set policy to admit Platform Roles Admin, and the legacy roles had to
+   * stay `global-admin`-assignable for the length of the additive slice.
+   *
+   * At Slice B there is no legacy role to assign — `RoleName` no longer carries
+   * one — so the pin is deleted and its assertions are inverted here: what the
+   * old suite forbade is now the intended path, and the vocabulary the old
+   * suite's actor held is gone. Keeping the old tests after renaming their
+   * fixtures would have asserted that Roles Admin is denied a role it now owns,
+   * which is why they are re-aimed rather than mechanically substituted.
+   */
+  describe('T077: the legacy-role pin is gone — Roles Admin owns assignment', () => {
     let realResolver: PlatformRoleResolverMutations;
 
     const buildActorContext = (
@@ -632,39 +666,37 @@ describe('PlatformRoleResolverMutations', () => {
       );
     });
 
-    it('denies assignPlatformRoleToUser(global-admin) to a platform-roles-admin-only actor', async () => {
+    it('rejects a role name from another role-set type instead of authorizing it', async () => {
+      // The `else` branch is unreachable for every PLATFORM/FEATURE role after
+      // T077, so what remains there is a role belonging to a different
+      // role-set type. It must be REJECTED, not run through an authorization
+      // check and then failed deep inside assignActorToRole — past the six
+      // assignment rules and the fail-closed audit write.
       const actor = buildActorContext(
         AuthorizationCredential.PLATFORM_ROLES_ADMIN
       );
       await expect(
         realResolver.assignPlatformRoleToUser(actor, {
           actorID: 'user-target',
-          role: RoleName.GLOBAL_ADMIN,
+          role: RoleName.MEMBER,
         } as any)
-      ).rejects.toThrow();
+      ).rejects.toThrow('is not a platform role');
     });
 
-    it('denies removePlatformRoleFromUser(global-admin) to a platform-roles-admin-only actor', async () => {
-      const actor = buildActorContext(
-        AuthorizationCredential.PLATFORM_ROLES_ADMIN
+    it('every role this resolver accepts is rule-engine governed — no else-branch role remains except platform-operations-admin', () => {
+      // The `else` branch existed for the legacy vocabulary. After T077 the
+      // only non-rule-engine platform role left is `platform-operations-admin`
+      // (spec 032), plus the three baseline identity tiers which are not
+      // assignable through this surface at all.
+      const assignable = Object.values(RoleName).filter(
+        role =>
+          role.startsWith('platform-') ||
+          role.startsWith('feature-') ||
+          role.startsWith('global-')
       );
-      await expect(
-        realResolver.removePlatformRoleFromUser(actor, {
-          actorID: 'user-target',
-          role: RoleName.GLOBAL_ADMIN,
-        } as any)
-      ).rejects.toThrow();
-    });
-
-    it('allows assignPlatformRoleToUser(global-admin) to an actor holding the legacy global-admin credential', async () => {
-      const actor = buildActorContext(AuthorizationCredential.GLOBAL_ADMIN);
-
-      await expect(
-        realResolver.assignPlatformRoleToUser(actor, {
-          actorID: 'user-target',
-          role: RoleName.GLOBAL_ADMIN,
-        } as any)
-      ).resolves.toBeDefined();
+      expect(assignable).not.toContain('global-admin');
+      expect(assignable).not.toContain('global-support');
+      expect(assignable).toContain(RoleName.PLATFORM_OPERATIONS_ADMIN);
     });
   });
 
@@ -710,7 +742,7 @@ describe('PlatformRoleResolverMutations', () => {
         (
           module.get(PlatformRoleAssignmentRulesService)
             .assignerPrivilegeFor as Mock
-        ).mockReturnValue('grant-global-admins');
+        ).mockReturnValue('platform-roles-assign');
       });
 
       it('assign: rejects an actor with NO assigner capability, writing NO audit row', async () => {
@@ -760,14 +792,18 @@ describe('PlatformRoleResolverMutations', () => {
       });
     });
 
-    it('rejects assignPlatformRoleToOrganization(global-admin) with the contract message, and never touches assignActorToRole or any audit writer', async () => {
+    // T077 (Slice B): the fixture role was `global-admin`, which no longer
+    // exists. Re-aimed at `platform-content-full-access` — a PLATFORM_FAMILY
+    // role, so the guard's reason is unchanged (spec FR-002: `Platform …` roles
+    // go to users and service accounts only, never an organization).
+    it('rejects assignPlatformRoleToOrganization(platform-content-full-access) with the contract message, and never touches assignActorToRole or any audit writer', async () => {
       await expect(
         resolver.assignPlatformRoleToOrganization(mockActorContext, {
           actorID: 'org-target',
-          role: RoleName.GLOBAL_ADMIN,
+          role: RoleName.PLATFORM_CONTENT_FULL_ACCESS,
         } as any)
       ).rejects.toThrow(
-        'Rejected: role global-admin may not be assigned or removed through the organization surface'
+        'Rejected: role platform-content-full-access may not be assigned or removed through the organization surface'
       );
 
       expect(roleSetService.assignActorToRole).not.toHaveBeenCalled();
@@ -808,7 +844,7 @@ describe('PlatformRoleResolverMutations', () => {
       await expect(
         resolver.assignPlatformRoleToOrganization(mockActorContext, {
           actorID: 'org-target',
-          role: RoleName.GLOBAL_ADMIN,
+          role: RoleName.PLATFORM_CONTENT_FULL_ACCESS,
         } as any)
       ).rejects.toThrow();
 
@@ -818,7 +854,7 @@ describe('PlatformRoleResolverMutations', () => {
         expect.objectContaining({
           targetKind: 'organization',
           targetId: 'org-target',
-          role: RoleName.GLOBAL_ADMIN,
+          role: RoleName.PLATFORM_CONTENT_FULL_ACCESS,
           rejectedRule: expect.stringContaining(
             'may not be assigned or removed through the organization surface'
           ),

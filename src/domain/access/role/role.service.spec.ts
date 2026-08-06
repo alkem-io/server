@@ -89,7 +89,7 @@ describe('RoleService', () => {
           resourceID: 'res-1',
         },
         {
-          type: AuthorizationCredential.GLOBAL_ADMIN,
+          type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
           resourceID: '',
         },
       ];
@@ -168,7 +168,7 @@ describe('RoleService', () => {
         resourceID: 'res-1',
       };
       const parentCredential2: ICredentialDefinition = {
-        type: AuthorizationCredential.GLOBAL_ADMIN,
+        type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
         resourceID: '',
       };
 

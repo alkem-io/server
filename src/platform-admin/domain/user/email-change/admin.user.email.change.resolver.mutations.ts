@@ -40,12 +40,7 @@ export class AdminUserEmailChangeResolverMutations {
     const rule =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.PLATFORM_USERS_ADMIN],
-        [
-          AuthorizationCredential.PLATFORM_USERS_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-        ],
+        [AuthorizationCredential.PLATFORM_USERS_ADMIN],
         GLOBAL_POLICY_ADMIN_USER_EMAIL_CHANGE
       );
     this.emailChangePolicy =

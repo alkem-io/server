@@ -1,5 +1,3 @@
-import { CREDENTIAL_RULE_TYPES_INNOVATION_HUBS } from '@common/constants/authorization/credential.rule.types.constants';
-import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
@@ -81,24 +79,15 @@ export class InnovationHubAuthorizationService {
       );
     }
 
+    // 027-platform-role-redesign (T076, Slice B): the blanket CRUD rule for
+    // `{global-admin, global-support}` is DELETED rather than re-anchored. An
+    // innovation hub is platform content, and Content Full Access already
+    // reaches it with cascading CRUD from the inheritance root (FR-004) — so
+    // re-pointing this rule at the same role would grant it twice and make the
+    // second grant invisible to `privilege.grants.ts`. Support's own reach over
+    // an ORGANIZATION's hubs is A7's `PLATFORM_SUPPORT_ORG_RESOURCES`, granted
+    // on the account tree, not here.
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
-    const innovationHubAdmins =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [
-          AuthorizationPrivilege.READ,
-          AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.CREATE,
-          AuthorizationPrivilege.DELETE,
-        ],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-        ],
-        CREDENTIAL_RULE_TYPES_INNOVATION_HUBS
-      );
-    innovationHubAdmins.cascade = true;
-    newRules.push(innovationHubAdmins);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
       hubAuthorization,

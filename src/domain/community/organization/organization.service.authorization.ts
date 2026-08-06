@@ -3,10 +3,6 @@ import {
   CREDENTIAL_RULE_ORGANIZATION_READ,
   CREDENTIAL_RULE_TYPES_DELETE_ORGANIZATION,
   CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET,
-  CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS,
-  CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_COMMUNITY_READ,
-  CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_SUPPORT_MANAGE,
-  CREDENTIAL_RULE_TYPES_ORGANIZATION_PLATFORM_ADMIN,
 } from '@common/constants';
 import {
   AuthorizationCredential,
@@ -181,50 +177,27 @@ export class OrganizationAuthorizationService {
     const globalAdminNotInherited =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.AUTHORIZATION_RESET],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
-        ],
+        [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],
         CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET
       );
     globalAdminNotInherited.cascade = false;
     newRules.push(globalAdminNotInherited);
 
-    const globalCommunityRead =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.READ],
-        [AuthorizationCredential.GLOBAL_COMMUNITY_READ],
-        CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_COMMUNITY_READ
-      );
-    newRules.push(globalCommunityRead);
-
-    const globalSupportManage =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [
-          AuthorizationPrivilege.CREATE,
-          AuthorizationPrivilege.READ,
-          AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.DELETE,
-        ],
-        [AuthorizationCredential.GLOBAL_SUPPORT],
-        CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_SUPPORT_MANAGE
-      );
-    newRules.push(globalSupportManage);
-
-    // Allow global admins do platform admin actions
-    const globalAdminPlatformAdminNotInherited =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.PLATFORM_ADMIN],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
-        CREDENTIAL_RULE_TYPES_ORGANIZATION_PLATFORM_ADMIN
-      );
-    globalAdminNotInherited.cascade = false;
-    newRules.push(globalAdminPlatformAdminNotInherited);
-
+    // 027-platform-role-redesign (T076/T074, FR-007(d)) — three rules deleted
+    // here, all of them legacy-credential grant sets with a live replacement:
+    //
+    //  1. `globalCommunityRead` — READ to `global-community-read`. The role is
+    //     retired with no successor in the 13: organizations are readable by
+    //     every registered user through `CREDENTIAL_RULE_ORGANIZATION_READ`
+    //     below, so a dedicated global community reader granted nothing extra.
+    //  2. `globalSupportManage` — blanket CRUD to `global-support`. Replaced by
+    //     the two purpose-built Support privileges Slice A added:
+    //     `PLATFORM_SUPPORT_ORG_RESOURCES` (A7, the organization's own
+    //     packs/hubs and their templates) and `DELETE_ORGANIZATION` (A6). That
+    //     split is FR-007(e): blanket CRUD on the organization tree also
+    //     satisfied the owner branch of actions Support does not own.
+    //  3. `globalAdminPlatformAdmin…` — the `PLATFORM_ADMIN` catch-all. Its
+    //     surfaces are re-gated per family (T074); the privilege is gone.
     const readPrivilege = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.READ],
       [
@@ -244,10 +217,6 @@ export class OrganizationAuthorizationService {
           type: AuthorizationCredential.GLOBAL_REGISTERED,
           resourceID: '',
         },
-        {
-          type: AuthorizationCredential.GLOBAL_COMMUNITY_READ,
-          resourceID: '',
-        },
       ],
       CREDENTIAL_RULE_ORGANIZATION_READ
     );
@@ -261,6 +230,10 @@ export class OrganizationAuthorizationService {
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
           AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN,
+          // 027-platform-role-redesign (T078, FR-020, A17): renaming is owned
+          // by the ENTITY admin. This rule's criteria are the organization's
+          // own admins/owners — no platform-role credential rides it.
+          AuthorizationPrivilege.UPDATE_NAMEID,
         ],
         organizationAdminCredentials,
         CREDENTIAL_RULE_ORGANIZATION_ADMIN
@@ -280,11 +253,7 @@ export class OrganizationAuthorizationService {
     const deleteOrganization =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.DELETE_ORGANIZATION],
-        [
-          AuthorizationCredential.PLATFORM_SUPPORT,
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
+        [AuthorizationCredential.PLATFORM_SUPPORT],
         CREDENTIAL_RULE_TYPES_DELETE_ORGANIZATION
       );
     deleteOrganization.cascade = false;
@@ -304,19 +273,12 @@ export class OrganizationAuthorizationService {
   ): Promise<IAuthorizationPolicyRuleCredential[]> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    // Allow Global admins + Global Space Admins to directly assign to roleSet
-    // Later remove this
-    const globalAdmin =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
-        CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS
-      );
-    globalAdmin.cascade = false;
-    newRules.push(globalAdmin);
+    // 027-platform-role-redesign (T076, Slice B): the "Later remove this" rule
+    // is removed — this is later. It let `{global-admin, global-support}` assign
+    // directly into any organization's role-set; no target role inherits that
+    // (row 2 denies Content Full Access role assignment; row 1's Roles Admin
+    // owns platform roles only). The organization's own admins keep it through
+    // the rule immediately below.
 
     const organizationAdmin =
       this.authorizationPolicyService.createCredentialRule(

@@ -59,7 +59,12 @@ describe('AuthorizationPolicyService', () => {
     it('should create a credential rule with cascade enabled', () => {
       const result = service.createCredentialRule(
         [AuthorizationPrivilege.READ],
-        [{ type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' }],
+        [
+          {
+            type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+            resourceID: '',
+          },
+        ],
         'test-rule'
       );
 
@@ -75,19 +80,19 @@ describe('AuthorizationPolicyService', () => {
       const result = service.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.READ, AuthorizationPrivilege.UPDATE],
         [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+          AuthorizationCredential.PLATFORM_SUPPORT,
         ],
         'types-rule'
       );
 
       expect(result.criterias).toHaveLength(2);
       expect(result.criterias[0].type).toBe(
-        AuthorizationCredential.GLOBAL_ADMIN
+        AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS
       );
       expect(result.criterias[0].resourceID).toBe('');
       expect(result.criterias[1].type).toBe(
-        AuthorizationCredential.GLOBAL_SUPPORT
+        AuthorizationCredential.PLATFORM_SUPPORT
       );
     });
   });
@@ -95,7 +100,7 @@ describe('AuthorizationPolicyService', () => {
   describe('createGlobalRolesAuthorizationPolicy', () => {
     it('should create an in-memory authorization policy with global role rules', () => {
       const result = service.createGlobalRolesAuthorizationPolicy(
-        [AuthorizationRoleGlobal.GLOBAL_ADMIN],
+        [AuthorizationRoleGlobal.PLATFORM_CONTENT_FULL_ACCESS],
         [AuthorizationPrivilege.READ],
         'admin-rule'
       );

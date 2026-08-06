@@ -1,5 +1,5 @@
 import { CurrentActor } from '@common/decorators';
-import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums';
 import { AuthenticationType } from '@common/enums/authentication.type';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -217,7 +217,7 @@ export class UserResolverFields {
     const platformAccessGranted = this.authorizationService.isAccessGranted(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN
+      AuthorizationPrivilege.PLATFORM_USERS_ADMIN
     );
     const result: UserAuthenticationResult = {
       methods: [AuthenticationType.UNKNOWN],
@@ -256,22 +256,13 @@ export class UserResolverFields {
       authorization,
       privilege
     );
-    if (!accessGranted) {
-      // Check if the user has a particular credential, which signals that it should be able to access the user
-      // todo: remove later, this is code to track down a particular race condition: https://github.com/alkem-io/notifications/issues/283
-      const hasGlobalAdminCredential = actorContext.credentials.some(
-        credential =>
-          credential.type === AuthorizationCredential.GLOBAL_COMMUNITY_READ ||
-          credential.type === AuthorizationCredential.GLOBAL_SUPPORT
-      );
-      if (hasGlobalAdminCredential) {
-        this.logger.error(
-          `Agent: ${actorContext.actorID} is not authorized to access user: ${
-            user.email
-          }: authorization policy of user: ${JSON.stringify(authorization)}`
-        );
-      }
-    }
+    // 027-platform-role-redesign (T076/T077): the race-condition diagnostic
+    // that used to log here keyed on `global-community-read` / `global-support`
+    // — both retired with the legacy vocabulary, so the branch could never fire
+    // again. Removed rather than re-pointed at a target role: it was a
+    // deliberately temporary probe for alkem-io/notifications#283, not a
+    // capability, and re-aiming it would assert the race still involves
+    // whichever role it was re-aimed at.
     return accessGranted;
   }
 }

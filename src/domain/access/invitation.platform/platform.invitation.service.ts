@@ -23,10 +23,15 @@ import { IPlatformInvitation } from './platform.invitation.interface';
 
 @Injectable()
 export class PlatformInvitationService {
-  private acceptedPlatformRoles: RoleName[] = [
-    RoleName.PLATFORM_BETA_TESTER,
-    RoleName.PLATFORM_VC_CAMPAIGN,
-  ];
+  /**
+   * 027-platform-role-redesign (T077, Slice B): a platform invitation could
+   * carry `platform-beta-tester` or `platform-vc-campaign`; both roles are
+   * gone. The successor `feature-beta-tester` is deliberately NOT added here —
+   * a Feature role is granted through `assignPlatformRoleToOrganization` /
+   * `…ToUser`, which run the six assignment rules and the fail-closed audit
+   * write (FR-012). Routing it through an invitation would bypass both.
+   */
+  private acceptedPlatformRoles: RoleName[] = [];
 
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,

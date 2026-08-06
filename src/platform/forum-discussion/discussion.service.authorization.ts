@@ -110,18 +110,25 @@ export class DiscussionAuthorizationService {
   ): IAuthorizationPolicy {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    // Allow global admins to update Discussions
-    const platformAdmin =
+    // 027-platform-role-redesign (T076, Slice B): re-anchored off
+    // `{global-admin, global-support}` onto Platform Support, which spec
+    // §Target global role model row 7 gives the platform forum (A15).
+    //
+    // `PLATFORM_FORUM_MANAGE` is granted here ALONGSIDE `UPDATE`, not instead of
+    // it: the discussion resolvers gate on ordinary `UPDATE`, so dropping it
+    // would lock Support out of the forum entirely — but naming the forum
+    // privilege is what records the family, and is why FR-007(e) introduced it.
+    const platformSupportForum =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.UPDATE],
         [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.PLATFORM_FORUM_MANAGE,
         ],
+        [AuthorizationCredential.PLATFORM_SUPPORT],
         CREDENTIAL_RULE_TYPES_UPDATE_FORUM_DISCUSSION
       );
-    platformAdmin.cascade = false;
-    newRules.push(platformAdmin);
+    platformSupportForum.cascade = false;
+    newRules.push(platformSupportForum);
 
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(

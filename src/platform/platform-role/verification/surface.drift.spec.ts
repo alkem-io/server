@@ -164,7 +164,7 @@ function censusEntriesByFile(): ReadonlyMap<string, readonly SurfaceRef[]> {
  * `SCANNED_PRIVILEGES` member whose enum key appears as a substring of the
  * gate's own `reason` text. (b) exists for exactly one documented shape —
  * T034a's FR-022 pin, whose `reason` deliberately names the shared
- * `GRANT_GLOBAL_ADMINS` privilege it is pinned ahead of, which the code
+ * `PLATFORM_ROLES_ASSIGN` privilege it is pinned ahead of, which the code
  * ALSO still passes as a literal (checked-against-a-narrower-policy)
  * argument to `grantAccessOrFail` — a real, scannable token that a
  * privilege-only view of a `{credential}` gate would otherwise miss. */

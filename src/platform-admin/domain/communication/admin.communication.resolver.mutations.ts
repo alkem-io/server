@@ -32,29 +32,25 @@ export class AdminCommunicationResolverMutations {
     // Synthetic, in-memory policy — built once at construction, never
     // persisted and never touched by an authorization reset. It gates the
     // messaging-platform maintenance mutations below on a deliberately
-    // NARROWER role set than the platform authorization policy: GLOBAL_ADMIN
-    // (historic holder) + PLATFORM_OPERATIONS_ADMIN. Every other global role,
-    // GLOBAL_SUPPORT included, stays excluded — these mutations act directly
-    // on Matrix rooms across every Space.
+    // NARROWER role set than the platform authorization policy: only
+    // PLATFORM_OPERATIONS_ADMIN. Every other global role, Support and Content
+    // Full Access included, stays excluded — these mutations act directly on
+    // Matrix rooms across every Space.
     //
-    // GRANT and PLATFORM_ADMIN are retained in the privilege set so
-    // GLOBAL_ADMIN's develop-era grants on this policy are preserved verbatim;
-    // the resolver gates themselves check PLATFORM_OPERATIONS_ADMIN. The
-    // privilege is granted here on this synthetic policy only — holders gain
-    // nothing on the platform policy through this rule.
+    // T074/T076 (Slice B): `global-admin` and the `PLATFORM_ADMIN` privilege
+    // are gone. They only ever existed here to preserve the develop-era grant
+    // verbatim while Slice A ran additively; the resolver gates below have
+    // always checked PLATFORM_OPERATIONS_ADMIN, so removing both narrows the
+    // reacher set to the owning role and changes no gate.
     //
     // Covered by admin.communication.resolver.mutations.spec.ts — see the
     // 'authorization policy' describe block.
     this.communicationGlobalAdminPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
-        [
-          AuthorizationRoleGlobal.GLOBAL_ADMIN,
-          AuthorizationRoleGlobal.PLATFORM_OPERATIONS_ADMIN,
-        ],
+        [AuthorizationRoleGlobal.PLATFORM_OPERATIONS_ADMIN],
         [
           AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
           AuthorizationPrivilege.GRANT,
-          AuthorizationPrivilege.PLATFORM_ADMIN,
         ],
         GLOBAL_POLICY_ADMIN_COMMUNICATION_GRANT
       );

@@ -77,7 +77,7 @@ describe('AdminAuthorizationService', () => {
     it('should return true for a valid global credential', () => {
       expect(
         service.isGlobalAuthorizationCredential(
-          AuthorizationRoleGlobal.GLOBAL_ADMIN
+          AuthorizationRoleGlobal.PLATFORM_CONTENT_FULL_ACCESS
         )
       ).toBe(true);
     });
@@ -94,7 +94,9 @@ describe('AdminAuthorizationService', () => {
   describe('isAuthorizationCredential', () => {
     it('should return true for a valid AuthorizationCredential', () => {
       expect(
-        service.isAuthorizationCredential(AuthorizationCredential.GLOBAL_ADMIN)
+        service.isAuthorizationCredential(
+          AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS
+        )
       ).toBe(true);
     });
 
@@ -118,12 +120,12 @@ describe('AdminAuthorizationService', () => {
       vi.mocked(userLookupService.usersWithCredential).mockResolvedValue([]);
 
       await service.usersWithCredentials({
-        type: AuthorizationCredential.GLOBAL_ADMIN,
+        type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
         resourceID: 'res-1',
       });
 
       expect(userLookupService.usersWithCredential).toHaveBeenCalledWith({
-        type: AuthorizationCredential.GLOBAL_ADMIN,
+        type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
         resourceID: 'res-1',
       });
     });
@@ -134,7 +136,7 @@ describe('AdminAuthorizationService', () => {
       await expect(
         service.grantCredentialToUser({
           userID: 'user-1',
-          type: AuthorizationCredential.GLOBAL_ADMIN,
+          type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
           resourceID: 'some-resource',
         })
       ).rejects.toThrow(ForbiddenException);
@@ -174,7 +176,7 @@ describe('AdminAuthorizationService', () => {
 
       await service.grantCredentialToUser({
         userID: 'user-1',
-        type: AuthorizationCredential.GLOBAL_ADMIN,
+        type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
       });
 
       expect(actorService.grantCredentialOrFail).toHaveBeenCalled();
@@ -186,7 +188,7 @@ describe('AdminAuthorizationService', () => {
       await expect(
         service.revokeCredentialFromUser({
           userID: 'user-1',
-          type: AuthorizationCredential.GLOBAL_ADMIN,
+          type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
           resourceID: 'some-resource',
         })
       ).rejects.toThrow(ForbiddenException);
@@ -218,7 +220,7 @@ describe('AdminAuthorizationService', () => {
       await expect(
         service.grantCredentialToOrganization({
           organizationID: 'org-1',
-          type: AuthorizationCredential.GLOBAL_ADMIN,
+          type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
           resourceID: 'some-resource',
         })
       ).rejects.toThrow(ForbiddenException);
@@ -249,7 +251,7 @@ describe('AdminAuthorizationService', () => {
       await expect(
         service.revokeCredentialFromOrganization({
           organizationID: 'org-1',
-          type: AuthorizationCredential.GLOBAL_ADMIN,
+          type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
           resourceID: 'some-resource',
         })
       ).rejects.toThrow(ForbiddenException);
@@ -398,11 +400,7 @@ describe('AdminAuthorizationService', () => {
         authorizationPolicyService.createCredentialRuleUsingTypesOnly
       ).toHaveBeenCalledWith(
         [AuthorizationPrivilege.AUTHORIZATION_RESET],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
-        ],
+        [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],
         expect.any(String)
       );
       expect(rule.cascade).toBe(false);

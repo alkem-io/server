@@ -31,10 +31,10 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
  * 3. `{ credential: C; reason }` — a CREDENTIAL-LEVEL PIN, checked AHEAD of
  *    (and independently of) any shared privilege. This is FR-022's shape
  *    (T034a): the four `grant/revokeCredentialTo{User,Organization}`
- *    mutations share `GRANT_GLOBAL_ADMINS` with A1, but are held to the
+ *    mutations share `PLATFORM_ROLES_ASSIGN` with A1, but are held to the
  *    legacy `global-admin` credential at their OWN resolver, ahead of the
  *    shared, Slice-A-widened privilege check — so the widening cannot reach
- *    them. Modelling this surface as `{ requires: GRANT_GLOBAL_ADMINS }`
+ *    them. Modelling this surface as `{ requires: PLATFORM_ROLES_ASSIGN }`
  *    would derive Slice A's WIDENED set and fail `reachability.spec.ts`
  *    *while the pin is correctly in place* — indistinguishable from the pin
  *    having been deleted, which is the one failure this whole model exists

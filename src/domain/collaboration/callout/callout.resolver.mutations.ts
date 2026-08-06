@@ -126,10 +126,7 @@ export class CalloutResolverMutations {
       await this.platformResourceAuditService.recordEventForActor(
         actorContext,
         [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
+        [],
         {
           resourceKind: 'callout',
           resourceId: deleteData.ID,
@@ -347,10 +344,7 @@ export class CalloutResolverMutations {
     await this.platformResourceAuditService.recordEventForActor(
       actorContext,
       [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
-      [
-        AuthorizationCredential.GLOBAL_ADMIN,
-        AuthorizationCredential.GLOBAL_SUPPORT,
-      ],
+      [],
       {
         resourceKind: 'callout-publisher',
         resourceId: callout.id,

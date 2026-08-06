@@ -23,12 +23,7 @@ import { PlatformAuthorizationService } from './platform.service.authorization';
 const A10_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_SETTINGS_ADMIN,
 ];
-const A10_LEGACY_REACHERS: readonly AuthorizationCredential[] = [
-  AuthorizationCredential.GLOBAL_ADMIN,
-  AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
-  AuthorizationCredential.GLOBAL_SUPPORT,
-  AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-];
+const A10_LEGACY_REACHERS: readonly AuthorizationCredential[] = [];
 
 @InstrumentResolver()
 @Resolver()

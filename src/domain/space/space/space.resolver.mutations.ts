@@ -1,12 +1,9 @@
-import { GLOBAL_POLICY_SPACE_LEGACY_NAMEID_RENAME } from '@common/constants/authorization/global.policy.constants';
 import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
-import { AuthorizationRoleGlobal } from '@common/enums/authorization.credential.global';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseService } from '@domain/common/license/license.service';
 import {
@@ -22,8 +19,8 @@ import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
 import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { PubSubEngine } from 'graphql-subscriptions';
+import { AdminUpdateSpaceVisibilityInput } from './dto/space.dto.admin.update.visibility';
 import { CreateSubspaceInput } from './dto/space.dto.create.subspace';
-import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
 import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
 import { UpdateSubspacePinnedInput } from './dto/space.dto.update.subspace.pinned';
 import { SubspaceCreatedPayload } from './dto/space.subspace.created.payload';
@@ -35,14 +32,12 @@ import { SpaceLicenseService } from './space.service.license';
 @InstrumentResolver()
 @Resolver()
 export class SpaceResolverMutations {
-  /** corr-server-6 fix: `updateSpacePlatformSettings`'s `nameID` field is
-   * additionally gated against THIS resolver-local, hardcoded
-   * [GLOBAL_ADMIN, GLOBAL_SUPPORT] policy — the exact pre-existing legacy
-   * reach — so re-anchoring the mutation's PRIMARY gate onto
-   * ACCOUNT_LICENSE_MANAGE (T048/A14, additive to platform-license-manager
-   * too) cannot silently hand entity renames to a role spec.md row 2 states
-   * no global role reaches (A17, FR-020). */
-  private legacySpaceNameIdRenamePolicy: IAuthorizationPolicy;
+  // 027-platform-role-redesign (T078, Slice B): corr-server-6's
+  // `legacySpaceNameIdRenamePolicy` is gone. It existed to stop T048's
+  // re-anchor handing entity renames to platform-license-manager while
+  // `nameID` still rode the platform-settings mutation. `nameID` no longer
+  // rides it — the protected section of `updateSpace` owns the rename now,
+  // on a privilege NO global role holds — so the pin has nothing left to pin.
 
   constructor(
     private contributionReporter: ContributionReporterService,
@@ -56,17 +51,7 @@ export class SpaceResolverMutations {
     private spaceLicenseService: SpaceLicenseService,
     private licenseService: LicenseService,
     private readonly platformResourceAuditService: PlatformResourceAuditService
-  ) {
-    this.legacySpaceNameIdRenamePolicy =
-      this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
-        [
-          AuthorizationRoleGlobal.GLOBAL_ADMIN,
-          AuthorizationRoleGlobal.GLOBAL_SUPPORT,
-        ],
-        [AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE],
-        GLOBAL_POLICY_SPACE_LEGACY_NAMEID_RENAME
-      );
-  }
+  ) {}
 
   @Mutation(() => ISpace, {
     description: 'Updates the Space.',
@@ -88,6 +73,21 @@ export class SpaceResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `update Space: ${space.id}`
     );
+
+    // 027-platform-role-redesign (T078, FR-020, A17) — the PROTECTED SECTION.
+    // `nameID` is the space's URL path: renaming repoints every inbound link,
+    // so it requires its own privilege ON TOP OF the ordinary UPDATE above,
+    // rather than riding an ordinary field edit. No global platform role
+    // holds UPDATE_NAMEID — it is owned by the entity admin, and the root
+    // content rule deliberately does not carry it (T072).
+    if (spaceData.nameID !== undefined) {
+      await this.authorizationService.grantAccessOrFail(
+        actorContext,
+        space.authorization,
+        AuthorizationPrivilege.UPDATE_NAMEID,
+        `rename Space (nameID): ${space.id}`
+      );
+    }
 
     const updatedSpace = await this.spaceService.update(spaceData);
 
@@ -144,10 +144,7 @@ export class SpaceResolverMutations {
       await this.platformResourceAuditService.recordEventForActor(
         actorContext,
         [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
+        [],
         {
           resourceKind: 'space',
           resourceId: deletedSpaceId,
@@ -195,46 +192,35 @@ export class SpaceResolverMutations {
     return this.spaceService.getSpaceOrFail(space.id);
   }
 
+  /**
+   * 027-platform-role-redesign (T078, FR-020/FR-023, A14) — renamed from
+   * `updateSpacePlatformSettings` and reduced to visibility alone. `nameID`
+   * moved to the protected section of `updateSpace` above, on `UPDATE_NAMEID`:
+   * it is not a platform setting, and a license manager holding visibility
+   * control must not acquire entity renames with it.
+   */
   @Mutation(() => ISpace, {
-    description:
-      'Update the platform settings, such as nameID, of the specified Space.',
+    description: 'Update the visibility of the specified Space.',
   })
-  async updateSpacePlatformSettings(
+  async adminUpdateSpaceVisibility(
     @CurrentActor() actorContext: ActorContext,
-    @Args('updateData') updateData: UpdateSpacePlatformSettingsInput
+    @Args('updateData') updateData: AdminUpdateSpaceVisibilityInput
   ): Promise<ISpace> {
     let space = await this.spaceService.getSpaceOrFail(updateData.spaceID, {
       relations: { about: { profile: true } },
     });
     // 027-platform-role-redesign (T048, A14): re-anchored off PLATFORM_ADMIN
     // onto ACCOUNT_LICENSE_MANAGE (space.service.authorization.ts grants it
-    // additively to platform-license-manager, alongside legacy
-    // global-admin/global-support).
+    // additively to platform-license-manager).
     this.authorizationService.grantAccessOrFail(
       actorContext,
       space.authorization,
       AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE,
-      `update platform settings on space: ${space.id}`
+      `update visibility on space: ${space.id}`
     );
 
-    // corr-server-6 fix: `nameID` (the space's URL path) is NOT part of the
-    // ACCOUNT_LICENSE_MANAGE family the gate above admits — spec.md row 2
-    // states no global role reaches entity renames (A17, FR-020), and
-    // `platform-license-manager` must not gain it as a side effect of the
-    // above gate's additive re-anchor. Additionally require the
-    // pre-existing legacy reach (GLOBAL_ADMIN/GLOBAL_SUPPORT only) whenever
-    // `nameID` is present.
-    if (updateData.nameID !== undefined) {
-      this.authorizationService.grantAccessOrFail(
-        actorContext,
-        this.legacySpaceNameIdRenamePolicy,
-        AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE,
-        `rename space (nameID) via platform settings: ${space.id}`
-      );
-    }
-
     const previousVisibility = space.visibility;
-    space = await this.spaceService.updateSpacePlatformSettings(
+    space = await this.spaceService.adminUpdateSpaceVisibility(
       space,
       updateData
     );
@@ -246,17 +232,11 @@ export class SpaceResolverMutations {
 
     // T058 — single-path surface (no owner branch): every successful call
     // is, by construction, authorized by ACCOUNT_LICENSE_MANAGE (A14).
-    if (
-      updateData.visibility !== undefined &&
-      updateData.visibility !== previousVisibility
-    ) {
+    if (updateData.visibility !== previousVisibility) {
       await this.platformResourceAuditService.recordEventForActor(
         actorContext,
         [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
+        [],
         {
           resourceKind: 'space-visibility',
           resourceId: space.id,

@@ -252,10 +252,6 @@ export class CalloutContributionAuthorizationService {
 
     // Allow space admins to move post
     const credentials: ICredentialDefinition[] = [
-      {
-        type: AuthorizationCredential.GLOBAL_ADMIN,
-        resourceID: '',
-      },
       // 027-platform-role-redesign (T038, A9): appended directly to this
       // rule's own credential list rather than the shared per-space
       // platformRolesAccess array — that array's UPDATE filter also feeds

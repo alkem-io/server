@@ -1,41 +1,26 @@
-import { RoleChangeType } from '@alkemio/notifications-lib';
-import { GLOBAL_POLICY_AUTHORIZATION_GRANT_GLOBAL_ADMIN } from '@common/constants/authorization/global.policy.constants';
-import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums';
 import { SpaceLevel } from '@common/enums/space.level';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IOrganization } from '@domain/community/organization';
-import { IUser } from '@domain/community/user/user.interface';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { Space } from '@domain/space/space/space.entity';
 import { SpaceService } from '@domain/space/space/space.service';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.global.role.change';
-import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 import { AuthResetService } from '@services/auth-reset/publisher/auth-reset.service';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { CurrentActor, Profiling } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
 import { EntityManager } from 'typeorm';
 import { AdminAuthorizationService } from './admin.authorization.service';
-import { GrantAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant';
-import { GrantOrganizationAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant.organization';
-import { RevokeAuthorizationCredentialInput } from './dto/authorization.dto.credential.revoke';
-import { RevokeOrganizationAuthorizationCredentialInput } from './dto/authorization.dto.credential.revoke.organization';
 
 @InstrumentResolver()
 @Resolver()
 export class AdminAuthorizationResolverMutations {
-  private authorizationGlobalAdminPolicy: IAuthorizationPolicy;
-
   constructor(
-    private authorizationPolicyService: AuthorizationPolicyService,
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
-    private notificationPlatformAdapter: NotificationPlatformAdapter,
     private authorizationService: AuthorizationService,
     private adminAuthorizationService: AdminAuthorizationService,
     private authResetService: AuthResetService,
@@ -44,130 +29,27 @@ export class AdminAuthorizationResolverMutations {
     private entityManager: EntityManager,
     private spaceService: SpaceService,
     private platformOperationsAuditService: PlatformOperationsAuditService
-  ) {
-    // 027-platform-role-redesign (T034a, research C10/D24, thirteenth
-    // analyze pass): this is the FR-022 pin, already structural. The four
-    // mutations below (grant/revokeCredentialTo{User,Organization}) check
-    // against THIS resolver-local, hardcoded IN_MEMORY policy — built once,
-    // from a fixed one-element `[GLOBAL_ADMIN]` array — rather than against
-    // the shared platform authorization policy's GRANT_GLOBAL_ADMINS
-    // credential rule that platform.service.authorization.ts (T034)
-    // widens to platform-roles-admin. Widening that shared rule therefore
-    // cannot reach these four: they are not a second assignment surface
-    // gated by the same widened privilege, they are gated by a wholly
-    // separate, deliberately un-widened policy object. Do NOT "simplify"
-    // this by replacing it with `platformAuthorizationPolicyService
-    // .getPlatformAuthorizationPolicy()` — that IS the widened policy, and
-    // doing so would open exactly the hole T034a exists to keep closed.
-    // Verified by admin.authorization.resolver.mutations.spec.ts's
-    // "FR-022 pin" suite using real AuthorizationPolicyService/
-    // AuthorizationService instances. Deleted alongside these four
-    // mutations at T080 (Slice B, FR-022).
-    this.authorizationGlobalAdminPolicy =
-      this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
-        [AuthorizationRoleGlobal.GLOBAL_ADMIN],
-        [AuthorizationPrivilege.GRANT_GLOBAL_ADMINS],
-        GLOBAL_POLICY_AUTHORIZATION_GRANT_GLOBAL_ADMIN
-      );
-  }
+  ) {}
 
-  @Mutation(() => IUser, {
-    description: 'Grants an authorization credential to a User.',
-  })
-  async grantCredentialToUser(
-    @Args('grantCredentialData')
-    grantCredentialData: GrantAuthorizationCredentialInput,
-    @CurrentActor() actorContext: ActorContext
-  ): Promise<IUser> {
-    this.authorizationService.grantAccessOrFail(
-      actorContext,
-      this.authorizationGlobalAdminPolicy,
-      AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `grant credential: ${actorContext.actorID}`
-    );
-
-    const user =
-      await this.adminAuthorizationService.grantCredentialToUser(
-        grantCredentialData
-      );
-
-    // Send the notification
-    this.notifyPlatformGlobalRoleChange(
-      actorContext.actorID,
-      user,
-      RoleChangeType.ADDED,
-      grantCredentialData.type
-    );
-    return user;
-  }
-
-  @Mutation(() => IUser, {
-    description: 'Removes an authorization credential from a User.',
-  })
-  @Profiling.api
-  async revokeCredentialFromUser(
-    @Args('revokeCredentialData')
-    credentialRemoveData: RevokeAuthorizationCredentialInput,
-    @CurrentActor() actorContext: ActorContext
-  ): Promise<IUser> {
-    await this.authorizationService.grantAccessOrFail(
-      actorContext,
-      this.authorizationGlobalAdminPolicy,
-      AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `revoke credential: ${actorContext.actorID}`
-    );
-    const user =
-      await this.adminAuthorizationService.revokeCredentialFromUser(
-        credentialRemoveData
-      );
-    this.notifyPlatformGlobalRoleChange(
-      actorContext.actorID,
-      user,
-      RoleChangeType.REMOVED,
-      credentialRemoveData.type
-    );
-    return user;
-  }
-
-  @Mutation(() => IOrganization, {
-    description: 'Grants an authorization credential to an Organization.',
-  })
-  @Profiling.api
-  async grantCredentialToOrganization(
-    @Args('grantCredentialData')
-    grantCredentialData: GrantOrganizationAuthorizationCredentialInput,
-    @CurrentActor() actorContext: ActorContext
-  ): Promise<IOrganization> {
-    await this.authorizationService.grantAccessOrFail(
-      actorContext,
-      this.authorizationGlobalAdminPolicy,
-      AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `grant credential: ${actorContext.actorID}`
-    );
-    return await this.adminAuthorizationService.grantCredentialToOrganization(
-      grantCredentialData
-    );
-  }
-
-  @Mutation(() => IOrganization, {
-    description: 'Removes an authorization credential from an Organization.',
-  })
-  @Profiling.api
-  async revokeCredentialFromOrganization(
-    @Args('revokeCredentialData')
-    credentialRemoveData: RevokeOrganizationAuthorizationCredentialInput,
-    @CurrentActor() actorContext: ActorContext
-  ): Promise<IOrganization> {
-    await this.authorizationService.grantAccessOrFail(
-      actorContext,
-      this.authorizationGlobalAdminPolicy,
-      AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `revoke credential: ${actorContext.actorID}`
-    );
-    return await this.adminAuthorizationService.revokeCredentialFromOrganization(
-      credentialRemoveData
-    );
-  }
+  // 027-platform-role-redesign (T080, Slice B, FR-022): the four credential
+  // mutations that stood here — grant/revokeCredentialTo{User,Organization}
+  // — are DELETED, and T034a's resolver-local `[GLOBAL_ADMIN]` pin goes with
+  // them. That pairing is the point of the census's `retiredIn: 'B'` marker:
+  // the pin existed only to keep T034's widening of PLATFORM_ROLES_ASSIGN
+  // off these four, so a pin outliving its mutations would be a policy
+  // object guarding nothing, and a mutation outliving its pin would be the
+  // hole T034a was built to close.
+  //
+  // The SERVICE methods are deliberately retained on
+  // `AdminAuthorizationService` — `bootstrap.service.ts` calls
+  // `grantCredentialToUser` directly to seed service accounts, which is the
+  // one credential-granting path that must survive Slice B (FR-013b
+  // break-glass recovery depends on it). What is removed is the GraphQL
+  // surface, not the capability the platform seeds itself with.
+  //
+  // Role assignment now happens exclusively through the assignment rule
+  // engine's mutations, which is what makes the six rules — and the audit
+  // trail they write — unbypassable rather than merely preferred.
 
   @Mutation(() => String, {
     description: 'Reset the Authorization Policy on all entities',
@@ -328,22 +210,5 @@ export class AdminAuthorizationResolverMutations {
       });
       throw error;
     }
-  }
-
-  private async notifyPlatformGlobalRoleChange(
-    triggeredBy: string,
-    user: IUser,
-    type: RoleChangeType,
-    role: string
-  ) {
-    const notificationInput: NotificationInputPlatformGlobalRoleChange = {
-      triggeredBy,
-      userID: user.id,
-      type: type,
-      role: role,
-    };
-    await this.notificationPlatformAdapter.platformGlobalRoleChanged(
-      notificationInput
-    );
   }
 }

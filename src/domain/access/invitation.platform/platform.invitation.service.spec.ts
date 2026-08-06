@@ -118,22 +118,25 @@ describe('PlatformInvitationService', () => {
       expect(invitationData.email).toBe('test@example.com');
     });
 
-    it('should allow invitations with accepted platform roles for platform roleSets', async () => {
+    // 027-platform-role-redesign (T077, Slice B): INVERTED. `platform-beta-tester`
+    // and `platform-vc-campaign` were the only roles a platform invitation could
+    // carry, and both are retired. `acceptedPlatformRoles` is now empty BY
+    // DESIGN, not by omission: the successor `feature-*` roles are granted
+    // through `assignPlatformRoleTo{User,Organization}`, which run the six
+    // assignment rules and the fail-closed audit write (FR-012). An invitation
+    // would bypass both, so it must be rejected — including for the successor.
+    it('rejects an invitation carrying a feature role — the assignment surface owns that, with the rules and the audit write', async () => {
       const roleSet = { type: RoleSetType.PLATFORM } as IRoleSet;
       const invitationData = {
         email: 'user@test.com',
         createdBy: 'user-1',
         roleSetInvitedToParent: false,
-        roleSetExtraRoles: [RoleName.PLATFORM_BETA_TESTER],
+        roleSetExtraRoles: [RoleName.FEATURE_BETA_TESTER],
       };
-
-      vi.spyOn(platformInvitationRepository, 'save').mockImplementation(
-        async (entity: any) => entity
-      );
 
       await expect(
         service.createPlatformInvitation(roleSet, invitationData)
-      ).resolves.toBeDefined();
+      ).rejects.toThrow(ValidationException);
     });
 
     it('should throw ValidationException when inviting to disallowed platform role', async () => {
@@ -142,7 +145,7 @@ describe('PlatformInvitationService', () => {
         email: 'user@test.com',
         createdBy: 'user-1',
         roleSetInvitedToParent: false,
-        roleSetExtraRoles: [RoleName.GLOBAL_ADMIN],
+        roleSetExtraRoles: [RoleName.PLATFORM_CONTENT_FULL_ACCESS],
       };
 
       await expect(
@@ -156,7 +159,7 @@ describe('PlatformInvitationService', () => {
         email: 'user@test.com',
         createdBy: 'user-1',
         roleSetInvitedToParent: false,
-        roleSetExtraRoles: [RoleName.GLOBAL_ADMIN],
+        roleSetExtraRoles: [RoleName.PLATFORM_CONTENT_FULL_ACCESS],
       };
 
       vi.spyOn(platformInvitationRepository, 'save').mockImplementation(
@@ -168,22 +171,19 @@ describe('PlatformInvitationService', () => {
       ).resolves.toBeDefined();
     });
 
-    it('should allow PLATFORM_VC_CAMPAIGN as an accepted platform role', async () => {
+    // T077: same inversion as above for the second retired role's successor.
+    it('rejects an invitation carrying feature-organization-creator for the same reason', async () => {
       const roleSet = { type: RoleSetType.PLATFORM } as IRoleSet;
       const invitationData = {
         email: 'user@test.com',
         createdBy: 'user-1',
         roleSetInvitedToParent: false,
-        roleSetExtraRoles: [RoleName.PLATFORM_VC_CAMPAIGN],
+        roleSetExtraRoles: [RoleName.FEATURE_ORGANIZATION_CREATOR],
       };
-
-      vi.spyOn(platformInvitationRepository, 'save').mockImplementation(
-        async (entity: any) => entity
-      );
 
       await expect(
         service.createPlatformInvitation(roleSet, invitationData)
-      ).resolves.toBeDefined();
+      ).rejects.toThrow(ValidationException);
     });
 
     it('should throw ValidationException when any role in the list is disallowed for platform roleSet', async () => {
@@ -192,9 +192,12 @@ describe('PlatformInvitationService', () => {
         email: 'user@test.com',
         createdBy: 'user-1',
         roleSetInvitedToParent: false,
+        // T077: the fixture role was `platform-beta-tester`. Any role at all is
+        // disallowed now, so this asserts the LIST check rather than a single
+        // membership — a `Platform …` role is the strongest case.
         roleSetExtraRoles: [
-          RoleName.PLATFORM_BETA_TESTER,
-          RoleName.GLOBAL_ADMIN,
+          RoleName.FEATURE_BETA_TESTER,
+          RoleName.PLATFORM_ROLES_ADMIN,
         ],
       };
 

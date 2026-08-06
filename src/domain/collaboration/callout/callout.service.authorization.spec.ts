@@ -402,8 +402,6 @@ describe('CalloutAuthorizationService', () => {
       ).toHaveBeenCalledWith(
         [AuthorizationPrivilege.UPDATE_CALLOUT_PUBLISHER],
         expect.arrayContaining([
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
           AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
         ]),
         expect.any(String)

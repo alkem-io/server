@@ -53,19 +53,6 @@ export type AlkemioConfig = {
     index_pattern: string;
     collabora_document_max_source_size: number;
   };
-  licensing: {
-    wingback: {
-      enabled: boolean;
-      key: string;
-      endpoint: string;
-      retries: number;
-      timeout: number;
-      webhook_secret: {
-        name: string;
-        value: string;
-      };
-    };
-  };
   identity: {
     authentication: {
       cache_ttl: number;

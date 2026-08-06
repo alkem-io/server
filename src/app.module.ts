@@ -49,7 +49,6 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.module';
 import { PlatformModule } from '@platform/platform/platform.module';
 import { PlatformHubModule } from '@platform/platform.hub/platform.hub.module';
 import { PlatformRoleModule } from '@platform/platform-role/platform.role.module';
@@ -73,8 +72,6 @@ import { CollaborativeDocumentIntegrationModule } from '@services/collaborative-
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { GeoLocationModule } from '@services/external/geo-location';
 import { KratosEventsModule } from '@services/external/kratos-events/kratos.events.module';
-import { WingbackManagerModule } from '@services/external/wingback/wingback.manager.module';
-import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
 import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.module';
 import { McpServerModule } from '@services/mcp-server/mcp-server.module';
 import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/whiteboard.integration.module';
@@ -92,7 +89,6 @@ import {
 import { KonfigModule } from '@src/platform/configuration/config/config.module';
 import { MetadataModule } from '@src/platform/metadata/metadata.module';
 import { AdminCommunicationModule } from '@src/platform-admin/domain/communication/admin.communication.module';
-import { DomainPlatformSettingsModule } from '@src/platform-admin/domain/organization/domain.platform.settings.module';
 import { AdminUsersModule } from '@src/platform-admin/domain/user/admin.users.module';
 import { AdminUserEmailChangeModule } from '@src/platform-admin/domain/user/email-change/admin.user.email.change.module';
 import { AdminWhiteboardModule } from '@src/platform-admin/domain/whiteboard/admin.whiteboard.module';
@@ -321,8 +317,6 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     AdminLicensingModule,
     AdminGeoLocationModule,
     AdminWhiteboardModule,
-    LicensingWingbackSubscriptionModule,
-    WingbackManagerModule,
     ActorModule,
     MessageModule,
     MessageReactionModule,
@@ -356,10 +350,8 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     WhiteboardIntegrationModule,
     CollaborativeDocumentIntegrationModule,
     MatrixRoomCheckModule,
-    DomainPlatformSettingsModule,
     PlatformRoleModule,
     TemplateApplierModule,
-    WingbackWebhookModule,
     KratosEventsModule,
     CalloutTransferModule,
     SearchModule,

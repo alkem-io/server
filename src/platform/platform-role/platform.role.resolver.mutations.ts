@@ -1,10 +1,7 @@
 import { RoleChangeType } from '@alkemio/notifications-lib';
-import { GLOBAL_POLICY_PLATFORM_ROLE_LEGACY_GRANT_GLOBAL_ADMIN } from '@common/constants/authorization/global.policy.constants';
 import { LogContext } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
-import { AuthorizationRoleGlobal } from '@common/enums/authorization.credential.global';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import { RoleName } from '@common/enums/role.name';
 import { ForbiddenException } from '@common/exceptions/forbidden.exception';
@@ -15,7 +12,6 @@ import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.se
 import { ActorService } from '@domain/actor/actor/actor.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseService } from '@domain/common/license/license.service';
 import { IOrganization } from '@domain/community/organization/organization.interface';
@@ -50,9 +46,9 @@ import {
 /**
  * A1/A2's declared attribution facts (T040b's eventual census entries,
  * inlined here until that file exists — FR-025).
- *  - A1 (`platform-*` role assign/revoke, `GRANT_GLOBAL_ADMINS`): owned by
+ *  - A1 (`platform-*` role assign/revoke, `PLATFORM_ROLES_ASSIGN`): owned by
  *    Platform Roles Admin alone, reachable in Slice A ONLY by the legacy
- *    `global-admin` credential — GRANT_GLOBAL_ADMINS' pre-existing sole
+ *    `global-admin` credential — PLATFORM_ROLES_ASSIGN' pre-existing sole
  *    holder, NOT global-support/global-license-manager, which never held it.
  *  - A2 (`feature-*` role assign/revoke, `FEATURE_ROLE_ASSIGN`): owned by
  *    BOTH Platform Users Admin and Platform Roles Admin; no legacy reacher
@@ -61,9 +57,7 @@ import {
 const A1_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_ROLES_ADMIN,
 ];
-const A1_LEGACY_REACHERS: readonly AuthorizationCredential[] = [
-  AuthorizationCredential.GLOBAL_ADMIN,
-];
+const A1_LEGACY_REACHERS: readonly AuthorizationCredential[] = [];
 const A2_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_USERS_ADMIN,
   AuthorizationCredential.PLATFORM_ROLES_ADMIN,
@@ -83,18 +77,20 @@ const RULE_ENGINE_GOVERNED_ROLES: ReadonlySet<RoleName> = new Set([
 @InstrumentResolver()
 @Resolver()
 export class PlatformRoleResolverMutations {
-  /** 027-platform-role-redesign (sec-server-2/corr-server-1 fix): the legacy
-   * `global-*` role branch of assign/removePlatformRoleFromUser checks
-   * GRANT_GLOBAL_ADMINS against THIS resolver-local, hardcoded IN_MEMORY
-   * policy — built once from a fixed one-element `[GLOBAL_ADMIN]` array —
-   * rather than against `roleSet.authorization`, whose GRANT_GLOBAL_ADMINS
-   * credential rule T034 widens to also admit PLATFORM_ROLES_ADMIN. Mirrors
-   * the FR-022 pin in admin.authorization.resolver.mutations.ts (T034a):
-   * widening the shared rule therefore cannot reach legacy role assignment.
-   * Do NOT replace this with `roleSet.authorization` — that IS the widened
-   * policy and doing so reopens exactly this hole. */
-  private legacyGlobalAdminPolicy: IAuthorizationPolicy;
-
+  /** 027-platform-role-redesign (T077, Slice B): the resolver-local
+   * `[GLOBAL_ADMIN]` pin that used to live here is GONE, together with the
+   * legacy roles it protected.
+   *
+   * It existed for one reason (sec-server-2/corr-server-1): T034 widened
+   * `roleSet.authorization`'s `PLATFORM_ROLES_ASSIGN` rule to admit
+   * `platform-roles-admin`, and the legacy `global-*` roles had to stay
+   * assignable by `global-admin` ALONE for the length of the additive slice.
+   * With the legacy roles removed from `RoleName` there is nothing left for
+   * the pin to protect: every role this resolver can now be asked about is
+   * either rule-engine-governed (the 13 target roles, six-rule engine +
+   * fail-closed audit) or `platform-operations-admin`, which spec 032 made an
+   * ordinary Roles-Admin-assignable role. Re-introducing a hardcoded
+   * credential policy here would re-introduce a legacy grant path. */
   constructor(
     private accountService: AccountService,
     private accountLookupService: AccountLookupService,
@@ -113,13 +109,37 @@ export class PlatformRoleResolverMutations {
     private roleAssignmentAuditService: PlatformRoleAssignmentAuditService,
     private authorizationPolicyService: AuthorizationPolicyService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
-  ) {
-    this.legacyGlobalAdminPolicy =
-      this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
-        [AuthorizationRoleGlobal.GLOBAL_ADMIN],
-        [AuthorizationPrivilege.GRANT_GLOBAL_ADMINS],
-        GLOBAL_POLICY_PLATFORM_ROLE_LEGACY_GRANT_GLOBAL_ADMIN
-      );
+  ) {}
+
+  /**
+   * 027-platform-role-redesign (T077, Slice B) — the `else` branch of both
+   * user-target mutations is now UNREACHABLE for every platform role, and this
+   * is what stands in its place.
+   *
+   * `RULE_ENGINE_GOVERNED_ROLES` is `PLATFORM_FAMILY_ROLES ∪
+   * FEATURE_FAMILY_ROLES` = all 13 target roles, and `platform-operations-admin`
+   * is one of the ten `Platform …` members. Once T077 removed the legacy
+   * vocabulary, nothing assignable to the platform role-set fell outside the
+   * rule engine — so the branch's old job (an ordinary `PLATFORM_ROLES_ASSIGN`
+   * check, or the legacy `[GLOBAL_ADMIN]` pin before it) applies to no role.
+   *
+   * Reaching here therefore means the caller passed a role name belonging to a
+   * DIFFERENT role-set type (`member`, `admin`, `lead`, `associate`, `owner`) or
+   * a baseline identity tier. Rejecting explicitly is what keeps that from
+   * degrading into an unaudited assignment attempt: the old branch would have
+   * run an authorization check and then failed deep inside
+   * `assignActorToRole`, past the point where the six assignment rules and the
+   * fail-closed audit write live.
+   */
+  private rejectNonPlatformRoleOrFail(
+    role: RoleName,
+    operation: 'assign' | 'remove'
+  ): never {
+    throw new ForbiddenException(
+      `Rejected: ${role} is not a platform role and may not be ${operation}ed through the platform role surface`,
+      LogContext.PLATFORM,
+      { ruleId: 'holder-kind' }
+    );
   }
 
   @Mutation(() => IUser, {
@@ -150,32 +170,7 @@ export class PlatformRoleResolverMutations {
         targetUser.serviceProfile
       );
     } else {
-      let privilegeRequired = AuthorizationPrivilege.GRANT_GLOBAL_ADMINS;
-      // 027-platform-role-redesign (sec-server-2/corr-server-1 fix): every
-      // legacy `global-*` role (and PLATFORM_OPERATIONS_ADMIN /
-      // PLATFORM_ASSISTANT_ACCESS) checks GRANT_GLOBAL_ADMINS against the
-      // resolver-local, un-widened [GLOBAL_ADMIN] policy — NOT
-      // roleSet.authorization, which T034 widened to also admit
-      // PLATFORM_ROLES_ADMIN. PLATFORM_BETA_TESTER/PLATFORM_VC_CAMPAIGN keep
-      // their pre-existing, deliberately wide-open GRANT check against
-      // roleSet.authorization (unchanged, additive-only).
-      let authorizationToCheck: IAuthorizationPolicy | undefined =
-        this.legacyGlobalAdminPolicy;
-
-      if (
-        roleData.role === RoleName.PLATFORM_BETA_TESTER ||
-        roleData.role === RoleName.PLATFORM_VC_CAMPAIGN
-      ) {
-        privilegeRequired = AuthorizationPrivilege.GRANT;
-        authorizationToCheck = roleSet.authorization;
-      }
-
-      this.authorizationService.grantAccessOrFail(
-        actorContext,
-        authorizationToCheck,
-        privilegeRequired,
-        `assign role to User: ${roleSet.id} on roleSet of type: ${roleSet.type}`
-      );
+      this.rejectNonPlatformRoleOrFail(roleData.role, 'assign');
     }
 
     // corr-server-14 fix: captured BEFORE assignActorToRole so a failed
@@ -219,14 +214,13 @@ export class PlatformRoleResolverMutations {
       roleData.actorID
     );
     if (
-      roleData.role === RoleName.PLATFORM_BETA_TESTER ||
-      roleData.role === RoleName.PLATFORM_VC_CAMPAIGN ||
-      // 027-platform-role-redesign (T040a): Feature Beta Tester carries the
-      // SAME beta/trial license entitlement as the legacy role it replaces
-      // (spec §Target global role model row 11). Without this, the target
-      // role would be inert once Slice B drops platform-beta-tester (FR-009,
-      // SC-007) — this is the one target role whose capability lives in a
-      // manual entitlement grant rather than an authorization policy.
+      // 027-platform-role-redesign (T040a, closed by T077): Feature Beta Tester
+      // carries the SAME beta/trial license entitlement as the two legacy roles
+      // it replaces (spec §Target global role model row 11), and is now the
+      // ONLY role that does — `platform-beta-tester` and `platform-vc-campaign`
+      // are gone. This is the one target role whose capability lives in a
+      // manual entitlement grant rather than an authorization policy, which is
+      // why FR-009/SC-007 name it explicitly.
       roleData.role === RoleName.FEATURE_BETA_TESTER
     ) {
       // Also assign the user account a license plan
@@ -288,35 +282,7 @@ export class PlatformRoleResolverMutations {
         roleData.actorID
       );
     } else {
-      let privilegeRequired = AuthorizationPrivilege.GRANT_GLOBAL_ADMINS;
-      // 027-platform-role-redesign (sec-server-2/corr-server-1 fix): legacy
-      // `global-*` roles check against the resolver-local, un-widened
-      // [GLOBAL_ADMIN] policy rather than roleSet.authorization — see
-      // legacyGlobalAdminPolicy above.
-      let extendedAuthorization: IAuthorizationPolicy =
-        this.legacyGlobalAdminPolicy;
-
-      if (
-        roleData.role === RoleName.PLATFORM_BETA_TESTER ||
-        roleData.role === RoleName.PLATFORM_VC_CAMPAIGN
-      ) {
-        privilegeRequired = AuthorizationPrivilege.GRANT;
-        // Extend the authorization policy with a credential rule to assign the GRANT privilege
-        // to the user specified in the incoming mutation. Then if it is the same user as is logged
-        // in then the user will have the GRANT privilege + so can carry out the mutation
-        extendedAuthorization =
-          this.roleSetAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
-            roleSet,
-            roleData.actorID
-          );
-      }
-
-      this.authorizationService.grantAccessOrFail(
-        actorContext,
-        extendedAuthorization,
-        privilegeRequired,
-        `remove role from User: ${roleSet.id} on roleSet of type ${roleSet.type}`
-      );
+      this.rejectNonPlatformRoleOrFail(roleData.role, 'remove');
     }
 
     // corr-server-14 fix: captured BEFORE removeActorFromRole — see the
@@ -353,9 +319,8 @@ export class PlatformRoleResolverMutations {
       roleData.actorID
     );
     if (
-      roleData.role === RoleName.PLATFORM_BETA_TESTER ||
-      roleData.role === RoleName.PLATFORM_VC_CAMPAIGN ||
-      roleData.role === RoleName.FEATURE_BETA_TESTER // T040a
+      // T040a, closed by T077 — see the grant side's comment.
+      roleData.role === RoleName.FEATURE_BETA_TESTER
     ) {
       // Also remove the user account a license plan
       // Account IS the Actor - use accountID directly as actorID
@@ -509,7 +474,7 @@ export class PlatformRoleResolverMutations {
    * rule 2 (`checkHolderKind`), but LEGACY `global-*` roles are members of
    * NEITHER `PLATFORM_FAMILY_ROLES` nor `FEATURE_FAMILY_ROLES`, so rule 2
    * never sees them and rule 1 (`checkAssignerCapability`) falls through to
-   * the shared, Slice-A-widened `GRANT_GLOBAL_ADMINS` check on
+   * the shared, Slice-A-widened `PLATFORM_ROLES_ASSIGN` check on
    * `roleSet.authorization` — the same widened policy the legacy-role
    * branch of the USER mutations deliberately avoids via
    * `legacyGlobalAdminPolicy`. Without this guard a `platform-roles-admin`
@@ -648,7 +613,7 @@ export class PlatformRoleResolverMutations {
     // corr-server-17/spec-server-18): a cheap, no-DB-write probe BEFORE
     // getHeldPlatformRoles' ~10 `isInRole` round trips and before any
     // rejection-audit write — but ONLY for an actor holding NEITHER
-    // GRANT_GLOBAL_ADMINS nor FEATURE_ROLE_ASSIGN at all (a genuine
+    // PLATFORM_ROLES_ASSIGN nor FEATURE_ROLE_ASSIGN at all (a genuine
     // unprivileged probe; any logged-in user could otherwise drive
     // unbounded reads plus one `platform_audit_entry` INSERT per request).
     // A privileged actor requesting a role outside its family (e.g. a

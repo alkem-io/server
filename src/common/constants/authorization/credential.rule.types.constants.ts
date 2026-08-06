@@ -66,14 +66,19 @@ export const CREDENTIAL_RULE_TYPES_VC_GLOBAL_ADMINS =
   'credentialRuleTypes-vcGlobalAdmins';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS =
   'credentialRuleTypes-platformGlobalAdmins';
-export const CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS =
-  'credentialRuleTypes-platformGrantGlobalAdmins';
+// 027-platform-role-redesign (T075, Slice B): the god-mode-era
+// `CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS` that stood here is
+// gone. Its replacement, `CREDENTIAL_RULE_TYPES_PLATFORM_ROLES_ASSIGN`, was
+// declared unused in the Slice A block below precisely so this rename had a
+// landing site — there is one declaration, not two.
 export const CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS =
   'credentialRuleTypes-platformPlatformAdmins';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_SETTINGS_ADMINS =
   'credentialRuleTypes-platformPlatformSettingsAdmins';
-export const CREDENTIAL_RULE_TYPES_PLATFORM_MGMT =
-  'credentialRuleTypes-platformPlatformMgmt';
+// 027-platform-role-redesign (T073, Slice B): `CREDENTIAL_RULE_TYPES_PLATFORM_MGMT`
+// named the `global-support` platform-SUBTREE cascade, which is deleted. The
+// constant goes with the rule — a rule-type identifier with no rule is how
+// the next reader concludes the capability still exists somewhere.
 export const CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET =
   'credentialRuleTypes-platformPlatformAuthReset';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_OPERATIONS_ADMIN =

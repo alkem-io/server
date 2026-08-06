@@ -347,7 +347,6 @@ describe('OrganizationAuthorizationService', () => {
       const granted = privilegesGrantedToRole();
       for (const excluded of [
         AuthorizationPrivilege.GRANT,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
@@ -438,8 +437,6 @@ describe('OrganizationAuthorizationService', () => {
       expect(rules).toHaveLength(1);
       expect(rules[0].criterias).toEqual([
         AuthorizationCredential.PLATFORM_SUPPORT,
-        AuthorizationCredential.GLOBAL_ADMIN,
-        AuthorizationCredential.GLOBAL_SUPPORT,
       ]);
       expect(rules[0].criterias).not.toContain(
         AuthorizationCredential.FEATURE_ORGANIZATION_CREATOR

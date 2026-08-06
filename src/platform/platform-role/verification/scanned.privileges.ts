@@ -24,7 +24,10 @@ export const EXCLUDED_FROM_SCAN: ReadonlySet<AuthorizationPrivilege> = new Set([
   AuthorizationPrivilege.UPDATE,
   AuthorizationPrivilege.DELETE,
   AuthorizationPrivilege.GRANT,
-  AuthorizationPrivilege.PLATFORM_ADMIN,
+  // T074 (Slice B): `PLATFORM_ADMIN` is no longer listed — it no longer
+  // exists. Its blanket exclusion (and the narrow rule-1b allowlist below that
+  // compensated for it) was this census's one documented blind spot, and the
+  // ~26 gates hiding inside it are exactly what T074 had to re-anchor by hand.
 ]);
 
 /**
@@ -54,7 +57,7 @@ export const PLATFORM_ADMIN_SCAN_ALLOWLIST: ReadonlySet<string> = new Set([
  * entry's `gate` expression, minus `EXCLUDED_FROM_SCAN`. This supersedes
  * the thirteenth analyze pass's "pin it as data" instruction: the
  * previously hand-pinned set (T007's 11 new privileges plus
- * `GRANT_GLOBAL_ADMINS`) is now this set's EXPECTED CONTENT, not its
+ * `PLATFORM_ROLES_ASSIGN`) is now this set's EXPECTED CONTENT, not its
  * definition — a surface added to the census extends the scan by
  * construction, so the vocabulary cannot independently drift from what is
  * actually declared.

@@ -1,12 +1,9 @@
 import { LogContext } from '@common/enums';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
-import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import {
-  EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { BaseExceptionInternal } from '@common/exceptions/internal/base.exception.internal';
 import { IActor } from '@domain/actor/actor/actor.interface';
 import { ActorService } from '@domain/actor/actor/actor.service';
 import { ILicense } from '@domain/common/license/license.interface';
@@ -14,8 +11,6 @@ import { LicenseService } from '@domain/common/license/license.service';
 import { ILicenseEntitlement } from '@domain/common/license-entitlement/license.entitlement.interface';
 import { Inject, Injectable } from '@nestjs/common';
 import { LicensingCredentialBasedService } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine/licensing.credential.based.service';
-import { LicensingGrantedEntitlement } from '@platform/licensing/dto/licensing.dto.granted.entitlement';
-import { LicensingWingbackSubscriptionService } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.service';
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { SpaceLicenseService } from '../space/space.service.license';
 import { IAccount } from './account.interface';
@@ -29,7 +24,6 @@ export class AccountLicenseService {
     private actorService: ActorService,
     private spaceLicenseService: SpaceLicenseService,
     private licensingCredentialBasedService: LicensingCredentialBasedService,
-    private licensingWingbackSubscriptionService: LicensingWingbackSubscriptionService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: WinstonLogger
   ) {}
 
@@ -69,12 +63,6 @@ export class AccountLicenseService {
       account.license,
       account
     );
-    // Apply Wingback entitlements with the highest priority
-    account.license = await this.applyWingbackEntitlements(
-      account,
-      account.license
-    );
-
     updatedLicenses.push(account.license);
 
     for (const space of account.spaces) {
@@ -85,70 +73,6 @@ export class AccountLicenseService {
     }
 
     return updatedLicenses;
-  }
-
-  /**
-   * Creates a Wingback account for the given Alkemio account AND assigns ACCOUNT_LICENSE_PLUS
-   * @param accountID
-   */
-  public async createWingbackAccount(accountID: string) {
-    const accountDetails =
-      await this.accountService.getAccountAndDetails(accountID);
-
-    if (!accountDetails) {
-      throw new EntityNotFoundException(
-        'Account not found',
-        LogContext.ACCOUNT,
-        { accountID }
-      );
-    }
-
-    if (accountDetails.externalSubscriptionID) {
-      throw new BaseExceptionInternal(
-        'Account already has an external subscription',
-        LogContext.LICENSE
-      );
-    }
-
-    const { user, organization } = accountDetails;
-    const name =
-      user?.name ?? (organization?.legalName || organization?.displayName);
-    const mainEmail =
-      user?.email ??
-      (organization?.email ||
-        `dummy-${organization?.nameID}@${organization?.nameID}.com`);
-
-    const { id: wingbackCustomerID } =
-      await this.licensingWingbackSubscriptionService.createCustomer({
-        name,
-        emails: { main: mainEmail },
-      });
-    // associate the Alkemio account with the Wingback customer
-    await this.accountService.updateExternalSubscriptionId(
-      accountID,
-      wingbackCustomerID
-    );
-    // grant ACCOUNT_LICENSE_PLUS entitlement to the account
-    // Account IS the Actor - use accountID directly as actorID
-    try {
-      await this.actorService.grantCredentialOrFail(accountID, {
-        type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
-        resourceID: accountID,
-      });
-      // only populate the license entitlements if the credential was granted successfully
-      await this.applyLicensePolicy(accountID);
-    } catch {
-      // failing is perfectly fine; we have to make sure the credential is granted
-      this.logger.verbose?.(
-        {
-          message: 'Account already has ACCOUNT_LICENSE_PLUS credential',
-          accountId: accountID,
-        },
-        LogContext.ACCOUNT
-      );
-    }
-
-    return wingbackCustomerID;
   }
 
   /**
@@ -170,84 +94,6 @@ export class AccountLicenseService {
     // Adds any credential based licensing based on the Actor held credentials
     for (const entitlement of license.entitlements) {
       await this.checkAndAssignGrantedEntitlement(entitlement, accountAgent);
-    }
-
-    return license;
-  }
-
-  /**
-   * @throws {EntityNotInitializedException} if the license entitlements are not initialized
-   */
-  private async applyWingbackEntitlements(
-    account: IAccount,
-    license: ILicense
-  ) {
-    if (!this.licensingWingbackSubscriptionService.isEnabled()) {
-      return license;
-    }
-
-    if (!account.externalSubscriptionID) {
-      return license;
-    }
-
-    if (!license.entitlements) {
-      this.logger.error(
-        {
-          message: 'Entitlements not initialized for License entity',
-          accountId: account.id,
-          licenseId: license.id,
-        },
-        undefined,
-        LogContext.ACCOUNT
-      );
-      return license;
-    }
-
-    // Then check the Wingback subscription service for any granted entitlements
-    const wingbackGrantedLicenseEntitlements: LicensingGrantedEntitlement[] =
-      [];
-
-    try {
-      const result =
-        await this.licensingWingbackSubscriptionService.getEntitlements(
-          account.externalSubscriptionID
-        );
-      wingbackGrantedLicenseEntitlements.push(...result);
-    } catch (e: any) {
-      this.logger.error?.(
-        {
-          message:
-            'Skipping Wingback entitlements for Account, since it returned with an error',
-          accountId: account.id,
-          error: e,
-        },
-        e?.stack,
-        LogContext.ACCOUNT
-      );
-      return license;
-    }
-    // early exit if no wingback entitlements were found`
-    if (!wingbackGrantedLicenseEntitlements.length) {
-      this.logger.warn?.(
-        {
-          message: 'No Wingback granted entitlements found for Account',
-          accountId: account.id,
-          wingbackCustomerId: account.externalSubscriptionID,
-        },
-        LogContext.ACCOUNT
-      );
-      return license;
-    }
-    // apply any wingback granted entitlements to the existing entitlements license
-    for (const entitlement of license.entitlements) {
-      const wingbackGrantedEntitlement =
-        wingbackGrantedLicenseEntitlements.find(
-          e => e.type === entitlement.type
-        );
-      if (wingbackGrantedEntitlement) {
-        entitlement.limit = wingbackGrantedEntitlement.limit;
-        entitlement.enabled = true;
-      }
     }
 
     return license;

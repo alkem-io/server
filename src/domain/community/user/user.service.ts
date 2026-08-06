@@ -73,7 +73,6 @@ import { CreateUserSettingsInput } from '../user-settings/dto/user.settings.dto.
 import { UpdateUserSettingsEntityInput } from '../user-settings/dto/user.settings.dto.update';
 import { DESIGN_VERSION_CURRENT_DEFAULT } from '../user-settings/user.settings.design.version.constants';
 import { UserSettingsService } from '../user-settings/user.settings.service';
-import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
 import { UsersQueryArgs } from './dto/users.query.args';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
@@ -1012,39 +1011,6 @@ export class UserService {
     }
 
     return response;
-  }
-
-  public async updateUserPlatformSettings(
-    updateData: UpdateUserPlatformSettingsInput
-  ): Promise<IUser> {
-    const user = await this.getUserByIdOrFail(updateData.userID);
-
-    if (updateData.nameID) {
-      if (updateData.nameID !== user.nameID) {
-        // updating the nameID, check new value is allowed
-        await this.isUserNameIdAvailableOrFail(updateData.nameID);
-
-        user.nameID = updateData.nameID;
-      }
-    }
-
-    if (updateData.email) {
-      const normalizedEmail = updateData.email.trim().toLowerCase();
-      if (normalizedEmail !== user.email) {
-        const userCheck =
-          await this.userLookupService.isRegisteredUser(normalizedEmail);
-        if (userCheck) {
-          throw new ValidationException(
-            `User profile with the specified email (${normalizedEmail}) already exists`,
-            LogContext.COMMUNITY
-          );
-        }
-
-        user.email = normalizedEmail;
-      }
-    }
-
-    return await this.save(user);
   }
 
   async getProfile(user: IUser): Promise<IProfile> {

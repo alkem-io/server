@@ -27,12 +27,7 @@ import { LicensePolicyService } from './license.policy.service';
 const A13_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_SETTINGS_ADMIN,
 ];
-const A13_LEGACY_REACHERS: readonly AuthorizationCredential[] = [
-  AuthorizationCredential.GLOBAL_ADMIN,
-  AuthorizationCredential.GLOBAL_SUPPORT,
-  AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-  AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
-];
+const A13_LEGACY_REACHERS: readonly AuthorizationCredential[] = [];
 
 @InstrumentResolver()
 @Resolver()
@@ -68,13 +63,7 @@ export class LicensePolicyResolverMutations {
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
         ],
-        [
-          AuthorizationCredential.PLATFORM_SETTINGS_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-          AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
-        ],
+        [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
         GLOBAL_POLICY_LICENSE_DEFINITION_ADMIN
       );
     this.licenseDefinitionPolicy =

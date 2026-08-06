@@ -281,9 +281,6 @@ describe('PlatformAuthorizationService', () => {
       // must pass the new gate — plus the dedicated role credential.
       expect(rule.criterias).toEqual(
         expect.arrayContaining([
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
           AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
         ])
       );
@@ -310,7 +307,6 @@ describe('PlatformAuthorizationService', () => {
       const granted = collectPrivilegesGrantedToCredential();
       for (const excluded of [
         AuthorizationPrivilege.GRANT,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
         AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN,
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.UPDATE,
@@ -323,7 +319,11 @@ describe('PlatformAuthorizationService', () => {
 
   // 004-web-ai-assistant (FR-027): the ACCESS_VIRTUAL_ASSISTANT credential rule.
   describe('ACCESS_VIRTUAL_ASSISTANT credential rule', () => {
-    it('grants ACCESS_VIRTUAL_ASSISTANT to GLOBAL_ADMIN OR ASSISTANT_ACCESS, never GLOBAL_REGISTERED', async () => {
+    // T076/T077 (Slice B): the re-anchor completed. `global-admin` and the
+    // legacy `assistant-access` credential are gone, leaving Feature Virtual
+    // Assistant (spec row 12) as the sole holder — which is what FR-009 means
+    // by the target role not being inert.
+    it('grants ACCESS_VIRTUAL_ASSISTANT to FEATURE_VIRTUAL_ASSISTANT alone, never GLOBAL_REGISTERED', async () => {
       platformService.getPlatformOrFail.mockResolvedValue(mockPlatform);
       messagingAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
         []
@@ -343,9 +343,10 @@ describe('PlatformAuthorizationService', () => {
         assistantRuleCall![1] as { type: AuthorizationCredential }[]
       ).map(c => c.type);
 
-      // Anchored to platform admin + the admin-assignable access credential.
-      expect(criteriaTypes).toContain(AuthorizationCredential.GLOBAL_ADMIN);
-      expect(criteriaTypes).toContain(AuthorizationCredential.ASSISTANT_ACCESS);
+      // Anchored to the owning feature role and nothing else.
+      expect(criteriaTypes).toEqual([
+        AuthorizationCredential.FEATURE_VIRTUAL_ASSISTANT,
+      ]);
       // Out of the box NOT every registered user.
       expect(criteriaTypes).not.toContain(
         AuthorizationCredential.GLOBAL_REGISTERED
@@ -378,14 +379,13 @@ describe('PlatformAuthorizationService', () => {
         .map(r => r.value)
         .filter((rule: any) => rule.grantedPrivileges?.includes(privilege));
 
-    it('GRANT_GLOBAL_ADMINS (T034 widening): EXACTLY {global-admin, platform-roles-admin}, non-cascading — the FR-022 pin (T034a) keeps the widening off the four credential mutations at the resolver, not here', async () => {
+    it('PLATFORM_ROLES_ASSIGN (T034 widening): EXACTLY {global-admin, platform-roles-admin}, non-cascading — the FR-022 pin (T034a) keeps the widening off the four credential mutations at the resolver, not here', async () => {
       arrange();
       await service.applyAuthorizationPolicy();
 
-      const rules = rulesGranting(AuthorizationPrivilege.GRANT_GLOBAL_ADMINS);
+      const rules = rulesGranting(AuthorizationPrivilege.PLATFORM_ROLES_ASSIGN);
       expect(rules).toHaveLength(1);
       expect(rules[0].criterias).toEqual([
-        AuthorizationCredential.GLOBAL_ADMIN,
         AuthorizationCredential.PLATFORM_ROLES_ADMIN,
       ]);
       expect(rules[0].cascade).toBe(false);
@@ -415,9 +415,6 @@ describe('PlatformAuthorizationService', () => {
       expect(rules[0].criterias).toEqual([
         AuthorizationCredential.PLATFORM_ROLES_ADMIN,
         AuthorizationCredential.PLATFORM_AUDIT_READER,
-        AuthorizationCredential.GLOBAL_ADMIN,
-        AuthorizationCredential.GLOBAL_SUPPORT,
-        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
       ]);
       expect(rules[0].cascade).toBe(false);
     });
@@ -432,9 +429,6 @@ describe('PlatformAuthorizationService', () => {
       expect(rules).toHaveLength(1);
       expect(rules[0].criterias).toEqual([
         AuthorizationCredential.PLATFORM_USERS_ADMIN,
-        AuthorizationCredential.GLOBAL_ADMIN,
-        AuthorizationCredential.GLOBAL_SUPPORT,
-        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
       ]);
       expect(rules[0].criterias).not.toContain(
         AuthorizationCredential.PLATFORM_ROLES_ADMIN
@@ -453,9 +447,6 @@ describe('PlatformAuthorizationService', () => {
       expect(rules).toHaveLength(1);
       expect(rules[0].criterias).toEqual([
         AuthorizationCredential.PLATFORM_AUDIT_READER,
-        AuthorizationCredential.GLOBAL_ADMIN,
-        AuthorizationCredential.GLOBAL_SUPPORT,
-        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
       ]);
       expect(rules[0].cascade).toBe(false);
     });
@@ -468,9 +459,6 @@ describe('PlatformAuthorizationService', () => {
       expect(rules).toHaveLength(1);
       expect(rules[0].criterias).toEqual([
         AuthorizationCredential.PLATFORM_ROLES_ADMIN,
-        AuthorizationCredential.GLOBAL_ADMIN,
-        AuthorizationCredential.GLOBAL_SUPPORT,
-        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
       ]);
       expect(rules[0].cascade).toBe(false);
     });
@@ -483,10 +471,6 @@ describe('PlatformAuthorizationService', () => {
       expect(rules).toHaveLength(1);
       expect(rules[0].criterias).toEqual([
         AuthorizationCredential.PLATFORM_USERS_ADMIN,
-        AuthorizationCredential.GLOBAL_ADMIN,
-        AuthorizationCredential.GLOBAL_SUPPORT,
-        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-        AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
       ]);
       expect(rules[0].cascade).toBe(false);
     });
@@ -499,8 +483,6 @@ describe('PlatformAuthorizationService', () => {
       expect(rules).toHaveLength(1);
       expect(rules[0].criterias).toEqual([
         AuthorizationCredential.PLATFORM_SUPPORT,
-        AuthorizationCredential.GLOBAL_ADMIN,
-        AuthorizationCredential.GLOBAL_SUPPORT,
       ]);
       expect(rules[0].criterias).not.toContain(
         AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS
@@ -517,10 +499,6 @@ describe('PlatformAuthorizationService', () => {
       );
       expect(rules).toHaveLength(1);
       expect(rules[0].criterias).toEqual([
-        AuthorizationCredential.GLOBAL_ADMIN,
-        AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
-        AuthorizationCredential.GLOBAL_SUPPORT,
-        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
         AuthorizationCredential.PLATFORM_SETTINGS_ADMIN,
       ]);
       expect(rules[0].cascade).toBe(false);
@@ -533,13 +511,58 @@ describe('PlatformAuthorizationService', () => {
       const rules = rulesGranting(AuthorizationPrivilege.CREATE_ORGANIZATION);
       expect(rules).toHaveLength(1);
       expect(rules[0].criterias).toEqual([
-        AuthorizationCredential.GLOBAL_ADMIN,
-        AuthorizationCredential.GLOBAL_SUPPORT,
-        AuthorizationCredential.BETA_TESTER,
         AuthorizationCredential.PLATFORM_SUPPORT,
         AuthorizationCredential.FEATURE_ORGANIZATION_CREATOR,
       ]);
       expect(rules[0].cascade).toBe(false);
+    });
+  });
+
+  // 027-platform-role-redesign (T073, Slice B) — the deletion of the
+  // `global-support` platform-SUBTREE cascade, pinned as a property of the
+  // policy rather than as the absence of one named rule. Phrased over the
+  // CRUD verbs (not over a credential) on purpose: it must keep failing a
+  // reintroduction after T077 removes `global-support` from the credential
+  // enum entirely, and it must catch the same cascade reappearing under any
+  // other credential.
+  describe('027-platform-role-redesign — the Support subtree cascade is gone (T073)', () => {
+    const CRUD = [
+      AuthorizationPrivilege.CREATE,
+      AuthorizationPrivilege.READ,
+      AuthorizationPrivilege.UPDATE,
+      AuthorizationPrivilege.DELETE,
+    ];
+
+    it('no rule on the platform policy cascades blanket CRUD over the platform subtree', async () => {
+      authorizationPolicyService.createCredentialRuleUsingTypesOnly.mockImplementation(
+        ((privileges: any, types: any, name: any) => ({
+          grantedPrivileges: privileges,
+          criterias: types,
+          name,
+          cascade: true,
+        })) as any
+      );
+      platformService.getPlatformOrFail.mockResolvedValue(mockPlatform);
+      messagingAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
+
+      await service.applyAuthorizationPolicy();
+
+      const calls =
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly.mock
+          .calls;
+      // Anti-vacuity: an empty call history would satisfy the assertion
+      // below without proving anything.
+      expect(calls.length).toBeGreaterThan(0);
+
+      const blanketCrudRules = calls.filter(([privileges]) =>
+        CRUD.every(verb =>
+          (privileges as AuthorizationPrivilege[]).includes(verb)
+        )
+      );
+
+      expect(blanketCrudRules).toEqual([]);
     });
   });
 });

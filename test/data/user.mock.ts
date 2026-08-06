@@ -29,7 +29,10 @@ export const userData: { user: IUser } = {
           {
             name: '1',
             criterias: [
-              { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
+              {
+                type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+                resourceID: '',
+              },
             ],
             grantedPrivileges: [
               AuthorizationPrivilege.CREATE,
@@ -44,7 +47,7 @@ export const userData: { user: IUser } = {
             name: '2',
             criterias: [
               {
-                type: AuthorizationCredential.GLOBAL_SUPPORT,
+                type: AuthorizationCredential.PLATFORM_SUPPORT,
                 resourceID: '',
               },
             ],
@@ -112,7 +115,10 @@ export const userData: { user: IUser } = {
         {
           name: '1',
           criterias: [
-            { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
+            {
+              type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+              resourceID: '',
+            },
           ],
           grantedPrivileges: [
             AuthorizationPrivilege.CREATE,
@@ -127,7 +133,7 @@ export const userData: { user: IUser } = {
           name: '2',
           criterias: [
             {
-              type: AuthorizationCredential.GLOBAL_SUPPORT,
+              type: AuthorizationCredential.PLATFORM_SUPPORT,
               resourceID: '',
             },
           ],

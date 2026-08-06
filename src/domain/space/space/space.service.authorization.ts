@@ -1,6 +1,7 @@
 import {
   CREDENTIAL_RULE_MEMBER_CREATE_SUBSPACE,
   CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE,
+  CREDENTIAL_RULE_SPACE_ADMIN_UPDATE_NAMEID,
   CREDENTIAL_RULE_SPACE_ADMINS,
   CREDENTIAL_RULE_SPACE_MEMBERS_READ,
   CREDENTIAL_RULE_SPACE_STORAGE_MEMBER_FILE_UPLOAD,
@@ -679,6 +680,32 @@ export class SpaceAuthorizationService {
       newRules.push(spaceAdminRule);
     }
 
+    // 027-platform-role-redesign (T078, FR-020, A17) — the rename privilege,
+    // on a SEPARATE rule keyed on `roleSetAdminCriterias` ALONE.
+    //
+    // It must not join the rule above: `spaceAdminCriterias` deliberately
+    // includes `platformRolesAdminCriterias` (every platform role holding
+    // UPDATE on this space), and folding UPDATE_NAMEID in there would hand
+    // entity renames to exactly the global roles spec §Target global role
+    // model row 2 denies them to — silently, as a side effect of an unrelated
+    // privilege list. A17's intended reacher set is empty of global roles by
+    // construction, and `reachability.spec.ts` asserts it derives empty.
+    //
+    // Renaming is owned by the ENTITY admin: the space's own admins, and
+    // nobody else on the platform.
+    if (roleSetAdminCriterias.length > 0) {
+      const spaceRenameRule =
+        this.authorizationPolicyService.createCredentialRule(
+          [AuthorizationPrivilege.UPDATE_NAMEID],
+          roleSetAdminCriterias,
+          CREDENTIAL_RULE_SPACE_ADMIN_UPDATE_NAMEID
+        );
+      // Does NOT cascade: renaming a space is not renaming its subspaces,
+      // each of which has its own admins and its own URL path.
+      spaceRenameRule.cascade = false;
+      newRules.push(spaceRenameRule);
+    }
+
     // Ensure privileges related to notifications are correctly assigned and also that they do not cascade
     const spaceMemberNotificationsRule =
       this.authorizationPolicyService.createCredentialRule(
@@ -798,11 +825,7 @@ export class SpaceAuthorizationService {
     const spacePlatformSettingsAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
-        ],
+        [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
         CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS
       );
     spacePlatformSettingsAdmin.cascade = false;
@@ -837,10 +860,7 @@ export class SpaceAuthorizationService {
     // role-action-matrix A16 cell. Each role gets its OWN rule derived from
     // its OWN declared privileges rather than sharing one credential list,
     // so the two can never silently inherit each other's grants.
-    for (const spacesReaderRole of [
-      RoleName.GLOBAL_SPACES_READER,
-      RoleName.PLATFORM_SPACES_READER,
-    ]) {
+    for (const spacesReaderRole of [RoleName.PLATFORM_SPACES_READER]) {
       const privilegesForSpacesRead =
         this.platformRolesAccessService.getPrivilegesForRole(
           space.platformRolesAccess.roles,

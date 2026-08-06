@@ -23,12 +23,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 const A5_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_USERS_ADMIN,
 ];
-const A5_LEGACY_REACHERS: readonly AuthorizationCredential[] = [
-  AuthorizationCredential.GLOBAL_ADMIN,
-  AuthorizationCredential.GLOBAL_SUPPORT,
-  AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-  AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
-];
+const A5_LEGACY_REACHERS: readonly AuthorizationCredential[] = [];
 
 @InstrumentResolver()
 @Resolver()
@@ -55,12 +50,7 @@ export class AdminUsersMutations {
     const rule =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.PLATFORM_USERS_ADMIN],
-        [
-          AuthorizationCredential.PLATFORM_USERS_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-        ],
+        [AuthorizationCredential.PLATFORM_USERS_ADMIN],
         GLOBAL_POLICY_ADMIN_USER_ACCOUNT_DELETE
       );
     this.accountDeletePolicy =

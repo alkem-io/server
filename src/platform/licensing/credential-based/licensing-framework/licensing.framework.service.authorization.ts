@@ -122,11 +122,7 @@ export class LicensingFrameworkAuthorizationService {
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
         ],
-        [
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-          AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
-          AuthorizationCredential.PLATFORM_SETTINGS_ADMIN,
-        ],
+        [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
         CREDENTIAL_RULE_LICENSE_MANAGER
       );
     licensings.cascade = true;
@@ -149,11 +145,7 @@ export class LicensingFrameworkAuthorizationService {
     const licensePlanUsage =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.GRANT],
-        [
-          AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-          AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
-        ],
+        [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
         CREDENTIAL_RULE_LICENSE_PLAN_USAGE
       );
     licensePlanUsage.cascade = true;
@@ -166,12 +158,7 @@ export class LicensingFrameworkAuthorizationService {
     const licenseReset =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.LICENSE_RESET],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-          AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
-          AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
-        ],
+        [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],
         CREDENTIAL_RULE_LICENSE_RESET
       );
     licenseReset.cascade = false;

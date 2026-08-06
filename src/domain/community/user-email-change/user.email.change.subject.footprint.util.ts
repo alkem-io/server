@@ -21,17 +21,7 @@ const ORG_CREDENTIAL_ROLES: Record<string, string> = {
   [AuthorizationCredential.ORGANIZATION_ASSOCIATE]: 'associate',
 };
 
-const GLOBAL_ROLE_CREDENTIAL_TYPES: ReadonlySet<string> = new Set([
-  AuthorizationCredential.GLOBAL_ADMIN,
-  AuthorizationCredential.GLOBAL_SUPPORT,
-  AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-  AuthorizationCredential.GLOBAL_COMMUNITY_READ,
-  AuthorizationCredential.GLOBAL_SPACES_READER,
-  AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
-  AuthorizationCredential.GLOBAL_SUPPORT_MANAGER,
-  AuthorizationCredential.BETA_TESTER,
-  AuthorizationCredential.VC_CAMPAIGN,
-]);
+const GLOBAL_ROLE_CREDENTIAL_TYPES: ReadonlySet<string> = new Set([]);
 
 export interface SubjectFootprint extends SubjectMembershipsPayload {
   globalRoles: string[];
