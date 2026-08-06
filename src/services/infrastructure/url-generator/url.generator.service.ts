@@ -128,14 +128,23 @@ export class UrlGeneratorService {
    * NO conversation selected — the push `url` for a digest covering MORE than
    * one conversation.
    *
-   * Deliberately the same `?chat=` param with an empty value rather than a
+   * Uses the same `?chat=` param carrying the sentinel `all` rather than a
    * bare `'/'`: it opens the unified chat panel (which is the point) without
    * guessing which of the several unread conversations the recipient meant.
    * Picking one would be a guess, and the home page would not open chat at
    * all.
+   *
+   * The value MUST be non-empty. `useChatDeepLinkOpen` reads the param with
+   * `URLSearchParams.get()` and bails on a falsy result, so `?chat=` with an
+   * EMPTY value parses to `''` and never opens the panel — the notification
+   * would click through to nothing. Any non-empty value opens it, and
+   * `useChatDeepLinkSelect` already treats an id matching no conversation as
+   * "leave the default list shown, strip the param, no error UI", which is
+   * exactly the wanted behaviour here. `all` cannot collide with a real
+   * conversation id (those are UUIDs).
    */
   public getChatSurfaceDeepLinkPath(): string {
-    return '/?chat=';
+    return '/?chat=all';
   }
 
   private async generateUrlForProfileNotCached(

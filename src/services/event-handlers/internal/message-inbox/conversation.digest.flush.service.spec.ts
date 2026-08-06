@@ -48,7 +48,7 @@ const mockPushAdapter = { sendMessagingPushNotifications: vi.fn() };
 const mockUrlGenerator = {
   getConversationUrl: vi.fn((id: string) => `https://p.test/?chat=${id}`),
   getConversationDeepLinkPath: vi.fn((id: string) => `/?chat=${id}`),
-  getChatSurfaceDeepLinkPath: vi.fn(() => '/?chat='),
+  getChatSurfaceDeepLinkPath: vi.fn(() => '/?chat=all'),
 };
 
 describe('ConversationDigestFlushService (R4, data-model §5.3)', () => {

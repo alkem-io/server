@@ -5,7 +5,7 @@ import {
   digestTotalCount,
 } from './conversation.digest.copy';
 
-const CHAT_SURFACE = '/?chat=';
+const CHAT_SURFACE = '/?chat=all';
 
 const entry = (
   displayName: string,

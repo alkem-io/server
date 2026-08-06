@@ -210,7 +210,7 @@ describe('NotificationPushAdapter', () => {
         {
           title: 'New messages',
           body: '5 messages in 2 conversations',
-          url: '/?chat=',
+          url: '/?chat=all',
           tag: 'messaging-digest-group',
         }
       );
