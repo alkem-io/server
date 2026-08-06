@@ -7,12 +7,14 @@ import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credential.based.plan.type';
+import { LogContext } from '@common/enums/logging.context';
 import { RoleName } from '@common/enums/role.name';
 import { SpaceLevel } from '@common/enums/space.level';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { TagsetType } from '@common/enums/tagset.type';
+import { UrlPathElementSpace } from '@common/enums/url.path.element.space';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -38,8 +40,9 @@ import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
-import { vi } from 'vitest';
+import { type Mock, vi } from 'vitest';
 import { Account } from '../account/account.entity';
 import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '../account/constants';
 import { SpaceAbout } from '../space.about';
@@ -51,6 +54,7 @@ describe('SpaceService', () => {
   let service: SpaceService;
   let spaceRepository: Repository<Space>;
   let urlGeneratorCacheService: UrlGeneratorCacheService;
+  let logger: { error: Mock };
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -71,6 +75,9 @@ describe('SpaceService', () => {
     urlGeneratorCacheService = module.get<UrlGeneratorCacheService>(
       UrlGeneratorCacheService
     );
+    // MockWinstonProvider hands out one shared vi.fn() per level; call history
+    // is reset between tests by `clearMocks: true` in vitest.config.ts.
+    logger = module.get(WINSTON_MODULE_NEST_PROVIDER) as any;
   });
 
   it('should be defined', () => {
@@ -146,7 +153,7 @@ describe('SpaceService', () => {
       // Mock the URL cache service - use direct assignment for mock objects
       const revokeUrlCacheSpy = vi.fn().mockResolvedValue(undefined);
       urlGeneratorCacheService.revokeUrlCache = revokeUrlCacheSpy;
-      (urlGeneratorCacheService as any).revokeUrlCachesForCalloutsInSpaces = vi
+      (urlGeneratorCacheService as any).revokeUrlCachesForContentInSpaces = vi
         .fn()
         .mockResolvedValue(undefined);
 
@@ -157,7 +164,14 @@ describe('SpaceService', () => {
       expect(mockSpace.nameID).toBe(newNameID);
       expect(revokeUrlCacheSpy).toHaveBeenCalledWith(`profile-${spaceId}`); // Main space cache invalidated
       expect(revokeUrlCacheSpy).toHaveBeenCalledWith(`profile-${subspaceId}`); // Subspace cache invalidated
-      expect(revokeUrlCacheSpy).toHaveBeenCalledTimes(2);
+      const revokedProfileIds = revokeUrlCacheSpy.mock.calls
+        .map(call => call[0])
+        .filter((id: string) => id.startsWith('profile-'));
+      expect(revokedProfileIds).toHaveLength(2);
+      // The sweep must run against the committed row, not the in-memory one.
+      expect(revokeUrlCacheSpy.mock.invocationCallOrder[0]).toBeGreaterThan(
+        vi.mocked(service.save).mock.invocationCallOrder[0]
+      );
     });
 
     it('should invalidate URL cache when nameID is updated for subspace', async () => {
@@ -254,7 +268,7 @@ describe('SpaceService', () => {
       // Mock the URL cache service - use direct assignment for mock objects
       const revokeUrlCacheSpy = vi.fn().mockResolvedValue(undefined);
       urlGeneratorCacheService.revokeUrlCache = revokeUrlCacheSpy;
-      (urlGeneratorCacheService as any).revokeUrlCachesForCalloutsInSpaces = vi
+      (urlGeneratorCacheService as any).revokeUrlCachesForContentInSpaces = vi
         .fn()
         .mockResolvedValue(undefined);
 
@@ -267,7 +281,10 @@ describe('SpaceService', () => {
       expect(revokeUrlCacheSpy).toHaveBeenCalledWith(
         `profile-${childSubspaceId}`
       ); // Child subspace cache invalidated
-      expect(revokeUrlCacheSpy).toHaveBeenCalledTimes(2);
+      const revokedProfileIds = revokeUrlCacheSpy.mock.calls
+        .map(call => call[0])
+        .filter((id: string) => id.startsWith('profile-'));
+      expect(revokedProfileIds).toHaveLength(2);
     });
 
     it('should update visibility to INACTIVE on L0 space', async () => {
@@ -361,38 +378,87 @@ describe('SpaceService', () => {
   });
 
   describe('invalidateUrlCacheForSpaceSubtree', () => {
+    // A space as the sweep loads it: the actor profile, the about profile, the
+    // community guidelines profile and the innovation flow profile hanging off
+    // collaboration.
+    const spaceWithProfiles = (spaceId: string) => ({
+      id: spaceId,
+      profile: { id: `actor-profile-${spaceId}` },
+      about: {
+        profile: { id: `profile-${spaceId}` },
+        guidelines: { profile: { id: `guidelines-profile-${spaceId}` } },
+      },
+      collaboration: {
+        innovationFlow: { profile: { id: `flow-profile-${spaceId}` } },
+      },
+    });
+
+    // getSpaceUrlPathByID() caches under the space id itself, plus one entry per
+    // space sub-path — none of those are profile-keyed, so they have to be swept
+    // by id or notifications keep rendering the pre-conversion URL.
+    const spaceKeyedCacheIds = (spaceId: string) => [
+      spaceId,
+      ...Object.values(UrlPathElementSpace).map(
+        spacePath => `${spaceId}-${spacePath}`
+      ),
+    ];
+
+    const expectedCacheIds = (spaceId: string) => [
+      `actor-profile-${spaceId}`,
+      `profile-${spaceId}`,
+      `guidelines-profile-${spaceId}`,
+      `flow-profile-${spaceId}`,
+      ...spaceKeyedCacheIds(spaceId),
+    ];
+
+    let revokeSpy: Mock;
+    let revokeCalloutsSpy: Mock;
+
+    beforeEach(() => {
+      // urlGeneratorCacheService is a @golevelup/ts-vitest proxy auto-mock, so
+      // its methods only materialise on access; vi.spyOn on them is
+      // order-dependent. Assign the doubles outright to keep each test
+      // self-contained.
+      revokeSpy = vi.fn().mockResolvedValue(undefined);
+      revokeCalloutsSpy = vi.fn().mockResolvedValue(undefined);
+      (urlGeneratorCacheService as any).revokeUrlCache = revokeSpy;
+      (urlGeneratorCacheService as any).revokeUrlCachesForContentInSpaces =
+        revokeCalloutsSpy;
+    });
+
+    const stubDescendants = (descendantIds: string[]) => {
+      const lookup = (service as any).spaceLookupService as any;
+      lookup.getAllDescendantSpaceIDs = vi
+        .fn()
+        .mockResolvedValue(descendantIds);
+    };
+
     it('revokes URL cache for the space and all descendants in a single fetch', async () => {
       const rootId = 'space-root';
       const childId = 'space-child';
       const grandchildId = 'space-grandchild';
 
-      const lookup = (service as any).spaceLookupService as any;
-      lookup.getAllDescendantSpaceIDs = vi
-        .fn()
-        .mockResolvedValue([childId, grandchildId]);
+      stubDescendants([childId, grandchildId]);
 
       const findSpy = vi
         .spyOn(spaceRepository, 'find')
         .mockResolvedValue([
-          { about: { profile: { id: `profile-${rootId}` } } },
-          { about: { profile: { id: `profile-${childId}` } } },
-          { about: { profile: { id: `profile-${grandchildId}` } } },
+          spaceWithProfiles(rootId),
+          spaceWithProfiles(childId),
+          spaceWithProfiles(grandchildId),
         ] as any);
-
-      const revokeSpy = vi
-        .spyOn(urlGeneratorCacheService, 'revokeUrlCache')
-        .mockResolvedValue(undefined);
-      const revokeCalloutsSpy = vi.fn().mockResolvedValue(undefined);
-      (urlGeneratorCacheService as any).revokeUrlCachesForCalloutsInSpaces =
-        revokeCalloutsSpy;
 
       await service.invalidateUrlCacheForSpaceSubtree(rootId);
 
       expect(findSpy).toHaveBeenCalledTimes(1);
-      expect(revokeSpy).toHaveBeenCalledTimes(3);
-      expect(revokeSpy).toHaveBeenCalledWith(`profile-${rootId}`);
-      expect(revokeSpy).toHaveBeenCalledWith(`profile-${childId}`);
-      expect(revokeSpy).toHaveBeenCalledWith(`profile-${grandchildId}`);
+      const revokedIds = revokeSpy.mock.calls.map(call => call[0]);
+      expect(revokedIds.sort()).toEqual(
+        [
+          ...expectedCacheIds(rootId),
+          ...expectedCacheIds(childId),
+          ...expectedCacheIds(grandchildId),
+        ].sort()
+      );
       expect(revokeCalloutsSpy).toHaveBeenCalledWith([
         rootId,
         childId,
@@ -400,26 +466,180 @@ describe('SpaceService', () => {
       ]);
     });
 
-    it('skips spaces that have no profile id', async () => {
+    // Regression: the Space actor profile, the community guidelines profile and
+    // the space-id-keyed entries written by getSpaceUrlPathByID() are all
+    // derived from the space path, so a conversion has to sweep them too.
+    it('revokes the actor, guidelines and space-id-keyed cache entries', async () => {
       const rootId = 'space-root';
-      const lookup = (service as any).spaceLookupService as any;
-      lookup.getAllDescendantSpaceIDs = vi.fn().mockResolvedValue([]);
 
-      vi.spyOn(spaceRepository, 'find').mockResolvedValue([
-        { about: undefined } as any,
-      ]);
+      stubDescendants([]);
 
-      const revokeSpy = vi
-        .spyOn(urlGeneratorCacheService, 'revokeUrlCache')
-        .mockResolvedValue(undefined);
-      const revokeCalloutsSpy = vi.fn().mockResolvedValue(undefined);
-      (urlGeneratorCacheService as any).revokeUrlCachesForCalloutsInSpaces =
-        revokeCalloutsSpy;
+      const findSpy = vi
+        .spyOn(spaceRepository, 'find')
+        .mockResolvedValue([spaceWithProfiles(rootId)] as any);
 
       await service.invalidateUrlCacheForSpaceSubtree(rootId);
 
-      expect(revokeSpy).not.toHaveBeenCalled();
+      for (const cacheId of expectedCacheIds(rootId)) {
+        expect(revokeSpy).toHaveBeenCalledWith(cacheId);
+      }
+
+      // The guidelines profile is declared `eager: true`, so with
+      // loadEagerRelations disabled it only arrives if asked for explicitly.
+      const findOptions = findSpy.mock.calls[0][0] as any;
+      expect(findOptions.loadEagerRelations).toBe(false);
+      expect(findOptions.relations).toMatchObject({
+        profile: true,
+        about: { profile: true, guidelines: { profile: true } },
+      });
+    });
+
+    // Regression: server#6020 QA — innovationFlow.profile.url kept serving the
+    // pre-promotion path after an L1 -> L0 conversion because the subtree sweep
+    // only ever revoked the space-about profile.
+    it('revokes the innovation flow profile of every space in the subtree', async () => {
+      const rootId = 'space-root';
+      const childId = 'space-child';
+
+      stubDescendants([childId]);
+
+      const findSpy = vi
+        .spyOn(spaceRepository, 'find')
+        .mockResolvedValue([
+          spaceWithProfiles(rootId),
+          spaceWithProfiles(childId),
+        ] as any);
+
+      await service.invalidateUrlCacheForSpaceSubtree(rootId);
+
+      expect(revokeSpy).toHaveBeenCalledWith(`flow-profile-${rootId}`);
+      expect(revokeSpy).toHaveBeenCalledWith(`flow-profile-${childId}`);
+
+      // ...and it must come out of the same single fetch, which has to ask for
+      // the innovation flow profile relation.
+      expect(findSpy).toHaveBeenCalledTimes(1);
+      const findOptions = findSpy.mock.calls[0][0] as any;
+      expect(findOptions.relations).toMatchObject({
+        about: { profile: true },
+        collaboration: { innovationFlow: { profile: true } },
+      });
+    });
+
+    it('skips spaces that have no profile id', async () => {
+      const rootId = 'space-root';
+      stubDescendants([]);
+
+      vi.spyOn(spaceRepository, 'find').mockResolvedValue([
+        {
+          id: rootId,
+          profile: undefined,
+          about: undefined,
+          collaboration: undefined,
+        } as any,
+      ]);
+
+      await service.invalidateUrlCacheForSpaceSubtree(rootId);
+
+      // Only the space-id-keyed entries remain — nothing profile-derived.
+      const revokedIds = revokeSpy.mock.calls.map(call => call[0]);
+      expect(revokedIds.sort()).toEqual(spaceKeyedCacheIds(rootId).sort());
       expect(revokeCalloutsSpy).toHaveBeenCalledWith([rootId]);
+    });
+
+    it.each([
+      ['no innovation flow', { innovationFlow: undefined }],
+      ['an innovation flow with no profile', { innovationFlow: {} }],
+    ])('skips spaces whose collaboration carries %s', async (_label, collaboration) => {
+      const rootId = 'space-root';
+      stubDescendants([]);
+
+      vi.spyOn(spaceRepository, 'find').mockResolvedValue([
+        {
+          id: rootId,
+          about: { profile: { id: `profile-${rootId}` } },
+          collaboration,
+        } as any,
+      ]);
+
+      await service.invalidateUrlCacheForSpaceSubtree(rootId);
+
+      expect(revokeSpy).toHaveBeenCalledWith(`profile-${rootId}`);
+      expect(revokeSpy).not.toHaveBeenCalledWith(`flow-profile-${rootId}`);
+    });
+
+    it('logs and keeps sweeping when revoking one profile throws', async () => {
+      const rootId = 'space-root';
+      const childId = 'space-child';
+
+      stubDescendants([childId]);
+
+      vi.spyOn(spaceRepository, 'find').mockResolvedValue([
+        spaceWithProfiles(rootId),
+        spaceWithProfiles(childId),
+      ] as any);
+
+      // The throwing profile belongs to the DESCENDANT, not the subtree root:
+      // that is the only case that tells the owning space apart from the root
+      // argument in the error log.
+      revokeSpy.mockImplementation(async (profileId: string) => {
+        if (profileId === `flow-profile-${childId}`) {
+          throw new Error('cache unavailable');
+        }
+      });
+
+      await service.invalidateUrlCacheForSpaceSubtree(rootId);
+
+      // The failure is isolated: every other entry is still swept and the
+      // callout sweep still runs.
+      const revokedIds = revokeSpy.mock.calls.map(call => call[0]);
+      expect(revokedIds.sort()).toEqual(
+        [...expectedCacheIds(rootId), ...expectedCacheIds(childId)].sort()
+      );
+      expect(revokeCalloutsSpy).toHaveBeenCalledWith([rootId, childId]);
+      // The log names the space that actually owns the stale entry, and still
+      // carries the root the sweep was invoked for.
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Failed to invalidate URL cache for space subtree',
+          spaceId: childId,
+          subtreeRootSpaceId: rootId,
+          cacheId: `flow-profile-${childId}`,
+        }),
+        expect.any(String),
+        LogContext.SPACES
+      );
+    });
+
+    it('revokes in bounded batches rather than fanning the whole subtree out at once', async () => {
+      const rootId = 'space-root';
+      // Each space contributes 4 profile ids plus its space-keyed ids, so 20
+      // spaces is comfortably more than one batch.
+      const childIds = Array.from({ length: 19 }, (_, i) => `space-${i}`);
+      const allIds = [rootId, ...childIds];
+
+      stubDescendants(childIds);
+      vi.spyOn(spaceRepository, 'find').mockResolvedValue(
+        allIds.map(spaceWithProfiles) as any
+      );
+
+      let inFlight = 0;
+      let maxInFlight = 0;
+      revokeSpy.mockImplementation(async () => {
+        inFlight++;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        // Yield so every revoke started in the same batch overlaps.
+        await Promise.resolve();
+        inFlight--;
+      });
+
+      await service.invalidateUrlCacheForSpaceSubtree(rootId);
+
+      const totalIds = allIds.flatMap(expectedCacheIds).length;
+      expect(totalIds).toBeGreaterThan(50);
+      // Every entry is still swept...
+      expect(revokeSpy).toHaveBeenCalledTimes(totalIds);
+      // ...but never more than one batch is in flight at a time.
+      expect(maxInFlight).toBeLessThanOrEqual(50);
     });
   });
 

@@ -1,7 +1,14 @@
 import { ActorType } from '@common/enums/actor.type';
 import { ContributorCollectionView } from '@common/enums/contributor.collection.view';
 import { Field, InputType } from '@nestjs/graphql';
-import { ArrayMinSize, IsEnum, IsOptional } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  ArrayMinSize,
+  IsEnum,
+  IsOptional,
+  ValidateNested,
+} from 'class-validator';
+import { CreateCalloutContributorsMapViewInput } from './callout.settings.contributors.mapview.dto.create';
 
 // Partial-update input: every field is OPTIONAL so a caller can update just one
 // (e.g. defaultView) without resending the whole block — the server merges into
@@ -39,4 +46,14 @@ export class UpdateCalloutContributorsSettingsInput {
   @IsOptional()
   @IsEnum(ContributorCollectionView)
   defaultView?: ContributorCollectionView;
+
+  @Field(() => CreateCalloutContributorsMapViewInput, {
+    nullable: true,
+    description:
+      'Admin-fixed initial map view. Omitted ⇒ stored view unchanged; explicit null ⇒ clear to automatic framing.',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateCalloutContributorsMapViewInput)
+  mapView?: CreateCalloutContributorsMapViewInput | null;
 }
