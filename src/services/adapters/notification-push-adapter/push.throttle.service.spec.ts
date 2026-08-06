@@ -46,7 +46,9 @@ describe('PushThrottleService', () => {
       const result = await service.isAllowed('user-1');
 
       expect(result).toBe(true);
-      expect(mockRedis.incr).toHaveBeenCalledWith('push:throttle:user-1');
+      expect(mockRedis.incr).toHaveBeenCalledWith(
+        expect.stringMatching(/^push:throttle:user-1:\d+$/)
+      );
       expect(mockRedis.expire).not.toHaveBeenCalled();
     });
 
@@ -56,7 +58,10 @@ describe('PushThrottleService', () => {
       const result = await service.isAllowed('user-1');
 
       expect(result).toBe(true);
-      expect(mockRedis.expire).toHaveBeenCalledWith('push:throttle:user-1', 60);
+      expect(mockRedis.expire).toHaveBeenCalledWith(
+        expect.stringMatching(/^push:throttle:user-1:\d+$/),
+        60
+      );
     });
 
     it('should return false once the counter exceeds max', async () => {
@@ -99,12 +104,55 @@ describe('PushThrottleService', () => {
       expect(result).toBe(true);
     });
 
-    it('should use correct key pattern for user', async () => {
+    it('D-7 second fix: the key is epoch-minute-suffixed, so a lost EXPIRE self-heals', async () => {
+      // The original key was `push:throttle:{userId}` with no time component.
+      // INCR and EXPIRE are two commands; if the process died between them the
+      // counter was left with NO TTL and that user was throttled PERMANENTLY.
+      // With the window addressable by time, a stranded key belongs to a
+      // minute that is never written to again.
       mockRedis.incr.mockResolvedValue(1);
+      const expectedMinute = Math.floor(Date.now() / 60000);
 
       await service.isAllowed('user-abc-123');
 
-      expect(mockRedis.incr).toHaveBeenCalledWith('push:throttle:user-abc-123');
+      expect(mockRedis.incr).toHaveBeenCalledWith(
+        `push:throttle:user-abc-123:${expectedMinute}`
+      );
+    });
+
+    it('rolls onto a fresh key when the epoch minute advances', async () => {
+      mockRedis.incr.mockResolvedValue(1);
+      const nowSpy = vi.spyOn(Date, 'now');
+
+      nowSpy.mockReturnValue(60_000 * 100);
+      await service.isAllowed('user-1');
+      nowSpy.mockReturnValue(60_000 * 101);
+      await service.isAllowed('user-1');
+
+      expect(mockRedis.incr).toHaveBeenNthCalledWith(
+        1,
+        'push:throttle:user-1:100'
+      );
+      expect(mockRedis.incr).toHaveBeenNthCalledWith(
+        2,
+        'push:throttle:user-1:101'
+      );
+      nowSpy.mockRestore();
+    });
+
+    it('FR-012: messaging notifications never reach this bucket at all', async () => {
+      // Independence by NON-PARTICIPATION (D-21). This service is now used
+      // only by `sendPushNotifications`; the messaging digest path calls
+      // `sendMessagingPushNotifications`, which does not consult it. Asserted
+      // from the other side in notification.push.adapter.spec.ts.
+      mockRedis.incr.mockResolvedValue(1);
+
+      await service.isAllowed('user-1');
+
+      for (const [key] of mockRedis.incr.mock.calls) {
+        expect(key).toMatch(/^push:throttle:/);
+        expect(key).not.toMatch(/^msg:notif:/);
+      }
     });
   });
 });

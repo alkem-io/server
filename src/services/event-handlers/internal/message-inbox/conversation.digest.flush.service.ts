@@ -1,8 +1,8 @@
 import { LogContext } from '@common/enums';
 import { getGroupDisplayNameForNotificationCopy } from '@common/utils/notification.copy.util';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
-import { ConversationService } from '@domain/communication/conversation/conversation.service';
 import { IConversation } from '@domain/communication/conversation/conversation.interface';
+import { ConversationService } from '@domain/communication/conversation/conversation.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
@@ -12,8 +12,8 @@ import { NotificationRecipientsService } from '@services/api/notification-recipi
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
-  ConversationDigestEntry,
   buildDigestPushCopy,
+  ConversationDigestEntry,
 } from './conversation.digest.copy';
 import { ConversationDigestSchedulerService } from './conversation.digest.scheduler.service';
 import {
@@ -188,7 +188,9 @@ export class ConversationDigestFlushService {
       userIDs: [track.userId],
     });
     const candidates =
-      track.channel === 'email' ? result.emailRecipients : result.pushRecipients;
+      track.channel === 'email'
+        ? result.emailRecipients
+        : result.pushRecipients;
     return candidates.find(user => user.id === track.userId) ?? null;
   }
 

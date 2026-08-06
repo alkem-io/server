@@ -1,32 +1,39 @@
 /**
- * 034-messaging-notifications — T003.
+ * 034-messaging-notifications — T007 (revised for Operator Ruling R4).
  *
  * Asserts the in-code defaults for the messaging-notifications config block
  * resolve correctly when the corresponding env vars are absent (Operator
  * Ruling 3b: none of these vars are declared on any deployment manifest this
  * release, so the literal defaults below govern everywhere until a future
- * release declares them).
+ * release declares them), and that every one of them IS env-overridable —
+ * the live test stacks must be able to run seconds-scale windows, because
+ * test-suites cannot wait 20 minutes per assertion.
  */
+
+const DIGEST_ENV_VARS = [
+  'MESSAGING_NOTIFICATIONS_ENABLED',
+  'MESSAGING_DIGEST_SWEEP_INTERVAL_SECONDS',
+  'MESSAGING_DIGEST_MAX_DISPATCH_ATTEMPTS',
+  'MESSAGING_DIGEST_RETRY_BACKOFF_SECONDS',
+  'MESSAGING_DIGEST_PUSH_DIRECT_QUIET_SECONDS',
+  'MESSAGING_DIGEST_PUSH_DIRECT_MAX_DELAY_SECONDS',
+  'MESSAGING_DIGEST_PUSH_GROUP_QUIET_SECONDS',
+  'MESSAGING_DIGEST_PUSH_GROUP_MAX_DELAY_SECONDS',
+  'MESSAGING_DIGEST_EMAIL_DIRECT_QUIET_SECONDS',
+  'MESSAGING_DIGEST_EMAIL_DIRECT_MAX_DELAY_SECONDS',
+  'MESSAGING_DIGEST_EMAIL_GROUP_QUIET_SECONDS',
+  'MESSAGING_DIGEST_EMAIL_GROUP_MAX_DELAY_SECONDS',
+] as const;
+
 describe('messaging notifications configuration defaults', () => {
   const origEnv: Record<string, string | undefined> = {};
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    origEnv.MESSAGING_NOTIFICATIONS_ENABLED =
-      process.env.MESSAGING_NOTIFICATIONS_ENABLED;
-    origEnv.MESSAGING_EMAIL_SUPPRESSION_WINDOW_SECONDS =
-      process.env.MESSAGING_EMAIL_SUPPRESSION_WINDOW_SECONDS;
-    origEnv.MESSAGING_PUSH_THROTTLE_MAX_PER_MINUTE =
-      process.env.MESSAGING_PUSH_THROTTLE_MAX_PER_MINUTE;
-    origEnv.MESSAGING_EMAIL_BUDGET_MAX_PER_WINDOW =
-      process.env.MESSAGING_EMAIL_BUDGET_MAX_PER_WINDOW;
-    origEnv.MESSAGING_EMAIL_BUDGET_WINDOW_SECONDS =
-      process.env.MESSAGING_EMAIL_BUDGET_WINDOW_SECONDS;
-    delete process.env.MESSAGING_NOTIFICATIONS_ENABLED;
-    delete process.env.MESSAGING_EMAIL_SUPPRESSION_WINDOW_SECONDS;
-    delete process.env.MESSAGING_PUSH_THROTTLE_MAX_PER_MINUTE;
-    delete process.env.MESSAGING_EMAIL_BUDGET_MAX_PER_WINDOW;
-    delete process.env.MESSAGING_EMAIL_BUDGET_WINDOW_SECONDS;
+    for (const key of DIGEST_ENV_VARS) {
+      origEnv[key] = process.env[key];
+      delete process.env[key];
+    }
     delete process.env.ALKEMIO_CONFIG_PATH;
   });
 
@@ -50,50 +57,87 @@ describe('messaging notifications configuration defaults', () => {
     expect(result.notifications.messaging.enabled).toBe(true);
   });
 
-  it('defaults the email suppression window to 300 seconds when absent (D-8)', async () => {
+  it('ships the D-20 quiet periods and delay caps for all four tracks', async () => {
     const factory = await loadConfiguration();
-    const result = factory();
+    const { digest } = factory().notifications.messaging;
 
-    expect(
-      result.notifications.messaging.email_suppression_window_seconds
-    ).toBe(300);
+    expect(digest.push.direct).toEqual({
+      quiet_period_seconds: 60,
+      max_delay_seconds: 300,
+    });
+    expect(digest.push.group).toEqual({
+      quiet_period_seconds: 300,
+      max_delay_seconds: 900,
+    });
+    expect(digest.email.direct).toEqual({
+      quiet_period_seconds: 300,
+      max_delay_seconds: 1800,
+    });
+    expect(digest.email.group).toEqual({
+      quiet_period_seconds: 1200,
+      max_delay_seconds: 3600,
+    });
   });
 
-  it('defaults the messaging push throttle to 10/min when absent (D-9)', async () => {
+  it('defaults the sweep to 10s and the dispatch retry to 3 attempts / 60s backoff', async () => {
     const factory = await loadConfiguration();
-    const result = factory();
+    const { digest } = factory().notifications.messaging;
 
-    expect(result.notifications.messaging.push.throttle.max_per_minute).toBe(
-      10
-    );
+    expect(digest.sweep_interval_seconds).toBe(10);
+    expect(digest.max_dispatch_attempts).toBe(3);
+    expect(digest.retry_backoff_seconds).toBe(60);
   });
 
-  it('honors env overrides when present', async () => {
+  it('every digest key is env-overridable so the live stacks can run seconds-scale windows', async () => {
     process.env.MESSAGING_NOTIFICATIONS_ENABLED = 'false';
-    process.env.MESSAGING_EMAIL_SUPPRESSION_WINDOW_SECONDS = '120';
-    process.env.MESSAGING_PUSH_THROTTLE_MAX_PER_MINUTE = '5';
-    process.env.MESSAGING_EMAIL_BUDGET_MAX_PER_WINDOW = '7';
-    process.env.MESSAGING_EMAIL_BUDGET_WINDOW_SECONDS = '60';
+    process.env.MESSAGING_DIGEST_SWEEP_INTERVAL_SECONDS = '1';
+    process.env.MESSAGING_DIGEST_MAX_DISPATCH_ATTEMPTS = '5';
+    process.env.MESSAGING_DIGEST_RETRY_BACKOFF_SECONDS = '2';
+    process.env.MESSAGING_DIGEST_PUSH_DIRECT_QUIET_SECONDS = '2';
+    process.env.MESSAGING_DIGEST_PUSH_DIRECT_MAX_DELAY_SECONDS = '5';
+    process.env.MESSAGING_DIGEST_PUSH_GROUP_QUIET_SECONDS = '3';
+    process.env.MESSAGING_DIGEST_PUSH_GROUP_MAX_DELAY_SECONDS = '6';
+    process.env.MESSAGING_DIGEST_EMAIL_DIRECT_QUIET_SECONDS = '4';
+    process.env.MESSAGING_DIGEST_EMAIL_DIRECT_MAX_DELAY_SECONDS = '7';
+    process.env.MESSAGING_DIGEST_EMAIL_GROUP_QUIET_SECONDS = '5';
+    process.env.MESSAGING_DIGEST_EMAIL_GROUP_MAX_DELAY_SECONDS = '8';
 
     const factory = await loadConfiguration();
-    const result = factory();
+    const messaging = factory().notifications.messaging;
 
-    expect(result.notifications.messaging.enabled).toBe(false);
-    expect(
-      result.notifications.messaging.email_suppression_window_seconds
-    ).toBe(120);
-    expect(result.notifications.messaging.push.throttle.max_per_minute).toBe(5);
-    expect(result.notifications.messaging.email.budget.max_per_window).toBe(7);
-    expect(result.notifications.messaging.email.budget.window_seconds).toBe(60);
+    expect(messaging.enabled).toBe(false);
+    expect(messaging.digest.sweep_interval_seconds).toBe(1);
+    expect(messaging.digest.max_dispatch_attempts).toBe(5);
+    expect(messaging.digest.retry_backoff_seconds).toBe(2);
+    expect(messaging.digest.push.direct).toEqual({
+      quiet_period_seconds: 2,
+      max_delay_seconds: 5,
+    });
+    expect(messaging.digest.email.group).toEqual({
+      quiet_period_seconds: 5,
+      max_delay_seconds: 8,
+    });
   });
 
-  it('sec-server-10: defaults the global email budget to 20 per 3600s (1h) when absent', async () => {
+  it('R4/D-21: the deleted suppression window and volume budgets are gone from config', async () => {
     const factory = await loadConfiguration();
-    const result = factory();
+    const messaging: any = factory().notifications.messaging;
 
-    expect(result.notifications.messaging.email.budget.max_per_window).toBe(20);
-    expect(result.notifications.messaging.email.budget.window_seconds).toBe(
-      3600
+    expect(messaging).not.toHaveProperty('email_suppression_window_seconds');
+    expect(messaging).not.toHaveProperty('email');
+    // The messaging block no longer declares a push throttle of its own —
+    // messaging does not participate in any push budget (FR-012).
+    expect(messaging).not.toHaveProperty('push');
+  });
+
+  it('the shipped defaults satisfy the boot-time invariants', async () => {
+    const { buildDigestConfig } = await import(
+      '@services/event-handlers/internal/message-inbox/conversation.digest.config'
     );
+    const factory = await loadConfiguration();
+
+    expect(() =>
+      buildDigestConfig(factory().notifications.messaging.digest)
+    ).not.toThrow();
   });
 });

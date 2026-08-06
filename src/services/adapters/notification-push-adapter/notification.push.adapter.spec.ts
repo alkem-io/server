@@ -5,7 +5,6 @@ import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { MessagingPushBudgetService } from './messaging.push.budget.service';
 import { NotificationPushAdapter } from './notification.push.adapter';
 import { PushThrottleService } from './push.throttle.service';
 
@@ -21,10 +20,6 @@ const mockPushSubscriptionService = {
 };
 
 const mockPushThrottleService = {
-  isAllowed: vi.fn(),
-};
-
-const mockMessagingPushBudgetService = {
   isAllowed: vi.fn(),
 };
 
@@ -50,10 +45,6 @@ describe('NotificationPushAdapter', () => {
         {
           provide: PushThrottleService,
           useValue: mockPushThrottleService,
-        },
-        {
-          provide: MessagingPushBudgetService,
-          useValue: mockMessagingPushBudgetService,
         },
         { provide: AmqpConnection, useValue: mockAmqpConnection },
         { provide: ConfigService, useValue: mockConfigService },
@@ -112,10 +103,6 @@ describe('NotificationPushAdapter', () => {
           {
             provide: PushThrottleService,
             useValue: mockPushThrottleService,
-          },
-          {
-            provide: MessagingPushBudgetService,
-            useValue: mockMessagingPushBudgetService,
           },
           { provide: AmqpConnection, useValue: mockAmqpConnection },
           { provide: ConfigService, useValue: mockConfigService },
@@ -180,65 +167,84 @@ describe('NotificationPushAdapter', () => {
   });
 
   describe('sendMessagingPushNotifications', () => {
-    it('gates on the messaging push budget, never the shared throttle', async () => {
-      const users = [createUser('user-1')];
-      mockMessagingPushBudgetService.isAllowed.mockResolvedValue(true);
+    const activeSubscription = {
+      id: 'sub-1',
+      userId: 'user-1',
+      endpoint: 'https://push.example.com/1',
+      p256dh: 'key1',
+      auth: 'auth1',
+    };
+
+    it('US4-AS2 / FR-012: never touches the shared push throttle', async () => {
       mockPushSubscriptionService.getActiveSubscriptions.mockResolvedValue([
-        {
-          id: 'sub-1',
-          userId: 'user-1',
-          endpoint: 'https://push.example.com/1',
-          p256dh: 'key1',
-          auth: 'auth1',
-        },
+        activeSubscription,
       ]);
-
-      await adapter.sendMessagingPushNotifications(
-        users,
-        NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
-        { title: 'Alice', body: 'Alice sent you a message', url: '/?chat=1' }
-      );
-
-      expect(mockMessagingPushBudgetService.isAllowed).toHaveBeenCalledWith(
-        'user-1'
-      );
-      expect(mockPushThrottleService.isAllowed).not.toHaveBeenCalled();
-      expect(mockAmqpConnection.publish).toHaveBeenCalledTimes(1);
-    });
-
-    it('drops recipients whose messaging push budget is exhausted', async () => {
-      mockMessagingPushBudgetService.isAllowed.mockResolvedValue(false);
 
       await adapter.sendMessagingPushNotifications(
         [createUser('user-1')],
         NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
-        { title: 'Alice', body: 'Alice sent you a message', url: '/?chat=1' }
+        {
+          title: 'Alice',
+          body: 'sent you 2 messages',
+          url: '/?chat=1',
+          tag: 'messaging-digest-direct',
+        }
+      );
+
+      // Independence by NON-PARTICIPATION (D-21): there is no messaging
+      // budget any more, and the shared bucket is not consulted either. Chat
+      // volume therefore cannot starve mentions/invitations, and the FR-011b
+      // delay cap is what bounds messaging volume.
+      expect(mockPushThrottleService.isAllowed).not.toHaveBeenCalled();
+      expect(mockAmqpConnection.publish).toHaveBeenCalledTimes(1);
+    });
+
+    it('FR-024: forwards the stable collapse tag onto the queued payload', async () => {
+      mockPushSubscriptionService.getActiveSubscriptions.mockResolvedValue([
+        activeSubscription,
+      ]);
+
+      await adapter.sendMessagingPushNotifications(
+        [createUser('user-1')],
+        NotificationEvent.USER_CONVERSATION_MESSAGE_GROUP,
+        {
+          title: 'New messages',
+          body: '5 messages in 2 conversations',
+          url: '/?chat=',
+          tag: 'messaging-digest-group',
+        }
+      );
+
+      const [, , message] = mockAmqpConnection.publish.mock.calls[0];
+      expect(message.payload.tag).toBe('messaging-digest-group');
+    });
+
+    it('omits `tag` entirely for notification kinds that should stack', async () => {
+      mockPushThrottleService.isAllowed.mockResolvedValue(true);
+      mockPushSubscriptionService.getActiveSubscriptions.mockResolvedValue([
+        activeSubscription,
+      ]);
+
+      await adapter.sendPushNotifications(
+        [createUser('user-1')],
+        NotificationEvent.USER_MENTIONED,
+        { title: 'Test', body: 'Test body', url: '/test' }
+      );
+
+      const [, , message] = mockAmqpConnection.publish.mock.calls[0];
+      expect(message.payload).not.toHaveProperty('tag');
+    });
+
+    it('skips when the recipient list is empty', async () => {
+      await adapter.sendMessagingPushNotifications(
+        [],
+        NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
+        { title: 'Alice', body: 'sent you 1 message', url: '/?chat=1' }
       );
 
       expect(
         mockPushSubscriptionService.getActiveSubscriptions
       ).not.toHaveBeenCalled();
-    });
-
-    it('sec-server-10: checks the messaging push budget for every recipient concurrently, not sequentially', async () => {
-      let inFlight = 0;
-      let maxInFlight = 0;
-      mockMessagingPushBudgetService.isAllowed.mockImplementation(async () => {
-        inFlight++;
-        maxInFlight = Math.max(maxInFlight, inFlight);
-        await Promise.resolve();
-        inFlight--;
-        return true;
-      });
-      mockPushSubscriptionService.getActiveSubscriptions.mockResolvedValue([]);
-
-      await adapter.sendMessagingPushNotifications(
-        [createUser('user-1'), createUser('user-2'), createUser('user-3')],
-        NotificationEvent.USER_CONVERSATION_MESSAGE_GROUP,
-        { title: 'Team', body: 'Alice sent a message', url: '/?chat=1' }
-      );
-
-      expect(maxInFlight).toBeGreaterThan(1);
     });
   });
 });

@@ -6,8 +6,8 @@ import { AlkemioConfig } from '@src/types';
 import type { Redis } from 'ioredis';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
-  DigestConfig,
   buildDigestConfig,
+  DigestConfig,
   digestStateTtlSeconds,
 } from './conversation.digest.config';
 import {
@@ -272,7 +272,8 @@ export class ConversationDigestSchedulerService {
       const parsedFirstAt = Number(firstAt);
       return {
         conversationIds: conversationIds ?? [],
-        firstAtMs: Number.isFinite(parsedFirstAt) && firstAt ? parsedFirstAt : null,
+        firstAtMs:
+          Number.isFinite(parsedFirstAt) && firstAt ? parsedFirstAt : null,
       };
     } catch (error: any) {
       this.logger.error?.(

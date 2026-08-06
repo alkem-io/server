@@ -653,27 +653,9 @@ describe('NotificationExternalAdapter', () => {
     });
   });
 
-  describe('034-messaging-notifications — buildConversationMessageDirectPayload / GroupPayload (C-2/FR-008/FR-009)', () => {
+  describe('034/R4 — digest payload builders (C-2/D-22/FR-008/FR-009/FR-018a)', () => {
     const HOSTILE_MESSAGE =
       '<script>alert(1)</script> "quoted" \n newline — none of this must appear';
-
-    const mockSender = () => {
-      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue({
-        id: 'sender-1',
-        firstName: 'Alice',
-        lastName: 'Sender',
-        email: 'alice@test.com',
-        nameID: 'alice',
-        profile: { displayName: 'Alice Sender' },
-      } as any);
-      vi.mocked(urlGeneratorService.createUrlForUserNameID).mockReturnValue(
-        '/user/alice'
-      );
-      vi.mocked(urlGeneratorService.getConversationUrl).mockReturnValue(
-        'https://platform.test/?chat=conv-1'
-      );
-      vi.mocked(configService.get).mockReturnValue('https://platform.test');
-    };
 
     const recipientUser = (id: string) =>
       ({
@@ -685,89 +667,114 @@ describe('NotificationExternalAdapter', () => {
         profile: { displayName: 'Bob Recipient' },
       }) as any;
 
-    it('buildConversationMessageDirectPayload zeroes triggeredBy.email (never the sender real address)', async () => {
-      mockSender();
+    beforeEach(() => {
+      vi.mocked(urlGeneratorService.createUrlForUserNameID).mockReturnValue(
+        '/user/bob'
+      );
+      vi.mocked(configService.get).mockReturnValue('https://platform.test');
+    });
 
+    it('direct digest: exactly one recipient, an entry array, and a precomputed totalCount', async () => {
       const result = await adapter.buildConversationMessageDirectPayload(
         NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
-        'sender-1',
-        [recipientUser('recipient-1')],
-        'conv-1'
+        recipientUser('recipient-1'),
+        [
+          { displayName: 'Alice', count: 2, url: 'https://p.test/?chat=c1' },
+          { displayName: 'Carol', count: 3, url: 'https://p.test/?chat=c2' },
+        ]
+      );
+
+      // The digest is per recipient by construction — 0 or >1 recipients is a
+      // contract violation, not a fan-out.
+      expect(result.recipients).toHaveLength(1);
+      expect(result.recipients[0].email).toBe('recipient-1@test.com');
+      expect(result.senders).toHaveLength(2);
+      expect(result.totalCount).toBe(5);
+    });
+
+    it('zeroes triggeredBy.email so no participant address rides the durable queue (FR-009)', async () => {
+      const result = await adapter.buildConversationMessageDirectPayload(
+        NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
+        recipientUser('recipient-1'),
+        [{ displayName: 'Alice', count: 1, url: 'https://p.test/?chat=c1' }]
       );
 
       expect(result.triggeredBy.email).toBe('');
-      expect(result.triggeredBy.id).toBe('sender-1');
       // recipients[].email is the delivery address and remains populated.
       expect(result.recipients[0].email).toBe('recipient-1@test.com');
     });
 
-    it('buildConversationMessageDirectPayload carries no message-content field, even under a hostile-content fixture (US1-AS5)', async () => {
-      mockSender();
-
+    it('carries no message-content field, even under a hostile-content fixture (US1-AS5/FR-008)', async () => {
       const result = await adapter.buildConversationMessageDirectPayload(
         NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
-        'sender-1',
-        [recipientUser('recipient-1')],
-        'conv-1'
+        recipientUser('recipient-1'),
+        [{ displayName: 'Alice', count: 1, url: 'https://p.test/?chat=c1' }]
       );
 
       const serialized = JSON.stringify(result);
       expect(serialized).not.toContain('script');
       expect(serialized).not.toContain(HOSTILE_MESSAGE);
       expect(result).not.toHaveProperty('message');
-      expect(result.conversation).toEqual({
-        id: 'conv-1',
-        url: 'https://platform.test/?chat=conv-1',
-      });
-      expect(result.sender).toEqual({ displayName: 'Alice Sender' });
+      expect(result).not.toHaveProperty('conversation');
     });
 
-    it('buildConversationMessageGroupPayload includes conversation.displayName and zeroes triggeredBy.email', async () => {
-      mockSender();
-
+    it('group digest names conversations and carries NO sender identity (FR-018a)', async () => {
       const result = await adapter.buildConversationMessageGroupPayload(
         NotificationEvent.USER_CONVERSATION_MESSAGE_GROUP,
-        'sender-1',
-        [recipientUser('recipient-1'), recipientUser('recipient-2')],
-        'conv-1',
-        'Project Alpha'
+        recipientUser('recipient-1'),
+        [
+          {
+            displayName: 'Project Alpha',
+            count: 4,
+            url: 'https://p.test/?chat=c1',
+          },
+        ]
       );
 
-      expect(result.triggeredBy.email).toBe('');
-      expect(result.conversation).toEqual({
-        id: 'conv-1',
-        url: 'https://platform.test/?chat=conv-1',
-        displayName: 'Project Alpha',
-      });
-      expect(result.recipients).toHaveLength(2);
-      expect(result).not.toHaveProperty('message');
+      expect(result.conversations).toEqual([
+        {
+          displayName: 'Project Alpha',
+          count: 4,
+          url: 'https://p.test/?chat=c1',
+        },
+      ]);
+      expect(result.totalCount).toBe(4);
+      expect(result.recipients).toHaveLength(1);
+      expect(result).not.toHaveProperty('sender');
+      expect(result).not.toHaveProperty('senders');
     });
 
-    it('sec-server-4: sanitizes control characters out of sender.displayName before it lands in the email payload', async () => {
-      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue({
-        id: 'sender-1',
-        firstName: 'Alice',
-        lastName: 'Sender',
-        email: 'alice@test.com',
-        nameID: 'alice',
-        profile: { displayName: 'Alice\nSubject: verify your account now' },
-      } as any);
-      vi.mocked(urlGeneratorService.createUrlForUserNameID).mockReturnValue(
-        '/user/alice'
-      );
-      vi.mocked(urlGeneratorService.getConversationUrl).mockReturnValue(
-        'https://platform.test/?chat=conv-1'
-      );
-      vi.mocked(configService.get).mockReturnValue('https://platform.test');
-
+    it('sec-server-4: sanitizes control characters out of every entry display name', async () => {
       const result = await adapter.buildConversationMessageDirectPayload(
         NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
-        'sender-1',
-        [recipientUser('recipient-1')],
-        'conv-1'
+        recipientUser('recipient-1'),
+        [
+          {
+            displayName: 'Alice\nSubject: verify your account now',
+            count: 1,
+            url: 'https://p.test/?chat=c1',
+          },
+        ]
       );
 
-      expect(result.sender.displayName).not.toContain('\n');
+      expect(result.senders[0].displayName).not.toContain('\n');
+    });
+
+    it('totalCount always equals the sum of the entry counts', async () => {
+      const result = await adapter.buildConversationMessageGroupPayload(
+        NotificationEvent.USER_CONVERSATION_MESSAGE_GROUP,
+        recipientUser('recipient-1'),
+        [
+          { displayName: 'A', count: 1, url: 'u1' },
+          { displayName: 'B', count: 7, url: 'u2' },
+          { displayName: 'C', count: 2, url: 'u3' },
+        ]
+      );
+
+      expect(result.totalCount).toBe(10);
+      expect(result.totalCount).toBe(
+        result.conversations.reduce((sum, entry) => sum + entry.count, 0)
+      );
     });
   });
 
