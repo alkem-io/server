@@ -103,46 +103,56 @@ export class ConversationDigestFlushService {
       return;
     }
 
-    // 2. FR-023 — re-evaluate settings at fire time. `getRecipients` also
-    // drops a user who no longer exists or lost the required privilege, so
-    // this doubles as the recipient-still-valid check.
-    const recipient = await this.resolveRecipient(track);
-    if (!recipient) {
-      await this.digestSchedulerService.clearAttempts(trackKey);
-      return;
-    }
-
-    // 3. Resolve the pending conversations (one query) and drop the ones the
-    // recipient can no longer see (US2-AS4).
-    const conversations = await this.resolveMemberConversations(
-      conversationIds,
-      track.userId
-    );
-    if (conversations.length === 0) {
-      await this.digestSchedulerService.clearAttempts(trackKey);
-      return;
-    }
-
-    // 4/5. The fire-time unread check — ONE RPC for the whole flush.
-    const entries = await this.buildEntries(track, recipient, conversations);
-    if (entries.length === 0) {
-      // US1-AS6 — the recipient read everything while the timer ran. Send
-      // nothing at all: an "empty digest" is not a thing this feature emits.
-      await this.digestSchedulerService.clearAttempts(trackKey);
-      this.logger.verbose?.(
-        {
-          message:
-            'Digest suppressed - everything pending was already read at fire time',
-          trackKey,
-          conversationCount: conversations.length,
-        },
-        LogContext.NOTIFICATIONS
-      );
-      return;
-    }
-
-    // 6. Dispatch, with a bounded re-arm on failure.
+    // From here on the pending set and the cap anchor are ALREADY GONE, so
+    // every fallible step below is covered by the same re-arm compensation —
+    // not just the dispatch. Steps 2-4 are a DB query, two more DB queries and
+    // a DB + Matrix RPC respectively; a transient failure in any of them used
+    // to propagate to `flush`'s catch, which only logs, and the digest was lost
+    // for good. The "next message on this track re-arms it" story does not
+    // rescue that: it only holds while the burst is still going.
+    //
+    // The deliberate "send nothing" outcomes below are NOT failures and must
+    // not re-arm — they clear the attempt budget and return normally.
     try {
+      // 2. FR-023 — re-evaluate settings at fire time. `getRecipients` also
+      // drops a user who no longer exists or lost the required privilege, so
+      // this doubles as the recipient-still-valid check.
+      const recipient = await this.resolveRecipient(track);
+      if (!recipient) {
+        await this.digestSchedulerService.clearAttempts(trackKey);
+        return;
+      }
+
+      // 3. Resolve the pending conversations (one query) and drop the ones the
+      // recipient can no longer see (US2-AS4).
+      const conversations = await this.resolveMemberConversations(
+        conversationIds,
+        track.userId
+      );
+      if (conversations.length === 0) {
+        await this.digestSchedulerService.clearAttempts(trackKey);
+        return;
+      }
+
+      // 4/5. The fire-time unread check — ONE RPC for the whole flush.
+      const entries = await this.buildEntries(track, recipient, conversations);
+      if (entries.length === 0) {
+        // US1-AS6 — the recipient read everything while the timer ran. Send
+        // nothing at all: an "empty digest" is not a thing this feature emits.
+        await this.digestSchedulerService.clearAttempts(trackKey);
+        this.logger.verbose?.(
+          {
+            message:
+              'Digest suppressed - everything pending was already read at fire time',
+            trackKey,
+            conversationCount: conversations.length,
+          },
+          LogContext.NOTIFICATIONS
+        );
+        return;
+      }
+
+      // 6. Dispatch.
       await this.dispatch(track, recipient, entries);
       await this.digestSchedulerService.clearAttempts(trackKey);
     } catch (error: any) {
@@ -156,7 +166,7 @@ export class ConversationDigestFlushService {
         this.logger.error?.(
           {
             message:
-              'Digest dispatch failed and the retry budget is exhausted - dropping. The underlying messages remain unread, so the next message on this track will re-report them.',
+              'Digest flush failed after draining and the retry budget is exhausted - dropping. The underlying messages remain unread, so the next message on this track will re-report them.',
             trackKey,
             error: error?.message,
           },
@@ -167,7 +177,7 @@ export class ConversationDigestFlushService {
       }
       this.logger.warn?.(
         {
-          message: 'Digest dispatch failed - re-armed with backoff',
+          message: 'Digest flush failed after draining - re-armed with backoff',
           trackKey,
           error: error?.message,
         },

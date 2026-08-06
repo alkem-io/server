@@ -461,6 +461,65 @@ describe('ConversationDigestFlushService (R4, data-model §5.3)', () => {
       expect(mockScheduler.clearAttempts).toHaveBeenCalledWith(EMAIL_TRACK);
       expect(mockScheduler.reArm).not.toHaveBeenCalled();
     });
+
+    // `readAndClear` destroys the pending set and the cap anchor at step 1, so
+    // EVERY fallible step after it needs the same compensation — not just the
+    // dispatch. These three used to propagate to `flush`'s catch, which only
+    // logs, losing the digest permanently once the burst had ended.
+    it.each([
+      [
+        'the recipient lookup',
+        () =>
+          mockRecipients.getRecipients.mockRejectedValue(new Error('db down')),
+      ],
+      [
+        'the conversation lookup',
+        () =>
+          mockConversationService.getConversationsByIds.mockRejectedValue(
+            new Error('db down')
+          ),
+      ],
+    ])('re-arms when %s fails, not only when dispatch does', async (_label, arrange) => {
+      arrange();
+
+      await service.flush(EMAIL_TRACK);
+
+      expect(mockScheduler.reArm).toHaveBeenCalledWith(
+        { channel: 'email', kind: 'direct', userId: RECIPIENT_ID },
+        EMAIL_TRACK,
+        ['conv-1'],
+        1_000_000
+      );
+      expect(mockScheduler.clearAttempts).not.toHaveBeenCalled();
+    });
+
+    // The unread RPC is deliberately NOT in the list above: D-10 / US5-AS5
+    // make an unread-lookup failure fail OPEN — it sends rather than
+    // cancelling — so it must dispatch, not re-arm.
+    it('sends rather than re-arming when the unread RPC fails (fail-open, D-10)', async () => {
+      mockCommunicationAdapter.batchGetUnreadCounts.mockRejectedValue(
+        new Error('matrix-adapter down')
+      );
+
+      await service.flush(EMAIL_TRACK);
+
+      expect(
+        mockExternalAdapter.sendExternalNotificationsAwaited
+      ).toHaveBeenCalled();
+      expect(mockScheduler.reArm).not.toHaveBeenCalled();
+    });
+
+    it('does NOT re-arm the deliberate send-nothing outcomes', async () => {
+      // Everything pending was already read at fire time (US1-AS6).
+      mockCommunicationAdapter.batchGetUnreadCounts.mockResolvedValue({
+        'room-1': 0,
+      });
+
+      await service.flush(EMAIL_TRACK);
+
+      expect(mockScheduler.reArm).not.toHaveBeenCalled();
+      expect(mockScheduler.clearAttempts).toHaveBeenCalledWith(EMAIL_TRACK);
+    });
   });
 
   describe('robustness', () => {

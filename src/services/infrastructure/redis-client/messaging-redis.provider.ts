@@ -32,11 +32,15 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
  * path.
  *
  * `lazyConnect` is kept so a Redis that is down at boot cannot crash the
- * application. Combined with `enableOfflineQueue: false` this means the very
- * FIRST command issued after boot fails (the client is still connecting) —
- * acceptable here precisely because every caller fails open: one message may
- * not arm its digest timer, and the next message on that track re-arms it
- * (FR-022 — pending state is a hint, counts are re-derived at fire time).
+ * application. Combined with `enableOfflineQueue: false` it also means the
+ * very FIRST command issued on a lazily-connected client fails, because the
+ * client is still in `connecting` — which under R4 costs a whole notification
+ * rather than a retry, since the arrival path only arms a timer and has no
+ * immediate send to fall back on. `MessagingRedisModule.onModuleInit`
+ * therefore connects at startup, moving that first failure off the message
+ * path while keeping the boot-time crash-safety. Callers still fail open
+ * (FR-022 — pending state is a hint, counts are re-derived at fire time), but
+ * that is now the backstop rather than the first line of defence.
  */
 export const MESSAGING_REDIS_CLIENT = 'MESSAGING_REDIS_CLIENT';
 
