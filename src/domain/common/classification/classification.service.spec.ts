@@ -54,6 +54,15 @@ describe('ClassificationService', () => {
     authorizationPolicyService = module.get(AuthorizationPolicyService);
   });
 
+  // `Classification.create` / `Classification.findOne` are statics on a shared
+  // module-level class and the suite runs with `isolate: false` (see
+  // docs/testing-flakiness.md §4): `clearMocks` only clears call data, so
+  // without an explicit restore the last spy installed here would leak into
+  // whichever spec file the worker picks up next.
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   describe('createClassification', () => {
     it('should create a classification with tagsets from templates', () => {
       const templates: ITagsetTemplate[] = [
@@ -523,6 +532,176 @@ describe('ClassificationService', () => {
       await service.updateTagsetTemplateOnSelectTagset('cls-1', template);
 
       expect(existingTagset.tags).toEqual([]);
+    });
+
+    // Regression coverage for story #6021 (same root cause as #4970): a Callout
+    // transferred into a Space whose flow-state template carries an unusable
+    // `defaultSelectedValue` must still land on a state the destination knows
+    // about, otherwise it matches no phase filter and disappears from the UI.
+    describe('destination default resolution (story #6021)', () => {
+      const arrangeFlowStateTagset = (tags: string[]) => {
+        const existingTagset = {
+          id: 'ts-1',
+          name: TagsetReservedName.FLOW_STATE,
+          tags,
+        };
+        vi.spyOn(Classification, 'findOne').mockResolvedValue({
+          id: 'cls-1',
+          tagsets: [existingTagset],
+        } as any);
+        (tagsetService.getTagsetByName as Mock).mockReturnValue(existingTagset);
+        (tagsetService.save as Mock).mockResolvedValue(existingTagset as any);
+        return existingTagset;
+      };
+
+      it('should fall back to the first allowed value when the template carries no defaultSelectedValue', async () => {
+        const existingTagset = arrangeFlowStateTagset(['HOME']);
+
+        const template = {
+          name: TagsetReservedName.FLOW_STATE,
+          type: TagsetType.SELECT_ONE,
+          allowedValues: ['EXPLORE', 'DEFINE', 'BRAINSTORM'],
+          defaultSelectedValue: undefined,
+        } as unknown as ITagsetTemplate;
+
+        await service.updateTagsetTemplateOnSelectTagset('cls-1', template);
+
+        expect(existingTagset.tags).toEqual(['EXPLORE']);
+      });
+
+      it('should fall back to the first allowed value when defaultSelectedValue is itself stale', async () => {
+        const existingTagset = arrangeFlowStateTagset(['HOME']);
+
+        // The destination flow was rebuilt but the template's default was left
+        // pointing at a state that no longer exists.
+        const template = {
+          name: TagsetReservedName.FLOW_STATE,
+          type: TagsetType.SELECT_ONE,
+          allowedValues: ['EXPLORE', 'DEFINE', 'BRAINSTORM'],
+          defaultSelectedValue: 'RETIRED-STATE',
+        } as unknown as ITagsetTemplate;
+
+        await service.updateTagsetTemplateOnSelectTagset('cls-1', template);
+
+        expect(existingTagset.tags).toEqual(['EXPLORE']);
+      });
+
+      it('should treat a simple-array empty marker as no current value and fall back to the default', async () => {
+        // A `simple-array` column persisted from [] reads back as ['']
+        const existingTagset = arrangeFlowStateTagset(['']);
+
+        const template = {
+          name: TagsetReservedName.FLOW_STATE,
+          type: TagsetType.SELECT_ONE,
+          allowedValues: ['EXPLORE', 'DEFINE'],
+          defaultSelectedValue: 'DEFINE',
+        } as unknown as ITagsetTemplate;
+
+        await service.updateTagsetTemplateOnSelectTagset('cls-1', template);
+
+        expect(existingTagset.tags).toEqual(['DEFINE']);
+      });
+
+      it('should ignore empty allowed values when picking the destination default', async () => {
+        const existingTagset = arrangeFlowStateTagset(['HOME']);
+
+        const template = {
+          name: TagsetReservedName.FLOW_STATE,
+          type: TagsetType.SELECT_ONE,
+          allowedValues: ['', 'EXPLORE'],
+          defaultSelectedValue: undefined,
+        } as unknown as ITagsetTemplate;
+
+        await service.updateTagsetTemplateOnSelectTagset('cls-1', template);
+
+        expect(existingTagset.tags).toEqual(['EXPLORE']);
+      });
+
+      it('should keep a current value that differs from the allowed value only in casing', async () => {
+        // `filterCalloutsByClassificationTagsets` matches phase filters
+        // case-insensitively, so a destination state that differs only in
+        // casing is a match for the client: resetting here would needlessly
+        // move the Callout off its state. The template's spelling wins.
+        const existingTagset = arrangeFlowStateTagset(['explore']);
+
+        const template = {
+          name: TagsetReservedName.FLOW_STATE,
+          type: TagsetType.SELECT_ONE,
+          allowedValues: ['EXPLORE', 'DEFINE'],
+          defaultSelectedValue: 'DEFINE',
+        } as unknown as ITagsetTemplate;
+
+        await service.updateTagsetTemplateOnSelectTagset('cls-1', template);
+
+        expect(existingTagset.tags).toEqual(['EXPLORE']);
+      });
+
+      it('should keep the declared default when the template constrains nothing', async () => {
+        const existingTagset = arrangeFlowStateTagset(['HOME']);
+
+        // A free-form template has no allowedValues to validate against, so
+        // there is no basis on which to reject the declared default.
+        const template = {
+          name: TagsetReservedName.FLOW_STATE,
+          type: TagsetType.SELECT_ONE,
+          allowedValues: [],
+          defaultSelectedValue: 'DEFINE',
+        } as unknown as ITagsetTemplate;
+
+        await service.updateTagsetTemplateOnSelectTagset('cls-1', template);
+
+        expect(existingTagset.tags).toEqual(['DEFINE']);
+      });
+
+      it('should still prefer an explicit defaultSelectedValue that is allowed', async () => {
+        const existingTagset = arrangeFlowStateTagset(['HOME']);
+
+        const template = {
+          name: TagsetReservedName.FLOW_STATE,
+          type: TagsetType.SELECT_ONE,
+          allowedValues: ['EXPLORE', 'DEFINE', 'BRAINSTORM'],
+          defaultSelectedValue: 'BRAINSTORM',
+        } as unknown as ITagsetTemplate;
+
+        await service.updateTagsetTemplateOnSelectTagset('cls-1', template);
+
+        expect(existingTagset.tags).toEqual(['BRAINSTORM']);
+      });
+
+      it('should seed a newly created tagset with the destination default when the template default is unusable', async () => {
+        vi.spyOn(Classification, 'findOne').mockResolvedValue({
+          id: 'cls-1',
+          tagsets: [],
+        } as any);
+        (tagsetService.getTagsetByName as Mock).mockReturnValue(undefined);
+
+        const newTagset = {
+          id: 'ts-new',
+          name: TagsetReservedName.FLOW_STATE,
+          tags: [],
+        };
+        (tagsetService.createTagsetWithName as Mock).mockReturnValue(
+          newTagset as any
+        );
+        (tagsetService.save as Mock).mockResolvedValue(newTagset as any);
+
+        const template = {
+          name: TagsetReservedName.FLOW_STATE,
+          type: TagsetType.SELECT_ONE,
+          allowedValues: ['EXPLORE', 'DEFINE'],
+          defaultSelectedValue: undefined,
+        } as unknown as ITagsetTemplate;
+
+        await service.updateTagsetTemplateOnSelectTagset('cls-1', template);
+
+        expect(tagsetService.createTagsetWithName).toHaveBeenCalledWith(
+          [],
+          expect.objectContaining({
+            name: TagsetReservedName.FLOW_STATE,
+            tags: ['EXPLORE'],
+          })
+        );
+      });
     });
   });
 });
