@@ -60,11 +60,13 @@ export class CollaboraDocumentResolverQueries {
     // The actor name is resolved here (the only layer that sees guest names)
     // and forwarded so the WOPI CheckFileInfo UserFriendlyName is the real name
     // instead of "UnknownUser" (#6170 — forwardAuth no longer carries it).
-    const actorName = await this.resolveActorName(actorContext);
-    // Passed through to Collabora as its own `lang` URL parameter so the
-    // editor UI matches the actor's Alkemio profile language instead of
-    // falling back to the browser's Accept-Language detection.
-    const lang = await this.resolveActorLanguage(actorContext);
+    // Name and language are independent lookups (different services, no data
+    // dependency between them) — resolved concurrently rather than adding an
+    // avoidable extra round-trip to the document-open path.
+    const [actorName, lang] = await Promise.all([
+      this.resolveActorName(actorContext),
+      this.resolveActorLanguage(actorContext),
+    ]);
     const editorUrl = await this.collaboraDocumentService.getEditorUrl(
       collaboraDocumentID,
       actorContext.actorID,
