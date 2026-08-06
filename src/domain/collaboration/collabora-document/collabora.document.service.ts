@@ -276,8 +276,8 @@ export class CollaboraDocumentService {
   public async getEditorUrl(
     collaboraDocumentID: string,
     actorID: string,
-    actorName?: string,
-    lang?: string
+    actorName: string | undefined,
+    lang: string
   ): Promise<{ editorUrl: string; accessTokenTTL: number }> {
     const collaboraDocument = await this.getCollaboraDocumentOrFail(
       collaboraDocumentID,

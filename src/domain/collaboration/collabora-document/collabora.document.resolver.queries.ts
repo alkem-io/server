@@ -1,5 +1,6 @@
 import { CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { getActorDisplayName } from '@domain/actor/actor.display.name';
@@ -205,12 +206,18 @@ export class CollaboraDocumentResolverQueries {
       );
       return user.settings?.language ?? platformDefault;
     } catch (e: any) {
-      // Expected for non-User actors (organizations, virtual contributors);
-      // logged at verbose rather than warn to avoid noise on the common path.
-      this.logger.verbose?.(
+      // "Not found" is expected for non-User actors (organizations, virtual
+      // contributors) and logged at verbose to avoid noise on the common
+      // path. Anything else (DB/query failure) is promoted to warn so a
+      // genuine infrastructure problem doesn't silently blend into that
+      // noise — best-effort still means it never blocks opening the
+      // document, just that unexpected failures stay operationally visible.
+      const logMethod =
+        e instanceof EntityNotFoundException ? 'verbose' : 'warn';
+      this.logger[logMethod]?.(
         {
           message:
-            'No language preference resolved for Collabora editor (non-User actor or lookup failure) — falling back to platform default',
+            'No language preference resolved for Collabora editor — falling back to platform default',
           actorId: actorContext.actorID,
           error: e?.message,
         },

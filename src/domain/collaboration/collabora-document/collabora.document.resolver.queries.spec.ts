@@ -1,5 +1,8 @@
+import { LogContext } from '@common/enums';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { CollaboraDocumentResolverQueries } from './collabora.document.resolver.queries';
 import { CollaboraDocumentService } from './collabora.document.service';
@@ -13,7 +16,12 @@ describe('CollaboraDocumentResolverQueries', () => {
     vi.restoreAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [CollaboraDocumentResolverQueries],
+      // MockWinstonProvider listed explicitly (not left to useMocker's
+      // dictionary lookup): useMocker returns the {provide, useValue}
+      // wrapper as if it were the resolved value for string-token
+      // dictionary entries, so `resolver.logger.warn` etc. would otherwise
+      // be undefined rather than a spy.
+      providers: [CollaboraDocumentResolverQueries, MockWinstonProvider],
     })
       .useMocker(defaultMockerFactory)
       .compile();
@@ -99,8 +107,12 @@ describe('CollaboraDocumentResolverQueries', () => {
         profile: { displayName: 'Alice Anderson' },
         nameID: 'alice',
       } as any);
+      // getUserByIdOrFail never resolves undefined in production — it
+      // resolves a User or throws. Reject, matching its real contract.
       const userService = (resolver as any).userService;
-      vi.mocked(userService.getUserByIdOrFail).mockResolvedValue(undefined);
+      vi.mocked(userService.getUserByIdOrFail).mockRejectedValue(
+        new Error('not a User actor')
+      );
 
       const actorContext = { actorID: 'user-1', isGuest: false } as any;
       await resolver.collaboraEditorUrl(actorContext, 'collab-doc-1');
@@ -131,8 +143,12 @@ describe('CollaboraDocumentResolverQueries', () => {
       vi.mocked(actorLookupService.getActorById).mockRejectedValue(
         new Error('db down')
       );
+      // getUserByIdOrFail never resolves undefined in production — it
+      // resolves a User or throws. Reject, matching its real contract.
       const userService = (resolver as any).userService;
-      vi.mocked(userService.getUserByIdOrFail).mockResolvedValue(undefined);
+      vi.mocked(userService.getUserByIdOrFail).mockRejectedValue(
+        new Error('not a User actor')
+      );
 
       const actorContext = { actorID: 'user-1', isGuest: false } as any;
       const result = await resolver.collaboraEditorUrl(
@@ -172,8 +188,12 @@ describe('CollaboraDocumentResolverQueries', () => {
         profile: { displayName: '  ' },
         nameID: '',
       } as any);
+      // getUserByIdOrFail never resolves undefined in production — it
+      // resolves a User or throws. Reject, matching its real contract.
       const userService = (resolver as any).userService;
-      vi.mocked(userService.getUserByIdOrFail).mockResolvedValue(undefined);
+      vi.mocked(userService.getUserByIdOrFail).mockRejectedValue(
+        new Error('not a User actor')
+      );
 
       const actorContext = { actorID: 'user-1', isGuest: false } as any;
       await resolver.collaboraEditorUrl(actorContext, 'collab-doc-1');
@@ -207,12 +227,16 @@ describe('CollaboraDocumentResolverQueries', () => {
         isGuest: true,
         guestName: 'Guest Bob',
       } as any;
+      const configService = (resolver as any).configService;
       await resolver.collaboraEditorUrl(actorContext, 'collab-doc-1');
 
       expect(actorLookupService.getActorById).not.toHaveBeenCalled();
       // Guests have no UserSettings — no lookup attempted, but they still get
       // the platform default language rather than no override at all.
       expect(userService.getUserByIdOrFail).not.toHaveBeenCalled();
+      expect(configService.get).toHaveBeenCalledWith('language.default', {
+        infer: true,
+      });
       expect(collaboraDocumentService.getEditorUrl).toHaveBeenCalledWith(
         'collab-doc-1',
         'guest-abc',
@@ -305,9 +329,10 @@ describe('CollaboraDocumentResolverQueries', () => {
       const actorLookupService = (resolver as any).actorLookupService;
       vi.mocked(actorLookupService.getActorById).mockResolvedValue(undefined);
 
+      // The real getUserByIdOrFail contract for a non-existent/non-User id.
       const userService = (resolver as any).userService;
       vi.mocked(userService.getUserByIdOrFail).mockRejectedValue(
-        new Error('not a User actor')
+        new EntityNotFoundException('not found', LogContext.COLLABORATION)
       );
 
       const actorContext = { actorID: 'org-1', isGuest: false } as any;
@@ -326,6 +351,56 @@ describe('CollaboraDocumentResolverQueries', () => {
         editorUrl: 'https://collabora/editor',
         accessTokenTTL: 3600,
       });
+      // Expected outcome (non-User actor) — quiet, not an operational alert.
+      const logger = (resolver as any).logger;
+      expect(logger.verbose).toHaveBeenCalled();
+      expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    it('logs at warn (not verbose) when the language lookup fails for a reason other than "not found"', async () => {
+      vi.mocked(
+        collaboraDocumentService.getCollaboraDocumentOrFail
+      ).mockResolvedValue({
+        id: 'collab-doc-1',
+        authorization: { id: 'auth-1' },
+        profile: { displayName: 'Quarterly Report' },
+      } as any);
+      vi.mocked(collaboraDocumentService.getEditorUrl).mockResolvedValue({
+        editorUrl: 'https://collabora/editor',
+        accessTokenTTL: 3600,
+      });
+
+      const actorLookupService = (resolver as any).actorLookupService;
+      vi.mocked(actorLookupService.getActorById).mockResolvedValue(undefined);
+
+      // A genuine infrastructure failure, not "actor isn't a User" — this
+      // must stay operationally visible rather than blend into the
+      // expected-non-User-actor noise.
+      const userService = (resolver as any).userService;
+      vi.mocked(userService.getUserByIdOrFail).mockRejectedValue(
+        new Error('connection to database lost')
+      );
+
+      const actorContext = { actorID: 'user-1', isGuest: false } as any;
+      const result = await resolver.collaboraEditorUrl(
+        actorContext,
+        'collab-doc-1'
+      );
+
+      // Still best-effort: the document opens regardless.
+      expect(collaboraDocumentService.getEditorUrl).toHaveBeenCalledWith(
+        'collab-doc-1',
+        'user-1',
+        undefined,
+        'en'
+      );
+      expect(result).toEqual({
+        editorUrl: 'https://collabora/editor',
+        accessTokenTTL: 3600,
+      });
+      const logger = (resolver as any).logger;
+      expect(logger.warn).toHaveBeenCalled();
+      expect(logger.verbose).not.toHaveBeenCalled();
     });
   });
 
