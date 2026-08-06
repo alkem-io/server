@@ -6,8 +6,8 @@ import {
 
 /**
  * Provides the shared ioredis client used by the messaging-notifications
- * atomic primitives (push throttle fix, messaging push budget, dedupe
- * marker, email suppression window — 034-messaging-notifications).
+ * atomic primitives (push throttle fix, dedupe marker, and the per-recipient
+ * digest scheduler state — 034-messaging-notifications).
  *
  * Nest deduplicates module imports by class, so every consumer module that
  * imports `MessagingRedisModule` shares the single underlying client

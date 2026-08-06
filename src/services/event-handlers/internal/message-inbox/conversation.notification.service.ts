@@ -82,9 +82,9 @@ export class ConversationNotificationService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
-    this.enabled = this.configService.get<boolean>(
-      'notifications.messaging.enabled' as any
-    );
+    this.enabled = this.configService.get('notifications.messaging.enabled', {
+      infer: true,
+    });
   }
 
   async notifyConversationMessage(

@@ -58,9 +58,9 @@ export class ConversationDigestSweepService
   ) {
     // FR-016 — the kill switch disables the WHOLE feature, arrival and flush
     // alike. With it off the sweep is never even registered.
-    this.enabled = configService.get<boolean>(
-      'notifications.messaging.enabled' as any
-    );
+    this.enabled = configService.get('notifications.messaging.enabled', {
+      infer: true,
+    });
   }
 
   onModuleInit(): void {

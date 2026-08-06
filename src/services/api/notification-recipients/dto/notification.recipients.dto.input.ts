@@ -4,10 +4,12 @@ import { Field, InputType } from '@nestjs/graphql';
 import { ArrayMaxSize } from 'class-validator';
 
 // 034-messaging-notifications (FR-020): the platform has no enforced member
-// cap on group conversations today; this bound is the input-validation half
-// of the fan-out safety net (alongside the suppression window and the
-// per-user push budget). Conversations larger than this are batched
-// internally by the caller — see ConversationNotificationService.
+// cap on group conversations today, so this bound is what keeps a single
+// recipients lookup from fanning out without limit. Since R4 it is the ONLY
+// such bound on this path — the per-user push budget and the email
+// suppression window were both removed with the immediate send.
+// Conversations larger than this are batched internally by the caller — see
+// ConversationNotificationService.
 export const NOTIFICATION_RECIPIENTS_USER_IDS_MAX = 100;
 
 @InputType()
