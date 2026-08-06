@@ -17,7 +17,7 @@ describe('ConversationDigestSweepService (FR-021 / D-25)', () => {
   let service: ConversationDigestSweepService;
   let schedulerRegistry: SchedulerRegistry;
 
-  const build = async (enabled = true) => {
+  const build = async (enabled = true, withScheduler = true) => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ConversationDigestSweepService,
@@ -26,7 +26,7 @@ describe('ConversationDigestSweepService (FR-021 / D-25)', () => {
           useValue: mockScheduler,
         },
         { provide: ConversationDigestFlushService, useValue: mockFlush },
-        SchedulerRegistry,
+        ...(withScheduler ? [SchedulerRegistry] : []),
         {
           provide: ConfigService,
           useValue: {
@@ -39,7 +39,9 @@ describe('ConversationDigestSweepService (FR-021 / D-25)', () => {
       ],
     }).compile();
 
-    schedulerRegistry = module.get(SchedulerRegistry);
+    schedulerRegistry = withScheduler
+      ? module.get(SchedulerRegistry)
+      : (undefined as unknown as SchedulerRegistry);
     return module.get(ConversationDigestSweepService);
   };
 
@@ -72,6 +74,29 @@ describe('ConversationDigestSweepService (FR-021 / D-25)', () => {
       expect(
         schedulerRegistry.doesExist('interval', 'messaging-digest-sweep')
       ).toBe(false);
+    });
+
+    // Regression: MessageInboxModule is reachable from AuthResetWorkerModule
+    // (AuthResetSubscriberModule -> SpaceModule -> CommunityModule ->
+    // CommunicationModule -> MessageInboxModule) and that worker deliberately
+    // does not import ScheduleModule. A REQUIRED SchedulerRegistry made
+    // NestFactory.create(AuthResetWorkerModule) fail to resolve this provider,
+    // crash-looping the worker pod and stopping all authorization resets.
+    it('resolves and no-ops in a module graph that has no SchedulerRegistry', async () => {
+      service = await build(true, false);
+
+      expect(service).toBeDefined();
+      expect(() => service.onModuleInit()).not.toThrow();
+      expect(() => service.onModuleDestroy()).not.toThrow();
+    });
+
+    it('still sweeps on demand without a registry, so nothing silently breaks', async () => {
+      service = await build(true, false);
+      mockScheduler.claimDue.mockResolvedValue(['push:direct:user-1']);
+
+      await service.tick();
+
+      expect(mockFlush.flush).toHaveBeenCalledWith('push:direct:user-1');
     });
 
     it('tears the interval down on shutdown', async () => {

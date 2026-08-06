@@ -5,6 +5,7 @@ import {
   LoggerService,
   OnModuleDestroy,
   OnModuleInit,
+  Optional,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SchedulerRegistry } from '@nestjs/schedule';
@@ -37,9 +38,18 @@ const SWEEP_CONCURRENCY = 10;
  * "every N seconds" from config. Registered through `SchedulerRegistry` so it
  * is visible to Nest's scheduler and torn down cleanly on shutdown.
  *
- * Note `auth-reset.worker.module.ts` deliberately excludes `ScheduleModule` —
- * the sweep runs on the API process only, and that is correct: the worker
- * consumes the auth-reset queue and nothing else.
+ * `SchedulerRegistry` is injected `@Optional()`, and that is load-bearing.
+ * `MessageInboxModule` is reachable from `AuthResetWorkerModule`
+ * (AuthResetSubscriberModule -> SpaceModule -> CommunityModule ->
+ * CommunicationModule -> MessageInboxModule), and that worker deliberately
+ * does NOT import `ScheduleModule` — see `auth-reset.worker.module.ts`. A
+ * REQUIRED dependency here therefore does not "keep the sweep off the
+ * worker", it makes `NestFactory.create(AuthResetWorkerModule)` fail to
+ * resolve this provider and crash-loops the pod. Optional injection gives the
+ * intended behaviour instead: the sweep is registered wherever scheduling
+ * exists (the API process, via `ScheduleModule.forRoot()` in `AppModule`) and
+ * is quietly absent everywhere else. The absence is logged, not silent, so a
+ * `ScheduleModule` regression in `AppModule` cannot stop the sweep unnoticed.
  */
 @Injectable()
 export class ConversationDigestSweepService
@@ -51,7 +61,14 @@ export class ConversationDigestSweepService
   constructor(
     private readonly digestSchedulerService: ConversationDigestSchedulerService,
     private readonly digestFlushService: ConversationDigestFlushService,
-    private readonly schedulerRegistry: SchedulerRegistry,
+    // `@Inject` is explicit on purpose: with only `@Optional()` the emitted
+    // `design:paramtypes` entry for an optional param is still the class, but
+    // any future widening of this type (e.g. `SchedulerRegistry | null`) makes
+    // TypeScript emit `Object` and Nest silently injects `undefined` on the
+    // API process too — turning the sweep off everywhere.
+    @Optional()
+    @Inject(SchedulerRegistry)
+    private readonly schedulerRegistry: SchedulerRegistry | undefined,
     configService: ConfigService<AlkemioConfig, true>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
@@ -67,6 +84,16 @@ export class ConversationDigestSweepService
     if (!this.enabled) {
       return;
     }
+    if (!this.schedulerRegistry) {
+      // Expected on the auth-reset worker, which has no ScheduleModule.
+      // Logged rather than silent: on the API process this line appearing
+      // means scheduling was lost and no digest will ever be flushed.
+      this.logger.warn?.(
+        'Messaging digest sweep not registered - no SchedulerRegistry in this module graph. Expected on the auth-reset worker; on the API process this means ScheduleModule.forRoot() is missing and digests will never flush.',
+        LogContext.NOTIFICATIONS
+      );
+      return;
+    }
     const intervalMs =
       this.digestSchedulerService.config.sweepIntervalSeconds * 1000;
     const interval = setInterval(() => {
@@ -76,7 +103,7 @@ export class ConversationDigestSweepService
   }
 
   onModuleDestroy(): void {
-    if (!this.enabled) {
+    if (!this.enabled || !this.schedulerRegistry) {
       return;
     }
     if (this.schedulerRegistry.doesExist('interval', SWEEP_INTERVAL_NAME)) {
