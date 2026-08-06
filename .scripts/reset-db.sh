@@ -89,13 +89,34 @@ for i in $(seq 1 90); do
 done
 
 # ---------- Step 6: Register admin user ----------
-info "Step 6/6: Registering admin user"
+info "Step 6/7: Registering admin user"
 printf '%s' "$AUTH_ADMIN_PASSWORD" > /tmp/.register-password
 bash .scripts/register-user.sh "admin@alkem.io" "admin" "alkemio"
+
+# ---------- Step 7: Seed the platform-role accounts ----------
+# Bootstrap seeding gives admin@alkem.io `platform-roles-admin` and nothing
+# else. That role is assignment-only: it cannot reset authorization, cannot
+# grant itself anything (rule `self-assignment`), and cannot grant the legacy
+# `global-*` roles. So a freshly reset stack has NO account able to run
+# `authorizationPolicyResetAll` until a second one exists — see
+# .scripts/dev-seed-roles.sh for the full explanation.
+#
+# Non-fatal: the reset itself has succeeded by this point, and a seeding
+# failure must not make it look otherwise.
+info "Step 7/7: Seeding platform-role dev accounts"
+if bash .scripts/dev-seed-roles.sh; then
+  :
+else
+  echo "  WARNING: role seeding failed — the database reset itself succeeded."
+  echo "  Re-run manually: bash .scripts/dev-seed-roles.sh"
+fi
 
 cat <<'EOF'
 
 ========================================
   Database reset complete!
 ========================================
+
+Reset authorization policies as ops@alkem.io — admin@alkem.io holds
+platform-roles-admin, which by design cannot do it.
 EOF

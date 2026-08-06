@@ -112,6 +112,35 @@ SDD is **mandatory** for feature work. Read `.specify/memory/constitution.md` fi
 4. Access GraphQL Playground at `/graphiql`
 5. Stop services: `docker compose -f quickstart-services.yml down`
 
+Full wipe and re-seed: `bash .scripts/reset-db.sh` (7 steps, ~3 min).
+
+### Dev accounts and roles
+
+`.scripts/reset-db.sh` step 7 runs `.scripts/dev-seed-roles.sh`, which creates
+loggable accounts for the platform roles. All share `AUTH_ADMIN_PASSWORD` from
+`.env`:
+
+| Account | Role |
+|---|---|
+| `admin@alkem.io` | `platform-roles-admin` (bootstrap-seeded) |
+| `ops@alkem.io` | `platform-operations-admin` |
+| `users-admin@alkem.io` | `platform-users-admin` |
+| `support@alkem.io` | `platform-support` |
+| `content@alkem.io` | `platform-content-full-access` |
+
+Two things that will otherwise cost you an afternoon:
+
+- **Reset authorization as `ops@alkem.io`, not `admin@alkem.io`.** Since
+  027-platform-role-redesign, `platform-roles-admin` is assignment-only — it
+  cannot reset authorization, cannot grant itself a role, and cannot grant the
+  legacy `global-*` roles. Bootstrap seeds only that role, so a fresh database
+  has *no* account able to run `authorizationPolicyResetAll` until
+  `dev-seed-roles.sh` creates one.
+- **Authorization policies are stored rows, not computed per request.** A build
+  that changes a credential rule does nothing until `authorizationPolicyResetAll`
+  is run and drained. Verify with a count, not elapsed time:
+  `SELECT count(*) FROM authorization_policy WHERE "credentialRules"::text LIKE '%<privilege>%';`
+
 Specialized stacks:
 
 ```bash
