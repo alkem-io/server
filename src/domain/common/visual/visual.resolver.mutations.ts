@@ -155,6 +155,17 @@ export class VisualResolverMutations {
       visualID: visual.id,
       uri: this.documentService.getPubliclyAccessibleURL(visualDocument),
       alternativeText: uploadData.alternativeText,
+      // Persist the uploaded image shape as display ratio (width / height).
+      // Rounded to 1 decimal to match the DB numeric(3,1) column precision.
+      aspectRatio:
+        visualDocument.imageWidth !== undefined &&
+        visualDocument.imageHeight !== undefined
+          ? Number(
+              (visualDocument.imageWidth / visualDocument.imageHeight).toFixed(
+                1
+              )
+            )
+          : undefined,
     };
     return await this.visualService.updateVisual(updateData);
   }
