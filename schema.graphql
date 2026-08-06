@@ -1874,6 +1874,18 @@ type CalloutContributionsCountOutput {
   whiteboard: Float!
 }
 
+"""
+Admin-fixed initial map view for a Contributors-collection callout's map. Absent/null ⇒ automatic framing (fit to plotted contributors; Europe fallback).
+"""
+type CalloutContributorsMapView {
+  """Map center latitude. Finite, within [-90, 90]."""
+  latitude: Float!
+  """Map center longitude. Finite, within [-180, 180]."""
+  longitude: Float!
+  """Map zoom level. Finite, within [0, 22]."""
+  zoom: Float!
+}
+
 type CalloutContributorsSettings {
   """
   The contributor types included in this contributor-collection callout. At least one.
@@ -1885,6 +1897,10 @@ type CalloutContributorsSettings {
   defaultContributorType: ActorType!
   """The default display mode (list or map)."""
   defaultView: ContributorCollectionView!
+  """
+  Admin-fixed initial map view. Absent/null ⇒ automatic framing (fit to plotted contributors; Europe fallback).
+  """
+  mapView: CalloutContributorsMapView
 }
 
 type CalloutFraming {
@@ -2450,6 +2466,15 @@ type CreateCalloutContributionDefaultsData {
   whiteboardContent: WhiteboardContent
 }
 
+type CreateCalloutContributorsMapViewData {
+  """Map center latitude. Finite, within [-90, 90]."""
+  latitude: Float!
+  """Map center longitude. Finite, within [-180, 180]."""
+  longitude: Float!
+  """Map zoom level. Finite, within [0, 22]."""
+  zoom: Float!
+}
+
 type CreateCalloutContributorsSettingsData {
   """The contributor types to include. At least one type is required."""
   contributorTypes: [ActorType!]!
@@ -2461,6 +2486,10 @@ type CreateCalloutContributorsSettingsData {
   The default display mode. Defaults to LIST; MAP requires a locatable contributor type.
   """
   defaultView: ContributorCollectionView
+  """
+  Admin-fixed initial map view. When omitted, the callout opens on automatic framing.
+  """
+  mapView: CreateCalloutContributorsMapViewData
 }
 
 type CreateCalloutData {
@@ -7548,6 +7577,15 @@ input CreateCalloutContributionInput {
   whiteboard: CreateWhiteboardInput
 }
 
+input CreateCalloutContributorsMapViewInput {
+  """Map center latitude. Finite, within [-90, 90]."""
+  latitude: Float!
+  """Map center longitude. Finite, within [-180, 180]."""
+  longitude: Float!
+  """Map zoom level. Finite, within [0, 22]."""
+  zoom: Float!
+}
+
 input CreateCalloutContributorsSettingsInput {
   """The contributor types to include. At least one type is required."""
   contributorTypes: [ActorType!]!
@@ -7559,6 +7597,10 @@ input CreateCalloutContributorsSettingsInput {
   The default display mode. Defaults to LIST; MAP requires a locatable contributor type.
   """
   defaultView: ContributorCollectionView
+  """
+  Admin-fixed initial map view. When omitted, the callout opens on automatic framing.
+  """
+  mapView: CreateCalloutContributorsMapViewInput
 }
 
 input CreateCalloutFramingInput {
@@ -8945,6 +8987,10 @@ input UpdateCalloutContributorsSettingsInput {
   The default display mode. Defaults to LIST; MAP requires a locatable contributor type.
   """
   defaultView: ContributorCollectionView
+  """
+  Admin-fixed initial map view. Omitted ⇒ stored view unchanged; explicit null ⇒ clear to automatic framing.
+  """
+  mapView: CreateCalloutContributorsMapViewInput
 }
 
 input UpdateCalloutEntityInput {

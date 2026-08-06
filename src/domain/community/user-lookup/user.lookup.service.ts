@@ -21,9 +21,12 @@ import {
 import { User } from '../user/user.entity';
 import { IUser } from '../user/user.interface';
 
-// Utility function for checking Alkemio team email - can be used directly when email is available
+// Utility function for checking Alkemio team email - can be used directly when email is available.
+// Anchored at the end so look-alike suffix domains (e.g. `x@alkem.io.example.com`,
+// `x@alkem.iodine.net`) are NOT treated as team addresses; the domain part is
+// case-insensitive per RFC 5321.
 export const isAlkemioEmail = (email: string): boolean =>
-  /.*@alkem\.io/.test(email);
+  /@alkem\.io$/i.test(email);
 
 export class UserLookupService {
   constructor(
