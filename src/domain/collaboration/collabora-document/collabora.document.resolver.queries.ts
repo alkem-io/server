@@ -1,15 +1,19 @@
 import { CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { getActorDisplayName } from '@domain/actor/actor.display.name';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { UserService } from '@domain/community/user/user.service';
 import { Inject } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { AlkemioConfig } from '@src/types/alkemio.config';
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { ICollaboraDocument } from './collabora.document.interface';
 import { CollaboraDocumentService } from './collabora.document.service';
@@ -25,7 +29,9 @@ export class CollaboraDocumentResolverQueries {
     private collaboraDocumentService: CollaboraDocumentService,
     private contributionReporter: ContributionReporterService,
     private communityResolverService: CommunityResolverService,
-    private actorLookupService: ActorLookupService
+    private actorLookupService: ActorLookupService,
+    private userService: UserService,
+    private configService: ConfigService<AlkemioConfig, true>
   ) {}
 
   @Query(() => CollaboraEditorUrlResult, {
@@ -55,11 +61,18 @@ export class CollaboraDocumentResolverQueries {
     // The actor name is resolved here (the only layer that sees guest names)
     // and forwarded so the WOPI CheckFileInfo UserFriendlyName is the real name
     // instead of "UnknownUser" (#6170 — forwardAuth no longer carries it).
-    const actorName = await this.resolveActorName(actorContext);
+    // Name and language are independent lookups (different services, no data
+    // dependency between them) — resolved concurrently rather than adding an
+    // avoidable extra round-trip to the document-open path.
+    const [actorName, lang] = await Promise.all([
+      this.resolveActorName(actorContext),
+      this.resolveActorLanguage(actorContext),
+    ]);
     const editorUrl = await this.collaboraDocumentService.getEditorUrl(
       collaboraDocumentID,
       actorContext.actorID,
-      actorName
+      actorName,
+      lang
     );
 
     // Lifecycle analytics (US4 / FR-014): one COLLABORA_DOCUMENT_OPENED record
@@ -156,6 +169,61 @@ export class CollaboraDocumentResolverQueries {
         LogContext.COLLABORATION
       );
       return undefined;
+    }
+  }
+
+  /**
+   * Resolves the language to hand Collabora for its editor UI. Always
+   * returns a concrete value — never undefined — so Collabora is always
+   * told explicitly rather than left to its own browser Accept-Language
+   * detection, which resolves inconsistently across its own UI bundles
+   * (some fall back to the browser locale, some don't) and produces a
+   * visibly mixed-language editor.
+   *
+   * Only Users carry an explicit preference (`UserSettings.language`).
+   * Guests, non-User actors (organizations, virtual contributors), and
+   * Users who have never chosen a language (`null` — distinct from a
+   * failed/non-User lookup, but both land here) all fall back to the same
+   * platform default (`language.default`, `alkemio.yml`) that the rest of
+   * the Alkemio UI already resolves to for them.
+   *
+   * Best-effort by design, mirroring {@link resolveActorName}: a failed
+   * lookup must never block opening the document.
+   */
+  private async resolveActorLanguage(
+    actorContext: ActorContext
+  ): Promise<string> {
+    const platformDefault = this.configService.get('language.default', {
+      infer: true,
+    });
+    if (actorContext.isGuest) {
+      return platformDefault;
+    }
+    try {
+      const user = await this.userService.getUserByIdOrFail(
+        actorContext.actorID,
+        { relations: { settings: true } }
+      );
+      return user.settings?.language ?? platformDefault;
+    } catch (e: any) {
+      // "Not found" is expected for non-User actors (organizations, virtual
+      // contributors) and logged at verbose to avoid noise on the common
+      // path. Anything else (DB/query failure) is promoted to warn so a
+      // genuine infrastructure problem doesn't silently blend into that
+      // noise — best-effort still means it never blocks opening the
+      // document, just that unexpected failures stay operationally visible.
+      const logMethod =
+        e instanceof EntityNotFoundException ? 'verbose' : 'warn';
+      this.logger[logMethod]?.(
+        {
+          message:
+            'No language preference resolved for Collabora editor — falling back to platform default',
+          actorId: actorContext.actorID,
+          error: e?.message,
+        },
+        LogContext.COLLABORATION
+      );
+      return platformDefault;
     }
   }
 }

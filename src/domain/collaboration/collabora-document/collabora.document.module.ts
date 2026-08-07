@@ -2,6 +2,7 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
+import { UserModule } from '@domain/community/user/user.module';
 import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
@@ -25,6 +26,7 @@ import { CollaboraDocumentAuthorizationService } from './collabora.document.serv
     AuthorizationPolicyModule,
     DocumentModule,
     ProfileModule,
+    UserModule,
     StorageAggregatorModule,
     StorageBucketModule,
     WopiServiceAdapterModule,
