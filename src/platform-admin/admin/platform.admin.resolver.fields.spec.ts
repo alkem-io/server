@@ -37,6 +37,11 @@ describe('PlatformAdminResolverFields', () => {
     platformAuthorizationService.getPlatformAuthorizationPolicy.mockResolvedValue(
       platformPolicy
     );
+    // Baseline for every case below: the actor holds NONE of the per-family
+    // privileges (F6), so each field falls through to its unchanged
+    // `PLATFORM_ADMIN` check. `createMock` otherwise returns a truthy proxy
+    // from `isAccessGranted`, which would silently admit every caller.
+    authorizationService.isAccessGranted.mockReturnValue(false);
   });
 
   it('should be defined', () => {
@@ -199,6 +204,71 @@ describe('PlatformAdminResolverFields', () => {
         'platformAdmin Identity'
       );
       expect(result).toEqual({});
+    });
+  });
+
+  // 027-platform-role-redesign, live finding F6. Before this, every field here
+  // demanded the legacy `PLATFORM_ADMIN` catch-all, which none of the thirteen
+  // new roles holds — so a Platform Users Admin the client had already admitted
+  // to `/admin/users` was denied the list that page is made of.
+  describe('per-family admission (F6)', () => {
+    const admits = (held: AuthorizationPrivilege) =>
+      authorizationService.isAccessGranted.mockImplementation(
+        (
+          _actor: unknown,
+          _policy: unknown,
+          privilege: AuthorizationPrivilege
+        ) => privilege === held
+      );
+
+    it('PLATFORM_USERS_ADMIN alone reaches the user list, without PLATFORM_ADMIN', async () => {
+      admits(AuthorizationPrivilege.PLATFORM_USERS_ADMIN);
+      platformAdminService.getAllUsers.mockResolvedValue({ items: [] });
+
+      await resolver.users(actorContext, { first: 10 } as any);
+
+      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+      expect(platformAdminService.getAllUsers).toHaveBeenCalled();
+    });
+
+    it('PLATFORM_CONTENT_FULL_ACCESS alone reaches the space list', async () => {
+      admits(AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS);
+      platformAdminService.getAllSpaces.mockResolvedValue([]);
+
+      await resolver.spaces(actorContext, {} as any);
+
+      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+      expect(platformAdminService.getAllSpaces).toHaveBeenCalled();
+    });
+
+    it('does NOT cross families — PLATFORM_USERS_ADMIN gets no space list', async () => {
+      admits(AuthorizationPrivilege.PLATFORM_USERS_ADMIN);
+      platformAdminService.getAllSpaces.mockResolvedValue([]);
+
+      await resolver.spaces(actorContext, {} as any);
+
+      // Falls through to the unchanged catch-all check, which the real
+      // AuthorizationService would reject for this actor.
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        platformPolicy,
+        AuthorizationPrivilege.PLATFORM_ADMIN,
+        'platformAdmin Spaces'
+      );
+    });
+
+    it('and PLATFORM_CONTENT_FULL_ACCESS gets no user list', async () => {
+      admits(AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS);
+      platformAdminService.getAllUsers.mockResolvedValue({ items: [] });
+
+      await resolver.users(actorContext, { first: 10 } as any);
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        platformPolicy,
+        AuthorizationPrivilege.PLATFORM_ADMIN,
+        'platformAdmin Users'
+      );
     });
   });
 });

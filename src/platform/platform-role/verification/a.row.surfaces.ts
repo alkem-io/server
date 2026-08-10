@@ -144,6 +144,25 @@ export const INDIRECT_ENFORCEMENT_FILES: readonly string[] = [
   // never trips rule 1/2 on its own — this entry exists so rule 4 (the
   // credential-typed-argument completeness scan) recognizes the file.
   'src/platform-admin/domain/authorization/admin.authorization.resolver.queries.ts',
+  // Live finding F6 (2026-08-10): the admin console's INVENTORY READS —
+  // `platformAdmin.{users,accounts,spaces,organizations,innovationPacks,
+  // innovationHubs,virtualContributors,identity}` and `identity.identities`.
+  // They are the second clause of this list's contract ("the hit belongs to a
+  // code path this census does not cover"), NOT an indirection: the census's
+  // 21 A-rows enumerate the ACTIONS a role takes, and none of them is "read
+  // the list the section is made of". Each field admits, alongside the
+  // retiring `PLATFORM_ADMIN` catch-all it has always checked, the ONE
+  // per-family privilege whose A-row owns what the list contains —
+  // `PLATFORM_USERS_ADMIN` (A4/A5) for the user and Kratos-identity lists,
+  // `PLATFORM_CONTENT_FULL_ACCESS` (A8) for the resource lists. No new
+  // privilege vocabulary, no new grant: both are already declared, already
+  // anchored on the platform policy, and already censused at their own
+  // action surfaces. Censusing these reads as A-row surfaces instead would
+  // multiply eight read-only affordances into the FR-024 denial matrix and
+  // restate each family's intent in a second place, where it could drift
+  // from the action it mirrors.
+  'src/platform-admin/admin/platform.admin.resolver.fields.ts',
+  'src/platform-admin/core/identity/admin.identity.resolver.fields.ts',
 ];
 
 const GA = AuthorizationCredential.GLOBAL_ADMIN;
