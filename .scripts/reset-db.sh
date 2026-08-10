@@ -32,15 +32,15 @@ AUTH_ADMIN_PASSWORD=$(grep '^AUTH_ADMIN_PASSWORD=' .env | head -1 | cut -d= -f2-
 [ -n "$AUTH_ADMIN_PASSWORD" ] || fail "AUTH_ADMIN_PASSWORD not found in .env"
 
 # ---------- Step 1: Stop compose services and remove volumes ----------
-info "Step 1/6: Stopping compose services and removing volumes"
+info "Step 1/7: Stopping compose services and removing volumes"
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down -v
 
 # ---------- Step 2: Start compose services ----------
-info "Step 2/6: Starting compose services"
+info "Step 2/7: Starting compose services"
 pnpm run start:services
 
 # ---------- Step 3: Wait for PostgreSQL + database init ----------
-info "Step 3/6: Waiting for PostgreSQL and database initialization"
+info "Step 3/7: Waiting for PostgreSQL and database initialization"
 for i in $(seq 1 60); do
   if docker exec alkemio_dev_postgres psql -U synapse -d alkemio -c "SELECT 1" >/dev/null 2>&1; then
     echo "  PostgreSQL ready, alkemio database exists."
@@ -51,11 +51,11 @@ for i in $(seq 1 60); do
 done
 
 # ---------- Step 4: Run migrations ----------
-info "Step 4/6: Running database migrations"
+info "Step 4/7: Running database migrations"
 pnpm run migration:run
 
 # ---------- Step 5: Start dev server in background ----------
-info "Step 5/6: Starting dev server"
+info "Step 5/7: Starting dev server"
 : > "$SERVER_LOG"
 setsid pnpm start:dev >> "$SERVER_LOG" 2>&1 &
 DEV_SERVER_PID=$!
@@ -94,12 +94,15 @@ printf '%s' "$AUTH_ADMIN_PASSWORD" > /tmp/.register-password
 bash .scripts/register-user.sh "admin@alkem.io" "admin" "alkemio"
 
 # ---------- Step 7: Seed the platform-role accounts ----------
-# Bootstrap seeding gives admin@alkem.io `platform-roles-admin` and nothing
-# else. That role is assignment-only: it cannot reset authorization, cannot
-# grant itself anything (rule `self-assignment`), and cannot grant the legacy
-# `global-*` roles. So a freshly reset stack has NO account able to run
-# `authorizationPolicyResetAll` until a second one exists — see
-# .scripts/dev-seed-roles.sh for the full explanation.
+# Gives each of the 027 platform roles a LOGGABLE account. Bootstrap seeding
+# creates an Alkemio `user` row but no Kratos identity, so a role seeded
+# through users.json alone cannot be exercised by anyone.
+#
+# admin@alkem.io keeps legacy `global-admin` for the whole of Slice A, so it
+# can still do everything it could before — these accounts are for testing the
+# roles in ISOLATION, which is the only way separation of duties is
+# observable. At Slice B, when `global-admin` is deleted, they stop being a
+# convenience and become the only way in.
 #
 # Non-fatal: the reset itself has succeeded by this point, and a seeding
 # failure must not make it look otherwise.
@@ -117,6 +120,7 @@ cat <<'EOF'
   Database reset complete!
 ========================================
 
-Reset authorization policies as ops@alkem.io — admin@alkem.io holds
-platform-roles-admin, which by design cannot do it.
+admin@alkem.io holds global-admin (Slice A) + platform-roles-admin.
+Per-role accounts: ops@ users-admin@ support@ content@ — use these to see
+what a single role can and cannot do.
 EOF

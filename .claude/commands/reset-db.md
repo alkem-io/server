@@ -46,18 +46,21 @@ All share `AUTH_ADMIN_PASSWORD` from `.env` (override with `DEV_SEED_PASSWORD`):
 
 | Account | Role | Notes |
 |---|---|---|
-| `admin@alkem.io` | `platform-roles-admin` | bootstrap-seeded; **assignment only** |
-| `ops@alkem.io` | `platform-operations-admin` | **authorization reset lives here** |
+| `admin@alkem.io` | `global-admin` + `platform-roles-admin` | bootstrap-seeded; full legacy powers for all of Slice A |
+| `ops@alkem.io` | `platform-operations-admin` | authorization reset |
 | `users-admin@alkem.io` | `platform-users-admin` | |
 | `support@alkem.io` | `platform-support` | |
 | `content@alkem.io` | `platform-content-full-access` | |
 
-**Reset authorization policies as `ops@alkem.io`, not `admin@alkem.io`.**
-Since 027-platform-role-redesign, `platform-roles-admin` is assignment-only: it
-cannot reset authorization, cannot grant itself a role (rule
-`self-assignment`), and cannot grant the legacy `global-*` roles at all. On a
-freshly reset stack, step 7 is what makes `authorizationPolicyResetAll`
-reachable — without it there is no account that can run it.
+`admin@alkem.io` can still do everything it could before 027 — Slice A is
+additive, and `test-suites` runs as this account at 878 sites. The per-role
+accounts each hold **exactly one** role, which is what makes separation of
+duties observable: use them to check what a role can *and cannot* do.
+
+Each of the 13 roles is genuinely narrow. `platform-roles-admin`, for example,
+is assignment-only — on its own it cannot reset authorization, cannot grant
+itself a role (rule `self-assignment`), and cannot grant the legacy `global-*`
+roles at all. That is the feature working, not a misconfiguration.
 
 Step 7 grants through `assignPlatformRoleToUser`, never SQL, so a regression in
 the assignment rule engine surfaces as a seeding failure instead of being
@@ -76,4 +79,4 @@ Report each step's outcome to the user. If the script fails, show the failing st
 - **Volume not found** — Safe to ignore; volumes were already removed.
 - **Admin registration fails** — Check `/tmp/alkemio-dev-server.log`.
 - **Role seeding fails (step 7)** — The reset itself succeeded. Re-run `bash .scripts/dev-seed-roles.sh`. A `grant REJECTED (rule: …)` line is a **real finding** in the assignment rule engine, not a script bug — report it rather than working around it.
-- **`unable to grant 'authorization-reset'`** — You are calling the mutation as `admin@alkem.io`. Use `ops@alkem.io`.
+- **`unable to grant '<privilege>'` as `admin@alkem.io`** — Check the account actually holds `global-admin`: `SELECT type FROM credential c JOIN "user" u ON u.id = c."actorId" WHERE u.email = 'admin@alkem.io';`. If it is missing, the seed regressed and `test-suites` cannot run at all — 83% of its spec files act as this user.

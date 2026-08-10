@@ -13,15 +13,22 @@ set -euo pipefail
 # (`users.json`) writes only the second, so a seeded account such as
 # `notifications@alkem.io` can hold a role and still be unable to authenticate.
 #
-# On a FRESH database that leaves the stack with exactly one loggable account —
-# `admin@alkem.io`, holding `platform-roles-admin` and nothing else. That role
-# is assignment-only by design: it cannot reset authorization, cannot grant
-# itself anything (rule `self-assignment`), and cannot grant the legacy
+# On a FRESH database that leaves exactly one loggable account,
+# `admin@alkem.io`. For all of Slice A it also carries legacy `global-admin`,
+# so it can do everything it could before the feature — which is what keeps
+# `test-suites` runnable (it acts as this user at 878 sites across 121 of 145
+# spec files).
+#
+# What it CANNOT give you is a view of any single role in isolation, and that
+# is the whole point of the decomposition. Each of the 13 roles is deliberately
+# narrow — `platform-roles-admin` alone cannot reset authorization, cannot
+# grant itself a role (rule `self-assignment`), and cannot grant the legacy
 # `global-*` roles at all (the resolver pins that check to a hardcoded
-# `[GLOBAL_ADMIN]` policy). So a fresh dev stack cannot run
-# `authorizationPolicyResetAll` until a SECOND account exists to receive
-# `platform-operations-admin`. This script creates that account, plus the
-# others worth having on hand.
+# `[GLOBAL_ADMIN]` policy). You only ever see that by logging in as an account
+# holding one role and nothing else.
+#
+# At Slice B, when `global-admin` is deleted, these accounts stop being a
+# convenience and become the only way to administer the platform.
 #
 # It uses ONLY product APIs — Kratos self-service registration and
 # `assignPlatformRoleToUser`. Nothing is written directly to the database, so a
