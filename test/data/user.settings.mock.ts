@@ -202,6 +202,9 @@ export const userSettingsData: { userSettings: IUserSettings } = {
       spaceID: null,
       autoRedirect: false,
     },
+    dashboard: {
+      activityView: true,
+    },
     assistant: {
       enabledCapabilities: [],
     },

@@ -1,4 +1,8 @@
-import { AuthorizationPrivilege, ProfileType } from '@common/enums';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  ProfileType,
+} from '@common/enums';
 import { AccountType } from '@common/enums/account.type';
 import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
@@ -23,6 +27,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.entity';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { InnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.entity';
@@ -41,7 +46,7 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Repository } from 'typeorm';
+import { Brackets, Repository } from 'typeorm';
 import { type Mock, vi } from 'vitest';
 import { Account } from '../account/account.entity';
 import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '../account/constants';
@@ -54,6 +59,7 @@ describe('SpaceService', () => {
   let service: SpaceService;
   let spaceRepository: Repository<Space>;
   let urlGeneratorCacheService: UrlGeneratorCacheService;
+  let authorizationService: AuthorizationService;
   let logger: { error: Mock };
 
   beforeEach(async () => {
@@ -75,6 +81,11 @@ describe('SpaceService', () => {
     urlGeneratorCacheService = module.get<UrlGeneratorCacheService>(
       UrlGeneratorCacheService
     );
+    authorizationService =
+      module.get<AuthorizationService>(AuthorizationService);
+    // Default to "access granted" so tests unrelated to authorization don't
+    // have to configure it explicitly; individual tests override this.
+    (authorizationService.isAccessGranted as any).mockReturnValue(true);
     // MockWinstonProvider hands out one shared vi.fn() per level; call history
     // is reset between tests by `clearMocks: true` in vitest.config.ts.
     logger = module.get(WINSTON_MODULE_NEST_PROVIDER) as any;
@@ -1947,53 +1958,166 @@ describe('SpaceService', () => {
   });
 
   describe('getExploreSpaces', () => {
-    it('should return empty array when no active spaces found', async () => {
+    // Captures the { where, orWhere } recorder from inside the privacy
+    // Brackets so assertions can inspect exactly what predicates were
+    // registered, instead of only asserting on the outer query-builder calls
+    // (which pass whether or not the Brackets grouping/logic is correct).
+    const createMockQb = (rows: Array<{ id: string }>) => {
+      const bracketsRecorder = { where: vi.fn(), orWhere: vi.fn() };
       const mockQb = {
         select: vi.fn().mockReturnThis(),
         innerJoin: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
-        andWhere: vi.fn().mockReturnThis(),
+        andWhere: vi.fn((condition: unknown) => {
+          if (condition instanceof Brackets) {
+            condition.whereFactory(bracketsRecorder as any);
+          }
+          return mockQb;
+        }),
         groupBy: vi.fn().mockReturnThis(),
         orderBy: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
-        getRawMany: vi.fn().mockResolvedValue([]),
+        getRawMany: vi.fn().mockResolvedValue(rows),
       };
+      return { mockQb, bracketsRecorder };
+    };
+
+    it('should return empty array when no active spaces found', async () => {
+      const { mockQb } = createMockQb([]);
       vi.spyOn(spaceRepository, 'createQueryBuilder').mockReturnValue(
         mockQb as any
       );
 
-      const result = await service.getExploreSpaces();
+      const result = await service.getExploreSpaces({ credentials: [] } as any);
 
       expect(result).toEqual([]);
     });
 
     it('should return spaces ordered by activity count', async () => {
-      const mockQb = {
-        select: vi.fn().mockReturnThis(),
-        innerJoin: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        andWhere: vi.fn().mockReturnThis(),
-        groupBy: vi.fn().mockReturnThis(),
-        orderBy: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        getRawMany: vi
-          .fn()
-          .mockResolvedValue([{ id: 'space-2' }, { id: 'space-1' }]),
-      };
+      const { mockQb } = createMockQb([{ id: 'space-2' }, { id: 'space-1' }]);
       vi.spyOn(spaceRepository, 'createQueryBuilder').mockReturnValue(
         mockQb as any
       );
       vi.spyOn(spaceRepository, 'find').mockResolvedValue([
-        { id: 'space-1' },
-        { id: 'space-2' },
+        { id: 'space-1', authorization: {} },
+        { id: 'space-2', authorization: {} },
       ] as any);
 
-      const result = await service.getExploreSpaces();
+      const result = await service.getExploreSpaces({ credentials: [] } as any);
 
       expect(result).toHaveLength(2);
       // Should preserve activity-based ordering
       expect(result[0].id).toBe('space-2');
       expect(result[1].id).toBe('space-1');
+    });
+
+    it('registers only the public-privacy predicate for a caller with no Space credentials', async () => {
+      const { mockQb, bracketsRecorder } = createMockQb([]);
+      vi.spyOn(spaceRepository, 'createQueryBuilder').mockReturnValue(
+        mockQb as any
+      );
+
+      await service.getExploreSpaces({ credentials: [] } as any);
+
+      expect(bracketsRecorder.where).toHaveBeenCalledWith(
+        `s.settings->'privacy'->>'mode' = :publicPrivacyMode`,
+        { publicPrivacyMode: SpacePrivacyMode.PUBLIC }
+      );
+      expect(bracketsRecorder.orWhere).not.toHaveBeenCalled();
+    });
+
+    it('additionally registers the member-space predicate when the actor holds a Space credential', async () => {
+      const { mockQb, bracketsRecorder } = createMockQb([]);
+      vi.spyOn(spaceRepository, 'createQueryBuilder').mockReturnValue(
+        mockQb as any
+      );
+
+      await service.getExploreSpaces({
+        credentials: [
+          {
+            type: AuthorizationCredential.SPACE_MEMBER,
+            resourceID: 'space-42',
+          },
+        ],
+      } as any);
+
+      expect(bracketsRecorder.orWhere).toHaveBeenCalledWith(
+        's.id IN (:...memberSpaceIds)',
+        { memberSpaceIds: ['space-42'] }
+      );
+    });
+
+    it('scopes the ranking query to L0/L1 active Spaces with visible, non-excluded activity', async () => {
+      const { mockQb } = createMockQb([]);
+      vi.spyOn(spaceRepository, 'createQueryBuilder').mockReturnValue(
+        mockQb as any
+      );
+
+      await service.getExploreSpaces({ credentials: [] } as any);
+
+      expect(mockQb.where).toHaveBeenCalledWith('s.level IN (:...levels)', {
+        levels: [SpaceLevel.L0, SpaceLevel.L1],
+      });
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        's.visibility = :visibility',
+        { visibility: SpaceVisibility.ACTIVE }
+      );
+      expect(mockQb.andWhere).toHaveBeenCalledWith('a.visibility = true');
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        'a.type NOT IN (:...excludeTypes)',
+        expect.objectContaining({ excludeTypes: expect.any(Array) })
+      );
+    });
+
+    it('excludes a candidate Space the actor cannot READ, even though it passed the SQL privacy pre-filter', async () => {
+      // Regression for a PUBLIC L1 subspace of a PRIVATE L0 parent (and any
+      // other case the coarse own-Space-only SQL predicate over-admits): the
+      // SQL Brackets are a cheap pre-filter only, the authorization policy is
+      // the actual READ decision, so a candidate that fails it must never be
+      // returned.
+      const { mockQb } = createMockQb([
+        { id: 'public-subspace-of-private-l0' },
+      ]);
+      vi.spyOn(spaceRepository, 'createQueryBuilder').mockReturnValue(
+        mockQb as any
+      );
+      const deniedAuthorization = { id: 'auth-1' };
+      vi.spyOn(spaceRepository, 'find').mockResolvedValue([
+        {
+          id: 'public-subspace-of-private-l0',
+          authorization: deniedAuthorization,
+        },
+      ] as any);
+      (authorizationService.isAccessGranted as any).mockReturnValue(false);
+
+      const result = await service.getExploreSpaces({ credentials: [] } as any);
+
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        { credentials: [] },
+        deniedAuthorization,
+        AuthorizationPrivilege.READ
+      );
+      expect(result).toEqual([]);
+    });
+
+    it('excludes (rather than throws for) a candidate whose access check errors', async () => {
+      const { mockQb } = createMockQb([{ id: 'space-1' }]);
+      vi.spyOn(spaceRepository, 'createQueryBuilder').mockReturnValue(
+        mockQb as any
+      );
+      vi.spyOn(spaceRepository, 'find').mockResolvedValue([
+        { id: 'space-1', authorization: undefined },
+      ] as any);
+      (authorizationService.isAccessGranted as any).mockImplementation(() => {
+        throw new EntityNotInitializedException(
+          'Authorization: no definition provided',
+          'AUTH_POLICY' as any
+        );
+      });
+
+      const result = await service.getExploreSpaces({ credentials: [] } as any);
+
+      expect(result).toEqual([]);
     });
   });
 

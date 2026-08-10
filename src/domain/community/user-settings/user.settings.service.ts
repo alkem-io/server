@@ -37,6 +37,7 @@ export class UserSettingsService {
       privacy: settingsData.privacy,
       notification: settingsData.notification,
       homeSpace: settingsData.homeSpace,
+      dashboard: settingsData.dashboard ?? { activityView: true },
       assistant: {
         enabledCapabilities: settingsData.assistant?.enabledCapabilities ?? [],
       },
@@ -322,6 +323,18 @@ export class UserSettingsService {
           );
         }
         settings.homeSpace.autoRedirect = updateData.homeSpace.autoRedirect;
+      }
+    }
+
+    if (updateData.dashboard) {
+      // Legacy rows are backfilled by migration, but guard defensively so a
+      // partial settings object can't throw on the nested assignment.
+      settings.dashboard = settings.dashboard ?? { activityView: true };
+      // `!= null` (not `!== undefined`): the input field is a nullable Boolean, so a
+      // client can send `null`; treat that as "no change" rather than persisting null
+      // into the NOT NULL `activityView`.
+      if (updateData.dashboard.activityView != null) {
+        settings.dashboard.activityView = updateData.dashboard.activityView;
       }
     }
 

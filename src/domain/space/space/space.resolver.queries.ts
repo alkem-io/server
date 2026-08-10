@@ -1,11 +1,15 @@
 import { RestrictedSpaceNames } from '@common/enums/restricted.space.names';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { PaginatedSpaces, PaginationArgs } from '@core/pagination';
 import { InnovationHub } from '@domain/innovation-hub/types';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { InnovationHub as InnovationHubDecorator } from '@src/common/decorators';
+import {
+  CurrentActor,
+  InnovationHub as InnovationHubDecorator,
+} from '@src/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ExploreSpacesInput } from './dto/explore.spaces.dto.input';
 import { SpacesQueryArgs } from './dto/space.args.query.spaces';
@@ -52,9 +56,14 @@ export class SpaceResolverQueries {
     description: 'Active Spaces only, order by most active in the past X days.',
   })
   public exploreSpaces(
+    @CurrentActor() actorContext: ActorContext,
     @Args('options', { nullable: true }) options?: ExploreSpacesInput
   ): Promise<ISpace[]> {
-    return this.spaceService.getExploreSpaces(options?.limit, options?.daysOld);
+    return this.spaceService.getExploreSpaces(
+      actorContext,
+      options?.limit,
+      options?.daysOld
+    );
   }
 
   @Query(() => [String], {

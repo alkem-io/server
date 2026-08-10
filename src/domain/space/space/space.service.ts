@@ -1,6 +1,7 @@
 import { JoinRuleInvite } from '@alkemio/matrix-adapter-lib';
 import { UUID_LENGTH } from '@common/constants';
-import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { ActivityEventType } from '@common/enums/activity.event.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
@@ -28,6 +29,7 @@ import { OperationNotAllowedException } from '@common/exceptions/operation.not.a
 import { getDiff, hasOnlyAllowedFields } from '@common/utils';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PaginationArgs } from '@core/pagination';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
@@ -72,13 +74,20 @@ import { Activity } from '@platform/activity';
 import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
 import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { groupCredentialsByEntity } from '@services/api/roles/util/group.credentials.by.entity';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 import { keyBy } from 'lodash';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
+import {
+  Brackets,
+  FindManyOptions,
+  FindOneOptions,
+  In,
+  Repository,
+} from 'typeorm';
 import { IAccount } from '../account/account.interface';
 import { ISpaceAbout } from '../space.about/space.about.interface';
 import { SpaceAboutService } from '../space.about/space.about.service';
@@ -99,6 +108,16 @@ import { orderSubspaces } from './subspace.ordering';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
+// Activity event types excluded from the most-active ranking and the per-Space
+// activity score, matching the dashboard feed's EXCLUDED_ACTIVITY_TYPES.
+const EXPLORE_SPACES_EXCLUDED_ACTIVITY_TYPES = [
+  ActivityEventType.CALLOUT_WHITEBOARD_CONTENT_MODIFIED,
+];
+// The ranking query's privacy Brackets are a coarse pre-filter; the authoritative
+// READ check afterwards can still drop candidates (e.g. a PUBLIC L1 subspace of a
+// PRIVATE L0 the actor can't read). Over-fetch candidates so those drops don't
+// leave the caller with fewer than `limit` readable Spaces, then slice to `limit`.
+const EXPLORE_SPACES_OVERFETCH_FACTOR = 3;
 // How many URL cache entries invalidateUrlCacheForSpaceSubtree revokes at once.
 // A deep subtree produces spaces x (profiles + space-keyed entries) ids; this
 // keeps the sweep parallel without fanning the whole set onto the cache backend
@@ -117,6 +136,7 @@ export class SpaceService {
   constructor(
     private actorService: ActorService,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private authorizationService: AuthorizationService,
     private spacesFilterService: SpaceFilterService,
     private spaceAboutService: SpaceAboutService,
     private communityService: CommunityService,
@@ -808,11 +828,20 @@ export class SpaceService {
   }
 
   public async getExploreSpaces(
+    actorContext: ActorContext,
     limit = EXPLORE_SPACES_LIMIT,
     daysOld = EXPLORE_SPACES_ACTIVITY_DAYS_OLD
   ): Promise<ISpace[]> {
     const daysAgo = new Date();
     daysAgo.setDate(daysAgo.getDate() - daysOld);
+
+    // Actor scoping: public Spaces are visible to everyone; private Spaces only
+    // to the actor when they hold a Space credential for it. The member set is
+    // keyed by Space ID (== credential resourceID).
+    const credentialMap = groupCredentialsByEntity(actorContext.credentials);
+    const memberSpaceIds = Array.from(
+      credentialMap.get('spaces')?.keys() ?? []
+    );
 
     // First, get the space IDs ordered by activity count using a subquery approach
     // This avoids PostgreSQL GROUP BY issues with joined columns
@@ -820,15 +849,36 @@ export class SpaceService {
       .createQueryBuilder('s')
       .select('s.id', 'id')
       .innerJoin(Activity, 'a', 's.collaborationId = a.collaborationID')
-      .where({
-        level: SpaceLevel.L0,
+      // L0 and L1 Spaces, scored by their own collaboration (no roll-up)
+      .where('s.level IN (:...levels)', {
+        levels: [SpaceLevel.L0, SpaceLevel.L1],
+      })
+      .andWhere('s.visibility = :visibility', {
         visibility: SpaceVisibility.ACTIVE,
       })
       // activities in the past "daysOld" days
       .andWhere('a.createdDate >= :daysAgo', { daysAgo })
+      // Only visible events, excluding whiteboard-content-modified — keeps the
+      // ranking count aligned with Space.activityScore and the dashboard feed.
+      .andWhere('a.visibility = true')
+      .andWhere('a.type NOT IN (:...excludeTypes)', {
+        excludeTypes: EXPLORE_SPACES_EXCLUDED_ACTIVITY_TYPES,
+      })
+      // Privacy filter: public Space OR one the actor is a member of. Privacy
+      // lives in the JSONB `settings` column, so it is filtered via a JSONB path.
+      .andWhere(
+        new Brackets(qb => {
+          qb.where(`s.settings->'privacy'->>'mode' = :publicPrivacyMode`, {
+            publicPrivacyMode: SpacePrivacyMode.PUBLIC,
+          });
+          if (memberSpaceIds.length > 0) {
+            qb.orWhere('s.id IN (:...memberSpaceIds)', { memberSpaceIds });
+          }
+        })
+      )
       .groupBy('s.id')
       .orderBy('COUNT(a.id)', 'DESC')
-      .limit(limit)
+      .limit(limit * EXPLORE_SPACES_OVERFETCH_FACTOR)
       .getRawMany<{ id: string }>();
 
     if (spaceIdsWithActivity.length === 0) {
@@ -842,11 +892,37 @@ export class SpaceService {
       where: { id: In(spaceIds) },
     });
 
-    // Preserve the activity-based ordering from the first query
-    const spaceMap = new Map(spaces.map(space => [space.id, space]));
+    // Authoritative READ check. The privacy Brackets above are a coarse,
+    // own-Space-only pre-filter kept purely to bound the ranking query - they
+    // cannot cheaply encode the full ancestor-aware/parent-membership
+    // authorization model (e.g. a PUBLIC L1 subspace of a PRIVATE L0 parent is
+    // NOT world-readable, but a member of that private parent CAN read it).
+    // `space.authorization` is eager-loaded and is the same policy every other
+    // Space-reading path enforces, so re-check READ against it here before
+    // returning any row — this is what actually determines FR-006 compliance.
+    const authorizedSpaces = spaces.filter(space => {
+      try {
+        return this.authorizationService.isAccessGranted(
+          actorContext,
+          space.authorization,
+          AuthorizationPrivilege.READ
+        );
+      } catch (error) {
+        this.logger.warn?.(
+          `getExploreSpaces: unable to evaluate READ access for space '${space.id}'; excluding from results: ${error}`,
+          LogContext.SPACES
+        );
+        return false;
+      }
+    });
+
+    // Preserve the activity-based ordering from the first query, then apply the
+    // caller's limit — the query over-fetched candidates to survive READ drops.
+    const spaceMap = new Map(authorizedSpaces.map(space => [space.id, space]));
     return spaceIds
       .map(id => spaceMap.get(id))
-      .filter((space): space is Space => space !== undefined);
+      .filter((space): space is Space => space !== undefined)
+      .slice(0, limit);
   }
 
   async getSpace(
