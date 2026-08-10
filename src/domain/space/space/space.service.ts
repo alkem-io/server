@@ -17,6 +17,7 @@ import { SpaceVisibility } from '@common/enums/space.visibility';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { TemplateType } from '@common/enums/template.type';
+import { UrlPathElementSpace } from '@common/enums/url.path.element.space';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -117,6 +118,11 @@ const EXPLORE_SPACES_EXCLUDED_ACTIVITY_TYPES = [
 // PRIVATE L0 the actor can't read). Over-fetch candidates so those drops don't
 // leave the caller with fewer than `limit` readable Spaces, then slice to `limit`.
 const EXPLORE_SPACES_OVERFETCH_FACTOR = 3;
+// How many URL cache entries invalidateUrlCacheForSpaceSubtree revokes at once.
+// A deep subtree produces spaces x (profiles + space-keyed entries) ids; this
+// keeps the sweep parallel without fanning the whole set onto the cache backend
+// in one go.
+const SPACE_URL_CACHE_REVOKE_BATCH_SIZE = 50;
 
 type SpaceSortingData = {
   id: string;
@@ -975,6 +981,8 @@ export class SpaceService {
     space: ISpace,
     updateData: UpdateSpacePlatformSettingsInput
   ): Promise<ISpace> {
+    let renamedFrom: string | undefined;
+
     if (updateData.visibility && updateData.visibility !== space.visibility) {
       // Only update visibility on L0 spaces
       if (space.level !== SpaceLevel.L0) {
@@ -1012,18 +1020,22 @@ export class SpaceService {
         );
       }
 
-      const oldNameID = space.nameID;
+      renamedFrom = space.nameID;
       space.nameID = updateData.nameID;
-
-      await this.invalidateUrlCacheForSpaceSubtree(space.id);
-
-      this.logger.verbose?.(
-        `Invalidated URL cache subtree for space ${space.id} (nameID: ${oldNameID} -> ${updateData.nameID})`,
-        LogContext.SPACES
-      );
     }
 
     await this.save(space);
+
+    // Only after the new nameID is committed: revoking earlier leaves a window
+    // in which a concurrent read repopulates the cache from the pre-rename row.
+    if (renamedFrom !== undefined) {
+      await this.invalidateUrlCacheForSpaceSubtree(space.id);
+
+      this.logger.verbose?.(
+        `Invalidated URL cache subtree for space ${space.id} (nameID: ${renamedFrom} -> ${space.nameID})`,
+        LogContext.SPACES
+      );
+    }
 
     // Update the platform roles access for the space
     const parentPlatformRolesAccess =
@@ -1035,11 +1047,55 @@ export class SpaceService {
   }
 
   /**
+   * Every UrlGenerator cache entry that is keyed by a space id rather than by a
+   * profile id: `getSpaceUrlPathByID()` caches the bare space id plus one entry
+   * per `UrlPathElementSpace` sub-path it was asked for.
+   */
+  private getSpaceKeyedUrlCacheIds(spaceId: string): string[] {
+    return [
+      spaceId,
+      ...Object.values(UrlPathElementSpace).map(
+        spacePath => `${spaceId}-${spacePath}`
+      ),
+    ];
+  }
+
+  /**
+   * Every UrlGenerator cache entry a single space owns directly — the profiles
+   * whose URL is derived from the space path, plus the space-id-keyed entries.
+   * The space's N-per-space content — callouts, framing and contribution content,
+   * and calendar events — is swept separately by
+   * `revokeUrlCachesForContentInSpaces`, in one SQL pass for the whole subtree.
+   */
+  private getUrlCacheIdsForSpace(space: Space): string[] {
+    const profileIds = [
+      space.profile?.id, // ProfileType.SPACE — the Space actor profile
+      space.about?.profile?.id, // ProfileType.SPACE_ABOUT
+      space.about?.guidelines?.profile?.id, // ProfileType.COMMUNITY_GUIDELINES
+      space.collaboration?.innovationFlow?.profile?.id, // ProfileType.INNOVATION_FLOW
+    ].filter((profileId): profileId is string => !!profileId);
+
+    const spaceKeyedIds = space.id
+      ? this.getSpaceKeyedUrlCacheIds(space.id)
+      : [];
+
+    return [...new Set([...profileIds, ...spaceKeyedIds])];
+  }
+
+  /**
    * Invalidates URL cache entries for a space and all of its descendant spaces.
    * Used after operations that change a space's URL path (transfer, L1↔L0/L2 conversion).
-   * Sweeps space-about profiles AND every callout/contribution profile reachable
-   * from those spaces — activity-log entries surface callout-derived URLs, so the
-   * inner sweep is what keeps them from pointing at the old path.
+   * Sweeps, for every space in the subtree: the space actor profile, the
+   * space-about profile, the community-guidelines profile, the innovation-flow
+   * profile, and the space-id-keyed entries written by `getSpaceUrlPathByID()`
+   * (which notifications and the URL resolver read) — AND every callout /
+   * contribution / calendar profile reachable from those spaces. Activity-log
+   * entries surface callout-derived URLs, so the inner sweep is what keeps them
+   * from pointing at the old path.
+   *
+   * Note: innovation flow *states* carry no Profile (displayName/description are
+   * plain columns on `innovation_flow_state`), so they hold no URL cache entry
+   * and need no sweep.
    */
   public async invalidateUrlCacheForSpaceSubtree(
     spaceId: string
@@ -1048,34 +1104,61 @@ export class SpaceService {
       await this.spaceLookupService.getAllDescendantSpaceIDs(spaceId);
     const allSpaceIds = [spaceId, ...descendantIds];
 
+    // Every relation below is 1:1 all the way down, so this stays a single row
+    // per space. Eager relations are suppressed: only profile ids are read here
+    // — note that means `about.guidelines.profile` has to be requested
+    // explicitly even though it is declared `eager: true`.
     const spaces = await this.spaceRepository.find({
       where: { id: In(allSpaceIds) },
-      relations: { about: { profile: true } },
+      relations: {
+        profile: true,
+        about: { profile: true, guidelines: { profile: true } },
+        collaboration: { innovationFlow: { profile: true } },
+      },
+      loadEagerRelations: false,
     });
 
-    for (const space of spaces) {
-      const profileId = space.about?.profile?.id;
-      if (!profileId) {
-        continue;
-      }
+    // Revoked in bounded batches rather than one round trip at a time: a deep
+    // subtree yields spaces x (profiles + space-keyed entries) ids, so a single
+    // Promise.all over all of them would fan out unbounded onto the cache
+    // backend. Each revoke is independently isolated below, so one unreachable
+    // key can abort neither its batch nor the sweep.
+    const revocations = spaces.flatMap(space =>
+      this.getUrlCacheIdsForSpace(space).map(cacheId => async () => {
+        try {
+          await this.urlGeneratorCacheService.revokeUrlCache(cacheId);
+        } catch (error) {
+          const stack = error instanceof Error ? (error.stack ?? '') : '';
+          this.logger.error(
+            {
+              message: 'Failed to invalidate URL cache for space subtree',
+              // The space that owns the entry — for a descendant this is not
+              // the subtree root, so both are logged to keep an incident
+              // traceable to the space whose URL is now stale.
+              spaceId: space.id,
+              subtreeRootSpaceId: spaceId,
+              cacheId,
+            },
+            stack,
+            LogContext.SPACES
+          );
+        }
+      })
+    );
 
-      try {
-        await this.urlGeneratorCacheService.revokeUrlCache(profileId);
-      } catch (error) {
-        const stack = error instanceof Error ? (error.stack ?? '') : '';
-        this.logger.error(
-          {
-            message: 'Failed to invalidate URL cache for space subtree',
-            spaceId,
-            profileId,
-          },
-          stack,
-          LogContext.SPACES
-        );
-      }
+    for (
+      let i = 0;
+      i < revocations.length;
+      i += SPACE_URL_CACHE_REVOKE_BATCH_SIZE
+    ) {
+      await Promise.all(
+        revocations
+          .slice(i, i + SPACE_URL_CACHE_REVOKE_BATCH_SIZE)
+          .map(revoke => revoke())
+      );
     }
 
-    await this.urlGeneratorCacheService.revokeUrlCachesForCalloutsInSpaces(
+    await this.urlGeneratorCacheService.revokeUrlCachesForContentInSpaces(
       allSpaceIds
     );
   }
