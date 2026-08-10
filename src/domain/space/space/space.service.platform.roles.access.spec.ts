@@ -84,8 +84,10 @@ describe('SpacePlatformRolesAccessService', () => {
         // policy now also grants PLATFORM_SPACES_READER (replacement for the
         // void GLOBAL_SPACES_READER, research C1) and PLATFORM_SUPPORT
         // (gated on the same allowPlatformSupportAsAdmin flag as legacy
-        // GLOBAL_SUPPORT) alongside every legacy role — 9, not 7.
-        expect(result.roles.length).toBe(9);
+        // GLOBAL_SUPPORT) alongside every legacy role — 9, not 7. Live finding
+        // F5 adds PLATFORM_RESOURCE_ADMIN (A9's mover needs READ on what it
+        // may move) — 10.
+        expect(result.roles.length).toBe(10);
 
         const roleNames = result.roles.map(r => r.roleName);
         expect(roleNames).toContain(RoleName.ANONYMOUS);
@@ -97,6 +99,25 @@ describe('SpacePlatformRolesAccessService', () => {
         expect(roleNames).toContain(RoleName.GLOBAL_SPACES_READER);
         expect(roleNames).toContain(RoleName.PLATFORM_SPACES_READER);
         expect(roleNames).toContain(RoleName.PLATFORM_SUPPORT);
+        expect(roleNames).toContain(RoleName.PLATFORM_RESOURCE_ADMIN);
+      });
+
+      // Live finding F5: the resource mover could move a Space it was not
+      // allowed to look at. READ only — never the CRUD set the in-space
+      // support flag grants, because this role does not edit space content.
+      it('grants PLATFORM_RESOURCE_ADMIN plain READ, and nothing more', () => {
+        const space = createSpace();
+        const result = service.createPlatformRolesAccess(
+          space,
+          defaultSettings
+        );
+
+        const resourceAdmin = result.roles.find(
+          r => r.roleName === RoleName.PLATFORM_RESOURCE_ADMIN
+        );
+        expect(resourceAdmin?.grantedPrivileges).toEqual([
+          AuthorizationPrivilege.READ,
+        ]);
       });
 
       it('should grant READ to anonymous users on public L0 space', () => {

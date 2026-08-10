@@ -359,12 +359,18 @@ export class AccountAuthorizationService {
     // same READ cascade gap found on the space tree; wiring only the space
     // side would leave the new role able to read a space but not its
     // account-level contents.
+    // 027-platform-role-redesign (A9, live finding F5): platform-resource-admin
+    // joins for the SAME reason — it already holds TRANSFER_RESOURCE_OFFER/
+    // _ACCEPT on this policy (below), but no READ, so the Transfer panel could
+    // not resolve the account or its host for a space it is entitled to move.
+    // Read-only; the transfer privileges remain its only write path here.
     const globalSpacesReader =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.READ],
         [
           AuthorizationCredential.GLOBAL_SPACES_READER,
           AuthorizationCredential.PLATFORM_SPACES_READER,
+          AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
         ],
         CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ
       );

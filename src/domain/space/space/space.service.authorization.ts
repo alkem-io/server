@@ -837,9 +837,15 @@ export class SpaceAuthorizationService {
     // role-action-matrix A16 cell. Each role gets its OWN rule derived from
     // its OWN declared privileges rather than sharing one credential list,
     // so the two can never silently inherit each other's grants.
+    //
+    // A9 (live finding F5) adds `platform-resource-admin` to the same loop:
+    // the resource mover needs to READ what it may move. Same per-role
+    // derivation, so it can only ever receive the privileges
+    // `space.service.platform.roles.access.ts` declares for it ([READ]).
     for (const spacesReaderRole of [
       RoleName.GLOBAL_SPACES_READER,
       RoleName.PLATFORM_SPACES_READER,
+      RoleName.PLATFORM_RESOURCE_ADMIN,
     ]) {
       const privilegesForSpacesRead =
         this.platformRolesAccessService.getPrivilegesForRole(
