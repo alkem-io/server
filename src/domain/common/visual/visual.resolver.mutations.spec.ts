@@ -265,6 +265,72 @@ describe('VisualResolverMutations', () => {
         AuthorizationPrivilege.UPDATE,
         expect.any(String)
       );
+
+      expect(visualService.updateVisual).toHaveBeenCalledWith(
+        expect.objectContaining({
+          visualID: 'vis-1',
+          uri: 'https://example.com/test.png',
+          aspectRatio: undefined,
+        })
+      );
+    });
+
+    it('sets aspectRatio from uploaded image dimensions', async () => {
+      const {
+        resolver,
+        visualService,
+        documentService,
+        documentAuthorizationService,
+        authorizationPolicyService,
+      } = createResolver();
+
+      const storageBucketAuth = {
+        id: 'sb-auth-1',
+        credentialRules: ['rule-1'],
+      };
+      const visual = {
+        id: 'vis-1',
+        authorization: { id: 'auth-1' },
+        profile: {
+          storageBucket: { id: 'sb-1', authorization: storageBucketAuth },
+        },
+        mediaGallery: undefined,
+      } as any;
+      visualService.getVisualOrFail.mockResolvedValueOnce(visual);
+
+      const readStream = { pipe: vi.fn() };
+      const fileUpload = {
+        createReadStream: vi.fn().mockReturnValue(readStream),
+        filename: 'test.png',
+        mimetype: 'image/png',
+      };
+
+      const doc = { id: 'doc-1', imageWidth: 1536, imageHeight: 256 } as any;
+      visualService.uploadImageOnVisual.mockResolvedValueOnce(doc);
+      documentAuthorizationService.applyAuthorizationPolicy.mockResolvedValueOnce(
+        []
+      );
+      authorizationPolicyService.saveAll.mockResolvedValueOnce(
+        undefined as any
+      );
+      documentService.getPubliclyAccessibleURL.mockReturnValueOnce(
+        'https://example.com/test.png'
+      );
+      visualService.updateVisual.mockResolvedValueOnce(visual);
+
+      await resolver.uploadImageOnVisual(
+        actorContext,
+        { visualID: 'vis-1' },
+        fileUpload as any
+      );
+
+      expect(visualService.updateVisual).toHaveBeenCalledWith(
+        expect.objectContaining({
+          visualID: 'vis-1',
+          uri: 'https://example.com/test.png',
+          aspectRatio: 6,
+        })
+      );
     });
 
     it('throws when fallback authorization is also not available', async () => {
