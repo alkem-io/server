@@ -128,6 +128,9 @@ describe('UserSettingsService', () => {
         spaceID: null,
         autoRedirect: false,
       },
+      dashboard: {
+        activityView: true,
+      },
       designVersion: DESIGN_VERSION_CURRENT_DEFAULT,
       ...overrides,
     } as IUserSettings;
@@ -378,6 +381,58 @@ describe('UserSettingsService', () => {
       expect(() => service.updateSettings(settings, updateData)).toThrow(
         ValidationException
       );
+    });
+  });
+
+  describe('updateSettings - dashboard', () => {
+    it('should update activityView when provided', () => {
+      const settings = buildSettings();
+      const updateData = {
+        dashboard: { activityView: false },
+      } as UpdateUserSettingsEntityInput;
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.dashboard.activityView).toBe(false);
+    });
+
+    it('should leave activityView untouched when dashboard update data is omitted', () => {
+      const settings = buildSettings({
+        dashboard: { activityView: false },
+      });
+      const updateData = {} as UpdateUserSettingsEntityInput;
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.dashboard.activityView).toBe(false);
+    });
+
+    it('should not change other setting groups when only dashboard is updated', () => {
+      const settings = buildSettings({
+        homeSpace: { spaceID: 'space-1', autoRedirect: true },
+      });
+      const updateData = {
+        dashboard: { activityView: false },
+      } as UpdateUserSettingsEntityInput;
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.dashboard.activityView).toBe(false);
+      expect(result.homeSpace.spaceID).toBe('space-1');
+      expect(result.homeSpace.autoRedirect).toBe(true);
+    });
+
+    it('should default a missing dashboard group to activityView=true before merging', () => {
+      const settings = buildSettings();
+      // Simulate a legacy row loaded before the backfill migration.
+      (settings as { dashboard?: unknown }).dashboard = undefined;
+      const updateData = {
+        dashboard: { activityView: false },
+      } as UpdateUserSettingsEntityInput;
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.dashboard.activityView).toBe(false);
     });
   });
 
