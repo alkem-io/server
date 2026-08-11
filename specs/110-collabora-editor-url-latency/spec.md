@@ -129,7 +129,7 @@ Every path that reports a Collabora analytics event resolves the owning level-ze
 - **FR-001**: `collaboraEditorUrl` MUST return its result as soon as the editor URL is available. No analytics work may be awaited before the response is sent.
 - **FR-002**: The replace-document mutation and `importCollaboraDocument` MUST likewise not await analytics before returning.
 - **FR-003**: Each detached analytics unit MUST contain its own error handling, so a failure is logged and cannot surface as an unhandled rejection or an error to the caller.
-- **FR-004**: A single method MUST resolve a level-zero space id directly from a CollaboraDocument id, traversing only indexed foreign-key hops: `callout_framing.collaboraDocumentId` / `callout_contribution.collaboraDocumentId` → `callout` → `callouts_set` → `collaboration` → `space.levelZeroSpaceID`. It MAY issue more than one statement (e.g. a framing lookup falling back to a contribution lookup) provided every hop is an indexed single-row lookup and no statement joins across the callout graph.
+- **FR-004**: A single method MUST resolve a level-zero space id directly from a CollaboraDocument id, traversing only indexed foreign-key hops: `callout_framing.collaboraDocumentId` / `callout_contribution.collaboraDocumentId` → `callout` → `callouts_set` → `collaboration` → `space.levelZeroSpaceID`. It MAY issue more than one statement (e.g. a framing lookup falling back to a contribution lookup) provided every hop is an indexed single-row lookup and no statement joins across the callout graph. The two attachment paths are mutually exclusive (see Key Entities), so probe order is a cost choice only: the first match is authoritative, and no precedence rule or reconciliation between the paths is required.
 - **FR-005**: All four sites listed in Context MUST use that lookup in place of the `getCommunityForCollaboraDocumentOrFail` + `getLevelZeroSpaceIdForCommunity` pair.
 - **FR-006**: `getCommunityForCollaboraDocumentOrFail` MUST be removed once it has no callers. `getLevelZeroSpaceIdForCommunity` MUST remain — it has unrelated callers in room events, whiteboard integration, and community service.
 - **FR-007**: The lookup MUST preserve today's not-found behaviour (`EntityNotFoundException`) so no call site's error handling changes.
@@ -140,6 +140,8 @@ Every path that reports a Collabora analytics event resolves the owning level-ze
 ### Key Entities
 
 No entity changes. The lookup path uses existing columns only: `callout_framing.collaboraDocumentId` and `callout_contribution.collaboraDocumentId` (both `@OneToOne` + `@JoinColumn`, therefore unique-indexed), `callout.calloutsSetId`, `collaboration.calloutsSetId`, `space.collaborationId`, `space.levelZeroSpaceID`.
+
+**Attachment invariant**: a CollaboraDocument is attached through exactly one of those two paths — it is either a callout's framing document or a callout contribution, never both. The lookup may therefore treat the first match as authoritative.
 
 ## Success Criteria *(mandatory)*
 
@@ -153,11 +155,14 @@ No entity changes. The lookup path uses existing columns only: `callout_framing.
 
 No numeric latency target is defined. The pre-regression APM baseline is the target, and it is a real measurement rather than an invented one.
 
+**When each criterion is checked.** SC-002, SC-004 and SC-005 are pre-merge gates — verifiable in the repository and its test suite. SC-001 and SC-003 can only be observed against production data: a development or acceptance database holds too few callouts for the old query to be slow, so re-measuring there would show both the old and new lookups finishing in milliseconds and would prove nothing. They are confirmed after deploy, from the same APM chart and filters used in Context. No production-sized rehearsal is required before merging — the span waterfall in Context is the measurement.
+
 ## Assumptions
 
 - `ContributionReporterService` and `CommunityResolverService` are singleton-scoped (verified — neither declares `Scope.REQUEST`), so analytics executing after the response returns holds no request-scoped dependency.
 - The `collaboraDocument` foreign keys on `callout_framing` and `callout_contribution` are unique-indexed by virtue of being `@OneToOne` + `@JoinColumn`, making the leaf-first traversal index-driven at every hop.
 - Losing an occasional analytics record to a pod restart is acceptable; the event is already best-effort and already discarded on any error.
+- Detached analytics work is deliberately **not** concurrency-limited. Awaiting it used to cap it at one unit per in-flight request; detaching removes that cap. This is accepted because each unit is a few indexed lookups plus one Elasticsearch write (~70 ms in the measured trace) and the number in flight can never exceed the rate at which documents are being opened. Building a limiter would be machinery for a load profile no evidence supports. Revisit if Elasticsearch write latency or rejections start correlating with bursts of document opens, or if the detached work grows beyond its current shape.
 - The 26 June 12:00–12:30 rollout carried v0.155.x. This was not confirmed against `infrastructure-operations` history (no access at time of writing) and is not load-bearing: the span waterfall attributes the latency directly, independent of which release introduced it.
 
 ## Out of Scope
@@ -167,6 +172,14 @@ No numeric latency target is defined. The pre-regression APM baseline is the tar
 - **wopi-service internals** — the two sequential authorization evaluations, the 12-hour discovery cache cliff, the file-service `/meta` hop. All bounded by that 27 ms span; revisit only if post-fix traces justify it.
 - **`importCollaboraDocument` having no client caller.** Confirmed during investigation: `client-web` contains no operation invoking it. Unrelated to this defect, worth its own issue.
 - **Any numeric latency SLA.** Deliberately excluded per SC-001.
+
+## Clarifications
+
+### Session 2026-08-11
+
+- Q: When a CollaboraDocument is reachable from both a callout framing and a callout contribution, which one determines the level-zero space? → A: Cannot occur — a document is attached either as callout framing or as a contribution, never both.
+- Q: Detaching analytics removes the natural cap of one unit per in-flight request. Should concurrent detached work be limited? → A: No limit; record the reasoning and the signal that would trigger revisiting.
+- Q: SC-001 is only observable in production. What is required before merging? → A: Merge on the trace evidence plus tests proving the resolver no longer waits; confirm in APM after deploy. No production-sized rehearsal.
 
 ## Implementation Constraints
 
