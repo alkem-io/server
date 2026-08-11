@@ -30,7 +30,7 @@
 
 **Constraints**: No GraphQL schema change (so no schema-contract cycle). No database schema change. Analytics records must be produced with the same reporter method and the same arguments as today. No spec, feature, or issue identifiers in code comments.
 
-**Scale/Scope**: Four call sites, one new service method, one deleted service method, one resolver signature simplification. Roughly 150–250 LOC changed across ~8 source files plus their specs. Well inside the constitution's agentic-path envelope.
+**Scale/Scope**: Four call sites, one new service method, one deleted service method, one resolver signature simplification. Roughly 150–250 LOC changed across 6 source files and 5 spec files. Well inside the constitution's agentic-path envelope.
 
 ## Constitution Check
 

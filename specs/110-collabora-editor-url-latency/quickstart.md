@@ -12,7 +12,9 @@ pnpm vitest run src/domain/collaboration/collabora-document/collabora.document.r
 pnpm vitest run src/domain/collaboration/callout/callout.resolver.mutations.spec.ts
 ```
 
-The test that matters stubs the analytics dependency with a promise that never settles and asserts the resolver resolves anyway. Sanity-check it the way any never-failing test should be checked: restore the `await`, confirm the test times out, then remove it again. A test for this that still passes with the `await` in place is not testing anything.
+Two tests per site. The first stubs the analytics dependency with a promise that never settles and asserts the resolver resolves anyway. Sanity-check it the way any never-failing test should be checked: restore the `await`, confirm the test times out, then remove it again. A test for this that still passes with the `await` in place is not testing anything.
+
+The second stubs analytics to **reject** and asserts the response is unaffected and nothing escapes. This is the one that defends FR-003: an unhandled rejection terminates the Node process by default, so "the `try`/`catch` is inside the method" needs to be a tested fact rather than a reviewed intention.
 
 ### SC-004 — the expensive lookup is gone
 
@@ -40,6 +42,8 @@ pnpm vitest run
 ```
 
 Both clean before review. Note the pre-commit hook already runs tsc, Biome and the full suite, so a successful commit means these have passed.
+
+FR-010 is confirmed at the same moment: the diff must contain no file under `src/migrations/`, no entity change, and no `schema.graphql` change. If any appears, something has been misunderstood — this feature reads existing columns and adds no surface.
 
 ## After deploy
 
@@ -70,7 +74,9 @@ Take any post-deploy `CollaboraEditorUrl` trace:
 1. APM → Services → `alkemio-server` → Transactions → `CollaboraEditorUrl`
 2. Open a trace sample and read the waterfall.
 
-Expect the `SELECT` spans that replaced `getCommunityForCollaboraDocumentOrFail` to sum to roughly the cost of the neighbouring `SELECT FROM "space"` span — around 10 ms — rather than seconds. Expect them to sit *after* the response-shaping work rather than inside it.
+Expect the `SELECT` spans attributable to the level-zero space lookup to total tens of milliseconds rather than seconds, and to sit *after* the response-shaping work rather than inside it.
+
+Compare against the two recorded figures below, not against a live neighbouring span: this work stops calling `getLevelZeroSpaceIdForCommunity` at these sites, so the 9.8 ms `SELECT FROM "space"` span is gone from post-fix traces and cannot be used as an in-trace comparator.
 
 For reference, the pre-fix waterfall (trace `c4a6bf41dcec6ceba4aa3bb5c94889d4`, 2026-07-25, `alkemio-server` 0.159.0, 8,000 ms):
 
