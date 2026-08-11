@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-10
 
-**Status**: Draft
+**Status**: Clarified (2 clarification iterations, 5 questions)
 
 **Input**: alkem-io/wopi-service#29 — "Loading of collabra docs takes a long time". Reported against wopi-service; root-caused to this repo.
 
@@ -118,7 +118,7 @@ Every path that reports a Collabora analytics event resolves the owning level-ze
 ### Edge Cases
 
 - **Document with no owning space** — templates and knowledge-base documents have no `Space` ancestor. The lookup must raise `EntityNotFoundException` as before; every call site already catches and logs it, and the user must be unaffected.
-- **Detached work rejects** — a failure inside the fire-and-forget analytics must not become an unhandled promise rejection. Error handling lives inside the detached unit, not at the call site.
+- **Detached work rejects** — a failure inside the detached analytics must not become an unhandled promise rejection. Error handling lives inside the detached unit, not at the call site.
 - **Process ends before the write lands** — a pod terminating between response and analytics write loses that record. Acceptable: the event is already documented as best-effort and is already dropped on any error.
 - **Concurrent opens of the same document** — no shared state is introduced; the detached work is per-request.
 
@@ -127,7 +127,7 @@ Every path that reports a Collabora analytics event resolves the owning level-ze
 ### Functional Requirements
 
 - **FR-001**: `collaboraEditorUrl` MUST return its result as soon as the editor URL is available. No analytics work may be awaited before the response is sent.
-- **FR-002**: The replace-document mutation and `importCollaboraDocument` MUST likewise not await analytics before returning.
+- **FR-002**: The replace-document mutation and `importCollaboraDocument` MUST likewise not await analytics before returning. The RabbitMQ contribution-event consumer (site 4) MUST keep awaiting its analytics: no caller is waiting on it, and the message is acknowledged only once the handler completes — detaching would acknowledge before the work finished, losing the event on failure with no redelivery. Site 4 receives the cheaper lookup and nothing else.
 - **FR-003**: Each detached analytics unit MUST contain its own error handling, so a failure is logged and cannot surface as an unhandled rejection or an error to the caller.
 - **FR-004**: A single method MUST resolve a level-zero space id directly from a CollaboraDocument id, traversing only indexed foreign-key hops: `callout_framing.collaboraDocumentId` / `callout_contribution.collaboraDocumentId` → `callout` → `callouts_set` → `collaboration` → `space.levelZeroSpaceID`. It MAY issue more than one statement (e.g. a framing lookup falling back to a contribution lookup) provided every hop is an indexed single-row lookup and no statement joins across the callout graph. The two attachment paths are mutually exclusive (see Key Entities), so probe order is a cost choice only: the first match is authoritative, and no precedence rule or reconciliation between the paths is required.
 - **FR-005**: All four sites listed in Context MUST use that lookup in place of the `getCommunityForCollaboraDocumentOrFail` + `getLevelZeroSpaceIdForCommunity` pair.
@@ -151,7 +151,7 @@ No entity changes. The lookup path uses existing columns only: `callout_framing.
 - **SC-002**: A test proves the resolver resolves while analytics is still pending, rather than a comment asserting it. Equivalent tests exist for both mutations.
 - **SC-003**: In a post-fix trace, the spans replacing `getCommunityForCollaboraDocumentOrFail` sum to the same order of magnitude as the neighbouring `SELECT FROM "space"` span (~10 ms), not seconds.
 - **SC-004**: `getCommunityForCollaboraDocumentOrFail` no longer exists in the codebase, and no call site issues the two-call pair.
-- **SC-005**: For a given document open, the analytics record written is byte-identical in type and fields to the one written before this change.
+- **SC-005**: At every changed site, the contribution reporter is invoked with the same method (therefore the same event type) and the same arguments as before this change — the `{ id, name, space }` contribution details plus the acting actor context. Values generated per record, such as timestamps and the Elasticsearch document id, are excluded from the comparison. Verified by unit tests on the reporter call.
 
 No numeric latency target is defined. The pre-regression APM baseline is the target, and it is a real measurement rather than an invented one.
 
@@ -180,6 +180,8 @@ No numeric latency target is defined. The pre-regression APM baseline is the tar
 - Q: When a CollaboraDocument is reachable from both a callout framing and a callout contribution, which one determines the level-zero space? → A: Cannot occur — a document is attached either as callout framing or as a contribution, never both.
 - Q: Detaching analytics removes the natural cap of one unit per in-flight request. Should concurrent detached work be limited? → A: No limit; record the reasoning and the signal that would trigger revisiting.
 - Q: SC-001 is only observable in production. What is required before merging? → A: Merge on the trace evidence plus tests proving the resolver no longer waits; confirm in APM after deploy. No production-sized rehearsal.
+- Q: Should the RabbitMQ contribution-event consumer also stop awaiting its analytics? → A: No — it keeps awaiting. Nobody waits on it, and detaching would acknowledge the message before the work completed, losing the event on failure. It gets the cheaper lookup only.
+- Q: SC-005 said the analytics record must be "byte-identical", which no record can be. What is actually checked? → A: The reporter is called with the same method and the same `{ id, name, space }` + actor context; per-record values such as timestamps are excluded. Verified by unit test.
 
 ## Implementation Constraints
 
