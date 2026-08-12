@@ -1,6 +1,7 @@
 import {
   BaseEventPayload,
   ContributorPayload,
+  ConversationDigestEntry,
   NotificationEventPayloadOrganizationMessageDirect,
   NotificationEventPayloadOrganizationMessageRoom,
   NotificationEventPayloadPlatformForumDiscussion,
@@ -22,6 +23,8 @@ import {
   NotificationEventPayloadSpacePollVoteAffectedByOptionChange,
   NotificationEventPayloadSpacePollVoteCastOnOwnPoll,
   NotificationEventPayloadSpacePollVoteCastOnPollIVotedOn,
+  NotificationEventPayloadUserConversationMessageDirect,
+  NotificationEventPayloadUserConversationMessageGroup,
   NotificationEventPayloadUserMessageDirect,
   NotificationEventPayloadUserMessageRoom,
   NotificationEventPayloadUserMessageRoomReply,
@@ -74,11 +77,6 @@ import { NotificationInputCollaborationCalloutContributionCreated } from '../not
 import { NotificationInputCollaborationCalloutPostContributionComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { NotificationInputCommentReply } from '../notification-adapter/dto/space/notification.dto.input.space.communication.user.comment.reply';
 import { NotificationInputUserEmailChangeSpaceAdmin } from '../notification-adapter/dto/space/notification.dto.input.space.user.email.change';
-import {
-  ConversationDigestEntryPayload,
-  NotificationEventPayloadUserConversationMessageDirect,
-} from './dto/user/notification.event.payload.user.conversation.message.direct';
-import { NotificationEventPayloadUserConversationMessageGroup } from './dto/user/notification.event.payload.user.conversation.message.group';
 
 interface CalloutContributionPayload {
   id: string;
@@ -1015,6 +1013,16 @@ export class NotificationExternalAdapter {
    * 034-messaging-notifications (contract C-2, data-model.md §3, FR-008/FR-009).
    * REVISED for Operator Ruling R4 / D-22 — a per-recipient DIGEST.
    *
+   * Wire contract (`NotificationEventPayloadUserConversationMessageDirect` /
+   * `...Group`, both owned by `@alkemio/notifications-lib` >= 0.19.0 and
+   * asserted on both sides):
+   *  - NO message-content field exists (FR-008, by construction).
+   *  - `recipients` has EXACTLY ONE entry — the digest is per recipient.
+   *  - `senders` / `conversations` is NEVER empty: a track that finds nothing
+   *    unread emits nothing at all (FR-018).
+   *  - `totalCount === sum(entries[].count)` and is therefore `>= 1`.
+   *  - `triggeredBy.email === ''` — sender PII never rides the durable queue.
+   *
    * Deliberately does NOT reuse `buildBaseEventPayload` — that helper's
    * `triggeredBy` carries the sender's REAL email address, which is the
    * exact leak this feature must not repeat (the unanimous council finding
@@ -1039,7 +1047,7 @@ export class NotificationExternalAdapter {
   async buildConversationMessageDirectPayload(
     eventType: NotificationEvent,
     recipient: IUser,
-    entries: ConversationDigestEntryPayload[]
+    entries: ConversationDigestEntry[]
   ): Promise<NotificationEventPayloadUserConversationMessageDirect> {
     const recipientPayload = this.createUserPayloadFromUser(recipient);
     const senders = entries.map(entry => this.sanitizeDigestEntry(entry));
@@ -1065,7 +1073,7 @@ export class NotificationExternalAdapter {
   async buildConversationMessageGroupPayload(
     eventType: NotificationEvent,
     recipient: IUser,
-    entries: ConversationDigestEntryPayload[]
+    entries: ConversationDigestEntry[]
   ): Promise<NotificationEventPayloadUserConversationMessageGroup> {
     const recipientPayload = this.createUserPayloadFromUser(recipient);
     const conversations = entries.map(entry => this.sanitizeDigestEntry(entry));
@@ -1084,8 +1092,8 @@ export class NotificationExternalAdapter {
   }
 
   private sanitizeDigestEntry(
-    entry: ConversationDigestEntryPayload
-  ): ConversationDigestEntryPayload {
+    entry: ConversationDigestEntry
+  ): ConversationDigestEntry {
     return {
       ...entry,
       displayName: sanitizeNotificationCopyText(entry.displayName),

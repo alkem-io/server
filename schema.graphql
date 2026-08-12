@@ -4234,7 +4234,7 @@ type Mutation {
   """
   joinRoleSet(joinData: JoinAsEntryRoleOnRoleSetInput!): RoleSet!
   """
-  Leave a group conversation. Awaits the Matrix kick rather than reporting success merely because the RPC was sent. Returns true once the member is removed on the Alkemio side: if Matrix rejects the kick the removal is still applied locally — Alkemio is authoritative for its own membership — and the Matrix-side room membership may diverge until an operator reconciles it. The MEMBER_REMOVED subscription event follows asynchronously; if the last member leaves, the conversation is auto-deleted and a CONVERSATION_DELETED event follows.
+  Leave a group conversation. Awaits the Matrix kick rather than reporting success merely because the RPC was sent: true means the kick was accepted, and the membership is then removed asynchronously — observe MEMBER_REMOVED for completion. If Matrix rejects the kick this still returns true, because Alkemio is authoritative for its own membership and applies the removal locally instead; on that path the Matrix-side room membership may diverge until an operator reconciles it. If the last member leaves, the conversation is auto-deleted and a CONVERSATION_DELETED event follows.
   """
   leaveConversation(leaveData: LeaveConversationInput!): Boolean!
   """Reset the License with Entitlements on the specified Account."""
@@ -4272,7 +4272,7 @@ type Mutation {
   """Empties the CommunityGuidelines."""
   removeCommunityGuidelinesContent(communityGuidelinesData: RemoveCommunityGuidelinesContentInput!): CommunityGuidelines!
   """
-  Remove a member from a group conversation. Awaits the Matrix kick rather than reporting success merely because the RPC was sent. Returns true once the member is removed on the Alkemio side: if Matrix rejects the kick (e.g. insufficient permissions) the removal is still applied locally — Alkemio is authoritative for its own membership — and the Matrix-side room membership may diverge until an operator reconciles it. The MEMBER_REMOVED subscription event follows asynchronously in both cases.
+  Remove a member from a group conversation. Awaits the Matrix kick rather than reporting success merely because the RPC was sent: true means the kick was accepted, and the membership is then removed asynchronously — observe MEMBER_REMOVED for completion. If Matrix rejects the kick (e.g. insufficient permissions) this still returns true, because Alkemio is authoritative for its own membership and applies the removal locally instead; on that path the Matrix-side room membership may diverge until an operator reconciles it.
   """
   removeConversationMember(memberData: RemoveConversationMemberInput!): Boolean!
   """Remove the default callout template from an InnovationFlowState."""
@@ -9789,7 +9789,7 @@ input UpdateUserSettingsNotificationPlatformAdminInput {
   """
   userEmailChanged: NotificationSettingInput
   """
-  [Admin] Receive a notification user is assigned or removed from a global role
+  [Admin] Receive a notification when a user is assigned to or removed from a global role
   """
   userGlobalRoleChanged: NotificationSettingInput
   """[Admin] Receive notification when a new user signs up"""

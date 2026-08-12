@@ -34,7 +34,7 @@ export class CreateUserSettingsNotificationPlatformAdminInput {
   @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,
     description:
-      '[Admin] Receive a notification user is assigned or removed from a global role',
+      '[Admin] Receive a notification when a user is assigned to or removed from a global role',
   })
   @ValidateNested()
   @Type(() => CreateUserSettingsNotificationChannelsInput)

@@ -70,12 +70,27 @@ const classNamesIn = (segment: string, suffix = ''): string[] => [
 describe('AuthResetWorkerModule graph (structural)', () => {
   const moduleFiles = walk(SRC, '.module.ts');
 
-  /** Module class name -> its source, comments stripped. */
-  const moduleSources = new Map<string, string>();
+  /**
+   * Module class name -> EVERY source that exports a module of that name.
+   *
+   * A single source per name would be wrong: `src/domain/actor/actor.module.ts`
+   * (a barrel that re-exports the real one under an import alias) and
+   * `src/domain/actor/actor/actor.module.ts` both export `ActorModule`, so a
+   * last-write-wins Map silently keeps one of them, chosen by directory
+   * traversal order. Keeping the barrel would dead-end the walk — its
+   * `imports: [ActorCoreModule]` names an alias no module declares — and the
+   * whole real subtree would drop out of the graph unnoticed, which is exactly
+   * the false negative this guard exists to prevent. Walking every same-named
+   * source over-approximates instead, which is the safe direction here.
+   */
+  const moduleSources = new Map<string, string[]>();
   for (const file of moduleFiles) {
     const source = stripComments(readFileSync(file, 'utf8'));
     for (const match of source.matchAll(/export class (\w+Module)\b/g)) {
-      moduleSources.set(match[1], source);
+      moduleSources.set(match[1], [
+        ...(moduleSources.get(match[1]) ?? []),
+        source,
+      ]);
     }
   }
 
@@ -84,15 +99,16 @@ describe('AuthResetWorkerModule graph (structural)', () => {
     const seen = new Set<string>([root]);
     const queue = [root];
     while (queue.length) {
-      const source = moduleSources.get(queue.shift() as string);
-      if (!source) continue;
-      for (const imported of classNamesIn(
-        decoratorArray(source, 'imports'),
-        'Module'
-      )) {
-        if (!seen.has(imported)) {
-          seen.add(imported);
-          queue.push(imported);
+      const sources = moduleSources.get(queue.shift() as string) ?? [];
+      for (const source of sources) {
+        for (const imported of classNamesIn(
+          decoratorArray(source, 'imports'),
+          'Module'
+        )) {
+          if (!seen.has(imported)) {
+            seen.add(imported);
+            queue.push(imported);
+          }
         }
       }
     }
@@ -105,6 +121,12 @@ describe('AuthResetWorkerModule graph (structural)', () => {
     expect(reachable.size).toBeGreaterThan(20);
     // The regression that motivated this guard came in through here.
     expect(reachable.has('MessageInboxModule')).toBe(true);
+    // Name-collision regression: `CredentialModule` is reachable ONLY through
+    // the real `ActorModule`. While module sources were keyed one-per-name,
+    // the `ActorModule` barrel won the key, its aliased import dead-ended the
+    // walk, and this module — with every provider it contributes — silently
+    // left the graph.
+    expect(reachable.has('CredentialModule')).toBe(true);
   });
 
   it('does not import ScheduleModule, so SchedulerRegistry is unavailable', () => {
@@ -112,47 +134,56 @@ describe('AuthResetWorkerModule graph (structural)', () => {
   });
 
   it('has no provider that REQUIRES SchedulerRegistry', () => {
-    // Class name -> source file, for every class in src.
-    const classToSource = new Map<string, string>();
+    // Class name -> EVERY source exporting a class of that name. Same reason
+    // as `moduleSources`: first-write-wins would inspect an arbitrary one of
+    // two same-named classes, and it would not even be the one `moduleSources`
+    // picked.
+    const classToSources = new Map<string, string[]>();
     for (const file of walk(SRC, '.ts')) {
       if (file.endsWith('.spec.ts')) continue;
       const source = stripComments(readFileSync(file, 'utf8'));
       for (const match of source.matchAll(/export class (\w+)\b/g)) {
-        if (!classToSource.has(match[1])) classToSource.set(match[1], source);
+        classToSources.set(match[1], [
+          ...(classToSources.get(match[1]) ?? []),
+          source,
+        ]);
       }
     }
 
     const offenders: string[] = [];
     for (const moduleName of reachable) {
-      const moduleSource = moduleSources.get(moduleName);
-      if (!moduleSource) continue;
-      for (const provider of classNamesIn(
-        decoratorArray(moduleSource, 'providers')
-      )) {
-        const source = classToSource.get(provider);
-        if (!source?.includes('SchedulerRegistry')) continue;
+      const moduleSourcesForName = moduleSources.get(moduleName) ?? [];
+      const providers = new Set(
+        moduleSourcesForName.flatMap(moduleSource =>
+          classNamesIn(decoratorArray(moduleSource, 'providers'))
+        )
+      );
+      for (const provider of providers) {
+        for (const source of classToSources.get(provider) ?? []) {
+          if (!source.includes('SchedulerRegistry')) continue;
 
-        // Look only at the constructor parameter list.
-        const ctor = source.indexOf('constructor(');
-        if (ctor < 0) continue;
-        let depth = 0;
-        let end = ctor;
-        for (let i = source.indexOf('(', ctor); i < source.length; i++) {
-          if (source[i] === '(') depth++;
-          else if (source[i] === ')' && --depth === 0) {
-            end = i;
-            break;
+          // Look only at the constructor parameter list.
+          const ctor = source.indexOf('constructor(');
+          if (ctor < 0) continue;
+          let depth = 0;
+          let end = ctor;
+          for (let i = source.indexOf('(', ctor); i < source.length; i++) {
+            if (source[i] === '(') depth++;
+            else if (source[i] === ')' && --depth === 0) {
+              end = i;
+              break;
+            }
           }
-        }
-        const params = source.slice(ctor, end);
-        const at = params.indexOf('SchedulerRegistry');
-        if (at < 0) continue;
+          const params = source.slice(ctor, end);
+          const at = params.indexOf('SchedulerRegistry');
+          if (at < 0) continue;
 
-        // `@Optional()` must decorate the same parameter, i.e. appear after
-        // the previous comma at this nesting level.
-        const paramStart = params.lastIndexOf(',', at) + 1;
-        if (!params.slice(paramStart, at).includes('@Optional')) {
-          offenders.push(`${provider} (via ${moduleName})`);
+          // `@Optional()` must decorate the same parameter, i.e. appear after
+          // the previous comma at this nesting level.
+          const paramStart = params.lastIndexOf(',', at) + 1;
+          if (!params.slice(paramStart, at).includes('@Optional')) {
+            offenders.push(`${provider} (via ${moduleName})`);
+          }
         }
       }
     }

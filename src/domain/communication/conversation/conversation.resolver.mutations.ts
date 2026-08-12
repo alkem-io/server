@@ -179,12 +179,12 @@ export class ConversationResolverMutations {
   @Mutation(() => Boolean, {
     description:
       'Remove a member from a group conversation. Awaits the Matrix kick rather than ' +
-      'reporting success merely because the RPC was sent. Returns true once the member ' +
-      'is removed on the Alkemio side: if Matrix rejects the kick (e.g. insufficient ' +
-      'permissions) the removal is still applied locally — Alkemio is authoritative for ' +
-      'its own membership — and the Matrix-side room membership may diverge until an ' +
-      'operator reconciles it. The MEMBER_REMOVED subscription event follows ' +
-      'asynchronously in both cases.',
+      'reporting success merely because the RPC was sent: true means the kick was ' +
+      'accepted, and the membership is then removed asynchronously — observe ' +
+      'MEMBER_REMOVED for completion. If Matrix rejects the kick (e.g. insufficient ' +
+      'permissions) this still returns true, because Alkemio is authoritative for its ' +
+      'own membership and applies the removal locally instead; on that path the ' +
+      'Matrix-side room membership may diverge until an operator reconciles it.',
   })
   async removeConversationMember(
     @CurrentActor() actorContext: ActorContext,
@@ -201,12 +201,13 @@ export class ConversationResolverMutations {
   @Mutation(() => Boolean, {
     description:
       'Leave a group conversation. Awaits the Matrix kick rather than reporting success ' +
-      'merely because the RPC was sent. Returns true once the member is removed on the ' +
-      'Alkemio side: if Matrix rejects the kick the removal is still applied locally — ' +
-      'Alkemio is authoritative for its own membership — and the Matrix-side room ' +
-      'membership may diverge until an operator reconciles it. The MEMBER_REMOVED ' +
-      'subscription event follows asynchronously; if the last member leaves, the ' +
-      'conversation is auto-deleted and a CONVERSATION_DELETED event follows.',
+      'merely because the RPC was sent: true means the kick was accepted, and the ' +
+      'membership is then removed asynchronously — observe MEMBER_REMOVED for ' +
+      'completion. If Matrix rejects the kick this still returns true, because Alkemio ' +
+      'is authoritative for its own membership and applies the removal locally instead; ' +
+      'on that path the Matrix-side room membership may diverge until an operator ' +
+      'reconciles it. If the last member leaves, the conversation is auto-deleted and a ' +
+      'CONVERSATION_DELETED event follows.',
   })
   async leaveConversation(
     @CurrentActor() actorContext: ActorContext,
@@ -273,13 +274,17 @@ export class ConversationResolverMutations {
    * Shared logic for removing a member (or self) from a group conversation.
    * Awaits the Matrix kick RPC (ConversationService.removeMember opts into
    * `ensureAllSucceeded`) rather than resolving optimistically on send
-   * (US2-AS4). `true` therefore means "removed on the Alkemio side": a kick
-   * Matrix refuses is downgraded by the service to an authoritative local
-   * removal (sec-server-11), which still runs the full removal workflow —
-   * membership deletion, MEMBER_REMOVED, last-member auto-delete — via the
-   * room.member.updated handler. Anything else (transport failures,
-   * programming errors) propagates as a GraphQL error. There is no resolver
-   * try/catch, deliberately.
+   * (US2-AS4). `true` therefore means the removal is under way on one of two
+   * paths, both of which complete through the same room.member.updated
+   * workflow (membership deletion, auth re-apply, MEMBER_REMOVED, last-member
+   * auto-delete) — so clients observe completion via MEMBER_REMOVED, not via
+   * this return value:
+   *  - Matrix ACCEPTED the kick: the adapter confirms synchronously, the
+   *    workflow then runs off the inbound room.member.updated event.
+   *  - Matrix REFUSED the kick: the service downgrades it to an authoritative
+   *    local removal (sec-server-11) and drives the same workflow itself.
+   * Anything else (transport failures, programming errors) propagates as a
+   * GraphQL error. There is no resolver try/catch, deliberately.
    */
   private async removeMemberAndSendRpc(
     actorContext: ActorContext,
