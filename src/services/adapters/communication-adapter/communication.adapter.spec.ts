@@ -610,6 +610,34 @@ describe('CommunicationAdapter', () => {
         })
       ).rejects.toThrow(CommunicationAdapterException);
     });
+
+    it('should return false when the successful results are keyed to rooms that were not requested', async () => {
+      // Right NUMBER of successes, WRONG rooms: the requested room-1 has no
+      // result of its own. A count-only check reads this as success even
+      // though room-1 was never removed.
+      const response = createSuccessResponse({
+        results: { 'room-2': { success: true } },
+      });
+      mockAmqpConnection.request.mockResolvedValue(response);
+
+      const result = await adapter.batchRemoveMember('actor-123', ['room-1']);
+
+      expect(result).toBe(false);
+      expect(mockLogger.warn).toHaveBeenCalled();
+    });
+
+    it('should throw when ensureAllSucceeded is true and the results are keyed to rooms that were not requested', async () => {
+      const response = createSuccessResponse({
+        results: { 'room-2': { success: true } },
+      });
+      mockAmqpConnection.request.mockResolvedValue(response);
+
+      await expect(
+        adapter.batchRemoveMember('actor-123', ['room-1'], undefined, {
+          ensureAllSucceeded: true,
+        })
+      ).rejects.toThrow(CommunicationAdapterException);
+    });
   });
 
   describe('updateSpace and updateRoom', () => {

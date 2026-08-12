@@ -22,10 +22,12 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { CommunicationAdapterException } from '@services/adapters/communication-adapter/communication.adapter.exception';
+import { RoomMemberUpdatedEvent } from '@services/event-handlers/internal/message-inbox/room.member.updated.event';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
 import { EntityManager, FindOneOptions, In, Repository } from 'typeorm';
 import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
@@ -56,6 +58,7 @@ export class ConversationService {
     private conversationRepository: Repository<Conversation>,
     @InjectRepository(ConversationMembership)
     private conversationMembershipRepository: Repository<ConversationMembership>,
+    private eventEmitter: EventEmitter2,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -325,15 +328,19 @@ export class ConversationService {
         // even when the underlying Matrix kick is rejected — otherwise
         // consent, once bypassed by enrollment into a group, could never be
         // withdrawn per-conversation short of a global settings toggle.
-        // Remove the local membership row (notification recipients are
-        // re-read from this table at send time — this alone stops all
-        // further targeting) and log the Matrix-side divergence for manual
+        // Remove the local membership (notification recipients are re-read
+        // from that table at send time — this alone stops all further
+        // targeting) and log the Matrix-side divergence for manual
         // reconciliation, rather than surfacing the failure to the caller.
         this.logger.warn?.(
           `removeMember: Matrix kick rejected for actor ${memberActorId} in conversation ${conversationId} (${error.message}) — proceeding with authoritative local removal; Matrix-side room membership may now diverge, see docs/matrix-admin-reflection.md`,
           LogContext.COMMUNICATION_CONVERSATION
         );
-        await this.persistMemberRemoved(conversationId, memberActorId);
+        await this.completeLocalMemberRemoval(
+          conversationId,
+          conversation.room.id,
+          memberActorId
+        );
         return conversation;
       }
       throw error;
@@ -345,6 +352,63 @@ export class ConversationService {
     );
 
     return conversation;
+  }
+
+  /**
+   * sec-server-11: drive the local-only removal through the SAME completion
+   * workflow the Matrix-confirmed path uses, by emitting the internal
+   * `room.member.updated` (leave) event that
+   * `MessageInboxService.handleConversationMemberLeft` consumes: persist the
+   * membership removal, re-apply the conversation authorization policy,
+   * publish MEMBER_REMOVED and — when the last member leaves — delete the
+   * conversation and publish CONVERSATION_DELETED.
+   *
+   * Deleting the membership row directly here would skip all of that: clients
+   * would never see the removal, the authorization policy would keep granting
+   * the removed member access, and an emptied conversation would linger.
+   *
+   * The removal itself is authoritative and must not depend on that workflow
+   * succeeding, so a failing listener — or an application context that has no
+   * listener at all — falls back to the row deletion alone (idempotent: the
+   * handler may already have performed it) and is logged for reconciliation.
+   */
+  private async completeLocalMemberRemoval(
+    conversationId: string,
+    roomId: string,
+    memberActorId: string
+  ): Promise<void> {
+    try {
+      const listenerResults = await this.eventEmitter.emitAsync(
+        'room.member.updated',
+        new RoomMemberUpdatedEvent({
+          roomId,
+          memberActorID: memberActorId,
+          senderActorID: memberActorId,
+          membership: 'leave',
+          timestamp: Date.now(),
+        })
+      );
+      if (listenerResults.length > 0) {
+        return;
+      }
+      this.logger.warn?.(
+        `removeMember: no listener handled the local removal of ${memberActorId} from conversation ${conversationId} — deleting the membership row directly`,
+        LogContext.COMMUNICATION_CONVERSATION
+      );
+    } catch (error: any) {
+      this.logger.error?.(
+        {
+          message:
+            'removeMember: local removal completion workflow failed — falling back to deleting the membership row only',
+          conversationId,
+          memberActorId,
+          error: error?.message,
+        },
+        error?.stack,
+        LogContext.COMMUNICATION_CONVERSATION
+      );
+    }
+    await this.persistMemberRemoved(conversationId, memberActorId);
   }
 
   /**

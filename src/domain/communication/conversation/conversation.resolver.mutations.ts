@@ -178,10 +178,13 @@ export class ConversationResolverMutations {
 
   @Mutation(() => Boolean, {
     description:
-      'Remove a member from a group conversation. Awaits Matrix confirmation of the ' +
-      'kick and throws if it is rejected (e.g. insufficient permissions) — it does not ' +
-      'report success merely because the RPC was sent. On success, DB persistence and ' +
-      'the MEMBER_REMOVED subscription event follow asynchronously.',
+      'Remove a member from a group conversation. Awaits the Matrix kick rather than ' +
+      'reporting success merely because the RPC was sent. Returns true once the member ' +
+      'is removed on the Alkemio side: if Matrix rejects the kick (e.g. insufficient ' +
+      'permissions) the removal is still applied locally — Alkemio is authoritative for ' +
+      'its own membership — and the Matrix-side room membership may diverge until an ' +
+      'operator reconciles it. The MEMBER_REMOVED subscription event follows ' +
+      'asynchronously in both cases.',
   })
   async removeConversationMember(
     @CurrentActor() actorContext: ActorContext,
@@ -197,11 +200,13 @@ export class ConversationResolverMutations {
 
   @Mutation(() => Boolean, {
     description:
-      'Leave a group conversation. Awaits Matrix confirmation of the kick and throws if ' +
-      'it is rejected — it does not report success merely because the RPC was sent. On ' +
-      'success, DB persistence and the MEMBER_REMOVED subscription event follow ' +
-      'asynchronously. If the last member leaves, the conversation is auto-deleted and a ' +
-      'CONVERSATION_DELETED event follows.',
+      'Leave a group conversation. Awaits the Matrix kick rather than reporting success ' +
+      'merely because the RPC was sent. Returns true once the member is removed on the ' +
+      'Alkemio side: if Matrix rejects the kick the removal is still applied locally — ' +
+      'Alkemio is authoritative for its own membership — and the Matrix-side room ' +
+      'membership may diverge until an operator reconciles it. The MEMBER_REMOVED ' +
+      'subscription event follows asynchronously; if the last member leaves, the ' +
+      'conversation is auto-deleted and a CONVERSATION_DELETED event follows.',
   })
   async leaveConversation(
     @CurrentActor() actorContext: ActorContext,
@@ -267,10 +272,14 @@ export class ConversationResolverMutations {
   /**
    * Shared logic for removing a member (or self) from a group conversation.
    * Awaits the Matrix kick RPC (ConversationService.removeMember opts into
-   * `ensureAllSucceeded`) and lets a rejection propagate as a GraphQL error —
-   * it must never resolve `true` on a kick Matrix actually refused (US2-AS4).
-   * DB persistence and subscription events still happen asynchronously via
-   * the room.member.updated event handler once Matrix confirms the removal.
+   * `ensureAllSucceeded`) rather than resolving optimistically on send
+   * (US2-AS4). `true` therefore means "removed on the Alkemio side": a kick
+   * Matrix refuses is downgraded by the service to an authoritative local
+   * removal (sec-server-11), which still runs the full removal workflow —
+   * membership deletion, MEMBER_REMOVED, last-member auto-delete — via the
+   * room.member.updated handler. Anything else (transport failures,
+   * programming errors) propagates as a GraphQL error. There is no resolver
+   * try/catch, deliberately.
    */
   private async removeMemberAndSendRpc(
     actorContext: ActorContext,

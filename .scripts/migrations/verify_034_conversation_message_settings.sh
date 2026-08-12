@@ -40,6 +40,16 @@ assert_eq() { # <description> <actual> <expected>
 }
 
 echo "==> Creating scratch database $DB"
+# `set -e` aborts on the first failing docker/psql command, so the drop at the
+# end of a happy run is not enough — without this trap a failed run leaves the
+# scratch database behind.
+cleanup() {
+  echo
+  echo "==> Dropping scratch database"
+  docker exec -i "$CONTAINER" psql -U "$PGUSER" -d postgres \
+    -c "DROP DATABASE IF EXISTS $DB;" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
 docker exec -i "$CONTAINER" psql -U "$PGUSER" -d postgres -v ON_ERROR_STOP=1 \
   -c "DROP DATABASE IF EXISTS $DB;" -c "CREATE DATABASE $DB;" >/dev/null
 
@@ -149,10 +159,6 @@ run_migration_down
 assert_eq "u1 conversationMessageDirect removed" "$(get 00000000-0000-0000-0000-00000000a001 conversationMessageDirect)" ""
 assert_eq "u1 conversationMessageGroup removed"  "$(get 00000000-0000-0000-0000-00000000a001 conversationMessageGroup)"  ""
 assert_eq "u2 conversationMessageDirect removed (even though it pre-dated the migration)" "$(get 00000000-0000-0000-0000-00000000a002 conversationMessageDirect)" ""
-
-echo
-echo "==> Dropping scratch database"
-docker exec -i "$CONTAINER" psql -U "$PGUSER" -d postgres -c "DROP DATABASE IF EXISTS $DB;" >/dev/null
 
 echo
 if [ "$failures" -ne 0 ]; then

@@ -1,3 +1,4 @@
+import { LogContext } from '@common/enums';
 import { RoomType } from '@common/enums/room.type';
 import { describe, expect, it, vi } from 'vitest';
 import { classifyConversationMessage } from './conversation.notification.classification';
@@ -73,6 +74,12 @@ describe('classifyConversationMessage (034-messaging-notifications, Ruling 2)', 
     );
 
     expect(result).toBe(null);
-    expect(logger.error).toHaveBeenCalled();
+    // Winston error logging takes (message, stacktrace, context) — the log
+    // context must land in the third argument, not the stacktrace slot.
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ roomType: RoomType.POST }),
+      undefined,
+      LogContext.COMMUNICATION_CONVERSATION
+    );
   });
 });

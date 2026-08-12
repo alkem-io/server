@@ -11,6 +11,7 @@ import { RoomService } from '@domain/communication/room/room.service';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
@@ -37,6 +38,7 @@ describe('ConversationService', () => {
   let communicationAdapter: Mocked<CommunicationAdapter>;
   let conversationRepo: Mocked<Repository<Conversation>>;
   let membershipRepo: Mocked<Repository<ConversationMembership>>;
+  let eventEmitter: Mocked<EventEmitter2>;
   let mockManagerFind: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
@@ -72,6 +74,7 @@ describe('ConversationService', () => {
     communicationAdapter = module.get(CommunicationAdapter);
     conversationRepo = module.get(getRepositoryToken(Conversation));
     membershipRepo = module.get(getRepositoryToken(ConversationMembership));
+    eventEmitter = module.get(EventEmitter2);
 
     // Mock the manager.find used by getConversationMembers to batch-lookup actor types
     mockManagerFind = vi.fn().mockResolvedValue([]);
@@ -369,6 +372,12 @@ describe('ConversationService', () => {
       membershipRepo.count.mockResolvedValue(1); // isConversationMember -> true
     };
 
+    const matrixKickRejected = () =>
+      CommunicationAdapterException.fromAdapterError('batchRemoveMember', {
+        code: 'NOT_ALLOWED',
+        message: 'insufficient power level',
+      });
+
     it('should send the batchRemoveMember RPC with ensureAllSucceeded and return the conversation on success', async () => {
       mockGroupConversation();
       communicationAdapter.batchRemoveMember.mockResolvedValue(true);
@@ -387,11 +396,41 @@ describe('ConversationService', () => {
     it('sec-server-11: falls back to authoritative local removal (never throws) when Matrix rejects the kick', async () => {
       mockGroupConversation();
       communicationAdapter.batchRemoveMember.mockRejectedValue(
-        CommunicationAdapterException.fromAdapterError('batchRemoveMember', {
-          code: 'NOT_ALLOWED',
-          message: 'insufficient power level',
+        matrixKickRejected()
+      );
+      eventEmitter.emitAsync.mockResolvedValue([undefined]); // one listener ran
+
+      const result = await service.removeMember(conversationId, memberActorId);
+
+      expect(result.id).toBe(conversationId);
+      // The removal is completed through the SAME workflow the
+      // Matrix-confirmed path uses (persist + auth re-apply + MEMBER_REMOVED
+      // + last-member conversation deletion), not by deleting the row behind
+      // the event handler's back.
+      expect(eventEmitter.emitAsync).toHaveBeenCalledWith(
+        'room.member.updated',
+        expect.objectContaining({
+          payload: expect.objectContaining({
+            roomId: 'room-1',
+            memberActorID: memberActorId,
+            membership: 'leave',
+          }),
         })
       );
+      expect(membershipRepo.delete).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['the completion workflow fails', () => new Error('listener blew up')],
+      ['no listener is registered at all', () => undefined],
+    ])('sec-server-11: still removes the membership row when %s', async (_case, failure) => {
+      mockGroupConversation();
+      communicationAdapter.batchRemoveMember.mockRejectedValue(
+        matrixKickRejected()
+      );
+      const error = failure();
+      if (error) eventEmitter.emitAsync.mockRejectedValue(error);
+      else eventEmitter.emitAsync.mockResolvedValue([]);
       membershipRepo.delete.mockResolvedValue({} as any);
 
       const result = await service.removeMember(conversationId, memberActorId);

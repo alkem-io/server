@@ -293,14 +293,16 @@ export class NotificationRecipientsService {
         // backfill migration) must never crash recipient resolution for the
         // WHOLE batch. `UserSettings.applyConversationMessageNotificationDefaults`
         // (@AfterLoad) already heals this for entity-loaded rows; this
-        // fallback covers any other load path (e.g. raw/partial selects).
+        // fallback covers any other load path (e.g. raw/partial selects) —
+        // including one that omits the whole `user` object, hence the
+        // optional chain rather than a leaf-key check.
         return (
-          notificationSettings.user.conversationMessageDirect ??
+          notificationSettings.user?.conversationMessageDirect ??
           DEFAULT_CONVERSATION_MESSAGE_CHANNELS
         );
       case NotificationEvent.USER_CONVERSATION_MESSAGE_GROUP:
         return (
-          notificationSettings.user.conversationMessageGroup ??
+          notificationSettings.user?.conversationMessageGroup ??
           DEFAULT_CONVERSATION_MESSAGE_CHANNELS
         );
       case NotificationEvent.ORGANIZATION_MESSAGE_SENDER:

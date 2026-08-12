@@ -34,6 +34,9 @@ describe('messaging notifications configuration defaults', () => {
       origEnv[key] = process.env[key];
       delete process.env[key];
     }
+    // Captured like the rest so `afterEach` puts it back — deleting it
+    // without restoring would leak into every later test in this worker.
+    origEnv.ALKEMIO_CONFIG_PATH = process.env.ALKEMIO_CONFIG_PATH;
     delete process.env.ALKEMIO_CONFIG_PATH;
   });
 

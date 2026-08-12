@@ -803,10 +803,16 @@ export class CommunicationAdapter {
     // AND every requested room to be individually accounted for as a
     // success — this is exactly the false-success class commit d7fe1a3 set
     // out to fix, re-introduced by the batch-response rework.
+    //
+    // The count alone is still not enough: a response carrying the right
+    // NUMBER of successes for the WRONG rooms (adapter-side key mismatch)
+    // would satisfy it. Each requested room must be correlated with its own
+    // successful result.
     const allSucceeded =
       response.success &&
       isBatchOperationSuccessful(batchResult, 'all') &&
-      batchResult.successCount === roomIds.length;
+      batchResult.successCount === roomIds.length &&
+      roomIds.every(roomId => batchResult.itemResults.get(roomId) === true);
 
     if (!allSucceeded) {
       this.logger.warn?.(

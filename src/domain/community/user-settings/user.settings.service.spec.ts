@@ -787,6 +787,11 @@ describe('UserSettingsService', () => {
 
     it('should update conversationMessageGroup notification and leave messageReceived/conversationMessageDirect untouched (FR-017)', () => {
       const settings = buildSettings();
+      // The fixture ships both siblings as `false`, which is also what an
+      // update that wrongly reset them would produce — flip them first so the
+      // preservation assertions can actually fail.
+      settings.notification.user.conversationMessageDirect.push = true;
+      settings.notification.user.messageReceived.push = true;
       const updateData: UpdateUserSettingsEntityInput = {
         notification: {
           user: {
@@ -801,9 +806,9 @@ describe('UserSettingsService', () => {
         false
       );
       expect(result.notification.user.conversationMessageDirect.push).toBe(
-        false
+        true
       );
-      expect(result.notification.user.messageReceived.push).toBe(false);
+      expect(result.notification.user.messageReceived.push).toBe(true);
     });
 
     it('should update membership.spaceCommunityInvitationReceived notification', () => {

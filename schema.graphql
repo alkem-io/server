@@ -4234,7 +4234,7 @@ type Mutation {
   """
   joinRoleSet(joinData: JoinAsEntryRoleOnRoleSetInput!): RoleSet!
   """
-  Leave a group conversation. Awaits Matrix confirmation of the kick and throws if it is rejected — it does not report success merely because the RPC was sent. On success, DB persistence and the MEMBER_REMOVED subscription event follow asynchronously. If the last member leaves, the conversation is auto-deleted and a CONVERSATION_DELETED event follows.
+  Leave a group conversation. Awaits the Matrix kick rather than reporting success merely because the RPC was sent. Returns true once the member is removed on the Alkemio side: if Matrix rejects the kick the removal is still applied locally — Alkemio is authoritative for its own membership — and the Matrix-side room membership may diverge until an operator reconciles it. The MEMBER_REMOVED subscription event follows asynchronously; if the last member leaves, the conversation is auto-deleted and a CONVERSATION_DELETED event follows.
   """
   leaveConversation(leaveData: LeaveConversationInput!): Boolean!
   """Reset the License with Entitlements on the specified Account."""
@@ -4272,7 +4272,7 @@ type Mutation {
   """Empties the CommunityGuidelines."""
   removeCommunityGuidelinesContent(communityGuidelinesData: RemoveCommunityGuidelinesContentInput!): CommunityGuidelines!
   """
-  Remove a member from a group conversation. Awaits Matrix confirmation of the kick and throws if it is rejected (e.g. insufficient permissions) — it does not report success merely because the RPC was sent. On success, DB persistence and the MEMBER_REMOVED subscription event follow asynchronously.
+  Remove a member from a group conversation. Awaits the Matrix kick rather than reporting success merely because the RPC was sent. Returns true once the member is removed on the Alkemio side: if Matrix rejects the kick (e.g. insufficient permissions) the removal is still applied locally — Alkemio is authoritative for its own membership — and the Matrix-side room membership may diverge until an operator reconciles it. The MEMBER_REMOVED subscription event follows asynchronously in both cases.
   """
   removeConversationMember(memberData: RemoveConversationMemberInput!): Boolean!
   """Remove the default callout template from an InnovationFlowState."""

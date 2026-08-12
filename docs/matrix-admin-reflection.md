@@ -113,8 +113,16 @@ by deriving the real per-room outcome from `results` (see
 `communication.adapter.response.ts#processBatchResponse`) and having
 `ConversationService.removeMember` (the direct-kick path behind
 `removeConversationMember`/`leaveConversation`) opt into
-`ensureAllSucceeded`, which now throws a `CommunicationAdapterException`
-instead of returning an optimistic `true` when Matrix rejects the kick.
+`ensureAllSucceeded`, so a rejected kick raises a
+`CommunicationAdapterException` out of the adapter instead of reading as an
+optimistic `true`.
+
+> **Superseded — read the addendum below before acting on this paragraph.**
+> Only `CommunicationAdapter.batchRemoveMember` still throws on a rejected
+> kick. `ConversationService.removeMember` no longer propagates that
+> exception to the caller: as of the 2026-08-04 addendum it catches it and
+> completes the removal locally. The description above is the state of the
+> code between 2026-07-30 and 2026-08-04, kept for the history of the defect.
 
 ### Finding 1 addendum: 2026-08-04 — sec-server-11 (security review)
 
@@ -128,12 +136,25 @@ from that table at send time) stayed forever. Fixed by making
 `ConversationService.removeMember` authoritative on the Alkemio side: it
 still attempts the Matrix kick and still surfaces genuine transport/programming
 errors, but when the adapter reports a rejected kick
-(`CommunicationAdapterException`) it now removes the local membership row
-directly (`persistMemberRemoved`) and logs the Matrix-side divergence for
-manual reconciliation, returning success to the caller instead of throwing.
+(`CommunicationAdapterException`) it now completes the removal locally and
+logs the Matrix-side divergence for manual reconciliation, returning success
+to the caller instead of throwing. The local completion re-enters the same
+workflow the Matrix-confirmed path uses — it emits the internal
+`room.member.updated` (`leave`) event that
+`MessageInboxService.handleConversationMemberLeft` consumes — so the
+membership row is deleted, the conversation authorization policy is
+re-applied, `MEMBER_REMOVED` is published, and a conversation left with no
+members is auto-deleted with `CONVERSATION_DELETED`, exactly as if Matrix had
+confirmed the kick. `removeConversationMember`/`leaveConversation` therefore
+return `true` to mean "removed on the Alkemio side", not "Matrix confirmed
+the kick"; their GraphQL descriptions say so.
+
 This is the documented interim mitigation (Option "make the Alkemio side
 authoritative" below) — the underlying power-level defect described above is
-still open and still needs its own cross-repo fix.
+still open and still needs its own cross-repo fix. Until it lands, operators
+reconciling Matrix state should treat the Alkemio `conversation_membership`
+table as the source of truth and expect Matrix rooms to retain members
+Alkemio has already removed.
 
 ---
 

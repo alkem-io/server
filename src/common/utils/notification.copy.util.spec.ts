@@ -49,6 +49,20 @@ describe('getGroupDisplayNameForNotificationCopy (corr-server-5)', () => {
     );
   });
 
+  it('returns the neutral fallback for a control-character-only name', () => {
+    // Truthy before sanitization, empty after it — the fallback must be
+    // decided on the sanitized value, not the raw one.
+    expect(getGroupDisplayNameForNotificationCopy('\n')).toBe(
+      GROUP_CONVERSATION_DISPLAY_NAME_FALLBACK
+    );
+    expect(getGroupDisplayNameForNotificationCopy('\x00')).toBe(
+      GROUP_CONVERSATION_DISPLAY_NAME_FALLBACK
+    );
+    expect(getGroupDisplayNameForNotificationCopy('\t \r\n')).toBe(
+      GROUP_CONVERSATION_DISPLAY_NAME_FALLBACK
+    );
+  });
+
   it('passes through a real, user-chosen name (sanitized)', () => {
     expect(getGroupDisplayNameForNotificationCopy('Team Chat')).toBe(
       'Team Chat'

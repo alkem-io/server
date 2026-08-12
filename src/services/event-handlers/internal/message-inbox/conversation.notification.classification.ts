@@ -25,9 +25,16 @@ export type ConversationMessageKind = 'DIRECT' | 'GROUP';
 export function classifyConversationMessage(
   roomType: RoomType,
   memberActorIds: string[] | undefined | null,
+  // Winston/Nest logger contract: verbose/warning take (message, context);
+  // error takes (message, stacktrace, context) — passing the context as the
+  // second argument would record it in the stacktrace field.
   logger?: {
     warn: (message: string, context: string) => void;
-    error: (message: string, context: string) => void;
+    error: (
+      message: string | object,
+      stacktrace: string | undefined,
+      context: string
+    ) => void;
   }
 ): ConversationMessageKind | null {
   if (roomType === RoomType.CONVERSATION_DIRECT) {
@@ -61,7 +68,12 @@ export function classifyConversationMessage(
   // upstream guard (isConversationRoom) should have prevented it. Log and
   // skip rather than guess.
   logger?.error(
-    `classifyConversationMessage called with a non-conversation room type: ${roomType}`,
+    {
+      message:
+        'classifyConversationMessage called with a non-conversation room type',
+      roomType,
+    },
+    undefined,
     LogContext.COMMUNICATION_CONVERSATION
   );
   return null;

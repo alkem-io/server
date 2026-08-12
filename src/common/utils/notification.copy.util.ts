@@ -46,9 +46,13 @@ export const GROUP_CONVERSATION_DISPLAY_NAME_FALLBACK = 'a group chat';
 export function getGroupDisplayNameForNotificationCopy(
   displayName: string | undefined | null
 ): string {
-  const raw = displayName?.trim() ?? '';
-  if (!raw || GROUP_DISPLAY_NAME_PLACEHOLDER_PATTERN.test(raw)) {
+  // Sanitize FIRST, then decide: a name made up only of control characters
+  // (e.g. '\n', '\x00') is truthy before sanitization but empty after it, so
+  // testing the raw value would let a blank group name through instead of
+  // falling back to the neutral label.
+  const normalized = sanitizeNotificationCopyText(displayName ?? '');
+  if (!normalized || GROUP_DISPLAY_NAME_PLACEHOLDER_PATTERN.test(normalized)) {
     return GROUP_CONVERSATION_DISPLAY_NAME_FALLBACK;
   }
-  return sanitizeNotificationCopyText(raw);
+  return normalized;
 }

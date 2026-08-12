@@ -394,6 +394,18 @@ describe('MessagingService', () => {
           undefined,
           undefined
         );
+
+        // The dropped member must also be absent from the published event —
+        // `memberActorIds` is the notification/subscription fan-out list, so
+        // a regression there would target memberC despite the filtering above.
+        expect(
+          subscriptionPublishService.publishConversationEvent
+        ).toHaveBeenCalledTimes(1);
+        const publishedEvent =
+          subscriptionPublishService.publishConversationEvent.mock.calls[0][0];
+        expect([...publishedEvent.memberActorIds].sort()).toEqual(
+          [callerId, memberB].sort()
+        );
       });
 
       it('throws ValidationException when every invited member denies consent (no group is created)', async () => {

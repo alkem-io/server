@@ -17,21 +17,22 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
  * non-atomic, so concurrent requests across replicas could both read the same
  * count and both proceed, letting the bucket exceed its cap.
  *
- * Fixed with an atomic ioredis INCR (correct by construction — no
- * check-then-set race) + an EXPIRE applied once, on the increment that
- * created the key (count === 1), with the TTL expressed in seconds (ioredis'
- * `expire` takes seconds, unlike cache-manager's milliseconds — the other
- * half of the original bug).
+ * Fixed with an atomic INCR (correct by construction — no check-then-set
+ * race) + an EXPIRE applied once, on the increment that created the key
+ * (count === 1), with the TTL expressed in seconds (Redis' `EXPIRE` takes
+ * seconds, unlike cache-manager's milliseconds — the other half of the
+ * original bug).
  *
  * SECOND fix (034 review): the key was `push:throttle:{userId}` — no epoch
- * component. INCR and EXPIRE are two commands, so if the process dies, the
- * connection drops, or Redis fails between them, the counter is left with NO
- * TTL and the key never expires. That user is then throttled PERMANENTLY,
- * with no self-healing path short of manual intervention. Suffixing the key
- * with the epoch minute makes the window addressable by time: a stranded key
- * belongs to a minute that will never be written to again, and the very next
- * minute starts from a fresh key at zero. The conditional EXPIRE is kept so
- * stranded keys are still reclaimed in the normal case.
+ * component. Suffixing the key with the epoch minute makes the window
+ * addressable by time: a key that somehow survives without a TTL belongs to a
+ * minute that will never be written to again, and the very next minute starts
+ * from a fresh key at zero, so a user can never be throttled permanently.
+ *
+ * THIRD fix (034 review): INCR and EXPIRE were two round trips, so a crash or
+ * an EXPIRE failure between them left a key with no TTL — harmless for
+ * throttling thanks to the epoch suffix, but never reclaimed. Both commands
+ * now run in one Lua script, so the key always carries an expiry.
  *
  * 034/R4 note: messaging notifications no longer participate in this bucket
  * AT ALL (D-21 deleted the parallel messaging budget; the FR-011b delay cap
@@ -60,14 +61,21 @@ export class PushThrottleService {
     const key = `push:throttle:${userId}:${epochMinute}`;
 
     try {
-      // Atomic increment — no read-modify-write race across replicas.
-      const count = await this.redis.incr(key);
-      if (count === 1) {
-        // Only the increment that created the key sets the window's TTL —
-        // a rolling per-minute fixed window, not a sliding one that would
-        // never expire under sustained traffic.
-        await this.redis.expire(key, 60);
-      }
+      // Atomic increment + TTL-on-create in a SINGLE round trip: INCR and
+      // EXPIRE as two commands leave a window in which the key can end up
+      // with no expiry at all (process death, connection drop, EXPIRE
+      // failure). The epoch-minute suffix already bounds the damage, but the
+      // stranded key would then never be reclaimed. Only the increment that
+      // creates the key sets the TTL — a fixed per-minute window, not a
+      // sliding one that would never expire under sustained traffic.
+      const count = (await this.redis.eval(
+        `local c = redis.call('INCR', KEYS[1])
+         if c == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end
+         return c`,
+        1,
+        key,
+        '60'
+      )) as number;
 
       if (count > this.maxPerMinute) {
         this.logger.verbose?.(
