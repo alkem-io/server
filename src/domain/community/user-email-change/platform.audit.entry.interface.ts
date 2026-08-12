@@ -99,6 +99,30 @@ export interface PlatformOperationsAuditDetails {
 }
 
 /**
+ * MCP API key lifecycle category payload shape (workspace#038, FR-022). One
+ * row per mint or revoke of an MCP API key. Deliberately an ALLOWLIST — never
+ * add a field here without also updating the exclusion test in
+ * `mcp-api-key.audit.service.spec.ts`.
+ *
+ * Forbidden by construction: the plaintext key, `keyHash` (or any
+ * prefix/suffix of either), `lastUsedFromIp` or any caller-supplied address,
+ * and the raw mutation input. `requestContext.ip` is deliberately NOT
+ * populated for this category — the only address available at this layer is
+ * client-influenced (`X-Forwarded-For`), so recording it would put a
+ * spoofable value in an audit record.
+ */
+export interface McpApiKeyAuditDetails {
+  /** The row id — an identifier, not a credential. */
+  keyId?: string;
+  /** The user's label for the key. */
+  keyName?: string;
+  /** The granted scope, flattened. */
+  operations?: ('read' | 'tools')[];
+  /** ISO timestamp, when an expiry was set at mint. */
+  expiresAt?: string;
+}
+
+/**
  * Cross-category shape of `platform_audit_entry.details`. Every field is
  * optional — the per-category audit-service (`UserEmailChangeAuditService`,
  * `UserPasswordChangeAuditService`, ...) enforces which keys it writes for
@@ -108,7 +132,8 @@ export interface PlatformOperationsAuditDetails {
  */
 export type PlatformAuditDetails = EmailChangeAuditDetails &
   PasswordChangeAuditDetails &
-  PlatformOperationsAuditDetails;
+  PlatformOperationsAuditDetails &
+  McpApiKeyAuditDetails;
 
 /**
  * Row shape of `platform_audit_entry`. Append-only; retained indefinitely

@@ -1,6 +1,7 @@
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { createMock } from '@golevelup/ts-vitest';
 import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
+import { McpApiKeyService } from '@services/mcp-server/auth/mcp-api-key.service';
 import { LogContext } from '@src/common/enums';
 import { MeResolverFields } from './me.resolver.fields';
 import { MeService } from './me.service';
@@ -43,10 +44,14 @@ describe('MeResolverFields', () => {
       5
     );
 
+    const mcpApiKeyService = createMock<McpApiKeyService>();
+    mcpApiKeyService.listUserKeysForProjection.mockResolvedValue([]);
+
     resolver = new MeResolverFields(
       meService,
       userLookupService,
       inAppNotificationService,
+      mcpApiKeyService,
       logger as any
     );
   });

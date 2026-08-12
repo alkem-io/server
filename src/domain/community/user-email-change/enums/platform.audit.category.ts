@@ -13,4 +13,9 @@ export enum PlatformAuditCategory {
   // execution of a gated platform-operations mutation, regardless of which
   // role authorized it.
   PLATFORM_OPERATIONS = 'platform_operations',
+  // MCP API key lifecycle (workspace#038): one row per mint or revoke of an
+  // MCP API key (self-service or admin). Written by the feature-scoped,
+  // FAIL-CLOSED `McpApiKeyAuditService` — unlike PLATFORM_OPERATIONS, a
+  // failed audit write here rolls back the key mutation itself.
+  MCP_API_KEY = 'mcp_api_key',
 }

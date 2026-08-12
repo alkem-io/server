@@ -25,6 +25,7 @@ import { ActivityModule } from '@platform/activity/activity.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { SearchModule } from '@services/api/search/search.module';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
+import { McpApiKeyAuditService } from './auth/mcp-api-key.audit.service';
 import { McpApiKey } from './auth/mcp-api-key.entity';
 import { McpApiKeyService } from './auth/mcp-api-key.service';
 import { McpApiKeyStrategy } from './auth/mcp-api-key.strategy';
@@ -38,6 +39,7 @@ import {
   McpResourceProvider,
   McpTool,
 } from './dto/mcp.types';
+import { McpApiKeyResolverMutations } from './mcp-api-key.resolver.mutations';
 import { McpServerController } from './mcp-server.controller';
 import { McpServerService } from './mcp-server.service';
 import { AssistantBudgetResourceProvider } from './resources/assistant-budget.resource';
@@ -121,6 +123,8 @@ const RESOURCE_PROVIDERS = [
   providers: [
     McpServerService,
     McpApiKeyService,
+    McpApiKeyAuditService,
+    McpApiKeyResolverMutations,
     McpApiKeyStrategy,
     McpDelegationStrategy,
     McpAuthGuard,

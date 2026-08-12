@@ -7,6 +7,11 @@ import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Float, ResolveField, Resolver } from '@nestjs/graphql';
 import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
 import { MeQueryResults } from '@services/api/me/dto';
+import { McpApiKeyService } from '@services/mcp-server/auth/mcp-api-key.service';
+import {
+  IMcpApiKey,
+  toGraphqlMcpApiKey,
+} from '@services/mcp-server/dto/mcp.api.key.dto';
 import { CurrentActor } from '@src/common/decorators';
 import { LogContext } from '@src/common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -24,6 +29,7 @@ export class MeResolverFields {
     private meService: MeService,
     private userLookupService: UserLookupService,
     private inAppNotificationService: InAppNotificationService,
+    private mcpApiKeyService: McpApiKeyService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -220,6 +226,27 @@ export class MeResolverFields {
     limit: number
   ): Promise<MySpaceResults[]> {
     return this.meService.getMySpaces(actorContext, limit);
+  }
+
+  @ResolveField('mcpApiKeys', () => [IMcpApiKey], {
+    nullable: false,
+    description:
+      "The current user's MCP API keys, newest first. Includes revoked and expired keys so last-used evidence survives revocation.",
+  })
+  public async mcpApiKeys(
+    @CurrentActor() actorContext: ActorContext
+  ): Promise<IMcpApiKey[]> {
+    if (!actorContext.actorID || actorContext.isAnonymous) {
+      this.logger.verbose?.(
+        'Degrading me.mcpApiKeys to its empty value: request has no resolved actor',
+        LogContext.AUTH
+      );
+      return [];
+    }
+    const rows = await this.mcpApiKeyService.listUserKeysForProjection(
+      actorContext.actorID
+    );
+    return rows.map(toGraphqlMcpApiKey);
   }
 
   @ResolveField(() => MeConversationsResult, {

@@ -39,7 +39,8 @@ describe('McpServerService.readResource — authorization', () => {
       resourceRegistry as any,
       authorizationService as any,
       capabilityGateService as any,
-      logger as any
+      logger as any,
+      {} as any
     );
     return { service, provider, authorizationService, logger };
   };

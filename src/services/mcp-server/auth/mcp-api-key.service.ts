@@ -1,11 +1,17 @@
 import { LogContext } from '@common/enums';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
+import { PlatformAuditInitiatorRole } from '@domain/community/user-email-change/enums/platform.audit.initiator.role';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHash, randomBytes } from 'crypto';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Repository } from 'typeorm';
+import { EntityManager, IsNull, MoreThan, Repository } from 'typeorm';
+import { McpApiKeyOperation } from '../dto/mcp.api.key.dto';
 import { McpApiKeyScope } from '../dto/mcp.types';
+import { McpApiKeyAuditService } from './mcp-api-key.audit.service';
 import { McpApiKey } from './mcp-api-key.entity';
 
 export interface CreateMcpApiKeyInput {
@@ -30,13 +36,36 @@ export interface CreateMcpApiKeyResult {
   expiresAt?: Date;
 }
 
+/**
+ * Cap on USABLE (active + unexpired + user-bound) MCP API keys per user
+ * (workspace#038, FR-005/FR-006). A hardcoded service constant, deliberately
+ * NOT an `alkemio.config.ts` field — infrastructure-operations stays out of
+ * this feature. Revoked and expired keys do not consume the allowance
+ * (data-model.md §"Usable").
+ */
+export const MCP_API_KEY_MAX_USABLE_PER_USER = 10;
+
+export interface MintApiKeyForUserInput {
+  name: string;
+  operations: McpApiKeyOperation[];
+  expiresAt?: Date;
+}
+
+export interface MintApiKeyForUserResult {
+  entity: McpApiKey;
+  /** The plaintext key. Only ever available here, at mint time (FR-002). */
+  plaintext: string;
+}
+
 @Injectable()
 export class McpApiKeyService {
   constructor(
     @InjectRepository(McpApiKey)
     private readonly mcpApiKeyRepository: Repository<McpApiKey>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
+    private readonly logger: LoggerService,
+    private readonly entityManager: EntityManager,
+    private readonly auditService: McpApiKeyAuditService
   ) {}
 
   /**
@@ -81,6 +110,108 @@ export class McpApiKeyService {
       apiKey: plainTextKey,
       expiresAt: saved.expiresAt,
     };
+  }
+
+  /**
+   * Mint a new USER-bound MCP API key with PAT semantics (workspace#038,
+   * FR-001..FR-006). One short transaction: takes a per-user advisory lock
+   * (so a concurrent mint at the cap boundary serializes rather than racing —
+   * FR-006/R-038-1), counts usable keys against
+   * {@link MCP_API_KEY_MAX_USABLE_PER_USER}, normalizes operations to ONE
+   * de-duplicated `{operations}` scope object (never `spaceIds` — FR-004),
+   * inserts the key, and records the mint audit row — all or nothing (FR-023):
+   * if the audit write throws, the whole transaction (including the insert)
+   * rolls back.
+   */
+  async mintApiKeyForUser(
+    userId: string,
+    input: MintApiKeyForUserInput
+  ): Promise<MintApiKeyForUserResult> {
+    if (input.expiresAt && input.expiresAt.getTime() <= Date.now()) {
+      throw new ValidationException(
+        'MCP API key expiresAt must be in the future',
+        LogContext.MCP_SERVER,
+        { expiresAt: input.expiresAt.toISOString() }
+      );
+    }
+
+    const normalizedOperations = this.normalizeOperations(input.operations);
+    if (normalizedOperations.length === 0) {
+      throw new ValidationException(
+        'MCP API key must grant at least one operation',
+        LogContext.MCP_SERVER
+      );
+    }
+
+    const plainTextKey = this.generateApiKey();
+    const keyHash = this.hashApiKey(plainTextKey);
+
+    const saved = await this.entityManager.transaction(async manager => {
+      // Per-user advisory lock: serializes concurrent mints for the SAME user
+      // so the cap check + insert below is race-free (FR-006). Released
+      // automatically at transaction end (xact-scoped).
+      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+        userId,
+      ]);
+
+      const usableCount = await manager.count(McpApiKey, {
+        where: this.usableKeysWhere(userId),
+      });
+      if (usableCount >= MCP_API_KEY_MAX_USABLE_PER_USER) {
+        throw new ValidationException(
+          `MCP API key limit reached (${MCP_API_KEY_MAX_USABLE_PER_USER}). Revoke an existing key to free an allowance.`,
+          LogContext.MCP_SERVER,
+          { userId, limit: MCP_API_KEY_MAX_USABLE_PER_USER }
+        );
+      }
+
+      const apiKey = new McpApiKey();
+      apiKey.name = input.name;
+      apiKey.userId = userId;
+      apiKey.keyHash = keyHash;
+      // Exactly ONE normalized scope object; never carries `spaceIds` (FR-004).
+      apiKey.scopes = [{ operations: normalizedOperations }];
+      apiKey.expiresAt = input.expiresAt;
+      apiKey.isActive = true;
+
+      const savedEntity = await manager.save(apiKey);
+
+      // Fail-closed: throwing here rolls back the insert above (FR-023).
+      await this.auditService.recordMint(manager, {
+        ownerUserId: userId,
+        initiatorUserId: userId,
+        initiatorRole: PlatformAuditInitiatorRole.SELF,
+        keyId: savedEntity.id,
+        keyName: savedEntity.name,
+        operations: normalizedOperations,
+        expiresAt: savedEntity.expiresAt,
+      });
+
+      return savedEntity;
+    });
+
+    return { entity: saved, plaintext: plainTextKey };
+  }
+
+  /**
+   * The "usable" predicate (data-model.md §Usable, FR-005):
+   * `userId = :userId AND isActive = true AND (expiresAt IS NULL OR expiresAt > now())`.
+   * Expressed as an OR of two AND'd FindOptionsWhere objects — TypeORM ORs an
+   * array of where-conditions at the top level, AND's the keys within each.
+   */
+  private usableKeysWhere(userId: string) {
+    const now = new Date();
+    return [
+      { userId, isActive: true, expiresAt: IsNull() },
+      { userId, isActive: true, expiresAt: MoreThan(now) },
+    ];
+  }
+
+  /** De-duplicates a requested operations list, preserving no particular order. */
+  private normalizeOperations(
+    operations: McpApiKeyOperation[]
+  ): McpApiKeyOperation[] {
+    return Array.from(new Set(operations));
   }
 
   /**
@@ -191,6 +322,29 @@ export class McpApiKeyService {
   }
 
   /**
+   * Re-validate a key BY ID — active + unexpired — without the plaintext
+   * (workspace#038, FR-013). Used ONLY by the session revalidation branch in
+   * `McpServerService.handleRequest`, on a session-bearing request whose
+   * incoming actorContext is anonymous: the session's identity was
+   * established from a key, but this particular request carries no bearer to
+   * re-derive the id from a plaintext, so the id captured at
+   * establish/refresh time is re-checked directly instead.
+   */
+  async isKeyUsable(keyId: string): Promise<boolean> {
+    const apiKey = await this.mcpApiKeyRepository.findOne({
+      where: { id: keyId },
+      select: { id: true, isActive: true, expiresAt: true },
+    });
+    if (!apiKey || !apiKey.isActive) {
+      return false;
+    }
+    if (apiKey.expiresAt && apiKey.expiresAt < new Date()) {
+      return false;
+    }
+    return true;
+  }
+
+  /**
    * Validate an API key and return the entity if valid
    */
   async validateApiKey(plainTextKey: string): Promise<McpApiKey | null> {
@@ -233,6 +387,139 @@ export class McpApiKeyService {
     return this.mcpApiKeyRepository.find({
       where: { userId },
       order: { createdDate: 'DESC' },
+    });
+  }
+
+  /**
+   * Self-service list, allowlisted at the QUERY level (workspace#038,
+   * FR-007/FR-008/FR-009): `keyHash` is excluded by the `select`, not by
+   * downstream omission (R-01). Includes revoked and expired rows so
+   * last-used forensic evidence survives revocation. Newest first.
+   */
+  async listUserKeysForProjection(userId: string): Promise<McpApiKey[]> {
+    return this.mcpApiKeyRepository.find({
+      select: {
+        id: true,
+        name: true,
+        scopes: true,
+        createdDate: true,
+        expiresAt: true,
+        lastUsedAt: true,
+        lastUsedFromIp: true,
+        isActive: true,
+      },
+      where: { userId },
+      order: { createdDate: 'DESC' },
+    });
+  }
+
+  /**
+   * Admin list, scoped to a named USER-bound owner only (workspace#038,
+   * FR-017/FR-018, ruling A9). `userId IS NOT NULL` is written explicitly, in
+   * addition to `userId = :userId`, so an actor-bound trust-anchor key (e.g.
+   * the virtual-assistant bootstrap key) can never be reached from this
+   * surface — even though it is already redundant with a concrete `userId`
+   * argument, the explicit predicate survives a future refactor that might
+   * loosen the equality check. `keyHash` is excluded at the query level (R-01).
+   */
+  async listUserKeysForAdmin(userId: string): Promise<McpApiKey[]> {
+    return this.mcpApiKeyRepository
+      .createQueryBuilder('key')
+      .select([
+        'key.id',
+        'key.name',
+        'key.scopes',
+        'key.createdDate',
+        'key.expiresAt',
+        'key.lastUsedAt',
+        'key.lastUsedFromIp',
+        'key.isActive',
+      ])
+      .where('key.userId = :userId', { userId })
+      .andWhere('key.userId IS NOT NULL')
+      .orderBy('key.createdDate', 'DESC')
+      .getMany();
+  }
+
+  /**
+   * Self-revoke (workspace#038, FR-010/FR-011). Sets `isActive = false` and
+   * records the revoke audit row in ONE transaction (fail-closed — FR-023).
+   * Idempotent: a key that is already revoked is returned unchanged, with NO
+   * second audit row (SC-004: exactly one clean row per event). Not found —
+   * including "found but owned by someone else" — surfaces the SAME generic
+   * error, so existence of another user's key is never disclosed (US2 edge
+   * case).
+   */
+  async revokeOwnApiKey(keyId: string, userId: string): Promise<McpApiKey> {
+    return this.entityManager.transaction(async manager => {
+      const apiKey = await manager.findOne(McpApiKey, {
+        where: { id: keyId, userId },
+      });
+      if (!apiKey) {
+        throw new EntityNotFoundException(
+          'MCP API key not found',
+          LogContext.MCP_SERVER,
+          { keyId }
+        );
+      }
+
+      if (apiKey.isActive) {
+        apiKey.isActive = false;
+        await manager.save(apiKey);
+        await this.auditService.recordRevoke(manager, {
+          ownerUserId: userId,
+          initiatorUserId: userId,
+          initiatorRole: PlatformAuditInitiatorRole.SELF,
+          keyId: apiKey.id,
+          keyName: apiKey.name,
+        });
+      }
+
+      return apiKey;
+    });
+  }
+
+  /**
+   * Admin revoke, scoped to a named USER-bound owner only (workspace#038,
+   * FR-017/FR-018). Same `userId IS NOT NULL` firewall as
+   * {@link listUserKeysForAdmin} — an actor-bound key is neither listed nor
+   * revocable from this surface. Records the revoke audit row with
+   * `initiatorRole = PLATFORM_ADMIN` and `initiatorUserId = adminUserId`
+   * (subject remains the key's owner) in the same transaction.
+   */
+  async adminRevokeApiKey(
+    keyId: string,
+    userId: string,
+    adminUserId: string
+  ): Promise<McpApiKey> {
+    return this.entityManager.transaction(async manager => {
+      const apiKey = await manager
+        .createQueryBuilder(McpApiKey, 'key')
+        .where('key.id = :keyId', { keyId })
+        .andWhere('key.userId = :userId', { userId })
+        .andWhere('key.userId IS NOT NULL')
+        .getOne();
+      if (!apiKey) {
+        throw new EntityNotFoundException(
+          'MCP API key not found',
+          LogContext.MCP_SERVER,
+          { keyId }
+        );
+      }
+
+      if (apiKey.isActive) {
+        apiKey.isActive = false;
+        await manager.save(apiKey);
+        await this.auditService.recordRevoke(manager, {
+          ownerUserId: userId,
+          initiatorUserId: adminUserId,
+          initiatorRole: PlatformAuditInitiatorRole.PLATFORM_ADMIN,
+          keyId: apiKey.id,
+          keyName: apiKey.name,
+        });
+      }
+
+      return apiKey;
     });
   }
 
