@@ -3,6 +3,7 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { streamToBuffer } from '@common/utils/file.util';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { CollaboraDocumentEventsService } from '@domain/collaboration/collabora-document/events/collabora.document.events.service';
 import { Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
@@ -15,7 +16,6 @@ import { CollaboraDocumentService } from './collabora.document.service';
 import { DeleteCollaboraDocumentInput } from './dto/collabora.document.dto.delete';
 import { ReplaceCollaboraDocumentInput } from './dto/collabora.document.dto.replace';
 import { UpdateCollaboraDocumentInput } from './dto/collabora.document.dto.update';
-import { CollaboraDocumentEventsService } from './events/collabora.document.events.service';
 
 @InstrumentResolver()
 @Resolver(() => ICollaboraDocument)

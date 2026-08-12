@@ -1,9 +1,5 @@
 import { LogContext } from '@common/enums';
-import { LoggerService } from '@nestjs/common';
-import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
-import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { beforeEach, describe, expect, it, type Mocked, vi } from 'vitest';
-import { CollaboraDocumentAnalyticsEventHandler } from './collabora.document.analytics.event.handler';
+import { CollaboraDocumentAnalyticsEventHandler } from '@domain/collaboration/collabora-document/events/collabora.document.analytics.event.handler';
 import {
   COLLABORA_DOCUMENT_OPENED,
   COLLABORA_DOCUMENT_REPLACED,
@@ -11,7 +7,11 @@ import {
   CollaboraDocumentOpened,
   CollaboraDocumentReplaced,
   CollaboraDocumentUploaded,
-} from './collabora.document.analytics.events';
+} from '@domain/collaboration/collabora-document/events/collabora.document.analytics.events';
+import { LoggerService } from '@nestjs/common';
+import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { beforeEach, describe, expect, it, type Mocked, vi } from 'vitest';
 
 describe('CollaboraDocumentAnalyticsEventHandler', () => {
   let resolver: Mocked<CommunityResolverService>;

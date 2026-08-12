@@ -1,17 +1,17 @@
 import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import {
+  COLLABORA_DOCUMENT_OPENED,
+  CollaboraDocumentOpened,
+} from '@domain/collaboration/collabora-document/events/collabora.document.analytics.events';
+import { CollaboraDocumentEventsService } from '@domain/collaboration/collabora-document/events/collabora.document.events.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { CollaboraDocumentResolverQueries } from './collabora.document.resolver.queries';
 import { CollaboraDocumentService } from './collabora.document.service';
-import {
-  COLLABORA_DOCUMENT_OPENED,
-  CollaboraDocumentOpened,
-} from './events/collabora.document.analytics.events';
-import { CollaboraDocumentEventsService } from './events/collabora.document.events.service';
 
 describe('CollaboraDocumentResolverQueries', () => {
   let resolver: CollaboraDocumentResolverQueries;

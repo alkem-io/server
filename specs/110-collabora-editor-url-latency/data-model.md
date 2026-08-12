@@ -49,7 +49,7 @@ This invariant is not enforced by a database constraint. It is a domain property
 
 A CollaboraDocument that is reachable from neither path has no owning space — templates and knowledge-base documents are the real examples. The lookup raises `EntityNotFoundException`, preserving the type returned by the method it replaces. The lifecycle subscriber and site 4 catch and log it, so no user-visible behavior depends on it.
 
-Per the repo's exception standard, the lookup always exposes the exact static message `Unable to find Space for CollaboraDocument`. The document id and any resolved `calloutsSetId` go in `details`, including when `getLevelZeroSpaceIdForCalloutsSet` fails; the delegated method's dynamic message must not escape.
+Per the repo's exception standard, both not-found paths expose the exact static message `Unable to find Space for CollaboraDocument`. The document id and any resolved `calloutsSetId` go in `details`, including when `getLevelZeroSpaceIdForCalloutsSet` reports no space; the delegated not-found method's dynamic message must not escape. Unexpected infrastructure failures propagate unchanged instead of being misclassified as missing ownership.
 
 ## Transient lifecycle events
 

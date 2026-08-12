@@ -5,6 +5,7 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { getActorDisplayName } from '@domain/actor/actor.display.name';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
+import { CollaboraDocumentEventsService } from '@domain/collaboration/collabora-document/events/collabora.document.events.service';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { UserService } from '@domain/community/user/user.service';
 import { Inject } from '@nestjs/common';
@@ -16,7 +17,6 @@ import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { ICollaboraDocument } from './collabora.document.interface';
 import { CollaboraDocumentService } from './collabora.document.service';
 import { CollaboraEditorUrlResult } from './dto/collabora.editor.url.result';
-import { CollaboraDocumentEventsService } from './events/collabora.document.events.service';
 
 @InstrumentResolver()
 @Resolver(() => ICollaboraDocument)

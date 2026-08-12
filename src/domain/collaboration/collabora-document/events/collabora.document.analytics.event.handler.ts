@@ -1,10 +1,5 @@
 import { performance } from 'node:perf_hooks';
 import { LogContext } from '@common/enums';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { OnEvent } from '@nestjs/event-emitter';
-import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
-import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
   COLLABORA_DOCUMENT_OPENED,
   COLLABORA_DOCUMENT_REPLACED,
@@ -13,7 +8,12 @@ import {
   CollaboraDocumentOpened,
   CollaboraDocumentReplaced,
   CollaboraDocumentUploaded,
-} from './collabora.document.analytics.events';
+} from '@domain/collaboration/collabora-document/events/collabora.document.analytics.events';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { OnEvent } from '@nestjs/event-emitter';
+import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 type CollaboraAnalyticsReporter = (
   event: CollaboraDocumentAnalyticsEvent,

@@ -10,19 +10,19 @@
 
 ```ts
 public async getLevelZeroSpaceIdForCollaboraDocument(
-  collaboraDocumentID: string
+  collaboraDocumentId: string
 ): Promise<string>
 ```
 
 **Returns**: the `levelZeroSpaceID` of the space that owns the callout the document is attached to.
 
-**Throws**: `EntityNotFoundException` when the document is attached to no callout, or the callout resolves to no space. Both paths expose the exact static message `Unable to find Space for CollaboraDocument`. The document id and any resolved `calloutsSetId` go in exception `details`; a dynamic message from the delegated lookup must not escape.
+**Throws**: `EntityNotFoundException` when the document is attached to no callout, or the callout resolves to no space. Both not-found paths expose the exact static message `Unable to find Space for CollaboraDocument`. The document id and any resolved `calloutsSetId` go in exception `details`; a dynamic message from the delegated not-found exception must not escape. Unexpected infrastructure failures retain their original error type and context.
 
 **Guarantees**:
 
 | # | Guarantee |
 |---|---|
-| C1 | Each owner probe starts at a uniquely indexed `collaboraDocumentId`, returns at most one `calloutsSetId`, and never starts from `space` or joins the complete callout graph. |
+| C1 | Each owner probe starts at a uniquely indexed `collaboraDocumentId`, returns at most one `calloutsSetId`, and never starts from `space` or joins the complete callout graph. Existing migrations `1777000000000-CreateCollaboraDocument` and `1777000000001-AddCollaboraDocumentToCalloutFraming` provide the two unique constraints and their PostgreSQL indexes. |
 | C2 | Two statements on the common contribution-hosted path; at most three on the framing-hosted path. |
 | C3 | Returns the same value the removed two-call pair returned, for every document that pair could resolve. |
 | C4 | Read-only. No writes, no entity mutation, no events. |
@@ -30,7 +30,7 @@ public async getLevelZeroSpaceIdForCollaboraDocument(
 
 **Naming**: matches the three siblings already in the class — `getLevelZeroSpaceIdForRoleSet`, `getLevelZeroSpaceIdForCalloutsSet`, `getLevelZeroSpaceIdForMediaGallery`.
 
-**Composition**: resolves the owning callout's `calloutsSetId` from the document, then delegates to the existing `getLevelZeroSpaceIdForCalloutsSet`. That second half is not reimplemented. If delegation fails, this method translates the failure to its own static-message exception contract.
+**Composition**: resolves the owning callout's `calloutsSetId` from the document, then delegates to the existing `getLevelZeroSpaceIdForCalloutsSet`. That second half is not reimplemented. If delegation reports that the callouts set has no space, this method translates that expected not-found result to its own static-message exception contract. Other failures propagate unchanged.
 
 ---
 

@@ -38,7 +38,7 @@ Neither entity declares its foreign key as a property (TypeORM manages the colum
 
 Because a document is attached through exactly one of the two paths (spec, Key Entities), the two probes are independent and the first match is authoritative. Probe the contribution path first — it is the ordinary attachment. The common path costs two statements: one leaf-first probe for `calloutsSetId`, then `getLevelZeroSpaceIdForCalloutsSet`. The framing path costs at most three: a missed contribution probe, a framing probe, then the delegated lookup. Each probe starts from a unique `collaboraDocumentId` predicate and joins only far enough to read the owning callout's `calloutsSetId`.
 
-Both an unattached document and a downstream callouts-set resolution failure are translated to `EntityNotFoundException` with the exact static message `Unable to find Space for CollaboraDocument`. The document id and any resolved `calloutsSetId` are carried only in `details`.
+Both an unattached document and a downstream callouts-set not-found result are translated to `EntityNotFoundException` with the exact static message `Unable to find Space for CollaboraDocument`. The document id and any resolved `calloutsSetId` are carried only in `details`. Unexpected infrastructure failures propagate unchanged so transient database faults are not mislabeled as missing ownership. The existing `UNIQUE ("collaboraDocumentId")` constraints in migrations `1777000000000-CreateCollaboraDocument` and `1777000000001-AddCollaboraDocumentToCalloutFraming` supply indexed access for both leaf probes; no new migration is required.
 
 **Alternatives considered**:
 

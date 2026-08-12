@@ -414,6 +414,22 @@ describe('CommunityResolverService', () => {
       });
     });
 
+    it('preserves unexpected downstream lookup failures', async () => {
+      const databaseError = new Error('database unavailable');
+      entityManager.createQueryBuilder.mockReturnValueOnce(
+        createOwnerQueryBuilder({
+          calloutsSetId: 'callouts-set-database-error',
+        }) as any
+      );
+      entityManager.findOne.mockRejectedValue(databaseError);
+
+      await expect(
+        service.getLevelZeroSpaceIdForCollaboraDocument(
+          'collabora-document-database-error'
+        )
+      ).rejects.toBe(databaseError);
+    });
+
     it('queries only owner leaves before delegating to the shallow space lookup', async () => {
       const contributionQuery = createOwnerQueryBuilder(null);
       const framingQuery = createOwnerQueryBuilder({

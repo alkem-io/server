@@ -11,6 +11,7 @@ import {
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
 import { streamToBuffer } from '@common/utils/file.util';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { CollaboraDocumentEventsService } from '@domain/collaboration/collabora-document/events/collabora.document.events.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -19,7 +20,6 @@ import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { Readable } from 'stream';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
-import { CollaboraDocumentEventsService } from '../collabora-document/events/collabora.document.events.service';
 import { CalloutResolverMutations } from './callout.resolver.mutations';
 import { CalloutService } from './callout.service';
 import { CalloutAuthorizationService } from './callout.service.authorization';

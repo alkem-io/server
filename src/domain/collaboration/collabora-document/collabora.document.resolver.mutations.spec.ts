@@ -1,11 +1,11 @@
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { CollaboraDocumentEventsService } from '@domain/collaboration/collabora-document/events/collabora.document.events.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { CollaboraDocumentResolverMutations } from './collabora.document.resolver.mutations';
 import { CollaboraDocumentService } from './collabora.document.service';
-import { CollaboraDocumentEventsService } from './events/collabora.document.events.service';
 
 vi.mock('@common/utils/file.util', () => ({
   streamToBuffer: vi.fn().mockResolvedValue(Buffer.from('new-bytes')),

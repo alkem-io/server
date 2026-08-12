@@ -19,6 +19,7 @@ import {
   DeleteCalloutInput,
   UpdateCalloutEntityInput,
 } from '@domain/collaboration/callout/dto';
+import { CollaboraDocumentEventsService } from '@domain/collaboration/collabora-document/events/collabora.document.events.service';
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IMemo } from '@domain/common/memo/types';
@@ -50,7 +51,6 @@ import { CalloutContributionAuthorizationService } from '../callout-contribution
 import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
 import { ICollaboraDocument } from '../collabora-document/collabora.document.interface';
 import { ImportCollaboraDocumentInput } from '../collabora-document/dto/collabora.document.dto.import';
-import { CollaboraDocumentEventsService } from '../collabora-document/events/collabora.document.events.service';
 import { CollaborationLicenseService } from '../collaboration/collaboration.service.license';
 import { ILink } from '../link/link.interface';
 import { ICallout } from './callout.interface';

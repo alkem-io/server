@@ -1,6 +1,4 @@
 import { ActorContext } from '@core/actor-context/actor.context';
-import { Injectable } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   COLLABORA_DOCUMENT_OPENED,
   COLLABORA_DOCUMENT_REPLACED,
@@ -9,7 +7,9 @@ import {
   CollaboraDocumentOpened,
   CollaboraDocumentReplaced,
   CollaboraDocumentUploaded,
-} from './collabora.document.analytics.events';
+} from '@domain/collaboration/collabora-document/events/collabora.document.analytics.events';
+import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class CollaboraDocumentEventsService {

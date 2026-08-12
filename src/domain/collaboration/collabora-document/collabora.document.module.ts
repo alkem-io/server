@@ -1,5 +1,7 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
+import { CollaboraDocumentAnalyticsEventHandler } from '@domain/collaboration/collabora-document/events/collabora.document.analytics.event.handler';
+import { CollaboraDocumentEventsService } from '@domain/collaboration/collabora-document/events/collabora.document.events.service';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { UserModule } from '@domain/community/user/user.module';
@@ -18,8 +20,6 @@ import { CollaboraDocumentResolverMutations } from './collabora.document.resolve
 import { CollaboraDocumentResolverQueries } from './collabora.document.resolver.queries';
 import { CollaboraDocumentService } from './collabora.document.service';
 import { CollaboraDocumentAuthorizationService } from './collabora.document.service.authorization';
-import { CollaboraDocumentAnalyticsEventHandler } from './events/collabora.document.analytics.event.handler';
-import { CollaboraDocumentEventsService } from './events/collabora.document.events.service';
 
 @Module({
   imports: [

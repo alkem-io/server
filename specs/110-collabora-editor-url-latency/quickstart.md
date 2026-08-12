@@ -93,7 +93,7 @@ pnpm vitest run src/services/infrastructure/entity-resolver/community.resolver.s
 pnpm vitest run src/domain/collaboration/collabora-document/events/collabora.document.analytics.event.handler.spec.ts
 ```
 
-Verify both generated owner probes begin at a `collaboraDocumentId` predicate, the contribution path uses two statements, the framing path uses no more than three, and neither path builds the removed space-first OR relation tree. Both unattached and downstream-not-found cases must yield `EntityNotFoundException` with the exact static message `Unable to find Space for CollaboraDocument`, with `collaboraDocumentId` and any resolved `calloutsSetId` in `details`.
+Verify both generated owner probes begin at a `collaboraDocumentId` predicate, the contribution path uses two statements, the framing path uses no more than three, and neither path builds the removed space-first OR relation tree. Both unattached and downstream-not-found cases must yield `EntityNotFoundException` with the exact static message `Unable to find Space for CollaboraDocument`, with `collaboraDocumentId` and any resolved `calloutsSetId` in `details`. An unexpected downstream database error must be rethrown unchanged.
 
 The handler spec must also prove that every lookup attempt emits exactly one INFO-level `logger.log` record under `LogContext.COLLABORATION`, on success and failure, with:
 
@@ -174,11 +174,11 @@ Production observations are written to separate evidence files so SC-001 and SC-
 | SC-005 | pre-merge | **Pass (2026-08-12):** handler and direct-consumer specs preserve all five reporter contracts, including the complete contribution/view aggregate payloads and awaited site-4 order. |
 | SC-006 | pre-merge | **Pass (2026-08-12):** suppression-residue and disabled-suite searches returned no matches; open, replace, upload, contribution-window, and view-window contracts all execute in the passing suite. |
 | SC-001 | post-deploy | [production evidence](./evidence/sc-001-production.md) |
-| SC-003 | pre-merge + post-deploy | **Pre-merge pass (2026-08-12):** 95 targeted tests passed across lookup, handler, and direct consumer; query shape/count, exception details, and success/failure timing records are covered. [Production evidence](./evidence/sc-003-production.md) remains pending deployment. |
+| SC-003 | pre-merge + post-deploy | **Pre-merge pass (2026-08-13):** 96 targeted tests passed across lookup, handler, and direct consumer; query shape/count, exception details, infrastructure-error preservation, and success/failure timing records are covered. [Production evidence](./evidence/sc-003-production.md) remains pending deployment. |
 
 The single-fetch acceptance scenario also passed on 2026-08-12: 27 resolver/service tests proved one relation load for `profile` and `document`, WOPI token issuance from the supplied backing document, and the unchanged missing-relationship error.
 
-Final gates on 2026-08-12: `pnpm lint` passed, and `pnpm vitest run` passed 684 files / 7,804 tests with six files / seven tests skipped for unrelated existing suites. `git diff --check` passed. The final source diff changes no file under `src/migrations/`, no entity mapping, `schema.graphql`, RabbitMQ configuration, dependency manifest, or lockfile. No new code comment contains a spec, feature, PR, or issue identifier.
+Final gates on 2026-08-13: `pnpm lint` passed, and `pnpm vitest run` passed 700 files / 8,031 tests with six files / seven tests skipped for unrelated existing suites. `git diff --check` passed. The final source diff changes no file under `src/migrations/`, no entity mapping, `schema.graphql`, RabbitMQ configuration, dependency manifest, or lockfile. No new code comment contains a spec, feature, PR, or issue identifier.
 
 ## Follow-up
 

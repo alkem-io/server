@@ -161,7 +161,10 @@ export class CommunityResolverService {
 
     try {
       return await this.getLevelZeroSpaceIdForCalloutsSet(calloutsSetId);
-    } catch {
+    } catch (error) {
+      if (!(error instanceof EntityNotFoundException)) {
+        throw error;
+      }
       throw new EntityNotFoundException(
         'Unable to find Space for CollaboraDocument',
         LogContext.COMMUNITY,

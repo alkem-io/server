@@ -1,6 +1,4 @@
 import { ActorContext } from '@core/actor-context/actor.context';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   COLLABORA_DOCUMENT_OPENED,
   COLLABORA_DOCUMENT_REPLACED,
@@ -8,8 +6,10 @@ import {
   CollaboraDocumentOpened,
   CollaboraDocumentReplaced,
   CollaboraDocumentUploaded,
-} from './collabora.document.analytics.events';
-import { CollaboraDocumentEventsService } from './collabora.document.events.service';
+} from '@domain/collaboration/collabora-document/events/collabora.document.analytics.events';
+import { CollaboraDocumentEventsService } from '@domain/collaboration/collabora-document/events/collabora.document.events.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('CollaboraDocumentEventsService', () => {
   let eventEmitter: EventEmitter2;
