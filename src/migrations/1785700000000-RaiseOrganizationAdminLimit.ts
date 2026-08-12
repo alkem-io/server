@@ -25,6 +25,16 @@ export class RaiseOrganizationAdminLimit1785700000000
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    // Rollback note: this reverts EVERY organization ADMIN role still at
+    // maximum = 6 back to 3 — not only the rows `up` touched. That is the
+    // intended semantics: a rollback withdraws the raised-limit feature, so all
+    // organizations return to the previous cap of 3 (organizations created
+    // after deploy with the new default of 6 are included by design, and are
+    // reverted alongside the code constant). It is non-destructive —
+    // userPolicy.maximum only gates NEW admin assignments and never removes
+    // admins already granted, so no membership is lost. Reverting to the prior
+    // uniform value is therefore both correct and idempotent, so no
+    // migration-owned row-state tracking is needed.
     await queryRunner.query(`
       UPDATE "role"
       SET "userPolicy" = jsonb_set("userPolicy", '{maximum}', '3')
