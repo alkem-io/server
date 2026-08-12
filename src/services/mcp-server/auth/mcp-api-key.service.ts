@@ -14,28 +14,6 @@ import { McpApiKeyScope } from '../dto/mcp.types';
 import { McpApiKeyAuditService } from './mcp-api-key.audit.service';
 import { McpApiKey } from './mcp-api-key.entity';
 
-export interface CreateMcpApiKeyInput {
-  name: string;
-  description?: string;
-  /** Bind the key to a User (`buildForUser`). Exactly one of userId / actorId. */
-  userId?: string;
-  /**
-   * Bind the key to an Actor (`buildForActor`) — e.g. the `virtual-assistant`
-   * actor for the system-invoked path (004-web-ai-assistant T027). Exactly one
-   * of userId / actorId.
-   */
-  actorId?: string;
-  scopes?: McpApiKeyScope[];
-  expiresAt?: Date;
-}
-
-export interface CreateMcpApiKeyResult {
-  id: string;
-  name: string;
-  apiKey: string; // The plain text key - only returned on creation
-  expiresAt?: Date;
-}
-
 /**
  * Cap on USABLE (active + unexpired + user-bound) MCP API keys per user
  * (workspace#038, FR-005/FR-006). A hardcoded service constant, deliberately
@@ -67,50 +45,6 @@ export class McpApiKeyService {
     private readonly entityManager: EntityManager,
     private readonly auditService: McpApiKeyAuditService
   ) {}
-
-  /**
-   * Create a new MCP API key
-   * Returns the plain text key only once - it cannot be retrieved again
-   */
-  async createApiKey(
-    input: CreateMcpApiKeyInput
-  ): Promise<CreateMcpApiKeyResult> {
-    // Generate a secure random key
-    const plainTextKey = this.generateApiKey();
-    const keyHash = this.hashApiKey(plainTextKey);
-
-    if (!input.userId === !input.actorId) {
-      throw new EntityNotFoundException(
-        'An MCP API key must bind to exactly one of userId / actorId',
-        LogContext.MCP_SERVER,
-        { hasUserId: !!input.userId, hasActorId: !!input.actorId }
-      );
-    }
-
-    const apiKey = new McpApiKey();
-    apiKey.name = input.name;
-    apiKey.description = input.description;
-    apiKey.userId = input.userId;
-    apiKey.actorId = input.actorId;
-    apiKey.keyHash = keyHash;
-    apiKey.scopes = input.scopes || [{ operations: ['read'] }];
-    apiKey.expiresAt = input.expiresAt;
-    apiKey.isActive = true;
-
-    const saved = await this.mcpApiKeyRepository.save(apiKey);
-
-    this.logger.verbose?.(
-      `Created MCP API key: ${saved.id} for ${input.actorId ? `actor: ${input.actorId}` : `user: ${input.userId}`}`,
-      LogContext.MCP_SERVER
-    );
-
-    return {
-      id: saved.id,
-      name: saved.name,
-      apiKey: plainTextKey,
-      expiresAt: saved.expiresAt,
-    };
-  }
 
   /**
    * Mint a new USER-bound MCP API key with PAT semantics (workspace#038,
@@ -381,16 +315,6 @@ export class McpApiKeyService {
   }
 
   /**
-   * List API keys for a user (without exposing the actual keys)
-   */
-  async listApiKeysForUser(userId: string): Promise<McpApiKey[]> {
-    return this.mcpApiKeyRepository.find({
-      where: { userId },
-      order: { createdDate: 'DESC' },
-    });
-  }
-
-  /**
    * Self-service list, allowlisted at the QUERY level (workspace#038,
    * FR-007/FR-008/FR-009): `keyHash` is excluded by the `select`, not by
    * downstream omission (R-01). Includes revoked and expired rows so
@@ -521,51 +445,6 @@ export class McpApiKeyService {
 
       return apiKey;
     });
-  }
-
-  /**
-   * Revoke (deactivate) an API key
-   */
-  async revokeApiKey(keyId: string, userId: string): Promise<void> {
-    const apiKey = await this.mcpApiKeyRepository.findOne({
-      where: { id: keyId, userId },
-    });
-
-    if (!apiKey) {
-      throw new EntityNotFoundException(
-        'MCP API key not found',
-        LogContext.MCP_SERVER,
-        { keyId }
-      );
-    }
-
-    apiKey.isActive = false;
-    await this.mcpApiKeyRepository.save(apiKey);
-
-    this.logger.verbose?.(
-      `Revoked MCP API key: ${keyId}`,
-      LogContext.MCP_SERVER
-    );
-  }
-
-  /**
-   * Delete an API key permanently
-   */
-  async deleteApiKey(keyId: string, userId: string): Promise<void> {
-    const result = await this.mcpApiKeyRepository.delete({ id: keyId, userId });
-
-    if (result.affected === 0) {
-      throw new EntityNotFoundException(
-        'MCP API key not found',
-        LogContext.MCP_SERVER,
-        { keyId }
-      );
-    }
-
-    this.logger.verbose?.(
-      `Deleted MCP API key: ${keyId}`,
-      LogContext.MCP_SERVER
-    );
   }
 
   /**

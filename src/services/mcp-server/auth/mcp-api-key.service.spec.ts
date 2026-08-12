@@ -395,10 +395,40 @@ describe('McpApiKeyService.revokeOwnApiKey (workspace#038)', () => {
     );
   });
 
-  it('has no hard-delete path reachable from self-revoke (FR-011)', () => {
-    // Structural guard: revokeOwnApiKey must never call repository.delete.
+  it('exposes no delete-capable method at all (FR-011)', () => {
+    // Assert against the real class, not a hand-built mock. The previous
+    // version of this test checked `repo.delete === undefined` on a stub that
+    // was never given a `delete` — it passed regardless of what the service
+    // did, and would not have noticed the legacy `deleteApiKey` that survived
+    // the REST deletion with zero callers on a service now injected into three
+    // GraphQL surfaces.
+    const methods = Object.getOwnPropertyNames(McpApiKeyService.prototype);
+    expect(methods).not.toContain('deleteApiKey');
+    expect(methods.filter(m => /delete|destroy|purge/i.test(m))).toEqual([]);
+  });
+
+  it('excludes actor-bound keys from the admin list (R-038-4)', async () => {
+    // The `userId IS NOT NULL` firewall is what keeps the bootstrap trust
+    // anchor out of reach of the admin surface. Assert it on the query the
+    // SERVICE actually builds — the resolver spec only proves forwarding, so
+    // dropping this clause would otherwise go unnoticed by every test.
     const { service, repo } = build();
-    expect((repo as any).delete).toBeUndefined();
-    expect(typeof service.revokeOwnApiKey).toBe('function');
+    const qb: any = {
+      select: vi.fn(() => qb),
+      where: vi.fn(() => qb),
+      andWhere: vi.fn(() => qb),
+      orderBy: vi.fn(() => qb),
+      getMany: vi.fn().mockResolvedValue([]),
+    };
+    (repo as any).createQueryBuilder = vi.fn(() => qb);
+
+    await service.listUserKeysForAdmin(USER);
+
+    const clauses = qb.andWhere.mock.calls.map((c: any[]) => String(c[0]));
+    expect(clauses.some((c: string) => /userId IS NOT NULL/i.test(c))).toBe(
+      true
+    );
+    // and the owner predicate is still scoped to the requested user
+    expect(String(qb.where.mock.calls[0][0])).toMatch(/key\.userId = :userId/);
   });
 });

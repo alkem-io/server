@@ -6,6 +6,7 @@ import {
   ObjectType,
   registerEnumType,
 } from '@nestjs/graphql';
+import { Transform } from 'class-transformer';
 import {
   ArrayNotEmpty,
   IsArray,
@@ -129,6 +130,11 @@ export class MintMcpApiKeyInput {
     nullable: false,
     description: 'Label for the key. 1..128 characters after trimming.',
   })
+  // Trim BEFORE validating: the description promises "1..128 characters after
+  // trimming", and without this a whitespace-only name passes `@IsNotEmpty()`
+  // and mints a key with a blank label — defeating the identify-then-revoke
+  // workflow the label exists for.
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
   @IsNotEmpty()
   @MaxLength(SMALL_TEXT_LENGTH)
@@ -206,9 +212,20 @@ interface McpApiKeyScope {
  */
 export function toGraphqlMcpApiKey(row: McpApiKeyProjectionSource): IMcpApiKey {
   const status = deriveStatus(row.isActive, row.expiresAt);
+  // Filter, don't cast. Rows predating this feature were written by the
+  // bootstrap path or by hand and may carry operations outside the published
+  // enum (or omit `operations` entirely). `me.mcpApiKeys` is `[McpApiKey!]!`,
+  // so one unrepresentable value fails the WHOLE field — the user would lose
+  // sight of every key, including the good ones, on the only surface that can
+  // revoke them. Unknown values degrade to an empty operation list: the key
+  // stays listable and stays revocable.
   const operations = Array.from(
     new Set(
-      row.scopes.flatMap(scope => scope.operations) as McpApiKeyOperation[]
+      row.scopes
+        .flatMap(scope => scope.operations ?? [])
+        .filter((op): op is McpApiKeyOperation =>
+          Object.values(McpApiKeyOperation).includes(op as McpApiKeyOperation)
+        )
     )
   );
 
