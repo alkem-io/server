@@ -42,7 +42,12 @@ describe('CollaboraDocumentResolverQueries', () => {
   });
 
   describe('collaboraEditorUrl', () => {
-    it('should report COLLABORA_DOCUMENT_OPENED for the opening actor and return the editor URL', async () => {
+    // TEMP hotfix: COLLABORA_DOCUMENT_OPENED analytics attribution is disabled to
+    // remove the ~8s getCommunityForCollaboraDocumentOrFail penalty on the open
+    // path, so the reporter is no longer called here. Re-enabled by the proper
+    // fix (a cheap leaf-first space lookup) in the collabora-editor-url-latency
+    // follow-up PR referenced in this PR's description.
+    it.skip('should report COLLABORA_DOCUMENT_OPENED for the opening actor and return the editor URL', async () => {
       const collaboraDocument = {
         id: 'collab-doc-1',
         authorization: { id: 'auth-1' },
