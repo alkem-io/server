@@ -1,3 +1,4 @@
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -15,11 +16,22 @@ import { LicensingFrameworkService } from '@platform/licensing/credential-based/
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor, Profiling } from '@src/common/decorators';
 import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
+import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { AdminLicensingService } from './admin.licensing.service';
 import { AssignLicensePlanToAccount } from './dto/admin.licensing.dto.assign.license.plan.to.account';
 import { AssignLicensePlanToSpace } from './dto/admin.licensing.dto.assign.license.plan.to.space';
 import { RevokeLicensePlanFromAccount } from './dto/admin.licensing.dto.revoke.license.plan.from.account';
 import { RevokeLicensePlanFromSpace } from './dto/admin.licensing.dto.revoke.license.plan.from.space';
+
+/** T058 — A12's declared owner/legacy-reachers (T037/T040's grant). */
+const A12_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
+  AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
+];
+const A12_LEGACY_REACHERS: readonly AuthorizationCredential[] = [
+  AuthorizationCredential.GLOBAL_ADMIN,
+  AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+  AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+];
 
 @InstrumentResolver()
 @Resolver()
@@ -33,7 +45,8 @@ export class AdminLicensingResolverMutations {
     private licensingFrameworkService: LicensingFrameworkService,
     private licenseService: LicenseService,
     private adminLicensingService: AdminLicensingService,
-    private platformOperationsAuditService: PlatformOperationsAuditService
+    private platformOperationsAuditService: PlatformOperationsAuditService,
+    private readonly platformResourceAuditService: PlatformResourceAuditService
   ) {}
 
   @Mutation(() => String, {
@@ -89,6 +102,21 @@ export class AdminLicensingResolverMutations {
     );
     await this.licenseService.saveAll(updatedLicenses);
 
+    // T058 — A12, single-path surface: gated on GRANT held on the
+    // licensing-framework tree, which only PLATFORM_LICENSE_MANAGER (∪
+    // legacy) holds.
+    await this.platformResourceAuditService.recordEventForActor(
+      actorContext,
+      A12_INTENDED_OWNERS,
+      A12_LEGACY_REACHERS,
+      {
+        resourceKind: 'account-license-plan',
+        resourceId: account.id,
+        licensePlan: planData.licensePlanID,
+        outcome: 'license_assigned',
+      }
+    );
+
     return this.accountService.getAccountOrFail(account.id);
   }
 
@@ -126,6 +154,18 @@ export class AdminLicensingResolverMutations {
       space.id
     );
     await this.licenseService.saveAll(updatedLicenses);
+
+    await this.platformResourceAuditService.recordEventForActor(
+      actorContext,
+      A12_INTENDED_OWNERS,
+      A12_LEGACY_REACHERS,
+      {
+        resourceKind: 'space-license-plan',
+        resourceId: space.id,
+        licensePlan: planData.licensePlanID,
+        outcome: 'license_assigned',
+      }
+    );
 
     return this.spaceService.getSpaceOrFail(space.id);
   }
@@ -166,6 +206,18 @@ export class AdminLicensingResolverMutations {
     );
     await this.licenseService.saveAll(updatedLicenses);
 
+    await this.platformResourceAuditService.recordEventForActor(
+      actorContext,
+      A12_INTENDED_OWNERS,
+      A12_LEGACY_REACHERS,
+      {
+        resourceKind: 'account-license-plan',
+        resourceId: account.id,
+        licensePlan: planData.licensePlanID,
+        outcome: 'license_revoked',
+      }
+    );
+
     return this.accountService.getAccountOrFail(account.id);
   }
 
@@ -203,6 +255,19 @@ export class AdminLicensingResolverMutations {
       space.id
     );
     await this.licenseService.saveAll(updatedLicenses);
+
+    await this.platformResourceAuditService.recordEventForActor(
+      actorContext,
+      A12_INTENDED_OWNERS,
+      A12_LEGACY_REACHERS,
+      {
+        resourceKind: 'space-license-plan',
+        resourceId: space.id,
+        licensePlan: planData.licensePlanID,
+        outcome: 'license_revoked',
+      }
+    );
+
     return this.spaceService.getSpaceOrFail(space.id);
   }
 

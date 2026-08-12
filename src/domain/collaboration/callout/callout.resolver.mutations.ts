@@ -1,5 +1,6 @@
 import { SUBSCRIPTION_CALLOUT_POST_CREATED } from '@common/constants';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { CalloutAllowedActors } from '@common/enums/callout.allowed.contributors';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
@@ -40,6 +41,7 @@ import { RoomResolverService } from '@services/infrastructure/entity-resolver/ro
 import { TemporaryStorageService } from '@services/infrastructure/temporary-storage/temporary.storage.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
+import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
@@ -79,6 +81,7 @@ export class CalloutResolverMutations {
     private readonly temporaryStorageService: TemporaryStorageService,
     private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly collaborationLicenseService: CollaborationLicenseService,
+    private readonly platformResourceAuditService: PlatformResourceAuditService,
     @Inject(SUBSCRIPTION_CALLOUT_POST_CREATED)
     private readonly postCreatedSubscription: PubSubEngine
   ) {}
@@ -91,13 +94,50 @@ export class CalloutResolverMutations {
     @Args('deleteData') deleteData: DeleteCalloutInput
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(deleteData.ID);
-    this.authorizationService.grantAccessOrFail(
+    // 027-platform-role-redesign (T043, A8, research D5): dual-path — the
+    // owning space keeps ordinary DELETE, platform-content-full-access
+    // reaches the same mutation via its own privilege (cascaded from the
+    // root policy, T036). Neither check alone is sufficient; either
+    // satisfies the mutation.
+    const canDeleteAsOwner = this.authorizationService.isAccessGranted(
       actorContext,
       callout.authorization,
-      AuthorizationPrivilege.DELETE,
-      `delete callout: ${callout.id}`
+      AuthorizationPrivilege.DELETE
     );
-    return await this.calloutService.deleteCallout(deleteData.ID);
+    const canDeleteAsContentFullAccess =
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        callout.authorization,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS
+      );
+    if (!canDeleteAsOwner && !canDeleteAsContentFullAccess) {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        callout.authorization,
+        AuthorizationPrivilege.DELETE,
+        `delete callout: ${callout.id}`
+      );
+    }
+    const deleted = await this.calloutService.deleteCallout(deleteData.ID);
+    // T058/FR-018a: audit ONLY on the PLATFORM branch — never the ordinary
+    // owner branch — taken from the authorization RESULT above, not
+    // re-derived from the actor's roles.
+    if (canDeleteAsContentFullAccess) {
+      await this.platformResourceAuditService.recordEventForActor(
+        actorContext,
+        [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        {
+          resourceKind: 'callout',
+          resourceId: deleteData.ID,
+          outcome: 'deleted',
+        }
+      );
+    }
+    return deleted;
   }
 
   @Mutation(() => ICallout, {
@@ -297,11 +337,27 @@ export class CalloutResolverMutations {
       AuthorizationPrivilege.UPDATE_CALLOUT_PUBLISHER,
       `update publisher information on callout: ${callout.id}`
     );
-    return this.calloutService.updateCalloutPublishInfo(
+    const updated = await this.calloutService.updateCalloutPublishInfo(
       callout,
       calloutData.publisherID,
       calloutData.publishDate
     );
+    // T058 — single-path surface (no owner branch): every successful call
+    // is, by construction, authorized by UPDATE_CALLOUT_PUBLISHER.
+    await this.platformResourceAuditService.recordEventForActor(
+      actorContext,
+      [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
+      [
+        AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_SUPPORT,
+      ],
+      {
+        resourceKind: 'callout-publisher',
+        resourceId: callout.id,
+        outcome: 'visibility_changed',
+      }
+    );
+    return updated;
   }
 
   @Mutation(() => ICalloutContribution, {

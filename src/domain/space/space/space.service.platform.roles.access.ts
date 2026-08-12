@@ -86,7 +86,92 @@ export class SpacePlatformRolesAccessService {
       grantedPrivileges: [AuthorizationPrivilege.READ],
     });
 
+    // 027-platform-role-redesign (T038, A16): platform-spaces-reader
+    // replaces the void global-spaces-read (research C1) — same grant,
+    // additively alongside the legacy role above.
+    platformAccessRoles.push({
+      roleName: RoleName.PLATFORM_SPACES_READER,
+      grantedPrivileges: [AuthorizationPrivilege.READ],
+    });
+
+    // 027-platform-role-redesign (A9, live finding F5): platform-resource-admin
+    // owns every cross-account/cross-parent MOVE of a Space, but its grants
+    // (TRANSFER_RESOURCE_OFFER/_ACCEPT @account, and the conversion resolver's
+    // own synthetic policy) are all WRITE gates. It held no READ anywhere, so
+    // it could move a Space it was not allowed to look at — and the admin
+    // Transfer/Conversion panel, its only section, could not render the space
+    // it was about to move (`SpaceConversionLookup` → `Space.account` denied,
+    // observed live 2026-08-10 on a private L0). READ-only, exactly the A16
+    // shape, deliberately NOT the CRUD set: this role moves resources, it does
+    // not edit their contents.
+    platformAccessRoles.push({
+      roleName: RoleName.PLATFORM_RESOURCE_ADMIN,
+      grantedPrivileges: [AuthorizationPrivilege.READ],
+    });
+
+    // 027-platform-role-redesign (T049, A15): platform-support's in-space
+    // admin rights, gated by the SAME per-space `allowPlatformSupportAsAdmin`
+    // flag as legacy global-support — the flag is the real gate; this role
+    // is additive alongside it. Deliberately does NOT carry the legacy
+    // PLATFORM_ADMIN privilege GLOBAL_SUPPORT still gets above — this is the
+    // new role, and the point of the redesign is that it never holds the
+    // catch-all.
+    platformAccessRoles.push({
+      roleName: RoleName.PLATFORM_SUPPORT,
+      grantedPrivileges: this.getAccessPrivilegesForPlatformSupport(
+        space,
+        spaceSettings,
+        parentPlatformAccess
+      ),
+    });
+
     return { roles: platformAccessRoles };
+  }
+
+  private getAccessPrivilegesForPlatformSupport(
+    space: ISpace,
+    spaceSettings: ISpaceSettings,
+    parentPlatformAccess?: IPlatformRolesAccess
+  ): AuthorizationPrivilege[] {
+    const privileges: AuthorizationPrivilege[] = [];
+
+    if (space.level === SpaceLevel.L0) {
+      if (spaceSettings.privacy.allowPlatformSupportAsAdmin) {
+        privileges.push(
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+          AuthorizationPrivilege.GRANT
+        );
+        if (spaceSettings.collaboration?.allowGuestContributions) {
+          privileges.push(AuthorizationPrivilege.PUBLIC_SHARE);
+        }
+      }
+    } else {
+      if (!parentPlatformAccess) {
+        throw new EntityNotFoundException(
+          `Platform Support access: Parent platform access not found for space ${space.id}`,
+          LogContext.SPACES
+        );
+      }
+      const hasUpdateOnParent = this.platformAccessService.hasRolePrivilege(
+        parentPlatformAccess.roles,
+        RoleName.PLATFORM_SUPPORT,
+        AuthorizationPrivilege.UPDATE
+      );
+      if (hasUpdateOnParent) {
+        privileges.push(
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+          AuthorizationPrivilege.GRANT
+        );
+      }
+    }
+
+    return privileges;
   }
 
   private getAccessPrivilegesForSupport(

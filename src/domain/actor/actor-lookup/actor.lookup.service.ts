@@ -597,20 +597,51 @@ export class ActorLookupService {
 
   /**
    * Count actors with a given credential, optionally filtered by type.
+   *
+   * 027-platform-role-redesign (live-verification fix, F-1): the previous
+   * implementation filtered on the to-many `credentials` relation via a
+   * plain `FindOptionsWhere`, which compiles to an INNER JOIN — the exact
+   * row-duplication hazard `findMentionableContributors` above already
+   * documents and avoids with an EXISTS subquery. Here it meant an actor
+   * with more than one credential row of the SAME type+resourceID (e.g. a
+   * stale duplicate grant — nothing in the schema forbids it, `Credential`
+   * carries no unique constraint) was counted once PER MATCHING ROW, not
+   * once per actor. `platform.role.assignment.rules.service.ts`'s rule 5
+   * (last-Platform-Roles-Admin guard) depends on this count being an exact
+   * actor headcount: an inflated count silently defeats the guard and lets
+   * the platform's last Platform Roles Admin revoke themselves. Switched to
+   * the same EXISTS-subquery pattern so the result is always a DISTINCT
+   * actor count, immune to relation-join fan-out.
    */
   async countActorsWithCredentials(
     credentialCriteria: CredentialsSearchInput,
     actorTypes?: ActorType[]
   ): Promise<number> {
-    return this.entityManager.count(Actor, {
-      where: {
-        ...(actorTypes?.length && { type: In(actorTypes) }),
-        credentials: {
-          type: credentialCriteria.type,
-          resourceID: credentialCriteria.resourceID || '',
-        },
-      },
-    });
+    const qb = this.entityManager
+      .createQueryBuilder(Actor, 'actor')
+      .where(qb2 => {
+        const sub = qb2
+          .subQuery()
+          .select('1')
+          .from(Credential, 'cred')
+          .where('cred.actorId = actor.id')
+          .andWhere('cred.type = :mcCredType')
+          .andWhere('cred.resourceID = :mcCredResourceID')
+          .getQuery();
+        return `EXISTS ${sub}`;
+      })
+      .setParameters({
+        mcCredType: credentialCriteria.type,
+        mcCredResourceID: credentialCriteria.resourceID || '',
+      });
+
+    if (actorTypes?.length) {
+      qb.andWhere('actor.type IN (:...mcCountActorTypes)', {
+        mcCountActorTypes: actorTypes,
+      });
+    }
+
+    return qb.getCount();
   }
 
   /**

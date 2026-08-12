@@ -8,6 +8,7 @@ import { SpaceService } from '@domain/space/space/space.service';
 import { SpaceLicenseService } from '@domain/space/space/space.service.license';
 import { Test, TestingModule } from '@nestjs/testing';
 import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
+import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock } from 'vitest';
@@ -15,6 +16,7 @@ import { AdminLicensingResolverMutations } from './admin.licensing.resolver.muta
 import { AdminLicensingService } from './admin.licensing.service';
 
 describe('AdminLicensingResolverMutations', () => {
+  let module: TestingModule;
   let resolver: AdminLicensingResolverMutations;
   let authorizationService: Record<string, Mock>;
   let accountService: Record<string, Mock>;
@@ -30,7 +32,7 @@ describe('AdminLicensingResolverMutations', () => {
   beforeEach(async () => {
     vi.restoreAllMocks();
 
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [AdminLicensingResolverMutations, MockWinstonProvider],
     })
       .useMocker(defaultMockerFactory)
@@ -352,6 +354,80 @@ describe('AdminLicensingResolverMutations', () => {
       );
       expect(adminLicensingService.getAllAccounts).toHaveBeenCalled();
       expect(accountLicenseService.applyLicensePolicy).toHaveBeenCalledTimes(2);
+    });
+  });
+  // ===================================================================
+  // qual-server-12 (2026-07-31) — A12's four license assign/revoke surfaces
+  // each write a `recordEventForActor` row, none asserted. These are
+  // single-path surfaces (ACCOUNT_LICENSE_MANAGE), so unlike A8/A9 there is
+  // no owner branch to exclude: every successful call MUST record. That also
+  // makes the `resourceKind`/`outcome` pair the only thing distinguishing
+  // four otherwise-identical rows, so both are asserted rather than just the
+  // fact of the call.
+  // ===================================================================
+  describe('audit coverage (qual-server-12)', () => {
+    const resourceAudit = () => module.get(PlatformResourceAuditService) as any;
+
+    const licensing = { id: 'lic-1', authorization: { id: 'auth-lic' } };
+
+    beforeEach(() => {
+      licensingFrameworkService.getLicensingOrFail.mockResolvedValue(licensing);
+      licensingFrameworkService.getDefaultLicensingOrFail.mockResolvedValue(
+        licensing
+      );
+      accountLicenseService.applyLicensePolicy.mockResolvedValue([]);
+      spaceLicenseService?.applyLicensePolicy?.mockResolvedValue?.([]);
+      accountService.getAccountOrFail.mockResolvedValue({ id: 'acc-1' });
+      adminLicensingService.assignLicensePlanToAccount.mockResolvedValue({
+        id: 'acc-1',
+      });
+      adminLicensingService.assignLicensePlanToSpace.mockResolvedValue({
+        id: 'space-1',
+        account: { id: 'acc-1' },
+      });
+      adminLicensingService.revokeLicensePlanFromAccount.mockResolvedValue({
+        id: 'acc-1',
+      });
+      adminLicensingService.revokeLicensePlanFromSpace.mockResolvedValue({
+        id: 'space-1',
+        account: { id: 'acc-1' },
+      });
+    });
+
+    it.each([
+      [
+        'assignLicensePlanToAccount',
+        { licensePlanID: 'plan-1', accountID: 'acc-1', licensingID: 'lic-1' },
+        'account-license-plan',
+        'license_assigned',
+      ],
+      [
+        'assignLicensePlanToSpace',
+        { licensePlanID: 'plan-1', spaceID: 'space-1', licensingID: 'lic-1' },
+        'space-license-plan',
+        'license_assigned',
+      ],
+      [
+        'revokeLicensePlanFromAccount',
+        { licensePlanID: 'plan-1', accountID: 'acc-1', licensingID: 'lic-1' },
+        'account-license-plan',
+        'license_revoked',
+      ],
+      [
+        'revokeLicensePlanFromSpace',
+        { licensePlanID: 'plan-1', spaceID: 'space-1', licensingID: 'lic-1' },
+        'space-license-plan',
+        'license_revoked',
+      ],
+    ])('%s records a `%s` / `%s` resource event', async (method, input, resourceKind, outcome) => {
+      await (resolver as any)[method](actorContext, input as any);
+
+      expect(resourceAudit().recordEventForActor).toHaveBeenCalledWith(
+        actorContext,
+        expect.any(Array),
+        expect.any(Array),
+        expect.objectContaining({ resourceKind, outcome })
+      );
     });
   });
 });

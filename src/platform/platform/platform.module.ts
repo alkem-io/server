@@ -15,6 +15,7 @@ import { LicensingFrameworkModule } from '@platform/licensing/credential-based/l
 import { MetadataModule } from '@platform/metadata/metadata.module';
 import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors';
 import { PlatformSettingsModule } from '@platform/platform-settings/platform.settings.module';
+import { PlatformConfigurationAuditModule } from '@src/platform-admin/platform-configuration-audit/platform.configuration.audit.module';
 import { PlatformOperationsAuditModule } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.module';
 import { Platform } from './platform.entity';
 import { PlatformResolverFields } from './platform.resolver.fields';
@@ -27,6 +28,7 @@ import { PlatformLicenseService } from './platform.service.license';
 @Module({
   imports: [
     PlatformOperationsAuditModule,
+    PlatformConfigurationAuditModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
     PlatformAuthorizationPolicyModule,

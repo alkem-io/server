@@ -1,6 +1,8 @@
 import { ActorType, LogContext, ProfileType } from '@common/enums';
 import { AccountType } from '@common/enums/account.type';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
@@ -14,6 +16,7 @@ import {
 import { FormatNotSupportedException } from '@common/exceptions/format.not.supported.exception';
 import { validateEmail } from '@common/utils';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextCacheService } from '@core/actor-context/actor.context.cache.service';
 import {
   OidcSessionRevocationService,
@@ -21,6 +24,7 @@ import {
   redactStack,
 } from '@core/auth/oidc/revocation/oidc-session-revocation.service';
 import { KratosSessionData } from '@core/authentication/kratos.session';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { applyUserFilter } from '@core/filtering/filters';
 import { UserFilterInput } from '@core/filtering/input-types';
 import { PaginationArgs } from '@core/pagination';
@@ -49,11 +53,17 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { getReadOnlyDefaultCapabilityToggles } from '@services/mcp-server/capabilities/assistant.capability.classification';
 import { InstrumentService } from '@src/apm/decorators';
+import {
+  resolveInitiatorRole,
+  resolveInitiatorRoleBestEffort,
+} from '@src/platform-admin/platform-audit-attribution/resolve.initiator.role';
+import { PlatformRoleAssignmentAuditService } from '@src/platform-admin/platform-role-assignment-audit/platform.role.assignment.audit.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, QueryFailedError, Repository } from 'typeorm';
 import { RoleSetRoleSelectionCredentials } from '../../access/role-set/dto/role.set.dto.role.selection.credentials';
@@ -90,6 +100,9 @@ export class UserService {
     // latter from UserModule would be a dependency cycle.
     private readonly oidcSessionRevocationService: OidcSessionRevocationService,
     private readonly messagingService: MessagingService,
+    private authorizationService: AuthorizationService,
+    private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
+    private platformRoleAssignmentAuditService: PlatformRoleAssignmentAuditService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -875,7 +888,10 @@ export class UserService {
     return getPaginationResults(qb, paginationArgs);
   }
 
-  async updateUser(userInput: UpdateUserInput): Promise<IUser> {
+  async updateUser(
+    userInput: UpdateUserInput,
+    actorContext: ActorContext
+  ): Promise<IUser> {
     const user = await this.getUserByIdOrFail(userInput.ID, {
       relations: { profile: true },
     });
@@ -898,7 +914,63 @@ export class UserService {
       user.phone = userInput.phone;
     }
 
+    // 027-platform-role-redesign (T052, A21, FR-002): the `serviceProfile`
+    // marker STAYS on UpdateUserInput (removing it would be a breaking
+    // input-field removal, forbidden in the additive slice) but its
+    // enforcement is extracted here — an ordinary user UPDATE no longer
+    // flips it unconditionally. `SET_SERVICE_PROFILE` is checked on the
+    // PLATFORM authorization policy, not the target user's own policy: the
+    // marker is a platform-wide precondition of a Platform Spaces Reader
+    // grant, not a per-user attribute the user's own admins control.
+    let serviceProfileChange: { previous: boolean; next: boolean } | undefined;
     if (userInput.serviceProfile !== undefined) {
+      const platformAuthorization =
+        await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
+      const canSetServiceProfile = this.authorizationService.isAccessGranted(
+        actorContext,
+        platformAuthorization,
+        AuthorizationPrivilege.SET_SERVICE_PROFILE
+      );
+      if (!canSetServiceProfile) {
+        await this.platformRoleAssignmentAuditService.recordServiceProfileRejected(
+          {
+            initiatorUserId: actorContext.actorID,
+            // corr-server-3/qual-server-1 fix: a rejected actor may
+            // legitimately hold NEITHER the owning role nor a legacy
+            // credential (that is often exactly WHY the check failed), so
+            // the strict `resolveInitiatorRole` throw path is not a defect
+            // here — the best-effort wrapper falls back to `SELF` instead
+            // of raising a second exception while already handling a
+            // rejection. Using the strict version raw made every realistic
+            // denial (any actor with no privileged credential) surface as
+            // an internal Error instead of ForbiddenException, and silently
+            // dropped this rejection audit row.
+            initiatorRole: resolveInitiatorRoleBestEffort({
+              actorCredentialTypes: actorContext.credentials?.map(
+                c => c.type as AuthorizationCredential
+              ),
+              intendedOwners: [AuthorizationCredential.PLATFORM_ROLES_ADMIN],
+            }),
+            targetUserId: user.id,
+            rejectedRule: 'SET_SERVICE_PROFILE',
+            newServiceProfile: userInput.serviceProfile,
+          }
+        );
+        // spec-server-6 fix: message matches
+        // `contracts/graphql-contract.md`'s declared shape verbatim
+        // (`client-web`/`test-suites` assert it exactly) — dynamic data
+        // (the user id) moves to `details`, never the message, per this
+        // repo's exception convention.
+        throw new ForbiddenException(
+          'Forbidden: set-service-profile required to change the service-profile marker',
+          LogContext.AUTH_POLICY,
+          { userId: user.id }
+        );
+      }
+      serviceProfileChange = {
+        previous: user.serviceProfile,
+        next: userInput.serviceProfile,
+      };
       user.serviceProfile = userInput.serviceProfile;
     }
 
@@ -911,6 +983,47 @@ export class UserService {
 
     const response = await this.save(user);
     await this.invalidateActorContextCache(response);
+
+    if (serviceProfileChange) {
+      try {
+        await this.platformRoleAssignmentAuditService.recordServiceProfileChange(
+          {
+            initiatorUserId: actorContext.actorID,
+            initiatorRole: resolveInitiatorRole({
+              actorCredentialTypes: actorContext.credentials?.map(
+                c => c.type as AuthorizationCredential
+              ),
+              intendedOwners: [AuthorizationCredential.PLATFORM_ROLES_ADMIN],
+            }),
+            targetUserId: user.id,
+            previousServiceProfile: serviceProfileChange.previous,
+            newServiceProfile: serviceProfileChange.next,
+          }
+        );
+      } catch (error) {
+        // corr-server-11/spec-server-8 fix: the marker was already saved
+        // (`this.save(user)` above) by the time this fail-closed audit
+        // write can throw — leaving it applied while the caller is told
+        // "the operation was NOT applied" inverts FR-027. Compensate by
+        // reverting JUST the serviceProfile field (not the whole entity —
+        // `profileData` changes in the same call are independent and stay
+        // applied) before re-throwing.
+        try {
+          response.serviceProfile = serviceProfileChange.previous;
+          await this.save(response);
+        } catch (compensationError) {
+          this.logger.error?.(
+            `Unable to compensate for a failed service-profile audit write (user=${user.id}): serviceProfile remains ${serviceProfileChange.next} with no audit record. Compensation error: ${compensationError instanceof Error ? compensationError.message : String(compensationError)}`,
+            compensationError instanceof Error
+              ? compensationError.stack
+              : undefined,
+            LogContext.AUTH_POLICY
+          );
+        }
+        throw error;
+      }
+    }
+
     return response;
   }
 

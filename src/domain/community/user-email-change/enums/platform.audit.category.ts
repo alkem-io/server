@@ -13,4 +13,17 @@ export enum PlatformAuditCategory {
   // execution of a gated platform-operations mutation, regardless of which
   // role authorized it.
   PLATFORM_OPERATIONS = 'platform_operations',
+  // --- 027-platform-role-redesign (T016/T019): four new categories ---
+  /** Role grant/revoke/rejection (A1/A2/A20-adjacent). Fail-closed when
+   * operator-initiated; fail-open when bootstrap-seeded (FR-027). Also
+   * carries A21's rejected service-profile attempts (eighth pass). */
+  PLATFORM_ROLE_ASSIGNMENT = 'platform_role_assignment',
+  /** User-record family (A4/A5): email change (already EMAIL_CHANGE),
+   * identity/account deletion & reset. */
+  PLATFORM_USER_RECORD = 'platform_user_record',
+  /** Platform settings / licensing-framework definition (A10/A13). */
+  PLATFORM_CONFIGURATION = 'platform_configuration',
+  /** Resource moves, container deletions, visibility changes, license usage
+   * assignment (A8/A9/A12/A14). */
+  PLATFORM_RESOURCE = 'platform_resource',
 }

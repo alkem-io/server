@@ -1,3 +1,4 @@
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { RoleName } from '@common/enums/role.name';
 import { ValidationException } from '@common/exceptions';
 import { PaginationInputOutOfBoundException } from '@common/exceptions/pagination/pagination.input.out.of.bounds.exception';
@@ -277,7 +278,11 @@ describe('RoleSetResolverFields', () => {
 
       (roleSetService.getUsersWithRole as Mock).mockResolvedValue(mockUsers);
 
-      const result = await resolver.usersInRole(mockRoleSet, RoleName.MEMBER);
+      const result = await resolver.usersInRole(
+        mockActorContext,
+        mockRoleSet,
+        RoleName.MEMBER
+      );
 
       expect(result).toEqual(mockUsers);
       expect(roleSetService.getUsersWithRole).toHaveBeenCalledWith(
@@ -291,7 +296,12 @@ describe('RoleSetResolverFields', () => {
       const mockRoleSet = { id: 'rs-1' } as any;
       (roleSetService.getUsersWithRole as Mock).mockResolvedValue([]);
 
-      await resolver.usersInRole(mockRoleSet, RoleName.MEMBER, 5);
+      await resolver.usersInRole(
+        mockActorContext,
+        mockRoleSet,
+        RoleName.MEMBER,
+        5
+      );
 
       expect(roleSetService.getUsersWithRole).toHaveBeenCalledWith(
         mockRoleSet,
@@ -304,8 +314,105 @@ describe('RoleSetResolverFields', () => {
       const mockRoleSet = { id: 'rs-1' } as any;
 
       await expect(
-        resolver.usersInRole(mockRoleSet, RoleName.MEMBER, -1)
+        resolver.usersInRole(mockActorContext, mockRoleSet, RoleName.MEMBER, -1)
       ).rejects.toThrow(PaginationInputOutOfBoundException);
+    });
+
+    // 027-platform-role-redesign (T051, A20): a `platform-*` TARGET role
+    // requires PLATFORM_ROLE_HOLDERS_READ, not plain READ.
+    it('should deny a platform-* target role without PLATFORM_ROLE_HOLDERS_READ', async () => {
+      const mockRoleSet = {
+        id: 'rs-1',
+        authorization: { id: 'auth-1' },
+      } as any;
+      // spec-server-6 fix: an explicit `isAccessGranted` + throw now
+      // enforces this, not a `grantAccessOrFail` delegation.
+      (authorizationService.isAccessGranted as Mock).mockReturnValue(false);
+
+      await expect(
+        resolver.usersInRole(
+          mockActorContext,
+          mockRoleSet,
+          RoleName.PLATFORM_ROLES_ADMIN
+        )
+      ).rejects.toThrow(
+        `Forbidden: ${AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ} required to read holders of ${RoleName.PLATFORM_ROLES_ADMIN}`
+      );
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        mockActorContext,
+        mockRoleSet.authorization,
+        AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ
+      );
+    });
+
+    // 027-platform-role-redesign (T051, A20b, D9): a `feature-*` TARGET role
+    // is reachable via FEATURE_ROLE_HOLDERS_READ alone, even when
+    // PLATFORM_ROLE_HOLDERS_READ is denied — this is what lets a Platform
+    // Users Admin see whom to revoke a Feature role from.
+    it('should allow a feature-* target role via FEATURE_ROLE_HOLDERS_READ alone', async () => {
+      const mockRoleSet = {
+        id: 'rs-1',
+        authorization: { id: 'auth-1' },
+      } as any;
+      const mockUsers = [{ id: 'user-1' }] as any[];
+      (roleSetService.getUsersWithRole as Mock).mockResolvedValue(mockUsers);
+      (authorizationService.isAccessGranted as Mock).mockImplementation(
+        (_actor, _auth, privilege) =>
+          privilege === AuthorizationPrivilege.FEATURE_ROLE_HOLDERS_READ
+      );
+
+      const result = await resolver.usersInRole(
+        mockActorContext,
+        mockRoleSet,
+        RoleName.FEATURE_BETA_TESTER
+      );
+
+      expect(result).toEqual(mockUsers);
+    });
+
+    // Neither PLATFORM_ROLE_HOLDERS_READ nor FEATURE_ROLE_HOLDERS_READ.
+    it('should deny a feature-* target role when neither holder-read privilege is held', async () => {
+      const mockRoleSet = {
+        id: 'rs-1',
+        authorization: { id: 'auth-1' },
+      } as any;
+      (authorizationService.isAccessGranted as Mock).mockReturnValue(false);
+
+      await expect(
+        resolver.usersInRole(
+          mockActorContext,
+          mockRoleSet,
+          RoleName.FEATURE_BETA_TESTER
+        )
+      ).rejects.toThrow();
+      expect(roleSetService.getUsersWithRole).not.toHaveBeenCalled();
+    });
+
+    // 027-platform-role-redesign (T051, FR-032, T070f): a NON-target role —
+    // every per-space/organization role, and the legacy platform-* roles
+    // this feature does not touch — keeps plain READ. A role-set-WIDE check
+    // would re-create the grant-but-never-revoke bug the sixth
+    // clarification pass closed.
+    it('should gate a non-target (ordinary) role on plain READ, not either holder-read privilege', async () => {
+      const mockRoleSet = {
+        id: 'rs-1',
+        authorization: { id: 'auth-1' },
+      } as any;
+      (roleSetService.getUsersWithRole as Mock).mockResolvedValue([]);
+
+      await resolver.usersInRole(
+        mockActorContext,
+        mockRoleSet,
+        RoleName.MEMBER
+      );
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        mockActorContext,
+        mockRoleSet.authorization,
+        AuthorizationPrivilege.READ,
+        expect.any(String)
+      );
+      expect(authorizationService.isAccessGranted).not.toHaveBeenCalled();
     });
   });
 
@@ -316,10 +423,11 @@ describe('RoleSetResolverFields', () => {
 
       (roleSetService.getUsersWithRole as Mock).mockResolvedValue(mockUsers);
 
-      const result = await resolver.usersInRoles(mockRoleSet, [
-        RoleName.MEMBER,
-        RoleName.LEAD,
-      ]);
+      const result = await resolver.usersInRoles(
+        mockActorContext,
+        mockRoleSet,
+        [RoleName.MEMBER, RoleName.LEAD]
+      );
 
       expect(result).toHaveLength(2);
       expect(result[0]).toEqual({
@@ -336,8 +444,41 @@ describe('RoleSetResolverFields', () => {
       const mockRoleSet = { id: 'rs-1' } as any;
 
       await expect(
-        resolver.usersInRoles(mockRoleSet, [RoleName.MEMBER], -1)
+        resolver.usersInRoles(
+          mockActorContext,
+          mockRoleSet,
+          [RoleName.MEMBER],
+          -1
+        )
       ).rejects.toThrow(PaginationInputOutOfBoundException);
+    });
+
+    // 027-platform-role-redesign (T051a): fail closed AS A WHOLE — a
+    // request naming a plain role AND a denied target role must be
+    // rejected entirely, before any data is fetched for either role.
+    it('should deny the whole request and return zero rows when any requested role is denied', async () => {
+      const mockRoleSet = {
+        id: 'rs-1',
+        authorization: { id: 'auth-1' },
+      } as any;
+      // MEMBER is an ordinary (non-target) role — still gated via
+      // `grantAccessOrFail`. PLATFORM_ROLES_ADMIN is a platform-target role
+      // — gated via `isAccessGranted` (spec-server-6 fix).
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(true);
+      (authorizationService.isAccessGranted as Mock).mockImplementation(
+        (_actor, _auth, privilege) =>
+          privilege !== AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ
+      );
+
+      await expect(
+        resolver.usersInRoles(mockActorContext, mockRoleSet, [
+          RoleName.MEMBER,
+          RoleName.PLATFORM_ROLES_ADMIN,
+        ])
+      ).rejects.toThrow(
+        `Forbidden: ${AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ} required to read holders of ${RoleName.PLATFORM_ROLES_ADMIN}`
+      );
+      expect(roleSetService.getUsersWithRole).not.toHaveBeenCalled();
     });
   });
 
@@ -351,11 +492,97 @@ describe('RoleSetResolverFields', () => {
       );
 
       const result = await resolver.organizationsInRole(
+        mockActorContext,
         mockRoleSet,
         RoleName.MEMBER
       );
 
       expect(result).toEqual(mockOrgs);
+    });
+
+    // 027-platform-role-redesign (T051, A20, T070f): same per-requested-role
+    // privilege selection as usersInRole — organizationsInRole shares
+    // checkHolderListAccessOrFail, but had no target-role coverage of its own.
+    it('should deny a platform-* target role without PLATFORM_ROLE_HOLDERS_READ', async () => {
+      const mockRoleSet = {
+        id: 'rs-1',
+        authorization: { id: 'auth-1' },
+      } as any;
+      // spec-server-6 fix: an explicit `isAccessGranted` + throw now
+      // enforces this, not a `grantAccessOrFail` delegation.
+      (authorizationService.isAccessGranted as Mock).mockReturnValue(false);
+
+      await expect(
+        resolver.organizationsInRole(
+          mockActorContext,
+          mockRoleSet,
+          RoleName.PLATFORM_ROLES_ADMIN
+        )
+      ).rejects.toThrow(
+        `Forbidden: ${AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ} required to read holders of ${RoleName.PLATFORM_ROLES_ADMIN}`
+      );
+      expect(roleSetService.getOrganizationsWithRole).not.toHaveBeenCalled();
+    });
+
+    it('should allow a feature-* target role via FEATURE_ROLE_HOLDERS_READ alone', async () => {
+      const mockRoleSet = {
+        id: 'rs-1',
+        authorization: { id: 'auth-1' },
+      } as any;
+      const mockOrgs = [{ id: 'org-1' }] as any[];
+      (roleSetService.getOrganizationsWithRole as Mock).mockResolvedValue(
+        mockOrgs
+      );
+      (authorizationService.isAccessGranted as Mock).mockImplementation(
+        (_actor, _auth, privilege) =>
+          privilege === AuthorizationPrivilege.FEATURE_ROLE_HOLDERS_READ
+      );
+
+      const result = await resolver.organizationsInRole(
+        mockActorContext,
+        mockRoleSet,
+        RoleName.FEATURE_ORGANIZATION_CREATOR
+      );
+
+      expect(result).toEqual(mockOrgs);
+    });
+
+    it('should deny a feature-* target role when neither holder-read privilege is held', async () => {
+      const mockRoleSet = {
+        id: 'rs-1',
+        authorization: { id: 'auth-1' },
+      } as any;
+      (authorizationService.isAccessGranted as Mock).mockReturnValue(false);
+
+      await expect(
+        resolver.organizationsInRole(
+          mockActorContext,
+          mockRoleSet,
+          RoleName.FEATURE_ORGANIZATION_CREATOR
+        )
+      ).rejects.toThrow();
+      expect(roleSetService.getOrganizationsWithRole).not.toHaveBeenCalled();
+    });
+
+    it('should gate a non-target (ordinary) role on plain READ', async () => {
+      const mockRoleSet = {
+        id: 'rs-1',
+        authorization: { id: 'auth-1' },
+      } as any;
+      (roleSetService.getOrganizationsWithRole as Mock).mockResolvedValue([]);
+
+      await resolver.organizationsInRole(
+        mockActorContext,
+        mockRoleSet,
+        RoleName.MEMBER
+      );
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        mockActorContext,
+        mockRoleSet.authorization,
+        AuthorizationPrivilege.READ,
+        expect.any(String)
+      );
     });
   });
 
@@ -368,13 +595,41 @@ describe('RoleSetResolverFields', () => {
         mockOrgs
       );
 
-      const result = await resolver.organizationsInRoles(mockRoleSet, [
-        RoleName.MEMBER,
-      ]);
+      const result = await resolver.organizationsInRoles(
+        mockActorContext,
+        mockRoleSet,
+        [RoleName.MEMBER]
+      );
 
       expect(result).toEqual([
         { role: RoleName.MEMBER, organizations: mockOrgs },
       ]);
+    });
+
+    // 027-platform-role-redesign (T051a, T070f): fail closed AS A WHOLE —
+    // mirrors usersInRoles. Asserts the returned data path is never reached
+    // (not merely that the call threw), which is what tells apart a
+    // fail-closed implementation from a partial-result one that also throws.
+    it('should deny the whole request and return zero rows when any requested role is denied', async () => {
+      const mockRoleSet = {
+        id: 'rs-1',
+        authorization: { id: 'auth-1' },
+      } as any;
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(true);
+      (authorizationService.isAccessGranted as Mock).mockImplementation(
+        (_actor, _auth, privilege) =>
+          privilege !== AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ
+      );
+
+      await expect(
+        resolver.organizationsInRoles(mockActorContext, mockRoleSet, [
+          RoleName.MEMBER,
+          RoleName.PLATFORM_ROLES_ADMIN,
+        ])
+      ).rejects.toThrow(
+        `Forbidden: ${AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ} required to read holders of ${RoleName.PLATFORM_ROLES_ADMIN}`
+      );
+      expect(roleSetService.getOrganizationsWithRole).not.toHaveBeenCalled();
     });
   });
 

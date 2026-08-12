@@ -1,5 +1,6 @@
 import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { LogContext } from '@common/enums';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import {
@@ -25,6 +26,7 @@ import { NotificationInputSpaceCreated } from '@services/adapters/notification-a
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 import { TemporaryStorageService } from '@services/infrastructure/temporary-storage/temporary.storage.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { AccountLicensePlanService } from '../account.license.plan/account.license.plan.service';
 import { ISpace } from '../space/space.interface';
 import { SpaceService } from '../space/space.service';
@@ -45,6 +47,23 @@ import { TransferAccountInnovationPackInput } from './dto/account.dto.transfer.i
 import { TransferAccountSpaceInput } from './dto/account.dto.transfer.space';
 import { TransferAccountVirtualContributorInput } from './dto/account.dto.transfer.virtual.contributor';
 import { UpdateBaselineLicensePlanOnAccount } from './dto/account.dto.update.baseline.license.plan';
+
+/** T058 — A9's declared owner/legacy-reachers (T037's TRANSFER_RESOURCE_OFFER/_ACCEPT grant). */
+const A9_TRANSFER_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
+  AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+];
+const A9_TRANSFER_LEGACY_REACHERS: readonly AuthorizationCredential[] = [
+  AuthorizationCredential.GLOBAL_ADMIN,
+  AuthorizationCredential.GLOBAL_SUPPORT,
+];
+/** T058 — A12's declared owner/legacy-reachers (ACCOUNT_LICENSE_MANAGE grant). */
+const A12_BASELINE_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
+  AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
+];
+const A12_BASELINE_LEGACY_REACHERS: readonly AuthorizationCredential[] = [
+  AuthorizationCredential.GLOBAL_ADMIN,
+  AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+];
 
 @InstrumentResolver()
 @Resolver()
@@ -68,7 +87,8 @@ export class AccountResolverMutations {
     private notificationPlatformAdapter: NotificationPlatformAdapter,
     private temporaryStorageService: TemporaryStorageService,
     private licenseService: LicenseService,
-    private accountLicensePlanService: AccountLicensePlanService
+    private accountLicensePlanService: AccountLicensePlanService,
+    private readonly platformResourceAuditService: PlatformResourceAuditService
   ) {}
 
   @Mutation(() => ISpace, {
@@ -360,6 +380,19 @@ export class AccountResolverMutations {
       account.id
     );
     await this.licenseService.saveAll(accountLicenses);
+
+    // T058 — A12, single-path surface: ACCOUNT_LICENSE_MANAGE.
+    await this.platformResourceAuditService.recordEventForActor(
+      actorContext,
+      A12_BASELINE_INTENDED_OWNERS,
+      A12_BASELINE_LEGACY_REACHERS,
+      {
+        resourceKind: 'account-baseline-license-plan',
+        resourceId: account.id,
+        outcome: 'license_assigned',
+      }
+    );
+
     return await this.accountService.getAccountOrFail(account.id);
   }
 
@@ -405,6 +438,24 @@ export class AccountResolverMutations {
       );
     await this.authorizationPolicyService.saveAll(innovationHubAuthorizations);
 
+    // corr-server-8 fix: NOT single-path — every ACCOUNT_ADMIN (i.e. every
+    // user on their own account, via grantCredentialsAllUsersReceive) also
+    // holds TRANSFER_RESOURCE_OFFER/_ACCEPT (account.service.authorization.ts).
+    // Audit only when a platform-level credential authorized the call.
+    if (this.isA9TransferPlatformAuthorized(actorContext)) {
+      await this.platformResourceAuditService.recordEventForActor(
+        actorContext,
+        A9_TRANSFER_INTENDED_OWNERS,
+        A9_TRANSFER_LEGACY_REACHERS,
+        {
+          resourceKind: 'innovation-hub',
+          resourceId: innovationHub.id,
+          toAccountId: targetAccount.id,
+          outcome: 'moved',
+        }
+      );
+    }
+
     // TODO: check if still needed later
     return await this.innovationHubService.getInnovationHubOrFail(
       innovationHub.id
@@ -444,6 +495,22 @@ export class AccountResolverMutations {
     await this.authorizationPolicyService.saveAll(spaceAuthorizations);
 
     await this.spaceService.invalidateUrlCacheForSpaceSubtree(space.id);
+
+    // corr-server-8 fix: NOT single-path — see the identical comment on
+    // transferInnovationHubToAccount above.
+    if (this.isA9TransferPlatformAuthorized(actorContext)) {
+      await this.platformResourceAuditService.recordEventForActor(
+        actorContext,
+        A9_TRANSFER_INTENDED_OWNERS,
+        A9_TRANSFER_LEGACY_REACHERS,
+        {
+          resourceKind: 'space',
+          resourceId: space.id,
+          toAccountId: targetAccount.id,
+          outcome: 'moved',
+        }
+      );
+    }
 
     // TODO: check if still needed later
     return await this.spaceService.getSpaceOrFail(space.id);
@@ -490,6 +557,22 @@ export class AccountResolverMutations {
         clonedAccountAuth
       );
     await this.authorizationPolicyService.saveAll(innovationPackAuthorizations);
+
+    // corr-server-8 fix: NOT single-path — see the identical comment on
+    // transferInnovationHubToAccount above.
+    if (this.isA9TransferPlatformAuthorized(actorContext)) {
+      await this.platformResourceAuditService.recordEventForActor(
+        actorContext,
+        A9_TRANSFER_INTENDED_OWNERS,
+        A9_TRANSFER_LEGACY_REACHERS,
+        {
+          resourceKind: 'innovation-pack',
+          resourceId: innovationPack.id,
+          toAccountId: targetAccount.id,
+          outcome: 'moved',
+        }
+      );
+    }
 
     return await this.innovationPackService.getInnovationPackOrFail(
       innovationPack.id
@@ -538,10 +621,43 @@ export class AccountResolverMutations {
       virtualContributorAuthorizations
     );
 
+    // corr-server-8 fix: NOT single-path — see the identical comment on
+    // transferInnovationHubToAccount above.
+    if (this.isA9TransferPlatformAuthorized(actorContext)) {
+      await this.platformResourceAuditService.recordEventForActor(
+        actorContext,
+        A9_TRANSFER_INTENDED_OWNERS,
+        A9_TRANSFER_LEGACY_REACHERS,
+        {
+          resourceKind: 'virtual-contributor',
+          resourceId: virtualContributor.id,
+          toAccountId: targetAccount.id,
+          outcome: 'moved',
+        }
+      );
+    }
+
     // TODO: check if still needed later
     return await this.virtualActorLookupService.getVirtualContributorByIdOrFail(
       virtualContributor.id
     );
+  }
+
+  /** corr-server-8 fix: A9's four transfer mutations are reachable by every
+   * ACCOUNT_ADMIN (every user on their own account), not only by A9's own
+   * platform-level credentials — TRANSFER_RESOURCE_OFFER/_ACCEPT is granted
+   * to both. Determine the audit branch from the actor's OWN held
+   * credentials (A9_TRANSFER_INTENDED_OWNERS ∪ A9_TRANSFER_LEGACY_REACHERS),
+   * never from the shared privilege grant an ordinary account owner also
+   * satisfies (FR-018a). */
+  private isA9TransferPlatformAuthorized(actorContext: ActorContext): boolean {
+    const held = new Set(
+      (actorContext.credentials ?? []).map(credential => credential.type)
+    );
+    return [
+      ...A9_TRANSFER_INTENDED_OWNERS,
+      ...A9_TRANSFER_LEGACY_REACHERS,
+    ].some(credential => held.has(credential));
   }
 
   private async validateTransferOfAccountResource(

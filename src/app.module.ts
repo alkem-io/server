@@ -95,6 +95,7 @@ import { AdminCommunicationModule } from '@src/platform-admin/domain/communicati
 import { DomainPlatformSettingsModule } from '@src/platform-admin/domain/organization/domain.platform.settings.module';
 import { AdminUsersModule } from '@src/platform-admin/domain/user/admin.users.module';
 import { AdminUserEmailChangeModule } from '@src/platform-admin/domain/user/email-change/admin.user.email.change.module';
+import { AdminWhiteboardModule } from '@src/platform-admin/domain/whiteboard/admin.whiteboard.module';
 import { AdminLicensingModule } from '@src/platform-admin/licensing/admin.licensing.module';
 import { AdminContributorsModule } from '@src/platform-admin/services/avatars/admin.avatar.module';
 import { AdminGeoLocationModule } from '@src/platform-admin/services/geolocation/admin.geolocation.module';
@@ -319,6 +320,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     AdminSearchIngestModule,
     AdminLicensingModule,
     AdminGeoLocationModule,
+    AdminWhiteboardModule,
     LicensingWingbackSubscriptionModule,
     WingbackManagerModule,
     ActorModule,

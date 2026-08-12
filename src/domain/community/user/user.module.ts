@@ -20,6 +20,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
+import { PlatformRoleAssignmentAuditModule } from '@src/platform-admin/platform-role-assignment-audit/platform.role.assignment.audit.module';
 import { UserLookupModule } from '../user-lookup/user.lookup.module';
 import { UserSettingsModule } from '../user-settings/user.settings.module';
 import { UserResolverFields } from './user.resolver.fields';
@@ -45,6 +46,7 @@ import { UserAuthorizationService } from './user.service.authorization';
     EntityResolverModule,
     MicroservicesModule,
     PlatformAuthorizationPolicyModule,
+    PlatformRoleAssignmentAuditModule,
     StorageAggregatorModule,
     StorageBucketModule,
     DocumentModule,

@@ -63,6 +63,7 @@ import { AdminCommunicationModule } from '@src/platform-admin/domain/communicati
 import { DomainPlatformSettingsModule } from '@src/platform-admin/domain/organization/domain.platform.settings.module';
 import { AdminUsersModule } from '@src/platform-admin/domain/user/admin.users.module';
 import { AdminUserEmailChangeModule } from '@src/platform-admin/domain/user/email-change/admin.user.email.change.module';
+import { AdminWhiteboardModule } from '@src/platform-admin/domain/whiteboard/admin.whiteboard.module';
 import { InAppNotificationAdminModule } from '@src/platform-admin/in-app-notification/in.app.notification.admin.module';
 import { AdminLicensingModule } from '@src/platform-admin/licensing/admin.licensing.module';
 import { AdminContributorsModule } from '@src/platform-admin/services/avatars/admin.avatar.module';
@@ -213,6 +214,7 @@ class SchemaBootstrapStubModule {}
     AdminSearchIngestModule,
     AdminLicensingModule,
     AdminGeoLocationModule,
+    AdminWhiteboardModule,
     LicensingWingbackSubscriptionModule,
     WingbackManagerModule,
     GeoLocationModule,

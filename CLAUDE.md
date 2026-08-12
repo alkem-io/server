@@ -112,6 +112,40 @@ SDD is **mandatory** for feature work. Read `.specify/memory/constitution.md` fi
 4. Access GraphQL Playground at `/graphiql`
 5. Stop services: `docker compose -f quickstart-services.yml down`
 
+Full wipe and re-seed: `bash .scripts/reset-db.sh` (7 steps, ~3 min).
+
+### Dev accounts and roles
+
+`.scripts/reset-db.sh` step 7 runs `.scripts/dev-seed-roles.sh`, which creates
+loggable accounts for the platform roles. All share `AUTH_ADMIN_PASSWORD` from
+`.env`:
+
+| Account | Role |
+|---|---|
+| `admin@alkem.io` | `global-admin` + `platform-roles-admin` (bootstrap-seeded) |
+| `ops@alkem.io` | `platform-operations-admin` |
+| `users-admin@alkem.io` | `platform-users-admin` |
+| `support@alkem.io` | `platform-support` |
+| `content@alkem.io` | `platform-content-full-access` |
+
+Three things that will otherwise cost you an afternoon:
+
+- **`admin@alkem.io` keeps `global-admin` for all of Slice A.** Slice A is
+  additive: nothing is taken away until Slice B. This matters practically —
+  `test-suites` acts as this account at 878 sites across 121 of 145 spec files
+  and it is the default actor for every request that does not name a user, so
+  dropping the credential makes the entire functional suite unrunnable. If a
+  spec suddenly fails on `create-organization`, check this credential first.
+- **The per-role accounts each hold exactly one role.** That is the only way to
+  observe separation of duties — each of the 13 roles is deliberately narrow,
+  and `admin@alkem.io` can do everything, so it can never show you what a role
+  cannot do. `platform-roles-admin` on its own, for instance, cannot reset
+  authorization and cannot grant itself a role (rule `self-assignment`).
+- **Authorization policies are stored rows, not computed per request.** A build
+  that changes a credential rule does nothing until `authorizationPolicyResetAll`
+  is run and drained. Verify with a count, not elapsed time:
+  `SELECT count(*) FROM authorization_policy WHERE "credentialRules"::text LIKE '%<privilege>%';`
+
 Specialized stacks:
 
 ```bash

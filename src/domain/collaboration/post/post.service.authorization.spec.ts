@@ -1,3 +1,6 @@
+import { CREDENTIAL_RULE_POST_ADMINS_MOVE } from '@common/constants/authorization/credential.rule.constants';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -199,7 +202,7 @@ describe('PostAuthorizationService', () => {
       ).toHaveBeenCalled();
     });
 
-    it('should not create MOVE_POST rule when no admin credentials exist', async () => {
+    it('should still create MOVE_POST rule for platform-resource-admin when no local admin credentials exist', async () => {
       const post = makePost();
       vi.mocked(
         authorizationPolicyService.inheritParentAuthorization
@@ -226,11 +229,27 @@ describe('PostAuthorizationService', () => {
         platformRolesAccess
       );
 
-      // createCredentialRule is called for the POST_CREATED_BY rule but not MOVE_POST
-      // since there are no admin credentials when roleSet is not provided
+      // 027-platform-role-redesign (T038, A9): createCredentialRule is now
+      // ALWAYS called for MOVE_POST too, even with zero local admin
+      // credentials and no roleSet — platform-resource-admin is appended
+      // unconditionally (global credential, resourceID: ''), which is the
+      // whole point of the role: it must reach every space's move surface
+      // regardless of local admin standing.
       expect(
         authorizationPolicyService.createCredentialRule
-      ).toHaveBeenCalledTimes(1);
+      ).toHaveBeenCalledTimes(2);
+      expect(
+        authorizationPolicyService.createCredentialRule
+      ).toHaveBeenCalledWith(
+        [AuthorizationPrivilege.MOVE_POST],
+        [
+          {
+            type: AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+            resourceID: '',
+          },
+        ],
+        CREDENTIAL_RULE_POST_ADMINS_MOVE
+      );
     });
   });
 });

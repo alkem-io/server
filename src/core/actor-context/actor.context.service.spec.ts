@@ -89,6 +89,110 @@ describe('ActorContextService', () => {
       expect(ctx.actorID).toBe('actor-123');
       expect(ctx.credentials).toBe(mockCredentials);
     });
+
+    // 027-platform-role-redesign (T056/T070g, research D8, FR-002/FR-031):
+    // an ORGANIZATION_ADMIN/OWNER inherits that organization's OWN
+    // `feature-*` credentials; `platform-*` credentials are NEVER expanded
+    // this way (D2's prefix filter is load-bearing).
+    it('expands an ORGANIZATION_ADMIN actor with the organization`s feature-* credentials', async () => {
+      const ctx = new ActorContext();
+      const actorLookupService = module.get(ActorLookupService);
+      (actorLookupService.getActorCredentialsOrFail as any)
+        .mockResolvedValueOnce([
+          {
+            type: AuthorizationCredential.ORGANIZATION_ADMIN,
+            resourceID: 'org-1',
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            type: AuthorizationCredential.FEATURE_BETA_TESTER,
+            resourceID: 'org-1',
+          },
+          // Not org-scoped, not feature-*  — must NOT be pulled in.
+          { type: AuthorizationCredential.GLOBAL_REGISTERED, resourceID: '' },
+        ]);
+
+      await service.populateFromActorID(ctx, 'user-1');
+
+      expect(ctx.credentials).toEqual([
+        {
+          type: AuthorizationCredential.ORGANIZATION_ADMIN,
+          resourceID: 'org-1',
+        },
+        {
+          type: AuthorizationCredential.FEATURE_BETA_TESTER,
+          resourceID: 'org-1',
+        },
+      ]);
+    });
+
+    it('does NOT expand platform-* credentials from an administered organization (D2 prefix filter)', async () => {
+      const ctx = new ActorContext();
+      const actorLookupService = module.get(ActorLookupService);
+      (actorLookupService.getActorCredentialsOrFail as any)
+        .mockResolvedValueOnce([
+          {
+            type: AuthorizationCredential.ORGANIZATION_OWNER,
+            resourceID: 'org-2',
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            type: AuthorizationCredential.PLATFORM_SUPPORT,
+            resourceID: 'org-2',
+          },
+        ]);
+
+      await service.populateFromActorID(ctx, 'user-2');
+
+      expect(ctx.credentials).toEqual([
+        {
+          type: AuthorizationCredential.ORGANIZATION_OWNER,
+          resourceID: 'org-2',
+        },
+      ]);
+    });
+
+    it('leaves a plain ORGANIZATION_ASSOCIATE unexpanded', async () => {
+      const ctx = new ActorContext();
+      const mockCredentials = [
+        {
+          type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
+          resourceID: 'org-3',
+        },
+      ];
+      const actorLookupService = module.get(ActorLookupService);
+      (actorLookupService.getActorCredentialsOrFail as any).mockResolvedValue(
+        mockCredentials
+      );
+
+      await service.populateFromActorID(ctx, 'user-3');
+
+      expect(ctx.credentials).toBe(mockCredentials);
+    });
+
+    it('skips a dangling ORGANIZATION_ADMIN resourceID without failing the whole build', async () => {
+      const ctx = new ActorContext();
+      const actorLookupService = module.get(ActorLookupService);
+      (actorLookupService.getActorCredentialsOrFail as any)
+        .mockResolvedValueOnce([
+          {
+            type: AuthorizationCredential.ORGANIZATION_ADMIN,
+            resourceID: 'org-stale',
+          },
+        ])
+        .mockRejectedValueOnce(new Error('Actor not found'));
+
+      await service.populateFromActorID(ctx, 'user-4');
+
+      expect(ctx.credentials).toEqual([
+        {
+          type: AuthorizationCredential.ORGANIZATION_ADMIN,
+          resourceID: 'org-stale',
+        },
+      ]);
+    });
   });
 
   describe('buildForUser', () => {

@@ -6,6 +6,9 @@
       "lastName": "alkemio",
       "credentials": [
         {
+          "type": "platform-roles-admin"
+        },
+        {
           "type": "global-admin"
         }
       ]
@@ -17,6 +20,17 @@
       "credentials": [
         {
           "type": "global-community-read"
+        }
+      ]
+    },
+    {
+      "email": "spaces-reader@alkem.io",
+      "firstName": "spaces",
+      "lastName": "reader",
+      "serviceProfile": true,
+      "credentials": [
+        {
+          "type": "platform-spaces-reader"
         }
       ]
     }

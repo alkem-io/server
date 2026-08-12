@@ -1,6 +1,7 @@
 import {
   CREDENTIAL_RULE_ORGANIZATION_ADMIN,
   CREDENTIAL_RULE_ORGANIZATION_READ,
+  CREDENTIAL_RULE_TYPES_DELETE_ORGANIZATION,
   CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET,
   CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS,
   CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_COMMUNITY_READ,
@@ -266,6 +267,28 @@ export class OrganizationAuthorizationService {
       );
     organizationAdmin.cascade = true;
     newRules.push(organizationAdmin);
+
+    // 027-platform-role-redesign (T039, A6 delete half, FR-007(e)):
+    // deleteOrganization is gated DUAL-PATH — the owner keeps plain DELETE
+    // (organizationAdmin above), the platform role uses this SEPARATE
+    // privilege (T041). Deliberately NOT merged with CREATE_ORGANIZATION —
+    // feature-organization-creator holds create, never delete. This dual
+    // gate is only enforceable because T036 narrowed the root cascade to
+    // exclude DELETE — while it still granted DELETE, Content Full Access
+    // satisfied the owner branch and this privilege closed nothing
+    // (eleventh analyze pass).
+    const deleteOrganization =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.DELETE_ORGANIZATION],
+        [
+          AuthorizationCredential.PLATFORM_SUPPORT,
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        CREDENTIAL_RULE_TYPES_DELETE_ORGANIZATION
+      );
+    deleteOrganization.cascade = false;
+    newRules.push(deleteOrganization);
 
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(

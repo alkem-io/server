@@ -1,11 +1,13 @@
 import { CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CollaborationLicenseService } from '@domain/collaboration/collaboration/collaboration.service.license';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { ICalloutContribution } from './callout.contribution.interface';
 import { CalloutContributionMoveService } from './callout.contribution.move.service';
 import { CalloutContributionService } from './callout.contribution.service';
@@ -19,7 +21,8 @@ export class CalloutContributionMoveResolverMutations {
     private authorizationService: AuthorizationService,
     private calloutContributionService: CalloutContributionService,
     private calloutContributionMoveService: CalloutContributionMoveService,
-    private collaborationLicenseService: CollaborationLicenseService
+    private collaborationLicenseService: CollaborationLicenseService,
+    private readonly platformResourceAuditService: PlatformResourceAuditService
   ) {}
 
   @Mutation(() => ICalloutContribution, {
@@ -48,10 +51,38 @@ export class CalloutContributionMoveResolverMutations {
         moveContributionData.calloutID
       );
     }
-    return this.calloutContributionMoveService.moveContributionToCallout(
-      moveContributionData.contributionID,
-      moveContributionData.calloutID
+    const moved =
+      await this.calloutContributionMoveService.moveContributionToCallout(
+        moveContributionData.contributionID,
+        moveContributionData.calloutID
+      );
+    // corr-server-8 fix: MOVE_CONTRIBUTION is NOT single-path — it is also
+    // granted to the space's own ADMIN role-set credentials and to any
+    // platform role holding UPDATE access via platformRolesAccess
+    // (callout.contribution.service.authorization.ts), so an ordinary space
+    // admin reaches this mutation too. Write the audit ONLY when the actor
+    // actually holds one of A9's own platform-level credentials (FR-018a) —
+    // never derive the branch from the shared MOVE_CONTRIBUTION grant,
+    // which an ordinary admin also satisfies.
+    const isPlatformAuthorized = (actorContext.credentials ?? []).some(
+      credential =>
+        credential.type === AuthorizationCredential.PLATFORM_RESOURCE_ADMIN ||
+        credential.type === AuthorizationCredential.GLOBAL_ADMIN
     );
+    if (isPlatformAuthorized) {
+      await this.platformResourceAuditService.recordEventForActor(
+        actorContext,
+        [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
+        [AuthorizationCredential.GLOBAL_ADMIN],
+        {
+          resourceKind: 'callout-contribution',
+          resourceId: contribution.id,
+          toAccountId: moveContributionData.calloutID,
+          outcome: 'moved',
+        }
+      );
+    }
+    return moved;
   }
 
   @Mutation(() => ICalloutContribution, {
@@ -66,13 +97,47 @@ export class CalloutContributionMoveResolverMutations {
         deleteData.ID
       );
 
-    this.authorizationService.grantAccessOrFail(
+    // 027-platform-role-redesign (T043, A8, research D5): dual-path — see
+    // the identical comment in callout.resolver.mutations.ts.
+    const canDeleteAsOwner = this.authorizationService.isAccessGranted(
       actorContext,
       contribution.authorization,
-      AuthorizationPrivilege.DELETE,
-      `move contribution: ${contribution.id}`
+      AuthorizationPrivilege.DELETE
     );
+    const canDeleteAsContentFullAccess =
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        contribution.authorization,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS
+      );
+    if (!canDeleteAsOwner && !canDeleteAsContentFullAccess) {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        contribution.authorization,
+        AuthorizationPrivilege.DELETE,
+        `move contribution: ${contribution.id}`
+      );
+    }
 
-    return this.calloutContributionService.delete(contribution.id);
+    const deleted = await this.calloutContributionService.delete(
+      contribution.id
+    );
+    // T058/FR-018a: audit ONLY on the PLATFORM branch.
+    if (canDeleteAsContentFullAccess) {
+      await this.platformResourceAuditService.recordEventForActor(
+        actorContext,
+        [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        {
+          resourceKind: 'callout-contribution',
+          resourceId: contribution.id,
+          outcome: 'deleted',
+        }
+      );
+    }
+    return deleted;
   }
 }

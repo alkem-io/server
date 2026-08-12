@@ -7,6 +7,7 @@ import {
 import { Profiling } from '@common/decorators';
 import { LogContext } from '@common/enums';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { RoleName } from '@common/enums/role.name';
 import { SpaceLevel } from '@common/enums/space.level';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
@@ -19,6 +20,7 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { BootstrapException } from '@common/exceptions/bootstrap.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
+import { ROLE_CREDENTIAL_MAP } from '@domain/access/platform-roles-access/platform.roles.access.service';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseService } from '@domain/common/license/license.service';
@@ -26,8 +28,10 @@ import { MessagingService } from '@domain/communication/messaging/messaging.serv
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
+import { PlatformAuditInitiatorRole } from '@domain/community/user-email-change/enums/platform.audit.initiator.role';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { IVirtualAssistant } from '@domain/community/virtual-assistant/virtual.assistant.interface';
 import { VirtualAssistantService } from '@domain/community/virtual-assistant/virtual.assistant.service';
@@ -49,11 +53,18 @@ import { LicensingFrameworkService } from '@platform/licensing/credential-based/
 import { PlatformService } from '@platform/platform/platform.service';
 import { PlatformAuthorizationService } from '@platform/platform/platform.service.authorization';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors/platform.well.known.virtual.contributors.service';
+import {
+  FEATURE_FAMILY_ROLES,
+  PLATFORM_FAMILY_ROLES,
+  PlatformRoleAssignmentRulesService,
+} from '@platform/platform-role/platform.role.assignment.rules.service';
 import { PlatformTemplatesService } from '@platform/platform-templates/platform.templates.service';
 import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
 import { AiServerAuthorizationService } from '@services/ai-server/ai-server/ai.server.service.authorization';
 import { McpApiKeyService } from '@services/mcp-server/auth/mcp-api-key.service';
 import { AdminAuthorizationService } from '@src/platform-admin/domain/authorization/admin.authorization.service';
+import { resolveInitiatorRole } from '@src/platform-admin/platform-audit-attribution/resolve.initiator.role';
+import { PlatformRoleAssignmentAuditService } from '@src/platform-admin/platform-role-assignment-audit/platform.role.assignment.audit.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials } from './platform-template-definitions/default-templates/bootstrap.template.space.content.callouts.space.l0.tutorials';
@@ -99,7 +110,12 @@ export class BootstrapService {
     private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService,
     private roleSetService: RoleSetService,
     private readonly virtualAssistantService: VirtualAssistantService,
-    private readonly mcpApiKeyService: McpApiKeyService
+    private readonly mcpApiKeyService: McpApiKeyService,
+    // 027-platform-role-redesign (T053-T055): the shared assignment rule
+    // engine and the (fail-open) role-assignment audit writer — seeded
+    // grants go through the SAME enforcement point as the mutation path.
+    private readonly platformRoleAssignmentRulesService: PlatformRoleAssignmentRulesService,
+    private readonly platformRoleAssignmentAuditService: PlatformRoleAssignmentAuditService
   ) {}
 
   async bootstrap() {
@@ -368,14 +384,30 @@ export class BootstrapService {
     }
   }
 
+  /**
+   * 027-platform-role-redesign (T053-T055, research C7/D12; narrowed by
+   * sec-server-18): the credential grant loop runs on EVERY start, for
+   * EVERY configured account, but the RESTART-TIME re-grant of a MISSING
+   * credential is scoped to the FR-013b break-glass recovery credential
+   * (`platform-roles-admin`) only — see `grantSeededCredentials`'s doc
+   * comment. A break-glass Roles Admin whose credential was revoked
+   * out-of-band (or never granted, on an environment seeded before this
+   * feature) is re-granted on the next restart, exactly as FR-013b's
+   * "out-of-band lockout repaired by restart" requires. Every OTHER seeded
+   * credential (`platform-spaces-reader`, legacy roles, …) is granted only
+   * at FIRST creation of the account — an operator's deliberate revocation
+   * of one of those is durable across restarts, not silently reverted.
+   */
   async createUserProfiles(usersData: any[]) {
     try {
       for (const userData of usersData) {
-        const userExists = await this.userLookupService.isRegisteredUser(
-          userData.email
-        );
-        if (!userExists) {
-          const user = await this.userService.createUser({
+        let user = await this.userService.getUserByEmail(userData.email, {
+          relations: { credentials: true },
+        });
+        const isNewAccount = !user;
+
+        if (!user) {
+          const created = await this.userService.createUser({
             email: userData.email,
             firstName: userData.firstName,
             lastName: userData.lastName,
@@ -387,34 +419,221 @@ export class BootstrapService {
           // Once all is done, reset the user authorizations
           const userAuthorizations =
             await this.userAuthorizationService.applyAuthorizationPolicy(
-              user.id
+              created.id
             );
           await this.authorizationPolicyService.saveAll(userAuthorizations);
 
-          const account = await this.userService.getAccount(user);
+          const account = await this.userService.getAccount(created);
           const accountAuthorizations =
             await this.accountAuthorizationService.applyAuthorizationPolicy(
               account
             );
           await this.authorizationPolicyService.saveAll(accountAuthorizations);
 
-          const credentialsData = userData.credentials;
-          for (const credentialData of credentialsData) {
-            await this.adminAuthorizationService.grantCredentialToUser({
-              userID: user.id,
-              type: credentialData.type,
-              resourceID: credentialData.resourceID,
-            });
-          }
           await this.userAuthorizationService.grantCredentialsAllUsersReceive(
-            user.id
+            created.id
+          );
+
+          // Reload with `credentials` populated for the grant loop below.
+          user = await this.userService.getUserByEmail(userData.email, {
+            relations: { credentials: true },
+          });
+        }
+
+        if (!user) {
+          throw new BootstrapException(
+            'Unable to (re)load seeded user after creation',
+            { userEmail: userData.email }
           );
         }
+
+        // T055/corr-server-4: reconcile the seeded `serviceProfile` marker
+        // for BOTH a freshly-created user AND a pre-existing one whose
+        // marker is missing (e.g. a bootstrap run that crashed before the
+        // marker was persisted, an out-of-band credential revoke, or an
+        // account seeded before this feature). This MUST happen BEFORE
+        // `grantSeededCredentials` evaluates rule 3 below, on EVERY restart
+        // — not only at user-creation time — or a pre-existing account
+        // without the marker makes `evaluateSeedOrFail` fail fatally and
+        // the server refuses to start, on every subsequent restart, with no
+        // way to repair it (inverting FR-013b's "out-of-band lockout
+        // repaired by restart" into a permanent, restart-proof outage). Set
+        // directly on the entity (not via `updateUser`) — bootstrap is a
+        // system process, not a `SET_SERVICE_PROFILE`-gated mutation, and
+        // the platform authorization policy carrying that privilege may not
+        // even be populated yet at this point in `bootstrap()`
+        // (`ensureAuthorizationsPopulated()` runs later).
+        if (userData.serviceProfile === true && user.serviceProfile !== true) {
+          user.serviceProfile = true;
+          user = await this.userService.save(user);
+        }
+
+        await this.grantSeededCredentials(
+          user,
+          userData.credentials ?? [],
+          isNewAccount
+        );
       }
     } catch (error: any) {
+      if (error instanceof BootstrapException) {
+        throw error;
+      }
       throw new BootstrapException(
         `Unable to create profiles ${error.message}`
       );
+    }
+  }
+
+  /**
+   * T053/T054 — grants only the credentials `user` does not already hold
+   * (idempotent across restarts), routing every credential that belongs to
+   * the NEW target role vocabulary (`platform-*` / `feature-*`) through the
+   * SAME `PlatformRoleAssignmentRulesService` the resolver mutation path
+   * uses (T030-T032a) via `evaluateSeedOrFail()` — rules 2-5, never rule 1
+   * (there is no assigner; see that method's doc comment). Legacy
+   * credentials (`global-admin`, ...) are outside the rule engine's scope
+   * in Slice A and are granted unconditionally, exactly as before.
+   *
+   * A rule violation is FATAL (`BootstrapException`, naming the account and
+   * the violated rule) — never forced through by stripping the role, never
+   * silently skipped (FR-013, FR-028). The audit write is FAIL-OPEN
+   * (`seeded: true`, FR-027): the break-glass grant must not depend on a
+   * healthy audit store.
+   *
+   * sec-server-18 fix: `isNewAccount` gates whether a MISSING credential is
+   * restart-eligible. Only `platform-roles-admin` (the FR-013b break-glass
+   * recovery role) is re-granted on a restart against a PRE-EXISTING
+   * account — every other credential (`platform-spaces-reader`, legacy
+   * roles, any other `Platform …`/`Feature …` role a future seed adds) is
+   * granted only when the account is being created for the first time.
+   * Before this fix, EVERY seeded credential of EVERY seeded account was
+   * silently re-applied on every restart — an operator who deliberately
+   * revoked, say, `platform-spaces-reader` from the seeded service account
+   * found it reinstated on the next pod restart, with no way to make the
+   * revocation durable through the product. FR-013b's "out-of-band lockout
+   * repaired by restart" is a guarantee about break-glass ROLES ADMIN
+   * recovery specifically (quickstart.md §5, T071) — not a blanket promise
+   * that every seeded credential is unrevokable.
+   */
+  private async grantSeededCredentials(
+    user: IUser,
+    credentialsData: { type: AuthorizationCredential; resourceID?: string }[],
+    isNewAccount: boolean
+  ): Promise<void> {
+    const alreadyHeld = new Set(
+      (user.credentials ?? []).map(c => `${c.type}::${c.resourceID ?? ''}`)
+    );
+
+    // spec-server-3/qual-server-2 fix: rule 4 (Audit Reader mutual
+    // exclusion) is otherwise INERT on this seed path — `evaluateSeedOrFail`
+    // was called without `targetHeldPlatformRoles`, so it always read an
+    // empty held-role set. Seed it from the user's EXISTING `Platform …`
+    // credentials, then update it as each credential in THIS loop is
+    // granted, so a single `users.json` entry listing two mutually
+    // exclusive Platform roles (e.g. platform-audit-reader +
+    // platform-support) on one account is caught even though neither is yet
+    // persisted when the loop starts (FR-028).
+    const heldPlatformRoles = new Set<RoleName>(
+      (user.credentials ?? [])
+        .map(c => c.type as unknown as RoleName)
+        .filter(r => PLATFORM_FAMILY_ROLES.has(r))
+    );
+
+    for (const credentialData of credentialsData) {
+      const key = `${credentialData.type}::${credentialData.resourceID ?? ''}`;
+      if (alreadyHeld.has(key)) {
+        continue;
+      }
+
+      // D2: identical strings for the new `platform-*`/`feature-*` roles —
+      // the two enums are nominally distinct, so the cast goes via
+      // `unknown`, exactly as `platform.roles.access.service.ts` documents.
+      const asRole = credentialData.type as unknown as RoleName;
+      const isTargetRoleModel =
+        PLATFORM_FAMILY_ROLES.has(asRole) || FEATURE_FAMILY_ROLES.has(asRole);
+
+      // spec-server-24 fix: VALIDATE BEFORE SKIPPING. This block used to sit
+      // AFTER the restart-eligibility `continue` below, so on a PRE-EXISTING
+      // account a rule-violating `users.json` entry was silently skipped
+      // instead of failing startup — making the FR-028 Audit Reader mutual
+      // exclusion (and every other seed rule) unenforceable on any
+      // environment that had already been bootstrapped once, i.e. every real
+      // one. A misconfigured seed must be fatal wherever it is read, whether
+      // or not this particular start would have acted on it.
+      if (isTargetRoleModel) {
+        try {
+          this.platformRoleAssignmentRulesService.evaluateSeedOrFail({
+            action: 'grant',
+            role: asRole,
+            targetActorType: 'user',
+            targetServiceProfile: user.serviceProfile,
+            targetHeldPlatformRoles: Array.from(heldPlatformRoles),
+          });
+        } catch (error: any) {
+          throw new BootstrapException(
+            `Seeded credential grant rejected: role ${asRole} violates ${
+              error?.details?.ruleId ?? 'an assignment rule'
+            }`,
+            { userId: user.id, role: asRole, cause: error?.message }
+          );
+        }
+      }
+
+      // A MISSING credential is restart-eligible when the account is new, OR
+      // the account is a SERVICE account, OR the credential is the FR-013b
+      // break-glass recovery role (`platform-roles-admin`).
+      //
+      // sec-server-18 established that an operator's deliberate revocation
+      // must be durable rather than silently reinstated on the next pod
+      // restart. spec-server-23 then showed that narrowing went one step too
+      // far: the spec's first clarification pass is explicit that "service
+      // accounts are re-seeded automatically — existing seeding grants their
+      // target roles on every server start; only HUMAN holders fall under
+      // manual re-grant" (FR-012). The discriminator is therefore the ACCOUNT
+      // KIND, not the credential alone. A revoked `platform-spaces-reader` on
+      // the seeded service account is a broken integration, not an operator
+      // decision to respect.
+      const isBreakGlassRecoveryCredential =
+        credentialData.type === AuthorizationCredential.PLATFORM_ROLES_ADMIN;
+      const isServiceAccount = user.serviceProfile === true;
+      if (
+        !isNewAccount &&
+        !isServiceAccount &&
+        !isBreakGlassRecoveryCredential
+      ) {
+        this.logger.verbose?.(
+          `Bootstrap: seeded credential '${credentialData.type}' is missing on pre-existing human account '${user.id}' — NOT auto-reinstating (durable revocation, sec-server-18)`,
+          LogContext.BOOTSTRAP
+        );
+        continue;
+      }
+
+      await this.adminAuthorizationService.grantCredentialToUser({
+        userID: user.id,
+        type: credentialData.type,
+        resourceID: credentialData.resourceID,
+      });
+
+      if (PLATFORM_FAMILY_ROLES.has(asRole)) {
+        heldPlatformRoles.add(asRole);
+      }
+
+      if (isTargetRoleModel) {
+        // FR-027: seeded writes fail OPEN — logged, never blocking startup.
+        // No actor at all (bootstrap-seeded) — resolves to `system`
+        // regardless of `intendedOwners` (T058a's second fallback case).
+        const initiatorRole: PlatformAuditInitiatorRole = resolveInitiatorRole({
+          intendedOwners: [ROLE_CREDENTIAL_MAP[asRole]],
+        });
+        await this.platformRoleAssignmentAuditService.recordGrantOrRevoke({
+          initiatorRole,
+          targetKind: 'user',
+          targetId: user.id,
+          role: asRole,
+          outcome: 'granted',
+          seeded: true,
+        });
+      }
     }
   }
 

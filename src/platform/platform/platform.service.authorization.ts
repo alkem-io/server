@@ -1,14 +1,21 @@
 import {
   CREDENTIAL_RULE_PLATFORM_CREATE_ORGANIZATION,
+  CREDENTIAL_RULE_TYPES_FEATURE_ROLE_ASSIGN,
+  CREDENTIAL_RULE_TYPES_FEATURE_ROLE_HOLDERS_READ,
   CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE,
   CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_VIRTUAL_ASSISTANT,
   CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS,
+  CREDENTIAL_RULE_TYPES_PLATFORM_AUDIT_READ,
   CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET,
   CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER,
+  CREDENTIAL_RULE_TYPES_PLATFORM_FORUM_MANAGE,
   CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS,
   CREDENTIAL_RULE_TYPES_PLATFORM_MGMT,
   CREDENTIAL_RULE_TYPES_PLATFORM_OPERATIONS_ADMIN,
   CREDENTIAL_RULE_TYPES_PLATFORM_READ_REGISTERED,
+  CREDENTIAL_RULE_TYPES_PLATFORM_ROLE_HOLDERS_READ,
+  CREDENTIAL_RULE_TYPES_PLATFORM_USERS_ADMIN,
+  CREDENTIAL_RULE_TYPES_SET_SERVICE_PROFILE,
 } from '@common/constants';
 import {
   AuthorizationCredential,
@@ -238,6 +245,13 @@ export class PlatformAuthorizationService {
         [
           { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
           { type: AuthorizationCredential.ASSISTANT_ACCESS, resourceID: '' },
+          // 027-platform-role-redesign (T035): re-anchor ASSISTANT_ACCESS ->
+          // Feature Virtual Assistant, additively (legacy ASSISTANT_ACCESS
+          // retained until Slice B).
+          {
+            type: AuthorizationCredential.FEATURE_VIRTUAL_ASSISTANT,
+            resourceID: '',
+          },
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_VIRTUAL_ASSISTANT
       );
@@ -283,17 +297,110 @@ export class PlatformAuthorizationService {
     // Allow global admins to manage the platform settings
     // Separate rule + privilege as can imagine that we later define this as a separate
     // platform role
+    // 027-platform-role-redesign (T035, T045): re-anchored onto
+    // platform-settings-admin, additively — legacy credentials retained
+    // until Slice B (T076). T045 consolidates the A10 family's five
+    // surfaces (updatePlatformSettings + the 4 iframe/notification-blacklist
+    // mutations, platform.resolver.mutations.ts) onto this ONE privilege;
+    // those 4 previously rode the PLATFORM_ADMIN catch-all, whose legacy
+    // grant set (GLOBAL_ADMIN, GLOBAL_SUPPORT, GLOBAL_LICENSE_MANAGER)
+    // differs from updatePlatformSettings' own (GLOBAL_ADMIN,
+    // GLOBAL_PLATFORM_MANAGER) — so GLOBAL_SUPPORT and
+    // GLOBAL_LICENSE_MANAGER are added here too, to the union of both, never
+    // narrowing either surface's pre-existing legacy reach.
     const platformSettingsAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+          AuthorizationCredential.PLATFORM_SETTINGS_ADMIN,
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS
       );
     platformSettingsAdmin.cascade = false;
     credentialRules.push(platformSettingsAdmin);
+
+    // 027-platform-role-redesign (T035, A19 read privilege) — audit-read,
+    // re-anchoring the audit read surface off the retiring PLATFORM_ADMIN
+    // catch-all (FR-028). Read-only, held by no other role.
+    const platformAuditRead =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_AUDIT_READ],
+        [
+          AuthorizationCredential.PLATFORM_AUDIT_READER,
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+        ],
+        CREDENTIAL_RULE_TYPES_PLATFORM_AUDIT_READ
+      );
+    platformAuditRead.cascade = false;
+    credentialRules.push(platformAuditRead);
+
+    // 027-platform-role-redesign (T035, A21) — the service-profile marker
+    // extraction. Held by Roles Admin alone (plus legacy, additively).
+    const setServiceProfile =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.SET_SERVICE_PROFILE],
+        [
+          AuthorizationCredential.PLATFORM_ROLES_ADMIN,
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+        ],
+        CREDENTIAL_RULE_TYPES_SET_SERVICE_PROFILE
+      );
+    setServiceProfile.cascade = false;
+    credentialRules.push(setServiceProfile);
+
+    // 027-platform-role-redesign (T061/T062, A4/A5): PLATFORM_USERS_ADMIN
+    // on the PLATFORM's own authorization tree — distinct from (but the
+    // same grant set as) T060's per-USER grant in
+    // user.service.authorization.ts. Three A4/A5 surfaces check this
+    // privilege directly against the platform policy rather than against
+    // any individual user's own authorization: adminUserEmailChange /
+    // …DriftResolve (T061), adminIdentityDeleteKratosIdentity and
+    // adminUserAccountDelete (T062). Grant set is the UNION of A4's legacy
+    // reachers (today's PLATFORM_ADMIN: GLOBAL_ADMIN, GLOBAL_SUPPORT,
+    // GLOBAL_LICENSE_MANAGER) and A5's (today's PLATFORM_SETTINGS_ADMIN:
+    // adds GLOBAL_PLATFORM_MANAGER) — identical to T060's set, kept in sync
+    // deliberately.
+    const platformUsersAdmin =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_USERS_ADMIN],
+        [
+          AuthorizationCredential.PLATFORM_USERS_ADMIN,
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+          AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+        ],
+        CREDENTIAL_RULE_TYPES_PLATFORM_USERS_ADMIN
+      );
+    platformUsersAdmin.cascade = false;
+    credentialRules.push(platformUsersAdmin);
+
+    // 027-platform-role-redesign (T035, A15, FR-007(e)) — the platform
+    // forum's OWN privilege. NOT optional/cosmetic: the forum's only
+    // platform-side path today is the GLOBAL_SUPPORT subtree cascade as
+    // ordinary UPDATE, which Slice B (T073) deletes — without this grant
+    // Support would lose forum access entirely at that point. Cascades to
+    // the forum (mirroring the legacy cascade's reach), granted additively.
+    const platformForumManage =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_FORUM_MANAGE],
+        [
+          AuthorizationCredential.PLATFORM_SUPPORT,
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        CREDENTIAL_RULE_TYPES_PLATFORM_FORUM_MANAGE
+      );
+    platformForumManage.cascade = true;
+    credentialRules.push(platformForumManage);
 
     const globalSupportPlatformAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
@@ -384,6 +491,10 @@ export class PlatformAuthorizationService {
     userNotInherited.cascade = false;
     credentialRules.push(userNotInherited);
 
+    // 027-platform-role-redesign (T035, A6 create half): re-anchored onto
+    // platform-support + feature-organization-creator, additively. Kept
+    // separate from DELETE_ORGANIZATION (organization.service.authorization.ts,
+    // T039) so Feature Organization Creator can never acquire the delete half.
     const createOrg =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.CREATE_ORGANIZATION],
@@ -391,6 +502,8 @@ export class PlatformAuthorizationService {
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
           AuthorizationCredential.BETA_TESTER,
+          AuthorizationCredential.PLATFORM_SUPPORT,
+          AuthorizationCredential.FEATURE_ORGANIZATION_CREATOR,
         ],
         CREDENTIAL_RULE_PLATFORM_CREATE_ORGANIZATION
       );
@@ -411,15 +524,81 @@ export class PlatformAuthorizationService {
     }
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    // Allow global admins to manage global privileges, access Platform mgmt
+    // Allow global admins to manage global privileges, access Platform mgmt.
+    // 027-platform-role-redesign (T034): additively extended with
+    // platform-roles-admin — `{owning role} ∪ legacy` (FR-007(d)). This
+    // privilege gates SIX A1 surfaces, not two: the two *PlatformRole*
+    // mutations below AND the four FR-022 credential mutations
+    // (admin.authorization.resolver.mutations.ts) — T034a pins those four
+    // to the legacy credential ahead of this check so the widening here
+    // cannot reach them (research C10, D24, thirteenth analyze pass).
     const globalAdminNotInherited =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.GRANT_GLOBAL_ADMINS],
-        [AuthorizationCredential.GLOBAL_ADMIN],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.PLATFORM_ROLES_ADMIN,
+        ],
         CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS
       );
     globalAdminNotInherited.cascade = false;
     newRules.push(globalAdminNotInherited);
+
+    // 027-platform-role-redesign (T034): A2 — low-risk Feature-role
+    // assignment. Owned by BOTH Platform Users Admin and Platform Roles
+    // Admin (spec row 6/1). Wholly new privilege — no legacy reacher.
+    const featureRoleAssign =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.FEATURE_ROLE_ASSIGN],
+        [
+          AuthorizationCredential.PLATFORM_USERS_ADMIN,
+          AuthorizationCredential.PLATFORM_ROLES_ADMIN,
+        ],
+        CREDENTIAL_RULE_TYPES_FEATURE_ROLE_ASSIGN
+      );
+    featureRoleAssign.cascade = false;
+    newRules.push(featureRoleAssign);
+
+    // 027-platform-role-redesign (T034, A20): read the `Platform …` holder
+    // lists — shared by Roles Admin and Audit Reader (research D9). Legacy
+    // reach is via the broad grants FR-007 removes (today's plain READ on
+    // the platform role-set, held by every legacy `global-*` credential
+    // through the root god-mode rule).
+    const platformRoleHoldersRead =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ],
+        [
+          AuthorizationCredential.PLATFORM_ROLES_ADMIN,
+          AuthorizationCredential.PLATFORM_AUDIT_READER,
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+        ],
+        CREDENTIAL_RULE_TYPES_PLATFORM_ROLE_HOLDERS_READ
+      );
+    platformRoleHoldersRead.cascade = false;
+    newRules.push(platformRoleHoldersRead);
+
+    // 027-platform-role-redesign (T034, A20b): the second, dedicated
+    // holder-list read privilege for the `Feature …` role set — kept
+    // separate from FEATURE_ROLE_ASSIGN so read and assign stay
+    // independently grantable (sixth clarification pass). NOT granted to
+    // Roles Admin / Audit Reader here — they reach the Feature holder lists
+    // through PLATFORM_ROLE_HOLDERS_READ by subsumption (D9); adding them
+    // here too would be a redundant, harmless-but-confusing second path.
+    const featureRoleHoldersRead =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.FEATURE_ROLE_HOLDERS_READ],
+        [
+          AuthorizationCredential.PLATFORM_USERS_ADMIN,
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+        ],
+        CREDENTIAL_RULE_TYPES_FEATURE_ROLE_HOLDERS_READ
+      );
+    featureRoleHoldersRead.cascade = false;
+    newRules.push(featureRoleHoldersRead);
 
     const globalAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(

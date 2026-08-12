@@ -21,6 +21,7 @@ import {
 } from '@common/exceptions';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { ActorContextCacheService } from '@core/actor-context/actor.context.cache.service';
 import {
   CreateApplicationInput,
   IApplication,
@@ -31,6 +32,7 @@ import { InvitationService } from '@domain/access/invitation/invitation.service'
 import { CreatePlatformInvitationInput } from '@domain/access/invitation.platform/dto/platform.invitation.dto.create';
 import { IPlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.interface';
 import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
+import { resolveRoleCredential } from '@domain/access/platform-roles-access/platform.roles.access.service';
 import { IActor } from '@domain/actor/actor/actor.interface';
 import { ActorService } from '@domain/actor/actor/actor.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
@@ -53,6 +55,7 @@ import { ISpaceSettings } from '@domain/space/space.settings/space.settings.inte
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
+import { FEATURE_FAMILY_ROLES } from '@platform/platform-role/platform.role.assignment.rules.service';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -121,7 +124,16 @@ export class RoleSetService {
     private roleSetRepository: Repository<RoleSet>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private readonly roleSetCacheService: RoleSetCacheService
+    private readonly roleSetCacheService: RoleSetCacheService,
+    // 027-platform-role-redesign (T057, research D8, FR-031/SC-016): a
+    // user's ORGANIZATION_ADMIN/OWNER standing drives the org-inherited
+    // `feature-*` credential expansion (T056). Explicit invalidation here —
+    // ON TOP OF the invalidation `ActorService.grantCredentialOrFail` /
+    // `.revokeCredential` already perform for the affected actor's OWN
+    // credential change — makes the guarantee hold by construction rather
+    // than by an incidental call chain a future refactor could silently
+    // remove.
+    private readonly actorContextCacheService: ActorContextCacheService
   ) {}
 
   async createRoleSet(roleSetData: CreateRoleSetInput): Promise<IRoleSet> {
@@ -786,6 +798,31 @@ export class RoleSetService {
             });
           }
         }
+        // T057 (FR-031/SC-016): standing on an ORGANIZATION role-set drives
+        // T056's org-inherited `feature-*` credential expansion — a newly
+        // promoted ADMIN/OWNER must pick up the org's `feature-*`
+        // credentials on the NEXT request, not after the 60s TTL.
+        await this.actorContextCacheService.deleteByActorID(actorID);
+        break;
+      }
+      case RoleSetType.PLATFORM: {
+        // spec-server-4 fix (FR-031/SC-016): granting a `Feature …` role to
+        // an ORGANIZATION (T032a) only invalidates that organization's OWN
+        // actor-context cache (via `ActorService.grantCredentialOrFail`
+        // above) — but the organization's `feature-*` credential is
+        // INHERITED, at ActorContext build time, by every USER who is its
+        // ORGANIZATION_ADMIN/OWNER (T056,
+        // `expandWithOrganizationInheritedFeatureCredentials`). Without
+        // ALSO invalidating those users' caches, a standing operator with a
+        // request in the last 60s keeps the OLD (pre-grant) credential set
+        // for up to the ActorContext TTL — violating FR-031's "the newly
+        // granted role likewise works on the next request".
+        if (
+          actorType === ActorType.ORGANIZATION &&
+          FEATURE_FAMILY_ROLES.has(roleType)
+        ) {
+          await this.invalidateOrganizationInheritingActorCaches(actorID);
+        }
         break;
       }
     }
@@ -1161,6 +1198,24 @@ export class RoleSetService {
             adminCredential.resourceID
           );
         }
+        // T057 (FR-031/SC-016): a demotion (ADMIN/OWNER → ASSOCIATE) or a
+        // departure (MEMBER/ASSOCIATE removed entirely) must deny the
+        // org-inherited `feature-*` credentials (T056) on the NEXT request
+        // rather than surviving the 60s ActorContext cache TTL.
+        await this.actorContextCacheService.deleteByActorID(actorID);
+        break;
+      }
+      case RoleSetType.PLATFORM: {
+        // spec-server-4 fix (FR-031/SC-016) — the revoke-direction mirror
+        // of the assign-side fix above: see that comment for the full
+        // rationale. Without this, an org admin/owner keeps a revoked
+        // `feature-*` credential live for up to the ActorContext TTL.
+        if (
+          actorType === ActorType.ORGANIZATION &&
+          FEATURE_FAMILY_ROLES.has(roleType)
+        ) {
+          await this.invalidateOrganizationInheritingActorCaches(actorID);
+        }
         break;
       }
     }
@@ -1172,6 +1227,34 @@ export class RoleSetService {
     );
 
     return actorID;
+  }
+
+  /** spec-server-4 fix (FR-031/SC-016): enumerates the USERS who currently
+   * hold `ORGANIZATION_ADMIN` or `ORGANIZATION_OWNER` on `organizationID`
+   * — the two credentials `expandWithOrganizationInheritedFeatureCredentials`
+   * (T056, `actor.context.service.ts`) uses to decide who inherits that
+   * organization's `feature-*` credentials — and invalidates each one's
+   * cached `ActorContext`, alongside the organization's own (already
+   * invalidated by `ActorService.grantCredentialOrFail`/`.revokeCredential`
+   * for the organization actor itself). */
+  private async invalidateOrganizationInheritingActorCaches(
+    organizationID: string
+  ): Promise<void> {
+    const inheritingUsers = await this.userLookupService.usersWithCredentials([
+      {
+        type: AuthorizationCredential.ORGANIZATION_ADMIN,
+        resourceID: organizationID,
+      },
+      {
+        type: AuthorizationCredential.ORGANIZATION_OWNER,
+        resourceID: organizationID,
+      },
+    ]);
+    await Promise.all(
+      inheritingUsers.map(user =>
+        this.actorContextCacheService.deleteByActorID(user.id)
+      )
+    );
   }
 
   public async isRoleSetAccountMatchingVcAccount(
@@ -1849,7 +1932,20 @@ export class RoleSetService {
     roleName: RoleName
   ): Promise<ICredentialDefinition> {
     const roleDefinition = await this.getRoleDefinition(roleSet, roleName);
-    return roleDefinition.credential;
+    // 027-platform-role-redesign (research C1/D3): resolve the credential
+    // TYPE through the single canonical map rather than trusting the stored
+    // row's `credential.type` verbatim — a seeded row whose type does not
+    // match what the checks expect (the C1 silent-void defect) is repaired
+    // here rather than propagated. The resourceID stays scoped to this role
+    // definition (space/org id, or '' for platform).
+    //
+    // MUST resolve with `roleSet.type`: the flat ROLE_CREDENTIAL_MAP is keyed
+    // by RoleName alone and maps ADMIN -> space-admin unconditionally, so an
+    // ORGANIZATION role-set's ADMIN would otherwise be mis-credentialed.
+    return {
+      type: resolveRoleCredential(roleName, roleSet.type),
+      resourceID: roleDefinition.credential.resourceID,
+    };
   }
 
   public async getRoleDefinitions(
@@ -2394,6 +2490,12 @@ export class RoleSetService {
     if (!roleSet.roles) return null;
     const role = roleSet.roles.find(rd => rd.name === roleName);
     if (!role) return null;
-    return role.credential;
+    // 027-platform-role-redesign (research C1/D3): same canonical-map
+    // resolution as the async twin above — including the roleSet.type
+    // dimension, without which an ORGANIZATION ADMIN resolves to space-admin.
+    return {
+      type: resolveRoleCredential(roleName, roleSet.type),
+      resourceID: role.credential.resourceID,
+    };
   }
 }

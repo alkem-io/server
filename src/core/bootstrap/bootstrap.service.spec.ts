@@ -6,13 +6,16 @@ import { Account } from '@domain/space/account/account.entity';
 import { Space } from '@domain/space/space/space.entity';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
+import { PlatformRoleAssignmentRulesService } from '@platform/platform-role/platform.role.assignment.rules.service';
 import { McpApiKeyService } from '@services/mcp-server/auth/mcp-api-key.service';
+import { PlatformRoleAssignmentAuditService } from '@src/platform-admin/platform-role-assignment-audit/platform.role.assignment.audit.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { vi } from 'vitest';
 import { BootstrapService } from './bootstrap.service';
+import * as seededUsers from './platform-template-definitions/user/users.json';
 
 describe('BootstrapService', () => {
   let service: BootstrapService;
@@ -80,6 +83,10 @@ describe('BootstrapService', () => {
         authenticationID: 'kratos-1',
       }),
       getAccount: vi.fn().mockResolvedValue({ id: 'acc-1' }),
+      // corr-server-4 fix: `createUserProfiles` now reconciles the seeded
+      // `serviceProfile` marker for a pre-existing user too (not only at
+      // creation time), which calls `save`.
+      save: vi.fn().mockImplementation((user: any) => Promise.resolve(user)),
     };
     mocks.userLookupService = {
       isRegisteredUser: vi.fn().mockResolvedValue(true),
@@ -495,6 +502,77 @@ describe('BootstrapService', () => {
     });
   });
 
+  // 027-platform-role-redesign — this seed has now flipped three times; the
+  // history is recorded here so it is not flipped a fourth by whoever reads
+  // only the last comment.
+  //
+  //   sec-server-15  ADDED `global-admin` — "to keep several
+  //                  `[GLOBAL_ADMIN]`-pinned legacy policies reachable on a
+  //                  fresh cluster".
+  //   spec-server-19 REVERTED it as a god-mode reintroduction, citing FR-013
+  //                  ("the seeded account holds Platform Roles Admin only")
+  //                  and T055.
+  //   2026-08-06     RESTORED, deliberately, with the cost measured.
+  //
+  // Both reviewers were right about their own half. spec-server-19 is correct
+  // about the LETTER of FR-013/T055 — and that letter describes the SLICE B
+  // end state, where `global-admin` does not exist at all. Applying it during
+  // Slice A breaks the additive guarantee at the only point that bootstraps a
+  // cluster, and sec-server-15's warning turned out to be concrete:
+  //
+  //   * A fresh database has NO account that can run
+  //     `authorizationPolicyResetAll` — `platform-roles-admin` is
+  //     assignment-only, cannot self-assign (rule `self-assignment`), and
+  //     cannot grant the legacy roles (resolver-pinned `[GLOBAL_ADMIN]`
+  //     policy). Bootstrap writes an Alkemio user row but no Kratos identity,
+  //     so no other seeded account can even log in to break the cycle.
+  //   * `test-suites` cannot run AT ALL: `TestUser.GLOBAL_ADMIN` is
+  //     `admin@alkem.io` and is the DEFAULT actor for every request
+  //     (`graphql.request.ts`), used at 878 sites across 121 of 145 spec
+  //     files. Its own fixture seeding is documented as running "by the
+  //     legacy GLOBAL_ADMIN fixture ... via the Slice A root cascade".
+  //     Measured 2026-08-06: 35 of 62 failures were scenario setup failing on
+  //     `create-organization`.
+  //
+  // Those `[GLOBAL_ADMIN]`-pinned surfaces are indeed Slice-B-retiring — and
+  // during Slice A they MUST still work, because "nothing is taken away" is
+  // the promise this slice makes. Slice B removes this credential together
+  // with the role itself (and `test-suites` T021 removes the legacy
+  // fixtures); until then, seeding it is what makes the slice additive.
+  //
+  // Deviation from FR-013/T055 as written, accepted 2026-08-06. Recorded in
+  // the workspace spec's residual-risks register (R-A.1).
+  describe('users.json seed data', () => {
+    it('seeds admin@alkem.io with the break-glass role AND legacy global-admin (Slice A additivity)', () => {
+      const admin = (seededUsers as any).default
+        ? (seededUsers as any).default.users.find(
+            (u: any) => u.email === 'admin@alkem.io'
+          )
+        : (seededUsers as any).users.find(
+            (u: any) => u.email === 'admin@alkem.io'
+          );
+      expect(admin).toBeDefined();
+      const credentialTypes = admin.credentials.map((c: any) => c.type);
+      // `platform-roles-admin` first: it is the FR-013b break-glass role and
+      // the only one re-granted on a restart against a pre-existing account.
+      expect(credentialTypes).toEqual(['platform-roles-admin', 'global-admin']);
+    });
+
+    it('grants no OTHER legacy global role — the deviation is exactly one credential', () => {
+      const admin = (seededUsers as any).default
+        ? (seededUsers as any).default.users.find(
+            (u: any) => u.email === 'admin@alkem.io'
+          )
+        : (seededUsers as any).users.find(
+            (u: any) => u.email === 'admin@alkem.io'
+          );
+      const legacy = admin.credentials
+        .map((c: any) => c.type)
+        .filter((t: string) => t.startsWith('global-'));
+      expect(legacy).toEqual(['global-admin']);
+    });
+  });
+
   describe('createUserProfiles', () => {
     it('skips existing users', async () => {
       mocks.userLookupService.isRegisteredUser.mockResolvedValue(true);
@@ -512,7 +590,17 @@ describe('BootstrapService', () => {
     });
 
     it('creates new users with credentials and authorization', async () => {
-      mocks.userLookupService.isRegisteredUser.mockResolvedValue(false);
+      // 027-platform-role-redesign (T053): existence + credentials are
+      // resolved via `userService.getUserByEmail` in ONE call — not found
+      // on the first lookup, then RELOADED (with credentials) after
+      // creation for the seeded-credential grant loop.
+      mocks.userService.getUserByEmail
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'user-new',
+          email: 'new@alkem.io',
+          credentials: [],
+        });
 
       await service.createUserProfiles([
         {
@@ -532,10 +620,81 @@ describe('BootstrapService', () => {
       ).toHaveBeenCalledOnce();
     });
 
-    it('wraps errors in BootstrapException', async () => {
-      mocks.userLookupService.isRegisteredUser.mockRejectedValue(
-        new Error('DB error')
+    // 027-platform-role-redesign (sec-server-18 fix): the restart-time
+    // re-grant of a MISSING credential is scoped to the FR-013b break-glass
+    // recovery role (`platform-roles-admin`) — a missing `global-admin` on
+    // a PRE-EXISTING account is a durable, deliberate revocation and MUST
+    // NOT be silently reinstated on the next restart.
+    it('re-grants a MISSING platform-roles-admin (break-glass) on an existing account, but does NOT reinstate a missing legacy credential', async () => {
+      mocks.userService.getUserByEmail.mockResolvedValueOnce({
+        id: 'admin-1',
+        email: 'admin@alkem.io',
+        credentials: [],
+      });
+      const rulesService = module.get(PlatformRoleAssignmentRulesService);
+      (rulesService.evaluateSeedOrFail as any).mockReturnValue(undefined);
+
+      await service.createUserProfiles([
+        {
+          email: 'admin@alkem.io',
+          firstName: 'admin',
+          lastName: 'alkemio',
+          credentials: [
+            { type: 'platform-roles-admin', resourceID: '' },
+            { type: 'global-admin', resourceID: '' },
+          ],
+        },
+      ]);
+
+      expect(mocks.userService.createUser).not.toHaveBeenCalled();
+      // Only the break-glass `platform-roles-admin` credential is granted —
+      // `global-admin` is missing on a pre-existing account and stays that
+      // way (durable revocation, sec-server-18).
+      expect(
+        mocks.adminAuthorizationService.grantCredentialToUser
+      ).toHaveBeenCalledOnce();
+      expect(
+        mocks.adminAuthorizationService.grantCredentialToUser
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'platform-roles-admin' })
       );
+    });
+
+    // 027-platform-role-redesign (sec-server-18 fix): a freshly-CREATED
+    // account still receives every seeded credential, including non-recovery
+    // ones — the restart-time narrowing applies ONLY to a pre-existing
+    // account.
+    it('grants ALL seeded credentials to a newly-created account, not just platform-roles-admin', async () => {
+      mocks.userService.getUserByEmail
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'svc-new',
+          email: 'svc-new@alkem.io',
+          credentials: [],
+          serviceProfile: true,
+        });
+      const rulesService = module.get(PlatformRoleAssignmentRulesService);
+      (rulesService.evaluateSeedOrFail as any).mockReturnValue(undefined);
+
+      await service.createUserProfiles([
+        {
+          email: 'svc-new@alkem.io',
+          firstName: 'Svc',
+          lastName: 'New',
+          serviceProfile: true,
+          credentials: [{ type: 'platform-spaces-reader', resourceID: '' }],
+        },
+      ]);
+
+      expect(
+        mocks.adminAuthorizationService.grantCredentialToUser
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'platform-spaces-reader' })
+      );
+    });
+
+    it('wraps errors in BootstrapException', async () => {
+      mocks.userService.getUserByEmail.mockRejectedValue(new Error('DB error'));
 
       await expect(
         service.createUserProfiles([
@@ -547,6 +706,122 @@ describe('BootstrapService', () => {
           },
         ])
       ).rejects.toThrow('Unable to create profiles');
+    });
+
+    // 027-platform-role-redesign (T054/T070j, FR-013/FR-028, FR-024 stateful
+    // flow 3): a seeded grant that violates the SAME rule engine the
+    // mutation path uses is FATAL — never forced through, never skipped.
+    it('T070j flow 3a: a conflicting configured grant raises a FATAL BootstrapException naming the rule', async () => {
+      mocks.userService.getUserByEmail
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'user-broken-seed',
+          email: 'broken-seed@alkem.io',
+          credentials: [],
+        });
+      const rulesService = module.get(PlatformRoleAssignmentRulesService);
+      (rulesService.evaluateSeedOrFail as any).mockImplementation(() => {
+        throw new Error(
+          'Rejected: platform-spaces-reader may only be granted to a service account'
+        );
+      });
+
+      await expect(
+        service.createUserProfiles([
+          {
+            email: 'broken-seed@alkem.io',
+            firstName: 'Broken',
+            lastName: 'Seed',
+            credentials: [{ type: 'platform-spaces-reader', resourceID: '' }],
+          },
+        ])
+      ).rejects.toThrow('Seeded credential grant rejected');
+      // Never forced through by stripping the role.
+      expect(
+        mocks.adminAuthorizationService.grantCredentialToUser
+      ).not.toHaveBeenCalled();
+    });
+
+    // FR-024 stateful flow 4: the seeded audit write is marked `seeded:
+    // true` so the SHARED writer's own fail-open branch applies (unit-proven
+    // in platform.role.assignment.audit.service.spec.ts) — the grant is
+    // applied BEFORE the write, so a failing audit store can never roll it
+    // back regardless of the writer's internal behaviour.
+    it('T070j flow 4: the grant is applied and the audit write is marked seeded (fail-open branch)', async () => {
+      mocks.userService.getUserByEmail
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'admin-new',
+          email: 'admin@alkem.io',
+          credentials: [],
+        });
+      const rulesService = module.get(PlatformRoleAssignmentRulesService);
+      (rulesService.evaluateSeedOrFail as any).mockReturnValue(undefined);
+      const auditService = module.get(PlatformRoleAssignmentAuditService);
+      (auditService.recordGrantOrRevoke as any).mockResolvedValue(undefined);
+
+      await expect(
+        service.createUserProfiles([
+          {
+            email: 'admin@alkem.io',
+            firstName: 'admin',
+            lastName: 'alkemio',
+            credentials: [{ type: 'platform-roles-admin', resourceID: '' }],
+          },
+        ])
+      ).resolves.not.toThrow();
+      expect(
+        mocks.adminAuthorizationService.grantCredentialToUser
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'platform-roles-admin' })
+      );
+      expect(auditService.recordGrantOrRevoke).toHaveBeenCalledWith(
+        expect.objectContaining({ seeded: true })
+      );
+    });
+
+    // 027-platform-role-redesign (T054a fix, spec-server-22): the existing
+    // fatal-conflict test above mocks `evaluateSeedOrFail` to throw
+    // directly, so the REAL rule engine never runs in it. Wire the REAL
+    // `PlatformRoleAssignmentRulesService` in so a seed listing two
+    // mutually-exclusive `Platform …` roles on ONE account is caught by the
+    // actual rule 4 (Audit Reader exclusion) — not merely asserted in
+    // isolation (rules.service.spec.ts) or mocked away (every other test in
+    // this file).
+    it('T054a: a REAL rule-4 evaluation raises a FATAL BootstrapException naming audit-reader-exclusion for an account seeded with both platform-audit-reader and platform-support', async () => {
+      mocks.userService.getUserByEmail
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'conflict-seed',
+          email: 'conflict-seed@alkem.io',
+          credentials: [],
+        });
+
+      const realRulesService = new PlatformRoleAssignmentRulesService(
+        {} as any
+      );
+      (service as any).platformRoleAssignmentRulesService = realRulesService;
+
+      await expect(
+        service.createUserProfiles([
+          {
+            email: 'conflict-seed@alkem.io',
+            firstName: 'Conflict',
+            lastName: 'Seed',
+            credentials: [
+              { type: 'platform-audit-reader', resourceID: '' },
+              { type: 'platform-support', resourceID: '' },
+            ],
+          },
+        ])
+      ).rejects.toThrow(/audit-reader-exclusion/);
+
+      // Never forced through by stripping the role.
+      expect(
+        mocks.adminAuthorizationService.grantCredentialToUser
+      ).not.toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'platform-support' })
+      );
     });
   });
 

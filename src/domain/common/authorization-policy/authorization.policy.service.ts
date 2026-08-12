@@ -108,6 +108,47 @@ export class AuthorizationPolicyService {
         case AuthorizationRoleGlobal.PLATFORM_OPERATIONS_ADMIN:
           credType = AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN;
           break;
+        // 027-platform-role-redesign (T044 et al.): the 12 target roles.
+        // Each AuthorizationRoleGlobal member is string-identical to its
+        // AuthorizationCredential counterpart (research D2 — one canonical
+        // identifier per role), so this is a direct 1:1 mapping, not a
+        // design decision to make per case.
+        case AuthorizationRoleGlobal.PLATFORM_ROLES_ADMIN:
+          credType = AuthorizationCredential.PLATFORM_ROLES_ADMIN;
+          break;
+        case AuthorizationRoleGlobal.PLATFORM_CONTENT_FULL_ACCESS:
+          credType = AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS;
+          break;
+        case AuthorizationRoleGlobal.PLATFORM_RESOURCE_ADMIN:
+          credType = AuthorizationCredential.PLATFORM_RESOURCE_ADMIN;
+          break;
+        case AuthorizationRoleGlobal.PLATFORM_SETTINGS_ADMIN:
+          credType = AuthorizationCredential.PLATFORM_SETTINGS_ADMIN;
+          break;
+        case AuthorizationRoleGlobal.PLATFORM_USERS_ADMIN:
+          credType = AuthorizationCredential.PLATFORM_USERS_ADMIN;
+          break;
+        case AuthorizationRoleGlobal.PLATFORM_SUPPORT:
+          credType = AuthorizationCredential.PLATFORM_SUPPORT;
+          break;
+        case AuthorizationRoleGlobal.PLATFORM_LICENSE_MANAGER:
+          credType = AuthorizationCredential.PLATFORM_LICENSE_MANAGER;
+          break;
+        case AuthorizationRoleGlobal.PLATFORM_SPACES_READER:
+          credType = AuthorizationCredential.PLATFORM_SPACES_READER;
+          break;
+        case AuthorizationRoleGlobal.PLATFORM_AUDIT_READER:
+          credType = AuthorizationCredential.PLATFORM_AUDIT_READER;
+          break;
+        case AuthorizationRoleGlobal.FEATURE_BETA_TESTER:
+          credType = AuthorizationCredential.FEATURE_BETA_TESTER;
+          break;
+        case AuthorizationRoleGlobal.FEATURE_VIRTUAL_ASSISTANT:
+          credType = AuthorizationCredential.FEATURE_VIRTUAL_ASSISTANT;
+          break;
+        case AuthorizationRoleGlobal.FEATURE_ORGANIZATION_CREATOR:
+          credType = AuthorizationCredential.FEATURE_ORGANIZATION_CREATOR;
+          break;
         default:
           throw new ForbiddenException(
             `Authorization: invalid global role encountered: ${globalRole}`,

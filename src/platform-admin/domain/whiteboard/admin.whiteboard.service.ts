@@ -67,7 +67,13 @@ export class AdminWhiteboardService {
     const errors: string[] = [];
     const warns: string[] = [];
 
-    const className = whiteboards[0].constructor.name;
+    // Taken from the entity class, not from `whiteboards[0]`: the find above
+    // legitimately returns an empty array (a platform with no whiteboards, or
+    // none left to migrate), and indexing it threw
+    // `TypeError: Cannot read properties of undefined (reading 'constructor')`
+    // out of the resolver as an UNSPECIFIED error — a crash where the correct
+    // answer is an empty result set.
+    const className = Whiteboard.name;
 
     for (const whiteboard of whiteboards) {
       const { id, content, profile } = whiteboard;

@@ -1,5 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import {
+  LEGACY_PLATFORM_ROLE_SEED_DEFINITIONS,
+  NEW_PLATFORM_ROLE_SEED_DEFINITIONS,
+} from './utils/platform.role.seed.definitions';
 
 /**
  * Seed migration for PostgreSQL baseline.
@@ -363,80 +367,44 @@ export class Seed1764590884533 implements MigrationInterface {
     queryRunner: QueryRunner,
     roleSetID: string
   ): Promise<void> {
+    // 027-platform-role-redesign (Slice A, T012): the legacy dozen (values
+    // unchanged) plus the twelve target `Platform …` / `Feature …` roles,
+    // read from the single shared seed-definitions module (data-model.md §2)
+    // rather than hardcoded here — `AddPlatformRolesRedesign` (T013) mirrors
+    // the same module for existing installs, and `role.credential.map.spec.ts`
+    // (T011) asserts every platform-role-set RoleName has a row here.
     const roles = [
-      {
-        name: 'global-admin',
-        credential: { type: 'global-admin', resourceID: '' },
-        userPolicy: { minimum: 1, maximum: -1 },
-      },
-      {
-        name: 'global-support',
-        credential: { type: 'global-support', resourceID: '' },
-        userPolicy: { minimum: 0, maximum: -1 },
-      },
-      {
-        name: 'global-license-manager',
-        credential: { type: 'global-license-manager', resourceID: '' },
-        userPolicy: { minimum: 0, maximum: -1 },
-      },
-      {
-        name: 'global-spaces-reader',
-        credential: { type: 'global-spaces-reader', resourceID: '' },
-        userPolicy: { minimum: 0, maximum: -1 },
-      },
-      {
-        name: 'platform-beta-tester',
-        credential: { type: 'beta-tester', resourceID: '' },
-        userPolicy: { minimum: 0, maximum: -1 },
-      },
-      {
-        name: 'platform-vc-campaign',
-        credential: { type: 'vc-campaign', resourceID: '' },
-        userPolicy: { minimum: 0, maximum: -1 },
-      },
-      {
-        name: 'platform-assistant-access',
-        credential: { type: 'assistant-access', resourceID: '' },
-        userPolicy: { minimum: 0, maximum: -1 },
-      },
-      {
-        name: 'global-community-reader',
-        credential: { type: 'global-community-reader', resourceID: '' },
-        userPolicy: { minimum: 0, maximum: -1 },
-      },
-      {
-        name: 'registered',
-        credential: { type: 'global-registered', resourceID: '' },
-        userPolicy: { minimum: 0, maximum: -1 },
-      },
-      {
-        name: 'global-platform-manager',
-        credential: { type: 'global-platform-manager', resourceID: '' },
-        userPolicy: { minimum: 0, maximum: -1 },
-      },
-      {
-        name: 'global-support-manager',
-        credential: { type: 'global-support-manager', resourceID: '' },
-        userPolicy: { minimum: 0, maximum: -1 },
-      },
-      {
-        name: 'platform-operations-admin',
-        credential: { type: 'platform-operations-admin', resourceID: '' },
-        userPolicy: { minimum: 0, maximum: -1 },
-      },
-    ];
+      ...LEGACY_PLATFORM_ROLE_SEED_DEFINITIONS,
+      ...NEW_PLATFORM_ROLE_SEED_DEFINITIONS,
+    ].map(def => ({
+      name: def.name,
+      credential: { type: def.credentialType, resourceID: '' },
+      userPolicy: def.userPolicy,
+      organizationPolicy: def.organizationPolicy,
+      virtualContributorPolicy: def.virtualContributorPolicy,
+    }));
 
     for (const role of roles) {
       const roleID = randomUUID();
+      // 027-platform-role-redesign (T012): organizationPolicy /
+      // virtualContributorPolicy are lifted out of the SQL literal into the
+      // definitions, exactly as userPolicy already was — the pre-existing
+      // dozen keep their historical {0,0}/{0,0}; the twelve new rows carry
+      // their own per-role triples (9 `platform-*` rows stay {0,0}; the 3
+      // `feature-*` rows get {0,-1} — inheriting the literal would make
+      // FR-002's organization-grant half unreachable no matter what the
+      // assignment rule engine does).
       await queryRunner.query(
         `INSERT INTO role (id, "createdDate", "updatedDate", version, "roleSetId", name, credential, "parentCredentials", "requiresEntryRole", "requiresSameRoleInParentRoleSet", "userPolicy", "organizationPolicy", "virtualContributorPolicy")
-         VALUES ($1, NOW(), NOW(), 1, $2, $3, $4, '[]', false, false, $5, '{"minimum": 0, "maximum": 0}', '{"minimum": 0, "maximum": 0}')`,
+         VALUES ($1, NOW(), NOW(), 1, $2, $3, $4, '[]', false, false, $5, $6, $7)`,
         [
           roleID,
           roleSetID,
           role.name,
           JSON.stringify(role.credential),
           JSON.stringify(role.userPolicy),
+          JSON.stringify(role.organizationPolicy),
+          JSON.stringify(role.virtualContributorPolicy),
         ]
       );
     }

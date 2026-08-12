@@ -1,5 +1,6 @@
 import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { LogContext } from '@common/enums';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import {
   RelationshipNotFoundException,
@@ -13,6 +14,7 @@ import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ICallout } from '../callout/callout.interface';
 import { CalloutService } from '../callout/callout.service';
@@ -34,6 +36,7 @@ export class CalloutTransferResolverMutations {
     private calloutTransferService: CalloutTransferService,
     private roomResolverService: RoomResolverService,
     private collaborationLicenseService: CollaborationLicenseService,
+    private readonly platformResourceAuditService: PlatformResourceAuditService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -113,6 +116,29 @@ export class CalloutTransferResolverMutations {
       );
 
     await this.authorizationPolicyService.saveAll(authorizations);
+
+    // T058 — A9, single-path surface (TRANSFER_RESOURCE_OFFER/_ACCEPT, both
+    // required, no ordinary-owner branch).
+    // corr-server-9 fix: legacy reacher is GLOBAL_SUPPORT_MANAGER, not
+    // GLOBAL_SUPPORT — the callouts-set TRANSFER_RESOURCE_OFFER/_ACCEPT
+    // rules grant [GA, GLOBAL_SUPPORT_MANAGER, PLATFORM_RESOURCE_ADMIN]
+    // (callouts.set.service.authorization.ts); GLOBAL_SUPPORT never reaches
+    // this surface (its account-tree grants are cascade:false).
+    await this.platformResourceAuditService.recordEventForActor(
+      actorContext,
+      [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
+      [
+        AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_SUPPORT_MANAGER,
+      ],
+      {
+        resourceKind: 'callout',
+        resourceId: callout.id,
+        toAccountId: targetCalloutsSet.id,
+        outcome: 'moved',
+      }
+    );
+
     return this.calloutService.getCalloutOrFail(callout.id);
   }
 }

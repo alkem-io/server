@@ -1,3 +1,5 @@
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { EntityNotInitializedException } from '@common/exceptions';
@@ -359,6 +361,53 @@ describe('CalloutAuthorizationService', () => {
       expect(
         authorizationPolicyService.appendPrivilegeAuthorizationRules
       ).toHaveBeenCalled();
+    });
+
+    // 027-platform-role-redesign (T038, A8; qual-server-10 fix): the
+    // UPDATE_CALLOUT_PUBLISHER credential rule this feature re-anchors onto
+    // `platform-content-full-access` had NO assertion anywhere in the repo —
+    // `unit.coverage.inventory.ts` pointed at a file that never mentions the
+    // privilege. Assert the EXACT credential types passed to
+    // `createCredentialRuleUsingTypesOnly` for this rule.
+    it('grants UPDATE_CALLOUT_PUBLISHER to platform-content-full-access alongside the legacy global-admin/global-support pair (qual-server-10)', async () => {
+      const callout = makeCallout();
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(
+        authorizationPolicyService.inheritParentAuthorization
+      ).mockReturnValue(callout.authorization);
+      vi.mocked(
+        authorizationPolicyService.appendPrivilegeAuthorizationRules
+      ).mockReturnValue(callout.authorization);
+      vi.mocked(
+        authorizationPolicyService.appendCredentialAuthorizationRules
+      ).mockReturnValue(callout.authorization);
+      vi.mocked(
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly
+      ).mockReturnValue({ grantedPrivileges: [], cascade: true } as any);
+
+      const framingAuthService = (service as any)
+        .calloutFramingAuthorizationService;
+      vi.mocked(framingAuthService.applyAuthorizationPolicy).mockResolvedValue(
+        []
+      );
+
+      await service.applyAuthorizationPolicy(
+        'callout-1',
+        undefined,
+        platformRolesAccess
+      );
+
+      expect(
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly
+      ).toHaveBeenCalledWith(
+        [AuthorizationPrivilege.UPDATE_CALLOUT_PUBLISHER],
+        expect.arrayContaining([
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+        ]),
+        expect.any(String)
+      );
     });
   });
 });

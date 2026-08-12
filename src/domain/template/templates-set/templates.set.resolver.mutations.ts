@@ -42,12 +42,28 @@ export class TemplatesSetResolverMutations {
     const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
       templateData.templatesSetID
     );
-    this.authorizationService.grantAccessOrFail(
+    // 027-platform-role-redesign (T042, A7): dual-path — see the identical
+    // comment in template.resolver.mutations.ts. Harmless no-op for
+    // space-owned templates sets.
+    const canCreateAsOwner = this.authorizationService.isAccessGranted(
       actorContext,
       templatesSet.authorization,
-      AuthorizationPrivilege.CREATE,
-      `templates set create template: ${templatesSet.id}`
+      AuthorizationPrivilege.CREATE
     );
+    const canCreateAsPlatformSupport =
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        templatesSet.authorization,
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+      );
+    if (!canCreateAsOwner && !canCreateAsPlatformSupport) {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        templatesSet.authorization,
+        AuthorizationPrivilege.CREATE,
+        `templates set create template: ${templatesSet.id}`
+      );
+    }
     const template = await this.templatesSetService.createTemplate(
       templatesSet,
       templateData
@@ -74,12 +90,27 @@ export class TemplatesSetResolverMutations {
     const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
       templateData.templatesSetID
     );
-    this.authorizationService.grantAccessOrFail(
-      actorContext,
-      templatesSet.authorization,
-      AuthorizationPrivilege.CREATE,
-      `templatesSet create template from Collaboration, templatesSetId: ${templatesSet.id}`
-    );
+    // 027-platform-role-redesign (T042, A7): dual-path — see createTemplate
+    // above.
+    if (
+      !this.authorizationService.isAccessGranted(
+        actorContext,
+        templatesSet.authorization,
+        AuthorizationPrivilege.CREATE
+      ) &&
+      !this.authorizationService.isAccessGranted(
+        actorContext,
+        templatesSet.authorization,
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+      )
+    ) {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        templatesSet.authorization,
+        AuthorizationPrivilege.CREATE,
+        `templatesSet create template from Collaboration, templatesSetId: ${templatesSet.id}`
+      );
+    }
 
     const space = await this.spaceLookupService.getSpaceOrFail(
       templateData.spaceID
@@ -116,12 +147,27 @@ export class TemplatesSetResolverMutations {
     const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
       templateData.templatesSetID
     );
-    this.authorizationService.grantAccessOrFail(
-      actorContext,
-      templatesSet.authorization,
-      AuthorizationPrivilege.CREATE,
-      `templatesSet create template from ContentSpace, templatesSetId: ${templatesSet.id}`
-    );
+    // 027-platform-role-redesign (T042, A7): dual-path — see createTemplate
+    // above.
+    if (
+      !this.authorizationService.isAccessGranted(
+        actorContext,
+        templatesSet.authorization,
+        AuthorizationPrivilege.CREATE
+      ) &&
+      !this.authorizationService.isAccessGranted(
+        actorContext,
+        templatesSet.authorization,
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+      )
+    ) {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        templatesSet.authorization,
+        AuthorizationPrivilege.CREATE,
+        `templatesSet create template from ContentSpace, templatesSetId: ${templatesSet.id}`
+      );
+    }
 
     const contentSpace =
       await this.templateContentSpaceService.getTemplateContentSpaceOrFail(

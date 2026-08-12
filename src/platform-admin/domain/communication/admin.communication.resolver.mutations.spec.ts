@@ -4,14 +4,18 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock, vi } from 'vitest';
 import { AdminCommunicationResolverMutations } from './admin.communication.resolver.mutations';
 import { AdminCommunicationService } from './admin.communication.service';
+import { AdminCommunicationSpaceSyncService } from './admin.communication.space.sync.service';
 
 describe('AdminCommunicationResolverMutations', () => {
+  let module: TestingModule;
   let resolver: AdminCommunicationResolverMutations;
+  let adminCommunicationSpaceSyncService: Record<string, Mock>;
   let authorizationService: Record<string, Mock>;
   let authorizationPolicyService: Record<string, Mock>;
   let adminCommunicationService: Record<string, Mock>;
@@ -21,7 +25,7 @@ describe('AdminCommunicationResolverMutations', () => {
   beforeEach(async () => {
     vi.restoreAllMocks();
 
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [AdminCommunicationResolverMutations, MockWinstonProvider],
     })
       .useMocker(defaultMockerFactory)
@@ -31,6 +35,9 @@ describe('AdminCommunicationResolverMutations', () => {
     authorizationService = module.get(AuthorizationService) as any;
     authorizationPolicyService = module.get(AuthorizationPolicyService) as any;
     adminCommunicationService = module.get(AdminCommunicationService) as any;
+    adminCommunicationSpaceSyncService = module.get(
+      AdminCommunicationSpaceSyncService
+    ) as any;
   });
 
   afterEach(() => {
@@ -239,6 +246,98 @@ describe('AdminCommunicationResolverMutations', () => {
 
       await expect(invoke()).rejects.toThrow('Forbidden');
       expect(service()).not.toHaveBeenCalled();
+    });
+  });
+  // ===================================================================
+  // qual-server-12 (2026-07-31) — A11's five operations here each audit BOTH
+  // outcomes (ten call sites, the largest concentration in the feature), and
+  // none was asserted. Every one of them mutates Matrix/room state outside
+  // Postgres — orphaned-room removal, room-state changes, conversation
+  // migration, space-hierarchy sync — so the audit row is often the ONLY
+  // record inside Alkemio that the operation happened at all.
+  // ===================================================================
+  describe('audit coverage (qual-server-12)', () => {
+    const operationsAudit = () =>
+      module.get(PlatformOperationsAuditService) as any;
+
+    const CASES: ReadonlyArray<
+      [string, () => Mock, (r: any) => Promise<unknown>, unknown]
+    > = [
+      [
+        'adminCommunicationEnsureAccessToCommunications',
+        () => adminCommunicationService.ensureCommunityAccessToCommunications,
+        r =>
+          r.adminCommunicationEnsureAccessToCommunications(
+            { spaceID: 'space-1' } as any,
+            actorContext
+          ),
+        true,
+      ],
+      [
+        'adminCommunicationRemoveOrphanedRoom',
+        () => adminCommunicationService.removeOrphanedRoom,
+        r =>
+          r.adminCommunicationRemoveOrphanedRoom(
+            { roomID: 'room-1' } as any,
+            actorContext
+          ),
+        true,
+      ],
+      [
+        'adminCommunicationUpdateRoomState',
+        () => adminCommunicationService.updateRoomState,
+        r =>
+          r.adminCommunicationUpdateRoomState(
+            { roomID: 'room-1', isWorldVisible: true, isPublic: false } as any,
+            actorContext
+          ),
+        { id: 'room-1', displayName: 'test' },
+      ],
+      [
+        'adminCommunicationMigrateOrphanedConversations',
+        () => adminCommunicationService.migrateConversationRooms,
+        r => r.adminCommunicationMigrateOrphanedConversations(actorContext),
+        true,
+      ],
+      [
+        'adminCommunicationSyncSpaceHierarchy',
+        () => adminCommunicationSpaceSyncService.syncSpaceHierarchy,
+        r => r.adminCommunicationSyncSpaceHierarchy(actorContext),
+        true,
+      ],
+    ];
+
+    it.each(
+      CASES
+    )('%s records a success operation', async (action, dep, invoke, ok) => {
+      dep().mockResolvedValue(ok);
+
+      await invoke(resolver);
+
+      expect(operationsAudit().recordOperation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorID: actorContext.actorID,
+          action,
+          outcome: 'success',
+        })
+      );
+    });
+
+    it.each(
+      CASES
+    )('%s records a FAILURE operation and rethrows', async (action, dep, invoke) => {
+      const failure = new Error(`${action} exploded`);
+      dep().mockRejectedValue(failure);
+
+      await expect(invoke(resolver)).rejects.toBe(failure);
+
+      expect(operationsAudit().recordOperation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action,
+          outcome: 'failure',
+          error: failure,
+        })
+      );
     });
   });
 });

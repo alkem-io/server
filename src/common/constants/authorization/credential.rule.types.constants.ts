@@ -121,3 +121,27 @@ export const CREDENTIAL_RULE_TYPES_FORUM_CREATE_DISCUSSION =
   'credentialRuleTypes-forumCreateDiscussion';
 export const CREDENTIAL_RULE_TYPES_MESSAGING_CREATE_CONVERSATION =
   'credentialRuleTypes-messagingCreateConversation';
+
+// --- 027-platform-role-redesign: Slice A credential-rule type identifiers ---
+export const CREDENTIAL_RULE_TYPES_PLATFORM_ROLES_ASSIGN =
+  'credentialRuleTypes-platformRolesAssign';
+export const CREDENTIAL_RULE_TYPES_FEATURE_ROLE_ASSIGN =
+  'credentialRuleTypes-featureRoleAssign';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_ROLE_HOLDERS_READ =
+  'credentialRuleTypes-platformRoleHoldersRead';
+export const CREDENTIAL_RULE_TYPES_FEATURE_ROLE_HOLDERS_READ =
+  'credentialRuleTypes-featureRoleHoldersRead';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_AUDIT_READ =
+  'credentialRuleTypes-platformAuditRead';
+export const CREDENTIAL_RULE_TYPES_SET_SERVICE_PROFILE =
+  'credentialRuleTypes-setServiceProfile';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_FORUM_MANAGE =
+  'credentialRuleTypes-platformForumManage';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_CONTENT_FULL_ACCESS =
+  'credentialRuleTypes-platformContentFullAccess';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_SUPPORT_ORG_RESOURCES =
+  'credentialRuleTypes-platformSupportOrgResources';
+export const CREDENTIAL_RULE_TYPES_DELETE_ORGANIZATION =
+  'credentialRuleTypes-deleteOrganization';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_USERS_ADMIN =
+  'credentialRuleTypes-platformUsersAdmin';

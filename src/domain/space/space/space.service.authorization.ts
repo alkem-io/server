@@ -22,7 +22,10 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
-import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
+import {
+  PlatformRolesAccessService,
+  resolveRoleCredential,
+} from '@domain/access/platform-roles-access/platform.roles.access.service';
 import { IRoleSet } from '@domain/access/role-set';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
@@ -786,12 +789,19 @@ export class SpaceAuthorizationService {
 
     // Allow global admins to manage platform settings
     // Later: to allow account admins to some settings?
+    // 027-platform-role-redesign (T048, A14): re-anchored off PLATFORM_ADMIN
+    // onto ACCOUNT_LICENSE_MANAGE. In Slice A the space-visibility mutation
+    // is still updateSpacePlatformSettings (renamed to
+    // adminUpdateSpaceVisibility only in Slice B, T078). Additive —
+    // platform-license-manager gains it, GLOBAL_ADMIN/GLOBAL_SUPPORT keep
+    // their pre-existing reach.
     const spacePlatformSettingsAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.PLATFORM_ADMIN],
+        [AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
         ],
         CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS
       );
@@ -815,23 +825,42 @@ export class SpaceAuthorizationService {
       newRules.push(globalRolesReadAbout);
     }
 
-    // Allow Global Spaces Read to view Spaces
-    const privilegesForGlobalSpacesRead =
-      this.platformRolesAccessService.getPrivilegesForRole(
-        space.platformRolesAccess.roles,
-        RoleName.GLOBAL_SPACES_READER
-      );
-    if (privilegesForGlobalSpacesRead.length > 0) {
-      const globalSpacesReader =
-        this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-          this.platformRolesAccessService.getPrivilegesForRole(
-            space.platformRolesAccess.roles,
-            RoleName.GLOBAL_SPACES_READER
-          ),
-          [AuthorizationCredential.GLOBAL_SPACES_READER],
-          CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ
+    // Allow the spaces-reader roles to view Spaces.
+    //
+    // 027-platform-role-redesign (T038, A16): this rule previously wired ONLY
+    // `GLOBAL_SPACES_READER`, so `platform-spaces-reader` — which
+    // `space.service.platform.roles.access.ts` registers with the SAME
+    // `[READ]` grant — had no path into the space-tree READ cascade at all
+    // and was denied plain READ on private spaces. That breaks the Slice A
+    // additive invariant (every new role must reach what its legacy
+    // counterpart already reaches). Live-confirmed 2026-07-30 by the
+    // role-action-matrix A16 cell. Each role gets its OWN rule derived from
+    // its OWN declared privileges rather than sharing one credential list,
+    // so the two can never silently inherit each other's grants.
+    //
+    // A9 (live finding F5) adds `platform-resource-admin` to the same loop:
+    // the resource mover needs to READ what it may move. Same per-role
+    // derivation, so it can only ever receive the privileges
+    // `space.service.platform.roles.access.ts` declares for it ([READ]).
+    for (const spacesReaderRole of [
+      RoleName.GLOBAL_SPACES_READER,
+      RoleName.PLATFORM_SPACES_READER,
+      RoleName.PLATFORM_RESOURCE_ADMIN,
+    ]) {
+      const privilegesForSpacesRead =
+        this.platformRolesAccessService.getPrivilegesForRole(
+          space.platformRolesAccess.roles,
+          spacesReaderRole
         );
-      newRules.push(globalSpacesReader);
+      if (privilegesForSpacesRead.length > 0) {
+        const spacesReader =
+          this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+            privilegesForSpacesRead,
+            [resolveRoleCredential(spacesReaderRole)],
+            CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ
+          );
+        newRules.push(spacesReader);
+      }
     }
 
     //

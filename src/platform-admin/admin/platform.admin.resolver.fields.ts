@@ -34,6 +34,59 @@ export class PlatformAdminResolverFields {
     private virtualAssistantService: VirtualAssistantService
   ) {}
 
+  /**
+   * 027-platform-role-redesign (live finding F6) — the admin console's
+   * INVENTORY READS, as opposed to the A-row actions taken on what they list.
+   *
+   * Every field below gated on the legacy `PLATFORM_ADMIN` catch-all, whose
+   * grant set is {global-admin, global-support, global-license-manager}. None
+   * of the thirteen new roles holds it — by design, that is the whole point of
+   * the decomposition — so a Platform Users Admin admitted to `/admin/users`
+   * by the client's own route guard was denied the list the page is made of
+   * (observed live 2026-08-10: `platformAdminUsersList` → "unable to grant
+   * 'platform-admin' privilege: platformAdmin Users"). The client was
+   * re-anchored onto the per-family privileges (spec-clientweb-5, and
+   * `useVisibleAdminSections.ts`); the server's matching read surfaces were
+   * not, and the mismatch is exactly the width of this helper.
+   *
+   * Additive: `PLATFORM_ADMIN` stays FIRST in every list, so no legacy holder
+   * loses a list, and the thrown message still names it when nothing matches.
+   * The alternative — granting the catch-all itself to the new roles — would
+   * hand each of them `grantCredentialToActor`, the forum and the Wingback
+   * subscription mutations along with it. Read affordances only; every action
+   * inside these sections keeps its own gate.
+   */
+  private async grantAnyOrFail(
+    actorContext: ActorContext,
+    privileges: readonly AuthorizationPrivilege[],
+    msg: string
+  ): Promise<void> {
+    const policy =
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
+
+    for (const privilege of privileges.slice(1)) {
+      if (
+        this.authorizationService.isAccessGranted(
+          actorContext,
+          policy,
+          privilege
+        )
+      ) {
+        return;
+      }
+    }
+
+    // None of the alternatives matched — fail on the primary privilege, so the
+    // error message and the thrown exception's `privilege` field stay the ones
+    // this surface has always reported.
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      policy,
+      privileges[0],
+      msg
+    );
+  }
+
   @ResolveField(() => [IAccount], {
     nullable: false,
     description:
@@ -42,10 +95,12 @@ export class PlatformAdminResolverFields {
   async accounts(
     @CurrentActor() actorContext: ActorContext
   ): Promise<IAccount[]> {
-    this.authorizationService.grantAccessOrFail(
+    await this.grantAnyOrFail(
       actorContext,
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      [
+        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
+      ],
       'platformAdmin Accounts'
     );
 
@@ -60,10 +115,12 @@ export class PlatformAdminResolverFields {
   async innovationHubs(
     @CurrentActor() actorContext: ActorContext
   ): Promise<IInnovationHub[]> {
-    this.authorizationService.grantAccessOrFail(
+    await this.grantAnyOrFail(
       actorContext,
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      [
+        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
+      ],
       'platformAdmin InnovationHubs'
     );
 
@@ -80,10 +137,12 @@ export class PlatformAdminResolverFields {
     @Args('queryData', { type: () => InnovationPacksInput, nullable: true })
     args?: InnovationPacksInput
   ): Promise<IInnovationPack[]> {
-    this.authorizationService.grantAccessOrFail(
+    await this.grantAnyOrFail(
       actorContext,
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      [
+        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
+      ],
       'platformAdmin InnovationPacks'
     );
 
@@ -99,10 +158,12 @@ export class PlatformAdminResolverFields {
     @CurrentActor() actorContext: ActorContext,
     @Args() args: SpacesQueryArgs
   ): Promise<ISpace[]> {
-    this.authorizationService.grantAccessOrFail(
+    await this.grantAnyOrFail(
       actorContext,
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      [
+        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
+      ],
       'platformAdmin Spaces'
     );
 
@@ -125,10 +186,12 @@ export class PlatformAdminResolverFields {
     withTags?: boolean,
     @Args('filter', { nullable: true }) filter?: UserFilterInput
   ): Promise<PaginatedUsers> {
-    this.authorizationService.grantAccessOrFail(
+    await this.grantAnyOrFail(
       actorContext,
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      [
+        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
+      ],
       'platformAdmin Users'
     );
 
@@ -151,10 +214,12 @@ export class PlatformAdminResolverFields {
     status?: OrganizationVerificationEnum,
     @Args('filter', { nullable: true }) filter?: OrganizationFilterInput
   ): Promise<PaginatedOrganization> {
-    this.authorizationService.grantAccessOrFail(
+    await this.grantAnyOrFail(
       actorContext,
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      [
+        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
+      ],
       'platformAdmin Organizations'
     );
     return this.platformAdminService.getAllOrganizations(
@@ -173,10 +238,12 @@ export class PlatformAdminResolverFields {
     @CurrentActor() actorContext: ActorContext,
     @Args() args: ContributorQueryArgs
   ): Promise<IVirtualContributor[]> {
-    this.authorizationService.grantAccessOrFail(
+    await this.grantAnyOrFail(
       actorContext,
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      [
+        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
+      ],
       'platformAdmin Virtual Contributors'
     );
 
@@ -226,10 +293,12 @@ export class PlatformAdminResolverFields {
   async identity(
     @CurrentActor() actorContext: ActorContext
   ): Promise<PlatformAdminIdentityQueryResults> {
-    this.authorizationService.grantAccessOrFail(
+    await this.grantAnyOrFail(
       actorContext,
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      [
+        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
+      ],
       'platformAdmin Identity'
     );
     return {} as PlatformAdminIdentityQueryResults;
