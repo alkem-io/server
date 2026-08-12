@@ -75,36 +75,41 @@ export class CollaboraDocumentResolverQueries {
       lang
     );
 
-    // Lifecycle analytics (US4 / FR-014): one COLLABORA_DOCUMENT_OPENED record
-    // per editor-URL fetch, attributed to the opening actor (like spaceJoined).
-    // Resolve the level-zero space the same way the upload path does.
-    // Best-effort (FR-008): reported AFTER the editor URL is resolved and
-    // wrapped so a community/space resolution or reporting failure can never
-    // block the user from opening the document.
-    try {
-      const community =
-        await this.communityResolverService.getCommunityForCollaboraDocumentOrFail(
-          collaboraDocument.id
-        );
-      const levelZeroSpaceID =
-        await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
-          community.id
-        );
-      this.contributionReporter.collaboraDocumentOpened(
-        {
-          id: collaboraDocument.id,
-          name: collaboraDocument.profile?.displayName ?? collaboraDocument.id,
-          space: levelZeroSpaceID,
-        },
-        actorContext
-      );
-    } catch (e: any) {
-      this.logger.error(
-        `Failed to report COLLABORA_DOCUMENT_OPENED analytics for document ${collaboraDocument.id}: ${e?.message}`,
-        e?.stack,
-        LogContext.COLLABORATION
-      );
-    }
+    // TEMP hotfix: analytics attribution disabled to remove the ~8s
+    // getCommunityForCollaboraDocumentOrFail penalty on the document-open path.
+    // The proper fix (a cheap leaf-first space lookup) restores this reporting;
+    // see the collabora-editor-url-latency follow-up PR referenced in this PR's
+    // description.
+    // Lifecycle analytics: one COLLABORA_DOCUMENT_OPENED record per editor-URL
+    // fetch, attributed to the opening actor (like spaceJoined). Resolve the
+    // level-zero space the same way the upload path does. Best-effort: reported
+    // AFTER the editor URL is resolved and wrapped so a community/space
+    // resolution or reporting failure can never block the user from opening the
+    // document.
+    // try {
+    //   const community =
+    //     await this.communityResolverService.getCommunityForCollaboraDocumentOrFail(
+    //       collaboraDocument.id
+    //     );
+    //   const levelZeroSpaceID =
+    //     await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
+    //       community.id
+    //     );
+    //   this.contributionReporter.collaboraDocumentOpened(
+    //     {
+    //       id: collaboraDocument.id,
+    //       name: collaboraDocument.profile?.displayName ?? collaboraDocument.id,
+    //       space: levelZeroSpaceID,
+    //     },
+    //     actorContext
+    //   );
+    // } catch (e: any) {
+    //   this.logger.error(
+    //     `Failed to report COLLABORA_DOCUMENT_OPENED analytics for document ${collaboraDocument.id}: ${e?.message}`,
+    //     e?.stack,
+    //     LogContext.COLLABORATION
+    //   );
+    // }
 
     return editorUrl;
   }

@@ -111,16 +111,22 @@ describe('CollaboraDocumentResolverMutations', () => {
         collaboraDocumentService.updateCollaboraDocument
       ).toHaveBeenCalledWith('collab-doc-1', 'A New Title');
 
-      expect(
-        contributionReporter.calloutCollaboraDocumentReplaced
-      ).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 'collab-doc-1',
-          name: 'A New Title',
-          space: 'space-root',
-        }),
-        actorContext
-      );
+      // TEMP hotfix: COLLABORA_DOCUMENT_REPLACED analytics attribution is disabled
+      // to remove the ~8s getCommunityForCollaboraDocumentOrFail penalty, so the
+      // reporter is no longer called on the replace path. The auth check, file
+      // swap, and rename above are unaffected. Re-enabled by the proper fix (a
+      // cheap leaf-first space lookup) in the collabora-editor-url-latency
+      // follow-up PR referenced in this PR's description.
+      // expect(
+      //   contributionReporter.calloutCollaboraDocumentReplaced
+      // ).toHaveBeenCalledWith(
+      //   expect.objectContaining({
+      //     id: 'collab-doc-1',
+      //     name: 'A New Title',
+      //     space: 'space-root',
+      //   }),
+      //   actorContext
+      // );
 
       expect(result.id).toBe('collab-doc-1');
     });
