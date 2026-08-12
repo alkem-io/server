@@ -95,6 +95,58 @@ export class UrlGeneratorService {
     return `${this.endpoint_cluster}/home`;
   }
 
+  /**
+   * 034-messaging-notifications (contract C-6). Platform-absolute deep link
+   * used by the conversation-message EMAIL templates' primary link (opened
+   * outside the app, so it needs the full origin). NEVER a bare home link
+   * (the existing `userToUserMessageDirect` push `url: '/'` is the
+   * anti-pattern this replaces, not the precedent).
+   *
+   * Do NOT reuse this for the push payload's `url` — push needs the bare
+   * relative path (contract C-4), see `getConversationDeepLinkPath()` below.
+   * The client's unified chat surface opens the panel on this conversation
+   * on load, then strips the query param.
+   */
+  public getConversationUrl(conversationID: string): string {
+    return `${this.endpoint_cluster}/?chat=${conversationID}`;
+  }
+
+  /**
+   * 034-messaging-notifications (contract C-4). Bare relative deep-link path
+   * for the push-notification payload's `url` — distinct from C-6's
+   * platform-absolute `getConversationUrl()`, which is for the email link.
+   * Push runs in-app-origin (service worker `notificationclick` resolves it
+   * against the current origin), so no platform-url prefix here — and NEVER
+   * the bare `'/'` anti-pattern.
+   */
+  public getConversationDeepLinkPath(conversationID: string): string {
+    return `/?chat=${conversationID}`;
+  }
+
+  /**
+   * 034-messaging-notifications (R4, data-model §9.2). The chat surface with
+   * NO conversation selected — the push `url` for a digest covering MORE than
+   * one conversation.
+   *
+   * Uses the same `?chat=` param carrying the sentinel `all` rather than a
+   * bare `'/'`: it opens the unified chat panel (which is the point) without
+   * guessing which of the several unread conversations the recipient meant.
+   * Picking one would be a guess, and the home page would not open chat at
+   * all.
+   *
+   * The value MUST be non-empty. `useChatDeepLinkOpen` reads the param with
+   * `URLSearchParams.get()` and bails on a falsy result, so `?chat=` with an
+   * EMPTY value parses to `''` and never opens the panel — the notification
+   * would click through to nothing. Any non-empty value opens it, and
+   * `useChatDeepLinkSelect` already treats an id matching no conversation as
+   * "leave the default list shown, strip the param, no error UI", which is
+   * exactly the wanted behaviour here. `all` cannot collide with a real
+   * conversation id (those are UUIDs).
+   */
+  public getChatSurfaceDeepLinkPath(): string {
+    return '/?chat=all';
+  }
+
   private async generateUrlForProfileNotCached(
     profile: IProfile
   ): Promise<string> {

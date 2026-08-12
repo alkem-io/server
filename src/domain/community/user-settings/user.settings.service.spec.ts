@@ -75,6 +75,8 @@ describe('UserSettingsService', () => {
           messageReceived: defaultNotificationSetting(),
           mentioned: defaultNotificationSetting(),
           commentReply: defaultNotificationSetting(),
+          conversationMessageDirect: defaultNotificationSetting(),
+          conversationMessageGroup: defaultNotificationSetting(),
           membership: {
             spaceCommunityInvitationReceived: defaultNotificationSetting(),
             spaceCommunityJoined: defaultNotificationSetting(),
@@ -761,6 +763,52 @@ describe('UserSettingsService', () => {
 
       expect(result.notification.user.messageReceived.email).toBe(true);
       expect(result.notification.user.messageReceived.inApp).toBe(true);
+    });
+
+    it('should update conversationMessageDirect notification and leave conversationMessageGroup untouched (FR-017)', () => {
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = {
+        notification: {
+          user: {
+            conversationMessageDirect: { email: true },
+          } as any,
+        },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.notification.user.conversationMessageDirect.email).toBe(
+        true
+      );
+      expect(result.notification.user.conversationMessageGroup.email).toBe(
+        false
+      );
+    });
+
+    it('should update conversationMessageGroup notification and leave messageReceived/conversationMessageDirect untouched (FR-017)', () => {
+      const settings = buildSettings();
+      // The fixture ships both siblings as `false`, which is also what an
+      // update that wrongly reset them would produce — flip them first so the
+      // preservation assertions can actually fail.
+      settings.notification.user.conversationMessageDirect.push = true;
+      settings.notification.user.messageReceived.push = true;
+      const updateData: UpdateUserSettingsEntityInput = {
+        notification: {
+          user: {
+            conversationMessageGroup: { push: false },
+          } as any,
+        },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.notification.user.conversationMessageGroup.push).toBe(
+        false
+      );
+      expect(result.notification.user.conversationMessageDirect.push).toBe(
+        true
+      );
+      expect(result.notification.user.messageReceived.push).toBe(true);
     });
 
     it('should update membership.spaceCommunityInvitationReceived notification', () => {
