@@ -500,6 +500,21 @@ enum LicensingCredentialBasedPlanType {
   SPACE_PLAN
 }
 
+"""Operations an MCP API key may perform."""
+enum McpApiKeyOperation {
+  READ
+  TOOLS
+}
+
+"""
+Lifecycle status of an MCP API key. REVOKED takes precedence over EXPIRED.
+"""
+enum McpApiKeyStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+}
+
 enum MimeType {
   AVIF
   BMP
@@ -1874,9 +1889,6 @@ type CalloutContributionsCountOutput {
   whiteboard: Float!
 }
 
-"""
-Admin-fixed initial map view for a Contributors-collection callout's map. Absent/null ⇒ automatic framing (fit to plotted contributors; Europe fallback).
-"""
 type CalloutContributorsMapView {
   """Map center latitude. Finite, within [-90, 90]."""
   latitude: Float!
@@ -2467,7 +2479,9 @@ type CreateCalloutContributionDefaultsData {
 }
 
 type CreateCalloutContributorsMapViewData {
-  """Map center latitude. Finite, within [-90, 90]."""
+  """
+  Map center latitude. Finite, within [-90, 90]. MapLibre throws on values outside this range.
+  """
   latitude: Float!
   """Map center longitude. Finite, within [-180, 180]."""
   longitude: Float!
@@ -3764,6 +3778,37 @@ type LookupQueryResults {
   whiteboard(ID: UUID!): Whiteboard
 }
 
+"""
+Metadata for one MCP API key. The key value itself is never exposed here.
+"""
+type McpApiKey {
+  createdDate: DateTime!
+  """Optional expiry chosen at mint."""
+  expiresAt: DateTime
+  id: UUID!
+  """When this key last authenticated a request."""
+  lastUsedAt: DateTime
+  """Source address of the last request this key authenticated."""
+  lastUsedFromIp: String
+  """User-supplied label. Not unique."""
+  name: String!
+  """Granted operations, flattened from the stored scope."""
+  operations: [McpApiKeyOperation!]!
+  status: McpApiKeyStatus!
+}
+
+"""
+Result of minting a key. The only place the plaintext is ever returned.
+"""
+type McpApiKeyMintResult {
+  """
+  The plaintext key. Returned EXACTLY ONCE — it is not stored and cannot be re-derived.
+  """
+  apiKey: String!
+  """Metadata for the key just created."""
+  key: McpApiKey!
+}
+
 type MeConversationsResult {
   """
   All conversations (direct and group) for the current authenticated user. Client handles categorization by room type and member actor types.
@@ -3834,6 +3879,10 @@ type MeQueryResults {
   conversations: MeConversationsResult!
   """The query id"""
   id: String!
+  """
+  The current user's MCP API keys, newest first. Includes revoked and expired keys so last-used evidence survives revocation.
+  """
+  mcpApiKeys: [McpApiKey!]!
   """The Spaces I am contributing to"""
   mySpaces(
     """
@@ -4005,6 +4054,8 @@ type Mutation {
   adminLicensePolicyDeleteCredentialRule(deleteData: DeleteLicensePolicyCredentialRuleInput!): LicensingCredentialBasedPolicyCredentialRule!
   """Updates a CredentialRule on the LicensePolicy."""
   adminLicensePolicyUpdateCredentialRule(updateData: UpdateLicensePolicyCredentialRuleInput!): LicensingCredentialBasedPolicyCredentialRule!
+  """Platform admin: revoke a named user's MCP API key. Idempotent."""
+  adminRevokeMcpApiKey(revokeData: AdminRevokeMcpApiKeyInput!): McpApiKey!
   """
   Ingests new data into Elasticsearch from scratch. This will delete all existing data and ingest new data from the source. This is an admin only operation.
   """
@@ -4247,6 +4298,10 @@ type Mutation {
   Mark notifications as unread. If no filter is provided, marks all user notifications as unread. If filter with types is provided, marks only those notification types as unread.
   """
   markNotificationsAsUnread(filter: NotificationEventsFilterInput): Boolean!
+  """
+  Mint a new MCP API key for the current user. Returns the plaintext exactly once.
+  """
+  mintMcpApiKey(mintData: MintMcpApiKeyInput!): McpApiKeyMintResult!
   """Moves the specified Contribution to another Callout."""
   moveContributionToCallout(moveContributionData: MoveCalloutContributionInput!): CalloutContribution!
   """
@@ -4327,6 +4382,8 @@ type Mutation {
   revokeLicensePlanFromAccount(planData: RevokeLicensePlanFromAccount!): Account!
   """Revokes the specified LicensePlan on a Space."""
   revokeLicensePlanFromSpace(planData: RevokeLicensePlanFromSpace!): Space!
+  """Revoke one of the current user's own MCP API keys. Idempotent."""
+  revokeMcpApiKey(revokeData: RevokeMcpApiKeyInput!): McpApiKey!
   """
   Send a private (1:1) chat message to each of the given Users individually. Does NOT create a group conversation. Each recipient is processed independently and reported on; partial success is possible.
   """
@@ -4790,6 +4847,10 @@ type PlatformAdminQueryResults {
   The most recent email-change audit entry for the named subject user. Returns null if no audit entry exists.
   """
   latestUserEmailChangeAuditEntry(userID: UUID!): UserEmailChangeAuditEntry
+  """
+  MCP API keys belonging to the named user. Platform admins only. Keys bound to a system actor are never returned.
+  """
+  mcpApiKeys(userID: UUID!): [McpApiKey!]!
   """
   Retrieve all Organizations on the Platform. This is only available to Platform Admins.
   """
@@ -7375,6 +7436,14 @@ input AddVisualToMediaGalleryInput {
   visualType: VisualType!
 }
 
+input AdminRevokeMcpApiKeyInput {
+  keyID: UUID!
+  """
+  Owner of the key. Required — it scopes the revoke and the audit subject.
+  """
+  userID: UUID!
+}
+
 input AdminUserEmailChangeDriftResolveInput {
   """
   The admin-chosen canonical email. MUST equal either the old or new email recorded on the drift_detected audit entry. Both sides are force-aligned to this value.
@@ -7595,7 +7664,9 @@ input CreateCalloutContributionInput {
 }
 
 input CreateCalloutContributorsMapViewInput {
-  """Map center latitude. Finite, within [-90, 90]."""
+  """
+  Map center latitude. Finite, within [-90, 90]. MapLibre throws on values outside this range.
+  """
   latitude: Float!
   """Map center longitude. Finite, within [-180, 180]."""
   longitude: Float!
@@ -8485,6 +8556,17 @@ input LicensingGrantedEntitlementInput {
   type: LicenseEntitlementType!
 }
 
+input MintMcpApiKeyInput {
+  """Optional expiry. MUST be in the future when supplied."""
+  expiresAt: DateTime
+  """Label for the key. 1..128 characters after trimming."""
+  name: String!
+  """
+  At least one operation. Duplicates are removed; order is not significant.
+  """
+  operations: [McpApiKeyOperation!]!
+}
+
 input MoveCalloutContributionInput {
   """ID of the Callout to move the Contribution to."""
   calloutID: UUID!
@@ -8724,6 +8806,10 @@ input RevokeLicensePlanFromSpace {
   licensingID: UUID
   """The ID of the Space to assign the LicensePlan to."""
   spaceID: UUID!
+}
+
+input RevokeMcpApiKeyInput {
+  keyID: UUID!
 }
 
 input RevokeOrganizationAuthorizationCredentialInput {

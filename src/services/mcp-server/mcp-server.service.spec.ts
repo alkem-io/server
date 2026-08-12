@@ -77,3 +77,152 @@ describe('McpServerService.readResource — authorization', () => {
     expect(result.contents[0].text).toBe('{"ok":true}');
   });
 });
+
+/**
+ * workspace#038, FR-012/FR-013/FR-014, C-04: session-scoped key revalidation.
+ * The service's own private `sessions` map is manipulated directly to seed a
+ * pre-established session — this is the same technique any real session
+ * reaches: `handleRequest` reads/writes `this.sessions`, and there is no
+ * public seam to construct a session without driving the real MCP SDK
+ * transport. `configService.get('mcp.enabled', ...)` must return true for
+ * `handleRequest` to proceed past its top-of-function guard.
+ */
+describe('McpServerService.handleRequest — session revalidation (workspace#038)', () => {
+  const SESSION_ID = 'session-1';
+  const KEY_ID = 'key-1';
+
+  const setup = (opts: { isKeyUsable?: boolean } = {}) => {
+    const configService = {
+      get: vi.fn().mockReturnValue(true),
+    };
+    const mcpApiKeyService = {
+      isKeyUsable: vi.fn().mockResolvedValue(opts.isKeyUsable ?? true),
+    };
+    const logger = { warn: vi.fn(), verbose: vi.fn(), error: vi.fn() };
+    const service = new McpServerService(
+      configService as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      { checkToolAllowed: vi.fn() } as any,
+      logger as any,
+      mcpApiKeyService as any
+    );
+
+    const transport = {
+      handleRequest: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    const authenticatedActor = new ActorContext();
+    authenticatedActor.actorID = 'user-1';
+    authenticatedActor.isAnonymous = false;
+
+    const session = {
+      transport,
+      server: {} as any,
+      actorContext: authenticatedActor,
+      apiKeyId: KEY_ID,
+    };
+    (service as any).sessions.set(SESSION_ID, session);
+
+    const res: any = {
+      statusCode: 200,
+      headers: {} as Record<string, string>,
+      setHeader: vi.fn((k: string, v: string) => {
+        res.headers[k] = v;
+      }),
+      end: vi.fn(),
+    };
+
+    return { service, session, transport, res, mcpApiKeyService, logger };
+  };
+
+  it('D2 (mandated): initialize with a key, revoke it, reuse the session WITHOUT re-sending the bearer — request fails and the session closes (US2-AS5, FR-013, R-038-3)', async () => {
+    // "revoke" is modeled by isKeyUsable now returning false for KEY_ID.
+    const { service, transport, res, mcpApiKeyService } = setup({
+      isKeyUsable: false,
+    });
+
+    // Reuse the session: sessionId present, NO fresh actorContext (undefined —
+    // i.e. no bearer on this particular request).
+    await service.handleRequest(
+      {} as any,
+      res,
+      SESSION_ID,
+      undefined,
+      undefined,
+      undefined
+    );
+
+    expect(mcpApiKeyService.isKeyUsable).toHaveBeenCalledWith(KEY_ID);
+    expect(transport.handleRequest).not.toHaveBeenCalled();
+    expect(transport.close).toHaveBeenCalledTimes(1);
+    expect(res.statusCode).toBe(401);
+    expect((service as any).sessions.has(SESSION_ID)).toBe(false);
+  });
+
+  it('serves the request when the key is still usable', async () => {
+    const { service, transport, res, mcpApiKeyService } = setup({
+      isKeyUsable: true,
+    });
+
+    await service.handleRequest(
+      {} as any,
+      res,
+      SESSION_ID,
+      undefined,
+      undefined,
+      undefined
+    );
+
+    expect(mcpApiKeyService.isKeyUsable).toHaveBeenCalledWith(KEY_ID);
+    expect(transport.handleRequest).toHaveBeenCalledTimes(1);
+    expect(res.statusCode).toBe(200);
+    expect((service as any).sessions.has(SESSION_ID)).toBe(true);
+  });
+
+  it('performs NO additional key lookup when the request DOES carry a fresh key (FR-014, SC-007)', async () => {
+    const { service, transport, res, mcpApiKeyService, session } = setup();
+    const freshActor = new ActorContext();
+    freshActor.actorID = 'user-1';
+    freshActor.isAnonymous = false;
+
+    await service.handleRequest(
+      {} as any,
+      res,
+      SESSION_ID,
+      freshActor,
+      [{ operations: ['read'] }],
+      'key-fresh'
+    );
+
+    // The strategy already revalidated this key on this request — the session
+    // branch must not call isKeyUsable at all.
+    expect(mcpApiKeyService.isKeyUsable).not.toHaveBeenCalled();
+    expect(transport.handleRequest).toHaveBeenCalledTimes(1);
+    expect(session.apiKeyId).toBe('key-fresh');
+  });
+
+  it('fails closed when the session has an authenticated identity but no apiKeyId (C-04, pre-existing session)', async () => {
+    const { service, transport, res, mcpApiKeyService } = setup();
+    // Simulate a session that predates this feature: authenticated identity,
+    // but no apiKeyId was ever recorded.
+    (service as any).sessions.get(SESSION_ID).apiKeyId = undefined;
+
+    await service.handleRequest(
+      {} as any,
+      res,
+      SESSION_ID,
+      undefined,
+      undefined,
+      undefined
+    );
+
+    // isKeyUsable is never CALLED for an absent id (nothing to look up) — the
+    // branch fails closed directly.
+    expect(mcpApiKeyService.isKeyUsable).not.toHaveBeenCalled();
+    expect(transport.handleRequest).not.toHaveBeenCalled();
+    expect(transport.close).toHaveBeenCalledTimes(1);
+    expect(res.statusCode).toBe(401);
+  });
+});
