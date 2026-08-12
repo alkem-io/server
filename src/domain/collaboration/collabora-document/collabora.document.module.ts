@@ -18,6 +18,8 @@ import { CollaboraDocumentResolverMutations } from './collabora.document.resolve
 import { CollaboraDocumentResolverQueries } from './collabora.document.resolver.queries';
 import { CollaboraDocumentService } from './collabora.document.service';
 import { CollaboraDocumentAuthorizationService } from './collabora.document.service.authorization';
+import { CollaboraDocumentAnalyticsEventHandler } from './events/collabora.document.analytics.event.handler';
+import { CollaboraDocumentEventsService } from './events/collabora.document.events.service';
 
 @Module({
   imports: [
@@ -41,7 +43,13 @@ import { CollaboraDocumentAuthorizationService } from './collabora.document.serv
     CollaboraDocumentResolverFields,
     CollaboraDocumentResolverMutations,
     CollaboraDocumentResolverQueries,
+    CollaboraDocumentEventsService,
+    CollaboraDocumentAnalyticsEventHandler,
   ],
-  exports: [CollaboraDocumentService, CollaboraDocumentAuthorizationService],
+  exports: [
+    CollaboraDocumentService,
+    CollaboraDocumentAuthorizationService,
+    CollaboraDocumentEventsService,
+  ],
 })
 export class CollaboraDocumentModule {}

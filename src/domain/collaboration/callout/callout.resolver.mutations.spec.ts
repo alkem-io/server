@@ -19,6 +19,7 @@ import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { Readable } from 'stream';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
+import { CollaboraDocumentEventsService } from '../collabora-document/events/collabora.document.events.service';
 import { CalloutResolverMutations } from './callout.resolver.mutations';
 import { CalloutService } from './callout.service';
 import { CalloutAuthorizationService } from './callout.service.authorization';
@@ -35,6 +36,7 @@ describe('CalloutResolverMutations', () => {
   let calloutAuthorizationService: CalloutAuthorizationService;
   let _contributionAuthorizationService: CalloutContributionAuthorizationService;
   let _calloutContributionService: CalloutContributionService;
+  let collaboraDocumentEventsService: CollaboraDocumentEventsService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -53,6 +55,14 @@ describe('CalloutResolverMutations', () => {
           provide: SUBSCRIPTION_CALLOUT_POST_CREATED,
           useValue: { publish: vi.fn() },
         },
+        {
+          provide: CollaboraDocumentEventsService,
+          useValue: {
+            publishOpened: vi.fn(),
+            publishReplaced: vi.fn(),
+            publishUploaded: vi.fn(),
+          },
+        },
       ],
     })
       .useMocker(defaultMockerFactory)
@@ -67,6 +77,7 @@ describe('CalloutResolverMutations', () => {
       CalloutContributionAuthorizationService
     );
     _calloutContributionService = module.get(CalloutContributionService);
+    collaboraDocumentEventsService = module.get(CollaboraDocumentEventsService);
   });
 
   it('should be defined', () => {
@@ -574,13 +585,7 @@ describe('CalloutResolverMutations', () => {
   });
 
   describe('importCollaboraDocument', () => {
-    // TEMP hotfix: COLLABORA_DOCUMENT_UPLOADED analytics attribution is disabled
-    // to remove the ~8s getCommunityForCollaboraDocumentOrFail penalty on the
-    // upload path, so the reporter is no longer called here. Re-enabled by the
-    // proper fix (a cheap leaf-first space lookup) in the
-    // collabora-editor-url-latency follow-up PR referenced in this PR's
-    // description.
-    it.skip('should report COLLABORA_DOCUMENT_UPLOADED for the uploading actor', async () => {
+    const setupImportHappyPath = () => {
       const callout = {
         id: 'callout-1',
         authorization: { id: 'auth-1' },
@@ -623,23 +628,17 @@ describe('CalloutResolverMutations', () => {
       vi.mocked(
         _contributionAuthorizationService.applyAuthorizationPolicy
       ).mockResolvedValue([]);
+      vi.mocked(authorizationPolicyService.saveAll).mockResolvedValue(
+        [] as any
+      );
       vi.mocked(
         _calloutContributionService.getCalloutContributionOrFail
       ).mockResolvedValue(contribution);
+      return { callout, contribution };
+    };
 
-      const communityResolverService = (resolver as any)
-        .communityResolverService;
-      vi.mocked(
-        communityResolverService.getCommunityForCollaboraDocumentOrFail
-      ).mockResolvedValue({ id: 'community-1' } as any);
-      vi.mocked(
-        communityResolverService.getLevelZeroSpaceIdForCommunity
-      ).mockResolvedValue('space-root');
-
-      const contributionReporter = (resolver as any).contributionReporter;
-      const actorContext = { actorID: 'user-1' } as any;
-
-      await resolver.importCollaboraDocument(
+    const invokeImport = (actorContext = { actorID: 'user-1' } as any) =>
+      resolver.importCollaboraDocument(
         actorContext,
         { calloutID: 'callout-1' } as any,
         {
@@ -649,19 +648,47 @@ describe('CalloutResolverMutations', () => {
         } as any
       );
 
+    it('publishes one uploaded event after all persistence completes', async () => {
+      setupImportHappyPath();
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await invokeImport(actorContext);
+
       expect(
-        contributionReporter.calloutCollaboraDocumentUploaded
-      ).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 'collab-doc-1',
-          name: 'Imported.docx',
-          space: 'space-root',
-        }),
-        actorContext
+        collaboraDocumentEventsService.publishUploaded
+      ).toHaveBeenCalledOnce();
+      expect(
+        collaboraDocumentEventsService.publishUploaded
+      ).toHaveBeenCalledWith('collab-doc-1', 'Imported.docx', actorContext);
+      expect(
+        vi.mocked(calloutService.importCollaboraDocumentToCallout).mock
+          .invocationCallOrder[0]
+      ).toBeLessThan(
+        vi.mocked(_calloutContributionService.save).mock.invocationCallOrder[0]
+      );
+      expect(
+        vi.mocked(_calloutContributionService.save).mock.invocationCallOrder[0]
+      ).toBeLessThan(
+        vi.mocked(_contributionAuthorizationService.applyAuthorizationPolicy)
+          .mock.invocationCallOrder[0]
+      );
+      expect(
+        vi.mocked(_contributionAuthorizationService.applyAuthorizationPolicy)
+          .mock.invocationCallOrder[0]
+      ).toBeLessThan(
+        vi.mocked(authorizationPolicyService.saveAll).mock
+          .invocationCallOrder[0]
+      );
+      expect(
+        vi.mocked(authorizationPolicyService.saveAll).mock
+          .invocationCallOrder[0]
+      ).toBeLessThan(
+        vi.mocked(collaboraDocumentEventsService.publishUploaded).mock
+          .invocationCallOrder[0]
       );
     });
 
-    it('should still return the persisted contribution when analytics reporting fails', async () => {
+    it('does not publish when authorization fails', async () => {
       const callout = {
         id: 'callout-1',
         authorization: { id: 'auth-1' },
@@ -672,63 +699,51 @@ describe('CalloutResolverMutations', () => {
           },
         },
       } as any;
-      const contribution = {
-        id: 'contrib-1',
-        collaboraDocument: {
-          id: 'collab-doc-1',
-          profile: { displayName: 'Imported.docx' },
-        },
-      } as any;
-
       vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
-      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
-      vi.mocked(
-        calloutService.importCollaboraDocumentToCallout
-      ).mockResolvedValue(contribution);
-
-      const configService = (resolver as any).configService;
-      vi.mocked(configService.get).mockReturnValue(1000);
-
-      const roomResolverService = (resolver as any).roomResolverService;
-      vi.mocked(
-        roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout
-      ).mockResolvedValue({
-        roleSet: { id: 'rs-1' },
-        platformRolesAccess: { roles: [] },
-        spaceSettings: {},
-      });
-
-      vi.mocked(_calloutContributionService.save).mockResolvedValue(
-        contribution
-      );
-      vi.mocked(
-        _contributionAuthorizationService.applyAuthorizationPolicy
-      ).mockResolvedValue([]);
-      vi.mocked(
-        _calloutContributionService.getCalloutContributionOrFail
-      ).mockResolvedValue(contribution);
-
-      // analytics resolution blows up after the contribution is persisted
-      const communityResolverService = (resolver as any)
-        .communityResolverService;
-      vi.mocked(
-        communityResolverService.getCommunityForCollaboraDocumentOrFail
-      ).mockRejectedValue(new Error('community resolution failed'));
-
-      const actorContext = { actorID: 'user-1' } as any;
-
-      const result = await resolver.importCollaboraDocument(
-        actorContext,
-        { calloutID: 'callout-1' } as any,
-        {
-          createReadStream: () => Readable.from([Buffer.from('test')]),
-          filename: 'Imported.docx',
-          mimetype: 'application/octet-stream',
-        } as any
+      vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(
+        () => {
+          throw new Error('authorization denied');
+        }
       );
 
-      // the persisted contribution is returned; analytics failure is swallowed
-      expect(result).toBe(contribution);
+      await expect(invokeImport()).rejects.toThrow('authorization denied');
+
+      expect(
+        collaboraDocumentEventsService.publishUploaded
+      ).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      {
+        failure: 'import',
+        reject: () =>
+          vi
+            .mocked(calloutService.importCollaboraDocumentToCallout)
+            .mockRejectedValue(new Error('import failed')),
+      },
+      {
+        failure: 'contribution save',
+        reject: () =>
+          vi
+            .mocked(_calloutContributionService.save)
+            .mockRejectedValue(new Error('contribution save failed')),
+      },
+      {
+        failure: 'authorization policy save',
+        reject: () =>
+          vi
+            .mocked(authorizationPolicyService.saveAll)
+            .mockRejectedValue(new Error('authorization policy save failed')),
+      },
+    ])('does not publish when $failure fails', async ({ reject }) => {
+      setupImportHappyPath();
+      reject();
+
+      await expect(invokeImport()).rejects.toThrow();
+
+      expect(
+        collaboraDocumentEventsService.publishUploaded
+      ).not.toHaveBeenCalled();
     });
   });
 

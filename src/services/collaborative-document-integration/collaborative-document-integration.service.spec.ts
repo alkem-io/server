@@ -45,8 +45,8 @@ describe('CollaborativeDocumentIntegrationService', () => {
   };
   let communityResolver: {
     getCommunityForMemoOrFail: Mock;
-    getCommunityForCollaboraDocumentOrFail: Mock;
     getLevelZeroSpaceIdForCommunity: Mock;
+    getLevelZeroSpaceIdForCollaboraDocument: Mock;
   };
   let actorLookupService: {
     getActorTypesByIds: Mock;
@@ -335,10 +335,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
           profile: { displayName: 'My Document' },
         }
       );
-      communityResolver.getCommunityForCollaboraDocumentOrFail.mockResolvedValue(
-        { id: 'community-1' } as any
-      );
-      communityResolver.getLevelZeroSpaceIdForCommunity.mockResolvedValue(
+      communityResolver.getLevelZeroSpaceIdForCollaboraDocument.mockResolvedValue(
         'space-root'
       );
       actorLookupService.getActorTypesByIds.mockResolvedValue(typeById);
@@ -376,21 +373,12 @@ describe('CollaborativeDocumentIntegrationService', () => {
         relations: { profile: true },
       });
 
-      // community resolution is keyed off the resolved CollaboraDocument id,
-      // NOT the incoming storage id
       expect(
-        communityResolver.getCommunityForCollaboraDocumentOrFail
-      ).toHaveBeenCalledTimes(1);
+        communityResolver.getLevelZeroSpaceIdForCollaboraDocument
+      ).toHaveBeenCalledOnce();
       expect(
-        communityResolver.getCommunityForCollaboraDocumentOrFail
+        communityResolver.getLevelZeroSpaceIdForCollaboraDocument
       ).toHaveBeenCalledWith(COLLABORA_DOCUMENT_ID);
-      expect(
-        communityResolver.getLevelZeroSpaceIdForCommunity
-      ).toHaveBeenCalledTimes(1);
-      // the resolved community's id is threaded through to the space lookup
-      expect(
-        communityResolver.getLevelZeroSpaceIdForCommunity
-      ).toHaveBeenCalledWith('community-1');
 
       // ONE aggregate record, id = resolved CollaboraDocument.id (NOT the storage id)
       expect(
@@ -408,6 +396,19 @@ describe('CollaborativeDocumentIntegrationService', () => {
       );
       expect(arg.writeActors[ActorType.USER]).toHaveLength(2);
       expect(arg.readonlyActors).toEqual({ [ActorType.USER]: ['user-3'] });
+      expect(arg.alkemio).toBe(false);
+      expect(
+        communityResolver.getLevelZeroSpaceIdForCollaboraDocument.mock
+          .invocationCallOrder[0]
+      ).toBeLessThan(
+        actorLookupService.getActorTypesByIds.mock.invocationCallOrder[0]
+      );
+      expect(
+        actorLookupService.getActorTypesByIds.mock.invocationCallOrder[0]
+      ).toBeLessThan(
+        contributionReporter.officeDocumentContribution.mock
+          .invocationCallOrder[0]
+      );
 
       // explicitly: the storage id is never used as the record id
       expect(arg.id).not.toBe(STORAGE_DOCUMENT_ID);
@@ -722,7 +723,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
 
       // never proceeds to community resolution or reporting
       expect(
-        communityResolver.getCommunityForCollaboraDocumentOrFail
+        communityResolver.getLevelZeroSpaceIdForCollaboraDocument
       ).not.toHaveBeenCalled();
       expect(
         contributionReporter.officeDocumentContribution
@@ -730,11 +731,11 @@ describe('CollaborativeDocumentIntegrationService', () => {
     });
 
     // FR-008: a downstream resolution failure is also discarded without throwing
-    it('should discard the event without throwing when the community cannot be resolved', async () => {
+    it('should discard the event without throwing when the space cannot be resolved', async () => {
       collaboraDocumentService.getCollaboraDocumentByStorageDocumentId.mockResolvedValue(
         { id: COLLABORA_DOCUMENT_ID, profile: { displayName: 'My Document' } }
       );
-      communityResolver.getCommunityForCollaboraDocumentOrFail.mockRejectedValue(
+      communityResolver.getLevelZeroSpaceIdForCollaboraDocument.mockRejectedValue(
         new EntityNotFoundException(
           'Unable to find Space for CollaboraDocument',
           'COMMUNITY' as any
@@ -776,10 +777,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
           profile: { displayName: 'My Document' },
         }
       );
-      communityResolver.getCommunityForCollaboraDocumentOrFail.mockResolvedValue(
-        { id: 'community-1' } as any
-      );
-      communityResolver.getLevelZeroSpaceIdForCommunity.mockResolvedValue(
+      communityResolver.getLevelZeroSpaceIdForCollaboraDocument.mockResolvedValue(
         'space-root'
       );
       actorLookupService.getActorTypesByIds.mockResolvedValue(typeById);
@@ -815,8 +813,11 @@ describe('CollaborativeDocumentIntegrationService', () => {
       });
 
       expect(
-        communityResolver.getCommunityForCollaboraDocumentOrFail
+        communityResolver.getLevelZeroSpaceIdForCollaboraDocument
       ).toHaveBeenCalledWith(COLLABORA_DOCUMENT_ID);
+      expect(
+        communityResolver.getLevelZeroSpaceIdForCollaboraDocument
+      ).toHaveBeenCalledOnce();
 
       // dispatched to the VIEW reporter, NOT the contribution reporter
       expect(contributionReporter.officeDocumentView).toHaveBeenCalledTimes(1);
@@ -834,6 +835,18 @@ describe('CollaborativeDocumentIntegrationService', () => {
       );
       expect(arg.writeActors[ActorType.USER]).toHaveLength(2);
       expect(arg.readonlyActors).toEqual({ [ActorType.USER]: ['user-3'] });
+      expect(arg.alkemio).toBe(false);
+      expect(
+        communityResolver.getLevelZeroSpaceIdForCollaboraDocument.mock
+          .invocationCallOrder[0]
+      ).toBeLessThan(
+        actorLookupService.getActorTypesByIds.mock.invocationCallOrder[0]
+      );
+      expect(
+        actorLookupService.getActorTypesByIds.mock.invocationCallOrder[0]
+      ).toBeLessThan(
+        contributionReporter.officeDocumentView.mock.invocationCallOrder[0]
+      );
 
       // the storage id is never used as the record id
       expect(arg.id).not.toBe(STORAGE_DOCUMENT_ID);
@@ -895,17 +908,17 @@ describe('CollaborativeDocumentIntegrationService', () => {
       ).resolves.toBeUndefined();
 
       expect(
-        communityResolver.getCommunityForCollaboraDocumentOrFail
+        communityResolver.getLevelZeroSpaceIdForCollaboraDocument
       ).not.toHaveBeenCalled();
       expect(contributionReporter.officeDocumentView).not.toHaveBeenCalled();
     });
 
     // FR-008: a downstream resolution failure is also discarded without throwing
-    it('should discard the event without throwing when the community cannot be resolved', async () => {
+    it('should discard the event without throwing when the space cannot be resolved', async () => {
       collaboraDocumentService.getCollaboraDocumentByStorageDocumentId.mockResolvedValue(
         { id: COLLABORA_DOCUMENT_ID, profile: { displayName: 'My Document' } }
       );
-      communityResolver.getCommunityForCollaboraDocumentOrFail.mockRejectedValue(
+      communityResolver.getLevelZeroSpaceIdForCollaboraDocument.mockRejectedValue(
         new EntityNotFoundException(
           'Unable to find Space for CollaboraDocument',
           'COMMUNITY' as any

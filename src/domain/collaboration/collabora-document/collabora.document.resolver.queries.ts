@@ -10,14 +10,13 @@ import { UserService } from '@domain/community/user/user.service';
 import { Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
-import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { ICollaboraDocument } from './collabora.document.interface';
 import { CollaboraDocumentService } from './collabora.document.service';
 import { CollaboraEditorUrlResult } from './dto/collabora.editor.url.result';
+import { CollaboraDocumentEventsService } from './events/collabora.document.events.service';
 
 @InstrumentResolver()
 @Resolver(() => ICollaboraDocument)
@@ -27,8 +26,7 @@ export class CollaboraDocumentResolverQueries {
     private readonly logger: WinstonLogger,
     private authorizationService: AuthorizationService,
     private collaboraDocumentService: CollaboraDocumentService,
-    private contributionReporter: ContributionReporterService,
-    private communityResolverService: CommunityResolverService,
+    private collaboraDocumentEventsService: CollaboraDocumentEventsService,
     private actorLookupService: ActorLookupService,
     private userService: UserService,
     private configService: ConfigService<AlkemioConfig, true>
@@ -46,7 +44,7 @@ export class CollaboraDocumentResolverQueries {
     const collaboraDocument =
       await this.collaboraDocumentService.getCollaboraDocumentOrFail(
         collaboraDocumentID,
-        { relations: { profile: true } }
+        { relations: { profile: true, document: true } }
       );
     this.authorizationService.grantAccessOrFail(
       actorContext,
@@ -69,47 +67,17 @@ export class CollaboraDocumentResolverQueries {
       this.resolveActorLanguage(actorContext),
     ]);
     const editorUrl = await this.collaboraDocumentService.getEditorUrl(
-      collaboraDocumentID,
+      collaboraDocument,
       actorContext.actorID,
       actorName,
       lang
     );
 
-    // TEMP hotfix: analytics attribution disabled to remove the ~8s
-    // getCommunityForCollaboraDocumentOrFail penalty on the document-open path.
-    // The proper fix (a cheap leaf-first space lookup) restores this reporting;
-    // see the collabora-editor-url-latency follow-up PR referenced in this PR's
-    // description.
-    // Lifecycle analytics: one COLLABORA_DOCUMENT_OPENED record per editor-URL
-    // fetch, attributed to the opening actor (like spaceJoined). Resolve the
-    // level-zero space the same way the upload path does. Best-effort: reported
-    // AFTER the editor URL is resolved and wrapped so a community/space
-    // resolution or reporting failure can never block the user from opening the
-    // document.
-    // try {
-    //   const community =
-    //     await this.communityResolverService.getCommunityForCollaboraDocumentOrFail(
-    //       collaboraDocument.id
-    //     );
-    //   const levelZeroSpaceID =
-    //     await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
-    //       community.id
-    //     );
-    //   this.contributionReporter.collaboraDocumentOpened(
-    //     {
-    //       id: collaboraDocument.id,
-    //       name: collaboraDocument.profile?.displayName ?? collaboraDocument.id,
-    //       space: levelZeroSpaceID,
-    //     },
-    //     actorContext
-    //   );
-    // } catch (e: any) {
-    //   this.logger.error(
-    //     `Failed to report COLLABORA_DOCUMENT_OPENED analytics for document ${collaboraDocument.id}: ${e?.message}`,
-    //     e?.stack,
-    //     LogContext.COLLABORATION
-    //   );
-    // }
+    this.collaboraDocumentEventsService.publishOpened(
+      collaboraDocument.id,
+      collaboraDocument.profile?.displayName ?? collaboraDocument.id,
+      actorContext
+    );
 
     return editorUrl;
   }

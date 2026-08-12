@@ -1,197 +1,267 @@
+---
+description: "Implementation tasks for removing Collabora editor URL analytics latency"
+---
+
 # Tasks: Opening a Collabora document waits ~8 s on analytics
 
 **Input**: Design documents from `specs/110-collabora-editor-url-latency/`
 
-**Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/, quickstart.md — all present
+**Prerequisites**: `plan.md`, `spec.md`, `research.md`, `data-model.md`, `contracts/`, `quickstart.md`
 
-**Tests**: Included. The spec requires them (SC-002 and SC-005 are both verified by test, and each user story defines an independent test), so they are not optional here.
+**Tests**: Required by SC-002, SC-003, SC-005, SC-006, and the User Story 3 single-fetch acceptance scenario. Tests are written before their corresponding implementation tasks.
 
-**Organization**: Grouped by user story. US1 and US2 are both P1 and both independently shippable; US1 alone fixes the reported defect, which makes it the MVP.
+**Organization**: Tasks are grouped by user story. The leaf-first ownership lookup is shared foundation because both P1 stories depend on it: the lifecycle subscriber uses it for sites 1–3 and the direct RabbitMQ-backed background consumer uses it at site 4.
 
 ## Format: `[ID] [P?] [Story] Description`
 
-- **[P]**: Can run in parallel — different files, no dependency on an incomplete task
-- **[Story]**: US1, US2, US3 as numbered in spec.md
-- Paths are repository-relative from the worktree root
+- **[P]**: Can run in parallel in a different file after its stated prerequisites
+- **[Story]**: Maps the task to US1, US2, or US3 from `spec.md`
+- All paths are repository-relative
 
-## The four sites
+## Runtime flow map
 
-Referenced throughout. Site numbering matches spec.md and contracts/.
+| Site | Final flow | Preserved analytics contract |
+|---|---|---|
+| 1 — editor URL | `collaboraEditorUrl` calls `CollaboraDocumentEventsService.publishOpened` | subscriber calls `collaboraDocumentOpened` |
+| 2 — replacement | replace mutation calls `CollaboraDocumentEventsService.publishReplaced` | subscriber calls `calloutCollaboraDocumentReplaced` |
+| 3 — import | `importCollaboraDocument` calls `CollaboraDocumentEventsService.publishUploaded` | subscriber calls `calloutCollaboraDocumentUploaded` |
+| 4 — window events | existing RabbitMQ consumer remains direct and awaited | existing contribution/view aggregate reporter and full payload stay unchanged |
 
-| Site | File | Method | Reporter call |
-|---|---|---|---|
-| 1 | `src/domain/collaboration/collabora-document/collabora.document.resolver.queries.ts` | `collaboraEditorUrl` | `collaboraDocumentOpened` |
-| 2 | `src/domain/collaboration/collabora-document/collabora.document.resolver.mutations.ts` | `replaceCollaboraDocument` | `calloutCollaboraDocumentReplaced` |
-| 3 | `src/domain/collaboration/callout/callout.resolver.mutations.ts` | `importCollaboraDocument` | `calloutCollaboraDocumentUploaded` |
-| 4 | `src/services/collaborative-document-integration/collaborative-document-integration.service.ts` | contribution event consumer | inline `report(...)` |
-
-**Site 4 keeps its `await`.** Its message is acknowledged only when the handler returns, so detaching would acknowledge before the work finished and lose the event on failure with no redelivery. It receives the cheaper lookup and nothing else — and T017 pins that with a test, because the other three sites will read as an argument for consistency to whoever comes next.
+Sites 1–3 use synchronous in-process `EventEmitter2.emit`; no RabbitMQ route, outbox, retry, or durable lifecycle delivery is added. Site 4 already receives cross-process events through RabbitMQ and does not republish them as lifecycle events. Its controller acknowledges before invoking the service, so these tasks make no deferred-acknowledgement or redelivery claim.
 
 ---
 
-## Phase 1: Setup
+## Phase 1: Setup and source-state baseline
 
-**Purpose**: Establish a known-good baseline before changing anything. The worktree and its `.env` files already exist.
+**Purpose**: Establish the executable baseline and reconcile the two possible starting trees: this feature branch may predate PR #6354, or Release 71 suppression may already be present.
 
-- [ ] T001 Run `pnpm lint` and `pnpm vitest run` from the worktree root and record that both are green, so any later failure is attributable to this work
-- [ ] T002 Record the current mock setup for `getCommunityForCollaboraDocumentOrFail` and `getLevelZeroSpaceIdForCommunity` in `src/domain/collaboration/collabora-document/collabora.document.resolver.queries.spec.ts`, `src/domain/collaboration/collabora-document/collabora.document.resolver.mutations.spec.ts`, `src/domain/collaboration/callout/callout.resolver.mutations.spec.ts` and `src/services/collaborative-document-integration/collaborative-document-integration.service.spec.ts`, so no existing assertion is silently dropped when the mocks are repointed in US2
+- [X] T001 Run the `pnpm lint` and `pnpm vitest run` scripts from `package.json`; record outcomes and whether PR #6354's commented blocks, site-4 early return, and disabled assertions are present in `specs/110-collabora-editor-url-latency/quickstart.md`
+- [X] T002 Inventory the executable pre-hotfix reporter contracts and every hotfix-suppressed assertion in `src/domain/collaboration/collabora-document/collabora.document.resolver.queries.spec.ts`, `src/domain/collaboration/collabora-document/collabora.document.resolver.mutations.spec.ts`, `src/domain/collaboration/callout/callout.resolver.mutations.spec.ts`, and `src/services/collaborative-document-integration/collaborative-document-integration.service.spec.ts`; record the baseline in `specs/110-collabora-editor-url-latency/quickstart.md`
 
----
-
-## Phase 2: Foundational
-
-**No foundational work is required.** Nothing must land before the user stories can start: no new module, no migration, no shared entity, no framework change. Inventing a phase here would be ceremony, so this phase is deliberately empty.
-
-The only cross-story coupling is that US1 and US2 edit the same three resolver files. That is a sequencing note, handled in Dependencies below — not a blocking prerequisite.
+**Checkpoint**: The implementation starting state and the five analytics record contracts to restore are explicit.
 
 ---
 
-## Phase 3: User Story 1 — Opening a document is not delayed by analytics (P1) 🎯 MVP
+## Phase 2: Foundational leaf-first ownership lookup
 
-**Goal**: The three user-facing paths return as soon as their real work is done. Analytics runs afterwards, on its own time, and can neither delay a response nor take the process down when it fails.
+**Purpose**: Provide the bounded lookup required by the US1 lifecycle subscriber and the US2 direct background consumer before either analytics path is migrated.
 
-**Independent test**: Two stubs per site. A never-settling analytics promise — the resolver still returns. A rejecting one — the response is unaffected and nothing escapes as an unhandled rejection.
+**⚠️ CRITICAL**: Write and fail T003–T005 before implementing T006. Do not introduce the subscriber against `getCommunityForCollaboraDocumentOrFail` even temporarily.
 
-**Delivers on its own**: yes. This alone removes the ~7.95 s the user waits, even before the query gets cheaper.
+- [X] T003 Add failing contribution-hosted, framing-hosted, unattached-document, and downstream-space-not-found cases for `getLevelZeroSpaceIdForCollaboraDocument` in `src/services/infrastructure/entity-resolver/community.resolver.service.spec.ts`
+- [X] T004 Extend `src/services/infrastructure/entity-resolver/community.resolver.service.spec.ts` with failing query-shape and statement-count assertions: contribution first, each probe anchored on `collaboraDocumentId`, two statements on contribution, at most three on framing fallback, and no space-first relation-tree query
+- [X] T005 Extend `src/services/infrastructure/entity-resolver/community.resolver.service.spec.ts` with failing exception assertions proving both not-found routes expose `EntityNotFoundException` with the exact static message `Unable to find Space for CollaboraDocument` and place `collaboraDocumentId` plus any resolved `calloutsSetId` in `details`
+- [X] T006 Implement `getLevelZeroSpaceIdForCollaboraDocument(collaboraDocumentID)` in `src/services/infrastructure/entity-resolver/community.resolver.service.ts` using a contribution-first raw scalar query, a framing fallback, and delegation to `getLevelZeroSpaceIdForCalloutsSet`; translate delegated failures to the exact static message `Unable to find Space for CollaboraDocument` and add the constitution-required leaf-first performance comment without spec, PR, or issue identifiers
 
-### Tests (write first — the never-settling case fails by timing out)
-
-- [ ] T003 [P] [US1] In `src/domain/collaboration/collabora-document/collabora.document.resolver.queries.spec.ts`, add two tests for `collaboraEditorUrl`: one asserting it resolves while analytics is stubbed with a never-settling promise, one asserting it resolves unaffected when analytics is stubbed to reject and that the rejection does not escape
-- [ ] T004 [P] [US1] Add the same pair for `replaceCollaboraDocument` in `src/domain/collaboration/collabora-document/collabora.document.resolver.mutations.spec.ts`
-- [ ] T005 [P] [US1] Add the same pair for `importCollaboraDocument` in `src/domain/collaboration/callout/callout.resolver.mutations.spec.ts`
-- [ ] T006 [US1] Run the six new tests in `src/domain/collaboration/collabora-document/collabora.document.resolver.queries.spec.ts`, `src/domain/collaboration/collabora-document/collabora.document.resolver.mutations.spec.ts` and `src/domain/collaboration/callout/callout.resolver.mutations.spec.ts` against the current code and confirm each fails — the never-settling ones by timing out. A passing test here would mean it cannot detect the defect
-
-### Implementation
-
-- [ ] T007 [P] [US1] In `src/domain/collaboration/collabora-document/collabora.document.resolver.queries.ts`, move the analytics block of `collaboraEditorUrl` into a private async method that owns the existing `try`/`catch` and `logger.error`, and invoke it with `void` immediately before the return. The `try`/`catch` must sit inside the method, not around the call, so a rejection is structurally impossible rather than conventionally avoided
-- [ ] T008 [P] [US1] Apply the same extraction to `replaceCollaboraDocument` in `src/domain/collaboration/collabora-document/collabora.document.resolver.mutations.ts`
-- [ ] T009 [P] [US1] Apply the same extraction to `importCollaboraDocument` in `src/domain/collaboration/callout/callout.resolver.mutations.ts`
-- [ ] T010 [US1] Verify `src/services/collaborative-document-integration/collaborative-document-integration.service.ts` is untouched by this phase — site 4 must still await its analytics
-
-**Checkpoint**: T003–T005 pass. Users stop waiting, and a failing analytics call can no longer take the process with it. The expensive query still runs, in the background, which is what US2 removes.
+**Checkpoint**: The new lookup satisfies the internal contract and can be used without issuing the 7,917 ms space-first query.
 
 ---
 
-## Phase 4: User Story 2 — Attributing a document to its space is cheap (P1)
+## Phase 3: User Story 1 — opening and equivalent user operations do not wait for analytics (Priority: P1) 🎯
 
-**Goal**: Every path that reports a Collabora analytics event resolves the owning level-zero space through indexed lookups instead of a join across the callout graph. The expensive method is deleted.
+**Goal**: Sites 1–3 synchronously publish typed Collabora lifecycle events after successful primary work; a singleton subscriber performs lookup and reporting independently of the response and exposes reliable lookup timing.
 
-**Independent test**: Call the new lookup for a framing-hosted document and a contribution-hosted document and assert the correct id; assert `EntityNotFoundException` when the document has no owning callout.
+**Independent Test**: Resolve `collaboraEditorUrl` with the real domain publisher and an in-process listener that returns a never-settling promise. The query still returns the editor URL, publishes exactly one typed `CollaboraDocumentOpened`, and never waits for analytics. Publisher and subscriber specs separately prove the immutable minimal actor snapshot, all three reporter mappings, structured timing, and contained failure behavior.
 
-**Delivers on its own**: yes — it removes the cost platform-wide, including from the background consumer, independently of whether US1 has landed.
+### Tests for User Story 1
 
-### Tests
+> **Write these tests first and confirm their new assertions fail before implementation.**
 
-- [ ] T011 [US2] Add tests to `src/services/infrastructure/entity-resolver/community.resolver.service.spec.ts` covering the three real branches of the new lookup: contribution-hosted document, framing-hosted document, and no owning callout raising `EntityNotFoundException`. This is net-new coverage — the method being replaced has none. Do not add a both-attachments case; the domain forbids that state and a test for it would be coverage padding
+- [X] T007 [P] [US1] Create `src/domain/collaboration/collabora-document/events/collabora.document.events.service.spec.ts` with a real `EventEmitter2`: cover `publishOpened`, `publishReplaced`, and `publishUploaded`; prove immediate `undefined` return with a never-settling listener; spy that `emit` is used and `emitAsync` is not; and assert a fresh frozen event containing a fresh frozen exact `{ actorID, isAnonymous, guestName }` snapshot that excludes credentials/session/delegation fields and survives mutation of the input `ActorContext`
+- [X] T008 [P] [US1] Create `src/domain/collaboration/collabora-document/events/collabora.document.analytics.event.handler.spec.ts` covering opened→`collaboraDocumentOpened`, replaced→`calloutCollaboraDocumentReplaced`, and uploaded→`calloutCollaboraDocumentUploaded`; assert one lookup, exact `{ id, name, space }` plus unchanged minimal attribution, contained lookup and synchronous reporter failures, and exactly one structured INFO timing record on both success and failure with stable message, event constant, document id, outcome, and non-negative numeric `durationMs` fields without any APM transaction mock
+- [X] T009 [P] [US1] Replace inline-reporter expectations with failing domain-publication coverage in `src/domain/collaboration/collabora-document/collabora.document.resolver.queries.spec.ts`: use the real publisher plus a pending listener for the non-blocking open test, assert exact document values/live authorized context, exactly one publication, and no publication when authorization or editor-URL resolution fails
+- [X] T010 [P] [US1] Restore any hotfix-commented replacement assertion and add failing `publishReplaced` coverage in `src/domain/collaboration/collabora-document/collabora.document.resolver.mutations.spec.ts`: assert exactly one call with the preserved document id/display name and the same live authorized context; prove it occurs only after replacement persistence and any optional rename attempt complete; prove authorization or replacement failure emits nothing; and prove a caught optional-rename failure still publishes the successful replacement with the preserved post-swap values
+- [X] T011 [P] [US1] Restore any hotfix-skipped upload assertion and add failing `publishUploaded` coverage in `src/domain/collaboration/callout/callout.resolver.mutations.spec.ts`: assert exactly one call with the persisted CollaboraDocument id/display name and the same live authorized context; prove it occurs only after contribution and authorization-policy persistence complete; and prove authorization, import, contribution-save, or authorization-policy-save failure emits nothing
 
-### Implementation
+### Event contract and handler implementation
 
-- [ ] T012 [US2] Add `getLevelZeroSpaceIdForCollaboraDocument(collaboraDocumentID: string): Promise<string>` to `src/services/infrastructure/entity-resolver/community.resolver.service.ts`, resolving the owning callout's `calloutsSetId` from the document's unique-indexed foreign key and then delegating to the existing `getLevelZeroSpaceIdForCalloutsSet`. Probe the contribution path first. Put the document id in the `EntityNotFoundException` `details`, never in the message. Include the inline comment the constitution requires of performance-sensitive queries, explaining why the traversal starts at the leaf — without naming any spec, feature, or issue identifier. The task is not done without that comment
-- [ ] T013 [P] [US2] Migrate site 1 in `src/domain/collaboration/collabora-document/collabora.document.resolver.queries.ts` to the single new call, leaving the surrounding `try`/`catch` and `logger.error` exactly as they are
-- [ ] T014 [P] [US2] Migrate site 2 in `src/domain/collaboration/collabora-document/collabora.document.resolver.mutations.ts` the same way
-- [ ] T015 [P] [US2] Migrate site 3 in `src/domain/collaboration/callout/callout.resolver.mutations.ts` the same way
-- [ ] T016 [P] [US2] Migrate site 4 in `src/services/collaborative-document-integration/collaborative-document-integration.service.ts` to the new lookup, keeping the `await` in place
-- [ ] T017 [US2] Add a test to `src/services/collaborative-document-integration/collaborative-document-integration.service.spec.ts` asserting the analytics report completes before the handler's promise resolves, so a later refactor cannot quietly detach site 4 and start acknowledging messages before their work is done
-- [ ] T018 [US2] Repoint the mocks recorded in T002 to the new method in `src/domain/collaboration/collabora-document/collabora.document.resolver.queries.spec.ts`, `src/domain/collaboration/collabora-document/collabora.document.resolver.mutations.spec.ts`, `src/domain/collaboration/callout/callout.resolver.mutations.spec.ts` and `src/services/collaborative-document-integration/collaborative-document-integration.service.spec.ts`, preserving every existing assertion — including the `toHaveBeenCalledWith({ id, name, space }, actorContext)` reporter assertions that satisfy SC-005
-- [ ] T019 [US2] Delete `getCommunityForCollaboraDocumentOrFail` from `src/services/infrastructure/entity-resolver/community.resolver.service.ts`. Leave `getLevelZeroSpaceIdForCommunity` in place — room events, whiteboard integration and community service still call it
+- [X] T012 [US1] Add the three centralized names `collabora.document.opened`, `collabora.document.replaced`, and `collabora.document.uploaded`; the readonly `CollaboraDocumentActorAttribution`; and distinct frozen `CollaboraDocumentOpened`, `CollaboraDocumentReplaced`, and `CollaboraDocumentUploaded` event classes in `src/domain/collaboration/collabora-document/events/collabora.document.analytics.events.ts`
+- [X] T013 [P] [US1] Implement `CollaboraDocumentEventsService` with void `publishOpened`, `publishReplaced`, and `publishUploaded` methods in `src/domain/collaboration/collabora-document/events/collabora.document.events.service.ts`; centrally copy exactly `actorID`, `isAnonymous`, and `guestName`, freeze the snapshot/envelope, call synchronous `EventEmitter2.emit`, discard its boolean result, and retain no reference to the input `ActorContext`
+- [X] T014 [P] [US1] Implement singleton `CollaboraDocumentAnalyticsEventHandler` in `src/domain/collaboration/collabora-document/events/collabora.document.analytics.event.handler.ts` with one `@OnEvent` method per lifecycle constant and one shared async reporting path that uses `getLevelZeroSpaceIdForCollaboraDocument`, maps the reporter method, catches/logs every failure, and measures only the lookup with `performance.now()` from `node:perf_hooks`; on success and failure emit exactly one `logger.log` record under `LogContext.COLLABORATION` with message `Collabora document analytics space lookup completed`, `eventName`, `collaboraDocumentId`, `outcome`, and `durationMs`
+- [X] T015 [US1] Register both providers and export only `CollaboraDocumentEventsService` from `src/domain/collaboration/collabora-document/collabora.document.module.ts`; reuse the existing `ContributionReporterModule` and `EntityResolverModule` imports and introduce no module cycle
 
-**Checkpoint**: the expensive query no longer exists anywhere in the codebase.
+### User-facing publisher integration
 
----
+- [X] T016 [P] [US1] Inject `CollaboraDocumentEventsService` into `src/domain/collaboration/collabora-document/collabora.document.resolver.queries.ts`; after editor URL resolution call `publishOpened` exactly once with id, `profile.displayName ?? id`, and the live authorized context, without awaiting or performing ownership attribution inline
+- [X] T017 [P] [US1] Inject `CollaboraDocumentEventsService` into `src/domain/collaboration/collabora-document/collabora.document.resolver.mutations.ts`; after swap and optional rename processing call `publishReplaced` exactly once with the preserved document values and live authorized context, replacing any inline or hotfix-commented analytics block
+- [X] T018 [P] [US1] Inject the exported `CollaboraDocumentEventsService` into `src/domain/collaboration/callout/callout.resolver.mutations.ts`; after persistence and authorization-policy application call `publishUploaded` exactly once with the preserved document values and live authorized context, replacing any inline or hotfix-commented analytics block
+- [X] T019 [US1] Remove only now-unused direct analytics/ownership imports and constructor injections from `src/domain/collaboration/collabora-document/collabora.document.resolver.queries.ts`, `src/domain/collaboration/collabora-document/collabora.document.resolver.mutations.ts`, and `src/domain/collaboration/callout/callout.resolver.mutations.ts`; retain Callout resolver dependencies used by unrelated operations and retain the Collabora module imports required by the handler
+- [X] T020 [US1] Run the five US1 specs at `src/domain/collaboration/collabora-document/events/collabora.document.events.service.spec.ts`, `src/domain/collaboration/collabora-document/events/collabora.document.analytics.event.handler.spec.ts`, `src/domain/collaboration/collabora-document/collabora.document.resolver.queries.spec.ts`, `src/domain/collaboration/collabora-document/collabora.document.resolver.mutations.spec.ts`, and `src/domain/collaboration/callout/callout.resolver.mutations.spec.ts`; record the SC-002 outcome in `specs/110-collabora-editor-url-latency/quickstart.md`
 
-## Phase 5: User Story 3 — The document row is read once (P3)
-
-**Goal**: `collaboraEditorUrl` loads the `CollaboraDocument` once instead of twice.
-
-**Independent test**: Spy on the document fetch during one `collaboraEditorUrl` call; assert exactly one invocation.
-
-**Delivers on its own**: yes, though it is worth ~7.4 ms — it is here because leaving a duplicate read in a hot path after a latency investigation is indefensible, not because it moves the number.
-
-### Tests
-
-- [ ] T020 [US3] Add a test to `src/domain/collaboration/collabora-document/collabora.document.resolver.queries.spec.ts` asserting `getCollaboraDocumentOrFail` is called exactly once per `collaboraEditorUrl` query
-
-### Implementation
-
-- [ ] T021 [US3] In `src/domain/collaboration/collabora-document/collabora.document.resolver.queries.ts`, load the `CollaboraDocument` once with both the `profile` and `document` relations
-- [ ] T022 [US3] Change `getEditorUrl` in `src/domain/collaboration/collabora-document/collabora.document.service.ts` to take what the resolver already holds instead of re-fetching the row, keeping its `RelationshipNotFoundException` guard for a missing backing document
-- [ ] T023 [US3] Update `src/domain/collaboration/collabora-document/collabora.document.service.spec.ts` for the new `getEditorUrl` signature
+**Checkpoint**: Sites 1–3 publish typed in-process events, never retain the full `ActorContext`, and cannot wait on attribution or reporting.
 
 ---
 
-## Phase 6: Polish — pre-merge
+## Phase 4: User Story 2 — every Collabora analytics attribution is cheap (Priority: P1)
 
-**Everything in this phase must be complete before the PR merges.**
+**Goal**: The lifecycle subscriber and site 4 use the leaf-first lookup; site 4's two aggregate analytics contracts are active and unchanged; the old wide lookup and all Collabora uses of the two-call pair are deleted.
 
-- [ ] T024 Run `pnpm lint` and `pnpm vitest run`; both clean. Confirm FR-010 at the same time: the diff contains no file under `src/migrations/`, no entity change, and no `schema.graphql` change
-- [ ] T025 Verify SC-004 by running the two greps in `specs/110-collabora-editor-url-latency/quickstart.md` — no match for `getCommunityForCollaboraDocumentOrFail`, no Collabora call site still pairing `getLevelZeroSpaceIdForCommunity`
-- [ ] T026 Confirm no comment added by this work contains a spec, feature, or issue identifier, and note in the PR description that code comments were touched
-- [ ] T027 Fill the pre-merge rows (SC-002, SC-004, SC-005) of the results table in `specs/110-collabora-editor-url-latency/quickstart.md` with what actually happened, recording failures as failures rather than rewording the criterion
-- [ ] T028 Write the PR description: domain impact, no schema change, no migration, the recorded Principle 4 deviation from `plan.md`, and a link to the wopi-service#29 investigation comment
+**Independent Test**: Run the ownership lookup specs for contribution and framing documents and the site-4 contribution/view suites. The lookup returns the correct level-zero id within the bounded query contract, and both aggregate reporter calls preserve their complete pre-hotfix payloads.
+
+### Tests for User Story 2
+
+- [X] T021 [P] [US2] Restore any skipped `officeDocumentContributions` and `officeDocumentViews` suites and update `src/services/collaborative-document-integration/collaborative-document-integration.service.spec.ts` to fail until site 4 calls `getLevelZeroSpaceIdForCollaboraDocument` once while preserving the exact aggregate reporter methods, full `{ id, name, space, writeActors, readonlyActors, alkemio }` payloads, direct awaited completion order, and existing catch-and-log behavior
+
+### Direct consumer migration and dead-code removal
+
+- [X] T022 [US2] Migrate site 4 in `src/services/collaborative-document-integration/collaborative-document-integration.service.ts` to `getLevelZeroSpaceIdForCollaboraDocument`; if PR #6354 is present remove its early return and replace the suppressed body, keep the direct awaited flow, and do not add lifecycle-event publication or RabbitMQ acknowledgement/redelivery claims
+- [X] T023 [US2] Delete `getCommunityForCollaboraDocumentOrFail` from `src/services/infrastructure/entity-resolver/community.resolver.service.ts` after T016–T018 and T022 have removed every caller; keep `getLevelZeroSpaceIdForCommunity` for unrelated consumers and remove obsolete old-pair mocks from `src/domain/collaboration/collabora-document/collabora.document.resolver.queries.spec.ts`, `src/domain/collaboration/collabora-document/collabora.document.resolver.mutations.spec.ts`, `src/domain/collaboration/callout/callout.resolver.mutations.spec.ts`, and `src/services/collaborative-document-integration/collaborative-document-integration.service.spec.ts`
+- [X] T024 [US2] Use `rg` to prove no `getCommunityForCollaboraDocumentOrFail` symbol or Collabora two-call pair remains under `src/`, and that outside its definition in `src/services/infrastructure/entity-resolver/community.resolver.service.ts` and specs, `getLevelZeroSpaceIdForCollaboraDocument` is called only by `src/domain/collaboration/collabora-document/events/collabora.document.analytics.event.handler.ts` and `src/services/collaborative-document-integration/collaborative-document-integration.service.ts`; record SC-004 in `specs/110-collabora-editor-url-latency/quickstart.md`
+- [X] T025 [US2] Run `src/services/infrastructure/entity-resolver/community.resolver.service.spec.ts`, `src/domain/collaboration/collabora-document/events/collabora.document.analytics.event.handler.spec.ts`, and `src/services/collaborative-document-integration/collaborative-document-integration.service.spec.ts`; record the query-contract part of SC-003 and the site-4 part of SC-005/SC-006 in `specs/110-collabora-editor-url-latency/quickstart.md`
+
+**Checkpoint**: All four Collabora attribution paths are leaf-first, the old relation-tree method is gone, and open/replace/upload/contribution/view analytics are active through their intended contracts.
 
 ---
 
-## Phase 7: Post-deploy
+## Phase 5: User Story 3 — fetch the CollaboraDocument once (Priority: P3)
 
-**These cannot be completed before merge** — SC-001 and SC-003 are only observable against production data. They are tracked here so the work is not treated as finished when the PR lands.
+**Goal**: `collaboraEditorUrl` reuses its authorized `CollaboraDocument` for token issuance instead of loading the same row again.
 
-- [ ] T029 After deploy, run the SC-001 and SC-003 checks in `specs/110-collabora-editor-url-latency/quickstart.md` against production APM and fill the remaining rows of its results table
-- [ ] T030 Once SC-001 is confirmed, close `alkem-io/wopi-service#29` with a link to the merged PR
+**Independent Test**: Spy on `getCollaboraDocumentOrFail` during one `collaboraEditorUrl` request and assert exactly one call while the editor URL result and missing-backing-document exception behavior remain unchanged.
+
+### Tests for User Story 3
+
+- [X] T026 [P] [US3] Add a failing one-fetch assertion to `src/domain/collaboration/collabora-document/collabora.document.resolver.queries.spec.ts`, including the expected single relation load for both `profile` and `document` and the already-loaded document passed to `getEditorUrl`
+- [X] T027 [P] [US3] Update `src/domain/collaboration/collabora-document/collabora.document.service.spec.ts` first for the new `getEditorUrl` input contract, WOPI token issuance from the supplied backing-document id, and the preserved static `RelationshipNotFoundException` when `document` is absent
+
+### Single-fetch implementation
+
+- [X] T028 [P] [US3] Change `src/domain/collaboration/collabora-document/collabora.document.resolver.queries.ts` to fetch `profile` and `document` in the one authorized load and pass that loaded `CollaboraDocument` to `getEditorUrl`
+- [X] T029 [P] [US3] Change `getEditorUrl` in `src/domain/collaboration/collabora-document/collabora.document.service.ts` to accept the loaded document, remove its internal `getCollaboraDocumentOrFail`, and preserve token arguments, return shape, and missing-relationship exception details
+- [X] T030 [US3] Run `src/domain/collaboration/collabora-document/collabora.document.resolver.queries.spec.ts` and `src/domain/collaboration/collabora-document/collabora.document.service.spec.ts`; verify the single-fetch acceptance scenario and record any failure in `specs/110-collabora-editor-url-latency/quickstart.md`
+
+**Checkpoint**: The hot GraphQL path performs one CollaboraDocument read and still returns the same editor URL contract.
 
 ---
 
-## Dependencies
+## Phase 6: Polish, pre-merge gates, deployment verification, and issue closure
+
+**Purpose**: Reconcile all source states, prove the final tree, publish accurate review context, and execute the two distinct production acceptance/closure paths.
+
+- [X] T031 Remove all remaining PR #6354 suppression residue from `src/domain/collaboration/collabora-document/`, `src/domain/collaboration/callout/callout.resolver.mutations.ts`, and `src/services/collaborative-document-integration/`: no commented analytics body/assertion, site-4 early return, temporary hotfix explanation, analytics-specific `it.skip`, or analytics-specific `describe.skip` may remain
+- [X] T032 Execute every pre-merge command in `specs/110-collabora-editor-url-latency/quickstart.md` and fill actual outcomes for SC-002, the pre-merge part of SC-003, SC-004, SC-005, and SC-006; preserve the SC-003 production-evidence link in its results row and do not convert failures or zero evidence into passes
+- [X] T033 Run `pnpm lint` and `pnpm vitest run` from `package.json`; inspect the final diff and record in `specs/110-collabora-editor-url-latency/quickstart.md` that no file under `src/migrations/`, entity mapping, `schema.graphql`, RabbitMQ configuration, or dependency manifest changed and that no new code comment contains a spec, feature, PR, or issue identifier
+- [X] T034 Update https://github.com/alkem-io/server/pull/6350 using the final design in `specs/110-collabora-editor-url-latency/plan.md` and `specs/110-collabora-editor-url-latency/research.md`: replace private-detachment and deferred-ack claims with the typed publisher/subscriber flow and actual ack-before-service behavior; document domain impact, the minimal frozen actor snapshot, post-persistence write-outcome publication, structured timing log, leaf-first lookup, hotfix restoration, site-4 distinction, test evidence, split issue-closure ownership, and the mandatory declarations `Schema changes: none`, `Migrations: none`, and `Deprecations: none`; explicitly propose Constitution `2.0.0 → 3.0.0` as a MAJOR amendment, identify Principle 4 and new Architecture Standard 6 as impacted, and explain that the amendment makes committed-state event ordering safe and records the incident's leaf-first-query rule
+- [ ] T035 After the proper-fix PR merges, close https://github.com/alkem-io/server/issues/6356 with the merged PR link and record the closure in `specs/110-collabora-editor-url-latency/quickstart.md`; do not wait for SC-001 or SC-003
+- [ ] T036 [P] Observe SC-001 after deployment using the two `CollaboraEditorUrl` APM queries defined in `specs/110-collabora-editor-url-latency/quickstart.md`: use `event.outcome: success` for sample count and p95, use the separate all-outcomes query for every transaction above five seconds, and use all successful samples after seven days if traffic never reaches 100; record the complete result in `specs/110-collabora-editor-url-latency/evidence/sc-001-production.md`; leave SC-001 unverified and wopi-service#29 open when the successful count is zero; for any exclusion record a linked incident/change identifier, exact interval, excluded count, independent same-interval platform evidence, and success-only p95 before and after exclusion
+- [ ] T037 [P] Observe SC-003 after deployment using the stable structured timing-log query in `specs/110-collabora-editor-url-latency/quickstart.md`; review the first 20 samples or all 1–19 available in seven days, record count/max/p95 by event/outcome in `specs/110-collabora-editor-url-latency/evidence/sc-003-production.md`, require every `durationMs` below 100 ms, and leave SC-003 unverified when the count is zero
+- [ ] T038 After T036 passes, close https://github.com/alkem-io/wopi-service/issues/29 with the merged PR and production SC-001 evidence, and record the closure in `specs/110-collabora-editor-url-latency/evidence/sc-001-production.md`; SC-003 does not gate this closure
+
+**Checkpoint**: All pre-merge criteria have evidence, production criteria remain honest about sample counts, server#6356 closes at merge, and wopi-service#29 closes only after the user-facing latency recovers.
+
+---
+
+## Dependencies and execution order
+
+### Phase dependencies
+
+- **Phase 1 — Setup**: Starts immediately.
+- **Phase 2 — Foundation**: Depends on Phase 1 and blocks the lifecycle handler and site-4 migration.
+- **Phase 3 — US1**: Depends on T006. T007–T011 are written first; T012–T015 establish the event boundary; T016–T018 migrate the three callers.
+- **Phase 4 — US2**: T021 can be written after T006 and in parallel with US1. T022 depends on T006 and T021. T023 depends on T016–T018 and T022 because every old-method caller must be gone before deletion.
+- **Phase 5 — US3**: Functionally independent after Phase 1, but starts after T020 because US1 and US3 edit and validate the same query resolver and spec.
+- **Phase 6 — Gates and follow-up**: T031–T034 depend on all implementation phases. T035 depends on merge. T036 and T037 depend on deployment, update separate production-evidence files, and can run independently. T038 depends on a passing T036 only and does not wait for T037.
+
+### Dependency graph
 
 ```text
-Phase 1 (Setup)
-      │
-      ├──────────────┬──────────────┐
-      ▼              ▼              ▼
-   US1 (P1)       US2 (P1)       US3 (P3)
-   detach         cheap lookup   single fetch
-      │              │              │
-      └──────────────┴──────────────┘
-                     ▼
-         Phase 6 (pre-merge polish)
-                     ▼
-                  merge
-                     ▼
-         Phase 7 (post-deploy)
+T001 → T002
+          │
+          ▼
+   T003 → T004 → T005 → T006
+          │               │
+          │               ├───────────────┐
+          ▼               ▼               ▼
+      T007–T020 (US1)  T021→T022 (US2)  T026–T030 (US3 after T020)
+          │               │
+          └───────┬───────┘
+                  ▼
+             T023→T024→T025
+                  │
+                  ▼
+             T031→T032→T033→T034
+                              │
+                            merge
+                              │
+                     ┌────────┴────────┐
+                     ▼                 ▼
+                   T035             deploy
+                                       │
+                                  ┌────┴────┐
+                                  ▼         ▼
+                                T036      T037
+                                  │
+                                  ▼
+                                T038
 ```
 
-**Story independence**: all three are independently implementable and independently testable. None requires another to be correct.
+### User-story dependencies
 
-**File-level coupling** (sequencing, not dependency): US1 and US2 both edit sites 1, 2 and 3; US1 and US3 both edit site 1. If run out of order or concurrently, expect conflicts in those files. Recommended order is US1 → US2 → US3, which is also priority order and puts the user-visible fix first.
+- **US1 (P1)**: Independently proves that user-facing operations return without awaiting analytics once the shared lookup exists. Its three caller migrations also remove old-method consumers needed for US2 dead-code deletion.
+- **US2 (P1)**: The lookup contract is shared foundation. Its site-4 implementation is independent of US1, but SC-004 completion waits for US1 to migrate sites 1–3 before the obsolete method can be deleted.
+- **US3 (P3)**: Behaviorally independent, but sequenced after T020 to avoid conflicting edits and validation in the same query resolver/spec files.
 
-**Within US1**: T003–T005 are parallel, then T006 gates, then T007–T009 are parallel.
-**Within US2**: T011 → T012, then T013–T016 in parallel, then T017, then T018, then T019.
-**Within US3**: strictly sequential — T020 → T021 → T022 → T023.
+---
 
 ## Parallel execution examples
 
-**US1 tests** — three different spec files, no shared state:
+### User Story 1
+
+After T006, write the five independent spec files together:
 
 ```text
-T003  collabora.document.resolver.queries.spec.ts
-T004  collabora.document.resolver.mutations.spec.ts
-T005  callout.resolver.mutations.spec.ts
+T007 publisher-service contract spec
+T008 analytics-handler contract/timing spec
+T009 editor-URL resolver publication spec
+T010 replacement resolver publication spec
+T011 import resolver publication spec
 ```
 
-**US2 call-site migrations** — four different files, each a mechanical two-calls-to-one replacement, all depending only on T012:
+After T012, implement T013 and T014 in parallel. After T015, migrate the three distinct caller files with T016, T017, and T018 in parallel.
 
-```text
-T013  collabora.document.resolver.queries.ts
-T014  collabora.document.resolver.mutations.ts
-T015  callout.resolver.mutations.ts
-T016  collaborative-document-integration.service.ts
-```
+### User Story 2
+
+T021 can proceed in the integration-service spec while US1 caller work is underway. After T006 and T021, T022 migrates the distinct site-4 source file; T023 waits until both site 4 and all three US1 callers have stopped using the old method.
+
+### User Story 3
+
+After T020, write T026 and T027 in parallel in the resolver and service spec files. Then implement T028 and T029 in parallel in their corresponding source files before the combined T030 check.
+
+### Post-deploy
+
+After deployment, T036 reads APM transaction data and writes `evidence/sc-001-production.md`, while T037 reads the structured application-log timing signal and writes `evidence/sc-003-production.md`. The observations and evidence writes can proceed in parallel because the files are distinct. Only a passing T036 gates T038, so SC-003 does not delay WOPI issue closure.
+
+---
 
 ## Implementation strategy
 
-**MVP is US1 alone.** Three extractions plus six tests. It fixes the reported defect completely from the user's point of view, and it reverts in one commit. If anything about the lookup replacement turns out to be harder than the research suggests, US1 can ship without it.
+### MVP scope
 
-**US2 is what stops the platform paying for the mistake** — it removes the ~8 s query from the background consumer too, where no amount of detaching would have helped.
+The safe MVP is **Phase 1 + Phase 2 + US1**, which removes analytics from the three user-response paths without ever wiring the new subscriber to the old wide query. In practice, ship **US1 and US2 together**: both are P1, US2 removes the database cost platform-wide, restores site-4 aggregates, and enables deletion of the defective lookup.
 
-**US3 is opportunistic.** It is in scope because the resolver is already open, not because it matters on its own.
+### Incremental delivery
 
-Ship as one PR if all three land cleanly. If US2 stalls, ship US1 first rather than holding the user-facing fix behind it.
+1. Establish the baseline and implement the tested leaf-first lookup.
+2. Add the typed publisher/subscriber boundary and migrate all three user-facing operations.
+3. Restore and migrate site 4, then delete the old lookup and prove no two-call pair remains.
+4. Remove the duplicate document fetch.
+5. Run the full pre-merge quickstart and quality gates, then update PR #6350 with the actual design and evidence.
+6. At merge close server#6356; after deployment evaluate SC-001 and SC-003 independently; close wopi-service#29 only after SC-001 passes.
+
+### Commit discipline
+
+- Keep tests before implementation within each story.
+- Commit after each task or coherent task group, with signed commits as required by `spec.md`.
+- Do not create intermediate code that revives PR #6354's suppressed wide lookup.
+- Do not add a migration, schema change, RabbitMQ route, dependency, retry/outbox layer, or full `ActorContext` event payload.
+
+---
+
+## Notes
+
+- `[P]` means different files and no dependency on an incomplete task at that point.
+- Publisher tests, not each caller test, own projection/copy/freeze/no-extra-field coverage.
+- Handler tests own event-to-reporter mapping, structured timing, and failure containment without relying on a live APM transaction.
+- `getLevelZeroSpaceIdForCommunity` remains for unrelated callers; only `getCommunityForCollaboraDocumentOrFail` is deleted.
+- Site 4 remains a direct awaited background flow and preserves its aggregate payload; it is not one of the three lifecycle events.
+- Zero production timing records leave SC-003 unverified. SC-003 gates feature acceptance but neither issue closure.

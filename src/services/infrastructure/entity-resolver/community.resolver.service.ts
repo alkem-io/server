@@ -1,6 +1,8 @@
 import { LogContext } from '@common/enums';
 import { RoomType } from '@common/enums/room.type';
 import { EntityNotFoundException } from '@common/exceptions';
+import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
+import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
 import { Collaboration } from '@domain/collaboration/collaboration';
 import { ILicense } from '@domain/common/license/license.interface';
 import { Communication } from '@domain/communication/communication/communication.entity';
@@ -121,6 +123,51 @@ export class CommunityResolverService {
       );
     }
     return space.levelZeroSpaceID;
+  }
+
+  public async getLevelZeroSpaceIdForCollaboraDocument(
+    collaboraDocumentId: string
+  ): Promise<string> {
+    // Resolve from the selective document-owning leaf before traversing toward Space.
+    const contributionOwner = await this.entityManager
+      .createQueryBuilder(CalloutContribution, 'contribution')
+      .innerJoin('contribution.callout', 'callout')
+      .select('callout.calloutsSetId', 'calloutsSetId')
+      .where('contribution.collaboraDocumentId = :collaboraDocumentId', {
+        collaboraDocumentId,
+      })
+      .getRawOne<{ calloutsSetId: string }>();
+
+    let calloutsSetId = contributionOwner?.calloutsSetId;
+    if (!calloutsSetId) {
+      const framingOwner = await this.entityManager
+        .createQueryBuilder(CalloutFraming, 'framing')
+        .innerJoin('framing.callout', 'callout')
+        .select('callout.calloutsSetId', 'calloutsSetId')
+        .where('framing.collaboraDocumentId = :collaboraDocumentId', {
+          collaboraDocumentId,
+        })
+        .getRawOne<{ calloutsSetId: string }>();
+      calloutsSetId = framingOwner?.calloutsSetId;
+    }
+
+    if (!calloutsSetId) {
+      throw new EntityNotFoundException(
+        'Unable to find Space for CollaboraDocument',
+        LogContext.COMMUNITY,
+        { collaboraDocumentId }
+      );
+    }
+
+    try {
+      return await this.getLevelZeroSpaceIdForCalloutsSet(calloutsSetId);
+    } catch {
+      throw new EntityNotFoundException(
+        'Unable to find Space for CollaboraDocument',
+        LogContext.COMMUNITY,
+        { collaboraDocumentId, calloutsSetId }
+      );
+    }
   }
 
   public async getLevelZeroSpaceIdForMediaGallery(
@@ -400,61 +447,6 @@ export class CommunityResolverService {
         'Unable to find Community for Space and Memo',
         LogContext.COMMUNITY,
         { spaceId: space.id, memoId }
-      );
-    }
-    return community;
-  }
-
-  public async getCommunityForCollaboraDocumentOrFail(
-    collaboraDocumentId: string
-  ): Promise<ICommunity> {
-    const space = await this.entityManager.findOne(Space, {
-      where: [
-        {
-          collaboration: {
-            calloutsSet: {
-              callouts: {
-                contributions: {
-                  collaboraDocument: {
-                    id: collaboraDocumentId,
-                  },
-                },
-              },
-            },
-          },
-        },
-        {
-          collaboration: {
-            calloutsSet: {
-              callouts: {
-                framing: {
-                  collaboraDocument: {
-                    id: collaboraDocumentId,
-                  },
-                },
-              },
-            },
-          },
-        },
-      ],
-      relations: {
-        community: true,
-      },
-    });
-
-    if (!space) {
-      throw new EntityNotFoundException(
-        'Unable to find Space for CollaboraDocument',
-        LogContext.COMMUNITY,
-        { collaboraDocumentId }
-      );
-    }
-    const community = space.community;
-    if (!community) {
-      throw new EntityNotFoundException(
-        'Unable to find Community for Space and CollaboraDocument',
-        LogContext.COMMUNITY,
-        { spaceId: space.id, collaboraDocumentId }
       );
     }
     return community;

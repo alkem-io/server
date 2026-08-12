@@ -1,5 +1,7 @@
 import { RoomType } from '@common/enums/room.type';
 import { EntityNotFoundException } from '@common/exceptions';
+import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
+import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
 import { Communication } from '@domain/communication/communication/communication.entity';
 import { Community } from '@domain/community/community';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -298,6 +300,159 @@ describe('CommunityResolverService', () => {
       await expect(
         service.getLevelZeroSpaceIdForCalloutsSet('cs-1')
       ).rejects.toThrow(EntityNotFoundException);
+    });
+  });
+
+  describe('getLevelZeroSpaceIdForCollaboraDocument', () => {
+    const createOwnerQueryBuilder = (
+      result: { calloutsSetId: string } | null
+    ) => ({
+      innerJoin: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      getRawOne: vi.fn().mockResolvedValue(result),
+    });
+
+    it('resolves a contribution document leaf-first in two statements', async () => {
+      const contributionQuery = createOwnerQueryBuilder({
+        calloutsSetId: 'callouts-set-contribution',
+      });
+      entityManager.createQueryBuilder.mockReturnValueOnce(
+        contributionQuery as any
+      );
+      entityManager.findOne.mockResolvedValue({
+        levelZeroSpaceID: 'space-level-zero',
+      } as any);
+
+      const result = await service.getLevelZeroSpaceIdForCollaboraDocument(
+        'collabora-document-contribution'
+      );
+
+      expect(result).toBe('space-level-zero');
+      expect(entityManager.createQueryBuilder).toHaveBeenCalledTimes(1);
+      expect(entityManager.createQueryBuilder).toHaveBeenCalledWith(
+        CalloutContribution,
+        'contribution'
+      );
+      expect(contributionQuery.where).toHaveBeenCalledWith(
+        'contribution.collaboraDocumentId = :collaboraDocumentId',
+        { collaboraDocumentId: 'collabora-document-contribution' }
+      );
+      expect(entityManager.findOne).toHaveBeenCalledTimes(1);
+    });
+
+    it('falls back to framing and resolves in three statements', async () => {
+      const contributionQuery = createOwnerQueryBuilder(null);
+      const framingQuery = createOwnerQueryBuilder({
+        calloutsSetId: 'callouts-set-framing',
+      });
+      entityManager.createQueryBuilder
+        .mockReturnValueOnce(contributionQuery as any)
+        .mockReturnValueOnce(framingQuery as any);
+      entityManager.findOne.mockResolvedValue({
+        levelZeroSpaceID: 'space-level-zero',
+      } as any);
+
+      const result = await service.getLevelZeroSpaceIdForCollaboraDocument(
+        'collabora-document-framing'
+      );
+
+      expect(result).toBe('space-level-zero');
+      expect(entityManager.createQueryBuilder).toHaveBeenNthCalledWith(
+        1,
+        CalloutContribution,
+        'contribution'
+      );
+      expect(entityManager.createQueryBuilder).toHaveBeenNthCalledWith(
+        2,
+        CalloutFraming,
+        'framing'
+      );
+      expect(framingQuery.where).toHaveBeenCalledWith(
+        'framing.collaboraDocumentId = :collaboraDocumentId',
+        { collaboraDocumentId: 'collabora-document-framing' }
+      );
+      expect(entityManager.createQueryBuilder).toHaveBeenCalledTimes(2);
+      expect(entityManager.findOne).toHaveBeenCalledTimes(1);
+    });
+
+    it('throws one stable error when the document has no owner', async () => {
+      entityManager.createQueryBuilder
+        .mockReturnValueOnce(createOwnerQueryBuilder(null) as any)
+        .mockReturnValueOnce(createOwnerQueryBuilder(null) as any);
+
+      const error = await service
+        .getLevelZeroSpaceIdForCollaboraDocument('collabora-document-orphan')
+        .catch(reason => reason);
+
+      expect(error).toBeInstanceOf(EntityNotFoundException);
+      expect(error.message).toBe('Unable to find Space for CollaboraDocument');
+      expect(error.details).toEqual({
+        collaboraDocumentId: 'collabora-document-orphan',
+      });
+      expect(entityManager.createQueryBuilder).toHaveBeenCalledTimes(2);
+      expect(entityManager.findOne).not.toHaveBeenCalled();
+    });
+
+    it('translates a downstream space lookup failure to the stable contract', async () => {
+      entityManager.createQueryBuilder.mockReturnValueOnce(
+        createOwnerQueryBuilder({
+          calloutsSetId: 'callouts-set-missing',
+        }) as any
+      );
+      entityManager.findOne.mockResolvedValue(null);
+
+      const error = await service
+        .getLevelZeroSpaceIdForCollaboraDocument('collabora-document-missing')
+        .catch(reason => reason);
+
+      expect(error).toBeInstanceOf(EntityNotFoundException);
+      expect(error.message).toBe('Unable to find Space for CollaboraDocument');
+      expect(error.details).toEqual({
+        collaboraDocumentId: 'collabora-document-missing',
+        calloutsSetId: 'callouts-set-missing',
+      });
+    });
+
+    it('queries only owner leaves before delegating to the shallow space lookup', async () => {
+      const contributionQuery = createOwnerQueryBuilder(null);
+      const framingQuery = createOwnerQueryBuilder({
+        calloutsSetId: 'callouts-set-framing',
+      });
+      entityManager.createQueryBuilder
+        .mockReturnValueOnce(contributionQuery as any)
+        .mockReturnValueOnce(framingQuery as any);
+      entityManager.findOne.mockResolvedValue({
+        levelZeroSpaceID: 'space-level-zero',
+      } as any);
+
+      await service.getLevelZeroSpaceIdForCollaboraDocument(
+        'collabora-document-query-shape'
+      );
+
+      expect(contributionQuery.innerJoin).toHaveBeenCalledWith(
+        'contribution.callout',
+        'callout'
+      );
+      expect(framingQuery.innerJoin).toHaveBeenCalledWith(
+        'framing.callout',
+        'callout'
+      );
+      expect(contributionQuery.select).toHaveBeenCalledWith(
+        'callout.calloutsSetId',
+        'calloutsSetId'
+      );
+      expect(framingQuery.select).toHaveBeenCalledWith(
+        'callout.calloutsSetId',
+        'calloutsSetId'
+      );
+      expect(entityManager.findOne).toHaveBeenCalledWith(expect.any(Function), {
+        where: {
+          collaboration: {
+            calloutsSet: { id: 'callouts-set-framing' },
+          },
+        },
+      });
     });
   });
 

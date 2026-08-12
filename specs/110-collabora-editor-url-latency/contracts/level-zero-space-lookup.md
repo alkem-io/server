@@ -16,21 +16,21 @@ public async getLevelZeroSpaceIdForCollaboraDocument(
 
 **Returns**: the `levelZeroSpaceID` of the space that owns the callout the document is attached to.
 
-**Throws**: `EntityNotFoundException` when the document is attached to no callout, or the callout resolves to no space. The document id goes in the exception `details`, never in the message.
+**Throws**: `EntityNotFoundException` when the document is attached to no callout, or the callout resolves to no space. Both paths expose the exact static message `Unable to find Space for CollaboraDocument`. The document id and any resolved `calloutsSetId` go in exception `details`; a dynamic message from the delegated lookup must not escape.
 
 **Guarantees**:
 
 | # | Guarantee |
 |---|---|
-| C1 | Every database hop is a single-row lookup against an existing index. No statement joins across the callout graph. |
-| C2 | At most three statements; one on the common (contribution-hosted) path. |
+| C1 | Each owner probe starts at a uniquely indexed `collaboraDocumentId`, returns at most one `calloutsSetId`, and never starts from `space` or joins the complete callout graph. |
+| C2 | Two statements on the common contribution-hosted path; at most three on the framing-hosted path. |
 | C3 | Returns the same value the removed two-call pair returned, for every document that pair could resolve. |
 | C4 | Read-only. No writes, no entity mutation, no events. |
 | C5 | Carries an inline comment explaining why the traversal is leaf-first — the constitution requires this of performance-sensitive queries. The comment explains the optimization without naming any spec, feature, or issue identifier. |
 
 **Naming**: matches the three siblings already in the class — `getLevelZeroSpaceIdForRoleSet`, `getLevelZeroSpaceIdForCalloutsSet`, `getLevelZeroSpaceIdForMediaGallery`.
 
-**Composition**: resolves the owning callout's `calloutsSetId` from the document, then delegates to the existing `getLevelZeroSpaceIdForCalloutsSet`. That second half is not reimplemented.
+**Composition**: resolves the owning callout's `calloutsSetId` from the document, then delegates to the existing `getLevelZeroSpaceIdForCalloutsSet`. That second half is not reimplemented. If delegation fails, this method translates the failure to its own static-message exception contract.
 
 ---
 
@@ -56,9 +56,11 @@ Deleted once its four callers migrate. It exists only to feed `getLevelZeroSpace
 
 ---
 
-## Call-site migration
+## Consumer migration
 
-Each of the four sites replaces this:
+If the Release 71 hotfix is present, the consumer bodies below are commented or bypassed. Migration restores their intended reporting behavior while replacing the removed lookup pair; it does not uncomment that pair.
+
+The new lifecycle-event subscriber and site 4 replace this:
 
 ```ts
 const community = await this.communityResolver
@@ -74,15 +76,13 @@ const levelZeroSpaceID = await this.communityResolver
   .getLevelZeroSpaceIdForCollaboraDocument(collaboraDocument.id);
 ```
 
-The surrounding `try`/`catch` and its `logger.error` stay exactly as they are — the failure mode is unchanged, so the handling should be too.
+The lifecycle subscriber owns its `try`/`catch` and error log. Site 4 retains its existing surrounding catch-and-log path.
 
-| Site | File | Also detached? |
+| Consumer | File | Use |
 |---|---|---|
-| 1 | `collabora.document.resolver.queries.ts` — `collaboraEditorUrl` | yes |
-| 2 | `collabora.document.resolver.mutations.ts` — replace document | yes |
-| 3 | `callout.resolver.mutations.ts` — `importCollaboraDocument` | yes |
-| 4 | `collaborative-document-integration.service.ts` — contribution event consumer | **no** — keeps awaiting |
+| Lifecycle subscriber for sites 1–3 | `collabora.document.analytics.event.handler.ts` | Resolves `space`, then dispatches the matching lifecycle reporter |
+| Site 4 | `collaborative-document-integration.service.ts` | Resolves `space` directly for its aggregate reporter payload |
 
 ## Reporter invocation contract
 
-Unchanged at every site, and this is what SC-005 checks: the same reporter method is called with the same `{ id, name, space }` contribution details and the same actor context. Only the moment of the call moves, and only at sites 1–3. Values generated per record — timestamps, the Elasticsearch document id — are outside the comparison.
+For sites 1–3, the subscriber calls the same reporter method with the same `{ id, name, space }` contribution details and effective actor attribution. The event supplies a copied, frozen snapshot containing only `actorID`, `isAnonymous`, and `guestName`, exactly the fields the reporter consumes. Site 4 has two separate aggregate record contracts: it keeps the same contribution-window and view-window reporter methods and their `{ id, name, space, writeActors, readonlyActors, alkemio }` payloads. Values generated inside reporters — timestamps and Elasticsearch document ids — are outside the comparison.
