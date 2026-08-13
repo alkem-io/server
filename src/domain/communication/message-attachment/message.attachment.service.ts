@@ -347,15 +347,17 @@ export class MessageAttachmentService {
     // (the m.image event's info.w/h; clients render without layout reflow).
     //
     // ONE batched round-trip for every image on the message, AFTER validation.
-    // The predecessor issued up to MAX_MESSAGE_ATTACHMENTS (<=10) PARALLEL by-id
-    // `getDocumentMeta` GETs; parallelism kept the added latency to one timeout
-    // but still billed file-service up to 10 requests per send. `/meta-batch`
-    // makes it one request AND one timeout. Like its by-id sibling the call is
-    // best-effort and isolated (short timeout, no retry, breaker-bypass) and
-    // already degrades to an empty map internally; the try/catch here is
-    // defence-in-depth — and catches a SYNCHRONOUS throw, which `.catch()` alone
-    // would not — so a meta failure just leaves width/height undefined and never
-    // fails (or blocks) the send.
+    // A by-id meta GET per image billed file-service up to
+    // MAX_MESSAGE_ATTACHMENTS (<= 10) requests per send; issuing them in parallel
+    // kept the added latency to one timeout but not the request count.
+    // `/meta-batch` makes it one request AND one timeout. The call is
+    // BEST-EFFORT and DELIBERATELY ISOLATED from the shared file-service circuit
+    // breaker — short timeout, zero retries, no breaker accounting — so a
+    // degraded `/meta-batch` can never fast-fail the uploads and pins that
+    // breaker guards; it already degrades to an empty map internally. The
+    // try/catch here is defence-in-depth — and catches a SYNCHRONOUS throw, which
+    // `.catch()` alone would not — so a meta failure just leaves width/height
+    // undefined and never fails (or blocks) the send.
     //
     // Each ref takes its OWN measurement, looked up BY DOCUMENT ID: `/meta-batch`
     // answers a partial and UNORDERED `files` array, so positional matching would
@@ -1155,7 +1157,8 @@ export class MessageAttachmentService {
    * WHY: `Message.attachments` is a `@ResolveField` and `getMessages(room)`
    * returns a room's ENTIRE history unpaginated, so the previous per-attachment
    * `fileServiceAdapter.getDocumentByReference(media_id, bucketId)` fanned out
-   * once PER ATTACHMENT PER VIEWER PER PAGE LOAD. Unlike `getDocumentMeta`, that
+   * once PER ATTACHMENT PER VIEWER PER PAGE LOAD. Unlike the best-effort dims
+   * fetch (`getDocumentMetaBatch`), which deliberately bypasses the breaker, that
    * call IS accounted against the SHARED file-service circuit breaker — so a
    * normal chat load in a media-heavy room could trip the breaker that guards
    * uploads and pins for the WHOLE platform. `(externalReference,
@@ -1299,9 +1302,10 @@ export class MessageAttachmentService {
    * and `roomService.getMessages(room)` returns a room's ENTIRE history
    * unpaginated, so anything issued per attachment — or per message — fans out
    * once PER VIEWER PER PAGE LOAD. Two collapses, in order:
-   *  - per ATTACHMENT → per MESSAGE: one `getDocumentMetaBatch` instead of one
-   *    `getDocumentMeta` GET per dimensionless image (which is why the
-   *    authoritative source had previously been demoted below the event's);
+   *  - per ATTACHMENT → per MESSAGE: one `getDocumentMetaBatch` for the whole
+   *    message instead of one by-id meta GET per dimensionless image (which is
+   *    why the authoritative source had previously been demoted below the
+   *    event's);
    *  - per MESSAGE → per REQUEST: with a `dimsLoader` supplied (the GraphQL read
    *    path always supplies one) the ids are handed to the REQUEST-scoped
    *    DataLoader, which coalesces every message's ids into a SINGLE

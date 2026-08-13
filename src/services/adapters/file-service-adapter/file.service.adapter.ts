@@ -29,11 +29,12 @@ const LOG_PREFIX = '[FileService]';
 const FILE_PATH_PREFIX = '/internal/file';
 
 /**
- * SHORT timeout for the best-effort outbound image-dimensions fetch
- * (`getDocumentMeta`). Deliberately far below the adapter's full request
- * timeout: image dims are a cosmetic rendering hint on the hot send path, so a
- * degraded file-service `/meta` must add at most this much latency per image —
- * never the full timeout × retries — and must never block the send.
+ * SHORT timeout for the best-effort image-dimensions fetch
+ * (`getDocumentMetaBatch`). Deliberately far below the adapter's full request
+ * timeout: image dims are a cosmetic rendering hint on the hot send and read
+ * paths, so a degraded file-service `/meta-batch` must add at most this much
+ * latency — never the full timeout × retries — and must never block the send or
+ * the read.
  */
 const DOCUMENT_META_TIMEOUT_MS = 2500;
 
@@ -275,99 +276,42 @@ export class FileServiceAdapter extends HttpClientBase {
   }
 
   /**
-   * Fetch a document's metadata by id (feature 013):
-   * `GET /internal/file/{documentId}/meta` — the by-id meta route
-   * `documentMetaResponse` backs. The OUTBOUND send path uses this to source
-   * intrinsic image dimensions (`imageWidth` / `imageHeight`): those are
-   * transient, file-service-owned fields (cached `content_metadata`), absent
-   * from the server's Document entity after a DB load, so the outbound
-   * attachment ref can only carry them by asking file-service. The `/meta`
-   * response is the SAME `documentMetaResponse` shape returned by-reference, so
-   * it deserializes as a `DocumentReferenceResult` (dims are all the caller
-   * reads).
-   *
-   * BEST-EFFORT + FULLY ISOLATED (deliberately unlike every other method here):
-   * image dims are a cosmetic rendering hint, so this fetch MUST NOT be able to
-   * (a) block the hot send path for long, or (b) pollute the SHARED circuit
-   * breaker that guards uploads/pins — a degraded `/meta` must never fast-fail
-   * unrelated healthy file-service traffic. It therefore does NOT route through
-   * `sendRequest` / `checkEnabledAndCircuit`: it issues a DIRECT axios GET with a
-   * SHORT timeout (`DOCUMENT_META_TIMEOUT_MS`), ZERO retries, and no breaker
-   * accounting, and resolves EVERY failure (timeout / 4xx / 5xx / network / 404)
-   * to `null` — NEVER propagating. A benign 404 (no meta / not found) is expected
-   * and stays quiet; every other failure (timeout / 5xx / network / other) is
-   * logged at WARN so the dropped dimensions stay observable. The `enabled` gate
-   * is kept (returns `null`, does not throw). The caller also guards the result,
-   * as defence-in-depth.
-   */
-  async getDocumentMeta(
-    documentId: string
-  ): Promise<DocumentReferenceResult | null> {
-    if (!this.enabled) {
-      return null;
-    }
-
-    const url = `${this.baseUrl}${this.fileMetaPath(documentId)}`;
-    try {
-      const response = await firstValueFrom(
-        this.httpService.get<DocumentReferenceResult>(url, {
-          timeout: DOCUMENT_META_TIMEOUT_MS,
-        })
-      );
-      return response.data;
-    } catch (error) {
-      // Best-effort: EVERY failure resolves to `null` — dims are a rendering
-      // hint, so the send proceeds without them and the shared breaker is
-      // untouched. A genuine 404 (the document has no meta / not found) is
-      // expected on this path and stays QUIET to avoid log spam; every other
-      // failure (timeout / 5xx / network / other) is logged at WARN so dropped
-      // dimensions are observable. Failures are logged but NEVER propagate.
-      if (isAxiosError(error) && error.response?.status === 404) {
-        return null;
-      }
-      this.logger.warn?.(
-        {
-          message: `${this.logPrefix} Best-effort document meta lookup failed; attachment dimensions omitted`,
-          documentId,
-          error: error instanceof Error ? error.message : String(error),
-        },
-        this.logContext
-      );
-      return null;
-    }
-  }
-
-  /**
-   * BATCHED sibling of `getDocumentMeta` (feature 013):
+   * Fetch image dimensions for many documents in ONE call (feature 013):
    * `POST /internal/file/meta-batch` with `{ ids: [...] }`, answering
-   * `{ files: [ <documentMetaResponse>, ... ] }` — the SAME per-element shape the
-   * by-id `/meta` route returns, so each element deserializes as a
-   * `DocumentReferenceResult`.
+   * `{ files: [ <documentMetaResponse>, ... ] }` — the same per-element shape
+   * returned by-reference, so each element deserializes as a
+   * `DocumentReferenceResult` (`imageWidth` / `imageHeight` are all the caller
+   * reads). Those dims are transient, file-service-owned fields (cached
+   * `content_metadata`), absent from the server's Document entity after a DB
+   * load, so an attachment ref can only carry them by asking file-service.
    *
    * WHY BATCHED: the READ path needs file-service's own MEASUREMENT of the stored
    * bytes (`imageWidth`/`imageHeight`) to outrank the Matrix event's
    * CLIENT-ASSERTED `info.w`/`info.h`, but `Message.attachments` is a
-   * `@ResolveField` over UNPAGINATED history — a per-attachment `/meta` GET there
-   * is an unbounded N+1. One request per message (<= MAX_MESSAGE_ATTACHMENTS = 10
-   * ids) makes the authoritative source affordable.
+   * `@ResolveField` over UNPAGINATED history — a per-attachment by-id meta GET
+   * there is an unbounded N+1. One request per message (<=
+   * MAX_MESSAGE_ATTACHMENTS = 10 ids) — and, via the request-scoped dims
+   * DataLoader, one per READ — makes the authoritative source affordable.
    *
    * PARTIAL RESULTS ARE NORMAL: ids that do not resolve are simply OMITTED from
    * `files` — a partial answer is a 200, not an error. Response ORDER is not
    * guaranteed, so the result is returned as a Map keyed by `id`; a caller reads
    * "no measurement for this id" as a missing key, never as a positional gap.
    *
-   * BEST-EFFORT + FULLY ISOLATED — the resilience policy is `getDocumentMeta`'s,
-   * verbatim, and for the same reason: image dims are a cosmetic rendering hint,
-   * so this fetch MUST NOT (a) block a read for long, or (b) pollute the SHARED
-   * circuit breaker that guards uploads/pins. It therefore does NOT route through
-   * `sendRequest` / `checkEnabledAndCircuit`: a DIRECT axios POST with the SHORT
-   * `DOCUMENT_META_TIMEOUT_MS` timeout, ZERO retries, and no breaker accounting.
-   * EVERY failure (timeout / 4xx / 5xx / network) resolves to an EMPTY map —
-   * never propagating, never failing or blocking a read. A 404 stays QUIET: it is
-   * what a file-service predating this route answers, so during rollout the read
-   * path silently falls back to the event-asserted dims instead of logging once
-   * per message. Every other failure is logged at WARN so dropped dimensions stay
-   * observable. The `enabled` gate is kept (empty map, does not throw).
+   * BEST-EFFORT + FULLY ISOLATED (deliberately unlike every other method here):
+   * image dims are a cosmetic rendering hint, so this fetch MUST NOT be able to
+   * (a) block a send or a read for long, or (b) pollute the SHARED circuit
+   * breaker that guards uploads/pins — a degraded `/meta-batch` must never
+   * fast-fail unrelated healthy file-service traffic. It therefore does NOT route
+   * through `sendRequest` / `checkEnabledAndCircuit`: a DIRECT axios POST with the
+   * SHORT `DOCUMENT_META_TIMEOUT_MS` timeout, ZERO retries, and no breaker
+   * accounting. EVERY failure (timeout / 4xx / 5xx / network) resolves to an EMPTY
+   * map — never propagating, never failing or blocking a send or a read. A 404
+   * stays QUIET: it is what a file-service predating this route answers, so during
+   * rollout the read path silently falls back to the event-asserted dims instead
+   * of logging once per message. Every other failure is logged at WARN so dropped
+   * dimensions stay observable. The `enabled` gate is kept (empty map, does not
+   * throw). Callers also guard the result, as defence-in-depth.
    */
   async getDocumentMetaBatch(
     documentIds: string[]
@@ -444,10 +388,6 @@ export class FileServiceAdapter extends HttpClientBase {
 
   private fileContentPath(documentId: string): string {
     return `${this.filePath(documentId)}/content`;
-  }
-
-  private fileMetaPath(documentId: string): string {
-    return `${this.filePath(documentId)}/meta`;
   }
 
   private checkEnabledAndCircuit(operation: string): void {

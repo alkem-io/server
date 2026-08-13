@@ -125,10 +125,6 @@ describe('MessageAttachmentService', () => {
     authorizationPolicyService.save.mockResolvedValue({
       id: 'minted-auth',
     } as any);
-    // Real signature is `Promise<DocumentReferenceResult | null>`; default to the
-    // "no meta" answer so a test that does not care about dims never picks up a
-    // deep-mock proxy as a width/height value.
-    fileServiceAdapter.getDocumentMeta.mockResolvedValue(null);
     // Read path: dims come from ONE batched `meta:batch` call per message. Real
     // signature is `Promise<Map<string, DocumentReferenceResult>>`; default to
     // "file-service has no measurement for anything" so a test that does not care
@@ -285,9 +281,8 @@ describe('MessageAttachmentService', () => {
       // persistOutboundAttachments (called only after the send succeeds), so
       // resolve itself must not flip anything.
       expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      // Dims are sourced from file-service's BATCHED meta endpoint, never the
-      // per-document by-id GET.
-      expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
+      // Dims are sourced from file-service's BATCHED meta endpoint — ONE call
+      // carrying every image id, never one request per document.
       expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledWith([
         'doc-1',
       ]);
@@ -375,7 +370,6 @@ describe('MessageAttachmentService', () => {
         ['doc-pdf']
       );
 
-      expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
       expect(fileServiceAdapter.getDocumentMetaBatch).not.toHaveBeenCalled();
       expect(refs).toEqual([
         {
@@ -475,7 +469,6 @@ describe('MessageAttachmentService', () => {
       ]);
       // The headline invariant, asserted by CALL COUNT: ONE request for the whole
       // send, carrying every image id — never one per attachment.
-      expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
       expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledTimes(1);
       expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledWith([
         'img-a',
@@ -488,7 +481,7 @@ describe('MessageAttachmentService', () => {
       // The per-id getDocumentOrFail loads are independent I/O and must be issued
       // concurrently (worst-case ~1 round-trip, not N) BEFORE the CPU-only
       // validation pass. Track concurrency of the loads and assert the returned
-      // refs keep documentIds order. Non-image docs so getDocumentMeta stays out
+      // refs keep documentIds order. Non-image docs so the dims batch stays out
       // of the way — this isolates the load-concurrency assertion.
       const docs: Record<string, any> = {
         'doc-x': {
@@ -1857,8 +1850,9 @@ describe('MessageAttachmentService', () => {
 
     it('C1: inbound read resolution issues NO breaker-accounted file-service lookup, and batches the whole message into ONE query', async () => {
       // getDocumentByReference IS accounted against the SHARED file-service
-      // circuit breaker (unlike getDocumentMeta), and Message.attachments is an
-      // unpaginated @ResolveField — so one per attachment could trip the breaker
+      // circuit breaker (unlike the best-effort dims batch, which deliberately
+      // bypasses it), and Message.attachments is an unpaginated @ResolveField —
+      // so one per attachment could trip the breaker
       // that guards uploads platform-wide. Inbound refs are now resolved from the
       // server's own DB, once per message.
       inboundDocuments(
@@ -2058,7 +2052,6 @@ describe('MessageAttachmentService', () => {
         {} as any
       );
 
-      expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
       expect(fileServiceAdapter.getDocumentMetaBatch).not.toHaveBeenCalled();
       expect(result).toEqual([
         expect.objectContaining({
@@ -2465,7 +2458,6 @@ describe('MessageAttachmentService', () => {
         { document_id: 'doc-c', mime_type: 'image/png', size: 1 }
       );
 
-      expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
       expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledTimes(1);
       expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledWith([
         'doc-a',
@@ -2592,7 +2584,6 @@ describe('MessageAttachmentService', () => {
         size: 1000,
       });
 
-      expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
       expect(fileServiceAdapter.getDocumentMetaBatch).not.toHaveBeenCalled();
       expect(result).toEqual([
         expect.objectContaining({
@@ -2636,7 +2627,6 @@ describe('MessageAttachmentService', () => {
       });
 
       expect(result).toEqual([]);
-      expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
       expect(fileServiceAdapter.getDocumentMetaBatch).not.toHaveBeenCalled();
     });
 
@@ -2706,7 +2696,6 @@ describe('MessageAttachmentService', () => {
       );
 
       expect(fileServiceAdapter.getDocumentByReference).not.toHaveBeenCalled();
-      expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
       expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledTimes(1);
       expect(result).toEqual([
         expect.objectContaining({ width: 320, height: 240 }),
