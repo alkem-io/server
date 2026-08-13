@@ -37,6 +37,15 @@ const FILE_PATH_PREFIX = '/internal/file';
  */
 const DOCUMENT_META_TIMEOUT_MS = 2500;
 
+/**
+ * Hard cap file-service enforces on ONE `POST /internal/file/meta-batch`
+ * request: more than this many ids is a 400, not a partial answer. Callers are
+ * chunked to it internally (see `getDocumentMetaBatch`) so an oversized batch
+ * degrades into several bounded requests instead of losing everything to a 400.
+ * Real callers are far below it — a chat message carries at most 10 attachments.
+ */
+const DOCUMENT_META_BATCH_MAX_IDS = 100;
+
 @Injectable()
 export class FileServiceAdapter extends HttpClientBase {
   private readonly enabled: boolean;
@@ -325,6 +334,107 @@ export class FileServiceAdapter extends HttpClientBase {
         this.logContext
       );
       return null;
+    }
+  }
+
+  /**
+   * BATCHED sibling of `getDocumentMeta` (feature 013):
+   * `POST /internal/file/meta-batch` with `{ ids: [...] }`, answering
+   * `{ files: [ <documentMetaResponse>, ... ] }` — the SAME per-element shape the
+   * by-id `/meta` route returns, so each element deserializes as a
+   * `DocumentReferenceResult`.
+   *
+   * WHY BATCHED: the READ path needs file-service's own MEASUREMENT of the stored
+   * bytes (`imageWidth`/`imageHeight`) to outrank the Matrix event's
+   * CLIENT-ASSERTED `info.w`/`info.h`, but `Message.attachments` is a
+   * `@ResolveField` over UNPAGINATED history — a per-attachment `/meta` GET there
+   * is an unbounded N+1. One request per message (<= MAX_MESSAGE_ATTACHMENTS = 10
+   * ids) makes the authoritative source affordable.
+   *
+   * PARTIAL RESULTS ARE NORMAL: ids that do not resolve are simply OMITTED from
+   * `files` — a partial answer is a 200, not an error. Response ORDER is not
+   * guaranteed, so the result is returned as a Map keyed by `id`; a caller reads
+   * "no measurement for this id" as a missing key, never as a positional gap.
+   *
+   * BEST-EFFORT + FULLY ISOLATED — the resilience policy is `getDocumentMeta`'s,
+   * verbatim, and for the same reason: image dims are a cosmetic rendering hint,
+   * so this fetch MUST NOT (a) block a read for long, or (b) pollute the SHARED
+   * circuit breaker that guards uploads/pins. It therefore does NOT route through
+   * `sendRequest` / `checkEnabledAndCircuit`: a DIRECT axios POST with the SHORT
+   * `DOCUMENT_META_TIMEOUT_MS` timeout, ZERO retries, and no breaker accounting.
+   * EVERY failure (timeout / 4xx / 5xx / network) resolves to an EMPTY map —
+   * never propagating, never failing or blocking a read. A 404 stays QUIET: it is
+   * what a file-service predating this route answers, so during rollout the read
+   * path silently falls back to the event-asserted dims instead of logging once
+   * per message. Every other failure is logged at WARN so dropped dimensions stay
+   * observable. The `enabled` gate is kept (empty map, does not throw).
+   */
+  async getDocumentMetaBatch(
+    documentIds: string[]
+  ): Promise<Map<string, DocumentReferenceResult>> {
+    const metaById = new Map<string, DocumentReferenceResult>();
+    if (!this.enabled || documentIds.length === 0) {
+      return metaById;
+    }
+
+    // De-duplicate: the answer is keyed by id, so a repeated id buys nothing and
+    // only eats into the 100-id budget.
+    const uniqueIds = [...new Set(documentIds)];
+    const chunks: string[][] = [];
+    for (let i = 0; i < uniqueIds.length; i += DOCUMENT_META_BATCH_MAX_IDS) {
+      chunks.push(uniqueIds.slice(i, i + DOCUMENT_META_BATCH_MAX_IDS));
+    }
+
+    // Chunks are independent and each degrades to `[]` on its own, so one bad
+    // chunk never costs the others their measurements.
+    const chunkResults = await Promise.all(
+      chunks.map(chunk => this.fetchDocumentMetaChunk(chunk))
+    );
+    for (const files of chunkResults) {
+      for (const file of files) {
+        if (file?.id) {
+          metaById.set(file.id, file);
+        }
+      }
+    }
+    return metaById;
+  }
+
+  /**
+   * One `meta-batch` request for at most `DOCUMENT_META_BATCH_MAX_IDS` ids.
+   * Resolves to the (possibly partial) `files` array, or `[]` on ANY failure —
+   * see `getDocumentMetaBatch` for the isolation rationale.
+   */
+  private async fetchDocumentMetaChunk(
+    documentIds: string[]
+  ): Promise<DocumentReferenceResult[]> {
+    const url = `${this.baseUrl}${FILE_PATH_PREFIX}/meta-batch`;
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post<{ files?: DocumentReferenceResult[] }>(
+          url,
+          { ids: documentIds },
+          { timeout: DOCUMENT_META_TIMEOUT_MS }
+        )
+      );
+      // Defensive: a malformed/absent `files` is treated as "no measurements"
+      // rather than throwing into a best-effort path.
+      return Array.isArray(response.data?.files) ? response.data.files : [];
+    } catch (error) {
+      if (isAxiosError(error) && error.response?.status === 404) {
+        // Expected against a file-service predating this route — stay quiet so
+        // rollout does not emit one WARN per message read.
+        return [];
+      }
+      this.logger.warn?.(
+        {
+          message: `${this.logPrefix} Best-effort batched document meta lookup failed; attachment dimensions omitted`,
+          documentIdCount: documentIds.length,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        this.logContext
+      );
+      return [];
     }
   }
 
