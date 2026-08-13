@@ -5,6 +5,7 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { CommunicationAdapterException } from '@services/adapters/communication-adapter/communication.adapter.exception';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mocked } from 'vitest';
@@ -125,6 +126,91 @@ describe('ConversationResolverMutations', () => {
         mockConversation.authorization,
         AuthorizationPrivilege.DELETE,
         expect.any(String)
+      );
+    });
+  });
+
+  // US2-AS4 live-verification: removeConversationMember/leaveConversation must
+  // never resolve `true` on nothing more than "the RPC was sent". The resolver
+  // has no try/catch around conversationService.removeMember, so whatever the
+  // service does is what the client sees: `true` means the member was removed
+  // on the Alkemio side (including the sec-server-11 local fallback when
+  // Matrix refuses the kick), and any rejection propagates as a real GraphQL
+  // error instead of being swallowed into an optimistic success.
+  describe('removeConversationMember / leaveConversation (US2-AS4)', () => {
+    const mockConversation = {
+      id: 'conv-1',
+      authorization: { id: 'auth-1' },
+    } as any;
+
+    beforeEach(() => {
+      conversationService.getConversationOrFail.mockResolvedValue(
+        mockConversation
+      );
+      authorizationService.grantAccessOrFail.mockReturnValue(undefined as any);
+    });
+
+    it('removeConversationMember returns true when the Matrix kick is confirmed', async () => {
+      conversationService.removeMember.mockResolvedValue(mockConversation);
+
+      const result = await resolver.removeConversationMember(actorContext, {
+        conversationID: 'conv-1',
+        memberID: 'member-1',
+      } as any);
+
+      expect(result).toBe(true);
+      expect(conversationService.removeMember).toHaveBeenCalledWith(
+        'conv-1',
+        'member-1'
+      );
+    });
+
+    it('sec-server-11: returns true when Matrix rejected the kick but the service removed the member locally', async () => {
+      // The service downgrades a refused Matrix kick to an authoritative
+      // local removal, so it RESOLVES — `true` documents "removed on the
+      // Alkemio side", not "Matrix confirmed the kick".
+      conversationService.removeMember.mockResolvedValue(mockConversation);
+
+      await expect(
+        resolver.removeConversationMember(actorContext, {
+          conversationID: 'conv-1',
+          memberID: 'member-1',
+        } as any)
+      ).resolves.toBe(true);
+    });
+
+    it('removeConversationMember propagates a service failure instead of returning true', async () => {
+      // Everything the service does NOT downgrade (transport failures,
+      // programming errors, an adapter exception raised outside the kick
+      // fallback) must surface as a GraphQL error.
+      conversationService.removeMember.mockRejectedValue(
+        CommunicationAdapterException.fromAdapterError('batchRemoveMember', {
+          code: 'NOT_ALLOWED',
+          message: 'insufficient power level',
+        })
+      );
+
+      await expect(
+        resolver.removeConversationMember(actorContext, {
+          conversationID: 'conv-1',
+          memberID: 'member-1',
+        } as any)
+      ).rejects.toThrow(CommunicationAdapterException);
+    });
+
+    it('leaveConversation propagates a service failure instead of returning true', async () => {
+      conversationService.removeMember.mockRejectedValue(
+        new Error('rabbit transport failure')
+      );
+
+      await expect(
+        resolver.leaveConversation(actorContext, {
+          conversationID: 'conv-1',
+        } as any)
+      ).rejects.toThrow('rabbit transport failure');
+      expect(conversationService.removeMember).toHaveBeenCalledWith(
+        'conv-1',
+        actorContext.actorID
       );
     });
   });

@@ -134,7 +134,7 @@ describe('communication.adapter.response utilities', () => {
   describe('processBatchResponse', () => {
     it('should process successful batch', () => {
       const result = processBatchResponse({
-        BaseResponse: { success: true } as any,
+        success: true,
         results: {
           'item-1': { success: true } as any,
           'item-2': { success: true } as any,
@@ -149,7 +149,7 @@ describe('communication.adapter.response utilities', () => {
 
     it('should process mixed batch', () => {
       const result = processBatchResponse({
-        BaseResponse: { success: false } as any,
+        success: false,
         results: {
           'item-1': { success: true } as any,
           'item-2': {
@@ -165,9 +165,35 @@ describe('communication.adapter.response utilities', () => {
       expect(result.itemErrors.has('item-2')).toBe(true);
     });
 
+    it('should treat a batch as failed when the envelope reports success but an item did not (the reported live defect)', () => {
+      // Reproduces the exact wire shape observed in US2-AS4: the top-level
+      // envelope says success:true (the RPC itself was processed) while the
+      // single room's kick failed with NOT_ALLOWED — the envelope flag must
+      // never be trusted in isolation.
+      const result = processBatchResponse({
+        success: true,
+        results: {
+          '!room-1:alkemio.matrix.host': {
+            success: false,
+            error: {
+              code: ErrCodeNotAllowed,
+              message: 'insufficient power level',
+            },
+          } as any,
+        },
+      });
+
+      expect(result.successCount).toBe(0);
+      expect(result.failureCount).toBe(1);
+      expect(result.itemErrors.get('!room-1:alkemio.matrix.host')?.code).toBe(
+        ErrCodeNotAllowed
+      );
+      expect(isBatchOperationSuccessful(result, 'all')).toBe(false);
+    });
+
     it('should handle empty results', () => {
       const result = processBatchResponse({
-        BaseResponse: { success: true } as any,
+        success: true,
       });
 
       expect(result.successCount).toBe(0);
@@ -176,7 +202,7 @@ describe('communication.adapter.response utilities', () => {
 
     it('should handle failed item without error object', () => {
       const result = processBatchResponse({
-        BaseResponse: { success: false } as any,
+        success: false,
         results: {
           'item-1': { success: false } as any,
         },
