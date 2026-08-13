@@ -757,7 +757,12 @@ describe('MessageAttachmentService', () => {
       await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
         {
           media_id: 'media-1',
-          display_name: '../../etc/pas swd\n',
+          // NUL is written as an ESCAPE, never as a raw 0x00 byte: a literal NUL
+          // makes this whole file classify as BINARY, so grep/rg silently skip
+          // it (it stops being greppable, which has already caused a
+          // near-miss when verifying dead code). The sanitizer sees the same
+          // character either way.
+          display_name: '../../etc/pas\u0000swd\n',
           mime_type: 'image/png',
           size: 1,
         },
