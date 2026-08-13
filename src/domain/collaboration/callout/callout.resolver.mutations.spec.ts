@@ -900,8 +900,11 @@ describe('CalloutResolverMutations', () => {
       expect(reactionService.removeReaction).not.toHaveBeenCalled();
     });
 
-    it('delegates to removeReaction (idempotent) and returns the refreshed Callout', async () => {
-      const callout = { id: 'callout-1' } as any;
+    it('delegates to removeReaction (idempotent) and returns the Callout when the caller has READ', async () => {
+      const callout = {
+        id: 'callout-1',
+        authorization: { id: 'auth-1' },
+      } as any;
       vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
       vi.mocked(reactionService.removeReaction).mockResolvedValue(undefined);
 
@@ -914,8 +917,35 @@ describe('CalloutResolverMutations', () => {
       expect(result).toBe(callout);
     });
 
-    it('does NOT require CONTRIBUTE — no grantAccessOrFail call for the remove path', async () => {
-      const callout = { id: 'callout-1' } as any;
+    it('requires READ on the Callout before disclosing metadata — throws when READ is denied', async () => {
+      const callout = {
+        id: 'callout-1',
+        authorization: { id: 'auth-1' },
+      } as any;
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(reactionService.removeReaction).mockResolvedValue(undefined);
+      vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(
+        () => {
+          throw new ValidationException('forbidden', 'test' as any);
+        }
+      );
+
+      await expect(
+        resolver.removeReactionFromCallout(
+          { actorID: 'user-1' } as any,
+          { calloutID: 'callout-1' } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      // The reaction is still removed (idempotent self-cleanup) even when READ is lost.
+      expect(reactionService.removeReaction).toHaveBeenCalled();
+    });
+
+    it('does NOT require CONTRIBUTE — only READ is checked on the remove path', async () => {
+      const callout = {
+        id: 'callout-1',
+        authorization: { id: 'auth-1' },
+      } as any;
       vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
       vi.mocked(reactionService.removeReaction).mockResolvedValue(undefined);
 
@@ -924,8 +954,19 @@ describe('CalloutResolverMutations', () => {
         { calloutID: 'callout-1' } as any
       );
 
-      // The remove path is authentication-only; no authorization policy is checked.
-      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        expect.objectContaining({ actorID: 'user-1' }),
+        callout.authorization,
+        AuthorizationPrivilege.READ,
+        expect.any(String)
+      );
+      // CONTRIBUTE must not be checked on the remove path.
+      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        AuthorizationPrivilege.CONTRIBUTE,
+        expect.any(String)
+      );
     });
   });
 });

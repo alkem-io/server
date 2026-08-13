@@ -908,7 +908,7 @@ export class CalloutResolverMutations {
 
   @Mutation(() => ICallout, {
     description:
-      "Removes the requesting user's reaction from a Callout. Idempotent — no error when no reaction exists. Self-scoped; requires only authentication (not CONTRIBUTE), so a person who left the space can still retract their own reaction.",
+      "Removes the requesting user's reaction from a Callout. Idempotent — no error when no reaction exists. Self-scoped; requires only authentication (not CONTRIBUTE). Returns the Callout only when the caller retains READ access on it.",
   })
   async removeReactionFromCallout(
     @CurrentActor() actorContext: ActorContext,
@@ -923,13 +923,30 @@ export class CalloutResolverMutations {
       );
     }
 
+    // Fetch with authorization relation so the READ check below can proceed.
+    const callout = await this.calloutService.getCalloutOrFail(
+      reactionData.calloutID,
+      { relations: { authorization: true } }
+    );
+
     // Idempotent: removal is a no-op if no reaction exists.
     await this.reactionService.removeReaction(
       ReactionType.POST,
-      reactionData.calloutID,
+      callout.id,
       actorContext.actorID
     );
 
-    return this.calloutService.getCalloutOrFail(reactionData.calloutID);
+    // Verify the caller can read the callout before disclosing any of its
+    // fields. This prevents the mutation from acting as an IDOR oracle —
+    // a caller who has already lost space membership cannot use it to read
+    // callout metadata across space boundaries.
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      callout.authorization,
+      AuthorizationPrivilege.READ,
+      `read callout after reaction removal: ${callout.id}`
+    );
+
+    return callout;
   }
 }
