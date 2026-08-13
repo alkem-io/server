@@ -88,6 +88,26 @@ const clampToUtf8Bytes = (value: string, maxBytes: number): string => {
  *
  * Iteration is by CODE POINT (`for..of`) so astral characters (emoji, CJK
  * extension planes) are never split into lone surrogates.
+ *
+ * KNOWN CROSS-LANGUAGE EDGE CASE (accepted, not handled):
+ * "nothing survives" is decided with JS `String.prototype.trim()`, while
+ * file-service decides the same thing with Go's `strings.TrimSpace`
+ * (`unicode.IsSpace`). The two whitespace sets differ by exactly two code
+ * points:
+ *   - U+0085 (NEL) — Go trims it, JS does NOT. A display_name consisting ONLY
+ *     of U+0085 therefore passes the check here, is sent as-is, and is rejected
+ *     by file-service ("displayName must not be empty or whitespace-only"),
+ *     failing that attachment's re-home PATCH. Effect is bounded to ONE
+ *     attachment whose sender deliberately crafted a filename of nothing but
+ *     NELs; the media stays in Synapse staging and every other attachment on
+ *     the message is unaffected.
+ *   - U+FEFF (BOM/ZWNBSP) — JS trims it, Go does NOT. This direction is SAFE:
+ *     we are strictly stricter, so anything we send is still storable.
+ * If it is ever worth closing, trim against the UNION set
+ * (a character class of JS `\\s` plus U+0085): a value non-empty after that is
+ * guaranteed non-empty under `strings.TrimSpace` too. C1 controls beyond U+0085
+ * need nothing — file-service's control-character rule is `r < 0x20 || r ==
+ * 0x7f`, exactly the set already dropped above.
  */
 export const sanitizeAttachmentDisplayName = (
   displayName: string | undefined | null,

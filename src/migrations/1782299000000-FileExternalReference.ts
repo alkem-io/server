@@ -59,6 +59,22 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * partial apply or rerun is a safe no-op. (Partial CONCURRENTLY index builds
  * touch zero existing rows — every legacy row has `externalReference IS NULL` —
  * so they complete instantly and cannot fail on current prod data.)
+ *
+ * KNOWN OPERATIONAL EDGE CASE (accepted, not handled here):
+ * a CONCURRENTLY index build that is cancelled or killed mid-flight leaves an
+ * INVALID index behind, and `IF NOT EXISTS` then SKIPS it on every rerun — so a
+ * green migration would not, in that one scenario, imply an enforced
+ * partial-unique constraint. It is not handled in this migration because the
+ * builds here touch ZERO rows (every pre-013 row has `externalReference IS
+ * NULL`), so they complete instantly and have effectively no window in which to
+ * be interrupted. If it ever does bite, the repair pattern already exists in
+ * this repo: see 1784200000000-AddFileExternalIDIndex, which probes
+ * `pg_index.indisvalid` and DROPs an invalid index before rebuilding. Detection
+ * meanwhile is a plain query:
+ *   SELECT c.relname, i.indisvalid FROM pg_index i
+ *   JOIN pg_class c ON c.oid = i.indexrelid
+ *   WHERE c.relname IN ('UQ_file_externalReference_storageBucketId',
+ *                       'IDX_file_externalReference');
  */
 export class FileExternalReference1782299000000 implements MigrationInterface {
   name = 'FileExternalReference1782299000000';
