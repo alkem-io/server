@@ -177,12 +177,15 @@ describe('ConversationService', () => {
       expect(conversationRepo.remove).toHaveBeenCalled();
     });
 
-    it('B1: a failed storage teardown leaves the conversation AUTHORIZATION intact, so the delete stays retryable', async () => {
+    it('B1: a failed storage teardown leaves the conversation ROOM and AUTHORIZATION intact, so the delete stays retryable', async () => {
       // storageAggregatorService.delete is a fallible, multi-step REMOTE teardown
-      // (one file-service call per document). Deleting the conversation's
-      // authorization policy first meant a teardown failure left the row alive
-      // with a NULL authorizationId — nothing could then authorize a retry, so
-      // the conversation became permanently undeletable.
+      // (one file-service call per document), so it must run before anything
+      // that destroys the conversation row:
+      //  * deleting the authorization first left the row alive with a NULL
+      //    authorizationId — nothing could authorize a retry;
+      //  * deleting the ROOM first cascade-deleted the conversation row itself
+      //    (Conversation.room is a FK with onDelete: CASCADE), stranding the
+      //    bucket + every attachment with no row left to retry from.
       const mockConversation = {
         id: 'conv-1',
         room: { id: 'room-1', type: RoomType.CONVERSATION_DIRECT },
@@ -200,8 +203,38 @@ describe('ConversationService', () => {
         'file-service unavailable'
       );
 
+      expect(roomService.deleteRoom).not.toHaveBeenCalled();
       expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
       expect(conversationRepo.remove).not.toHaveBeenCalled();
+    });
+
+    it('tears the remote storage down BEFORE the cascade-deleting room delete', async () => {
+      const order: string[] = [];
+      const mockConversation = {
+        id: 'conv-1',
+        room: { id: 'room-1', type: RoomType.CONVERSATION_DIRECT },
+        authorization: { id: 'auth-1' },
+        messaging: { id: 'messaging-1' },
+        storageAggregator: { id: 'agg-1' },
+      } as unknown as Conversation;
+
+      conversationRepo.findOne.mockResolvedValue(mockConversation);
+      conversationRepo.remove.mockResolvedValue({
+        ...mockConversation,
+        id: '',
+      } as Conversation);
+      storageAggregatorService.delete.mockImplementation(async () => {
+        order.push('storage');
+        return undefined as any;
+      });
+      roomService.deleteRoom.mockImplementation(async () => {
+        order.push('room');
+        return undefined as any;
+      });
+
+      await service.deleteConversation('conv-1');
+
+      expect(order).toEqual(['storage', 'room']);
     });
 
     it('should throw EntityNotInitializedException when room is missing', async () => {

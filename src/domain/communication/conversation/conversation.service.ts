@@ -642,6 +642,41 @@ export class ConversationService {
     // Note: Conversations now belong to the platform Messaging, not to a user.
     // Memberships are cleaned up via cascade when the conversation is deleted.
 
+    // Release the per-conversation storage (feature 013) as the SINGLE deletion
+    // path (FIX 5). Delete the aggregator EXPLICITLY — this cleans its bucket +
+    // documents + auth (StorageAggregatorService.delete). The relation no longer
+    // cascade-removes (cascade: insert/update only), so the later
+    // conversationRepository.remove does NOT double-delete the already-removed
+    // aggregator (which previously threw EntityNotFound and orphaned bucket/docs).
+    // Detach the in-memory reference as well, so nothing revisits the removed row.
+    //
+    // ORDERING — this MUST run before BOTH the room delete and the authorization
+    // delete, because it is the only fallible REMOTE step (a file-service HTTP
+    // call per document) and it is the only one whose failure must stay
+    // recoverable:
+    //
+    //  * BEFORE `deleteRoom`: `Conversation.room` is a `@JoinColumn` FK declared
+    //    `onDelete: 'CASCADE'`, so deleting the ROOM row cascade-deletes the
+    //    CONVERSATION row with it. Running the teardown after `deleteRoom` meant
+    //    a teardown failure stranded the bucket + every attachment with NO
+    //    conversation row left to retry the delete from — unrecoverable, and the
+    //    opposite of what the previous comment here claimed.
+    //  * BEFORE the authorization delete: a teardown failure would otherwise
+    //    leave the conversation alive with a NULL authorizationId, so nothing
+    //    could authorize a retry — the conversation became undeletable.
+    //
+    // With the teardown first, a failure here leaves the conversation, its room
+    // and its authorization FULLY INTACT and the delete simply retryable. The
+    // reverse partial (storage released, then `deleteRoom` fails) is also
+    // recoverable: `storageAggregatorId` is `onDelete: 'SET NULL'`, so the
+    // surviving conversation just has no aggregator and the retry skips straight
+    // past this block.
+    const storageAggregatorId = conversation.storageAggregator?.id;
+    if (storageAggregatorId) {
+      await this.storageAggregatorService.delete(storageAggregatorId);
+      conversation.storageAggregator = undefined;
+    }
+
     // Delete the room entity
     const room = conversation.room;
     // For direct messaging rooms, provide sender/receiver IDs to handle Matrix cleanup
@@ -649,32 +684,14 @@ export class ConversationService {
       `Deleting conversation room (${room.id}) of type (${room.type})`,
       LogContext.COMMUNICATION_CONVERSATION
     );
-    // The Matrix adapter handles room type internally
+    // The Matrix adapter handles room type internally. NOTE: this also
+    // cascade-deletes the conversation row itself (see the FK note above), so
+    // everything after this point operates on an already-removed row —
+    // `authorizationPolicyService.delete` still cleans the now-unreferenced
+    // policy, and `conversationRepository.remove` is a no-op DELETE by id.
     await this.roomService.deleteRoom({
       roomID: conversation.room.id,
     });
-
-    // Release the per-conversation storage (feature 013) as the SINGLE deletion
-    // path (FIX 5). Delete the aggregator EXPLICITLY first — this cleans its
-    // bucket + documents + auth (StorageAggregatorService.delete). The relation
-    // no longer cascade-removes (cascade: insert/update only), so the subsequent
-    // conversationRepository.remove does NOT double-delete the already-removed
-    // aggregator (which previously threw EntityNotFound and orphaned bucket/docs).
-    // Detach the in-memory reference as well, so nothing revisits the removed row.
-    //
-    // ORDERING (B1): this runs BEFORE the authorization policy is deleted.
-    // StorageAggregatorService.delete is a FALLIBLE, multi-step REMOTE teardown
-    // (a file-service HTTP call per document). Deleting the conversation's
-    // authorization policy first meant a storage-teardown failure left the
-    // conversation row alive with a NULL authorizationId — nothing could then
-    // authorize a retry of the delete, so the conversation became permanently
-    // undeletable. Doing all fallible remote work first means a failure here
-    // leaves the conversation fully intact and the delete simply retryable.
-    const storageAggregatorId = conversation.storageAggregator?.id;
-    if (storageAggregatorId) {
-      await this.storageAggregatorService.delete(storageAggregatorId);
-      conversation.storageAggregator = undefined;
-    }
 
     await this.authorizationPolicyService.delete(conversation.authorization);
 
