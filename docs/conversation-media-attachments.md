@@ -59,6 +59,19 @@ type/size satisfy the bucket policy. It then threads `AttachmentRef`s to
 matrix-adapter via `SendMessageRequest.attachments`; the adapter embeds
 `io.alkemio.document_id` on the outbound `m.image`/`m.file` event.
 
+For **image** attachments the refs also carry `width`/`height`, sourced from
+file-service's by-id meta endpoint (`getDocumentMeta`) — the intrinsic dims are
+transient, file-service-owned fields, so the DB load above leaves them undefined.
+They become the outbound `m.image` event's `info.w`/`info.h`, which is what stops
+Element (and every other Matrix client) reflowing its layout as the image loads;
+Element populates them for its own uploads, so omitting them would make us the
+worse client. The fan-out is hard-bounded — at most 10 attachments, one message
+at a time — and the fetches run in parallel after validation, so the worst case
+adds one short timeout, not ten. The lookup is best-effort and isolated (short
+timeout, zero retries, deliberate bypass of the shared file-service circuit
+breaker): any failure just leaves the dims undefined and can never fail or block
+the send.
+
 Documents are pinned durable (`temporaryLocation: false`) only **after** the send
 is confirmed, so a failed send leaves nothing pinned. Three anchors make the pin
 robust:
@@ -131,7 +144,11 @@ resolves dimensionless.
 
 The only harm a wrong `info.w`/`info.h` can do is make the sender's *own* image
 lay out slightly wrong in the viewer — cosmetic and self-inflicted, which is why
-second-guessing it is not worth a parallel measurement pipeline.
+second-guessing it is not worth a parallel measurement pipeline. Note the
+asymmetry with the send path above: *asserting* dims on our own uploads is what
+every Matrix client does and costs a bounded ≤10 fetches per send; *re-measuring*
+somebody else's would cost an unbounded fetch per attachment of unpaginated
+history, for no benefit.
 
 Failures degrade rather than propagate: an unresolvable bucket, a failed batch
 lookup, or a single bad attachment omits *that* attachment (or that message's

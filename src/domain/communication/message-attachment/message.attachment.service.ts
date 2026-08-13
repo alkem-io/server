@@ -275,6 +275,10 @@ export class MessageAttachmentService {
     );
 
     const refs: CommunicationMessageAttachment[] = [];
+    // Image refs whose dims are fetched AFTER validation (below). Each entry
+    // references its ref object (built in documentIds order) so the dims pass
+    // mutates dims in place without disturbing ref ORDER.
+    const imageRefs: CommunicationMessageAttachment[] = [];
     for (const outcome of settled) {
       // Ordered pass: surface position i's LOAD error at its position (e.g. a
       // not-found id), matching the old sequential loop that would have thrown
@@ -330,13 +334,57 @@ export class MessageAttachmentService {
 
       this.validateAgainstBucketPolicy(bucket, document);
 
-      refs.push({
+      const ref: CommunicationMessageAttachment = {
         documentId: document.id,
         displayName: document.displayName,
         mimeType: document.mimeType,
         size: document.size,
-      });
+      };
+      refs.push(ref);
+      if (document.mimeType?.startsWith('image/')) {
+        imageRefs.push(ref);
+      }
     }
+
+    // Outbound image dimensions: `imageWidth`/`imageHeight` are TRANSIENT,
+    // file-service-owned fields (cached content_metadata) — the getDocumentOrFail
+    // DB loads above leave them undefined on the server entities, so we source
+    // them from file-service's by-id meta endpoint. This lets an Alkemio-composed
+    // image reach matrix-adapter with intrinsic dimensions, which become the
+    // `m.image` event's `info.w`/`info.h`. Element populates those for its own
+    // uploads and every Matrix client renders them; omitting them makes us the
+    // worse client, and the viewer's layout reflows as the image loads.
+    //
+    // Bounded by construction, which is why a by-id call is fine HERE and not on
+    // the read path: a send carries at most MAX_MESSAGE_ATTACHMENTS (10)
+    // attachments, one message at a time. The fetches run in PARALLEL and only
+    // for images, AFTER validation — not sequentially inside the loop above,
+    // which would serialise up to 10 round-trips on the hot send path — so the
+    // worst-case added latency is ONE getDocumentMeta timeout, not N.
+    //
+    // BEST-EFFORT: getDocumentMeta is itself isolated (short timeout, zero
+    // retries, deliberate bypass of the shared file-service circuit breaker) and
+    // already resolves every failure to null. The try/catch here is
+    // defence-in-depth — and catches a SYNCHRONOUS throw, which `.catch()` alone
+    // would not — so a meta failure just leaves width/height undefined and can
+    // NEVER fail (or block) the send.
+    await Promise.all(
+      imageRefs.map(async ref => {
+        try {
+          const meta = await this.fileServiceAdapter.getDocumentMeta(
+            ref.documentId
+          );
+          // Same guard the read path applies to event-asserted dims: a value the
+          // GraphQL/wire layer cannot carry counts as ABSENT rather than as a
+          // dimension.
+          ref.width = this.toImageDimension(meta?.imageWidth);
+          ref.height = this.toImageDimension(meta?.imageHeight);
+        } catch {
+          // Dims omitted; the send proceeds. Refs keep their input ORDER either
+          // way — this pass only mutates in place.
+        }
+      })
+    );
 
     return refs;
   }
@@ -1208,15 +1256,17 @@ export class MessageAttachmentService {
   }
 
   /**
-   * Narrow an event-asserted `info.w`/`info.h` to a dimension the GraphQL layer
-   * can actually serialize, or `undefined` ("no dimension").
+   * Narrow a claimed image dimension to one the GraphQL/wire layer can actually
+   * carry, or `undefined` ("no dimension"). Used by BOTH directions: the read
+   * path's event-asserted `info.w`/`info.h`, and the send path's file-service
+   * `imageWidth`/`imageHeight`.
    *
-   * `IMessageAttachment.width`/`height` are GraphQL `Int`s, and the value comes
-   * verbatim off an attacker-influenceable Matrix event, so anything `Int`
-   * cannot represent — non-integer, non-finite, or outside the signed 32-bit
-   * range — would throw during response serialization and fail the whole message
-   * read. Non-positive is rejected on top: no image is 0 wide, so `0` is what an
-   * unmeasured/unknown sender reports, not a real dimension.
+   * `IMessageAttachment.width`/`height` are GraphQL `Int`s, and on the read path
+   * the value comes verbatim off an attacker-influenceable Matrix event, so
+   * anything `Int` cannot represent — non-integer, non-finite, or outside the
+   * signed 32-bit range — would throw during response serialization and fail the
+   * whole message read. Non-positive is rejected on top: no image is 0 wide, so
+   * `0` is what an unmeasured/unknown sender reports, not a real dimension.
    */
   private toImageDimension(value: number | undefined): number | undefined {
     return Number.isInteger(value as number) &&

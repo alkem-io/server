@@ -10,6 +10,7 @@ import { AlkemioConfig } from '@src/types/alkemio.config';
 import { isAxiosError } from 'axios';
 import FormData from 'form-data';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { firstValueFrom } from 'rxjs';
 import type {
   CopyDocumentInput,
   CreateDocumentMetadata,
@@ -26,6 +27,15 @@ import {
 
 const LOG_PREFIX = '[FileService]';
 const FILE_PATH_PREFIX = '/internal/file';
+
+/**
+ * SHORT timeout for the best-effort outbound image-dimensions fetch
+ * (`getDocumentMeta`). Deliberately far below the adapter's full request
+ * timeout: image dims are a cosmetic rendering hint on the hot send path, so a
+ * degraded file-service `/meta` must add at most this much latency — never the
+ * full timeout × retries — and must never block the send.
+ */
+const DOCUMENT_META_TIMEOUT_MS = 2500;
 
 @Injectable()
 export class FileServiceAdapter extends HttpClientBase {
@@ -255,12 +265,86 @@ export class FileServiceAdapter extends HttpClientBase {
     }
   }
 
+  /**
+   * Fetch a document's metadata by id (feature 013):
+   * `GET /internal/file/{documentId}/meta` — the by-id meta route
+   * `documentMetaResponse` backs. The OUTBOUND send path uses this to source
+   * intrinsic image dimensions (`imageWidth` / `imageHeight`): those are
+   * transient, file-service-owned fields (cached `content_metadata`), absent
+   * from the server's Document entity after a DB load, so the outbound
+   * attachment ref can only carry them by asking file-service. The `/meta`
+   * response is the SAME `documentMetaResponse` shape returned by-reference, so
+   * it deserializes as a `DocumentReferenceResult` (dims are all the caller
+   * reads).
+   *
+   * SEND PATH ONLY, and that is what keeps a by-id call affordable: one message
+   * carries at most `MAX_MESSAGE_ATTACHMENTS` (10) attachments and is sent one
+   * at a time, so the fan-out is hard-bounded. The READ path does NOT call this
+   * — it takes the Matrix event's own `info.w`/`info.h`, exactly as Element
+   * does — because `Message.attachments` resolves over UNPAGINATED history,
+   * where any per-attachment fetch is an unbounded N+1.
+   *
+   * BEST-EFFORT + FULLY ISOLATED (deliberately unlike every other method here):
+   * image dims are a cosmetic rendering hint, so this fetch MUST NOT be able to
+   * (a) block the hot send path for long, or (b) pollute the SHARED circuit
+   * breaker that guards uploads/pins — a degraded `/meta` must never fast-fail
+   * unrelated healthy file-service traffic. It therefore does NOT route through
+   * `sendRequest` / `checkEnabledAndCircuit`: it issues a DIRECT axios GET with a
+   * SHORT timeout (`DOCUMENT_META_TIMEOUT_MS`), ZERO retries, and no breaker
+   * accounting, and resolves EVERY failure (timeout / 4xx / 5xx / network / 404)
+   * to `null` — NEVER propagating. A benign 404 (no meta / not found) is expected
+   * and stays quiet; every other failure (timeout / 5xx / network / other) is
+   * logged at WARN so the dropped dimensions stay observable. The `enabled` gate
+   * is kept (returns `null`, does not throw). The caller also guards the result,
+   * as defence-in-depth.
+   */
+  async getDocumentMeta(
+    documentId: string
+  ): Promise<DocumentReferenceResult | null> {
+    if (!this.enabled) {
+      return null;
+    }
+
+    const url = `${this.baseUrl}${this.fileMetaPath(documentId)}`;
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get<DocumentReferenceResult>(url, {
+          timeout: DOCUMENT_META_TIMEOUT_MS,
+        })
+      );
+      return response.data;
+    } catch (error) {
+      // Best-effort: EVERY failure resolves to `null` — dims are a rendering
+      // hint, so the send proceeds without them and the shared breaker is
+      // untouched. A genuine 404 (the document has no meta / not found) is
+      // expected on this path and stays QUIET to avoid log spam; every other
+      // failure (timeout / 5xx / network / other) is logged at WARN so dropped
+      // dimensions are observable. Failures are logged but NEVER propagate.
+      if (isAxiosError(error) && error.response?.status === 404) {
+        return null;
+      }
+      this.logger.warn?.(
+        {
+          message: `${this.logPrefix} Best-effort document meta lookup failed; attachment dimensions omitted`,
+          documentId,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        this.logContext
+      );
+      return null;
+    }
+  }
+
   private filePath(documentId: string): string {
     return `${FILE_PATH_PREFIX}/${documentId}`;
   }
 
   private fileContentPath(documentId: string): string {
     return `${this.filePath(documentId)}/content`;
+  }
+
+  private fileMetaPath(documentId: string): string {
+    return `${this.filePath(documentId)}/meta`;
   }
 
   private checkEnabledAndCircuit(operation: string): void {

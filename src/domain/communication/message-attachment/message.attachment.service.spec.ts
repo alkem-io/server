@@ -124,6 +124,10 @@ describe('MessageAttachmentService', () => {
     // query per message. Default to "nothing re-homed yet" so a test that does
     // not care never picks up a deep-mock proxy as a document list.
     documentService.getDocumentsByReferencesInBucket.mockResolvedValue([]);
+    // SEND path only. Real signature is `Promise<DocumentReferenceResult | null>`;
+    // default to the "no meta" answer so a test that does not care about dims
+    // never picks up a deep-mock proxy as a width/height value.
+    fileServiceAdapter.getDocumentMeta.mockResolvedValue(null);
   });
 
   /**
@@ -313,6 +317,118 @@ describe('MessageAttachmentService', () => {
           size: 1000,
         },
       ]);
+    });
+
+    describe('outbound image dimensions', () => {
+      /** A sender-owned, staged, in-bucket doc of the given mime type. */
+      const outboundDoc = (id: string, mimeType: string) => ({
+        id,
+        createdBy: 'sender-1',
+        displayName: `${id}.bin`,
+        mimeType,
+        size: 1000,
+        temporaryLocation: true,
+        storageBucket: { id: CONV_BUCKET },
+        authorization: { id: `${id}-auth` },
+      });
+
+      it('sets width/height on IMAGE refs from file-service meta, so the m.image event carries info.w/info.h', async () => {
+        // WHY this exists: Element (and every Matrix client) populates info.w/h
+        // for its own uploads. Without these the outbound event is dimensionless
+        // and Element reflows its layout as our image loads.
+        documentService.getDocumentOrFail.mockImplementation(
+          async (id: string) => outboundDoc(id, 'image/png') as any
+        );
+        fileServiceAdapter.getDocumentMeta.mockImplementation(
+          async (id: string) =>
+            ({
+              id,
+              imageWidth: id === 'img-a' ? 640 : 100,
+              imageHeight: id === 'img-a' ? 480 : 50,
+            }) as any
+        );
+
+        const refs = await service.resolveOutboundAttachments(
+          conversationRoom,
+          { actorID: 'sender-1' } as any,
+          ['img-a', 'img-b']
+        );
+
+        // Dims are matched BY DOCUMENT ID, and ref order is untouched.
+        expect(refs).toEqual([
+          expect.objectContaining({
+            documentId: 'img-a',
+            width: 640,
+            height: 480,
+          }),
+          expect.objectContaining({
+            documentId: 'img-b',
+            width: 100,
+            height: 50,
+          }),
+        ]);
+        // Bounded: exactly one lookup per image, never more.
+        expect(fileServiceAdapter.getDocumentMeta).toHaveBeenCalledTimes(2);
+      });
+
+      it('a meta failure still SENDS: dims stay undefined and nothing throws', async () => {
+        documentService.getDocumentOrFail.mockImplementation(
+          async (id: string) => outboundDoc(id, 'image/png') as any
+        );
+        // Best-effort: even a REJECTION (not just the adapter's own null
+        // degradation) must never reach the send.
+        fileServiceAdapter.getDocumentMeta.mockRejectedValue(
+          new Error('file-service is down')
+        );
+
+        const refs = await service.resolveOutboundAttachments(
+          conversationRoom,
+          { actorID: 'sender-1' } as any,
+          ['img-a']
+        );
+
+        expect(refs).toHaveLength(1);
+        expect(refs[0].documentId).toBe('img-a');
+        expect(refs[0].width).toBeUndefined();
+        expect(refs[0].height).toBeUndefined();
+      });
+
+      it('a NON-IMAGE attachment triggers NO meta fetch at all', async () => {
+        documentService.getDocumentOrFail.mockImplementation(
+          async (id: string) => outboundDoc(id, 'application/pdf') as any
+        );
+
+        const refs = await service.resolveOutboundAttachments(
+          conversationRoom,
+          { actorID: 'sender-1' } as any,
+          ['doc-pdf']
+        );
+
+        expect(refs).toHaveLength(1);
+        expect(refs[0].width).toBeUndefined();
+        expect(refs[0].height).toBeUndefined();
+        expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
+      });
+
+      it('a dimension the wire cannot carry (0 / non-integer / out of Int range) counts as ABSENT', async () => {
+        documentService.getDocumentOrFail.mockImplementation(
+          async (id: string) => outboundDoc(id, 'image/png') as any
+        );
+        fileServiceAdapter.getDocumentMeta.mockResolvedValue({
+          id: 'img-a',
+          imageWidth: 0,
+          imageHeight: 1.5,
+        } as any);
+
+        const refs = await service.resolveOutboundAttachments(
+          conversationRoom,
+          { actorID: 'sender-1' } as any,
+          ['img-a']
+        );
+
+        expect(refs[0].width).toBeUndefined();
+        expect(refs[0].height).toBeUndefined();
+      });
     });
 
     it('[1] loads the attachment documents in PARALLEL, then validates in order (refs keep input order)', async () => {

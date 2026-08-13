@@ -1524,6 +1524,10 @@ export class CommunicationAdapter {
       display_name: a.displayName,
       mime_type: a.mimeType,
       size: a.size,
+      // Images only, and best-effort: these become the outbound `m.image`
+      // event's `info.w`/`info.h`. Undefined simply omits them.
+      width: a.width,
+      height: a.height,
     }));
   }
 

@@ -9,4 +9,13 @@ export interface CommunicationMessageAttachment {
   displayName: string;
   mimeType: string;
   size: number;
+  /**
+   * Intrinsic image dimensions, images only and best-effort — they become the
+   * outbound `m.image` event's `info.w`/`info.h`, which is what stops Element
+   * (and every other Matrix client) reflowing its layout as the image loads.
+   * Absent for non-images, and absent whenever the best-effort lookup did not
+   * answer: never load-bearing for the send.
+   */
+  width?: number;
+  height?: number;
 }

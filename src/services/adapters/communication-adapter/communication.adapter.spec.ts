@@ -375,6 +375,8 @@ describe('CommunicationAdapter', () => {
             displayName: 'pic.png',
             mimeType: 'image/png',
             size: 1000,
+            width: 10,
+            height: 20,
           },
         ],
       });
@@ -386,6 +388,10 @@ describe('CommunicationAdapter', () => {
           display_name: 'pic.png',
           mime_type: 'image/png',
           size: 1000,
+          // Dims must survive the mapper — they become the m.image event's
+          // info.w/info.h, so dropping them is what makes Element reflow.
+          width: 10,
+          height: 20,
         },
       ]);
     });
