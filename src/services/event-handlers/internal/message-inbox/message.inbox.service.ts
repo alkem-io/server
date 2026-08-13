@@ -241,6 +241,20 @@ export class MessageInboxService {
         threadID: payload.threadId || '',
         timestamp: originalMessage.timestamp,
         reactions: originalMessage.reactions ?? [],
+        // feature 013: an edit changes the message TEXT only — media is a
+        // separate event and is untouched by it. These three fields are what
+        // `Message.attachments` resolves from, and none of them is derivable
+        // from the edit payload, so rebuilding the published IMessage without
+        // them made the UPDATE resolve to `attachments: []` — i.e. editing a
+        // message made its media VANISH for every live subscriber (until a
+        // history re-read). Carry them over from the original message, which
+        // was just fetched and already has them (`rawAttachments` + `roomID`
+        // come from CommunicationAdapter.convertMessageDtoToIMessage;
+        // `storageBucketId` is only set by producers with room context, and is
+        // re-derived from `roomID` on the read path when absent).
+        rawAttachments: originalMessage.rawAttachments,
+        storageBucketId: originalMessage.storageBucketId,
+        roomID: originalMessage.roomID ?? room.id,
       }
     );
   }
