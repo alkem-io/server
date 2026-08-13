@@ -1,4 +1,7 @@
-import { DataLoaderCreator } from '@core/dataloader/creators/base';
+import {
+  DataLoaderCreator,
+  DataLoaderCreatorOptions,
+} from '@core/dataloader/creators/base';
 import { Injectable } from '@nestjs/common';
 import type { DocumentReferenceResult } from '@services/adapters/file-service-adapter/dto';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
@@ -24,7 +27,23 @@ export class MessageAttachmentDimsLoaderCreator
 {
   constructor(private readonly fileServiceAdapter: FileServiceAdapter) {}
 
-  public create(): MessageAttachmentDimsLoader {
-    return createMessageAttachmentDimsLoader(this.fileServiceAdapter);
+  /**
+   * `options` MUST be accepted and honoured — every other creator in this
+   * directory takes it, and `DataLoaderInterceptor` always supplies it. The
+   * field that matters here is `cache`: the interceptor sets it to FALSE for
+   * websocket/subscription contexts, because a subscription's loader instance
+   * is memoized on a connection-scoped GraphQL context and therefore outlives a
+   * single read. Ignoring the flag (the previous no-arg `create()`) meant a
+   * subscription got per-connection memoization of file-service's image
+   * measurements — so a document whose bytes were replaced kept serving the old
+   * dimensions for the life of the socket. Default to `true` so a non-GraphQL
+   * caller (or a test) still gets the per-request coalescing.
+   */
+  public create(
+    options?: DataLoaderCreatorOptions<DocumentReferenceResult | null>
+  ): MessageAttachmentDimsLoader {
+    return createMessageAttachmentDimsLoader(this.fileServiceAdapter, {
+      cache: options?.cache ?? true,
+    });
   }
 }

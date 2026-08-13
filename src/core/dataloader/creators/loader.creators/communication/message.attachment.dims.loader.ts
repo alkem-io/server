@@ -71,9 +71,17 @@ export type MessageAttachmentDimsLoader = DataLoader<
  * per-request GraphQL context. Both the DataLoader cache and the barrier state
  * below are therefore closed over per request, so one viewer's measurements — and
  * one request's participant count — can never leak into another's.
+ *
+ * `cache` comes from `DataLoaderInterceptor` via the creator and MUST be
+ * honoured: the interceptor sets it to FALSE on websocket/subscription
+ * contexts, where the GraphQL context (and therefore this loader) is scoped to
+ * the CONNECTION rather than to one read. With caching left on there, a
+ * measurement would be memoized for the life of the socket. Batching is
+ * unaffected either way — only memoization is.
  */
 export const createMessageAttachmentDimsLoader = (
-  fileServiceAdapter: FileServiceAdapter
+  fileServiceAdapter: FileServiceAdapter,
+  options?: { cache?: boolean }
 ): MessageAttachmentDimsLoader => {
   /** Messages that have registered but not yet reached their dims phase. */
   let activeMessages = 0;
@@ -130,7 +138,7 @@ export const createMessageAttachmentDimsLoader = (
       return documentIds.map(documentId => metaById.get(documentId) ?? null);
     },
     {
-      cache: true,
+      cache: options?.cache ?? true,
       name: 'MessageAttachmentDimsLoader',
       batchScheduleFn: scheduleDispatch,
     }
