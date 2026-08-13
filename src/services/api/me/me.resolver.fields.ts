@@ -1,14 +1,15 @@
-import { LogContext } from '@common/enums';
-import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { PaginationArgs } from '@core/pagination';
 import { PaginatedInAppNotifications } from '@core/pagination/paginated.in-app-notification';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Float, ResolveField, Resolver } from '@nestjs/graphql';
 import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
 import { MeQueryResults } from '@services/api/me/dto';
 import { CurrentActor } from '@src/common/decorators';
+import { LogContext } from '@src/common/enums';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CommunityApplicationResult } from './dto/me.application.result';
 import { MeConversationsResult } from './dto/me.conversations.result';
 import { CommunityInvitationResult } from './dto/me.invitation.result';
@@ -22,7 +23,9 @@ export class MeResolverFields {
   constructor(
     private meService: MeService,
     private userLookupService: UserLookupService,
-    private inAppNotificationService: InAppNotificationService
+    private inAppNotificationService: InAppNotificationService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   @ResolveField('notifications', () => PaginatedInAppNotifications, {
@@ -35,11 +38,15 @@ export class MeResolverFields {
     @Args('filter', { nullable: true }) filter?: NotificationEventsFilterInput
   ): Promise<PaginatedInAppNotifications> {
     if (!actorContext.actorID) {
-      throw new ForbiddenException(
-        'User could not be resolved',
-        LogContext.IN_APP_NOTIFICATION,
-        { actorContext }
+      this.logger.verbose?.(
+        'Degrading me.notifications to its empty value: request has no resolved actor',
+        LogContext.AUTH
       );
+      return {
+        total: 0,
+        items: [],
+        pageInfo: { hasNextPage: false, hasPreviousPage: false },
+      } as PaginatedInAppNotifications;
     }
 
     return await this.inAppNotificationService.getPaginatedNotifications(
@@ -57,10 +64,11 @@ export class MeResolverFields {
     @CurrentActor() actorContext: ActorContext
   ): Promise<number> {
     if (!actorContext.actorID) {
-      throw new ValidationException(
-        'Unable to retrieve unread notifications count; no userID provided.',
-        LogContext.IN_APP_NOTIFICATION
+      this.logger.verbose?.(
+        'Degrading me.notificationsUnreadCount to its empty value: request has no resolved actor',
+        LogContext.AUTH
       );
+      return 0;
     }
     // Always return the total unread count, regardless of any filtering on notifications
     return await this.inAppNotificationService.getRawNotificationsUnreadCount(
@@ -106,10 +114,11 @@ export class MeResolverFields {
     states: string[]
   ): Promise<number> {
     if (!actorContext.actorID) {
-      throw new ValidationException(
-        'Unable to retrieve invitations as no userID provided.',
-        LogContext.COMMUNITY
+      this.logger.verbose?.(
+        'Degrading me.communityInvitationsCount to its empty value: request has no resolved actor',
+        LogContext.AUTH
       );
+      return 0;
     }
     return this.meService.getCommunityInvitationsCountForUser(
       actorContext.actorID,
@@ -131,10 +140,11 @@ export class MeResolverFields {
     states: string[]
   ): Promise<CommunityInvitationResult[]> {
     if (!actorContext.actorID) {
-      throw new ValidationException(
-        'Unable to retrieve invitations as no userID provided.',
-        LogContext.COMMUNITY
+      this.logger.verbose?.(
+        'Degrading me.communityInvitations to its empty value: request has no resolved actor',
+        LogContext.AUTH
       );
+      return [];
     }
     return this.meService.getCommunityInvitationsForUser(
       actorContext.actorID,
@@ -157,10 +167,11 @@ export class MeResolverFields {
     states: string[]
   ): Promise<CommunityApplicationResult[]> {
     if (!actorContext.actorID) {
-      throw new ValidationException(
-        'Unable to retrieve applications as no userID provided.',
-        LogContext.COMMUNITY
+      this.logger.verbose?.(
+        'Degrading me.communityApplications to its empty value: request has no resolved actor',
+        LogContext.AUTH
       );
+      return [];
     }
     return this.meService.getCommunityApplicationsForUser(
       actorContext.actorID,
@@ -218,14 +229,10 @@ export class MeResolverFields {
   public async conversations(
     @CurrentActor() actorContext: ActorContext
   ): Promise<MeConversationsResult> {
-    if (!actorContext.actorID) {
-      throw new ValidationException(
-        'Unable to retrieve conversations as no userID provided.',
-        LogContext.COMMUNICATION
-      );
-    }
-
-    // Return an empty object - the fields will be resolved by MeConversationsResolverFields
+    // No actorID guard here on purpose: this field's value is the same empty
+    // envelope either way, so a guard would only add a log line. The real
+    // degradation for the conversations payload lives in
+    // MeConversationsResolverFields, which resolves the fields inside it.
     return {} as MeConversationsResult;
   }
 }

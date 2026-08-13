@@ -10,6 +10,7 @@ import { AUTH_STRATEGY_OIDC_HYDRA_BEARER } from '@core/auth/oidc/strategies/stra
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import express, {
   type NextFunction,
   type Request,
@@ -80,6 +81,7 @@ export async function createBearerHarness(
 
   const moduleRef = await Test.createTestingModule({
     providers: [
+      MockWinstonProvider,
       { provide: BEARER_JWKS_HANDLE, useValue: jwksFn },
       { provide: BEARER_AUD_ALLOW_LIST_HANDLE, useValue: allowListRef.current },
       { provide: HYDRA_ISSUER_URL_HANDLE, useValue: issuer },

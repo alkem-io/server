@@ -1,6 +1,7 @@
 import { ActorType } from '@common/enums/actor.type';
 import { ContributorCollectionView } from '@common/enums/contributor.collection.view';
 import { Field, ObjectType } from '@nestjs/graphql';
+import { ICalloutContributorsMapView } from './callout.settings.contributors.mapview.interface';
 
 @ObjectType('CalloutContributorsSettings')
 export abstract class ICalloutContributorsSettings {
@@ -23,4 +24,11 @@ export abstract class ICalloutContributorsSettings {
     description: 'The default display mode (list or map).',
   })
   defaultView!: ContributorCollectionView;
+
+  @Field(() => ICalloutContributorsMapView, {
+    nullable: true,
+    description:
+      'Admin-fixed initial map view. Absent/null ⇒ automatic framing (fit to plotted contributors; Europe fallback).',
+  })
+  mapView?: ICalloutContributorsMapView;
 }

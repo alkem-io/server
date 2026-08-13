@@ -1,4 +1,8 @@
-import { AuthorizationPrivilege, ProfileType } from '@common/enums';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  ProfileType,
+} from '@common/enums';
 import { AccountType } from '@common/enums/account.type';
 import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
@@ -7,12 +11,14 @@ import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credential.based.plan.type';
+import { LogContext } from '@common/enums/logging.context';
 import { RoleName } from '@common/enums/role.name';
 import { SpaceLevel } from '@common/enums/space.level';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { TagsetType } from '@common/enums/tagset.type';
+import { UrlPathElementSpace } from '@common/enums/url.path.element.space';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -21,6 +27,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.entity';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { InnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.entity';
@@ -38,8 +45,9 @@ import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
-import { vi } from 'vitest';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Brackets, Repository } from 'typeorm';
+import { type Mock, vi } from 'vitest';
 import { Account } from '../account/account.entity';
 import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '../account/constants';
 import { SpaceAbout } from '../space.about';
@@ -51,6 +59,8 @@ describe('SpaceService', () => {
   let service: SpaceService;
   let spaceRepository: Repository<Space>;
   let urlGeneratorCacheService: UrlGeneratorCacheService;
+  let authorizationService: AuthorizationService;
+  let logger: { error: Mock };
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -71,6 +81,14 @@ describe('SpaceService', () => {
     urlGeneratorCacheService = module.get<UrlGeneratorCacheService>(
       UrlGeneratorCacheService
     );
+    authorizationService =
+      module.get<AuthorizationService>(AuthorizationService);
+    // Default to "access granted" so tests unrelated to authorization don't
+    // have to configure it explicitly; individual tests override this.
+    (authorizationService.isAccessGranted as any).mockReturnValue(true);
+    // MockWinstonProvider hands out one shared vi.fn() per level; call history
+    // is reset between tests by `clearMocks: true` in vitest.config.ts.
+    logger = module.get(WINSTON_MODULE_NEST_PROVIDER) as any;
   });
 
   it('should be defined', () => {
@@ -146,7 +164,7 @@ describe('SpaceService', () => {
       // Mock the URL cache service - use direct assignment for mock objects
       const revokeUrlCacheSpy = vi.fn().mockResolvedValue(undefined);
       urlGeneratorCacheService.revokeUrlCache = revokeUrlCacheSpy;
-      (urlGeneratorCacheService as any).revokeUrlCachesForCalloutsInSpaces = vi
+      (urlGeneratorCacheService as any).revokeUrlCachesForContentInSpaces = vi
         .fn()
         .mockResolvedValue(undefined);
 
@@ -157,7 +175,14 @@ describe('SpaceService', () => {
       expect(mockSpace.nameID).toBe(newNameID);
       expect(revokeUrlCacheSpy).toHaveBeenCalledWith(`profile-${spaceId}`); // Main space cache invalidated
       expect(revokeUrlCacheSpy).toHaveBeenCalledWith(`profile-${subspaceId}`); // Subspace cache invalidated
-      expect(revokeUrlCacheSpy).toHaveBeenCalledTimes(2);
+      const revokedProfileIds = revokeUrlCacheSpy.mock.calls
+        .map(call => call[0])
+        .filter((id: string) => id.startsWith('profile-'));
+      expect(revokedProfileIds).toHaveLength(2);
+      // The sweep must run against the committed row, not the in-memory one.
+      expect(revokeUrlCacheSpy.mock.invocationCallOrder[0]).toBeGreaterThan(
+        vi.mocked(service.save).mock.invocationCallOrder[0]
+      );
     });
 
     it('should invalidate URL cache when nameID is updated for subspace', async () => {
@@ -254,7 +279,7 @@ describe('SpaceService', () => {
       // Mock the URL cache service - use direct assignment for mock objects
       const revokeUrlCacheSpy = vi.fn().mockResolvedValue(undefined);
       urlGeneratorCacheService.revokeUrlCache = revokeUrlCacheSpy;
-      (urlGeneratorCacheService as any).revokeUrlCachesForCalloutsInSpaces = vi
+      (urlGeneratorCacheService as any).revokeUrlCachesForContentInSpaces = vi
         .fn()
         .mockResolvedValue(undefined);
 
@@ -267,7 +292,10 @@ describe('SpaceService', () => {
       expect(revokeUrlCacheSpy).toHaveBeenCalledWith(
         `profile-${childSubspaceId}`
       ); // Child subspace cache invalidated
-      expect(revokeUrlCacheSpy).toHaveBeenCalledTimes(2);
+      const revokedProfileIds = revokeUrlCacheSpy.mock.calls
+        .map(call => call[0])
+        .filter((id: string) => id.startsWith('profile-'));
+      expect(revokedProfileIds).toHaveLength(2);
     });
 
     it('should update visibility to INACTIVE on L0 space', async () => {
@@ -361,38 +389,87 @@ describe('SpaceService', () => {
   });
 
   describe('invalidateUrlCacheForSpaceSubtree', () => {
+    // A space as the sweep loads it: the actor profile, the about profile, the
+    // community guidelines profile and the innovation flow profile hanging off
+    // collaboration.
+    const spaceWithProfiles = (spaceId: string) => ({
+      id: spaceId,
+      profile: { id: `actor-profile-${spaceId}` },
+      about: {
+        profile: { id: `profile-${spaceId}` },
+        guidelines: { profile: { id: `guidelines-profile-${spaceId}` } },
+      },
+      collaboration: {
+        innovationFlow: { profile: { id: `flow-profile-${spaceId}` } },
+      },
+    });
+
+    // getSpaceUrlPathByID() caches under the space id itself, plus one entry per
+    // space sub-path — none of those are profile-keyed, so they have to be swept
+    // by id or notifications keep rendering the pre-conversion URL.
+    const spaceKeyedCacheIds = (spaceId: string) => [
+      spaceId,
+      ...Object.values(UrlPathElementSpace).map(
+        spacePath => `${spaceId}-${spacePath}`
+      ),
+    ];
+
+    const expectedCacheIds = (spaceId: string) => [
+      `actor-profile-${spaceId}`,
+      `profile-${spaceId}`,
+      `guidelines-profile-${spaceId}`,
+      `flow-profile-${spaceId}`,
+      ...spaceKeyedCacheIds(spaceId),
+    ];
+
+    let revokeSpy: Mock;
+    let revokeCalloutsSpy: Mock;
+
+    beforeEach(() => {
+      // urlGeneratorCacheService is a @golevelup/ts-vitest proxy auto-mock, so
+      // its methods only materialise on access; vi.spyOn on them is
+      // order-dependent. Assign the doubles outright to keep each test
+      // self-contained.
+      revokeSpy = vi.fn().mockResolvedValue(undefined);
+      revokeCalloutsSpy = vi.fn().mockResolvedValue(undefined);
+      (urlGeneratorCacheService as any).revokeUrlCache = revokeSpy;
+      (urlGeneratorCacheService as any).revokeUrlCachesForContentInSpaces =
+        revokeCalloutsSpy;
+    });
+
+    const stubDescendants = (descendantIds: string[]) => {
+      const lookup = (service as any).spaceLookupService as any;
+      lookup.getAllDescendantSpaceIDs = vi
+        .fn()
+        .mockResolvedValue(descendantIds);
+    };
+
     it('revokes URL cache for the space and all descendants in a single fetch', async () => {
       const rootId = 'space-root';
       const childId = 'space-child';
       const grandchildId = 'space-grandchild';
 
-      const lookup = (service as any).spaceLookupService as any;
-      lookup.getAllDescendantSpaceIDs = vi
-        .fn()
-        .mockResolvedValue([childId, grandchildId]);
+      stubDescendants([childId, grandchildId]);
 
       const findSpy = vi
         .spyOn(spaceRepository, 'find')
         .mockResolvedValue([
-          { about: { profile: { id: `profile-${rootId}` } } },
-          { about: { profile: { id: `profile-${childId}` } } },
-          { about: { profile: { id: `profile-${grandchildId}` } } },
+          spaceWithProfiles(rootId),
+          spaceWithProfiles(childId),
+          spaceWithProfiles(grandchildId),
         ] as any);
-
-      const revokeSpy = vi
-        .spyOn(urlGeneratorCacheService, 'revokeUrlCache')
-        .mockResolvedValue(undefined);
-      const revokeCalloutsSpy = vi.fn().mockResolvedValue(undefined);
-      (urlGeneratorCacheService as any).revokeUrlCachesForCalloutsInSpaces =
-        revokeCalloutsSpy;
 
       await service.invalidateUrlCacheForSpaceSubtree(rootId);
 
       expect(findSpy).toHaveBeenCalledTimes(1);
-      expect(revokeSpy).toHaveBeenCalledTimes(3);
-      expect(revokeSpy).toHaveBeenCalledWith(`profile-${rootId}`);
-      expect(revokeSpy).toHaveBeenCalledWith(`profile-${childId}`);
-      expect(revokeSpy).toHaveBeenCalledWith(`profile-${grandchildId}`);
+      const revokedIds = revokeSpy.mock.calls.map(call => call[0]);
+      expect(revokedIds.sort()).toEqual(
+        [
+          ...expectedCacheIds(rootId),
+          ...expectedCacheIds(childId),
+          ...expectedCacheIds(grandchildId),
+        ].sort()
+      );
       expect(revokeCalloutsSpy).toHaveBeenCalledWith([
         rootId,
         childId,
@@ -400,26 +477,180 @@ describe('SpaceService', () => {
       ]);
     });
 
-    it('skips spaces that have no profile id', async () => {
+    // Regression: the Space actor profile, the community guidelines profile and
+    // the space-id-keyed entries written by getSpaceUrlPathByID() are all
+    // derived from the space path, so a conversion has to sweep them too.
+    it('revokes the actor, guidelines and space-id-keyed cache entries', async () => {
       const rootId = 'space-root';
-      const lookup = (service as any).spaceLookupService as any;
-      lookup.getAllDescendantSpaceIDs = vi.fn().mockResolvedValue([]);
 
-      vi.spyOn(spaceRepository, 'find').mockResolvedValue([
-        { about: undefined } as any,
-      ]);
+      stubDescendants([]);
 
-      const revokeSpy = vi
-        .spyOn(urlGeneratorCacheService, 'revokeUrlCache')
-        .mockResolvedValue(undefined);
-      const revokeCalloutsSpy = vi.fn().mockResolvedValue(undefined);
-      (urlGeneratorCacheService as any).revokeUrlCachesForCalloutsInSpaces =
-        revokeCalloutsSpy;
+      const findSpy = vi
+        .spyOn(spaceRepository, 'find')
+        .mockResolvedValue([spaceWithProfiles(rootId)] as any);
 
       await service.invalidateUrlCacheForSpaceSubtree(rootId);
 
-      expect(revokeSpy).not.toHaveBeenCalled();
+      for (const cacheId of expectedCacheIds(rootId)) {
+        expect(revokeSpy).toHaveBeenCalledWith(cacheId);
+      }
+
+      // The guidelines profile is declared `eager: true`, so with
+      // loadEagerRelations disabled it only arrives if asked for explicitly.
+      const findOptions = findSpy.mock.calls[0][0] as any;
+      expect(findOptions.loadEagerRelations).toBe(false);
+      expect(findOptions.relations).toMatchObject({
+        profile: true,
+        about: { profile: true, guidelines: { profile: true } },
+      });
+    });
+
+    // Regression: server#6020 QA — innovationFlow.profile.url kept serving the
+    // pre-promotion path after an L1 -> L0 conversion because the subtree sweep
+    // only ever revoked the space-about profile.
+    it('revokes the innovation flow profile of every space in the subtree', async () => {
+      const rootId = 'space-root';
+      const childId = 'space-child';
+
+      stubDescendants([childId]);
+
+      const findSpy = vi
+        .spyOn(spaceRepository, 'find')
+        .mockResolvedValue([
+          spaceWithProfiles(rootId),
+          spaceWithProfiles(childId),
+        ] as any);
+
+      await service.invalidateUrlCacheForSpaceSubtree(rootId);
+
+      expect(revokeSpy).toHaveBeenCalledWith(`flow-profile-${rootId}`);
+      expect(revokeSpy).toHaveBeenCalledWith(`flow-profile-${childId}`);
+
+      // ...and it must come out of the same single fetch, which has to ask for
+      // the innovation flow profile relation.
+      expect(findSpy).toHaveBeenCalledTimes(1);
+      const findOptions = findSpy.mock.calls[0][0] as any;
+      expect(findOptions.relations).toMatchObject({
+        about: { profile: true },
+        collaboration: { innovationFlow: { profile: true } },
+      });
+    });
+
+    it('skips spaces that have no profile id', async () => {
+      const rootId = 'space-root';
+      stubDescendants([]);
+
+      vi.spyOn(spaceRepository, 'find').mockResolvedValue([
+        {
+          id: rootId,
+          profile: undefined,
+          about: undefined,
+          collaboration: undefined,
+        } as any,
+      ]);
+
+      await service.invalidateUrlCacheForSpaceSubtree(rootId);
+
+      // Only the space-id-keyed entries remain — nothing profile-derived.
+      const revokedIds = revokeSpy.mock.calls.map(call => call[0]);
+      expect(revokedIds.sort()).toEqual(spaceKeyedCacheIds(rootId).sort());
       expect(revokeCalloutsSpy).toHaveBeenCalledWith([rootId]);
+    });
+
+    it.each([
+      ['no innovation flow', { innovationFlow: undefined }],
+      ['an innovation flow with no profile', { innovationFlow: {} }],
+    ])('skips spaces whose collaboration carries %s', async (_label, collaboration) => {
+      const rootId = 'space-root';
+      stubDescendants([]);
+
+      vi.spyOn(spaceRepository, 'find').mockResolvedValue([
+        {
+          id: rootId,
+          about: { profile: { id: `profile-${rootId}` } },
+          collaboration,
+        } as any,
+      ]);
+
+      await service.invalidateUrlCacheForSpaceSubtree(rootId);
+
+      expect(revokeSpy).toHaveBeenCalledWith(`profile-${rootId}`);
+      expect(revokeSpy).not.toHaveBeenCalledWith(`flow-profile-${rootId}`);
+    });
+
+    it('logs and keeps sweeping when revoking one profile throws', async () => {
+      const rootId = 'space-root';
+      const childId = 'space-child';
+
+      stubDescendants([childId]);
+
+      vi.spyOn(spaceRepository, 'find').mockResolvedValue([
+        spaceWithProfiles(rootId),
+        spaceWithProfiles(childId),
+      ] as any);
+
+      // The throwing profile belongs to the DESCENDANT, not the subtree root:
+      // that is the only case that tells the owning space apart from the root
+      // argument in the error log.
+      revokeSpy.mockImplementation(async (profileId: string) => {
+        if (profileId === `flow-profile-${childId}`) {
+          throw new Error('cache unavailable');
+        }
+      });
+
+      await service.invalidateUrlCacheForSpaceSubtree(rootId);
+
+      // The failure is isolated: every other entry is still swept and the
+      // callout sweep still runs.
+      const revokedIds = revokeSpy.mock.calls.map(call => call[0]);
+      expect(revokedIds.sort()).toEqual(
+        [...expectedCacheIds(rootId), ...expectedCacheIds(childId)].sort()
+      );
+      expect(revokeCalloutsSpy).toHaveBeenCalledWith([rootId, childId]);
+      // The log names the space that actually owns the stale entry, and still
+      // carries the root the sweep was invoked for.
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Failed to invalidate URL cache for space subtree',
+          spaceId: childId,
+          subtreeRootSpaceId: rootId,
+          cacheId: `flow-profile-${childId}`,
+        }),
+        expect.any(String),
+        LogContext.SPACES
+      );
+    });
+
+    it('revokes in bounded batches rather than fanning the whole subtree out at once', async () => {
+      const rootId = 'space-root';
+      // Each space contributes 4 profile ids plus its space-keyed ids, so 20
+      // spaces is comfortably more than one batch.
+      const childIds = Array.from({ length: 19 }, (_, i) => `space-${i}`);
+      const allIds = [rootId, ...childIds];
+
+      stubDescendants(childIds);
+      vi.spyOn(spaceRepository, 'find').mockResolvedValue(
+        allIds.map(spaceWithProfiles) as any
+      );
+
+      let inFlight = 0;
+      let maxInFlight = 0;
+      revokeSpy.mockImplementation(async () => {
+        inFlight++;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        // Yield so every revoke started in the same batch overlaps.
+        await Promise.resolve();
+        inFlight--;
+      });
+
+      await service.invalidateUrlCacheForSpaceSubtree(rootId);
+
+      const totalIds = allIds.flatMap(expectedCacheIds).length;
+      expect(totalIds).toBeGreaterThan(50);
+      // Every entry is still swept...
+      expect(revokeSpy).toHaveBeenCalledTimes(totalIds);
+      // ...but never more than one batch is in flight at a time.
+      expect(maxInFlight).toBeLessThanOrEqual(50);
     });
   });
 
@@ -1727,53 +1958,166 @@ describe('SpaceService', () => {
   });
 
   describe('getExploreSpaces', () => {
-    it('should return empty array when no active spaces found', async () => {
+    // Captures the { where, orWhere } recorder from inside the privacy
+    // Brackets so assertions can inspect exactly what predicates were
+    // registered, instead of only asserting on the outer query-builder calls
+    // (which pass whether or not the Brackets grouping/logic is correct).
+    const createMockQb = (rows: Array<{ id: string }>) => {
+      const bracketsRecorder = { where: vi.fn(), orWhere: vi.fn() };
       const mockQb = {
         select: vi.fn().mockReturnThis(),
         innerJoin: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
-        andWhere: vi.fn().mockReturnThis(),
+        andWhere: vi.fn((condition: unknown) => {
+          if (condition instanceof Brackets) {
+            condition.whereFactory(bracketsRecorder as any);
+          }
+          return mockQb;
+        }),
         groupBy: vi.fn().mockReturnThis(),
         orderBy: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
-        getRawMany: vi.fn().mockResolvedValue([]),
+        getRawMany: vi.fn().mockResolvedValue(rows),
       };
+      return { mockQb, bracketsRecorder };
+    };
+
+    it('should return empty array when no active spaces found', async () => {
+      const { mockQb } = createMockQb([]);
       vi.spyOn(spaceRepository, 'createQueryBuilder').mockReturnValue(
         mockQb as any
       );
 
-      const result = await service.getExploreSpaces();
+      const result = await service.getExploreSpaces({ credentials: [] } as any);
 
       expect(result).toEqual([]);
     });
 
     it('should return spaces ordered by activity count', async () => {
-      const mockQb = {
-        select: vi.fn().mockReturnThis(),
-        innerJoin: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        andWhere: vi.fn().mockReturnThis(),
-        groupBy: vi.fn().mockReturnThis(),
-        orderBy: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        getRawMany: vi
-          .fn()
-          .mockResolvedValue([{ id: 'space-2' }, { id: 'space-1' }]),
-      };
+      const { mockQb } = createMockQb([{ id: 'space-2' }, { id: 'space-1' }]);
       vi.spyOn(spaceRepository, 'createQueryBuilder').mockReturnValue(
         mockQb as any
       );
       vi.spyOn(spaceRepository, 'find').mockResolvedValue([
-        { id: 'space-1' },
-        { id: 'space-2' },
+        { id: 'space-1', authorization: {} },
+        { id: 'space-2', authorization: {} },
       ] as any);
 
-      const result = await service.getExploreSpaces();
+      const result = await service.getExploreSpaces({ credentials: [] } as any);
 
       expect(result).toHaveLength(2);
       // Should preserve activity-based ordering
       expect(result[0].id).toBe('space-2');
       expect(result[1].id).toBe('space-1');
+    });
+
+    it('registers only the public-privacy predicate for a caller with no Space credentials', async () => {
+      const { mockQb, bracketsRecorder } = createMockQb([]);
+      vi.spyOn(spaceRepository, 'createQueryBuilder').mockReturnValue(
+        mockQb as any
+      );
+
+      await service.getExploreSpaces({ credentials: [] } as any);
+
+      expect(bracketsRecorder.where).toHaveBeenCalledWith(
+        `s.settings->'privacy'->>'mode' = :publicPrivacyMode`,
+        { publicPrivacyMode: SpacePrivacyMode.PUBLIC }
+      );
+      expect(bracketsRecorder.orWhere).not.toHaveBeenCalled();
+    });
+
+    it('additionally registers the member-space predicate when the actor holds a Space credential', async () => {
+      const { mockQb, bracketsRecorder } = createMockQb([]);
+      vi.spyOn(spaceRepository, 'createQueryBuilder').mockReturnValue(
+        mockQb as any
+      );
+
+      await service.getExploreSpaces({
+        credentials: [
+          {
+            type: AuthorizationCredential.SPACE_MEMBER,
+            resourceID: 'space-42',
+          },
+        ],
+      } as any);
+
+      expect(bracketsRecorder.orWhere).toHaveBeenCalledWith(
+        's.id IN (:...memberSpaceIds)',
+        { memberSpaceIds: ['space-42'] }
+      );
+    });
+
+    it('scopes the ranking query to L0/L1 active Spaces with visible, non-excluded activity', async () => {
+      const { mockQb } = createMockQb([]);
+      vi.spyOn(spaceRepository, 'createQueryBuilder').mockReturnValue(
+        mockQb as any
+      );
+
+      await service.getExploreSpaces({ credentials: [] } as any);
+
+      expect(mockQb.where).toHaveBeenCalledWith('s.level IN (:...levels)', {
+        levels: [SpaceLevel.L0, SpaceLevel.L1],
+      });
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        's.visibility = :visibility',
+        { visibility: SpaceVisibility.ACTIVE }
+      );
+      expect(mockQb.andWhere).toHaveBeenCalledWith('a.visibility = true');
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        'a.type NOT IN (:...excludeTypes)',
+        expect.objectContaining({ excludeTypes: expect.any(Array) })
+      );
+    });
+
+    it('excludes a candidate Space the actor cannot READ, even though it passed the SQL privacy pre-filter', async () => {
+      // Regression for a PUBLIC L1 subspace of a PRIVATE L0 parent (and any
+      // other case the coarse own-Space-only SQL predicate over-admits): the
+      // SQL Brackets are a cheap pre-filter only, the authorization policy is
+      // the actual READ decision, so a candidate that fails it must never be
+      // returned.
+      const { mockQb } = createMockQb([
+        { id: 'public-subspace-of-private-l0' },
+      ]);
+      vi.spyOn(spaceRepository, 'createQueryBuilder').mockReturnValue(
+        mockQb as any
+      );
+      const deniedAuthorization = { id: 'auth-1' };
+      vi.spyOn(spaceRepository, 'find').mockResolvedValue([
+        {
+          id: 'public-subspace-of-private-l0',
+          authorization: deniedAuthorization,
+        },
+      ] as any);
+      (authorizationService.isAccessGranted as any).mockReturnValue(false);
+
+      const result = await service.getExploreSpaces({ credentials: [] } as any);
+
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        { credentials: [] },
+        deniedAuthorization,
+        AuthorizationPrivilege.READ
+      );
+      expect(result).toEqual([]);
+    });
+
+    it('excludes (rather than throws for) a candidate whose access check errors', async () => {
+      const { mockQb } = createMockQb([{ id: 'space-1' }]);
+      vi.spyOn(spaceRepository, 'createQueryBuilder').mockReturnValue(
+        mockQb as any
+      );
+      vi.spyOn(spaceRepository, 'find').mockResolvedValue([
+        { id: 'space-1', authorization: undefined },
+      ] as any);
+      (authorizationService.isAccessGranted as any).mockImplementation(() => {
+        throw new EntityNotInitializedException(
+          'Authorization: no definition provided',
+          'AUTH_POLICY' as any
+        );
+      });
+
+      const result = await service.getExploreSpaces({ credentials: [] } as any);
+
+      expect(result).toEqual([]);
     });
   });
 

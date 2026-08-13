@@ -47,6 +47,13 @@ export enum NotificationEvent {
   USER_MENTIONED = 'USER_MENTIONED',
   USER_MESSAGE = 'USER_MESSAGE',
   USER_COMMENT_REPLY = 'USER_COMMENT_REPLY',
+
+  // Conversation (chat) message notifications (034-messaging-notifications).
+  // Two distinct wire events (Operator Ruling 1) — never routed through the
+  // legacy USER_MESSAGE event/template, which leaks the sender's email via
+  // reply-to.
+  USER_CONVERSATION_MESSAGE_DIRECT = 'USER_CONVERSATION_MESSAGE_DIRECT',
+  USER_CONVERSATION_MESSAGE_GROUP = 'USER_CONVERSATION_MESSAGE_GROUP',
   // Virtual contributors
   VIRTUAL_ADMIN_SPACE_COMMUNITY_INVITATION = 'VIRTUAL_ADMIN_SPACE_COMMUNITY_INVITATION',
 

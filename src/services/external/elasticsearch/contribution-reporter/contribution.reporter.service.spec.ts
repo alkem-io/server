@@ -382,6 +382,7 @@ describe('ContributionReporterService', () => {
           [ActorType.VIRTUAL_CONTRIBUTOR]: ['vc-1'],
         },
         readonlyActors: { [ActorType.USER]: ['user-3'] },
+        alkemio: true,
       });
 
       await vi.waitFor(() => {
@@ -403,6 +404,9 @@ describe('ContributionReporterService', () => {
       expect(indexedDocument.readonlyActors).toEqual({
         [ActorType.USER]: ['user-3'],
       });
+      // the aggregate team flag is written through verbatim (the reporter does
+      // no resolution — the consumer computes it)
+      expect(indexedDocument.alkemio).toBe(true);
     });
 
     // FR-008 / C1: ONLY the typed shape is written — no flat-array field is
@@ -414,6 +418,7 @@ describe('ContributionReporterService', () => {
         space: 'space-root',
         writeActors: { [ActorType.USER]: ['user-1'] },
         readonlyActors: {},
+        alkemio: false,
       });
 
       await vi.waitFor(() => {
@@ -443,6 +448,7 @@ describe('ContributionReporterService', () => {
           [ActorType.VIRTUAL_CONTRIBUTOR]: ['vc-1'],
         },
         readonlyActors: {},
+        alkemio: false,
       });
 
       await vi.waitFor(() => {
@@ -464,6 +470,7 @@ describe('ContributionReporterService', () => {
         space: 'space-root',
         writeActors: { [ActorType.USER]: ['user-1'] },
         readonlyActors: {},
+        alkemio: false,
       });
 
       await vi.waitFor(() => {
@@ -489,6 +496,7 @@ describe('ContributionReporterService', () => {
           [ActorType.USER]: ['user-1', 'user-2'],
         },
         readonlyActors: { [ActorType.USER]: ['user-3'] },
+        alkemio: false,
       });
 
       await vi.waitFor(() => {
@@ -506,6 +514,8 @@ describe('ContributionReporterService', () => {
       expect(indexedDocument.readonlyActors).toEqual({
         [ActorType.USER]: ['user-3'],
       });
+      // the VIEW aggregate carries the same team flag, written through verbatim
+      expect(indexedDocument.alkemio).toBe(false);
     });
 
     // FR-008: only the typed shape is written — no flat-array field alongside.
@@ -516,6 +526,7 @@ describe('ContributionReporterService', () => {
         space: 'space-root',
         writeActors: { [ActorType.USER]: ['user-1'] },
         readonlyActors: {},
+        alkemio: false,
       });
 
       await vi.waitFor(() => {
@@ -539,6 +550,7 @@ describe('ContributionReporterService', () => {
         space: 'space-root',
         writeActors: { [ActorType.USER]: ['user-1'] },
         readonlyActors: {},
+        alkemio: false,
       });
 
       await vi.waitFor(() => {

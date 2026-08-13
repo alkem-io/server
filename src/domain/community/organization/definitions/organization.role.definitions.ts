@@ -36,7 +36,9 @@ export const organizationRoleDefinitions: CreateRoleInput[] = [
     parentCredentialsData: [],
     userPolicyData: {
       minimum: 0,
-      maximum: 3,
+      // AC1 of alkem-io/client-web#10132: raise the organization admin cap
+      // from 3 to 6. Enforced in RoleSetService via userPolicyData.maximum.
+      maximum: 6,
     },
     organizationPolicyData: {
       minimum: 0,

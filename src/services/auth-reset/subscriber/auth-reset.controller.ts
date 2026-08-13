@@ -84,8 +84,16 @@ export class AuthResetController {
     context: RmqContext,
     subject: string,
     work: () => Promise<void>,
-    task?: string
+    // The whole payload rather than just `payload.task`: `type` + `id` form the
+    // stable item identity that makes task accounting idempotent under RMQ's
+    // at-least-once delivery (this method's own retry path guarantees
+    // redelivery, see below). Omitted by the platform/AI-server handlers, which
+    // are untracked by design.
+    payload?: AuthResetEventPayload
   ): Promise<void> {
+    const task = payload?.task;
+    const itemKey = payload ? `${payload.type}:${payload.id}` : undefined;
+
     this.logger.verbose?.(
       `Starting reset of ${subject}.`,
       LogContext.AUTH_POLICY
@@ -109,7 +117,7 @@ export class AuthResetController {
         // Awaited so the task cache write completes before the message is acked,
         // but isolated (recordTaskResult swallows its own errors) so a task-cache
         // hiccup can never requeue a reset that already succeeded.
-        await this.recordTaskResult(task, message);
+        await this.recordTaskResult(task, message, itemKey);
       }
       channel.ack(originalMsg);
     } catch (error: any) {
@@ -117,7 +125,7 @@ export class AuthResetController {
         const message = `Resetting ${subject} failed! Max retries reached. Rejecting message.`;
         this.logger.error(message, error?.stack, LogContext.AUTH);
         if (task) {
-          await this.recordTaskError(task, message);
+          await this.recordTaskError(task, message, itemKey);
         }
         channel.reject(originalMsg, false); // Reject and don't requeue
       } else {
@@ -143,9 +151,13 @@ export class AuthResetController {
    * telemetry — it must never throw back into the reset flow (which would requeue
    * an already-successful reset), so its errors are logged and contained here.
    */
-  private async recordTaskResult(task: string, message: string): Promise<void> {
+  private async recordTaskResult(
+    task: string,
+    message: string,
+    itemKey?: string
+  ): Promise<void> {
     try {
-      await this.taskService.updateTaskResults(task, message);
+      await this.taskService.updateTaskResults(task, message, true, itemKey);
     } catch (error: any) {
       this.logger.warn(
         `Failed to persist task result for task ${task}: ${error?.message}`,
@@ -155,9 +167,13 @@ export class AuthResetController {
   }
 
   /** As {@link recordTaskResult}, for the terminal (max-retries) error path. */
-  private async recordTaskError(task: string, message: string): Promise<void> {
+  private async recordTaskError(
+    task: string,
+    message: string,
+    itemKey?: string
+  ): Promise<void> {
     try {
-      await this.taskService.updateTaskErrors(task, message);
+      await this.taskService.updateTaskErrors(task, message, true, itemKey);
     } catch (error: any) {
       this.logger.warn(
         `Failed to persist task error for task ${task}: ${error?.message}`,
@@ -182,7 +198,7 @@ export class AuthResetController {
           );
         await this.authorizationPolicyService.saveAll(updatedAuthorizations);
       },
-      payload.task
+      payload
     );
   }
 
@@ -200,7 +216,7 @@ export class AuthResetController {
           await this.accountLicenseService.applyLicensePolicy(account.id);
         await this.licenseService.saveAll(updatedLicenses);
       },
-      payload.task
+      payload
     );
   }
 
@@ -223,7 +239,7 @@ export class AuthResetController {
           );
         await this.licenseService.saveAll(updatedLicenses);
       },
-      payload.task
+      payload
     );
   }
 
@@ -267,7 +283,7 @@ export class AuthResetController {
           await this.userAuthorizationService.applyAuthorizationPolicy(user.id);
         await this.authorizationPolicyService.saveAll(authorizations);
       },
-      payload.task
+      payload
     );
   }
 
@@ -291,7 +307,7 @@ export class AuthResetController {
           );
         await this.authorizationPolicyService.saveAll(authorizations);
       },
-      payload.task
+      payload
     );
   }
 }

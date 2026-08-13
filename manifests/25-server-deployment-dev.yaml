@@ -16,9 +16,20 @@ spec:
       labels:
         app: alkemio-server
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: alkemio-server
           image: rg.nl-ams.scw.cloud/alkemio/alkemio-server:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           env:
             - name: RABBITMQ_HOST
               valueFrom:

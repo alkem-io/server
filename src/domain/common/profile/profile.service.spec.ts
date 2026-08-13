@@ -1158,86 +1158,33 @@ describe('ProfileService', () => {
   });
 
   describe('convertTagsetTemplatesToCreateTagsetInput', () => {
-    it('should transform templates to input array', () => {
-      const templates: Partial<ITagsetTemplate>[] = [
-        {
-          name: 'skills',
-          type: TagsetType.FREEFORM,
-          allowedValues: [],
-        },
-        {
-          name: 'industry',
-          type: TagsetType.SELECT_ONE,
-          allowedValues: ['tech', 'finance'],
-        },
-      ];
-
-      const result = service.convertTagsetTemplatesToCreateTagsetInput(
-        templates as ITagsetTemplate[]
-      );
-
-      expect(result).toHaveLength(2);
-      expect(result[0]).toEqual(
-        expect.objectContaining({
-          name: 'skills',
-          type: TagsetType.FREEFORM,
-          tags: undefined,
-        })
-      );
-      expect(result[1]).toEqual(
-        expect.objectContaining({
-          name: 'industry',
-          type: TagsetType.SELECT_ONE,
-        })
-      );
-    });
-
-    it('should include defaultSelectedValue as tag when present', () => {
+    // The conversion itself (including how a template's default is resolved)
+    // is owned by TagsetService and covered in tagset.service.spec.ts; this
+    // used to be a duplicated implementation, so all that matters here is that
+    // it is not one any more.
+    it('should delegate to TagsetService', () => {
       const templates: Partial<ITagsetTemplate>[] = [
         {
           name: 'industry',
           type: TagsetType.SELECT_ONE,
           allowedValues: ['tech', 'finance'],
-          defaultSelectedValue: 'tech',
         },
       ];
+      const converted = [
+        { name: 'industry', type: TagsetType.SELECT_ONE, tags: ['tech'] },
+      ];
+      vi.mocked(
+        tagsetService.convertTagsetTemplatesToCreateTagsetInput
+      ).mockReturnValue(converted as any);
 
       const result = service.convertTagsetTemplatesToCreateTagsetInput(
         templates as ITagsetTemplate[]
       );
 
-      expect(result[0].tags).toEqual(['tech']);
-    });
-
-    it('should set tags to undefined when no defaultSelectedValue', () => {
-      const templates: Partial<ITagsetTemplate>[] = [
-        {
-          name: 'skills',
-          type: TagsetType.FREEFORM,
-          allowedValues: [],
-          defaultSelectedValue: undefined,
-        },
-      ];
-
-      const result = service.convertTagsetTemplatesToCreateTagsetInput(
-        templates as ITagsetTemplate[]
-      );
-
-      expect(result[0].tags).toBeUndefined();
-    });
-
-    it('should include tagsetTemplate reference in each input', () => {
-      const template = {
-        name: 'skills',
-        type: TagsetType.FREEFORM,
-        allowedValues: [],
-      } as unknown as ITagsetTemplate;
-
-      const result = service.convertTagsetTemplatesToCreateTagsetInput([
-        template,
-      ]);
-
-      expect(result[0].tagsetTemplate).toBe(template);
+      expect(
+        tagsetService.convertTagsetTemplatesToCreateTagsetInput
+      ).toHaveBeenCalledWith(templates);
+      expect(result).toBe(converted);
     });
   });
 });

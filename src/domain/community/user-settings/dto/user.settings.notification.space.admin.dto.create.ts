@@ -1,5 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsBoolean } from 'class-validator';
+import { Type } from 'class-transformer';
+import { ValidateNested } from 'class-validator';
 import { CreateUserSettingsNotificationChannelsInput } from './user.settings.notification.dto.channels.create';
 
 @InputType()
@@ -9,14 +10,16 @@ export class CreateUserSettingsNotificationSpaceAdminInput {
     description:
       'Receive a notification when a message is sent to a Space I lead',
   })
-  @IsBoolean()
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationChannelsInput)
   communicationMessageReceived!: CreateUserSettingsNotificationChannelsInput;
 
   @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,
     description: 'Receive a notification when an application is received',
   })
-  @IsBoolean()
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationChannelsInput)
   communityApplicationReceived!: CreateUserSettingsNotificationChannelsInput;
 
   @Field(() => CreateUserSettingsNotificationChannelsInput, {
@@ -24,14 +27,16 @@ export class CreateUserSettingsNotificationSpaceAdminInput {
     description:
       'Receive a notification when a new member joins the community (admin)',
   })
-  @IsBoolean()
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationChannelsInput)
   communityNewMember!: CreateUserSettingsNotificationChannelsInput;
 
   @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,
     description: 'Receive a notification when a contribution is added (admin)',
   })
-  @IsBoolean()
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationChannelsInput)
   collaborationCalloutContributionCreated!: CreateUserSettingsNotificationChannelsInput;
 
   @Field(() => CreateUserSettingsNotificationChannelsInput, {
@@ -39,6 +44,7 @@ export class CreateUserSettingsNotificationSpaceAdminInput {
     description:
       'Receive a notification when the login email of an admin or lead of a Space I administer is changed (admin)',
   })
-  @IsBoolean()
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationChannelsInput)
   userEmailChanged!: CreateUserSettingsNotificationChannelsInput;
 }

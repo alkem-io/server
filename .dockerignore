@@ -1,6 +1,7 @@
 **/.classpath
 **/.dockerignore
 **/.env
+**/.env.*
 **/.git
 **/.gitignore
 **/.project
@@ -25,3 +26,41 @@ README.md
 .scannerwork/
 coverage*/
 sonar-project.properties
+
+# Three-stage distroless build (workspace#026-distroless-runtime-images):
+# only src/, tsconfig*.json, nest-cli.json, alkemio.yml, package.json,
+# pnpm-lock.yaml are COPYed into the builder stage. Everything below is
+# dev/test/doc/tooling context that must never reach the build graph.
+.build/
+.claude/
+.codex/
+.devcontainer/
+.github/
+.husky/
+.lintstagedrc.json
+.mcp.json
+.npmrc
+.scripts/
+.sonarlint/
+.specify/
+LICENSE
+agents.md
+biome.json
+contract-tests/
+docs/
+gql-pipeline-agent-teams.md
+graphql-samples/
+manifests/
+overlays/
+quickstart-services*.yml
+schema-baseline.graphql
+schema-lite.graphql
+schema.graphql
+scripts/
+specs/
+test/
+tmp/
+uploads/
+vitest.config.ts
+change-report.json
+deprecations.json

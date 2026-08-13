@@ -4,15 +4,13 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { AlkemioConfig } from '@src/types';
-import { json } from 'body-parser';
 import { useContainer } from 'class-validator';
 import cookieParser from 'cookie-parser';
-import { NextFunction, Request, Response } from 'express';
+import { Request, Response } from 'express';
 import session from 'express-session';
 import { renderGraphiQL } from 'graphql-helix';
 import { graphqlUploadExpress } from 'graphql-upload';
 import helmet from 'helmet';
-import Redis from 'ioredis';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AppModule } from './app.module';
 import { NonInteractiveLoginConfig } from './core/auth/non-interactive-login/non-interactive-login.config';
@@ -21,8 +19,14 @@ import {
   buildOidcSessionRedisStore,
   buildSessionRenewalMiddleware,
 } from './core/auth/oidc/session-store.redis';
+import {
+  cookieSessionStoreUnavailableMiddleware,
+  sessionCookieAttributesFrom,
+} from './core/auth/oidc/strategies/cookie-session.exception-filter';
 import { BootstrapService } from './core/bootstrap/bootstrap.service';
 import { faviconMiddleware } from './core/middleware/favicon.middleware';
+import { createJsonBodyParserMiddleware } from './core/middleware/json-body-parser.middleware';
+import { createRedisClient } from './core/redis/redis.client.factory';
 
 /**
  * Bootstrap the full Alkemio API server (AppModule): GraphQL/Apollo, REST,
@@ -102,12 +106,41 @@ export const bootstrapServer = async () => {
     }
   );
   const redisConfig = configService.get('storage.redis', { infer: true });
-  const sessionRedis = new Redis({
-    host: redisConfig.host,
-    port: Number(redisConfig.port),
+  // server#6332 — was `new Redis({ host, port })`. ioredis defaults then
+  // applied: `enableOfflineQueue: true` parked commands issued while
+  // disconnected instead of rejecting them, and `maxRetriesPerRequest: 20` made
+  // a parked command wait for the 21st reconnection boundary — ~42s once the
+  // backoff saturated. Every request during a Redis outage hung for tens of
+  // seconds and then failed. The factory applies the fail-fast options and is
+  // now the only place an ioredis client is constructed. FR-007, FR-008.
+  const sessionRedis = createRedisClient(redisConfig, logger, {
+    purpose: 'session',
   });
-  const idleTtlS = oidcConfig.cookie.idle_ttl_s;
-  const sessionStore = buildOidcSessionRedisStore(sessionRedis, idleTtlS);
+  // Boot guard — `idle_ttl_s` is typed `number` but arrives from YAML with env
+  // substitution, so it is only a number if the operator supplied one. A
+  // non-numeric `OIDC_SESSION_COOKIE_IDLE_TTL_S` stays a string, and the two
+  // things that consume it both fail SILENTLY rather than loudly:
+  // `idle_ttl_s * 1000` becomes NaN, so the cookie is issued with no maxAge —
+  // downgrading a 14-day persistent cookie to a browser-session one, a
+  // security-relevant change nobody would notice — and the store's TTL
+  // computation collapses to NaN, so connect-redis writes `EX NaN`.
+  // Refuse to start instead. Same posture as the non-interactive-login guard.
+  // Integer, not merely finite: `connect-redis` hands a FUNCTION-form `ttl`
+  // straight to `client.set(key, val, ttl)` with no normalisation — note that
+  // its own cookie-derived branch does `Math.ceil(ms / 1000)` for exactly this
+  // reason — so a fractional value reaches Redis as a non-integer `EX` and
+  // every session write fails.
+  const idleTtlS = Number(oidcConfig.cookie.idle_ttl_s);
+  if (!Number.isInteger(idleTtlS) || idleTtlS <= 0) {
+    throw new Error(
+      'identity.authentication.providers.oidc.cookie.idle_ttl_s must be a positive integer number of seconds (check OIDC_SESSION_COOKIE_IDLE_TTL_S)'
+    );
+  }
+  const sessionStore = buildOidcSessionRedisStore(
+    sessionRedis,
+    idleTtlS,
+    logger
+  );
   const sessionMiddleware = session({
     store: sessionStore,
     secret: oidcConfig.session_signing_key,
@@ -128,6 +161,24 @@ export const bootstrapServer = async () => {
     },
   });
   app.use(sessionMiddleware);
+  // server#6332 FR-016a — MUST come directly after the session middleware.
+  //
+  // `express-session` reads the store for any request presenting a session
+  // cookie, BEFORE any authentication code runs, and on a store error calls
+  // `next(err)`. Until now no error-handling middleware followed it, so during
+  // a total Redis outage that error reached Express's default handler and a
+  // cookie-bearing request got an HTML 500 — a third wrong answer, distinct
+  // from the 401 the issue measured on the cookie-LESS path, and the one nobody
+  // had measured. This gives that path the same 503 + Retry-After +
+  // cookie-preserving answer as every other transport.
+  //
+  // The middleware itself already existed and was written for exactly this
+  // ("the raw express path"); it simply had no production caller until now.
+  app.use(
+    cookieSessionStoreUnavailableMiddleware(
+      sessionCookieAttributesFrom(oidcConfig)
+    )
+  );
   // FR-018 — lazily slide the idle window only when it crosses the half-life
   // mark. MUST run after express-session has populated req.session.
   app.use(buildSessionRenewalMiddleware(idleTtlS));
@@ -150,13 +201,7 @@ export const bootstrapServer = async () => {
   const { max_json_payload_size, port } = configService.get('hosting', {
     infer: true,
   });
-  // JSON body parsing - skip for MCP routes (MCP SDK handles its own parsing)
-  app.use((req: Request, res: Response, next: NextFunction) => {
-    if (req.path.startsWith('/rest/mcp')) {
-      return next();
-    }
-    json({ limit: max_json_payload_size })(req, res, next);
-  });
+  app.use(createJsonBodyParserMiddleware(max_json_payload_size));
 
   // Serve the GraphiQL interface at '/graphiql'
   app.use('/graphiql', (_req: Request, res: Response) => {

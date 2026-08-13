@@ -4,7 +4,16 @@ import {
   createOidcHarness,
   extractCookie,
   type OidcHarness,
+  signSessionCookie,
 } from './oidc-test-harness';
+
+// server#6332 — the cookie must be the SIGNED wire form. These specs used to
+// send a bare `an-opaque-sid`, which express-session rejects (it then generates
+// a fresh sid); the strategy now correctly treats that as "no session
+// presented" and resolves anonymous WITHOUT reading the store, so it no longer
+// reaches the store-unavailable path at all. Presenting a properly signed
+// cookie is what keeps these specs testing FR-022b rather than testing D1.
+const SESSION_COOKIE_VALUE = signSessionCookie('an-opaque-sid');
 
 // FR-022b — with a well-formed alkemio_session cookie on POST /api/private/graphql,
 // when the session-store backend times out / refuses connection, alkemio-server
@@ -15,6 +24,10 @@ describe('GraphQL cookie path under Redis-unreachable (FR-022b)', () => {
 
   beforeEach(async () => {
     harness = await createOidcHarness();
+    // Make express-session recognise the sid, so it preserves it as
+    // `req.sessionID` rather than generating a replacement — the precondition
+    // for the strategy reaching the session store at all (server#6332 D1).
+    await harness.seedSession('an-opaque-sid');
   });
 
   afterEach(async () => {
@@ -32,7 +45,10 @@ describe('GraphQL cookie path under Redis-unreachable (FR-022b)', () => {
 
     const res = await request(harness.app.getHttpServer())
       .post('/api/private/graphql')
-      .set('Cookie', `${harness.sessionCookieName}=an-opaque-sid`)
+      .set(
+        'Cookie',
+        `${harness.sessionCookieName}=${encodeURIComponent(SESSION_COOKIE_VALUE)}`
+      )
       .send({ query: '{ me { id } }' });
 
     expect(res.status).toBe(503);
@@ -57,7 +73,10 @@ describe('GraphQL cookie path under Redis-unreachable (FR-022b)', () => {
 
     await request(harness.app.getHttpServer())
       .post('/api/private/graphql')
-      .set('Cookie', `${harness.sessionCookieName}=an-opaque-sid`)
+      .set(
+        'Cookie',
+        `${harness.sessionCookieName}=${encodeURIComponent(SESSION_COOKIE_VALUE)}`
+      )
       .send({ query: '{ me { id } }' })
       .expect(503);
 
@@ -65,7 +84,10 @@ describe('GraphQL cookie path under Redis-unreachable (FR-022b)', () => {
 
     const res = await request(harness.app.getHttpServer())
       .post('/api/private/graphql')
-      .set('Cookie', `${harness.sessionCookieName}=an-opaque-sid`)
+      .set(
+        'Cookie',
+        `${harness.sessionCookieName}=${encodeURIComponent(SESSION_COOKIE_VALUE)}`
+      )
       .send({ query: '{ me { id } }' });
 
     // After recovery the resolver runs; implementation may return any

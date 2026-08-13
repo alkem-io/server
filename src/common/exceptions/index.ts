@@ -11,6 +11,7 @@ export * from './pagination';
 export * from './registration.exception';
 export * from './relationship.not.found.exception';
 export * from './role.set.policy.role.limits.exception';
+export * from './session-store-unavailable.exception';
 export * from './subscription';
 export * from './user';
 export * from './validation.exception';

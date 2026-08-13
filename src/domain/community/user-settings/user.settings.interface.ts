@@ -2,6 +2,7 @@ import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { Field, Int, ObjectType } from '@nestjs/graphql';
 import { IUserSettingsAssistant } from './user.settings.assistant.interface';
 import { IUserSettingsCommunication } from './user.settings.communications.interface';
+import { IUserSettingsDashboard } from './user.settings.dashboard.interface';
 import { IUserSettingsHomeSpace } from './user.settings.home.space.interface';
 import { IUserSettingsNotification } from './user.settings.notification.interface';
 import { IUserSettingsPrivacy } from './user.settings.privacy.interface';
@@ -39,10 +40,30 @@ export class IUserSettings extends IAuthorizable {
   })
   homeSpace!: IUserSettingsHomeSpace;
 
+  @Field(() => IUserSettingsDashboard, {
+    nullable: false,
+    description: 'The home-dashboard view settings for this User.',
+  })
+  dashboard!: IUserSettingsDashboard;
+
   @Field(() => Int, {
     nullable: false,
     description:
       'The design version this User has selected (1 = legacy design generation, deprecated and scheduled for removal; 2 = current default design generation; 3+ reserved for future generations).',
   })
   designVersion!: number;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'The interface language chosen by this User. Null = the User has never chosen a language (distinct from having chosen the platform default).',
+  })
+  language!: string | null;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description:
+      'Whether this User has answered the one-time language offer (global across all languages). Latched true by any language write.',
+  })
+  languageOfferAnswered!: boolean;
 }

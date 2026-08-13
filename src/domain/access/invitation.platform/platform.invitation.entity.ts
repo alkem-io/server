@@ -1,4 +1,8 @@
-import { LONGER_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
+import {
+  LONGER_TEXT_LENGTH,
+  SMALL_TEXT_LENGTH,
+  TINY_TEXT_LENGTH,
+} from '@common/constants';
 import { RoleName } from '@common/enums/role.name';
 import { RoleSet } from '@domain/access/role-set/role.set.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
@@ -43,4 +47,7 @@ export class PlatformInvitation
 
   @Column('boolean', { default: false })
   profileCreated!: boolean;
+
+  @Column('varchar', { length: TINY_TEXT_LENGTH, nullable: true })
+  suggestedLanguage?: string;
 }

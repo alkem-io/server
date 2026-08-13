@@ -34,6 +34,26 @@ describe('SpaceResolverFields', () => {
     expect(resolver).toBeDefined();
   });
 
+  describe('activityScore', () => {
+    it('delegates to the batched loader keyed by space id', async () => {
+      const space = { id: 'space-1' } as any;
+      const loader = { load: vi.fn().mockResolvedValue(5) } as any;
+
+      const result = await resolver.activityScore(space, loader);
+
+      expect(loader.load).toHaveBeenCalledWith('space-1');
+      expect(result).toBe(5);
+    });
+
+    it('propagates a rejection from the loader (e.g. a denied READ check)', async () => {
+      const space = { id: 'private-space' } as any;
+      const denied = new Error('forbidden');
+      const loader = { load: vi.fn().mockRejectedValue(denied) } as any;
+
+      await expect(resolver.activityScore(space, loader)).rejects.toBe(denied);
+    });
+  });
+
   describe('platformAccess', () => {
     it('should return platformRolesAccess when defined', () => {
       const space = {

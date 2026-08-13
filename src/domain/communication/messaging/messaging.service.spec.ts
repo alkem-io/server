@@ -1,4 +1,5 @@
 import { ActorType, LogContext } from '@common/enums';
+import { RoomType } from '@common/enums/room.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -319,6 +320,138 @@ describe('MessagingService', () => {
         'a-actor',
         expect.objectContaining({ query: advisoryLockQuery })
       );
+    });
+
+    describe('GROUP consent gate (sec-server-1)', () => {
+      const callerId = 'caller-actor';
+      const memberB = 'member-b';
+      const memberC = 'member-c';
+      const vcMemberId = 'vc-member';
+
+      // Stub actor-type resolution for the given map of id → ActorType.
+      // The default fallback for everything else is USER (mirrors
+      // stubActorTypes in the createConversationFromExternal block below,
+      // but against getActorTypesByIds — the never-throwing resolver used
+      // here on purpose so an unknown/malformed id never crashes GROUP
+      // creation, only its own consent-evaluability).
+      const stubActorTypes = (override: Record<string, ActorType> = {}) => {
+        actorLookupService.getActorTypesByIds.mockImplementation(
+          async (ids: string[]) =>
+            new Map(ids.map(id => [id, override[id] ?? ActorType.USER]))
+        );
+      };
+
+      const userActor = (id: string, consents: boolean) =>
+        ({
+          id,
+          settings: {
+            communication: { allowOtherUsersToSendMessages: consents },
+          },
+        }) as any;
+
+      const stubPlatformMessagingAndPersist = (conversation: IConversation) => {
+        entityManager.getRepository.mockReturnValue({
+          createQueryBuilder: vi.fn().mockReturnValue({
+            leftJoinAndSelect: vi.fn().mockReturnThis(),
+            getOne: vi
+              .fn()
+              .mockResolvedValue({ messaging: { id: 'platform-messaging' } }),
+          }),
+        } as any);
+        conversationService.createConversation.mockResolvedValue(conversation);
+        conversationService.save.mockResolvedValue(conversation);
+        conversationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+          []
+        );
+        authorizationPolicyService.saveAll.mockResolvedValue(undefined);
+        conversationService.getConversationOrFail.mockResolvedValue(
+          conversation
+        );
+      };
+
+      it('drops non-consenting USER members before persisting the group (only consenting members become recipients of the notification pipeline)', async () => {
+        stubActorTypes();
+        userLookupService.getUsersByIds.mockResolvedValue([
+          userActor(memberB, true),
+          userActor(memberC, false),
+        ]);
+        const created = {
+          id: 'conv-group-1',
+          room: { id: 'room-1' },
+        } as unknown as IConversation;
+        stubPlatformMessagingAndPersist(created);
+
+        await service.createConversation({
+          type: 'group' as any,
+          callerActorId: callerId,
+          memberActorIds: [memberB, memberC],
+        });
+
+        expect(conversationService.createConversation).toHaveBeenCalledWith(
+          callerId,
+          [memberB],
+          RoomType.CONVERSATION_GROUP,
+          undefined,
+          undefined
+        );
+
+        // The dropped member must also be absent from the published event —
+        // `memberActorIds` is the notification/subscription fan-out list, so
+        // a regression there would target memberC despite the filtering above.
+        expect(
+          subscriptionPublishService.publishConversationEvent
+        ).toHaveBeenCalledTimes(1);
+        const publishedEvent =
+          subscriptionPublishService.publishConversationEvent.mock.calls[0][0];
+        expect([...publishedEvent.memberActorIds].sort()).toEqual(
+          [callerId, memberB].sort()
+        );
+      });
+
+      it('throws ValidationException when every invited member denies consent (no group is created)', async () => {
+        stubActorTypes();
+        userLookupService.getUsersByIds.mockResolvedValue([
+          userActor(memberB, false),
+          userActor(memberC, false),
+        ]);
+
+        await expect(
+          service.createConversation({
+            type: 'group' as any,
+            callerActorId: callerId,
+            memberActorIds: [memberB, memberC],
+          })
+        ).rejects.toThrow(ValidationException);
+
+        expect(conversationService.createConversation).not.toHaveBeenCalled();
+      });
+
+      it('exempts non-USER actors (e.g. a Virtual Contributor) from the consent check', async () => {
+        stubActorTypes({ [vcMemberId]: ActorType.VIRTUAL_CONTRIBUTOR });
+        userLookupService.getUsersByIds.mockResolvedValue([
+          userActor(memberB, false),
+        ]);
+        const created = {
+          id: 'conv-group-2',
+          room: { id: 'room-2' },
+        } as unknown as IConversation;
+        stubPlatformMessagingAndPersist(created);
+
+        await service.createConversation({
+          type: 'group' as any,
+          callerActorId: callerId,
+          memberActorIds: [memberB, vcMemberId],
+        });
+
+        // memberB denies and is dropped; the VC is exempt and stays.
+        expect(conversationService.createConversation).toHaveBeenCalledWith(
+          callerId,
+          [vcMemberId],
+          RoomType.CONVERSATION_GROUP,
+          undefined,
+          undefined
+        );
+      });
     });
   });
 

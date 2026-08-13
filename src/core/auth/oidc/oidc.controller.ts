@@ -2,15 +2,19 @@ import {
   Controller,
   Get,
   Inject,
+  LoggerService,
   Optional,
   Query,
   Req,
   Res,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { LogContext } from '@src/common/enums';
 import { AlkemioConfig } from '@src/types';
 import { randomUUID, timingSafeEqual } from 'crypto';
 import type { Request, Response } from 'express';
+import type { Redis } from 'ioredis';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { generators, type TokenSet } from 'openid-client';
 import {
   CORRELATION_ID_HEADER,
@@ -20,6 +24,7 @@ import {
 } from '../../middleware/correlation-id.middleware';
 import { emitAudit } from './audit';
 import { OidcService } from './oidc.service';
+import { OIDC_REDIS_CLIENT } from './oidc.tokens';
 import {
   PRE_AUTH_COOKIE_NAME,
   preAuthCookieAttributes,
@@ -27,6 +32,11 @@ import {
   verifyPreAuthCookie,
 } from './pre-auth-cookie';
 import { validateReturnTo } from './returnto-validator';
+import { sessionCookieClearOptions } from './session-cookie';
+import {
+  addSessionToSubIndex,
+  removeSessionFromSubIndex,
+} from './session-index.redis';
 import {
   type AlkemioSessionPayload,
   type SessionStoreHandle,
@@ -90,17 +100,40 @@ export class OidcController {
   // default in alkemio.yml); stamped onto the session at login as
   // `absolute_expires_at`.
   private readonly sessionAbsoluteTtlS: number;
-
+  /**
+   * server#6315 — the cookie's `domain`, which every clear on this controller
+   * used to omit. A clear whose domain does not match the set silently creates
+   * a second cookie and leaves the original alive, so with a domain configured
+   * (every deployed environment) sign-out did not actually sign the browser out.
+   * Verified on a running server: the login set carried `Domain=…`, the logout
+   * clear did not.
+   */
+  private readonly sessionCookieDomain: string | undefined;
   constructor(
     private readonly oidcService: OidcService,
     configService: ConfigService<AlkemioConfig, true>,
+    // server#6315 — index-maintenance failures are logged, never thrown
+    // (FR-006). Winston + LogContext rather than `new Logger()`: these are the
+    // records an operator greps for by `LogContext.AUTH` when a revocation
+    // misses a session, and a bare Nest logger does not reach the configured
+    // transports or APM.
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
     // FR-022c — sessionStore optional because some test harnesses replace
     // OidcController via custom providers and don't wire SESSION_STORE_HANDLE.
     // When absent, tearDownSession falls back to legacy destroy-only behaviour
     // (no tombstone). Production wiring in OidcModule provides the handle.
     @Optional()
     @Inject(SESSION_STORE_HANDLE)
-    private readonly sessionStore?: SessionStoreHandle
+    private readonly sessionStore?: SessionStoreHandle,
+    // server#6315 — the per-subject session index. Optional for the same reason
+    // as `sessionStore` above: some test harnesses replace OidcController via
+    // custom providers and wire neither. Without it the index simply is not
+    // maintained from here; the self-healing write in CookieSessionStrategy
+    // still catches the session on its next request.
+    @Optional()
+    @Inject(OIDC_REDIS_CLIENT)
+    private readonly redis?: Redis
   ) {
     const cookie = configService.get(
       'identity.authentication.providers.oidc.cookie',
@@ -108,6 +141,55 @@ export class OidcController {
     );
     this.sessionCookieName = cookie.name;
     this.sessionAbsoluteTtlS = cookie.absolute_ttl_s;
+    this.sessionCookieDomain = cookie.domain || undefined;
+  }
+
+  /**
+   * server#6315 — index maintenance is best-effort at every call site (FR-006).
+   * Login and logout must never fail because Redis hiccupped while updating an
+   * index, so every call routes through these two wrappers, which log and
+   * swallow. A stale member is harmless: a later revocation resolves it as
+   * `already_absent`.
+   */
+  private async indexSession(
+    sub: string | undefined,
+    sid: string | undefined,
+    absoluteExpiresAt: number
+  ): Promise<void> {
+    if (!this.redis || !sub || !sid) return;
+    try {
+      await addSessionToSubIndex(this.redis, sub, sid, absoluteExpiresAt);
+    } catch (error) {
+      this.logger.warn?.(
+        {
+          message: 'Failed to add session to subject index',
+          sub,
+          sid,
+          failureReason: error instanceof Error ? error.message : String(error),
+        },
+        LogContext.AUTH
+      );
+    }
+  }
+
+  private async deindexSession(
+    sub: string | undefined | null,
+    sid: string | undefined
+  ): Promise<void> {
+    if (!this.redis || !sub || !sid) return;
+    try {
+      await removeSessionFromSubIndex(this.redis, sub, sid);
+    } catch (error) {
+      this.logger.warn?.(
+        {
+          message: 'Failed to prune session from subject index',
+          sub,
+          sid,
+          failureReason: error instanceof Error ? error.message : String(error),
+        },
+        LogContext.AUTH
+      );
+    }
   }
 
   @Get('login')
@@ -251,6 +333,20 @@ export class OidcController {
     const clientId = client.metadata.client_id ?? '';
     const targetReturnTo = validateReturnTo(preAuth.returnTo).value;
 
+    // server#6315 — `regenerate()` below destroys the current Redis session and
+    // mints a fresh sid. Capture the OUTGOING pair first: the old sid is still
+    // a member of its subject's index, and nothing else will ever remove it —
+    // the paths that call `deindexSession` are logout and revocation, neither
+    // of which runs on a re-login.
+    //
+    // Left behind, every re-login adds one phantom member. Beyond leaking
+    // entries, a later revocation emits one `session.revoked` audit record per
+    // phantom with `outcome=success`, padding the compliance trail with
+    // sessions that had already ceased to exist.
+    const previousSid = req.sessionID;
+    const previousSub =
+      typeof req.session?.sub === 'string' ? req.session.sub : null;
+
     await new Promise<void>((resolve, reject) => {
       req.session.regenerate(err => {
         if (err) return reject(err);
@@ -270,6 +366,23 @@ export class OidcController {
         req.session.save(saveErr => (saveErr ? reject(saveErr) : resolve()));
       });
     });
+
+    // Retire the sid `regenerate()` just destroyed. Guarded on the sid actually
+    // having changed so a session store that reuses the id cannot make this
+    // un-index the session we are in the middle of establishing.
+    if (previousSid && previousSid !== req.sessionID) {
+      await this.deindexSession(previousSub, previousSid);
+    }
+
+    // server#6315 / FR-002 — register the new session in its subject's index so
+    // it can be revoked later. Without this there is no way to get from a
+    // subject to that subject's sessions, which is the whole reason deleting a
+    // user could not end their access. Best-effort: never fails the login.
+    await this.indexSession(
+      sub,
+      req.sessionID,
+      req.session.absolute_expires_at ?? now + this.sessionAbsoluteTtlS
+    );
 
     const attrs = preAuthCookieAttributes(this.oidcService.getCookieSecure());
     res.cookie(PRE_AUTH_COOKIE_NAME, '', {
@@ -479,6 +592,11 @@ export class OidcController {
     tombstone?: { tombstoneReason: string; sub?: string; clientId?: string }
   ): Promise<void> {
     const sid = req.sessionID;
+    // server#6315 / FR-003 — capture `sub` BEFORE destroy: afterwards the
+    // payload is gone and the index prune would silently target `undefined`.
+    const subForIndex =
+      tombstone?.sub ??
+      (typeof req.session?.sub === 'string' ? req.session.sub : undefined);
     await new Promise<void>(resolve => {
       try {
         req.session.destroy(() => resolve());
@@ -486,6 +604,7 @@ export class OidcController {
         resolve();
       }
     });
+    await this.deindexSession(subForIndex, sid);
     if (tombstone && this.sessionStore && sid) {
       try {
         await this.sessionStore.markTerminated(sid, tombstone.tombstoneReason, {
@@ -499,13 +618,15 @@ export class OidcController {
         // but functionally correct.
       }
     }
-    res.cookie(this.sessionCookieName, '', {
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-      secure: this.oidcService.getCookieSecure(),
-      maxAge: 0,
-    });
+    res.cookie(
+      this.sessionCookieName,
+      '',
+      sessionCookieClearOptions({
+        name: this.sessionCookieName,
+        secure: this.oidcService.getCookieSecure(),
+        domain: this.sessionCookieDomain,
+      })
+    );
   }
 
   @Get('id-token-hint')
@@ -550,6 +671,9 @@ export class OidcController {
     //   - had no cookie at all: nothing to clear; respond 204 so the SPA can
     //     break out of any retry loop and render the logged-out state.
     if (!storedIdToken) {
+      // server#6315 / FR-003 — read `sub` before destroy (see tearDownSession).
+      const staleSub = typeof s?.sub === 'string' ? s.sub : undefined;
+      const staleSid = req.sessionID;
       await new Promise<void>(resolve => {
         try {
           req.session.destroy(() => resolve());
@@ -557,6 +681,7 @@ export class OidcController {
           resolve();
         }
       });
+      await this.deindexSession(staleSub, staleSid);
       emitAudit({
         event_type: 'session.ended',
         outcome: 'success',
@@ -571,13 +696,15 @@ export class OidcController {
         res.status(204).end();
         return;
       }
-      res.cookie(this.sessionCookieName, '', {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: this.oidcService.getCookieSecure(),
-        maxAge: 0,
-      });
+      res.cookie(
+        this.sessionCookieName,
+        '',
+        sessionCookieClearOptions({
+          name: this.sessionCookieName,
+          secure: this.oidcService.getCookieSecure(),
+          domain: this.sessionCookieDomain,
+        })
+      );
       const fallback =
         typeof postLogoutRedirectUri === 'string' && postLogoutRedirectUri
           ? postLogoutRedirectUri
@@ -605,6 +732,9 @@ export class OidcController {
 
     // FR-017d — local cleanup is unconditional and precedes Hydra redirect.
     // Redis errors mid-destroy MUST NOT abort cookie clearance.
+    // server#6315 / FR-003 — `sub` is read above, before destroy, for the same
+    // reason the index prune has to be.
+    const logoutSid = req.sessionID;
     await new Promise<void>(resolve => {
       try {
         req.session.destroy(() => resolve());
@@ -612,14 +742,17 @@ export class OidcController {
         resolve();
       }
     });
+    await this.deindexSession(sub, logoutSid);
 
-    res.cookie(this.sessionCookieName, '', {
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-      secure: this.oidcService.getCookieSecure(),
-      maxAge: 0,
-    });
+    res.cookie(
+      this.sessionCookieName,
+      '',
+      sessionCookieClearOptions({
+        name: this.sessionCookieName,
+        secure: this.oidcService.getCookieSecure(),
+        domain: this.sessionCookieDomain,
+      })
+    );
 
     emitAudit({
       event_type: 'session.ended',

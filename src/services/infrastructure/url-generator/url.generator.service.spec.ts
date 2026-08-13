@@ -82,6 +82,42 @@ describe('UrlGeneratorService', () => {
     });
   });
 
+  describe('getConversationUrl (034-messaging-notifications, contract C-6)', () => {
+    it('pins the exact deep-link format `{platform.url}/?chat={conversationID}`', () => {
+      const result = service.getConversationUrl('conversation-123');
+
+      expect(result).toBe(`${ENDPOINT}/?chat=conversation-123`);
+    });
+
+    it('never returns a bare home/root link regardless of ID shape', () => {
+      const result = service.getConversationUrl(
+        '00000000-0000-0000-0000-000000000000'
+      );
+
+      expect(result).not.toBe('/');
+      expect(result).not.toBe(ENDPOINT);
+      expect(result).toContain('?chat=');
+    });
+  });
+
+  describe('getConversationDeepLinkPath (034-messaging-notifications, contract C-4)', () => {
+    it('pins the exact bare relative path `/?chat={conversationID}` — never platform-prefixed', () => {
+      const result = service.getConversationDeepLinkPath('conversation-123');
+
+      expect(result).toBe('/?chat=conversation-123');
+      expect(result).not.toContain(ENDPOINT);
+    });
+
+    it('never returns the bare home/root link anti-pattern regardless of ID shape', () => {
+      const result = service.getConversationDeepLinkPath(
+        '00000000-0000-0000-0000-000000000000'
+      );
+
+      expect(result).not.toBe('/');
+      expect(result).toContain('?chat=');
+    });
+  });
+
   describe('generateUrlForProfile', () => {
     it('should return cached URL when available', async () => {
       cacheService.getUrlFromCache.mockResolvedValue(

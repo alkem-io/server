@@ -1,4 +1,5 @@
 import { ActorContextModule } from '@core/actor-context/actor.context.module';
+import { OidcCoreModule } from '@core/auth/oidc/oidc-core.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { MicroservicesModule } from '@core/microservices/microservices.module';
 import { ActorModule } from '@domain/actor/actor/actor.module';
@@ -48,6 +49,12 @@ import { UserAuthorizationService } from './user.service.authorization';
     StorageBucketModule,
     DocumentModule,
     KratosModule,
+    // server#6315 — provides OidcSessionRevocationService for the deletion
+    // cascade. Deliberately NOT OidcModule: that pulls in Authentication /
+    // ActorContext / Authorization / PlatformAuthorizationPolicy, several of
+    // which sit above this module, so importing it would be a cycle.
+    // OidcCoreModule imports only ConfigModule.
+    OidcCoreModule,
     MessagingModule,
     TypeOrmModule.forFeature([User]),
   ],

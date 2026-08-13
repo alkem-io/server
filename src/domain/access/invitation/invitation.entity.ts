@@ -1,4 +1,4 @@
-import { LONGER_TEXT_LENGTH } from '@common/constants';
+import { LONGER_TEXT_LENGTH, TINY_TEXT_LENGTH } from '@common/constants';
 import { RoleName } from '@common/enums/role.name';
 import { RoleSet } from '@domain/access/role-set/role.set.entity';
 import { Actor } from '@domain/actor/actor/actor.entity';
@@ -62,4 +62,7 @@ export class Invitation extends AuthorizableEntity implements IInvitation {
 
   @Column('simple-array', { nullable: false })
   extraRoles!: RoleName[];
+
+  @Column('varchar', { length: TINY_TEXT_LENGTH, nullable: true })
+  suggestedLanguage?: string;
 }

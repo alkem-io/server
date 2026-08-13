@@ -1,3 +1,4 @@
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import {
   EntityNotFoundException,
@@ -362,6 +363,32 @@ describe('TagsetService', () => {
         service.convertTagsetTemplatesToCreateTagsetInput(templates);
 
       expect(result[0].tags).toBeUndefined();
+    });
+
+    // Same root cause as story #6021, on the create path rather than the
+    // transfer path: a Callout seeded with a state the Space does not allow
+    // matches no phase filter and is filtered out of every tab.
+    it('should seed the first allowed value when the template carries no usable default', () => {
+      const templates = [
+        {
+          name: TagsetReservedName.FLOW_STATE,
+          type: TagsetType.SELECT_ONE,
+          allowedValues: ['EXPLORE', 'DEFINE'],
+          defaultSelectedValue: undefined,
+        },
+        {
+          name: TagsetReservedName.FLOW_STATE,
+          type: TagsetType.SELECT_ONE,
+          allowedValues: ['EXPLORE', 'DEFINE'],
+          defaultSelectedValue: 'RETIRED-STATE',
+        },
+      ] as unknown as ITagsetTemplate[];
+
+      const result =
+        service.convertTagsetTemplatesToCreateTagsetInput(templates);
+
+      expect(result[0].tags).toEqual(['EXPLORE']);
+      expect(result[1].tags).toEqual(['EXPLORE']);
     });
   });
 

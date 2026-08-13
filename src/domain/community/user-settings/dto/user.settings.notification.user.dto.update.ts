@@ -31,6 +31,24 @@ export class UpdateUserSettingsNotificationUserInput {
   @Type(() => NotificationSettingInput)
   commentReply?: NotificationSettingInput;
 
+  @Field(() => NotificationSettingInput, {
+    nullable: true,
+    description:
+      'Receive a notification when someone sends me a direct (1:1) chat message. Note: the inApp channel is permanently OFF regardless of the stored value.',
+  })
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  conversationMessageDirect?: NotificationSettingInput;
+
+  @Field(() => NotificationSettingInput, {
+    nullable: true,
+    description:
+      'Receive a notification when someone posts in a group chat I am a member of. Note: the inApp channel is permanently OFF regardless of the stored value.',
+  })
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  conversationMessageGroup?: NotificationSettingInput;
+
   @Field(() => UpdateUserSettingsNotificationUserMembershipInput, {
     nullable: true,
     description: 'Settings related to User Membership Notifications.',

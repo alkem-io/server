@@ -3,6 +3,7 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { CollaboraDocumentModule } from '@domain/collaboration/collabora-document/collabora.document.module';
 import { MemoModule } from '@domain/common/memo';
+import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { Module } from '@nestjs/common';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
@@ -14,6 +15,7 @@ import { CollaborativeDocumentIntegrationService } from './collaborative-documen
     AuthorizationModule,
     ActorContextModule,
     ActorLookupModule,
+    UserLookupModule,
     MemoModule,
     CollaboraDocumentModule,
     ContributionReporterModule,

@@ -170,6 +170,16 @@ export const userSettingsData: { userSettings: IUserSettings } = {
           inApp: true,
           push: true,
         },
+        conversationMessageDirect: {
+          email: false,
+          inApp: false,
+          push: true,
+        },
+        conversationMessageGroup: {
+          email: false,
+          inApp: false,
+          push: true,
+        },
         membership: {
           spaceCommunityInvitationReceived: {
             email: true,
@@ -192,9 +202,14 @@ export const userSettingsData: { userSettings: IUserSettings } = {
       spaceID: null,
       autoRedirect: false,
     },
+    dashboard: {
+      activityView: true,
+    },
     assistant: {
       enabledCapabilities: [],
     },
     designVersion: DESIGN_VERSION_CURRENT_DEFAULT,
+    language: null,
+    languageOfferAnswered: false,
   },
 };

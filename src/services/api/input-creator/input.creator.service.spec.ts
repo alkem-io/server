@@ -1,4 +1,5 @@
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
+import { CalloutSelectionMode } from '@common/enums/callout.selection.mode';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
@@ -754,6 +755,113 @@ describe('InputCreatorService', () => {
       expect(result.location!.city).toBe('Amsterdam');
       expect(result.referencesData).toHaveLength(1);
       expect(result.referencesData![0].name).toBe('website');
+    });
+  });
+
+  // ─── Template-capture strip: mapView ───────────────────────────────────────
+
+  describe('template strip — mapView on CONTRIBUTORS callout', () => {
+    const contributorsCalloutWithMapView = {
+      id: 'callout-contributors',
+      nameID: 'contributors-callout',
+      sortOrder: 1,
+      framing: {
+        id: 'framing-contributors',
+        type: CalloutFramingType.CONTRIBUTORS,
+        profile: {
+          displayName: 'Contributors',
+          description: '',
+          tagsets: [],
+        },
+        whiteboard: undefined,
+        link: undefined,
+        memo: undefined,
+        mediaGallery: undefined,
+      },
+      contributionDefaults: {
+        defaultDisplayName: '',
+        postDescription: '',
+        whiteboardContent: '',
+      },
+      settings: {
+        framing: {
+          contributors: {
+            contributorTypes: ['USER'],
+            defaultContributorType: 'USER',
+            defaultView: 'LIST',
+            mapView: { longitude: 4.9, latitude: 52.37, zoom: 7 },
+          },
+          selection: { mode: 'auto', selectedIds: [] },
+        },
+      },
+      classification: { tagsets: [] },
+    };
+
+    it('strips mapView from a CONTRIBUTORS callout during template serialization', async () => {
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(
+        contributorsCalloutWithMapView
+      );
+
+      const result = await service.buildCreateCalloutInputFromCallout(
+        'callout-contributors'
+      );
+
+      expect(result).not.toBeNull();
+      // mapView must not appear in the serialized template settings
+      expect(
+        (result!.settings as any)?.framing?.contributors?.mapView
+      ).toBeUndefined();
+    });
+
+    it('preserves every contributor field when a CONTRIBUTORS callout has no mapView (regression)', async () => {
+      const calloutWithoutMapView = {
+        ...contributorsCalloutWithMapView,
+        settings: {
+          framing: {
+            contributors: {
+              contributorTypes: ['USER'],
+              defaultContributorType: 'USER',
+              defaultView: 'LIST',
+              // no mapView
+            },
+            selection: { mode: CalloutSelectionMode.AUTO, selectedIds: [] },
+          },
+        },
+      };
+
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(
+        calloutWithoutMapView
+      );
+
+      const result = await service.buildCreateCalloutInputFromCallout(
+        'callout-contributors'
+      );
+
+      expect(result).not.toBeNull();
+      const contributors = (result!.settings as any)?.framing?.contributors;
+      // No mapView appears (nothing to strip), and each other contributor field
+      // round-trips unchanged — assert them all, not just contributorTypes.
+      expect(contributors?.mapView).toBeUndefined();
+      expect(contributors?.contributorTypes).toEqual(['USER']);
+      expect(contributors?.defaultContributorType).toBe('USER');
+      expect(contributors?.defaultView).toBe('LIST');
+    });
+
+    it('025 selection strip still holds on a CONTRIBUTORS callout with mapView (regression)', async () => {
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(
+        contributorsCalloutWithMapView
+      );
+
+      const result = await service.buildCreateCalloutInputFromCallout(
+        'callout-contributors'
+      );
+
+      expect(result).not.toBeNull();
+      // 025: selection is reset to AUTO (enum value is 'auto')
+      expect((result!.settings as any)?.framing?.selection?.mode).toBe('auto');
+      expect(
+        (result!.settings as any)?.framing?.selection?.selectedIds
+      ).toEqual([]);
     });
   });
 });

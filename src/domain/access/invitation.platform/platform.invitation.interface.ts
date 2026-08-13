@@ -54,4 +54,11 @@ export class IPlatformInvitation extends IAuthorizable {
     description: 'The platform role the user will receive when they sign up',
   })
   platformRole?: RoleName;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'Optional language the inviter expects the invitee to prefer; recorded per invitation.',
+  })
+  suggestedLanguage?: string;
 }

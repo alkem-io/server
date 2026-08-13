@@ -1,7 +1,14 @@
 import { ActorType } from '@common/enums/actor.type';
 import { ContributorCollectionView } from '@common/enums/contributor.collection.view';
 import { Field, InputType, ObjectType } from '@nestjs/graphql';
-import { ArrayMinSize, IsEnum, IsOptional } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  ArrayMinSize,
+  IsEnum,
+  IsOptional,
+  ValidateNested,
+} from 'class-validator';
+import { CreateCalloutContributorsMapViewInput } from './callout.settings.contributors.mapview.dto.create';
 
 // CREATE-specific contributor settings: `contributorTypes` is REQUIRED on create
 // (a CONTRIBUTORS callout must declare at least one type). The partial-update
@@ -40,4 +47,14 @@ export class CreateCalloutContributorsSettingsInput {
   @IsOptional()
   @IsEnum(ContributorCollectionView)
   defaultView?: ContributorCollectionView;
+
+  @Field(() => CreateCalloutContributorsMapViewInput, {
+    nullable: true,
+    description:
+      'Admin-fixed initial map view. When omitted, the callout opens on automatic framing.',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateCalloutContributorsMapViewInput)
+  mapView?: CreateCalloutContributorsMapViewInput;
 }

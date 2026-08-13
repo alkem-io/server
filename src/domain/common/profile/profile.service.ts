@@ -595,19 +595,12 @@ export class ProfileService {
   public convertTagsetTemplatesToCreateTagsetInput(
     tagsetTemplates: ITagsetTemplate[]
   ): CreateTagsetInput[] {
-    const result: CreateTagsetInput[] = [];
-    for (const tagsetTemplate of tagsetTemplates) {
-      const input: CreateTagsetInput = {
-        name: tagsetTemplate.name,
-        type: tagsetTemplate.type,
-        tagsetTemplate: tagsetTemplate,
-        tags: tagsetTemplate.defaultSelectedValue
-          ? [tagsetTemplate.defaultSelectedValue]
-          : undefined,
-      };
-      result.push(input);
-    }
-    return result;
+    // Single implementation on TagsetService: this used to be a byte-identical
+    // copy, so any fix to how a template's default is resolved had to be made
+    // twice (and was not).
+    return this.tagsetService.convertTagsetTemplatesToCreateTagsetInput(
+      tagsetTemplates
+    );
   }
 
   private static readonly TRUSTED_EXTERNAL_AVATAR_HOSTS = new Set<string>([
