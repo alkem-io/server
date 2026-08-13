@@ -309,7 +309,13 @@ describe('CollaborativeDocumentIntegrationService', () => {
     });
   });
 
-  describe('officeDocumentContributions', () => {
+  // TEMP hotfix: the background office-document window reporting path is disabled
+  // to remove the ~8s getCommunityForCollaboraDocumentOrFail penalty it paid per
+  // event (reportOfficeDocumentWindow now returns early). The whole reporting
+  // behavior these blocks verify is suppressed until the proper fix restores it
+  // with a cheap leaf-first space lookup — see the collabora-editor-url-latency
+  // follow-up PR referenced in this PR's description.
+  describe.skip('officeDocumentContributions', () => {
     // The event carries the STORAGE Document id (= collaboraDocument.document.id),
     // NOT the CollaboraDocument id. The service reverse-resolves the
     // CollaboraDocument by its document.id, then indexes under CollaboraDocument.id.
@@ -751,7 +757,12 @@ describe('CollaborativeDocumentIntegrationService', () => {
 
   // FR-012: companion VIEW consumer — same reverse-resolution path as the
   // contribution consumer, differing ONLY in the reporter method invoked.
-  describe('officeDocumentViews', () => {
+  // TEMP hotfix: office-document window reporting is disabled to remove the ~8s
+  // getCommunityForCollaboraDocumentOrFail penalty (reportOfficeDocumentWindow
+  // now returns early). Re-enabled by the proper fix (a cheap leaf-first space
+  // lookup) in the collabora-editor-url-latency follow-up PR referenced in this
+  // PR's description.
+  describe.skip('officeDocumentViews', () => {
     const STORAGE_DOCUMENT_ID = 'storage-doc-1';
     const COLLABORA_DOCUMENT_ID = 'collabora-doc-1';
 

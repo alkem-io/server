@@ -331,60 +331,71 @@ export class CollaborativeDocumentIntegrationService {
       alkemio: boolean;
     }) => void
   ): Promise<void> {
-    try {
-      // documentId is the storage Document id — reverse-resolve the domain
-      // CollaboraDocument that is backed by it.
-      const collaboraDocument =
-        await this.collaboraDocumentService.getCollaboraDocumentByStorageDocumentId(
-          documentId,
-          { relations: { profile: true } }
-        );
-      if (!collaboraDocument) {
-        this.logger.warn?.(
-          {
-            message: `Discarding Collabora document ${kind} event: no CollaboraDocument for storage document id`,
-            documentId,
-          },
-          LogContext.COLLAB_DOCUMENT_INTEGRATION
-        );
-        return;
-      }
-
-      const community =
-        await this.communityResolver.getCommunityForCollaboraDocumentOrFail(
-          collaboraDocument.id
-        );
-      const levelZeroSpaceID =
-        await this.communityResolver.getLevelZeroSpaceIdForCommunity(
-          community.id
-        );
-      const displayName = collaboraDocument.profile?.displayName ?? '';
-
-      // Resolve actor types ONCE for the union of both sets (tolerant batch
-      // lookup — unresolvable ids are simply absent and fall to `unknown`),
-      // then partition each set by type. The set of ids is unchanged (SC-006);
-      // only their shape changes (flat array → type-keyed object).
-      const allIds = [...new Set([...writeActors, ...readonlyActors])];
-      const typeById = await this.actorLookupService.getActorTypesByIds(allIds);
-
-      report({
-        id: collaboraDocument.id,
-        name: displayName,
-        space: levelZeroSpaceID,
-        writeActors: this.groupActorsByType(writeActors, typeById),
-        readonlyActors: this.groupActorsByType(readonlyActors, typeById),
-        alkemio: await this.isAlkemioTeamWindow(allIds, typeById),
-      });
-    } catch (e: any) {
-      this.logger.warn?.(
-        {
-          message: `Discarding unresolvable Collabora document ${kind} event`,
-          documentId,
-          error: e?.message,
-        },
-        LogContext.COLLAB_DOCUMENT_INTEGRATION
-      );
-    }
+    // TEMP hotfix: analytics attribution disabled to remove the ~8s
+    // getCommunityForCollaboraDocumentOrFail penalty. This is the BACKGROUND
+    // RabbitMQ consumer path — no user waits on it, but it paid the same
+    // expensive getCommunityForCollaboraDocumentOrFail query per
+    // contribution/view event. Whole best-effort report body suppressed (the
+    // `report`/`kind`/`documentId`/actor params are now unreferenced while this
+    // is off; restored by the proper fix — a cheap leaf-first space lookup — in
+    // the collabora-editor-url-latency follow-up PR referenced in this PR's
+    // description). Return early so the consumer still ACKs the event without
+    // firing the query.
+    return;
+    // try {
+    //   // documentId is the storage Document id — reverse-resolve the domain
+    //   // CollaboraDocument that is backed by it.
+    //   const collaboraDocument =
+    //     await this.collaboraDocumentService.getCollaboraDocumentByStorageDocumentId(
+    //       documentId,
+    //       { relations: { profile: true } }
+    //     );
+    //   if (!collaboraDocument) {
+    //     this.logger.warn?.(
+    //       {
+    //         message: `Discarding Collabora document ${kind} event: no CollaboraDocument for storage document id`,
+    //         documentId,
+    //       },
+    //       LogContext.COLLAB_DOCUMENT_INTEGRATION
+    //     );
+    //     return;
+    //   }
+    //
+    //   const community =
+    //     await this.communityResolver.getCommunityForCollaboraDocumentOrFail(
+    //       collaboraDocument.id
+    //     );
+    //   const levelZeroSpaceID =
+    //     await this.communityResolver.getLevelZeroSpaceIdForCommunity(
+    //       community.id
+    //     );
+    //   const displayName = collaboraDocument.profile?.displayName ?? '';
+    //
+    //   // Resolve actor types ONCE for the union of both sets (tolerant batch
+    //   // lookup — unresolvable ids are simply absent and fall to `unknown`),
+    //   // then partition each set by type. The set of ids is unchanged;
+    //   // only their shape changes (flat array → type-keyed object).
+    //   const allIds = [...new Set([...writeActors, ...readonlyActors])];
+    //   const typeById = await this.actorLookupService.getActorTypesByIds(allIds);
+    //
+    //   report({
+    //     id: collaboraDocument.id,
+    //     name: displayName,
+    //     space: levelZeroSpaceID,
+    //     writeActors: this.groupActorsByType(writeActors, typeById),
+    //     readonlyActors: this.groupActorsByType(readonlyActors, typeById),
+    //     alkemio: await this.isAlkemioTeamWindow(allIds, typeById),
+    //   });
+    // } catch (e: any) {
+    //   this.logger.warn?.(
+    //     {
+    //       message: `Discarding unresolvable Collabora document ${kind} event`,
+    //       documentId,
+    //       error: e?.message,
+    //     },
+    //     LogContext.COLLAB_DOCUMENT_INTEGRATION
+    //   );
+    // }
   }
 
   /**
