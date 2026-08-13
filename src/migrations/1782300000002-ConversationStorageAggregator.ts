@@ -179,18 +179,50 @@ export class ConversationStorageAggregator1782300000002
     }
   }
 
+  /**
+   * NON-DESTRUCTIVE by design.
+   *
+   * The previous implementation deleted every conversation's backfilled
+   * `storage_bucket`. `file."storageBucketId"` is `ON DELETE CASCADE`, so that
+   * silently destroyed every conversation attachment's `file` row — real user
+   * data — and orphaned each one's server-owned `authorization_policy` and
+   * `tagset` rows (both are `ON DELETE SET NULL` from `file`, so they are left
+   * behind unreferenced), while the blobs stayed in file-service with no row
+   * pointing at them. A down-migration must never destroy user data.
+   *
+   * So `down()` now reverses only what `up()` can reverse safely:
+   *   - the schema it added (FK + unique constraint + the column), always; and
+   *   - the storage rows it created, ONLY for conversations whose backfilled
+   *     bucket is still EMPTY (no `file` rows) — i.e. provably never used, so
+   *     deleting it cannot lose anything.
+   *
+   * DOCUMENTED LIMITATION: a conversation whose bucket has accrued attachments
+   * keeps its `storage_aggregator` + `storage_bucket` + `authorization_policy`
+   * rows. After `down()` they are unreferenced (the `conversation` column is
+   * gone) but harmless, and they still hold the attachments. Re-running `up()`
+   * will mint a NEW aggregator for those conversations rather than re-link the
+   * old one, so the old rows (and the attachments in them) become unreachable
+   * from the conversation. Reattaching them is a manual, data-aware operation
+   * and is deliberately NOT attempted here.
+   */
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // Release backfilled storage for conversations, then drop the column.
+    // Capture the mapping BEFORE the column is dropped. `documentCount` decides
+    // whether each backfilled bucket is safe to delete.
     const rows: {
       storageAggregatorId: string;
       directStorageId: string | null;
-      aggregatorAuthId: string;
+      aggregatorAuthId: string | null;
       bucketAuthId: string | null;
+      documentCount: string;
     }[] = await queryRunner.query(
       `SELECT c."storageAggregatorId"            AS "storageAggregatorId",
               sa."directStorageId"               AS "directStorageId",
               sa."authorizationId"               AS "aggregatorAuthId",
-              sb."authorizationId"               AS "bucketAuthId"
+              sb."authorizationId"               AS "bucketAuthId",
+              COALESCE(
+                (SELECT COUNT(*) FROM file f WHERE f."storageBucketId" = sa."directStorageId"),
+                0
+              )                                  AS "documentCount"
        FROM conversation c
        JOIN storage_aggregator sa ON sa.id = c."storageAggregatorId"
        LEFT JOIN storage_bucket sb ON sb.id = sa."directStorageId"
@@ -208,11 +240,19 @@ export class ConversationStorageAggregator1782300000002
     );
 
     for (const row of rows) {
+      // Any attachment in the bucket ⇒ leave the whole chain alone. Deleting the
+      // bucket would CASCADE-delete those `file` rows.
+      if (Number(row.documentCount) > 0) {
+        continue;
+      }
       if (row.directStorageId) {
         await queryRunner.query(`DELETE FROM storage_bucket WHERE id = $1`, [
           row.directStorageId,
         ]);
       }
+      // storage_bucket."storageAggregatorId" and storage_aggregator."directStorageId"
+      // are both ON DELETE SET NULL, so deleting the aggregator cannot cascade
+      // into any bucket we chose to keep above.
       await queryRunner.query(`DELETE FROM storage_aggregator WHERE id = $1`, [
         row.storageAggregatorId,
       ]);
@@ -222,9 +262,12 @@ export class ConversationStorageAggregator1782300000002
           [row.bucketAuthId]
         );
       }
-      await queryRunner.query(`DELETE FROM authorization_policy WHERE id = $1`, [
-        row.aggregatorAuthId,
-      ]);
+      if (row.aggregatorAuthId) {
+        await queryRunner.query(
+          `DELETE FROM authorization_policy WHERE id = $1`,
+          [row.aggregatorAuthId]
+        );
+      }
     }
   }
 }
