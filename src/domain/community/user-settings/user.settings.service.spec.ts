@@ -128,6 +128,9 @@ describe('UserSettingsService', () => {
         spaceID: null,
         autoRedirect: false,
       },
+      dashboard: {
+        activityView: true,
+      },
       designVersion: DESIGN_VERSION_CURRENT_DEFAULT,
       ...overrides,
     } as IUserSettings;
@@ -378,6 +381,175 @@ describe('UserSettingsService', () => {
       expect(() => service.updateSettings(settings, updateData)).toThrow(
         ValidationException
       );
+    });
+  });
+
+  describe('updateSettings - dashboard', () => {
+    it('should update activityView when provided', () => {
+      const settings = buildSettings();
+      const updateData = {
+        dashboard: { activityView: false },
+      } as UpdateUserSettingsEntityInput;
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.dashboard.activityView).toBe(false);
+    });
+
+    it('should leave activityView untouched when dashboard update data is omitted', () => {
+      const settings = buildSettings({
+        dashboard: { activityView: false },
+      });
+      const updateData = {} as UpdateUserSettingsEntityInput;
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.dashboard.activityView).toBe(false);
+    });
+
+    it('should not change other setting groups when only dashboard is updated', () => {
+      const settings = buildSettings({
+        homeSpace: { spaceID: 'space-1', autoRedirect: true },
+      });
+      const updateData = {
+        dashboard: { activityView: false },
+      } as UpdateUserSettingsEntityInput;
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.dashboard.activityView).toBe(false);
+      expect(result.homeSpace.spaceID).toBe('space-1');
+      expect(result.homeSpace.autoRedirect).toBe(true);
+    });
+
+    it('should default a missing dashboard group to activityView=true before merging', () => {
+      const settings = buildSettings();
+      // Simulate a legacy row loaded before the backfill migration.
+      (settings as { dashboard?: unknown }).dashboard = undefined;
+      const updateData = {
+        dashboard: { activityView: false },
+      } as UpdateUserSettingsEntityInput;
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.dashboard.activityView).toBe(false);
+    });
+  });
+
+  describe('updateSettings - language / languageOfferAnswered', () => {
+    it('should set language and latch languageOfferAnswered when language is provided', () => {
+      const settings = buildSettings({
+        language: null,
+        languageOfferAnswered: false,
+      } as any);
+      const result = service.updateSettings(settings, { language: 'nl' });
+
+      expect(result.language).toBe('nl');
+      expect(result.languageOfferAnswered).toBe(true);
+    });
+
+    it('should latch languageOfferAnswered to true (decline path) without writing a language', () => {
+      const settings = buildSettings({
+        language: null,
+        languageOfferAnswered: false,
+      } as any);
+      const result = service.updateSettings(settings, {
+        languageOfferAnswered: true,
+      });
+
+      expect(result.language).toBeNull();
+      expect(result.languageOfferAnswered).toBe(true);
+    });
+
+    it('should throw ValidationException when languageOfferAnswered is set to false (one-way latch)', () => {
+      const settings = buildSettings({
+        language: null,
+        languageOfferAnswered: true,
+      } as any);
+
+      expect(() =>
+        service.updateSettings(settings, { languageOfferAnswered: false })
+      ).toThrow(ValidationException);
+    });
+
+    it('should leave other settings blocks untouched by a language-only update', () => {
+      const settings = buildSettings({
+        language: null,
+        languageOfferAnswered: false,
+        designVersion: 3,
+      } as any);
+      const result = service.updateSettings(settings, { language: 'en' });
+
+      expect(result.designVersion).toBe(3);
+      expect(result.privacy.contributionRolesPubliclyVisible).toBe(false);
+    });
+
+    it('should not change language when language update is omitted', () => {
+      const settings = buildSettings({
+        language: 'nl',
+        languageOfferAnswered: true,
+      } as any);
+      const result = service.updateSettings(settings, {});
+
+      expect(result.language).toBe('nl');
+      expect(result.languageOfferAnswered).toBe(true);
+    });
+
+    it('should treat explicit null for language as a no-op (not clear language or latch)', () => {
+      // GraphQL nullable Boolean/String: sending null must not clear the stored
+      // language or touch the latch — it behaves like an omitted field.
+      const settings = buildSettings({
+        language: 'nl',
+        languageOfferAnswered: true,
+      } as any);
+      const updateData = {
+        language: null,
+      } as unknown as UpdateUserSettingsEntityInput;
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.language).toBe('nl');
+      expect(result.languageOfferAnswered).toBe(true);
+    });
+
+    it('should treat explicit null for languageOfferAnswered as a no-op', () => {
+      // An explicit null on the nullable Boolean must not trigger the rejection
+      // path (false check) or change the latch state.
+      const settings = buildSettings({
+        language: null,
+        languageOfferAnswered: false,
+      } as any);
+      const updateData = {
+        languageOfferAnswered: null,
+      } as unknown as UpdateUserSettingsEntityInput;
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.languageOfferAnswered).toBe(false);
+    });
+
+    it('should throw ValidationException when language is not in SUPPORTED_INTERFACE_LANGUAGES (3656016008)', () => {
+      const settings = buildSettings({
+        language: null,
+        languageOfferAnswered: false,
+      } as any);
+
+      expect(() =>
+        service.updateSettings(settings, { language: 'xx' })
+      ).toThrow(ValidationException);
+    });
+
+    it('should accept a supported non-eligible language (e.g. "es") without throwing', () => {
+      // The FULL supported set is allowed, not just the eligible subset
+      const settings = buildSettings({
+        language: null,
+        languageOfferAnswered: false,
+      } as any);
+
+      const result = service.updateSettings(settings, { language: 'es' });
+
+      expect(result.language).toBe('es');
+      expect(result.languageOfferAnswered).toBe(true);
     });
   });
 

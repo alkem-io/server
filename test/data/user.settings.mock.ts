@@ -192,9 +192,14 @@ export const userSettingsData: { userSettings: IUserSettings } = {
       spaceID: null,
       autoRedirect: false,
     },
+    dashboard: {
+      activityView: true,
+    },
     assistant: {
       enabledCapabilities: [],
     },
     designVersion: DESIGN_VERSION_CURRENT_DEFAULT,
+    language: null,
+    languageOfferAnswered: false,
   },
 };

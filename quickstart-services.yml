@@ -358,6 +358,11 @@ services:
 
   rabbitmq:
     container_name: alkemio_dev_rabbitmq
+    # The Erlang node name is derived from the hostname, and the node name is
+    # the mnesia sub-directory name. Without pinning it, Docker uses the random
+    # container id, so every `compose up` orphans the previous node directory
+    # under ~/.docker-conf/rabbitmq/data and that directory is never reclaimed.
+    hostname: rmq
     image: rabbitmq:3.9.13-management
     restart: always
     networks:
@@ -369,6 +374,9 @@ services:
       - RABBITMQ_SECURE_PASSWORD=yes
       - RABBITMQ_DEFAULT_USER=alkemio-admin
       - RABBITMQ_DEFAULT_PASS=alkemio!
+      # Ra (Raft) pre-allocates its write-ahead log at boot, ~280MB by default.
+      # The dev stack only declares classic queues, so cap it at 32MB.
+      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-ra wal_max_size_bytes 33554432
     healthcheck:
       test: rabbitmq-diagnostics check_port_connectivity
       interval: 30s
@@ -382,7 +390,7 @@ services:
       [
         'bash',
         '-c',
-        'chmod 400 /var/lib/rabbitmq/.erlang.cookie; rabbitmq-server --hostname rmq',
+        'chmod 400 /var/lib/rabbitmq/.erlang.cookie; rabbitmq-server',
       ]
 
   notification:
@@ -746,7 +754,7 @@ services:
       - 'wopi-service:host-gateway'
     container_name: alkemio_dev_collabora
     hostname: collabora
-    image: collabora/code:24.04.12.2.1
+    image: collabora/code:26.04.2.4.1
     environment:
       # Reach wopi through Traefik (not a direct port), so callbacks ride the
       # wopi-service failover. A `wopi-service:host-gateway` extra_host here

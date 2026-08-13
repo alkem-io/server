@@ -6,6 +6,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { CollaboraDocumentService } from '@domain/collaboration/collabora-document/collabora.document.service';
 import { MemoService } from '@domain/common/memo';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
@@ -50,6 +51,9 @@ describe('CollaborativeDocumentIntegrationService', () => {
   let actorLookupService: {
     getActorTypesByIds: Mock;
   };
+  let userLookupService: {
+    getUsersByIds: Mock;
+  };
 
   const configServiceMock = {
     get: vi.fn((key: string) => {
@@ -82,6 +86,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
     contributionReporter = module.get(ContributionReporterService) as any;
     communityResolver = module.get(CommunityResolverService) as any;
     actorLookupService = module.get(ActorLookupService) as any;
+    userLookupService = module.get(UserLookupService) as any;
   });
 
   describe('accessGranted', () => {
@@ -304,7 +309,13 @@ describe('CollaborativeDocumentIntegrationService', () => {
     });
   });
 
-  describe('officeDocumentContributions', () => {
+  // TEMP hotfix: the background office-document window reporting path is disabled
+  // to remove the ~8s getCommunityForCollaboraDocumentOrFail penalty it paid per
+  // event (reportOfficeDocumentWindow now returns early). The whole reporting
+  // behavior these blocks verify is suppressed until the proper fix restores it
+  // with a cheap leaf-first space lookup — see the collabora-editor-url-latency
+  // follow-up PR referenced in this PR's description.
+  describe.skip('officeDocumentContributions', () => {
     // The event carries the STORAGE Document id (= collaboraDocument.document.id),
     // NOT the CollaboraDocument id. The service reverse-resolves the
     // CollaboraDocument by its document.id, then indexes under CollaboraDocument.id.
@@ -314,7 +325,10 @@ describe('CollaborativeDocumentIntegrationService', () => {
     // 012: the consumer resolves each actor id → ActorType once via the tolerant
     // batch lookup, then groups writeActors/readonlyActors by type. Pass the
     // type-by-id map a test wants the lookup to return.
-    const arrange = (typeById: Map<string, ActorType> = new Map()) => {
+    const arrange = (
+      typeById: Map<string, ActorType> = new Map(),
+      users: { id: string; email: string }[] = []
+    ) => {
       collaboraDocumentService.getCollaboraDocumentByStorageDocumentId.mockResolvedValue(
         {
           id: COLLABORA_DOCUMENT_ID,
@@ -328,6 +342,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
         'space-root'
       );
       actorLookupService.getActorTypesByIds.mockResolvedValue(typeById);
+      userLookupService.getUsersByIds.mockResolvedValue(users);
       contributionReporter.officeDocumentContribution.mockReturnValue(
         undefined
       );
@@ -535,6 +550,162 @@ describe('CollaborativeDocumentIntegrationService', () => {
       expect(readIds).toEqual(['r-ghost']);
     });
 
+    // The aggregate `alkemio` team flag: true ONLY when the window has ≥1 user
+    // actor AND every user actor (across both sets) is an @alkem.io team member.
+    describe('alkemio team flag', () => {
+      it('is true when every user actor is an Alkemio-team member', async () => {
+        arrange(
+          new Map([
+            ['user-1', ActorType.USER],
+            ['user-2', ActorType.USER],
+          ]),
+          [
+            { id: 'user-1', email: 'a@alkem.io' },
+            { id: 'user-2', email: 'b@alkem.io' },
+          ]
+        );
+
+        await service.officeDocumentContributions({
+          documentId: STORAGE_DOCUMENT_ID,
+          writeActors: ['user-1'],
+          readonlyActors: ['user-2'],
+        } as any);
+
+        // only the user-type ids are looked up (non-user actors never participate)
+        expect(userLookupService.getUsersByIds).toHaveBeenCalledTimes(1);
+        expect(userLookupService.getUsersByIds.mock.calls[0][0]).toEqual(
+          expect.arrayContaining(['user-1', 'user-2'])
+        );
+        const arg =
+          contributionReporter.officeDocumentContribution.mock.calls[0][0];
+        expect(arg.alkemio).toBe(true);
+      });
+
+      it('is false when any user actor is outside the Alkemio team (mixed window)', async () => {
+        arrange(
+          new Map([
+            ['user-1', ActorType.USER],
+            ['user-2', ActorType.USER],
+          ]),
+          [
+            { id: 'user-1', email: 'polina@alkem.io' },
+            { id: 'user-2', email: 'someone@example.com' },
+          ]
+        );
+
+        await service.officeDocumentContributions({
+          documentId: STORAGE_DOCUMENT_ID,
+          writeActors: ['user-1'],
+          readonlyActors: ['user-2'],
+        } as any);
+
+        const arg =
+          contributionReporter.officeDocumentContribution.mock.calls[0][0];
+        expect(arg.alkemio).toBe(false);
+      });
+
+      it('is false when a user actor cannot be resolved to a user row', async () => {
+        // user-2 is a user-type actor but has no user row (deleted between
+        // emission and indexing) — the window cannot be confirmed team-only.
+        arrange(
+          new Map([
+            ['user-1', ActorType.USER],
+            ['user-2', ActorType.USER],
+          ]),
+          [{ id: 'user-1', email: 'a@alkem.io' }]
+        );
+
+        await service.officeDocumentContributions({
+          documentId: STORAGE_DOCUMENT_ID,
+          writeActors: ['user-1', 'user-2'],
+          readonlyActors: [],
+        } as any);
+
+        const arg =
+          contributionReporter.officeDocumentContribution.mock.calls[0][0];
+        expect(arg.alkemio).toBe(false);
+      });
+
+      it('is false when an actor id resolves to no type at all', async () => {
+        // `ghost` lands in the `unknown` bucket (FR-005): a participant of
+        // unknown provenance cannot be vouched for as team-internal, so the
+        // window must not be indexed as an Alkemio-team window.
+        arrange(new Map([['user-1', ActorType.USER]]), [
+          { id: 'user-1', email: 'a@alkem.io' },
+        ]);
+
+        await service.officeDocumentContributions({
+          documentId: STORAGE_DOCUMENT_ID,
+          writeActors: ['user-1', 'ghost'],
+          readonlyActors: [],
+        } as any);
+
+        // disqualified before any user lookup is issued
+        expect(userLookupService.getUsersByIds).not.toHaveBeenCalled();
+        const arg =
+          contributionReporter.officeDocumentContribution.mock.calls[0][0];
+        expect(arg.alkemio).toBe(false);
+        // ...and the record itself is still indexed, with the id preserved
+        expect(Object.values(arg.writeActors).flat()).toEqual(
+          expect.arrayContaining(['user-1', 'ghost'])
+        );
+      });
+
+      it('is false — and the record is still indexed — when the user lookup fails', async () => {
+        // The flag is analytics-only: a transient DB failure must not discard
+        // the whole contribution record.
+        arrange(new Map([['user-1', ActorType.USER]]));
+        userLookupService.getUsersByIds.mockRejectedValue(
+          new Error('connection terminated')
+        );
+
+        await service.officeDocumentContributions({
+          documentId: STORAGE_DOCUMENT_ID,
+          writeActors: ['user-1'],
+          readonlyActors: [],
+        } as any);
+
+        expect(
+          contributionReporter.officeDocumentContribution
+        ).toHaveBeenCalledTimes(1);
+        const arg =
+          contributionReporter.officeDocumentContribution.mock.calls[0][0];
+        expect(arg.alkemio).toBe(false);
+      });
+
+      it('is false for a look-alike suffix domain', async () => {
+        arrange(new Map([['user-1', ActorType.USER]]), [
+          { id: 'user-1', email: 'attacker@alkem.io.example.com' },
+        ]);
+
+        await service.officeDocumentContributions({
+          documentId: STORAGE_DOCUMENT_ID,
+          writeActors: ['user-1'],
+          readonlyActors: [],
+        } as any);
+
+        const arg =
+          contributionReporter.officeDocumentContribution.mock.calls[0][0];
+        expect(arg.alkemio).toBe(false);
+      });
+
+      it('is false when the window has no user actors', async () => {
+        arrange(new Map([['vc-1', ActorType.VIRTUAL_CONTRIBUTOR]]));
+
+        await service.officeDocumentContributions({
+          documentId: STORAGE_DOCUMENT_ID,
+          writeActors: ['vc-1'],
+          readonlyActors: [],
+        } as any);
+
+        // no user ids → the user lookup is skipped entirely
+        expect(userLookupService.getUsersByIds).not.toHaveBeenCalled();
+        const arg =
+          contributionReporter.officeDocumentContribution.mock.calls[0][0];
+        expect(arg.alkemio).toBe(false);
+      });
+    });
+
     // FR-008: no CollaboraDocument backs the storage document id → discard without throwing
     it('should discard the event without throwing when no CollaboraDocument resolves for the storage document id', async () => {
       collaboraDocumentService.getCollaboraDocumentByStorageDocumentId.mockResolvedValue(
@@ -586,11 +757,19 @@ describe('CollaborativeDocumentIntegrationService', () => {
 
   // FR-012: companion VIEW consumer — same reverse-resolution path as the
   // contribution consumer, differing ONLY in the reporter method invoked.
-  describe('officeDocumentViews', () => {
+  // TEMP hotfix: office-document window reporting is disabled to remove the ~8s
+  // getCommunityForCollaboraDocumentOrFail penalty (reportOfficeDocumentWindow
+  // now returns early). Re-enabled by the proper fix (a cheap leaf-first space
+  // lookup) in the collabora-editor-url-latency follow-up PR referenced in this
+  // PR's description.
+  describe.skip('officeDocumentViews', () => {
     const STORAGE_DOCUMENT_ID = 'storage-doc-1';
     const COLLABORA_DOCUMENT_ID = 'collabora-doc-1';
 
-    const arrange = (typeById: Map<string, ActorType> = new Map()) => {
+    const arrange = (
+      typeById: Map<string, ActorType> = new Map(),
+      users: { id: string; email: string }[] = []
+    ) => {
       collaboraDocumentService.getCollaboraDocumentByStorageDocumentId.mockResolvedValue(
         {
           id: COLLABORA_DOCUMENT_ID,
@@ -604,6 +783,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
         'space-root'
       );
       actorLookupService.getActorTypesByIds.mockResolvedValue(typeById);
+      userLookupService.getUsersByIds.mockResolvedValue(users);
       contributionReporter.officeDocumentView.mockReturnValue(undefined);
     };
 
@@ -682,6 +862,22 @@ describe('CollaborativeDocumentIntegrationService', () => {
       expect(arg.writeActors[ActorType.USER]).toEqual(['w1']);
       expect(arg.writeActors[ActorType.VIRTUAL_CONTRIBUTOR]).toEqual(['w2']);
       expect(arg.readonlyActors).toEqual({});
+    });
+
+    // the VIEW path computes the same `alkemio` team flag as the contribution path
+    it('computes the alkemio team flag on the VIEW record too', async () => {
+      arrange(new Map([['user-1', ActorType.USER]]), [
+        { id: 'user-1', email: 'polina@alkem.io' },
+      ]);
+
+      await service.officeDocumentViews({
+        documentId: STORAGE_DOCUMENT_ID,
+        writeActors: ['user-1'],
+        readonlyActors: [],
+      } as any);
+
+      const arg = contributionReporter.officeDocumentView.mock.calls[0][0];
+      expect(arg.alkemio).toBe(true);
     });
 
     // FR-008: no CollaboraDocument backs the storage document id → discard without throwing

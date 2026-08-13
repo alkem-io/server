@@ -776,6 +776,42 @@ export class CalloutFramingService {
       contributors.defaultView = ContributorCollectionView.LIST;
     }
 
+    // Validate mapView when present.
+    // CRASH GUARD: MapLibre LngLat throws on latitude outside ±90, crashing the
+    // map in every viewer's browser, including anonymous visitors.
+    //
+    // Isolation:
+    // - This clause MUST NOT read or write contributorTypes / defaultContributorType
+    //   / defaultView (those healing rules run above and are already settled).
+    // - The contributor-type healing rules MUST NOT read or write mapView (enforced
+    //   by construction — the healing clauses above precede this block and touch no
+    //   mapView field).
+    // - This clause is validate-and-reject ONLY — it NEVER heals or coerces a
+    //   value into range (an invalid map view falls back to automatic framing on the
+    //   client, not to a silently clamped camera the admin never chose).
+    if (contributors.mapView !== undefined && contributors.mapView !== null) {
+      const { longitude, latitude, zoom } = contributors.mapView;
+      const isFiniteNumber = (v: unknown): v is number =>
+        typeof v === 'number' && Number.isFinite(v);
+
+      if (
+        !isFiniteNumber(longitude) ||
+        !isFiniteNumber(latitude) ||
+        !isFiniteNumber(zoom) ||
+        longitude < -180 ||
+        longitude > 180 ||
+        latitude < -90 ||
+        latitude > 90 ||
+        zoom < 0 ||
+        zoom > 22
+      ) {
+        throw new ValidationException(
+          'Invalid mapView: longitude must be finite within [-180, 180], latitude within [-90, 90], zoom within [0, 22].',
+          LogContext.COLLABORATION
+        );
+      }
+    }
+
     return framingSettings;
   }
 

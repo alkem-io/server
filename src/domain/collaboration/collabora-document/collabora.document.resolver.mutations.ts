@@ -155,37 +155,42 @@ export class CollaboraDocumentResolverMutations {
       }
     }
 
-    // FR-014 lifecycle analytics: record the swap as a single-actor
+    // TEMP hotfix: analytics attribution disabled to remove the ~8s
+    // getCommunityForCollaboraDocumentOrFail penalty on the document-replace
+    // path. The proper fix (a cheap leaf-first space lookup) restores this
+    // reporting; see the collabora-editor-url-latency follow-up PR referenced in
+    // this PR's description.
+    // Lifecycle analytics: record the swap as a single-actor
     // COLLABORA_DOCUMENT_REPLACED event. Resolve the level-zero space via the
     // community resolver exactly as the upload path does. Best-effort: the
     // swap is already committed, so a failure here must NOT fail the mutation
     // (a retry would double-swap). Catch and log; never re-throw.
-    try {
-      const community =
-        await this.communityResolverService.getCommunityForCollaboraDocumentOrFail(
-          updated.id
-        );
-      const levelZeroSpaceID =
-        await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
-          community.id
-        );
-      this.contributionReporter.calloutCollaboraDocumentReplaced(
-        {
-          id: updated.id,
-          name: updated.profile?.displayName ?? updated.id,
-          space: levelZeroSpaceID,
-        },
-        actorContext
-      );
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      const details = e instanceof Error ? e.stack : String(e);
-      this.logger.error(
-        `Failed to report COLLABORA_DOCUMENT_REPLACED analytics for CollaboraDocument ${updated.id}: ${message}`,
-        details,
-        LogContext.COLLABORATION
-      );
-    }
+    // try {
+    //   const community =
+    //     await this.communityResolverService.getCommunityForCollaboraDocumentOrFail(
+    //       updated.id
+    //     );
+    //   const levelZeroSpaceID =
+    //     await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
+    //       community.id
+    //     );
+    //   this.contributionReporter.calloutCollaboraDocumentReplaced(
+    //     {
+    //       id: updated.id,
+    //       name: updated.profile?.displayName ?? updated.id,
+    //       space: levelZeroSpaceID,
+    //     },
+    //     actorContext
+    //   );
+    // } catch (e) {
+    //   const message = e instanceof Error ? e.message : String(e);
+    //   const details = e instanceof Error ? e.stack : String(e);
+    //   this.logger.error(
+    //     `Failed to report COLLABORA_DOCUMENT_REPLACED analytics for CollaboraDocument ${updated.id}: ${message}`,
+    //     details,
+    //     LogContext.COLLABORATION
+    //   );
+    // }
 
     return updated;
   }

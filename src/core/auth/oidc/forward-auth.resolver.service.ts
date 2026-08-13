@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types';
 import { randomUUID } from 'crypto';
 import type { Request } from 'express';
+import { resolveCookieSessionId } from './session-id.resolver';
 import type { SessionStoreHandle } from './session-store.redis';
 import { SESSION_STORE_HANDLE } from './strategies/cookie-session.errors';
 import { HydraBearerValidator } from './strategies/hydra-bearer.validator';
@@ -64,11 +65,16 @@ export class ForwardAuthResolverService {
     //    auto-generates a sid for every request, so without this guard the
     //    endpoint would attempt a BFF Redis lookup for unauthenticated traffic.
     //    The cookie name is per-env.
-    const sid = req.cookies?.[this.sessionCookieName]
-      ? typeof req.sessionID === 'string' && req.sessionID.length > 0
-        ? req.sessionID
-        : undefined
-      : undefined;
+    //
+    //    server#6332 — this used to be a local presence-only check, inlined
+    //    here. It is now the shared resolver, for two reasons: the same
+    //    question is asked by `cookie-session.strategy.ts` and the two answers
+    //    must not drift, and presence ALONE still reads the store for a request
+    //    whose cookie failed signature verification — express-session having
+    //    discarded it and generated a fresh sid, which passes a presence test.
+    //    The shared resolver additionally requires the sid to derive from the
+    //    presented cookie. Research R8.
+    const sid = resolveCookieSessionId(req, this.sessionCookieName);
 
     let cookiePayload = null;
     if (sid) {

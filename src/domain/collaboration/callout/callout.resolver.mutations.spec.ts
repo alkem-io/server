@@ -574,7 +574,13 @@ describe('CalloutResolverMutations', () => {
   });
 
   describe('importCollaboraDocument', () => {
-    it('should report COLLABORA_DOCUMENT_UPLOADED for the uploading actor', async () => {
+    // TEMP hotfix: COLLABORA_DOCUMENT_UPLOADED analytics attribution is disabled
+    // to remove the ~8s getCommunityForCollaboraDocumentOrFail penalty on the
+    // upload path, so the reporter is no longer called here. Re-enabled by the
+    // proper fix (a cheap leaf-first space lookup) in the
+    // collabora-editor-url-latency follow-up PR referenced in this PR's
+    // description.
+    it.skip('should report COLLABORA_DOCUMENT_UPLOADED for the uploading actor', async () => {
       const callout = {
         id: 'callout-1',
         authorization: { id: 'auth-1' },

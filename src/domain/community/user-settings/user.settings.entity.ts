@@ -1,7 +1,9 @@
+import { TINY_TEXT_LENGTH } from '@common/constants';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Column, Entity } from 'typeorm';
 import { IUserSettingsAssistant } from './user.settings.assistant.interface';
 import { IUserSettingsCommunication } from './user.settings.communications.interface';
+import { IUserSettingsDashboard } from './user.settings.dashboard.interface';
 import { DESIGN_VERSION_CURRENT_DEFAULT } from './user.settings.design.version.constants';
 import { IUserSettingsHomeSpace } from './user.settings.home.space.interface';
 import { IUserSettings } from './user.settings.interface';
@@ -31,6 +33,18 @@ export class UserSettings extends AuthorizableEntity implements IUserSettings {
   })
   homeSpace!: IUserSettingsHomeSpace;
 
+  @Column('jsonb', {
+    nullable: false,
+    default: { activityView: true },
+  })
+  dashboard!: IUserSettingsDashboard;
+
   @Column('int', { nullable: false, default: DESIGN_VERSION_CURRENT_DEFAULT })
   designVersion!: number;
+
+  @Column('varchar', { length: TINY_TEXT_LENGTH, nullable: true })
+  language!: string | null;
+
+  @Column('boolean', { nullable: false, default: false })
+  languageOfferAnswered!: boolean;
 }
