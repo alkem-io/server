@@ -7,6 +7,7 @@ import {
   MimeFileType,
 } from '@common/enums/mime.file.type';
 import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { VisualType } from '@common/enums/visual.type';
 import { ValidationException } from '@common/exceptions';
@@ -227,8 +228,10 @@ export class StorageBucketService {
     skipDedup = false,
     allowedMimeTypesOverride?: string[]
   ): Promise<IDocument> {
+    // `storageAggregator` is joined ONLY to classify the bucket for the
+    // per-uploader-row rule below — a single FK join.
     const storage = await this.getStorageBucketOrFail(storageBucketId, {
-      relations: {},
+      relations: { storageAggregator: true },
     });
 
     const effectiveAllowedMimes =
@@ -237,6 +240,11 @@ export class StorageBucketService {
       this.validateMimeTypes(storage, mimeType);
     }
     this.validateSize(storage, buffer.length);
+
+    // Conversation buckets (feature 013) must NEVER content-dedup — see
+    // requiresPerUploaderDocuments.
+    const effectiveSkipDedup =
+      skipDedup || this.requiresPerUploaderDocuments(storage);
 
     return this.persistDocumentWithPreparedAuth(
       storageBucketId,
@@ -251,9 +259,44 @@ export class StorageBucketService {
           temporaryLocation,
           allowedMimeTypes: effectiveAllowedMimes.join(','),
           maxFileSize: storage.maxFileSize,
-          skipDedup: skipDedup || undefined,
+          skipDedup: effectiveSkipDedup || undefined,
         })
     );
+  }
+
+  /**
+   * Whether every upload into this bucket must get its OWN row rather than
+   * being collapsed into an existing one by file-service's per-bucket CONTENT
+   * dedup. True for CONVERSATION buckets (feature 013).
+   *
+   * WHY: a conversation bucket is SHARED by every member, and message
+   * attachments are attributed by `createdBy` on both the send and the read
+   * path — the outbound send requires the document to be owned by the sender
+   * and to still be an unsent (`temporaryLocation`) upload, and the read
+   * resolves an outbound `document_id` only when it is owned by the message's
+   * sender. Content dedup breaks both at once: after Alice sends `logo.png`,
+   * Bob uploading the SAME BYTES into the same conversation bucket got back
+   * ALICE's now-durable row (`reused: true`), which then failed the ownership
+   * gate AND the single-use gate — so Bob simply could not send that file, and
+   * neither could Alice send it a second time. Reachable in any group
+   * conversation where two people share the same image.
+   *
+   * Fixing it HERE (a fresh row per uploader) rather than by relaxing those
+   * gates is deliberate: the gates are the confused-deputy protection that
+   * stops a crafted event or a guessed id surfacing/pinning another member's
+   * document, and the read-path ownership check is what makes them binding —
+   * relaxing the send gate alone would let the send succeed and still resolve
+   * to nothing on every read. Giving each sender their own row satisfies both
+   * gates untouched.
+   *
+   * Cost is a row, not bytes: content is content-addressed, so the second row
+   * points at the SAME blob, and file-service only deletes a blob once no row
+   * references it. This mirrors the established `skipDedup: true` usage for
+   * Collabora documents and profile-document re-uploads, where each entity
+   * likewise must own its backing row.
+   */
+  private requiresPerUploaderDocuments(storageBucket: IStorageBucket): boolean {
+    return this.isConversationBucket(storageBucket);
   }
 
   /**
@@ -516,8 +559,10 @@ export class StorageBucketService {
     args: StorageBucketArgsDocuments,
     actorContext: ActorContext
   ): Promise<IDocument[]> {
+    // `storageAggregator` is joined ONLY to classify the bucket for the staging
+    // rule below (see isListableInStagingState) — it is a single FK join.
     const storageLoaded = await this.getStorageBucketOrFail(storage.id, {
-      relations: { documents: true },
+      relations: { documents: true, storageAggregator: true },
     });
     const allDocuments = storageLoaded.documents;
     if (!allDocuments)
@@ -526,12 +571,16 @@ export class StorageBucketService {
         LogContext.STORAGE_BUCKET
       );
 
-    // First filter the documents the current user has READ privilege to, then
-    // hide OTHER actors' still-staged uploads (A3).
+    // First filter the documents the current user has READ privilege to, then —
+    // on CONVERSATION buckets only — hide OTHER actors' still-staged uploads
+    // (A3). See isListableInStagingState for why the rule is scoped.
+    const hideOtherActorsStagedUploads =
+      this.isConversationBucket(storageLoaded);
     const readableDocuments = allDocuments.filter(
       document =>
         this.hasAgentAccessToDocument(document, actorContext) &&
-        this.isListableInStagingState(document, actorContext)
+        (!hideOtherActorsStagedUploads ||
+          this.isListableInStagingState(document, actorContext))
     );
 
     // (a) by IDs, results in order specified by IDs
@@ -572,8 +621,8 @@ export class StorageBucketService {
   /**
    * A document that is still in its temporary (staging) location has NOT been
    * committed to anything yet — it is an in-flight upload that its uploader has
-   * not finished with. It must therefore only be LISTED for the actor that
-   * created it (A3).
+   * not finished with. On a CONVERSATION bucket it must therefore only be
+   * LISTED for the actor that created it (A3).
    *
    * WHY THIS IS NEEDED: document authorization is INHERITED from the bucket, so
    * everyone who can read the bucket can read every document in it — including
@@ -581,8 +630,19 @@ export class StorageBucketService {
    * Conversation now exposes its shared, membership-authorized storage bucket
    * (`Conversation.storageBucket`), so without this filter every member could
    * enumerate every OTHER member's still-unsent attachment uploads — name, size
-   * and a downloadable URL — before the message was ever sent. The same applies
-   * to the other staging flows (Collabora import, profile temporary storage).
+   * and a downloadable URL — before the message was ever sent.
+   *
+   * WHY IT IS SCOPED TO CONVERSATION BUCKETS: `getFilteredDocuments` backs
+   * `StorageBucket.documents` and `StorageBucket.document(ID)` for EVERY bucket
+   * on the platform. Applying the rule unconditionally silently narrowed a
+   * long-standing listing everywhere — space/profile/collaboration buckets,
+   * where other staging flows (Collabora import, profile temporary storage,
+   * template + innovation-pack reference uploads) legitimately produce
+   * `temporaryLocation` rows that admins and the owning flows expect to see
+   * listed. That is a pre-existing platform behaviour and a broader lifecycle
+   * question that feature 013 does not own. The NEW exposure 013 introduced is
+   * the conversation bucket alone, so that is exactly where the new restriction
+   * applies; every other bucket keeps its pre-013 listing.
    *
    * Deliberately a LISTING rule, not an authorization rule: it is applied at the
    * single GraphQL exposure choke point (`documents` / `document(ID)`), so it
@@ -600,6 +660,19 @@ export class StorageBucketService {
     }
     return (
       !!actorContext.actorID && document.createdBy === actorContext.actorID
+    );
+  }
+
+  /**
+   * True for the per-conversation buckets feature 013 creates
+   * (`StorageAggregatorType.CONVERSATION`). Requires the `storageAggregator`
+   * relation to be loaded; an unloaded/absent aggregator reads as "not a
+   * conversation bucket", which keeps the platform-wide default behaviour.
+   */
+  private isConversationBucket(storageBucket: IStorageBucket): boolean {
+    return (
+      storageBucket.storageAggregator?.type ===
+      StorageAggregatorType.CONVERSATION
     );
   }
 

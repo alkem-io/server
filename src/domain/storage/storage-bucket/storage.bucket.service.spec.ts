@@ -5,6 +5,7 @@ import {
 } from '@common/enums/mime.file.type';
 import { MimeTypeDocument } from '@common/enums/mime.file.type.document';
 import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { ValidationException } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
@@ -339,6 +340,108 @@ describe('StorageBucketService', () => {
         }
       );
       expect(result).toBe(createdDoc);
+    });
+
+    // A1: a conversation bucket is SHARED, and message attachments are
+    // attributed by `createdBy` on both the send and the read path. Per-bucket
+    // CONTENT dedup handed a second uploader the FIRST uploader's (durable)
+    // row, which then failed both the sender-ownership gate and the single-use
+    // gate — so an already-shared file could never be sent again by anyone.
+    describe('A1: conversation buckets never content-dedup', () => {
+      const arrangeUpload = (bucket: IStorageBucket) => {
+        const created = mockDocument({ id: 'doc-created' });
+        (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(
+          bucket
+        );
+        (authorizationPolicyService.save as Mock).mockResolvedValue({
+          id: 'auth-saved',
+        });
+        (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
+          id: 'doc-created',
+          externalID: 'ext-shared',
+          reused: false,
+        });
+        (documentService.getDocumentOrFail as Mock).mockResolvedValue(created);
+      };
+
+      it('forces skipDedup so a SECOND sender gets their OWN row for identical bytes', async () => {
+        arrangeUpload(
+          mockStorageBucket({
+            id: 'bucket-conversation',
+            storageAggregator: {
+              id: 'agg-conversation',
+              type: StorageAggregatorType.CONVERSATION,
+            } as any,
+          })
+        );
+
+        // Bob uploads the exact bytes Alice already sent into this conversation.
+        await service.uploadFileAsDocumentFromBuffer(
+          'bucket-conversation',
+          Buffer.alloc(1024),
+          'logo.png',
+          MimeTypeVisual.PNG,
+          'bob',
+          true // temporaryLocation — an unsent attachment upload
+        );
+
+        expect(fileServiceAdapter.createDocument).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ skipDedup: true, createdBy: 'bob' })
+        );
+      });
+
+      it('leaves dedup ON for every other bucket type', async () => {
+        arrangeUpload(
+          mockStorageBucket({
+            id: 'bucket-space',
+            storageAggregator: {
+              id: 'agg-space',
+              type: StorageAggregatorType.SPACE,
+            } as any,
+          })
+        );
+
+        await service.uploadFileAsDocumentFromBuffer(
+          'bucket-space',
+          Buffer.alloc(1024),
+          'logo.png',
+          MimeTypeVisual.PNG,
+          'bob'
+        );
+
+        expect(fileServiceAdapter.createDocument).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ skipDedup: undefined })
+        );
+      });
+
+      it('still honours an explicitly requested skipDedup on a non-conversation bucket', async () => {
+        arrangeUpload(
+          mockStorageBucket({
+            id: 'bucket-space-explicit',
+            storageAggregator: {
+              id: 'agg-space',
+              type: StorageAggregatorType.SPACE,
+            } as any,
+          })
+        );
+
+        await service.uploadFileAsDocumentFromBuffer(
+          'bucket-space-explicit',
+          Buffer.alloc(1024),
+          'logo.png',
+          MimeTypeVisual.PNG,
+          'bob',
+          false,
+          true // skipDedup
+        );
+
+        expect(fileServiceAdapter.createDocument).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ skipDedup: true })
+        );
+      });
     });
 
     it('should throw ValidationException when MIME type is not allowed', async () => {
@@ -965,9 +1068,22 @@ describe('StorageBucketService', () => {
       expect(result).toHaveLength(2);
     });
 
-    // A3: still-staged uploads are only listed for their own uploader.
-    describe('A3: temporaryLocation documents are private to their uploader', () => {
+    // A3: on a CONVERSATION bucket, still-staged uploads are only listed for
+    // their own uploader. B1: that restriction is scoped to conversation
+    // buckets — every other bucket keeps its pre-013 listing.
+    describe('A3: temporaryLocation documents are private to their uploader (conversation buckets)', () => {
       const viewer = Object.assign(new ActorContext(), { actorID: 'alice' });
+
+      const conversationBucket = (
+        overrides: Partial<IStorageBucket>
+      ): IStorageBucket =>
+        mockStorageBucket({
+          storageAggregator: {
+            id: 'agg-conversation',
+            type: StorageAggregatorType.CONVERSATION,
+          } as any,
+          ...overrides,
+        });
 
       it("hides ANOTHER actor's still-staged upload even though READ is granted", async () => {
         // Document auth is INHERITED from the bucket, so every member of a shared
@@ -990,7 +1106,7 @@ describe('StorageBucketService', () => {
           temporaryLocation: false,
           createdBy: 'bob',
         });
-        const bucket = mockStorageBucket({
+        const bucket = conversationBucket({
           id: 'bucket-staging',
           documents: [mine, theirs, sent],
         });
@@ -1009,7 +1125,7 @@ describe('StorageBucketService', () => {
           temporaryLocation: true,
           createdBy: 'bob',
         });
-        const bucket = mockStorageBucket({
+        const bucket = conversationBucket({
           id: 'bucket-staging-byid',
           documents: [theirs],
         });
@@ -1032,7 +1148,7 @@ describe('StorageBucketService', () => {
           temporaryLocation: true,
           createdBy: 'bob',
         });
-        const bucket = mockStorageBucket({
+        const bucket = conversationBucket({
           id: 'bucket-anon',
           documents: [staged],
         });
@@ -1047,6 +1163,83 @@ describe('StorageBucketService', () => {
         );
 
         expect(result).toEqual([]);
+      });
+    });
+
+    // B1: the A3 restriction must NOT narrow the platform-wide listing. Other
+    // bucket types host legitimate staging flows (Collabora import, profile
+    // temporary storage, template/innovation-pack reference uploads) whose
+    // temporaryLocation rows have always been listed.
+    describe('B1: the staging restriction is scoped to conversation buckets', () => {
+      const viewer = Object.assign(new ActorContext(), { actorID: 'alice' });
+
+      it("still lists ANOTHER actor's staged upload on a non-conversation bucket", async () => {
+        const theirs = mockDocument({
+          id: 'their-staged',
+          temporaryLocation: true,
+          createdBy: 'bob',
+        });
+        const bucket = mockStorageBucket({
+          id: 'bucket-space',
+          documents: [theirs],
+          storageAggregator: {
+            id: 'agg-space',
+            type: StorageAggregatorType.SPACE,
+          } as any,
+        });
+        (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(
+          bucket
+        );
+
+        const result = await service.getFilteredDocuments(bucket, {}, viewer);
+
+        expect(result).toEqual([theirs]);
+      });
+
+      it("still resolves ANOTHER actor's staged upload by ID on a non-conversation bucket", async () => {
+        const theirs = mockDocument({
+          id: 'their-staged',
+          temporaryLocation: true,
+          createdBy: 'bob',
+        });
+        const bucket = mockStorageBucket({
+          id: 'bucket-space-byid',
+          documents: [theirs],
+          storageAggregator: {
+            id: 'agg-space',
+            type: StorageAggregatorType.SPACE,
+          } as any,
+        });
+        (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(
+          bucket
+        );
+
+        const result = await service.getFilteredDocuments(
+          bucket,
+          { IDs: ['their-staged'] },
+          viewer
+        );
+
+        expect(result).toEqual([theirs]);
+      });
+
+      it('keeps the pre-013 listing when the bucket has no storage aggregator at all', async () => {
+        const theirs = mockDocument({
+          id: 'their-staged',
+          temporaryLocation: true,
+          createdBy: 'bob',
+        });
+        const bucket = mockStorageBucket({
+          id: 'bucket-orphan',
+          documents: [theirs],
+        });
+        (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(
+          bucket
+        );
+
+        const result = await service.getFilteredDocuments(bucket, {}, viewer);
+
+        expect(result).toEqual([theirs]);
       });
     });
 

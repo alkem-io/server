@@ -254,6 +254,63 @@ describe('MessageAttachmentService', () => {
       expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
     });
 
+    // A1 (two senders, same file). Alice sends logo.png; the send pins her row
+    // durable with createdBy=Alice. Bob then attaches the SAME BYTES. With
+    // per-bucket content dedup the upload handed Bob back ALICE's row, which
+    // fails BOTH gates above — so Bob could never send that file. The fix is at
+    // UPLOAD (conversation buckets skipDedup, see
+    // StorageBucketService.requiresPerUploaderDocuments): Bob gets his own
+    // fresh, temporary row and both gates pass UNTOUCHED. This pins that the
+    // gates were NOT weakened to achieve it.
+    describe('A1: a second sender can send a file another member already sent', () => {
+      const aliceDurableRow = {
+        id: 'doc-alice',
+        createdBy: 'alice',
+        displayName: 'logo.png',
+        mimeType: 'image/png',
+        size: 1000,
+        temporaryLocation: false, // pinned by Alice's send
+        storageBucket: { id: CONV_BUCKET },
+        authorization: { id: 'doc-auth' },
+      };
+
+      it("still REFUSES Alice's row when handed to Bob (confused-deputy gates intact)", async () => {
+        documentService.getDocumentOrFail.mockResolvedValue(
+          aliceDurableRow as any
+        );
+
+        await expect(
+          service.resolveOutboundAttachments(
+            conversationRoom,
+            { actorID: 'bob' } as any,
+            ['doc-alice']
+          )
+        ).rejects.toBeInstanceOf(ValidationException);
+      });
+
+      it("ACCEPTS Bob's own fresh row for the identical bytes", async () => {
+        documentService.getDocumentOrFail.mockResolvedValue({
+          ...aliceDurableRow,
+          id: 'doc-bob',
+          createdBy: 'bob',
+          temporaryLocation: true, // Bob's own unsent upload
+        } as any);
+        fileServiceDims({ id: 'doc-bob', imageWidth: 10, imageHeight: 20 });
+
+        const refs = await service.resolveOutboundAttachments(
+          conversationRoom,
+          { actorID: 'bob' } as any,
+          ['doc-bob']
+        );
+
+        expect(refs).toHaveLength(1);
+        expect(refs[0]).toMatchObject({
+          documentId: 'doc-bob',
+          displayName: 'logo.png',
+        });
+      });
+    });
+
     it('resolves + validates a sender-owned attachment, READ-gates, and does NOT pin during resolve', async () => {
       documentService.getDocumentOrFail.mockResolvedValue({
         id: 'doc-1',
