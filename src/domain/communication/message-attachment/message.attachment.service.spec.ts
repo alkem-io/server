@@ -3085,6 +3085,204 @@ describe('MessageAttachmentService', () => {
     );
   });
 
+  // --- No dims loader supplied: the per-message fallback must still work ---
+
+  describe('resolveMessageAttachments — NO dims loader (per-message fallback)', () => {
+    /**
+     * `dimsLoader` is an OPTIONAL parameter and every use of it is
+     * optional-chained (`dimsLoader?.beginMessage()`), so a caller that has no
+     * loader degrades to the previous per-message batch instead of throwing.
+     *
+     * That fallback is LOAD-BEARING, not a convenience: `Message.attachments` is
+     * NON-NULLABLE in the schema, and the `@Loader` decorator that supplies the
+     * loader goes through `DataLoaderInterceptor`, which SKIPS any execution
+     * context without `ctx.req`. So the moment a context reaches this resolver
+     * without a loader — a non-GraphQL caller, or a future wiring the
+     * interceptor does not cover — this fallback is the only thing between it
+     * and a failed non-nullable field for the whole message.
+     *
+     * These tests pin it explicitly: without a loader the resolution is
+     * IDENTICAL (same dims precedence, same READ gate, no throw), it just
+     * batches per MESSAGE instead of per REQUEST.
+     */
+    const baseDoc = {
+      createdBy: 'sender-1',
+      displayName: 'pic.png',
+      mimeType: 'image/png',
+      size: 1000,
+      temporaryLocation: false,
+      storageBucket: { id: CONV_BUCKET },
+    };
+
+    beforeEach(() => {
+      documentService.getDocumentOrFail.mockImplementation((async (
+        id: string
+      ) => ({
+        ...baseDoc,
+        id,
+        authorization: { id: `auth-${id}` },
+      })) as any);
+      documentService.getPubliclyAccessibleURL.mockReturnValue(
+        'https://docs/x'
+      );
+      authorizationService.isAccessGranted.mockReturnValue(true);
+    });
+
+    /** The @ResolveField call MINUS the loader argument — the whole point. */
+    const readWithoutLoader = (
+      messageId: string,
+      ...raws: Record<string, unknown>[]
+    ) =>
+      service.resolveMessageAttachments(
+        {
+          id: messageId,
+          sender: 'sender-1',
+          storageBucketId: CONV_BUCKET,
+          rawAttachments: raws,
+        } as any,
+        {} as any
+        // NO third argument — this is the degraded, loader-less path.
+      );
+
+    it('resolves attachments with the SAME dims precedence and the SAME READ gate as the loader path', async () => {
+      // Precedence, unchanged by the missing loader:
+      //   file-service measurement > event-asserted info.w/h > nothing.
+      // And the READ gate still runs BEFORE dims, so a denied attachment is
+      // dropped and contributes no id to the batch.
+      authorizationService.isAccessGranted.mockImplementation(
+        ((_ctx: any, authorization: any) =>
+          authorization?.id !== 'auth-doc-denied') as any
+      );
+      fileServiceDims({
+        id: 'doc-measured',
+        imageWidth: 320,
+        imageHeight: 240,
+      });
+
+      const result = await readWithoutLoader(
+        'm1',
+        // (1) measurement OVERRIDES the client-asserted event dims
+        {
+          document_id: 'doc-measured',
+          mime_type: 'image/png',
+          size: 1,
+          width: 800,
+          height: 600,
+        },
+        // (2) no measurement for this id → the event dims stand
+        {
+          document_id: 'doc-event-only',
+          mime_type: 'image/png',
+          size: 1,
+          width: 800,
+          height: 600,
+        },
+        // (3) neither → dimensionless, but still RETURNED
+        { document_id: 'doc-bare', mime_type: 'image/png', size: 1 },
+        // (4) READ-denied → dropped entirely
+        {
+          document_id: 'doc-denied',
+          mime_type: 'image/png',
+          size: 1,
+          width: 11,
+          height: 22,
+        }
+      );
+
+      expect(result).toEqual([
+        expect.objectContaining({
+          id: 'doc-measured',
+          width: 320,
+          height: 240,
+        }),
+        expect.objectContaining({
+          id: 'doc-event-only',
+          width: 800,
+          height: 600,
+        }),
+        expect.objectContaining({
+          id: 'doc-bare',
+          width: undefined,
+          height: undefined,
+        }),
+      ]);
+      // GATE ORDERING holds without a loader too: the denied id never reaches
+      // file-service.
+      expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledTimes(1);
+      expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledWith([
+        'doc-measured',
+        'doc-event-only',
+        'doc-bare',
+      ]);
+    });
+
+    it('falls back to the PER-MESSAGE batched lookup — N messages issue N calls, and no message throws', async () => {
+      // With a loader these three messages coalesce into ONE request (see
+      // "ONE dims batch per REQUEST"). Without one, each message batches its own
+      // ids — degraded, but correct, and crucially it still RESOLVES.
+      fileServiceDims(
+        { id: 'doc-a', imageWidth: 10, imageHeight: 20 },
+        { id: 'doc-b', imageWidth: 30, imageHeight: 40 },
+        { id: 'doc-c', imageWidth: 50, imageHeight: 60 }
+      );
+
+      const [first, second, third] = await Promise.all([
+        readWithoutLoader('m1', {
+          document_id: 'doc-a',
+          mime_type: 'image/png',
+          size: 1,
+        }),
+        readWithoutLoader('m2', {
+          document_id: 'doc-b',
+          mime_type: 'image/png',
+          size: 1,
+        }),
+        readWithoutLoader('m3', {
+          document_id: 'doc-c',
+          mime_type: 'image/png',
+          size: 1,
+        }),
+      ]);
+
+      // One call PER MESSAGE, each carrying only its own message's ids.
+      expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledTimes(3);
+      expect(
+        vi
+          .mocked(fileServiceAdapter.getDocumentMetaBatch)
+          .mock.calls.map(([ids]) => ids)
+      ).toEqual([['doc-a'], ['doc-b'], ['doc-c']]);
+      expect(first).toEqual([
+        expect.objectContaining({ id: 'doc-a', width: 10, height: 20 }),
+      ]);
+      expect(second).toEqual([
+        expect.objectContaining({ id: 'doc-b', width: 30, height: 40 }),
+      ]);
+      expect(third).toEqual([
+        expect.objectContaining({ id: 'doc-c', width: 50, height: 60 }),
+      ]);
+    });
+
+    it('DEGRADATION without a loader: a failing batch still resolves the attachments on their event dims', async () => {
+      // No loader AND a dead file-service: still no throw out of a
+      // non-nullable field.
+      fileServiceAdapter.getDocumentMetaBatch.mockRejectedValue(
+        new Error('file-service down')
+      );
+
+      const result = await readWithoutLoader('m1', {
+        document_id: 'doc-a',
+        mime_type: 'image/png',
+        size: 1,
+        width: 800,
+        height: 600,
+      });
+
+      expect(result).toEqual([
+        expect.objectContaining({ id: 'doc-a', width: 800, height: 600 }),
+      ]);
+    });
+  });
+
   describe('MessageAttachmentDimsLoaderCreator', () => {
     it("REQUEST SCOPING: create() mints a FRESH loader, so one viewer's measurements never serve another", async () => {
       // DataLoaderInterceptor calls create() once per request and memoizes the
