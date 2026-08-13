@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import request from 'supertest';
-import { afterAll, beforeAll, describe, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { McpAuthGuard } from './auth/mcp-auth.guard';
 import { McpServerController } from './mcp-server.controller';
 import { McpServerService } from './mcp-server.service';
@@ -18,6 +18,14 @@ import { McpServerService } from './mcp-server.service';
  */
 describe('McpServerController — deleted /rest/mcp/api-keys surface (US3-AS3)', () => {
   let app: INestApplication;
+  // The controller hands the raw ServerResponse to the service and writes
+  // nothing itself, so the mock must end the response or the request hangs.
+  const mcpServerService = {
+    handleRequest: vi.fn(async (_req: unknown, res: any) => {
+      res.statusCode = 200;
+      res.end();
+    }),
+  };
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -26,7 +34,7 @@ describe('McpServerController — deleted /rest/mcp/api-keys surface (US3-AS3)',
         MockWinstonProvider,
         {
           provide: McpServerService,
-          useValue: { handleRequest: vi.fn().mockResolvedValue(undefined) },
+          useValue: mcpServerService,
         },
       ],
     })
@@ -40,6 +48,15 @@ describe('McpServerController — deleted /rest/mcp/api-keys surface (US3-AS3)',
 
   afterAll(async () => {
     await app.close();
+  });
+
+  // Positive control. Without it, all three 404 assertions below would still
+  // pass if the controller were mounted under a different base path, or not
+  // mounted at all — proving nothing about the deleted lifecycle surface.
+  // This anchors '/rest/mcp' as live before we assert its sub-path is gone.
+  it('POST /rest/mcp still resolves to the MCP handler', async () => {
+    await request(app.getHttpServer()).post('/rest/mcp').send({});
+    expect(mcpServerService.handleRequest).toHaveBeenCalled();
   });
 
   it('POST /rest/mcp/api-keys returns 404', async () => {

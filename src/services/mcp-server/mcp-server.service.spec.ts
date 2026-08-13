@@ -225,4 +225,31 @@ describe('McpServerService.handleRequest — session revalidation (workspace#038
     expect(transport.close).toHaveBeenCalledTimes(1);
     expect(res.statusCode).toBe(401);
   });
+
+  it('leaves an anonymous session alone — no revalidation, no 401 (CodeRabbit, PR #6358)', async () => {
+    const { service, transport, res, mcpApiKeyService } = setup();
+    // A session that never authenticated: anonymous actorContext, no apiKeyId.
+    // It holds no authority to revoke, so the revalidation branch must not
+    // fire — and it must not be mistaken for a revoked-credential session and
+    // torn down. Anonymous MCP access is a legitimate state (the strategy
+    // returns an anonymous ActorContext rather than a 401 for an absent key);
+    // per-operation scope enforcement is what constrains it, not this branch.
+    const session = (service as any).sessions.get(SESSION_ID);
+    session.actorContext = { actorID: '', isAnonymous: true };
+    session.apiKeyId = undefined;
+
+    await service.handleRequest(
+      {} as any,
+      res,
+      SESSION_ID,
+      undefined,
+      undefined,
+      undefined
+    );
+
+    expect(mcpApiKeyService.isKeyUsable).not.toHaveBeenCalled();
+    expect(transport.close).not.toHaveBeenCalled();
+    expect(transport.handleRequest).toHaveBeenCalledTimes(1);
+    expect(res.statusCode).not.toBe(401);
+  });
 });

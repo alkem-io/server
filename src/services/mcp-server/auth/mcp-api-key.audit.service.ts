@@ -7,6 +7,18 @@ import { Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { McpApiKeyOperation } from '../dto/mcp.api.key.dto';
 
+/**
+ * Compile-time guard for the cast below. `McpApiKeyAuditDetails.operations` is
+ * declared as `('read' | 'tools')[]` in the domain layer, which deliberately
+ * does not import this service-layer enum. This assertion fails the build if
+ * the enum ever grows a third member, so the cast can never silently lie.
+ */
+type _EnumMatchesAuditDetails = `${McpApiKeyOperation}` extends 'read' | 'tools'
+  ? true
+  : never;
+const _enumMatchesAuditDetails: _EnumMatchesAuditDetails = true;
+void _enumMatchesAuditDetails;
+
 export interface RecordMintInput {
   /** The key's owner — written as `subjectUserId`. */
   ownerUserId: string;

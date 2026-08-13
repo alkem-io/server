@@ -18,6 +18,7 @@ import {
   IsUUID,
   MaxLength,
 } from 'class-validator';
+import type { McpApiKeyScope } from './mcp.types';
 
 /**
  * Operations an MCP API key may perform (workspace#038). TS values are the
@@ -196,10 +197,6 @@ export interface McpApiKeyProjectionSource {
   lastUsedAt?: Date;
   lastUsedFromIp?: string;
   isActive: boolean;
-}
-
-interface McpApiKeyScope {
-  operations: ('read' | 'tools')[];
 }
 
 /**
