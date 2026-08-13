@@ -95,6 +95,22 @@ export class ConversationResolverFields {
       }
       throw error;
     }
+    // A conversation whose bucket exists but is NOT YET AUTHORIZED is the second
+    // accepted backfill-lag state (A4). The 013 backfill migration creates the
+    // aggregator + bucket for every pre-existing conversation with EMPTY
+    // authorization policies (`credentialRules: '[]'`), by design: the
+    // membership-mirrored rules are (re)applied the next time
+    // ConversationAuthorizationService.applyAuthorizationPolicy runs. Until then
+    // the policy grants nobody anything, so the READ-gate below would throw
+    // ForbiddenException at a MEMBER and fail the whole conversation query. Treat
+    // it exactly like "no bucket yet": resolve null, so the client simply shows
+    // no upload UI until the auth reset lands. An empty policy can never grant
+    // access anyway, so this short-circuit denies nothing that would otherwise
+    // have been granted, and a NON-EMPTY policy still goes through the real gate
+    // (non-members are still rejected).
+    if (!bucket.authorization?.credentialRules?.length) {
+      return null;
+    }
     // READ-gate (C1): the bucket auth mirrors the conversation-member credential,
     // so non-members are denied.
     this.authorizationService.grantAccessOrFail(

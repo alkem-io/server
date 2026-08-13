@@ -11,7 +11,15 @@ import { type Mocked } from 'vitest';
 import { ConversationResolverFields } from './conversation.resolver.fields';
 import { ConversationService } from './conversation.service';
 
-const bucket = { id: 'conv-bucket', authorization: { id: 'auth' } } as any;
+const bucket = {
+  id: 'conv-bucket',
+  // A real, membership-mirrored bucket policy: non-empty credentialRules is what
+  // distinguishes an AUTHORIZED bucket from a backfilled-but-not-yet-reset one.
+  authorization: {
+    id: 'auth',
+    credentialRules: [{ grantedPrivileges: ['read'], criterias: [] }],
+  },
+} as any;
 const conversation = { id: 'conv-1' } as any;
 
 describe('ConversationResolverFields.storageBucket (C1)', () => {
@@ -68,6 +76,24 @@ describe('ConversationResolverFields.storageBucket (C1)', () => {
       )
     );
     const result = await resolver.storageBucket(conversation, {} as any);
+    expect(result).toBeNull();
+    expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+  });
+
+  it('A4: returns null when the bucket was backfilled with an EMPTY authorization policy', async () => {
+    // The 013 backfill migration creates the bucket for every pre-existing
+    // conversation with `credentialRules: '[]'`; the membership rules only land
+    // on the next ConversationAuthorizationService reset. Until then the READ
+    // gate would throw ForbiddenException AT A MEMBER and fail the whole
+    // conversation query — degrade to null, exactly like "no bucket yet".
+    await build(true);
+    conversationService.getStorageBucket.mockResolvedValue({
+      id: 'conv-bucket',
+      authorization: { id: 'auth', credentialRules: [] },
+    } as any);
+
+    const result = await resolver.storageBucket(conversation, {} as any);
+
     expect(result).toBeNull();
     expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
   });
