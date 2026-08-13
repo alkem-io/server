@@ -10,6 +10,7 @@ import {
   CurrentActor,
 } from '@src/common/decorators';
 import { IMessage } from '../message/message.interface';
+import { MessageAttachmentService } from '../message-attachment/message.attachment.service';
 import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
 import { RoomUnreadCounts } from './dto/room.dto.unread.counts';
 import { RoomDataLoader } from './room.data.loader';
@@ -21,7 +22,8 @@ export class RoomResolverFields {
   constructor(
     private readonly roomService: RoomService,
     private readonly authorizationService: AuthorizationService,
-    private readonly roomDataLoader: RoomDataLoader
+    private readonly roomDataLoader: RoomDataLoader,
+    private readonly messageAttachmentService: MessageAttachmentService
   ) {}
 
   @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
@@ -33,6 +35,14 @@ export class RoomResolverFields {
   async messages(@Parent() room: IRoom): Promise<IMessage[]> {
     const result = await this.roomService.getMessages(room);
     if (!result) return [];
+    // Feature 013 (C2): this is the single point where a room's WHOLE
+    // (unpaginated) message list materializes, so resolve the room's attachment
+    // bucket ONCE here and stamp it on every message. The per-message
+    // `Message.attachments` resolver then takes its zero-query fast path instead
+    // of re-resolving room → conversation/callout → storage aggregator for each
+    // message individually. Best-effort: never throws, never changes what the
+    // field returns.
+    await this.messageAttachmentService.stampAttachmentBucket(room, result);
     return result;
   }
 

@@ -12,7 +12,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, In, Repository } from 'typeorm';
 import { Document } from './document.entity';
 import { IDocument } from './document.interface';
 import { DeleteDocumentInput } from './dto/document.dto.delete';
@@ -104,6 +104,43 @@ export class DocumentService {
         { externalID }
       );
     return document;
+  }
+
+  /**
+   * Batch-resolve the documents carrying the given opaque `externalReference`s
+   * WITHIN one storage bucket, in a SINGLE query (feature 013, C1).
+   *
+   * `(externalReference, storageBucketId)` is partially UNIQUE
+   * (`UQ_file_externalReference_storageBucketId`, `WHERE "externalReference" IS
+   * NOT NULL`), so each reference resolves to at most one document per bucket
+   * and the result maps 1:1 onto the requested references.
+   *
+   * This is the SERVER-SIDE equivalent of file-service's
+   * `GET /internal/file/by-reference?ref=…&bucketId=…`, and exists because the
+   * message read path needs it once per attachment on an UNPAGINATED history
+   * read: the HTTP lookup is accounted against the SHARED file-service circuit
+   * breaker, so fanning it out per attachment let a normal chat load trip the
+   * breaker that guards uploads platform-wide. `externalReference` is mapped
+   * read-only on the Document entity and the `file` table is the same database,
+   * so the read is exact — no cache, no staleness.
+   *
+   * `authorization` is requested explicitly (it is also eager) because callers
+   * READ-gate the returned documents.
+   */
+  public async getDocumentsByReferencesInBucket(
+    storageBucketId: string,
+    externalReferences: string[]
+  ): Promise<IDocument[]> {
+    if (externalReferences.length === 0) {
+      return [];
+    }
+    return this.documentRepository.find({
+      where: {
+        externalReference: In(externalReferences),
+        storageBucket: { id: storageBucketId },
+      },
+      relations: { authorization: true },
+    });
   }
 
   public async getUploadedDate(documentID: string): Promise<Date> {
