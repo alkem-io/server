@@ -1,6 +1,7 @@
 import { ReceivedAttachment } from '@alkemio/matrix-adapter-lib';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { MimeFileType } from '@common/enums/mime.file.type';
 import { RoomType } from '@common/enums/room.type';
 import {
   EntityNotFoundException,
@@ -8,6 +9,7 @@ import {
 } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import type { MessageAttachmentDimsLoader } from '@core/dataloader/creators/loader.creators';
 import {
   AuthorizationPolicy,
   IAuthorizationPolicy,
@@ -24,6 +26,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationMessageAttachment } from '@services/adapters/communication-adapter/dto/communication.message.attachment';
+import type { DocumentReferenceResult } from '@services/adapters/file-service-adapter/dto';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
@@ -123,15 +126,19 @@ interface ImageDimsSource {
 }
 
 /**
- * The outcome of read-path document resolution: the resolved document plus any
- * dimensions the resolution ALREADY had in hand (the inbound by-reference
- * lookup returns them on its `DocumentReferenceResult`), so surfacing dims
- * costs zero extra I/O on that branch.
+ * The outcome of read-path document resolution.
  */
 interface ResolvedAttachmentDocument {
   document: IDocument;
-  dims?: ImageDimsSource;
 }
+
+/**
+ * Inbound (`media_id`) documents for ONE message, pre-resolved in a single
+ * server-side query and keyed by `externalReference` (C1). `undefined` means
+ * "the batch lookup itself failed" — distinct from an empty map, which means
+ * "looked up, nothing re-homed yet" and legitimately triggers the lazy re-home.
+ */
+type InboundDocumentsByReference = Map<string, IDocument> | undefined;
 
 /**
  * Conversation media attachments (feature 013-matrix-media-file-service).
@@ -261,9 +268,9 @@ export class MessageAttachmentService {
     );
 
     const refs: CommunicationMessageAttachment[] = [];
-    // Image refs whose dims are fetched AFTER validation, in PARALLEL (below).
+    // Image refs whose dims are fetched AFTER validation, in ONE batch (below).
     // Each entry references its ref object (built in documentIds order) so the
-    // concurrent dims fetch mutates dims in place without disturbing ref ORDER.
+    // dims pass mutates dims in place without disturbing ref ORDER.
     const imageRefs: CommunicationMessageAttachment[] = [];
     for (const outcome of settled) {
       // Ordered pass: surface position i's LOAD error at its position (e.g. a
@@ -335,25 +342,37 @@ export class MessageAttachmentService {
     // Outbound image dimensions ([4], completes both directions): imageWidth/
     // imageHeight are TRANSIENT, file-service-owned fields (content_metadata) —
     // the getDocumentOrFail DB loads above leave them undefined on the server
-    // entities, so we source them from file-service's by-id meta endpoint. This
-    // lets Alkemio-composed images reach matrix-adapter with intrinsic dimensions
+    // entities, so we source them from file-service's meta endpoint. This lets
+    // Alkemio-composed images reach matrix-adapter with intrinsic dimensions
     // (the m.image event's info.w/h; clients render without layout reflow).
     //
-    // Run the (image-only) meta round-trips in PARALLEL, AFTER validation —
-    // NOT sequentially inside the loop above, which would serialise up to
-    // MAX_MESSAGE_ATTACHMENTS (<=10) fetches on the hot send path. Worst-case
-    // added latency is then ONE getDocumentMeta timeout, not N. getDocumentMeta
-    // is itself best-effort and isolated (short timeout, no retry, breaker-
-    // bypass); the extra `.catch` here is defence-in-depth so a meta failure just
-    // leaves width/height undefined and never fails (or blocks) the send.
-    await Promise.all(
-      imageRefs.map(async ref => {
-        const meta = await this.fileServiceAdapter
-          .getDocumentMeta(ref.documentId)
-          .catch(() => undefined);
-        this.applyImageDims(ref, meta);
-      })
-    );
+    // ONE batched round-trip for every image on the message, AFTER validation.
+    // The predecessor issued up to MAX_MESSAGE_ATTACHMENTS (<=10) PARALLEL by-id
+    // `getDocumentMeta` GETs; parallelism kept the added latency to one timeout
+    // but still billed file-service up to 10 requests per send. `/meta-batch`
+    // makes it one request AND one timeout. Like its by-id sibling the call is
+    // best-effort and isolated (short timeout, no retry, breaker-bypass) and
+    // already degrades to an empty map internally; the try/catch here is
+    // defence-in-depth — and catches a SYNCHRONOUS throw, which `.catch()` alone
+    // would not — so a meta failure just leaves width/height undefined and never
+    // fails (or blocks) the send.
+    //
+    // Each ref takes its OWN measurement, looked up BY DOCUMENT ID: `/meta-batch`
+    // answers a partial and UNORDERED `files` array, so positional matching would
+    // silently mis-assign dims between attachments.
+    if (imageRefs.length > 0) {
+      try {
+        const metaById = await this.fileServiceAdapter.getDocumentMetaBatch(
+          imageRefs.map(ref => ref.documentId)
+        );
+        for (const ref of imageRefs) {
+          this.applyImageDims(ref, metaById.get(ref.documentId));
+        }
+      } catch {
+        // Dims omitted; the send proceeds. Refs keep their input ORDER either
+        // way — this pass only mutates in place.
+      }
+    }
 
     return refs;
   }
@@ -748,6 +767,63 @@ export class MessageAttachmentService {
   }
 
   /**
+   * Resolve a room's attachment bucket ONCE for a whole batch of messages and
+   * stamp it onto each of them (C2).
+   *
+   * WHY: `CommunicationAdapter.convertMessageDtoToIMessage` sets only `roomID`,
+   * never `storageBucketId`, so on every history read each message individually
+   * fell into `resolveMessageBucket`'s slow branch — a room lookup PLUS a
+   * conversation/callout + storage-aggregator resolution, PER MESSAGE. Since
+   * `getMessages(room)` is unpaginated, a single room open fanned that chain out
+   * once per message carrying attachments. All those lookups resolve the SAME
+   * room to the SAME bucket, so resolve it once here and let every message take
+   * `resolveMessageBucket`'s zero-query fast path.
+   *
+   * Called from the ONE place a room's whole message list materializes for
+   * GraphQL (`RoomResolverFields.messages`). Never throws and never mutates a
+   * message that already carries a `storageBucketId` (the live-subscription path
+   * sets it from the eager re-home): attachment resolution must never be able to
+   * break a message read, so an unresolvable bucket simply leaves the messages
+   * as they were and each one degrades exactly as before.
+   */
+  public async stampAttachmentBucket(
+    room: IRoom,
+    messages: IMessage[] | undefined
+  ): Promise<void> {
+    if (!this.enabled || !messages?.length) {
+      return;
+    }
+    const pending = messages.filter(
+      message => !message.storageBucketId && message.rawAttachments?.length
+    );
+    if (pending.length === 0) {
+      return;
+    }
+    let bucket: IStorageBucket | undefined;
+    try {
+      bucket = await this.getTargetBucketForRoom(room);
+    } catch (error) {
+      this.logger.warn?.(
+        {
+          message:
+            'Failed to resolve the attachment bucket for a message batch; falling back to per-message resolution',
+          roomId: room.id,
+          roomType: room.type,
+          error: (error as Error)?.message,
+        },
+        LogContext.COMMUNICATION
+      );
+      return;
+    }
+    if (!bucket) {
+      return;
+    }
+    for (const message of pending) {
+      message.storageBucketId = bucket.id;
+    }
+  }
+
+  /**
    * FIX [1]: single-flight coalescer for the inbound re-home WRITE, keyed by
    * `${bucketId}:${mediaId}`. If a re-home for that key is already in flight,
    * return its promise (NO `startRehome` call). Otherwise invoke the `startRehome`
@@ -815,6 +891,48 @@ export class MessageAttachmentService {
       return;
     }
 
+    // FR-022 (D1): inbound media must satisfy the TARGET bucket's curated policy
+    // too. Without this the allow-list and 50 MiB cap only ever guarded the
+    // outbound (web compose) path, so anything Element could push through Synapse
+    // — a 2 GiB video, an `application/x-msdownload`, any MIME outside the
+    // MimeFileType enum — was re-homed into the conversation bucket unchecked. A
+    // non-enum MIME additionally breaks the bucket's `documents` GraphQL query for
+    // everyone (`Document.mimeType` is a `MimeType!` enum field).
+    //
+    // FAILURE MODE — decline the re-home, do NOT throw and do NOT delete anything:
+    //  * the media stays in the `matrix_media` staging bucket, exactly as it does
+    //    for any other unresolvable re-home. Synapse still owns and serves it, so
+    //    Element users are unaffected — this is a "not admitted into Alkemio
+    //    storage" decision, not a deletion (media lifecycle is Synapse's job);
+    //  * the read path's bucket-scoped lookup then simply misses, so the web
+    //    client omits THAT attachment while the rest of the message renders. A bad
+    //    MIME can never break the read of the whole message;
+    //  * returning (rather than throwing) also keeps the eager path's per-
+    //    attachment catch quiet for what is an expected policy outcome, not a
+    //    fault. It is logged at WARN with the media id, MIME, size and bucket so
+    //    rejections are observable.
+    //
+    // NOTE (out of server scope): the `matrix_media` STAGING bucket's own policy
+    // is not enforced here — that row is created directly by the Synapse
+    // media-storage provider against file-service, which the server does not
+    // mediate.
+    const violation = this.checkAgainstBucketPolicy(bucket, canonical);
+    if (violation) {
+      this.logger.warn?.(
+        {
+          message:
+            'Inbound attachment rejected by the target bucket policy; leaving media in staging',
+          violation,
+          mediaId,
+          mimeType: canonical.mimeType,
+          size: canonical.size,
+          bucketId: bucket.id,
+        },
+        LogContext.COMMUNICATION
+      );
+      return;
+    }
+
     const documentAuthId = await this.mintDocumentAuth(bucket);
 
     // Human filename (Element <-> web parity). The Synapse media-storage provider
@@ -849,6 +967,14 @@ export class MessageAttachmentService {
         // genuinely-temporary staging doc durable (temporaryLocation:false); a
         // failure leaves the staging row untouched and the minted auth unused, so
         // the catch cleanup is correct.
+        //
+        // TODO(013): the re-homed row keeps the staging row's EMPTY tagsetId —
+        // `UpdateDocumentInput` has no `tagsetId` field and the server never
+        // writes the `file` table directly, so no tagset can be attached here.
+        // `Document.tagset` is `Tagset!` in schema.graphql, so a query selecting
+        // it on these rows would fail; nothing selects it today (latent).
+        // ACCEPTED + documented limitation, not a defect — see
+        // docs/conversation-media-attachments.md, "Known limitations" (1).
         await this.fileServiceAdapter.moveDocument(canonical.id, {
           storageBucketId: bucket.id,
           authorizationId: documentAuthId,
@@ -878,7 +1004,8 @@ export class MessageAttachmentService {
         // the same sanitized `displayName` here. Deliberately NOT worked around
         // with a follow-up PATCH round-trip: that would make the placement
         // non-atomic (a partial failure would leave a copied-but-misnamed row)
-        // for a cosmetic field.
+        // for a cosmetic field. ACCEPTED + documented limitation, not a defect —
+        // see docs/conversation-media-attachments.md, "Known limitations" (2).
         await this.fileServiceAdapter.copyDocument({
           sourceId: canonical.id,
           destinationBucketId: bucket.id,
@@ -908,10 +1035,43 @@ export class MessageAttachmentService {
    * Outbound media is resolved by `document_id` from the event; inbound media by
    * `by-reference(bucket, media_id)`. Returns `[]` when the feature is off, when
    * the message carries no attachments, or when the resolution bucket is unknown.
+   *
+   * `dimsLoader` is the REQUEST-scoped image-dimensions loader supplied by
+   * `MessageResolverFields.attachments`. It collapses the authoritative dims
+   * fetch to ONE `getDocumentMetaBatch` call for the WHOLE request instead of one
+   * per message — see applyReadImageDims. It is optional so that a caller outside
+   * a GraphQL request (or a test) still resolves attachments correctly, just with
+   * a per-message batch.
    */
   public async resolveMessageAttachments(
     message: IMessage,
-    actorContext: ActorContext
+    actorContext: ActorContext,
+    dimsLoader?: MessageAttachmentDimsLoader
+  ): Promise<IMessageAttachment[]> {
+    // Register with the request's dims batch SYNCHRONOUSLY, before the first
+    // await: graphql-js invokes every message's `attachments` resolver in one
+    // turn, so this is what lets the loader know how many messages it must wait
+    // for. Released below (and, as a safety net, in the `finally`).
+    const settleDimsBatch = dimsLoader?.beginMessage();
+    try {
+      return await this.resolveMessageAttachmentsGated(
+        message,
+        actorContext,
+        dimsLoader,
+        settleDimsBatch
+      );
+    } finally {
+      // Idempotent: a no-op when the gated pass already released. Covers every
+      // early return and any throw, so a message can never stall the batch.
+      settleDimsBatch?.();
+    }
+  }
+
+  private async resolveMessageAttachmentsGated(
+    message: IMessage,
+    actorContext: ActorContext,
+    dimsLoader: MessageAttachmentDimsLoader | undefined,
+    settleDimsBatch: (() => void) | undefined
   ): Promise<IMessageAttachment[]> {
     if (!this.enabled || !message.rawAttachments?.length) {
       return [];
@@ -929,10 +1089,17 @@ export class MessageAttachmentService {
       return [];
     }
 
+    // C1: resolve EVERY inbound (media_id) attachment of this message in ONE
+    // server-side query, BEFORE the per-attachment fan-out below.
+    const inboundDocuments = await this.loadInboundDocuments(
+      resolved.id,
+      message
+    );
+
     // Resolve the message's attachments in parallel — each is an independent
-    // document lookup (+ file-service round-trip for inbound refs); awaiting them
-    // sequentially serialised the round-trips on every history read. Promise.all
-    // preserves order, so the resolved attachments keep their original sequence.
+    // document lookup; awaiting them sequentially serialised the round-trips on
+    // every history read. Promise.all preserves order, so the resolved
+    // attachments keep their original sequence.
     //
     // FIX 2 (fault isolation): attachment resolution must NEVER fail the whole
     // getMessages/getLastMessages query. Each item's resolution is guarded so a
@@ -948,7 +1115,8 @@ export class MessageAttachmentService {
           resolved.id,
           resolved.bucket,
           message.sender,
-          actorContext
+          actorContext,
+          inboundDocuments
         ).catch(error => {
           this.logger.warn?.(
             {
@@ -964,25 +1132,100 @@ export class MessageAttachmentService {
         })
       )
     );
-    return resolvedAttachments.filter(
+    const attachments = resolvedAttachments.filter(
       (attachment): attachment is IMessageAttachment => attachment !== null
     );
+
+    // Authoritative image dimensions, LAST — after every per-attachment READ
+    // gate has run, so a denied attachment costs nothing. See applyReadImageDims.
+    //
+    // Release this message's hold on the request-wide dims batch FIRST: the
+    // batch waits for every registered message to reach this point, so a message
+    // that awaited its own loads before releasing would wait on itself forever.
+    settleDimsBatch?.();
+    await this.applyReadImageDims(attachments, dimsLoader);
+
+    return attachments;
+  }
+
+  /**
+   * Batch-resolve a message's INBOUND (`media_id`) attachment documents in ONE
+   * server-side query (C1).
+   *
+   * WHY: `Message.attachments` is a `@ResolveField` and `getMessages(room)`
+   * returns a room's ENTIRE history unpaginated, so the previous per-attachment
+   * `fileServiceAdapter.getDocumentByReference(media_id, bucketId)` fanned out
+   * once PER ATTACHMENT PER VIEWER PER PAGE LOAD. Unlike `getDocumentMeta`, that
+   * call IS accounted against the SHARED file-service circuit breaker — so a
+   * normal chat load in a media-heavy room could trip the breaker that guards
+   * uploads and pins for the WHOLE platform. `(externalReference,
+   * storageBucketId)` is a partially-unique indexed pair on the same database,
+   * so the server can resolve every reference itself, exactly, in one query —
+   * and the read path then makes NO breaker-accounted file-service call at all
+   * on the hit path.
+   *
+   * Returns `undefined` when the batch itself failed (logged) — the caller then
+   * omits inbound attachments for this message rather than mistaking the failure
+   * for "not re-homed yet" and kicking off a pointless re-home. That keeps the
+   * same never-fail-the-query degradation as an unresolvable bucket.
+   */
+  private async loadInboundDocuments(
+    bucketId: string,
+    message: IMessage
+  ): Promise<InboundDocumentsByReference> {
+    const mediaIds = [
+      ...new Set(
+        (message.rawAttachments ?? [])
+          .filter(raw => !raw.document_id && raw.media_id)
+          .map(raw => raw.media_id as string)
+      ),
+    ];
+    if (mediaIds.length === 0) {
+      return new Map();
+    }
+    try {
+      const documents =
+        await this.documentService.getDocumentsByReferencesInBucket(
+          bucketId,
+          mediaIds
+        );
+      return new Map(
+        documents
+          .filter(document => !!document.externalReference)
+          .map(document => [document.externalReference as string, document])
+      );
+    } catch (error) {
+      this.logger.warn?.(
+        {
+          message:
+            'Failed to batch-resolve inbound attachment documents on read; omitting inbound attachments for this message',
+          roomId: message.roomID,
+          messageId: message.id,
+          storageBucketId: bucketId,
+          error: (error as Error)?.message,
+        },
+        LogContext.COMMUNICATION
+      );
+      return undefined;
+    }
   }
 
   /**
    * Resolve a single raw attachment for read (T012): document resolution +
-   * ownership gate (via resolveAttachmentDocument), then the READ-gate, and
-   * ONLY THEN image dimensions (applyReadImageDims) — so an attachment the
-   * viewer cannot read costs no dimension work at all. Returns null when the
-   * document cannot be resolved or the viewer cannot read it, so the caller
-   * drops it from the resolved set.
+   * ownership gate (via resolveAttachmentDocument), then the READ-gate, and ONLY
+   * THEN the event-asserted image dimensions. Returns null when the document
+   * cannot be resolved or the viewer cannot read it, so the caller drops it from
+   * the resolved set — and the caller's batched, authoritative dims pass
+   * (applyReadImageDims) therefore never sees it, so an attachment the viewer
+   * cannot read costs no dimension work at all.
    */
   private async resolveReadAttachment(
     raw: ReceivedAttachment,
     bucketId: string,
     bucketForRehome: IStorageBucket | undefined,
     senderActorID: string | undefined,
-    actorContext: ActorContext
+    actorContext: ActorContext,
+    inboundDocuments: InboundDocumentsByReference
   ): Promise<IMessageAttachment | null> {
     // resolveAttachmentDocument is a READ-path helper: the outbound heal and the
     // lazy inbound re-home always run. On the fast path `bucketForRehome` is
@@ -993,6 +1236,7 @@ export class MessageAttachmentService {
       raw,
       bucketId,
       senderActorID,
+      inboundDocuments,
       bucketForRehome
     );
     if (!resolved) {
@@ -1023,89 +1267,120 @@ export class MessageAttachmentService {
       height: undefined,
     };
 
-    // Dimensions resolve AFTER the READ gate on purpose: a denied attachment
-    // must cost NOTHING (see applyReadImageDims).
-    await this.applyReadImageDims(attachment, raw, resolved.dims);
+    // Event-asserted dims (`info.w`/`info.h`) — the LOWER-precedence source, and
+    // the only one already in hand. Applied HERE (after the READ gate, still
+    // inside the per-attachment guard) so the authoritative file-service
+    // measurement can OVERWRITE it in the batched second pass that runs once the
+    // whole message has been gated. See applyReadImageDims.
+    this.applyImageDims(attachment, raw);
 
     return attachment;
   }
 
   /**
-   * Resolve an attachment's intrinsic image dimensions: MOST AUTHORITATIVE of
-   * the zero-cost sources, and a network call only as a last resort.
+   * Overlay file-service's OWN MEASUREMENT of the stored bytes onto a message's
+   * already-gated attachments.
    *
-   * This runs on an UNBOUNDED read path: `Message.attachments` is a
-   * `@ResolveField` and `roomService.getMessages(room)` returns a room's ENTIRE
-   * history unpaginated, so anything issued here fans out once PER ATTACHMENT
-   * PER VIEWER PER PAGE LOAD. Hence: both in-hand sources are consulted first,
-   * and the network call stays the rare exception, not the rule.
+   * PRECEDENCE (highest first) — `applyImageDims` OVERWRITES, so the sources are
+   * applied lowest-first and this method runs LAST:
+   *  1. **file-service measurement** (`imageWidth`/`imageHeight` from
+   *     `getDocumentMetaBatch`) — applied HERE, and therefore final. file-service
+   *     measured the bytes it stores; nobody can assert it.
+   *  2. **event-asserted `info.w`/`info.h`** (`ReceivedAttachment.width`/`height`)
+   *     — applied earlier, in resolveReadAttachment, so a measurement overwrites
+   *     it and its absence leaves the event value standing. It is CLIENT-ASSERTED
+   *     and UNVERIFIED (Synapse does not check it either), so it is a fallback,
+   *     never the authority.
+   *  3. nothing — the attachment stays dimensionless.
+   * A non-positive/non-finite value from EITHER source counts as ABSENT (C4), so
+   * an `info.w: 0` can neither stick nor mask a real measurement.
    *
-   *  1. Dims the resolution already returned — the inbound by-reference
-   *     lookup's `DocumentReferenceResult`. WINS where present: these are
-   *     file-service's own measurement of the stored bytes, so they are
-   *     authoritative, and the lookup already happened (zero extra I/O).
-   *  2. `ReceivedAttachment.width`/`height` — the event's own `info.w`/`info.h`,
-   *     also ALREADY IN HAND (matrix-adapter populates them on every read path,
-   *     live sync and history parse alike). These are what Element renders, and
-   *     for web-composed media the server put them there from file-service in
-   *     the first place — but for inbound (Element-origin) media they are
-   *     asserted by the SENDING CLIENT and therefore unverified, which is why
-   *     (1) outranks them when we have it. In practice this is the source that
-   *     serves the outbound branch, where (1) never exists.
-   *  3. ONLY if neither produced anything AND the content is an image: one
-   *     `getDocumentMeta` round-trip. That call deliberately BYPASSES the shared
-   *     file-service circuit breaker (justified on the hard-bounded send path:
-   *     <= MAX_MESSAGE_ATTACHMENTS per request), so it must stay a rarity here —
-   *     an unconditional call would be an unbounded, uncached, unbatched N+1
-   *     that burns its full timeout per attachment while file-service is
-   *     degraded, starving the uploads/downloads the breaker protects.
+   * WHY IT IS BATCHED, AND HOW FAR. `Message.attachments` is a `@ResolveField`
+   * and `roomService.getMessages(room)` returns a room's ENTIRE history
+   * unpaginated, so anything issued per attachment — or per message — fans out
+   * once PER VIEWER PER PAGE LOAD. Two collapses, in order:
+   *  - per ATTACHMENT → per MESSAGE: one `getDocumentMetaBatch` instead of one
+   *    `getDocumentMeta` GET per dimensionless image (which is why the
+   *    authoritative source had previously been demoted below the event's);
+   *  - per MESSAGE → per REQUEST: with a `dimsLoader` supplied (the GraphQL read
+   *    path always supplies one) the ids are handed to the REQUEST-scoped
+   *    DataLoader, which coalesces every message's ids into a SINGLE
+   *    `getDocumentMetaBatch` call for the whole read. See
+   *    `createMessageAttachmentDimsLoader` for how dispatch is barriered so the
+   *    coalescing survives the messages reaching this point at different times.
+   * Without a loader (a non-GraphQL caller) the direct per-message batch is kept
+   * as the fallback. Either way the call BYPASSES the shared file-service circuit
+   * breaker (short timeout, zero retries, no breaker accounting), so a degraded
+   * `/meta-batch` can never fast-fail the uploads and pins the breaker protects;
+   * and the adapter chunks at 100 ids, so a history whose gated images exceed
+   * that degrades into several bounded requests rather than a 400.
    *
-   * (Application order in the body is the REVERSE of this list, because
-   * `applyImageDims` overwrites with any defined value — so the
-   * highest-precedence source is applied last.)
+   * Called from resolveMessageAttachments AFTER every per-attachment READ gate,
+   * so a denied attachment is not in `attachments` and costs NOTHING — not even
+   * a loader key, which is what keeps the request-wide batch free of ids the
+   * viewer may not read. Non-image attachments are excluded, so a message with no
+   * images asks for nothing at all.
    *
-   * Best-effort throughout: dims are a cosmetic rendering hint (they avoid
-   * layout reflow), so EVERY failure degrades to "no dims" and must never fail
-   * — or block — the read.
+   * Best-effort: dims are a cosmetic rendering hint (they avoid layout reflow),
+   * so EVERY failure degrades to "the event dims, or nothing" and must never fail
+   * — or block — the read. try/catch rather than `.catch(() => undefined)` so a
+   * SYNCHRONOUS throw is caught too: unlike its per-attachment predecessor this
+   * runs OUTSIDE the per-attachment guard, so an escaping throw would fail the
+   * non-nullable `Message.attachments` field for the whole message. On the loader
+   * path a rejected batch surfaces as an `Error` VALUE per key (`loadMany` never
+   * rejects), which is read as "no measurement" for exactly the same reason.
    */
   private async applyReadImageDims(
-    attachment: IMessageAttachment,
-    raw: ReceivedAttachment,
-    resolvedDims: ImageDimsSource | undefined
+    attachments: IMessageAttachment[],
+    dimsLoader?: MessageAttachmentDimsLoader
   ): Promise<void> {
-    // Applied lowest-precedence FIRST (applyImageDims overwrites with any
-    // defined value), so `resolvedDims` wins where it exists.
-    //
-    // Trust order: `raw` dims come from the Matrix event's `info.w`/`info.h`,
-    // which the SENDING CLIENT asserts — for inbound (Element-origin) media that
-    // is unverified, attacker-influenceable input. `resolvedDims` comes from the
-    // by-reference lookup, i.e. file-service's own measurement of the stored
-    // bytes, so it is authoritative and is already in hand (zero extra I/O).
-    // Preferring it costs nothing and keeps a lying client from distorting a
-    // viewer's layout.
-    //
-    // This does NOT reintroduce the read-path N+1: `resolvedDims` is only ever
-    // set on the inbound by-reference branch (whose lookup already happened).
-    // The outbound branch leaves it undefined, so the event's dims stand and no
-    // round-trip is made.
-    this.applyImageDims(attachment, raw);
-    this.applyImageDims(attachment, resolvedDims);
-    if (attachment.width !== undefined || attachment.height !== undefined) {
-      return; // dims already in hand — no round-trip
+    const imageAttachments = attachments.filter(attachment =>
+      attachment.mimeType?.startsWith('image/')
+    );
+    if (imageAttachments.length === 0) {
+      return; // only images carry dims — no round-trip
     }
-    if (!attachment.mimeType?.startsWith('image/')) {
-      return; // only images carry dims
-    }
-    // try/catch rather than `.catch(() => undefined)` so a SYNCHRONOUS throw is
-    // caught too: a throw escaping here would be caught by the per-attachment
-    // guard in resolveMessageAttachments and DROP the attachment from the read.
-    let meta: ImageDimsSource | null | undefined;
+    const documentIds = imageAttachments.map(attachment => attachment.id);
+    // Positional ONLY against `documentIds` — both branches below resolve the
+    // measurement by document ID, never by the order file-service answered in
+    // (`/meta-batch` returns a partial, unordered `files` array).
+    let measurements: (DocumentReferenceResult | null)[];
     try {
-      meta = await this.fileServiceAdapter.getDocumentMeta(attachment.id);
+      measurements = dimsLoader
+        ? await this.loadImageDimsViaLoader(dimsLoader, documentIds)
+        : await this.loadImageDimsDirect(documentIds);
     } catch {
-      meta = undefined; // best-effort — never fail (or block) a read
+      return; // best-effort — never fail (or block) a read
     }
-    this.applyImageDims(attachment, meta);
+    imageAttachments.forEach((attachment, index) => {
+      // A `null` is a NORMAL partial result (file-service has no measurement for
+      // that id): applyImageDims no-ops on it, leaving the event-asserted dims —
+      // or nothing — in place.
+      this.applyImageDims(attachment, measurements[index]);
+    });
+  }
+
+  /**
+   * Request-wide path: hand the ids to the per-request DataLoader, which
+   * coalesces them with every other message's into ONE `getDocumentMetaBatch`.
+   * `loadMany` resolves errors as VALUES rather than rejecting, so one bad batch
+   * degrades to "no measurement" instead of throwing into the read.
+   */
+  private async loadImageDimsViaLoader(
+    dimsLoader: MessageAttachmentDimsLoader,
+    documentIds: string[]
+  ): Promise<(DocumentReferenceResult | null)[]> {
+    const results = await dimsLoader.loadMany(documentIds);
+    return results.map(result => (result instanceof Error ? null : result));
+  }
+
+  /** Fallback path (no request loader): one batch for this message's ids. */
+  private async loadImageDimsDirect(
+    documentIds: string[]
+  ): Promise<(DocumentReferenceResult | null)[]> {
+    const metaById =
+      await this.fileServiceAdapter.getDocumentMetaBatch(documentIds);
+    return documentIds.map(documentId => metaById.get(documentId) ?? null);
   }
 
   /**
@@ -1133,15 +1408,24 @@ export class MessageAttachmentService {
    * source — or a change to the never-clobber rule — is one edit.
    *
    * Reads EITHER naming (`width`/`height` or `imageWidth`/`imageHeight`, see
-   * ImageDimsSource) and NEVER writes `undefined` over a value already present,
-   * so it is safe to layer lowest-precedence-source-first.
+   * ImageDimsSource) and NEVER writes an absent value over a value already
+   * present, so it is safe to layer lowest-precedence-source-first.
+   *
+   * A NON-POSITIVE dimension counts as ABSENT (C4). A zero pixel count is not a
+   * real dimension — no image is 0 wide — it is what an unmeasured/unknown
+   * source reports. Treating `0` as "present" would overwrite a genuine
+   * dimension already applied by a lower-precedence source, and (in the earlier
+   * `dims already in hand?` short-circuit) also suppressed the authoritative
+   * file-service measurement entirely. Negative/NaN values are rejected on the
+   * same grounds. This matters most for inbound media, whose `info.w`/`info.h`
+   * are asserted by the sending client and may be 0 or missing.
    */
   private applyImageDims(
     target: { width?: number; height?: number },
     source: ImageDimsSource | null | undefined
   ): void {
-    const width = source?.width ?? source?.imageWidth;
-    const height = source?.height ?? source?.imageHeight;
+    const width = this.firstPositiveDim(source?.width, source?.imageWidth);
+    const height = this.firstPositiveDim(source?.height, source?.imageHeight);
     if (width !== undefined) {
       target.width = width;
     }
@@ -1150,10 +1434,28 @@ export class MessageAttachmentService {
     }
   }
 
+  /**
+   * First usable pixel dimension among the candidates: finite and > 0. Anything
+   * else (undefined, 0, negative, NaN) is "no dimension" — see applyImageDims.
+   * Checked across BOTH namings so a `width: 0` never masks a valid
+   * `imageWidth`.
+   */
+  private firstPositiveDim(
+    ...candidates: (number | undefined)[]
+  ): number | undefined {
+    return candidates.find(
+      (value): value is number =>
+        typeof value === 'number' && Number.isFinite(value) && value > 0
+    );
+  }
+
   private async resolveAttachmentDocument(
     raw: ReceivedAttachment,
     storageBucketId: string | undefined,
     senderActorID: string | undefined,
+    // C1: this message's inbound (media_id) documents, pre-resolved in ONE
+    // server-side query by loadInboundDocuments. `undefined` = that batch failed.
+    inboundDocuments: InboundDocumentsByReference,
     // FIX [0]/[4]: this is a READ-path helper — its only caller is the read
     // resolution path (resolveReadAttachment), so the outbound heal and the lazy
     // inbound re-home always run. `bucketForRehome` is the pre-resolved full bucket
@@ -1231,21 +1533,24 @@ export class MessageAttachmentService {
         // Dims are NOT resolved here. This branch has no dims in hand (the
         // getDocumentOrFail DB load leaves the TRANSIENT, file-service-owned
         // imageWidth/imageHeight undefined), and the only remaining source is a
-        // network round-trip — which must not run before the READ gate, and
-        // must not run at all when the event already carries the dimensions.
-        // See applyReadImageDims, called AFTER the gate in resolveReadAttachment.
+        // network round-trip — which must not run before the READ gate. The
+        // event's dims are applied after that gate in resolveReadAttachment, and
+        // the authoritative measurement in the batched applyReadImageDims pass.
         return { document };
       }
       // Inbound: bucket-scoped by-reference → the re-homed conversation doc.
-      // `media_id` is attacker-influenceable too, so the same ownership gate
-      // applies: the re-home stamped `createdBy = sender`, so a forged media_id
-      // pointing at another member's re-homed doc fails the gate.
+      // Resolved from the PRE-BATCHED map (C1) — one server-side query for the
+      // whole message instead of one breaker-accounted file-service round-trip
+      // per attachment. See loadInboundDocuments.
       if (raw.media_id) {
-        let ref = await this.fileServiceAdapter.getDocumentByReference(
-          raw.media_id,
-          storageBucketId
-        );
-        if (!ref) {
+        if (!inboundDocuments) {
+          // The batch lookup itself failed (already logged). Do NOT fall through
+          // to the miss branch: that would mistake an infrastructure failure for
+          // "not re-homed yet" and kick off a pointless re-home write.
+          return null;
+        }
+        let document = inboundDocuments.get(raw.media_id);
+        if (!document) {
           // FIX 2 (self-heal): the eager inbound re-home may have failed
           // transiently, leaving the media in the matrix_media staging bucket
           // where this bucket-scoped lookup can't see it — permanent invisibility
@@ -1299,22 +1604,50 @@ export class MessageAttachmentService {
             );
             return null;
           }
-          ref = await this.fileServiceAdapter.getDocumentByReference(
-            raw.media_id,
-            storageBucketId
-          );
-          if (!ref) {
+          // Re-resolve the ONE media id we just re-homed — still a server-side
+          // query (file-service writes the same `file` table), so the self-heal
+          // costs no breaker-accounted call either.
+          [document] =
+            await this.documentService.getDocumentsByReferencesInBucket(
+              storageBucketId,
+              [raw.media_id]
+            );
+          if (!document) {
             return null;
           }
         }
-        const document = await this.documentService.getDocumentOrFail(ref.id, {
-          relations: { authorization: true },
-        });
-        if (!this.isOwnedBySender(document, senderActorID)) {
+        // Confused-deputy gate, INBOUND variant (C3). `media_id` comes verbatim
+        // off an attacker-influenceable Matrix event, so a gate is required — but
+        // it must NOT be sender-ownership.
+        //
+        // WHY NOT OWNERSHIP: `(bucket, externalReference)` is UNIQUE, so a media
+        // id maps to exactly ONE document per bucket. When a SECOND member
+        // legitimately re-shares media already in this conversation, rehomeOne
+        // finds it homed and no-ops — the row keeps the FIRST sharer's
+        // `createdBy`, so the second sender could never satisfy an ownership
+        // check and their attachment was dropped from every read, FOREVER. That
+        // also diverged from Element/Synapse, where any member may reference any
+        // `mxc://` URI they know and the message renders — re-sharing/forwarding
+        // media is ordinary Matrix behaviour, not an attack.
+        //
+        // WHAT THE GATE IS INSTEAD: the document must be DURABLE. That is the
+        // property with actual confidentiality value — a `temporaryLocation`
+        // document is somebody's UNSENT, still-staged upload, and surfacing one
+        // via a crafted event would disclose content its uploader never shared
+        // (the same exposure A3 closes on the bucket listing). Everything a
+        // durable, bucket-scoped, externally-referenced document can be is
+        // already shared INTO THIS CONVERSATION and therefore already readable by
+        // every member — the viewer-side READ gate in resolveReadAttachment still
+        // runs on top. So the residual of a forged `media_id` is bounded to
+        // mis-attributing media the forger can already see and re-upload
+        // verbatim. The OUTBOUND (`document_id`) branch above keeps its strict
+        // ownership gate untouched: that one resolves ANY document id in the
+        // bucket, including never-referenced staged uploads.
+        if (document.temporaryLocation === true) {
           this.logger.warn?.(
             {
               message:
-                'Inbound attachment media_id resolves to a document not owned by the message sender; ignoring',
+                'Inbound attachment media_id resolves to a document that is still in staging; ignoring',
               mediaId: raw.media_id,
               storageBucketId,
             },
@@ -1322,13 +1655,7 @@ export class MessageAttachmentService {
           );
           return null;
         }
-        // FIX [4] inbound dims: imageWidth/imageHeight are TRANSIENT,
-        // file-service-owned fields (content_metadata) — the getDocumentOrFail DB
-        // load above leaves them undefined. The by-reference `ref` we already
-        // fetched for resolution DOES carry them (DocumentReferenceResult), so
-        // hand it back as a ZERO-I/O dims source; applyReadImageDims layers it
-        // under the event's own dims after the READ gate.
-        return { document, dims: ref };
+        return { document };
       }
     } catch (error) {
       this.logger.warn?.(
@@ -1358,28 +1685,50 @@ export class MessageAttachmentService {
     return saved.id;
   }
 
-  private validateAgainstBucketPolicy(
+  /**
+   * The ONE bucket-policy check (FR-020/FR-022), shared by the OUTBOUND send
+   * validation (which throws) and the INBOUND re-home (which declines, see
+   * rehomeOne). Returns the violated rule, or undefined when the content is
+   * permitted. Deliberately takes the two content facts rather than an
+   * `IDocument`, so it can also be applied to a file-service
+   * `DocumentReferenceResult` before that content is re-homed into the bucket.
+   */
+  private checkAgainstBucketPolicy(
     bucket: IStorageBucket,
-    document: IDocument
-  ): void {
+    content: { mimeType?: string; size?: number }
+  ): 'mime-type' | 'size' | undefined {
     // An empty / unset allowedMimeTypes list means "no explicit MIME allow-list"
     // → no type restriction (platform convention). A non-empty list is enforced
     // as an allow-list. Conversation buckets always carry a curated non-empty
     // list, so in practice this branch always enforces.
     if (
       bucket.allowedMimeTypes?.length &&
-      !bucket.allowedMimeTypes.includes(document.mimeType)
+      !bucket.allowedMimeTypes.includes(content.mimeType as MimeFileType)
     ) {
-      throw new ValidationException(
-        'Attachment type is not permitted in this conversation',
-        LogContext.COMMUNICATION
-      );
+      return 'mime-type';
     }
     // maxFileSize === 0 (or unset) means "no explicit size limit" (platform
     // convention, matching how other buckets treat 0). Only a positive cap is
     // enforced — the truthiness check `bucket.maxFileSize && …` would have
     // skipped enforcement identically, but be explicit so the intent is clear.
-    if (bucket.maxFileSize > 0 && document.size > bucket.maxFileSize) {
+    if (bucket.maxFileSize > 0 && (content.size ?? 0) > bucket.maxFileSize) {
+      return 'size';
+    }
+    return undefined;
+  }
+
+  private validateAgainstBucketPolicy(
+    bucket: IStorageBucket,
+    document: IDocument
+  ): void {
+    const violation = this.checkAgainstBucketPolicy(bucket, document);
+    if (violation === 'mime-type') {
+      throw new ValidationException(
+        'Attachment type is not permitted in this conversation',
+        LogContext.COMMUNICATION
+      );
+    }
+    if (violation === 'size') {
       throw new ValidationException(
         'Attachment exceeds the maximum allowed size',
         LogContext.COMMUNICATION

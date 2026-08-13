@@ -5,6 +5,11 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { MessageAttachmentDimsLoaderCreator } from '@core/dataloader/creators/loader.creators';
+import {
+  createMessageAttachmentDimsLoader,
+  type MessageAttachmentDimsLoader,
+} from '@core/dataloader/creators/loader.creators/communication/message.attachment.dims.loader';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { DocumentService } from '@domain/storage/document/document.service';
@@ -124,7 +129,54 @@ describe('MessageAttachmentService', () => {
     // "no meta" answer so a test that does not care about dims never picks up a
     // deep-mock proxy as a width/height value.
     fileServiceAdapter.getDocumentMeta.mockResolvedValue(null);
+    // Read path: dims come from ONE batched `meta:batch` call per message. Real
+    // signature is `Promise<Map<string, DocumentReferenceResult>>`; default to
+    // "file-service has no measurement for anything" so a test that does not care
+    // about dims never picks up a deep-mock proxy in place of the map.
+    fileServiceAdapter.getDocumentMetaBatch.mockResolvedValue(new Map());
+    // C1: inbound (media_id) read resolution is a SINGLE batched server-side
+    // query per message. Default to "nothing re-homed yet" so a test that does
+    // not care never picks up a deep-mock proxy as a document list.
+    documentService.getDocumentsByReferencesInBucket.mockResolvedValue([]);
   });
+
+  /**
+   * The realistic conversation bucket the OUTBOUND path resolves (via the
+   * conversation repository), carrying the curated MIME allow-list and the
+   * 50 MiB cap so `validateAgainstBucketPolicy` is genuinely load-bearing in
+   * the outbound tests (D2), not a silent no-op against a policy-less stub.
+   */
+  const useConversationBucket = () => {
+    conversationRepository.findOne.mockResolvedValue({
+      id: 'conv-1',
+      storageAggregator: { directStorage: conversationBucket },
+    });
+  };
+
+  /** C1: the inbound documents a read's batched by-reference query resolves. */
+  const inboundDocuments = (...documents: any[]) => {
+    documentService.getDocumentsByReferencesInBucket.mockResolvedValue(
+      documents as any
+    );
+  };
+
+  /**
+   * The measurements file-service answers on a `meta:batch` call — the ONE call
+   * a read makes per REQUEST, and the ONE call a send makes per message. Keyed by
+   * document id, exactly as the adapter returns it; ids the caller asked for but
+   * which are NOT listed here are the normal "no measurement" partial result.
+   *
+   * The Map is built in the order given, so passing files in an order that does
+   * NOT match the requested ids proves the caller matches BY ID rather than by
+   * the (unordered, partial) response position.
+   */
+  const fileServiceDims = (
+    ...files: { id: string; imageWidth?: number; imageHeight?: number }[]
+  ) => {
+    fileServiceAdapter.getDocumentMetaBatch.mockResolvedValue(
+      new Map(files.map(file => [file.id, file])) as any
+    );
+  };
 
   // --- T009 outbound validation ---
 
@@ -220,11 +272,7 @@ describe('MessageAttachmentService', () => {
         storageBucket: { id: CONV_BUCKET },
         authorization: { id: 'doc-auth' },
       } as any);
-      fileServiceAdapter.getDocumentMeta.mockResolvedValue({
-        id: 'doc-1',
-        imageWidth: 10,
-        imageHeight: 20,
-      } as any);
+      fileServiceDims({ id: 'doc-1', imageWidth: 10, imageHeight: 20 });
 
       const refs = await service.resolveOutboundAttachments(
         conversationRoom,
@@ -237,8 +285,12 @@ describe('MessageAttachmentService', () => {
       // persistOutboundAttachments (called only after the send succeeds), so
       // resolve itself must not flip anything.
       expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      // Dims are sourced from the file-service by-id meta endpoint.
-      expect(fileServiceAdapter.getDocumentMeta).toHaveBeenCalledWith('doc-1');
+      // Dims are sourced from file-service's BATCHED meta endpoint, never the
+      // per-document by-id GET.
+      expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledWith([
+        'doc-1',
+      ]);
       expect(refs).toEqual([
         {
           documentId: 'doc-1',
@@ -251,7 +303,7 @@ describe('MessageAttachmentService', () => {
       ]);
     });
 
-    it('outbound image: a getDocumentMeta failure leaves width/height undefined and does NOT fail the send ([4])', async () => {
+    it('outbound image: a batched meta failure leaves width/height undefined and does NOT fail the send ([4])', async () => {
       // Meta sourcing is best-effort: a rejected/failed meta fetch must degrade
       // to undefined dims, never propagate out of resolveOutboundAttachments.
       documentService.getDocumentOrFail.mockResolvedValue({
@@ -264,9 +316,18 @@ describe('MessageAttachmentService', () => {
         storageBucket: { id: CONV_BUCKET },
         authorization: { id: 'doc-auth' },
       } as any);
-      fileServiceAdapter.getDocumentMeta.mockRejectedValue(
+      fileServiceAdapter.getDocumentMetaBatch.mockRejectedValue(
         new Error('file-service down')
       );
+
+      const dimensionless = {
+        documentId: 'doc-1',
+        displayName: 'pic.png',
+        mimeType: 'image/png',
+        size: 1000,
+        width: undefined,
+        height: undefined,
+      };
 
       const refs = await service.resolveOutboundAttachments(
         conversationRoom,
@@ -274,20 +335,28 @@ describe('MessageAttachmentService', () => {
         ['doc-1']
       );
 
-      expect(fileServiceAdapter.getDocumentMeta).toHaveBeenCalledWith('doc-1');
-      expect(refs).toEqual([
-        {
-          documentId: 'doc-1',
-          displayName: 'pic.png',
-          mimeType: 'image/png',
-          size: 1000,
-          width: undefined,
-          height: undefined,
-        },
+      expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledWith([
+        'doc-1',
       ]);
+      expect(refs).toEqual([dimensionless]);
+
+      // ...and a SYNCHRONOUS throw degrades identically. The dims pass runs
+      // outside any per-attachment guard, so it needs try/catch — a bare
+      // `.catch()` would let a synchronous throw fail the whole send.
+      fileServiceAdapter.getDocumentMetaBatch.mockImplementation((() => {
+        throw new Error('sync boom');
+      }) as any);
+
+      await expect(
+        service.resolveOutboundAttachments(
+          conversationRoom,
+          { actorID: 'sender-1' } as any,
+          ['doc-1']
+        )
+      ).resolves.toEqual([dimensionless]);
     });
 
-    it('non-image attachment: getDocumentMeta is NOT called (no wasted round-trip) and the ref carries no dims ([4])', async () => {
+    it('non-image attachment: NO meta round-trip at all (no wasted request) and the ref carries no dims ([4])', async () => {
       // The image-guard skips the extra meta round-trip for non-image files.
       documentService.getDocumentOrFail.mockResolvedValue({
         id: 'doc-pdf',
@@ -307,6 +376,7 @@ describe('MessageAttachmentService', () => {
       );
 
       expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.getDocumentMetaBatch).not.toHaveBeenCalled();
       expect(refs).toEqual([
         {
           documentId: 'doc-pdf',
@@ -319,10 +389,11 @@ describe('MessageAttachmentService', () => {
       ]);
     });
 
-    it('fetches image dims in PARALLEL, matches each to its ref, and preserves ref order ([0])', async () => {
-      // Multiple images: the dims fetches must run concurrently (worst-case ONE
-      // short timeout, not N) yet each ref keeps its OWN dims and the returned
-      // refs keep their original input order.
+    it('fetches image dims in ONE BATCHED call, matches each ref BY ID, and preserves ref order ([0])', async () => {
+      // Multiple images: the dims fetch must be a SINGLE `/meta-batch` request
+      // carrying every image id (not up to MAX_MESSAGE_ATTACHMENTS by-id GETs),
+      // yet each ref keeps its OWN dims and the returned refs keep their
+      // original input order.
       const docs: Record<string, any> = {
         'img-a': {
           id: 'img-a',
@@ -359,22 +430,14 @@ describe('MessageAttachmentService', () => {
         Promise.resolve(docs[id])
       );
 
-      const dims: Record<string, any> = {
-        'img-a': { imageWidth: 100, imageHeight: 10 },
-        'img-b': { imageWidth: 200, imageHeight: 20 },
-        'img-c': { imageWidth: 300, imageHeight: 30 },
-      };
-      // Track concurrency: all fetches must be in flight simultaneously.
-      let inFlight = 0;
-      let maxInFlight = 0;
-      fileServiceAdapter.getDocumentMeta.mockImplementation(
-        async (id: string) => {
-          inFlight += 1;
-          maxInFlight = Math.max(maxInFlight, inFlight);
-          await Promise.resolve();
-          inFlight -= 1;
-          return dims[id];
-        }
+      // Answered in REVERSE of the requested order, and deliberately partial-
+      // shaped (an extra id nobody asked for): `/meta-batch` guarantees neither
+      // order nor completeness, so a ref may only take the measurement whose
+      // `id` is its OWN. Positional matching would hand img-a img-c's dims.
+      fileServiceDims(
+        { id: 'img-c', imageWidth: 300, imageHeight: 30 },
+        { id: 'img-b', imageWidth: 200, imageHeight: 20 },
+        { id: 'img-a', imageWidth: 100, imageHeight: 10 }
       );
 
       const refs = await service.resolveOutboundAttachments(
@@ -410,8 +473,15 @@ describe('MessageAttachmentService', () => {
           height: 30,
         },
       ]);
-      // Proven parallel: all three meta fetches overlapped in flight.
-      expect(maxInFlight).toBe(3);
+      // The headline invariant, asserted by CALL COUNT: ONE request for the whole
+      // send, carrying every image id — never one per attachment.
+      expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledTimes(1);
+      expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledWith([
+        'img-a',
+        'img-b',
+        'img-c',
+      ]);
     });
 
     it('[1] loads the attachment documents in PARALLEL, then validates in order (refs keep input order)', async () => {
@@ -1156,6 +1226,70 @@ describe('MessageAttachmentService', () => {
     });
   });
 
+  // --- C2: resolve the room's bucket ONCE per read ---
+
+  describe('stampAttachmentBucket', () => {
+    const withAttachments = (id: string) =>
+      ({
+        id,
+        roomID: 'room-1',
+        rawAttachments: [{ media_id: `media-${id}` }],
+      }) as any;
+
+    it('resolves the room bucket ONCE for a whole message batch and stamps every message', async () => {
+      // CommunicationAdapter.convertMessageDtoToIMessage never sets
+      // storageBucketId, so on an unpaginated history read every message
+      // individually re-resolved room → conversation → storage aggregator. One
+      // resolution for the batch puts them all on the zero-query fast path.
+      const messages = [
+        withAttachments('m1'),
+        withAttachments('m2'),
+        withAttachments('m3'),
+      ];
+
+      await service.stampAttachmentBucket(conversationRoom, messages);
+
+      expect(conversationRepository.findOne).toHaveBeenCalledTimes(1);
+      expect(messages.map(m => m.storageBucketId)).toEqual([
+        CONV_BUCKET,
+        CONV_BUCKET,
+        CONV_BUCKET,
+      ]);
+    });
+
+    it('does not resolve anything when no message carries attachments', async () => {
+      const messages = [{ id: 'm1', roomID: 'room-1' }] as any[];
+
+      await service.stampAttachmentBucket(conversationRoom, messages);
+
+      expect(conversationRepository.findOne).not.toHaveBeenCalled();
+      expect(messages[0].storageBucketId).toBeUndefined();
+    });
+
+    it('never overwrites a storageBucketId already set by the live path', async () => {
+      const live = {
+        id: 'm1',
+        roomID: 'room-1',
+        storageBucketId: 'already-set',
+        rawAttachments: [{ media_id: 'media-1' }],
+      } as any;
+
+      await service.stampAttachmentBucket(conversationRoom, [live]);
+
+      expect(live.storageBucketId).toBe('already-set');
+    });
+
+    it('degrades silently when the bucket cannot be resolved (reads must never break)', async () => {
+      conversationRepository.findOne.mockRejectedValue(new Error('db down'));
+      const messages = [withAttachments('m1')];
+
+      await expect(
+        service.stampAttachmentBucket(conversationRoom, messages)
+      ).resolves.toBeUndefined();
+      expect(messages[0].storageBucketId).toBeUndefined();
+    });
+  });
+
   // --- outbound coalesce (eliminate the stranded matrix_media twin) ---
 
   describe('rehomeInboundAttachments — outbound coalesce', () => {
@@ -1683,17 +1817,16 @@ describe('MessageAttachmentService', () => {
         id: 'room-1',
         type: RoomType.CONVERSATION_GROUP,
       });
-      fileServiceAdapter.getDocumentByReference.mockResolvedValue({
+      inboundDocuments({
         id: 'doc-rehomed',
-      } as any);
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-rehomed',
+        externalReference: 'media-1',
         createdBy: 'sender-1',
         displayName: 'pic.png',
         mimeType: 'image/png',
         size: 1000,
+        temporaryLocation: false,
         authorization: { id: 'doc-auth' },
-      } as any);
+      });
       authorizationService.isAccessGranted.mockReturnValue(true);
       documentService.getPubliclyAccessibleURL.mockReturnValue(
         'https://docs/doc-rehomed'
@@ -1716,38 +1849,92 @@ describe('MessageAttachmentService', () => {
         {} as any
       );
 
-      expect(fileServiceAdapter.getDocumentByReference).toHaveBeenCalledWith(
-        'media-1',
-        CONV_BUCKET
-      );
+      expect(
+        documentService.getDocumentsByReferencesInBucket
+      ).toHaveBeenCalledWith(CONV_BUCKET, ['media-1']);
       expect(result).toEqual([expect.objectContaining({ id: 'doc-rehomed' })]);
     });
 
-    it('[4] carries the by-reference image dimensions onto the resolved inbound attachment', async () => {
-      // imageWidth/imageHeight are TRANSIENT, file-service-owned fields
-      // (content_metadata) — the getDocumentOrFail DB load leaves them undefined.
-      // The by-reference `ref` already carries them, so the resolved
-      // MessageAttachment must surface width/height (clients render with intrinsic
-      // dimensions, no layout reflow) with zero extra I/O.
-      fileServiceAdapter.getDocumentByReference.mockResolvedValue({
-        id: 'doc-rehomed',
-        imageWidth: 640,
-        imageHeight: 480,
-      } as any);
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-rehomed',
-        createdBy: 'sender-1',
-        displayName: 'pic.png',
-        mimeType: 'image/png',
-        size: 1000,
-        // No imageWidth/imageHeight on the DB-loaded doc — the transient dims are
-        // lost on a getDocumentOrFail load; they must come from the ref.
-        authorization: { id: 'doc-auth' },
-      } as any);
+    it('C1: inbound read resolution issues NO breaker-accounted file-service lookup, and batches the whole message into ONE query', async () => {
+      // getDocumentByReference IS accounted against the SHARED file-service
+      // circuit breaker (unlike getDocumentMeta), and Message.attachments is an
+      // unpaginated @ResolveField — so one per attachment could trip the breaker
+      // that guards uploads platform-wide. Inbound refs are now resolved from the
+      // server's own DB, once per message.
+      inboundDocuments(
+        {
+          id: 'doc-a',
+          externalReference: 'media-a',
+          createdBy: 'sender-1',
+          displayName: 'a.png',
+          mimeType: 'image/png',
+          size: 10,
+          temporaryLocation: false,
+          authorization: { id: 'doc-auth' },
+        },
+        {
+          id: 'doc-b',
+          externalReference: 'media-b',
+          createdBy: 'sender-1',
+          displayName: 'b.png',
+          mimeType: 'image/png',
+          size: 20,
+          temporaryLocation: false,
+          authorization: { id: 'doc-auth' },
+        }
+      );
       authorizationService.isAccessGranted.mockReturnValue(true);
       documentService.getPubliclyAccessibleURL.mockReturnValue(
-        'https://docs/doc-rehomed'
+        'https://docs/x'
       );
+
+      const result = await service.resolveMessageAttachments(
+        {
+          id: 'm1',
+          sender: 'sender-1',
+          storageBucketId: CONV_BUCKET,
+          rawAttachments: [
+            {
+              media_id: 'media-a',
+              mime_type: 'image/png',
+              size: 10,
+              width: 1,
+              height: 1,
+            },
+            {
+              media_id: 'media-b',
+              mime_type: 'image/png',
+              size: 20,
+              width: 1,
+              height: 1,
+            },
+          ],
+        } as any,
+        {} as any
+      );
+
+      expect(fileServiceAdapter.getDocumentByReference).not.toHaveBeenCalled();
+      expect(
+        documentService.getDocumentsByReferencesInBucket
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        documentService.getDocumentsByReferencesInBucket
+      ).toHaveBeenCalledWith(CONV_BUCKET, ['media-a', 'media-b']);
+      expect(result).toEqual([
+        expect.objectContaining({ id: 'doc-a' }),
+        expect.objectContaining({ id: 'doc-b' }),
+      ]);
+    });
+
+    it('C1: omits inbound attachments (without kicking off a re-home) when the batched lookup itself fails', async () => {
+      // A failed batch is an INFRASTRUCTURE failure, not "not re-homed yet" —
+      // treating it as a miss would fire a pointless re-home WRITE on every read.
+      documentService.getDocumentsByReferencesInBucket.mockRejectedValue(
+        new Error('db down')
+      );
+      const rehomeSpy = vi
+        .spyOn(service as any, 'rehomeOne')
+        .mockResolvedValue(undefined);
 
       const result = await service.resolveMessageAttachments(
         {
@@ -1761,33 +1948,102 @@ describe('MessageAttachmentService', () => {
         {} as any
       );
 
-      expect(result).toEqual([
-        expect.objectContaining({
-          id: 'doc-rehomed',
-          width: 640,
-          height: 480,
-        }),
-      ]);
+      expect(result).toEqual([]);
+      expect(rehomeSpy).not.toHaveBeenCalled();
     });
 
-    it('[4] leaves width/height undefined when the by-reference ref carries no dimensions (non-image content)', async () => {
-      // A PDF / non-image ref has no imageWidth/imageHeight — the carry-over is
-      // guarded on presence, so the resolved attachment stays dimensionless
-      // rather than stamping undefined-over-nothing.
-      fileServiceAdapter.getDocumentByReference.mockResolvedValue({
+    it('C3: a re-share by a DIFFERENT sender still resolves (the row keeps the first sharer as createdBy)', async () => {
+      // (bucket, externalReference) is UNIQUE, so a re-share of media already in
+      // this conversation reuses the FIRST sharer's row. A sender-ownership gate
+      // could therefore never be satisfied by the second sharer and dropped their
+      // attachment forever. Element/Synapse let any member reference any mxc://
+      // URI, so this is ordinary Matrix forwarding, not an attack.
+      inboundDocuments({
+        id: 'doc-shared',
+        externalReference: 'media-1',
+        createdBy: 'alice',
+        displayName: 'pic.png',
+        mimeType: 'image/png',
+        size: 1000,
+        temporaryLocation: false,
+        authorization: { id: 'doc-auth' },
+      });
+      authorizationService.isAccessGranted.mockReturnValue(true);
+      documentService.getPubliclyAccessibleURL.mockReturnValue(
+        'https://docs/doc-shared'
+      );
+
+      const result = await service.resolveMessageAttachments(
+        {
+          id: 'm1',
+          sender: 'bob',
+          storageBucketId: CONV_BUCKET,
+          rawAttachments: [
+            { media_id: 'media-1', mime_type: 'image/png', size: 1000 },
+          ],
+        } as any,
+        {} as any
+      );
+
+      expect(result).toEqual([expect.objectContaining({ id: 'doc-shared' })]);
+    });
+
+    it('C3: an inbound media_id resolving to a STILL-STAGED document is refused (confused-deputy gate)', async () => {
+      // The gate that replaces sender-ownership: a temporaryLocation document is
+      // somebody's UNSENT upload, so a crafted media_id must never surface it.
+      inboundDocuments({
+        id: 'doc-unsent',
+        externalReference: 'media-1',
+        createdBy: 'alice',
+        displayName: 'secret.png',
+        mimeType: 'image/png',
+        size: 1000,
+        temporaryLocation: true,
+        authorization: { id: 'doc-auth' },
+      });
+      authorizationService.isAccessGranted.mockReturnValue(true);
+
+      const result = await service.resolveMessageAttachments(
+        {
+          id: 'm1',
+          sender: 'bob',
+          storageBucketId: CONV_BUCKET,
+          rawAttachments: [
+            { media_id: 'media-1', mime_type: 'image/png', size: 1000 },
+          ],
+        } as any,
+        {} as any
+      );
+
+      expect(result).toEqual([]);
+    });
+
+    it('leaves width/height undefined for non-image inbound content', async () => {
+      // A PDF carries no dims from any source — the resolved attachment stays
+      // dimensionless rather than stamping undefined-over-nothing, and no
+      // (breaker-bypassing) meta round-trip is made for non-image content.
+      inboundDocuments({
         id: 'doc-rehomed',
-      } as any);
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-rehomed',
+        externalReference: 'media-1',
         createdBy: 'sender-1',
         displayName: 'doc.pdf',
         mimeType: 'application/pdf',
         size: 1000,
+        temporaryLocation: false,
         authorization: { id: 'doc-auth' },
-      } as any);
+      });
       authorizationService.isAccessGranted.mockReturnValue(true);
       documentService.getPubliclyAccessibleURL.mockReturnValue(
         'https://docs/doc-rehomed'
+      );
+      // If the image guard were dropped, this would leak onto every PDF read.
+      fileServiceAdapter.getDocumentMetaBatch.mockResolvedValue(
+        new Map([
+          [
+            'doc-rehomed',
+            { id: 'doc-rehomed', imageWidth: 999, imageHeight: 999 },
+          ],
+        ]) as any
       );
 
       const result = await service.resolveMessageAttachments(
@@ -1802,6 +2058,8 @@ describe('MessageAttachmentService', () => {
         {} as any
       );
 
+      expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.getDocumentMetaBatch).not.toHaveBeenCalled();
       expect(result).toEqual([
         expect.objectContaining({
           id: 'doc-rehomed',
@@ -1817,22 +2075,27 @@ describe('MessageAttachmentService', () => {
       // (MOVE) and then resolve the now-homed doc, instead of returning nothing
       // forever.
       fileServiceAdapter.getDocumentByReference
-        .mockResolvedValueOnce(null) // (1) initial bucket-scoped miss
-        .mockResolvedValueOnce(null) // (2) rehomeOne: not already in target
+        .mockResolvedValueOnce(null) // (1) rehomeOne: not already in target
         .mockResolvedValueOnce({
           id: 'doc-staging',
           storageBucketId: MATRIX_MEDIA_BUCKET,
           mimeType: 'image/png',
-        } as any) // (3) rehomeOne: global canonical lookup
-        .mockResolvedValueOnce({ id: 'doc-rehomed' } as any); // (4) re-run after re-home
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-rehomed',
-        createdBy: 'sender-1',
-        displayName: 'pic.png',
-        mimeType: 'image/png',
-        size: 1000,
-        authorization: { id: 'doc-auth' },
-      } as any);
+          size: 1000,
+        } as any); // (2) rehomeOne: global canonical lookup
+      documentService.getDocumentsByReferencesInBucket
+        .mockResolvedValueOnce([]) // batched read lookup: still in staging → miss
+        .mockResolvedValue([
+          {
+            id: 'doc-rehomed',
+            externalReference: 'media-1',
+            createdBy: 'sender-1',
+            displayName: 'pic.png',
+            mimeType: 'image/png',
+            size: 1000,
+            temporaryLocation: false,
+            authorization: { id: 'doc-auth' },
+          },
+        ] as any); // re-run after the lazy re-home
       authorizationService.isAccessGranted.mockReturnValue(true);
       documentService.getPubliclyAccessibleURL.mockReturnValue(
         'https://docs/doc-rehomed'
@@ -1872,7 +2135,7 @@ describe('MessageAttachmentService', () => {
       // No sender → the re-home cannot stamp createdBy / mint attribution, so it
       // must be skipped and the attachment omitted (still self-heals once a read
       // carries a sender).
-      fileServiceAdapter.getDocumentByReference.mockResolvedValue(null);
+      documentService.getDocumentsByReferencesInBucket.mockResolvedValue([]);
 
       const result = await service.resolveMessageAttachments(
         {
@@ -1940,17 +2203,20 @@ describe('MessageAttachmentService', () => {
       const rehomeSpy = vi
         .spyOn(service as any, 'rehomeOne')
         .mockResolvedValue(undefined);
-      fileServiceAdapter.getDocumentByReference
-        .mockResolvedValueOnce(null) // initial bucket-scoped miss
-        .mockResolvedValue({ id: 'doc-rehomed' } as any); // re-lookup after re-home
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-rehomed',
-        createdBy: 'sender-1',
-        displayName: 'pic.png',
-        mimeType: 'image/png',
-        size: 1000,
-        authorization: { id: 'doc-auth' },
-      } as any);
+      documentService.getDocumentsByReferencesInBucket
+        .mockResolvedValueOnce([]) // batched read lookup misses
+        .mockResolvedValue([
+          {
+            id: 'doc-rehomed',
+            externalReference: 'media-1',
+            createdBy: 'sender-1',
+            displayName: 'pic.png',
+            mimeType: 'image/png',
+            size: 1000,
+            temporaryLocation: false,
+            authorization: { id: 'doc-auth' },
+          },
+        ] as any); // re-lookup after re-home
       authorizationService.isAccessGranted.mockReturnValue(true);
       documentService.getPubliclyAccessibleURL.mockReturnValue(
         'https://docs/doc-rehomed'
@@ -1989,18 +2255,20 @@ describe('MessageAttachmentService', () => {
       const rehomeSpy = vi
         .spyOn(service as any, 'rehomeOne')
         .mockResolvedValue(undefined);
-      fileServiceAdapter.getDocumentByReference
-        .mockResolvedValueOnce(null) // attachment A initial miss
-        .mockResolvedValueOnce(null) // attachment B initial miss
-        .mockResolvedValue({ id: 'doc-rehomed' } as any); // both re-lookups hit
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-rehomed',
-        createdBy: 'sender-1',
-        displayName: 'pic.png',
-        mimeType: 'image/png',
-        size: 1000,
-        authorization: { id: 'doc-auth' },
-      } as any);
+      documentService.getDocumentsByReferencesInBucket
+        .mockResolvedValueOnce([]) // ONE batched lookup for the message: miss
+        .mockResolvedValue([
+          {
+            id: 'doc-rehomed',
+            externalReference: 'media-same',
+            createdBy: 'sender-1',
+            displayName: 'pic.png',
+            mimeType: 'image/png',
+            size: 1000,
+            temporaryLocation: false,
+            authorization: { id: 'doc-auth' },
+          },
+        ] as any); // both post-re-home re-lookups hit
       authorizationService.isAccessGranted.mockReturnValue(true);
       documentService.getPubliclyAccessibleURL.mockReturnValue(
         'https://docs/doc-rehomed'
@@ -2155,16 +2423,18 @@ describe('MessageAttachmentService', () => {
       authorization: { id: 'doc-auth' },
     };
 
-    const readOutbound = (raw: Record<string, unknown>) =>
+    const readRaw = (...raws: Record<string, unknown>[]) =>
       service.resolveMessageAttachments(
         {
           id: 'm1',
           sender: 'sender-1',
           storageBucketId: CONV_BUCKET,
-          rawAttachments: [raw],
+          rawAttachments: raws,
         } as any,
         {} as any
       );
+
+    const readOutbound = (raw: Record<string, unknown>) => readRaw(raw);
 
     beforeEach(() => {
       documentService.getDocumentOrFail.mockResolvedValue(outboundDoc as any);
@@ -2174,12 +2444,47 @@ describe('MessageAttachmentService', () => {
       authorizationService.isAccessGranted.mockReturnValue(true);
     });
 
-    it('ANTI-N+1: an outbound image whose event carries dims surfaces them WITHOUT calling getDocumentMeta', async () => {
-      // This is the whole point of the restructure. `Message.attachments` is a
-      // @ResolveField and getMessages returns a room's ENTIRE history
-      // unpaginated, so a per-attachment meta GET is an unbounded, uncached,
-      // unbatched N+1 (and getDocumentMeta bypasses the shared circuit breaker).
-      // The event already carries info.w/info.h — assert the ABSENCE of the call.
+    it('ANTI-N+1: several image attachments on ONE message are served by ONE batched call carrying every id', async () => {
+      // The invariant that makes the authoritative source affordable at all.
+      // `Message.attachments` is a @ResolveField and getMessages returns a room's
+      // ENTIRE history unpaginated, so a per-attachment meta GET is an unbounded,
+      // uncached, unbatched N+1 (and the meta calls bypass the shared circuit
+      // breaker). Assert the CALL COUNT, not just the values.
+      documentService.getDocumentOrFail.mockImplementation((async (
+        id: string
+      ) => ({ ...outboundDoc, id })) as any);
+      fileServiceDims(
+        { id: 'doc-a', imageWidth: 10, imageHeight: 20 },
+        { id: 'doc-b', imageWidth: 30, imageHeight: 40 },
+        { id: 'doc-c', imageWidth: 50, imageHeight: 60 }
+      );
+
+      const result = await readRaw(
+        { document_id: 'doc-a', mime_type: 'image/png', size: 1 },
+        { document_id: 'doc-b', mime_type: 'image/png', size: 1 },
+        { document_id: 'doc-c', mime_type: 'image/png', size: 1 }
+      );
+
+      expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledTimes(1);
+      expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledWith([
+        'doc-a',
+        'doc-b',
+        'doc-c',
+      ]);
+      expect(result).toEqual([
+        expect.objectContaining({ id: 'doc-a', width: 10, height: 20 }),
+        expect.objectContaining({ id: 'doc-b', width: 30, height: 40 }),
+        expect.objectContaining({ id: 'doc-c', width: 50, height: 60 }),
+      ]);
+    });
+
+    it("AUTHORITY: file-service's own measurement OVERRIDES the client-asserted event dims", async () => {
+      // `info.w`/`info.h` is unverified — any room member (or federated
+      // homeserver) can craft it. file-service measured the bytes it stores, so
+      // its measurement is applied LAST and wins.
+      fileServiceDims({ id: 'doc-1', imageWidth: 320, imageHeight: 240 });
+
       const result = await readOutbound({
         document_id: 'doc-1',
         display_name: 'pic.png',
@@ -2189,51 +2494,86 @@ describe('MessageAttachmentService', () => {
         height: 600,
       });
 
-      expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
-      expect(result).toEqual([
-        expect.objectContaining({ id: 'doc-1', width: 800, height: 600 }),
+      expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledWith([
+        'doc-1',
       ]);
-    });
-
-    it('falls back to getDocumentMeta ONLY when the event carries no dims', async () => {
-      fileServiceAdapter.getDocumentMeta.mockResolvedValue({
-        id: 'doc-1',
-        imageWidth: 320,
-        imageHeight: 240,
-      } as any);
-
-      const result = await readOutbound({
-        document_id: 'doc-1',
-        display_name: 'pic.png',
-        mime_type: 'image/png',
-        size: 1000,
-      });
-
-      expect(fileServiceAdapter.getDocumentMeta).toHaveBeenCalledWith('doc-1');
       expect(result).toEqual([
         expect.objectContaining({ id: 'doc-1', width: 320, height: 240 }),
       ]);
     });
 
-    it('a failing getDocumentMeta still resolves the attachment (dims undefined, no throw)', async () => {
-      fileServiceAdapter.getDocumentMeta.mockRejectedValue(
-        new Error('file-service down')
-      );
+    it('FALLBACK: the event dims stand when file-service has no measurement for that id (partial batch is a normal 200)', async () => {
+      // Ids that do not resolve are OMITTED from the batch answer; a missing key
+      // must read as "no measurement", never as "no dimensions".
+      fileServiceDims({ id: 'some-other-doc', imageWidth: 1, imageHeight: 1 });
 
       const result = await readOutbound({
         document_id: 'doc-1',
         display_name: 'pic.png',
         mime_type: 'image/png',
         size: 1000,
+        width: 800,
+        height: 600,
       });
 
-      expect(fileServiceAdapter.getDocumentMeta).toHaveBeenCalledWith('doc-1');
       expect(result).toEqual([
+        expect.objectContaining({ id: 'doc-1', width: 800, height: 600 }),
+      ]);
+    });
+
+    it('DEGRADATION: a failing batch falls back to the event dims, and to no dims at all when the event carries none — never throwing', async () => {
+      fileServiceAdapter.getDocumentMetaBatch.mockRejectedValue(
+        new Error('file-service down')
+      );
+
+      const withEventDims = await readOutbound({
+        document_id: 'doc-1',
+        display_name: 'pic.png',
+        mime_type: 'image/png',
+        size: 1000,
+        width: 800,
+        height: 600,
+      });
+      expect(withEventDims).toEqual([
+        expect.objectContaining({ id: 'doc-1', width: 800, height: 600 }),
+      ]);
+
+      // ...and with nothing asserted on the event either, the attachment is
+      // still RETURNED (dimensionless) rather than dropped or the read failed.
+      const withoutEventDims = await readOutbound({
+        document_id: 'doc-1',
+        display_name: 'pic.png',
+        mime_type: 'image/png',
+        size: 1000,
+      });
+      expect(withoutEventDims).toEqual([
         expect.objectContaining({
           id: 'doc-1',
           width: undefined,
           height: undefined,
         }),
+      ]);
+    });
+
+    it('DEGRADATION: a SYNCHRONOUS throw from the batch call does not fail the read either', async () => {
+      // applyReadImageDims runs OUTSIDE the per-attachment guard, so an escaping
+      // throw would fail the non-nullable Message.attachments field for the whole
+      // message — `.catch()` alone would not catch a synchronous throw.
+      fileServiceAdapter.getDocumentMetaBatch.mockImplementation((() => {
+        throw new Error('sync boom');
+      }) as any);
+
+      const result = await readOutbound({
+        document_id: 'doc-1',
+        display_name: 'pic.png',
+        mime_type: 'image/png',
+        size: 1000,
+        width: 800,
+        height: 600,
+      });
+
+      expect(result).toEqual([
+        expect.objectContaining({ id: 'doc-1', width: 800, height: 600 }),
       ]);
     });
 
@@ -2253,12 +2593,33 @@ describe('MessageAttachmentService', () => {
       });
 
       expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.getDocumentMetaBatch).not.toHaveBeenCalled();
       expect(result).toEqual([
         expect.objectContaining({
           id: 'doc-pdf',
           width: undefined,
           height: undefined,
         }),
+      ]);
+    });
+
+    it('mixed message: the batch carries ONLY the image ids, not the non-image ones', async () => {
+      documentService.getDocumentOrFail.mockImplementation((async (
+        id: string
+      ) => ({
+        ...outboundDoc,
+        id,
+        mimeType: id === 'doc-pdf' ? 'application/pdf' : 'image/png',
+      })) as any);
+
+      await readRaw(
+        { document_id: 'doc-img', mime_type: 'image/png', size: 1 },
+        { document_id: 'doc-pdf', mime_type: 'application/pdf', size: 1 }
+      );
+
+      expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledTimes(1);
+      expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledWith([
+        'doc-img',
       ]);
     });
 
@@ -2276,22 +2637,93 @@ describe('MessageAttachmentService', () => {
 
       expect(result).toEqual([]);
       expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.getDocumentMetaBatch).not.toHaveBeenCalled();
     });
 
-    it('inbound: the by-reference (file-service) dims OUTRANK the event dims, and still no meta call', async () => {
-      fileServiceAdapter.getDocumentByReference.mockResolvedValue({
+    it('GATE ORDERING: on a mixed message only the READABLE attachment reaches the batch', async () => {
+      documentService.getDocumentOrFail.mockImplementation((async (
+        id: string
+      ) => ({
+        ...outboundDoc,
+        id,
+        authorization: { id: `auth-${id}` },
+      })) as any);
+      authorizationService.isAccessGranted.mockImplementation(
+        ((_ctx: any, authorization: any) =>
+          authorization?.id === 'auth-doc-ok') as any
+      );
+
+      const result = await readRaw(
+        { document_id: 'doc-ok', mime_type: 'image/png', size: 1 },
+        { document_id: 'doc-denied', mime_type: 'image/png', size: 1 }
+      );
+
+      expect(result).toEqual([expect.objectContaining({ id: 'doc-ok' })]);
+      expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledTimes(1);
+      expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledWith([
+        'doc-ok',
+      ]);
+    });
+
+    it('inbound: the file-service measurement outranks the Element-asserted event dims', async () => {
+      // The reason the batch exists: an Element client asserts info.w/info.h
+      // unverified (Synapse does not check it either), so the stored bytes'
+      // measurement must win. Still ZERO breaker-accounted calls — the inbound
+      // document itself is resolved from the server's own DB.
+      inboundDocuments({
         id: 'doc-rehomed',
-        imageWidth: 111,
-        imageHeight: 222,
-      } as any);
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-rehomed',
+        externalReference: 'media-1',
         createdBy: 'sender-1',
         displayName: 'pic.png',
         mimeType: 'image/png',
         size: 1000,
+        temporaryLocation: false,
         authorization: { id: 'doc-auth' },
-      } as any);
+      });
+      fileServiceDims({
+        id: 'doc-rehomed',
+        imageWidth: 320,
+        imageHeight: 240,
+      });
+
+      const result = await service.resolveMessageAttachments(
+        {
+          id: 'm1',
+          sender: 'sender-1',
+          storageBucketId: CONV_BUCKET,
+          rawAttachments: [
+            {
+              media_id: 'media-1',
+              display_name: 'pic.png',
+              mime_type: 'image/png',
+              size: 1000,
+              width: 9999,
+              height: 9999,
+            },
+          ],
+        } as any,
+        {} as any
+      );
+
+      expect(fileServiceAdapter.getDocumentByReference).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledTimes(1);
+      expect(result).toEqual([
+        expect.objectContaining({ width: 320, height: 240 }),
+      ]);
+    });
+
+    it('inbound: the event dims stand when file-service has no measurement', async () => {
+      inboundDocuments({
+        id: 'doc-rehomed',
+        externalReference: 'media-1',
+        createdBy: 'sender-1',
+        displayName: 'pic.png',
+        mimeType: 'image/png',
+        size: 1000,
+        temporaryLocation: false,
+        authorization: { id: 'doc-auth' },
+      });
 
       const result = await service.resolveMessageAttachments(
         {
@@ -2312,14 +2744,517 @@ describe('MessageAttachmentService', () => {
         {} as any
       );
 
-      // The event asserts 800x600; file-service MEASURED 111x222 on the stored
-      // bytes. For inbound (Element-origin) media the event's info.w/h is
-      // unverified client input, so the authoritative measurement must win — and
-      // it is already in hand, so this costs no extra round-trip.
-      expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
       expect(result).toEqual([
-        expect.objectContaining({ width: 111, height: 222 }),
+        expect.objectContaining({ width: 800, height: 600 }),
       ]);
+    });
+
+    it('C4: a ZERO event dimension counts as ABSENT — it never sticks, and never masks the authoritative measurement', async () => {
+      // `applyImageDims` treated 0 as a real dimension, so an event asserting
+      // `info.w: 0` stamped a nonsense 0 pixel count onto the attachment.
+      inboundDocuments({
+        id: 'doc-rehomed',
+        externalReference: 'media-1',
+        createdBy: 'sender-1',
+        displayName: 'pic.png',
+        mimeType: 'image/png',
+        size: 1000,
+        temporaryLocation: false,
+        authorization: { id: 'doc-auth' },
+      });
+      const readZeroDimEvent = () =>
+        service.resolveMessageAttachments(
+          {
+            id: 'm1',
+            sender: 'sender-1',
+            storageBucketId: CONV_BUCKET,
+            rawAttachments: [
+              {
+                media_id: 'media-1',
+                display_name: 'pic.png',
+                mime_type: 'image/png',
+                size: 1000,
+                width: 0,
+                height: 0,
+              },
+            ],
+          } as any,
+          {} as any
+        );
+
+      // (a) No measurement to fall back on: the attachment stays DIMENSIONLESS
+      // rather than carrying a nonsense 0.
+      expect(await readZeroDimEvent()).toEqual([
+        expect.objectContaining({ width: undefined, height: undefined }),
+      ]);
+
+      // (b) With a measurement, it is the measurement that lands.
+      fileServiceDims({
+        id: 'doc-rehomed',
+        imageWidth: 320,
+        imageHeight: 240,
+      });
+      expect(await readZeroDimEvent()).toEqual([
+        expect.objectContaining({ width: 320, height: 240 }),
+      ]);
+    });
+
+    it('C4: a ZERO file-service measurement never overwrites a real event dimension', async () => {
+      fileServiceDims({ id: 'doc-1', imageWidth: 0, imageHeight: 0 });
+
+      const result = await readOutbound({
+        document_id: 'doc-1',
+        display_name: 'pic.png',
+        mime_type: 'image/png',
+        size: 1000,
+        width: 800,
+        height: 600,
+      });
+
+      expect(result).toEqual([
+        expect.objectContaining({ id: 'doc-1', width: 800, height: 600 }),
+      ]);
+    });
+  });
+
+  // --- ONE dims batch for the WHOLE read, not one per message ---
+
+  describe('resolveMessageAttachments — ONE dims batch per REQUEST', () => {
+    /**
+     * Per-test timeout, deliberately far below the loader's 5s liveness
+     * backstop and ~200x above what these scenarios actually take (~10ms).
+     *
+     * It is what makes the RELEASE ORDER load-bearing: each message must hand
+     * back its hold on the request-wide batch BEFORE awaiting its own loads. A
+     * message that released only after awaiting (e.g. from a `finally` placed
+     * around the load) would wait on itself, and the batch would go out only on
+     * the backstop — still one call, but a multi-second stall on every room
+     * read. Without this timeout that regression would pass unnoticed, because
+     * the suite-wide timeout is 90s.
+     */
+    const REQUEST_BATCH_TIMEOUT_MS = 2000;
+
+    const baseDoc = {
+      createdBy: 'sender-1',
+      displayName: 'pic.png',
+      mimeType: 'image/png',
+      size: 1000,
+      temporaryLocation: false,
+      storageBucket: { id: CONV_BUCKET },
+    };
+
+    /** One instance stands for ONE GraphQL request. */
+    let dimsLoader: MessageAttachmentDimsLoader;
+
+    beforeEach(() => {
+      dimsLoader = createMessageAttachmentDimsLoader(fileServiceAdapter as any);
+      documentService.getPubliclyAccessibleURL.mockReturnValue(
+        'https://docs/x'
+      );
+      authorizationService.isAccessGranted.mockReturnValue(true);
+    });
+
+    /**
+     * Put each document load on its OWN macrotask so the messages reach their
+     * dims phase in DIFFERENT event-loop turns — which is what actually happens
+     * in production, where every message first awaits its own DB round-trips
+     * (getDocumentOrFail / getDocumentsByReferencesInBucket) and those responses
+     * arrive in separate I/O callbacks.
+     *
+     * This stagger is what makes the one-call assertion MEAN anything: resolve
+     * the loads synchronously and every message lands in a single microtask
+     * drain, where even DataLoader's default batch window would look like one
+     * call. Staggered, only a loader that waits for every registered message
+     * still issues one request.
+     */
+    const staggerDocumentLoads = (
+      delayMsById: Record<string, number>,
+      mimeTypeById: Record<string, string> = {}
+    ) => {
+      documentService.getDocumentOrFail.mockImplementation((async (
+        id: string
+      ) => {
+        await new Promise(resolve => setTimeout(resolve, delayMsById[id] ?? 0));
+        return {
+          ...baseDoc,
+          id,
+          mimeType: mimeTypeById[id] ?? 'image/png',
+          authorization: { id: `auth-${id}` },
+        };
+      }) as any);
+    };
+
+    /** One message of a room's history, resolved as the @ResolveField would. */
+    const readMessage = (messageId: string, ...documentIds: string[]) =>
+      service.resolveMessageAttachments(
+        {
+          id: messageId,
+          sender: 'sender-1',
+          storageBucketId: CONV_BUCKET,
+          rawAttachments: documentIds.map(documentId => ({
+            document_id: documentId,
+            mime_type: 'image/png',
+            size: 1,
+            width: 7,
+            height: 7,
+          })),
+        } as any,
+        {} as any,
+        dimsLoader
+      );
+
+    it(
+      'ANTI-N+1 ACROSS THE LIST: a multi-message history is served by ONE call for the whole request',
+      async () => {
+        // The headline invariant. `RoomResolverFields.messages` returns a room's
+        // ENTIRE unpaginated history, so one call per MESSAGE is still N calls per
+        // viewer per page load. Assert the CALL COUNT, not just the values.
+        staggerDocumentLoads({ 'doc-a': 0, 'doc-b': 5, 'doc-c': 10 });
+        // Answered out of order — a ref may only take the measurement whose id is
+        // its own (`/meta-batch` guarantees neither order nor completeness).
+        fileServiceDims(
+          { id: 'doc-c', imageWidth: 50, imageHeight: 60 },
+          { id: 'doc-a', imageWidth: 10, imageHeight: 20 },
+          { id: 'doc-b', imageWidth: 30, imageHeight: 40 }
+        );
+
+        // graphql-js invokes every list item's field resolvers in ONE turn.
+        const [first, second, third] = await Promise.all([
+          readMessage('m1', 'doc-a'),
+          readMessage('m2', 'doc-b'),
+          readMessage('m3', 'doc-c'),
+        ]);
+
+        expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledTimes(
+          1
+        );
+        expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledWith([
+          'doc-a',
+          'doc-b',
+          'doc-c',
+        ]);
+        expect(first).toEqual([
+          expect.objectContaining({ id: 'doc-a', width: 10, height: 20 }),
+        ]);
+        expect(second).toEqual([
+          expect.objectContaining({ id: 'doc-b', width: 30, height: 40 }),
+        ]);
+        expect(third).toEqual([
+          expect.objectContaining({ id: 'doc-c', width: 50, height: 60 }),
+        ]);
+      },
+      REQUEST_BATCH_TIMEOUT_MS
+    );
+
+    it(
+      'GATE ORDERING survives the request-wide batch: a READ-denied attachment contributes NO id',
+      async () => {
+        // The load-bearing ordering rule: dims resolution happens AFTER each
+        // attachment's per-viewer READ gate, so an attachment the viewer cannot
+        // read must not even become a loader key — let alone a batched request.
+        staggerDocumentLoads({ 'doc-ok': 0, 'doc-denied': 5, 'doc-ok-2': 10 });
+        authorizationService.isAccessGranted.mockImplementation(
+          ((_ctx: any, authorization: any) =>
+            authorization?.id !== 'auth-doc-denied') as any
+        );
+        fileServiceDims(
+          { id: 'doc-ok', imageWidth: 10, imageHeight: 20 },
+          { id: 'doc-ok-2', imageWidth: 30, imageHeight: 40 }
+        );
+
+        const [first, second, third] = await Promise.all([
+          readMessage('m1', 'doc-ok'),
+          readMessage('m2', 'doc-denied'),
+          readMessage('m3', 'doc-ok-2'),
+        ]);
+
+        expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledTimes(
+          1
+        );
+        expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledWith([
+          'doc-ok',
+          'doc-ok-2',
+        ]);
+        expect(first).toEqual([
+          expect.objectContaining({ id: 'doc-ok', width: 10, height: 20 }),
+        ]);
+        expect(second).toEqual([]);
+        expect(third).toEqual([
+          expect.objectContaining({ id: 'doc-ok-2', width: 30, height: 40 }),
+        ]);
+      },
+      REQUEST_BATCH_TIMEOUT_MS
+    );
+
+    it(
+      'the request-wide batch carries ONLY image ids — a history of non-images issues no call at all',
+      async () => {
+        staggerDocumentLoads(
+          { 'doc-img': 0, 'doc-pdf': 5 },
+          { 'doc-pdf': 'application/pdf' }
+        );
+
+        await Promise.all([
+          readMessage('m1', 'doc-img'),
+          readMessage('m2', 'doc-pdf'),
+        ]);
+
+        expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledTimes(
+          1
+        );
+        expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledWith([
+          'doc-img',
+        ]);
+
+        // ...and with no image anywhere in the history, nothing is asked for.
+        vi.mocked(fileServiceAdapter.getDocumentMetaBatch).mockClear();
+        dimsLoader = createMessageAttachmentDimsLoader(
+          fileServiceAdapter as any
+        );
+        staggerDocumentLoads(
+          { 'doc-pdf': 0, 'doc-zip': 5 },
+          { 'doc-pdf': 'application/pdf', 'doc-zip': 'application/zip' }
+        );
+
+        await Promise.all([
+          readMessage('m1', 'doc-pdf'),
+          readMessage('m2', 'doc-zip'),
+        ]);
+
+        expect(fileServiceAdapter.getDocumentMetaBatch).not.toHaveBeenCalled();
+      },
+      REQUEST_BATCH_TIMEOUT_MS
+    );
+
+    it(
+      'DEGRADATION: a failing request-wide batch leaves EVERY message on its event dims — no message throws',
+      async () => {
+        // `Message.attachments` is non-nullable, so an escaping throw would fail
+        // the whole message (and, through the list, the whole read).
+        staggerDocumentLoads({ 'doc-a': 0, 'doc-b': 5 });
+        fileServiceAdapter.getDocumentMetaBatch.mockRejectedValue(
+          new Error('file-service down')
+        );
+
+        const [first, second] = await Promise.all([
+          readMessage('m1', 'doc-a'),
+          readMessage('m2', 'doc-b'),
+        ]);
+
+        expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledTimes(
+          1
+        );
+        // The event-asserted dims (7×7) stand — nothing was dropped, nothing threw.
+        expect(first).toEqual([
+          expect.objectContaining({ id: 'doc-a', width: 7, height: 7 }),
+        ]);
+        expect(second).toEqual([
+          expect.objectContaining({ id: 'doc-b', width: 7, height: 7 }),
+        ]);
+      },
+      REQUEST_BATCH_TIMEOUT_MS
+    );
+
+    it(
+      "a history exceeding the 100-id cap is still ONE call — chunking is the ADAPTER's job, not the loader's",
+      async () => {
+        // A media-heavy room easily passes 100 gated images across its history.
+        // The loader must NOT cap the batch (a maxBatchSize would re-fragment the
+        // request); `getDocumentMetaBatch` chunks at 100 internally — see the
+        // adapter spec, "CHUNKS at 100 ids ... and merges the chunk answers".
+        const messageCount = 12;
+        const perMessage = 10;
+        const delayMsById: Record<string, number> = {};
+        const expectedIds: string[] = [];
+        for (let m = 0; m < messageCount; m++) {
+          for (let a = 0; a < perMessage; a++) {
+            const id = `doc-${m}-${a}`;
+            delayMsById[id] = m;
+            expectedIds.push(id);
+          }
+        }
+        staggerDocumentLoads(delayMsById);
+
+        await Promise.all(
+          Array.from({ length: messageCount }, (_unused, m) =>
+            readMessage(
+              `m${m}`,
+              ...Array.from({ length: perMessage }, (_u, a) => `doc-${m}-${a}`)
+            )
+          )
+        );
+
+        expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledTimes(
+          1
+        );
+        const [sentIds] = vi.mocked(fileServiceAdapter.getDocumentMetaBatch)
+          .mock.calls[0];
+        expect(sentIds).toHaveLength(messageCount * perMessage);
+        expect(sentIds).toEqual(expectedIds);
+      },
+      REQUEST_BATCH_TIMEOUT_MS
+    );
+  });
+
+  describe('MessageAttachmentDimsLoaderCreator', () => {
+    it("REQUEST SCOPING: create() mints a FRESH loader, so one viewer's measurements never serve another", async () => {
+      // DataLoaderInterceptor calls create() once per request and memoizes the
+      // result on that request's GraphQL context. A creator that memoized the
+      // loader itself would turn a per-request cache into a process-wide one:
+      // stale dims, and one request's batch answering another's ids.
+      const creator = new MessageAttachmentDimsLoaderCreator(
+        fileServiceAdapter as any
+      );
+      const firstRequestLoader = creator.create();
+      const secondRequestLoader = creator.create();
+
+      expect(secondRequestLoader).not.toBe(firstRequestLoader);
+
+      fileServiceDims({ id: 'doc-1', imageWidth: 10, imageHeight: 20 });
+      await expect(firstRequestLoader.load('doc-1')).resolves.toEqual(
+        expect.objectContaining({ imageWidth: 10 })
+      );
+
+      // A second request must go back to file-service rather than reuse the
+      // first request's cached answer.
+      fileServiceDims({ id: 'doc-1', imageWidth: 99, imageHeight: 98 });
+      await expect(secondRequestLoader.load('doc-1')).resolves.toEqual(
+        expect.objectContaining({ imageWidth: 99 })
+      );
+      expect(fileServiceAdapter.getDocumentMetaBatch).toHaveBeenCalledTimes(2);
+    });
+
+    it('resolves an id file-service has no measurement for to null, never to an error', async () => {
+      // A partial answer is a normal 200 — a missing key means "no measurement".
+      const loader = new MessageAttachmentDimsLoaderCreator(
+        fileServiceAdapter as any
+      ).create();
+      fileServiceDims({ id: 'doc-other', imageWidth: 1, imageHeight: 1 });
+
+      await expect(loader.load('doc-1')).resolves.toBeNull();
+    });
+  });
+
+  // --- D2: bucket-policy enforcement (FR-020/FR-022) ---
+
+  describe('bucket policy enforcement', () => {
+    const senderContext = { actorID: 'sender-1' } as any;
+    const stagedDoc = (overrides: Record<string, unknown> = {}) => ({
+      id: 'doc-1',
+      createdBy: 'sender-1',
+      displayName: 'pic.png',
+      mimeType: 'image/png',
+      size: 1000,
+      temporaryLocation: true,
+      storageBucket: { id: CONV_BUCKET },
+      authorization: { id: 'doc-auth' },
+      ...overrides,
+    });
+
+    beforeEach(() => {
+      // The REAL conversation bucket policy — allow-list ['image/png'] + 50 MiB.
+      useConversationBucket();
+      authorizationService.grantAccessOrFail.mockReturnValue(true as any);
+    });
+
+    it('outbound: accepts a document whose MIME type is on the bucket allow-list', async () => {
+      documentService.getDocumentOrFail.mockResolvedValue(stagedDoc() as any);
+
+      const refs = await service.resolveOutboundAttachments(
+        conversationRoom,
+        senderContext,
+        ['doc-1']
+      );
+
+      expect(refs).toEqual([
+        expect.objectContaining({ documentId: 'doc-1', mimeType: 'image/png' }),
+      ]);
+    });
+
+    it('outbound: REJECTS a document whose MIME type is not on the bucket allow-list (FR-022)', async () => {
+      documentService.getDocumentOrFail.mockResolvedValue(
+        stagedDoc({ mimeType: 'application/x-msdownload' }) as any
+      );
+
+      await expect(
+        service.resolveOutboundAttachments(conversationRoom, senderContext, [
+          'doc-1',
+        ])
+      ).rejects.toThrow(/type is not permitted/);
+    });
+
+    it('outbound: REJECTS a document larger than the bucket cap (FR-020)', async () => {
+      documentService.getDocumentOrFail.mockResolvedValue(
+        stagedDoc({ size: 52428801 }) as any
+      );
+
+      await expect(
+        service.resolveOutboundAttachments(conversationRoom, senderContext, [
+          'doc-1',
+        ])
+      ).rejects.toThrow(/exceeds the maximum allowed size/);
+    });
+
+    it('D1: inbound re-home REFUSES media whose MIME type is not on the target bucket allow-list', async () => {
+      fileServiceAdapter.getDocumentByReference
+        .mockResolvedValueOnce(null) // not already in the target bucket
+        .mockResolvedValueOnce({
+          id: 'doc-staging',
+          storageBucketId: MATRIX_MEDIA_BUCKET,
+          mimeType: 'application/x-msdownload',
+          size: 1000,
+        } as any);
+
+      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
+        { media_id: 'media-1', display_name: 'evil.exe' },
+      ] as any);
+
+      // Left in staging: nothing moved, nothing copied, no auth policy minted.
+      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
+      expect(authorizationPolicyService.save).not.toHaveBeenCalled();
+    });
+
+    it('D1: inbound re-home REFUSES media larger than the target bucket cap', async () => {
+      fileServiceAdapter.getDocumentByReference
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'doc-staging',
+          storageBucketId: MATRIX_MEDIA_BUCKET,
+          mimeType: 'image/png',
+          size: 52428801,
+        } as any);
+
+      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
+        { media_id: 'media-1', display_name: 'huge.png' },
+      ] as any);
+
+      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
+      expect(authorizationPolicyService.save).not.toHaveBeenCalled();
+    });
+
+    it('D1: inbound re-home ACCEPTS media that satisfies the target bucket policy', async () => {
+      fileServiceAdapter.getDocumentByReference
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'doc-staging',
+          storageBucketId: MATRIX_MEDIA_BUCKET,
+          mimeType: 'image/png',
+          size: 1000,
+        } as any);
+
+      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
+        { media_id: 'media-1', display_name: 'ok.png' },
+      ] as any);
+
+      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith(
+        'doc-staging',
+        expect.objectContaining({
+          storageBucketId: CONV_BUCKET,
+          externalReference: 'media-1',
+        })
+      );
     });
   });
 });
