@@ -375,8 +375,6 @@ describe('CommunicationAdapter', () => {
             displayName: 'pic.png',
             mimeType: 'image/png',
             size: 1000,
-            width: 10,
-            height: 20,
           },
         ],
       });
@@ -388,8 +386,6 @@ describe('CommunicationAdapter', () => {
           display_name: 'pic.png',
           mime_type: 'image/png',
           size: 1000,
-          width: 10,
-          height: 20,
         },
       ]);
     });

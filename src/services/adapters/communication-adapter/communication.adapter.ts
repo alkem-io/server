@@ -1524,8 +1524,6 @@ export class CommunicationAdapter {
       display_name: a.displayName,
       mime_type: a.mimeType,
       size: a.size,
-      width: a.width,
-      height: a.height,
     }));
   }
 

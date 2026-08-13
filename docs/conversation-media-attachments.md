@@ -121,36 +121,17 @@ permanently invisible.
   Ownership is deliberately *not* required here, so a legitimate re-share by a
   second member resolves, matching how Element/Synapse treat `mxc://` references.
 
-`width`/`height` are **file-service-first**. One best-effort, batched
-`POST /internal/file/meta-batch` (`getDocumentMetaBatch`) supplies file-service's
-own **measurement** of the stored bytes, and that outranks the event's
-`info.w`/`info.h` — those are asserted by the sending client and verified by
-nobody (Synapse does not check them either). Precedence is therefore
-**measurement → event `info.w`/`info.h` → nothing**, and a non-positive/
-non-finite value from either source counts as absent (so an `info.w: 0` can
-neither stick nor mask a real measurement).
+`width`/`height` come **straight off the Matrix event** (`info.w`/`info.h`),
+exactly as Element and every other Matrix client renders them. There is no
+measurement, no batching and no round-trip: the server accepts what the event
+asserts. A value the GraphQL `Int` field cannot represent — non-integer,
+non-finite, out of the signed 32-bit range — or a non-positive one counts as
+**absent**, so a crafted `info.w` can never fail the read; the attachment simply
+resolves dimensionless.
 
-That call runs only for **image** attachments and only **after** the READ gate,
-so a denied or non-image attachment costs nothing. It deliberately **bypasses the
-shared file-service circuit breaker** (short timeout, zero retries, no breaker
-accounting) — dims are a cosmetic rendering hint and must never be able to
-fast-fail the uploads and pins the breaker guards. Every failure, and every id
-file-service does not resolve, degrades to "the event dims, or nothing"; it can
-never fail or block a read.
-
-It is **one request per GraphQL request**, not per message. `getMessages(room)`
-is unpaginated, so a per-message call would still be N calls per viewer per page
-load. A request-scoped DataLoader (`MessageAttachmentDimsLoaderCreator`, injected
-into `Message.attachments`) collects every message's post-gate image ids and
-issues a single `getDocumentMetaBatch`. Because each message reaches its dims
-phase after its own DB round-trips — i.e. in a different event-loop turn —
-DataLoader's default per-tick window would not coalesce them, so dispatch is
-gated on a participant count instead: every message registers when its resolver
-starts and releases when it reaches its dims phase, and the batch goes out once
-the last one has. That costs no end-to-end latency (GraphQL cannot answer
-`messages` until every message has resolved anyway). The adapter chunks at 100
-ids, so a history whose gated images exceed that degrades into several bounded
-requests rather than a 400.
+The only harm a wrong `info.w`/`info.h` can do is make the sender's *own* image
+lay out slightly wrong in the viewer — cosmetic and self-inflicted, which is why
+second-guessing it is not worth a parallel measurement pipeline.
 
 Failures degrade rather than propagate: an unresolvable bucket, a failed batch
 lookup, or a single bad attachment omits *that* attachment (or that message's

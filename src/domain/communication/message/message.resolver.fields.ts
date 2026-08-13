@@ -1,11 +1,7 @@
 import { CurrentActor } from '@common/decorators';
 import { LogContext } from '@common/enums/logging.context';
 import { ActorContext } from '@core/actor-context/actor.context';
-import {
-  ContributorByAgentIdLoaderCreator,
-  type MessageAttachmentDimsLoader,
-  MessageAttachmentDimsLoaderCreator,
-} from '@core/dataloader/creators/loader.creators';
+import { ContributorByAgentIdLoaderCreator } from '@core/dataloader/creators/loader.creators';
 import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { IActor } from '@domain/actor/actor/actor.interface';
@@ -62,20 +58,11 @@ export class MessageResolverFields {
   })
   async attachments(
     @Parent() message: IMessage,
-    @CurrentActor() actorContext: ActorContext,
-    // REQUEST-scoped (created once per request by DataLoaderInterceptor and
-    // memoized on the GraphQL context). `RoomResolverFields.messages` returns a
-    // room's ENTIRE unpaginated history, so without this every media-bearing
-    // message would bill file-service its own `/meta-batch` request per viewer
-    // per page load. The loader coalesces every message's post-READ-gate image
-    // ids into ONE call — see createMessageAttachmentDimsLoader.
-    @Loader(MessageAttachmentDimsLoaderCreator)
-    dimsLoader: MessageAttachmentDimsLoader
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IMessageAttachment[]> {
     return this.messageAttachmentService.resolveMessageAttachments(
       message,
-      actorContext,
-      dimsLoader
+      actorContext
     );
   }
 }

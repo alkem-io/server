@@ -9,7 +9,6 @@ import {
 } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import type { MessageAttachmentDimsLoader } from '@core/dataloader/creators/loader.creators';
 import {
   AuthorizationPolicy,
   IAuthorizationPolicy,
@@ -26,7 +25,6 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationMessageAttachment } from '@services/adapters/communication-adapter/dto/communication.message.attachment';
-import type { DocumentReferenceResult } from '@services/adapters/file-service-adapter/dto';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
@@ -44,6 +42,9 @@ import { IMessageAttachment } from './message.attachment.interface';
  * NOT UTF-16 code units.
  */
 const DISPLAY_NAME_MAX_BYTES = 512;
+
+/** Largest value a GraphQL `Int` can carry — see toImageDimension. */
+const INT32_MAX = 2_147_483_647;
 
 /**
  * Truncate to at most `maxBytes` UTF-8 bytes WITHOUT splitting a multi-byte
@@ -130,20 +131,6 @@ export const sanitizeAttachmentDisplayName = (
   ).trim();
   return clamped.length > 0 ? clamped : fallback;
 };
-
-/**
- * Anything in this feature that may carry intrinsic image dimensions. The two
- * sides of the boundary name the SAME two numbers differently: file-service
- * shapes (`Document`, `DocumentReferenceResult`) use `imageWidth`/`imageHeight`,
- * the Matrix/wire shapes (`ReceivedAttachment`, `CommunicationMessageAttachment`,
- * `IMessageAttachment`) use `width`/`height`. `applyImageDims` reads both.
- */
-interface ImageDimsSource {
-  width?: number;
-  height?: number;
-  imageWidth?: number;
-  imageHeight?: number;
-}
 
 /**
  * The outcome of read-path document resolution.
@@ -288,10 +275,6 @@ export class MessageAttachmentService {
     );
 
     const refs: CommunicationMessageAttachment[] = [];
-    // Image refs whose dims are fetched AFTER validation, in ONE batch (below).
-    // Each entry references its ref object (built in documentIds order) so the
-    // dims pass mutates dims in place without disturbing ref ORDER.
-    const imageRefs: CommunicationMessageAttachment[] = [];
     for (const outcome of settled) {
       // Ordered pass: surface position i's LOAD error at its position (e.g. a
       // not-found id), matching the old sequential loop that would have thrown
@@ -347,53 +330,12 @@ export class MessageAttachmentService {
 
       this.validateAgainstBucketPolicy(bucket, document);
 
-      const ref: CommunicationMessageAttachment = {
+      refs.push({
         documentId: document.id,
         displayName: document.displayName,
         mimeType: document.mimeType,
         size: document.size,
-      };
-      refs.push(ref);
-      if (document.mimeType?.startsWith('image/')) {
-        imageRefs.push(ref);
-      }
-    }
-
-    // Outbound image dimensions ([4], completes both directions): imageWidth/
-    // imageHeight are TRANSIENT, file-service-owned fields (content_metadata) —
-    // the getDocumentOrFail DB loads above leave them undefined on the server
-    // entities, so we source them from file-service's meta endpoint. This lets
-    // Alkemio-composed images reach matrix-adapter with intrinsic dimensions
-    // (the m.image event's info.w/h; clients render without layout reflow).
-    //
-    // ONE batched round-trip for every image on the message, AFTER validation.
-    // A by-id meta GET per image billed file-service up to
-    // MAX_MESSAGE_ATTACHMENTS (<= 10) requests per send; issuing them in parallel
-    // kept the added latency to one timeout but not the request count.
-    // `/meta-batch` makes it one request AND one timeout. The call is
-    // BEST-EFFORT and DELIBERATELY ISOLATED from the shared file-service circuit
-    // breaker — short timeout, zero retries, no breaker accounting — so a
-    // degraded `/meta-batch` can never fast-fail the uploads and pins that
-    // breaker guards; it already degrades to an empty map internally. The
-    // try/catch here is defence-in-depth — and catches a SYNCHRONOUS throw, which
-    // `.catch()` alone would not — so a meta failure just leaves width/height
-    // undefined and never fails (or blocks) the send.
-    //
-    // Each ref takes its OWN measurement, looked up BY DOCUMENT ID: `/meta-batch`
-    // answers a partial and UNORDERED `files` array, so positional matching would
-    // silently mis-assign dims between attachments.
-    if (imageRefs.length > 0) {
-      try {
-        const metaById = await this.fileServiceAdapter.getDocumentMetaBatch(
-          imageRefs.map(ref => ref.documentId)
-        );
-        for (const ref of imageRefs) {
-          this.applyImageDims(ref, metaById.get(ref.documentId));
-        }
-      } catch {
-        // Dims omitted; the send proceeds. Refs keep their input ORDER either
-        // way — this pass only mutates in place.
-      }
+      });
     }
 
     return refs;
@@ -1058,42 +1000,13 @@ export class MessageAttachmentService {
    * `by-reference(bucket, media_id)`. Returns `[]` when the feature is off, when
    * the message carries no attachments, or when the resolution bucket is unknown.
    *
-   * `dimsLoader` is the REQUEST-scoped image-dimensions loader supplied by
-   * `MessageResolverFields.attachments`. It collapses the authoritative dims
-   * fetch to ONE `getDocumentMetaBatch` call for the WHOLE request instead of one
-   * per message — see applyReadImageDims. It is optional so that a caller outside
-   * a GraphQL request (or a test) still resolves attachments correctly, just with
-   * a per-message batch.
+   * Image dimensions come straight off the Matrix event (`info.w`/`info.h`),
+   * exactly as Element and every other Matrix client renders them — see
+   * resolveReadAttachment.
    */
   public async resolveMessageAttachments(
     message: IMessage,
-    actorContext: ActorContext,
-    dimsLoader?: MessageAttachmentDimsLoader
-  ): Promise<IMessageAttachment[]> {
-    // Register with the request's dims batch SYNCHRONOUSLY, before the first
-    // await: graphql-js invokes every message's `attachments` resolver in one
-    // turn, so this is what lets the loader know how many messages it must wait
-    // for. Released below (and, as a safety net, in the `finally`).
-    const settleDimsBatch = dimsLoader?.beginMessage();
-    try {
-      return await this.resolveMessageAttachmentsGated(
-        message,
-        actorContext,
-        dimsLoader,
-        settleDimsBatch
-      );
-    } finally {
-      // Idempotent: a no-op when the gated pass already released. Covers every
-      // early return and any throw, so a message can never stall the batch.
-      settleDimsBatch?.();
-    }
-  }
-
-  private async resolveMessageAttachmentsGated(
-    message: IMessage,
-    actorContext: ActorContext,
-    dimsLoader: MessageAttachmentDimsLoader | undefined,
-    settleDimsBatch: (() => void) | undefined
+    actorContext: ActorContext
   ): Promise<IMessageAttachment[]> {
     if (!this.enabled || !message.rawAttachments?.length) {
       return [];
@@ -1154,20 +1067,9 @@ export class MessageAttachmentService {
         })
       )
     );
-    const attachments = resolvedAttachments.filter(
+    return resolvedAttachments.filter(
       (attachment): attachment is IMessageAttachment => attachment !== null
     );
-
-    // Authoritative image dimensions, LAST — after every per-attachment READ
-    // gate has run, so a denied attachment costs nothing. See applyReadImageDims.
-    //
-    // Release this message's hold on the request-wide dims batch FIRST: the
-    // batch waits for every registered message to reach this point, so a message
-    // that awaited its own loads before releasing would wait on itself forever.
-    settleDimsBatch?.();
-    await this.applyReadImageDims(attachments, dimsLoader);
-
-    return attachments;
   }
 
   /**
@@ -1177,9 +1079,8 @@ export class MessageAttachmentService {
    * WHY: `Message.attachments` is a `@ResolveField` and `getMessages(room)`
    * returns a room's ENTIRE history unpaginated, so the previous per-attachment
    * `fileServiceAdapter.getDocumentByReference(media_id, bucketId)` fanned out
-   * once PER ATTACHMENT PER VIEWER PER PAGE LOAD. Unlike the best-effort dims
-   * fetch (`getDocumentMetaBatch`), which deliberately bypasses the breaker, that
-   * call IS accounted against the SHARED file-service circuit breaker — so a
+   * once PER ATTACHMENT PER VIEWER PER PAGE LOAD. That call IS accounted against
+   * the SHARED file-service circuit breaker — so a
    * normal chat load in a media-heavy room could trip the breaker that guards
    * uploads and pins for the WHOLE platform. `(externalReference,
    * storageBucketId)` is a partially-unique indexed pair on the same database,
@@ -1238,9 +1139,7 @@ export class MessageAttachmentService {
    * ownership gate (via resolveAttachmentDocument), then the READ-gate, and ONLY
    * THEN the event-asserted image dimensions. Returns null when the document
    * cannot be resolved or the viewer cannot read it, so the caller drops it from
-   * the resolved set — and the caller's batched, authoritative dims pass
-   * (applyReadImageDims) therefore never sees it, so an attachment the viewer
-   * cannot read costs no dimension work at all.
+   * the resolved set.
    */
   private async resolveReadAttachment(
     raw: ReceivedAttachment,
@@ -1278,133 +1177,17 @@ export class MessageAttachmentService {
       return null;
     }
 
-    const attachment: IMessageAttachment = {
+    return {
       id: document.id,
       url: this.documentService.getPubliclyAccessibleURL(document),
       displayName: document.displayName,
       mimeType: document.mimeType,
       size: document.size,
-      // Explicitly present (rather than omitted) so the shape is stable whether
-      // or not dims resolve below.
-      width: undefined,
-      height: undefined,
+      // The Matrix event's own `info.w`/`info.h` — the same values Element and
+      // every other Matrix client renders. No measurement, no second source.
+      width: this.toImageDimension(raw.width),
+      height: this.toImageDimension(raw.height),
     };
-
-    // Event-asserted dims (`info.w`/`info.h`) — the LOWER-precedence source, and
-    // the only one already in hand. Applied HERE (after the READ gate, still
-    // inside the per-attachment guard) so the authoritative file-service
-    // measurement can OVERWRITE it in the batched second pass that runs once the
-    // whole message has been gated. See applyReadImageDims.
-    this.applyImageDims(attachment, raw);
-
-    return attachment;
-  }
-
-  /**
-   * Overlay file-service's OWN MEASUREMENT of the stored bytes onto a message's
-   * already-gated attachments.
-   *
-   * PRECEDENCE (highest first) — `applyImageDims` OVERWRITES, so the sources are
-   * applied lowest-first and this method runs LAST:
-   *  1. **file-service measurement** (`imageWidth`/`imageHeight` from
-   *     `getDocumentMetaBatch`) — applied HERE, and therefore final. file-service
-   *     measured the bytes it stores; nobody can assert it.
-   *  2. **event-asserted `info.w`/`info.h`** (`ReceivedAttachment.width`/`height`)
-   *     — applied earlier, in resolveReadAttachment, so a measurement overwrites
-   *     it and its absence leaves the event value standing. It is CLIENT-ASSERTED
-   *     and UNVERIFIED (Synapse does not check it either), so it is a fallback,
-   *     never the authority.
-   *  3. nothing — the attachment stays dimensionless.
-   * A non-positive/non-finite value from EITHER source counts as ABSENT (C4), so
-   * an `info.w: 0` can neither stick nor mask a real measurement.
-   *
-   * WHY IT IS BATCHED, AND HOW FAR. `Message.attachments` is a `@ResolveField`
-   * and `roomService.getMessages(room)` returns a room's ENTIRE history
-   * unpaginated, so anything issued per attachment — or per message — fans out
-   * once PER VIEWER PER PAGE LOAD. Two collapses, in order:
-   *  - per ATTACHMENT → per MESSAGE: one `getDocumentMetaBatch` for the whole
-   *    message instead of one by-id meta GET per dimensionless image (which is
-   *    why the authoritative source had previously been demoted below the
-   *    event's);
-   *  - per MESSAGE → per REQUEST: with a `dimsLoader` supplied (the GraphQL read
-   *    path always supplies one) the ids are handed to the REQUEST-scoped
-   *    DataLoader, which coalesces every message's ids into a SINGLE
-   *    `getDocumentMetaBatch` call for the whole read. See
-   *    `createMessageAttachmentDimsLoader` for how dispatch is barriered so the
-   *    coalescing survives the messages reaching this point at different times.
-   * Without a loader (a non-GraphQL caller) the direct per-message batch is kept
-   * as the fallback. Either way the call BYPASSES the shared file-service circuit
-   * breaker (short timeout, zero retries, no breaker accounting), so a degraded
-   * `/meta-batch` can never fast-fail the uploads and pins the breaker protects;
-   * and the adapter chunks at 100 ids, so a history whose gated images exceed
-   * that degrades into several bounded requests rather than a 400.
-   *
-   * Called from resolveMessageAttachments AFTER every per-attachment READ gate,
-   * so a denied attachment is not in `attachments` and costs NOTHING — not even
-   * a loader key, which is what keeps the request-wide batch free of ids the
-   * viewer may not read. Non-image attachments are excluded, so a message with no
-   * images asks for nothing at all.
-   *
-   * Best-effort: dims are a cosmetic rendering hint (they avoid layout reflow),
-   * so EVERY failure degrades to "the event dims, or nothing" and must never fail
-   * — or block — the read. try/catch rather than `.catch(() => undefined)` so a
-   * SYNCHRONOUS throw is caught too: unlike its per-attachment predecessor this
-   * runs OUTSIDE the per-attachment guard, so an escaping throw would fail the
-   * non-nullable `Message.attachments` field for the whole message. On the loader
-   * path a rejected batch surfaces as an `Error` VALUE per key (`loadMany` never
-   * rejects), which is read as "no measurement" for exactly the same reason.
-   */
-  private async applyReadImageDims(
-    attachments: IMessageAttachment[],
-    dimsLoader?: MessageAttachmentDimsLoader
-  ): Promise<void> {
-    const imageAttachments = attachments.filter(attachment =>
-      attachment.mimeType?.startsWith('image/')
-    );
-    if (imageAttachments.length === 0) {
-      return; // only images carry dims — no round-trip
-    }
-    const documentIds = imageAttachments.map(attachment => attachment.id);
-    // Positional ONLY against `documentIds` — both branches below resolve the
-    // measurement by document ID, never by the order file-service answered in
-    // (`/meta-batch` returns a partial, unordered `files` array).
-    let measurements: (DocumentReferenceResult | null)[];
-    try {
-      measurements = dimsLoader
-        ? await this.loadImageDimsViaLoader(dimsLoader, documentIds)
-        : await this.loadImageDimsDirect(documentIds);
-    } catch {
-      return; // best-effort — never fail (or block) a read
-    }
-    imageAttachments.forEach((attachment, index) => {
-      // A `null` is a NORMAL partial result (file-service has no measurement for
-      // that id): applyImageDims no-ops on it, leaving the event-asserted dims —
-      // or nothing — in place.
-      this.applyImageDims(attachment, measurements[index]);
-    });
-  }
-
-  /**
-   * Request-wide path: hand the ids to the per-request DataLoader, which
-   * coalesces them with every other message's into ONE `getDocumentMetaBatch`.
-   * `loadMany` resolves errors as VALUES rather than rejecting, so one bad batch
-   * degrades to "no measurement" instead of throwing into the read.
-   */
-  private async loadImageDimsViaLoader(
-    dimsLoader: MessageAttachmentDimsLoader,
-    documentIds: string[]
-  ): Promise<(DocumentReferenceResult | null)[]> {
-    const results = await dimsLoader.loadMany(documentIds);
-    return results.map(result => (result instanceof Error ? null : result));
-  }
-
-  /** Fallback path (no request loader): one batch for this message's ids. */
-  private async loadImageDimsDirect(
-    documentIds: string[]
-  ): Promise<(DocumentReferenceResult | null)[]> {
-    const metaById =
-      await this.fileServiceAdapter.getDocumentMetaBatch(documentIds);
-    return documentIds.map(documentId => metaById.get(documentId) ?? null);
   }
 
   /**
@@ -1425,52 +1208,22 @@ export class MessageAttachmentService {
   }
 
   /**
-   * The ONE place "transfer intrinsic image dimensions from a source onto a
-   * target" lives. This idiom used to be open-coded at three sites (outbound
-   * send ref, inbound by-reference carry-over, outbound read) with subtly
-   * different guards and field names; a single helper means a future dims
-   * source — or a change to the never-clobber rule — is one edit.
+   * Narrow an event-asserted `info.w`/`info.h` to a dimension the GraphQL layer
+   * can actually serialize, or `undefined` ("no dimension").
    *
-   * Reads EITHER naming (`width`/`height` or `imageWidth`/`imageHeight`, see
-   * ImageDimsSource) and NEVER writes an absent value over a value already
-   * present, so it is safe to layer lowest-precedence-source-first.
-   *
-   * A NON-POSITIVE dimension counts as ABSENT (C4). A zero pixel count is not a
-   * real dimension — no image is 0 wide — it is what an unmeasured/unknown
-   * source reports. Treating `0` as "present" would overwrite a genuine
-   * dimension already applied by a lower-precedence source, and (in the earlier
-   * `dims already in hand?` short-circuit) also suppressed the authoritative
-   * file-service measurement entirely. Negative/NaN values are rejected on the
-   * same grounds. This matters most for inbound media, whose `info.w`/`info.h`
-   * are asserted by the sending client and may be 0 or missing.
+   * `IMessageAttachment.width`/`height` are GraphQL `Int`s, and the value comes
+   * verbatim off an attacker-influenceable Matrix event, so anything `Int`
+   * cannot represent — non-integer, non-finite, or outside the signed 32-bit
+   * range — would throw during response serialization and fail the whole message
+   * read. Non-positive is rejected on top: no image is 0 wide, so `0` is what an
+   * unmeasured/unknown sender reports, not a real dimension.
    */
-  private applyImageDims(
-    target: { width?: number; height?: number },
-    source: ImageDimsSource | null | undefined
-  ): void {
-    const width = this.firstPositiveDim(source?.width, source?.imageWidth);
-    const height = this.firstPositiveDim(source?.height, source?.imageHeight);
-    if (width !== undefined) {
-      target.width = width;
-    }
-    if (height !== undefined) {
-      target.height = height;
-    }
-  }
-
-  /**
-   * First usable pixel dimension among the candidates: finite and > 0. Anything
-   * else (undefined, 0, negative, NaN) is "no dimension" — see applyImageDims.
-   * Checked across BOTH namings so a `width: 0` never masks a valid
-   * `imageWidth`.
-   */
-  private firstPositiveDim(
-    ...candidates: (number | undefined)[]
-  ): number | undefined {
-    return candidates.find(
-      (value): value is number =>
-        typeof value === 'number' && Number.isFinite(value) && value > 0
-    );
+  private toImageDimension(value: number | undefined): number | undefined {
+    return Number.isInteger(value as number) &&
+      (value as number) > 0 &&
+      (value as number) <= INT32_MAX
+      ? value
+      : undefined;
   }
 
   private async resolveAttachmentDocument(
@@ -1554,12 +1307,8 @@ export class MessageAttachmentService {
             );
           }
         }
-        // Dims are NOT resolved here. This branch has no dims in hand (the
-        // getDocumentOrFail DB load leaves the TRANSIENT, file-service-owned
-        // imageWidth/imageHeight undefined), and the only remaining source is a
-        // network round-trip — which must not run before the READ gate. The
-        // event's dims are applied after that gate in resolveReadAttachment, and
-        // the authoritative measurement in the batched applyReadImageDims pass.
+        // Dims are NOT resolved here: they come off the Matrix event, applied
+        // after the READ gate in resolveReadAttachment.
         return { document };
       }
       // Inbound: bucket-scoped by-reference → the re-homed conversation doc.
