@@ -2,6 +2,7 @@ import { ActorType } from '@common/enums/actor.type';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -36,6 +37,16 @@ describe('ConversationAuthorizationService', () => {
     storageBucketAuthorizationService = module.get(
       StorageBucketAuthorizationService
     );
+
+    // Realistic `reset`: the production one CLEARS the rules on the policy it is
+    // handed and returns that same object. A mock that returned a fresh stub
+    // would hide the whole point of A1 (that the rules persisted on the policy
+    // must be cleared before the participant rule is re-appended).
+    authorizationPolicyService.reset.mockImplementation((policy: any) => {
+      policy.credentialRules = [];
+      policy.privilegeRules = [];
+      return policy;
+    });
   });
 
   it('should be defined', () => {
@@ -217,9 +228,6 @@ describe('ConversationAuthorizationService', () => {
       authorizationPolicyService.createCredentialRule.mockReturnValue({
         cascade: false,
       } as any);
-      authorizationPolicyService.reset.mockReturnValue({
-        id: 'agg-auth-reset',
-      } as any);
       authorizationPolicyService.inheritParentAuthorization.mockReturnValue({
         id: 'agg-auth-inherited',
       } as any);
@@ -259,5 +267,217 @@ describe('ConversationAuthorizationService', () => {
         storageBucketAuthorizationService.applyAuthorizationPolicy
       ).toHaveBeenCalledWith(directStorage, { id: 'agg-auth-inherited' });
     });
+
+    // --- A1: stale participant grants must not accumulate ---
+
+    describe('A1: membership changes rebuild the policy from a clean state', () => {
+      /** The real createCredentialRule shape, so the rules are inspectable. */
+      const useRealisticCredentialRule = () => {
+        authorizationPolicyService.createCredentialRule.mockImplementation(
+          (grantedPrivileges: any, criterias: any, name: any) =>
+            ({ grantedPrivileges, criterias, cascade: true, name }) as any
+        );
+      };
+
+      /** Actor ids granted READ by the policy, across every credential rule. */
+      const grantedUserIDs = (authorization: any): string[] =>
+        authorization.credentialRules.flatMap((rule: any) =>
+          rule.criterias.map((criteria: any) => criteria.resourceID)
+        );
+
+      it('a removed member loses READ while remaining members keep it', async () => {
+        useRealisticCredentialRule();
+        // ONE persisted policy object, reused across both resets — this is what
+        // makes the accumulation visible: `credentialRules` is a jsonb column
+        // that round-trips, so an appended rule survives into the next reset.
+        const persistedAuthorization = {
+          id: 'auth-1',
+          credentialRules: [],
+          privilegeRules: [],
+        };
+        const conversation = {
+          id: 'conv-1',
+          authorization: persistedAuthorization,
+          room: undefined,
+        } as any;
+        conversationService.getConversationOrFail.mockResolvedValue(
+          conversation
+        );
+        userLookupService.getUserById.mockImplementation(
+          async (id: string) => ({ id }) as any
+        );
+
+        // 1. Alice + Bob are members.
+        conversationService.getConversationMembers.mockResolvedValue([
+          { actorID: 'alice', actorType: ActorType.USER },
+          { actorID: 'bob', actorType: ActorType.USER },
+        ] as any);
+        await service.applyAuthorizationPolicy('conv-1');
+        expect(grantedUserIDs(persistedAuthorization).sort()).toEqual([
+          'alice',
+          'bob',
+        ]);
+
+        // 2. Bob leaves; the auth reset re-runs against the SAME persisted policy.
+        conversationService.getConversationMembers.mockResolvedValue([
+          { actorID: 'alice', actorType: ActorType.USER },
+        ] as any);
+        await service.applyAuthorizationPolicy('conv-1');
+
+        // Bob's grant is GONE (it used to survive on the stale, never-cleared
+        // rule) and Alice's access is fully re-granted.
+        expect(grantedUserIDs(persistedAuthorization)).toEqual(['alice']);
+        expect(persistedAuthorization.credentialRules).toHaveLength(1);
+      });
+
+      it('repeated resets with unchanged membership stay idempotent (one rule, not N)', async () => {
+        useRealisticCredentialRule();
+        const persistedAuthorization = {
+          id: 'auth-1',
+          credentialRules: [],
+          privilegeRules: [],
+        };
+        conversationService.getConversationOrFail.mockResolvedValue({
+          id: 'conv-1',
+          authorization: persistedAuthorization,
+          room: undefined,
+        } as any);
+        conversationService.getConversationMembers.mockResolvedValue([
+          { actorID: 'alice', actorType: ActorType.USER },
+        ] as any);
+        userLookupService.getUserById.mockImplementation(
+          async (id: string) => ({ id }) as any
+        );
+
+        await service.applyAuthorizationPolicy('conv-1');
+        await service.applyAuthorizationPolicy('conv-1');
+        await service.applyAuthorizationPolicy('conv-1');
+
+        expect(persistedAuthorization.credentialRules).toHaveLength(1);
+        expect(grantedUserIDs(persistedAuthorization)).toEqual(['alice']);
+      });
+    });
+  });
+});
+
+// --- A2: the conversation→bucket→document cascade must tolerate a tagset-less
+// document (every inbound, Element-origin re-homed attachment is one) ---
+
+describe('ConversationAuthorizationService — cascade over inbound (tagset-less) attachments (A2)', () => {
+  let service: ConversationAuthorizationService;
+  let conversationService: Mocked<ConversationService>;
+  let authorizationPolicyService: Mocked<AuthorizationPolicyService>;
+
+  beforeEach(async () => {
+    vi.restoreAllMocks();
+
+    // The REAL bucket + document authorization services, so the cascade this
+    // test exercises is the production one end to end. Only the policy
+    // persistence layer is mocked.
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ConversationAuthorizationService,
+        StorageBucketAuthorizationService,
+        DocumentAuthorizationService,
+        MockWinstonProvider,
+      ],
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
+
+    service = module.get(ConversationAuthorizationService);
+    conversationService = module.get(ConversationService);
+    authorizationPolicyService = module.get(AuthorizationPolicyService);
+
+    authorizationPolicyService.reset.mockImplementation((policy: any) => {
+      policy.credentialRules = [];
+      policy.privilegeRules = [];
+      return policy;
+    });
+    authorizationPolicyService.inheritParentAuthorization.mockImplementation(
+      (child: any) => child ?? { id: 'created', credentialRules: [] }
+    );
+    authorizationPolicyService.createCredentialRule.mockImplementation(
+      (grantedPrivileges: any, criterias: any, name: any) =>
+        ({ grantedPrivileges, criterias, cascade: true, name }) as any
+    );
+    authorizationPolicyService.appendCredentialAuthorizationRules.mockImplementation(
+      (authorization: any) => authorization
+    );
+    authorizationPolicyService.appendPrivilegeAuthorizationRules.mockImplementation(
+      (authorization: any) => authorization
+    );
+    authorizationPolicyService.saveAll.mockResolvedValue(undefined as any);
+
+    conversationService.getConversationMembers.mockResolvedValue([
+      { actorID: 'alice', actorType: ActorType.USER },
+    ] as any);
+  });
+
+  const conversationWithDocument = (document: any) => ({
+    id: 'conv-1',
+    authorization: { id: 'conv-auth', credentialRules: [], privilegeRules: [] },
+    room: undefined,
+    storageAggregator: {
+      id: 'agg-1',
+      authorization: { id: 'agg-auth', credentialRules: [] },
+      directStorage: {
+        id: 'bucket-1',
+        authorization: { id: 'bucket-auth', credentialRules: [] },
+        documents: [document],
+      },
+    },
+  });
+
+  it('a membership change on a conversation holding an INBOUND (tagset-less) attachment succeeds', async () => {
+    // An Element-origin attachment: the Synapse media-storage provider creates
+    // the staging row with NO tagsetId, and the re-home MOVE cannot add one
+    // (PATCH /internal/file/:id has no tagsetId field, and the server never
+    // writes the `file` table). DocumentAuthorizationService used to hard-throw
+    // RelationshipNotFoundException on exactly this, aborting the whole
+    // conversation auth reset on every join/leave.
+    const inboundDocument = {
+      id: 'doc-inbound',
+      createdBy: 'alice',
+      authorization: { id: 'doc-auth', credentialRules: [] },
+      tagset: null,
+    };
+    conversationService.getConversationOrFail.mockResolvedValue(
+      conversationWithDocument(inboundDocument) as any
+    );
+
+    await expect(
+      service.applyAuthorizationPolicy('conv-1')
+    ).resolves.toBeDefined();
+
+    // The document's OWN policy was still applied and persisted — the tagset leg
+    // is the only thing skipped.
+    expect(authorizationPolicyService.saveAll).toHaveBeenCalledWith([
+      inboundDocument.authorization,
+    ]);
+  });
+
+  it('still applies BOTH policies for a document that does have a tagset', async () => {
+    const webDocument = {
+      id: 'doc-web',
+      createdBy: 'alice',
+      authorization: { id: 'doc-auth', credentialRules: [] },
+      tagset: {
+        id: 'tagset-1',
+        authorization: { id: 'tagset-auth', credentialRules: [] },
+      },
+    };
+    conversationService.getConversationOrFail.mockResolvedValue(
+      conversationWithDocument(webDocument) as any
+    );
+
+    await expect(
+      service.applyAuthorizationPolicy('conv-1')
+    ).resolves.toBeDefined();
+
+    expect(authorizationPolicyService.saveAll).toHaveBeenCalledWith([
+      webDocument.authorization,
+      webDocument.tagset.authorization,
+    ]);
   });
 });

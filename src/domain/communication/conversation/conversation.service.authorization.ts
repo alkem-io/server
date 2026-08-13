@@ -85,6 +85,31 @@ export class ConversationAuthorizationService {
       // the platform's service credentials, not user credentials.
     }
 
+    // ALWAYS RESET FIRST (A1). `applyAuthorizationPolicy` is re-run on EVERY
+    // membership change (join/leave — see MessageInboxService) as well as on the
+    // platform-wide Messaging cascade, and `conversation.authorization` is a
+    // PERSISTED policy whose `credentialRules` jsonb round-trips from the DB.
+    // Appending without resetting therefore ACCUMULATED one participant rule per
+    // reset: after Bob left, the previously-persisted rule granting
+    // READ+CONTRIBUTE to [alice, bob] survived alongside the new [alice] rule, so
+    // Bob kept access forever. Feature 013 makes that materially worse — the
+    // conversation policy is now inherited by the conversation storage bucket and
+    // cascaded onto every attachment document, so a removed member would retain
+    // READ on the conversation's attachments too.
+    //
+    // Resetting is safe here because this policy has exactly ONE rule source:
+    // the participant rule built below. The conversation policy does NOT inherit
+    // from its parent Messaging policy (MessagingAuthorizationService cascades by
+    // calling this method, it does not pass a parent authorization), and nothing
+    // else in the codebase writes conversation.authorization.credentialRules. So
+    // after the reset the rebuilt participant rule fully restores every current
+    // member's access. This mirrors the sibling storage-aggregator branch below
+    // and the reset-then-append convention used by every other domain
+    // (organization/user/account/space/... .service.authorization.ts).
+    conversation.authorization = this.authorizationPolicyService.reset(
+      conversation.authorization
+    );
+
     // Add READ + CONTRIBUTE access for all user participants
     // T057: Membership grants both read and send message privileges
     // T058: Structured logging with conversation ID and agent IDs in exception details

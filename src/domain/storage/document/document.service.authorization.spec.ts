@@ -123,16 +123,38 @@ describe('DocumentAuthorizationService', () => {
       ).not.toHaveBeenCalled();
     });
 
-    it('should throw RelationshipNotFoundException when document tagset is missing', async () => {
+    it('A2: applies the document policy and skips the tagset leg when the document has NO tagset', async () => {
+      // `file.tagsetId` is nullable and file-service treats a tagset as optional
+      // throughout its contract, so a tagset-less row is a VALID state — most
+      // notably every feature-013 inbound (Element-origin) attachment, whose
+      // staging row the Synapse provider creates without one and whose re-home
+      // MOVE cannot add one. Throwing here aborted the ENTIRE parent cascade, so
+      // one such document broke the whole conversation/space auth reset.
+      const docAuth = { id: 'auth-3' };
       const document = {
         id: 'doc-3',
-        authorization: { id: 'auth-3' },
+        createdBy: undefined,
+        authorization: docAuth,
         tagset: undefined,
       } as unknown as IDocument;
 
+      const inheritedAuth = { id: 'inherited' };
+      (
+        authorizationPolicyService.inheritParentAuthorization as Mock
+      ).mockReturnValue(inheritedAuth);
+      (
+        authorizationPolicyService.appendCredentialAuthorizationRules as Mock
+      ).mockReturnValue(inheritedAuth);
+      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
+
       await expect(
         service.applyAuthorizationPolicy(document, undefined)
-      ).rejects.toThrow(RelationshipNotFoundException);
+      ).resolves.toEqual([]);
+
+      // Only the document's own policy is persisted — no tagset policy.
+      expect(authorizationPolicyService.saveAll).toHaveBeenCalledWith([
+        inheritedAuth,
+      ]);
     });
 
     it('should throw RelationshipNotFoundException when tagset authorization is missing', async () => {

@@ -19,7 +19,27 @@ export class DocumentAuthorizationService {
     document: IDocument,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IAuthorizationPolicy[]> {
-    if (!document.tagset || !document.tagset.authorization) {
+    // A tagset-less document is a VALID state, not a load failure (A2).
+    // `file.tagsetId` is nullable (`onDelete: 'SET NULL'`) and file-service
+    // models it as optional throughout its contract (`CreateDocumentMetadata`
+    // /`CopyDocumentInput`.tagsetId are optional, `DeleteDocumentResult.tagsetId`
+    // is `string | null`). Rows created by writers that do not go through
+    // `StorageBucketService.persistDocumentWithPreparedAuth` therefore legitimately
+    // have none — most notably feature 013's inbound Element media: the Synapse
+    // media-storage provider creates the `matrix_media` staging row with no
+    // tagsetId, and the re-home MOVE cannot add one (PATCH /internal/file/:id has
+    // no `tagsetId` field, and the server never writes the `file` table directly).
+    // That NULL tagset is an ACCEPTED + documented limitation of feature 013 —
+    // see docs/conversation-media-attachments.md, "Known limitations" (1).
+    //
+    // Hard-throwing here made ONE such row abort the WHOLE parent cascade — for
+    // 013 that meant any conversation membership change threw and left the entire
+    // conversation (and its bucket + every other attachment) unauthorized. The
+    // document's own policy does not depend on the tagset, so apply it and simply
+    // skip the tagset leg. `authorization` is eager on every AuthorizableEntity,
+    // so a LOADED tagset always carries its policy; a tagset present WITHOUT one
+    // is a genuine relation/data defect and still throws.
+    if (document.tagset && !document.tagset.authorization) {
       throw new RelationshipNotFoundException(
         `Unable to find entities required to reset auth for Document ${document.id} `,
         LogContext.STORAGE_BUCKET
@@ -37,12 +57,14 @@ export class DocumentAuthorizationService {
     document.authorization = this.appendCredentialRules(document);
     updatedAuthorizations.push(document.authorization);
 
-    document.tagset.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        document.tagset.authorization,
-        document.authorization
-      );
-    updatedAuthorizations.push(document.tagset.authorization);
+    if (document.tagset?.authorization) {
+      document.tagset.authorization =
+        this.authorizationPolicyService.inheritParentAuthorization(
+          document.tagset.authorization,
+          document.authorization
+        );
+      updatedAuthorizations.push(document.tagset.authorization);
+    }
 
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
     return [];
