@@ -965,6 +965,91 @@ describe('StorageBucketService', () => {
       expect(result).toHaveLength(2);
     });
 
+    // A3: still-staged uploads are only listed for their own uploader.
+    describe('A3: temporaryLocation documents are private to their uploader', () => {
+      const viewer = Object.assign(new ActorContext(), { actorID: 'alice' });
+
+      it("hides ANOTHER actor's still-staged upload even though READ is granted", async () => {
+        // Document auth is INHERITED from the bucket, so every member of a shared
+        // bucket (e.g. a Conversation's) can read every document in it. Without
+        // this rule a member could enumerate every OTHER member's unsent
+        // attachment upload — name, size and downloadable URL — before the
+        // message was ever sent.
+        const mine = mockDocument({
+          id: 'my-staged',
+          temporaryLocation: true,
+          createdBy: 'alice',
+        });
+        const theirs = mockDocument({
+          id: 'their-staged',
+          temporaryLocation: true,
+          createdBy: 'bob',
+        });
+        const sent = mockDocument({
+          id: 'their-sent',
+          temporaryLocation: false,
+          createdBy: 'bob',
+        });
+        const bucket = mockStorageBucket({
+          id: 'bucket-staging',
+          documents: [mine, theirs, sent],
+        });
+        (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(
+          bucket
+        );
+
+        const result = await service.getFilteredDocuments(bucket, {}, viewer);
+
+        expect(result).toEqual([mine, sent]);
+      });
+
+      it("refuses to resolve ANOTHER actor's staged upload by ID", async () => {
+        const theirs = mockDocument({
+          id: 'their-staged',
+          temporaryLocation: true,
+          createdBy: 'bob',
+        });
+        const bucket = mockStorageBucket({
+          id: 'bucket-staging-byid',
+          documents: [theirs],
+        });
+        (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(
+          bucket
+        );
+
+        await expect(
+          service.getFilteredDocuments(
+            bucket,
+            { IDs: ['their-staged'] },
+            viewer
+          )
+        ).rejects.toThrow(EntityNotFoundException);
+      });
+
+      it('hides every staged upload from an unattributable (anonymous) caller', async () => {
+        const staged = mockDocument({
+          id: 'staged',
+          temporaryLocation: true,
+          createdBy: 'bob',
+        });
+        const bucket = mockStorageBucket({
+          id: 'bucket-anon',
+          documents: [staged],
+        });
+        (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(
+          bucket
+        );
+
+        const result = await service.getFilteredDocuments(
+          bucket,
+          {},
+          new ActorContext()
+        );
+
+        expect(result).toEqual([]);
+      });
+    });
+
     it('should throw EntityNotFoundException when storage has no documents array', async () => {
       const bucket = mockStorageBucket({
         id: 'bucket-no-docs',

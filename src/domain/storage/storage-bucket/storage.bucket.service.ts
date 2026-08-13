@@ -526,9 +526,12 @@ export class StorageBucketService {
         LogContext.STORAGE_BUCKET
       );
 
-    // First filter the documents the current user has READ privilege to
-    const readableDocuments = allDocuments.filter(document =>
-      this.hasAgentAccessToDocument(document, actorContext)
+    // First filter the documents the current user has READ privilege to, then
+    // hide OTHER actors' still-staged uploads (A3).
+    const readableDocuments = allDocuments.filter(
+      document =>
+        this.hasAgentAccessToDocument(document, actorContext) &&
+        this.isListableInStagingState(document, actorContext)
     );
 
     // (a) by IDs, results in order specified by IDs
@@ -563,6 +566,40 @@ export class StorageBucketService {
       actorContext,
       document.authorization,
       AuthorizationPrivilege.READ
+    );
+  }
+
+  /**
+   * A document that is still in its temporary (staging) location has NOT been
+   * committed to anything yet — it is an in-flight upload that its uploader has
+   * not finished with. It must therefore only be LISTED for the actor that
+   * created it (A3).
+   *
+   * WHY THIS IS NEEDED: document authorization is INHERITED from the bucket, so
+   * everyone who can read the bucket can read every document in it — including
+   * uploads nobody has committed. Feature 013 made that a real disclosure: a
+   * Conversation now exposes its shared, membership-authorized storage bucket
+   * (`Conversation.storageBucket`), so without this filter every member could
+   * enumerate every OTHER member's still-unsent attachment uploads — name, size
+   * and a downloadable URL — before the message was ever sent. The same applies
+   * to the other staging flows (Collabora import, profile temporary storage).
+   *
+   * Deliberately a LISTING rule, not an authorization rule: it is applied at the
+   * single GraphQL exposure choke point (`documents` / `document(ID)`), so it
+   * cannot break any internal flow that resolves a staged document by id (e.g.
+   * the outbound attachment send path, which goes through DocumentService).
+   * Fail-closed on an unknown actor: an anonymous caller never matches
+   * `createdBy` and therefore never sees a staged document.
+   */
+  private isListableInStagingState(
+    document: IDocument,
+    actorContext: ActorContext
+  ): boolean {
+    if (document.temporaryLocation !== true) {
+      return true;
+    }
+    return (
+      !!actorContext.actorID && document.createdBy === actorContext.actorID
     );
   }
 
