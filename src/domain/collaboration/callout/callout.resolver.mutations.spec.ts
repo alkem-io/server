@@ -11,6 +11,7 @@ import {
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
 import { streamToBuffer } from '@common/utils/file.util';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { ReactionService } from '@domain/collaboration/reaction/reaction.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -33,6 +34,7 @@ describe('CalloutResolverMutations', () => {
   let authorizationService: AuthorizationService;
   let authorizationPolicyService: AuthorizationPolicyService;
   let calloutAuthorizationService: CalloutAuthorizationService;
+  let reactionService: ReactionService;
   let _contributionAuthorizationService: CalloutContributionAuthorizationService;
   let _calloutContributionService: CalloutContributionService;
 
@@ -63,6 +65,7 @@ describe('CalloutResolverMutations', () => {
     authorizationService = module.get(AuthorizationService);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
     calloutAuthorizationService = module.get(CalloutAuthorizationService);
+    reactionService = module.get(ReactionService);
     _contributionAuthorizationService = module.get(
       CalloutContributionAuthorizationService
     );
@@ -757,6 +760,172 @@ describe('CalloutResolverMutations', () => {
         expect.any(String)
       );
       expect(result).toHaveLength(1);
+    });
+  });
+
+  describe('addReactionToCallout', () => {
+    function makePublishedCallout(overrides: Record<string, unknown> = {}) {
+      return {
+        id: 'callout-1',
+        authorization: { id: 'auth-1' },
+        isTemplate: false,
+        settings: { visibility: CalloutVisibility.PUBLISHED },
+        ...overrides,
+      } as any;
+    }
+
+    it('requires CONTRIBUTE — throws when authorization service denies access', async () => {
+      const callout = makePublishedCallout();
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(
+        () => {
+          throw new ValidationException('forbidden', 'test' as any);
+        }
+      );
+
+      await expect(
+        resolver.addReactionToCallout(
+          { actorID: 'user-1' } as any,
+          { calloutID: 'callout-1', emoji: 'heart' } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        expect.objectContaining({ actorID: 'user-1' }),
+        callout.authorization,
+        AuthorizationPrivilege.CONTRIBUTE,
+        expect.any(String)
+      );
+    });
+
+    it('rejects when the actor has no userID (VC or anonymous)', async () => {
+      const callout = makePublishedCallout();
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+
+      await expect(
+        resolver.addReactionToCallout(
+          { actorID: undefined } as any,
+          { calloutID: 'callout-1', emoji: 'heart' } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(reactionService.upsertReaction).not.toHaveBeenCalled();
+    });
+
+    it('rejects when the Callout is a DRAFT (not published)', async () => {
+      const callout = makePublishedCallout({
+        settings: { visibility: CalloutVisibility.DRAFT },
+      });
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+
+      await expect(
+        resolver.addReactionToCallout(
+          { actorID: 'user-1' } as any,
+          { calloutID: 'callout-1', emoji: 'heart' } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(reactionService.upsertReaction).not.toHaveBeenCalled();
+    });
+
+    it('rejects when the Callout is a template', async () => {
+      const callout = makePublishedCallout({ isTemplate: true });
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+
+      await expect(
+        resolver.addReactionToCallout(
+          { actorID: 'user-1' } as any,
+          { calloutID: 'callout-1', emoji: 'heart' } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(reactionService.upsertReaction).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      '1',
+      '#',
+      '*',
+    ])('rejects the emoji slug "%s" that is not on the allow-list', async (badSlug: string) => {
+      const callout = makePublishedCallout();
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      // Simulate the allow-list rejection that reactionService.validateAllowedEmojiOrFail
+      // raises when the emoji slug is not present.
+      vi.mocked(reactionService.validateAllowedEmojiOrFail).mockImplementation(
+        () => {
+          throw new ValidationException(
+            'emoji not on allow-list',
+            'test' as any
+          );
+        }
+      );
+
+      await expect(
+        resolver.addReactionToCallout(
+          { actorID: 'user-1' } as any,
+          { calloutID: 'callout-1', emoji: badSlug } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(reactionService.upsertReaction).not.toHaveBeenCalled();
+    });
+
+    it('delegates to upsertReaction and returns the refreshed Callout on success', async () => {
+      const callout = makePublishedCallout();
+      const refreshedCallout = { ...callout, id: 'callout-1' } as any;
+      vi.mocked(calloutService.getCalloutOrFail)
+        .mockResolvedValueOnce(callout)
+        .mockResolvedValueOnce(refreshedCallout);
+      vi.mocked(reactionService.upsertReaction).mockResolvedValue({} as any);
+
+      const result = await resolver.addReactionToCallout(
+        { actorID: 'user-1' } as any,
+        { calloutID: 'callout-1', emoji: 'heart' } as any
+      );
+
+      expect(reactionService.upsertReaction).toHaveBeenCalled();
+      expect(result).toBe(refreshedCallout);
+    });
+  });
+
+  describe('removeReactionFromCallout', () => {
+    it('rejects when the actor has no userID (unauthenticated)', async () => {
+      await expect(
+        resolver.removeReactionFromCallout(
+          { actorID: undefined } as any,
+          { calloutID: 'callout-1' } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(reactionService.removeReaction).not.toHaveBeenCalled();
+    });
+
+    it('delegates to removeReaction (idempotent) and returns the refreshed Callout', async () => {
+      const callout = { id: 'callout-1' } as any;
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(reactionService.removeReaction).mockResolvedValue(undefined);
+
+      const result = await resolver.removeReactionFromCallout(
+        { actorID: 'user-1' } as any,
+        { calloutID: 'callout-1' } as any
+      );
+
+      expect(reactionService.removeReaction).toHaveBeenCalled();
+      expect(result).toBe(callout);
+    });
+
+    it('does NOT require CONTRIBUTE — no grantAccessOrFail call for the remove path', async () => {
+      const callout = { id: 'callout-1' } as any;
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(reactionService.removeReaction).mockResolvedValue(undefined);
+
+      await resolver.removeReactionFromCallout(
+        { actorID: 'user-1' } as any,
+        { calloutID: 'callout-1' } as any
+      );
+
+      // The remove path is authentication-only; no authorization policy is checked.
+      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
     });
   });
 });

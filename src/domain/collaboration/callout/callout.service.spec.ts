@@ -1,12 +1,14 @@
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { ReactionType } from '@common/enums/reaction.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { ReactionService } from '@domain/collaboration/reaction/reaction.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ClassificationService } from '@domain/common/classification/classification.service';
 import { RoomService } from '@domain/communication/room/room.service';
@@ -40,6 +42,7 @@ describe('CalloutService', () => {
   let userLookupService: UserLookupService;
   let classificationService: ClassificationService;
   let authorizationPolicyService: AuthorizationPolicyService;
+  let reactionService: ReactionService;
   let _storageAggregatorResolverService: StorageAggregatorResolverService;
 
   beforeEach(async () => {
@@ -75,6 +78,7 @@ describe('CalloutService', () => {
     userLookupService = module.get(UserLookupService);
     classificationService = module.get(ClassificationService);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
+    reactionService = module.get(ReactionService);
     _storageAggregatorResolverService = module.get(
       StorageAggregatorResolverService
     );
@@ -402,6 +406,42 @@ describe('CalloutService', () => {
       await service.deleteCallout('callout-1');
 
       expect(roomService.deleteRoom).not.toHaveBeenCalled();
+    });
+
+    it('deletes all reactions for the Callout before removing the Callout row', async () => {
+      const callout = {
+        id: 'callout-1',
+        framing: { id: 'framing-1' },
+        contributions: [],
+        contributionDefaults: { id: 'defaults-1' },
+        settings: { contribution: {} },
+        comments: undefined,
+        authorization: { id: 'auth-1' },
+      } as any;
+
+      vi.mocked(repository.findOne).mockResolvedValue(callout);
+
+      const callOrder: string[] = [];
+      vi.mocked(reactionService.deleteAllForEntity).mockImplementation(
+        async () => {
+          callOrder.push('deleteAllForEntity');
+        }
+      );
+      vi.mocked(repository.remove).mockImplementation(async () => {
+        callOrder.push('repositoryRemove');
+        return { id: undefined } as any;
+      });
+
+      await service.deleteCallout('callout-1');
+
+      expect(reactionService.deleteAllForEntity).toHaveBeenCalledWith(
+        ReactionType.POST,
+        'callout-1'
+      );
+      // Reaction cleanup must happen before the row is removed.
+      expect(callOrder.indexOf('deleteAllForEntity')).toBeLessThan(
+        callOrder.indexOf('repositoryRemove')
+      );
     });
   });
 
