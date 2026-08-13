@@ -313,6 +313,7 @@ enum CalloutVisibility {
 
 enum CollaboraDocumentType {
   DRAWING
+  PDF
   PRESENTATION
   SPREADSHEET
   WORDPROCESSING

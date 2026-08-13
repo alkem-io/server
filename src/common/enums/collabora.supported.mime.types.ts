@@ -3,7 +3,8 @@ import { CollaboraDocumentType } from './collabora.document.type';
 /**
  * MIME types Collabora Online can open and save in the editor modes we
  * surface: Writer (word processing), Calc (spreadsheet), Impress
- * (presentation), Draw (drawings). Used as the `allowedMimeTypes`
+ * (presentation), Draw (drawings), plus PDF (annotation-only, view/annotate
+ * mode — import-only, no blank-create). Used as the `allowedMimeTypes`
  * parameter on the `importCollaboraDocument` flow — file-service-go
  * sniffs the actual MIME from content and rejects anything not in this
  * list with `415 ErrUnsupportedMediaType`.
@@ -14,9 +15,6 @@ import { CollaboraDocumentType } from './collabora.document.type';
  * formats than we want to support (some are read-only, some are
  * niche). Update this list when Collabora adds editor modes we want
  * to surface.
- *
- * PDF is intentionally absent: Collabora's PDF mode is annotation-
- * first rather than document-first and warrants its own scope.
  */
 
 export const MIME_TO_DOCUMENT_TYPE: Record<string, CollaboraDocumentType> = {
@@ -45,6 +43,9 @@ export const MIME_TO_DOCUMENT_TYPE: Record<string, CollaboraDocumentType> = {
 
   // Drawing (Draw)
   'application/vnd.oasis.opendocument.graphics': CollaboraDocumentType.DRAWING,
+
+  // PDF (view/annotate — import-only, no blank-create)
+  'application/pdf': CollaboraDocumentType.PDF,
 };
 
 export const MIME_TO_EXTENSION: Record<string, string> = {
@@ -62,6 +63,7 @@ export const MIME_TO_EXTENSION: Record<string, string> = {
   'application/vnd.ms-powerpoint': '.ppt',
   'application/vnd.oasis.opendocument.presentation': '.odp',
   'application/vnd.oasis.opendocument.graphics': '.odg',
+  'application/pdf': '.pdf',
 };
 
 export const COLLABORA_SUPPORTED_MIMES: string[] = Object.keys(
