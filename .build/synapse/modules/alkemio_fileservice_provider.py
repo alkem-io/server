@@ -212,12 +212,21 @@ class _ConsumerSink(Protocol):
         Protocol.makeConnection(self, transport)
         # `transport` is Twisted's TransportProxyProducer for the response body —
         # an IPushProducer. Register it so the consumer applies real backpressure.
-        # Degrade gracefully if the consumer cannot accept a producer.
+        # Degrade gracefully if the consumer cannot accept a producer — but LOG
+        # it: without the producer this streams with NO backpressure, so a slow
+        # client buffers the whole media file in memory. That is a real,
+        # diagnosable degradation, not a no-op, and it must not be silent.
         try:
             self._consumer.registerProducer(transport, True)
             self._producer_registered = True
-        except (AttributeError, RuntimeError):
+        except (AttributeError, RuntimeError) as exc:
             self._producer_registered = False
+            logger.warning(
+                "media consumer rejected the body producer (%s: %s); streaming "
+                "WITHOUT backpressure — a slow client may buffer the whole file",
+                type(exc).__name__,
+                exc,
+            )
 
         # Time-to-first-byte deadline: file-service returning 200 then going silent
         # BEFORE any body byte must not hang the media request (and hold the
@@ -606,11 +615,20 @@ class FileServiceStorageProvider(StorageProvider):
         # media_store_path + `path` (the relative path Synapse hands us, e.g.
         # `local_content/aa/bb/<rest>`). Synapse's FileInfo has NO `upload_path`
         # attribute — derive the absolute path the same way the on-disk store does
-        # (matching synapse-s3-storage-provider). Opening it is blocking I/O — do
-        # it off the reactor; treq then STREAMS the handle into the multipart body
-        # via twisted's cooperative FileBodyProducer (chunked 64 KiB reads on a
-        # Cooperator), so the file is never fully copied into memory nor read
-        # synchronously on the reactor thread.
+        # (matching synapse-s3-storage-provider).
+        #
+        # Opening it is done OFF the reactor (defer_to_thread below) because
+        # open() on a wedged media-store mount can block for an unbounded time and
+        # would stall the whole Synapse worker.
+        #
+        # The subsequent READS are a different matter, and are deliberately NOT
+        # off-reactor: treq wraps the handle in twisted's FileBodyProducer (inside
+        # its MultiPartProducer), which reads it in 64 KiB chunks driven by a
+        # Cooperator — incrementally, ON THE REACTOR THREAD, yielding between
+        # chunks. So the file is never copied into memory whole and no single read
+        # monopolises the reactor, but a wedged mount can still block a chunk read.
+        # That is the same trade-off the mainline s3_storage_provider makes; the
+        # off-reactor open is what covers the unbounded case.
         cache_file = os.path.join(self.cache_path, path)
 
         # Bound the open by `store_timeout_s` so a wedged media-store mount fails
@@ -668,11 +686,20 @@ class FileServiceStorageProvider(StorageProvider):
             raise
 
         try:
-            # treq serialises the multipart body as form-fields (`data`) THEN
-            # files, preserving dict insertion order — so storageBucketId /
-            # externalReference / displayName / skipImageProcessing (every
-            # metadata part) precede the file part, which file-service requires
-            # (it reads the metadata fields before consuming the streamed file).
+            # ORDERING INVARIANT: every metadata part must precede the file part —
+            # file-service's Create handler reads the form fields before consuming
+            # the streamed file.
+            #
+            # treq guarantees this STRUCTURALLY — do NOT rely on the insertion
+            # order of the `data` dict below: treq's `_convert_params` does
+            # `list(sorted(params.items()))`, so the metadata parts go out
+            # ALPHABETICALLY. What holds the invariant is
+            # `MultiPartProducer.__init__` running the whole field list through
+            # `_sorted_by_type`, which keys str/bytes values (0, name) and file
+            # producers (1, name) — so ALL string fields precede ALL file fields
+            # however they were supplied.
+            # test_store_multipart_body_puts_every_metadata_part_before_the_file
+            # asserts this against the bytes treq actually serialises.
             files = {"file": (media_id, stream)}
             data = {
                 "storageBucketId": self.matrix_media_bucket_id,
@@ -744,6 +771,23 @@ class FileServiceStorageProvider(StorageProvider):
         finally:
             # Close the file handle on EVERY exit path (success, non-201 raise,
             # transport error, timeout).
+            #
+            # This CANNOT truncate the upload by closing the handle while the
+            # multipart producer is still streaming it. The awaited treq Deferred
+            # does not fire at response headers: twisted's
+            # HTTP11ClientProtocol.request chains the parser's response Deferred
+            # into the one it returns ONLY inside `cbRequestWritten`, i.e. after
+            # `Request.writeTo`'s Deferred fires — and for a body producer that is
+            # when `startProducing` completes, after every byte (including the
+            # whole file) has been written. So reaching this `finally` on the
+            # success path already means the body send finished. On the
+            # timeout/error paths the request has been cancelled and the
+            # connection aborted, which is exactly when the handle SHOULD go.
+            # (FileBodyProducer also closes the handle itself once read; this
+            # close is idempotent belt-and-braces for the paths where it never
+            # got that far.)
+            # test_store_does_not_close_handle_before_the_body_send_completes
+            # pins the ordering.
             try:
                 stream.close()
             except Exception:  # noqa: BLE001 - best-effort
