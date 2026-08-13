@@ -117,6 +117,11 @@ export class ConversationService {
     conversation.storageAggregator =
       await this.createConversationStorageAggregator();
 
+    // Tracks whether the conversation ROW has been committed. Rollback is only
+    // legitimate while the conversation is still uncommitted (B2) — see the
+    // catch block.
+    let conversationPersisted = false;
+
     try {
       // Create room — either by asking the adapter to create the Matrix room
       // (normal flow) or with a pre-assigned UUID (Element room-check flow:
@@ -138,6 +143,7 @@ export class ConversationService {
       const savedConversation = await this.conversationRepository.save(
         conversation as Conversation
       );
+      conversationPersisted = true;
 
       // Create membership records for all members
       const memberships = allMemberIds.map(actorID =>
@@ -158,9 +164,26 @@ export class ConversationService {
       // Roll back the pre-created storage so a failed room/conversation/
       // membership step never leaves orphaned storage (FIX 1). Best-effort —
       // never mask the original failure.
+      //
+      // ONLY roll back what is genuinely UNCOMMITTED (B2). Once the conversation
+      // row itself is durable (the failure was a later step, e.g. the membership
+      // insert), deleting its storage aggregator is DESTRUCTIVE, not a rollback:
+      // `conversation.storageAggregatorId` is `ON DELETE SET NULL`, so the
+      // committed conversation would be left with no storage and no repair path
+      // (the one-shot backfill migration has already run and only fills
+      // conversations it saw). A conversation with intact storage but missing
+      // memberships is repairable — memberships are (re)persisted from
+      // room.member.updated events and the auth reset re-runs from there — so
+      // prefer leaving it repairable and LOUD over destroying its storage.
       const orphanedAggregatorId = conversation.storageAggregator?.id;
-      if (orphanedAggregatorId) {
+      if (orphanedAggregatorId && !conversationPersisted) {
         await this.rollbackConversationStorageAggregator(orphanedAggregatorId);
+      } else if (orphanedAggregatorId) {
+        this.logger.error(
+          `Conversation ${conversation.id} was already persisted when creation failed; leaving its storage aggregator ${orphanedAggregatorId} intact for repair rather than stranding the conversation without storage`,
+          (error as Error)?.stack,
+          LogContext.COMMUNICATION_CONVERSATION
+        );
       }
       throw error;
     }
@@ -491,8 +514,6 @@ export class ConversationService {
       roomID: conversation.room.id,
     });
 
-    await this.authorizationPolicyService.delete(conversation.authorization);
-
     // Release the per-conversation storage (feature 013) as the SINGLE deletion
     // path (FIX 5). Delete the aggregator EXPLICITLY first — this cleans its
     // bucket + documents + auth (StorageAggregatorService.delete). The relation
@@ -500,11 +521,22 @@ export class ConversationService {
     // conversationRepository.remove does NOT double-delete the already-removed
     // aggregator (which previously threw EntityNotFound and orphaned bucket/docs).
     // Detach the in-memory reference as well, so nothing revisits the removed row.
+    //
+    // ORDERING (B1): this runs BEFORE the authorization policy is deleted.
+    // StorageAggregatorService.delete is a FALLIBLE, multi-step REMOTE teardown
+    // (a file-service HTTP call per document). Deleting the conversation's
+    // authorization policy first meant a storage-teardown failure left the
+    // conversation row alive with a NULL authorizationId — nothing could then
+    // authorize a retry of the delete, so the conversation became permanently
+    // undeletable. Doing all fallible remote work first means a failure here
+    // leaves the conversation fully intact and the delete simply retryable.
     const storageAggregatorId = conversation.storageAggregator?.id;
     if (storageAggregatorId) {
       await this.storageAggregatorService.delete(storageAggregatorId);
       conversation.storageAggregator = undefined;
     }
+
+    await this.authorizationPolicyService.delete(conversation.authorization);
 
     const result = await this.conversationRepository.remove(
       conversation as Conversation

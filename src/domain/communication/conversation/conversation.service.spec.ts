@@ -170,6 +170,33 @@ describe('ConversationService', () => {
       expect(conversationRepo.remove).toHaveBeenCalled();
     });
 
+    it('B1: a failed storage teardown leaves the conversation AUTHORIZATION intact, so the delete stays retryable', async () => {
+      // storageAggregatorService.delete is a fallible, multi-step REMOTE teardown
+      // (one file-service call per document). Deleting the conversation's
+      // authorization policy first meant a teardown failure left the row alive
+      // with a NULL authorizationId — nothing could then authorize a retry, so
+      // the conversation became permanently undeletable.
+      const mockConversation = {
+        id: 'conv-1',
+        room: { id: 'room-1', type: RoomType.CONVERSATION_DIRECT },
+        authorization: { id: 'auth-1' },
+        messaging: { id: 'messaging-1' },
+        storageAggregator: { id: 'agg-1' },
+      } as unknown as Conversation;
+
+      conversationRepo.findOne.mockResolvedValue(mockConversation);
+      storageAggregatorService.delete.mockRejectedValue(
+        new Error('file-service unavailable')
+      );
+
+      await expect(service.deleteConversation('conv-1')).rejects.toThrow(
+        'file-service unavailable'
+      );
+
+      expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
+      expect(conversationRepo.remove).not.toHaveBeenCalled();
+    });
+
     it('should throw EntityNotInitializedException when room is missing', async () => {
       const mockConversation = {
         id: 'conv-1',
@@ -782,6 +809,36 @@ describe('ConversationService', () => {
       expect(storageAggregatorService.delete).toHaveBeenCalledTimes(1);
       // The room RPC is never reached — the failure is in storage creation.
       expect(roomService.createRoom).not.toHaveBeenCalled();
+    });
+
+    it('B2: does NOT destroy the storage when the conversation row is already committed', async () => {
+      // Rollback is only legitimate while the conversation is UNCOMMITTED. Once
+      // the row is durable (here the membership insert is what fails), deleting
+      // its aggregator is destruction, not rollback: the FK is ON DELETE SET
+      // NULL, so the committed conversation would be permanently left with no
+      // storage and no repair path. Leave it repairable instead.
+      storageAggregatorService.createStorageAggregator.mockResolvedValue({
+        id: 'agg-1',
+        directStorage: undefined,
+      } as any);
+      roomService.createRoom.mockResolvedValue({ id: 'room-1' } as any);
+      conversationRepo.save.mockResolvedValue({
+        id: 'conv-new',
+      } as Conversation);
+      membershipRepo.create.mockImplementation(data => data as any);
+      membershipRepo.save.mockRejectedValue(
+        new Error('membership insert failed')
+      );
+
+      await expect(
+        service.createConversation(
+          'agent-1',
+          ['agent-2'],
+          RoomType.CONVERSATION_DIRECT
+        )
+      ).rejects.toThrow('membership insert failed');
+
+      expect(storageAggregatorService.delete).not.toHaveBeenCalled();
     });
   });
 
