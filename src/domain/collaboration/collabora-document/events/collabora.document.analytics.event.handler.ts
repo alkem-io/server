@@ -112,7 +112,12 @@ export class CollaboraDocumentAnalyticsEventHandler {
     const message = error instanceof Error ? error.message : String(error);
     const details = error instanceof Error ? error.stack : undefined;
     this.logger.error(
-      `Failed to process ${eventName} analytics for CollaboraDocument ${collaboraDocumentId}: ${message}`,
+      {
+        message: 'Failed to process Collabora document analytics',
+        eventName,
+        collaboraDocumentId,
+        errorMessage: message,
+      },
       details,
       LogContext.COLLABORATION
     );

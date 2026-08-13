@@ -134,6 +134,16 @@ describe('CollaboraDocumentAnalyticsEventHandler', () => {
       LogContext.COLLABORATION
     );
     expect(logger.error).toHaveBeenCalledOnce();
+    expect(logger.error).toHaveBeenCalledWith(
+      {
+        message: 'Failed to process Collabora document analytics',
+        eventName: COLLABORA_DOCUMENT_OPENED,
+        collaboraDocumentId: 'document-1',
+        errorMessage: 'lookup failed',
+      },
+      expect.stringContaining('Error: lookup failed'),
+      LogContext.COLLABORATION
+    );
   });
 
   it('contains a synchronous reporter failure after a successful lookup', async () => {
@@ -150,5 +160,15 @@ describe('CollaboraDocumentAnalyticsEventHandler', () => {
 
     expect(logger.log).toHaveBeenCalledOnce();
     expect(logger.error).toHaveBeenCalledOnce();
+    expect(logger.error).toHaveBeenCalledWith(
+      {
+        message: 'Failed to process Collabora document analytics',
+        eventName: COLLABORA_DOCUMENT_UPLOADED,
+        collaboraDocumentId: 'document-1',
+        errorMessage: 'reporter failed',
+      },
+      expect.stringContaining('Error: reporter failed'),
+      LogContext.COLLABORATION
+    );
   });
 });
