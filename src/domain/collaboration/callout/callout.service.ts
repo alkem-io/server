@@ -7,6 +7,7 @@ import {
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutSelectionMode } from '@common/enums/callout.selection.mode';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { ReactionType } from '@common/enums/reaction.type';
 import { RoleName } from '@common/enums/role.name';
 import { RoomType } from '@common/enums/room.type';
 import {
@@ -58,6 +59,7 @@ import { ICalloutSettings } from '../callout-settings/callout.settings.interface
 import { CollaboraDocumentService } from '../collabora-document/collabora.document.service';
 import { ImportCollaboraDocumentInput } from '../collabora-document/dto/collabora.document.dto.import';
 import { CreatePostInput } from '../post/dto/post.dto.create';
+import { ReactionService } from '../reaction/reaction.service';
 import { CalloutContributionsCountOutput } from './dto/callout.contributions.count.dto';
 import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contribution';
 import { UpdateCalloutInput } from './dto/callout.dto.update';
@@ -77,6 +79,7 @@ export class CalloutService {
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private classificationService: ClassificationService,
     private roleSetService: RoleSetService,
+    private reactionService: ReactionService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
   ) {}
@@ -620,6 +623,15 @@ export class CalloutService {
 
     if (callout.authorization)
       await this.authorizationPolicyService.delete(callout.authorization);
+
+    // Remove all reactions for this callout before removing the callout row.
+    // This delete-first ordering ensures no orphaned reaction records can
+    // arise, even on partial failure, because the reaction table has no
+    // database-level FK back to the callout (the polymorphic target reference
+    // is intentionally FK-free). The method is deliberately not wrapped in a
+    // new transaction: deleteCallout performs external side effects (Matrix
+    // room deletion above) that must not sit inside a DB transaction.
+    await this.reactionService.deleteAllForEntity(ReactionType.POST, calloutID);
 
     const result = await this.calloutRepository.remove(callout as Callout);
     result.id = calloutID;

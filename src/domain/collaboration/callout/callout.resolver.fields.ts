@@ -1,26 +1,37 @@
 import { AuthorizationActorHasPrivilege } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { ReactionType } from '@common/enums/reaction.type';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { GraphqlGuard } from '@core/authorization';
 import {
   CalloutActivityLoaderCreator,
+  CalloutReactionsSummaryLoaderCreator,
   UserLoaderCreator,
 } from '@core/dataloader/creators';
+import { CalloutMyReactionLoaderCreator } from '@core/dataloader/creators/loader.creators/callout/callout.my.reaction.loader.creator';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
+import { CALLOUT_REACTION_ALLOWED_EMOJIS } from '@domain/collaboration/reaction/reaction.constants';
+import { ReactionService } from '@domain/collaboration/reaction/reaction.service';
 import { IClassification } from '@domain/common/classification/classification.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { LoggerService } from '@nestjs/common';
 import { Inject, UseGuards } from '@nestjs/common/decorators';
 import { Args, Int, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { CurrentActor } from '@src/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
 import { CalloutContributionsCountOutput } from './dto/callout.contributions.count.dto';
+import {
+  ICalloutReaction,
+  ICalloutReactionsSummary,
+} from './dto/callout.dto.reaction';
 import { ContributionsFilterInput } from './dto/contributions.filter';
 
 @Resolver(() => ICallout)
@@ -28,7 +39,9 @@ export class CalloutResolverFields {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private calloutService: CalloutService
+    private calloutService: CalloutService,
+    private reactionService: ReactionService,
+    private myReactionHelper: CalloutMyReactionLoaderCreator
   ) {}
 
   @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
@@ -184,5 +197,66 @@ export class CalloutResolverFields {
       return null;
     }
     return loader.load(callout.createdBy);
+  }
+
+  @ResolveField('reactionsSummary', () => ICalloutReactionsSummary, {
+    nullable: false,
+    description:
+      'Cheap always-shown summary (tier-1). Dataloader-batched; safe to select on feeds.',
+  })
+  async reactionsSummary(
+    @Parent() callout: ICallout,
+    @CurrentActor() actorContext: ActorContext,
+    @Loader(CalloutReactionsSummaryLoaderCreator)
+    summaryLoader: ILoader<
+      | import('@core/dataloader/creators/loader.creators/callout/callout.reactions.summary.loader.creator').CalloutReactionsSummaryResult
+      | null
+    >
+  ): Promise<ICalloutReactionsSummary> {
+    const summary = await summaryLoader.load(callout.id);
+
+    const myReactionEmoji = await this.myReactionHelper.getMyReactionEmoji(
+      callout.id,
+      actorContext.actorID || null
+    );
+
+    return {
+      total: summary?.total ?? 0,
+      emojis: summary?.emojis ?? [],
+      myReactionEmoji: myReactionEmoji ?? null,
+      allowedEmojis: [...CALLOUT_REACTION_ALLOWED_EMOJIS],
+    };
+  }
+
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('reactions', () => [ICalloutReaction], {
+    nullable: false,
+    description:
+      'Who reacted (tier-2). Bounded: 100 most recent by last change, descending. Fetch only on demand.',
+  })
+  async reactions(
+    @Parent() callout: ICallout,
+    @Loader(UserLoaderCreator) userLoader: ILoader<IUser | null>
+  ): Promise<ICalloutReaction[]> {
+    const rawReactions = await this.reactionService.getReactionsForEntity(
+      ReactionType.POST,
+      callout.id,
+      100
+    );
+
+    const results: ICalloutReaction[] = [];
+    for (const r of rawReactions) {
+      const user = await userLoader.load(r.createdBy);
+      // Skip entries whose creator cannot be resolved (deletion race window).
+      if (!user) continue;
+      results.push({
+        id: r.id,
+        emoji: r.emoji,
+        updatedDate: r.updatedDate,
+        user,
+      });
+    }
+    return results;
   }
 }

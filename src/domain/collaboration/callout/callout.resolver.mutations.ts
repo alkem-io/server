@@ -5,6 +5,7 @@ import { CalloutContributionType } from '@common/enums/callout.contribution.type
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { ReactionType } from '@common/enums/reaction.type';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import {
   RelationshipNotFoundException,
@@ -20,6 +21,7 @@ import {
   UpdateCalloutEntityInput,
 } from '@domain/collaboration/callout/dto';
 import { IPost } from '@domain/collaboration/post/post.interface';
+import { ReactionService } from '@domain/collaboration/reaction/reaction.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IMemo } from '@domain/common/memo/types';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
@@ -56,6 +58,10 @@ import { ICallout } from './callout.interface';
 import { CalloutService } from './callout.service';
 import { CalloutAuthorizationService } from './callout.service.authorization';
 import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contribution';
+import {
+  AddReactionToCalloutInput,
+  RemoveReactionFromCalloutInput,
+} from './dto/callout.dto.reaction.input';
 import { UpdateCalloutPublishInfoInput } from './dto/callout.dto.update.publish.info';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
 
@@ -79,6 +85,7 @@ export class CalloutResolverMutations {
     private readonly temporaryStorageService: TemporaryStorageService,
     private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly collaborationLicenseService: CollaborationLicenseService,
+    private readonly reactionService: ReactionService,
     @Inject(SUBSCRIPTION_CALLOUT_POST_CREATED)
     private readonly postCreatedSubscription: PubSubEngine
   ) {}
@@ -840,5 +847,89 @@ export class CalloutResolverMutations {
       sortOrderData.calloutID,
       sortOrderData
     );
+  }
+
+  @Mutation(() => ICallout, {
+    description:
+      "Adds or swaps the requesting user's single reaction on a Callout. Requires CONTRIBUTE on the Callout. The Callout must be published and not a template. The emoji must be on the platform allow-list.",
+  })
+  async addReactionToCallout(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('reactionData') reactionData: AddReactionToCalloutInput
+  ): Promise<ICallout> {
+    const callout = await this.calloutService.getCalloutOrFail(
+      reactionData.calloutID,
+      { relations: { authorization: true } }
+    );
+
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      callout.authorization,
+      AuthorizationPrivilege.CONTRIBUTE,
+      `react to callout: ${callout.id}`
+    );
+
+    // Human users only — VCs and anonymous actors must not react.
+    if (!actorContext.actorID) {
+      throw new ValidationException(
+        'Authentication is required to react to a Callout',
+        LogContext.COLLABORATION,
+        { calloutId: callout.id }
+      );
+    }
+
+    // Only published, non-template callouts accept reactions.
+    if (callout.settings.visibility !== CalloutVisibility.PUBLISHED) {
+      throw new ValidationException(
+        'Reactions are only allowed on published Callouts',
+        LogContext.COLLABORATION,
+        { calloutId: callout.id, visibility: callout.settings.visibility }
+      );
+    }
+    if (callout.isTemplate) {
+      throw new ValidationException(
+        'Reactions are not allowed on template Callouts',
+        LogContext.COLLABORATION,
+        { calloutId: callout.id }
+      );
+    }
+
+    this.reactionService.validateAllowedEmojiOrFail(reactionData.emoji);
+
+    await this.reactionService.upsertReaction(
+      ReactionType.POST,
+      callout.id,
+      actorContext.actorID,
+      reactionData.emoji
+    );
+
+    return this.calloutService.getCalloutOrFail(reactionData.calloutID);
+  }
+
+  @Mutation(() => ICallout, {
+    description:
+      "Removes the requesting user's reaction from a Callout. Idempotent — no error when no reaction exists. Self-scoped; requires only authentication (not CONTRIBUTE), so a person who left the space can still retract their own reaction.",
+  })
+  async removeReactionFromCallout(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('reactionData') reactionData: RemoveReactionFromCalloutInput
+  ): Promise<ICallout> {
+    // Only authentication is required — removal does not need CONTRIBUTE.
+    if (!actorContext.actorID) {
+      throw new ValidationException(
+        'Authentication is required to remove a reaction from a Callout',
+        LogContext.COLLABORATION,
+        { calloutId: reactionData.calloutID }
+      );
+    }
+
+    // Idempotent: removal is a no-op if no reaction exists.
+    await this.reactionService.removeReaction(
+      ReactionType.POST,
+      reactionData.calloutID,
+      actorContext.actorID
+    );
+
+    return this.calloutService.getCalloutOrFail(reactionData.calloutID);
   }
 }
