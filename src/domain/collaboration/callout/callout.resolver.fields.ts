@@ -245,11 +245,18 @@ export class CalloutResolverFields {
       100
     );
 
+    // Load all users in parallel so DataLoader can coalesce them into a
+    // single batched query rather than one query per reaction.
+    const users = await Promise.all(
+      rawReactions.map(r => userLoader.load(r.createdBy))
+    );
+
     const results: ICalloutReaction[] = [];
-    for (const r of rawReactions) {
-      const user = await userLoader.load(r.createdBy);
+    for (let i = 0; i < rawReactions.length; i++) {
+      const user = users[i];
       // Skip entries whose creator cannot be resolved (deletion race window).
       if (!user) continue;
+      const r = rawReactions[i];
       results.push({
         id: r.id,
         emoji: r.emoji,
