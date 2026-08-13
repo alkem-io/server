@@ -1,42 +1,59 @@
 import { ReactionType } from '@common/enums/reaction.type';
-import { Reaction } from '@domain/collaboration/reaction/reaction.entity';
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
+import { ReactionService } from '@domain/collaboration/reaction/reaction.service';
+import { Injectable, Scope } from '@nestjs/common';
+import DataLoader from 'dataloader';
 
 /**
- * Helper service that fetches the requesting user's current reaction for a
- * single callout. Used by the reactionsSummary field resolver; the single-row
- * lookup is served by the (type, entityID, createdBy) unique index so it
- * does not perform a table scan even when called once per callout on a feed.
+ * Request-scoped DataLoader that batches viewer-specific reaction lookups
+ * for callouts. One query is issued per (user, request) pair regardless of
+ * how many callouts appear on the page — the DataLoader coalesces all
+ * `load(calloutId)` calls within a single event-loop tick into a single
+ * `getMyReactionsForEntities` call.
  *
- * Not a DataLoader creator — the query is keyed by both calloutID and userID,
- * making the standard per-request DataLoader pattern inapplicable here without
- * a composite cache key that the framework does not support out of the box.
+ * Scoped to the request so that different authenticated users in concurrent
+ * requests each receive their own isolated loader state.
  */
-@Injectable()
+@Injectable({ scope: Scope.REQUEST })
 export class CalloutMyReactionLoaderCreator {
-  constructor(@InjectEntityManager() private manager: EntityManager) {}
+  private readonly loaders = new Map<
+    string,
+    DataLoader<string, string | null>
+  >();
+
+  constructor(private readonly reactionService: ReactionService) {}
 
   /**
-   * Returns the emoji slug for the user's current reaction on the given
-   * callout, or null when the user has not reacted or is unauthenticated.
+   * Returns the emoji slug for the given callout and user, or null when the
+   * user has not reacted or is unauthenticated. Calls are batched within the
+   * same event-loop tick — one DB query per user per request.
    */
-  async getMyReactionEmoji(
-    calloutID: string,
+  async loadMyReaction(
+    calloutId: string,
     userID: string | null
   ): Promise<string | null> {
     if (!userID) return null;
 
-    const row = await this.manager.getRepository(Reaction).findOne({
-      where: {
-        type: ReactionType.POST,
-        entityID: calloutID,
-        createdBy: userID,
-      },
-      select: ['emoji'],
-    });
+    let loader = this.loaders.get(userID);
+    if (!loader) {
+      loader = this.createLoaderForUser(userID);
+      this.loaders.set(userID, loader);
+    }
+    return loader.load(calloutId);
+  }
 
-    return row?.emoji ?? null;
+  private createLoaderForUser(
+    userID: string
+  ): DataLoader<string, string | null> {
+    return new DataLoader<string, string | null>(
+      async (calloutIds: readonly string[]) => {
+        const map = await this.reactionService.getMyReactionsForEntities(
+          ReactionType.POST,
+          calloutIds,
+          userID
+        );
+        return calloutIds.map(id => map.get(id) ?? null);
+      },
+      { cache: true, name: `CalloutMyReactionLoader:${userID}` }
+    );
   }
 }

@@ -111,7 +111,7 @@ describe('CalloutResolverFields', () => {
 
     it('returns zero total and empty emojis when there are no reactions', async () => {
       const callout = makeCallout('c-1', []);
-      vi.mocked(myReactionHelper.getMyReactionEmoji).mockResolvedValue(null);
+      vi.mocked(myReactionHelper.loadMyReaction).mockResolvedValue(null);
       const loader = makeSummaryLoader(null);
 
       const result = await resolver.reactionsSummary(
@@ -127,7 +127,7 @@ describe('CalloutResolverFields', () => {
 
     it('propagates total and emojis from the DataLoader summary', async () => {
       const callout = makeCallout('c-2', []);
-      vi.mocked(myReactionHelper.getMyReactionEmoji).mockResolvedValue('heart');
+      vi.mocked(myReactionHelper.loadMyReaction).mockResolvedValue('heart');
       const loader = makeSummaryLoader({
         total: 5,
         emojis: ['heart', 'rocket'],
@@ -146,7 +146,7 @@ describe('CalloutResolverFields', () => {
 
     it('always includes the full allow-list in allowedEmojis regardless of current reactions', async () => {
       const callout = makeCallout('c-3', []);
-      vi.mocked(myReactionHelper.getMyReactionEmoji).mockResolvedValue(null);
+      vi.mocked(myReactionHelper.loadMyReaction).mockResolvedValue(null);
       const loader = makeSummaryLoader(null);
 
       const result = await resolver.reactionsSummary(
@@ -162,7 +162,7 @@ describe('CalloutResolverFields', () => {
 
     it('summary shape has NO per-emoji count field — only bare slug list and total', async () => {
       const callout = makeCallout('c-4', []);
-      vi.mocked(myReactionHelper.getMyReactionEmoji).mockResolvedValue(null);
+      vi.mocked(myReactionHelper.loadMyReaction).mockResolvedValue(null);
       const loader = makeSummaryLoader({ total: 2, emojis: ['heart'] });
 
       const result = await resolver.reactionsSummary(

@@ -215,7 +215,7 @@ export class CalloutResolverFields {
   ): Promise<ICalloutReactionsSummary> {
     const summary = await summaryLoader.load(callout.id);
 
-    const myReactionEmoji = await this.myReactionHelper.getMyReactionEmoji(
+    const myReactionEmoji = await this.myReactionHelper.loadMyReaction(
       callout.id,
       actorContext.actorID || null
     );

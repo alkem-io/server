@@ -2,12 +2,9 @@ import { ReactionType } from '@common/enums/reaction.type';
 import { DataLoaderCreator } from '@core/dataloader/creators/base';
 import { DataLoaderCreatorOptions } from '@core/dataloader/creators/base/data.loader.creator.options';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { CALLOUT_REACTION_ALLOWED_EMOJIS } from '@domain/collaboration/reaction/reaction.constants';
-import { Reaction } from '@domain/collaboration/reaction/reaction.entity';
+import { ReactionService } from '@domain/collaboration/reaction/reaction.service';
 import { Injectable } from '@nestjs/common';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import DataLoader from 'dataloader';
-import { EntityManager } from 'typeorm';
 
 export interface CalloutReactionsSummaryResult {
   entityID: string;
@@ -21,12 +18,15 @@ export interface CalloutReactionsSummaryResult {
  * DataLoader creator that batches callout reaction summaries.
  * For N callouts rendered on a feed page, this performs a single GROUP BY
  * query instead of N individual aggregation queries (tier-1 read).
+ *
+ * Delegates the aggregation query to ReactionService.getSummaryForEntities,
+ * keeping a single implementation of the GROUP BY and allow-list sort logic.
  */
 @Injectable()
 export class CalloutReactionsSummaryLoaderCreator
   implements DataLoaderCreator<CalloutReactionsSummaryResult | null>
 {
-  constructor(@InjectEntityManager() private manager: EntityManager) {}
+  constructor(private readonly reactionService: ReactionService) {}
 
   public create(
     _options: DataLoaderCreatorOptions<CalloutReactionsSummaryResult | null>
@@ -42,33 +42,14 @@ export class CalloutReactionsSummaryLoaderCreator
   ): Promise<(CalloutReactionsSummaryResult | null)[]> {
     if (calloutIds.length === 0) return calloutIds.map(() => null);
 
-    const rows = await this.manager
-      .getRepository(Reaction)
-      .createQueryBuilder('r')
-      .select('r.entityID', 'entityID')
-      .addSelect('COUNT(DISTINCT r.createdBy)', 'total')
-      .addSelect('array_agg(DISTINCT r.emoji)', 'emojis')
-      .where('r.type = :type AND r.entityID IN (:...entityIDs)', {
-        type: ReactionType.POST,
-        entityIDs: [...calloutIds],
-      })
-      .groupBy('r.entityID')
-      .getRawMany<{ entityID: string; total: string; emojis: string[] }>();
+    const summaries = await this.reactionService.getSummaryForEntities(
+      ReactionType.POST,
+      calloutIds
+    );
 
-    const allowedOrder = CALLOUT_REACTION_ALLOWED_EMOJIS;
     const summaryMap = new Map<string, CalloutReactionsSummaryResult>();
-    for (const row of rows) {
-      summaryMap.set(row.entityID, {
-        entityID: row.entityID,
-        total: parseInt(row.total, 10),
-        emojis: [...row.emojis].sort((a, b) => {
-          const ai = allowedOrder.indexOf(a);
-          const bi = allowedOrder.indexOf(b);
-          const aPos = ai === -1 ? Number.MAX_SAFE_INTEGER : ai;
-          const bPos = bi === -1 ? Number.MAX_SAFE_INTEGER : bi;
-          return aPos - bPos;
-        }),
-      });
+    for (const s of summaries) {
+      summaryMap.set(s.entityID, s);
     }
 
     return calloutIds.map(id => summaryMap.get(id) ?? null);
