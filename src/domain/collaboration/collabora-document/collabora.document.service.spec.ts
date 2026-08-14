@@ -1,5 +1,8 @@
 import { CollaboraDocumentType } from '@common/enums/collabora.document.type';
-import { ValidationException } from '@common/exceptions';
+import {
+  RelationshipNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { DocumentService } from '@domain/storage/document/document.service';
@@ -61,6 +64,56 @@ describe('CollaboraDocumentService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('getEditorUrl', () => {
+    it('issues a WOPI token from the supplied backing document without reloading', async () => {
+      const collaboraDocument = {
+        id: 'collabora-document-1',
+        document: { id: 'storage-document-1' },
+      } as any;
+      vi.mocked(wopiServiceAdapter.issueToken).mockResolvedValue({
+        editorUrl: 'https://collabora/editor',
+        accessTokenTTL: 3600,
+      } as any);
+
+      const result = await service.getEditorUrl(
+        collaboraDocument,
+        'actor-1',
+        'Actor One',
+        'nl'
+      );
+
+      expect(repository.findOne).not.toHaveBeenCalled();
+      expect(wopiServiceAdapter.issueToken).toHaveBeenCalledWith(
+        'storage-document-1',
+        'actor-1',
+        'Actor One',
+        'nl'
+      );
+      expect(result).toEqual({
+        editorUrl: 'https://collabora/editor',
+        accessTokenTTL: 3600,
+      });
+    });
+
+    it('preserves the static missing-backing-document exception contract', async () => {
+      const collaboraDocument = {
+        id: 'collabora-document-without-backing',
+      } as any;
+
+      const error = await service
+        .getEditorUrl(collaboraDocument, 'actor-1', undefined, 'en')
+        .catch(reason => reason);
+
+      expect(error).toBeInstanceOf(RelationshipNotFoundException);
+      expect(error.message).toBe('Document not found on CollaboraDocument');
+      expect(error.details).toEqual({
+        collaboraDocumentId: 'collabora-document-without-backing',
+      });
+      expect(repository.findOne).not.toHaveBeenCalled();
+      expect(wopiServiceAdapter.issueToken).not.toHaveBeenCalled();
+    });
   });
 
   describe('replaceCollaboraDocument', () => {
