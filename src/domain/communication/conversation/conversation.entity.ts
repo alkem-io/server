@@ -51,11 +51,22 @@ export class Conversation extends AuthorizableEntity implements IConversation {
   // under it. ConversationService.deleteConversation deletes the aggregator
   // explicitly (StorageAggregatorService.delete, which cleans bucket + docs +
   // auth) as the single deletion path (FIX 5).
+  //
+  // The FK constraint name is declared EXPLICITLY because migration
+  // 1782300000002 creates it as `FK_conversation_storageAggregatorId`, not as
+  // TypeORM's generated hash. Without this, entity metadata and the database
+  // disagree and the next `migration:generate` silently emits a DROP of the
+  // named constraint plus a re-CREATE under a hash name — verified against the
+  // live schema before/after this declaration. Same hazard, same treatment as
+  // `Document.externalReference`'s index declarations.
   @OneToOne(() => StorageAggregator, {
     eager: false,
     cascade: ['insert', 'update'],
     onDelete: 'SET NULL',
   })
-  @JoinColumn()
+  @JoinColumn({
+    name: 'storageAggregatorId',
+    foreignKeyConstraintName: 'FK_conversation_storageAggregatorId',
+  })
   storageAggregator?: StorageAggregator;
 }
