@@ -23,6 +23,17 @@ export class MatrixMediaStorageBucket1782300000001
   private readonly bucketId = '00000000-0000-4000-8000-000000000013';
   private readonly bucketAuthId = '00000000-0000-4000-8000-000000000014';
 
+  // SUPERSEDED by 1785800000000-MatrixMediaStagingBucketUnrestricted, which
+  // clears BOTH fields below (empty allow-list + maxFileSize 0). Left here
+  // unchanged because this migration has already run; read that one for the
+  // reasoning. In short: the staging bucket receives EVERY local Synapse media
+  // upload, including in rooms Alkemio does not own, so it must carry no
+  // Alkemio policy — Alkemio's conversation policy is enforced on the
+  // CONVERSATION/collaboration bucket at re-home and on the outbound send
+  // path. (The rationale recorded below was also factually wrong: file-service
+  // reads `allowedMimeTypes`/`maxFileSize` from the CREATE request, not from
+  // this row, and the Synapse media-storage provider sends neither.)
+
   // 50 MiB (FR-020), reconciled with Synapse max_upload_size + file-service.
   private readonly maxFileSize = 52428800;
 

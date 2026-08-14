@@ -43,6 +43,10 @@ no inbound re-home happens.
   `storage.file_service.matrix_media_bucket_id`). The Synapse storage provider
   creates inbound Matrix media here first; the server re-homes rows out of it.
   Rows the provider creates carry no server-side tagset, which is a valid state.
+  The bucket carries **no** Alkemio policy — empty `allowedMimeTypes`, zero
+  `maxFileSize` — because it receives every local Synapse media upload, in every
+  room on the homeserver. Alkemio's conversation policy constrains what Alkemio
+  surfaces, never what Synapse accepts.
 - **Comment rooms** — callout/post comment rooms are supported and target the
   parent callout's existing collaboration bucket (no new bucket is created), for
   both the outbound send path and the inbound re-home.
@@ -236,9 +240,11 @@ sanitized name the MOVE branch already computes.
 
 - AV/malware scanning is intentionally out of scope (FR-024): chat media inherits
   the platform's existing upload behaviour.
-- The `matrix_media` staging bucket's own policy is not enforced by the server —
-  that row is created directly by the Synapse media-storage provider against
-  file-service, which the server does not mediate. The conversation/collaboration
-  bucket policy is enforced on re-home.
+- The `matrix_media` staging bucket carries no policy and none is enforced on it
+  — that row is created directly by the Synapse media-storage provider against
+  file-service, which the server does not mediate (the provider sends no
+  `allowedMimeTypes`/`maxFileSize` on the create, and file-service only enforces
+  the ones a request supplies). The conversation/collaboration bucket policy is
+  enforced on re-home.
 - Media whose parent callout cannot be resolved, or whose room type is neither a
   conversation nor a comment room, is left in staging (logged).
