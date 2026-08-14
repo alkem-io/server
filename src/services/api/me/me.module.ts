@@ -9,6 +9,7 @@ import { Module } from '@nestjs/common';
 import { ActivityModule } from '@platform/activity/activity.module';
 import { InAppNotificationModule } from '@platform/in-app-notification/in.app.notification.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
+import { McpServerModule } from '@services/mcp-server/mcp-server.module';
 import { ActivityLogModule } from '../activity-log/activity.log.module';
 import { RolesModule } from '../roles/roles.module';
 import { MeConversationsResolverFields } from './me.conversations.resolver.fields';
@@ -30,6 +31,7 @@ import { MeService } from './me.service';
     EntityResolverModule,
     InAppNotificationModule,
     MessagingModule,
+    McpServerModule,
   ],
   providers: [
     MeService,
