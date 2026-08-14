@@ -1,8 +1,7 @@
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { CollaboraDocumentEventsService } from '@domain/collaboration/collabora-document/events/collabora.document.events.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
-import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { CollaboraDocumentResolverMutations } from './collabora.document.resolver.mutations';
@@ -19,8 +18,7 @@ describe('CollaboraDocumentResolverMutations', () => {
   let resolver: CollaboraDocumentResolverMutations;
   let authorizationService: AuthorizationService;
   let collaboraDocumentService: CollaboraDocumentService;
-  let contributionReporter: ContributionReporterService;
-  let communityResolverService: CommunityResolverService;
+  let collaboraDocumentEventsService: CollaboraDocumentEventsService;
 
   const fileUpload = () =>
     ({
@@ -33,7 +31,18 @@ describe('CollaboraDocumentResolverMutations', () => {
     vi.restoreAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [CollaboraDocumentResolverMutations, MockWinstonProvider],
+      providers: [
+        CollaboraDocumentResolverMutations,
+        {
+          provide: CollaboraDocumentEventsService,
+          useValue: {
+            publishOpened: vi.fn(),
+            publishReplaced: vi.fn(),
+            publishUploaded: vi.fn(),
+          },
+        },
+        MockWinstonProvider,
+      ],
     })
       .useMocker(defaultMockerFactory)
       .compile();
@@ -41,8 +50,7 @@ describe('CollaboraDocumentResolverMutations', () => {
     resolver = module.get(CollaboraDocumentResolverMutations);
     authorizationService = module.get(AuthorizationService);
     collaboraDocumentService = module.get(CollaboraDocumentService);
-    contributionReporter = module.get(ContributionReporterService);
-    communityResolverService = module.get(CommunityResolverService);
+    collaboraDocumentEventsService = module.get(CollaboraDocumentEventsService);
   });
 
   it('should be defined', () => {
@@ -69,15 +77,9 @@ describe('CollaboraDocumentResolverMutations', () => {
         id: 'collab-doc-1',
         profile: { displayName: 'A New Title' },
       } as any);
-      vi.mocked(
-        communityResolverService.getCommunityForCollaboraDocumentOrFail
-      ).mockResolvedValue({ id: 'community-1' } as any);
-      vi.mocked(
-        communityResolverService.getLevelZeroSpaceIdForCommunity
-      ).mockResolvedValue('space-root');
     };
 
-    it('enforces UPDATE, applies the chosen displayName via the rename path, and reports COLLABORA_DOCUMENT_REPLACED on success', async () => {
+    it('enforces UPDATE, completes swap and rename, then publishes one replaced event', async () => {
       wireHappyPath();
       const actorContext = { actorID: 'user-1' } as any;
 
@@ -112,14 +114,24 @@ describe('CollaboraDocumentResolverMutations', () => {
       ).toHaveBeenCalledWith('collab-doc-1', 'A New Title');
 
       expect(
-        contributionReporter.calloutCollaboraDocumentReplaced
-      ).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 'collab-doc-1',
-          name: 'A New Title',
-          space: 'space-root',
-        }),
-        actorContext
+        collaboraDocumentEventsService.publishReplaced
+      ).toHaveBeenCalledOnce();
+      expect(
+        collaboraDocumentEventsService.publishReplaced
+      ).toHaveBeenCalledWith('collab-doc-1', 'A New Title', actorContext);
+      expect(
+        vi.mocked(collaboraDocumentService.replaceCollaboraDocument).mock
+          .invocationCallOrder[0]
+      ).toBeLessThan(
+        vi.mocked(collaboraDocumentService.updateCollaboraDocument).mock
+          .invocationCallOrder[0]
+      );
+      expect(
+        vi.mocked(collaboraDocumentService.updateCollaboraDocument).mock
+          .invocationCallOrder[0]
+      ).toBeLessThan(
+        vi.mocked(collaboraDocumentEventsService.publishReplaced).mock
+          .invocationCallOrder[0]
       );
 
       expect(result.id).toBe('collab-doc-1');
@@ -157,6 +169,13 @@ describe('CollaboraDocumentResolverMutations', () => {
       expect(
         collaboraDocumentService.replaceCollaboraDocument
       ).toHaveBeenCalledTimes(1);
+      expect(
+        collaboraDocumentEventsService.publishReplaced
+      ).toHaveBeenCalledWith(
+        'collab-doc-1',
+        'Quarterly Report',
+        expect.objectContaining({ actorID: 'user-1' })
+      );
     });
 
     it('refuses when the caller lacks UPDATE and never touches the document', async () => {
@@ -183,23 +202,27 @@ describe('CollaboraDocumentResolverMutations', () => {
       expect(
         collaboraDocumentService.replaceCollaboraDocument
       ).not.toHaveBeenCalled();
+      expect(
+        collaboraDocumentEventsService.publishReplaced
+      ).not.toHaveBeenCalled();
     });
 
-    it('still returns the swapped document when analytics reporting fails (best-effort, FR-014)', async () => {
+    it('does not publish when replacement fails', async () => {
       wireHappyPath();
       vi.mocked(
-        communityResolverService.getCommunityForCollaboraDocumentOrFail
-      ).mockRejectedValue(new Error('community lookup down'));
+        collaboraDocumentService.replaceCollaboraDocument
+      ).mockRejectedValue(new Error('replacement failed'));
 
-      const result = await resolver.replaceCollaboraDocument(
-        { actorID: 'user-1' } as any,
-        { ID: 'collab-doc-1' },
-        fileUpload()
-      );
+      await expect(
+        resolver.replaceCollaboraDocument(
+          { actorID: 'user-1' } as any,
+          { ID: 'collab-doc-1' },
+          fileUpload()
+        )
+      ).rejects.toThrow('replacement failed');
 
-      expect(result.id).toBe('collab-doc-1');
       expect(
-        contributionReporter.calloutCollaboraDocumentReplaced
+        collaboraDocumentEventsService.publishReplaced
       ).not.toHaveBeenCalled();
     });
   });
