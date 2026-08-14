@@ -9,6 +9,7 @@ import { RelationshipNotFoundException } from '@common/exceptions/relationship.n
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { Injectable } from '@nestjs/common';
 import { IDocument } from './document.interface';
 @Injectable()
@@ -39,7 +40,35 @@ export class DocumentAuthorizationService {
     // skip the tagset leg. `authorization` is eager on every AuthorizableEntity,
     // so a LOADED tagset always carries its policy; a tagset present WITHOUT one
     // is a genuine relation/data defect and still throws.
-    if (document.tagset && !document.tagset.authorization) {
+    //
+    // "No tagset" and "tagset NOT LOADED" are distinguished by `null` vs
+    // `undefined`, and that distinction is load-bearing: skipping BOTH would let
+    // any caller that forgets `relations: { documents: { tagset: true } }` leave
+    // every document's tagset policy stale platform-wide, with no error and no
+    // log. TypeORM makes the two states unambiguous — a to-one relation that was
+    // JOINED but matched no row is set to `null`
+    // (RawSqlResultsToEntityTransformer.transformJoins: "this is needed to make
+    // relations to return null when its joined but nothing was found in the
+    // database"), while a relation that was never joined is never assigned at
+    // all. The FK column is not mapped on the entity (`Document.tagset` is a
+    // bare `@OneToOne` + `@JoinColumn()`, no `tagsetId` property), so this is
+    // the available sound discriminator. Every cascade caller today requests
+    // the relation explicitly, and `tagset` is additionally `eager: true` —
+    // which TypeORM also applies to nested joined relations — so `undefined`
+    // here really does mean the document was not loaded for auth work.
+    //
+    // The cast is deliberate: `IDocument.tagset` is declared non-nullable
+    // because the GraphQL field is, but a loaded-and-absent relation is `null`
+    // and an unloaded one is `undefined`, so the declared type cannot express
+    // the state actually being discriminated.
+    const tagset = document.tagset as ITagset | null | undefined;
+    if (tagset === undefined) {
+      throw new RelationshipNotFoundException(
+        `Unable to find entities required to reset auth for Document ${document.id}: tagset relation not loaded`,
+        LogContext.STORAGE_BUCKET
+      );
+    }
+    if (tagset && !tagset.authorization) {
       throw new RelationshipNotFoundException(
         `Unable to find entities required to reset auth for Document ${document.id} `,
         LogContext.STORAGE_BUCKET

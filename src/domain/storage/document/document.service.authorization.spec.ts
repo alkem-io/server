@@ -130,12 +130,16 @@ describe('DocumentAuthorizationService', () => {
       // staging row the Synapse provider creates without one and whose re-home
       // MOVE cannot add one. Throwing here aborted the ENTIRE parent cascade, so
       // one such document broke the whole conversation/space auth reset.
+      //
+      // `null`, NOT `undefined`: TypeORM sets a to-one relation that WAS joined
+      // but matched no row to `null`. That is what "loaded, and there genuinely
+      // is no tagset" looks like on a real entity.
       const docAuth = { id: 'auth-3' };
       const document = {
         id: 'doc-3',
         createdBy: undefined,
         authorization: docAuth,
-        tagset: undefined,
+        tagset: null,
       } as unknown as IDocument;
 
       const inheritedAuth = { id: 'inherited' };
@@ -155,6 +159,26 @@ describe('DocumentAuthorizationService', () => {
       expect(authorizationPolicyService.saveAll).toHaveBeenCalledWith([
         inheritedAuth,
       ]);
+    });
+
+    it('A2: throws when the tagset relation was NOT LOADED, so a forgotten relation spec cannot silently leave tagset policies stale', async () => {
+      // `undefined` is the OTHER state: TypeORM never assigns a relation it did
+      // not join. Skipping it like the `null` case above would mean any auth
+      // path that forgets `relations: { documents: { tagset: true } }` leaves
+      // every document's tagset policy stale, with no error and no log.
+      const document = {
+        id: 'doc-3b',
+        createdBy: undefined,
+        authorization: { id: 'auth-3b' },
+        tagset: undefined,
+      } as unknown as IDocument;
+
+      await expect(
+        service.applyAuthorizationPolicy(document, undefined)
+      ).rejects.toThrow(RelationshipNotFoundException);
+
+      // Nothing is persisted on the error path.
+      expect(authorizationPolicyService.saveAll).not.toHaveBeenCalled();
     });
 
     it('should throw RelationshipNotFoundException when tagset authorization is missing', async () => {
