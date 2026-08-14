@@ -1,6 +1,7 @@
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { createMock } from '@golevelup/ts-vitest';
 import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
+import { McpApiKeyService } from '@services/mcp-server/auth/mcp-api-key.service';
 import { LogContext } from '@src/common/enums';
 import { MeResolverFields } from './me.resolver.fields';
 import { MeService } from './me.service';
@@ -14,6 +15,7 @@ describe('MeResolverFields', () => {
   let inAppNotificationService: ReturnType<
     typeof createMock<InAppNotificationService>
   >;
+  let mcpApiKeyServiceMock: ReturnType<typeof createMock<McpApiKeyService>>;
   // A plain stub injected as the resolver's logger. Deliberately NOT a
   // `vi.spyOn(Logger.prototype, …)`: vitest runs with `isolate: false`, so a
   // prototype spy that is never restored leaks a no-op logger into every later
@@ -43,10 +45,14 @@ describe('MeResolverFields', () => {
       5
     );
 
+    mcpApiKeyServiceMock = createMock<McpApiKeyService>();
+    mcpApiKeyServiceMock.listUserKeysForProjection.mockResolvedValue([]);
+
     resolver = new MeResolverFields(
       meService,
       userLookupService,
       inAppNotificationService,
+      mcpApiKeyServiceMock,
       logger as any
     );
   });
@@ -268,6 +274,54 @@ describe('MeResolverFields', () => {
   it('should return mySpaces', async () => {
     const result = await resolver.mySpaces(actorContext, 10);
     expect(result).toEqual([]);
+  });
+
+  describe('mcpApiKeys (workspace#038)', () => {
+    it('returns an empty array when actorID is missing, without throwing', async () => {
+      const result = await resolver.mcpApiKeys(anonymousActorContext);
+      expect(result).toEqual([]);
+    });
+
+    it('does not call the service when actorID is missing', async () => {
+      await resolver.mcpApiKeys(anonymousActorContext);
+      expect(
+        mcpApiKeyServiceMock.listUserKeysForProjection
+      ).not.toHaveBeenCalled();
+    });
+
+    it("returns only the caller's keys, newest first, incl. revoked/expired, with no keyHash (FR-008/FR-009, US2-AS2)", async () => {
+      const now = new Date('2026-08-12T00:00:00.000Z');
+      const older = new Date('2026-08-01T00:00:00.000Z');
+      mcpApiKeyServiceMock.listUserKeysForProjection.mockResolvedValue([
+        {
+          id: 'k-new',
+          name: 'new key',
+          scopes: [{ operations: ['read'] }],
+          createdDate: now,
+          isActive: true,
+        },
+        {
+          id: 'k-revoked',
+          name: 'revoked key',
+          scopes: [{ operations: ['tools'] }],
+          createdDate: older,
+          isActive: false,
+        },
+      ] as any);
+
+      const result = await resolver.mcpApiKeys(actorContext);
+
+      expect(
+        mcpApiKeyServiceMock.listUserKeysForProjection
+      ).toHaveBeenCalledWith(actorContext.actorID);
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe('k-new');
+      expect(result[1].id).toBe('k-revoked');
+      expect(result[1].status).toBe('revoked');
+      for (const key of result) {
+        expect(key).not.toHaveProperty('keyHash');
+      }
+    });
   });
 
   describe('conversations degradation', () => {

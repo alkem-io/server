@@ -35,4 +35,7 @@ export enum PlatformAuditOutcome {
   // execution of an operational/maintenance mutation.
   OPERATION_SUCCEEDED = 'operation_succeeded',
   OPERATION_FAILED = 'operation_failed',
+  // MCP API key lifecycle (workspace#038).
+  KEY_MINTED = 'key_minted',
+  KEY_REVOKED = 'key_revoked',
 }

@@ -106,6 +106,13 @@ export class McpApiKeyStrategy extends PassportStrategy(
     (
       request as IncomingMessage & { mcpApiKeyScopes?: McpApiKeyScope[] }
     ).mcpApiKeyScopes = validatedKey.scopes;
+    // Expose the validated key's id alongside the scopes (workspace#038,
+    // FR-013): the controller threads this into the session so a LATER
+    // request on the same session — one that carries no bearer of its own —
+    // can revalidate the originating key rather than trusting a stale
+    // identity forever.
+    (request as IncomingMessage & { mcpApiKeyId?: string }).mcpApiKeyId =
+      validatedKey.id;
     this.logger.verbose?.(
       `MCP API key authenticated: actorID=${actorContext.actorID}${validatedKey.actorId ? ' (actor-bound, system-invoked)' : ''}`,
       LogContext.MCP_SERVER
