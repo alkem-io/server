@@ -241,10 +241,11 @@ export class StorageBucketService {
     }
     this.validateSize(storage, buffer.length);
 
-    // Conversation buckets (feature 013) must NEVER content-dedup — see
-    // requiresPerUploaderDocuments.
+    // Conversation buckets and staged (temporary) uploads must NEVER
+    // content-dedup — see requiresPerUploaderDocuments.
     const effectiveSkipDedup =
-      skipDedup || this.requiresPerUploaderDocuments(storage);
+      skipDedup ||
+      this.requiresPerUploaderDocuments(storage, temporaryLocation);
 
     return this.persistDocumentWithPreparedAuth(
       storageBucketId,
@@ -265,11 +266,37 @@ export class StorageBucketService {
   }
 
   /**
-   * Whether every upload into this bucket must get its OWN row rather than
-   * being collapsed into an existing one by file-service's per-bucket CONTENT
-   * dedup. True for CONVERSATION buckets (feature 013).
+   * Whether this upload must get its OWN row rather than being collapsed into
+   * an existing one by file-service's per-bucket CONTENT dedup. True for
+   * CONVERSATION buckets, and for any STAGED (`temporaryLocation`) upload
+   * (feature 013).
    *
-   * WHY: a conversation bucket is SHARED by every member, and message
+   * WHY THE `temporaryLocation` LEG: message attachments are not only sent in
+   * conversation rooms. A callout/post COMMENT-room attachment uploads into the
+   * parent callout's pre-existing COLLABORATION bucket (see
+   * MessageAttachmentService.getCommentRoomParentBucket), where the callout's own
+   * content media already lives — and that bucket hangs off the SPACE storage
+   * aggregator, indistinguishable by type from every other space bucket, so the
+   * bucket-type test below neither covers it nor could be widened to. Content
+   * dedup there hands the sender a PRE-EXISTING durable row.
+   * `resolveOutboundAttachments` then rejects it with 'Attachment is not owned by
+   * the sender' or 'Attachment has already been sent' for a perfectly ordinary
+   * file. `temporaryLocation` is the right discriminator because it is exactly
+   * the attachment path and nothing else in that bucket: a sendable attachment
+   * MUST be a fresh unsent upload (the send path's single-use gate requires
+   * `temporaryLocation === true`), while callout/post CONTENT uploads into the
+   * same bucket are durable from the start and keep deduping untouched.
+   *
+   * It is also the correct rule independently of 013: a staged upload is by
+   * definition a row its uploader will later MUTATE (move bucket, flip durable,
+   * or roll back — see TemporaryStorageService.moveTemporaryDocuments), so
+   * handing back a row that belongs to someone else, or one already committed,
+   * is never what the caller asked for. Same reasoning already applied
+   * explicitly by the Collabora create/replace flows, which pass both
+   * `temporaryLocation: true` and `skipDedup: true` "so this doc owns its own
+   * backing row".
+   *
+   * WHY (bucket type): a conversation bucket is SHARED by every member, and message
    * attachments are attributed by `createdBy` on both the send and the read
    * path — the outbound send requires the document to be owned by the sender
    * and to still be an unsent (`temporaryLocation`) upload, and the read
@@ -295,8 +322,11 @@ export class StorageBucketService {
    * Collabora documents and profile-document re-uploads, where each entity
    * likewise must own its backing row.
    */
-  private requiresPerUploaderDocuments(storageBucket: IStorageBucket): boolean {
-    return this.isConversationBucket(storageBucket);
+  private requiresPerUploaderDocuments(
+    storageBucket: IStorageBucket,
+    temporaryLocation: boolean
+  ): boolean {
+    return temporaryLocation || this.isConversationBucket(storageBucket);
   }
 
   /**

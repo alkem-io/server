@@ -391,6 +391,94 @@ describe('StorageBucketService', () => {
         );
       });
 
+      it('forces skipDedup on a CONVERSATION bucket even for a DURABLE upload (bucket-type leg)', async () => {
+        arrangeUpload(
+          mockStorageBucket({
+            id: 'bucket-conversation-durable',
+            storageAggregator: {
+              id: 'agg-conversation',
+              type: StorageAggregatorType.CONVERSATION,
+            } as any,
+          })
+        );
+
+        await service.uploadFileAsDocumentFromBuffer(
+          'bucket-conversation-durable',
+          Buffer.alloc(1024),
+          'logo.png',
+          MimeTypeVisual.PNG,
+          'bob',
+          false // temporaryLocation OFF — isolates the bucket-type leg
+        );
+
+        expect(fileServiceAdapter.createDocument).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ skipDedup: true })
+        );
+      });
+
+      it('forces skipDedup for a STAGED upload into a callout collaboration bucket (comment-room attachments)', async () => {
+        // A callout/post comment-room attachment uploads into the parent
+        // callout's collaboration bucket, which hangs off the SPACE aggregator
+        // — so the conversation-bucket rule does not reach it. Without this,
+        // file-service content-dedup hands the sender the callout's own
+        // pre-existing DURABLE row and resolveOutboundAttachments then rejects
+        // an ordinary file with 'Attachment is not owned by the sender' /
+        // 'Attachment has already been sent'.
+        arrangeUpload(
+          mockStorageBucket({
+            id: 'bucket-callout-collaboration',
+            storageAggregator: {
+              id: 'agg-space',
+              type: StorageAggregatorType.SPACE,
+            } as any,
+          })
+        );
+
+        await service.uploadFileAsDocumentFromBuffer(
+          'bucket-callout-collaboration',
+          Buffer.alloc(1024),
+          'logo.png',
+          MimeTypeVisual.PNG,
+          'bob',
+          true // temporaryLocation — an unsent comment-room attachment upload
+        );
+
+        expect(fileServiceAdapter.createDocument).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ skipDedup: true, createdBy: 'bob' })
+        );
+      });
+
+      it('leaves dedup ON for a DURABLE upload into the same collaboration bucket (callout content is untouched)', async () => {
+        // The non-regression half of the rule above: callout/post CONTENT
+        // uploads into the very same bucket are durable from the start and must
+        // keep deduping exactly as before.
+        arrangeUpload(
+          mockStorageBucket({
+            id: 'bucket-callout-content',
+            storageAggregator: {
+              id: 'agg-space',
+              type: StorageAggregatorType.SPACE,
+            } as any,
+          })
+        );
+
+        await service.uploadFileAsDocumentFromBuffer(
+          'bucket-callout-content',
+          Buffer.alloc(1024),
+          'logo.png',
+          MimeTypeVisual.PNG,
+          'bob',
+          false // temporaryLocation — a normal callout content upload
+        );
+
+        expect(fileServiceAdapter.createDocument).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ skipDedup: undefined })
+        );
+      });
+
       it('leaves dedup ON for every other bucket type', async () => {
         arrangeUpload(
           mockStorageBucket({
