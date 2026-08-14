@@ -13,6 +13,7 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -61,6 +62,18 @@ describe('ConversationService', () => {
         repositoryProviderMockFactory(Conversation),
         repositoryProviderMockFactory(ConversationMembership),
         MockWinstonProvider,
+        // Feature 013 attachments ON for the default suite — the eager
+        // per-conversation storage provisioning is gated on this flag.
+        {
+          provide: ConfigService,
+          useValue: {
+            get: vi.fn((key: string) =>
+              key === 'communications.message_attachments.enabled'
+                ? true
+                : undefined
+            ),
+          },
+        },
       ],
     })
       .useMocker(defaultMockerFactory)
@@ -1060,6 +1073,60 @@ describe('ConversationService', () => {
       expect(storageAggregatorService.delete).toHaveBeenCalledTimes(1);
       // The room RPC is never reached — the failure is in storage creation.
       expect(roomService.createRoom).not.toHaveBeenCalled();
+    });
+
+    it('does NOT provision storage when the message-attachments flag is OFF (its shipped default)', async () => {
+      // Every read/write attachment path is flag-gated; the provisioning must be
+      // too. With the flag off (the default) a conversation creation committed
+      // four extra rows — storage_aggregator + bucket + 2 authorization_policy —
+      // in a separate transaction on the creation hot path, plus a
+      // compensating-delete failure mode, for a feature that is disabled.
+      const disabledModule: TestingModule = await Test.createTestingModule({
+        providers: [
+          ConversationService,
+          repositoryProviderMockFactory(Conversation),
+          repositoryProviderMockFactory(ConversationMembership),
+          MockWinstonProvider,
+          {
+            provide: ConfigService,
+            useValue: { get: vi.fn().mockReturnValue(false) },
+          },
+        ],
+      })
+        .useMocker(defaultMockerFactory)
+        .compile();
+      const disabled = disabledModule.get(ConversationService);
+      const disabledStorageAggregatorService: Mocked<StorageAggregatorService> =
+        disabledModule.get(StorageAggregatorService);
+      const disabledRoomService: Mocked<RoomService> =
+        disabledModule.get(RoomService);
+      const disabledConversationRepo = disabledModule.get(
+        getRepositoryToken(Conversation)
+      );
+      const disabledMembershipRepo = disabledModule.get(
+        getRepositoryToken(ConversationMembership)
+      );
+      (disabledMembershipRepo as any).manager = { find: vi.fn() };
+      disabledRoomService.createRoom.mockResolvedValue({ id: 'room-1' } as any);
+      disabledConversationRepo.save.mockResolvedValue({
+        id: 'conv-new',
+      } as Conversation);
+      disabledMembershipRepo.create.mockImplementation((d: any) => d);
+      disabledMembershipRepo.save.mockResolvedValue([] as any);
+
+      const conversation = await disabled.createConversation(
+        'agent-1',
+        ['agent-2'],
+        RoomType.CONVERSATION_DIRECT
+      );
+
+      expect(conversation).toBeDefined();
+      expect(
+        disabledStorageAggregatorService.createStorageAggregator
+      ).not.toHaveBeenCalled();
+      // The conversation is still created — "no bucket yet" is an accepted,
+      // backfillable state that Conversation.storageBucket resolves to null.
+      expect(disabledConversationRepo.save).toHaveBeenCalled();
     });
 
     it('B2: does NOT destroy the storage when the conversation row is already committed', async () => {
