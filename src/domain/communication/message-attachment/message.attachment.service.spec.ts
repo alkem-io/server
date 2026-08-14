@@ -1287,14 +1287,19 @@ describe('MessageAttachmentService', () => {
       expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith('doc-D', {
         externalReference: 'media-Y',
       });
-      // (2) twin looked up scoped to matrix_media, then deleted.
+      // (2) twin looked up scoped to matrix_media, then deleted — via the
+      // CANONICAL DocumentService path, which also releases the server-owned
+      // auth-policy + tagset rows. The raw adapter delete leaks those, so this
+      // call site must never use it (the invariant MessageAttachmentCleanup
+      // states and enforces).
       expect(fileServiceAdapter.getDocumentByReference).toHaveBeenCalledWith(
         'media-Y',
         MATRIX_MEDIA_BUCKET
       );
-      expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith(
-        'doc-twin'
-      );
+      expect(documentService.deleteDocument).toHaveBeenCalledWith({
+        ID: 'doc-twin',
+      });
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
       // No re-home of the echo.
       expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
     });
@@ -1318,7 +1323,7 @@ describe('MessageAttachmentService', () => {
 
       // The stamp is NEVER re-applied (no overwrite of the existing reference).
       expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+      expect(documentService.deleteDocument).not.toHaveBeenCalled();
     });
 
     it('confused-deputy guard: rejects a forged echo whose document_id is owned by another member — no stamp AND no pin', async () => {
@@ -1339,7 +1344,7 @@ describe('MessageAttachmentService', () => {
       ]);
 
       expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+      expect(documentService.deleteDocument).not.toHaveBeenCalled();
     });
 
     it('no-overwrite guard: skips when media_id already resolves to a different document in the bucket', async () => {
@@ -1362,7 +1367,7 @@ describe('MessageAttachmentService', () => {
       ]);
 
       expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+      expect(documentService.deleteDocument).not.toHaveBeenCalled();
     });
 
     it('confused-deputy guard: ignores an echo whose document_id is not in the room bucket', async () => {
@@ -1377,7 +1382,7 @@ describe('MessageAttachmentService', () => {
       ]);
 
       expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+      expect(documentService.deleteDocument).not.toHaveBeenCalled();
     });
 
     it('echo without media_id + durable doc → nothing to do (no twin work possible, nothing to pin)', async () => {
@@ -1401,7 +1406,7 @@ describe('MessageAttachmentService', () => {
       ]);
 
       expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+      expect(documentService.deleteDocument).not.toHaveBeenCalled();
       expect(fileServiceAdapter.getDocumentByReference).not.toHaveBeenCalled();
     });
 
@@ -1430,7 +1435,7 @@ describe('MessageAttachmentService', () => {
         temporaryLocation: false,
       });
       expect(fileServiceAdapter.getDocumentByReference).not.toHaveBeenCalled();
-      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+      expect(documentService.deleteDocument).not.toHaveBeenCalled();
     });
 
     it('full-gate [0]: echo WITH media_id + temporary doc → the pin is FOLDED into the stamp (one PATCH)', async () => {
@@ -1459,9 +1464,9 @@ describe('MessageAttachmentService', () => {
         temporaryLocation: false,
       });
       // Twin cleanup unaffected.
-      expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith(
-        'doc-twin'
-      );
+      expect(documentService.deleteDocument).toHaveBeenCalledWith({
+        ID: 'doc-twin',
+      });
     });
 
     it('full-gate [0]: already stamped to this doc but STILL temporary → standalone pin issued', async () => {
@@ -1487,7 +1492,7 @@ describe('MessageAttachmentService', () => {
       expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith('doc-D', {
         temporaryLocation: false,
       });
-      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+      expect(documentService.deleteDocument).not.toHaveBeenCalled();
     });
 
     it('no-overwrite: skips when D already carries a DIFFERENT externalReference', async () => {
@@ -1515,7 +1520,7 @@ describe('MessageAttachmentService', () => {
 
       // Neither the overwrite stamp nor the twin delete fires.
       expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+      expect(documentService.deleteDocument).not.toHaveBeenCalled();
     });
 
     it('stamps when D has no existing externalReference (unset slot)', async () => {
@@ -1540,9 +1545,9 @@ describe('MessageAttachmentService', () => {
       expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith('doc-D', {
         externalReference: 'media-Y',
       });
-      expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith(
-        'doc-twin'
-      );
+      expect(documentService.deleteDocument).toHaveBeenCalledWith({
+        ID: 'doc-twin',
+      });
     });
 
     it('idempotent: no re-stamp when D already references exactly media_id', async () => {
@@ -1564,7 +1569,7 @@ describe('MessageAttachmentService', () => {
 
       // The reference is identical → no stamp, and nothing to delete.
       expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+      expect(documentService.deleteDocument).not.toHaveBeenCalled();
     });
   });
 
@@ -1723,11 +1728,6 @@ describe('MessageAttachmentService', () => {
       expect(result).toEqual([expect.objectContaining({ id: 'doc-1' })]);
     });
 
-    it('attribution-spoof: ignores an outbound document_id owned by another member (forged under the sender)', async () => {
-      // The message claims to be from sender-1, but document_id points at a doc
-      // owned by another member that lives in the same conversation bucket.
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-victim',
     it('read-heal (full-gate [0]): a viewer DENIED by the READ gate triggers no pin at all', async () => {
       // Ordering matters: the heal is a maintenance write, not part of deciding
       // what a viewer may see. A denied viewer opening a room full of unpinned
@@ -1880,6 +1880,11 @@ describe('MessageAttachmentService', () => {
       ]);
     });
 
+    it('attribution-spoof: ignores an outbound document_id owned by another member (forged under the sender)', async () => {
+      // The message claims to be from sender-1, but document_id points at a doc
+      // owned by another member that lives in the same conversation bucket.
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-victim',
         createdBy: 'victim-member',
         storageBucket: { id: CONV_BUCKET },
         authorization: { id: 'doc-auth' },

@@ -718,12 +718,22 @@ export class MessageAttachmentService {
     // (2) Delete the redundant matrix_media staging twin D′ (shares D's blob,
     // which survives because D now references it). Scoped to the matrix_media
     // bucket so we never touch D itself (now also carrying the reference).
+    //
+    // Via the CANONICAL DocumentService.deleteDocument, not the raw
+    // fileServiceAdapter.deleteDocument: the canonical path also releases the
+    // server-owned auth-policy + tagset rows named in the DeleteDocumentResult,
+    // which a direct adapter delete would leak. Today a provider-minted staging
+    // twin has neither, so nothing leaks either way — but the invariant is
+    // stated and enforced in exactly one place (see
+    // MessageAttachmentCleanupService) and must not have a second, divergent
+    // delete site. Costs one extra `file` read (the canonical path loads the row
+    // to return it).
     const twin = await this.fileServiceAdapter.getDocumentByReference(
       mediaId,
       this.matrixMediaBucketId
     );
     if (twin && twin.storageBucketId === this.matrixMediaBucketId) {
-      await this.fileServiceAdapter.deleteDocument(twin.id);
+      await this.documentService.deleteDocument({ ID: twin.id });
     }
   }
 
@@ -1234,16 +1244,6 @@ export class MessageAttachmentService {
       return null;
     }
 
-    return {
-      id: document.id,
-      url: this.documentService.getPubliclyAccessibleURL(document),
-      displayName: document.displayName,
-      mimeType: document.mimeType,
-      size: this.toAttachmentSize(document.size),
-      // The Matrix event's own `info.w`/`info.h` — the same values Element and
-      // every other Matrix client renders. No measurement, no second source.
-      width: this.toImageDimension(raw.width),
-      height: this.toImageDimension(raw.height),
     // Outbound read-heal (full-gate [0], third pin anchor). An OUTBOUND
     // (`document_id`) attachment backs an EXISTING — therefore delivered —
     // message, so finding it still temporary is proof that BOTH the inline
@@ -1294,6 +1294,16 @@ export class MessageAttachmentService {
       }
     }
 
+    return {
+      id: document.id,
+      url: this.documentService.getPubliclyAccessibleURL(document),
+      displayName: document.displayName,
+      mimeType: document.mimeType,
+      size: this.toAttachmentSize(document.size),
+      // The Matrix event's own `info.w`/`info.h` — the same values Element and
+      // every other Matrix client renders. No measurement, no second source.
+      width: this.toImageDimension(raw.width),
+      height: this.toImageDimension(raw.height),
     };
   }
 
@@ -1327,16 +1337,6 @@ export class MessageAttachmentService {
    * whole message read. Non-positive is rejected on top: no image is 0 wide, so
    * `0` is what an unmeasured/unknown sender reports, not a real dimension.
    */
-  private toImageDimension(value: number | undefined): number | undefined {
-    return Number.isInteger(value as number) &&
-      (value as number) > 0 &&
-      (value as number) <= INT32_MAX
-      ? value
-      : undefined;
-  }
-
-  private async resolveAttachmentDocument(
-    raw: ReceivedAttachment,
   /**
    * Narrow a document's byte size to a value the GraphQL/wire layer can carry.
    *
@@ -1370,6 +1370,16 @@ export class MessageAttachmentService {
       : 0;
   }
 
+  private toImageDimension(value: number | undefined): number | undefined {
+    return Number.isInteger(value as number) &&
+      (value as number) > 0 &&
+      (value as number) <= INT32_MAX
+      ? value
+      : undefined;
+  }
+
+  private async resolveAttachmentDocument(
+    raw: ReceivedAttachment,
     storageBucketId: string | undefined,
     senderActorID: string | undefined,
     // C1: this message's inbound (media_id) documents, pre-resolved in ONE
