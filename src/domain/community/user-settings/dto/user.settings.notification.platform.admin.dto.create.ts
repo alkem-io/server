@@ -1,5 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsBoolean } from 'class-validator';
+import { Type } from 'class-transformer';
+import { ValidateNested } from 'class-validator';
 import { CreateUserSettingsNotificationChannelsInput } from './user.settings.notification.dto.channels.create';
 
 @InputType()
@@ -8,7 +9,8 @@ export class CreateUserSettingsNotificationPlatformAdminInput {
     nullable: false,
     description: '[Admin] Receive notification when a new user signs up',
   })
-  @IsBoolean()
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationChannelsInput)
   userProfileCreated!: CreateUserSettingsNotificationChannelsInput;
 
   @Field(() => CreateUserSettingsNotificationChannelsInput, {
@@ -16,7 +18,8 @@ export class CreateUserSettingsNotificationPlatformAdminInput {
     description:
       '[Admin] Receive a notification when a user profile is removed',
   })
-  @IsBoolean()
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationChannelsInput)
   userProfileRemoved!: CreateUserSettingsNotificationChannelsInput;
 
   @Field(() => CreateUserSettingsNotificationChannelsInput, {
@@ -24,15 +27,17 @@ export class CreateUserSettingsNotificationPlatformAdminInput {
     description:
       '[Admin] Receive a notification when a new L0 Space is created',
   })
-  @IsBoolean()
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationChannelsInput)
   spaceCreated!: CreateUserSettingsNotificationChannelsInput;
 
   @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,
     description:
-      '[Admin] Receive a notification user is assigned or removed from a global role',
+      '[Admin] Receive a notification when a user is assigned to or removed from a global role',
   })
-  @IsBoolean()
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationChannelsInput)
   userGlobalRoleChanged!: CreateUserSettingsNotificationChannelsInput;
 
   @Field(() => CreateUserSettingsNotificationChannelsInput, {
@@ -40,6 +45,7 @@ export class CreateUserSettingsNotificationPlatformAdminInput {
     description:
       '[Admin] Receive a notification when a user changes their login email address',
   })
-  @IsBoolean()
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationChannelsInput)
   userEmailChanged!: CreateUserSettingsNotificationChannelsInput;
 }

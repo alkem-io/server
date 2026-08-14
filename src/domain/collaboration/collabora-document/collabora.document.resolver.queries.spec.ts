@@ -1,6 +1,12 @@
 import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import {
+  COLLABORA_DOCUMENT_OPENED,
+  CollaboraDocumentOpened,
+} from '@domain/collaboration/collabora-document/events/collabora.document.analytics.events';
+import { CollaboraDocumentEventsService } from '@domain/collaboration/collabora-document/events/collabora.document.events.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -11,6 +17,8 @@ describe('CollaboraDocumentResolverQueries', () => {
   let resolver: CollaboraDocumentResolverQueries;
   let collaboraDocumentService: CollaboraDocumentService;
   let authorizationService: AuthorizationService;
+  let eventEmitter: EventEmitter2;
+  let collaboraDocumentEventsService: CollaboraDocumentEventsService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -21,7 +29,12 @@ describe('CollaboraDocumentResolverQueries', () => {
       // wrapper as if it were the resolved value for string-token
       // dictionary entries, so `resolver.logger.warn` etc. would otherwise
       // be undefined rather than a spy.
-      providers: [CollaboraDocumentResolverQueries, MockWinstonProvider],
+      providers: [
+        CollaboraDocumentResolverQueries,
+        CollaboraDocumentEventsService,
+        { provide: EventEmitter2, useValue: new EventEmitter2() },
+        MockWinstonProvider,
+      ],
     })
       .useMocker(defaultMockerFactory)
       .compile();
@@ -29,6 +42,8 @@ describe('CollaboraDocumentResolverQueries', () => {
     resolver = module.get(CollaboraDocumentResolverQueries);
     collaboraDocumentService = module.get(CollaboraDocumentService);
     authorizationService = module.get(AuthorizationService);
+    eventEmitter = module.get(EventEmitter2);
+    collaboraDocumentEventsService = module.get(CollaboraDocumentEventsService);
 
     // Platform default language (language.default in alkemio.yml) — the
     // fallback resolveActorLanguage always returns when there's no explicit
@@ -42,7 +57,47 @@ describe('CollaboraDocumentResolverQueries', () => {
   });
 
   describe('collaboraEditorUrl', () => {
-    it('should report COLLABORA_DOCUMENT_OPENED for the opening actor and return the editor URL', async () => {
+    it('loads profile and backing document once and passes the loaded entity to token issuance', async () => {
+      const collaboraDocument = {
+        id: 'collab-doc-1',
+        authorization: { id: 'auth-1' },
+        profile: { displayName: 'Quarterly Report' },
+        document: { id: 'storage-document-1' },
+      } as any;
+      vi.mocked(
+        collaboraDocumentService.getCollaboraDocumentOrFail
+      ).mockResolvedValue(collaboraDocument);
+      vi.mocked(collaboraDocumentService.getEditorUrl).mockResolvedValue({
+        editorUrl: 'https://collabora/editor',
+        accessTokenTTL: 3600,
+      });
+
+      await resolver.collaboraEditorUrl(
+        {
+          actorID: 'guest-1',
+          isGuest: true,
+          guestName: 'Guest One',
+        } as any,
+        'collab-doc-1'
+      );
+
+      expect(
+        collaboraDocumentService.getCollaboraDocumentOrFail
+      ).toHaveBeenCalledOnce();
+      expect(
+        collaboraDocumentService.getCollaboraDocumentOrFail
+      ).toHaveBeenCalledWith('collab-doc-1', {
+        relations: { profile: true, document: true },
+      });
+      expect(collaboraDocumentService.getEditorUrl).toHaveBeenCalledWith(
+        collaboraDocument,
+        'guest-1',
+        'Guest One',
+        'en'
+      );
+    });
+
+    it('publishes one opened event without waiting for its pending listener and returns the editor URL', async () => {
       const collaboraDocument = {
         id: 'collab-doc-1',
         authorization: { id: 'auth-1' },
@@ -57,17 +112,21 @@ describe('CollaboraDocumentResolverQueries', () => {
         accessTokenTTL: 3600,
       });
 
-      const communityResolverService = (resolver as any)
-        .communityResolverService;
-      vi.mocked(
-        communityResolverService.getCommunityForCollaboraDocumentOrFail
-      ).mockResolvedValue({ id: 'community-1' });
-      vi.mocked(
-        communityResolverService.getLevelZeroSpaceIdForCommunity
-      ).mockResolvedValue('space-root');
-
-      const contributionReporter = (resolver as any).contributionReporter;
-      const actorContext = { actorID: 'user-1' } as any;
+      let event: CollaboraDocumentOpened | undefined;
+      eventEmitter.on(COLLABORA_DOCUMENT_OPENED, opened => {
+        event = opened;
+        return new Promise(() => undefined);
+      });
+      const publishSpy = vi.spyOn(
+        collaboraDocumentEventsService,
+        'publishOpened'
+      );
+      const actorContext = {
+        actorID: 'user-1',
+        isAnonymous: false,
+        isGuest: true,
+        guestName: 'Opening Guest',
+      } as any;
 
       const result = await resolver.collaboraEditorUrl(
         actorContext,
@@ -75,18 +134,75 @@ describe('CollaboraDocumentResolverQueries', () => {
       );
 
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
-      expect(contributionReporter.collaboraDocumentOpened).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 'collab-doc-1',
-          name: 'Quarterly Report',
-          space: 'space-root',
-        }),
+      expect(publishSpy).toHaveBeenCalledOnce();
+      expect(publishSpy).toHaveBeenCalledWith(
+        'collab-doc-1',
+        'Quarterly Report',
         actorContext
       );
+      expect(event).toBeInstanceOf(CollaboraDocumentOpened);
+      expect(event).toMatchObject({
+        id: 'collab-doc-1',
+        name: 'Quarterly Report',
+      });
       expect(result).toEqual({
         editorUrl: 'https://collabora/editor',
         accessTokenTTL: 3600,
       });
+    });
+
+    it('does not publish when read authorization fails', async () => {
+      vi.mocked(
+        collaboraDocumentService.getCollaboraDocumentOrFail
+      ).mockResolvedValue({
+        id: 'collab-doc-1',
+        authorization: { id: 'auth-1' },
+        profile: { displayName: 'Quarterly Report' },
+      } as any);
+      vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(
+        () => {
+          throw new Error('authorization denied');
+        }
+      );
+      const publishSpy = vi.spyOn(
+        collaboraDocumentEventsService,
+        'publishOpened'
+      );
+
+      await expect(
+        resolver.collaboraEditorUrl(
+          { actorID: 'user-1', isGuest: false } as any,
+          'collab-doc-1'
+        )
+      ).rejects.toThrow('authorization denied');
+
+      expect(publishSpy).not.toHaveBeenCalled();
+    });
+
+    it('does not publish when editor URL resolution fails', async () => {
+      vi.mocked(
+        collaboraDocumentService.getCollaboraDocumentOrFail
+      ).mockResolvedValue({
+        id: 'collab-doc-1',
+        authorization: { id: 'auth-1' },
+        profile: { displayName: 'Quarterly Report' },
+      } as any);
+      vi.mocked(collaboraDocumentService.getEditorUrl).mockRejectedValue(
+        new Error('WOPI unavailable')
+      );
+      const publishSpy = vi.spyOn(
+        collaboraDocumentEventsService,
+        'publishOpened'
+      );
+
+      await expect(
+        resolver.collaboraEditorUrl(
+          { actorID: 'user-1', isGuest: false } as any,
+          'collab-doc-1'
+        )
+      ).rejects.toThrow('WOPI unavailable');
+
+      expect(publishSpy).not.toHaveBeenCalled();
     });
 
     it("forwards an authenticated user's profile display name to the WOPI service (#6170)", async () => {
@@ -119,7 +235,7 @@ describe('CollaboraDocumentResolverQueries', () => {
 
       expect(actorLookupService.getActorById).toHaveBeenCalledWith('user-1');
       expect(collaboraDocumentService.getEditorUrl).toHaveBeenCalledWith(
-        'collab-doc-1',
+        expect.objectContaining({ id: 'collab-doc-1' }),
         'user-1',
         'Alice Anderson',
         'en'
@@ -158,7 +274,7 @@ describe('CollaboraDocumentResolverQueries', () => {
 
       // Lookup failure is swallowed: name omitted, document still opens.
       expect(collaboraDocumentService.getEditorUrl).toHaveBeenCalledWith(
-        'collab-doc-1',
+        expect.objectContaining({ id: 'collab-doc-1' }),
         'user-1',
         undefined,
         'en'
@@ -200,7 +316,7 @@ describe('CollaboraDocumentResolverQueries', () => {
 
       // '' is coalesced to undefined so WOPI applies its own fallback.
       expect(collaboraDocumentService.getEditorUrl).toHaveBeenCalledWith(
-        'collab-doc-1',
+        expect.objectContaining({ id: 'collab-doc-1' }),
         'user-1',
         undefined,
         'en'
@@ -238,7 +354,7 @@ describe('CollaboraDocumentResolverQueries', () => {
         infer: true,
       });
       expect(collaboraDocumentService.getEditorUrl).toHaveBeenCalledWith(
-        'collab-doc-1',
+        expect.objectContaining({ id: 'collab-doc-1' }),
         'guest-abc',
         'Guest Bob',
         'en'
@@ -273,7 +389,7 @@ describe('CollaboraDocumentResolverQueries', () => {
         relations: { settings: true },
       });
       expect(collaboraDocumentService.getEditorUrl).toHaveBeenCalledWith(
-        'collab-doc-1',
+        expect.objectContaining({ id: 'collab-doc-1' }),
         'user-1',
         undefined,
         'bg'
@@ -306,7 +422,7 @@ describe('CollaboraDocumentResolverQueries', () => {
       await resolver.collaboraEditorUrl(actorContext, 'collab-doc-1');
 
       expect(collaboraDocumentService.getEditorUrl).toHaveBeenCalledWith(
-        'collab-doc-1',
+        expect.objectContaining({ id: 'collab-doc-1' }),
         'user-1',
         undefined,
         'en'
@@ -342,7 +458,7 @@ describe('CollaboraDocumentResolverQueries', () => {
       );
 
       expect(collaboraDocumentService.getEditorUrl).toHaveBeenCalledWith(
-        'collab-doc-1',
+        expect.objectContaining({ id: 'collab-doc-1' }),
         'org-1',
         undefined,
         'en'
@@ -389,7 +505,7 @@ describe('CollaboraDocumentResolverQueries', () => {
 
       // Still best-effort: the document opens regardless.
       expect(collaboraDocumentService.getEditorUrl).toHaveBeenCalledWith(
-        'collab-doc-1',
+        expect.objectContaining({ id: 'collab-doc-1' }),
         'user-1',
         undefined,
         'en'
@@ -415,7 +531,10 @@ describe('CollaboraDocumentResolverQueries', () => {
       vi.mocked(
         collaboraDocumentService.isWopiServiceAvailable
       ).mockResolvedValue(true);
-      const contributionReporter = (resolver as any).contributionReporter;
+      const publishSpy = vi.spyOn(
+        collaboraDocumentEventsService,
+        'publishOpened'
+      );
       const actorContext = { actorID: 'user-1' } as any;
 
       const result = await resolver.collaboraServiceAvailable(
@@ -427,9 +546,7 @@ describe('CollaboraDocumentResolverQueries', () => {
       expect(result).toBe(true);
       // Side-effect-free health check: no token minted, no analytics recorded.
       expect(collaboraDocumentService.getEditorUrl).not.toHaveBeenCalled();
-      expect(
-        contributionReporter.collaboraDocumentOpened
-      ).not.toHaveBeenCalled();
+      expect(publishSpy).not.toHaveBeenCalled();
     });
 
     it('returns false when the WOPI health check reports the service unavailable', async () => {
