@@ -392,9 +392,25 @@ export class NotificationExternalAdapter {
           contribution.memo.nameID
         ),
       };
+    } else if (contribution.collaboraDocument) {
+      contributionPayload = {
+        id: contribution.collaboraDocument.id,
+        type: CalloutContributionType.COLLABORA_DOCUMENT,
+        createdBy: await this.getContributorPayloadOrFail(
+          contribution.createdBy ||
+            contribution.collaboraDocument.createdBy ||
+            ''
+        ),
+        displayName: contribution.collaboraDocument.profile?.displayName ?? '',
+        description: contribution.collaboraDocument.profile?.description ?? '',
+        // Collabora documents have no client deep-link route — the client opens
+        // them in a dialog from the callout page — so the canonical URL is the
+        // containing callout (mirrors UrlGeneratorService + the link branch).
+        url: calloutURL,
+      };
     } else {
       throw new RelationshipNotFoundException(
-        'No valid contribution type found (post, whiteboard, or link)',
+        'No valid contribution type found (post, whiteboard, link, memo, or collabora document)',
         LogContext.NOTIFICATIONS,
         {
           contribution: contribution.id,

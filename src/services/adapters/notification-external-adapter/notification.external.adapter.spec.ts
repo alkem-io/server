@@ -356,6 +356,50 @@ describe('NotificationExternalAdapter', () => {
         CalloutContributionType.MEMO
       );
     });
+
+    it('should build payload for collabora document contribution (regression: server crash on document response)', async () => {
+      mockSetup();
+
+      const result = await adapter.buildSpaceCollaborationCreatedPayload(
+        NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION,
+        'user-1',
+        [],
+        {
+          id: 'space-1',
+          level: 1,
+          about: { profile: { displayName: 'Space' } },
+        } as any,
+        {
+          callout: {
+            id: 'callout-1',
+            framing: {
+              id: 'framing-1',
+              profile: { displayName: 'Callout', description: 'desc' },
+              type: 'POST_COLLECTION',
+            },
+            settings: {
+              contribution: { allowedTypes: ['collabora_document'] },
+            },
+          },
+          contribution: {
+            id: 'contrib-1',
+            createdBy: 'user-1',
+            collaboraDocument: {
+              id: 'collabora-1',
+              createdBy: 'user-1',
+              profile: { displayName: 'Doc', description: 'desc' },
+            },
+          },
+        } as any
+      );
+
+      expect(result.callout.contribution?.type).toBe(
+        CalloutContributionType.COLLABORA_DOCUMENT
+      );
+      expect(result.callout.contribution?.id).toBe('collabora-1');
+      // Collabora documents have no deep link — the URL is the containing callout.
+      expect(result.callout.contribution?.url).toBe('/callout/1');
+    });
   });
 
   describe('buildPlatformUserRemovedNotificationPayload', () => {
