@@ -37,6 +37,14 @@ const FILE_PATH_PREFIX = '/internal/file';
  */
 const DOCUMENT_META_TIMEOUT_MS = 2500;
 
+/**
+ * SHORT timeout for the best-effort read-path durability heal
+ * (`pinDocumentDurableBestEffort`). Same rationale as
+ * `DOCUMENT_META_TIMEOUT_MS`: a self-heal riding a message READ must add at
+ * most this much latency and never the full timeout × retries.
+ */
+const DOCUMENT_PIN_TIMEOUT_MS = 2500;
+
 @Injectable()
 export class FileServiceAdapter extends HttpClientBase {
   private readonly enabled: boolean;
@@ -332,6 +340,58 @@ export class FileServiceAdapter extends HttpClientBase {
         this.logContext
       );
       return null;
+    }
+  }
+
+  /**
+   * Flip a document out of staging (`temporaryLocation = false`) as a
+   * BEST-EFFORT, FULLY ISOLATED call — the READ-path durability heal of feature
+   * 013 (`MessageAttachmentService.resolveReadAttachment`).
+   *
+   * Same isolation contract, and for the same reason, as `getDocumentMeta`:
+   * `Message.attachments` resolves over UNPAGINATED history, so anything issued
+   * from there fans out per attachment per viewer per page load. Routing that
+   * through `sendRequest` would make a single room open in a degraded state
+   * spend N retrying, breaker-accounted calls and trip the SHARED file-service
+   * circuit breaker that guards uploads and pins for the WHOLE platform — the
+   * exact hazard the inbound batching fix (`loadInboundDocuments`) removed from
+   * this path.
+   *
+   * So: a DIRECT axios PATCH with a SHORT timeout (`DOCUMENT_PIN_TIMEOUT_MS`),
+   * ZERO retries, NO breaker accounting, and every failure resolved to `false`
+   * rather than propagating. The heal is idempotent and re-attempted on the next
+   * read, so dropping one costs nothing; it is logged at WARN so a persistently
+   * failing pin stays observable. The `enabled` gate is kept (returns `false`,
+   * does not throw).
+   *
+   * NOT a substitute for `moveDocument` on write paths: those are authoritative
+   * and MUST stay retried + breaker-accounted.
+   */
+  async pinDocumentDurableBestEffort(documentId: string): Promise<boolean> {
+    if (!this.enabled) {
+      return false;
+    }
+
+    const url = `${this.baseUrl}${this.filePath(documentId)}`;
+    try {
+      await firstValueFrom(
+        this.httpService.patch<UpdateDocumentResult>(
+          url,
+          { temporaryLocation: false },
+          { timeout: DOCUMENT_PIN_TIMEOUT_MS }
+        )
+      );
+      return true;
+    } catch (error) {
+      this.logger.warn?.(
+        {
+          message: `${this.logPrefix} Best-effort durability pin failed; it will be retried on the next read`,
+          documentId,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        this.logContext
+      );
+      return false;
     }
   }
 

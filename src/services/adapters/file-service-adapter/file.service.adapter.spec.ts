@@ -49,6 +49,7 @@ describe('FileServiceAdapter', () => {
             request: vi.fn(),
             get: vi.fn(),
             post: vi.fn(),
+            patch: vi.fn(),
           },
         },
         {
@@ -662,7 +663,7 @@ describe('FileServiceAdapter', () => {
           FileServiceAdapter,
           {
             provide: HttpService,
-            useValue: { request: vi.fn(), get: vi.fn() },
+            useValue: { request: vi.fn(), get: vi.fn(), patch: vi.fn() },
           },
           {
             provide: ConfigService,
@@ -690,6 +691,114 @@ describe('FileServiceAdapter', () => {
       ).resolves.toBeNull();
       // No HTTP attempted when disabled.
       expect(disabledHttp.get).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('pinDocumentDurableBestEffort (read-path heal, isolated from the shared breaker)', () => {
+    it('issues ONE direct PATCH with a short timeout and no retries, and reports success', async () => {
+      (httpService.patch as Mock).mockReturnValue(
+        of(axiosResponse({ id: 'doc-1', temporaryLocation: false }))
+      );
+
+      await expect(adapter.pinDocumentDurableBestEffort('doc-1')).resolves.toBe(
+        true
+      );
+
+      expect(httpService.patch).toHaveBeenCalledTimes(1);
+      const [url, body, config] = (httpService.patch as Mock).mock.calls[0];
+      expect(url).toBe('http://file-service:4003/internal/file/doc-1');
+      expect(body).toEqual({ temporaryLocation: false });
+      expect(config.timeout).toBeLessThan(
+        mockConfigValues['storage.file_service.timeout'] as number
+      );
+      // The direct axios call is NOT routed through sendRequest, so nothing on
+      // this path is retried.
+      expect(httpService.request).not.toHaveBeenCalled();
+    });
+
+    it('resolves EVERY failure to false and NEVER throws (a read must not fail on a heal)', async () => {
+      const err500 = new AxiosError('Boom', '500', undefined, null, {
+        status: 500,
+        data: { error: 'internal' },
+        statusText: 'Internal Server Error',
+        headers: {},
+        config: { headers: new AxiosHeaders() },
+      });
+      (httpService.patch as Mock).mockReturnValue(throwError(() => err500));
+      mockLogger.warn.mockClear();
+
+      await expect(adapter.pinDocumentDurableBestEffort('doc-1')).resolves.toBe(
+        false
+      );
+
+      expect(mockLogger.warn).toHaveBeenCalledTimes(1);
+      const [payload, context] = mockLogger.warn.mock.calls[0];
+      expect(payload).toMatchObject({
+        message: expect.stringContaining('Best-effort durability pin failed'),
+        documentId: 'doc-1',
+      });
+      expect(context).toBe(LogContext.STORAGE_BUCKET);
+    });
+
+    it('failing pins never trip the shared breaker guarding uploads', async () => {
+      const err500 = new AxiosError('Boom', '500', undefined, null, {
+        status: 500,
+        data: { error: 'internal' },
+        statusText: 'Internal Server Error',
+        headers: {},
+        config: { headers: new AxiosHeaders() },
+      });
+      (httpService.patch as Mock).mockReturnValue(throwError(() => err500));
+
+      // Ten failed pins — far past the breaker threshold if they counted. This
+      // unpaginated-read fan-out is exactly what the isolation exists for.
+      for (let i = 0; i < 10; i++) {
+        await expect(
+          adapter.pinDocumentDurableBestEffort(`doc-${i}`)
+        ).resolves.toBe(false);
+      }
+
+      // The shared breaker is still CLOSED: a guarded delete reaches the network.
+      (httpService.request as Mock).mockReturnValue(
+        of(axiosResponse({ authorizationId: 'a', tagsetId: 't' }))
+      );
+      await adapter.deleteDocument('doc-x');
+      expect(httpService.request).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns false when the adapter is disabled and issues no HTTP', async () => {
+      const disabledModule = await Test.createTestingModule({
+        providers: [
+          FileServiceAdapter,
+          {
+            provide: HttpService,
+            useValue: { request: vi.fn(), get: vi.fn(), patch: vi.fn() },
+          },
+          {
+            provide: ConfigService,
+            useValue: {
+              get: vi.fn((key: string) =>
+                key === 'storage.file_service.enabled'
+                  ? false
+                  : mockConfigValues[key]
+              ),
+            },
+          },
+          {
+            provide: WINSTON_MODULE_NEST_PROVIDER,
+            useValue: mockLogger,
+          },
+        ],
+      }).compile();
+
+      const disabledAdapter =
+        disabledModule.get<FileServiceAdapter>(FileServiceAdapter);
+      const disabledHttp = disabledModule.get<HttpService>(HttpService);
+
+      await expect(
+        disabledAdapter.pinDocumentDurableBestEffort('doc-1')
+      ).resolves.toBe(false);
+      expect(disabledHttp.patch).not.toHaveBeenCalled();
     });
   });
 
@@ -813,7 +922,7 @@ describe('FileServiceAdapter', () => {
           FileServiceAdapter,
           {
             provide: HttpService,
-            useValue: { request: vi.fn(), get: vi.fn() },
+            useValue: { request: vi.fn(), get: vi.fn(), patch: vi.fn() },
           },
           {
             provide: ConfigService,

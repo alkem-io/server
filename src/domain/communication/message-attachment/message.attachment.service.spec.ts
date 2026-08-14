@@ -1639,9 +1639,15 @@ describe('MessageAttachmentService', () => {
         {} as any
       );
 
-      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith('doc-1', {
-        temporaryLocation: false,
-      });
+      // Healed via the ISOLATED best-effort pin (short timeout, zero retries,
+      // no circuit-breaker accounting) — NEVER the retrying, breaker-accounted
+      // moveDocument, which on an unpaginated history read would fan out one
+      // breaker-accounted write per unpinned attachment and trip the shared
+      // file-service breaker that guards uploads platform-wide.
+      expect(
+        fileServiceAdapter.pinDocumentDurableBestEffort
+      ).toHaveBeenCalledWith('doc-1');
+      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
       expect(result).toEqual([expect.objectContaining({ id: 'doc-1' })]);
     });
 
@@ -1656,7 +1662,7 @@ describe('MessageAttachmentService', () => {
         storageBucket: { id: CONV_BUCKET },
         authorization: { id: 'doc-auth' },
       } as any);
-      fileServiceAdapter.moveDocument.mockRejectedValue(
+      fileServiceAdapter.pinDocumentDurableBestEffort.mockRejectedValue(
         new Error('file-service down')
       );
       authorizationService.isAccessGranted.mockReturnValue(true);
@@ -1677,9 +1683,9 @@ describe('MessageAttachmentService', () => {
       );
 
       // The pin was attempted, rejected — and the read still succeeded.
-      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith('doc-1', {
-        temporaryLocation: false,
-      });
+      expect(
+        fileServiceAdapter.pinDocumentDurableBestEffort
+      ).toHaveBeenCalledWith('doc-1');
       expect(result).toEqual([expect.objectContaining({ id: 'doc-1' })]);
     });
 
@@ -1711,7 +1717,9 @@ describe('MessageAttachmentService', () => {
         {} as any
       );
 
-      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+      expect(
+        fileServiceAdapter.pinDocumentDurableBestEffort
+      ).not.toHaveBeenCalled();
       expect(result).toEqual([expect.objectContaining({ id: 'doc-1' })]);
     });
 
@@ -1720,6 +1728,158 @@ describe('MessageAttachmentService', () => {
       // owned by another member that lives in the same conversation bucket.
       documentService.getDocumentOrFail.mockResolvedValue({
         id: 'doc-victim',
+    it('read-heal (full-gate [0]): a viewer DENIED by the READ gate triggers no pin at all', async () => {
+      // Ordering matters: the heal is a maintenance write, not part of deciding
+      // what a viewer may see. A denied viewer opening a room full of unpinned
+      // attachments must cost ZERO file-service writes.
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-1',
+        createdBy: 'sender-1',
+        displayName: 'pic.png',
+        mimeType: 'image/png',
+        size: 1000,
+        temporaryLocation: true,
+        storageBucket: { id: CONV_BUCKET },
+        authorization: { id: 'doc-auth' },
+      } as any);
+      authorizationService.isAccessGranted.mockReturnValue(false);
+
+      const result = await service.resolveMessageAttachments(
+        {
+          id: 'm1',
+          sender: 'sender-1',
+          storageBucketId: CONV_BUCKET,
+          rawAttachments: [
+            { document_id: 'doc-1', mime_type: 'image/png', size: 1000 },
+          ],
+        } as any,
+        {} as any
+      );
+
+      expect(result).toEqual([]);
+      expect(
+        fileServiceAdapter.pinDocumentDurableBestEffort
+      ).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+    });
+
+    it('read-heal (full-gate [0]): concurrent resolutions of the SAME document issue only ONE pin', async () => {
+      // Bounds the read-path fan-out: an unpaginated history read resolves the
+      // same documents for every concurrent viewer, and a re-read while a pin is
+      // still in flight adds nothing.
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-1',
+        createdBy: 'sender-1',
+        displayName: 'pic.png',
+        mimeType: 'image/png',
+        size: 1000,
+        temporaryLocation: true,
+        storageBucket: { id: CONV_BUCKET },
+        authorization: { id: 'doc-auth' },
+      } as any);
+      authorizationService.isAccessGranted.mockReturnValue(true);
+      documentService.getPubliclyAccessibleURL.mockReturnValue(
+        'https://docs/doc-1'
+      );
+      // The pin stays in flight until both resolutions have run.
+      let releasePin: () => void = () => undefined;
+      fileServiceAdapter.pinDocumentDurableBestEffort.mockReturnValue(
+        new Promise<boolean>(resolve => {
+          releasePin = () => resolve(true);
+        })
+      );
+
+      const pending = service.resolveMessageAttachments(
+        {
+          id: 'm1',
+          sender: 'sender-1',
+          storageBucketId: CONV_BUCKET,
+          rawAttachments: [
+            { document_id: 'doc-1', mime_type: 'image/png', size: 1000 },
+            { document_id: 'doc-1', mime_type: 'image/png', size: 1000 },
+          ],
+        } as any,
+        {} as any
+      );
+      await Promise.resolve();
+      releasePin();
+      await pending;
+
+      expect(
+        fileServiceAdapter.pinDocumentDurableBestEffort
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('size that a GraphQL Int! cannot carry degrades to 0 rather than failing the whole Message', async () => {
+      // `IMessageAttachment.size` is NON-null, so an unrepresentable value would
+      // throw during serialization AFTER resolveMessageAttachments' per-
+      // attachment catch — failing the entire Message, not just this attachment.
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-1',
+        createdBy: 'sender-1',
+        displayName: 'huge.bin',
+        mimeType: 'application/pdf',
+        size: 3_000_000_000, // > INT32_MAX
+        temporaryLocation: false,
+        storageBucket: { id: CONV_BUCKET },
+        authorization: { id: 'doc-auth' },
+      } as any);
+      authorizationService.isAccessGranted.mockReturnValue(true);
+      documentService.getPubliclyAccessibleURL.mockReturnValue(
+        'https://docs/doc-1'
+      );
+
+      const result = await service.resolveMessageAttachments(
+        {
+          id: 'm1',
+          sender: 'sender-1',
+          storageBucketId: CONV_BUCKET,
+          rawAttachments: [
+            { document_id: 'doc-1', mime_type: 'application/pdf', size: 1 },
+          ],
+        } as any,
+        {} as any
+      );
+
+      // Degraded to the "size unknown" sentinel; the attachment still resolves.
+      expect(result).toEqual([
+        expect.objectContaining({ id: 'doc-1', size: 0 }),
+      ]);
+    });
+
+    it('a representable size is passed through verbatim', async () => {
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-1',
+        createdBy: 'sender-1',
+        displayName: 'pic.png',
+        mimeType: 'image/png',
+        size: 1234,
+        temporaryLocation: false,
+        storageBucket: { id: CONV_BUCKET },
+        authorization: { id: 'doc-auth' },
+      } as any);
+      authorizationService.isAccessGranted.mockReturnValue(true);
+      documentService.getPubliclyAccessibleURL.mockReturnValue(
+        'https://docs/doc-1'
+      );
+
+      const result = await service.resolveMessageAttachments(
+        {
+          id: 'm1',
+          sender: 'sender-1',
+          storageBucketId: CONV_BUCKET,
+          rawAttachments: [
+            { document_id: 'doc-1', mime_type: 'image/png', size: 1 },
+          ],
+        } as any,
+        {} as any
+      );
+
+      expect(result).toEqual([
+        expect.objectContaining({ id: 'doc-1', size: 1234 }),
+      ]);
+    });
+
         createdBy: 'victim-member',
         storageBucket: { id: CONV_BUCKET },
         authorization: { id: 'doc-auth' },

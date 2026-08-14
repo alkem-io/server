@@ -185,6 +185,15 @@ export class MessageAttachmentService {
    */
   private readonly rehomeInFlight = new Map<string, Promise<void>>();
 
+  /**
+   * Document ids whose read-path durability heal is currently in flight (see
+   * resolveReadAttachment). Concurrent viewers of the same room resolve the
+   * SAME documents, so without this every viewer would issue its own pin PATCH
+   * for the same still-temporary attachment. Per-process, like rehomeInFlight,
+   * and bounded: an entry exists only for the duration of one PATCH.
+   */
+  private readonly pinHealInFlight = new Set<string>();
+
   constructor(
     private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly fileServiceAdapter: FileServiceAdapter,
@@ -1230,11 +1239,61 @@ export class MessageAttachmentService {
       url: this.documentService.getPubliclyAccessibleURL(document),
       displayName: document.displayName,
       mimeType: document.mimeType,
-      size: document.size,
+      size: this.toAttachmentSize(document.size),
       // The Matrix event's own `info.w`/`info.h` — the same values Element and
       // every other Matrix client renders. No measurement, no second source.
       width: this.toImageDimension(raw.width),
       height: this.toImageDimension(raw.height),
+    // Outbound read-heal (full-gate [0], third pin anchor). An OUTBOUND
+    // (`document_id`) attachment backs an EXISTING — therefore delivered —
+    // message, so finding it still temporary is proof that BOTH the inline
+    // post-send flip (persistOutboundAttachments) and the echo-anchored pin
+    // (coalesceOutboundEcho) failed. Pin it so the 24h staging sweep cannot reap
+    // a delivered attachment.
+    //
+    // POSITION IS DELIBERATE — this sits AFTER the READ gate: a viewer who is
+    // denied the attachment must cost nothing, and the heal is a
+    // maintenance action, not part of resolving what the viewer may see.
+    //
+    // ISOLATION IS DELIBERATE — `pinDocumentDurableBestEffort` is a direct,
+    // short-timeout, ZERO-retry, NON-breaker-accounted PATCH (the same contract
+    // as getDocumentMeta), not `moveDocument`. `Message.attachments` resolves
+    // over UNPAGINATED history, so a single room open in a degraded state would
+    // otherwise issue one retrying, breaker-accounted write per unpinned
+    // attachment and trip the SHARED file-service breaker that guards uploads
+    // platform-wide — exactly the hazard loadInboundDocuments was introduced to
+    // remove from this same path.
+    //
+    // It is kept on the read path rather than dropped because it is the LAST
+    // anchor: the echo-anchored pin runs inside rehomeInboundAttachments' own
+    // per-attachment catch, so a failure there is swallowed and never retried,
+    // leaving no other place that learns a delivered attachment is still
+    // staged. Losing it would turn a two-way transient failure into permanent
+    // loss of a delivered message's file at the 24h sweep.
+    //
+    // Best-effort by construction: it never throws and never blocks the read.
+    if (
+      raw.document_id &&
+      document.temporaryLocation === true &&
+      !this.pinHealInFlight.has(document.id)
+    ) {
+      // In-process de-dup: concurrent viewers of the same room resolve the same
+      // documents, and a re-read while a pin is still in flight adds nothing.
+      // Bounds the fan-out to ONE outstanding heal per document per pod.
+      this.pinHealInFlight.add(document.id);
+      try {
+        // `pinDocumentDurableBestEffort` resolves every failure to `false` and
+        // never rejects; the catch is defence-in-depth so that contract cannot
+        // be broken from the adapter side into a failed read. Same posture as
+        // the send path's getDocumentMeta guard.
+        await this.fileServiceAdapter.pinDocumentDurableBestEffort(document.id);
+      } catch {
+        // Heal skipped; it is retried on the next read.
+      } finally {
+        this.pinHealInFlight.delete(document.id);
+      }
+    }
+
     };
   }
 
@@ -1278,6 +1337,39 @@ export class MessageAttachmentService {
 
   private async resolveAttachmentDocument(
     raw: ReceivedAttachment,
+  /**
+   * Narrow a document's byte size to a value the GraphQL/wire layer can carry.
+   *
+   * `IMessageAttachment.size` is `Int!` — NON-null — so unlike `width`/`height`
+   * there is no "absent" to degrade to: anything `Int` cannot represent
+   * (non-integer, non-finite, negative, or beyond the signed 32-bit range) would
+   * throw during response serialization and, because that happens AFTER
+   * `resolveMessageAttachments`' per-attachment `.catch`, fail the ENTIRE
+   * `Message` rather than one attachment.
+   *
+   * It degrades to `0` — deliberately, as the "size unknown" sentinel. `0` is
+   * the one value that cannot be mistaken for a real attachment size, whereas
+   * clamping to `INT32_MAX` would present a confident, wrong number (a "2 GB"
+   * label on a file of unknown size) and hide the underlying data defect. The
+   * attachment stays fully usable: id, url, name and MIME are unaffected, so it
+   * still renders and downloads. Same convention as `toImageDimension`, which
+   * already treats a non-positive value as "not a real measurement".
+   *
+   * Unreachable through today's schema — `file.size` is `integer NOT NULL`, so
+   * Postgres itself bounds it to int32 and both read paths select the column in
+   * full. The guard is here because that is a schema accident, not a contract:
+   * widening `file.size` to `bigint` (the obvious fix for >2 GiB media) makes
+   * node-postgres hand back a STRING, which would then throw on EVERY
+   * attachment. Cheap insurance against a one-line migration elsewhere.
+   */
+  private toAttachmentSize(value: number | undefined): number {
+    return Number.isInteger(value as number) &&
+      (value as number) >= 0 &&
+      (value as number) <= INT32_MAX
+      ? (value as number)
+      : 0;
+  }
+
     storageBucketId: string | undefined,
     senderActorID: string | undefined,
     // C1: this message's inbound (media_id) documents, pre-resolved in ONE
@@ -1332,31 +1424,10 @@ export class MessageAttachmentService {
           );
           return null;
         }
-        // Outbound read-heal (full-gate [0], secondary anchor): this document
-        // backs an EXISTING — therefore delivered — message, so observing it
-        // still temporary is proof both the inline post-send flip AND the
-        // echo-anchored pin failed. Heal it now so the 24h staging sweep cannot
-        // reap a delivered attachment. This is a READ-path operation (the only
-        // caller is the read resolution path). Best-effort: a pin failure is
-        // logged and must NEVER fail (or block) the read.
-        if (document.temporaryLocation === true) {
-          try {
-            await this.fileServiceAdapter.moveDocument(document.id, {
-              temporaryLocation: false,
-            });
-          } catch (error) {
-            this.logger.warn?.(
-              {
-                message:
-                  'Failed to pin delivered outbound attachment durable on read; will retry on the next read',
-                documentId: document.id,
-                storageBucketId,
-                error: (error as Error)?.message,
-              },
-              LogContext.COMMUNICATION
-            );
-          }
-        }
+        // The outbound read-heal deliberately does NOT run here — it runs in
+        // resolveReadAttachment, AFTER the viewer's READ gate. See the comment
+        // there.
+        //
         // Dims are NOT resolved here: they come off the Matrix event, applied
         // after the READ gate in resolveReadAttachment.
         return { document };
