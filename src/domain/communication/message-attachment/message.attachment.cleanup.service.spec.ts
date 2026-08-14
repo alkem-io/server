@@ -4,6 +4,7 @@ import { DocumentService } from '@domain/storage/document/document.service';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { MESSAGING_REDIS_CLIENT } from '@services/infrastructure/redis-client/messaging-redis.provider';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mocked } from 'vitest';
@@ -24,10 +25,13 @@ describe('MessageAttachmentCleanupService', () => {
   let service: MessageAttachmentCleanupService;
   let documentService: Mocked<DocumentService>;
   let documentRepository: { find: ReturnType<typeof vi.fn> };
+  let redis: { set: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     vi.restoreAllMocks();
     documentRepository = { find: vi.fn() };
+    // Claim won by default — `SET NX` returns 'OK' for the owning replica.
+    redis = { set: vi.fn().mockResolvedValue('OK') };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -38,6 +42,7 @@ describe('MessageAttachmentCleanupService', () => {
           provide: getRepositoryToken(Document),
           useValue: documentRepository,
         },
+        { provide: MESSAGING_REDIS_CLIENT, useValue: redis },
       ],
     })
       .useMocker(defaultMockerFactory)
@@ -88,6 +93,7 @@ describe('MessageAttachmentCleanupService', () => {
           provide: getRepositoryToken(Document),
           useValue: documentRepository,
         },
+        { provide: MESSAGING_REDIS_CLIENT, useValue: redis },
       ],
     })
       .useMocker(defaultMockerFactory)
@@ -97,5 +103,43 @@ describe('MessageAttachmentCleanupService', () => {
     await disabled.sweepStagingDocuments();
 
     expect(documentRepository.find).not.toHaveBeenCalled();
+    // The flag short-circuits BEFORE the claim — a disabled sweep must not even
+    // consume the day's claim, or it would suppress an enabled replica.
+    expect(redis.set).not.toHaveBeenCalled();
+  });
+
+  describe('cross-replica claim', () => {
+    it('claims the run atomically (SET NX + TTL) before touching anything', async () => {
+      documentRepository.find.mockResolvedValue([]);
+
+      await service.sweepStagingDocuments();
+
+      expect(redis.set).toHaveBeenCalledTimes(1);
+      const [key, , exFlag, ttlSeconds, nxFlag] = redis.set.mock.calls[0];
+      expect(key).toBe('msg:attachment:cleanup:claim');
+      expect(exFlag).toBe('EX');
+      expect(ttlSeconds).toBeGreaterThan(0);
+      expect(nxFlag).toBe('NX');
+    });
+
+    it('a replica that LOSES the claim reaps nothing (no duplicate 404/EntityNotFound burst)', async () => {
+      // `SET NX` returns null when the key already exists — another replica owns
+      // this run.
+      redis.set.mockResolvedValue(null);
+
+      await service.sweepStagingDocuments();
+
+      expect(documentRepository.find).not.toHaveBeenCalled();
+      expect(documentService.deleteDocument).not.toHaveBeenCalled();
+    });
+
+    it('fails CLOSED: an unreachable Redis skips the run rather than letting every replica sweep', async () => {
+      redis.set.mockRejectedValue(new Error('redis down'));
+
+      await expect(service.sweepStagingDocuments()).resolves.toBeUndefined();
+
+      expect(documentRepository.find).not.toHaveBeenCalled();
+      expect(documentService.deleteDocument).not.toHaveBeenCalled();
+    });
   });
 });

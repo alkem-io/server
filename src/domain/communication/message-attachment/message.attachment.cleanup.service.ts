@@ -6,11 +6,24 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
+import { MESSAGING_REDIS_CLIENT } from '@services/infrastructure/redis-client/messaging-redis.provider';
 import { AlkemioConfig } from '@src/types/alkemio.config';
+import type { Redis } from 'ioredis';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LessThan, Repository } from 'typeorm';
 
 const STAGING_TTL_MS = 24 * 60 * 60 * 1000; // 24h (FR-012, SC-007)
+
+/** Cross-replica claim key for one daily sweep run. */
+const SWEEP_CLAIM_KEY = 'msg:attachment:cleanup:claim';
+
+/**
+ * How long a claimed run stays claimed. Must comfortably exceed the spread of
+ * a midnight `@Cron` firing across replicas (clock skew, staggered pod starts)
+ * and comfortably precede the NEXT midnight, so a run is claimed exactly once
+ * per day and a crashed claimant cannot block the following day.
+ */
+const SWEEP_CLAIM_TTL_SECONDS = 12 * 60 * 60; // 12h
 
 /**
  * Scheduled cleanup for conversation media (feature 013, T014).
@@ -59,6 +72,20 @@ const STAGING_TTL_MS = 24 * 60 * 60 * 1000; // 24h (FR-012, SC-007)
  * Disabled unless the feature flag is on. If the platform runs an equivalent
  * file-service CronJob, that is authoritative and this can be left off (see
  * plan / infra).
+ *
+ * CROSS-REPLICA CLAIM — mirrors ConversationDigestSweepService (034,
+ * FR-021/D-25): EVERY replica runs the schedule, and the run is claimed by a
+ * single ATOMIC Redis write (the replica whose `SET NX` returns OK owns it), so
+ * there is no leader election and no distributed lock. Without it every API pod
+ * reaps the SAME document set concurrently and the losers log
+ * EntityNotFoundException/404 at ERROR — a false-alarm burst proportional to
+ * (replicas - 1) x stale rows. `SET NX EX` rather than the digest sweep's
+ * `ZREM` only because the unit of work here is DERIVED by a query rather than
+ * enqueued into a due ZSET; the claim principle is identical.
+ *
+ * The claim fails CLOSED (an unreachable Redis skips the run, logged), matching
+ * `ConversationDigestSchedulerService.claimDue`. A skipped daily sweep is
+ * harmless: the rows stay stale and the next run takes them.
  */
 @Injectable()
 export class MessageAttachmentCleanupService {
@@ -69,6 +96,8 @@ export class MessageAttachmentCleanupService {
     private readonly documentService: DocumentService,
     @InjectRepository(Document)
     private readonly documentRepository: Repository<Document>,
+    @Inject(MESSAGING_REDIS_CLIENT)
+    private readonly redis: Redis,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
@@ -83,6 +112,9 @@ export class MessageAttachmentCleanupService {
     if (!this.enabled) {
       return;
     }
+    if (!(await this.claimRun())) {
+      return;
+    }
     const cutoff = new Date(Date.now() - STAGING_TTL_MS);
 
     const reaped = await this.releaseUnsentConversationUploads(cutoff);
@@ -92,6 +124,35 @@ export class MessageAttachmentCleanupService {
         `Conversation media cleanup: released ${reaped} unsent uploads`,
         LogContext.COMMUNICATION
       );
+    }
+  }
+
+  /**
+   * Atomically claim this run for exactly one replica. `SET NX` returning `OK`
+   * IS the claim — the replicas that get `null` simply skip, so there is no
+   * leader election and no lock to release. Fails CLOSED: a Redis error skips
+   * the run (logged) rather than letting every replica reap the same set.
+   */
+  private async claimRun(): Promise<boolean> {
+    try {
+      const claimed = await this.redis.set(
+        SWEEP_CLAIM_KEY,
+        Date.now().toString(),
+        'EX',
+        SWEEP_CLAIM_TTL_SECONDS,
+        'NX'
+      );
+      return claimed === 'OK';
+    } catch (error) {
+      this.logger.warn?.(
+        {
+          message:
+            'Conversation media cleanup: could not claim the sweep run; skipping it on this replica',
+          error: (error as Error)?.message,
+        },
+        LogContext.COMMUNICATION
+      );
+      return false;
     }
   }
 
