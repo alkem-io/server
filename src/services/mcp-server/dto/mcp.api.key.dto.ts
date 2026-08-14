@@ -216,10 +216,18 @@ export function toGraphqlMcpApiKey(row: McpApiKeyProjectionSource): IMcpApiKey {
   // sight of every key, including the good ones, on the only surface that can
   // revoke them. Unknown values degrade to an empty operation list: the key
   // stays listable and stays revocable.
+  // Guard the OUTER array too, not just `scope.operations`. `scopes` is a
+  // NOT NULL jsonb column, but that constrains SQL NULL — it still accepts
+  // JSON `null` and objects, which reach JS as values with no `.flatMap`
+  // (verified against the live column). A legacy row written by the bootstrap
+  // or manual-insert path could therefore throw here, and one throwing row
+  // fails the whole non-nullable `me.mcpApiKeys` field — the same
+  // lose-sight-of-every-key failure the inner filter exists to prevent.
+  const scopes = Array.isArray(row.scopes) ? row.scopes : [];
   const operations = Array.from(
     new Set(
-      row.scopes
-        .flatMap(scope => scope.operations ?? [])
+      scopes
+        .flatMap(scope => scope?.operations ?? [])
         .filter((op): op is McpApiKeyOperation =>
           Object.values(McpApiKeyOperation).includes(op as McpApiKeyOperation)
         )

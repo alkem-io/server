@@ -35,10 +35,8 @@ export class AdminMcpApiKeyResolverMutations {
     @CurrentActor() actorContext: ActorContext,
     @Args('revokeData') input: AdminRevokeMcpApiKeyInput
   ): Promise<IMcpApiKey> {
-    await this.assertPlatformAdmin(
-      actorContext,
-      `adminRevokeMcpApiKey subject=${input.userID}`
-    );
+    // Static description — see the note in admin.mcp.api.key.resolver.fields.ts.
+    await this.assertPlatformAdmin(actorContext, 'adminRevokeMcpApiKey');
     const revoked = await this.mcpApiKeyService.adminRevokeApiKey(
       input.keyID,
       input.userID,

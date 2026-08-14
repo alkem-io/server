@@ -44,10 +44,12 @@ export class AdminMcpApiKeyResolverFields {
     @CurrentActor() actorContext: ActorContext,
     @Args('userID', { type: () => UUID }) userID: string
   ): Promise<IMcpApiKey[]> {
-    await this.assertPlatformAdmin(
-      actorContext,
-      `platformAdmin mcpApiKeys subject=${userID}`
-    );
+    // No subject id in the description: it lands verbatim in the
+    // ForbiddenAuthorizationPolicyException message (authorization.service.ts),
+    // and this repo's convention is that exception messages carry no dynamic
+    // data — identifiers belong in structured `details`. The subject is
+    // already recorded on the audit row for successful operations.
+    await this.assertPlatformAdmin(actorContext, 'platformAdmin mcpApiKeys');
     const rows = await this.mcpApiKeyService.listUserKeysForAdmin(userID);
     return rows.map(toGraphqlMcpApiKey);
   }
