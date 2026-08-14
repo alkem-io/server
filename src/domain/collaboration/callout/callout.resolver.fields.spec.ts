@@ -1,3 +1,4 @@
+import { ReactionType } from '@common/enums/reaction.type';
 import { CalloutMyReactionLoaderCreator } from '@core/dataloader/creators/loader.creators/callout/callout.my.reaction.loader.creator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
@@ -192,7 +193,7 @@ describe('CalloutResolverFields', () => {
       await resolver.reactions(callout as any, userLoader as any);
 
       expect(reactionService.getReactionsForEntity).toHaveBeenCalledWith(
-        expect.anything(),
+        ReactionType.POST,
         'c-1',
         100
       );

@@ -1,5 +1,6 @@
 import { SUBSCRIPTION_CALLOUT_POST_CREATED } from '@common/constants';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { ActorType } from '@common/enums/actor.type';
 import { CalloutAllowedActors } from '@common/enums/callout.allowed.contributors';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
@@ -15,6 +16,7 @@ import { CalloutClosedException } from '@common/exceptions/callout/callout.close
 import { streamToBuffer } from '@common/utils/file.util';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import {
   CalloutPostCreatedPayload,
   DeleteCalloutInput,
@@ -86,6 +88,7 @@ export class CalloutResolverMutations {
     private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly collaborationLicenseService: CollaborationLicenseService,
     private readonly reactionService: ReactionService,
+    private readonly actorLookupService: ActorLookupService,
     @Inject(SUBSCRIPTION_CALLOUT_POST_CREATED)
     private readonly postCreatedSubscription: PubSubEngine
   ) {}
@@ -869,12 +872,26 @@ export class CalloutResolverMutations {
       `react to callout: ${callout.id}`
     );
 
-    // Human users only — VCs and anonymous actors must not react.
+    // Anonymous actors have no actorID and cannot react.
     if (!actorContext.actorID) {
       throw new ValidationException(
         'Authentication is required to react to a Callout',
         LogContext.COLLABORATION,
         { calloutId: callout.id }
+      );
+    }
+
+    // Human users only. Reaction.createdBy is an FK to user(id), so a
+    // non-user actor (e.g. a Virtual Contributor) would violate the FK and
+    // mis-attribute the reaction — reject it before writing.
+    const actorType = await this.actorLookupService.getActorTypeByIdOrFail(
+      actorContext.actorID
+    );
+    if (actorType !== ActorType.USER) {
+      throw new ValidationException(
+        'Only human users can react to a Callout',
+        LogContext.COLLABORATION,
+        { calloutId: callout.id, actorType }
       );
     }
 
@@ -928,6 +945,20 @@ export class CalloutResolverMutations {
       reactionData.calloutID,
       { relations: { authorization: true } }
     );
+
+    // Human users only. Reaction.createdBy is an FK to user(id); a non-user
+    // actor (e.g. a Virtual Contributor) can never own a reaction, so reject
+    // it rather than issue a delete keyed on a non-user id.
+    const actorType = await this.actorLookupService.getActorTypeByIdOrFail(
+      actorContext.actorID
+    );
+    if (actorType !== ActorType.USER) {
+      throw new ValidationException(
+        'Only human users can react to a Callout',
+        LogContext.COLLABORATION,
+        { calloutId: callout.id, actorType }
+      );
+    }
 
     // Idempotent: removal is a no-op if no reaction exists.
     await this.reactionService.removeReaction(

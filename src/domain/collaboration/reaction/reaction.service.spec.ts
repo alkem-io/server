@@ -247,5 +247,25 @@ describe('ReactionService', () => {
         entityID: 'e1',
       });
     });
+
+    it('uses the provided transaction manager repository when one is passed', async () => {
+      const managerRepo = {
+        delete: vi.fn().mockResolvedValue({ affected: 0 }),
+      };
+      const manager = {
+        getRepository: vi.fn().mockReturnValue(managerRepo),
+      } as any;
+
+      await service.deleteAllForEntity(ReactionType.POST, 'e1', manager);
+
+      // The delete is issued through the manager's repository, not the
+      // service's own repository — so it enrolls in the caller's transaction.
+      expect(manager.getRepository).toHaveBeenCalledWith(Reaction);
+      expect(managerRepo.delete).toHaveBeenCalledWith({
+        type: ReactionType.POST,
+        entityID: 'e1',
+      });
+      expect(repo.delete).not.toHaveBeenCalled();
+    });
   });
 });

@@ -36,12 +36,13 @@ import { Space } from '@domain/space/space/space.entity';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { cloneDeep, keyBy, merge, mergeWith } from 'lodash';
 import {
   DeepPartial,
+  EntityManager,
   FindManyOptions,
   FindOneOptions,
   Repository,
@@ -80,6 +81,8 @@ export class CalloutService {
     private classificationService: ClassificationService,
     private roleSetService: RoleSetService,
     private reactionService: ReactionService,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
   ) {}
@@ -624,16 +627,22 @@ export class CalloutService {
     if (callout.authorization)
       await this.authorizationPolicyService.delete(callout.authorization);
 
-    // Remove all reactions for this callout before removing the callout row.
-    // This delete-first ordering ensures no orphaned reaction records can
-    // arise, even on partial failure, because the reaction table has no
-    // database-level FK back to the callout (the polymorphic target reference
-    // is intentionally FK-free). The method is deliberately not wrapped in a
-    // new transaction: deleteCallout performs external side effects (Matrix
-    // room deletion above) that must not sit inside a DB transaction.
-    await this.reactionService.deleteAllForEntity(ReactionType.POST, calloutID);
-
-    const result = await this.calloutRepository.remove(callout as Callout);
+    // The reaction table has no database-level FK back to the callout (the
+    // polymorphic target reference is intentionally FK-free), so its rows must
+    // be removed explicitly. Delete the reactions and remove the callout row in
+    // a single transaction so they commit or roll back together — leaving no
+    // orphaned reactions if the row removal fails, and no lost reactions if it
+    // succeeds. The external side effects above (notably the Matrix room
+    // deletion) run BEFORE this transaction and are deliberately kept outside
+    // it: they are not database work and cannot participate in a DB rollback.
+    const result = await this.entityManager.transaction(async manager => {
+      await this.reactionService.deleteAllForEntity(
+        ReactionType.POST,
+        calloutID,
+        manager
+      );
+      return manager.remove(callout as Callout);
+    });
     result.id = calloutID;
 
     return result;

@@ -14,7 +14,7 @@ import { ClassificationService } from '@domain/common/classification/classificat
 import { RoomService } from '@domain/communication/room/room.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
+import { getEntityManagerToken, getRepositoryToken } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -44,6 +44,9 @@ describe('CalloutService', () => {
   let authorizationPolicyService: AuthorizationPolicyService;
   let reactionService: ReactionService;
   let _storageAggregatorResolverService: StorageAggregatorResolverService;
+  // Transaction-scoped manager handed to the callback by entityManager.transaction.
+  let mockManager: { remove: Mock };
+  let mockEntityManager: { transaction: Mock };
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -55,10 +58,26 @@ describe('CalloutService', () => {
       return entity as any;
     });
 
+    // By default transaction runs its callback immediately with the mock
+    // manager and returns whatever the callback resolves to. Individual tests
+    // can override transaction to simulate a rollback.
+    mockManager = {
+      remove: vi.fn().mockResolvedValue({ id: undefined }),
+    };
+    mockEntityManager = {
+      transaction: vi.fn(async (cb: (m: typeof mockManager) => unknown) =>
+        cb(mockManager)
+      ),
+    };
+
     module = await Test.createTestingModule({
       providers: [
         CalloutService,
         repositoryProviderMockFactory(Callout),
+        {
+          provide: getEntityManagerToken('default'),
+          useValue: mockEntityManager,
+        },
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -352,9 +371,6 @@ describe('CalloutService', () => {
       } as any;
 
       vi.mocked(repository.findOne).mockResolvedValue(callout);
-      vi.mocked(repository.remove).mockResolvedValue({
-        id: undefined,
-      } as any);
 
       const result = await service.deleteCallout('callout-1');
 
@@ -369,6 +385,8 @@ describe('CalloutService', () => {
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
         callout.authorization
       );
+      // The callout row is removed via the transaction-scoped manager.
+      expect(mockManager.remove).toHaveBeenCalledWith(callout);
       expect(result.id).toBe('callout-1');
     });
 
@@ -399,16 +417,13 @@ describe('CalloutService', () => {
       } as any;
 
       vi.mocked(repository.findOne).mockResolvedValue(callout);
-      vi.mocked(repository.remove).mockResolvedValue({
-        id: undefined,
-      } as any);
 
       await service.deleteCallout('callout-1');
 
       expect(roomService.deleteRoom).not.toHaveBeenCalled();
     });
 
-    it('deletes all reactions for the Callout before removing the Callout row', async () => {
+    it('deletes all reactions and removes the Callout row in the same transaction', async () => {
       const callout = {
         id: 'callout-1',
         framing: { id: 'framing-1' },
@@ -427,21 +442,55 @@ describe('CalloutService', () => {
           callOrder.push('deleteAllForEntity');
         }
       );
-      vi.mocked(repository.remove).mockImplementation(async () => {
-        callOrder.push('repositoryRemove');
-        return { id: undefined } as any;
+      mockManager.remove.mockImplementation(async () => {
+        callOrder.push('managerRemove');
+        return { id: undefined };
       });
 
       await service.deleteCallout('callout-1');
 
+      // The reaction delete is enrolled in the same transaction: it receives
+      // the transaction-scoped manager as its third argument.
       expect(reactionService.deleteAllForEntity).toHaveBeenCalledWith(
         ReactionType.POST,
-        'callout-1'
+        'callout-1',
+        mockManager
       );
       // Reaction cleanup must happen before the row is removed.
       expect(callOrder.indexOf('deleteAllForEntity')).toBeLessThan(
-        callOrder.indexOf('repositoryRemove')
+        callOrder.indexOf('managerRemove')
       );
+      // Both DB writes ran inside a single transaction.
+      expect(mockEntityManager.transaction).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not remove the Callout row when the reaction delete fails (transaction rolls back)', async () => {
+      const callout = {
+        id: 'callout-1',
+        framing: { id: 'framing-1' },
+        contributions: [],
+        contributionDefaults: { id: 'defaults-1' },
+        settings: { contribution: {} },
+        comments: { id: 'room-1' },
+        authorization: { id: 'auth-1' },
+      } as any;
+
+      vi.mocked(repository.findOne).mockResolvedValue(callout);
+      // The reaction delete throws inside the transaction; a real transaction
+      // would roll back and never remove the callout row.
+      vi.mocked(reactionService.deleteAllForEntity).mockRejectedValue(
+        new Error('reaction delete failed')
+      );
+
+      await expect(service.deleteCallout('callout-1')).rejects.toThrow(
+        'reaction delete failed'
+      );
+
+      // The callout row removal must not run once the reaction delete fails.
+      expect(mockManager.remove).not.toHaveBeenCalled();
+      // The external Matrix room deletion happens BEFORE the transaction, so it
+      // still runs regardless of the DB rollback.
+      expect(roomService.deleteRoom).toHaveBeenCalledWith({ roomID: 'room-1' });
     });
   });
 

@@ -3,7 +3,7 @@ import { ReactionType } from '@common/enums/reaction.type';
 import { ValidationException } from '@common/exceptions';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { CALLOUT_REACTION_ALLOWED_EMOJIS } from './reaction.constants';
 import { Reaction } from './reaction.entity';
 import { IReaction } from './reaction.interface';
@@ -171,11 +171,19 @@ export class ReactionService {
    * Removes all reactions for a target entity. Called by the target's delete
    * flow (e.g. deleteCallout) before the target row is removed, so no orphans
    * can ever arise even on partial failure.
+   *
+   * Pass an EntityManager to enroll this delete in a caller-owned transaction
+   * (so it commits or rolls back atomically with the target row removal);
+   * omit it to use this service's own repository.
    */
   async deleteAllForEntity(
     type: ReactionType,
-    entityID: string
+    entityID: string,
+    manager?: EntityManager
   ): Promise<void> {
-    await this.reactionRepository.delete({ type, entityID });
+    const repository = manager
+      ? manager.getRepository(Reaction)
+      : this.reactionRepository;
+    await repository.delete({ type, entityID });
   }
 }

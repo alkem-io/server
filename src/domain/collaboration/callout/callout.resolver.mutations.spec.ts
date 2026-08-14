@@ -1,9 +1,11 @@
 import { SUBSCRIPTION_CALLOUT_POST_CREATED } from '@common/constants';
 import { AuthorizationPrivilege } from '@common/enums';
+import { ActorType } from '@common/enums/actor.type';
 import { CalloutAllowedActors } from '@common/enums/callout.allowed.contributors';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { ReactionType } from '@common/enums/reaction.type';
 import {
   RelationshipNotFoundException,
   ValidationException,
@@ -11,6 +13,7 @@ import {
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
 import { streamToBuffer } from '@common/utils/file.util';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { ReactionService } from '@domain/collaboration/reaction/reaction.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -35,6 +38,7 @@ describe('CalloutResolverMutations', () => {
   let authorizationPolicyService: AuthorizationPolicyService;
   let calloutAuthorizationService: CalloutAuthorizationService;
   let reactionService: ReactionService;
+  let actorLookupService: ActorLookupService;
   let _contributionAuthorizationService: CalloutContributionAuthorizationService;
   let _calloutContributionService: CalloutContributionService;
 
@@ -66,6 +70,7 @@ describe('CalloutResolverMutations', () => {
     authorizationPolicyService = module.get(AuthorizationPolicyService);
     calloutAuthorizationService = module.get(CalloutAuthorizationService);
     reactionService = module.get(ReactionService);
+    actorLookupService = module.get(ActorLookupService);
     _contributionAuthorizationService = module.get(
       CalloutContributionAuthorizationService
     );
@@ -870,12 +875,32 @@ describe('CalloutResolverMutations', () => {
       expect(reactionService.upsertReaction).not.toHaveBeenCalled();
     });
 
+    it('rejects when the actor is a Virtual Contributor (non-user actor type)', async () => {
+      const callout = makePublishedCallout();
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(actorLookupService.getActorTypeByIdOrFail).mockResolvedValue(
+        ActorType.VIRTUAL_CONTRIBUTOR
+      );
+
+      await expect(
+        resolver.addReactionToCallout(
+          { actorID: 'vc-1' } as any,
+          { calloutID: 'callout-1', emoji: 'heart' } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(reactionService.upsertReaction).not.toHaveBeenCalled();
+    });
+
     it('delegates to upsertReaction and returns the refreshed Callout on success', async () => {
       const callout = makePublishedCallout();
       const refreshedCallout = { ...callout, id: 'callout-1' } as any;
       vi.mocked(calloutService.getCalloutOrFail)
         .mockResolvedValueOnce(callout)
         .mockResolvedValueOnce(refreshedCallout);
+      vi.mocked(actorLookupService.getActorTypeByIdOrFail).mockResolvedValue(
+        ActorType.USER
+      );
       vi.mocked(reactionService.upsertReaction).mockResolvedValue({} as any);
 
       const result = await resolver.addReactionToCallout(
@@ -883,7 +908,12 @@ describe('CalloutResolverMutations', () => {
         { calloutID: 'callout-1', emoji: 'heart' } as any
       );
 
-      expect(reactionService.upsertReaction).toHaveBeenCalled();
+      expect(reactionService.upsertReaction).toHaveBeenCalledWith(
+        ReactionType.POST,
+        'callout-1',
+        'user-1',
+        'heart'
+      );
       expect(result).toBe(refreshedCallout);
     });
   });
@@ -900,12 +930,35 @@ describe('CalloutResolverMutations', () => {
       expect(reactionService.removeReaction).not.toHaveBeenCalled();
     });
 
+    it('rejects when the actor is a Virtual Contributor (non-user actor type)', async () => {
+      const callout = {
+        id: 'callout-1',
+        authorization: { id: 'auth-1' },
+      } as any;
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(actorLookupService.getActorTypeByIdOrFail).mockResolvedValue(
+        ActorType.VIRTUAL_CONTRIBUTOR
+      );
+
+      await expect(
+        resolver.removeReactionFromCallout(
+          { actorID: 'vc-1' } as any,
+          { calloutID: 'callout-1' } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(reactionService.removeReaction).not.toHaveBeenCalled();
+    });
+
     it('delegates to removeReaction (idempotent) and returns the Callout when the caller has READ', async () => {
       const callout = {
         id: 'callout-1',
         authorization: { id: 'auth-1' },
       } as any;
       vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(actorLookupService.getActorTypeByIdOrFail).mockResolvedValue(
+        ActorType.USER
+      );
       vi.mocked(reactionService.removeReaction).mockResolvedValue(undefined);
 
       const result = await resolver.removeReactionFromCallout(
@@ -923,6 +976,9 @@ describe('CalloutResolverMutations', () => {
         authorization: { id: 'auth-1' },
       } as any;
       vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(actorLookupService.getActorTypeByIdOrFail).mockResolvedValue(
+        ActorType.USER
+      );
       vi.mocked(reactionService.removeReaction).mockResolvedValue(undefined);
       vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(
         () => {
@@ -947,6 +1003,9 @@ describe('CalloutResolverMutations', () => {
         authorization: { id: 'auth-1' },
       } as any;
       vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(actorLookupService.getActorTypeByIdOrFail).mockResolvedValue(
+        ActorType.USER
+      );
       vi.mocked(reactionService.removeReaction).mockResolvedValue(undefined);
 
       await resolver.removeReactionFromCallout(
