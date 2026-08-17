@@ -114,6 +114,11 @@ import { ConvertSpaceL2ToSpaceL1Input } from '@services/api/conversion/dto/conve
 import { MoveSpaceL1ToSpaceL0Input } from '@services/api/conversion/dto/move.dto.space.l1.to.space.l0.input';
 import { MoveSpaceL1ToSpaceL2Input } from '@services/api/conversion/dto/move.dto.space.l1.to.space.l2.input';
 import { RolesUserInput } from '@services/api/roles/dto/roles.dto.input.actor';
+import {
+  AdminRevokeMcpApiKeyInput,
+  MintMcpApiKeyInput,
+  RevokeMcpApiKeyInput,
+} from '@services/mcp-server/dto/mcp.api.key.dto';
 import { ValidationError, validate } from 'class-validator';
 import { AbstractHandler } from './abstract.handler';
 
@@ -221,6 +226,9 @@ export class BaseHandler extends AbstractHandler {
       ConvertSpaceL2ToSpaceL1Input,
       MoveSpaceL1ToSpaceL0Input,
       MoveSpaceL1ToSpaceL2Input,
+      MintMcpApiKeyInput,
+      RevokeMcpApiKeyInput,
+      AdminRevokeMcpApiKeyInput,
     ];
 
     if (types.includes(metatype)) {
