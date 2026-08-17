@@ -622,8 +622,9 @@ export class CollaboraDocumentService {
     const mime = mimeMap[documentType];
     if (!mime) {
       throw new ValidationException(
-        `Blank-create is not supported for Collabora document type ${documentType}; this type is import-only.`,
-        LogContext.COLLABORATION
+        'Blank-create is not supported for this Collabora document type; this type is import-only.',
+        LogContext.COLLABORATION,
+        { documentType }
       );
     }
     return mime;
