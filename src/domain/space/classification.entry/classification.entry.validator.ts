@@ -1,0 +1,122 @@
+import { ClassificationCardinality } from '@common/enums/classification.cardinality';
+import { LogContext } from '@common/enums/logging.context';
+import { ValidationException } from '@common/exceptions';
+import {
+  CLASSIFICATION_VALUE_SET_MAX_SIZE,
+  CLASSIFICATION_VALUE_SET_MIN_SIZE,
+  IClassificationValue,
+} from '@domain/common/classification-value/classification.value.interface';
+import { normalizeClassificationLabel } from './utils/normalize.classification.label';
+
+/**
+ * The single home for invariants I-1…I-7 (data-model.md §1). I-4 and I-7
+ * live here together deliberately (R-6): narrowing cardinality while >1
+ * value is selected is REJECTED (the server never picks a survivor), while
+ * removing a value from the value set during a definition edit
+ * AUTO-DESELECTS it (unambiguous — the value is gone). Keeping the contrast
+ * in one file is what stops the two rules drifting apart.
+ *
+ * I-8 (sortOrder allocation) is not here — it is an allocation, not a
+ * validation, and lives in ClassificationEntryService. I-9 (the
+ * Template-side pair) lives in TemplateService, next to the columns it
+ * constrains. I-10 (host scope) is not a runtime guard at all under D1 — see
+ * classification.entry.service.ts.
+ *
+ * No dependency injection: every method is pure, given its inputs.
+ */
+export class ClassificationEntryValidator {
+  static readonly MIN_VALUES = CLASSIFICATION_VALUE_SET_MIN_SIZE;
+  static readonly MAX_VALUES = CLASSIFICATION_VALUE_SET_MAX_SIZE;
+
+  // I-1, I-2 — size bound and within-set id uniqueness. Order (I-6) is
+  // never checked here because nothing in this module may reorder it; there
+  // is simply no sort call anywhere on the write path.
+  static validateValueSet(valueSet: IClassificationValue[]): void {
+    if (
+      valueSet.length < ClassificationEntryValidator.MIN_VALUES ||
+      valueSet.length > ClassificationEntryValidator.MAX_VALUES
+    ) {
+      throw new ValidationException(
+        `A Classification value set must contain between ${ClassificationEntryValidator.MIN_VALUES} and ${ClassificationEntryValidator.MAX_VALUES} values`,
+        LogContext.CLASSIFICATION,
+        { size: valueSet.length }
+      );
+    }
+
+    const seen = new Set<string>();
+    for (const value of valueSet) {
+      if (seen.has(value.id)) {
+        throw new ValidationException(
+          'Classification value ids must be unique within the value set',
+          LogContext.CLASSIFICATION,
+          { duplicateId: value.id }
+        );
+      }
+      seen.add(value.id);
+    }
+  }
+
+  // I-3, I-4 — every id in the proposed selection must exist in the value
+  // set, and a SINGLE_SELECT entry may never end up with more than one
+  // selected value. Both reject atomically: nothing is applied on failure.
+  static validateSelection(
+    cardinality: ClassificationCardinality,
+    valueSet: IClassificationValue[],
+    selectedValueIDs: string[]
+  ): void {
+    const validIds = new Set(valueSet.map(value => value.id));
+    const unknownIds = selectedValueIDs.filter(id => !validIds.has(id));
+    if (unknownIds.length > 0) {
+      throw new ValidationException(
+        'Selection contains value id(s) not present in the value set',
+        LogContext.CLASSIFICATION,
+        { unknownIds }
+      );
+    }
+
+    if (
+      cardinality === ClassificationCardinality.SINGLE_SELECT &&
+      selectedValueIDs.length > 1
+    ) {
+      throw new ValidationException(
+        'A single-select Classification may have at most one selected value',
+        LogContext.CLASSIFICATION,
+        { selectedValueIDs }
+      );
+    }
+  }
+
+  // I-5 — the display-label duplicate guard, scoped to the SAME SpaceAbout's
+  // other entries, comparing under FR-011c normalization. `excludeEntryID`
+  // lets an update compare against every sibling except itself.
+  static validateDisplayLabelUnique(
+    candidateLabel: string,
+    siblingEntries: { id: string; displayLabel: string }[],
+    excludeEntryID?: string
+  ): void {
+    const normalizedCandidate = normalizeClassificationLabel(candidateLabel);
+    const collision = siblingEntries.some(
+      entry =>
+        entry.id !== excludeEntryID &&
+        normalizeClassificationLabel(entry.displayLabel) === normalizedCandidate
+    );
+    if (collision) {
+      throw new ValidationException(
+        'A Classification with this display label already exists on this Space',
+        LogContext.CLASSIFICATION,
+        { displayLabel: candidateLabel }
+      );
+    }
+  }
+
+  // I-7 — auto-deselect any currently-selected id that is no longer present
+  // in the (possibly narrowed) value set. Unlike I-4, this never rejects:
+  // which selection dies is unambiguous when the value itself is gone.
+  static autoDeselectRemovedValues(
+    selectedValueIDs: string[],
+    valueSet: IClassificationValue[]
+  ): string[] {
+    const validIds = new Set(valueSet.map(value => value.id));
+    return selectedValueIDs.filter(id => validIds.has(id));
+  }
+}
