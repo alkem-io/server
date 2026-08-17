@@ -805,6 +805,10 @@ export class TemplateService {
         // Nothing to do
         break;
       }
+      case TemplateType.CLASSIFICATION: {
+        // Cardinality and value set live as columns on the Template row itself, so there is nothing extra to cascade-delete.
+        break;
+      }
       default: {
         throw new EntityNotFoundException(
           `Template type not recognized '${template.type}' when deleting template: ${template.id}`,
