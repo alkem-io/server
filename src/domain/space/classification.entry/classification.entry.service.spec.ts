@@ -73,4 +73,15 @@ describe('ClassificationEntryService.addFromTemplate (Step A)', () => {
     );
     expect(overridden.displayLabel).toEqual('Our SDGs');
   });
+
+  it('loads the template.profile relation so the default-label path never reads through undefined', async () => {
+    const { service, templateRepository } = buildClassificationEntryService();
+    templateRepository.findOne.mockResolvedValue(makeClassificationTemplate());
+
+    await service.addFromTemplate(makeSpaceAbout(), 'template-1');
+
+    expect(templateRepository.findOne).toHaveBeenCalledWith(
+      expect.objectContaining({ relations: { profile: true } })
+    );
+  });
 });

@@ -80,6 +80,7 @@ export class ClassificationEntryService {
   ): Promise<IClassificationEntry> {
     const template = await this.templateRepository.findOne({
       where: { id: templateID },
+      relations: { profile: true },
     });
     if (!template) {
       throw new EntityNotFoundException(
