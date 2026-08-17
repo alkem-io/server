@@ -1,11 +1,14 @@
 import { AuthorizationCredential, LogContext } from '@common/enums';
+import { SearchVisibility } from '@common/enums/search.visibility';
 import { EntityNotFoundException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { VirtualAssistantService } from '@domain/community/virtual-assistant/virtual.assistant.service';
 import { Account } from '@domain/space/account/account.entity';
 import { Space } from '@domain/space/space/space.entity';
+import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getEntityManagerToken } from '@nestjs/typeorm';
 import { McpApiKeyService } from '@services/mcp-server/auth/mcp-api-key.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -136,9 +139,36 @@ describe('BootstrapService', () => {
     mocks.messagingService = {};
     mocks.templatesSetService = {
       createTemplate: vi.fn().mockResolvedValue({ id: 'tmpl-new' }),
+      // Pre-populated with every seeded nameID so the classification-seed
+      // step below is a no-op in the generic bootstrap() tests — its own
+      // behaviour is covered by bootstrap.service.classification.spec.ts.
+      getTemplatesOfType: vi.fn().mockResolvedValue([
+        { id: 'ct-1', nameID: 'sdgs' },
+        { id: 'ct-2', nameID: 'language' },
+        { id: 'ct-3', nameID: 'sector' },
+      ]),
     };
     mocks.templateDefaultService = {
       save: vi.fn().mockResolvedValue(undefined),
+    };
+    mocks.innovationPackService = {
+      getInnovationPackByNameIdOrFail: vi.fn().mockResolvedValue({
+        id: 'classification-pack-1',
+        searchVisibility: SearchVisibility.PUBLIC,
+        listedInStore: true,
+      }),
+      save: vi.fn().mockResolvedValue(undefined),
+      getTemplatesSetOrFail: vi
+        .fn()
+        .mockResolvedValue({ id: 'classification-templates-set-1' }),
+    };
+    mocks.entityManager = {
+      // Runs the callback against a fake manager exposing just `.query`,
+      // mirroring the shape ensureClassificationTemplatesArePresent needs
+      // for the advisory-lock statement.
+      transaction: vi.fn(async (runInTransaction: any) =>
+        runInTransaction({ query: vi.fn().mockResolvedValue(undefined) })
+      ),
     };
 
     // Build injectors map using class tokens
@@ -305,6 +335,14 @@ describe('BootstrapService', () => {
         {
           provide: PlatformWellKnownVirtualContributorsService,
           useValue: mocks.platformWellKnownVCService,
+        },
+        {
+          provide: InnovationPackService,
+          useValue: mocks.innovationPackService,
+        },
+        {
+          provide: getEntityManagerToken('default'),
+          useValue: mocks.entityManager,
         },
       ],
     })

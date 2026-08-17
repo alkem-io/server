@@ -783,6 +783,8 @@ export class TemplateNavigatorTool implements McpTool {
         'Apply this template when creating posts to get consistent formatting and structure.',
       [TemplateType.COMMUNITY_GUIDELINES]:
         'Use this template to set up community guidelines for your space.',
+      [TemplateType.CLASSIFICATION]:
+        'Use this template to add a structured Classification (e.g. SDGs, Language, Sector) to a Space.',
     };
     return hints[type] || 'Apply this template to create new content.';
   }

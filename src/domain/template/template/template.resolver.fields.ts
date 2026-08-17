@@ -1,4 +1,6 @@
+import { LogContext } from '@common/enums';
 import { TemplateType } from '@common/enums/template.type';
+import { RelationshipNotFoundException } from '@common/exceptions';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
@@ -8,6 +10,7 @@ import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ITemplateContentSpace } from '../template-content-space/template.content.space.interface';
+import { ClassificationTemplateContent } from './dto/classification.template.content';
 import { Template } from './template.entity';
 import { ITemplate } from './template.interface';
 import { TemplateService } from './template.service';
@@ -76,5 +79,35 @@ export class TemplateResolverFields {
       return undefined;
     }
     return this.templateService.getSpaceContent(template.id);
+  }
+
+  @ResolveField('classification', () => ClassificationTemplateContent, {
+    nullable: true,
+    description:
+      'The classification vocabulary; null unless this Template is of type CLASSIFICATION — and never null when it is (S-21).',
+  })
+  classification(
+    @Parent() template: ITemplate
+  ): ClassificationTemplateContent | undefined {
+    if (template.type !== TemplateType.CLASSIFICATION) {
+      return undefined;
+    }
+    // I-9 (enforced on every write path in TemplateService) guarantees a
+    // CLASSIFICATION template always carries both columns — a missing one
+    // here means I-9 was bypassed, not a legitimate empty state.
+    if (
+      !template.classificationCardinality ||
+      !template.classificationValueSet
+    ) {
+      throw new RelationshipNotFoundException(
+        'Classification Template is missing its cardinality or value set',
+        LogContext.TEMPLATES,
+        { templateId: template.id }
+      );
+    }
+    return {
+      cardinality: template.classificationCardinality,
+      values: template.classificationValueSet,
+    };
   }
 }

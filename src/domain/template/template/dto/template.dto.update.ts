@@ -6,6 +6,7 @@ import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.cont
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
+import { CreateClassificationTemplateContentInput } from './classification.template.content.dto.create';
 
 @InputType()
 export class UpdateTemplateInput extends UpdateBaseAlkemioInput {
@@ -33,4 +34,13 @@ export class UpdateTemplateInput extends UpdateBaseAlkemioInput {
   })
   @IsOptional()
   whiteboardContent?: string;
+
+  @Field(() => CreateClassificationTemplateContentInput, {
+    nullable: true,
+    description: 'The cardinality and value set for a Classification Template.',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateClassificationTemplateContentInput)
+  classificationData?: CreateClassificationTemplateContentInput;
 }
