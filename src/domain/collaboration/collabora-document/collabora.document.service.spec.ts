@@ -88,7 +88,7 @@ describe('CollaboraDocumentService', () => {
       vi.mocked(fileServiceAdapter.updateDocument).mockResolvedValue({} as any);
     });
 
-    it('accepts an uploaded PDF and types the resulting document as PDF (US1, FR-001)', async () => {
+    it('accepts an uploaded PDF and types the resulting document as PDF', async () => {
       vi.mocked(
         storageBucketService.uploadFileAsDocumentFromBuffer
       ).mockResolvedValue({ id: 'doc-1', mimeType: PDF_MIME } as any);
@@ -123,7 +123,7 @@ describe('CollaboraDocumentService', () => {
       });
     });
 
-    it('continues to reject a file type outside the allowlist, e.g. .zip (regression, FR-005)', async () => {
+    it('continues to reject a file type outside the allowlist, e.g. .zip (regression)', async () => {
       vi.mocked(
         storageBucketService.uploadFileAsDocumentFromBuffer
       ).mockRejectedValue(new Error('415 ErrUnsupportedMediaType'));
@@ -143,7 +143,7 @@ describe('CollaboraDocumentService', () => {
       ).rejects.toThrow('415');
     });
 
-    it('rejects a blank-create request for PDF: no blank-create option exists for it (FR-003)', async () => {
+    it('rejects a blank-create request for PDF: no blank-create option exists for it', async () => {
       await expect(
         service.createCollaboraDocument(
           {
@@ -372,7 +372,7 @@ describe('CollaboraDocumentService', () => {
       expect(repository.save).not.toHaveBeenCalled();
     });
 
-    it('replaces a PDF document with another PDF (US2, FR-004)', async () => {
+    it('replaces a PDF document with another PDF', async () => {
       const existingPdfDoc = () =>
         ({
           ...existingDoc(),
@@ -415,7 +415,7 @@ describe('CollaboraDocumentService', () => {
       });
     });
 
-    it('rejects replacing a PDF document with a non-PDF file (same-type enforcement, FR-004)', async () => {
+    it('rejects replacing a PDF document with a non-PDF file (same-type enforcement)', async () => {
       const existingPdfDoc = () =>
         ({
           ...existingDoc(),

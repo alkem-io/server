@@ -16,7 +16,7 @@ describe('CreateCollaboraDocumentInput', () => {
       expect(errors).toHaveLength(0);
     });
 
-    it('accepts PDF specifically with no DTO change needed (FR-001)', async () => {
+    it('accepts PDF specifically with no DTO change needed', async () => {
       const input = new CreateCollaboraDocumentInput();
       input.displayName = 'Report';
       input.documentType = CollaboraDocumentType.PDF;

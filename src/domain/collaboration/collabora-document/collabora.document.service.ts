@@ -603,7 +603,7 @@ export class CollaboraDocumentService {
    * DRAWING → .odg. Imported documents preserve their actual sniffed
    * MIME instead (stored on `originalMimeType`).
    *
-   * PDF is deliberately absent from this map: it is import-only (FR-003) —
+   * PDF is deliberately absent from this map: it is import-only —
    * Collabora's PDF mode is annotation-first, with no blank-document concept
    * to create. A blank-create request for PDF has no canonical MIME to stage
    * and must be rejected here rather than silently falling through.

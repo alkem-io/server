@@ -3,8 +3,8 @@ import { CollaboraDocumentType } from './collabora.document.type';
 /**
  * MIME types Collabora Online can open and save in the editor modes we
  * surface: Writer (word processing), Calc (spreadsheet), Impress
- * (presentation), Draw (drawings), plus PDF (annotation-only, view/annotate
- * mode — import-only, no blank-create). Used as the `allowedMimeTypes`
+ * (presentation), Draw (drawings), plus PDF (view-only, import-only, no
+ * blank-create). Used as the `allowedMimeTypes`
  * parameter on the `importCollaboraDocument` flow — file-service-go
  * sniffs the actual MIME from content and rejects anything not in this
  * list with `415 ErrUnsupportedMediaType`.
@@ -44,7 +44,7 @@ export const MIME_TO_DOCUMENT_TYPE: Record<string, CollaboraDocumentType> = {
   // Drawing (Draw)
   'application/vnd.oasis.opendocument.graphics': CollaboraDocumentType.DRAWING,
 
-  // PDF (view/annotate — import-only, no blank-create)
+  // PDF (view-only — import-only, no blank-create)
   'application/pdf': CollaboraDocumentType.PDF,
 };
 
