@@ -12,8 +12,12 @@
  *   - D3 fix 2: searchVisibility is forced PUBLIC after any create, even
  *     when the existing pack was left ACCOUNT-visible by a prior partial run
  *   - D3 fix 1: the advisory-lock statement is issued for every run
- *   - D3 fix 3 firing rule: the seed's own scoped auth reset runs only when
- *     something was actually created, never on a full no-op re-run
+ *   - D3 fix 3 firing rule: the seed's own scoped auth reset runs when
+ *     something was actually created, on a full no-op re-run where every
+ *     existing template's policy is already populated it does NOT re-run,
+ *     but a full no-op re-run where a pre-existing template's policy was
+ *     left empty by a prior bootstrap self-heals by running the reset
+ *     anyway (the already-seeded / upgrade path)
  *
  * Known gap, recorded rather than silently asserted: create-if-absent
  * matched by nameID cannot, on its own and without a persisted tombstone
@@ -257,11 +261,23 @@ describe('BootstrapService — ensureClassificationTemplatesArePresent (D3)', ()
     expect(mocks.authorizationPolicyService.saveAll).toHaveBeenCalled();
   });
 
-  it('D3 fix 3: does NOT run the scoped auth reset on a full no-op re-run', async () => {
+  it('D3 fix 3: does NOT run the scoped auth reset on a full no-op re-run when every existing template already has policy rules', async () => {
     mocks.templatesSetService.getTemplatesOfType.mockResolvedValue([
-      { id: 't1', nameID: 'sdgs' },
-      { id: 't2', nameID: 'language' },
-      { id: 't3', nameID: 'sector' },
+      {
+        id: 't1',
+        nameID: 'sdgs',
+        authorization: { credentialRules: [{ name: 'rule' }] },
+      },
+      {
+        id: 't2',
+        nameID: 'language',
+        authorization: { credentialRules: [{ name: 'rule' }] },
+      },
+      {
+        id: 't3',
+        nameID: 'sector',
+        authorization: { credentialRules: [{ name: 'rule' }] },
+      },
     ]);
 
     await runEnsure();
@@ -270,5 +286,33 @@ describe('BootstrapService — ensureClassificationTemplatesArePresent (D3)', ()
       mocks.accountAuthorizationService.applyAuthorizationPolicy
     ).not.toHaveBeenCalled();
     expect(mocks.authorizationPolicyService.saveAll).not.toHaveBeenCalled();
+  });
+
+  it('D3 fix 3 self-heal: runs the scoped auth reset on a full no-op re-run when a pre-existing template still carries empty credentialRules (already-seeded / upgrade path)', async () => {
+    mocks.templatesSetService.getTemplatesOfType.mockResolvedValue([
+      {
+        id: 't1',
+        nameID: 'sdgs',
+        authorization: { credentialRules: [] },
+      },
+      {
+        id: 't2',
+        nameID: 'language',
+        authorization: { credentialRules: [{ name: 'rule' }] },
+      },
+      {
+        id: 't3',
+        nameID: 'sector',
+        authorization: { credentialRules: [{ name: 'rule' }] },
+      },
+    ]);
+
+    await runEnsure();
+
+    expect(mocks.templatesSetService.createTemplate).not.toHaveBeenCalled();
+    expect(
+      mocks.accountAuthorizationService.applyAuthorizationPolicy
+    ).toHaveBeenCalledWith(expect.objectContaining({ id: 'host-account-1' }));
+    expect(mocks.authorizationPolicyService.saveAll).toHaveBeenCalled();
   });
 });

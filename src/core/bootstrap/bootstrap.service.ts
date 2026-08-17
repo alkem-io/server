@@ -530,21 +530,29 @@ export class BootstrapService {
    *     service.ts` — the input-honouring path is a separate `update()`), so
    *     the pack is forced `PUBLIC` explicitly, every time, after any
    *     create-or-fix-up — the picker (`library.service.ts`) requires it.
-   * (3) When this run created the pack or any template, the seed's OWN
-   *     scoped authorization reset runs — re-applying the host
+   * (3) When this run created the pack or any template, OR an already-
+   *     seeded CLASSIFICATION template is found carrying an empty
+   *     `credentialRules` (a stale policy left behind by a prior bootstrap
+   *     run that predates this reset, or one that raced past it), the
+   *     seed's OWN scoped authorization reset runs — re-applying the host
    *     organization's Account policy, which cascades down through every
    *     owned InnovationPack's templatesSet and templates.
    *     `ensureAuthorizationsPopulated` only fires when the PLATFORM policy
    *     has zero rules, true on a fresh DB but false on every real deploy,
    *     so without this the seeded pack's policies stay empty in
-   *     production.
+   *     production. Gating the reset on "created something" alone is NOT
+   *     enough: an install that seeded its templates once with the reset
+   *     broken (or skipped) stays permanently broken across every later
+   *     restart, since nothing is ever created again — the empty-
+   *     credentialRules check is what makes this self-healing on the
+   *     already-seeded / upgrade path, not just the fresh-install path.
    *
    * Never modifies, overwrites, or restores an existing or admin-deleted
    * template — create-if-absent, matched by nameID within this pack alone.
    */
   private async ensureClassificationTemplatesArePresent(): Promise<void> {
-    const createdSomething = await this.entityManager.transaction(
-      async manager => {
+    const { createdSomething, staleAuthFound } =
+      await this.entityManager.transaction(async manager => {
         // Fix 1 — held for the duration of this callback; released when the
         // outer transaction commits on return.
         await manager.query(
@@ -594,6 +602,13 @@ export class BootstrapService {
         const existingNameIDs = new Set(
           existingClassificationTemplates.map(template => template.nameID)
         );
+        // Self-heal detector: the `authorization` relation is eager on
+        // AuthorizableEntity, so every template returned above already
+        // carries its policy row — no extra query needed.
+        const staleAuthFound = existingClassificationTemplates.some(
+          template =>
+            (template.authorization?.credentialRules?.length ?? 0) === 0
+        );
 
         for (const definition of bootstrapClassificationTemplateDefinitions) {
           if (existingNameIDs.has(definition.nameID)) {
@@ -614,16 +629,17 @@ export class BootstrapService {
           created = true;
         }
 
-        return created;
-      }
-    );
+        return { createdSomething: created, staleAuthFound };
+      });
 
-    if (!createdSomething) {
+    if (!createdSomething && !staleAuthFound) {
       return;
     }
 
     this.logger.verbose?.(
-      "=== Classification Template defaults were (re)created; running the seed's own scoped authorization reset ===",
+      createdSomething
+        ? "=== Classification Template defaults were (re)created; running the seed's own scoped authorization reset ==="
+        : '=== Classification Templates already present but carrying empty credentialRules from a prior bootstrap; running the scoped authorization reset to self-heal ===',
       LogContext.BOOTSTRAP
     );
     // Fix 3 — scoped to the host organization's Account (the pack's policy
