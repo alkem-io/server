@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { EMPTY, of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { NotificationExternalAdapter } from './notification.external.adapter';
 
@@ -62,6 +63,63 @@ describe('NotificationExternalAdapter', () => {
         NotificationEvent.USER_MESSAGE,
         payload
       );
+    });
+
+    it('resolves even when the broker rejects, so emit-and-forget callers are unaffected', async () => {
+      notificationsClient.emit.mockReturnValue(
+        throwError(() => new Error('broker down'))
+      );
+
+      await expect(
+        adapter.sendExternalNotifications(NotificationEvent.USER_MESSAGE, {})
+      ).resolves.toBeUndefined();
+    });
+  });
+
+  // The 034 digest flush drains its Redis state BEFORE dispatching and reArms
+  // only when dispatch throws. With the emit-and-forget publish above, a broker
+  // outage could never reach the caller, so the digest was destroyed silently
+  // and the §5.4 retry design was dead code on the email channel. These assert
+  // the failure actually propagates — the flush spec cannot, because there the
+  // adapter is a mock that can be made to reject regardless of the real code.
+  describe('sendExternalNotificationsAwaited', () => {
+    it('resolves once the broker has accepted the event', async () => {
+      notificationsClient.emit.mockReturnValue(of(1));
+
+      await expect(
+        adapter.sendExternalNotificationsAwaited(
+          NotificationEvent.USER_MESSAGE,
+          { test: 'data' }
+        )
+      ).resolves.toBeUndefined();
+      expect(notificationsClient.emit).toHaveBeenCalledWith(
+        NotificationEvent.USER_MESSAGE,
+        { test: 'data' }
+      );
+    });
+
+    it('REJECTS when the broker publish fails', async () => {
+      notificationsClient.emit.mockReturnValue(
+        throwError(() => new Error('broker down'))
+      );
+
+      await expect(
+        adapter.sendExternalNotificationsAwaited(
+          NotificationEvent.USER_MESSAGE,
+          {}
+        )
+      ).rejects.toThrow('broker down');
+    });
+
+    it('does not reject when the transport completes without emitting', async () => {
+      notificationsClient.emit.mockReturnValue(EMPTY);
+
+      await expect(
+        adapter.sendExternalNotificationsAwaited(
+          NotificationEvent.USER_MESSAGE,
+          {}
+        )
+      ).resolves.toBeUndefined();
     });
   });
 
@@ -297,6 +355,50 @@ describe('NotificationExternalAdapter', () => {
       expect(result.callout.contribution?.type).toBe(
         CalloutContributionType.MEMO
       );
+    });
+
+    it('should build payload for collabora document contribution (regression: server crash on document response)', async () => {
+      mockSetup();
+
+      const result = await adapter.buildSpaceCollaborationCreatedPayload(
+        NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION,
+        'user-1',
+        [],
+        {
+          id: 'space-1',
+          level: 1,
+          about: { profile: { displayName: 'Space' } },
+        } as any,
+        {
+          callout: {
+            id: 'callout-1',
+            framing: {
+              id: 'framing-1',
+              profile: { displayName: 'Callout', description: 'desc' },
+              type: 'POST_COLLECTION',
+            },
+            settings: {
+              contribution: { allowedTypes: ['collabora_document'] },
+            },
+          },
+          contribution: {
+            id: 'contrib-1',
+            createdBy: 'user-1',
+            collaboraDocument: {
+              id: 'collabora-1',
+              createdBy: 'user-1',
+              profile: { displayName: 'Doc', description: 'desc' },
+            },
+          },
+        } as any
+      );
+
+      expect(result.callout.contribution?.type).toBe(
+        CalloutContributionType.COLLABORA_DOCUMENT
+      );
+      expect(result.callout.contribution?.id).toBe('collabora-1');
+      // Collabora documents have no deep link — the URL is the containing callout.
+      expect(result.callout.contribution?.url).toBe('/callout/1');
     });
   });
 
@@ -650,6 +752,131 @@ describe('NotificationExternalAdapter', () => {
       );
 
       expect(result.message).toBe('Hello!');
+    });
+  });
+
+  describe('034/R4 — digest payload builders (C-2/D-22/FR-008/FR-009/FR-018a)', () => {
+    const HOSTILE_MESSAGE =
+      '<script>alert(1)</script> "quoted" \n newline — none of this must appear';
+
+    const recipientUser = (id: string) =>
+      ({
+        id,
+        firstName: 'Bob',
+        lastName: 'Recipient',
+        email: `${id}@test.com`,
+        nameID: id,
+        profile: { displayName: 'Bob Recipient' },
+      }) as any;
+
+    beforeEach(() => {
+      vi.mocked(urlGeneratorService.createUrlForUserNameID).mockReturnValue(
+        '/user/bob'
+      );
+      vi.mocked(configService.get).mockReturnValue('https://platform.test');
+    });
+
+    it('direct digest: exactly one recipient, an entry array, and a precomputed totalCount', async () => {
+      const result = await adapter.buildConversationMessageDirectPayload(
+        NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
+        recipientUser('recipient-1'),
+        [
+          { displayName: 'Alice', count: 2, url: 'https://p.test/?chat=c1' },
+          { displayName: 'Carol', count: 3, url: 'https://p.test/?chat=c2' },
+        ]
+      );
+
+      // The digest is per recipient by construction — 0 or >1 recipients is a
+      // contract violation, not a fan-out.
+      expect(result.recipients).toHaveLength(1);
+      expect(result.recipients[0].email).toBe('recipient-1@test.com');
+      expect(result.senders).toHaveLength(2);
+      expect(result.totalCount).toBe(5);
+    });
+
+    it('zeroes triggeredBy.email so no participant address rides the durable queue (FR-009)', async () => {
+      const result = await adapter.buildConversationMessageDirectPayload(
+        NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
+        recipientUser('recipient-1'),
+        [{ displayName: 'Alice', count: 1, url: 'https://p.test/?chat=c1' }]
+      );
+
+      expect(result.triggeredBy.email).toBe('');
+      // recipients[].email is the delivery address and remains populated.
+      expect(result.recipients[0].email).toBe('recipient-1@test.com');
+    });
+
+    it('carries no message-content field, even under a hostile-content fixture (US1-AS5/FR-008)', async () => {
+      const result = await adapter.buildConversationMessageDirectPayload(
+        NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
+        recipientUser('recipient-1'),
+        [{ displayName: 'Alice', count: 1, url: 'https://p.test/?chat=c1' }]
+      );
+
+      const serialized = JSON.stringify(result);
+      expect(serialized).not.toContain('script');
+      expect(serialized).not.toContain(HOSTILE_MESSAGE);
+      expect(result).not.toHaveProperty('message');
+      expect(result).not.toHaveProperty('conversation');
+    });
+
+    it('group digest names conversations and carries NO sender identity (FR-018a)', async () => {
+      const result = await adapter.buildConversationMessageGroupPayload(
+        NotificationEvent.USER_CONVERSATION_MESSAGE_GROUP,
+        recipientUser('recipient-1'),
+        [
+          {
+            displayName: 'Project Alpha',
+            count: 4,
+            url: 'https://p.test/?chat=c1',
+          },
+        ]
+      );
+
+      expect(result.conversations).toEqual([
+        {
+          displayName: 'Project Alpha',
+          count: 4,
+          url: 'https://p.test/?chat=c1',
+        },
+      ]);
+      expect(result.totalCount).toBe(4);
+      expect(result.recipients).toHaveLength(1);
+      expect(result).not.toHaveProperty('sender');
+      expect(result).not.toHaveProperty('senders');
+    });
+
+    it('sec-server-4: sanitizes control characters out of every entry display name', async () => {
+      const result = await adapter.buildConversationMessageDirectPayload(
+        NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
+        recipientUser('recipient-1'),
+        [
+          {
+            displayName: 'Alice\nSubject: verify your account now',
+            count: 1,
+            url: 'https://p.test/?chat=c1',
+          },
+        ]
+      );
+
+      expect(result.senders[0].displayName).not.toContain('\n');
+    });
+
+    it('totalCount always equals the sum of the entry counts', async () => {
+      const result = await adapter.buildConversationMessageGroupPayload(
+        NotificationEvent.USER_CONVERSATION_MESSAGE_GROUP,
+        recipientUser('recipient-1'),
+        [
+          { displayName: 'A', count: 1, url: 'u1' },
+          { displayName: 'B', count: 7, url: 'u2' },
+          { displayName: 'C', count: 2, url: 'u3' },
+        ]
+      );
+
+      expect(result.totalCount).toBe(10);
+      expect(result.totalCount).toBe(
+        result.conversations.reduce((sum, entry) => sum + entry.count, 0)
+      );
     });
   });
 

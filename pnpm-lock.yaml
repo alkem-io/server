@@ -52,8 +52,8 @@ importers:
         specifier: 0.8.16
         version: 0.8.16
       '@alkemio/notifications-lib':
-        specifier: 0.18.0
-        version: 0.18.0(@types/express@4.17.23)
+        specifier: 0.19.0
+        version: 0.19.0(@types/express@4.17.23)
       '@apollo/server':
         specifier: ^4.13.0
         version: 4.13.0(graphql@16.11.0)
@@ -447,8 +447,8 @@ packages:
     resolution: {integrity: sha512-XwnfgDpfvwOfBHXiUEys6zjAu9nLuOQgOeAKBEqwuaUKXMNEchRBpDOgdTc8Gad/ZPmvJ56XnhPuoP5Rl2yIrw==}
     engines: {node: '>=22.x', pnpm: '>=9.x'}
 
-  '@alkemio/notifications-lib@0.18.0':
-    resolution: {integrity: sha512-qzb4zSN5pw7pEU3dKjXFr53FjPafHE1kakHquyoQUhHz0LAlxhaEd9+w4tzPT907V5FcB+2T03cRaUvivpx9tA==}
+  '@alkemio/notifications-lib@0.19.0':
+    resolution: {integrity: sha512-z6sWsg6CdNEsdKbviuM7lIxM1fACuVDGwWJcp/MwwLxLobvHXKE+SpL6Xl90sT531DEej0wbU1l9/T2nqbu8Rw==}
     engines: {node: '>=20.0.0', npm: '>=8.5.5'}
 
   '@angular-devkit/core@17.3.11':
@@ -3878,11 +3878,13 @@ packages:
   glob@10.4.2:
     resolution: {integrity: sha512-GwMlUF6PkPo3Gk21UxkCohOv0PLcIXVtKyLlpEI28R/cO/4eNOdmLk3CMW1wROV/WR/EsZOWAfBbBOqYvs88/w==}
     engines: {node: '>=16 || 14 >=14.18'}
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
     hasBin: true
 
   glob@11.0.3:
     resolution: {integrity: sha512-2Nim7dha1KVkaiF4q6Dj+ngPPMdfvLJEOpZk/jKiUAkqKebpGAWQXAq9z1xu9HKu5lWfqw/FASuccEjyznjPaA==}
     engines: {node: 20 || >=22}
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
     hasBin: true
 
   glob@7.2.3:
@@ -5515,11 +5517,6 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
 
-  semver@7.7.4:
-    resolution: {integrity: sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==}
-    engines: {node: '>=10'}
-    hasBin: true
-
   semver@7.8.5:
     resolution: {integrity: sha512-Y7/KDsb8LjooZpwaqGyulO6DQlksgCncchHGk+sZIY4SBvUocMBEFH5Ur1fI4dV+Jvl0w6cjvucaIi40puRioA==}
     engines: {node: '>=10'}
@@ -5926,6 +5923,7 @@ packages:
   tsconfck@3.1.6:
     resolution: {integrity: sha512-ks6Vjr/jEw0P1gmOVwutM3B7fWxoWBL2KRDb1JfqGVawBmO5UsvmWOQFGHBPl5yxYz4eERr19E6L7NMv+Fej4w==}
     engines: {node: ^18 || >=20}
+    deprecated: unmaintained
     hasBin: true
     peerDependencies:
       typescript: ^5.0.0
@@ -6164,11 +6162,12 @@ packages:
 
   uuid@3.4.0:
     resolution: {integrity: sha512-HjSDRw6gZE5JMggctHBcjVak08+KEVhSIiDzFnT9S9aegmp85S/bReBVTb4QTFaRNptJ9kuYaNhnbNEOkbKb/A==}
-    deprecated: Please upgrade  to version 7 or higher.  Older versions may use Math.random() in certain circumstances, which is known to be problematic.  See https://v8.dev/blog/math-random for details.
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   uuid@9.0.1:
     resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   v8-compile-cache-lib@3.0.1:
@@ -6536,7 +6535,7 @@ snapshots:
       graphql-request: 3.7.0(graphql@16.11.0)
       graphql-tag: 2.12.6(graphql@16.11.0)
       graphql-upload: 16.0.2(@types/express@4.17.23)(graphql@16.11.0)
-      semver: 7.7.4
+      semver: 7.8.5
       typescript: 4.9.5
       url-join: 4.0.1
       winston: 3.17.0
@@ -6549,7 +6548,7 @@ snapshots:
 
   '@alkemio/matrix-adapter-lib@0.8.16': {}
 
-  '@alkemio/notifications-lib@0.18.0(@types/express@4.17.23)':
+  '@alkemio/notifications-lib@0.19.0(@types/express@4.17.23)':
     dependencies:
       '@alkemio/client-lib': 0.36.0(@types/express@4.17.23)
     transitivePeerDependencies:
@@ -11848,8 +11847,6 @@ snapshots:
   semver@6.3.1: {}
 
   semver@7.7.2: {}
-
-  semver@7.7.4: {}
 
   semver@7.8.5: {}
 

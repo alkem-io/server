@@ -1,15 +1,12 @@
-<!-- Implements constitution & agents.md. Does not introduce new governance. -->
+<!-- Implements constitution & agents.md. -->
 
 <!--
 Sync Impact Report
-Version change: 1.0.0 → 2.0.0 (re-balanced observability + testing principles)
-Modified principles: 5. Observability & Operational Readiness (clarified signal expectations), 6. Code Quality with Pragmatic Testing (risk-based guidance)
-Added sections: (none)
+Version change: 2.0.0 → 3.0.0 (write-path event ordering redefined)
+Modified principles: 4. Explicit Data & Event Flow → Explicit Data, Persistence & Event Flow
+Added sections: Architecture Standard 6 (selective leaf-first relational lookups)
 Removed sections: (none)
-Templates requiring updates:
- - .specify/templates/plan-template.md (Constitution Check alignment) ✅
- - .specify/templates/tasks-template.md (testing guidance note) ✅
- - .specify/templates/spec-template.md (no changes required) ✅
+Templates requiring updates: (none; templates resolve this constitution at runtime)
 Deferred TODOs: None
 -->
 
@@ -31,9 +28,20 @@ Each feature set MUST map to a NestJS module with a single, testable purpose. Mo
 
 The GraphQL schema is a public contract. Breaking field removals or type changes REQUIRE deprecation (mark with `@deprecated` and a removal date) and MINOR or MAJOR version review. All mutations MUST validate inputs at DTO layer and surface typed domain errors mapped to GraphQL error codes. Pagination follows the documented pattern (cursor or offset as per `docs/Pagination.md`). No resolver may perform ad-hoc data shaping already represented in the domain model.
 
-### 4. Explicit Data & Event Flow
+### 4. Explicit Data, Persistence & Event Flow
 
-State changes MUST propagate through domain services emitting events (synchronous in-process or queued for async delivery). Side effects (notifications, indexing, metrics) subscribe to those events—never embedded inline with core logic. Direct repository calls from controllers/resolvers are forbidden. Every write path MUST have: validation → authorization → domain operation → event emission → persistence.
+State changes MUST pass through domain services. Side effects such as notifications, indexing,
+analytics, and metrics MUST subscribe to explicit domain or outcome events; they MUST NOT be
+implemented inline with core logic. Direct repository calls from controllers and resolvers are
+forbidden.
+
+Every write path MUST have: validation → authorization → domain operation → persistence →
+post-success event publication. A domain operation MAY record an event before persistence, but a
+handler that reads committed state or invokes an external side effect MUST NOT run until the
+required persistence succeeds. If state persistence and event delivery must be atomic, the design
+MUST use a transactional outbox or document an equivalent consistency mechanism. Best-effort
+post-persistence events are permitted only when possible loss is explicitly accepted and no caller
+can mistake a side-effect failure for failure of an already-committed primary operation.
 
 ### 5. Observability & Operational Readiness
 
@@ -76,6 +84,11 @@ Prefer the simplest viable implementation that satisfies domain constraints. Arc
 3. Migrations MUST be idempotent and tested on a snapshot before prod promotion.
 4. Feature flags & licensing decisions centralize in dedicated services—not scattered conditionals.
 5. Storage aggregators & external service clients implement narrow interfaces consumed by domain services.
+6. Performance-sensitive relational ownership and attribution lookups MUST start from the most
+   selective indexed leaf available and select only the identifiers required for the next step.
+   Starting from a broad aggregate root and hydrating a relation tree is forbidden unless the PR
+   includes measured evidence that the shape is bounded and preferable. Tests MUST defend the
+   selective predicate and any promised query-count bound.
 
 ## Engineering Workflow
 
@@ -104,4 +117,4 @@ Enforcement:
 - Automated lint / CI may enforce schema stability, module boundaries, and logging context presence.
 - Manual review ensures domain purity & testing adequacy.
 
-**Version**: 2.0.0 | **Ratified**: 2025-10-04 | **Last Amended**: 2025-11-11
+**Version**: 3.0.0 | **Ratified**: 2025-10-04 | **Last Amended**: 2026-08-12

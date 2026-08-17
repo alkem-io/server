@@ -1,5 +1,7 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
+import { CollaboraDocumentAnalyticsEventHandler } from '@domain/collaboration/collabora-document/events/collabora.document.analytics.event.handler';
+import { CollaboraDocumentEventsService } from '@domain/collaboration/collabora-document/events/collabora.document.events.service';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { UserModule } from '@domain/community/user/user.module';
@@ -41,7 +43,13 @@ import { CollaboraDocumentAuthorizationService } from './collabora.document.serv
     CollaboraDocumentResolverFields,
     CollaboraDocumentResolverMutations,
     CollaboraDocumentResolverQueries,
+    CollaboraDocumentEventsService,
+    CollaboraDocumentAnalyticsEventHandler,
   ],
-  exports: [CollaboraDocumentService, CollaboraDocumentAuthorizationService],
+  exports: [
+    CollaboraDocumentService,
+    CollaboraDocumentAuthorizationService,
+    CollaboraDocumentEventsService,
+  ],
 })
 export class CollaboraDocumentModule {}

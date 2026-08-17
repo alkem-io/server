@@ -350,13 +350,9 @@ export class CollaborativeDocumentIntegrationService {
         return;
       }
 
-      const community =
-        await this.communityResolver.getCommunityForCollaboraDocumentOrFail(
-          collaboraDocument.id
-        );
       const levelZeroSpaceID =
-        await this.communityResolver.getLevelZeroSpaceIdForCommunity(
-          community.id
+        await this.communityResolver.getLevelZeroSpaceIdForCollaboraDocument(
+          collaboraDocument.id
         );
       const displayName = collaboraDocument.profile?.displayName ?? '';
 

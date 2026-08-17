@@ -163,6 +163,43 @@ describe('MessageInboxService', () => {
       );
     });
 
+    it('resolves conversation + memberActorIds ONCE per conversation message and shares it (034-messaging-notifications D-13, risk R-8)', async () => {
+      const room = makeRoom({ type: RoomType.CONVERSATION });
+      roomLookupService.getRoomOrFail.mockResolvedValue(room);
+      roomLookupService.incrementMessagesCount.mockResolvedValue(
+        undefined as any
+      );
+      conversationService.findConversationByRoomId.mockResolvedValue({
+        id: 'conv-1',
+      } as any);
+      conversationService.getConversationMemberActorIds.mockResolvedValue([
+        'agent-a',
+        'agent-b',
+      ]);
+      vcInvocationService.processDirectConversation.mockResolvedValue(
+        undefined
+      );
+
+      await service.handleMessageReceived(
+        new MessageReceivedEvent(basePayload as any)
+      );
+
+      expect(
+        conversationService.findConversationByRoomId
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        conversationService.getConversationMemberActorIds
+      ).toHaveBeenCalledTimes(1);
+      // Both the subscription publish AND the new notification branch see
+      // the SAME hoisted memberActorIds — the conversation-notification
+      // service was invoked (auto-mocked) rather than skipped.
+      expect(
+        subscriptionPublishService.publishConversationEvent
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ memberActorIds: ['agent-a', 'agent-b'] })
+      );
+    });
+
     it('should delegate to VC direct conversation processing for conversation rooms', async () => {
       const room = makeRoom({ type: RoomType.CONVERSATION_DIRECT });
       roomLookupService.getRoomOrFail.mockResolvedValue(room);

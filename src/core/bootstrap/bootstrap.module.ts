@@ -27,6 +27,7 @@ import { PlatformTemplatesModule } from '@platform/platform-templates/platform.t
 import { AiPersonaModule } from '@services/ai-server/ai-persona';
 import { AiServerModule } from '@services/ai-server/ai-server/ai.server.module';
 import { SearchIngestModule } from '@services/api/search/ingest';
+import { McpApiKeyAuditService } from '@services/mcp-server/auth/mcp-api-key.audit.service';
 import { McpApiKey } from '@services/mcp-server/auth/mcp-api-key.entity';
 import { McpApiKeyService } from '@services/mcp-server/auth/mcp-api-key.service';
 import { AdminAuthorizationModule } from '@src/platform-admin/domain/authorization/admin.authorization.module';
@@ -63,7 +64,7 @@ import { BootstrapService } from './bootstrap.service';
     PlatformWellKnownVirtualContributorsModule,
     RoleSetModule,
   ],
-  providers: [BootstrapService, McpApiKeyService],
+  providers: [BootstrapService, McpApiKeyService, McpApiKeyAuditService],
   exports: [BootstrapService],
 })
 export class BootstrapModule {}

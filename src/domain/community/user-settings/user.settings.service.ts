@@ -250,6 +250,18 @@ export class UserSettingsService {
         settings.notification.user.commentReply,
         notificationUserData.commentReply
       );
+      // 034-messaging-notifications (FR-017): merged field-by-field like
+      // every other row — an update to one messaging row never resets the
+      // other, and the stored `inApp` value is retained for row-shape
+      // symmetry even though it is never honored (FR-003/D-2).
+      this.updateNotificationSetting(
+        settings.notification.user.conversationMessageDirect,
+        notificationUserData.conversationMessageDirect
+      );
+      this.updateNotificationSetting(
+        settings.notification.user.conversationMessageGroup,
+        notificationUserData.conversationMessageGroup
+      );
 
       // Handle membership notifications
       if (notificationUserData.membership) {
