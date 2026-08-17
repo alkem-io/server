@@ -145,6 +145,14 @@ export class TemplateAuthorizationService {
       case TemplateType.POST: {
         break;
       }
+      case TemplateType.CLASSIFICATION: {
+        // No sub-entity to cascade into: a Classification Template's payload
+        // (classificationCardinality, classificationValueSet) lives directly
+        // on the template row, not a related entity — the parent-inherited +
+        // profile authorization already applied above is everything a
+        // Classification Template needs.
+        break;
+      }
       default: {
         throw new EntityNotFoundException(
           `Unable to reset auth on template of type: ${template.type}`,
