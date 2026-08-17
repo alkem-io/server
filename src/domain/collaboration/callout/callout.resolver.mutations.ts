@@ -19,6 +19,7 @@ import {
   DeleteCalloutInput,
   UpdateCalloutEntityInput,
 } from '@domain/collaboration/callout/dto';
+import { CollaboraDocumentEventsService } from '@domain/collaboration/collabora-document/events/collabora.document.events.service';
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IMemo } from '@domain/common/memo/types';
@@ -67,6 +68,7 @@ export class CalloutResolverMutations {
     private readonly logger: WinstonLogger,
     private readonly communityResolverService: CommunityResolverService,
     private readonly contributionReporter: ContributionReporterService,
+    private readonly collaboraDocumentEventsService: CollaboraDocumentEventsService,
     private readonly activityAdapter: ActivityAdapter,
     private readonly notificationAdapterSpace: NotificationSpaceAdapter,
     private readonly authorizationService: AuthorizationService,
@@ -604,46 +606,14 @@ export class CalloutResolverMutations {
       );
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
-    // TEMP hotfix: analytics attribution disabled to remove the ~8s
-    // getCommunityForCollaboraDocumentOrFail penalty on the document-upload
-    // path. The proper fix (a cheap leaf-first space lookup) restores this
-    // reporting; see the collabora-editor-url-latency follow-up PR referenced in
-    // this PR's description.
-    // Lifecycle analytics: record the upload as a single-actor
-    // COLLABORA_DOCUMENT_UPLOADED event for the uploading user. Resolve the
-    // level-zero space by the freshly-created CollaboraDocument the same way
-    // the open path does (via the community resolver), then report.
-    // Best-effort: the contribution is already persisted above, so a
-    // failure here must NOT fail the import — that would prompt a client retry
-    // and a duplicate document. Catch and log; never re-throw.
-    // if (contribution.collaboraDocument) {
-    //   try {
-    //     const collaboraDocument = contribution.collaboraDocument;
-    //     const community =
-    //       await this.communityResolverService.getCommunityForCollaboraDocumentOrFail(
-    //         collaboraDocument.id
-    //       );
-    //     const levelZeroSpaceID =
-    //       await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
-    //         community.id
-    //       );
-    //     this.contributionReporter.calloutCollaboraDocumentUploaded(
-    //       {
-    //         id: collaboraDocument.id,
-    //         name:
-    //           collaboraDocument.profile?.displayName ?? collaboraDocument.id,
-    //         space: levelZeroSpaceID,
-    //       },
-    //       actorContext
-    //     );
-    //   } catch (e: any) {
-    //     this.logger.error(
-    //       `Failed to report COLLABORA_DOCUMENT_UPLOADED analytics for contribution ${contribution.id}: ${e?.message}`,
-    //       e?.stack,
-    //       LogContext.COLLABORATION
-    //     );
-    //   }
-    // }
+    if (contribution.collaboraDocument) {
+      const collaboraDocument = contribution.collaboraDocument;
+      this.collaboraDocumentEventsService.publishUploaded(
+        collaboraDocument.id,
+        collaboraDocument.profile?.displayName ?? collaboraDocument.id,
+        actorContext
+      );
+    }
 
     return await this.calloutContributionService.getCalloutContributionOrFail(
       contribution.id

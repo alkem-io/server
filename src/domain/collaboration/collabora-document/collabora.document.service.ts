@@ -274,23 +274,16 @@ export class CollaboraDocumentService {
   }
 
   public async getEditorUrl(
-    collaboraDocumentID: string,
+    collaboraDocument: ICollaboraDocument,
     actorID: string,
     actorName: string | undefined,
     lang: string
   ): Promise<{ editorUrl: string; accessTokenTTL: number }> {
-    const collaboraDocument = await this.getCollaboraDocumentOrFail(
-      collaboraDocumentID,
-      {
-        relations: { document: true },
-      }
-    );
-
     if (!collaboraDocument.document) {
       throw new RelationshipNotFoundException(
         'Document not found on CollaboraDocument',
         LogContext.COLLABORATION,
-        { collaboraDocumentId: collaboraDocumentID }
+        { collaboraDocumentId: collaboraDocument.id }
       );
     }
 

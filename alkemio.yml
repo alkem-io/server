@@ -523,6 +523,54 @@ notifications:
   in_app:
     max_notifications_per_user: ${IN_APP_MAX_NOTIFICATIONS_PER_USER}:100
     max_retention_period_days: ${IN_APP_MAX_RETENTION_PERIOD_DAYS}:90
+  # Chat/conversation message notifications (034-messaging-notifications).
+  # NOT declared on any deployment manifest this release (Operator Ruling 3b) —
+  # the in-code defaults below govern everywhere; flipping `enabled` in
+  # production requires a deploy (risk R-9).
+  messaging:
+    enabled: ${MESSAGING_NOTIFICATIONS_ENABLED}:true
+    # Operator Ruling R4 — messaging notifications are DEBOUNCED per recipient
+    # and then digested; nothing is sent on message arrival. Four independent
+    # tracks per recipient, each with its own quiet period and its own maximum
+    # delay cap. The cap is not optional: a pure reset-on-every-message
+    # debounce never fires in an active conversation, which would make the
+    # busiest conversations the quietest notifiers.
+    #
+    # Worst case dispatches per recipient per hour = 3600 / max_delay_seconds,
+    # INDEPENDENT of message volume. That bound is why the pre-R4 suppression
+    # window and both volume budgets were deleted (D-21).
+    #
+    # Every window is env-overridable because the live test stacks must run
+    # seconds-scale windows; the committed defaults are the production values.
+    # None of these vars are declared on any deployment manifest this release
+    # (Operator Ruling 3a/3b) — the literals below govern in production, and
+    # changing them requires a deploy (risk R-9).
+    #
+    # Validated at boot (fail fast): per track quiet <= max_delay, and
+    # sweep_interval <= the smallest quiet period.
+    digest:
+      # How often each replica sweeps the due queue. Lower = tighter adherence
+      # to the quiet periods below; cost is one ZRANGEBYSCORE per replica/tick.
+      sweep_interval_seconds: ${MESSAGING_DIGEST_SWEEP_INTERVAL_SECONDS}:10
+      max_dispatch_attempts: ${MESSAGING_DIGEST_MAX_DISPATCH_ATTEMPTS}:3
+      retry_backoff_seconds: ${MESSAGING_DIGEST_RETRY_BACKOFF_SECONDS}:60
+      # Push is the real-time channel, so it is faster than email; group is
+      # higher-volume and lower-salience per message, so it is slower than
+      # direct.
+      push:
+        direct:
+          quiet_period_seconds: ${MESSAGING_DIGEST_PUSH_DIRECT_QUIET_SECONDS}:60
+          max_delay_seconds: ${MESSAGING_DIGEST_PUSH_DIRECT_MAX_DELAY_SECONDS}:300
+        group:
+          quiet_period_seconds: ${MESSAGING_DIGEST_PUSH_GROUP_QUIET_SECONDS}:300
+          max_delay_seconds: ${MESSAGING_DIGEST_PUSH_GROUP_MAX_DELAY_SECONDS}:900
+      email:
+        direct:
+          quiet_period_seconds: ${MESSAGING_DIGEST_EMAIL_DIRECT_QUIET_SECONDS}:300
+          max_delay_seconds: ${MESSAGING_DIGEST_EMAIL_DIRECT_MAX_DELAY_SECONDS}:1800
+        group:
+          quiet_period_seconds: ${MESSAGING_DIGEST_EMAIL_GROUP_QUIET_SECONDS}:1200
+          max_delay_seconds: ${MESSAGING_DIGEST_EMAIL_GROUP_MAX_DELAY_SECONDS}:3600
 
 collaboration:
   membership:
