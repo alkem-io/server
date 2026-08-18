@@ -137,15 +137,26 @@ describe('SpaceAbout.classifications — S-13, S-14, council operator:Q6', () =>
     // @AuthorizationActorHasPrivilege(READ) decorator on this specific
     // field would break anonymous reads of a public Space's hidden entries
     // (probe 8). Guards against a well-meaning future addition.
+    //
+    // The window checked starts at the previous blank line, NOT at
+    // `@ResolveField('classifications'` — every sibling field in this file
+    // places its privilege decorator ABOVE `@ResolveField`, so a slice that
+    // starts there would miss a decorator added in that conventional spot
+    // and stay green through the exact regression it exists to catch.
     const source = readFileSync(
       join(__dirname, '../space.about/space.about.resolver.fields.ts'),
       'utf-8'
     );
-    const classificationsFieldBlock = source.slice(
-      source.indexOf("@ResolveField('classifications'")
-    );
-    const nextMethodBoundary = classificationsFieldBlock.indexOf('\n  }\n');
-    const fieldSource = classificationsFieldBlock.slice(0, nextMethodBoundary);
-    expect(fieldSource).not.toMatch(/AuthorizationActorHasPrivilege/);
+    const methodStart = source.indexOf('async classifications(');
+    const windowStart = source.lastIndexOf('\n\n', methodStart);
+    const nextMethodBoundary = source.indexOf('\n  }\n', methodStart);
+    const fieldSource = source.slice(windowStart, nextMethodBoundary);
+    expect(fieldSource).toContain('classifications');
+    // Match only an actual decorator line (starts with `@`, ignoring
+    // leading whitespace) — the surrounding comment explaining the
+    // deliberate absence legitimately mentions the decorator's name in
+    // prose and must not itself trip the guard.
+    expect(fieldSource).not.toMatch(/^\s*@AuthorizationActorHasPrivilege/m);
+    expect(fieldSource).not.toMatch(/^\s*@UseGuards/m);
   });
 });
