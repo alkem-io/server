@@ -23,7 +23,7 @@ jobs:
           docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}
 
   # Serialise against a running test-suites nightly. A deploy that lands
-  # mid-nightly rolls the (single-replica) server pod and migrates the DB under
+  # mid-nightly rolls the server pods and migrates the DB under
   # live tests, which tore down the auth endpoint and cascaded the run to
   # failure (see server#6258 / test-suites#563). The lock is a ConfigMap in the
   # test cluster; the nightly holds it across cleanup-db + e2e. Held only around
@@ -127,7 +127,7 @@ jobs:
         uses: azure/k8s-deploy@v7.0.0
         with:
           manifests: |
-            manifests/25-server-deployment-dev.yaml
+            manifests/26-server-deployment-test.yaml
             manifests/30-server-service.yaml
           images: |
             ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}
