@@ -2,7 +2,11 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { describe, expect, it, vi } from 'vitest';
 import { ClassificationEntryResolverFields } from './classification.entry.resolver.fields';
-import { makeEntry } from './classification.entry.test-helpers';
+import { ClassificationEntryService } from './classification.entry.service';
+import {
+  createMockClassificationEntryRepository,
+  makeEntry,
+} from './classification.entry.test-helpers';
 
 describe('ClassificationEntryResolverFields', () => {
   const resolver = new ClassificationEntryResolverFields();
@@ -83,6 +87,49 @@ describe('SpaceAbout.classifications — S-13, S-14, council operator:Q6', () =>
     expect(
       classificationEntryService.getClassificationsForSpaceAbout
     ).toHaveBeenCalledWith('about-1');
+  });
+
+  it('a hidden (display: false) entry is still returned by the read path — "hidden" is never "private"', async () => {
+    const mixedEntries = [
+      makeEntry({ id: 'e1', displayLabel: 'Shown', display: true }),
+      makeEntry({ id: 'e2', displayLabel: 'Hidden', display: false }),
+    ];
+    const classificationEntryService = {
+      getClassificationsForSpaceAbout: vi.fn().mockResolvedValue(mixedEntries),
+    };
+    const { SpaceAboutResolverFields } = await import(
+      '@domain/space/space.about/space.about.resolver.fields'
+    );
+    const resolver = new SpaceAboutResolverFields(
+      {} as any,
+      {} as any,
+      classificationEntryService as any
+    );
+
+    const result = await resolver.classifications({ id: 'about-1' } as any);
+
+    expect(result).toHaveLength(2);
+    expect(result.map(e => ({ id: e.id, display: e.display }))).toEqual([
+      { id: 'e1', display: true },
+      { id: 'e2', display: false },
+    ]);
+  });
+
+  it('the service query behind the read path carries no `display` predicate — regressing to a filtered query would silently hide entries from external aggregators', () => {
+    const entryRepository = createMockClassificationEntryRepository();
+    const service = new ClassificationEntryService(
+      entryRepository as any,
+      { findOne: vi.fn() } as any,
+      { verbose: vi.fn(), warn: vi.fn(), error: vi.fn() } as any
+    );
+
+    service.getClassificationsForSpaceAbout('about-1');
+
+    expect(entryRepository.find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { spaceAbout: { id: 'about-1' } },
+      })
+    );
   });
 
   it('S-13/FR-010d: the classifications resolve field carries no privilege decorator — read auth is inherited from the About query path', () => {
