@@ -272,6 +272,42 @@ describe('ApplicationService', () => {
     });
   });
 
+  describe('getUser', () => {
+    it('should return the user when the relation is present', async () => {
+      const mockUser = { id: 'user-1' } as any;
+      const mockApplication = {
+        id: 'app-1',
+        user: mockUser,
+      } as Application;
+
+      vi.spyOn(service, 'getApplicationOrFail').mockResolvedValue(
+        mockApplication
+      );
+
+      const result = await service.getUser('app-1');
+
+      expect(result).toBe(mockUser);
+      expect(service.getApplicationOrFail).toHaveBeenCalledWith('app-1', {
+        relations: { user: true },
+      });
+    });
+
+    it('should return null when the user relation is missing', async () => {
+      const mockApplication = {
+        id: 'app-1',
+        user: undefined,
+      } as Application;
+
+      vi.spyOn(service, 'getApplicationOrFail').mockResolvedValue(
+        mockApplication
+      );
+
+      const result = await service.getUser('app-1');
+
+      expect(result).toBeNull();
+    });
+  });
+
   describe('getActor', () => {
     it('should return user when application has a loaded user relation', async () => {
       const mockUser = { id: 'user-1', email: 'user@test.com' } as any;
