@@ -1,10 +1,12 @@
 import { SMALL_TEXT_LENGTH } from '@common/constants/entity.field.length.constants';
 import { ClassificationCardinality } from '@common/enums/classification.cardinality';
+import { CLASSIFICATION_VALUE_SET_MAX_SIZE } from '@domain/common/classification-value/classification.value.interface';
 import { CreateClassificationValueInput } from '@domain/common/classification-value/dto/classification.value.dto.create';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   ArrayMinSize,
   IsOptional,
   MaxLength,
@@ -33,5 +35,6 @@ export class UpdateClassificationEntryInput {
   @ValidateNested({ each: true })
   @Type(() => CreateClassificationValueInput)
   @ArrayMinSize(1)
+  @ArrayMaxSize(CLASSIFICATION_VALUE_SET_MAX_SIZE)
   values?: CreateClassificationValueInput[];
 }

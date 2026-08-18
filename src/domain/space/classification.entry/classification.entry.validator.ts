@@ -1,3 +1,4 @@
+import { SMALL_TEXT_LENGTH } from '@common/constants/entity.field.length.constants';
 import { ClassificationCardinality } from '@common/enums/classification.cardinality';
 import { LogContext } from '@common/enums/logging.context';
 import { ValidationException } from '@common/exceptions';
@@ -59,6 +60,19 @@ export class ClassificationEntryValidator {
           { duplicateId: value.id }
         );
       }
+      // Defence in depth alongside CreateClassificationValueInput's own
+      // @MaxLength(SMALL_TEXT_LENGTH): this validator is also reachable from
+      // callers that never pass through that DTO's class-validator pipe
+      // (bootstrap seeding, a future internal caller), and `label` persists
+      // straight into unbounded jsonb re-served on every anonymous read of
+      // a public Space's About.
+      if (value.label.length > SMALL_TEXT_LENGTH) {
+        throw new ValidationException(
+          'Classification value label exceeds the maximum length',
+          LogContext.CLASSIFICATION,
+          { labelLength: value.label.length }
+        );
+      }
       seen.add(value.id);
     }
   }
@@ -66,17 +80,43 @@ export class ClassificationEntryValidator {
   // I-3, I-4 — every id in the proposed selection must exist in the value
   // set, and a SINGLE_SELECT entry may never end up with more than one
   // selected value. Both reject atomically: nothing is applied on failure.
+  //
+  // A selection can never legitimately contain a duplicate or exceed the
+  // value set's own size (a value can only be selected once) — rejecting
+  // both here, before the membership/cardinality checks, is defence in
+  // depth against a caller that bypasses the DTO's own
+  // @ArrayMaxSize(CLASSIFICATION_VALUE_SET_MAX_SIZE): without it, a
+  // duplicate-tolerant MULTI_SELECT write can inflate `selectedValueIDs`
+  // arbitrarily even though every id it contains is individually valid.
   static validateSelection(
     cardinality: ClassificationCardinality,
     valueSet: IClassificationValue[],
     selectedValueIDs: string[]
   ): void {
+    if (selectedValueIDs.length > CLASSIFICATION_VALUE_SET_MAX_SIZE) {
+      throw new ValidationException(
+        `A Classification selection must contain at most ${CLASSIFICATION_VALUE_SET_MAX_SIZE} values`,
+        LogContext.CLASSIFICATION,
+        { size: selectedValueIDs.length }
+      );
+    }
+    if (new Set(selectedValueIDs).size !== selectedValueIDs.length) {
+      throw new ValidationException(
+        'Selection must not contain duplicate value ids',
+        LogContext.CLASSIFICATION,
+        { size: selectedValueIDs.length }
+      );
+    }
+
     const validIds = new Set(valueSet.map(value => value.id));
     const unknownIds = selectedValueIDs.filter(id => !validIds.has(id));
     if (unknownIds.length > 0) {
       throw new ValidationException(
         'Selection contains value id(s) not present in the value set',
         LogContext.CLASSIFICATION,
+        // Bounded by the size check above — never the unbounded caller
+        // input verbatim, which would turn a rejected request into an
+        // oversized log record.
         { unknownIds }
       );
     }
@@ -85,6 +125,9 @@ export class ClassificationEntryValidator {
       cardinality === ClassificationCardinality.SINGLE_SELECT &&
       selectedValueIDs.length > 1
     ) {
+      // Safe to embed verbatim here (unlike a hypothetical unbounded
+      // caller): the size guard above already caps `selectedValueIDs` at
+      // CLASSIFICATION_VALUE_SET_MAX_SIZE by the time this branch runs.
       throw new ValidationException(
         'A single-select Classification may have at most one selected value',
         LogContext.CLASSIFICATION,

@@ -42,6 +42,24 @@ describe('ClassificationEntryValidator', () => {
     });
   });
 
+  describe('sec-server-2: label length is enforced defensively, even for a caller that bypasses the DTO pipe', () => {
+    it('rejects a value label over SMALL_TEXT_LENGTH', () => {
+      expect(() =>
+        ClassificationEntryValidator.validateValueSet([
+          { id: 'a', label: 'x'.repeat(129) },
+        ])
+      ).toThrow(ValidationException);
+    });
+
+    it('accepts a value label at exactly SMALL_TEXT_LENGTH', () => {
+      expect(() =>
+        ClassificationEntryValidator.validateValueSet([
+          { id: 'a', label: 'x'.repeat(128) },
+        ])
+      ).not.toThrow();
+    });
+  });
+
   describe('I-3: selection must be a subset of the value set', () => {
     it('rejects an unknown selected id', () => {
       expect(() =>
@@ -49,6 +67,27 @@ describe('ClassificationEntryValidator', () => {
           ClassificationCardinality.MULTI_SELECT,
           values(3),
           ['v0', 'bogus']
+        )
+      ).toThrow(ValidationException);
+    });
+
+    it('sec-server-4: rejects a duplicate id in the selection, even though every id is individually valid', () => {
+      expect(() =>
+        ClassificationEntryValidator.validateSelection(
+          ClassificationCardinality.MULTI_SELECT,
+          values(3),
+          ['v0', 'v0']
+        )
+      ).toThrow(ValidationException);
+    });
+
+    it('sec-server-4: rejects a selection longer than the value-set size bound, before the membership check even runs', () => {
+      const oversized = Array.from({ length: 51 }, (_, i) => `v${i}`);
+      expect(() =>
+        ClassificationEntryValidator.validateSelection(
+          ClassificationCardinality.MULTI_SELECT,
+          values(3),
+          oversized
         )
       ).toThrow(ValidationException);
     });
