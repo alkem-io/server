@@ -91,8 +91,8 @@ export const DEFAULT_VISUAL_CONSTRAINTS = {
     minHeight: 1,
     maxHeight: 8000,
     aspectRatio: 1,
-    minAspectRatio: 1,
-    maxAspectRatio: 1,
+    minAspectRatio: 0.01,
+    maxAspectRatio: 100,
     allowedTypes: VISUAL_ALLOWED_TYPES,
   },
   [VisualType.MEDIA_GALLERY_VIDEO]: {
@@ -101,8 +101,8 @@ export const DEFAULT_VISUAL_CONSTRAINTS = {
     minHeight: 1,
     maxHeight: 8000,
     aspectRatio: 1,
-    minAspectRatio: 1,
-    maxAspectRatio: 1,
+    minAspectRatio: 0.01,
+    maxAspectRatio: 100,
     allowedTypes: MEDIA_GALLERY_VIDEO_ALLOWED_TYPES,
   },
 } as const;
