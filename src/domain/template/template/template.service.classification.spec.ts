@@ -280,6 +280,63 @@ describe('TemplateService — Classification Template (FR-002, I-9)', () => {
       ]);
     });
 
+    it('removing the first value with ids omitted keeps the survivor on its own id — never re-pointed via position', async () => {
+      const existing = new Template();
+      existing.id = 'tmpl-1';
+      existing.type = TemplateType.CLASSIFICATION;
+      existing.classificationCardinality =
+        ClassificationCardinality.MULTI_SELECT;
+      existing.classificationValueSet = [
+        { id: 'dutch', label: 'Dutch' },
+        { id: 'french', label: 'French' },
+      ];
+      templateRepository.find.mockResolvedValue([existing]);
+
+      const updated = await service.updateTemplate(
+        existing as any,
+        {
+          ID: 'tmpl-1',
+          classificationData: {
+            cardinality: ClassificationCardinality.MULTI_SELECT,
+            values: [{ label: 'French' }],
+          },
+        } as any
+      );
+
+      expect(updated.classificationValueSet).toEqual([
+        { id: 'french', label: 'French' },
+      ]);
+    });
+
+    it('a reorder with ids omitted leaves every id pointing at its own label, never swapped', async () => {
+      const existing = new Template();
+      existing.id = 'tmpl-1';
+      existing.type = TemplateType.CLASSIFICATION;
+      existing.classificationCardinality =
+        ClassificationCardinality.MULTI_SELECT;
+      existing.classificationValueSet = [
+        { id: 'dutch', label: 'Dutch' },
+        { id: 'french', label: 'French' },
+      ];
+      templateRepository.find.mockResolvedValue([existing]);
+
+      const updated = await service.updateTemplate(
+        existing as any,
+        {
+          ID: 'tmpl-1',
+          classificationData: {
+            cardinality: ClassificationCardinality.MULTI_SELECT,
+            values: [{ label: 'French' }, { label: 'Dutch' }],
+          },
+        } as any
+      );
+
+      expect(updated.classificationValueSet).toEqual([
+        { id: 'french', label: 'French' },
+        { id: 'dutch', label: 'Dutch' },
+      ]);
+    });
+
     it('rejects classificationData on an update targeting a non-CLASSIFICATION template', async () => {
       const existing = new Template();
       existing.id = 'tmpl-2';

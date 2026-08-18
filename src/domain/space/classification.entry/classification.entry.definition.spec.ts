@@ -139,4 +139,52 @@ describe('ClassificationEntryService.updateDefinition — relabel leaves the id 
       { id: '14-life-below-water', label: '14 · Life Below Water' },
     ]);
   });
+
+  it('removing the first value with ids omitted keeps the survivor on its own id — never re-pointed via position', async () => {
+    const { service } = buildClassificationEntryService();
+    const entry = makeEntry({
+      cardinality: ClassificationCardinality.MULTI_SELECT,
+      valueSet: [
+        { id: 'sdg-13', label: '13 · Climate Action' },
+        { id: 'sdg-14', label: '14 · Life Below Water' },
+      ],
+      selectedValueIDs: ['sdg-14'],
+    });
+
+    const result = await service.updateDefinition(entry, {
+      classificationEntryID: entry.id,
+      values: [{ label: '14 · Life Below Water' }],
+    } as any);
+
+    expect(result.valueSet).toEqual([
+      { id: 'sdg-14', label: '14 · Life Below Water' },
+    ]);
+    // The selection survives on the correct id — a positional carry would
+    // have re-pointed 'sdg-13' at 'Life Below Water' instead, and
+    // auto-deselect would then have silently emptied the selection.
+    expect(result.selectedValueIDs).toEqual(['sdg-14']);
+  });
+
+  it('a reorder with ids omitted leaves every id pointing at its own label, never swapped', async () => {
+    const { service } = buildClassificationEntryService();
+    const entry = makeEntry({
+      cardinality: ClassificationCardinality.MULTI_SELECT,
+      valueSet: [
+        { id: 'a', label: 'A' },
+        { id: 'b', label: 'B' },
+      ],
+      selectedValueIDs: ['b'],
+    });
+
+    const result = await service.updateDefinition(entry, {
+      classificationEntryID: entry.id,
+      values: [{ label: 'B' }, { label: 'A' }],
+    } as any);
+
+    expect(result.valueSet).toEqual([
+      { id: 'b', label: 'B' },
+      { id: 'a', label: 'A' },
+    ]);
+    expect(result.selectedValueIDs).toEqual(['b']);
+  });
 });

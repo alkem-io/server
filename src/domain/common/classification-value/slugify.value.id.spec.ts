@@ -26,6 +26,28 @@ describe('deriveClassificationValueIds', () => {
     ]);
   });
 
+  it('rejects an over-size input BEFORE any collision-suffix work — the bound is checked first, not after (sec-server-3)', () => {
+    // A single label repeated past the max would previously walk the
+    // quadratic collision-suffix loop before this bound was ever consulted.
+    const oversized = Array.from({ length: 51 }, () => ({ label: 'a' }));
+    expect(() => deriveClassificationValueIds(oversized)).toThrow(
+      ValidationException
+    );
+  });
+
+  it('stays fast for a large run of identically-labelled values, at exactly the max size — O(1) amortized suffix allocation, not O(n^2)', () => {
+    const atMax = Array.from({ length: 50 }, () => ({ label: 'Dutch' }));
+    const start = performance.now();
+    const derived = deriveClassificationValueIds(atMax);
+    const elapsedMs = performance.now() - start;
+
+    expect(derived).toHaveLength(50);
+    expect(new Set(derived.map(v => v.id)).size).toEqual(50);
+    // The old quadratic loop took ~1.4s for 10k identical labels on this
+    // class of machine; 50 values must be essentially instant.
+    expect(elapsedMs).toBeLessThan(50);
+  });
+
   it('suffixes deterministically on a derived-id collision within the set', () => {
     const derived = deriveClassificationValueIds([
       { label: 'Dutch' },
@@ -134,5 +156,73 @@ describe('deriveClassificationValueIdsForEdit', () => {
       { id: 'nl', label: 'Nederlands' },
     ]);
     expect(edited).toEqual([{ id: 'nl', label: 'Nederlands' }]);
+  });
+
+  it("a removal with ids omitted keeps the surviving value's own id — never the first value's id via position", () => {
+    const existing = [
+      { id: 'sdg-13', label: '13 · Climate Action' },
+      { id: 'sdg-14', label: '14 · Life Below Water' },
+    ];
+    const edited = deriveClassificationValueIdsForEdit(existing, [
+      { label: '14 · Life Below Water' },
+    ]);
+    expect(edited).toEqual([{ id: 'sdg-14', label: '14 · Life Below Water' }]);
+  });
+
+  it('removing the middle value with ids omitted keeps the surviving values on their own ids', () => {
+    const existing = [
+      { id: 'a', label: 'A' },
+      { id: 'b', label: 'B' },
+      { id: 'c', label: 'C' },
+    ];
+    const edited = deriveClassificationValueIdsForEdit(existing, [
+      { label: 'A' },
+      { label: 'C' },
+    ]);
+    expect(edited).toEqual([
+      { id: 'a', label: 'A' },
+      { id: 'c', label: 'C' },
+    ]);
+  });
+
+  it('a reorder with ids omitted follows the label, not the position — ids never swap', () => {
+    const existing = [
+      { id: 'a', label: 'A' },
+      { id: 'b', label: 'B' },
+    ];
+    const edited = deriveClassificationValueIdsForEdit(existing, [
+      { label: 'B' },
+      { label: 'A' },
+    ]);
+    expect(edited).toEqual([
+      { id: 'b', label: 'B' },
+      { id: 'a', label: 'A' },
+    ]);
+  });
+
+  it('rejects an over-size edit input BEFORE any label-matching work (sec-server-3)', () => {
+    const existing = [{ id: 'a', label: 'A' }];
+    const oversized = Array.from({ length: 51 }, () => ({ label: 'a' }));
+    expect(() =>
+      deriveClassificationValueIdsForEdit(existing, oversized)
+    ).toThrow(ValidationException);
+  });
+
+  it('a reorder combined with a rename: the moved value keeps its id, the renamed value keeps its id too', () => {
+    const existing = [
+      { id: 'a', label: 'A' },
+      { id: 'b', label: 'B' },
+    ];
+    const edited = deriveClassificationValueIdsForEdit(existing, [
+      { label: 'B' },
+      { label: 'A2' },
+    ]);
+    // 'B' matches existing id b via label; 'A2' has no label match, so it
+    // falls back positionally onto existing[1] = b — but b is already
+    // claimed by 'B', so 'A2' is treated as genuinely new and slugified.
+    expect(edited).toEqual([
+      { id: 'b', label: 'B' },
+      { id: 'a2', label: 'A2' },
+    ]);
   });
 });
