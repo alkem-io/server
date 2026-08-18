@@ -2,6 +2,7 @@ import { ClassificationCardinality } from '@common/enums/classification.cardinal
 import { TemplateType } from '@common/enums/template.type';
 import { ValidationException } from '@common/exceptions';
 import { ProfileService } from '@domain/common/profile/profile.service';
+import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken, getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -32,6 +33,7 @@ describe('TemplateService — Classification Template (FR-002, I-9)', () => {
       providers: [
         TemplateService,
         repositoryProviderMockFactory(Template),
+        repositoryProviderMockFactory(InnovationPack),
         {
           provide: getEntityManagerToken('default'),
           useValue: { find: vi.fn(), findOne: vi.fn() },
@@ -224,6 +226,57 @@ describe('TemplateService — Classification Template (FR-002, I-9)', () => {
 
       expect(updated.classificationValueSet).toEqual([
         { id: 'dutch', label: 'Nederlands' },
+      ]);
+    });
+
+    it('keeps the existing id on a relabel even when the caller OMITS the id — derive-once must not depend on the client echoing it back', async () => {
+      const existing = new Template();
+      existing.id = 'tmpl-1';
+      existing.type = TemplateType.CLASSIFICATION;
+      existing.classificationCardinality =
+        ClassificationCardinality.MULTI_SELECT;
+      existing.classificationValueSet = [{ id: 'dutch', label: 'Dutch' }];
+      templateRepository.find.mockResolvedValue([existing]);
+
+      const updated = await service.updateTemplate(
+        existing as any,
+        {
+          ID: 'tmpl-1',
+          classificationData: {
+            cardinality: ClassificationCardinality.MULTI_SELECT,
+            values: [{ label: 'Nederlands' }],
+          },
+        } as any
+      );
+
+      expect(updated.classificationValueSet).toEqual([
+        { id: 'dutch', label: 'Nederlands' },
+      ]);
+    });
+
+    it('derives a fresh id only for a value beyond the previous length, on an id-omitted edit', async () => {
+      const existing = new Template();
+      existing.id = 'tmpl-1';
+      existing.type = TemplateType.CLASSIFICATION;
+      existing.classificationCardinality =
+        ClassificationCardinality.MULTI_SELECT;
+      existing.classificationValueSet = [{ id: 'dutch', label: 'Dutch' }];
+      templateRepository.find.mockResolvedValue([existing]);
+
+      const updated = await service.updateTemplate(
+        existing as any,
+        {
+          ID: 'tmpl-1',
+          classificationData: {
+            cardinality: ClassificationCardinality.MULTI_SELECT,
+            values: [{ label: 'Nederlands' }, { label: 'French' }],
+          },
+        } as any
+      );
+
+      expect(updated.classificationValueSet).toEqual([
+        { id: 'dutch', label: 'Nederlands' },
+        { id: 'french', label: 'French' },
       ]);
     });
 

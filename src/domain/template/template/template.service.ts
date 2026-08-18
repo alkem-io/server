@@ -17,7 +17,10 @@ import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.
 import { ICollaboration } from '@domain/collaboration/collaboration';
 import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { deriveClassificationValueIds } from '@domain/common/classification-value/slugify.value.id';
+import {
+  deriveClassificationValueIds,
+  deriveClassificationValueIdsForEdit,
+} from '@domain/common/classification-value/slugify.value.id';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
@@ -28,6 +31,7 @@ import { ClassificationEntryValidator } from '@domain/space/classification.entry
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
@@ -60,6 +64,11 @@ export class TemplateService {
     private spaceLookupService: SpaceLookupService,
     @InjectRepository(Template)
     private templateRepository: Repository<Template>,
+    // Narrow, direct read/write of InnovationPack rows — used only to
+    // record the delete-time seed tombstone on the owning pack. NOT the
+    // full InnovationPackModule; see template.module.ts.
+    @InjectRepository(InnovationPack)
+    private innovationPackRepository: Repository<InnovationPack>,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -484,10 +493,16 @@ export class TemplateService {
       template.type === TemplateType.CLASSIFICATION &&
       templateData.classificationData
     ) {
-      // Derive-once (FR-002c): an id supplied by the caller (e.g. an
-      // existing value being relabeled) is kept verbatim, never
-      // re-derived; only a genuinely new, id-less value is slugified here.
-      const derivedValues = deriveClassificationValueIds(
+      // Derive-once: an id supplied by the caller (e.g. an existing value
+      // being relabeled) is kept verbatim, never re-derived. An id-LESS
+      // incoming value is matched positionally against the
+      // template's CURRENT classificationValueSet and carries that id
+      // forward too — a relabel must not change the stable id merely
+      // because the caller omitted it rather than echoing it back; only a
+      // value beyond the previous length is genuinely new and gets a fresh
+      // slug.
+      const derivedValues = deriveClassificationValueIdsForEdit(
+        template.classificationValueSet ?? [],
         templateData.classificationData.values
       );
       ClassificationEntryValidator.validateValueSet(derivedValues);
@@ -747,6 +762,7 @@ export class TemplateService {
         callout: true,
         whiteboard: true,
         contentSpace: true,
+        templatesSet: true,
       },
     });
 
@@ -807,6 +823,13 @@ export class TemplateService {
       }
       case TemplateType.CLASSIFICATION: {
         // Cardinality and value set live as columns on the Template row itself, so there is nothing extra to cascade-delete.
+        // If this template lives inside an InnovationPack (e.g. the
+        // platform's own seeded pack), record its nameID as admin-deleted
+        // so the next bootstrap run's create-if-absent step never
+        // resurrects it. A no-op for Classification Templates in a Space
+        // Template Library or the platform TemplatesManager — neither has
+        // a matching InnovationPack.
+        await this.recordSeedTemplateDeletionIfInAnInnovationPack(template);
         break;
       }
       default: {
@@ -823,6 +846,30 @@ export class TemplateService {
     const result = await this.templateRepository.remove(template as Template);
     result.id = templateId;
     return result;
+  }
+
+  // The classification-template seed's create-if-absent step matches
+  // definitions by nameID alone, which on its own cannot tell "never
+  // created" apart from "admin-deleted"; this is the write half of that
+  // tombstone. Scoped to whichever InnovationPack (if any) owns this
+  // template's TemplatesSet — never a platform-wide marker — so it says
+  // nothing about templates outside a pack.
+  private async recordSeedTemplateDeletionIfInAnInnovationPack(
+    template: ITemplate
+  ): Promise<void> {
+    if (!template.templatesSet) {
+      return;
+    }
+    const pack = await this.innovationPackRepository.findOne({
+      where: { templatesSet: { id: template.templatesSet.id } },
+    });
+    if (!pack) {
+      return;
+    }
+    const deletedNameIDs = new Set(pack.deletedSeedTemplateNameIDs ?? []);
+    deletedNameIDs.add(template.nameID);
+    pack.deletedSeedTemplateNameIDs = Array.from(deletedNameIDs);
+    await this.innovationPackRepository.save(pack);
   }
 
   async save(template: ITemplate): Promise<ITemplate> {

@@ -51,9 +51,24 @@ export class ClassificationEntryResolverMutations {
       `addClassificationEntryFromTemplate: ${space.about.id}`
     );
 
+    // The DESTINATION's UPDATE right is not authorization to read an
+    // arbitrary SOURCE template's vocabulary — a Classification Template
+    // can live inside a private Space's own library. Resolve and
+    // READ-authorize it before ever copying from it.
+    const template =
+      await this.classificationEntryService.getClassificationTemplateOrFail(
+        classificationData.templateID
+      );
+    await this.authorizationService.grantAccessOrFail(
+      actorContext,
+      template.authorization,
+      AuthorizationPrivilege.READ,
+      `addClassificationEntryFromTemplate source template: ${template.id}`
+    );
+
     return this.classificationEntryService.addFromTemplate(
       space.about,
-      classificationData.templateID,
+      template,
       classificationData.displayLabel
     );
   }

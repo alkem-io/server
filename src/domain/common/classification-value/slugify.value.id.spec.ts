@@ -1,6 +1,10 @@
 import { ValidationException } from '@common/exceptions';
 import { describe, expect, it } from 'vitest';
-import { deriveClassificationValueIds, slugifyLabel } from './slugify.value.id';
+import {
+  deriveClassificationValueIds,
+  deriveClassificationValueIdsForEdit,
+  slugifyLabel,
+} from './slugify.value.id';
 
 describe('slugifyLabel', () => {
   it('slugifies a label with punctuation and accents into a dashed lowercase id', () => {
@@ -66,5 +70,69 @@ describe('deriveClassificationValueIds', () => {
         { id: 'dutch', label: 'Nederlands' },
       ])
     ).toThrow(ValidationException);
+  });
+
+  describe('non-Latin labels never derive an empty id', () => {
+    it('derives a non-empty id for a Cyrillic-only label', () => {
+      const derived = deriveClassificationValueIds([{ label: 'Здоровье' }]);
+      expect(derived[0].id).not.toEqual('');
+      expect(derived[0].id.length).toBeGreaterThan(0);
+    });
+
+    it('derives distinct non-empty ids for a set of Cyrillic labels, never colliding into the empty-id suffix chain', () => {
+      const derived = deriveClassificationValueIds([
+        { label: 'Здоровье' },
+        { label: 'Образование' },
+        { label: 'Технологии' },
+      ]);
+      const ids = derived.map(v => v.id);
+      expect(ids.every(id => id.length > 0)).toBe(true);
+      expect(new Set(ids).size).toEqual(3);
+    });
+
+    it('derives a non-empty id for a punctuation-only label', () => {
+      const derived = deriveClassificationValueIds([{ label: '· · ·' }]);
+      expect(derived[0].id.length).toBeGreaterThan(0);
+    });
+
+    it('derives a non-empty id for an empty label', () => {
+      const derived = deriveClassificationValueIds([{ label: '' }]);
+      expect(derived[0].id).toEqual('value');
+    });
+
+    it('derives a non-empty id for a CJK label', () => {
+      const derived = deriveClassificationValueIds([{ label: '教育' }]);
+      expect(derived[0].id.length).toBeGreaterThan(0);
+    });
+  });
+});
+
+describe('deriveClassificationValueIdsForEdit', () => {
+  it('carries the existing id forward positionally when the incoming value omits it, even on a relabel', () => {
+    const existing = [{ id: 'dutch', label: 'Dutch' }];
+    const edited = deriveClassificationValueIdsForEdit(existing, [
+      { label: 'Nederlands' },
+    ]);
+    expect(edited).toEqual([{ id: 'dutch', label: 'Nederlands' }]);
+  });
+
+  it('derives a fresh id only for a value beyond the previous length', () => {
+    const existing = [{ id: 'dutch', label: 'Dutch' }];
+    const edited = deriveClassificationValueIdsForEdit(existing, [
+      { label: 'Nederlands' },
+      { label: 'French' },
+    ]);
+    expect(edited).toEqual([
+      { id: 'dutch', label: 'Nederlands' },
+      { id: 'french', label: 'French' },
+    ]);
+  });
+
+  it('an explicit id on the incoming value still wins over positional carry-forward', () => {
+    const existing = [{ id: 'dutch', label: 'Dutch' }];
+    const edited = deriveClassificationValueIdsForEdit(existing, [
+      { id: 'nl', label: 'Nederlands' },
+    ]);
+    expect(edited).toEqual([{ id: 'nl', label: 'Nederlands' }]);
   });
 });

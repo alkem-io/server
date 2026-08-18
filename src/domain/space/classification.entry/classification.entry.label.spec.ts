@@ -12,15 +12,12 @@ describe('S-7/S-8: display-label duplicate guard, every write path', () => {
   const existingSibling = { id: 'sibling-1', displayLabel: 'SDGs' };
 
   it('addFromTemplate: rejects a normalized collision against a sibling on the same About', async () => {
-    const { service, entryRepository, templateRepository } =
-      buildClassificationEntryService();
+    const { service, entryRepository } = buildClassificationEntryService();
     entryRepository.find.mockResolvedValue([existingSibling]);
-    templateRepository.findOne.mockResolvedValue(
-      makeClassificationTemplate({ displayName: 'sdgs' })
-    );
+    const template = makeClassificationTemplate({ displayName: 'sdgs' });
 
     await expect(
-      service.addFromTemplate(makeSpaceAbout(), 'template-1')
+      service.addFromTemplate(makeSpaceAbout(), template as any)
     ).rejects.toThrow(ValidationException);
   });
 
@@ -68,14 +65,13 @@ describe('S-7/S-8: display-label duplicate guard, every write path', () => {
   });
 
   it('S-8: the stored label preserves the exact casing/spacing the author supplied', async () => {
-    const { service, entryRepository, templateRepository } =
-      buildClassificationEntryService();
+    const { service, entryRepository } = buildClassificationEntryService();
     entryRepository.find.mockResolvedValue([]);
-    templateRepository.findOne.mockResolvedValue(makeClassificationTemplate());
+    const template = makeClassificationTemplate();
 
     const entry = await service.addFromTemplate(
       makeSpaceAbout(),
-      'template-1',
+      template as any,
       '  My SDGs  '
     );
 

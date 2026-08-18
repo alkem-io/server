@@ -45,6 +45,13 @@ export class ClassificationEntryValidator {
 
     const seen = new Set<string>();
     for (const value of valueSet) {
+      if (!value.id) {
+        throw new ValidationException(
+          'Classification value ids must not be empty',
+          LogContext.CLASSIFICATION,
+          { label: value.label }
+        );
+      }
       if (seen.has(value.id)) {
         throw new ValidationException(
           'Classification value ids must be unique within the value set',

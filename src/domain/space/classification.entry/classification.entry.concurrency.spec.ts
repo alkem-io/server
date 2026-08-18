@@ -51,15 +51,13 @@ describe('S-12: the 1-50 value-set bound holds on every write path', () => {
   }));
 
   it('addFromTemplate: a template somehow carrying 51 values is rejected at add time', async () => {
-    const { service, templateRepository } = buildClassificationEntryService();
-    templateRepository.findOne.mockResolvedValue(
-      makeClassificationTemplate({
-        valueSet: values51.map((v, i) => ({ id: `v${i}`, label: v.label })),
-      })
-    );
+    const { service } = buildClassificationEntryService();
+    const template = makeClassificationTemplate({
+      valueSet: values51.map((v, i) => ({ id: `v${i}`, label: v.label })),
+    });
 
     await expect(
-      service.addFromTemplate(makeSpaceAbout(), 'template-1')
+      service.addFromTemplate(makeSpaceAbout(), template as any)
     ).rejects.toThrow(ValidationException);
   });
 

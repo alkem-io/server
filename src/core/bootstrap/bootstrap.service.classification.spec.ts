@@ -19,12 +19,11 @@
  *     left empty by a prior bootstrap self-heals by running the reset
  *     anyway (the already-seeded / upgrade path)
  *
- * Known gap, recorded rather than silently asserted: create-if-absent
- * matched by nameID cannot, on its own and without a persisted tombstone
- * (no DDL was authorised for one), distinguish "never created" from
- * "admin-deleted" — an admin-deleted seeded template WOULD be recreated by
- * the next bootstrap run. This is NOT tested here as a passing guarantee;
- * see the wave-1 report.
+ *   - an admin-deleted seeded template is NEVER restored — the pack's own
+ *     `deletedSeedTemplateNameIDs` tombstone (written by
+ *     TemplateService.delete, see recordSeedTemplateDeletionIfInAnInnovationPack)
+ *     is consulted alongside `existingNameIDs`, so create-if-absent skips a
+ *     deleted definition exactly like an already-present one
  */
 import { LogContext } from '@common/enums/logging.context';
 import { SearchVisibility } from '@common/enums/search.visibility';
@@ -194,6 +193,32 @@ describe('BootstrapService — ensureClassificationTemplatesArePresent (D3)', ()
     expect(
       mocks.accountService.createInnovationPackOnAccount
     ).not.toHaveBeenCalled();
+  });
+
+  it('never restores an admin-deleted definition — the pack tombstone is consulted alongside existingNameIDs', async () => {
+    mocks.innovationPackService.getInnovationPackByNameIdOrFail.mockResolvedValue(
+      {
+        id: 'classification-pack-1',
+        searchVisibility: SearchVisibility.PUBLIC,
+        listedInStore: true,
+        deletedSeedTemplateNameIDs: ['sdgs'],
+      }
+    );
+    mocks.templatesSetService.getTemplatesOfType.mockResolvedValue([
+      { id: 't2', nameID: 'language' },
+    ]);
+
+    await runEnsure();
+
+    // 'sdgs' is tombstoned (admin-deleted), 'language' already exists —
+    // only 'sector' is genuinely missing and gets created.
+    expect(mocks.templatesSetService.createTemplate).toHaveBeenCalledTimes(1);
+    const createdNameIDs =
+      mocks.templatesSetService.createTemplate.mock.calls.map(
+        (call: any[]) => call[1].nameID
+      );
+    expect(createdNameIDs).toEqual(['sector']);
+    expect(createdNameIDs).not.toContain('sdgs');
   });
 
   it('never re-creates or updates an existing definition — an edit survives re-seed by construction', async () => {

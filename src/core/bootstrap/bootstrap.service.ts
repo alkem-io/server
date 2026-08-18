@@ -549,6 +549,9 @@ export class BootstrapService {
    *
    * Never modifies, overwrites, or restores an existing or admin-deleted
    * template — create-if-absent, matched by nameID within this pack alone.
+   * "Admin-deleted" is distinguished from "never created" by the pack's own
+   * `deletedSeedTemplateNameIDs` tombstone, written by TemplateService.delete
+   * at the moment a seeded template is removed.
    */
   private async ensureClassificationTemplatesArePresent(): Promise<void> {
     const { createdSomething, staleAuthFound } =
@@ -602,6 +605,11 @@ export class BootstrapService {
         const existingNameIDs = new Set(
           existingClassificationTemplates.map(template => template.nameID)
         );
+        // A platform admin may delete a seeded template (it is an ordinary
+        // community-editable one); the next bootstrap run MUST NOT
+        // re-create it. TemplateService.delete writes the tombstone at
+        // delete time (recordSeedTemplateDeletionIfInAnInnovationPack).
+        const deletedNameIDs = new Set(pack.deletedSeedTemplateNameIDs ?? []);
         // Self-heal detector: the `authorization` relation is eager on
         // AuthorizableEntity, so every template returned above already
         // carries its policy row — no extra query needed.
@@ -612,6 +620,10 @@ export class BootstrapService {
 
         for (const definition of bootstrapClassificationTemplateDefinitions) {
           if (existingNameIDs.has(definition.nameID)) {
+            continue;
+          }
+          if (deletedNameIDs.has(definition.nameID)) {
+            // Never restored — an admin-deleted default stays deleted.
             continue;
           }
           await this.templatesSetService.createTemplate(templatesSet, {

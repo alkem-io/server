@@ -95,3 +95,48 @@ describe('ClassificationEntryService.updateDefinition — I-4 vs I-7 (R-6)', () 
     expect(result.selectedValueIDs).toEqual(['v1']);
   });
 });
+
+describe('ClassificationEntryService.updateDefinition — relabel leaves the id unchanged', () => {
+  it('keeps the existing id on a relabel even when the caller OMITS the id, and the selection keyed on that id survives', async () => {
+    const { service } = buildClassificationEntryService();
+    const entry = makeEntry({
+      cardinality: ClassificationCardinality.MULTI_SELECT,
+      valueSet: [{ id: 'sdg-13', label: '13 · Climate Action' }],
+      selectedValueIDs: ['sdg-13'],
+    });
+
+    const result = await service.updateDefinition(entry, {
+      classificationEntryID: entry.id,
+      values: [{ label: '13 · Climate Action (renamed)' }],
+    } as any);
+
+    expect(result.valueSet).toEqual([
+      { id: 'sdg-13', label: '13 · Climate Action (renamed)' },
+    ]);
+    // Selection is keyed on the id — an id changing under a relabel would
+    // have silently emptied it via autoDeselectRemovedValues.
+    expect(result.selectedValueIDs).toEqual(['sdg-13']);
+  });
+
+  it('derives a fresh id only for a value beyond the previous length, on an id-omitted edit', async () => {
+    const { service } = buildClassificationEntryService();
+    const entry = makeEntry({
+      cardinality: ClassificationCardinality.MULTI_SELECT,
+      valueSet: [{ id: 'sdg-13', label: '13 · Climate Action' }],
+      selectedValueIDs: [],
+    });
+
+    const result = await service.updateDefinition(entry, {
+      classificationEntryID: entry.id,
+      values: [
+        { label: '13 · Climate Action' },
+        { label: '14 · Life Below Water' },
+      ],
+    } as any);
+
+    expect(result.valueSet).toEqual([
+      { id: 'sdg-13', label: '13 · Climate Action' },
+      { id: '14-life-below-water', label: '14 · Life Below Water' },
+    ]);
+  });
+});

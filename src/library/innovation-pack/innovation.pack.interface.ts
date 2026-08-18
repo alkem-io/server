@@ -26,6 +26,9 @@ export abstract class IInnovationPack extends INameable {
 
   account?: IAccount;
 
+  // Bootstrap-internal tombstone; not GraphQL-exposed.
+  deletedSeedTemplateNameIDs?: string[];
+
   // Only used internally
   templatesCount!: number;
 }

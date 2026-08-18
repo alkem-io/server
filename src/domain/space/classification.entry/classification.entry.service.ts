@@ -7,10 +7,12 @@ import {
 import {
   DerivedClassificationValue,
   deriveClassificationValueIds,
+  deriveClassificationValueIdsForEdit,
 } from '@domain/common/classification-value/slugify.value.id';
 import { SpaceAbout } from '@domain/space/space.about/space.about.entity';
 import { ISpaceAbout } from '@domain/space/space.about/space.about.interface';
 import { Template } from '@domain/template/template/template.entity';
+import { ITemplate } from '@domain/template/template/template.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -69,18 +71,18 @@ export class ClassificationEntryService {
     });
   }
 
-  // Step A. `spaceAbout` is resolved (and authorized) by the caller via
-  // SpaceLookupService.getSpaceOrFail(spaceID) — a Callout's or a
-  // TemplateContentSpace's id fails there as "not a Space", which IS the
-  // host-scope enforcement at this single creation point (D1, S-22).
-  async addFromTemplate(
-    spaceAbout: ISpaceAbout,
-    templateID: string,
-    displayLabelOverride?: string
-  ): Promise<IClassificationEntry> {
+  // Resolves the source Template for Step A, WITHOUT authorizing or
+  // validating it — the caller (resolver) authorizes READ against the
+  // returned template's own policy before ever calling addFromTemplate: a
+  // Classification Template can live in a private Space's own library, and
+  // copying its vocabulary into an unrelated Space must not be possible
+  // merely by holding UPDATE on the DESTINATION About.
+  async getClassificationTemplateOrFail(
+    templateID: string
+  ): Promise<ITemplate> {
     const template = await this.templateRepository.findOne({
       where: { id: templateID },
-      relations: { profile: true },
+      relations: { profile: true, authorization: true },
     });
     if (!template) {
       throw new EntityNotFoundException(
@@ -89,6 +91,22 @@ export class ClassificationEntryService {
         { templateID }
       );
     }
+    return template;
+  }
+
+  // Step A. `spaceAbout` is resolved (and authorized) by the caller via
+  // SpaceLookupService.getSpaceOrFail(spaceID) — a Callout's or a
+  // TemplateContentSpace's id fails there as "not a Space", which IS the
+  // host-scope enforcement at this single creation point. The `template`
+  // argument must already be READ-authorized by the caller
+  // (getClassificationTemplateOrFail + a grantAccessOrFail in the resolver)
+  // — this method itself only validates it is a fully-defined
+  // Classification Template, never its access rights.
+  async addFromTemplate(
+    spaceAbout: ISpaceAbout,
+    template: ITemplate,
+    displayLabelOverride?: string
+  ): Promise<IClassificationEntry> {
     const templateCardinality = template.classificationCardinality;
     const templateValueSet = template.classificationValueSet;
     if (
@@ -96,10 +114,15 @@ export class ClassificationEntryService {
       !templateCardinality ||
       !templateValueSet
     ) {
+      // Deliberately omits templateType from `details` — the caller has
+      // already passed the READ-authorization gate at this point, but
+      // keeping the rejection uninformative about a template's actual
+      // type/state costs nothing and closes an existence-and-type oracle
+      // for the id itself.
       throw new ValidationException(
         'Template is not a fully-defined Classification Template',
         LogContext.CLASSIFICATION,
-        { templateID, templateType: template.type }
+        { templateID: template.id }
       );
     }
 
@@ -186,8 +209,13 @@ export class ClassificationEntryService {
   ): Promise<IClassificationEntry> {
     const nextDisplayLabel = input.displayLabel ?? entry.displayLabel;
     const nextCardinality = input.cardinality ?? entry.cardinality;
+    // Derive-once: a relabel must not change a value's stable id even when
+    // the caller omits the id rather than echoing it back — an id-less
+    // incoming value is matched positionally against the entry's CURRENT
+    // valueSet and carries that id forward; only a value beyond the
+    // previous length is genuinely new and gets a fresh slug.
     const nextValueSet = input.values
-      ? deriveClassificationValueIds(input.values)
+      ? deriveClassificationValueIdsForEdit(entry.valueSet, input.values)
       : entry.valueSet;
 
     if (input.values) {
