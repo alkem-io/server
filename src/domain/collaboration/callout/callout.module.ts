@@ -1,5 +1,7 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { CalloutMyReactionLoaderCreator } from '@core/dataloader/creators/loader.creators/callout/callout.my.reaction.loader.creator';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ClassificationModule } from '@domain/common/classification/classification.module';
 import { RoomModule } from '@domain/communication/room/room.module';
@@ -19,6 +21,7 @@ import { CalloutFramingModule } from '../callout-framing/callout.framing.module'
 import { CollaboraDocumentModule } from '../collabora-document/collabora.document.module';
 import { CollaborationLicenseModule } from '../collaboration/collaboration.license.module';
 import { PostModule } from '../post/post.module';
+import { ReactionModule } from '../reaction/reaction.module';
 import { Callout } from './callout.entity';
 import { CalloutResolverFields } from './callout.resolver.fields';
 import { CalloutResolverMutations } from './callout.resolver.mutations';
@@ -48,6 +51,8 @@ import { CalloutAuthorizationService } from './callout.service.authorization';
     ClassificationModule,
     TemporaryStorageModule,
     RoleSetModule,
+    ReactionModule,
+    ActorLookupModule,
     TypeOrmModule.forFeature([Callout]),
   ],
   providers: [
@@ -56,6 +61,7 @@ import { CalloutAuthorizationService } from './callout.service.authorization';
     CalloutAuthorizationService,
     CalloutResolverFields,
     CalloutResolverSubscriptions,
+    CalloutMyReactionLoaderCreator,
   ],
   exports: [
     CalloutService,
