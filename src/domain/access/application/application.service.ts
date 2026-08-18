@@ -16,6 +16,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { NVPService } from '@domain/common/nvp/nvp.service';
 import { IQuestion } from '@domain/common/question/question.interface';
+import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -124,6 +125,13 @@ export class ApplicationService {
         { applicationID }
       );
     return user;
+  }
+
+  async getUser(applicationID: string): Promise<IUser | null> {
+    const application = await this.getApplicationOrFail(applicationID, {
+      relations: { user: true },
+    });
+    return application.user ?? null;
   }
 
   async findExistingApplications(
