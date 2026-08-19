@@ -77,4 +77,11 @@ export class CreateUserSettingsNotificationSpaceInput {
       'Receive a notification when a poll option you voted for is changed or removed',
   })
   collaborationPollVoteAffectedByOptionChange!: CreateUserSettingsNotificationChannelsInput;
+
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
+    nullable: false,
+    description:
+      'Receive a notification when someone reacts to a callout you published',
+  })
+  collaborationCalloutReaction!: CreateUserSettingsNotificationChannelsInput;
 }
