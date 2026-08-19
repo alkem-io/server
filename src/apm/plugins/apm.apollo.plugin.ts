@@ -3,8 +3,8 @@ import {
   GraphQLFieldResolverParams,
   GraphQLRequestContextDidResolveOperation,
   GraphQLRequestListener,
+  GraphQLRequestListenerDidResolveField,
 } from '@apollo/server';
-import { GraphQLRequestListenerDidResolveField } from '@apollo/server/src/externalTypes/plugins';
 import { GraphQLObjectType } from 'graphql/type';
 import { IncomingMessage } from 'http';
 import { apmAgent } from '../apm';

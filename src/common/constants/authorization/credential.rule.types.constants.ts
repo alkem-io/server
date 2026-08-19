@@ -18,6 +18,10 @@ export const CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS =
   'credentialRuleTypes-spacePlatformSettings';
 export const CREDENTIAL_RULE_VIRTUAL_PLATFORM_SETTINGS =
   'credentialRuleTypes-virtualContributorPlatformSettings';
+export const CREDENTIAL_RULE_TYPES_VIRTUAL_ASSISTANT_MANAGE =
+  'credentialRuleTypes-virtualAssistantManage';
+export const CREDENTIAL_RULE_TYPES_VIRTUAL_ASSISTANT_READ =
+  'credentialRuleTypes-virtualAssistantRead';
 export const CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ =
   'credentialRuleTypes-spaceGlobalRead';
 export const CREDENTIAL_RULE_TYPES_ROLESET_APPLY_GLOBAL_REGISTERED =
@@ -72,6 +76,8 @@ export const CREDENTIAL_RULE_TYPES_PLATFORM_MGMT =
   'credentialRuleTypes-platformPlatformMgmt';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET =
   'credentialRuleTypes-platformPlatformAuthReset';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_OPERATIONS_ADMIN =
+  'credentialRuleTypes-platformPlatformOperationsAdmin';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_READ_REGISTERED =
   'credentialRuleTypes-platformReadRegistered';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_CREATE_ORG_FILE_UPLOAD =
@@ -88,6 +94,8 @@ export const CREDENTIAL_RULE_PLATFORM_CREATE_INNOVATION_PACK =
   'credentialRuleTypes-platformCreateInnovationPack';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE =
   'credentialRuleTypes-platformAccessGuidance';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_VIRTUAL_ASSISTANT =
+  'credentialRuleTypes-platformAccessVirtualAssistant';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_DASHBOARD =
   'credentialRuleTypes-platformAccessDashboard';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER =
@@ -98,6 +106,12 @@ export const CREDENTIAL_RULE_TYPES_INNOVATION_HUBS =
   'credentialRuleTypes-platformInnovationHubs';
 export const CREDENTIAL_RULE_AI_SERVER_GLOBAL_ADMINS =
   'credentialRuleTypes-aiServerGlobalAdmins';
+export const CREDENTIAL_RULE_AI_SERVER_AUTH_RESET =
+  'credentialRuleTypes-aiServerAuthReset';
+export const CREDENTIAL_RULE_AI_SERVER_PERSONA_CREATE =
+  'credentialRuleTypes-aiServerPersonaCreate';
+export const CREDENTIAL_RULE_TYPES_ACCOUNT_AUTH_RESET =
+  'credentialRuleTypes-accountAuthReset';
 export const CREDENTIAL_RULE_TYPES_ACCOUNT_LICENSE_MANAGE =
   'credentialRuleTypes-accountLicenseManage';
 export const CREDENTIAL_RULE_TYPES_FORUM_READ = 'credentialRuleTypes-forumRead';

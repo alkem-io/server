@@ -9,6 +9,7 @@ import { OrganizationModule } from '@domain/community/organization/organization.
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
+import { VirtualAssistantModule } from '@domain/community/virtual-assistant/virtual.assistant.module';
 import { AccountModule } from '@domain/space/account/account.module';
 import { Space } from '@domain/space/space/space.entity';
 import { SpaceModule } from '@domain/space/space/space.module';
@@ -26,6 +27,8 @@ import { PlatformTemplatesModule } from '@platform/platform-templates/platform.t
 import { AiPersonaModule } from '@services/ai-server/ai-persona';
 import { AiServerModule } from '@services/ai-server/ai-server/ai.server.module';
 import { SearchIngestModule } from '@services/api/search/ingest';
+import { McpApiKey } from '@services/mcp-server/auth/mcp-api-key.entity';
+import { McpApiKeyService } from '@services/mcp-server/auth/mcp-api-key.service';
 import { AdminAuthorizationModule } from '@src/platform-admin/domain/authorization/admin.authorization.module';
 import { BootstrapService } from './bootstrap.service';
 
@@ -47,7 +50,8 @@ import { BootstrapService } from './bootstrap.service';
     PlatformModule,
     PlatformAuthorizationPolicyModule,
     CommunicationModule,
-    TypeOrmModule.forFeature([Space]),
+    TypeOrmModule.forFeature([Space, McpApiKey]),
+    VirtualAssistantModule,
     SearchIngestModule,
     TemplatesSetModule,
     TemplatesManagerModule,
@@ -59,7 +63,7 @@ import { BootstrapService } from './bootstrap.service';
     PlatformWellKnownVirtualContributorsModule,
     RoleSetModule,
   ],
-  providers: [BootstrapService],
+  providers: [BootstrapService, McpApiKeyService],
   exports: [BootstrapService],
 })
 export class BootstrapModule {}

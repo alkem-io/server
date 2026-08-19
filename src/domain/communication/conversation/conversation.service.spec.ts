@@ -11,9 +11,12 @@ import { RoomService } from '@domain/communication/room/room.service';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { CommunicationAdapterException } from '@services/adapters/communication-adapter/communication.adapter.exception';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
@@ -32,8 +35,10 @@ describe('ConversationService', () => {
   let userLookupService: Mocked<UserLookupService>;
   let virtualActorLookupService: Mocked<VirtualActorLookupService>;
   let platformWellKnownVCService: Mocked<PlatformWellKnownVirtualContributorsService>;
+  let communicationAdapter: Mocked<CommunicationAdapter>;
   let conversationRepo: Mocked<Repository<Conversation>>;
   let membershipRepo: Mocked<Repository<ConversationMembership>>;
+  let eventEmitter: Mocked<EventEmitter2>;
   let mockManagerFind: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
@@ -66,8 +71,10 @@ describe('ConversationService', () => {
     platformWellKnownVCService = module.get(
       PlatformWellKnownVirtualContributorsService
     );
+    communicationAdapter = module.get(CommunicationAdapter);
     conversationRepo = module.get(getRepositoryToken(Conversation));
     membershipRepo = module.get(getRepositoryToken(ConversationMembership));
+    eventEmitter = module.get(EventEmitter2);
 
     // Mock the manager.find used by getConversationMembers to batch-lookup actor types
     mockManagerFind = vi.fn().mockResolvedValue([]);
@@ -258,6 +265,217 @@ describe('ConversationService', () => {
       const result = await service.isConversationMember('conv-1', 'agent-1');
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('addMember (sec-server-1: consent gate)', () => {
+    const conversationId = 'conv-1';
+    const memberActorId = 'actor-c';
+
+    const mockGroupConversation = () => {
+      conversationRepo.findOne.mockResolvedValue({
+        id: conversationId,
+        room: { id: 'room-1', type: RoomType.CONVERSATION_GROUP },
+      } as any);
+      membershipRepo.count.mockResolvedValue(0); // isConversationMember -> false
+    };
+
+    it('adds a consenting user and sends the batchAddMember RPC', async () => {
+      mockGroupConversation();
+      userLookupService.getUserById.mockResolvedValue({
+        id: memberActorId,
+        settings: {
+          communication: { allowOtherUsersToSendMessages: true },
+        },
+      } as any);
+      communicationAdapter.batchAddMember.mockResolvedValue(true as any);
+
+      const result = await service.addMember(conversationId, memberActorId);
+
+      expect(result.id).toBe(conversationId);
+      expect(communicationAdapter.batchAddMember).toHaveBeenCalledWith(
+        memberActorId,
+        ['room-1']
+      );
+    });
+
+    it('throws MessagingNotEnabledException and never sends the RPC when the user does not consent to receiving messages', async () => {
+      mockGroupConversation();
+      userLookupService.getUserById.mockResolvedValue({
+        id: memberActorId,
+        settings: {
+          communication: { allowOtherUsersToSendMessages: false },
+        },
+      } as any);
+
+      await expect(
+        service.addMember(conversationId, memberActorId)
+      ).rejects.toThrow('User is not open to receiving messages');
+      expect(communicationAdapter.batchAddMember).not.toHaveBeenCalled();
+    });
+
+    it('exempts non-USER actors (e.g. a Virtual Contributor, no settings row) from the consent check', async () => {
+      mockGroupConversation();
+      userLookupService.getUserById.mockResolvedValue(null);
+      communicationAdapter.batchAddMember.mockResolvedValue(true as any);
+
+      await service.addMember(conversationId, memberActorId);
+
+      expect(communicationAdapter.batchAddMember).toHaveBeenCalledWith(
+        memberActorId,
+        ['room-1']
+      );
+    });
+
+    it('is idempotent — an already-present member is returned without a consent check or RPC', async () => {
+      conversationRepo.findOne.mockResolvedValue({
+        id: conversationId,
+        room: { id: 'room-1', type: RoomType.CONVERSATION_GROUP },
+      } as any);
+      membershipRepo.count.mockResolvedValue(1); // already a member
+
+      const result = await service.addMember(conversationId, memberActorId);
+
+      expect(result.id).toBe(conversationId);
+      expect(userLookupService.getUserById).not.toHaveBeenCalled();
+      expect(communicationAdapter.batchAddMember).not.toHaveBeenCalled();
+    });
+
+    it('sec-server-10: throws ValidationException and never sends the RPC once the group is at the member cap', async () => {
+      conversationRepo.findOne.mockResolvedValue({
+        id: conversationId,
+        room: { id: 'room-1', type: RoomType.CONVERSATION_GROUP },
+      } as any);
+      membershipRepo.count
+        .mockResolvedValueOnce(0) // isConversationMember -> not yet a member
+        .mockResolvedValueOnce(100); // current total membership == cap
+
+      await expect(
+        service.addMember(conversationId, memberActorId)
+      ).rejects.toThrow(
+        'Group conversation has reached the maximum member count'
+      );
+      expect(userLookupService.getUserById).not.toHaveBeenCalled();
+      expect(communicationAdapter.batchAddMember).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('removeMember (US2-AS4 live-verification fix)', () => {
+    const conversationId = 'conv-1';
+    const memberActorId = 'actor-c';
+
+    const mockGroupConversation = () => {
+      conversationRepo.findOne.mockResolvedValue({
+        id: conversationId,
+        room: { id: 'room-1', type: RoomType.CONVERSATION_GROUP },
+      } as any);
+      membershipRepo.count.mockResolvedValue(1); // isConversationMember -> true
+    };
+
+    const matrixKickRejected = () =>
+      CommunicationAdapterException.fromAdapterError('batchRemoveMember', {
+        code: 'NOT_ALLOWED',
+        message: 'insufficient power level',
+      });
+
+    it('should send the batchRemoveMember RPC with ensureAllSucceeded and return the conversation on success', async () => {
+      mockGroupConversation();
+      communicationAdapter.batchRemoveMember.mockResolvedValue(true);
+
+      const result = await service.removeMember(conversationId, memberActorId);
+
+      expect(result.id).toBe(conversationId);
+      expect(communicationAdapter.batchRemoveMember).toHaveBeenCalledWith(
+        memberActorId,
+        ['room-1'],
+        undefined,
+        { ensureAllSucceeded: true }
+      );
+    });
+
+    it('sec-server-11: falls back to authoritative local removal (never throws) when Matrix rejects the kick', async () => {
+      mockGroupConversation();
+      communicationAdapter.batchRemoveMember.mockRejectedValue(
+        matrixKickRejected()
+      );
+      eventEmitter.emitAsync.mockResolvedValue([undefined]); // one listener ran
+
+      const result = await service.removeMember(conversationId, memberActorId);
+
+      expect(result.id).toBe(conversationId);
+      // The removal is completed through the SAME workflow the
+      // Matrix-confirmed path uses (persist + auth re-apply + MEMBER_REMOVED
+      // + last-member conversation deletion), not by deleting the row behind
+      // the event handler's back.
+      expect(eventEmitter.emitAsync).toHaveBeenCalledWith(
+        'room.member.updated',
+        expect.objectContaining({
+          payload: expect.objectContaining({
+            roomId: 'room-1',
+            memberActorID: memberActorId,
+            membership: 'leave',
+          }),
+        })
+      );
+      expect(membershipRepo.delete).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['the completion workflow fails', () => new Error('listener blew up')],
+      ['no listener is registered at all', () => undefined],
+    ])('sec-server-11: still removes the membership row when %s', async (_case, failure) => {
+      mockGroupConversation();
+      communicationAdapter.batchRemoveMember.mockRejectedValue(
+        matrixKickRejected()
+      );
+      const error = failure();
+      if (error) eventEmitter.emitAsync.mockRejectedValue(error);
+      else eventEmitter.emitAsync.mockResolvedValue([]);
+      membershipRepo.delete.mockResolvedValue({} as any);
+
+      const result = await service.removeMember(conversationId, memberActorId);
+
+      expect(result.id).toBe(conversationId);
+      expect(membershipRepo.delete).toHaveBeenCalledWith({
+        conversationId,
+        actorID: memberActorId,
+      });
+    });
+
+    it('sec-server-11: propagates a non-adapter error (e.g. a transport/programming error) rather than swallowing it', async () => {
+      mockGroupConversation();
+      const unexpected = new Error('unexpected failure');
+      communicationAdapter.batchRemoveMember.mockRejectedValue(unexpected);
+
+      await expect(
+        service.removeMember(conversationId, memberActorId)
+      ).rejects.toThrow(unexpected);
+      expect(membershipRepo.delete).not.toHaveBeenCalled();
+    });
+
+    it('should throw ValidationException when the conversation is not a group', async () => {
+      conversationRepo.findOne.mockResolvedValue({
+        id: conversationId,
+        room: { id: 'room-1', type: RoomType.CONVERSATION_DIRECT },
+      } as any);
+
+      await expect(
+        service.removeMember(conversationId, memberActorId)
+      ).rejects.toThrow(ValidationException);
+      expect(communicationAdapter.batchRemoveMember).not.toHaveBeenCalled();
+    });
+
+    it('should throw ValidationException when the actor is not a member', async () => {
+      conversationRepo.findOne.mockResolvedValue({
+        id: conversationId,
+        room: { id: 'room-1', type: RoomType.CONVERSATION_GROUP },
+      } as any);
+      membershipRepo.count.mockResolvedValue(0);
+
+      await expect(
+        service.removeMember(conversationId, memberActorId)
+      ).rejects.toThrow(ValidationException);
+      expect(communicationAdapter.batchRemoveMember).not.toHaveBeenCalled();
     });
   });
 

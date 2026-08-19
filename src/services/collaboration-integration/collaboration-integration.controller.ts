@@ -16,6 +16,8 @@ import {
   DeleteInputData,
   FetchInputData,
   InfoInputData,
+  OfficeDocumentContributionsInputData,
+  OfficeDocumentRenameInputData,
   SaveInputData,
 } from './inputs';
 import {
@@ -27,6 +29,7 @@ import {
 import {
   CollaborationEventPattern,
   CollaborationMessagePattern,
+  OfficeDocumentEventPattern,
 } from './types';
 
 /**
@@ -110,5 +113,51 @@ export class CollaborationIntegrationController {
     );
     ack(context);
     return this.integrationService.contribution(data);
+  }
+
+  /**
+   * Collabora office-document window/rename events (WOPI producer). A distinct
+   * modality from the Yjs memo/whiteboard contract above, but hosted on this
+   * unified consumer. These arrive on the COLLABORATION_DOCUMENT_SERVICE queue
+   * (still bound in main.server.ts); the wire patterns are the frozen WOPI
+   * contract (`OfficeDocumentEventPattern`).
+   */
+  @MessagePattern(OfficeDocumentEventPattern.CONTRIBUTION, Transport.RMQ)
+  public officeDocumentContribution(
+    @Payload() data: OfficeDocumentContributionsInputData,
+    @Ctx() context: RmqContext
+  ): Promise<void> {
+    this.logger.verbose?.(
+      `Received collaboration-office-document-contribution for document: ${data.documentId}`,
+      LogContext.COLLABORATION_INTEGRATION
+    );
+    ack(context);
+    return this.integrationService.officeDocumentContributions(data);
+  }
+
+  @MessagePattern(OfficeDocumentEventPattern.VIEW, Transport.RMQ)
+  public officeDocumentView(
+    @Payload() data: OfficeDocumentContributionsInputData,
+    @Ctx() context: RmqContext
+  ): Promise<void> {
+    this.logger.verbose?.(
+      `Received collaboration-office-document-view for document: ${data.documentId}`,
+      LogContext.COLLABORATION_INTEGRATION
+    );
+    ack(context);
+    return this.integrationService.officeDocumentViews(data);
+  }
+
+  @MessagePattern(OfficeDocumentEventPattern.RENAME, Transport.RMQ)
+  public officeDocumentRename(
+    @Payload() data: OfficeDocumentRenameInputData,
+    @Ctx() context: RmqContext
+  ): Promise<void> {
+    this.logger.verbose?.(
+      `Received collaboration-office-document-rename for document: ${data.documentId}`,
+      LogContext.COLLABORATION_INTEGRATION
+    );
+    ack(context);
+    return this.integrationService.officeDocumentRename(data);
   }
 }

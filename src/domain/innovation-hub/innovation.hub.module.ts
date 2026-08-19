@@ -1,9 +1,11 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
+import { VirtualActorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
+import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
@@ -20,6 +22,8 @@ import { InnovationHubService } from './innovation.hub.service';
     AuthorizationPolicyModule,
     AuthorizationModule,
     NamingModule,
+    InnovationPackModule,
+    VirtualActorLookupModule,
     TypeOrmModule.forFeature([InnovationHub]),
   ],
   providers: [

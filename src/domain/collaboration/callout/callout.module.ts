@@ -57,6 +57,10 @@ import { CalloutAuthorizationService } from './callout.service.authorization';
     CalloutResolverFields,
     CalloutResolverSubscriptions,
   ],
-  exports: [CalloutService, CalloutAuthorizationService],
+  exports: [
+    CalloutService,
+    CalloutAuthorizationService,
+    CalloutResolverMutations,
+  ],
 })
 export class CalloutModule {}

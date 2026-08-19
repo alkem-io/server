@@ -61,6 +61,7 @@ export class Document extends AuthorizableEntity implements IDocument {
   @Column('int', { nullable: false })
   size!: number;
 
+  @Index('IDX_file_externalID')
   @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
   externalID!: string;
 

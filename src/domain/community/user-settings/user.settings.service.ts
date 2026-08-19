@@ -1,3 +1,7 @@
+import {
+  isSupportedInterfaceLanguage,
+  SUPPORTED_INTERFACE_LANGUAGES,
+} from '@common/constants/supported.languages';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { LogContext } from '@common/enums/logging.context';
 import {
@@ -33,8 +37,14 @@ export class UserSettingsService {
       privacy: settingsData.privacy,
       notification: settingsData.notification,
       homeSpace: settingsData.homeSpace,
+      dashboard: settingsData.dashboard ?? { activityView: true },
+      assistant: {
+        enabledCapabilities: settingsData.assistant?.enabledCapabilities ?? [],
+      },
       designVersion:
         settingsData.designVersion ?? DESIGN_VERSION_CURRENT_DEFAULT,
+      language: settingsData.language ?? null,
+      languageOfferAnswered: settingsData.languageOfferAnswered ?? false,
     });
     settings.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.USER_SETTINGS
@@ -76,6 +86,31 @@ export class UserSettingsService {
         settings.communication.allowOtherUsersToSendMessages =
           updateData.communication.allowOtherUsersToSendMessages;
       }
+      if (
+        updateData.communication.allowOtherUsersToContactViaEmail !== undefined
+      ) {
+        settings.communication.allowOtherUsersToContactViaEmail =
+          updateData.communication.allowOtherUsersToContactViaEmail;
+      }
+    }
+
+    // Assistant authority (FR-018): when enabledCapabilities is provided it
+    // replaces the user's toggle set. Absence of a capability from the set means
+    // disabled (the host gate treats missing/false identically). Never widened
+    // beyond the user's privileges — that bound is enforced structurally at the
+    // host gate, not here. See contracts/assistant-authority.md §2.
+    if (
+      updateData.assistant &&
+      updateData.assistant.enabledCapabilities !== undefined
+    ) {
+      settings.assistant = {
+        enabledCapabilities: updateData.assistant.enabledCapabilities.map(
+          toggle => ({
+            capability: toggle.capability,
+            enabled: toggle.enabled,
+          })
+        ),
+      };
     }
     const notificationPlatformData = updateData.notification?.platform;
     if (notificationPlatformData) {
@@ -215,6 +250,18 @@ export class UserSettingsService {
         settings.notification.user.commentReply,
         notificationUserData.commentReply
       );
+      // 034-messaging-notifications (FR-017): merged field-by-field like
+      // every other row — an update to one messaging row never resets the
+      // other, and the stored `inApp` value is retained for row-shape
+      // symmetry even though it is never honored (FR-003/D-2).
+      this.updateNotificationSetting(
+        settings.notification.user.conversationMessageDirect,
+        notificationUserData.conversationMessageDirect
+      );
+      this.updateNotificationSetting(
+        settings.notification.user.conversationMessageGroup,
+        notificationUserData.conversationMessageGroup
+      );
 
       // Handle membership notifications
       if (notificationUserData.membership) {
@@ -240,6 +287,22 @@ export class UserSettingsService {
       );
     }
 
+    // Sound playback preferences. Merge field-by-field (never by spread) so a
+    // partial update of one flag leaves the sibling flag untouched. The `!= null`
+    // guards skip both undefined and an explicit null: the output fields are
+    // Boolean!, so persisting a null would make every later read of this User
+    // fail the non-null check.
+    if (updateData.notification?.sound) {
+      const soundData = updateData.notification.sound;
+      if (soundData.chatMessage != null) {
+        settings.notification.sound.chatMessage = soundData.chatMessage;
+      }
+      if (soundData.inAppNotification != null) {
+        settings.notification.sound.inAppNotification =
+          soundData.inAppNotification;
+      }
+    }
+
     if (updateData.homeSpace) {
       // Note: spaceID can be explicitly set to null to clear
       if (updateData.homeSpace.spaceID !== undefined) {
@@ -263,10 +326,61 @@ export class UserSettingsService {
       }
     }
 
+    if (updateData.dashboard) {
+      // Legacy rows are backfilled by migration, but guard defensively so a
+      // partial settings object can't throw on the nested assignment.
+      settings.dashboard = settings.dashboard ?? { activityView: true };
+      // `!= null` (not `!== undefined`): the input field is a nullable Boolean, so a
+      // client can send `null`; treat that as "no change" rather than persisting null
+      // into the NOT NULL `activityView`.
+      if (updateData.dashboard.activityView != null) {
+        settings.dashboard.activityView = updateData.dashboard.activityView;
+      }
+    }
+
     // Skip on both undefined (field omitted) and null (explicit clear is
     // unsupported — the column is NOT NULL with a default of 2).
     if (updateData.designVersion != null) {
       settings.designVersion = updateData.designVersion;
+    }
+
+    // Language preference + one-way latch:
+    // (a) Any non-null language write latches languageOfferAnswered = true
+    //     (invariant: language ≠ NULL ⇒ flag = true).
+    // (b) Setting languageOfferAnswered = true without a language is the
+    //     decline path (stores the answered flag, leaves language null).
+    // (c) Setting languageOfferAnswered = false is rejected — the latch is
+    //     one-way; un-answering is not a valid state transition.
+    // (d) An explicit null for either field behaves like an omitted field
+    //     (no-op), matching the designVersion pattern above.
+    if (updateData.language != null) {
+      // Enforce UserSettings.language ∈ SUPPORTED_INTERFACE_LANGUAGES.
+      // DTO @IsIn catches API requests but internal callers (registration seeding,
+      // reconciliation) bypass DTO validation — this service-level guard is the
+      // last line of defence.
+      if (!isSupportedInterfaceLanguage(updateData.language)) {
+        throw new ValidationException(
+          'Language is not supported',
+          LogContext.COMMUNITY,
+          {
+            language: updateData.language,
+            supported: [...SUPPORTED_INTERFACE_LANGUAGES],
+          }
+        );
+      }
+      settings.language = updateData.language;
+      settings.languageOfferAnswered = true;
+    }
+
+    if (updateData.languageOfferAnswered != null) {
+      if (updateData.languageOfferAnswered === false) {
+        throw new ValidationException(
+          'languageOfferAnswered cannot be set back to false — it is a one-way latch',
+          LogContext.COMMUNITY
+        );
+      }
+      // true: latch the flag (decline path — no language written)
+      settings.languageOfferAnswered = true;
     }
 
     return settings;

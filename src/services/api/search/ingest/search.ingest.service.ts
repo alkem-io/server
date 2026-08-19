@@ -3,21 +3,20 @@ import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
 import { LogContext } from '@common/enums';
 import { SpaceLevel } from '@common/enums/space.level';
 import { SpaceVisibility } from '@common/enums/space.visibility';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { isDefined } from '@common/utils';
 import { asyncMap } from '@common/utils/async.map';
+import { asyncMapSequential } from '@common/utils/async.map.sequential';
 import { asyncReduceSequential } from '@common/utils/async.reduce.sequential';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { CollaboraDocument } from '@domain/collaboration/collabora-document/collabora.document.entity';
 import { yjsStateToMarkdown } from '@domain/common/memo/conversion';
 import { Memo } from '@domain/common/memo/memo.entity';
 import { Tagset } from '@domain/common/tagset';
 import { Organization } from '@domain/community/organization';
 import { User } from '@domain/community/user/user.entity';
 import { Space } from '@domain/space/space/space.entity';
-import { Client as ElasticClient } from '@elastic/elasticsearch';
-import {
-  ErrorCause,
-  IndicesUpdateAliasesAction,
-} from '@elastic/elasticsearch/lib/api/types';
+import { Client as ElasticClient, estypes } from '@elastic/elasticsearch';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectEntityManager } from '@nestjs/typeorm';
@@ -28,6 +27,10 @@ import { Task } from '@services/task/task.interface';
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager, FindManyOptions } from 'typeorm';
+import {
+  CollaboraExtractSkipReason,
+  CollaboraTextExtractService,
+} from '../extract/collabora.text.extract.service';
 import { SearchResultType } from '../search.result.type';
 import { getIndexPattern } from './get.index.pattern';
 
@@ -71,9 +74,45 @@ const journeyFindOptions: FindManyOptions<Space> = {
 
 const EMPTY_VALUE = 'N/A';
 
+/**
+ * Upper bound (bytes, JSON-serialized) for a single ES bulk request payload.
+ * Deliberately far below the transport's http.max_content_length (100 MB
+ * default) so a content-heavy batch (office documents carry up to ~1 MB of
+ * extracted text each) is split instead of rejected wholesale.
+ */
+const MAX_BULK_PAYLOAD_BYTES = 10 * 1024 * 1024;
+
+/**
+ * Splits documents into chunks whose cumulative JSON size stays under
+ * `maxBytes`. A single document larger than the cap still gets its own chunk —
+ * ES rejects just that one request and the error is recorded per batch, rather
+ * than poisoning the neighbours.
+ */
+const chunkByPayloadSize = (data: unknown[], maxBytes: number): unknown[][] => {
+  const chunks: unknown[][] = [];
+  let current: unknown[] = [];
+  let currentBytes = 0;
+
+  for (const doc of data) {
+    const docBytes = Buffer.byteLength(JSON.stringify(doc) ?? '');
+    if (current.length > 0 && currentBytes + docBytes > maxBytes) {
+      chunks.push(current);
+      current = [];
+      currentBytes = 0;
+    }
+    current.push(doc);
+    currentBytes += docBytes;
+  }
+  if (current.length > 0) {
+    chunks.push(current);
+  }
+
+  return chunks;
+};
+
 type ErroredDocument = {
   status: number | undefined;
-  error: ErrorCause | undefined;
+  error: estypes.ErrorCause | undefined;
   operation: unknown;
   document: unknown;
 };
@@ -101,6 +140,9 @@ const getIndexAliases = (indexPattern: string) => [
   `${indexPattern}callouts`,
   `${indexPattern}whiteboards`,
   `${indexPattern}memos`,
+  // MUST match the reporting-orchestration template index_patterns
+  // `alkemio-data-*office-document-*` (workspace#009-office-doc-search).
+  `${indexPattern}office-document`,
 ];
 
 @Injectable()
@@ -113,7 +155,8 @@ export class SearchIngestService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
     private configService: ConfigService<AlkemioConfig, true>,
     private taskService: TaskService,
-    private fileServiceAdapter: FileServiceAdapter
+    private fileServiceAdapter: FileServiceAdapter,
+    private collaboraTextExtractService: CollaboraTextExtractService
   ) {
     this.indexPattern = getIndexPattern(this.configService);
 
@@ -135,6 +178,13 @@ export class SearchIngestService {
    * did we have aliases?
    *  - no -> do nothing
    *  - yes -> delete index
+   *
+   * KNOWN DEFECT — tracked in alkem-io/server#6382 (pre-existing, not a 006/Yjs
+   * issue): no admission guard + fire-and-forget from two entry points means two
+   * overlapping full rebuilds can race — a stalled earlier run can finish last and
+   * replace/delete the newer promoted index, so search silently serves a stale index
+   * (plus a `generateSuffix()`-before-try task leak). Fix per the issue = reject via a
+   * PG session advisory lock + UUID suffix; do NOT add Yjs/pointer-version plumbing.
    */
   public async ingestFromScratch(task: Task) {
     this.logger.verbose?.('Starting search ingest from scratch');
@@ -322,7 +372,7 @@ export class SearchIngestService {
       throw new Error('Elasticsearch client not initialized');
     }
 
-    const actions: IndicesUpdateAliasesAction[] = [];
+    const actions: estypes.IndicesUpdateAliasesAction[] = [];
 
     for (const { alias, index } of data) {
       if (removeOldAlias) {
@@ -486,19 +536,28 @@ export class SearchIngestService {
         index: `${this.indexPattern}posts-${suffix}`,
         fetchFn: this.fetchPosts.bind(this),
         countFn: this.fetchPostsCount.bind(this),
-        batchSize: 30,
+        batchSize: 50,
       },
       {
         index: `${this.indexPattern}whiteboards-${suffix}`,
         fetchFn: this.fetchWhiteboard.bind(this),
         countFn: this.fetchWhiteboardCount.bind(this),
-        batchSize: 30,
+        batchSize: 50,
       },
       {
         index: `${this.indexPattern}memos-${suffix}`,
         fetchFn: this.fetchMemo.bind(this),
         countFn: this.fetchMemoCount.bind(this),
-        batchSize: 30,
+        batchSize: 50,
+      },
+      {
+        index: `${this.indexPattern}office-document-${suffix}`,
+        // bind the active Task so per-document extraction skips/failures are
+        // recorded as durable task results (FR-019).
+        fetchFn: (start: number, limit: number) =>
+          this.fetchCollaboraDocument(start, limit, task),
+        countFn: this.fetchCollaboraDocumentCount.bind(this),
+        batchSize: 15,
       },
     ];
 
@@ -512,6 +571,17 @@ export class SearchIngestService {
           batchSize,
           task
         );
+        // Office-document is a rebuild-once, read-only index. Its extracted
+        // `content` is excluded from _source, but a freshly-bulk-loaded index
+        // still carries many small segments plus a transient `_recovery_source`
+        // full copy that mask the reduced footprint. Compact to a single
+        // segment now — while the new index is populated but not yet aliased,
+        // so no reads are served — to realize the smaller size immediately.
+        // Scoped to office-document only; other indices are left to ES's
+        // background merges. Non-fatal: force-merge is an optimization.
+        if (index.startsWith(`${this.indexPattern}office-document-`)) {
+          await this.forceMergeIndex(index);
+        }
         const total = batches.reduce((acc, val) => acc + (val.total ?? 0), 0);
         acc[index] = {
           total: total + (acc[index]?.total ?? 0),
@@ -522,6 +592,36 @@ export class SearchIngestService {
       },
       result
     );
+  }
+
+  /**
+   * Compacts a freshly-ingested index down to a single segment. Used only for
+   * the write-once, read-only office-document index to drop unmerged segments
+   * and the transient `_recovery_source`, so the (content-excluded) footprint
+   * settles immediately instead of waiting for background merges. Best-effort:
+   * a failure is logged but never fails the ingest, since the index is already
+   * fully searchable — this only affects on-disk size.
+   */
+  private async forceMergeIndex(index: string): Promise<void> {
+    if (!this.elasticClient) {
+      return;
+    }
+
+    try {
+      await this.elasticClient.indices.forcemerge({
+        index,
+        max_num_segments: 1,
+      });
+      this.logger.verbose?.(
+        `[${index}] - force-merged to a single segment`,
+        LogContext.SEARCH_INGEST
+      );
+    } catch (error) {
+      this.logger.warn?.(
+        `[${index}] - force-merge failed (non-fatal): ${(error as Error)?.message}`,
+        LogContext.SEARCH_INGEST
+      );
+    }
   }
 
   private async fetchAndIngest(
@@ -547,7 +647,10 @@ export class SearchIngestService {
       `Found ${total} total results to ingest into ${index}`,
       LogContext.SEARCH_INGEST
     );
-    this.taskService.updateTaskResults(
+    // awaited: TaskService updates are read-modify-write on a shared cache
+    // entry — firing this without awaiting lets it interleave with the batch
+    // updates below and lose records to last-write-wins.
+    await this.taskService.updateTaskResults(
       task.id,
       `Found ${total} total results to ingest into ${index}`
     );
@@ -556,8 +659,20 @@ export class SearchIngestService {
     const results: IngestBatchResultType[] = [];
 
     while (start <= total) {
-      const fetched = await fetchFn(start, batchSize);
-      const result = await this.ingestBulk(fetched, index, task);
+      // A single poisoned batch (e.g. a bulk payload the ES transport rejects
+      // outright) must not abort the whole reindex — office-document is
+      // ingested last, so an uncaught throw here would discard every freshly
+      // rebuilt index by skipping the alias flip. Record the failure as an
+      // errored batch and move on to the next one.
+      let result: IngestBatchResultType;
+      try {
+        const fetched = await fetchFn(start, batchSize);
+        result = await this.ingestBulk(fetched, index, task);
+      } catch (error) {
+        const message = `[${index}] - batch at offset ${start} failed: ${(error as Error)?.message}`;
+        await this.taskService.updateTaskErrors(task.id, message);
+        result = { success: false, total: 0, message };
+      }
       results.push(result);
 
       if (result.erroredDocuments?.length) {
@@ -593,6 +708,29 @@ export class SearchIngestService {
         total: 0,
         message: `[${index}] - 0 documents indexed`,
       };
+    }
+
+    // Batch sizes are row counts, but payload BYTES are what the ES transport
+    // caps (http.max_content_length, 100 MB default). Office documents carry
+    // up to 1M chars of extracted content each, so a count-based batch can
+    // still exceed the transport cap. Split into byte-bounded sub-requests and
+    // aggregate — one oversized document set must never turn into a rejected
+    // request that aborts the reindex.
+    const chunks = chunkByPayloadSize(data, MAX_BULK_PAYLOAD_BYTES);
+    if (chunks.length > 1) {
+      const results: IngestBatchResultType[] = [];
+      for (const chunk of chunks) {
+        results.push(await this.ingestBulk(chunk, index, task));
+      }
+      return results.reduce((acc, val) => ({
+        success: acc.success && val.success,
+        total: acc.total + val.total,
+        message: [acc.message, val.message].filter(Boolean).join(' | '),
+        erroredDocuments: [
+          ...(acc.erroredDocuments ?? []),
+          ...(val.erroredDocuments ?? []),
+        ],
+      }));
     }
 
     const operations = data.flatMap(doc => [{ index: { _index: index } }, doc]);
@@ -864,10 +1002,16 @@ export class SearchIngestService {
             parentSpace: true,
           },
           collaboration: {
+            innovationFlow: {
+              states: true,
+            },
             calloutsSet: {
               callouts: {
                 framing: {
                   profile: profileRelationOptions,
+                },
+                classification: {
+                  tagsets: true,
                 },
               },
             },
@@ -879,6 +1023,13 @@ export class SearchIngestService {
           parentSpace: { id: true, parentSpace: { id: true } },
           collaboration: {
             id: true,
+            innovationFlow: {
+              id: true,
+              states: {
+                id: true,
+                displayName: true,
+              },
+            },
             calloutsSet: {
               id: true,
               callouts: {
@@ -890,6 +1041,14 @@ export class SearchIngestService {
                   id: true,
                   profile: profileSelectOptions,
                 },
+                classification: {
+                  id: true,
+                  tagsets: {
+                    id: true,
+                    name: true,
+                    tags: true,
+                  },
+                },
               },
             },
           },
@@ -898,10 +1057,15 @@ export class SearchIngestService {
         take: limit,
       })
       .then(spaces =>
-        spaces.flatMap(space =>
-          space.collaboration?.calloutsSet?.callouts?.map(callout => ({
+        spaces.flatMap(space => {
+          const { map: flowStateNameToId, ambiguousNames } =
+            buildFlowStateNameToIdMap(
+              space.collaboration?.innovationFlow?.states
+            );
+          return space.collaboration?.calloutsSet?.callouts?.map(callout => ({
             ...callout,
             framing: undefined,
+            classification: undefined,
             type: SearchResultType.CALLOUT,
             license: {
               visibility: space?.visibility ?? EMPTY_VALUE,
@@ -911,14 +1075,30 @@ export class SearchIngestService {
               space.parentSpace?.id ??
               space.id,
             collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+            flowStateID: resolveCalloutFlowStateID(
+              callout.classification?.tagsets,
+              flowStateNameToId,
+              ambiguousNames,
+              this.logUnresolvedFlowState.bind(this),
+              callout.id
+            ),
             profile: {
               ...callout.framing.profile,
               tags: processTagsets(callout.framing?.profile?.tagsets),
               tagsets: undefined,
             },
-          }))
-        )
+          }));
+        })
       );
+  }
+
+  /**
+   * Logs an unresolved/ambiguous flow-state mapping at warning level so data
+   * issues are visible without failing the ingest. Affected callouts simply
+   * remain out of any flow-state-scoped search (SC-003: zero leakage).
+   */
+  private logUnresolvedFlowState(message: string): void {
+    this.logger.warn?.(message, LogContext.SEARCH_INGEST);
   }
 
   private fetchWhiteboardCount() {
@@ -940,6 +1120,9 @@ export class SearchIngestService {
         },
         relations: {
           collaboration: {
+            innovationFlow: {
+              states: true,
+            },
             calloutsSet: {
               callouts: {
                 framing: {
@@ -951,6 +1134,9 @@ export class SearchIngestService {
                   whiteboard: {
                     profile: profileRelationOptions,
                   },
+                },
+                classification: {
+                  tagsets: true,
                 },
               },
             },
@@ -964,6 +1150,13 @@ export class SearchIngestService {
           visibility: true,
           collaboration: {
             id: true,
+            innovationFlow: {
+              id: true,
+              states: {
+                id: true,
+                displayName: true,
+              },
+            },
             calloutsSet: {
               id: true,
               callouts: {
@@ -985,6 +1178,14 @@ export class SearchIngestService {
                     profile: profileSelectOptions,
                   },
                 },
+                classification: {
+                  id: true,
+                  tagsets: {
+                    id: true,
+                    name: true,
+                    tags: true,
+                  },
+                },
               },
             },
           },
@@ -1000,9 +1201,21 @@ export class SearchIngestService {
       })
       .then(spaces => {
         return spaces.flatMap(space => {
+          const { map: flowStateNameToId, ambiguousNames } =
+            buildFlowStateNameToIdMap(
+              space.collaboration?.innovationFlow?.states
+            );
           const callouts = space.collaboration?.calloutsSet?.callouts;
           return callouts
             ?.flatMap(callout => {
+              // children inherit the parent callout's scope fields
+              const flowStateID = resolveCalloutFlowStateID(
+                callout.classification?.tagsets,
+                flowStateNameToId,
+                ambiguousNames,
+                this.logUnresolvedFlowState.bind(this),
+                callout.id
+              );
               // a callout can have whiteboard in the framing
               // AND whiteboards in the contributions.
               // NOTE (006-collab-content-unification): the whiteboard scene is no
@@ -1023,6 +1236,7 @@ export class SearchIngestService {
                     space.id,
                   calloutID: callout.id,
                   collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+                  flowStateID,
                   profile: {
                     ...callout.framing.whiteboard.profile,
                     tags: processTagsets(
@@ -1050,6 +1264,7 @@ export class SearchIngestService {
                     space.id,
                   calloutID: callout.id,
                   collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+                  flowStateID,
                   profile: {
                     ...contribution.whiteboard.profile,
                     tags: processTagsets(
@@ -1084,6 +1299,9 @@ export class SearchIngestService {
       },
       relations: {
         collaboration: {
+          innovationFlow: {
+            states: true,
+          },
           calloutsSet: {
             callouts: {
               framing: {
@@ -1095,6 +1313,9 @@ export class SearchIngestService {
                 memo: {
                   profile: profileRelationOptions,
                 },
+              },
+              classification: {
+                tagsets: true,
               },
             },
           },
@@ -1108,6 +1329,13 @@ export class SearchIngestService {
         visibility: true,
         collaboration: {
           id: true,
+          innovationFlow: {
+            id: true,
+            states: {
+              id: true,
+              displayName: true,
+            },
+          },
           calloutsSet: {
             id: true,
             callouts: {
@@ -1131,6 +1359,14 @@ export class SearchIngestService {
                   profile: profileSelectOptions,
                 },
               },
+              classification: {
+                id: true,
+                tagsets: {
+                  id: true,
+                  name: true,
+                  tags: true,
+                },
+              },
             },
           },
         },
@@ -1151,7 +1387,12 @@ export class SearchIngestService {
     // keyed by `contentPointer`, instead of the dropped inline column.
     const markdownByPointer = await this.fetchMemoMarkdownByPointer(spaces);
 
-    const memoForIngestion = (memo: Memo, callout: Callout, space: Space) => {
+    const memoForIngestion = (
+      memo: Memo,
+      callout: Callout,
+      space: Space,
+      flowStateID: string | undefined
+    ) => {
       const markdown = memo.contentPointer
         ? markdownByPointer.get(memo.contentPointer)
         : undefined;
@@ -1174,6 +1415,7 @@ export class SearchIngestService {
           space.id,
         calloutID: callout.id,
         collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+        flowStateID,
         profile: {
           ...memo.profile,
           tags: processTagsets(memo?.profile?.tagsets),
@@ -1183,14 +1425,31 @@ export class SearchIngestService {
     };
 
     return spaces.flatMap(space => {
+      const { map: flowStateNameToId, ambiguousNames } =
+        buildFlowStateNameToIdMap(space.collaboration?.innovationFlow?.states);
       const callouts = space.collaboration?.calloutsSet?.callouts ?? [];
       return callouts
         .flatMap(callout => {
+          // children inherit the parent callout's scope fields
+          const flowStateID = resolveCalloutFlowStateID(
+            callout.classification?.tagsets,
+            flowStateNameToId,
+            ambiguousNames,
+            this.logUnresolvedFlowState.bind(this),
+            callout.id
+          );
           // a callout can have memo in the framing
           // AND memos in the contributions
           const memos: (Record<string, unknown> | undefined)[] = [];
           if (callout.framing.memo) {
-            memos.push(memoForIngestion(callout.framing.memo, callout, space));
+            memos.push(
+              memoForIngestion(
+                callout.framing.memo,
+                callout,
+                space,
+                flowStateID
+              )
+            );
           }
 
           callout?.contributions?.forEach(({ memo }) => {
@@ -1198,7 +1457,7 @@ export class SearchIngestService {
               return;
             }
 
-            memos.push(memoForIngestion(memo, callout, space));
+            memos.push(memoForIngestion(memo, callout, space, flowStateID));
           });
 
           return memos;
@@ -1264,6 +1523,255 @@ export class SearchIngestService {
     return result;
   }
 
+  private fetchCollaboraDocumentCount() {
+    // todo: count through CollaboraDocument directly; consider framing + contributions
+    return this.entityManager.count<Space>(Space, {
+      loadEagerRelations: false,
+      where: {
+        visibility: SpaceVisibility.ACTIVE,
+      },
+    });
+  }
+
+  /**
+   * Loads Collabora office documents from both a Callout's framing and its
+   * contributions, extracts + cleans their text content in-process (FR-001/002,
+   * FR-017), and builds one index doc per document (data-model §1). A document
+   * that yields no usable text / is skipped (no-text, parse-error, over-cap) is
+   * STILL pushed — with empty `content` — so it stays findable by its
+   * profile.displayName/tags (FR-014, research §9). Extraction is lazy: it runs
+   * only here, during a reindex of the owning entity (FR-010).
+   */
+  private async fetchCollaboraDocument(
+    start: number,
+    limit: number,
+    task: Task
+  ) {
+    const spaces = await this.entityManager.find<Space>(Space, {
+      loadEagerRelations: false,
+      where: {
+        visibility: SpaceVisibility.ACTIVE,
+      },
+      relations: {
+        collaboration: {
+          innovationFlow: {
+            states: true,
+          },
+          calloutsSet: {
+            callouts: {
+              framing: {
+                collaboraDocument: {
+                  profile: profileRelationOptions,
+                  document: true,
+                },
+              },
+              contributions: {
+                collaboraDocument: {
+                  profile: profileRelationOptions,
+                  document: true,
+                },
+              },
+              classification: {
+                tagsets: true,
+              },
+            },
+          },
+        },
+        parentSpace: {
+          parentSpace: true,
+        },
+      },
+      select: {
+        id: true,
+        visibility: true,
+        collaboration: {
+          id: true,
+          innovationFlow: {
+            id: true,
+            states: {
+              id: true,
+              displayName: true,
+            },
+          },
+          calloutsSet: {
+            id: true,
+            callouts: {
+              id: true,
+              createdBy: true,
+              createdDate: true,
+              nameID: true,
+              framing: {
+                id: true,
+                collaboraDocument: {
+                  id: true,
+                  createdBy: true,
+                  createdDate: true,
+                  document: {
+                    id: true,
+                    size: true,
+                    mimeType: true,
+                  },
+                  profile: profileSelectOptions,
+                },
+              },
+              contributions: {
+                id: true,
+                collaboraDocument: {
+                  id: true,
+                  createdBy: true,
+                  createdDate: true,
+                  document: {
+                    id: true,
+                    size: true,
+                    mimeType: true,
+                  },
+                  profile: profileSelectOptions,
+                },
+              },
+              classification: {
+                id: true,
+                tagsets: {
+                  id: true,
+                  name: true,
+                  tags: true,
+                },
+              },
+            },
+          },
+        },
+        parentSpace: {
+          id: true,
+          parentSpace: {
+            id: true,
+          },
+        },
+      },
+      skip: start,
+      take: limit,
+    });
+
+    // (collaboraDocument, callout, space, flowStateID, isContribution) tuples
+    const docsToIndex: {
+      collaboraDocument: CollaboraDocument;
+      callout: Callout;
+      space: Space;
+      flowStateID: string | undefined;
+      isContribution: boolean;
+    }[] = [];
+
+    for (const space of spaces) {
+      const { map: flowStateNameToId, ambiguousNames } =
+        buildFlowStateNameToIdMap(space.collaboration?.innovationFlow?.states);
+      const callouts = space.collaboration?.calloutsSet?.callouts ?? [];
+      for (const callout of callouts) {
+        const flowStateID = resolveCalloutFlowStateID(
+          callout.classification?.tagsets,
+          flowStateNameToId,
+          ambiguousNames,
+          this.logUnresolvedFlowState.bind(this),
+          callout.id
+        );
+        // a callout can have a collabora document in the framing
+        // AND collabora documents in the contributions
+        if (callout.framing?.collaboraDocument) {
+          docsToIndex.push({
+            collaboraDocument: callout.framing.collaboraDocument,
+            callout,
+            space,
+            flowStateID,
+            isContribution: false,
+          });
+        }
+        for (const contribution of callout.contributions ?? []) {
+          if (!contribution?.collaboraDocument) {
+            continue;
+          }
+          docsToIndex.push({
+            collaboraDocument: contribution.collaboraDocument,
+            callout,
+            space,
+            flowStateID,
+            isContribution: true,
+          });
+        }
+      }
+    }
+
+    // extract + build index docs strictly one document at a time —
+    // asyncMapSequential, NOT asyncMap (= Promise.all): each extraction can
+    // hold up to the 15 MiB source cap in memory plus parser overhead, so
+    // concurrent extraction of a whole batch would multiply peak memory by the
+    // document count. Sequential also serializes the per-skip task-record
+    // writes below (TaskService updates are read-modify-write and not atomic).
+    // Extraction is off the request path — runs during async reindex, SC-005.
+    return asyncMapSequential(docsToIndex, async entry => {
+      const { collaboraDocument, callout, space, flowStateID, isContribution } =
+        entry;
+
+      const { content, skipReason } =
+        await this.collaboraTextExtractService.extract(collaboraDocument);
+
+      if (skipReason) {
+        // FR-019 channel 2: durable, queryable task record per skip/failure.
+        await this.recordCollaboraExtractSkip(
+          task,
+          collaboraDocument.id,
+          skipReason
+        );
+      }
+
+      return {
+        ...collaboraDocument,
+        document: undefined,
+        // empty `content` is intentional for a skipped document — it stays
+        // findable by its profile fields (FR-014).
+        content: content ?? '',
+        isContribution,
+        type: SearchResultType.COLLABORA_DOCUMENT,
+        license: {
+          visibility: space?.visibility ?? EMPTY_VALUE,
+        },
+        spaceID:
+          space?.parentSpace?.parentSpace?.id ??
+          space?.parentSpace?.id ??
+          space.id,
+        calloutID: callout.id,
+        collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+        flowStateID,
+        profile: {
+          ...collaboraDocument.profile,
+          tags: processTagsets(collaboraDocument.profile?.tagsets),
+          tagsets: undefined,
+        },
+      };
+    });
+  }
+
+  /**
+   * Appends a reason-tagged Collabora extraction skip/failure to the active
+   * reindex task so it is a durable, queryable record (FR-019, SC-008). Does not
+   * advance the task item counter — these are sub-document notes, not units of
+   * work. Never throws (observability must not break ingestion).
+   */
+  private async recordCollaboraExtractSkip(
+    task: Task,
+    collaboraDocumentId: string,
+    reason: CollaboraExtractSkipReason
+  ): Promise<void> {
+    try {
+      await this.taskService.updateTaskResults(
+        task.id,
+        `[office-document] - extraction skipped (${reason}) for document ${collaboraDocumentId}`,
+        false
+      );
+    } catch (e: any) {
+      this.logger.warn?.(
+        `Failed to record Collabora extraction skip on task: ${e?.message}`,
+        LogContext.SEARCH_INGEST
+      );
+    }
+  }
+
   private fetchPostsCount() {
     // todo: count through Post directly
     return this.entityManager.count<Space>(Space, {
@@ -1282,12 +1790,18 @@ export class SearchIngestService {
         },
         relations: {
           collaboration: {
+            innovationFlow: {
+              states: true,
+            },
             calloutsSet: {
               callouts: {
                 contributions: {
                   post: {
                     profile: profileRelationOptions,
                   },
+                },
+                classification: {
+                  tagsets: true,
                 },
               },
             },
@@ -1301,6 +1815,13 @@ export class SearchIngestService {
           visibility: true,
           collaboration: {
             id: true,
+            innovationFlow: {
+              id: true,
+              states: {
+                id: true,
+                displayName: true,
+              },
+            },
             calloutsSet: {
               id: true,
               callouts: {
@@ -1313,6 +1834,14 @@ export class SearchIngestService {
                     createdDate: true,
                     nameID: true,
                     profile: profileSelectOptions,
+                  },
+                },
+                classification: {
+                  id: true,
+                  tagsets: {
+                    id: true,
+                    name: true,
+                    tags: true,
                   },
                 },
               },
@@ -1331,8 +1860,20 @@ export class SearchIngestService {
       .then(spaces => {
         const posts: any[] = [];
         spaces.forEach(space => {
+          const { map: flowStateNameToId, ambiguousNames } =
+            buildFlowStateNameToIdMap(
+              space.collaboration?.innovationFlow?.states
+            );
           const callouts = space?.collaboration?.calloutsSet?.callouts;
           callouts?.forEach(callout => {
+            // children inherit the parent callout's scope fields
+            const flowStateID = resolveCalloutFlowStateID(
+              callout.classification?.tagsets,
+              flowStateNameToId,
+              ambiguousNames,
+              this.logUnresolvedFlowState.bind(this),
+              callout.id
+            );
             const contributions = callout?.contributions;
             contributions?.forEach(contribution => {
               if (!contribution.post) {
@@ -1350,6 +1891,7 @@ export class SearchIngestService {
                   space.id,
                 calloutID: callout.id,
                 collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+                flowStateID,
                 profile: {
                   ...contribution.post.profile,
                   tags: processTagsets(contribution.post?.profile?.tagsets),
@@ -1367,4 +1909,90 @@ export class SearchIngestService {
 
 const processTagsets = (tagsets: Tagset[] | undefined) => {
   return tagsets?.flatMap(tagset => tagset.tags).join(' ');
+};
+
+/**
+ * Builds a lookup from a flow-state display name to its InnovationFlowState UUID,
+ * scoped to a single Collaboration's InnovationFlow.
+ *
+ * The flow state lives on a Callout only as a `flow-state` classification tagset
+ * VALUE (the state's name string) — there is no FK. To scope a search by the
+ * InnovationFlowState UUID (FR-008) we must resolve that name to the matching
+ * state's id within this Collaboration only.
+ *
+ * Uniqueness is asserted per-Collaboration: if two states in the same flow share
+ * a display name, the name is ambiguous and is excluded from the map (logged by
+ * the caller via the returned `ambiguousNames` set), so affected callouts are
+ * left unstamped rather than mis-scoped (SC-003 = zero leakage).
+ */
+const buildFlowStateNameToIdMap = (
+  states: { id: string; displayName: string }[] | undefined
+): { map: Map<string, string>; ambiguousNames: Set<string> } => {
+  const map = new Map<string, string>();
+  const ambiguousNames = new Set<string>();
+
+  for (const state of states ?? []) {
+    if (!state?.displayName || !state?.id) {
+      continue;
+    }
+    if (map.has(state.displayName)) {
+      ambiguousNames.add(state.displayName);
+      // remove the ambiguous entry so it can never resolve to a single id
+      map.delete(state.displayName);
+      continue;
+    }
+    if (ambiguousNames.has(state.displayName)) {
+      continue;
+    }
+    map.set(state.displayName, state.id);
+  }
+
+  return { map, ambiguousNames };
+};
+
+/**
+ * Reads a Callout's `flow-state` classification tagset value and resolves it to
+ * the InnovationFlowState UUID via the per-Collaboration name->id map.
+ *
+ * Returns `undefined` (skip-stamp) when there is no flow-state value, no match,
+ * or an ambiguous match — in all of these cases the callout simply stays out of
+ * any flow-state-scoped search until the data is corrected, rather than leaking
+ * into the wrong scope.
+ */
+const resolveCalloutFlowStateID = (
+  classificationTagsets: { name: string; tags: string[] }[] | undefined,
+  flowStateNameToId: Map<string, string>,
+  ambiguousNames: Set<string>,
+  onUnresolved: (reason: string, flowStateName?: string) => void,
+  calloutId: string
+): string | undefined => {
+  const flowStateTagset = classificationTagsets?.find(
+    tagset => tagset.name === TagsetReservedName.FLOW_STATE
+  );
+  const flowStateName = flowStateTagset?.tags?.[0];
+
+  if (!flowStateName) {
+    // no flow-state classification on this callout; nothing to resolve
+    return undefined;
+  }
+
+  if (ambiguousNames.has(flowStateName)) {
+    onUnresolved(
+      `Ambiguous flow-state name '${flowStateName}' for Callout '${calloutId}' — duplicate InnovationFlowState displayNames in the Collaboration; skipping flowStateID stamp`,
+      flowStateName
+    );
+    return undefined;
+  }
+
+  const flowStateID = flowStateNameToId.get(flowStateName);
+
+  if (!flowStateID) {
+    onUnresolved(
+      `Unable to resolve flow-state name '${flowStateName}' to an InnovationFlowState for Callout '${calloutId}'; skipping flowStateID stamp`,
+      flowStateName
+    );
+    return undefined;
+  }
+
+  return flowStateID;
 };

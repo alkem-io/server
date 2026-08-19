@@ -1,8 +1,12 @@
-import { SMALL_TEXT_LENGTH } from '@common/constants';
+import {
+  CONVERSATION_GROUP_MEMBER_COUNT_MAX,
+  SMALL_TEXT_LENGTH,
+} from '@common/constants';
 import { ConversationCreationType } from '@common/enums/conversation.creation.type';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Field, InputType } from '@nestjs/graphql';
 import {
+  ArrayMaxSize,
   ArrayMinSize,
   IsArray,
   IsEnum,
@@ -29,10 +33,14 @@ export class CreateConversationInput {
 
   @Field(() => [UUID], {
     description:
-      'IDs of members to add. For DIRECT: exactly 1 ID. For GROUP: 1+ IDs. Creator is auto-included.',
+      'IDs of members to add. For DIRECT: exactly 1 ID. For GROUP: 1+ IDs, ' +
+      `up to ${CONVERSATION_GROUP_MEMBER_COUNT_MAX}. Creator is auto-included.`,
   })
   @IsArray()
   @ArrayMinSize(1)
+  // sec-server-10: bounds the notification fan-out of every future message
+  // in this conversation — see CONVERSATION_GROUP_MEMBER_COUNT_MAX.
+  @ArrayMaxSize(CONVERSATION_GROUP_MEMBER_COUNT_MAX)
   @IsUUID('4', { each: true })
   memberIDs!: string[];
 

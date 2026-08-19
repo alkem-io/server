@@ -1,17 +1,51 @@
 import { buildSearchQuery } from './build.search.query';
 
 describe('buildSearchQuery', () => {
-  it('should build a basic multi_match query with no filters', () => {
+  it('should OR an exact all-fields match with a content-scoped fuzzy match', () => {
     const query = buildSearchQuery('hello world');
 
     expect(query.bool?.must).toBeDefined();
-    expect(query.bool?.must).toEqual(
+    // The text match is a single should-block: exact-all-fields OR fuzzy-content.
+    const textMatch = (query.bool?.must as any[])[0].bool;
+    expect(textMatch.minimum_should_match).toBe(1);
+    expect(textMatch.should).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
+          // displayName's `.text` subfield and profile.tags are boosted above the
+          // wildcard (displayName's base field is keyword). `content^0` gives
+          // content zero weight HERE so it is scored only once, by the fuzzy
+          // `content` clause below — removing the double-count that used to sink
+          // tag-only hits to dead-last (M-05).
           multi_match: {
             query: 'hello world',
             type: 'most_fields',
-            fields: ['*'],
+            fields: [
+              '*',
+              'profile.displayName.text^3',
+              'profile.tags^2',
+              'content^0',
+            ],
+          },
+        }),
+        expect.objectContaining({
+          // fuzziness is scoped to `content` only — never applied via fields:['*']
+          match: {
+            content: {
+              query: 'hello world',
+              fuzziness: 'AUTO',
+              prefix_length: 2,
+              max_expansions: 50,
+            },
+          },
+        }),
+      ])
+    );
+    // pure ranking boost: phrase-proximity on content, outer should (no filter)
+    expect(query.bool?.should).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          match_phrase: {
+            content: { query: 'hello world', slop: 2, boost: 2 },
           },
         }),
       ])
@@ -57,6 +91,49 @@ describe('buildSearchQuery', () => {
 
   it('should not add filter when options is empty object', () => {
     const query = buildSearchQuery('test', {});
+
+    expect(query.bool?.filter).toBeUndefined();
+  });
+
+  it('should build a "field-absent OR field-equals" filter for flowStateIdFilter', () => {
+    const query = buildSearchQuery('test', {
+      flowStateIdFilter: 'fs-456',
+    });
+
+    const filter = query.bool?.filter as any;
+    expect(filter.bool.must).toHaveLength(1);
+    const innerBool = filter.bool.must[0].bool;
+    expect(innerBool.minimum_should_match).toBe(1);
+    expect(innerBool.should[0].bool.must_not.exists.field).toBe('flowStateID');
+    expect(innerBool.should[1].term.flowStateID).toBe('fs-456');
+  });
+
+  it('should combine space + flowState scope filters together', () => {
+    // flowState UUID alone scopes; spaceID is the only other scope filter
+    const query = buildSearchQuery('test', {
+      spaceIdFilter: 'space-1',
+      flowStateIdFilter: 'fs-456',
+    });
+
+    const filter = query.bool?.filter as any;
+    // both scope clauses present, each as an independent should-block
+    expect(filter.bool.must).toHaveLength(2);
+    const fields = filter.bool.must.map(
+      (clause: any) => clause.bool.should[1].term
+    );
+    expect(fields).toEqual(
+      expect.arrayContaining([
+        { spaceID: 'space-1' },
+        { flowStateID: 'fs-456' },
+      ])
+    );
+  });
+
+  it('should not add a scope filter when space/flowState filters are undefined', () => {
+    const query = buildSearchQuery('test', {
+      spaceIdFilter: undefined,
+      flowStateIdFilter: undefined,
+    });
 
     expect(query.bool?.filter).toBeUndefined();
   });

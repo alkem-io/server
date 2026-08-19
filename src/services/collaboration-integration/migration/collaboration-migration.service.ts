@@ -1,5 +1,4 @@
 import { CollaborationContentType, LogContext } from '@common/enums';
-import { BlobStoreKind } from '@common/enums/blob.store.kind';
 import { decompressText } from '@common/utils/compression.util';
 import { Memo } from '@domain/common/memo/memo.entity';
 import { whiteboardSceneToYjsV2State } from '@domain/common/whiteboard/conversion';
@@ -199,7 +198,6 @@ export class CollaborationMigrationService {
       .update()
       .set({
         contentPointer: result.id,
-        blobStore: BlobStoreKind.FILE_SERVICE,
         contentVersion: 0,
       })
       .where('id = :id', { id: record.id })

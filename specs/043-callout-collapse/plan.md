@@ -5,7 +5,7 @@
 
 ## Summary
 
-Add a new `layout` sub-object to `SpaceSettings` containing a `calloutDescriptionDisplayMode` enum field (`COLLAPSED` | `EXPANDED`). This follows the established sub-object pattern used by `privacy`, `membership`, and `collaboration`. A migration backfills existing spaces with `EXPANDED` (preserving current behavior); new spaces default to `COLLAPSED`. The setting is exposed via GraphQL both through the guarded `settings` resolver and as a public field resolver (no READ privilege required, matching `sortMode` pattern).
+Add a new `layout` sub-object to `SpaceSettings` containing a `calloutDescriptionDisplayMode` enum field (`COLLAPSED` | `EXPANDED`). This follows the established sub-object pattern used by `privacy`, `membership`, and `collaboration`. A migration backfills existing spaces with `EXPANDED` (preserving current behavior); new spaces default to `EXPANDED` (enforced in `SpaceSettingsService.applyCreationDefaults` and by explicitly setting the four platform-level default templates to `EXPANDED` via migration). The setting is exposed via GraphQL both through the guarded `settings` resolver and as a public field resolver (no READ privilege required, matching `sortMode` pattern).
 
 ## Technical Context
 
@@ -319,7 +319,7 @@ FROM "space";
 Expected post-migration result: `missing = 0`.
 
 **Canary rollout plan:**
-1. Deploy the new server image to the **development** environment. Run `migration:run`. Verify via GraphQL Playground that `space.layout.calloutDescriptionDisplayMode` returns `EXPANDED` for existing spaces and `COLLAPSED` for newly created spaces.
+1. Deploy the new server image to the **development** environment. Run `migration:run`. Verify via GraphQL Playground that `space.layout.calloutDescriptionDisplayMode` returns `EXPANDED` for existing spaces and `EXPANDED` for newly created spaces.
 2. Promote to **staging**. Re-run the migration (idempotent; no rows will be updated). Run the integration test suite. Check deployment logs for the `verification passed` line.
 3. Promote to **production**. Monitor the following for 30 minutes post-deploy:
    - Container logs for any `[Migration] WARNING` pattern.

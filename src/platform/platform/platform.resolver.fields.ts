@@ -143,4 +143,21 @@ export class PlatformResolverFields {
     const stored = platform.wellKnownVirtualContributors;
     return { mappings: stored?.mappings ?? [] };
   }
+
+  @ResolveField('virtualAssistantAccess', () => Boolean, {
+    nullable: false,
+    description:
+      'Whether the current user may use the web AI assistant (the ACCESS_VIRTUAL_ASSISTANT privilege, 004-web-ai-assistant). client-web reads this to gate every assistant UI cue.',
+  })
+  async virtualAssistantAccess(
+    @CurrentActor() actorContext: ActorContext
+  ): Promise<boolean> {
+    // Non-throwing read so an unprivileged user resolves `false` (and the
+    // client hides the assistant) rather than receiving an authorization error.
+    return this.authorizationService.isAccessGranted(
+      actorContext,
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.ACCESS_VIRTUAL_ASSISTANT
+    );
+  }
 }

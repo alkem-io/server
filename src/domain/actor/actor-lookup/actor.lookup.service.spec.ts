@@ -289,6 +289,86 @@ describe('ActorLookupService', () => {
     });
   });
 
+  // agents-hq workspace spec 012-collabora-actor-type: tolerant batch lookup used by the Collabora
+  // analytics consumer — resolvable ids only, never throws (FR-005/009).
+  describe('getActorTypesByIds', () => {
+    it('should return empty map for empty input', async () => {
+      const result = await service.getActorTypesByIds([]);
+      expect(result.size).toBe(0);
+      expect(entityManager.find).not.toHaveBeenCalled();
+    });
+
+    it('should silently skip non-UUID ids without throwing', async () => {
+      actorTypeCacheService.getActorTypes.mockResolvedValue(new Map());
+
+      const result = await service.getActorTypesByIds([
+        'not-a-uuid',
+        'also-no',
+      ]);
+
+      expect(result.size).toBe(0);
+      // never reaches the DB when no id is a valid UUID
+      expect(entityManager.find).not.toHaveBeenCalled();
+    });
+
+    it('should return cached types without DB query', async () => {
+      const cachedMap = new Map([[VALID_UUID, ActorType.USER]]);
+      actorTypeCacheService.getActorTypes.mockResolvedValue(cachedMap);
+
+      const result = await service.getActorTypesByIds([VALID_UUID]);
+
+      expect(result.get(VALID_UUID)).toBe(ActorType.USER);
+      expect(entityManager.find).not.toHaveBeenCalled();
+    });
+
+    it('should query DB for uncached IDs and cache results', async () => {
+      actorTypeCacheService.getActorTypes.mockResolvedValue(new Map());
+      entityManager.find.mockResolvedValue([
+        { id: VALID_UUID, type: ActorType.USER },
+        { id: VALID_UUID_2, type: ActorType.VIRTUAL_CONTRIBUTOR },
+      ]);
+      actorTypeCacheService.setActorTypes.mockResolvedValue(undefined);
+
+      const result = await service.getActorTypesByIds([
+        VALID_UUID,
+        VALID_UUID_2,
+      ]);
+
+      expect(result.size).toBe(2);
+      expect(result.get(VALID_UUID)).toBe(ActorType.USER);
+      expect(result.get(VALID_UUID_2)).toBe(ActorType.VIRTUAL_CONTRIBUTOR);
+      expect(actorTypeCacheService.setActorTypes).toHaveBeenCalled();
+    });
+
+    it('should omit unresolvable ids from the map without throwing (no caching of nothing)', async () => {
+      actorTypeCacheService.getActorTypes.mockResolvedValue(new Map());
+      // only one of the two requested ids exists in the DB
+      entityManager.find.mockResolvedValue([
+        { id: VALID_UUID, type: ActorType.USER },
+      ]);
+      actorTypeCacheService.setActorTypes.mockResolvedValue(undefined);
+
+      const result = await service.getActorTypesByIds([
+        VALID_UUID,
+        VALID_UUID_2,
+      ]);
+
+      expect(result.size).toBe(1);
+      expect(result.get(VALID_UUID)).toBe(ActorType.USER);
+      expect(result.has(VALID_UUID_2)).toBe(false);
+    });
+
+    it('should not write to cache when nothing is resolved', async () => {
+      actorTypeCacheService.getActorTypes.mockResolvedValue(new Map());
+      entityManager.find.mockResolvedValue([]); // none found
+
+      const result = await service.getActorTypesByIds([VALID_UUID]);
+
+      expect(result.size).toBe(0);
+      expect(actorTypeCacheService.setActorTypes).not.toHaveBeenCalled();
+    });
+  });
+
   describe('getActorAuthorizationOrFail', () => {
     it('should throw for invalid UUID', async () => {
       await expect(

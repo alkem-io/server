@@ -8,7 +8,8 @@ export class CollaboraEditorUrlResult {
   editorUrl!: string;
 
   @Field(() => Number, {
-    description: 'The time-to-live of the access token in seconds.',
+    description:
+      'When the access token expires, as an absolute Unix timestamp in milliseconds (the WOPI access_token_ttl passed through from the WOPI host); 0 means it does not expire.',
   })
   accessTokenTTL!: number;
 }

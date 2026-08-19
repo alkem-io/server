@@ -10,6 +10,7 @@ export enum AuthorizationPrivilege {
   AUTHORIZATION_RESET = 'authorization-reset',
   LICENSE_RESET = 'license-reset',
   PLATFORM_ADMIN = 'platform-admin', // To determine if the user should have access to the platform administration
+  PLATFORM_OPERATIONS_ADMIN = 'platform-operations-admin', // gates the operational & maintenance mutation family
   PLATFORM_SETTINGS_ADMIN = 'platform-settings-admin', // To determine if the user should be able to update platform wide settings
   CONTRIBUTE = 'contribute',
   CREATE_CALLOUT = 'create-callout',
@@ -44,6 +45,7 @@ export enum AuthorizationPrivilege {
   MOVE_POST = 'move-post',
   MOVE_CONTRIBUTION = 'move-contribution',
   ACCESS_INTERACTIVE_GUIDANCE = 'access-interactive-guidance',
+  ACCESS_VIRTUAL_ASSISTANT = 'access-virtual-assistant', // may the user use the web AI assistant (004-web-ai-assistant, FR-027)
   UPDATE_CONTENT = 'update-content',
   RECEIVE_NOTIFICATIONS = 'receive-notifications',
   RECEIVE_NOTIFICATIONS_ADMIN = 'receive-notifications-admin',

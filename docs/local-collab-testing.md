@@ -19,7 +19,7 @@ real-time collaboration works end to end on a **fresh** database.
 | Memo backend | `collaborative-document-service` :4004 (hocuspocus) | `collaboration` :4006 (raw WS, Yjs) |
 | Browser → backend path | Traefik `/api/private/ws` + `/api/private/hocuspocus` | Traefik `/collab/{documentId}` |
 | Server ↔ backend | RMQ `alkemio-whiteboards` + `collaboration-document-service` | RMQ `alkemio-collaboration` (unified) |
-| Snapshot blob | inline in main DB | file-service (`BLOB_STORE=file-service`) |
+| Snapshot blob | inline in main DB | file-service (`CHECKPOINT_STORE=file-service`) |
 
 The browser **never** talks to the collaboration container directly — it goes
 through Traefik (`localhost:3000`), which proxies `/collab/*` to
@@ -36,9 +36,9 @@ Traefik router: `.build/traefik/http.yml` → router `collaboration`
 
 ```
 PORT=4006
-FANOUT_MODE=redis                 REDIS_URL=redis://redis:6379/0
+HUB_MODE=redis                 REDIS_URL=redis://redis:6379/0
 METADATA_STORE=rabbitmq           RABBITMQ_QUEUE=alkemio-collaboration
-BLOB_STORE=file-service           FILE_SERVICE_URL=http://file-service:4003
+CHECKPOINT_STORE=file-service           FILE_SERVICE_URL=http://file-service:4003
 AUTH_MODE=authzeval               AUTH_SERVICE_URL=http://authorization-evaluation:6060
 MAX_UPLOAD_SIZE=33554432
 FILE_SERVICE_STORAGE_BUCKET_ID=${COLLAB_FILE_SERVICE_STORAGE_BUCKET_ID}   # filled post-seed
@@ -46,7 +46,7 @@ FILE_SERVICE_AUTHORIZATION_ID=${COLLAB_FILE_SERVICE_AUTHORIZATION_ID}     # fill
 ```
 
 > The collaboration service validates its config at startup and **fails fast**
-> if `BLOB_STORE=file-service` and either of the two file-service IDs is empty.
+> if `CHECKPOINT_STORE=file-service` and either of the two file-service IDs is empty.
 > That is intentional — the two IDs are seeded with **random UUIDs per DB reset**
 > and must be filled in (step 3) before the container can start.
 
@@ -158,7 +158,7 @@ docker compose -f quickstart-services.yml --env-file .env.docker up -d --force-r
 > exists — it stores documents under whatever UUIDs the caller supplies), but
 > using the real platform bucket keeps the blobs consistent with the rest of the
 > platform's storage. See the "Assumptions / risks" section for the
-> `BLOB_STORE=inline` shortcut that skips this step entirely.
+> `CHECKPOINT_STORE=inline` shortcut that skips this step entirely.
 
 ---
 
@@ -169,7 +169,7 @@ docker compose -f quickstart-services.yml --env-file .env.docker up -d --force-r
 ```bash
 docker logs alkemio_dev_collaboration --tail 40
 # expect a startup line naming the topology:
-#   FANOUT_MODE=redis METADATA_STORE=rabbitmq BLOB_STORE=file-service AUTH_MODE=authzeval
+#   HUB_MODE=redis METADATA_STORE=rabbitmq CHECKPOINT_STORE=file-service AUTH_MODE=authzeval
 docker ps --filter name=alkemio_dev_collaboration   # should be Up (not restarting)
 ```
 
@@ -380,8 +380,8 @@ docker compose -f quickstart-services.yml --env-file .env.docker down -v   # inc
 5. **Fast path to isolate WS/Yjs from infra.** If you only want to prove the
    real-time sync path and skip the file-service IDs + authZ entirely, run the
    collaboration container with the zero-dependency standalone modes:
-   `AUTH_MODE=open`, `BLOB_STORE=inline`, `METADATA_STORE=inmemory`,
-   `FANOUT_MODE=inmemory`. It boots with no DB/bus/file-service wiring and any
+   `AUTH_MODE=open`, `CHECKPOINT_STORE=inline`, `METADATA_STORE=inmemory`,
+   `HUB_MODE=inmemory`. It boots with no DB/bus/file-service wiring and any
    WS handshake is accepted — useful to confirm `/collab/{id}` convergence before
    layering auth + persistence back on. (Persistence won't survive a restart in
    this mode.)

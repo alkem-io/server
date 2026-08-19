@@ -8,6 +8,8 @@ export enum MimeTypeDocument {
   ODS = 'application/vnd.oasis.opendocument.spreadsheet',
   CSV = 'text/csv',
 
+  ICS = 'text/calendar',
+
   DOC = 'application/msword',
   DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   ODT = 'application/vnd.oasis.opendocument.text',

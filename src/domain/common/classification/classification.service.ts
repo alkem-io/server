@@ -14,9 +14,13 @@ import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { CreateTagsetInput } from '../tagset';
 import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
+import {
+  matchAllowedValue,
+  resolveDefaultTags,
+} from '../tagset-template/tagset.template.utils';
 import { CreateClassificationInput } from './dto/classification.dto.create';
 import { UpdateClassificationInput } from './dto/classification.dto.update';
 import { UpdateClassificationSelectTagsetValueInput } from './dto/classification.dto.update.select.tagset.value';
@@ -104,7 +108,8 @@ export class ClassificationService {
 
   public async addTagsetOnClassification(
     classification: IClassification,
-    tagsetData: CreateTagsetInput
+    tagsetData: CreateTagsetInput,
+    mgr?: EntityManager
   ): Promise<ITagset> {
     if (!classification.tagsets) {
       classification.tagsets = await this.getTagsets(classification.id);
@@ -115,7 +120,7 @@ export class ClassificationService {
       tagsetData
     );
     tagset.classification = classification;
-    return await this.tagsetService.save(tagset);
+    return await this.tagsetService.save(tagset, mgr);
   }
 
   async getClassificationOrFail(
@@ -192,7 +197,8 @@ export class ClassificationService {
 
   async updateTagsetTemplateOnSelectTagset(
     classificationID: string,
-    tagsetTemplate: ITagsetTemplate
+    tagsetTemplate: ITagsetTemplate,
+    mgr?: EntityManager
   ): Promise<ITagset> {
     const tagsets = await this.getTagsets(classificationID);
     const existingTagset = this.tagsetService.getTagsetByName(
@@ -200,31 +206,39 @@ export class ClassificationService {
       tagsetTemplate.name
     );
 
-    const defaultTags = tagsetTemplate.defaultSelectedValue
-      ? [tagsetTemplate.defaultSelectedValue]
-      : [];
-
     if (existingTagset) {
       existingTagset.tagsetTemplate = tagsetTemplate;
-      // Preserve current value when it is still valid in the target template;
-      // only fall back to the default when the current value is not allowed.
-      const currentValue = existingTagset.tags?.[0];
-      const isCurrentValueValid =
-        currentValue != null &&
-        tagsetTemplate.allowedValues?.includes(currentValue);
-      existingTagset.tags = isCurrentValueValid ? [currentValue] : defaultTags;
-      return await this.tagsetService.save(existingTagset);
+      // Preserve the current value when the target template still allows it —
+      // matched case-insensitively, because that is how
+      // `filterCalloutsByClassificationTagsets` matches phase filters, and
+      // normalised to the template's spelling so the stored value stays
+      // canonical. Only fall back to the default when there is no match at all.
+      const matchedValue = matchAllowedValue(
+        tagsetTemplate.allowedValues,
+        existingTagset.tags?.[0]
+      );
+      existingTagset.tags = matchedValue
+        ? [matchedValue]
+        : resolveDefaultTags(tagsetTemplate);
+      return await this.tagsetService.save(existingTagset, mgr);
     }
 
     // Target callouts set has a template not present in the source classification;
     // create a new tagset for it
     const classification = await this.getClassificationOrFail(classificationID);
-    return await this.addTagsetOnClassification(classification, {
-      name: tagsetTemplate.name,
-      type: tagsetTemplate.type,
-      tags: defaultTags,
-      tagsetTemplate,
-    });
+    // Tagsets are already loaded above; hand them over so addTagsetOnClassification
+    // does not re-query them.
+    classification.tagsets = tagsets;
+    return await this.addTagsetOnClassification(
+      classification,
+      {
+        name: tagsetTemplate.name,
+        type: tagsetTemplate.type,
+        tags: resolveDefaultTags(tagsetTemplate),
+        tagsetTemplate,
+      },
+      mgr
+    );
   }
 
   // Note: provided data has priority when it comes to tags

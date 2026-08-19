@@ -7,18 +7,15 @@ on:
     branches: [develop, main]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pull-requests: write
-  checks: write
-
 jobs:
   test:
-    runs-on: [self-hosted, macOS, ARM64, apple-silicon, m4]
+    runs-on: ${{ (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/develop')) && 'arc-trusted-linux-x64' || 'ubuntu-latest' }}
+    permissions:
+      contents: read
     env:
       NODE_OPTIONS: "--max-old-space-size=4096"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -26,7 +23,7 @@ jobs:
           dest: ${{ runner.temp }}/setup-pnpm
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6.2.0
+        uses: actions/setup-node@v7
         with:
           node-version: '22.22.0'
           cache: 'pnpm'
@@ -34,13 +31,16 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Native TypeScript 7 typecheck gate
+        run: pnpm run typecheck:native
+
       - name: Run tests with coverage
         timeout-minutes: 10
         run: pnpm run test:ci
 
       - name: Upload coverage artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage
           path: coverage-ci/
@@ -48,21 +48,25 @@ jobs:
 
   sonarqube:
     needs: test
-    runs-on: [self-hosted, macOS, ARM64, apple-silicon, m4]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Download coverage artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: coverage
           path: coverage-ci/
 
       - name: SonarQube Scan
-        uses: sonarsource/sonarqube-scan-action@v7
+        uses: sonarsource/sonarqube-scan-action@v8
         continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

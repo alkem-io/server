@@ -1,6 +1,8 @@
 import { LogContext } from '@common/enums';
 import { RoomType } from '@common/enums/room.type';
 import { EntityNotFoundException } from '@common/exceptions';
+import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
+import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
 import { Collaboration } from '@domain/collaboration/collaboration';
 import { ILicense } from '@domain/common/license/license.interface';
 import { Communication } from '@domain/communication/communication/communication.entity';
@@ -121,6 +123,54 @@ export class CommunityResolverService {
       );
     }
     return space.levelZeroSpaceID;
+  }
+
+  public async getLevelZeroSpaceIdForCollaboraDocument(
+    collaboraDocumentId: string
+  ): Promise<string> {
+    // Resolve from the selective document-owning leaf before traversing toward Space.
+    const contributionOwner = await this.entityManager
+      .createQueryBuilder(CalloutContribution, 'contribution')
+      .innerJoin('contribution.callout', 'callout')
+      .select('callout.calloutsSetId', 'calloutsSetId')
+      .where('contribution.collaboraDocumentId = :collaboraDocumentId', {
+        collaboraDocumentId,
+      })
+      .getRawOne<{ calloutsSetId: string }>();
+
+    let calloutsSetId = contributionOwner?.calloutsSetId;
+    if (!calloutsSetId) {
+      const framingOwner = await this.entityManager
+        .createQueryBuilder(CalloutFraming, 'framing')
+        .innerJoin('framing.callout', 'callout')
+        .select('callout.calloutsSetId', 'calloutsSetId')
+        .where('framing.collaboraDocumentId = :collaboraDocumentId', {
+          collaboraDocumentId,
+        })
+        .getRawOne<{ calloutsSetId: string }>();
+      calloutsSetId = framingOwner?.calloutsSetId;
+    }
+
+    if (!calloutsSetId) {
+      throw new EntityNotFoundException(
+        'Unable to find Space for CollaboraDocument',
+        LogContext.COMMUNITY,
+        { collaboraDocumentId }
+      );
+    }
+
+    try {
+      return await this.getLevelZeroSpaceIdForCalloutsSet(calloutsSetId);
+    } catch (error) {
+      if (!(error instanceof EntityNotFoundException)) {
+        throw error;
+      }
+      throw new EntityNotFoundException(
+        'Unable to find Space for CollaboraDocument',
+        LogContext.COMMUNITY,
+        { collaboraDocumentId, calloutsSetId }
+      );
+    }
   }
 
   public async getLevelZeroSpaceIdForMediaGallery(
@@ -254,6 +304,39 @@ export class CommunityResolverService {
       );
     }
     return community;
+  }
+
+  /**
+   * Resolve callout → CalloutsSet → Collaboration → Space (the HOST space) for a
+   * collaboration callout, loading the host space's direct subspaces and their
+   * profiles (workspace#013-spaces-collection-callout). Host-space-generic:
+   * works on any level (L0 or L1) — it returns whatever the host space's
+   * subspaces relation contains (empty for a leaf). Returns null when the
+   * callout is not attached to a space (e.g. a template / knowledge-base
+   * callout), so the SPACES collection resolves to an empty list there.
+   */
+  public async getSpaceWithSubspacesFromCollaborationCallout(
+    calloutId: string
+  ): Promise<Space | null> {
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        collaboration: {
+          calloutsSet: {
+            callouts: {
+              id: calloutId,
+            },
+          },
+        },
+      },
+      relations: {
+        subspaces: {
+          about: {
+            profile: true,
+          },
+        },
+      },
+    });
+    return space ?? null;
   }
 
   public async getCommunityFromWhiteboardOrFail(
@@ -506,6 +589,43 @@ export class CommunityResolverService {
       );
     }
     return community;
+  }
+
+  /**
+   * Lightweight spaceID -> roleSetID resolution (only the join needed for the
+   * lookup, no relation hydration beyond it). Returns undefined when the space
+   * (or its community/role-set) does not exist — for best-effort cache
+   * invalidation, not authorisation.
+   */
+  public async getRoleSetIdForSpace(
+    spaceID: string
+  ): Promise<string | undefined> {
+    const space = await this.entityManager.findOne(Space, {
+      where: { id: spaceID },
+      relations: { community: { roleSet: true } },
+    });
+    return space?.community?.roleSet?.id;
+  }
+
+  /**
+   * Settings-only Space read for a role-set: no relation hydration (unlike
+   * {@link getSpaceForRoleSetOrFail}, which joins about.profile). Used on hot
+   * paths that only gate on `space.settings` — e.g. the combined-application
+   * reachability checks, which run per-ancestor during authorization resets.
+   */
+  public async getSpaceSettingsForRoleSet(
+    roleSetID: string
+  ): Promise<ISpace['settings'] | undefined> {
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        community: {
+          roleSet: {
+            id: roleSetID,
+          },
+        },
+      },
+    });
+    return space?.settings;
   }
 
   public async getSpaceForRoleSetOrFail(roleSetID: string): Promise<ISpace> {

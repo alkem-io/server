@@ -1,6 +1,5 @@
 import { LogContext, ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { BlobStoreKind } from '@common/enums/blob.store.kind';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
@@ -141,7 +140,6 @@ export class WhiteboardService {
           storageBucketId
         );
         saved.contentPointer = result.id;
-        saved.blobStore = BlobStoreKind.FILE_SERVICE;
         saved.contentVersion = 0;
         await this.whiteboardRepository.save(saved);
       } catch (error) {
@@ -317,7 +315,6 @@ export class WhiteboardService {
       select: {
         id: true,
         contentPointer: true,
-        blobStore: true,
         profile: {
           id: true,
           storageBucket: { id: true },
@@ -344,7 +341,6 @@ export class WhiteboardService {
       whiteboard.profile.storageBucket.id
     );
     whiteboard.contentPointer = result.id;
-    whiteboard.blobStore = BlobStoreKind.FILE_SERVICE;
     const saved = await this.save(whiteboard);
 
     if (previousPointer && previousPointer !== result.id) {
@@ -424,7 +420,6 @@ export class WhiteboardService {
         id: true,
         contentVersion: true,
         contentPointer: true,
-        blobStore: true,
         authorization: { id: true },
         profile: { id: true, storageBucket: { id: true } },
       },
@@ -437,7 +432,6 @@ export class WhiteboardService {
       // Coerce DB NULLs (e.g. after `deleteCollaborationMetadata`) to
       // `undefined` so the contract reply shape stays `string | undefined`.
       contentPointer: whiteboard.contentPointer ?? undefined,
-      blobStore: whiteboard.blobStore ?? undefined,
       authorizationPolicyId: whiteboard.authorization?.id,
       // The whiteboard's OWN storage bucket (via its profile) — the collab
       // service persists this doc's snapshot into this bucket, not a flat one.
@@ -447,7 +441,7 @@ export class WhiteboardService {
 
   /**
    * Upserts the unified collaboration metadata/index for a whiteboard
-   * (FR-003): the contract `version` + `contentPointer` + `blobStore`. The room
+   * (FR-003): the contract `version` + `contentPointer`. The room
    * owns the version (`contracts/persistence-ports.md`), so the value it sends
    * is PERSISTED verbatim into `contentVersion` and round-tripped back on fetch
    * — the server does NOT substitute its own counter. The inherited TypeORM
@@ -472,14 +466,22 @@ export class WhiteboardService {
     // work in the full save path) is NOT triggered for a metadata-only write.
     // The room-owned contract version is persisted verbatim into
     // `contentVersion` (NOT the `@VersionColumn`) so fetch round-trips it.
+    //
+    // `contentPointer` is produced solely by the checkpoint store's metapointer
+    // `Record` (on establishment/recreation); PreRegister and Room.persist omit it.
+    // A blank/omitted pointer on a save means UNCHANGED — set it only when a real
+    // pointer is present; otherwise preserve the stored one, so a partial or
+    // redelivered save never orphans the content.
+    const set: { contentVersion: number; contentPointer?: string } = {
+      contentVersion: update.version,
+    };
+    if (update.contentPointer) {
+      set.contentPointer = update.contentPointer;
+    }
     await this.whiteboardRepository
       .createQueryBuilder()
       .update(Whiteboard)
-      .set({
-        contentVersion: update.version,
-        contentPointer: update.contentPointer,
-        blobStore: update.blobStore,
-      })
+      .set(set)
       .where('id = :id', { id: whiteboardId })
       .execute();
 
@@ -492,7 +494,6 @@ export class WhiteboardService {
         id: true,
         contentVersion: true,
         contentPointer: true,
-        blobStore: true,
         authorization: { id: true },
       },
     })) as Whiteboard;
@@ -500,7 +501,6 @@ export class WhiteboardService {
     return {
       version: whiteboard.contentVersion ?? 0,
       contentPointer: whiteboard.contentPointer ?? undefined,
-      blobStore: whiteboard.blobStore ?? undefined,
       authorizationPolicyId: whiteboard.authorization?.id,
     };
   }
@@ -524,7 +524,6 @@ export class WhiteboardService {
       .set({
         contentVersion: null as any,
         contentPointer: null as any,
-        blobStore: null as any,
       })
       .where('id = :id', { id: whiteboardId })
       .execute();

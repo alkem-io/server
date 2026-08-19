@@ -105,6 +105,15 @@ export class AccountHostService {
             limit: 0,
             enabled: false,
           },
+          {
+            // 004-web-ai-assistant (FR-027b): the account's monthly weighted-token
+            // allowance for the web AI assistant. The limit is materialized from
+            // the credential-based license policy when the policy is applied.
+            type: LicenseEntitlementType.ACCOUNT_AI_ASSISTANT_TOKENS_MONTH,
+            dataType: LicenseEntitlementDataType.LIMIT,
+            limit: 0,
+            enabled: false,
+          },
         ],
       });
 

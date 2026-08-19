@@ -107,6 +107,56 @@ describe('SpaceLookupService', () => {
     });
   });
 
+  describe('getSpaceByIdOrNameIdOrFail', () => {
+    const SPACE_UUID = 'e0e2e08f-04cc-40dc-b40c-089b6cc27689';
+
+    it('routes a UUID to getSpaceOrFail (any level)', async () => {
+      const mockSpace = { id: SPACE_UUID } as ISpace;
+      entityManager.findOne.mockResolvedValue(mockSpace);
+      const byNameId = vi.spyOn(spaceRepository, 'findOne');
+
+      const result = await service.getSpaceByIdOrNameIdOrFail(SPACE_UUID);
+
+      expect(result).toBe(mockSpace);
+      expect(byNameId).not.toHaveBeenCalled();
+    });
+
+    it('routes a non-UUID to getSpaceByNameIdOrFail (top-level nameID)', async () => {
+      const mockSpace = { id: SPACE_UUID, nameID: 'my-space' } as ISpace;
+      const byNameId = vi
+        .spyOn(spaceRepository, 'findOne')
+        .mockResolvedValue(mockSpace as Space);
+
+      const result = await service.getSpaceByIdOrNameIdOrFail('my-space');
+
+      expect(result).toBe(mockSpace);
+      expect(byNameId).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ nameID: 'my-space' }),
+        })
+      );
+      expect(entityManager.findOne).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getSpaceByNameIdOrFail where-clause safety', () => {
+    it('caller options can never clobber the nameID + L0 filter', async () => {
+      const byNameId = vi
+        .spyOn(spaceRepository, 'findOne')
+        .mockResolvedValue({ id: 'space-1' } as Space);
+
+      await service.getSpaceByNameIdOrFail('my-space', {
+        where: { visibility: 'demo' },
+      } as any);
+
+      const arg = byNameId.mock.calls[0][0] as any;
+      // The caller's where is merged, not replacing the guard.
+      expect(arg.where.nameID).toBe('my-space');
+      expect(arg.where.level).toBeDefined();
+      expect(arg.where.visibility).toBe('demo');
+    });
+  });
+
   describe('spacesExist', () => {
     it('should return true when called with empty array', async () => {
       const result = await service.spacesExist([]);

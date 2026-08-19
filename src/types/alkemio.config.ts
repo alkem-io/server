@@ -1,3 +1,30 @@
+export type McpConfig = {
+  enabled: boolean;
+  api_key_enabled: boolean;
+  sse: {
+    heartbeat_interval_ms: number;
+    connection_timeout_ms: number;
+  };
+  rate_limit: {
+    requests_per_minute: number;
+  };
+  resources: {
+    max_response_items: number;
+  };
+};
+
+/**
+ * 034-messaging-notifications (Operator Ruling R4, data-model §6). One
+ * debounce track: `quiet_period_seconds` is the reset window, and
+ * `max_delay_seconds` is the FR-011b cap measured from the recipient's first
+ * un-notified message on that track. Effective fire time is
+ * `min(lastMessage + quiet, firstMessage + maxDelay)`.
+ */
+export type MessagingDigestTrackConfig = {
+  quiet_period_seconds: number;
+  max_delay_seconds: number;
+};
+
 export type AlkemioConfig = {
   authorization: {
     chunk: number;
@@ -5,6 +32,7 @@ export type AlkemioConfig = {
   endpoints: {
     client_web: string;
   };
+  mcp: McpConfig;
   hosting: {
     environment: string;
     port: number;
@@ -35,6 +63,7 @@ export type AlkemioConfig = {
   search: {
     max_results: number;
     index_pattern: string;
+    collabora_document_max_source_size: number;
   };
   licensing: {
     wingback: {
@@ -184,6 +213,12 @@ export type AlkemioConfig = {
         user: string;
         password: string;
       };
+      auth_reset: {
+        // Queue the auth/license reset events flow over. Publisher (normal
+        // server) and the dedicated worker (src/main.worker.ts) MUST agree on
+        // this name.
+        queue: string;
+      };
       event_bus: {
         exchange: string;
         ingest_body_of_knowledge_queue: string;
@@ -253,6 +288,29 @@ export type AlkemioConfig = {
       max_notifications_per_user: number;
       max_retention_period_days: number;
     };
+    messaging: {
+      enabled: boolean;
+      /**
+       * 034-messaging-notifications / Operator Ruling R4. Debounce windows
+       * for the four per-recipient digest tracks, plus the sweep that flushes
+       * them. Validated at boot by `buildDigestConfig` — per track
+       * `quiet_period_seconds <= max_delay_seconds`, and
+       * `sweep_interval_seconds <= min(quiet periods)`.
+       */
+      digest: {
+        sweep_interval_seconds: number;
+        max_dispatch_attempts: number;
+        retry_backoff_seconds: number;
+        push: {
+          direct: MessagingDigestTrackConfig;
+          group: MessagingDigestTrackConfig;
+        };
+        email: {
+          direct: MessagingDigestTrackConfig;
+          group: MessagingDigestTrackConfig;
+        };
+      };
+    };
   };
   collaboration: {
     membership: {
@@ -266,6 +324,14 @@ export type AlkemioConfig = {
       enabled: boolean;
       max_collaborators_in_room: number;
     };
+  };
+  language: {
+    /**
+     * Comma-separated list of language codes the platform proactively offers.
+     * Parsed by KonfigService into a string[]. Empty string ⇒ empty array (kill switch).
+     */
+    eligible: string;
+    default: string;
   };
   platform: {
     terms: string;

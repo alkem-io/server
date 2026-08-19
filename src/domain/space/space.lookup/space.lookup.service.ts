@@ -8,6 +8,7 @@ import { IActor } from '@domain/actor/actor/actor.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { isUUID } from 'class-validator';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
   EntityManager,
@@ -74,22 +75,42 @@ export class SpaceLookupService {
     spaceNameID: string,
     options?: FindOneOptions<Space>
   ): Promise<ISpace> {
+    // Spread options FIRST so a caller-supplied where can never clobber the
+    // nameID + L0 filter (getSpace uses the same safe order).
     const space = await this.spaceRepository.findOne({
+      ...options,
       where: {
+        ...options?.where,
         nameID: spaceNameID,
         level: SpaceLevel.L0,
       },
-      ...options,
     });
     if (!space) {
-      if (!space)
-        throw new EntityNotFoundException(
-          'L0 Space not found',
-          LogContext.SPACES,
-          { spaceNameID }
-        );
+      throw new EntityNotFoundException(
+        'L0 Space not found',
+        LogContext.SPACES,
+        { spaceNameID }
+      );
     }
     return space;
+  }
+
+  /**
+   * Resolve a space by UUID (any level) or, when the input is not a UUID, by
+   * TOP-LEVEL space nameID (the URL slug). Subspace nameIDs are only unique
+   * within their L0 space, so a bare slug can only address an L0 space —
+   * subspaces require the UUID. This is the single home of the id-or-nameID
+   * policy; model-facing MCP tools should call this rather than re-deriving
+   * the branch.
+   */
+  public async getSpaceByIdOrNameIdOrFail(
+    spaceIdOrNameId: string,
+    options?: FindOneOptions<Space>
+  ): Promise<ISpace> {
+    if (isUUID(spaceIdOrNameId)) {
+      return this.getSpaceOrFail(spaceIdOrNameId, options);
+    }
+    return this.getSpaceByNameIdOrFail(spaceIdOrNameId, options);
   }
 
   public async getSubspaceByNameIdInLevelZeroSpace(
@@ -98,12 +119,13 @@ export class SpaceLookupService {
     options?: FindOneOptions<Space>
   ): Promise<ISpace | null> {
     const subspace = await this.spaceRepository.findOne({
+      ...options,
       where: {
+        ...options?.where,
         nameID: subspaceNameID,
         levelZeroSpaceID: levelZeroSpaceID,
         level: Not(SpaceLevel.L0),
       },
-      ...options,
     });
 
     return subspace;

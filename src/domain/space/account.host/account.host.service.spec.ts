@@ -115,7 +115,9 @@ describe('AccountHostService', () => {
 
       // Assert
       const createLicenseArg = createLicenseSpy.mock.calls[0][0];
-      expect(createLicenseArg.entitlements).toHaveLength(6);
+      // 7 = the 6 baseline ACCOUNT_* entitlements + ACCOUNT_AI_ASSISTANT_TOKENS_MONTH
+      // (004-web-ai-assistant FR-027b, Increment B).
+      expect(createLicenseArg.entitlements).toHaveLength(7);
       for (const entitlement of createLicenseArg.entitlements) {
         expect(entitlement.limit).toBe(0);
         expect(entitlement.enabled).toBe(false);

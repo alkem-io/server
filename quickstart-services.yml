@@ -7,6 +7,7 @@ volumes:
   rabbitmq_data:
     driver: local
   alkemio_dev_redis:
+  alkemio_dev_backup:
 
 networks:
   alkemio_dev_net:
@@ -323,6 +324,13 @@ services:
       - POSTGRES_INITDB_ARGS=--encoding=UTF8 --lc-collate=C --lc-ctype=C
       - POSTGRES_MULTIPLE_DATABASES
     entrypoint: ['bash', '/usr/local/bin/entrypoint-wrapper.sh']
+    # Forwarded by entrypoint-wrapper.sh to docker-entrypoint.sh as the postgres
+    # args. Raise max_connections from the default 100 — this single dev Postgres
+    # is shared by server + hydra + kratos + oidc-service + synapse + collab +
+    # assistant-service + wopi, and transient bursts exhausted the 100-cap pool
+    # (FATAL: sorry, too many clients already / SQLSTATE 53300), which surfaced as
+    # a misleading Hydra `invalid_client` ("client does not exist") at OIDC login.
+    command: ['postgres', '-c', 'max_connections=200']
     restart: always
     ports:
       - 5432
@@ -350,6 +358,11 @@ services:
 
   rabbitmq:
     container_name: alkemio_dev_rabbitmq
+    # The Erlang node name is derived from the hostname, and the node name is
+    # the mnesia sub-directory name. Without pinning it, Docker uses the random
+    # container id, so every `compose up` orphans the previous node directory
+    # under ~/.docker-conf/rabbitmq/data and that directory is never reclaimed.
+    hostname: rmq
     image: rabbitmq:3.9.13-management
     restart: always
     networks:
@@ -361,6 +374,9 @@ services:
       - RABBITMQ_SECURE_PASSWORD=yes
       - RABBITMQ_DEFAULT_USER=alkemio-admin
       - RABBITMQ_DEFAULT_PASS=alkemio!
+      # Ra (Raft) pre-allocates its write-ahead log at boot, ~280MB by default.
+      # The dev stack only declares classic queues, so cap it at 32MB.
+      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-ra wal_max_size_bytes 33554432
     healthcheck:
       test: rabbitmq-diagnostics check_port_connectivity
       interval: 30s
@@ -374,7 +390,7 @@ services:
       [
         'bash',
         '-c',
-        'chmod 400 /var/lib/rabbitmq/.erlang.cookie; rabbitmq-server --hostname rmq',
+        'chmod 400 /var/lib/rabbitmq/.erlang.cookie; rabbitmq-server',
       ]
 
   notification:
@@ -382,7 +398,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:v0.35.0
+    image: alkemio/notifications:v0.37.0
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -504,9 +520,9 @@ services:
   # offloaded to file-service.
   #
   # Alkemio topology (mirrors collaboration-service deploy/k8s/base/configmap.yaml):
-  #   FANOUT_MODE=redis · METADATA_STORE=rabbitmq · BLOB_STORE=file-service ·
+  #   HUB_MODE=redis · METADATA_STORE=rabbitmq · CHECKPOINT_STORE=file-service ·
   #   AUTH_MODE=authzeval. For a zero-dependency smoke test that isolates the WS
-  #   path from authZ, override AUTH_MODE=open + BLOB_STORE=inline + METADATA_STORE=inmemory
+  #   path from authZ, override AUTH_MODE=open + CHECKPOINT_STORE=inline + METADATA_STORE=inmemory
   #   (see docs/local-collab-testing.md).
   collaboration:
     extra_hosts:
@@ -530,16 +546,16 @@ services:
       # --- service ---
       - PORT=4006
       # --- pluggable ports: Alkemio topology ---
-      - FANOUT_MODE=redis
+      - HUB_MODE=redis
       - METADATA_STORE=rabbitmq
-      - BLOB_STORE=file-service
+      - CHECKPOINT_STORE=file-service
       - AUTH_MODE=authzeval
       # The Traefik `collaboration` router resolves identity at the gateway
       # (alkemio-resolve forwardAuth) and forwards the actor id in this header;
       # the WS handshake reads it from here instead of the bearer Authorization
       # header. Must match the authResponseHeader alkemio-resolve injects.
       - AUTH_TOKEN_HEADER=X-Alkemio-Actor-Id
-      # --- redis fan-out (FANOUT_MODE=redis) ---
+      # --- redis fan-out (HUB_MODE=redis) ---
       - REDIS_URL=redis://redis:6379/0
       # --- RabbitMQ metadata bus (METADATA_STORE=rabbitmq) ---
       # Unified contract: collaboration-save/-fetch/-delete/-info/-contribution
@@ -549,7 +565,7 @@ services:
       - RABBITMQ_USER
       - RABBITMQ_PASSWORD
       - RABBITMQ_QUEUE=alkemio-collaboration
-      # --- file-service blob offload (BLOB_STORE=file-service) ---
+      # --- file-service blob offload (CHECKPOINT_STORE=file-service) ---
       - FILE_SERVICE_URL=http://file-service:4003
       - MAX_UPLOAD_SIZE=33554432
       # Environment-scoped UUIDs naming rows provisioned in THIS dev DB's seed
@@ -577,7 +593,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service:v0.1.0
+    image: alkemio/file-service:v0.2.3
     depends_on:
       postgres:
         condition: service_healthy
@@ -592,6 +608,13 @@ services:
       - AUTH_SERVICE_URL=http://authorization-evaluation:6060
       - LOCAL_STORAGE_PATH=/storage
       - STORAGE_TYPE=local
+      # 008-continuous-file-backup: write the backup outbox on every non-temporary object so
+      # file-backup-service can replicate it. Consumed by the file-backup-service below.
+      # REQUIRES the file_backup_outbox table + scoped role from server migration 1783508955161 —
+      # run `pnpm run migration:run` (dev-flow step 2) BEFORE uploading files. Until it is applied,
+      # every upload's transactional outbox INSERT fails and the worker below crash-loops on its
+      # startup probe (both recover once the migration runs).
+      - FILE_BACKUP_OUTBOX_ENABLED=true
       - LOG_LEVEL=info
     restart: always
     volumes:
@@ -600,6 +623,69 @@ services:
       - alkemio_dev_net
     ports:
       - 4003
+
+  # 008-continuous-file-backup — one-shot: apply the ledger DB migrations, then exit. The worker
+  # below waits for this to complete (service_completed_successfully).
+  file-backup-migrate:
+    container_name: alkemio_dev_file_backup_migrate
+    image: alkemio/file-backup-service:v0.0.5
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # migrate only needs the ledger DB (it applies the ledger schema, then exits).
+    environment:
+      - FBS_LEDGERDB_HOST=postgres
+      - FBS_LEDGERDB_DBNAME=filebackup
+      - FBS_LEDGERDB_SSLMODE=disable
+      - FBS_LEDGERDB_USER=${POSTGRES_USER}
+      - FBS_LEDGERDB_PASSWORD=${POSTGRES_PASSWORD}
+    command: ['migrate']
+    networks:
+      - alkemio_dev_net
+    restart: 'no'
+
+  # 008-continuous-file-backup — the backup worker: drains the outbox and replicates every object
+  # to the local filesystem target (a Docker volume). Content-addressed by SHA3-256. Configured
+  # ENTIRELY from env (12-factor) — no config file. The nonroot image pre-creates /storage owned by
+  # 65532 + declares it a VOLUME, so the mounted named volume is writable (same as file-service).
+  file-backup-service:
+    container_name: alkemio_dev_file_backup_service
+    hostname: file-backup-service
+    image: alkemio/file-backup-service:v0.0.5
+    depends_on:
+      postgres:
+        condition: service_healthy
+      file-service:
+        condition: service_started
+      file-backup-migrate:
+        condition: service_completed_successfully
+    environment:
+      - FBS_FILESERVICEBASE=http://file-service:4003
+      # the outbox lives in the alkemio DB; the ledger in its own DB — both on the shared dev postgres
+      - FBS_ALKEMIODB_HOST=postgres
+      - FBS_ALKEMIODB_DBNAME=${DATABASE_NAME}
+      - FBS_ALKEMIODB_SSLMODE=disable
+      - FBS_ALKEMIODB_USER=${POSTGRES_USER}
+      - FBS_ALKEMIODB_PASSWORD=${POSTGRES_PASSWORD}
+      - FBS_LEDGERDB_HOST=postgres
+      - FBS_LEDGERDB_DBNAME=filebackup
+      - FBS_LEDGERDB_SSLMODE=disable
+      - FBS_LEDGERDB_USER=${POSTGRES_USER}
+      - FBS_LEDGERDB_PASSWORD=${POSTGRES_PASSWORD}
+      # a single local filesystem target at /storage (a Docker volume)
+      - FBS_TARGETS=local
+      - FBS_TARGET_LOCAL_TYPE=filesystem
+      - FBS_TARGET_LOCAL_PATH=/storage
+      - FBS_POLLEVERYSEC=5
+      - LOG_LEVEL=info
+    command: ['serve']
+    restart: always
+    volumes:
+      - alkemio_dev_backup:/storage
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 4004
 
   kratos-hooks:
     extra_hosts:
@@ -660,9 +746,11 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_wopi_service
     hostname: wopi-service
-    image: alkemio/wopi-service:v0.1.0
+    image: alkemio/wopi-service:v0.1.4
     depends_on:
       postgres:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
       authorization-evaluation:
         condition: service_started
@@ -684,10 +772,17 @@ services:
       - FILE_SERVICE_URL=http://file-service:4003
       - WOPI_COLLABORA_URL=http://collabora:9980
       - WOPI_BASE_URL=http://localhost:3000
-      - WOPI_CALLBACK_URL=http://wopi-service:8080
+      # WOPISrc handed to Collabora routes via Traefik's /wopi route so it rides
+      # the wopi-service failover (local primary → container fallback), instead
+      # of hitting a single instance directly.
+      - WOPI_CALLBACK_URL=http://traefik
       - WOPI_TOKEN_SECRET=dev-wopi-token-secret-change-in-production
       - WOPI_SERVER_PORT=8080
       - WOPI_PROOF_VALIDATION=false
+      # RabbitMQ — WITHOUT this the publisher is a no-op and every event the WOPI
+      # emits (office-document contribution/view AND the in-editor rename event the
+      # server consumes to persist a Collabora rename) is silently dropped.
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
       - LOG_LEVEL=info
     restart: unless-stopped
     networks:
@@ -696,11 +791,17 @@ services:
       - 8080
 
   collabora:
+    extra_hosts:
+      - 'wopi-service:host-gateway'
     container_name: alkemio_dev_collabora
     hostname: collabora
-    image: collabora/code:24.04.12.2.1
+    image: collabora/code:26.04.2.4.1
     environment:
-      - aliasgroup1=http://wopi-service:8080
+      # Reach wopi through Traefik (not a direct port), so callbacks ride the
+      # wopi-service failover. A `wopi-service:host-gateway` extra_host here
+      # would shadow the container's Docker DNS name and pin Collabora to the
+      # host — exactly what we must avoid.
+      - aliasgroup1=http://traefik
       - username=admin
       - password=admin
       - extra_params=--o:ssl.enable=false --o:net.proto=IPv4 --o:security.seccomp=false --o:security.capabilities=false
@@ -718,3 +819,90 @@ services:
       - alkemio_dev_net
     ports:
       - 9980
+
+  # Headless auth-reset consumer. Same Alkemio image as the API server; the
+  # AUTH_RESET_WORKER=true env flips main.ts into worker role (binds only the
+  # `alkemio-auth-reset` queue, prefetch=1, no HTTP). The API publisher runs on
+  # the host (`pnpm start:dev`) and emits resets that these containers drain.
+  #
+  # Competing-consumers: scale to N instances that split the queue with no extra
+  # config. Hence NO container_name and NO published port (both would collide
+  # across replicas). profiles: ['auth-reset'] keeps it OUT of a plain `up` — it
+  # boots at 0 and is scaled 0<->N solely by the auth-reset-scaler sidecar below.
+  auth-reset-worker:
+    profiles: ['auth-reset']
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env.docker
+    environment:
+      - AUTH_RESET_WORKER=true
+      # Graceful-drain budget on SIGTERM (default 55s). Short locally so
+      # `compose down` / scale-in returns quickly.
+      - AUTH_RESET_DRAIN_TIMEOUT_SECONDS=55
+      # .env.docker maps DATABASE_HOST=postgres and RABBITMQ_HOST=rabbitmq, but
+      # not REDIS_HOST (defaults to localhost in alkemio.yml — right for the host
+      # server via traefik, wrong inside a container). Point it at the service.
+      - REDIS_HOST=redis
+    # No command override: the image's own CMD (`node dist/main.js`) is correct.
+    # In the Docker build only `src` is copied, so tsc's rootDir collapses to
+    # `src` and output flattens to dist/main.js. (A host `nest build` instead
+    # emits dist/src/main.js because tsconfig `include` also pulls in test/,
+    # keeping src/ as a subdir — that layout does NOT exist in the image.)
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    # SIGTERM starts the drain; give it the full budget + margin before SIGKILL.
+    stop_grace_period: 60s
+    restart: unless-stopped
+    networks:
+      - alkemio_dev_net
+
+  # Local KEDA analogue. Starts with the base stack (no profile), watches the
+  # `alkemio-auth-reset` queue via the RabbitMQ mgmt API, and drives the worker
+  # 0<->MAX_REPLICAS through the host Docker socket. Nothing manual: `up` brings
+  # this online, it scales the worker up from zero when resets arrive and back to
+  # zero once the queue drains. COMPOSE_PROFILES=auth-reset lets it manage the
+  # profiled worker; COMPOSE_PROJECT_NAME must match the host stack's project
+  # (compose derives it from the repo dir basename, default `server`) so the
+  # sidecar targets the SAME containers/network instead of forking a new stack.
+  auth-reset-scaler:
+    image: docker:27-cli
+    working_dir: /workspace
+    # RABBITMQ_HOST / RABBITMQ_USER / RABBITMQ_PASSWORD (+ optional
+    # RABBITMQ_AUTH_RESET_QUEUE) come straight from .env.docker; the script
+    # derives the mgmt URL and creds from them. No credentials duplicated here.
+    # .env.docker.local (per-dev, gitignored) layers on top when present.
+    env_file:
+      - path: .env.docker
+        required: true
+      - path: .env.docker.local
+        required: false
+    environment:
+      - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-server}
+      - COMPOSE_PROFILES=auth-reset
+      - COMPOSE_FILE=quickstart-services.yml
+      - ENV_FILE=.env.docker
+      - MAX_REPLICAS=${AUTH_RESET_MAX_REPLICAS:-3}
+      - INTERVAL=${AUTH_RESET_POLL_INTERVAL:-5}
+      - IDLE_ROUNDS=${AUTH_RESET_IDLE_ROUNDS:-3}
+    volumes:
+      # Host Docker socket => the sidecar drives the same daemon the stack runs on.
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Repo mount => the compose file, .env.docker, build context, and the
+      # autoscale script are all visible at /workspace.
+      - .:/workspace
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - 'apk add --no-cache bash jq curl docker-cli-compose >/dev/null && exec bash ./scripts/auth-reset-autoscale.sh'
+    restart: unless-stopped
+    networks:
+      - alkemio_dev_net

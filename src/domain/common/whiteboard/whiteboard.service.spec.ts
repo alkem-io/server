@@ -1,6 +1,5 @@
 import { ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { BlobStoreKind } from '@common/enums/blob.store.kind';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
@@ -548,7 +547,6 @@ describe('WhiteboardService', () => {
         'sb-1'
       );
       expect(result.contentPointer).toBe('snap-1');
-      expect(result.blobStore).toBe(BlobStoreKind.FILE_SERVICE);
       expect(whiteboardRepository.save).toHaveBeenCalled();
     });
 
@@ -826,7 +824,6 @@ describe('WhiteboardService', () => {
         sourceSnapshotBase64
       );
       expect(result.contentPointer).toBe('snap-new');
-      expect(result.blobStore).toBe(BlobStoreKind.FILE_SERVICE);
     });
 
     it('falls back to the client `content` when the source whiteboard has no stored content (never edited)', async () => {

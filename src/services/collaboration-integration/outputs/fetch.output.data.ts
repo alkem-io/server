@@ -1,4 +1,3 @@
-import { BlobStoreKind } from '@common/enums/blob.store.kind';
 import { CollaborationContentType } from '../types';
 
 /**
@@ -6,15 +5,14 @@ import { CollaborationContentType } from '../types';
  *
  * `found: false` means no such document (the unified, typed replacement for the
  * legacy `contentBase64 | undefined` and the memo `not_found` code). The blob
- * never crosses this bus — the collab service rehydrates the snapshot from its
- * BlobStore using `contentPointer` + `blobStore`.
+ * never crosses this bus — the collab service reads the snapshot from file-service
+ * using `contentPointer` (the single storage backend for the Alkemio stack).
  */
 export interface FetchOutputData {
   found: boolean;
   contentType?: CollaborationContentType;
   version?: number;
   contentPointer?: string;
-  blobStore?: BlobStoreKind;
   /** OPEN-1 / FR-005 — the entity's own AuthorizationPolicy.id. */
   authorizationPolicyId?: string;
   /**
@@ -24,17 +22,6 @@ export interface FetchOutputData {
    * flat platform bucket.
    */
   storageBucketId?: string;
-  /**
-   * The document's stored content for the FIRST-OPEN SEED (R4 / FR-003): the
-   * Yjs-V2 snapshot bytes, base64-encoded, matching the collaboration-service
-   * `FetchReply.Content` → `Metadata.SeedContent` wire contract. A freshly created
-   * document whose content the server persisted but which has no LIVE collab
-   * snapshot yet materializes from this on first open instead of opening empty.
-   * Omitted (undefined) when the document has no stored content (empty-on-create)
-   * so an empty document stays empty + editable (FR-010). A live snapshot is
-   * authoritative — the collab service ignores this seed once one exists.
-   */
-  content?: string;
   ownerRef?: string;
   error?: string;
 }

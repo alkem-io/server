@@ -90,6 +90,14 @@ search:
   # the index pattern used when ingesting data in Elasticsearch, e.g. alkemio-data-[organization];
   # The dash at the end is MANDATORY
   index_pattern: ${ELASTIC_SEARCH_INDEX_PATTERN}:alkemio-data-
+  # Pre-parse source-file-size cap (bytes) for in-process Collabora office-document
+  # text extraction (workspace#009-office-doc-search, FR-018). A document whose raw
+  # file exceeds this cap is skipped for content indexing (handled like a no-text
+  # document) to protect the in-process parser from OOM/hang. Default 15 MiB —
+  # matches the largest per-document storage cap (storage.file.max_file_size and
+  # StorageBucketService.DEFAULT_MAX_ALLOWED_FILE_SIZE), so a document that can be
+  # uploaded can always be parsed. Raising it above that has no effect.
+  collabora_document_max_source_size: ${SEARCH_COLLABORA_DOCUMENT_MAX_SOURCE_SIZE}:15728640
 
 licensing:
   wingback:
@@ -350,8 +358,11 @@ storage:
   enabled: ${STORAGE_ENABLED}:true
   #
   file:
-    # 20MB
-    max_file_size: ${STORAGE_MAX_FILE_SIZE}:20971520
+    # 15MB — the upload-middleware guard. Kept equal to
+    # StorageBucketService.DEFAULT_MAX_ALLOWED_FILE_SIZE, which every bucket is
+    # seeded with; a larger value here only defers rejection until after the
+    # whole file has been buffered. Raising it needs a storage_bucket migration.
+    max_file_size: ${STORAGE_MAX_FILE_SIZE}:15728640
     # Timeout in milliseconds for reading file upload streams
     stream_timeout_ms: ${STORAGE_STREAM_TIMEOUT_MS}:60000
   # Database configuration for usage by the Alkemio Server.
@@ -442,6 +453,12 @@ microservices:
       # RabbitMQ password
       password: ${RABBITMQ_PASSWORD}:alkemio!
 
+    # Authorization / license reset queue. Consumed by the dedicated worker
+    # (src/main.worker.ts); the normal server publishes reset events here but
+    # never consumes them. Publisher and worker MUST agree on this name.
+    auth_reset:
+      queue: ${RABBITMQ_AUTH_RESET_QUEUE}:alkemio-auth-reset
+
     # configuration for the event bus used by the AiServer
     event_bus:
       exchange: ${RABBITMQ_EVENT_BUS_EXCHANGE}:event-bus
@@ -506,6 +523,54 @@ notifications:
   in_app:
     max_notifications_per_user: ${IN_APP_MAX_NOTIFICATIONS_PER_USER}:100
     max_retention_period_days: ${IN_APP_MAX_RETENTION_PERIOD_DAYS}:90
+  # Chat/conversation message notifications (034-messaging-notifications).
+  # NOT declared on any deployment manifest this release (Operator Ruling 3b) —
+  # the in-code defaults below govern everywhere; flipping `enabled` in
+  # production requires a deploy (risk R-9).
+  messaging:
+    enabled: ${MESSAGING_NOTIFICATIONS_ENABLED}:true
+    # Operator Ruling R4 — messaging notifications are DEBOUNCED per recipient
+    # and then digested; nothing is sent on message arrival. Four independent
+    # tracks per recipient, each with its own quiet period and its own maximum
+    # delay cap. The cap is not optional: a pure reset-on-every-message
+    # debounce never fires in an active conversation, which would make the
+    # busiest conversations the quietest notifiers.
+    #
+    # Worst case dispatches per recipient per hour = 3600 / max_delay_seconds,
+    # INDEPENDENT of message volume. That bound is why the pre-R4 suppression
+    # window and both volume budgets were deleted (D-21).
+    #
+    # Every window is env-overridable because the live test stacks must run
+    # seconds-scale windows; the committed defaults are the production values.
+    # None of these vars are declared on any deployment manifest this release
+    # (Operator Ruling 3a/3b) — the literals below govern in production, and
+    # changing them requires a deploy (risk R-9).
+    #
+    # Validated at boot (fail fast): per track quiet <= max_delay, and
+    # sweep_interval <= the smallest quiet period.
+    digest:
+      # How often each replica sweeps the due queue. Lower = tighter adherence
+      # to the quiet periods below; cost is one ZRANGEBYSCORE per replica/tick.
+      sweep_interval_seconds: ${MESSAGING_DIGEST_SWEEP_INTERVAL_SECONDS}:10
+      max_dispatch_attempts: ${MESSAGING_DIGEST_MAX_DISPATCH_ATTEMPTS}:3
+      retry_backoff_seconds: ${MESSAGING_DIGEST_RETRY_BACKOFF_SECONDS}:60
+      # Push is the real-time channel, so it is faster than email; group is
+      # higher-volume and lower-salience per message, so it is slower than
+      # direct.
+      push:
+        direct:
+          quiet_period_seconds: ${MESSAGING_DIGEST_PUSH_DIRECT_QUIET_SECONDS}:60
+          max_delay_seconds: ${MESSAGING_DIGEST_PUSH_DIRECT_MAX_DELAY_SECONDS}:300
+        group:
+          quiet_period_seconds: ${MESSAGING_DIGEST_PUSH_GROUP_QUIET_SECONDS}:300
+          max_delay_seconds: ${MESSAGING_DIGEST_PUSH_GROUP_MAX_DELAY_SECONDS}:900
+      email:
+        direct:
+          quiet_period_seconds: ${MESSAGING_DIGEST_EMAIL_DIRECT_QUIET_SECONDS}:300
+          max_delay_seconds: ${MESSAGING_DIGEST_EMAIL_DIRECT_MAX_DELAY_SECONDS}:1800
+        group:
+          quiet_period_seconds: ${MESSAGING_DIGEST_EMAIL_GROUP_QUIET_SECONDS}:1200
+          max_delay_seconds: ${MESSAGING_DIGEST_EMAIL_GROUP_MAX_DELAY_SECONDS}:3600
 
 collaboration:
   membership:
@@ -516,6 +581,38 @@ collaboration:
   memo:
     enabled: ${MEMO_ENABLED}:true
     max_collaborators_in_room: ${MEMO_MAX_COLLABORATORS_IN_ROOM}:20
+
+## MCP Server ##
+# Model Context Protocol server for AI client integrations.
+# Provides read-only access to platform content for AI assistants.
+mcp:
+  # Enable/disable the MCP server endpoint
+  enabled: ${MCP_ENABLED}:false
+  # Enable dedicated MCP API keys (in addition to Ory tokens)
+  api_key_enabled: ${MCP_API_KEY_ENABLED}:true
+  # Server-Sent Events configuration
+  sse:
+    # Heartbeat interval in milliseconds
+    heartbeat_interval_ms: ${MCP_SSE_HEARTBEAT_MS}:30000
+    # Connection timeout in milliseconds
+    connection_timeout_ms: ${MCP_SSE_TIMEOUT_MS}:300000
+  # Rate limiting configuration
+  rate_limit:
+    # Maximum requests per minute per client
+    requests_per_minute: ${MCP_RATE_LIMIT_RPM}:100
+  # Resource configuration
+  resources:
+    # Maximum items returned in list responses
+    max_response_items: ${MCP_MAX_RESPONSE_ITEMS}:100
+
+## Language detection & offer configuration
+# eligible: comma-separated list of language codes the platform proactively detects,
+#           offers via the banner, and accepts as invitation suggestions.
+#           Subset of the supported languages; an empty value disables all proactive offers.
+# default:  the platform-wide fallback language.
+language:
+  eligible: ${LANGUAGE_ELIGIBLE}:nl
+  default: ${LANGUAGE_DEFAULT}:en
 
 ## Configuration of the legal / usability aspects of the platform
 platform:

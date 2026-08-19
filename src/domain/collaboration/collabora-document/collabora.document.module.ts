@@ -1,6 +1,10 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
+import { CollaboraDocumentAnalyticsEventHandler } from '@domain/collaboration/collabora-document/events/collabora.document.analytics.event.handler';
+import { CollaboraDocumentEventsService } from '@domain/collaboration/collabora-document/events/collabora.document.events.service';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
+import { UserModule } from '@domain/community/user/user.module';
 import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
@@ -8,6 +12,8 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { FileServiceAdapterModule } from '@services/adapters/file-service-adapter/file.service.adapter.module';
 import { WopiServiceAdapterModule } from '@services/adapters/wopi-service-adapter/wopi.service.adapter.module';
+import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
+import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { CollaboraDocument } from './collabora.document.entity';
 import { CollaboraDocumentResolverFields } from './collabora.document.resolver.fields';
 import { CollaboraDocumentResolverMutations } from './collabora.document.resolver.mutations';
@@ -18,13 +24,17 @@ import { CollaboraDocumentAuthorizationService } from './collabora.document.serv
 @Module({
   imports: [
     AuthorizationModule,
+    ActorLookupModule,
     AuthorizationPolicyModule,
     DocumentModule,
     ProfileModule,
+    UserModule,
     StorageAggregatorModule,
     StorageBucketModule,
     WopiServiceAdapterModule,
     FileServiceAdapterModule,
+    ContributionReporterModule,
+    EntityResolverModule,
     TypeOrmModule.forFeature([CollaboraDocument]),
   ],
   providers: [
@@ -33,7 +43,13 @@ import { CollaboraDocumentAuthorizationService } from './collabora.document.serv
     CollaboraDocumentResolverFields,
     CollaboraDocumentResolverMutations,
     CollaboraDocumentResolverQueries,
+    CollaboraDocumentEventsService,
+    CollaboraDocumentAnalyticsEventHandler,
   ],
-  exports: [CollaboraDocumentService, CollaboraDocumentAuthorizationService],
+  exports: [
+    CollaboraDocumentService,
+    CollaboraDocumentAuthorizationService,
+    CollaboraDocumentEventsService,
+  ],
 })
 export class CollaboraDocumentModule {}

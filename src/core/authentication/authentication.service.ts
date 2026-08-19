@@ -5,9 +5,6 @@ import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { isAbsoluteTtlExceeded } from '@core/auth/oidc/absolute-ttl.guard';
 import type { AlkemioSessionPayload } from '@core/auth/oidc/session-store.redis';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { Session } from '@ory/kratos-client';
-import { KratosService } from '@services/infrastructure/kratos/kratos.service';
-import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
@@ -15,7 +12,6 @@ export class AuthenticationService {
   constructor(
     private actorContextCacheService: ActorContextCacheService,
     private actorContextService: ActorContextService,
-    private kratosService: KratosService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -55,53 +51,6 @@ export class AuthenticationService {
   }
 
   /**
-   * Gets ActorContext by validating a Kratos session via cookie or authorization header.
-   * Used by integration services (collaborative-document, whiteboard, file) that authenticate
-   * via direct session validation rather than pre-parsed JWT tokens.
-   *
-   * This method:
-   * 1. Validates session with Kratos using cookie/authorization
-   * 2. Extracts alkemio_actor_id from session identity metadata_public
-   * 3. Returns ActorContext (or anonymous/guest if no valid session)
-   */
-  public async getActorContext(opts: {
-    cookie?: string;
-    authorization?: string;
-    guestName?: string;
-  }): Promise<ActorContext> {
-    let session: Session | undefined;
-    try {
-      session = await this.kratosService.getSession(
-        opts.authorization,
-        opts.cookie
-      );
-      if (session?.identity) {
-        const oryIdentity = session.identity as OryDefaultIdentitySchema;
-        const actorID = oryIdentity.metadata_public?.alkemio_actor_id;
-
-        if (actorID) {
-          return this.createActorContext(actorID, session);
-        }
-
-        this.logger.warn?.(
-          'Session identity missing alkemio_actor_id in metadata_public',
-          LogContext.AUTH
-        );
-      }
-    } catch (error) {
-      this.logger.verbose?.(
-        `Session validation failed, falling back to guest/anonymous: ${error}`,
-        LogContext.AUTH
-      );
-    }
-
-    if (opts.guestName?.trim()) {
-      return this.actorContextService.createGuest(opts.guestName.trim());
-    }
-    return this.actorContextService.createAnonymous();
-  }
-
-  /**
    * Creates and returns an `ActorContext` based on the provided actorID.
    *
    * This method performs the following steps:
@@ -109,13 +58,10 @@ export class AuthenticationService {
    * 2. Loads credentials from database if not cached.
    * 3. Caches the result using actorID as key.
    *
-   * @param actorID - The Alkemio actor ID from the JWT token (set by identity resolver)
-   * @param session - Optional Kratos session for expiry information
+   * @param actorID - The Alkemio actor ID (resolved from the BFF session payload,
+   *   a Hydra bearer token, or a non-interactive-login token)
    */
-  async createActorContext(
-    actorID: string,
-    session?: Session
-  ): Promise<ActorContext> {
+  async createActorContext(actorID: string): Promise<ActorContext> {
     if (!actorID) {
       return this.actorContextService.createAnonymous();
     }
@@ -123,19 +69,12 @@ export class AuthenticationService {
     // Check cache first (using actorID as key)
     const cachedCtx = await this.actorContextCacheService.getByActorID(actorID);
     if (cachedCtx) {
-      // Update expiry from current session
-      if (session?.expires_at) {
-        cachedCtx.expiry = new Date(session.expires_at).getTime();
-      }
       return cachedCtx;
     }
 
-    // Build context with actorID and expiry
+    // Build context with actorID
     const ctx = new ActorContext();
     ctx.isAnonymous = false;
-    if (session?.expires_at) {
-      ctx.expiry = new Date(session.expires_at).getTime();
-    }
 
     // Load credentials (actorID already known from token)
     try {

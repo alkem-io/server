@@ -167,7 +167,7 @@ describe('TemplateApplierService', () => {
       inputCreatorService.buildCreateInnovationFlowStateInputFromInnovationFlowState.mockReturnValue(
         []
       );
-      innovationFlowService.updateInnovationFlowStates.mockResolvedValue(
+      innovationFlowService.updateInnovationFlowStatesFromTemplate.mockResolvedValue(
         {} as any
       );
       storageAggregatorResolverService.getStorageAggregatorForCollaboration.mockResolvedValue(
@@ -195,6 +195,55 @@ describe('TemplateApplierService', () => {
       expect(targetCollab.calloutsSet.callouts).toEqual([]);
     });
 
+    it('should not delete existing callouts when the flow-state update rejects (atomicity)', async () => {
+      const sourceCollab = {
+        innovationFlow: {
+          states: [{ displayName: 'State1' }],
+        },
+        calloutsSet: { callouts: [] },
+      };
+
+      templateService.getTemplateOrFail.mockResolvedValue({
+        id: 'tpl-1',
+        contentSpace: {
+          id: 'tcs-1',
+          collaboration: sourceCollab,
+        },
+      } as any);
+
+      const existingCallout = { id: 'existing-callout-1' };
+      const targetCollab = {
+        id: 'collab-1',
+        innovationFlow: { states: [{ displayName: 'OldState' }] },
+        calloutsSet: { callouts: [existingCallout] },
+      } as any;
+
+      inputCreatorService.buildCreateInnovationFlowStateInputFromInnovationFlowState.mockReturnValue(
+        []
+      );
+      // Simulate an L0 overflow rejection from the flow-state update.
+      innovationFlowService.updateInnovationFlowStatesFromTemplate.mockRejectedValue(
+        new Error('overflow')
+      );
+
+      await expect(
+        service.updateCollaborationFromSpaceTemplate(
+          {
+            collaborationID: 'collab-1',
+            spaceTemplateID: 'tpl-1',
+            addCallouts: false,
+            deleteExistingCallouts: true,
+          },
+          targetCollab,
+          'user-1'
+        )
+      ).rejects.toThrow('overflow');
+
+      // Atomicity: no callouts deleted, and the original callout is preserved.
+      expect(calloutService.deleteCallout).not.toHaveBeenCalled();
+      expect(targetCollab.calloutsSet.callouts).toEqual([existingCallout]);
+    });
+
     it('should add callouts from source when addCallouts is true', async () => {
       const sourceCallouts = [{ id: 'src-callout-1' }];
       const sourceCollab = {
@@ -219,7 +268,7 @@ describe('TemplateApplierService', () => {
       inputCreatorService.buildCreateInnovationFlowStateInputFromInnovationFlowState.mockReturnValue(
         [{ displayName: 'New' }] as any
       );
-      innovationFlowService.updateInnovationFlowStates.mockResolvedValue(
+      innovationFlowService.updateInnovationFlowStatesFromTemplate.mockResolvedValue(
         {} as any
       );
       storageAggregatorResolverService.getStorageAggregatorForCollaboration.mockResolvedValue(
@@ -281,9 +330,11 @@ describe('TemplateApplierService', () => {
       inputCreatorService.buildCreateInnovationFlowStateInputFromInnovationFlowState.mockReturnValue(
         stateInputs as any
       );
-      innovationFlowService.updateInnovationFlowStates.mockResolvedValue({
-        states: sourceStates,
-      } as any);
+      innovationFlowService.updateInnovationFlowStatesFromTemplate.mockResolvedValue(
+        {
+          states: sourceStates,
+        } as any
+      );
       storageAggregatorResolverService.getStorageAggregatorForCollaboration.mockResolvedValue(
         {} as any
       );
@@ -304,7 +355,7 @@ describe('TemplateApplierService', () => {
       );
 
       expect(
-        innovationFlowService.updateInnovationFlowStates
+        innovationFlowService.updateInnovationFlowStatesFromTemplate
       ).toHaveBeenCalledWith(
         expect.objectContaining({ states: [{ displayName: 'Old' }] }),
         stateInputs
@@ -334,7 +385,7 @@ describe('TemplateApplierService', () => {
       inputCreatorService.buildCreateInnovationFlowStateInputFromInnovationFlowState.mockReturnValue(
         []
       );
-      innovationFlowService.updateInnovationFlowStates.mockResolvedValue(
+      innovationFlowService.updateInnovationFlowStatesFromTemplate.mockResolvedValue(
         {} as any
       );
       storageAggregatorResolverService.getStorageAggregatorForCollaboration.mockResolvedValue(

@@ -172,6 +172,24 @@ export class UserResolverFields {
     return userSettings.communication.allowOtherUsersToSendMessages;
   }
 
+  @ResolveField('isContactableViaEmail', () => Boolean, {
+    nullable: false,
+    description:
+      'Whether this User can be offered an email contact route (they enabled email contact). Exposes only the consent flag, never the email address.',
+  })
+  async isContactableViaEmail(
+    @Parent() user: User,
+    @Loader(UserSettingsLoaderCreator, {
+      parentClassRef: User,
+      checkParentPrivilege: AuthorizationPrivilege.READ,
+    })
+    loader: ILoader<IUserSettings>
+  ): Promise<boolean> {
+    const userSettings = await loader.load(user.id);
+
+    return userSettings.communication.allowOtherUsersToContactViaEmail;
+  }
+
   @ResolveField('storageAggregator', () => IStorageAggregator, {
     nullable: true,
     description:

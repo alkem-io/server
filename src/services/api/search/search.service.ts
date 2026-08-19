@@ -63,11 +63,21 @@ export class SearchService {
       searchData,
       onlyPublicResults
     );
+    // Callout-level folding: a matching post/whiteboard/memo folds up to its
+    // containing callout, deduped, in calloutResults (FR-017). Triggered either
+    // by a flow-state scoped search, or by an explicit foldCalloutResources opt-in
+    // that widens a Callout search to match in its framing resources and
+    // contributions.
+    const foldToCallouts =
+      Boolean(searchData.searchInFlowStateFilter) ||
+      Boolean(searchData.foldCalloutResources);
+
     return this.searchResultService.resolveSearchResults(
       searchResults,
       actorContext,
       searchData.filters,
-      searchData.searchInSpaceFilter
+      searchData.searchInSpaceFilter,
+      { foldToCallouts }
     );
   }
 }

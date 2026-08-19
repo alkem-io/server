@@ -75,6 +75,8 @@ describe('UserSettingsService', () => {
           messageReceived: defaultNotificationSetting(),
           mentioned: defaultNotificationSetting(),
           commentReply: defaultNotificationSetting(),
+          conversationMessageDirect: defaultNotificationSetting(),
+          conversationMessageGroup: defaultNotificationSetting(),
           membership: {
             spaceCommunityInvitationReceived: defaultNotificationSetting(),
             spaceCommunityJoined: defaultNotificationSetting(),
@@ -119,10 +121,17 @@ describe('UserSettingsService', () => {
         virtualContributor: {
           adminSpaceCommunityInvitation: defaultNotificationSetting(),
         },
+        sound: {
+          chatMessage: true,
+          inAppNotification: true,
+        },
       },
       homeSpace: {
         spaceID: null,
         autoRedirect: false,
+      },
+      dashboard: {
+        activityView: true,
       },
       designVersion: DESIGN_VERSION_CURRENT_DEFAULT,
       ...overrides,
@@ -187,6 +196,115 @@ describe('UserSettingsService', () => {
       const result = service.updateSettings(settings, updateData);
 
       expect(result.communication.allowOtherUsersToSendMessages).toBe(true);
+    });
+
+    it('should update allowOtherUsersToContactViaEmail when provided', () => {
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = {
+        communication: { allowOtherUsersToContactViaEmail: true },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.communication.allowOtherUsersToContactViaEmail).toBe(true);
+    });
+
+    it('should leave allowOtherUsersToContactViaEmail untouched when not provided', () => {
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = {
+        communication: { allowOtherUsersToSendMessages: true },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      // Not in the update payload → unchanged (undefined on a pre-existing
+      // settings object that predates the field; the GraphQL read-path resolver
+      // coerces it to false).
+      expect(
+        result.communication.allowOtherUsersToContactViaEmail
+      ).toBeUndefined();
+    });
+  });
+
+  describe('updateSettings - notification.sound', () => {
+    it('should update chatMessage when provided', () => {
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = {
+        notification: { sound: { chatMessage: false } },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.notification.sound.chatMessage).toBe(false);
+    });
+
+    it('should update inAppNotification when provided', () => {
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = {
+        notification: { sound: { inAppNotification: false } },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.notification.sound.inAppNotification).toBe(false);
+    });
+
+    it('should leave the sibling flag untouched on a partial update', () => {
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = {
+        notification: { sound: { chatMessage: false } },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      // Only chatMessage was in the payload → inAppNotification is unchanged.
+      expect(result.notification.sound.chatMessage).toBe(false);
+      expect(result.notification.sound.inAppNotification).toBe(true);
+    });
+
+    it('should leave both flags untouched when sound update data is omitted', () => {
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = {
+        notification: {},
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.notification.sound.chatMessage).toBe(true);
+      expect(result.notification.sound.inAppNotification).toBe(true);
+    });
+
+    it('should not write undefined as false when only one flag is provided', () => {
+      const settings = buildSettings({
+        notification: {
+          ...buildSettings().notification,
+          sound: { chatMessage: false, inAppNotification: false },
+        },
+      } as any);
+      const updateData: UpdateUserSettingsEntityInput = {
+        notification: { sound: { chatMessage: true } },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      // inAppNotification omitted from the payload → not coerced to any value,
+      // the stored false survives.
+      expect(result.notification.sound.chatMessage).toBe(true);
+      expect(result.notification.sound.inAppNotification).toBe(false);
+    });
+
+    it('should treat an explicit null as a no-op rather than persisting it', () => {
+      const settings = buildSettings();
+      const updateData = {
+        notification: { sound: { chatMessage: null, inAppNotification: null } },
+      } as unknown as UpdateUserSettingsEntityInput;
+
+      const result = service.updateSettings(settings, updateData);
+
+      // The output fields are Boolean! — a persisted null would fail the non-null
+      // check on every later read of this User, so null must never be written.
+      expect(result.notification.sound.chatMessage).toBe(true);
+      expect(result.notification.sound.inAppNotification).toBe(true);
     });
   });
 
@@ -265,6 +383,175 @@ describe('UserSettingsService', () => {
       expect(() => service.updateSettings(settings, updateData)).toThrow(
         ValidationException
       );
+    });
+  });
+
+  describe('updateSettings - dashboard', () => {
+    it('should update activityView when provided', () => {
+      const settings = buildSettings();
+      const updateData = {
+        dashboard: { activityView: false },
+      } as UpdateUserSettingsEntityInput;
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.dashboard.activityView).toBe(false);
+    });
+
+    it('should leave activityView untouched when dashboard update data is omitted', () => {
+      const settings = buildSettings({
+        dashboard: { activityView: false },
+      });
+      const updateData = {} as UpdateUserSettingsEntityInput;
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.dashboard.activityView).toBe(false);
+    });
+
+    it('should not change other setting groups when only dashboard is updated', () => {
+      const settings = buildSettings({
+        homeSpace: { spaceID: 'space-1', autoRedirect: true },
+      });
+      const updateData = {
+        dashboard: { activityView: false },
+      } as UpdateUserSettingsEntityInput;
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.dashboard.activityView).toBe(false);
+      expect(result.homeSpace.spaceID).toBe('space-1');
+      expect(result.homeSpace.autoRedirect).toBe(true);
+    });
+
+    it('should default a missing dashboard group to activityView=true before merging', () => {
+      const settings = buildSettings();
+      // Simulate a legacy row loaded before the backfill migration.
+      (settings as { dashboard?: unknown }).dashboard = undefined;
+      const updateData = {
+        dashboard: { activityView: false },
+      } as UpdateUserSettingsEntityInput;
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.dashboard.activityView).toBe(false);
+    });
+  });
+
+  describe('updateSettings - language / languageOfferAnswered', () => {
+    it('should set language and latch languageOfferAnswered when language is provided', () => {
+      const settings = buildSettings({
+        language: null,
+        languageOfferAnswered: false,
+      } as any);
+      const result = service.updateSettings(settings, { language: 'nl' });
+
+      expect(result.language).toBe('nl');
+      expect(result.languageOfferAnswered).toBe(true);
+    });
+
+    it('should latch languageOfferAnswered to true (decline path) without writing a language', () => {
+      const settings = buildSettings({
+        language: null,
+        languageOfferAnswered: false,
+      } as any);
+      const result = service.updateSettings(settings, {
+        languageOfferAnswered: true,
+      });
+
+      expect(result.language).toBeNull();
+      expect(result.languageOfferAnswered).toBe(true);
+    });
+
+    it('should throw ValidationException when languageOfferAnswered is set to false (one-way latch)', () => {
+      const settings = buildSettings({
+        language: null,
+        languageOfferAnswered: true,
+      } as any);
+
+      expect(() =>
+        service.updateSettings(settings, { languageOfferAnswered: false })
+      ).toThrow(ValidationException);
+    });
+
+    it('should leave other settings blocks untouched by a language-only update', () => {
+      const settings = buildSettings({
+        language: null,
+        languageOfferAnswered: false,
+        designVersion: 3,
+      } as any);
+      const result = service.updateSettings(settings, { language: 'en' });
+
+      expect(result.designVersion).toBe(3);
+      expect(result.privacy.contributionRolesPubliclyVisible).toBe(false);
+    });
+
+    it('should not change language when language update is omitted', () => {
+      const settings = buildSettings({
+        language: 'nl',
+        languageOfferAnswered: true,
+      } as any);
+      const result = service.updateSettings(settings, {});
+
+      expect(result.language).toBe('nl');
+      expect(result.languageOfferAnswered).toBe(true);
+    });
+
+    it('should treat explicit null for language as a no-op (not clear language or latch)', () => {
+      // GraphQL nullable Boolean/String: sending null must not clear the stored
+      // language or touch the latch — it behaves like an omitted field.
+      const settings = buildSettings({
+        language: 'nl',
+        languageOfferAnswered: true,
+      } as any);
+      const updateData = {
+        language: null,
+      } as unknown as UpdateUserSettingsEntityInput;
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.language).toBe('nl');
+      expect(result.languageOfferAnswered).toBe(true);
+    });
+
+    it('should treat explicit null for languageOfferAnswered as a no-op', () => {
+      // An explicit null on the nullable Boolean must not trigger the rejection
+      // path (false check) or change the latch state.
+      const settings = buildSettings({
+        language: null,
+        languageOfferAnswered: false,
+      } as any);
+      const updateData = {
+        languageOfferAnswered: null,
+      } as unknown as UpdateUserSettingsEntityInput;
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.languageOfferAnswered).toBe(false);
+    });
+
+    it('should throw ValidationException when language is not in SUPPORTED_INTERFACE_LANGUAGES (3656016008)', () => {
+      const settings = buildSettings({
+        language: null,
+        languageOfferAnswered: false,
+      } as any);
+
+      expect(() =>
+        service.updateSettings(settings, { language: 'xx' })
+      ).toThrow(ValidationException);
+    });
+
+    it('should accept a supported non-eligible language (e.g. "es") without throwing', () => {
+      // The FULL supported set is allowed, not just the eligible subset
+      const settings = buildSettings({
+        language: null,
+        languageOfferAnswered: false,
+      } as any);
+
+      const result = service.updateSettings(settings, { language: 'es' });
+
+      expect(result.language).toBe('es');
+      expect(result.languageOfferAnswered).toBe(true);
     });
   });
 
@@ -476,6 +763,52 @@ describe('UserSettingsService', () => {
 
       expect(result.notification.user.messageReceived.email).toBe(true);
       expect(result.notification.user.messageReceived.inApp).toBe(true);
+    });
+
+    it('should update conversationMessageDirect notification and leave conversationMessageGroup untouched (FR-017)', () => {
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = {
+        notification: {
+          user: {
+            conversationMessageDirect: { email: true },
+          } as any,
+        },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.notification.user.conversationMessageDirect.email).toBe(
+        true
+      );
+      expect(result.notification.user.conversationMessageGroup.email).toBe(
+        false
+      );
+    });
+
+    it('should update conversationMessageGroup notification and leave messageReceived/conversationMessageDirect untouched (FR-017)', () => {
+      const settings = buildSettings();
+      // The fixture ships both siblings as `false`, which is also what an
+      // update that wrongly reset them would produce — flip them first so the
+      // preservation assertions can actually fail.
+      settings.notification.user.conversationMessageDirect.push = true;
+      settings.notification.user.messageReceived.push = true;
+      const updateData: UpdateUserSettingsEntityInput = {
+        notification: {
+          user: {
+            conversationMessageGroup: { push: false },
+          } as any,
+        },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.notification.user.conversationMessageGroup.push).toBe(
+        false
+      );
+      expect(result.notification.user.conversationMessageDirect.push).toBe(
+        true
+      );
+      expect(result.notification.user.messageReceived.push).toBe(true);
     });
 
     it('should update membership.spaceCommunityInvitationReceived notification', () => {

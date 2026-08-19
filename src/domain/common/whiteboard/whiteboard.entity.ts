@@ -1,5 +1,4 @@
 import { ENUM_LENGTH, MID_TEXT_LENGTH } from '@common/constants';
-import { BlobStoreKind } from '@common/enums/blob.store.kind';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
@@ -18,22 +17,12 @@ export class Whiteboard extends NameableEntity implements IWhiteboard {
   // binding-compatible `whiteboardSceneToYjsV2State` and written to the bucket.
 
   /**
-   * Locator into the collaboration BlobStore that holds the encoded snapshot.
-   * For `blobStore = 'inline'` this is the whiteboard id (the snapshot stays in
-   * `content`); for an offloaded blob it is the file-service UUID / S3 key /
-   * local path. Part of the unified metadata/index (FR-001).
+   * The file-service id of this whiteboard's stored Yjs-V2 snapshot — file-service
+   * is the single storage backend for the Alkemio stack. Part of the unified
+   * metadata/index (FR-001).
    */
   @Column('varchar', { length: MID_TEXT_LENGTH, nullable: true })
   contentPointer?: string;
-
-  /**
-   * Which BlobStore backend holds the snapshot located by `contentPointer`.
-   * `inline` (default) keeps the blob in `content`; non-inline values mean the
-   * collaboration-service owns the blob and the server stores only the index
-   * (FR-001, FR-003).
-   */
-  @Column('varchar', { length: ENUM_LENGTH, nullable: true })
-  blobStore?: BlobStoreKind;
 
   /**
    * The collaboration content version owned by the collaboration-service room

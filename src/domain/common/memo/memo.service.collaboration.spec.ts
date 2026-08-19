@@ -1,4 +1,3 @@
-import { BlobStoreKind } from '@common/enums/blob.store.kind';
 import { CollaborationLifecycleService } from '@domain/common/collaboration-metadata';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -61,7 +60,6 @@ describe('MemoService — collaboration metadata + lifecycle', () => {
         version: 9,
         contentVersion: 42,
         contentPointer: 'm1',
-        blobStore: BlobStoreKind.INLINE,
         authorization: { id: 'policy-1' },
         // The memo's OWN bucket via its profile — where this doc's snapshots go.
         profile: { id: 'profile-1', storageBucket: { id: 'bucket-1' } },
@@ -72,7 +70,6 @@ describe('MemoService — collaboration metadata + lifecycle', () => {
       expect(meta).toEqual({
         version: 42,
         contentPointer: 'm1',
-        blobStore: BlobStoreKind.INLINE,
         authorizationPolicyId: 'policy-1',
         storageBucketId: 'bucket-1',
       });
@@ -84,7 +81,6 @@ describe('MemoService — collaboration metadata + lifecycle', () => {
         version: 9,
         contentVersion: 42,
         contentPointer: 'm1',
-        blobStore: BlobStoreKind.INLINE,
         authorization: { id: 'policy-1' },
         profile: { id: 'profile-1', storageBucket: undefined },
       });
@@ -100,7 +96,6 @@ describe('MemoService — collaboration metadata + lifecycle', () => {
         version: 5,
         contentVersion: null,
         contentPointer: 'm1',
-        blobStore: BlobStoreKind.INLINE,
         authorization: { id: 'policy-1' },
       });
 
@@ -120,20 +115,17 @@ describe('MemoService — collaboration metadata + lifecycle', () => {
           id: 'm1',
           contentVersion: 7,
           contentPointer: 'ptr',
-          blobStore: BlobStoreKind.S3,
           authorization: { id: 'p' },
         });
 
       await service.saveCollaborationMetadata('m1', {
         version: 7,
         contentPointer: 'ptr',
-        blobStore: BlobStoreKind.S3,
       });
 
       expect(qb.set).toHaveBeenCalledWith({
         contentVersion: 7,
         contentPointer: 'ptr',
-        blobStore: BlobStoreKind.S3,
       });
       // The contract version is NOT routed to the optimistic-locking column.
       const setArg = qb.set.mock.calls[0][0];
@@ -151,14 +143,12 @@ describe('MemoService — collaboration metadata + lifecycle', () => {
           id: 'm1',
           contentVersion: 11,
           contentPointer: 'm1',
-          blobStore: BlobStoreKind.INLINE,
           authorization: { id: 'policy-1' },
         });
 
       await service.saveCollaborationMetadata('m1', {
         version: 11,
         contentPointer: 'm1',
-        blobStore: BlobStoreKind.INLINE,
       });
 
       // Simulate the later fetch reading back the persisted row.
@@ -167,7 +157,6 @@ describe('MemoService — collaboration metadata + lifecycle', () => {
         version: 99, // @VersionColumn churned by unrelated writes — ignored
         contentVersion: 11,
         contentPointer: 'm1',
-        blobStore: BlobStoreKind.INLINE,
         authorization: { id: 'policy-1' },
       });
 
@@ -182,24 +171,44 @@ describe('MemoService — collaboration metadata + lifecycle', () => {
         id: 'm1',
         contentVersion: 0,
         contentPointer: 'm1',
-        blobStore: BlobStoreKind.INLINE,
         authorization: { id: 'policy-1' },
       });
 
       await service.saveCollaborationMetadata('m1', {
         version: 3,
         contentPointer: 'm1',
-        blobStore: BlobStoreKind.INLINE,
       });
       await service.saveCollaborationMetadata('m1', {
         version: 4,
         contentPointer: 'm1',
-        blobStore: BlobStoreKind.INLINE,
       });
 
       const versions = qb.set.mock.calls.map((c: any[]) => c[0].contentVersion);
       expect(versions).toEqual([3, 4]);
       expect(versions[versions.length - 1]).toBe(4);
+    });
+
+    it('preserves the stored contentPointer when the save omits it (blank = unchanged; single-writer contract)', async () => {
+      const qb = updateBuilder();
+      memoRepo.createQueryBuilder.mockReturnValue(qb);
+      memoRepo.findOne
+        .mockResolvedValueOnce({ id: 'm1' }) // existence check
+        .mockResolvedValueOnce({
+          id: 'm1',
+          contentVersion: 9,
+          contentPointer: 'existing-ptr',
+          authorization: { id: 'p' },
+        });
+
+      // contentPointer is produced only by the checkpoint store's metapointer
+      // Record; PreRegister/Room.persist omit it. A save with no contentPointer
+      // must NOT overwrite the stored pointer with blank (which would orphan the
+      // content), so the query omits the column entirely.
+      await service.saveCollaborationMetadata('m1', { version: 9 });
+
+      const setArg = qb.set.mock.calls[0][0];
+      expect(setArg).toEqual({ contentVersion: 9 });
+      expect(setArg).not.toHaveProperty('contentPointer');
     });
   });
 
@@ -216,7 +225,6 @@ describe('MemoService — collaboration metadata + lifecycle', () => {
         expect.objectContaining({
           contentVersion: null,
           contentPointer: null,
-          blobStore: null,
         })
       );
       expect(qb.execute).toHaveBeenCalledTimes(1);

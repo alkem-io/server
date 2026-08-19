@@ -62,6 +62,7 @@ import { InviteForEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.
 import { JoinAsEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.join';
 import { UpdateApplicationFormOnRoleSetInput } from './dto/role.set.dto.update.application.form';
 import { RoleSetInvitationResult } from './dto/role.set.invitation.result';
+import { RoleSetEligibleLanguageGuard } from './role.set.eligible.language.guard';
 import { IRoleSet } from './role.set.interface';
 import { RoleSetService } from './role.set.service';
 import { RoleSetAuthorizationService } from './role.set.service.authorization';
@@ -94,6 +95,7 @@ export class RoleSetResolverMutationsMembership {
     private licenseService: LicenseService,
     private lifecycleService: LifecycleService,
     private roleSetCacheService: RoleSetCacheService,
+    private eligibleLanguageGuard: RoleSetEligibleLanguageGuard,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -158,12 +160,20 @@ export class RoleSetResolverMutationsMembership {
       `join community: ${roleSet.id}`
     );
 
-    await this.roleSetService.assignActorToRole(
+    // Feature 017 round 2 — combined Subspace direct join. Route through the
+    // shared grant service so an eligible non-parent-member joining an open
+    // Subspace is registered in the Subspace AND every missing public ancestor,
+    // atomically (FR-023/FR-026). The combined-flow authorisation is evaluated
+    // once, here at join time (there is no approval step). For a parent-member
+    // or a non-eligible join the shared service falls back to today's single-
+    // target grant via assignActorToRole (behaviour-preserving — FR-028).
+    await this.roleSetService.ensureMemberOfRoleSetAndAncestors(
       roleSet,
-      RoleName.MEMBER,
       actorContext.actorID,
       actorContext,
-      true
+      {
+        source: 'join',
+      }
     );
 
     return roleSet;
@@ -201,10 +211,25 @@ export class RoleSetResolverMutationsMembership {
         RoleName.MEMBER
       );
       if (!userIsMemberInParent) {
-        throw new RoleSetMembershipException(
-          `Unable to apply for Community (${roleSet.id}): user is not a member of the parent Community`,
-          LogContext.COMMUNITY
-        );
+        // Feature 017 — combined Subspace application: a non-parent-member may
+        // apply directly IFF the combined-flow preconditions hold for THIS
+        // applicant (actor-relative reachability, ADR 0001 — ancestors they
+        // already belong to impose no requirements; every ancestor they would
+        // be granted into must be PUBLIC with
+        // `allowSubspaceAdminsToInviteMembers` enabled). On approval they are
+        // registered in the Subspace AND every missing ancestor. Otherwise
+        // today's "join the parent first" still fires.
+        const combinedApplicationAllowed =
+          await this.roleSetService.isCombinedApplicationGrantAuthorised(
+            roleSet,
+            actorContext.actorID
+          );
+        if (!combinedApplicationAllowed) {
+          throw new RoleSetMembershipException(
+            `Unable to apply for Community (${roleSet.id}): user is not a member of the parent Community`,
+            LogContext.COMMUNITY
+          );
+        }
       }
     }
 
@@ -281,6 +306,14 @@ export class RoleSetResolverMutationsMembership {
       `create invitation RoleSet: ${roleSet.id}`
     );
 
+    // Validate suggestedLanguage against the eligible set up front (compose-time check).
+    // An empty eligible set rejects every suggestion (config kill switch).
+    if (invitationData.suggestedLanguage) {
+      this.eligibleLanguageGuard.isEligibleLanguageOrFail(
+        invitationData.suggestedLanguage
+      );
+    }
+
     const { authorizedToInviteToParentRoleSet } =
       this.getPrivilegesOnParentRoleSets(roleSet, actorContext);
 
@@ -323,7 +356,8 @@ export class RoleSetResolverMutationsMembership {
       actorContext,
       authorizedToInviteToParentRoleSet,
       invitationData.extraRoles,
-      invitationData.welcomeMessage
+      invitationData.welcomeMessage,
+      invitationData.suggestedLanguage
     );
 
     const newUserInvitationResults =
@@ -333,7 +367,8 @@ export class RoleSetResolverMutationsMembership {
         authorizedToInviteToParentRoleSet,
         invitationData.welcomeMessage,
         invitationData.extraRoles,
-        actorContext
+        actorContext,
+        invitationData.suggestedLanguage
       );
     invitationResults.push(...newUserInvitationResults);
 
@@ -369,7 +404,8 @@ export class RoleSetResolverMutationsMembership {
     authorizedToInviteToParentRoleSet: boolean,
     welcomeMessage: string | undefined,
     extraRoles: RoleName[],
-    actorContext: ActorContext
+    actorContext: ActorContext,
+    suggestedLanguage?: string
   ): Promise<RoleSetInvitationResult[]> {
     const invitationResults: RoleSetInvitationResult[] = [];
     // Rely on check already being made that there is no user with the emails
@@ -410,7 +446,8 @@ export class RoleSetResolverMutationsMembership {
           welcomeMessage || '',
           inviteToParentRoleSet,
           extraRoles,
-          actorContext
+          actorContext,
+          suggestedLanguage
         );
       const result: RoleSetInvitationResult = {
         type: RoleSetInvitationResultType.INVITED_TO_PLATFORM_AND_ROLE_SET,
@@ -716,7 +753,8 @@ export class RoleSetResolverMutationsMembership {
     actorContext: ActorContext,
     authorizedToInviteToParentRoleSet: boolean,
     extraRoles: RoleName[],
-    welcomeMessage: string | undefined
+    welcomeMessage: string | undefined,
+    suggestedLanguage?: string
   ): Promise<RoleSetInvitationResult[]> {
     const invitationResults: RoleSetInvitationResult[] = [];
     for (const actorID of actorIDs) {
@@ -745,6 +783,7 @@ export class RoleSetResolverMutationsMembership {
         invitedToParent: invitedToParent,
         extraRoles: extraRoles,
         welcomeMessage,
+        suggestedLanguage,
       };
 
       const openInvitation = await this.roleSetService.findOpenInvitation(

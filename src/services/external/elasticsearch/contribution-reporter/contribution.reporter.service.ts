@@ -3,8 +3,7 @@ import { ELASTICSEARCH_CLIENT_PROVIDER } from '@constants/index';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorService } from '@domain/actor';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { Client as ElasticClient } from '@elastic/elasticsearch';
-import { WriteResponseBase } from '@elastic/elasticsearch/lib/api/types';
+import { Client as ElasticClient, estypes } from '@elastic/elasticsearch';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types';
@@ -15,11 +14,16 @@ import {
   CONTRIBUTION_TYPE,
   ContributionDetails,
   ContributionDocument,
+  ContributionType,
+  OfficeDocumentContributionDocument,
 } from '../types';
 import { ContributionAuthorDetails } from '../types/contribution.author.details';
+import { TypedActorSet, UNKNOWN_ACTOR_TYPE } from '../types/typed.actor.set';
 import { isElasticError, isElasticResponseError } from '../utils';
 
-const isFromAlkemioTeam = (email: string) => /.*@alkem\.io/.test(email);
+// Anchored at the end so look-alike suffix domains (e.g. `x@alkem.io.example.com`)
+// are NOT treated as team addresses; the domain part is case-insensitive per RFC 5321.
+const isFromAlkemioTeam = (email: string) => /@alkem\.io$/i.test(email);
 
 type ContributionActorContext = Partial<
   Pick<ActorContext, 'actorID' | 'isAnonymous' | 'guestName'>
@@ -210,6 +214,81 @@ export class ContributionReporterService {
     );
   }
 
+  /**
+   * Single-actor Collabora lifecycle events (created / uploaded / opened).
+   * Unlike {@link officeDocumentContribution} (the aggregate edited-window
+   * record), these mirror `calloutMemoCreated`: one per-user document carrying
+   * the acting user as `author` via the shared {@link createDocument} helper.
+   * The record `id` is the `CollaboraDocument.id`. See feature
+   * 003-collabora-doc-contributions (US4).
+   */
+  public calloutCollaboraDocumentCreated(
+    contribution: ContributionDetails,
+    actorContext: ContributionActorContext
+  ): void {
+    void this.createDocument(
+      {
+        type: CONTRIBUTION_TYPE.COLLABORA_DOCUMENT_CREATED,
+        id: contribution.id,
+        name: contribution.name,
+        space: contribution.space,
+      },
+      actorContext
+    );
+  }
+
+  public calloutCollaboraDocumentUploaded(
+    contribution: ContributionDetails,
+    actorContext: ContributionActorContext
+  ): void {
+    void this.createDocument(
+      {
+        type: CONTRIBUTION_TYPE.COLLABORA_DOCUMENT_UPLOADED,
+        id: contribution.id,
+        name: contribution.name,
+        space: contribution.space,
+      },
+      actorContext
+    );
+  }
+
+  /**
+   * A CollaboraDocument's backing file was swapped in place (the document
+   * identity is preserved; only its content changed). Single-actor shape,
+   * identical to {@link calloutCollaboraDocumentUploaded}; the record `id`
+   * is the `CollaboraDocument.id`. See feature 014-officedocs-replace-file
+   * (FR-014).
+   */
+  public calloutCollaboraDocumentReplaced(
+    contribution: ContributionDetails,
+    actorContext: ContributionActorContext
+  ): void {
+    void this.createDocument(
+      {
+        type: CONTRIBUTION_TYPE.COLLABORA_DOCUMENT_REPLACED,
+        id: contribution.id,
+        name: contribution.name,
+        space: contribution.space,
+      },
+      actorContext
+    );
+  }
+
+  public collaboraDocumentOpened(
+    contribution: ContributionDetails,
+    actorContext: ContributionActorContext
+  ): void {
+    void this.createDocument(
+      {
+        type: CONTRIBUTION_TYPE.COLLABORA_DOCUMENT_OPENED,
+        id: contribution.id,
+        name: contribution.name,
+        space: contribution.space,
+      },
+      actorContext
+    );
+  }
+
   public calloutPostCommentCreated(
     contribution: ContributionDetails,
     actorContext: ContributionActorContext
@@ -285,6 +364,80 @@ export class ContributionReporterService {
     );
   }
 
+  /**
+   * Indexes ONE aggregate `contribution` document per (Collabora document,
+   * window) for a window in which the document was genuinely **edited**,
+   * carrying both `writeActors` and `readonlyActors` type-keyed sets — NOT one
+   * document per user. The consumer resolves space/displayName once upstream
+   * and groups each actor set by `ActorType`; both maps pass through verbatim
+   * (this reporter does no resolution and writes only the typed shape). See
+   * agents-hq workspace specs 003-collabora-doc-contributions and 012-collabora-actor-type.
+   */
+  public officeDocumentContribution(contribution: {
+    id: string;
+    name: string;
+    space: string;
+    writeActors: TypedActorSet;
+    readonlyActors: TypedActorSet;
+    alkemio: boolean;
+  }): void {
+    this.officeDocumentAggregate(
+      CONTRIBUTION_TYPE.OFFICE_DOCUMENT_CONTRIBUTION,
+      contribution
+    );
+  }
+
+  /**
+   * Companion of {@link officeDocumentContribution}: indexes ONE aggregate
+   * `contribution` document per (Collabora document, window) for a window in
+   * which the document was **active but not edited** (viewed). Same aggregate
+   * shape — both `writeActors` and `readonlyActors` type-keyed sets — differing
+   * ONLY by the `OFFICE_DOCUMENT_VIEW` type. See feature
+   * 003-collabora-doc-contributions (FR-012). Mutually exclusive with the
+   * contribution record per window.
+   */
+  public officeDocumentView(contribution: {
+    id: string;
+    name: string;
+    space: string;
+    writeActors: TypedActorSet;
+    readonlyActors: TypedActorSet;
+    alkemio: boolean;
+  }): void {
+    this.officeDocumentAggregate(
+      CONTRIBUTION_TYPE.OFFICE_DOCUMENT_VIEW,
+      contribution
+    );
+  }
+
+  /**
+   * Shared aggregate-index path for the two Collabora window record types
+   * (CONTRIBUTION = edited, VIEW = active-but-not-edited). Both indexed records
+   * are byte-for-byte identical save for `type`, so the public methods differ
+   * only in the type they pass here.
+   */
+  private officeDocumentAggregate(
+    type: ContributionType,
+    contribution: {
+      id: string;
+      name: string;
+      space: string;
+      writeActors: TypedActorSet;
+      readonlyActors: TypedActorSet;
+      alkemio: boolean;
+    }
+  ): void {
+    void this.createAggregateDocument({
+      type,
+      id: contribution.id,
+      name: contribution.name,
+      space: contribution.space,
+      writeActors: contribution.writeActors,
+      readonlyActors: contribution.readonlyActors,
+      alkemio: contribution.alkemio,
+    });
+  }
+
   public mediaGalleryContribution(
     contribution: ContributionDetails,
     actorContext: ContributionActorContext
@@ -352,33 +505,51 @@ export class ContributionReporterService {
       const actor = await this.actorService.getActorOrNull(
         actorContext.actorID
       );
-      if (actor && actor.type === 'user') {
-        try {
-          const user = await this.userLookupService.getUserByIdOrFail(actor.id);
-          return {
-            author: actor.id,
-            anonymous: false,
-            alkemio: isFromAlkemioTeam(user.email),
-            guest: false,
-          };
-        } catch (e) {
-          this.logger.error(
-            {
-              message:
-                'Unable to fetch user details for actor in ContributionReporterService',
-              actorContext,
-              actorId: actor.id,
-            },
-            e instanceof Error ? e.stack : String(e),
-            LogContext.CONTRIBUTION_REPORTER
-          );
-          return {
-            author: actor.id,
-            anonymous: false,
-            alkemio: false,
-            guest: false,
-          };
+      if (actor) {
+        // 012 / research R4: any resolvable actor records its id + ActorType.
+        // The `alkemio`-team flag is user-specific (derived from email), so the
+        // user lookup only runs for users; non-user actors (VC/org/space/
+        // account) record their id and type without it, matching the aggregate
+        // path which types every actor.
+        if (actor.type === 'user') {
+          try {
+            const user = await this.userLookupService.getUserByIdOrFail(
+              actor.id
+            );
+            return {
+              author: actor.id,
+              anonymous: false,
+              alkemio: isFromAlkemioTeam(user.email),
+              guest: false,
+              authorType: actor.type,
+            };
+          } catch (e) {
+            this.logger.error(
+              {
+                message:
+                  'Unable to fetch user details for actor in ContributionReporterService',
+                actorContext,
+                actorId: actor.id,
+              },
+              e instanceof Error ? e.stack : String(e),
+              LogContext.CONTRIBUTION_REPORTER
+            );
+            return {
+              author: actor.id,
+              anonymous: false,
+              alkemio: false,
+              guest: false,
+              authorType: actor.type,
+            };
+          }
         }
+        return {
+          author: actor.id,
+          anonymous: false,
+          alkemio: false,
+          guest: false,
+          authorType: actor.type,
+        };
       }
     }
     if (actorContext.guestName) {
@@ -387,6 +558,7 @@ export class ContributionReporterService {
         anonymous: false,
         guest: true,
         guestName: actorContext.guestName,
+        authorType: UNKNOWN_ACTOR_TYPE,
       };
     }
     if (actorContext.isAnonymous) {
@@ -394,6 +566,7 @@ export class ContributionReporterService {
         alkemio: false,
         anonymous: true,
         guest: false,
+        authorType: UNKNOWN_ACTOR_TYPE,
       };
     }
 
@@ -409,6 +582,7 @@ export class ContributionReporterService {
       alkemio: false,
       anonymous: true,
       guest: false,
+      authorType: UNKNOWN_ACTOR_TYPE,
     };
   }
 
@@ -416,7 +590,7 @@ export class ContributionReporterService {
     contribution: Omit<TObject, 'author'>,
     actorContext: ContributionActorContext,
     timestamp: number
-  ): Promise<WriteResponseBase | undefined> {
+  ): Promise<estypes.WriteResponseBase | undefined> {
     if (!this.client) {
       return undefined;
     }
@@ -454,7 +628,7 @@ export class ContributionReporterService {
   private async createDocument<TObject extends BaseContribution>(
     contribution: Omit<TObject, 'author'>,
     actorContext: ContributionActorContext
-  ): Promise<WriteResponseBase | undefined> {
+  ): Promise<estypes.WriteResponseBase | undefined> {
     if (!this.client) {
       return undefined;
     }
@@ -463,6 +637,52 @@ export class ContributionReporterService {
       const document: ContributionDocument = {
         ...contribution,
         ...(await this.getAuthorDetails(actorContext)),
+        '@timestamp': new Date(),
+        environment: this.environment,
+      };
+
+      const result = await this.client.index({
+        index: this.activityIndexName,
+        document,
+      });
+
+      this.logger.verbose?.(
+        `Event '${contribution.type}' for object with id '(${contribution.id})' ingested to (${this.activityIndexName})`
+      );
+
+      return result;
+    } catch (e: unknown) {
+      const errorId = this.handleError(e);
+      this.logger.error(
+        `Event '${contribution.type}' for object with id '(${contribution.id})' FAILED to be ingested into (${this.activityIndexName})`,
+        { errorId },
+        LogContext.CONTRIBUTION_REPORTER
+      );
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Indexes a single aggregate contribution document. Unlike
+   * {@link createDocument}, this does NOT attach per-user
+   * {@link ContributionAuthorDetails} (no `author`) — the aggregate carries its
+   * own user arrays instead. Used for OFFICE_DOCUMENT_CONTRIBUTION and
+   * OFFICE_DOCUMENT_VIEW.
+   */
+  private async createAggregateDocument(
+    contribution: Omit<
+      OfficeDocumentContributionDocument,
+      '@timestamp' | 'environment'
+    >
+  ): Promise<estypes.WriteResponseBase | undefined> {
+    if (!this.client) {
+      return undefined;
+    }
+
+    try {
+      const document: OfficeDocumentContributionDocument = {
+        ...contribution,
         '@timestamp': new Date(),
         environment: this.environment,
       };

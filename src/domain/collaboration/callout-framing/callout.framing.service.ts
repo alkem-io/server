@@ -1,6 +1,13 @@
 import { ProfileType } from '@common/enums';
+import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
+import { CalloutSelectionMode } from '@common/enums/callout.selection.mode';
+import {
+  CONTRIBUTOR_ACTOR_TYPES,
+  isContributorActorType,
+} from '@common/enums/contributor.actor.types';
+import { ContributorCollectionView } from '@common/enums/contributor.collection.view';
 import { LogContext } from '@common/enums/logging.context';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
@@ -10,6 +17,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { ICollaboraDocument } from '@domain/collaboration/collabora-document/collabora.document.interface';
 import { CollaboraDocumentService } from '@domain/collaboration/collabora-document/collabora.document.service';
 import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
@@ -41,6 +49,7 @@ import {
   FindOptionsRelations,
   Repository,
 } from 'typeorm';
+import { ICalloutSettingsFraming } from '../callout-settings/callout.settings.framing.interface';
 import { ILink } from '../link/link.interface';
 import { CalloutFraming } from './callout.framing.entity';
 import { ICalloutFraming } from './callout.framing.interface';
@@ -432,6 +441,16 @@ export class CalloutFramingService {
       const oldType = calloutFraming.type;
       const newType = calloutFramingData.type;
 
+      // Fixed kind (workspace#013-spaces-collection-callout, FR-005/FR-006):
+      // a SPACES framing can never be switched to another framing type (and
+      // never offers a map/view option — it carries no config at all).
+      if (oldType === CalloutFramingType.SPACES && newType !== oldType) {
+        throw new ValidationException(
+          'A SPACES callout framing has a fixed kind and cannot be changed to another framing type.',
+          LogContext.COLLABORATION
+        );
+      }
+
       // Validate framing type transitions for callout templates
       if (
         isParentCalloutTemplate &&
@@ -672,6 +691,197 @@ export class CalloutFramingService {
     return await this.calloutFramingRepository.save(calloutFraming);
   }
 
+  /**
+   * Validate + normalize the contributors settings against the framing type
+   * (FR-004b/FR-006a/FR-006b/FR-006c). Mutates and returns the framing settings
+   * object so the caller can persist the auto-healed result.
+   *
+   * Rules:
+   * - `contributors` present iff `framingType === CONTRIBUTORS` (FR-004b).
+   * - `contributorTypes` non-empty (FR-006a).
+   * - `defaultContributorType` ∈ `contributorTypes`; auto-heal to the first
+   *   selected type when unset or its type was deselected (FR-006b).
+   * - `defaultView = MAP` only when a locatable type (USER/ORGANIZATION) is
+   *   selected; auto-heal to LIST when the selection becomes VC-only (FR-006c).
+   */
+  public validateAndNormalizeContributorsSettings(
+    framingType: CalloutFramingType,
+    framingSettings: ICalloutSettingsFraming
+  ): ICalloutSettingsFraming {
+    const isContributors = framingType === CalloutFramingType.CONTRIBUTORS;
+    const contributors = framingSettings.contributors;
+
+    if (!isContributors) {
+      if (contributors) {
+        throw new ValidationException(
+          'Contributors settings can only be set when framing.type = CONTRIBUTORS.',
+          LogContext.COLLABORATION
+        );
+      }
+      // A SPACES framing is deliberately CONFIG-FREE
+      // (workspace#013-spaces-collection-callout, FR-004b): it carries no
+      // framing settings block (no contributors object, no counts, no view/map).
+      // The check above already rejects any `contributors` payload on a SPACES
+      // callout; nothing else needs to be persisted for SPACES.
+      return framingSettings;
+    }
+
+    if (!contributors) {
+      throw new ValidationException(
+        'Callout Framing of type CONTRIBUTORS requires contributors settings.',
+        LogContext.COLLABORATION
+      );
+    }
+
+    const contributorTypes = contributors.contributorTypes ?? [];
+    if (contributorTypes.length === 0) {
+      throw new ValidationException(
+        'At least one contributor type must be selected.',
+        LogContext.COLLABORATION
+      );
+    }
+
+    // Only the community-contributor ActorType subtypes are valid here; reject
+    // SPACE / ACCOUNT / VIRTUAL_ASSISTANT (the schema exposes the full ActorType
+    // since the platform unified Contributor → Actor in #5856).
+    const invalidType = contributorTypes.find(
+      type => !isContributorActorType(type)
+    );
+    if (invalidType) {
+      throw new ValidationException(
+        `Invalid contributor type: ${invalidType}. Allowed: ${CONTRIBUTOR_ACTOR_TYPES.join(', ')}.`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    // Auto-heal defaultContributorType to the first selected type when unset
+    // or no longer part of the selection.
+    if (
+      !contributors.defaultContributorType ||
+      !contributorTypes.includes(contributors.defaultContributorType)
+    ) {
+      contributors.defaultContributorType = contributorTypes[0];
+    }
+
+    // Auto-heal defaultView to LIST when the selection is VC-only (no
+    // locatable type remains), otherwise default an unset view to LIST.
+    const hasLocatableType = contributorTypes.some(
+      type => type === ActorType.USER || type === ActorType.ORGANIZATION
+    );
+    if (
+      !contributors.defaultView ||
+      (contributors.defaultView === ContributorCollectionView.MAP &&
+        !hasLocatableType)
+    ) {
+      contributors.defaultView = ContributorCollectionView.LIST;
+    }
+
+    // Validate mapView when present.
+    // CRASH GUARD: MapLibre LngLat throws on latitude outside ±90, crashing the
+    // map in every viewer's browser, including anonymous visitors.
+    //
+    // Isolation:
+    // - This clause MUST NOT read or write contributorTypes / defaultContributorType
+    //   / defaultView (those healing rules run above and are already settled).
+    // - The contributor-type healing rules MUST NOT read or write mapView (enforced
+    //   by construction — the healing clauses above precede this block and touch no
+    //   mapView field).
+    // - This clause is validate-and-reject ONLY — it NEVER heals or coerces a
+    //   value into range (an invalid map view falls back to automatic framing on the
+    //   client, not to a silently clamped camera the admin never chose).
+    if (contributors.mapView !== undefined && contributors.mapView !== null) {
+      const { longitude, latitude, zoom } = contributors.mapView;
+      const isFiniteNumber = (v: unknown): v is number =>
+        typeof v === 'number' && Number.isFinite(v);
+
+      if (
+        !isFiniteNumber(longitude) ||
+        !isFiniteNumber(latitude) ||
+        !isFiniteNumber(zoom) ||
+        longitude < -180 ||
+        longitude > 180 ||
+        latitude < -90 ||
+        latitude > 90 ||
+        zoom < 0 ||
+        zoom > 22
+      ) {
+        throw new ValidationException(
+          'Invalid mapView: longitude must be finite within [-180, 180], latitude within [-90, 90], zoom within [0, 22].',
+          LogContext.COLLABORATION
+        );
+      }
+    }
+
+    return framingSettings;
+  }
+
+  /**
+   * Validate + normalize the selection settings against the framing type
+   * (FR-013/FR-022 — workspace#025-callout-manual-selection). Mutates and
+   * returns the framing settings object so the caller can persist the result.
+   *
+   * Called AFTER validateAndNormalizeContributorsSettings at both create and
+   * update call sites in CalloutService.
+   *
+   * Rules:
+   * - `selection` present only iff `framingType ∈ {CONTRIBUTORS, SPACES}`.
+   * - On collection kinds: materialize a missing `selection` to
+   *   `{mode: AUTO, selectedIds: []}` (FR-002/FR-016 default).
+   * - Partial-update semantics (FR-022): omitted field ⇒ keep stored value;
+   *   provided field ⇒ replace whole. Works identically for create (no stored
+   *   value → both fields default to AUTO / []).
+   * - `selectedIds` is deduplicated in place (FR-004/T004).
+   * - The byte-identical contributors guard above is kept untouched.
+   */
+  public validateAndNormalizeSelectionSettings(
+    framingType: CalloutFramingType,
+    framingSettings: ICalloutSettingsFraming,
+    incomingSelection?: { mode?: CalloutSelectionMode; selectedIds?: string[] }
+  ): ICalloutSettingsFraming {
+    const isCollectionKind =
+      framingType === CalloutFramingType.CONTRIBUTORS ||
+      framingType === CalloutFramingType.SPACES;
+
+    if (!isCollectionKind) {
+      // Any provided selection on a non-collection kind is a caller error.
+      if (incomingSelection !== undefined) {
+        throw new ValidationException(
+          'Selection settings can only be set when framing.type ∈ {CONTRIBUTORS, SPACES}.',
+          LogContext.COLLABORATION
+        );
+      }
+      // Non-collection framing: strip any stale selection that might linger
+      // from a type change (defensive; the merge path in CalloutService strips
+      // it too, but belt-and-suspenders).
+      delete framingSettings.selection;
+      return framingSettings;
+    }
+
+    // --- Collection kind ---
+    // Materialize the stored block if absent (read-time default — FR-016).
+    if (!framingSettings.selection) {
+      framingSettings.selection = {
+        mode: CalloutSelectionMode.AUTO,
+        selectedIds: [],
+      };
+    }
+
+    if (incomingSelection !== undefined) {
+      // Partial-update: only replace the fields that were explicitly provided.
+      if (incomingSelection.mode !== undefined) {
+        framingSettings.selection.mode = incomingSelection.mode;
+      }
+      if (incomingSelection.selectedIds !== undefined) {
+        // Deduplicate, preserving first occurrence (FR-004).
+        framingSettings.selection.selectedIds = [
+          ...new Set(incomingSelection.selectedIds),
+        ];
+      }
+    }
+
+    return framingSettings;
+  }
+
   public async getCalloutFramingOrFail(
     calloutFramingID: string,
     options?: FindOneOptions<CalloutFraming>
@@ -688,6 +898,23 @@ export class CalloutFramingService {
         { calloutFramingID }
       );
     return calloutFraming;
+  }
+
+  /**
+   * Load the parent Callout for a framing (the callout owns the JSON settings
+   * that carry the contributors config). Returns null if the framing is not
+   * attached to a callout (e.g. a standalone template framing).
+   */
+  public async getParentCallout(
+    calloutFramingInput: ICalloutFraming
+  ): Promise<ICallout | null> {
+    const calloutFraming = (await this.getCalloutFramingOrFail(
+      calloutFramingInput.id,
+      {
+        relations: { callout: true } as FindOptionsRelations<CalloutFraming>,
+      }
+    )) as CalloutFraming;
+    return calloutFraming.callout ?? null;
   }
 
   public async getProfile(

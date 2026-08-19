@@ -1,4 +1,3 @@
-import { BlobStoreKind } from '@common/enums/blob.store.kind';
 import { CollaborationLifecycleService } from '@domain/common/collaboration-metadata';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -64,7 +63,6 @@ describe('WhiteboardService — collaboration metadata + lifecycle', () => {
         version: 3,
         contentVersion: 21,
         contentPointer: 'w1',
-        blobStore: BlobStoreKind.INLINE,
         authorization: { id: 'policy-w' },
         // The whiteboard's OWN bucket via its profile — where this doc's
         // snapshots go.
@@ -76,7 +74,6 @@ describe('WhiteboardService — collaboration metadata + lifecycle', () => {
       expect(meta).toEqual({
         version: 21,
         contentPointer: 'w1',
-        blobStore: BlobStoreKind.INLINE,
         authorizationPolicyId: 'policy-w',
         storageBucketId: 'bucket-w',
       });
@@ -88,7 +85,6 @@ describe('WhiteboardService — collaboration metadata + lifecycle', () => {
         version: 3,
         contentVersion: 21,
         contentPointer: 'w1',
-        blobStore: BlobStoreKind.INLINE,
         authorization: { id: 'policy-w' },
         profile: { id: 'profile-w', storageBucket: undefined },
       });
@@ -104,7 +100,6 @@ describe('WhiteboardService — collaboration metadata + lifecycle', () => {
         version: 3,
         contentVersion: null,
         contentPointer: 'w1',
-        blobStore: BlobStoreKind.INLINE,
         authorization: { id: 'policy-w' },
       });
 
@@ -124,20 +119,17 @@ describe('WhiteboardService — collaboration metadata + lifecycle', () => {
           id: 'w1',
           contentVersion: 4,
           contentPointer: 'ptr',
-          blobStore: BlobStoreKind.FILE_SERVICE,
           authorization: { id: 'p' },
         });
 
       const result = await service.saveCollaborationMetadata('w1', {
         version: 4,
         contentPointer: 'ptr',
-        blobStore: BlobStoreKind.FILE_SERVICE,
       });
 
       expect(qb.set).toHaveBeenCalledWith({
         contentVersion: 4,
         contentPointer: 'ptr',
-        blobStore: BlobStoreKind.FILE_SERVICE,
       });
       // The contract version is NOT routed to the optimistic-locking column.
       const setArg = qb.set.mock.calls[0][0];
@@ -155,14 +147,12 @@ describe('WhiteboardService — collaboration metadata + lifecycle', () => {
           id: 'w1',
           contentVersion: 8,
           contentPointer: 'w1',
-          blobStore: BlobStoreKind.INLINE,
           authorization: { id: 'policy-w' },
         });
 
       await service.saveCollaborationMetadata('w1', {
         version: 8,
         contentPointer: 'w1',
-        blobStore: BlobStoreKind.INLINE,
       });
 
       whiteboardRepo.findOne.mockResolvedValueOnce({
@@ -170,7 +160,6 @@ describe('WhiteboardService — collaboration metadata + lifecycle', () => {
         version: 77, // @VersionColumn churn — ignored
         contentVersion: 8,
         contentPointer: 'w1',
-        blobStore: BlobStoreKind.INLINE,
         authorization: { id: 'policy-w' },
       });
 
@@ -185,24 +174,44 @@ describe('WhiteboardService — collaboration metadata + lifecycle', () => {
         id: 'w1',
         contentVersion: 0,
         contentPointer: 'w1',
-        blobStore: BlobStoreKind.INLINE,
         authorization: { id: 'policy-w' },
       });
 
       await service.saveCollaborationMetadata('w1', {
         version: 2,
         contentPointer: 'w1',
-        blobStore: BlobStoreKind.INLINE,
       });
       await service.saveCollaborationMetadata('w1', {
         version: 5,
         contentPointer: 'w1',
-        blobStore: BlobStoreKind.INLINE,
       });
 
       const versions = qb.set.mock.calls.map((c: any[]) => c[0].contentVersion);
       expect(versions).toEqual([2, 5]);
       expect(versions[versions.length - 1]).toBe(5);
+    });
+
+    it('preserves the stored contentPointer when the save omits it (blank = unchanged; single-writer contract)', async () => {
+      const qb = updateBuilder();
+      whiteboardRepo.createQueryBuilder.mockReturnValue(qb);
+      whiteboardRepo.findOne
+        .mockResolvedValueOnce({ id: 'w1' }) // existence check
+        .mockResolvedValueOnce({
+          id: 'w1',
+          contentVersion: 9,
+          contentPointer: 'existing-ptr',
+          authorization: { id: 'policy-w' },
+        });
+
+      // contentPointer is produced only by the checkpoint store's metapointer
+      // Record; PreRegister/Room.persist omit it. A save with no contentPointer
+      // must NOT overwrite the stored pointer with blank (which would orphan the
+      // content), so the query omits the column entirely.
+      await service.saveCollaborationMetadata('w1', { version: 9 });
+
+      const setArg = qb.set.mock.calls[0][0];
+      expect(setArg).toEqual({ contentVersion: 9 });
+      expect(setArg).not.toHaveProperty('contentPointer');
     });
   });
 
@@ -219,7 +228,6 @@ describe('WhiteboardService — collaboration metadata + lifecycle', () => {
         expect.objectContaining({
           contentVersion: null,
           contentPointer: null,
-          blobStore: null,
         })
       );
     });

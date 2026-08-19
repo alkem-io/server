@@ -1,22 +1,23 @@
-import { BlobStoreKind } from '@common/enums/blob.store.kind';
 import { CollaborationContentType } from '../types';
 
 /**
  * `collaboration-save` request payload — the index row only.
  *
  * Mirrors the frozen contract `SaveData`
- * (`contract.go`): the blob NEVER crosses this bus. `contentPointer` +
- * `blobStore` locate the snapshot in the collaboration-service's BlobStore;
- * for `inline` the pointer is the row id and the snapshot stays in the
- * server's `content` column (written by the collab service's own inline
- * BlobStore through the legacy save path during coexistence).
+ * (`contract.go`): the blob NEVER crosses this bus. `contentPointer` locates the
+ * snapshot in file-service — the single storage backend for the Alkemio stack.
  */
 export interface SaveInputData {
   id: string;
   contentType: CollaborationContentType;
   version: number;
-  contentPointer: string;
-  blobStore: BlobStoreKind;
+  /**
+   * The file-service snapshot pointer. Sole producer is the checkpoint store's
+   * metapointer `Record`; `PreRegister` and `Room.persist` omit it. Blank/omitted
+   * means UNCHANGED — the server sets it only when present and preserves the stored
+   * pointer otherwise, so a partial or redelivered save never orphans the content.
+   */
+  contentPointer?: string;
   /** OPEN-1; may be '' in open/standalone mode. */
   authorizationPolicyId?: string;
   /** delete-cascade key (FR-023); optional. */

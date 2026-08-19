@@ -101,6 +101,10 @@ export class PlatformRolesAccessService {
         return AuthorizationCredential.BETA_TESTER;
       case RoleName.PLATFORM_VC_CAMPAIGN:
         return AuthorizationCredential.VC_CAMPAIGN;
+      case RoleName.PLATFORM_ASSISTANT_ACCESS:
+        return AuthorizationCredential.ASSISTANT_ACCESS;
+      case RoleName.PLATFORM_OPERATIONS_ADMIN:
+        return AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN;
       case RoleName.REGISTERED:
         return AuthorizationCredential.GLOBAL_REGISTERED;
       case RoleName.GUEST:

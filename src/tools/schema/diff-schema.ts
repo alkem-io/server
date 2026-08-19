@@ -33,6 +33,7 @@ import {
   pushEntry,
   sha256,
 } from '../../schema-contract/diff/diff-core';
+import { diffInputs } from '../../schema-contract/diff/diff-inputs';
 import { parseDeprecationReason } from './deprecation-parser';
 import { performOverrideEvaluationAsync } from './override';
 import {
@@ -724,6 +725,7 @@ async function buildReport(
   diffTypes(oldIdx, newIdx, ctx);
   diffEnums(oldIdx, newIdx, ctx);
   diffScalars(oldIdx, newIdx, ctx);
+  diffInputs(oldIdx, newIdx, ctx);
   const report: ChangeReport = {
     snapshotId: sha256(newSDL),
     baseSnapshotId: sha256(oldSDL),

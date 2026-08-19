@@ -15,6 +15,11 @@ import { FormatNotSupportedException } from '@common/exceptions/format.not.suppo
 import { validateEmail } from '@common/utils';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { ActorContextCacheService } from '@core/actor-context/actor.context.cache.service';
+import {
+  OidcSessionRevocationService,
+  redactError,
+  redactStack,
+} from '@core/auth/oidc/revocation/oidc-session-revocation.service';
 import { KratosSessionData } from '@core/authentication/kratos.session';
 import { applyUserFilter } from '@core/filtering/filters';
 import { UserFilterInput } from '@core/filtering/input-types';
@@ -23,7 +28,7 @@ import { IPaginatedType } from '@core/pagination/paginated.type';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { actorDefaults } from '@domain/actor/actor/actor.defaults';
 import { ActorService } from '@domain/actor/actor/actor.service';
-import { getMatrixDisplayName } from '@domain/actor/actor.matrix.display.name';
+import { getActorDisplayName } from '@domain/actor/actor.display.name';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -47,6 +52,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { getReadOnlyDefaultCapabilityToggles } from '@services/mcp-server/capabilities/assistant.capability.classification';
 import { InstrumentService } from '@src/apm/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, QueryFailedError, Repository } from 'typeorm';
@@ -80,6 +86,9 @@ export class UserService {
     private userSettingsService: UserSettingsService,
     private profileAvatarService: ProfileAvatarService,
     private kratosService: KratosService,
+    // server#6315 — reached via OidcCoreModule, NOT OidcModule: importing the
+    // latter from UserModule would be a dependency cycle.
+    private readonly oidcSessionRevocationService: OidcSessionRevocationService,
     private readonly messagingService: MessagingService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
@@ -230,7 +239,7 @@ export class UserService {
 
     // Sync the user to the communication adapter
     // User.id (which is Actor.id) is used as the AlkemioActorID for all communication operations
-    const displayName = getMatrixDisplayName(user);
+    const displayName = getActorDisplayName(user);
 
     try {
       await this.communicationAdapter.syncActor(user.id, displayName);
@@ -278,6 +287,7 @@ export class UserService {
     const settings: CreateUserSettingsInput = {
       communication: {
         allowOtherUsersToSendMessages: true,
+        allowOtherUsersToContactViaEmail: false,
       },
       privacy: {
         // Note: not currently used but will be near term.
@@ -366,6 +376,19 @@ export class UserService {
           mentioned: { email: true, inApp: true, push: true },
           commentReply: { email: false, inApp: true, push: true },
           messageReceived: { email: true, inApp: true, push: true },
+          // 034-messaging-notifications (FR-002): email OFF, inApp OFF
+          // (permanently unsupported — enforced platform-wide regardless of
+          // this stored value, FR-003/D-2), push ON.
+          conversationMessageDirect: {
+            email: false,
+            inApp: false,
+            push: true,
+          },
+          conversationMessageGroup: {
+            email: false,
+            inApp: false,
+            push: true,
+          },
           membership: {
             spaceCommunityInvitationReceived: {
               email: true,
@@ -382,12 +405,25 @@ export class UserService {
             push: true,
           },
         },
+        sound: {
+          chatMessage: true,
+          inAppNotification: true,
+        },
       },
       homeSpace: {
         spaceID: null,
         autoRedirect: false,
       },
+      // Read-only assistant authority by default (FR-018): all READ capabilities
+      // enabled, all WRITE_* disabled, derived from the shared frozen
+      // classification (contracts/assistant-authority.md §1/§2). A new WRITE
+      // capability defaults disabled for existing users (absence = disabled).
+      assistant: {
+        enabledCapabilities: getReadOnlyDefaultCapabilityToggles(),
+      },
       designVersion: DESIGN_VERSION_CURRENT_DEFAULT,
+      language: null,
+      languageOfferAnswered: false,
     };
     return settings;
   }
@@ -543,6 +579,78 @@ export class UserService {
     // Note: Conversations belong to the platform Messaging.
     // User's conversation memberships are cleaned up via cascade.
 
+    // server#6315 — session revocation cascade.
+    //
+    // Deleting a user used to leave their BFF/OIDC session alive in Redis, so
+    // the browser kept authenticating against an account that no longer existed
+    // for up to the 30-day absolute ceiling — an access-control failure
+    // (ISO 27001 A.5.18, SOC 2 CC6.2) and an incomplete erasure, since the
+    // session payload caches display name and email (GDPR Art. 17).
+    //
+    // Four properties of this block are deliberate and each has a test:
+    //
+    // - **After the commit, outside the transaction.** A rolled-back deletion
+    //   must not sign anybody out. The transaction closed above.
+    // - **Unconditional.** NOT gated on `deleteData.deleteIdentity` (unlike the
+    //   identity deletion below): a surviving Kratos identity with live
+    //   sessions is exactly the orphan state being fixed.
+    // - **Best-effort.** Neither leg may fail the delete mutation. User
+    //   deletion has broken against Kratos repeatedly (#5350, #5678, #4762,
+    //   #2137), and a security improvement must not become an availability
+    //   regression. Failures are audited by the revocation service and logged
+    //   here; the deletion result is unchanged.
+    // - **Revocation before the Kratos calls.** The BFF session is what
+    //   actually gates the API (Kratos SSO has not since #6288), so if the
+    //   process dies partway through this block, the leg that ran is the one
+    //   that mattered.
+    if (user.authenticationID) {
+      try {
+        await this.oidcSessionRevocationService.revokeAllForSub(
+          user.authenticationID,
+          'account_deleted'
+        );
+      } catch (error: any) {
+        this.logger.error?.(
+          {
+            message:
+              'Failed to revoke OIDC sessions during user deletion; the deletion still stands',
+            userID: id,
+            authenticationID: user.authenticationID,
+            error: redactError(error),
+          },
+          // Scrubbed, not raw: a stack begins with the error's own message, so
+          // logging it unredacted defeats a redacted `message` entirely. The
+          // revocation service exports the guarded pair precisely for this.
+          //
+          // One policy for the whole deletion path — every catch below uses
+          // the same pair. The remaining calls hit the same Kratos client, so
+          // they can surface the same material in an error message.
+          redactStack(error),
+          LogContext.AUTH
+        );
+      }
+
+      // Kills the Kratos SSO session. This method already existed
+      // (`kratos.service.ts`) and was simply never called from here.
+      try {
+        await this.kratosService.invalidateAllIdentitySessions(
+          user.authenticationID
+        );
+      } catch (error: any) {
+        this.logger.error?.(
+          {
+            message:
+              'Failed to invalidate Kratos identity sessions during user deletion; the deletion still stands',
+            userID: id,
+            authenticationID: user.authenticationID,
+            error: redactError(error),
+          },
+          redactStack(error),
+          LogContext.AUTH
+        );
+      }
+    }
+
     // Kratos identity deletion — outside the DB transaction since it's
     // an external system call. Uses authenticationID (the Kratos identity
     // UUID) which is more reliable than email lookup. If authenticationID
@@ -561,9 +669,9 @@ export class UserService {
             message: 'Failed to clear actor metadata from Kratos identity',
             userID: id,
             authenticationID: user.authenticationID,
-            error: error?.message,
+            error: redactError(error),
           },
-          error?.stack,
+          redactStack(error),
           LogContext.AUTH
         );
       }
@@ -577,9 +685,9 @@ export class UserService {
               message: 'Failed to delete Kratos identity during user deletion',
               userID: id,
               authenticationID: user.authenticationID,
-              error: error?.message,
+              error: redactError(error),
             },
-            error?.stack,
+            redactStack(error),
             LogContext.AUTH
           );
         }

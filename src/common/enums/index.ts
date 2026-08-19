@@ -5,7 +5,6 @@ export * from './authorization.credential';
 export * from './authorization.credential.global';
 export * from './authorization.privilege';
 export * from './authorization.verified.credential';
-export * from './blob.store.kind';
 export * from './collabora.document.type';
 export * from './collaboration.content.type';
 export * from './error.category';

@@ -6,6 +6,7 @@ import { Field, InterfaceType } from '@nestjs/graphql';
 import { BaseSearchHit } from '@services/api/search/dto/results/base.search.hit';
 import { SearchResultType } from '../../search.result.type';
 import { ISearchResultCallout } from './search.result.callout';
+import { ISearchResultCollaboraDocument } from './search.result.collabora-document';
 import { ISearchResultMemo } from './search.result.memo';
 import { ISearchResultOrganization } from './search.result.organization';
 import { ISearchResultPost } from './search.result.post';
@@ -32,6 +33,8 @@ import { ISearchResultWhiteboard } from './search.result.whiteboard';
         return ISearchResultMemo;
       case SearchResultType.WHITEBOARD:
         return ISearchResultWhiteboard;
+      case SearchResultType.COLLABORA_DOCUMENT:
+        return ISearchResultCollaboraDocument;
     }
 
     throw new BaseException(

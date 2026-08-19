@@ -82,6 +82,42 @@ describe('UrlGeneratorService', () => {
     });
   });
 
+  describe('getConversationUrl (034-messaging-notifications, contract C-6)', () => {
+    it('pins the exact deep-link format `{platform.url}/?chat={conversationID}`', () => {
+      const result = service.getConversationUrl('conversation-123');
+
+      expect(result).toBe(`${ENDPOINT}/?chat=conversation-123`);
+    });
+
+    it('never returns a bare home/root link regardless of ID shape', () => {
+      const result = service.getConversationUrl(
+        '00000000-0000-0000-0000-000000000000'
+      );
+
+      expect(result).not.toBe('/');
+      expect(result).not.toBe(ENDPOINT);
+      expect(result).toContain('?chat=');
+    });
+  });
+
+  describe('getConversationDeepLinkPath (034-messaging-notifications, contract C-4)', () => {
+    it('pins the exact bare relative path `/?chat={conversationID}` — never platform-prefixed', () => {
+      const result = service.getConversationDeepLinkPath('conversation-123');
+
+      expect(result).toBe('/?chat=conversation-123');
+      expect(result).not.toContain(ENDPOINT);
+    });
+
+    it('never returns the bare home/root link anti-pattern regardless of ID shape', () => {
+      const result = service.getConversationDeepLinkPath(
+        '00000000-0000-0000-0000-000000000000'
+      );
+
+      expect(result).not.toBe('/');
+      expect(result).toContain('?chat=');
+    });
+  });
+
   describe('generateUrlForProfile', () => {
     it('should return cached URL when available', async () => {
       cacheService.getUrlFromCache.mockResolvedValue(
@@ -448,6 +484,56 @@ describe('UrlGeneratorService', () => {
       expect(result).toBe(
         `${ENDPOINT}/${UrlPathBase.VIRTUAL_CONTRIBUTOR}/my-vc/${UrlPathElement.KNOWLEDGE_BASE}`
       );
+    });
+
+    // A CollaboraDocument has no nameID and no deep-link route — its URL is
+    // the parent callout's URL. Without this branch the switch fell through to
+    // '' and every Collabora search result rendered a dead link.
+    it('should generate the parent callout URL for a framing COLLABORA_DOCUMENT profile', async () => {
+      entityManager.findOne
+        .mockResolvedValueOnce({ id: 'cd-1' }) // CollaboraDocument by profile id
+        .mockResolvedValueOnce({ id: 'callout-1' }); // Callout via framing
+      const calloutUrl = `${ENDPOINT}/my-space/${UrlPathElement.COLLABORATION}/my-callout`;
+      vi.spyOn(service, 'getCalloutUrlPath').mockResolvedValue(calloutUrl);
+
+      const result = await service.generateUrlForProfile({
+        id: 'profile-cd',
+        type: ProfileType.COLLABORA_DOCUMENT,
+      } as any);
+
+      expect(result).toBe(calloutUrl);
+      expect(service.getCalloutUrlPath).toHaveBeenCalledWith('callout-1');
+    });
+
+    it('should fall back to the contribution parent callout for a contribution COLLABORA_DOCUMENT profile', async () => {
+      entityManager.findOne
+        .mockResolvedValueOnce({ id: 'cd-2' }) // CollaboraDocument by profile id
+        .mockResolvedValueOnce(null) // not a framing document
+        .mockResolvedValueOnce({ id: 'callout-2' }); // Callout via contribution
+      const calloutUrl = `${ENDPOINT}/my-space/${UrlPathElement.COLLABORATION}/other-callout`;
+      vi.spyOn(service, 'getCalloutUrlPath').mockResolvedValue(calloutUrl);
+
+      const result = await service.generateUrlForProfile({
+        id: 'profile-cd',
+        type: ProfileType.COLLABORA_DOCUMENT,
+      } as any);
+
+      expect(result).toBe(calloutUrl);
+      expect(service.getCalloutUrlPath).toHaveBeenCalledWith('callout-2');
+    });
+
+    it('should throw EntityNotFoundException when a COLLABORA_DOCUMENT profile has no parent callout', async () => {
+      entityManager.findOne
+        .mockResolvedValueOnce({ id: 'cd-3' }) // CollaboraDocument by profile id
+        .mockResolvedValueOnce(null) // no framing parent
+        .mockResolvedValueOnce(null); // no contribution parent
+
+      await expect(
+        service.generateUrlForProfile({
+          id: 'profile-cd',
+          type: ProfileType.COLLABORA_DOCUMENT,
+        } as any)
+      ).rejects.toThrow(EntityNotFoundException);
     });
   });
 

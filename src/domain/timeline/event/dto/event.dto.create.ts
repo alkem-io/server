@@ -33,6 +33,10 @@ export class CreateCalendarEventInput extends CreateNameableInput {
   })
   multipleDays!: boolean;
 
+  // For whole-day events this is the offset between the start and end dates
+  // (End − Start), NOT the event's length: a single-day whole-day event is 0, and
+  // the ICS/Google/Outlook export appends the RFC 5545 exclusive +1 day so it
+  // still covers one full day. Timed events store their true start→end duration.
   @Field(() => Number, {
     nullable: false,
     description: 'The length of the event in minutes.',

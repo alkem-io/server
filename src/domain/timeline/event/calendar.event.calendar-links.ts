@@ -65,18 +65,27 @@ export const formatDatesForCalendar = (
   const endIso = toIsoString(end, 'endDate');
 
   if (wholeDay) {
-    const dateStart = formatDateOnly(startIso);
-    // For Google Calendar, end date must be exclusive for all-day events, so add 1 day
-    const endDateObj = new Date(endIso);
-    endDateObj.setUTCDate(endDateObj.getUTCDate() + 1);
-    const dateEndGoogle = formatDateOnly(endDateObj.toISOString());
-    const dateEnd = formatDateOnly(endIso);
+    // A whole-day event is a bare calendar date, not an instant. Its canonical
+    // value is UTC-midnight of the intended date, so the date-only value is the
+    // UTC calendar day — timezone-independent for every server. (Deriving it from
+    // process-local parts slips a day west of UTC; the client is responsible for
+    // sending UTC-midnight so this holds end to end.)
+    const dateStart = formatDateOnlyUtc(startIso);
+    // Whole-day end dates are EXCLUSIVE (RFC 5545 §3.6.1 for ICS; Google and
+    // Outlook all-day links use the same convention): the end must be the day
+    // AFTER the last covered day. The stored end date is the last covered day, so
+    // add one UTC day (UTC has no DST, so day arithmetic is exact). All three
+    // targets share this exclusive end.
+    const exclusiveEnd = new Date(endIso);
+    exclusiveEnd.setUTCDate(exclusiveEnd.getUTCDate() + 1);
+    const exclusiveEndIso = exclusiveEnd.toISOString();
+    const dateEndExclusive = formatDateOnlyUtc(exclusiveEndIso);
     return {
-      google: `${dateStart}/${dateEndGoogle}`,
-      outlookStart: startIso.slice(0, 10),
-      outlookEnd: endIso.slice(0, 10),
+      google: `${dateStart}/${dateEndExclusive}`,
+      outlookStart: formatUtcDateHyphenated(startIso),
+      outlookEnd: formatUtcDateHyphenated(exclusiveEndIso),
       icalStart: dateStart,
-      icalEnd: dateEnd,
+      icalEnd: dateEndExclusive,
       wholeDay: true,
     };
   }
@@ -194,9 +203,34 @@ const sliceByBytes = (
 export const formatDateForCalendar = (iso: string): string =>
   iso.replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
 
-/** Extracts a date-only iCal value (YYYYMMDD) from an ISO-8601 string. */
-export const formatDateOnly = (iso: string): string =>
-  iso.slice(0, 10).replace(/-/g, '');
+/**
+ * UTC date parts of the instant an ISO-8601 string represents. A whole-day event
+ * is a bare calendar date whose canonical value is UTC-midnight of that date, so
+ * its date-only value is the UTC calendar day — independent of the server's
+ * process timezone (deriving it from process-local parts slips a day west of UTC).
+ */
+const utcDateParts = (
+  iso: string
+): { year: string; month: string; day: string } => {
+  const d = new Date(iso);
+  return {
+    year: String(d.getUTCFullYear()).padStart(4, '0'),
+    month: String(d.getUTCMonth() + 1).padStart(2, '0'),
+    day: String(d.getUTCDate()).padStart(2, '0'),
+  };
+};
+
+/** UTC calendar date as an iCal date-only value (YYYYMMDD). */
+export const formatDateOnlyUtc = (iso: string): string => {
+  const { year, month, day } = utcDateParts(iso);
+  return `${year}${month}${day}`;
+};
+
+/** UTC calendar date as YYYY-MM-DD (Outlook all-day format). */
+const formatUtcDateHyphenated = (iso: string): string => {
+  const { year, month, day } = utcDateParts(iso);
+  return `${year}-${month}-${day}`;
+};
 
 export const calculateCalendarEventEndDate = (event: ICalendarEvent): Date => {
   const start = toDate(event.startDate, 'startDate');
@@ -273,12 +307,22 @@ export const isIsoDateString = (value: string): boolean =>
 export const validateCalendarDateRange = (
   startIso: string,
   endIso: string,
-  eventId: string
+  eventId: string,
+  wholeDay = false
 ): void => {
   const start = new Date(startIso).getTime();
   const end = new Date(endIso).getTime();
 
-  if (Number.isNaN(start) || Number.isNaN(end) || start >= end) {
+  // A whole-day event may be a single day (start === end, i.e. durationMinutes 0);
+  // its exclusive end is added at export. A timed event must end strictly after
+  // its start.
+  const invalid =
+    Number.isNaN(start) ||
+    Number.isNaN(end) ||
+    start > end ||
+    (!wholeDay && start === end);
+
+  if (invalid) {
     throw new ValidationException(
       'Invalid calendar event date range',
       LogContext.CALENDAR,

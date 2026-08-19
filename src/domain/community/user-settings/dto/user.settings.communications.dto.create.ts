@@ -9,4 +9,12 @@ export class CreateUserSettingsCommunicationInput {
   })
   @IsBoolean()
   allowOtherUsersToSendMessages!: boolean;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description:
+      'Allow other Users to be offered an email contact route to this User. Default false.',
+  })
+  @IsBoolean()
+  allowOtherUsersToContactViaEmail!: boolean;
 }

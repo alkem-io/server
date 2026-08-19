@@ -160,6 +160,28 @@ describe('buildMultiSearchRequestItems', () => {
     expect(body.fields).toEqual(['id', 'type']);
   });
 
+  it('should request highlighting on all query-matched fields (server#3702)', () => {
+    const indices: SearchIndex[] = [
+      {
+        name: 'test-spaces',
+        type: SearchResultType.SPACE,
+        category: SearchCategory.SPACES,
+      },
+    ];
+
+    const result = buildMultiSearchRequestItems(indices, baseQuery, {
+      defaults: { size: 10 },
+    });
+
+    const body = result[1] as any;
+    expect(body.highlight).toEqual({
+      fields: { '*': {} },
+      fragment_size: 100,
+      number_of_fragments: 3,
+      max_analyzed_offset: 999_999,
+    });
+  });
+
   it('should sort by _score desc and id desc', () => {
     const indices: SearchIndex[] = [
       {

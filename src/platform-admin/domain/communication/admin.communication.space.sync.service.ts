@@ -2,7 +2,7 @@ import { JoinRuleInvite, JoinRulePublic } from '@alkemio/matrix-adapter-lib';
 import { LogContext } from '@common/enums';
 import { RoomType } from '@common/enums/room.type';
 import { FORUM_CATEGORY_NAMESPACE } from '@constants/forum.constants';
-import { getMatrixDisplayName } from '@domain/actor/actor.matrix.display.name';
+import { getActorDisplayName } from '@domain/actor/actor.display.name';
 import { Room } from '@domain/communication/room/room.entity';
 import { User } from '@domain/community/user/user.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
@@ -505,7 +505,7 @@ export class AdminCommunicationSpaceSyncService {
 
     let synced = 0;
     for (const user of users) {
-      const displayName = getMatrixDisplayName(user);
+      const displayName = getActorDisplayName(user);
       try {
         await this.communicationAdapter.syncActor(user.id, displayName);
         synced++;
@@ -519,7 +519,7 @@ export class AdminCommunicationSpaceSyncService {
     }
 
     for (const vc of vcs) {
-      const displayName = getMatrixDisplayName(vc);
+      const displayName = getActorDisplayName(vc);
       try {
         await this.communicationAdapter.syncActor(vc.id, displayName);
         synced++;

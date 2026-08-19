@@ -14,6 +14,7 @@ import { AuthenticationModule } from '@core/authentication/authentication.module
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { GraphqlGuardModule } from '@core/authorization/graphql.guard.module';
 import { BootstrapModule } from '@core/bootstrap/bootstrap.module';
+import { redisCacheModule } from '@core/cache/redis.cache.module';
 import { LoaderCreatorModule } from '@core/dataloader/creators/loader.creator.module';
 import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
 import {
@@ -31,6 +32,7 @@ import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/ca
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import { MessageModule } from '@domain/communication/message/message.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
+import { VirtualAssistantModule } from '@domain/community/virtual-assistant/virtual.assistant.module';
 import { VirtualActorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 import { PushSubscriptionModule } from '@domain/push-subscription/push.subscription.module';
@@ -40,7 +42,6 @@ import { TemplateApplierModule } from '@domain/template/template-applier/templat
 import { Cipher, EncryptionModule } from '@hedger/nestjs-encryption';
 import { LibraryModule } from '@library/library/library.module';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
-import { CacheModule } from '@nestjs/cache-manager';
 import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
@@ -75,6 +76,7 @@ import { KratosEventsModule } from '@services/external/kratos-events/kratos.even
 import { WingbackManagerModule } from '@services/external/wingback/wingback.manager.module';
 import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
 import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.module';
+import { McpServerModule } from '@services/mcp-server/mcp-server.module';
 import { AppController } from '@src/app.controller';
 import { WinstonConfigService } from '@src/config/winston.config';
 
@@ -101,7 +103,6 @@ import {
   SubscriptionsTransportWsWebsocket,
   WebsocketContext,
 } from '@src/types';
-import * as redisStore from 'cache-manager-redis-store';
 import { print } from 'graphql/language/printer';
 import { CloseCode } from 'graphql-ws';
 import { WinstonModule } from 'nest-winston';
@@ -136,22 +137,10 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
       global: true,
     }),
     ScheduleModule.forRoot(),
-    CacheModule.registerAsync({
-      isGlobal: true,
-      imports: [ConfigModule],
-      useFactory: async (configService: ConfigService<AlkemioConfig, true>) => {
-        const { host, port, timeout } = configService.get('storage.redis', {
-          infer: true,
-        });
-        return {
-          store: redisStore,
-          host,
-          port,
-          redisOptions: { connectTimeout: timeout * 1000 }, // Connection timeout in milliseconds
-        };
-      },
-      inject: [ConfigService],
-    }),
+    // One shared definition, imported here and by auth-reset.worker.module.ts.
+    // They were byte-identical copies, and both crashed the process on any
+    // Redis blip (#6330). Do not inline a `store` anywhere else.
+    redisCacheModule(),
     TypeOrmModule.forRootAsync({
       name: 'default',
       imports: [ConfigModule],
@@ -206,7 +195,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
           infer: true,
         });
         return {
-          cors: false, // this is to avoid a duplicate cors origin header being created when behind the oathkeeper reverse proxy
+          cors: false, // avoids a duplicate CORS origin header when behind the Traefik edge reverse proxy
           uploads: false,
           autoSchemaFile: true,
           inheritResolversFromInterfaces: true,
@@ -282,11 +271,17 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
               },
             },
             'graphql-ws': {
-              onNext: (ctx, message, args, result) => {
+              // Sockets are authenticated once at connection time, so a
+              // long-lived subscription would outlive its session. ActorContext
+              // .absoluteExpiry is stamped by CookieSessionStrategy from the
+              // BFF alkemio_session's ABSOLUTE ceiling (absolute_expires_at).
+              // Deliberately NOT enforced here: `.expiry` (access-token, ~10min,
+              // self-renews) and the sliding idle window (renews on activity).
+              onNext: (ctx, _message, args, result) => {
                 const context = args.contextValue as IGraphQLContext;
-                const expiry = context.req?.user?.expiry;
-                // if the session has expired, close the socket
-                if (expiry && expiry < Date.now()) {
+                const absoluteExpiry = context.req?.user?.absoluteExpiry;
+                // if the session has passed its absolute ceiling, close the socket
+                if (absoluteExpiry && absoluteExpiry < Date.now()) {
                   (ctx as WebsocketContext).extra.socket.close(
                     CloseCode.Unauthorized,
                     'Session expired'
@@ -343,8 +338,10 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     CalendarEventIcsModule,
     IdentityResolveModule,
     InternalAdminModule,
+    McpServerModule,
     MeModule,
     VirtualActorModule,
+    VirtualAssistantModule,
     InputCreatorModule,
     LookupModule,
     LookupByNameModule,

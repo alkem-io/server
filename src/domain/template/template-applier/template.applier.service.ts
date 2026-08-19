@@ -102,7 +102,24 @@ export class TemplateApplierService {
       );
     }
 
-    // Delete existing callouts if requested (before updating flow states)
+    const newStates = sourceCollaboration.innovationFlow.states;
+    const newStatesInput: CreateInnovationFlowStateInput[] =
+      this.inputCreatorService.buildCreateInnovationFlowStateInputFromInnovationFlowState(
+        newStates
+      );
+    // Story #6177: for an L0 (root) space this preserves the fixed first phases
+    // and appends only the template's additional states (capped at the L0 max);
+    // for subspaces it is a wholesale replacement (unchanged behavior). This can
+    // reject atomically on L0 overflow, so it MUST run before any callouts are
+    // deleted to keep the whole apply atomic.
+    targetCollaboration.innovationFlow =
+      await this.innovationFlowService.updateInnovationFlowStatesFromTemplate(
+        targetCollaboration.innovationFlow,
+        newStatesInput
+      );
+
+    // Delete existing callouts if requested (only after the flow-state update
+    // succeeds, so an overflow rejection above leaves callouts untouched).
     if (deleteExistingCallouts && targetCollaboration.calloutsSet?.callouts) {
       const existingCallouts = targetCollaboration.calloutsSet.callouts;
       this.logger.verbose?.(
@@ -121,17 +138,6 @@ export class TemplateApplierService {
         LogContext.TEMPLATES
       );
     }
-
-    const newStates = sourceCollaboration.innovationFlow.states;
-    const newStatesInput: CreateInnovationFlowStateInput[] =
-      this.inputCreatorService.buildCreateInnovationFlowStateInputFromInnovationFlowState(
-        newStates
-      );
-    targetCollaboration.innovationFlow =
-      await this.innovationFlowService.updateInnovationFlowStates(
-        targetCollaboration.innovationFlow,
-        newStatesInput
-      );
 
     const storageAggregator =
       await this.storageAggregatorResolverService.getStorageAggregatorForCollaboration(

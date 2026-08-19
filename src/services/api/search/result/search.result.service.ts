@@ -13,6 +13,7 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { CollaboraDocument } from '@domain/collaboration/collabora-document/collabora.document.entity';
 import { Post } from '@domain/collaboration/post';
 import { Memo } from '@domain/common/memo/memo.entity';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
@@ -32,6 +33,7 @@ import { EntityManager, In } from 'typeorm';
 import {
   ISearchResult,
   ISearchResultCallout,
+  ISearchResultCollaboraDocument,
   ISearchResultMemo,
   ISearchResultOrganization,
   ISearchResultPost,
@@ -62,6 +64,13 @@ type WhiteboardParents = {
   space: Space;
 };
 
+type CollaboraDocumentParents = {
+  collaboraDocument: CollaboraDocument;
+  isContribution: boolean;
+  callout: Callout;
+  space: Space;
+};
+
 type CalloutParents = {
   callout: Callout;
   space: Space;
@@ -82,12 +91,17 @@ export class SearchResultService {
    * @param actorContext The agent info of the user making the search request.
    * @param filters Used to filter the end results.
    * @param spaceId The space ID to filter the search results by.
+   * @param options.foldToCallouts When true — set by a flow-state scoped search
+   *   or by the `foldCalloutResources` opt-in — matching posts/whiteboards/memos
+   *   are folded up to their containing callout and merged into `calloutResults`,
+   *   deduped by callout id (FR-017).
    */
   public async resolveSearchResults(
     rawSearchResults: ISearchResult[],
     actorContext: ActorContext,
     filters: SearchFilterInput[],
-    spaceId?: string
+    spaceId?: string,
+    options?: { foldToCallouts?: boolean }
   ): Promise<ISearchResults> {
     const groupedResults = groupBy(rawSearchResults, 'type') as Record<
       Partial<SearchResultType>,
@@ -103,6 +117,7 @@ export class SearchResultService {
       posts,
       whiteboards,
       memos,
+      collaboraDocuments,
     ] = await Promise.all([
       this.getSpaceSearchResults(groupedResults.space ?? [], spaceId),
       this.getSubspaceSearchResults(
@@ -122,6 +137,10 @@ export class SearchResultService {
         actorContext
       ),
       this.getMemoSearchResults(groupedResults.memo ?? [], actorContext),
+      this.getCollaboraDocumentSearchResults(
+        groupedResults.collabora_document ?? [],
+        actorContext
+      ),
     ]);
     const filtersByCategory = groupBy(filters, 'category') as Record<
       SearchCategory,
@@ -132,28 +151,44 @@ export class SearchResultService {
       users,
       organizations
     );
-    // callout framings:
-    const framingResults = buildResults(
-      filtersByCategory.framings?.[0],
-      whiteboards.filter(whiteboard => !whiteboard.isContribution),
-      memos.filter(memo => !memo.isContribution)
-    );
-    // contributions include posts, whiteboards, and memos
-    const contributionResults = buildResults(
-      filtersByCategory.contributions?.[0],
-      posts,
-      whiteboards.filter(whiteboard => whiteboard.isContribution),
-      memos.filter(memo => memo.isContribution)
-    );
+    // callout framings. When foldToCallouts widened the search to pull these
+    // indices purely to fold them into callouts, the framings category is not in
+    // the requested filters; in that case this bucket stays empty so the hits
+    // surface only as folded callouts (and aren't dumped here unbounded).
+    const framingResults = filtersByCategory.framings?.[0]
+      ? buildResults(
+          filtersByCategory.framings[0],
+          whiteboards.filter(whiteboard => !whiteboard.isContribution),
+          memos.filter(memo => !memo.isContribution),
+          collaboraDocuments.filter(doc => !doc.isContribution)
+        )
+      : emptyResultSet();
+    // contributions include posts, whiteboards, memos, and collabora documents.
+    // Same guard as framings.
+    const contributionResults = filtersByCategory.contributions?.[0]
+      ? buildResults(
+          filtersByCategory.contributions[0],
+          posts,
+          whiteboards.filter(whiteboard => whiteboard.isContribution),
+          memos.filter(memo => memo.isContribution),
+          collaboraDocuments.filter(doc => doc.isContribution)
+        )
+      : emptyResultSet();
     const spaceResults = buildResults(
       filtersByCategory.spaces?.[0],
       spaces,
       subspaces
     );
-    const calloutResults = buildResults(
-      filtersByCategory['collaboration-tools']?.[0],
-      callouts
-    );
+    const calloutResults = options?.foldToCallouts
+      ? buildFoldedCalloutResults(
+          filtersByCategory['collaboration-tools']?.[0],
+          callouts,
+          posts,
+          whiteboards,
+          memos,
+          collaboraDocuments
+        )
+      : buildResults(filtersByCategory['collaboration-tools']?.[0], callouts);
 
     return {
       actorResults,
@@ -539,6 +574,66 @@ export class SearchResultService {
       .filter(isDefined);
   }
 
+  private async getCollaboraDocumentSearchResults(
+    rawSearchResults: ISearchResult[],
+    actorContext: ActorContext
+  ): Promise<ISearchResultCollaboraDocument[]> {
+    if (rawSearchResults.length === 0) {
+      return [];
+    }
+
+    const collaboraDocumentIds = rawSearchResults.map(hit => hit.result.id);
+
+    const collaboraDocuments = await this.entityManager.findBy(
+      CollaboraDocument,
+      {
+        id: In(collaboraDocumentIds),
+      }
+    );
+
+    // Authorize query-time (FR-009, SC-004): never bake permission into the
+    // index. Filter first, then resolve parents for the authorized set only.
+    const authorizedCollaboraDocuments = collaboraDocuments.filter(doc =>
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        doc.authorization,
+        AuthorizationPrivilege.READ
+      )
+    );
+
+    const collaboraDocumentParents = await this.getCollaboraDocumentParents(
+      authorizedCollaboraDocuments
+    );
+
+    return collaboraDocumentParents
+      .map<ISearchResultCollaboraDocument | undefined>(parent => {
+        const rawSearchResult = rawSearchResults.find(
+          hit => hit.result.id === parent.collaboraDocument.id
+        );
+
+        if (!rawSearchResult) {
+          this.logger.error(
+            {
+              message: 'Unable to find raw search result for CollaboraDocument',
+              collaboraDocumentId: parent.collaboraDocument.id,
+            },
+            undefined,
+            LogContext.SEARCH
+          );
+          return undefined;
+        }
+
+        return {
+          ...rawSearchResult,
+          isContribution: parent.isContribution,
+          callout: parent.callout,
+          space: parent.space,
+          collaboraDocument: parent.collaboraDocument,
+        };
+      })
+      .filter(isDefined);
+  }
+
   private async getCalloutSearchResult(
     rawSearchResults: ISearchResult[],
     actorContext: ActorContext
@@ -567,6 +662,8 @@ export class SearchResultService {
       select: {
         id: true,
         nameID: true,
+        // createdDate is the relevance tiebreak when folding results (FR-019)
+        createdDate: true,
         framing: {
           id: true,
           type: true,
@@ -748,6 +845,8 @@ export class SearchResultService {
       },
       select: {
         id: true,
+        // createdDate is the relevance tiebreak when folding results (FR-019)
+        createdDate: true,
         settings: {
           visibility: true,
         },
@@ -905,6 +1004,8 @@ export class SearchResultService {
       },
       select: {
         id: true,
+        // createdDate is the relevance tiebreak when folding results (FR-019)
+        createdDate: true,
         settings: {
           visibility: true,
         },
@@ -1055,6 +1156,199 @@ export class SearchResultService {
       );
   }
 
+  private async getCollaboraDocumentParents(
+    collaboraDocuments: CollaboraDocument[]
+  ): Promise<CollaboraDocumentParents[]> {
+    if (!collaboraDocuments.length) {
+      return [];
+    }
+
+    const collaboraDocumentIds = collaboraDocuments.map(doc => doc.id);
+
+    const callouts = await this.entityManager.find(Callout, {
+      where: [
+        {
+          contributions: {
+            collaboraDocument: {
+              id: In(collaboraDocumentIds),
+            },
+          },
+          calloutsSet: { type: CalloutsSetType.COLLABORATION },
+        },
+        {
+          framing: {
+            collaboraDocument: {
+              id: In(collaboraDocumentIds),
+            },
+          },
+          calloutsSet: { type: CalloutsSetType.COLLABORATION },
+        },
+      ],
+      relations: {
+        framing: {
+          collaboraDocument: true,
+        },
+        contributions: {
+          collaboraDocument: true,
+        },
+        calloutsSet: true,
+      },
+      select: {
+        id: true,
+        // createdDate is the relevance tiebreak when folding results (FR-019)
+        createdDate: true,
+        settings: {
+          visibility: true,
+        },
+        framing: {
+          id: true,
+          collaboraDocument: {
+            id: true,
+          },
+        },
+        contributions: {
+          id: true,
+          collaboraDocument: {
+            id: true,
+          },
+        },
+        calloutsSet: {
+          id: true,
+          type: true,
+        },
+      },
+    });
+    const calloutIds = callouts.map(callout => callout.id);
+
+    const spaces = await this.entityManager.find(Space, {
+      where: {
+        collaboration: {
+          calloutsSet: {
+            callouts: {
+              id: In(calloutIds),
+            },
+          },
+        },
+      },
+      relations: {
+        collaboration: {
+          calloutsSet: {
+            callouts: {
+              framing: {
+                collaboraDocument: true,
+              },
+              contributions: {
+                collaboraDocument: true,
+              },
+            },
+          },
+        },
+      },
+      select: {
+        id: true,
+        level: true,
+        settings: {
+          collaboration: {
+            allowEventsFromSubspaces: true,
+            allowMembersToCreateCallouts: true,
+            allowMembersToCreateSubspaces: true,
+            inheritMembershipRights: true,
+            allowMembersToVideoCall: true,
+            allowGuestContributions: true,
+          },
+          membership: {
+            allowSubspaceAdminsToInviteMembers: true,
+            policy: true,
+          },
+          privacy: { allowPlatformSupportAsAdmin: true, mode: true },
+        },
+        visibility: true,
+        collaboration: {
+          id: true,
+          calloutsSet: {
+            id: true,
+            callouts: {
+              id: true,
+              framing: {
+                id: true,
+                collaboraDocument: {
+                  id: true,
+                },
+              },
+              contributions: {
+                id: true,
+                collaboraDocument: {
+                  id: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return collaboraDocuments
+      .map(collaboraDocument => {
+        let isContribution = false;
+        let callout = callouts.find(
+          callout =>
+            callout?.framing?.collaboraDocument?.id === collaboraDocument.id
+        );
+
+        if (!callout) {
+          isContribution = true;
+          callout = callouts.find(callout =>
+            callout?.contributions?.some(
+              contribution =>
+                contribution?.collaboraDocument?.id === collaboraDocument.id
+            )
+          );
+        }
+
+        if (!callout) {
+          this.logger.error(
+            {
+              message: 'Unable to find Callout parent for CollaboraDocument',
+              collaboraDocumentId: collaboraDocument.id,
+            },
+            undefined,
+            LogContext.SEARCH_EXTRACT
+          );
+          return undefined;
+        }
+
+        const space = spaces.find(space =>
+          space?.collaboration?.calloutsSet?.callouts?.some(
+            spaceCallout => spaceCallout.id === callout?.id
+          )
+        );
+
+        if (!space) {
+          this.logger.error(
+            {
+              message: 'Unable to find Space parent for CollaboraDocument',
+              collaboraDocumentId: collaboraDocument.id,
+            },
+            undefined,
+            LogContext.SEARCH_EXTRACT
+          );
+          return undefined;
+        }
+
+        return {
+          collaboraDocument,
+          isContribution,
+          callout,
+          space,
+        };
+      })
+      .filter((x): x is CollaboraDocumentParents => !!x)
+      .filter(
+        parent =>
+          parent.callout?.settings?.visibility !== CalloutVisibility.DRAFT
+      );
+  }
+
   private async getWhiteboardParents(
     whiteboards: Whiteboard[]
   ): Promise<WhiteboardParents[]> {
@@ -1094,6 +1388,8 @@ export class SearchResultService {
       },
       select: {
         id: true,
+        // createdDate is the relevance tiebreak when folding results (FR-019)
+        createdDate: true,
         settings: {
           visibility: true,
         },
@@ -1276,6 +1572,15 @@ export class SearchResultService {
   }
 }
 
+// a fresh, well-formed empty result set for categories that were not requested.
+// Returns a new object (and new results array) each call so buckets stay
+// independent and no downstream mutation can leak across them.
+const emptyResultSet = (): {
+  results: ISearchResult[];
+  cursor?: string;
+  total: number;
+} => ({ results: [], cursor: undefined, total: -1 });
+
 const buildResults = (
   filter?: SearchFilterInput,
   ...results: ISearchResult[][] | ISearchResult[]
@@ -1297,6 +1602,100 @@ const buildResults = (
   const rankedAndLimited = resultsRanked.slice(0, filter?.size);
 
   const cursor = calculateSearchCursor(rankedAndLimited);
+
+  return { results: rankedAndLimited, cursor, total };
+};
+
+// search results that carry a containing callout (and its space): the direct
+// callout hits plus the post/whiteboard/memo hits that fold up to a callout.
+type FoldableSearchResult = ISearchResult & {
+  callout: ISearchResultCallout['callout'];
+  space: ISearchResultCallout['space'];
+};
+
+/**
+ * Folds matching callouts and the containing callouts of matching
+ * posts/whiteboards/memos into a single callout-level list, deduped by callout
+ * id (FR-017). Each callout appears at most once regardless of how many of its
+ * children matched; the representative keeps the highest score among its
+ * matches. Ordered by relevance (score desc), then callout `createdDate` desc as
+ * the tiebreak (FR-019). The returned results carry the callout id as their
+ * `result.id` so the keyset cursor (`score::calloutId`) pages correctly.
+ */
+const buildFoldedCalloutResults = (
+  filter: SearchFilterInput | undefined,
+  callouts: ISearchResultCallout[],
+  posts: ISearchResultPost[],
+  whiteboards: ISearchResultWhiteboard[],
+  memos: ISearchResultMemo[],
+  collaboraDocuments: ISearchResultCollaboraDocument[]
+): { results: ISearchResult[]; cursor?: string; total: number } => {
+  // todo: total - https://github.com/alkem-io/server/issues/3700
+  const total = -1;
+
+  const foldable: FoldableSearchResult[] = [
+    ...callouts,
+    ...posts,
+    ...whiteboards,
+    ...memos,
+    ...collaboraDocuments,
+  ];
+
+  if (foldable.length === 0) {
+    return { results: [], cursor: undefined, total };
+  }
+
+  // dedupe by callout id, keeping the highest-scored representative
+  const byCalloutId = new Map<string, ISearchResultCallout>();
+  // remember the ES sort id (`id` field) of the document that actually matched
+  // for each callout's representative. Elasticsearch paginates the msearch on
+  // `[_score desc, id desc]` using each document's own id, so the keyset cursor
+  // MUST resume on that same id — NOT the callout id. When a child
+  // (post/whiteboard/memo) is the match, its id differs from the callout id;
+  // using the callout id makes `search_after` fail to exclude the child, which
+  // re-returns the same hit forever (endless client scroll).
+  const cursorIdByCalloutId = new Map<string, string>();
+
+  for (const hit of foldable) {
+    const callout = hit.callout;
+    if (!callout?.id) {
+      continue;
+    }
+    const existing = byCalloutId.get(callout.id);
+    if (existing && existing.score >= hit.score) {
+      continue;
+    }
+    // re-key the result to the containing callout for the response/dedupe...
+    byCalloutId.set(callout.id, {
+      id: callout.id,
+      score: hit.score,
+      terms: hit.terms,
+      type: SearchResultType.CALLOUT,
+      result: { id: callout.id },
+      callout,
+      space: hit.space,
+    });
+    // ...but keep the matched document's own id for the keyset cursor.
+    cursorIdByCalloutId.set(callout.id, hit.result.id);
+  }
+
+  const foldedResults = Array.from(byCalloutId.values());
+
+  // relevance first, then recency (newest createdDate) as the tiebreak (FR-019)
+  const resultsRanked = orderBy(
+    foldedResults,
+    ['score', callout => callout.callout?.createdDate?.getTime?.() ?? 0],
+    ['desc', 'desc']
+  );
+
+  const rankedAndLimited = resultsRanked.slice(0, filter?.size);
+
+  // build the cursor from the score + the matched document's ES sort id so
+  // `search_after` resumes at a real Elasticsearch sort position.
+  const last = rankedAndLimited.at(-1);
+  const cursor = last
+    ? `${last.score}::${cursorIdByCalloutId.get(last.callout.id)}`
+    : undefined;
 
   return { results: rankedAndLimited, cursor, total };
 };

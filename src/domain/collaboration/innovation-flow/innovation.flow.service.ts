@@ -1,5 +1,6 @@
 import { LogContext, ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { SpaceLevel } from '@common/enums/space.level';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { VisualType } from '@common/enums/visual.type';
 import {
@@ -15,6 +16,7 @@ import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { UpdateTagsetTemplateDefinitionInput } from '@domain/common/tagset-template';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 import { TagsetTemplateService } from '@domain/common/tagset-template/tagset.template.service';
+import { Space } from '@domain/space/space/space.entity';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -28,12 +30,14 @@ import { CreateInnovationFlowStateInput } from '../innovation-flow-state/dto/inn
 import { UpdateInnovationFlowStateInput } from '../innovation-flow-state/dto/innovation.flow.state.dto.update';
 import { IInnovationFlowState } from '../innovation-flow-state/innovation.flow.state.interface';
 import { InnovationFlowStateService } from '../innovation-flow-state/innovation.flow.state.service';
+import { normalizeStatesSettings } from '../innovation-flow-state/normalize.state.settings';
 import { sortBySortOrder } from '../innovation-flow-state/utils/sortBySortOrder';
 import { CreateInnovationFlowInput } from './dto/innovation.flow.dto.create';
 import { DeleteStateOnInnovationFlowInput } from './dto/innovation.flow.dto.state.delete';
 import { UpdateInnovationFlowCurrentStateInput } from './dto/innovation.flow.dto.state.select';
 import { UpdateInnovationFlowInput } from './dto/innovation.flow.dto.update';
 import { UpdateInnovationFlowStatesSortOrderInput } from './dto/innovation.flow.dto.update.states.sort.order';
+import { L0_FIXED_INNOVATION_FLOW_STATES } from './innovation.flow.constants';
 import { InnovationFlow } from './innovation.flow.entity';
 import { IInnovationFlow } from './innovation.flow.interface';
 
@@ -189,12 +193,24 @@ export class InnovationFlowService {
         }
       );
     }
-    // Reject comma-containing names on rename (commas are reserved separators)
-    this.validateStateDisplayNames([stateUpdatedData.displayName]);
+    // displayName is an optional partial update: only validate/rename when supplied.
+    const newDisplayName = stateUpdatedData.displayName;
+    if (newDisplayName != null) {
+      // Reject comma-containing names on rename (commas are reserved separators)
+      this.validateStateDisplayNames([newDisplayName]);
+      // Reject a rename that collides with another state. Posts are joined to their phase
+      // by display name, so duplicates make that join ambiguous: the settings of whichever
+      // phase sorts first would silently apply to both.
+      this.validateStateDisplayNameIsUnique(
+        newDisplayName,
+        states,
+        updatedState.id
+      );
+    }
 
     const renamedState =
-      updatedState.displayName !== stateUpdatedData.displayName
-        ? { old: updatedState.displayName, new: stateUpdatedData.displayName }
+      newDisplayName != null && updatedState.displayName !== newDisplayName
+        ? { old: updatedState.displayName, new: newDisplayName }
         : undefined;
 
     // Update the state with the new data
@@ -240,6 +256,105 @@ export class InnovationFlowService {
    * @param newStates
    * @returns
    */
+  /**
+   * Applies a set of template states to an InnovationFlow when a Space Template
+   * is applied (story #6177).
+   *
+   * For an L0 (root) space the first {@link L0_FIXED_INNOVATION_FLOW_STATES}
+   * "fixed phases" MUST NOT be overridden (FR-008): they are preserved by
+   * identity and leading order, and only the template's *additional* states
+   * (those not duplicating a fixed-phase name) are appended, capped at the
+   * flow's `maximumNumberOfStates`. If the combined unique set would exceed the
+   * maximum the apply is rejected atomically (FR-009) before any mutation.
+   *
+   * For subspaces (L1/L2) behavior is unchanged: a wholesale replacement via
+   * {@link updateInnovationFlowStates} (FR-011).
+   */
+  public async updateInnovationFlowStatesFromTemplate(
+    innovationFlow: IInnovationFlow,
+    templateStates: CreateInnovationFlowStateInput[]
+  ) {
+    const isLevelZero = await this.isLevelZeroInnovationFlow(innovationFlow.id);
+    if (!isLevelZero) {
+      // Subspace (or non-space) behavior is unchanged: replace all states.
+      return this.updateInnovationFlowStates(innovationFlow, templateStates);
+    }
+
+    if (!innovationFlow.states) {
+      throw new RelationshipNotFoundException(
+        'Unable to find states on InnovationFlow',
+        LogContext.INNOVATION_FLOW,
+        { innovationFlowId: innovationFlow.id }
+      );
+    }
+
+    // Preserve the leading fixed phases (by sort order) of the L0 space.
+    const fixedStates = [...innovationFlow.states]
+      .sort(sortBySortOrder)
+      .slice(0, L0_FIXED_INNOVATION_FLOW_STATES);
+    const fixedStateNames = new Set(
+      fixedStates.map(state => state.displayName)
+    );
+
+    const fixedStateInputs: CreateInnovationFlowStateInput[] = fixedStates.map(
+      state => ({
+        displayName: state.displayName,
+        description: state.description,
+        settings: state.settings,
+        sortOrder: state.sortOrder,
+      })
+    );
+
+    // Append only the template states that do not duplicate a fixed phase name,
+    // re-basing their sort order to come after the fixed phases.
+    const additionalStateInputs: CreateInnovationFlowStateInput[] = [
+      ...templateStates,
+    ]
+      .sort(sortBySortOrder)
+      .filter(state => !fixedStateNames.has(state.displayName))
+      .map((state, index) => ({
+        ...state,
+        sortOrder: L0_FIXED_INNOVATION_FLOW_STATES + index + 1,
+      }));
+
+    const combinedStates = [...fixedStateInputs, ...additionalStateInputs];
+
+    const maximumNumberOfStates = innovationFlow.settings.maximumNumberOfStates;
+    if (combinedStates.length > maximumNumberOfStates) {
+      throw new ValidationException(
+        'Applying this template would exceed the maximum number of states for this Space',
+        LogContext.INNOVATION_FLOW,
+        {
+          innovationFlowId: innovationFlow.id,
+          maximumNumberOfStates,
+          resultingStateCount: combinedStates.length,
+        }
+      );
+    }
+
+    return this.updateInnovationFlowStates(innovationFlow, combinedStates);
+  }
+
+  /**
+   * An InnovationFlow belongs to an L0 (root) space iff its owning Space has
+   * `level === 0`. Resolved via the entity manager (no module coupling), mirroring
+   * {@link getCollaborationByInnovationFlowId}. A flow with no owning Space row
+   * (e.g. a template content space) is treated as non-L0.
+   */
+  private async isLevelZeroInnovationFlow(
+    innovationFlowId: string
+  ): Promise<boolean> {
+    const spaceRepository =
+      this.innovationFlowRepository.manager.getRepository(Space);
+    const space = await spaceRepository.findOne({
+      where: {
+        collaboration: { innovationFlow: { id: innovationFlowId } },
+      },
+      select: { id: true, level: true },
+    });
+    return space?.level === SpaceLevel.L0;
+  }
+
   public async updateInnovationFlowStates(
     innovationFlow: IInnovationFlow,
     newStates: CreateInnovationFlowStateInput[]
@@ -356,6 +471,11 @@ export class InnovationFlowService {
         LogContext.INNOVATION_FLOW
       );
     }
+    // Posts join to their phase by display name, so a duplicate makes that join ambiguous.
+    this.validateStateDisplayNameIsUnique(
+      stateData.displayName,
+      innovationFlow.states
+    );
     if (innovationFlow.states.length >= maximumNumberOfStates) {
       throw new ValidationException(
         `Innovation Flow can have a maximum of ${maximumNumberOfStates} states; provided: ${innovationFlow.states.length}`,
@@ -516,7 +636,11 @@ export class InnovationFlowService {
         );
       }
     }
-    const stateNames = states.map(state => state.displayName);
+    // On an update input, an omitted displayName means "leave unchanged", so it carries no
+    // name to validate. Creation inputs always carry one.
+    const stateNames = states
+      .map(state => state.displayName)
+      .filter((displayName): displayName is string => displayName != null);
     const uniqueStateNames = new Set(stateNames);
     if (uniqueStateNames.size !== stateNames.length) {
       throw new ValidationException(
@@ -544,6 +668,42 @@ export class InnovationFlowService {
       throw new ValidationException(
         `Invalid characters found on flow state: ${stateNames}`,
         LogContext.INNOVATION_FLOW
+      );
+    }
+  }
+
+  /**
+   * Rejects a state display name that collides with an existing state in the same flow.
+   *
+   * `validateInnovationFlowDefinition` enforces uniqueness when a flow is created, but the
+   * incremental edit paths (rename, add state) bypassed it — so a flow could be edited into
+   * a state that creating it from scratch would have rejected.
+   *
+   * Uniqueness is load-bearing, not cosmetic: a post resolves its presentation settings by
+   * joining its flow-state classification on the phase *display name* (there is no stable
+   * phase id in the classification). Two phases sharing a name make that join ambiguous.
+   *
+   * Comparison is case-insensitive and trims surrounding whitespace, matching the
+   * collision check the client applies when adding a phase.
+   *
+   * @param excludeStateID the state being renamed, so it does not collide with itself
+   */
+  public validateStateDisplayNameIsUnique(
+    displayName: string,
+    existingStates: IInnovationFlowState[],
+    excludeStateID?: string
+  ) {
+    const normalized = displayName.trim().toLowerCase();
+    const collides = existingStates.some(
+      state =>
+        state.id !== excludeStateID &&
+        state.displayName?.trim().toLowerCase() === normalized
+    );
+    if (collides) {
+      throw new ValidationException(
+        'A state with this display name already exists in the Innovation Flow',
+        LogContext.INNOVATION_FLOW,
+        { displayName }
       );
     }
   }
@@ -668,8 +828,11 @@ export class InnovationFlowService {
       );
     }
 
-    // sort the states by sortOrder
-    return [...innovationFlow.states].sort(sortBySortOrder);
+    // sort the states by sortOrder, and normalize settings: these are raw TypeORM rows,
+    // so an un-backfilled row would serialize null into the NonNull settings fields.
+    return normalizeStatesSettings(
+      [...innovationFlow.states].sort(sortBySortOrder)
+    );
   }
 
   public async getCurrentState(
@@ -754,7 +917,8 @@ export class InnovationFlowService {
 
     await this.innovationFlowStateService.saveAll(modifiedStates);
 
-    return statesInOrder;
+    // This mutation returns [IInnovationFlowState!]! straight from the raw rows.
+    return normalizeStatesSettings(statesInOrder);
   }
 
   private async getCollaborationByInnovationFlowId(innovationFlowId: string) {

@@ -1,6 +1,5 @@
 import { LogContext, ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { BlobStoreKind } from '@common/enums/blob.store.kind';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
@@ -106,7 +105,7 @@ export class MemoService {
   /**
    * Writes the creation-time Yjs-V2 snapshot into the document's own storage
    * bucket (NULL per-file authz, mirroring the collaboration-service BlobStore)
-   * and records `contentPointer` / `blobStore` / `contentVersion` on the entity
+   * and records `contentPointer` / `contentVersion` on the entity
    * (R2/R4, FR-005). Shared by memo + whiteboard create. On a snapshot-write
    * failure the whole create is rolled back so a half-created document is never
    * returned.
@@ -129,7 +128,6 @@ export class MemoService {
         storageBucketId
       );
       memo.contentPointer = result.id;
-      memo.blobStore = BlobStoreKind.FILE_SERVICE;
       // The room owns the version once it persists; seed at 0 so the first
       // collaboration-save's room-owned version is adopted verbatim.
       memo.contentVersion = 0;
@@ -246,7 +244,6 @@ export class MemoService {
       storageBucketId
     );
     memo.contentPointer = result.id;
-    memo.blobStore = BlobStoreKind.FILE_SERVICE;
     const saved = await this.save(memo);
 
     if (previousPointer && previousPointer !== result.id) {
@@ -287,7 +284,6 @@ export class MemoService {
         id: true,
         contentVersion: true,
         contentPointer: true,
-        blobStore: true,
         authorization: { id: true },
         profile: { id: true, storageBucket: { id: true } },
       },
@@ -300,7 +296,6 @@ export class MemoService {
       // Coerce DB NULLs (e.g. after `deleteCollaborationMetadata`) to
       // `undefined` so the contract reply shape stays `string | undefined`.
       contentPointer: memo.contentPointer ?? undefined,
-      blobStore: memo.blobStore ?? undefined,
       authorizationPolicyId: memo.authorization?.id,
       // The memo's OWN storage bucket (via its profile) — the collab service
       // persists this doc's snapshot into this bucket, not a flat platform one.
@@ -310,7 +305,7 @@ export class MemoService {
 
   /**
    * Upserts the unified collaboration metadata/index for a memo (FR-003): the
-   * contract `version` + `contentPointer` + `blobStore`. The room owns the
+   * contract `version` + `contentPointer`. The room owns the
    * version (`contracts/persistence-ports.md`), so the value it sends is
    * PERSISTED verbatim into `contentVersion` and round-tripped back on fetch —
    * the server does NOT substitute its own counter. The inherited TypeORM
@@ -331,17 +326,24 @@ export class MemoService {
     });
 
     // Index-only write: persist the room-owned contract version verbatim into
-    // `contentVersion` (NOT the `@VersionColumn`), plus the pointer + store.
-    // The inline blob (`content`) is never touched here — it does not cross the
-    // unified bus.
+    // `contentVersion` (NOT the `@VersionColumn`). The inline blob is never
+    // touched here — it does not cross the unified bus.
+    //
+    // `contentPointer` is produced solely by the checkpoint store's metapointer
+    // `Record` (on establishment/recreation); PreRegister and Room.persist omit it.
+    // A blank/omitted pointer on a save means UNCHANGED — set it only when a real
+    // pointer is present; otherwise preserve the stored one. Overwriting it with
+    // blank would orphan the content (incl. on a redelivered partial save).
+    const set: { contentVersion: number; contentPointer?: string } = {
+      contentVersion: update.version,
+    };
+    if (update.contentPointer) {
+      set.contentPointer = update.contentPointer;
+    }
     await this.memoRepository
       .createQueryBuilder()
       .update(Memo)
-      .set({
-        contentVersion: update.version,
-        contentPointer: update.contentPointer,
-        blobStore: update.blobStore,
-      })
+      .set(set)
       .where('id = :id', { id: memoId })
       .execute();
 
@@ -354,7 +356,6 @@ export class MemoService {
         id: true,
         contentVersion: true,
         contentPointer: true,
-        blobStore: true,
         authorization: { id: true },
       },
     })) as Memo;
@@ -362,7 +363,6 @@ export class MemoService {
     return {
       version: memo.contentVersion ?? 0,
       contentPointer: memo.contentPointer ?? undefined,
-      blobStore: memo.blobStore ?? undefined,
       authorizationPolicyId: memo.authorization?.id,
     };
   }
@@ -414,7 +414,6 @@ export class MemoService {
       select: {
         id: true,
         contentPointer: true,
-        blobStore: true,
         profile: { id: true, storageBucket: { id: true } },
       },
     });
@@ -467,7 +466,6 @@ export class MemoService {
       .set({
         contentVersion: null as any,
         contentPointer: null as any,
-        blobStore: null as any,
       })
       .where('id = :id', { id: memoId })
       .execute();

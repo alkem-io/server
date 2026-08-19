@@ -42,6 +42,7 @@ export enum AuthorizationPolicyType {
   ORGANIZATION = 'organization',
   ORGANIZATION_VERIFICATION = 'organization-verification',
   VIRTUAL_CONTRIBUTOR = 'virtual-contributor',
+  VIRTUAL_ASSISTANT = 'virtual-assistant',
   SPACE = 'space',
   SPACE_ABOUT = 'space-about',
   ACCOUNT = 'account',

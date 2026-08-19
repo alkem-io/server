@@ -1,5 +1,3 @@
-import { BlobStoreKind } from '@common/enums/blob.store.kind';
-
 /**
  * The unified collaboration metadata/index projection over a Memo / Whiteboard
  * row (data-model.md §CollaborationMetadata). v1 realizes this as columns on
@@ -19,7 +17,6 @@ export interface CollaborationMetadata {
    */
   version: number;
   contentPointer?: string;
-  blobStore?: BlobStoreKind;
   /** the entity's own AuthorizationPolicy.id (= `authorizationId`), FR-005. */
   authorizationPolicyId?: string;
   /**
@@ -41,6 +38,13 @@ export interface CollaborationMetadataUpdate {
    * does NOT substitute its own counter.
    */
   version: number;
-  contentPointer: string;
-  blobStore: BlobStoreKind;
+  /**
+   * The file-service snapshot pointer. Its SOLE producer is the checkpoint store's
+   * metapointer `Record` (on first establishment / recreation), which emits the
+   * `collaboration-save` that carries it. `PreRegister` and `Room.persist` always
+   * OMIT it. So a blank / undefined pointer on a save means UNCHANGED — the server
+   * sets it only when present and preserves the stored one otherwise, never nulling
+   * it (which would orphan the content). Atomic first-release contract — no echo/readback.
+   */
+  contentPointer?: string;
 }

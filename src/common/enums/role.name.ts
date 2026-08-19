@@ -13,8 +13,10 @@ export enum RoleName {
   GLOBAL_SPACES_READER = 'global-spaces-reader',
   GLOBAL_PLATFORM_MANAGER = 'global-platform-manager',
   GLOBAL_SUPPORT_MANAGER = 'global-support-manager',
+  PLATFORM_OPERATIONS_ADMIN = 'platform-operations-admin', // operational & maintenance actions on the platform
   PLATFORM_BETA_TESTER = 'platform-beta-tester',
   PLATFORM_VC_CAMPAIGN = 'platform-vc-campaign',
+  PLATFORM_ASSISTANT_ACCESS = 'platform-assistant-access',
   REGISTERED = 'registered',
   GUEST = 'guest',
   ANONYMOUS = 'anonymous',

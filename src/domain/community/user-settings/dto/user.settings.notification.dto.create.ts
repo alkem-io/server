@@ -3,6 +3,7 @@ import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
 import { CreateUserSettingsNotificationOrganizationInput } from './user.settings.notification.organization.dto.create';
 import { CreateUserSettingsNotificationPlatformInput } from './user.settings.notification.platform.dto.create';
+import { CreateUserSettingsNotificationSoundInput } from './user.settings.notification.sound.dto.create';
 import { CreateUserSettingsNotificationSpaceInput } from './user.settings.notification.space.dto.create';
 import { CreateUserSettingsNotificationUserInput } from './user.settings.notification.user.dto.create';
 import { CreateUserSettingsNotificationVirtualContributorInput } from './user.settings.notification.virtual.contributor.dto.create';
@@ -48,4 +49,12 @@ export class CreateUserSettingsNotificationInput {
   @ValidateNested()
   @Type(() => CreateUserSettingsNotificationSpaceInput)
   space?: CreateUserSettingsNotificationSpaceInput;
+
+  @Field(() => CreateUserSettingsNotificationSoundInput, {
+    nullable: true,
+    description: 'Settings related to notification sound playback.',
+  })
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationSoundInput)
+  sound?: CreateUserSettingsNotificationSoundInput;
 }

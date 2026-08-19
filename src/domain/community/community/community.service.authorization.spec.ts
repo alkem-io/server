@@ -1,3 +1,5 @@
+import { CREDENTIAL_RULE_SUBSPACE_NON_MEMBER_JOIN } from '@common/constants';
+import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { RoleSetType } from '@common/enums/role.set.type';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
@@ -33,6 +35,7 @@ describe('CommunityAuthorizationService', () => {
     getCredentialsForRoleWithParents: Mock;
     getCredentialForRole: Mock;
     getDirectParentCredentialForRole: Mock;
+    getCombinedApplicationEligibleCriteria: Mock;
   };
   let platformRolesAccessService: {
     getCredentialsForRolesWithAccess: Mock;
@@ -351,6 +354,79 @@ describe('CommunityAuthorizationService', () => {
       expect(
         authorizationPolicyService.createCredentialRule
       ).toHaveBeenCalled();
+    });
+
+    it('should surface JOIN to the eligible non-parent-member population for an open-join subspace (feature 017 round 2)', async () => {
+      const authorization = { credentialRules: [] };
+      const community = {
+        id: 'comm-1',
+        communication: { id: 'comms-1', updates: { id: 'upd-1' } },
+        roleSet: { id: 'rs-1', type: RoleSetType.SPACE },
+        groups: [],
+        authorization,
+      };
+      communityService.getCommunityOrFail.mockResolvedValue(community);
+      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(
+        authorization
+      );
+      authorizationPolicyService.createCredentialRuleUsingTypesOnly.mockReturnValue(
+        { cascade: false }
+      );
+      authorizationPolicyService.createCredentialRule.mockReturnValue({
+        cascade: false,
+      });
+      authorizationPolicyService.appendCredentialAuthorizationRules.mockReturnValue(
+        authorization
+      );
+      communicationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        [authorization]
+      );
+      roleSetService.getCredentialsForRoleWithParents.mockResolvedValue([]);
+      roleSetService.getDirectParentCredentialForRole.mockResolvedValue({
+        type: 'space_member',
+        resourceID: 'parent-space-id',
+      });
+      // The whole granted-into chain is public + opted in ⇒ the entire
+      // registered platform is eligible to directly join (mirrors APPLY).
+      roleSetService.getCombinedApplicationEligibleCriteria.mockResolvedValue({
+        kind: 'globalRegistered',
+      });
+      platformRolesAccessService.getCredentialsForRolesWithAccess.mockReturnValue(
+        []
+      );
+      roleSetAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([
+        authorization,
+      ]);
+
+      const spaceSettings = {
+        privacy: { mode: 'public' },
+        membership: {
+          policy: CommunityMembershipPolicy.OPEN,
+          trustedOrganizations: [],
+          allowSubspaceAdminsToInviteMembers: true,
+        },
+      };
+      await service.applyAuthorizationPolicy(
+        'comm-1',
+        {} as any,
+        { roles: [] } as any,
+        false,
+        spaceSettings as any,
+        true // isSubspace
+      );
+
+      // The combined-eligibility predicate is consulted for the OPEN subspace...
+      expect(
+        roleSetService.getCombinedApplicationEligibleCriteria
+      ).toHaveBeenCalled();
+      // ...and a GLOBAL_REGISTERED JOIN rule is added for the non-member.
+      expect(
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly
+      ).toHaveBeenCalledWith(
+        [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_JOIN],
+        [AuthorizationCredential.GLOBAL_REGISTERED],
+        CREDENTIAL_RULE_SUBSPACE_NON_MEMBER_JOIN
+      );
     });
 
     it('should apply subspace policy with parent member apply for applications membership', async () => {

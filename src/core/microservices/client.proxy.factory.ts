@@ -8,8 +8,11 @@ const QUEUE_CONTEXT_MAP: { [key in MessagingQueue]?: LogContext } = {
   [MessagingQueue.AUTH_RESET]: LogContext.AUTH,
 };
 
-export const clientProxyFactory = (queue: MessagingQueue, durable = true) => {
-  const context = QUEUE_CONTEXT_MAP[queue];
+export const clientProxyFactory = (
+  queue: MessagingQueue | string,
+  durable = true
+) => {
+  const context = QUEUE_CONTEXT_MAP[queue as MessagingQueue];
   return async (
     logger: LoggerService,
     configService: ConfigService<AlkemioConfig, true>

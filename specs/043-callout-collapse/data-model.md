@@ -22,7 +22,7 @@ New settings sub-object nested within `ISpaceSettings`.
 
 | Field | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| calloutDescriptionDisplayMode | CalloutDescriptionDisplayMode | Yes | COLLAPSED (new) / EXPANDED (existing) | Default display mode for callout descriptions in this space |
+| calloutDescriptionDisplayMode | CalloutDescriptionDisplayMode | Yes | EXPANDED | Default display mode for callout descriptions in this space |
 
 **Location**: `src/domain/space/space.settings/space.settings.layout.interface.ts`
 
@@ -92,6 +92,7 @@ WHERE "settings" ->> 'layout' IS NOT NULL
 
 | Context | Default Value | Rationale |
 | --- | --- | --- |
-| New space (no template value) | `COLLAPSED` | New spaces benefit from compact layout |
+| New space (no template value) | `EXPANDED` | Callout descriptions visible out-of-the-box; matches platform default templates and runtime fallback |
 | Existing space (migration) | `EXPANDED` | Preserves current behavior |
+| Platform default templates | `EXPANDED` | Set explicitly on the four platform-level default templates so platform-provisioned spaces default to `EXPANDED` |
 | Missing field (runtime fallback) | `EXPANDED` | Defensive default matching pre-feature behavior |

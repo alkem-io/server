@@ -30,6 +30,7 @@ export * from './roleset/lead.organizations.by.role.set.loader.creator';
 export * from './roleset/lead.users.by.role.set.loader.creator';
 export * from './roleset.application.loader.creator';
 export * from './space/space.about.loader.creator';
+export * from './space/space.activity-score.loader.creator';
 export * from './space/space.by.space.about.id.loader.creator';
 export * from './space/space.collaboration.loader.creator';
 export * from './space/space.community.loader.creator';

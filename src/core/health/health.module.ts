@@ -1,7 +1,8 @@
-import { Module } from '@nestjs/common';
+import { createRedisClient } from '@core/redis/redis.client.factory';
+import { LoggerService, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import type { AlkemioConfig } from '@src/types';
-import Redis from 'ioredis';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { HealthController } from './health.controller';
 import { HealthService } from './health.service';
 import { HEALTH_JWKS_HANDLE, HEALTH_REDIS_HANDLE } from './health.tokens';
@@ -26,22 +27,29 @@ import { createJwksFreshnessHandle } from './jwks-freshness';
     HealthService,
     {
       provide: HEALTH_REDIS_HANDLE,
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService<AlkemioConfig, true>) => {
-        const { host, port } = configService.get('storage.redis', {
-          infer: true,
-        });
-        // Lazy-connect so a Redis outage at boot doesn't crash the probe
-        // surface — the PING in HealthService will surface as `unhealthy`
-        // until the connection comes back.
-        return new Redis({
-          host,
-          port: Number(port),
-          lazyConnect: true,
-          maxRetriesPerRequest: 1,
-          connectTimeout: 500,
-          enableOfflineQueue: false,
-        });
+      inject: [ConfigService, WINSTON_MODULE_NEST_PROVIDER],
+      useFactory: (
+        configService: ConfigService<AlkemioConfig, true>,
+        logger: LoggerService
+      ) => {
+        // server#6332 — this client was already correct; it was the ONLY one
+        // that was. Its four options are now the factory's defaults, so it is
+        // built through the factory purely so that no `new Redis()` survives
+        // outside it (FR-007, SC-009). A second correct hand-rolled client is
+        // exactly how the next incorrect one gets written.
+        //
+        // `lazyConnect` stays, expressed as a factory option rather than by
+        // bypassing the factory (FR-014): a Redis outage at boot must not crash
+        // the probe surface — the PING in HealthService surfaces as `unhealthy`
+        // until the connection comes back. Note the cost that option carries:
+        // combined with `enableOfflineQueue: false` the FIRST command fails
+        // unconditionally, which a probe that re-runs tolerates and the request
+        // path would not. Hence opt-in.
+        return createRedisClient(
+          configService.get('storage.redis', { infer: true }),
+          logger,
+          { purpose: 'health', lazyConnect: true }
+        );
       },
     },
     {

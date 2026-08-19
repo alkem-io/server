@@ -1,5 +1,8 @@
+import { GLOBAL_POLICY_ADMIN_COMMUNICATION_GRANT } from '@common/constants/authorization/global.policy.constants';
+import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -10,6 +13,7 @@ import { AdminCommunicationService } from './admin.communication.service';
 describe('AdminCommunicationResolverMutations', () => {
   let resolver: AdminCommunicationResolverMutations;
   let authorizationService: Record<string, Mock>;
+  let authorizationPolicyService: Record<string, Mock>;
   let adminCommunicationService: Record<string, Mock>;
 
   const actorContext = { actorID: 'actor-1' } as any as ActorContext;
@@ -25,6 +29,7 @@ describe('AdminCommunicationResolverMutations', () => {
 
     resolver = module.get(AdminCommunicationResolverMutations);
     authorizationService = module.get(AuthorizationService) as any;
+    authorizationPolicyService = module.get(AuthorizationPolicyService) as any;
     adminCommunicationService = module.get(AdminCommunicationService) as any;
   });
 
@@ -117,6 +122,123 @@ describe('AdminCommunicationResolverMutations', () => {
         adminCommunicationService.migrateConversationRooms
       ).toHaveBeenCalled();
       expect(result).toEqual(migrateResult);
+    });
+  });
+
+  // These tests pin the grant set of the synthetic comms policy. They exist
+  // because that grant set is deliberately NARROWER than the platform
+  // authorization policy: the other global roles (GLOBAL_SUPPORT here, and
+  // GLOBAL_LICENSE_MANAGER on the platform policy, which is not an
+  // AuthorizationRoleGlobal so cannot be asserted against directly) hold
+  // PLATFORM_OPERATIONS_ADMIN platform-wide but have never been able to run
+  // the adminCommunication* mutations, which act directly on Matrix rooms
+  // across every Space. The gate privilege is granted on THIS synthetic
+  // policy only; if a future change swaps in the platform policy, these
+  // tests fail rather than silently widening access. Widening is a product
+  // decision — if you are here because a test failed, get sign-off before
+  // updating the expectations.
+  describe('authorization policy', () => {
+    it('grants the comms gate to GLOBAL_ADMIN and PLATFORM_OPERATIONS_ADMIN only', () => {
+      expect(
+        authorizationPolicyService.createGlobalRolesAuthorizationPolicy
+      ).toHaveBeenCalledWith(
+        [
+          AuthorizationRoleGlobal.GLOBAL_ADMIN,
+          AuthorizationRoleGlobal.PLATFORM_OPERATIONS_ADMIN,
+        ],
+        [
+          AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
+          AuthorizationPrivilege.GRANT,
+          AuthorizationPrivilege.PLATFORM_ADMIN,
+        ],
+        GLOBAL_POLICY_ADMIN_COMMUNICATION_GRANT
+      );
+    });
+
+    it('does not grant the comms family to GLOBAL_SUPPORT or GLOBAL_COMMUNITY_READ', () => {
+      const [roles] =
+        authorizationPolicyService.createGlobalRolesAuthorizationPolicy.mock
+          .calls[0];
+      expect(roles).not.toContain(AuthorizationRoleGlobal.GLOBAL_SUPPORT);
+      expect(roles).not.toContain(
+        AuthorizationRoleGlobal.GLOBAL_COMMUNITY_READ
+      );
+    });
+
+    it.each([
+      [
+        'adminCommunicationEnsureAccessToCommunications',
+        () =>
+          resolver.adminCommunicationEnsureAccessToCommunications(
+            {} as any,
+            actorContext
+          ),
+      ],
+      [
+        'adminCommunicationRemoveOrphanedRoom',
+        () =>
+          resolver.adminCommunicationRemoveOrphanedRoom(
+            {} as any,
+            actorContext
+          ),
+      ],
+      [
+        'adminCommunicationUpdateRoomState',
+        () =>
+          resolver.adminCommunicationUpdateRoomState(
+            { roomID: 'room-1', isPublic: true, isWorldVisible: true } as any,
+            actorContext
+          ),
+      ],
+      [
+        'adminCommunicationMigrateOrphanedConversations',
+        () =>
+          resolver.adminCommunicationMigrateOrphanedConversations(actorContext),
+      ],
+      [
+        'adminCommunicationSyncSpaceHierarchy',
+        () => resolver.adminCommunicationSyncSpaceHierarchy(actorContext),
+      ],
+    ])('%s checks PLATFORM_OPERATIONS_ADMIN against the comms policy', async (_name, invoke) => {
+      // The policy the resolver actually holds — asserting reference
+      // identity here is the point: these mutations must never be gated on
+      // the platform authorization policy, which has a wider grant set.
+      const commsPolicy = (resolver as any).communicationGlobalAdminPolicy;
+
+      await invoke();
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledTimes(1);
+      const [ctx, policy, privilege, reason] =
+        authorizationService.grantAccessOrFail.mock.calls[0];
+      expect(ctx).toBe(actorContext);
+      expect(policy).toBe(commsPolicy);
+      expect(privilege).toBe(AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN);
+      expect(typeof reason).toBe('string');
+    });
+
+    it.each([
+      [
+        'adminCommunicationRemoveOrphanedRoom',
+        () =>
+          resolver.adminCommunicationRemoveOrphanedRoom(
+            {} as any,
+            actorContext
+          ),
+        () => adminCommunicationService.removeOrphanedRoom,
+      ],
+      [
+        'adminCommunicationMigrateOrphanedConversations',
+        () =>
+          resolver.adminCommunicationMigrateOrphanedConversations(actorContext),
+        () => adminCommunicationService.migrateConversationRooms,
+      ],
+    ])('%s does not run when the authorization check fails', async (_name, invoke, service) => {
+      authorizationService.grantAccessOrFail.mockImplementation(() => {
+        throw new Error('Forbidden');
+      });
+
+      await expect(invoke()).rejects.toThrow('Forbidden');
+      expect(service()).not.toHaveBeenCalled();
     });
   });
 });

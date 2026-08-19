@@ -1,13 +1,7 @@
 import { LogContext } from '@common/enums';
 import { isDefined } from '@common/utils';
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@constants/index';
-import { Client as ElasticClient } from '@elastic/elasticsearch';
-import {
-  ErrorResponseBase,
-  MsearchMultiSearchItem,
-  MsearchResponse,
-  MsearchResponseItem,
-} from '@elastic/elasticsearch/lib/api/types';
+import { Client as ElasticClient, estypes } from '@elastic/elasticsearch';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { getIndexPattern } from '@services/api/search/ingest/get.index.pattern';
@@ -68,6 +62,11 @@ const getIndexStore = (
       type: SearchResultType.WHITEBOARD,
       category: SearchCategory.FRAMINGS,
     },
+    {
+      name: `${indexPattern}office-document`,
+      type: SearchResultType.COLLABORA_DOCUMENT,
+      category: SearchCategory.FRAMINGS,
+    },
   ],
   [SearchCategory.CONTRIBUTIONS]: [
     {
@@ -83,6 +82,11 @@ const getIndexStore = (
     {
       name: `${indexPattern}whiteboards`,
       type: SearchResultType.WHITEBOARD,
+      category: SearchCategory.CONTRIBUTIONS,
+    },
+    {
+      name: `${indexPattern}office-document`,
+      type: SearchResultType.COLLABORA_DOCUMENT,
       category: SearchCategory.CONTRIBUTIONS,
     },
   ],
@@ -113,6 +117,11 @@ const getPublicIndexStore = (
       type: SearchResultType.WHITEBOARD,
       category: SearchCategory.FRAMINGS,
     },
+    {
+      name: `${indexPattern}office-document`,
+      type: SearchResultType.COLLABORA_DOCUMENT,
+      category: SearchCategory.FRAMINGS,
+    },
   ],
   [SearchCategory.CONTRIBUTIONS]: [
     {
@@ -130,6 +139,11 @@ const getPublicIndexStore = (
       type: SearchResultType.WHITEBOARD,
       category: SearchCategory.CONTRIBUTIONS,
     },
+    {
+      name: `${indexPattern}office-document`,
+      type: SearchResultType.COLLABORA_DOCUMENT,
+      category: SearchCategory.CONTRIBUTIONS,
+    },
   ],
 });
 
@@ -143,11 +157,13 @@ const allowedTypesPerCategory: Record<SearchCategory, SearchResultType[]> = {
   [SearchCategory.FRAMINGS]: [
     SearchResultType.MEMO,
     SearchResultType.WHITEBOARD,
+    SearchResultType.COLLABORA_DOCUMENT,
   ],
   [SearchCategory.CONTRIBUTIONS]: [
     SearchResultType.POST,
     SearchResultType.WHITEBOARD,
     SearchResultType.MEMO,
+    SearchResultType.COLLABORA_DOCUMENT,
   ],
 };
 
@@ -186,8 +202,18 @@ export class SearchExtractService {
       throw new Error('Elasticsearch client not initialized');
     }
 
-    const { terms, searchInSpaceFilter, filters } = searchData;
-    const indicesToSearchOn = this.getIndices(onlyPublicResults, filters);
+    const {
+      terms,
+      searchInSpaceFilter,
+      searchInFlowStateFilter,
+      filters,
+      foldCalloutResources,
+    } = searchData;
+    const indicesToSearchOn = this.getIndices(
+      onlyPublicResults,
+      filters,
+      foldCalloutResources
+    );
 
     if (indicesToSearchOn.length === 0) {
       return [];
@@ -196,6 +222,7 @@ export class SearchExtractService {
     // execute search per category
     const result = await this.executeMultiSearch(indicesToSearchOn, terms, {
       searchInSpaceFilter,
+      searchInFlowStateFilter,
       filters,
       sizeMultiplier: SIZE_MULTIPLIER,
     });
@@ -205,7 +232,8 @@ export class SearchExtractService {
 
   private getIndices(
     onlyPublicResults = false,
-    filters?: SearchFilterInput[]
+    filters?: SearchFilterInput[],
+    foldCalloutResources = false
   ): SearchIndex[] {
     const categories = filters
       ?.map(filter => filter.category)
@@ -235,19 +263,87 @@ export class SearchExtractService {
           )
         : filteredIndicesByCategory;
 
+    // foldCalloutResources widens a Callout search so framing resources and
+    // contributions (post/whiteboard/memo) are matched too and fold up to their
+    // containing callout. We must therefore also query those indices even though
+    // they belong to other categories; the type filter above would otherwise
+    // strip them. Bypasses it by appending here, deduped by index name.
+    const indicesToSearchOn = foldCalloutResources
+      ? this.withCalloutResourceIndices(
+          filteredIndicesByCategoryAndType,
+          categories
+        )
+      : filteredIndicesByCategoryAndType;
+
     if (onlyPublicResults) {
       const publicIndices = Object.values(
         getPublicIndexStore(this.indexPattern)
       ).flat();
       // if we want only public results - filter the public indices with the user defined filter
       return intersectionWith(
-        filteredIndicesByCategoryAndType,
+        indicesToSearchOn,
         publicIndices,
         (a, b) => a.name === b.name
       );
     }
     // these indices may include private data
-    return filteredIndicesByCategoryAndType;
+    return indicesToSearchOn;
+  }
+
+  /**
+   * Appends the post/whiteboard/memo indices so a Callout search (the
+   * COLLABORATION_TOOLS category) also matches in the framing resources and
+   * contributions that fold up to a callout. The single whiteboards/memos
+   * indices hold both framing- and contribution-level instances, so each index
+   * is needed at most once. No-op unless Callouts are in scope (collaboration
+   * tools requested, or no category filter — meaning all categories). Deduped by
+   * index name to avoid searching an already-included index twice.
+   */
+  private withCalloutResourceIndices(
+    indices: SearchIndex[],
+    categories?: SearchCategory[]
+  ): SearchIndex[] {
+    const calloutsInScope =
+      !categories ||
+      categories.length === 0 ||
+      categories.includes(SearchCategory.COLLABORATION_TOOLS);
+    if (!calloutsInScope) {
+      return indices;
+    }
+
+    const indexStore = getIndexStore(this.indexPattern);
+    const resourceIndices = [
+      ...indexStore[SearchCategory.CONTRIBUTIONS],
+      ...indexStore[SearchCategory.FRAMINGS],
+    ];
+
+    const existingNames = new Set(indices.map(index => index.name));
+    const additions = resourceIndices
+      .filter(index => {
+        if (existingNames.has(index.name)) {
+          return false;
+        }
+        existingNames.add(index.name);
+        return true;
+      })
+      // Re-tag the appended indices to COLLABORATION_TOOLS so msearch folds them
+      // into the SAME sub-query as the callouts index. msearch groups indices by
+      // `category` into independent sub-queries, each with its OWN `search_after`.
+      // The fold returns a single callout-level cursor (carried by the client
+      // under the collaboration-tools filter). If these stayed under
+      // CONTRIBUTIONS/FRAMINGS they would be separate sub-queries whose
+      // `search_after` is never populated (those buckets are folded away, so no
+      // cursor is sent) — they restart at hit 0 every page and re-return the same
+      // folded hits forever (endless client scroll on contributions). Merging
+      // them gives one global `[_score desc, id desc]` sort that the single
+      // cursor paginates correctly. Result grouping is by `type`, not `category`,
+      // so folding on the result side is unaffected.
+      .map(index => ({
+        ...index,
+        category: SearchCategory.COLLABORATION_TOOLS,
+      }));
+
+    return [...indices, ...additions];
   }
 
   /***
@@ -267,10 +363,11 @@ export class SearchExtractService {
     terms: string[],
     options?: {
       searchInSpaceFilter?: string;
+      searchInFlowStateFilter?: string;
       filters?: SearchFilterInput[];
       sizeMultiplier: number;
     }
-  ): Promise<MsearchResponse<BaseSearchHit>> {
+  ): Promise<estypes.MsearchResponse<BaseSearchHit>> {
     if (!this.client) {
       throw new Error('Elasticsearch client not initialized');
     }
@@ -279,15 +376,31 @@ export class SearchExtractService {
       throw new Error('No indices to search on');
     }
 
-    const { searchInSpaceFilter, filters, sizeMultiplier } = options ?? {};
+    const {
+      searchInSpaceFilter,
+      searchInFlowStateFilter,
+      filters,
+      sizeMultiplier,
+    } = options ?? {};
 
     const term = terms.join(' ');
     // the main search query built using query DSL
     const query = buildSearchQuery(term, {
       spaceIdFilter: searchInSpaceFilter,
+      flowStateIdFilter: searchInFlowStateFilter,
     });
 
-    const categoriesRequested = filters?.length ?? 0;
+    // Budget the default per-category size off the categories actually being
+    // queried, not just the explicit filters: foldCalloutResources appends the
+    // CONTRIBUTIONS/FRAMINGS indices on top of the requested COLLABORATION_TOOLS
+    // filter, and those folded categories would otherwise each take the full
+    // default size and overfetch. For non-folding searches this equals
+    // filters.length, so behaviour is unchanged.
+    const categoriesQueried = new Set(
+      indicesToSearchOn.map(index => index.category)
+    ).size;
+    const categoriesRequested =
+      categoriesQueried || (filters?.length ?? 0) || 1;
     const searchRequests = buildMultiSearchRequestItems(
       indicesToSearchOn,
       query,
@@ -308,10 +421,14 @@ export class SearchExtractService {
   }
 
   private processMultiSearchResponses(
-    responses: MsearchResponseItem<BaseSearchHit>[]
+    responses: estypes.MsearchResponseItem<BaseSearchHit>[]
   ): ISearchResult[] {
     const results = responses.flatMap(
-      (response: MsearchMultiSearchItem<BaseSearchHit> | ErrorResponseBase) => {
+      (
+        response:
+          | estypes.MsearchMultiSearchItem<BaseSearchHit>
+          | estypes.ErrorResponseBase
+      ) => {
         if (isElasticError(response)) {
           this.processMultiSearchError(response);
           return undefined;
@@ -325,7 +442,7 @@ export class SearchExtractService {
   }
 
   private processMultiSearchItem(
-    item: MsearchMultiSearchItem<BaseSearchHit>
+    item: estypes.MsearchMultiSearchItem<BaseSearchHit>
   ): ISearchResult[] {
     return item.hits.hits.map<ISearchResult>(hit => {
       const entityId = hit.fields?.id?.[0];
@@ -352,7 +469,7 @@ export class SearchExtractService {
         id: hit._id ?? 'N/A',
         score: hit._score ?? -1,
         type,
-        terms: [], // todo - https://github.com/alkem-io/server/issues/3702
+        terms: extractMatchedTerms(hit.highlight),
         result: {
           id: entityId ?? 'N/A',
         },
@@ -360,7 +477,7 @@ export class SearchExtractService {
     });
   }
 
-  private processMultiSearchError(error: ErrorResponseBase): void {
+  private processMultiSearchError(error: estypes.ErrorResponseBase): void {
     this.logger.error(
       {
         message: 'Error response for multi search request',
@@ -371,3 +488,30 @@ export class SearchExtractService {
     );
   }
 }
+
+/**
+ * Pulls the distinct matched terms out of a hit's highlight fragments
+ * (server#3702). ES wraps each matched token in `<em>...</em>` (the default
+ * tags); the tokens are the document's own words — for fuzzy matches this is
+ * the actual (possibly misspelled) term that matched, i.e. the real reason the
+ * document surfaced. A field is only highlightable when ES holds a retrievable
+ * copy of it (`_source` or `store: true` — office-document `content` uses the
+ * latter); a matched field without one contributes no terms.
+ */
+const extractMatchedTerms = (
+  highlight: Record<string, string[]> | undefined
+): string[] => {
+  if (!highlight) {
+    return [];
+  }
+
+  const terms = new Set<string>();
+  for (const fragments of Object.values(highlight)) {
+    for (const fragment of fragments) {
+      for (const match of fragment.matchAll(/<em>(.+?)<\/em>/g)) {
+        terms.add(match[1].toLowerCase());
+      }
+    }
+  }
+  return [...terms];
+};

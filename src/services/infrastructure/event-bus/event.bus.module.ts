@@ -1,10 +1,11 @@
 import { RabbitMQResilienceService } from '@core/microservices/rabbitmq.resilience.service';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
-import { Global, Module, OnModuleInit } from '@nestjs/common';
+import { Global, LoggerService, Module, OnModuleInit } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CqrsModule, EventBus } from '@nestjs/cqrs';
 import { AiServerModule } from '@services/ai-server/ai-server/ai.server.module';
 import { AlkemioConfig } from '@src/types';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Handlers } from './handlers';
 import { HandleMessages } from './messages';
 import { Publisher } from './publisher';
@@ -19,10 +20,15 @@ import { Subscriber } from './subscriber';
     RabbitMQConnectionModule,
     RabbitMQModule.forRootAsync({
       imports: [ConfigModule, RabbitMQConnectionModule],
-      inject: [ConfigService, RabbitMQConnectionFactory],
+      inject: [
+        ConfigService,
+        RabbitMQConnectionFactory,
+        WINSTON_MODULE_NEST_PROVIDER,
+      ],
       useFactory: async (
         configService: ConfigService<AlkemioConfig, true>,
-        connectionFactory: RabbitMQConnectionFactory
+        connectionFactory: RabbitMQConnectionFactory,
+        logger: LoggerService
       ) => {
         const rbmqConfig = configService.get(
           'microservices.rabbitmq.connection',
@@ -41,7 +47,8 @@ import { Subscriber } from './subscriber';
         await connectionFactory.ensureExchange(
           uri,
           eventBusConfig.exchange,
-          exchangeType
+          exchangeType,
+          logger
         );
 
         return {

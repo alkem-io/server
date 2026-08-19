@@ -7,22 +7,21 @@ import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 /**
  * Result shape the memo-content loader yields, keyed by the memo's
  * `contentPointer` (the file-service snapshot id). `markdown` is the derived
- * rich text and `contentBase64` the raw Yjs-V2 snapshot (both `null` when the
- * snapshot is missing / un-decodable).
+ * rich text (`null` when the snapshot is missing / un-decodable).
  */
 export interface MemoContentLoaderResult {
   id: string;
   markdown: string | null;
-  contentBase64: string | null;
 }
 
 /**
- * Request-scoped DataLoader that derives memo `markdown` (and the base64 Yjs
- * snapshot) from file-service in ONE batched round trip (R2/T007). Keys are
- * `contentPointer`s; the batch calls file-service `POST /internal/file/content-batch`
- * (order preserved) and decodes each Yjs-V2 snapshot to markdown. Replaces the
- * dropped inline `memo.content` read in `memo.resolver.fields` so a page rendering
- * N memos issues a single file-service request instead of N.
+ * Request-scoped DataLoader that derives memo `markdown` from file-service in ONE
+ * batched round trip (R2/T007). Keys are `contentPointer`s; the batch calls
+ * file-service `POST /internal/file/content-batch` (order preserved) and decodes
+ * each stable Yjs-V2 snapshot to markdown for the read-only `Memo.markdown` field
+ * (single-user / preview surfaces that do not join the live room). The raw base64
+ * snapshot is NOT surfaced — the client reads live CRDT state from the room, never
+ * over GraphQL. A page rendering N memos issues a single file-service request.
  */
 @Injectable()
 export class MemoContentLoaderCreator
@@ -42,7 +41,6 @@ export class MemoContentLoaderCreator
           .filter(item => item.found && item.contentBase64)
           .map(item => ({
             id: item.id,
-            contentBase64: item.contentBase64 as string,
             markdown: this.decode(item.contentBase64 as string),
           }));
       },

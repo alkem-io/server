@@ -1,6 +1,7 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IUserSettingsNotificationOrganization } from './user.settings.notification.organization.interface';
 import { IUserSettingsNotificationPlatform } from './user.settings.notification.platform.interface';
+import { IUserSettingsNotificationSound } from './user.settings.notification.sound.interface';
 import { IUserSettingsNotificationSpace } from './user.settings.notification.space.interface';
 import { IUserSettingsNotificationUser } from './user.settings.notification.user.interface';
 import { IUserSettingsNotificationVirtualContributor } from './user.settings.notification.virtual.contributor.interface';
@@ -38,4 +39,10 @@ export abstract class IUserSettingsNotification {
       'The notifications settings for Virtual Contributor events for this User',
   })
   virtualContributor!: IUserSettingsNotificationVirtualContributor;
+
+  @Field(() => IUserSettingsNotificationSound, {
+    nullable: false,
+    description: 'The sound playback settings for this User.',
+  })
+  sound!: IUserSettingsNotificationSound;
 }

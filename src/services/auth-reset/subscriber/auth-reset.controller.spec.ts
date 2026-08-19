@@ -10,6 +10,7 @@ import { UserAuthorizationService } from '@domain/community/user/user.service.au
 import { AccountService } from '@domain/space/account/account.service';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
+import { ConfigService } from '@nestjs/config';
 import { RmqContext } from '@nestjs/microservices';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PlatformAuthorizationService } from '@platform/platform/platform.service.authorization';
@@ -72,7 +73,16 @@ describe('AuthResetController', () => {
     vi.restoreAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [MockWinstonProvider],
+      providers: [
+        MockWinstonProvider,
+        {
+          provide: ConfigService,
+          useValue: {
+            // Controller reads microservices.rabbitmq.auth_reset.queue here.
+            get: vi.fn().mockReturnValue(MessagingQueue.AUTH_RESET),
+          },
+        },
+      ],
       controllers: [AuthResetController],
     })
       .useMocker(defaultMockerFactory)

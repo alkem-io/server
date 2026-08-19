@@ -64,6 +64,34 @@ describe('NotificationInAppAdapter', () => {
       ).not.toHaveBeenCalled();
     });
 
+    it('should skip USER_CONVERSATION_MESSAGE_DIRECT even with an inApp:true stored preference (FR-003/D-2)', async () => {
+      await adapter.sendInAppNotifications(
+        NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
+        NotificationEventCategory.USER,
+        'user-1',
+        ['user-2'],
+        {} as any
+      );
+
+      expect(
+        inAppNotificationService.createInAppNotification
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should skip USER_CONVERSATION_MESSAGE_GROUP even with an inApp:true stored preference (FR-003/D-2)', async () => {
+      await adapter.sendInAppNotifications(
+        NotificationEvent.USER_CONVERSATION_MESSAGE_GROUP,
+        NotificationEventCategory.USER,
+        'user-1',
+        ['user-2', 'user-3'],
+        {} as any
+      );
+
+      expect(
+        inAppNotificationService.createInAppNotification
+      ).not.toHaveBeenCalled();
+    });
+
     it('should skip when receiverIDs is empty', async () => {
       await adapter.sendInAppNotifications(
         NotificationEvent.USER_MESSAGE,

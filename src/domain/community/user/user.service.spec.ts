@@ -116,6 +116,29 @@ describe('UserService', () => {
     expect(service).toBeDefined();
   });
 
+  describe('getDefaultUserSettings', () => {
+    it('should default both notification.sound flags to true', () => {
+      const defaults = (service as any).getDefaultUserSettings();
+
+      expect(defaults.notification.sound).toEqual({
+        chatMessage: true,
+        inAppNotification: true,
+      });
+    });
+
+    it('should default language to null (never chose)', () => {
+      const defaults = (service as any).getDefaultUserSettings();
+
+      expect(defaults.language).toBeNull();
+    });
+
+    it('should default languageOfferAnswered to false', () => {
+      const defaults = (service as any).getDefaultUserSettings();
+
+      expect(defaults.languageOfferAnswered).toBe(false);
+    });
+  });
+
   describe('getUserByIdOrFail', () => {
     it('should throw EntityNotFoundException when userID is empty string', async () => {
       await expect(service.getUserByIdOrFail('')).rejects.toThrow(

@@ -1,5 +1,4 @@
 import { AuthorizationPrivilege } from '@common/enums';
-import { BlobStoreKind } from '@common/enums/blob.store.kind';
 import { CollaborationContentType } from '@common/enums/collaboration.content.type';
 import { EntityNotFoundException } from '@common/exceptions';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
@@ -8,7 +7,6 @@ import { MemoService } from '@domain/common/memo';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -20,14 +18,12 @@ import { CollaborationErrorCode } from './types';
 const memoMeta = {
   version: 4,
   contentPointer: 'memo-1',
-  blobStore: BlobStoreKind.INLINE,
   authorizationPolicyId: 'policy-memo',
   storageBucketId: 'bucket-memo',
 };
 const whiteboardMeta = {
   version: 7,
   contentPointer: 'wb-1',
-  blobStore: BlobStoreKind.INLINE,
   authorizationPolicyId: 'policy-wb',
   storageBucketId: 'bucket-wb',
 };
@@ -61,7 +57,6 @@ describe('CollaborationIntegrationService', () => {
     getCommunityFromWhiteboardOrFail: Mock;
     getLevelZeroSpaceIdForCommunity: Mock;
   };
-  let fileServiceAdapter: { getDocumentContent: Mock };
 
   const configServiceMock = {
     get: vi.fn((key: string) => {
@@ -95,11 +90,10 @@ describe('CollaborationIntegrationService', () => {
     actorContextService = module.get(ActorContextService) as any;
     contributionReporter = module.get(ContributionReporterService) as any;
     communityResolver = module.get(CommunityResolverService) as any;
-    fileServiceAdapter = module.get(FileServiceAdapter) as any;
   });
 
   describe('save', () => {
-    it('upserts the memo index for an inline memo (SC-001)', async () => {
+    it('routes a memo save to the memo service with its version + pointer (SC-001)', async () => {
       memoService.saveCollaborationMetadata.mockResolvedValue(undefined);
 
       const result = await service.save({
@@ -107,7 +101,6 @@ describe('CollaborationIntegrationService', () => {
         contentType: CollaborationContentType.MEMO,
         version: 5,
         contentPointer: 'memo-1',
-        blobStore: BlobStoreKind.INLINE,
       });
 
       expect(result).toEqual({ success: true });
@@ -117,7 +110,6 @@ describe('CollaborationIntegrationService', () => {
         {
           version: 5,
           contentPointer: 'memo-1',
-          blobStore: BlobStoreKind.INLINE,
         }
       );
       expect(
@@ -133,7 +125,6 @@ describe('CollaborationIntegrationService', () => {
         contentType: CollaborationContentType.WHITEBOARD,
         version: 2,
         contentPointer: 's3://bucket/wb-1',
-        blobStore: BlobStoreKind.S3,
       });
 
       expect(result).toEqual({ success: true });
@@ -142,47 +133,8 @@ describe('CollaborationIntegrationService', () => {
         {
           version: 2,
           contentPointer: 's3://bucket/wb-1',
-          blobStore: BlobStoreKind.S3,
         }
       );
-    });
-
-    it('stores only metadata + pointer for an offloaded blob (SC-002)', async () => {
-      whiteboardService.saveCollaborationMetadata.mockResolvedValue(undefined);
-
-      await service.save({
-        id: 'wb-1',
-        contentType: CollaborationContentType.WHITEBOARD,
-        version: 3,
-        contentPointer: 'file-uuid',
-        blobStore: BlobStoreKind.FILE_SERVICE,
-      });
-
-      // The unified save never carries the blob — only the index update
-      // (version + pointer + store) is forwarded to the domain service.
-      expect(whiteboardService.saveCollaborationMetadata).toHaveBeenCalledWith(
-        'wb-1',
-        {
-          version: 3,
-          contentPointer: 'file-uuid',
-          blobStore: BlobStoreKind.FILE_SERVICE,
-        }
-      );
-    });
-
-    it('returns a structured error for an unknown blobStore (FR-004)', async () => {
-      const result = await service.save({
-        id: 'memo-1',
-        contentType: CollaborationContentType.MEMO,
-        version: 1,
-        contentPointer: 'memo-1',
-        blobStore: 'bogus' as BlobStoreKind,
-      });
-
-      expect(result.success).toBe(false);
-      // The reply carries only the typed code — no dynamic blobStore / id leak.
-      expect(result.error).toBe(CollaborationErrorCode.UNKNOWN_BLOB_STORE);
-      expect(memoService.saveCollaborationMetadata).not.toHaveBeenCalled();
     });
 
     it('rejects an unknown contentType without routing to a write path', async () => {
@@ -191,7 +143,6 @@ describe('CollaborationIntegrationService', () => {
         contentType: 'bogus' as CollaborationContentType,
         version: 1,
         contentPointer: 'doc-1',
-        blobStore: BlobStoreKind.INLINE,
       });
 
       expect(result.success).toBe(false);
@@ -211,7 +162,6 @@ describe('CollaborationIntegrationService', () => {
         contentType: CollaborationContentType.MEMO,
         version: 1,
         contentPointer: 'memo-x',
-        blobStore: BlobStoreKind.INLINE,
       });
 
       expect(result.success).toBe(false);
@@ -220,31 +170,25 @@ describe('CollaborationIntegrationService', () => {
   });
 
   describe('fetch', () => {
-    it('returns the memo index incl. authorizationPolicyId + per-document storageBucketId (FR-005)', async () => {
+    it('returns the memo index (pointer only, no seed bytes) incl. authorizationPolicyId + per-document storageBucketId (FR-005)', async () => {
       memoService.getCollaborationMetadata.mockResolvedValue(memoMeta);
-      // The memo has a contentPointer, so fetch reads the stored snapshot as the
-      // first-open seed (R4/FR-003) and returns it base64-encoded as `content`.
-      const seed = Buffer.from('yjs-v2-seed-bytes');
-      fileServiceAdapter.getDocumentContent.mockResolvedValue(seed);
 
       const result = await service.fetch({ id: 'memo-1' });
 
+      // Index-only: the reply carries the pointer, NOT the blob. The collab
+      // service loads the snapshot itself from file-service via contentPointer.
+      // The exact-shape assertion guards against a `content` seed field ever
+      // creeping back onto the fetch reply.
       expect(result).toEqual({
         found: true,
         contentType: CollaborationContentType.MEMO,
         version: 4,
         contentPointer: 'memo-1',
-        blobStore: BlobStoreKind.INLINE,
         authorizationPolicyId: 'policy-memo',
         // The memo's OWN bucket flows through the reply so the collab service
         // persists this doc's snapshot there, not into a flat platform bucket.
         storageBucketId: 'bucket-memo',
-        // First-open seed: the stored snapshot, base64-encoded.
-        content: seed.toString('base64'),
       });
-      expect(fileServiceAdapter.getDocumentContent).toHaveBeenCalledWith(
-        'memo-1'
-      );
     });
 
     it('falls through to whiteboard when the id is not a memo (incl. its own storageBucketId)', async () => {
@@ -312,7 +256,6 @@ describe('CollaborationIntegrationService', () => {
         async (id: string) => ({
           version: persisted.get(id) ?? 0,
           contentPointer: id,
-          blobStore: BlobStoreKind.INLINE,
           authorizationPolicyId: 'policy-memo',
         })
       );
@@ -323,7 +266,6 @@ describe('CollaborationIntegrationService', () => {
         contentType: CollaborationContentType.MEMO,
         version: N,
         contentPointer: 'memo-rt',
-        blobStore: BlobStoreKind.INLINE,
       });
       expect(saveResult).toEqual({ success: true });
 
@@ -345,7 +287,6 @@ describe('CollaborationIntegrationService', () => {
         async (id: string) => ({
           version: persisted.get(id) ?? 0,
           contentPointer: id,
-          blobStore: BlobStoreKind.INLINE,
           authorizationPolicyId: 'policy-wb',
         })
       );
@@ -355,14 +296,12 @@ describe('CollaborationIntegrationService', () => {
         contentType: CollaborationContentType.WHITEBOARD,
         version: 6,
         contentPointer: 'wb-rt',
-        blobStore: BlobStoreKind.INLINE,
       });
       await service.save({
         id: 'wb-rt',
         contentType: CollaborationContentType.WHITEBOARD,
         version: 9,
         contentPointer: 'wb-rt',
-        blobStore: BlobStoreKind.INLINE,
       });
 
       const fetchResult = await service.fetch({ id: 'wb-rt' });

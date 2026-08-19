@@ -1,4 +1,3 @@
-import { BlobStoreKind } from '@common/enums/blob.store.kind';
 import { CollaborationContentType } from '@common/enums/collaboration.content.type';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -54,7 +53,6 @@ describe('CollaborationIntegrationController', () => {
       contentType: CollaborationContentType.MEMO,
       version: 1,
       contentPointer: 'memo-1',
-      blobStore: BlobStoreKind.INLINE,
     };
     const result = await controller.save(data, ctx);
 

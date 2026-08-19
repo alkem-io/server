@@ -10,6 +10,7 @@ import { PlatformModule } from '@platform/platform/platform.module';
 import { AiServerModule } from '@services/ai-server/ai-server/ai.server.module';
 import { TaskModule } from '@services/task/task.module';
 import { AuthResetController } from './auth-reset.controller';
+import { AuthResetWorkerState } from './auth-reset.worker-state.service';
 
 @Global()
 @Module({
@@ -26,5 +27,9 @@ import { AuthResetController } from './auth-reset.controller';
     LicenseModule,
   ],
   controllers: [AuthResetController],
+  // Exported (and @Global) so main.worker.ts can resolve it via app.get() to
+  // drive the SIGTERM drain.
+  providers: [AuthResetWorkerState],
+  exports: [AuthResetWorkerState],
 })
 export class AuthResetSubscriberModule {}

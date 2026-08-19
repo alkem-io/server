@@ -133,6 +133,10 @@ describe('PlatformRolesAccessService', () => {
         ],
         [RoleName.PLATFORM_BETA_TESTER, AuthorizationCredential.BETA_TESTER],
         [RoleName.PLATFORM_VC_CAMPAIGN, AuthorizationCredential.VC_CAMPAIGN],
+        [
+          RoleName.PLATFORM_ASSISTANT_ACCESS,
+          AuthorizationCredential.ASSISTANT_ACCESS,
+        ],
         [RoleName.REGISTERED, AuthorizationCredential.GLOBAL_REGISTERED],
         [RoleName.GUEST, AuthorizationCredential.GLOBAL_GUEST],
         [RoleName.ANONYMOUS, AuthorizationCredential.GLOBAL_ANONYMOUS],
