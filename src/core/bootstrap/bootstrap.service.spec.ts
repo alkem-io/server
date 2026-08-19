@@ -142,11 +142,9 @@ describe('BootstrapService', () => {
       // Pre-populated with every seeded nameID so the classification-seed
       // step below is a no-op in the generic bootstrap() tests — its own
       // behaviour is covered by bootstrap.service.classification.spec.ts.
-      getTemplatesOfType: vi.fn().mockResolvedValue([
-        { id: 'ct-1', nameID: 'sdgs' },
-        { id: 'ct-2', nameID: 'language' },
-        { id: 'ct-3', nameID: 'sector' },
-      ]),
+      getTemplatesOfType: vi
+        .fn()
+        .mockResolvedValue([{ id: 'ct-1', nameID: 'sdgs' }]),
     };
     mocks.templateDefaultService = {
       save: vi.fn().mockResolvedValue(undefined),

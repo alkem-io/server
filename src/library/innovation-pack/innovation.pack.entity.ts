@@ -51,14 +51,5 @@ export class InnovationPack extends NameableEntity implements IInnovationPack {
   })
   searchVisibility!: SearchVisibility;
 
-  // Bootstrap-internal tombstone: nameIDs of seeded templates a platform
-  // admin has deleted from THIS pack. Consulted only by BootstrapService's
-  // create-if-absent seed step, which must never resurrect one of these —
-  // matched by nameID, never updated once written except to append. Not
-  // GraphQL-exposed (no @Field on IInnovationPack), same convention as
-  // `rowId`/`templatesCount` below.
-  @Column('jsonb', { nullable: true })
-  deletedSeedTemplateNameIDs?: string[];
-
   templatesCount = 0;
 }

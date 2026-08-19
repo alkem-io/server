@@ -6604,7 +6604,7 @@ type Template {
   """The Callout for this Template."""
   callout: Callout
   """
-  The classification vocabulary; null unless this Template is of type CLASSIFICATION — and never null when it is (S-21).
+  The classification vocabulary; null unless this Template is of type CLASSIFICATION — and never null when it is.
   """
   classification: ClassificationTemplateContent
   """The Community Guidelines for this Template."""
@@ -7902,7 +7902,7 @@ input CreateClassificationEntryInput {
   cardinality: ClassificationCardinality!
   displayLabel: String!
   """
-  Optional selection to apply in the same write (FR-017a). Omitted -> selectedValueIDs: [].
+  Optional selection to apply in the same write. Omitted -> selectedValueIDs: [].
   """
   selectedValueIDs: [String!]
   """The Space to add the Classification to."""

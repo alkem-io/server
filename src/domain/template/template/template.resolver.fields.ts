@@ -84,7 +84,7 @@ export class TemplateResolverFields {
   @ResolveField('classification', () => ClassificationTemplateContent, {
     nullable: true,
     description:
-      'The classification vocabulary; null unless this Template is of type CLASSIFICATION — and never null when it is (S-21).',
+      'The classification vocabulary; null unless this Template is of type CLASSIFICATION — and never null when it is.',
   })
   classification(
     @Parent() template: ITemplate

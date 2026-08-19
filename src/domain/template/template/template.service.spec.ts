@@ -9,7 +9,6 @@ import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
-import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken, getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -27,7 +26,6 @@ import { TemplateService } from './template.service';
 describe('TemplateService', () => {
   let service: TemplateService;
   let templateRepository: Mocked<Repository<Template>>;
-  let innovationPackRepository: Mocked<Repository<InnovationPack>>;
   let entityManager: Mocked<EntityManager>;
   let profileService: Mocked<ProfileService>;
   let communityGuidelinesService: Mocked<CommunityGuidelinesService>;
@@ -55,7 +53,6 @@ describe('TemplateService', () => {
       providers: [
         TemplateService,
         repositoryProviderMockFactory(Template),
-        repositoryProviderMockFactory(InnovationPack),
         {
           provide: getEntityManagerToken('default'),
           useValue: mockEntityManager,
@@ -71,9 +68,6 @@ describe('TemplateService', () => {
     templateRepository = module.get(getRepositoryToken(Template)) as Mocked<
       Repository<Template>
     >;
-    innovationPackRepository = module.get(
-      getRepositoryToken(InnovationPack)
-    ) as Mocked<Repository<InnovationPack>>;
     entityManager = module.get(
       getEntityManagerToken('default')
     ) as Mocked<EntityManager>;
@@ -666,79 +660,6 @@ describe('TemplateService', () => {
         templateContentSpaceService.deleteTemplateContentSpaceOrFail
       ).not.toHaveBeenCalled();
       expect(profileService.deleteProfile).toHaveBeenCalledWith('p-1');
-    });
-
-    describe('CLASSIFICATION delete — records the admin-deleted seed tombstone', () => {
-      it('records the deleted nameID on the owning InnovationPack when the template lives inside one', async () => {
-        const template = makeTemplate(TemplateType.CLASSIFICATION, {
-          nameID: 'sdgs',
-          templatesSet: { id: 'templates-set-1' },
-        });
-        templateRepository.find.mockResolvedValue([template]);
-        innovationPackRepository.findOne.mockResolvedValue({
-          id: 'pack-1',
-          deletedSeedTemplateNameIDs: undefined,
-        } as any);
-        innovationPackRepository.save.mockImplementation(
-          async (entity: any) => entity
-        );
-
-        await service.delete({ id: 'tpl-1' } as ITemplate);
-
-        expect(innovationPackRepository.findOne).toHaveBeenCalledWith({
-          where: { templatesSet: { id: 'templates-set-1' } },
-        });
-        expect(innovationPackRepository.save).toHaveBeenCalledWith(
-          expect.objectContaining({ deletedSeedTemplateNameIDs: ['sdgs'] })
-        );
-      });
-
-      it('appends to, rather than overwrites, an existing tombstone list', async () => {
-        const template = makeTemplate(TemplateType.CLASSIFICATION, {
-          nameID: 'sector',
-          templatesSet: { id: 'templates-set-1' },
-        });
-        templateRepository.find.mockResolvedValue([template]);
-        innovationPackRepository.findOne.mockResolvedValue({
-          id: 'pack-1',
-          deletedSeedTemplateNameIDs: ['sdgs'],
-        } as any);
-        innovationPackRepository.save.mockImplementation(
-          async (entity: any) => entity
-        );
-
-        await service.delete({ id: 'tpl-1' } as ITemplate);
-
-        expect(innovationPackRepository.save).toHaveBeenCalledWith(
-          expect.objectContaining({
-            deletedSeedTemplateNameIDs: ['sdgs', 'sector'],
-          })
-        );
-      });
-
-      it('is a no-op when the template has no templatesSet loaded', async () => {
-        const template = makeTemplate(TemplateType.CLASSIFICATION, {
-          templatesSet: undefined,
-        });
-        templateRepository.find.mockResolvedValue([template]);
-
-        await service.delete({ id: 'tpl-1' } as ITemplate);
-
-        expect(innovationPackRepository.findOne).not.toHaveBeenCalled();
-        expect(innovationPackRepository.save).not.toHaveBeenCalled();
-      });
-
-      it('is a no-op when the TemplatesSet belongs to no InnovationPack (platform TemplatesManager or a Space Template Library)', async () => {
-        const template = makeTemplate(TemplateType.CLASSIFICATION, {
-          templatesSet: { id: 'templates-set-1' },
-        });
-        templateRepository.find.mockResolvedValue([template]);
-        innovationPackRepository.findOne.mockResolvedValue(null);
-
-        await service.delete({ id: 'tpl-1' } as ITemplate);
-
-        expect(innovationPackRepository.save).not.toHaveBeenCalled();
-      });
     });
 
     it('should throw EntityNotFoundException for unrecognized template type', async () => {

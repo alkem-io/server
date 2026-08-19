@@ -31,7 +31,6 @@ import { ClassificationEntryValidator } from '@domain/space/classification.entry
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
@@ -64,11 +63,6 @@ export class TemplateService {
     private spaceLookupService: SpaceLookupService,
     @InjectRepository(Template)
     private templateRepository: Repository<Template>,
-    // Narrow, direct read/write of InnovationPack rows — used only to
-    // record the delete-time seed tombstone on the owning pack. NOT the
-    // full InnovationPackModule; see template.module.ts.
-    @InjectRepository(InnovationPack)
-    private innovationPackRepository: Repository<InnovationPack>,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -823,13 +817,6 @@ export class TemplateService {
       }
       case TemplateType.CLASSIFICATION: {
         // Cardinality and value set live as columns on the Template row itself, so there is nothing extra to cascade-delete.
-        // If this template lives inside an InnovationPack (e.g. the
-        // platform's own seeded pack), record its nameID as admin-deleted
-        // so the next bootstrap run's create-if-absent step never
-        // resurrects it. A no-op for Classification Templates in a Space
-        // Template Library or the platform TemplatesManager — neither has
-        // a matching InnovationPack.
-        await this.recordSeedTemplateDeletionIfInAnInnovationPack(template);
         break;
       }
       default: {
@@ -846,30 +833,6 @@ export class TemplateService {
     const result = await this.templateRepository.remove(template as Template);
     result.id = templateId;
     return result;
-  }
-
-  // The classification-template seed's create-if-absent step matches
-  // definitions by nameID alone, which on its own cannot tell "never
-  // created" apart from "admin-deleted"; this is the write half of that
-  // tombstone. Scoped to whichever InnovationPack (if any) owns this
-  // template's TemplatesSet — never a platform-wide marker — so it says
-  // nothing about templates outside a pack.
-  private async recordSeedTemplateDeletionIfInAnInnovationPack(
-    template: ITemplate
-  ): Promise<void> {
-    if (!template.templatesSet) {
-      return;
-    }
-    const pack = await this.innovationPackRepository.findOne({
-      where: { templatesSet: { id: template.templatesSet.id } },
-    });
-    if (!pack) {
-      return;
-    }
-    const deletedNameIDs = new Set(pack.deletedSeedTemplateNameIDs ?? []);
-    deletedNameIDs.add(template.nameID);
-    pack.deletedSeedTemplateNameIDs = Array.from(deletedNameIDs);
-    await this.innovationPackRepository.save(pack);
   }
 
   async save(template: ITemplate): Promise<ITemplate> {

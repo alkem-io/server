@@ -7,7 +7,6 @@ import { ProfileModule } from '@domain/common/profile/profile.module';
 import { WhiteboardModule } from '@domain/common/whiteboard';
 import { CommunityGuidelinesModule } from '@domain/community/community-guidelines/community.guidelines.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
-import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
@@ -33,12 +32,7 @@ import { TemplateAuthorizationService } from './template.service.authorization';
     CalloutsSetModule,
     TemplateContentSpaceModule,
     SpaceLookupModule,
-    // Narrow InnovationPack registration ONLY — deliberately not the full
-    // InnovationPackModule, whose own dependency graph this module has no
-    // other reason to pull in. Mirrors the ClassificationEntryModule ->
-    // Template precedent (classification.entry.module.ts). Used solely to
-    // record the delete-time seed tombstone on the owning pack.
-    TypeOrmModule.forFeature([Template, InnovationPack]),
+    TypeOrmModule.forFeature([Template]),
   ],
   providers: [
     TemplateService,

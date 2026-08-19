@@ -43,7 +43,7 @@ export class CreateClassificationEntryInput {
   @Field(() => [String], {
     nullable: true,
     description:
-      'Optional selection to apply in the same write (FR-017a). Omitted -> selectedValueIDs: [].',
+      'Optional selection to apply in the same write. Omitted -> selectedValueIDs: [].',
   })
   @IsOptional()
   @ArrayMaxSize(CLASSIFICATION_VALUE_SET_MAX_SIZE)
