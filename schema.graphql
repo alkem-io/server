@@ -573,6 +573,7 @@ enum NotificationEvent {
   SPACE_COLLABORATION_CALLOUT_CONTRIBUTION
   SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT
   SPACE_COLLABORATION_CALLOUT_PUBLISHED
+  SPACE_COLLABORATION_CALLOUT_REACTION
   SPACE_COLLABORATION_POLL_MODIFIED_ON_POLL_I_VOTED_ON
   SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE
   SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL
@@ -625,6 +626,7 @@ enum NotificationEventPayload {
   SPACE_COLLABORATION_CALLOUT
   SPACE_COLLABORATION_CALLOUT_COMMENT
   SPACE_COLLABORATION_CALLOUT_POST_COMMENT
+  SPACE_COLLABORATION_CALLOUT_REACTION
   SPACE_COLLABORATION_POLL
   SPACE_COMMUNICATION_MESSAGE_DIRECT
   SPACE_COMMUNICATION_UPDATE
@@ -3097,6 +3099,11 @@ type InAppNotificationPayloadSpaceCollaborationCalloutPostComment implements InA
   type: NotificationEventPayload!
 }
 
+type InAppNotificationPayloadSpaceCollaborationCalloutReaction implements InAppNotificationPayload {
+  """The payload type."""
+  type: NotificationEventPayload!
+}
+
 type InAppNotificationPayloadSpaceCollaborationPoll implements InAppNotificationPayload {
   """The Callout that contains the poll."""
   callout: Callout!
@@ -4396,7 +4403,7 @@ type Mutation {
   """
   removePollVote(voteData: RemovePollVoteInput!): Poll!
   """
-  Removes the requesting user's reaction from a Callout. Idempotent — no error when no reaction exists. Self-scoped; requires only authentication (not CONTRIBUTE), so a person who left the space can still retract their own reaction.
+  Removes the requesting user's reaction from a Callout. Idempotent — no error when no reaction exists. Self-scoped; requires only authentication (not CONTRIBUTE). Returns the Callout only when the caller retains READ access on it.
   """
   removeReactionFromCallout(reactionData: RemoveReactionFromCalloutInput!): Callout!
   """Remove a reaction on a message from the specified Room."""
@@ -7074,6 +7081,8 @@ type UserSettingsNotificationSpace {
   collaborationCalloutPostContributionComment: UserSettingsNotificationChannels!
   """Receive a notification when a callout is published"""
   collaborationCalloutPublished: UserSettingsNotificationChannels!
+  """Receive a notification when someone reacts to a callout you published"""
+  collaborationCalloutReaction: UserSettingsNotificationChannels!
   """Receive a notification when a poll you voted on is modified"""
   collaborationPollModifiedOnPollIVotedOn: UserSettingsNotificationChannels!
   """
@@ -9995,6 +10004,8 @@ input UpdateUserSettingsNotificationSpaceInput {
   collaborationCalloutPostContributionComment: NotificationSettingInput
   """Receive a notification when a callout is published"""
   collaborationCalloutPublished: NotificationSettingInput
+  """Receive a notification when someone reacts to a callout you published"""
+  collaborationCalloutReaction: NotificationSettingInput
   """Receive a notification when a poll you voted on is modified"""
   collaborationPollModifiedOnPollIVotedOn: NotificationSettingInput
   """
