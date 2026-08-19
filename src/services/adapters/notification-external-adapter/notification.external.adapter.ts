@@ -78,6 +78,20 @@ import { NotificationInputCollaborationCalloutPostContributionComment } from '..
 import { NotificationInputCommentReply } from '../notification-adapter/dto/space/notification.dto.input.space.communication.user.comment.reply';
 import { NotificationInputUserEmailChangeSpaceAdmin } from '../notification-adapter/dto/space/notification.dto.input.space.user.email.change';
 
+/**
+ * Temporary bridge type for the callout-reaction AMQP payload. This interface
+ * will be replaced by the import from @alkemio/notifications-lib@0.20.0 once
+ * that version publishes (merge gate — see tasks/server.md T019). The shape
+ * must remain stable: no content fields, only reactor identity, emoji slug,
+ * and callout link.
+ */
+interface SpaceCollaborationCalloutReactionEventPayload
+  extends NotificationEventPayloadSpaceCollaborationCallout {
+  reaction: {
+    emoji: string;
+  };
+}
+
 interface CalloutContributionPayload {
   id: string;
   displayName: string;
@@ -778,6 +792,48 @@ export class NotificationExternalAdapter {
         calloutTitle: callout.framing.profile.displayName,
         calloutUrl: calloutURL,
       },
+    };
+  }
+
+  /**
+   * Builds the AMQP payload for a callout-reaction email notification.
+   *
+   * Temporary bridge interface — the DTO will be imported from
+   * @alkemio/notifications-lib once 0.20.0 publishes (merge gate T019).
+   * The shape is no-content-by-construction: framing.description is always
+   * empty so no callout body is ever transmitted.
+   */
+  async buildSpaceCollaborationCalloutReactionPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    space: ISpace,
+    calloutId: string,
+    calloutDisplayName: string,
+    emoji: string
+  ): Promise<SpaceCollaborationCalloutReactionEventPayload> {
+    const spacePayload = await this.buildSpacePayload(
+      eventType,
+      triggeredBy,
+      recipients,
+      space
+    );
+    const calloutURL =
+      await this.urlGeneratorService.getCalloutUrlPath(calloutId);
+
+    return {
+      ...spacePayload,
+      callout: {
+        id: calloutId,
+        framing: {
+          id: '',
+          type: '',
+          displayName: calloutDisplayName,
+          description: '',
+          url: calloutURL,
+        },
+      },
+      reaction: { emoji },
     };
   }
 
