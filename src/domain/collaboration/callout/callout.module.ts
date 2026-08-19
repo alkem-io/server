@@ -2,6 +2,7 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ClassificationModule } from '@domain/common/classification/classification.module';
+import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { Module } from '@nestjs/common';
@@ -38,6 +39,7 @@ import { CalloutAuthorizationService } from './callout.service.authorization';
     EntityResolverModule,
     UserLookupModule,
     NamingModule,
+    WhiteboardModule,
     CalloutFramingModule,
     CalloutContributionModule,
     CalloutContributionDefaultsModule,

@@ -1,10 +1,12 @@
 import { SUBSCRIPTION_CALLOUT_POST_CREATED } from '@common/constants';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { CalloutAllowedActors } from '@common/enums/callout.allowed.contributors';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import {
+  ForbiddenException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
@@ -13,6 +15,7 @@ import { streamToBuffer } from '@common/utils/file.util';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CollaboraDocumentEventsService } from '@domain/collaboration/collabora-document/events/collabora.document.events.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -37,6 +40,7 @@ describe('CalloutResolverMutations', () => {
   let _contributionAuthorizationService: CalloutContributionAuthorizationService;
   let _calloutContributionService: CalloutContributionService;
   let collaboraDocumentEventsService: CollaboraDocumentEventsService;
+  let whiteboardService: WhiteboardService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -78,6 +82,7 @@ describe('CalloutResolverMutations', () => {
     );
     _calloutContributionService = module.get(CalloutContributionService);
     collaboraDocumentEventsService = module.get(CollaboraDocumentEventsService);
+    whiteboardService = module.get(WhiteboardService);
   });
 
   it('should be defined', () => {
@@ -481,6 +486,118 @@ describe('CalloutResolverMutations', () => {
           calloutID: 'callout-1',
         } as any)
       ).rejects.toThrow(CalloutClosedException);
+    });
+
+    // Contract: a clone (a WHITEBOARD contribution's whiteboard.sourceWhiteboardID)
+    // may read its source only after the actor is granted READ.
+    const sourceCloneCallout = () =>
+      ({
+        id: 'callout-1',
+        authorization: { id: 'auth-1' },
+        calloutsSet: { id: 'cs-1', type: CalloutsSetType.COLLABORATION },
+        settings: {
+          contribution: {
+            enabled: true,
+            canAddContributions: CalloutAllowedActors.MEMBERS,
+          },
+          visibility: CalloutVisibility.PUBLISHED,
+        },
+      }) as any;
+
+    it('refuses a whiteboard clone when the actor cannot READ the source, and never delegates', async () => {
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(
+        sourceCloneCallout()
+      );
+      vi.mocked(whiteboardService.getWhiteboardOrFail).mockResolvedValue({
+        id: 'src-1',
+        authorization: { id: 'auth-src' },
+      } as any);
+      const forbidden = new ForbiddenException('denied', LogContext.AUTH);
+      vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(
+        (_actor: any, _authz: any, privilege: any) => {
+          if (privilege === AuthorizationPrivilege.READ) throw forbidden;
+          return true;
+        }
+      );
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await expect(
+        resolver.createContributionOnCallout(actorContext, {
+          calloutID: 'callout-1',
+          type: CalloutContributionType.WHITEBOARD,
+          whiteboard: { sourceWhiteboardID: 'src-1' },
+        } as any)
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(whiteboardService.getWhiteboardOrFail).toHaveBeenCalledWith(
+        'src-1',
+        { relations: { authorization: true } }
+      );
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        { id: 'auth-src' },
+        AuthorizationPrivilege.READ,
+        expect.any(String)
+      );
+      expect(calloutService.createContributionOnCallout).not.toHaveBeenCalled();
+    });
+
+    it('allows a whiteboard clone when the actor CAN READ the source (reaches the delegate)', async () => {
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(
+        sourceCloneCallout()
+      );
+      vi.mocked(whiteboardService.getWhiteboardOrFail).mockResolvedValue({
+        id: 'src-1',
+        authorization: { id: 'auth-src' },
+      } as any);
+      vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(
+        undefined as any
+      );
+      const reachedDelegate = new Error('reached-delegate-sentinel');
+      vi.mocked(calloutService.createContributionOnCallout).mockRejectedValue(
+        reachedDelegate
+      );
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await expect(
+        resolver.createContributionOnCallout(actorContext, {
+          calloutID: 'callout-1',
+          type: CalloutContributionType.WHITEBOARD,
+          whiteboard: { sourceWhiteboardID: 'src-1' },
+        } as any)
+      ).rejects.toBe(reachedDelegate);
+
+      expect(whiteboardService.getWhiteboardOrFail).toHaveBeenCalledWith(
+        'src-1',
+        { relations: { authorization: true } }
+      );
+      expect(calloutService.createContributionOnCallout).toHaveBeenCalled();
+    });
+
+    it('does NOT load the source for a non-WHITEBOARD contribution carrying a stray sourceWhiteboardID', async () => {
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(
+        sourceCloneCallout()
+      );
+      vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(
+        undefined as any
+      );
+      const reachedDelegate = new Error('reached-delegate-sentinel');
+      vi.mocked(calloutService.createContributionOnCallout).mockRejectedValue(
+        reachedDelegate
+      );
+      const actorContext = { actorID: 'user-1' } as any;
+
+      // POST discriminant with a stray whiteboard.sourceWhiteboardID — the type must
+      // gate the check so it cannot probe source existence/auth.
+      await expect(
+        resolver.createContributionOnCallout(actorContext, {
+          calloutID: 'callout-1',
+          type: CalloutContributionType.POST,
+          whiteboard: { sourceWhiteboardID: 'src-1' },
+        } as any)
+      ).rejects.toBe(reachedDelegate);
+
+      expect(whiteboardService.getWhiteboardOrFail).not.toHaveBeenCalled();
     });
 
     const setupCollaboraCreateHappyPath = (visibility: CalloutVisibility) => {

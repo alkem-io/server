@@ -12,6 +12,7 @@ import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platf
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { introducesCollaboraDocument } from '@domain/collaboration/callout/callout.collabora.gate.util';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { Inject, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
@@ -53,8 +54,33 @@ export class CalloutsSetResolverMutations {
     private temporaryStorageService: TemporaryStorageService,
     private configService: ConfigService<AlkemioConfig, true>,
     private collaborationLicenseService: CollaborationLicenseService,
+    private whiteboardService: WhiteboardService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
+
+  /**
+   * A clone may read its source only after the actor is granted READ: when a
+   * `sourceWhiteboardID` is present, load it with its authorization and
+   * `grantAccessOrFail` READ (throws Forbidden). No-op when there is no source.
+   */
+  private async assertActorCanReadSourceWhiteboard(
+    actorContext: ActorContext,
+    sourceWhiteboardID?: string
+  ): Promise<void> {
+    if (!sourceWhiteboardID) {
+      return;
+    }
+    const source = await this.whiteboardService.getWhiteboardOrFail(
+      sourceWhiteboardID,
+      { relations: { authorization: true } }
+    );
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      source.authorization,
+      AuthorizationPrivilege.READ,
+      `clone whiteboard content from source: ${sourceWhiteboardID}`
+    );
+  }
 
   @Mutation(() => ICallout, {
     description:
@@ -94,6 +120,16 @@ export class CalloutsSetResolverMutations {
         restrictedFramingType
       );
     }
+
+    // A clone (a WHITEBOARD framing's `whiteboard.sourceWhiteboardID`) may read its
+    // source only after the actor is granted READ. Runs before the office-doc/upload
+    // work below so a denied clone fails fast.
+    await this.assertActorCanReadSourceWhiteboard(
+      actorContext,
+      calloutData.framing?.type === CalloutFramingType.WHITEBOARD
+        ? calloutData.framing.whiteboard?.sourceWhiteboardID
+        : undefined
+    );
 
     // Office Docs entitlement gate (FR-001/FR-004/FR-009): block introduction of a
     // Collabora Document — in framing form, contribution-allowed form, or via attached
