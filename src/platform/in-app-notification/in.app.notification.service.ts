@@ -31,6 +31,7 @@ import {
   InAppNotificationPayloadSpaceCollaborationCallout,
   InAppNotificationPayloadSpaceCollaborationCalloutComment,
   InAppNotificationPayloadSpaceCollaborationCalloutPostComment,
+  InAppNotificationPayloadSpaceCollaborationCalloutReaction,
   InAppNotificationPayloadSpaceCommunicationMessageDirect,
   InAppNotificationPayloadSpaceCommunicationUpdate,
   InAppNotificationPayloadSpaceCommunityActor,
@@ -542,6 +543,14 @@ export class InAppNotificationService {
         result.calloutID = typedPayload.calloutID;
         result.messageID = typedPayload.messageID;
         result.roomID = typedPayload.roomID;
+        break;
+      }
+
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_REACTION: {
+        const typedPayload =
+          payload as InAppNotificationPayloadSpaceCollaborationCalloutReaction;
+        result.spaceID = typedPayload.spaceID;
+        result.calloutID = typedPayload.calloutID;
         break;
       }
 

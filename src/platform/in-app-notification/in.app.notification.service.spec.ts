@@ -395,6 +395,27 @@ describe('InAppNotificationService', () => {
       expect(result.roomID).toBe('room-1');
     });
 
+    it('should extract spaceID and calloutID for SPACE_COLLABORATION_CALLOUT_REACTION', () => {
+      const payload = {
+        spaceID: 'space-1',
+        calloutID: 'callout-1',
+        emoji: 'thumbs_up',
+      };
+      notificationRepo.create!.mockImplementation((input: any) => input);
+
+      const result = service.createInAppNotification({
+        type: NotificationEvent.SPACE_COLLABORATION_CALLOUT_REACTION,
+        category: 'member' as any,
+        triggeredByID: 'user-1',
+        triggeredAt: new Date(),
+        receiverID: 'user-2',
+        payload: payload as any,
+      });
+
+      expect(result.spaceID).toBe('space-1');
+      expect(result.calloutID).toBe('callout-1');
+    });
+
     it('should extract all FKs for SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT', () => {
       const payload = {
         spaceID: 'space-1',

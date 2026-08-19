@@ -9,6 +9,7 @@ export * from './platform/in.app.notification.payload.platform.global.role.chang
 export * from './platform/in.app.notification.payload.platform.user.profile.removed.resolver.fields';
 export * from './space/in.app.notification.payload.space.collaboration.callout.comment.resolver.fields';
 export * from './space/in.app.notification.payload.space.collaboration.callout.post.comment.resolver.fields';
+export * from './space/in.app.notification.payload.space.collaboration.callout.reaction.resolver.fields';
 export * from './space/in.app.notification.payload.space.collaboration.callout.resolver.fields';
 export * from './space/in.app.notification.payload.space.collaboration.poll.resolver.fields';
 export * from './space/in.app.notification.payload.space.communication.message.direct.resolver.fields';

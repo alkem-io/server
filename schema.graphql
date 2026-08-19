@@ -3100,6 +3100,14 @@ type InAppNotificationPayloadSpaceCollaborationCalloutPostComment implements InA
 }
 
 type InAppNotificationPayloadSpaceCollaborationCalloutReaction implements InAppNotificationPayload {
+  """The Callout that was reacted to."""
+  callout: Callout!
+  """
+  The emoji slug from the platform allow-list. Clients own slug-to-glyph rendering.
+  """
+  emoji: String!
+  """The Space where the reaction was made."""
+  space: Space!
   """The payload type."""
   type: NotificationEventPayload!
 }
