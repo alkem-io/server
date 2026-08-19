@@ -547,9 +547,15 @@ export class BootstrapService {
    *     credentialRules check is what makes this self-healing on the
    *     already-seeded / upgrade path, not just the fresh-install path.
    *
-   * Never modifies, overwrites, or restores an existing or admin-deleted
-   * template — create-if-absent, matched by nameID within this pack alone.
-   * at the moment a seeded template is removed.
+   * Never modifies or overwrites an existing template — create-if-absent,
+   * matched by nameID within this pack alone, so an admin's edits survive
+   * every later re-seed.
+   *
+   * It keeps NO record of deletions, so a seeded template a platform admin
+   * has DELETED is re-created on the next bootstrap. That is deliberate
+   * (operator ruling D5, 2026-08-19): suppressing it needed a persisted
+   * tombstone column this feature is not authorised to add, to guard an
+   * action that is rare, trivially repeatable, and harmless when undone.
    */
   private async ensureClassificationTemplatesArePresent(): Promise<void> {
     const { createdSomething, staleAuthFound } =
