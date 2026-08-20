@@ -220,10 +220,62 @@ export class MessagingService {
       );
     }
 
+    // sec-server-1: GROUP creation previously never consulted
+    // `settings.communication.allowOtherUsersToSendMessages` — only the
+    // DIRECT path (checkReceivingUserAccessAndSettings, resolver-level) and
+    // the external/Matrix-initiated GROUP path
+    // (createConversationFromExternal below) enforced it. That let any
+    // registered user add a non-consenting user to a GROUP and have the
+    // 034-messaging-notifications pipeline push them attacker-authored
+    // copy by default. Bring GROUP membership to the same consent
+    // semantics: non-consenting USER actors are silently dropped from
+    // membership (never added, so the notification pipeline never targets
+    // them); non-USER actor types (VC, Organization, …) have no such
+    // setting and are exempt — mirrors evaluateMemberConsent's contract.
+    const consentedMemberActorIds = await this.filterMembersByConsent(
+      normalizedMemberActorIds
+    );
+
+    if (consentedMemberActorIds.length < 1) {
+      throw new ValidationException(
+        'No invited members consent to receiving messages',
+        LogContext.COMMUNICATION_CONVERSATION
+      );
+    }
+
     return await this.persistNewConversation(
       conversationData,
-      normalizedMemberActorIds,
+      consentedMemberActorIds,
       roomType
+    );
+  }
+
+  /**
+   * Partition `memberActorIds` by actor type and filter to those who either
+   * have no inbound-messaging consent setting (non-USER actors) or have
+   * explicitly opted in (`allowOtherUsersToSendMessages === true`). Order of
+   * the input array is preserved. Mirrors the consent gate applied in
+   * `createConversationFromExternal` (sec-server-1) so both conversation
+   * creation entrypoints treat GROUP membership consistently.
+   */
+  private async filterMembersByConsent(
+    memberActorIds: string[]
+  ): Promise<string[]> {
+    if (memberActorIds.length === 0) {
+      return [];
+    }
+    const actorTypesById =
+      await this.actorLookupService.getActorTypesByIds(memberActorIds);
+    const consentEvaluableActorIds = memberActorIds.filter(
+      id => actorTypesById.get(id) === ActorType.USER
+    );
+    const { consentingIds } =
+      consentEvaluableActorIds.length > 0
+        ? await this.evaluateMemberConsent(consentEvaluableActorIds)
+        : { consentingIds: [] as string[] };
+    const consentingSet = new Set(consentingIds);
+    return memberActorIds.filter(
+      id => actorTypesById.get(id) !== ActorType.USER || consentingSet.has(id)
     );
   }
 

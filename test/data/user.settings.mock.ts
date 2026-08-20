@@ -170,6 +170,16 @@ export const userSettingsData: { userSettings: IUserSettings } = {
           inApp: true,
           push: true,
         },
+        conversationMessageDirect: {
+          email: false,
+          inApp: false,
+          push: true,
+        },
+        conversationMessageGroup: {
+          email: false,
+          inApp: false,
+          push: true,
+        },
         membership: {
           spaceCommunityInvitationReceived: {
             email: true,

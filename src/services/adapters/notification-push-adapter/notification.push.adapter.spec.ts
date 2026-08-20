@@ -165,4 +165,86 @@ describe('NotificationPushAdapter', () => {
       expect(mockAmqpConnection.publish).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('sendMessagingPushNotifications', () => {
+    const activeSubscription = {
+      id: 'sub-1',
+      userId: 'user-1',
+      endpoint: 'https://push.example.com/1',
+      p256dh: 'key1',
+      auth: 'auth1',
+    };
+
+    it('US4-AS2 / FR-012: never touches the shared push throttle', async () => {
+      mockPushSubscriptionService.getActiveSubscriptions.mockResolvedValue([
+        activeSubscription,
+      ]);
+
+      await adapter.sendMessagingPushNotifications(
+        [createUser('user-1')],
+        NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
+        {
+          title: 'Alice',
+          body: 'sent you 2 messages',
+          url: '/?chat=1',
+          tag: 'messaging-digest-direct',
+        }
+      );
+
+      // Independence by NON-PARTICIPATION (D-21): there is no messaging
+      // budget any more, and the shared bucket is not consulted either. Chat
+      // volume therefore cannot starve mentions/invitations, and the FR-011b
+      // delay cap is what bounds messaging volume.
+      expect(mockPushThrottleService.isAllowed).not.toHaveBeenCalled();
+      expect(mockAmqpConnection.publish).toHaveBeenCalledTimes(1);
+    });
+
+    it('FR-024: forwards the stable collapse tag onto the queued payload', async () => {
+      mockPushSubscriptionService.getActiveSubscriptions.mockResolvedValue([
+        activeSubscription,
+      ]);
+
+      await adapter.sendMessagingPushNotifications(
+        [createUser('user-1')],
+        NotificationEvent.USER_CONVERSATION_MESSAGE_GROUP,
+        {
+          title: 'New messages',
+          body: '5 messages in 2 conversations',
+          url: '/?chat=all',
+          tag: 'messaging-digest-group',
+        }
+      );
+
+      const [, , message] = mockAmqpConnection.publish.mock.calls[0];
+      expect(message.payload.tag).toBe('messaging-digest-group');
+    });
+
+    it('omits `tag` entirely for notification kinds that should stack', async () => {
+      mockPushThrottleService.isAllowed.mockResolvedValue(true);
+      mockPushSubscriptionService.getActiveSubscriptions.mockResolvedValue([
+        activeSubscription,
+      ]);
+
+      await adapter.sendPushNotifications(
+        [createUser('user-1')],
+        NotificationEvent.USER_MENTIONED,
+        { title: 'Test', body: 'Test body', url: '/test' }
+      );
+
+      const [, , message] = mockAmqpConnection.publish.mock.calls[0];
+      expect(message.payload).not.toHaveProperty('tag');
+    });
+
+    it('skips when the recipient list is empty', async () => {
+      await adapter.sendMessagingPushNotifications(
+        [],
+        NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
+        { title: 'Alice', body: 'sent you 1 message', url: '/?chat=1' }
+      );
+
+      expect(
+        mockPushSubscriptionService.getActiveSubscriptions
+      ).not.toHaveBeenCalled();
+    });
+  });
 });

@@ -3,11 +3,10 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { streamToBuffer } from '@common/utils/file.util';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { CollaboraDocumentEventsService } from '@domain/collaboration/collabora-document/events/collabora.document.events.service';
 import { Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
-import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
@@ -26,8 +25,7 @@ export class CollaboraDocumentResolverMutations {
     private readonly logger: WinstonLogger,
     private authorizationService: AuthorizationService,
     private collaboraDocumentService: CollaboraDocumentService,
-    private contributionReporter: ContributionReporterService,
-    private communityResolverService: CommunityResolverService,
+    private collaboraDocumentEventsService: CollaboraDocumentEventsService,
     private readonly configService: ConfigService<AlkemioConfig, true>
   ) {}
 
@@ -155,42 +153,11 @@ export class CollaboraDocumentResolverMutations {
       }
     }
 
-    // TEMP hotfix: analytics attribution disabled to remove the ~8s
-    // getCommunityForCollaboraDocumentOrFail penalty on the document-replace
-    // path. The proper fix (a cheap leaf-first space lookup) restores this
-    // reporting; see the collabora-editor-url-latency follow-up PR referenced in
-    // this PR's description.
-    // Lifecycle analytics: record the swap as a single-actor
-    // COLLABORA_DOCUMENT_REPLACED event. Resolve the level-zero space via the
-    // community resolver exactly as the upload path does. Best-effort: the
-    // swap is already committed, so a failure here must NOT fail the mutation
-    // (a retry would double-swap). Catch and log; never re-throw.
-    // try {
-    //   const community =
-    //     await this.communityResolverService.getCommunityForCollaboraDocumentOrFail(
-    //       updated.id
-    //     );
-    //   const levelZeroSpaceID =
-    //     await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
-    //       community.id
-    //     );
-    //   this.contributionReporter.calloutCollaboraDocumentReplaced(
-    //     {
-    //       id: updated.id,
-    //       name: updated.profile?.displayName ?? updated.id,
-    //       space: levelZeroSpaceID,
-    //     },
-    //     actorContext
-    //   );
-    // } catch (e) {
-    //   const message = e instanceof Error ? e.message : String(e);
-    //   const details = e instanceof Error ? e.stack : String(e);
-    //   this.logger.error(
-    //     `Failed to report COLLABORA_DOCUMENT_REPLACED analytics for CollaboraDocument ${updated.id}: ${message}`,
-    //     details,
-    //     LogContext.COLLABORATION
-    //   );
-    // }
+    this.collaboraDocumentEventsService.publishReplaced(
+      updated.id,
+      updated.profile?.displayName ?? updated.id,
+      actorContext
+    );
 
     return updated;
   }

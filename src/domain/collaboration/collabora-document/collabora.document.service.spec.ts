@@ -1,8 +1,12 @@
 import { CollaboraDocumentType } from '@common/enums/collabora.document.type';
-import { ValidationException } from '@common/exceptions';
+import {
+  RelationshipNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { DocumentService } from '@domain/storage/document/document.service';
+import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -18,12 +22,15 @@ const XLSX_MIME =
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const DOCX_MIME =
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const PDF_MIME = 'application/pdf';
+const ZIP_MIME = 'application/zip';
 
 describe('CollaboraDocumentService', () => {
   let service: CollaboraDocumentService;
   let repository: { findOne: Mock; save: Mock; remove: Mock };
   let wopiServiceAdapter: WopiServiceAdapter;
   let storageBucketService: StorageBucketService;
+  let storageAggregatorService: StorageAggregatorService;
   let fileServiceAdapter: FileServiceAdapter;
   let documentService: DocumentService;
   let profileService: ProfileService;
@@ -53,6 +60,7 @@ describe('CollaboraDocumentService', () => {
     repository = module.get(getRepositoryToken(CollaboraDocument));
     wopiServiceAdapter = module.get(WopiServiceAdapter);
     storageBucketService = module.get(StorageBucketService);
+    storageAggregatorService = module.get(StorageAggregatorService);
     fileServiceAdapter = module.get(FileServiceAdapter);
     documentService = module.get(DocumentService);
     profileService = module.get(ProfileService);
@@ -61,6 +69,147 @@ describe('CollaboraDocumentService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('createCollaboraDocument', () => {
+    const storageAggregator = { id: 'aggregator-1' } as any;
+
+    beforeEach(() => {
+      vi.mocked(
+        storageAggregatorService.getDirectStorageBucket
+      ).mockResolvedValue({ id: 'bucket-1' } as any);
+      vi.mocked(profileService.createProfile).mockResolvedValue({
+        id: 'profile-1',
+        displayName: 'report',
+      } as any);
+      vi.mocked(profileService.addOrUpdateTagsetOnProfile).mockResolvedValue(
+        {} as any
+      );
+      vi.mocked(fileServiceAdapter.updateDocument).mockResolvedValue({} as any);
+    });
+
+    it('accepts an uploaded PDF and types the resulting document as PDF', async () => {
+      vi.mocked(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).mockResolvedValue({ id: 'doc-1', mimeType: PDF_MIME } as any);
+
+      const result = await service.createCollaboraDocument(
+        {
+          uploadedFile: {
+            buffer: Buffer.from('%PDF-1.4'),
+            filename: 'report.pdf',
+            mimetype: PDF_MIME,
+          },
+        } as any,
+        storageAggregator,
+        'user-1'
+      );
+
+      expect(result.documentType).toBe(CollaboraDocumentType.PDF);
+      expect(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).toHaveBeenCalledWith(
+        'bucket-1',
+        expect.any(Buffer),
+        'report.pdf',
+        PDF_MIME,
+        'user-1',
+        true,
+        true,
+        expect.arrayContaining([PDF_MIME])
+      );
+      expect(fileServiceAdapter.updateDocument).toHaveBeenCalledWith('doc-1', {
+        temporaryLocation: false,
+      });
+    });
+
+    it('continues to reject a file type outside the allowlist, e.g. .zip (regression)', async () => {
+      vi.mocked(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).mockRejectedValue(new Error('415 ErrUnsupportedMediaType'));
+
+      await expect(
+        service.createCollaboraDocument(
+          {
+            uploadedFile: {
+              buffer: Buffer.from('PK'),
+              filename: 'archive.zip',
+              mimetype: ZIP_MIME,
+            },
+          } as any,
+          storageAggregator,
+          'user-1'
+        )
+      ).rejects.toThrow('415');
+    });
+
+    it('rejects a blank-create request for PDF: no blank-create option exists for it', async () => {
+      await expect(
+        service.createCollaboraDocument(
+          {
+            displayName: 'Untitled',
+            documentType: CollaboraDocumentType.PDF,
+          } as any,
+          storageAggregator,
+          'user-1'
+        )
+      ).rejects.toThrow(ValidationException);
+
+      // Never reached staging — rejected before any bytes are written.
+      expect(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getEditorUrl', () => {
+    it('issues a WOPI token from the supplied backing document without reloading', async () => {
+      const collaboraDocument = {
+        id: 'collabora-document-1',
+        document: { id: 'storage-document-1' },
+      } as any;
+      vi.mocked(wopiServiceAdapter.issueToken).mockResolvedValue({
+        editorUrl: 'https://collabora/editor',
+        accessTokenTTL: 3600,
+      } as any);
+
+      const result = await service.getEditorUrl(
+        collaboraDocument,
+        'actor-1',
+        'Actor One',
+        'nl'
+      );
+
+      expect(repository.findOne).not.toHaveBeenCalled();
+      expect(wopiServiceAdapter.issueToken).toHaveBeenCalledWith(
+        'storage-document-1',
+        'actor-1',
+        'Actor One',
+        'nl'
+      );
+      expect(result).toEqual({
+        editorUrl: 'https://collabora/editor',
+        accessTokenTTL: 3600,
+      });
+    });
+
+    it('preserves the static missing-backing-document exception contract', async () => {
+      const collaboraDocument = {
+        id: 'collabora-document-without-backing',
+      } as any;
+
+      const error = await service
+        .getEditorUrl(collaboraDocument, 'actor-1', undefined, 'en')
+        .catch(reason => reason);
+
+      expect(error).toBeInstanceOf(RelationshipNotFoundException);
+      expect(error.message).toBe('Document not found on CollaboraDocument');
+      expect(error.details).toEqual({
+        collaboraDocumentId: 'collabora-document-without-backing',
+      });
+      expect(repository.findOne).not.toHaveBeenCalled();
+      expect(wopiServiceAdapter.issueToken).not.toHaveBeenCalled();
+    });
   });
 
   describe('replaceCollaboraDocument', () => {
@@ -213,6 +362,84 @@ describe('CollaboraDocumentService', () => {
       // Staged file fully cleaned up (file + auth policy + tagset, via
       // documentService.deleteDocument — not the file-only adapter); original
       // never re-pointed and the OLD file is never touched.
+      expect(documentService.deleteDocument).toHaveBeenCalledWith({
+        ID: 'new-doc',
+      });
+      expect(documentService.deleteDocument).not.toHaveBeenCalledWith({
+        ID: 'old-doc',
+      });
+      expect(fileServiceAdapter.updateDocument).not.toHaveBeenCalled();
+      expect(repository.save).not.toHaveBeenCalled();
+    });
+
+    it('replaces a PDF document with another PDF', async () => {
+      const existingPdfDoc = () =>
+        ({
+          ...existingDoc(),
+          documentType: CollaboraDocumentType.PDF,
+          originalMimeType: PDF_MIME,
+        }) as any;
+
+      repository.findOne
+        .mockResolvedValueOnce(existingPdfDoc())
+        .mockResolvedValueOnce({
+          id: 'collab-doc-1',
+          documentType: CollaboraDocumentType.PDF,
+          profile: { id: 'profile-1', displayName: 'Quarterly Report' },
+          document: { id: 'new-doc' },
+        } as any);
+
+      vi.mocked(wopiServiceAdapter.getLockStatus).mockResolvedValue('unlocked');
+      vi.mocked(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).mockResolvedValue({ id: 'new-doc', mimeType: PDF_MIME } as any);
+      vi.mocked(fileServiceAdapter.updateDocument).mockResolvedValue({} as any);
+      repository.save.mockImplementation(async (d: any) => d);
+      vi.mocked(documentService.deleteDocument).mockResolvedValue({} as any);
+
+      const result = await service.replaceCollaboraDocument(
+        'collab-doc-1',
+        Buffer.from('new-pdf-bytes'),
+        'report-v2.pdf',
+        PDF_MIME,
+        'user-1'
+      );
+
+      const saved = repository.save.mock.calls[0][0];
+      expect(saved.document.id).toBe('new-doc');
+      expect(saved.documentType).toBe(CollaboraDocumentType.PDF);
+      expect(saved.originalMimeType).toBe(PDF_MIME);
+      expect(result.documentType).toBe(CollaboraDocumentType.PDF);
+      expect(documentService.deleteDocument).toHaveBeenCalledWith({
+        ID: 'old-doc',
+      });
+    });
+
+    it('rejects replacing a PDF document with a non-PDF file (same-type enforcement)', async () => {
+      const existingPdfDoc = () =>
+        ({
+          ...existingDoc(),
+          documentType: CollaboraDocumentType.PDF,
+          originalMimeType: PDF_MIME,
+        }) as any;
+
+      repository.findOne.mockResolvedValueOnce(existingPdfDoc());
+      vi.mocked(wopiServiceAdapter.getLockStatus).mockResolvedValue('unlocked');
+      // Sniffed as a spreadsheet, but the existing document is a PDF.
+      vi.mocked(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).mockResolvedValue({ id: 'new-doc', mimeType: XLSX_MIME } as any);
+      vi.mocked(documentService.deleteDocument).mockResolvedValue({} as any);
+
+      await expect(
+        service.replaceCollaboraDocument(
+          'collab-doc-1',
+          Buffer.from('x'),
+          'report.xlsx',
+          XLSX_MIME
+        )
+      ).rejects.toThrow(ValidationException);
+
       expect(documentService.deleteDocument).toHaveBeenCalledWith({
         ID: 'new-doc',
       });
