@@ -5,11 +5,11 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { AiPersona } from '@services/ai-server/ai-persona/ai.persona.entity';
 import { AiPersonaService } from '@services/ai-server/ai-persona/ai.persona.service';
 import { AiPersonaEngineAdapter } from '@services/ai-server/ai-persona-engine-adapter/ai.persona.engine.adapter';
+import graphJson from '@services/ai-server/prompt-graph/config/prompt.graph.expert.json';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { type Mock, vi } from 'vitest';
-import graphJson from '../../../src/services/ai-server/prompt-graph/config/prompt.graph.expert.json';
 
 describe('AI persona prompt-graph attachment matrix', () => {
   let module: TestingModule;
