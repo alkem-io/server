@@ -510,14 +510,18 @@ export class CalloutFramingService {
           return calloutFraming;
         }
 
-        // if there is content and a Memo AND the parent Callout is template, we update it
+        // if there is content and a Memo AND the parent Callout is template, we update it.
+        // The update is applied THROUGH the memo's live collaboration room (the single
+        // authority over the snapshot) as the initiating actor — never a direct snapshot
+        // write, which a live room's next SAVE would clobber (006 write-path fix).
         if (
           calloutFraming.memo &&
           calloutFramingData.memoContent &&
           isParentCalloutTemplate
         ) {
-          calloutFraming.memo = await this.memoService.updateMemoContent(
+          calloutFraming.memo = await this.memoService.replaceMemoContent(
             calloutFraming.memo.id,
+            userID ?? '',
             calloutFramingData.memoContent
           );
         } else {

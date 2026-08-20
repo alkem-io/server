@@ -9,6 +9,7 @@ import { ProfileDocumentsService } from '@domain/profile-documents/profile.docum
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
+import { CollaborationDocumentService } from '@services/collaboration-client/collaboration-document.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -30,6 +31,7 @@ describe('MemoService', () => {
   let profileDocumentsService: ProfileDocumentsService;
   let fileServiceAdapter: FileServiceAdapter;
   let collaborationLifecycleService: CollaborationLifecycleService;
+  let collaborationDocumentService: CollaborationDocumentService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -59,6 +61,7 @@ describe('MemoService', () => {
     profileDocumentsService = module.get(ProfileDocumentsService);
     fileServiceAdapter = module.get(FileServiceAdapter);
     collaborationLifecycleService = module.get(CollaborationLifecycleService);
+    collaborationDocumentService = module.get(CollaborationDocumentService);
   });
 
   describe('getMemoOrFail', () => {
@@ -197,7 +200,14 @@ describe('MemoService', () => {
     });
   });
 
-  describe('updateMemoContent', () => {
+  describe('replaceMemoContent', () => {
+    it('fails closed when there is no initiating actor — never joins the room unauthenticated', async () => {
+      await expect(
+        service.replaceMemoContent('memo-1', '', '# content')
+      ).rejects.toThrow(EntityNotInitializedException);
+      expect(collaborationDocumentService.mutate).not.toHaveBeenCalled();
+    });
+
     it('should return memo unchanged when newContent is empty', async () => {
       const memo = {
         id: 'memo-1',
@@ -206,10 +216,10 @@ describe('MemoService', () => {
 
       memoRepository.findOne!.mockResolvedValue(memo);
 
-      const result = await service.updateMemoContent('memo-1', '');
+      const result = await service.replaceMemoContent('memo-1', 'actor-1', '');
 
       expect(result).toBe(memo);
-      expect(memoRepository.save).not.toHaveBeenCalled();
+      expect(collaborationDocumentService.mutate).not.toHaveBeenCalled();
     });
 
     it('should throw EntityNotInitializedException when profile is missing', async () => {
@@ -221,45 +231,36 @@ describe('MemoService', () => {
       memoRepository.findOne!.mockResolvedValue(memo);
 
       await expect(
-        service.updateMemoContent('memo-1', 'some content')
+        service.replaceMemoContent('memo-1', 'actor-1', 'some content')
       ).rejects.toThrow(EntityNotInitializedException);
     });
 
-    it('reuploads embedded media then writes the snapshot to the bucket + sets the pointer', async () => {
+    it('reuploads embedded media then applies the replacement THROUGH the live room — never a direct snapshot write', async () => {
       const memo = {
         id: 'memo-1',
         profile: { id: 'p1', storageBucket: { id: 'sb-1' } },
-        contentPointer: undefined,
       } as unknown as IMemo;
 
       memoRepository.findOne!.mockResolvedValue(memo);
-      memoRepository.save!.mockImplementation(async (m: any) => m);
       (
         profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket as Mock
       ).mockResolvedValue('reuploaded content');
-      (fileServiceAdapter.createSnapshotInBucket as Mock).mockResolvedValue({
-        id: 'snap-new',
-        externalID: 'ext',
-        mimeType: 'application/octet-stream',
-        size: 10,
-        reused: false,
-      });
 
-      const result = await service.updateMemoContent(
-        'memo-1',
-        '# Some markdown'
-      );
+      await service.replaceMemoContent('memo-1', 'actor-1', '# Some markdown');
 
       expect(
         profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket
       ).toHaveBeenCalled();
-      // Content is written to the document's bucket as a Yjs-V2 snapshot, not the
-      // dropped inline column; the pointer is recorded on the entity.
-      expect(fileServiceAdapter.createSnapshotInBucket).toHaveBeenCalledWith(
-        expect.any(Buffer),
-        'sb-1'
+      // The content is applied THROUGH the memo's live collaboration room as the
+      // initiating actor — the room's own SAVE persists it. The server never writes
+      // the snapshot / repoints the pointer directly (which a live room would clobber).
+      expect(collaborationDocumentService.mutate).toHaveBeenCalledWith(
+        'memo-1',
+        'memo',
+        'actor-1',
+        expect.any(Function)
       );
-      expect(result.contentPointer).toBe('snap-new');
+      expect(fileServiceAdapter.createSnapshotInBucket).not.toHaveBeenCalled();
     });
   });
 

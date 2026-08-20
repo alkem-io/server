@@ -625,7 +625,7 @@ describe('CalloutFramingService', () => {
       );
 
       expect(result).toBe(framing);
-      expect(memoService.updateMemoContent).not.toHaveBeenCalled();
+      expect(memoService.replaceMemoContent).not.toHaveBeenCalled();
     });
 
     it('should update memo content when MEMO type, is template, and memo content provided', async () => {
@@ -639,7 +639,7 @@ describe('CalloutFramingService', () => {
         memoContent: 'new content',
       } as any;
 
-      vi.mocked(memoService.updateMemoContent).mockResolvedValue({
+      vi.mocked(memoService.replaceMemoContent).mockResolvedValue({
         id: 'memo-1',
       } as any);
 
@@ -647,11 +647,13 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        true // isParentCalloutTemplate
+        true, // isParentCalloutTemplate
+        'actor-1' // initiating actor threaded to the live-room replacement
       );
 
-      expect(memoService.updateMemoContent).toHaveBeenCalledWith(
+      expect(memoService.replaceMemoContent).toHaveBeenCalledWith(
         'memo-1',
+        'actor-1',
         'new content'
       );
     });

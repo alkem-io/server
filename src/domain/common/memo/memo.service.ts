@@ -20,6 +20,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
+import { CollaborationDocumentService } from '@services/collaboration-client/collaboration-document.service';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
@@ -27,7 +28,12 @@ import { AuthorizationPolicy } from '../authorization-policy/authorization.polic
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { LicenseService } from '../license/license.service';
 import { ProfileService } from '../profile/profile.service';
-import { markdownToYjsV2State, yjsStateToMarkdown } from './conversion';
+import {
+  markdownToProseMirrorNode,
+  markdownToYjsV2State,
+  replaceMemoDocContent,
+  yjsStateToMarkdown,
+} from './conversion';
 import { CreateMemoInput } from './dto/memo.dto.create';
 import { UpdateMemoInput } from './dto/memo.dto.update';
 import { Memo } from './memo.entity';
@@ -46,7 +52,8 @@ export class MemoService {
     private communityResolverService: CommunityResolverService,
     private licenseService: LicenseService,
     private collaborationLifecycleService: CollaborationLifecycleService,
-    private fileServiceAdapter: FileServiceAdapter
+    private fileServiceAdapter: FileServiceAdapter,
+    private collaborationDocumentService: CollaborationDocumentService
   ) {}
 
   async createMemo(
@@ -238,50 +245,6 @@ export class MemoService {
   }
 
   /**
-   * Replaces the document's stored Yjs-V2 snapshot in its own bucket with a new
-   * one and repoints `contentPointer`, deleting the superseded snapshot file
-   * (latest-only, mirroring the collaboration-service BlobStore). Used by the
-   * server-side content-set paths that do NOT go through a live collab session
-   * (template/framing content edits — `updateMemoContent`). Best-effort cleanup:
-   * a failed delete of the old file does not fail the save (the new snapshot is
-   * already durable + recorded; the orphan is reclaimable).
-   */
-  private async replaceSnapshot(memo: IMemo, snapshot: Buffer): Promise<IMemo> {
-    const storageBucketId = memo.profile?.storageBucket?.id;
-    if (!storageBucketId) {
-      throw new EntityNotInitializedException(
-        'Memo storage bucket not initialized when replacing snapshot',
-        LogContext.MEMOS,
-        { memoId: memo.id }
-      );
-    }
-    const previousPointer = memo.contentPointer;
-    const result = await this.fileServiceAdapter.createSnapshotInBucket(
-      snapshot,
-      storageBucketId
-    );
-    memo.contentPointer = result.id;
-    const saved = await this.save(memo);
-
-    if (previousPointer && previousPointer !== result.id) {
-      await this.fileServiceAdapter
-        .deleteDocument(previousPointer)
-        .catch(error => {
-          this.logger.warn?.(
-            {
-              message: 'Failed to delete superseded memo snapshot',
-              memoId: memo.id,
-              previousPointer,
-              error: String(error),
-            },
-            LogContext.MEMOS
-          );
-        });
-    }
-    return saved;
-  }
-
-  /**
    * Reads the unified collaboration metadata/index for a memo (FR-005). The
    * blob never leaves the server on this path — only the index + the entity's
    * own `authorizationPolicyId` (= `authorizationId`, the eager
@@ -410,27 +373,36 @@ export class MemoService {
   }
 
   /**
-   * Server-side memo content set (template / framing-content edit — NOT a live
-   * collab session). Re-homes embedded media into the memo's bucket, encodes the
-   * markdown to a Yjs-V2 snapshot, and replaces the stored snapshot in the bucket
-   * (R2/FR-005) — the inline `content` column is gone. The content originates
-   * server-side here (e.g. a callout-template framing edit), so it is persisted
-   * directly rather than through the room; the next open seeds from this snapshot.
+   * Replace an EXISTING memo's content through its live collaboration room — the single
+   * authority over the document snapshot — instead of a direct snapshot/`contentPointer`
+   * write (which would be clobbered by the room's next SAVE: silent data loss). The server
+   * joins the room as the initiating authorized actor (like the MCP tools), re-homes
+   * markdown media into the memo's own bucket for locator safety, then applies a whole-doc
+   * ProseMirror replacement to the live `default` Y.XmlFragment as one durable update. The
+   * room fans the change out to connected editors and its own SAVE persists the new
+   * snapshot + bumps the version (006-collab-content-unification write-path fix). A cold
+   * memo materializes from its durable snapshot on join. Content CREATION seeds storage
+   * directly (pre-room); only existing-document edits route here.
    */
-  async updateMemoContent(
-    memoInputId: string,
+  async replaceMemoContent(
+    memoId: string,
+    actorId: string,
     newContent: string
   ): Promise<IMemo> {
-    const memo = await this.getMemoOrFail(memoInputId, {
+    if (!actorId) {
+      // Fail closed: a live-room edit joins as the initiating actor and must be
+      // authorized — never join the collaboration room unauthenticated.
+      throw new EntityNotInitializedException(
+        'Cannot replace memo content without an initiating actor',
+        LogContext.MEMOS,
+        { memoId }
+      );
+    }
+    const memo = await this.getMemoOrFail(memoId, {
       loadEagerRelations: false,
-      relations: {
-        profile: {
-          storageBucket: true,
-        },
-      },
+      relations: { profile: { storageBucket: true } },
       select: {
         id: true,
-        contentPointer: true,
         profile: { id: true, storageBucket: { id: true } },
       },
     });
@@ -438,10 +410,9 @@ export class MemoService {
       throw new EntityNotInitializedException(
         'Profile not initialized on Memo',
         LogContext.MEMOS,
-        { memoId: memoInputId }
+        { memoId }
       );
     }
-
     if (!newContent) {
       return memo;
     }
@@ -456,13 +427,14 @@ export class MemoService {
         );
     }
 
-    const binaryUpdateV2 = this.markdownToStateUpdate(newMemoContent);
-
-    if (!binaryUpdateV2) {
-      return memo;
-    }
-
-    return this.replaceSnapshot(memo, Buffer.from(binaryUpdateV2));
+    const desiredNode = markdownToProseMirrorNode(newMemoContent);
+    await this.collaborationDocumentService.mutate(
+      memoId,
+      'memo',
+      actorId,
+      doc => replaceMemoDocContent(doc, desiredNode)
+    );
+    return memo;
   }
 
   /**

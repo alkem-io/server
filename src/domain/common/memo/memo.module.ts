@@ -7,6 +7,7 @@ import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.buck
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { FileServiceAdapterModule } from '@services/adapters/file-service-adapter/file.service.adapter.module';
+import { CollaborationClientModule } from '@services/collaboration-client/collaboration-client.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { AuthorizationPolicyModule } from '../authorization-policy/authorization.policy.module';
 import { LicenseModule } from '../license/license.module';
@@ -31,6 +32,7 @@ import { MemoAuthorizationService } from './memo.service.authorization';
     ProfileDocumentsModule,
     CollaborationMetadataModule,
     FileServiceAdapterModule,
+    CollaborationClientModule,
   ],
   providers: [
     MemoService,
