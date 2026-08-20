@@ -3,22 +3,21 @@ import * as Y from 'yjs';
 
 /**
  * Server-side `Excalidraw scene JSON → Yjs-V2 state snapshot` — the single stored
- * content representation (R1/R2, FR-005). This is a faithful port of the
- * `@alkemio/excalidraw-yjs-binding` `populateYDoc` + scene `Y.Map` schema
- * (`schema.ts` / `migrate.ts` / `order.ts` in `excalidraw-fork`), reproduced here
- * because the published binding bundles its OWN copy of `yjs` (it does NOT
- * externalise it), so a `Y.Doc` it builds cannot be `encodeStateAsUpdateV2`-ed by
- * the server's `yjs` instance — the two yjs copies fail each other's `instanceof`
- * checks ("Unexpected content type", yjs#438). Once the fork's binding externalises
- * `yjs`/`lib0`/`y-protocols` as peers, the body below collapses back to a single
- * `populateYDoc(scene, ydoc)` call against the shared instance.
+ * content representation (R1/R2, FR-005). The `populateYDoc` + scene `Y.Map`
+ * schema below is native to the server; it originated as a port of the
+ * now-removed `@alkemio/excalidraw-yjs-binding` (`schema.ts` / `migrate.ts` /
+ * `order.ts`) but no longer depends on it. Keeping the schema in-tree also
+ * sidesteps the historical `instanceof` hazard: a binding that bundled its OWN
+ * copy of `yjs` produced a `Y.Doc` the server's `yjs` instance could not
+ * `encodeStateAsUpdateV2` (the two yjs copies fail each other's checks —
+ * "Unexpected content type", yjs#438). This file builds the doc directly on the
+ * server's single shared `yjs` instance, so no cross-instance split can arise.
  *
- * The wire format is byte-compatible with the binding (same root-type names, same
- * per-property tiering, same `fractional-indexing` key scheme — the fork notes the
- * package is byte-for-byte identical to the editor's vendored copy), so a snapshot
- * the server writes here seeds an identical room to one an editor produces
- * (FR-002 — one representation everywhere), and the collaboration-service rehydrates
- * it via `ApplyUpdateV2`.
+ * The wire format is byte-compatible with the editor's native Yjs format (the
+ * excalidraw-yjs fork): same root-type names, same per-property tiering, same
+ * `fractional-indexing` key scheme. A snapshot the server writes here therefore
+ * seeds an identical room to one an editor produces (FR-002 — one representation
+ * everywhere), and the collaboration-service rehydrates it via `ApplyUpdateV2`.
  *
  * An empty / unparseable scene yields the encoding of an empty `Y.Doc` rather than
  * throwing, so an empty-on-create whiteboard stays empty + editable (FR-010) and a
@@ -36,8 +35,9 @@ export const whiteboardSceneToYjsV2State = (sceneJSON: string): Uint8Array => {
 
 /**
  * Inverse of `whiteboardSceneToYjsV2State`: applies a Yjs-V2 snapshot into a
- * fresh `Y.Doc` and reads the scene back to Excalidraw JSON (a port of the
- * binding's `exportSceneJSON` + `yMapToElement`). Used by the server-side
+ * fresh `Y.Doc` and reads the scene back to Excalidraw JSON (native, originally
+ * ported from the now-removed binding's `exportSceneJSON` + `yMapToElement`).
+ * Used by the server-side
  * duplicate/export path (input-creator) to seed a copied whiteboard from the
  * source's stored snapshot, since content is no longer a JSON column. Returns
  * the canonical empty-scene JSON for an empty / undecodable snapshot.
