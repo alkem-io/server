@@ -1,0 +1,263 @@
+{
+  "state": {
+    "type": "object",
+    "properties": [
+      {
+        "name": "role",
+        "type": "string",
+        "optional": true
+      },
+      {
+        "name": "duration",
+        "type": "string",
+        "optional": true
+      },
+      {
+        "name": "workshop_type",
+        "type": "string",
+        "optional": true
+      },
+      {
+        "name": "purpose",
+        "type": "string",
+        "optional": true
+      },
+      {
+        "name": "audience_size",
+        "type": "integer",
+        "optional": true
+      },
+      {
+        "name": "question",
+        "type": "string",
+        "optional": true
+      },
+      {
+        "name": "complete",
+        "type": "boolean",
+        "optional": true
+      },
+      {
+        "name": "action",
+        "type": "string",
+        "optional": true
+      },
+      {
+        "name": "current",
+        "type": "string",
+        "optional": true
+      },
+      {
+        "name": "knowledge_docs",
+        "type": "string",
+        "optional": true
+      },
+      {
+        "name": "result",
+        "type": "string",
+        "optional": true
+      },
+      {
+        "name": "conversation",
+        "type": "string",
+        "optional": true
+      },
+      {
+        "name": "current_question",
+        "type": "string",
+        "optional": true
+      },
+      {
+        "name": "bok_id",
+        "type": "string",
+        "optional": true
+      }
+    ]
+  },
+  "nodes": [
+    {
+      "name": "check_input",
+      "type": "llm",
+      "input_variables": ["conversation"],
+      "prompt": "You are a conversation analyser extracting key information points from a conversation between a human and an assistant. The conversation below is about a workshop creation and you are looking for the following data points: role, duration, workshop_type, purpose, audience_size.\n\nReply according to the output format instructions below, trying to fill in as many fields as possible.\n\nIf one or more data points are missing, generate a question asking for them. Ask for no more than 2 data points in a single question.\n\nIf the conversation is missing, assume all key points are missing.\n\nConversation:\n{conversation}\n\nOutput format instructions:\n{format_instructions}",
+      "output": {
+        "type": "object",
+        "properties": [
+          {
+            "name": "role",
+            "type": "string",
+            "description": "The role of the workshop creator/facilitator in the organisation.",
+            "optional": false
+          },
+          {
+            "name": "duration",
+            "type": "string",
+            "description": "The duration of the workshop.",
+            "optional": false
+          },
+          {
+            "name": "workshop_type",
+            "type": "string",
+            "description": "The type of the workshop - in-person, online, etc.",
+            "optional": false
+          },
+          {
+            "name": "purpose",
+            "type": "string",
+            "description": "The purpose/goal of the workshop.",
+            "optional": false
+          },
+          {
+            "name": "audience_size",
+            "type": "integer",
+            "description": "The size of the audience of the workshop.",
+            "optional": false
+          },
+          {
+            "name": "question",
+            "type": "string",
+            "description": "A question asking the workshop creator to provide a missing key variable.",
+            "optional": false
+          },
+          {
+            "name": "complete",
+            "type": "boolean",
+            "description": "True when all five data points are present.",
+            "optional": false
+          }
+        ]
+      },
+      "system": false
+    },
+    {
+      "name": "ask",
+      "type": "echo",
+      "source": "question",
+      "system": false
+    },
+    {
+      "name": "analyse_last_message",
+      "type": "llm",
+      "input_variables": ["conversation"],
+      "prompt": "You are a conversation analyser. You are provided with a conversation between a human and an assistant about a workshop design.\n\nBased on the last human message, determine if the user wants to refine an already generated workshop design ('refine') or wants a new one generated ('generate').\n\nConversation:\n{conversation}\n\nOutput format instructions:\n{format_instructions}",
+      "output": {
+        "type": "object",
+        "properties": [
+          {
+            "name": "action",
+            "type": "string",
+            "description": "Either 'refine' or 'generate'.",
+            "optional": false
+          }
+        ]
+      },
+      "system": false
+    },
+    {
+      "name": "extract",
+      "type": "llm",
+      "input_variables": ["conversation"],
+      "prompt": "You are a conversation analyser. Below you are provided with a conversation between a human and an assistant about a workshop design, formatted like:\n```\nhuman:\nmessage content\nassistant:\nmessage content\n...\n```\nOne of the messages contains a workshop design. Find it and return the contents of the message without any additional information or alterations.\n\nNever explain your reasoning or provide any additional information outside of the workshop design.\n\nConversation:\n{conversation}\n\nOutput format instructions:\n{format_instructions}",
+      "output": {
+        "type": "object",
+        "properties": [
+          {
+            "name": "current",
+            "type": "string",
+            "description": "The current iteration of the workshop design found in the conversation.",
+            "optional": false
+          }
+        ]
+      },
+      "system": false
+    },
+    {
+      "name": "retrieve_refine",
+      "type": "retrieve",
+      "collection_template": "{bok_id}-knowledge",
+      "query_template": "I need information about Liberating Structures suitable for a {workshop_type} for {audience_size} people held by {role} for {duration} in order to {purpose}.",
+      "n_results": 10,
+      "max_context_chars": 95000,
+      "output_key": "knowledge_docs",
+      "system": false
+    },
+    {
+      "name": "refine",
+      "type": "llm",
+      "input_variables": ["current", "current_question", "knowledge_docs"],
+      "prompt": "You are a renowned expert in Liberating Structures.\n\nYou are provided with a workshop design based on Liberating Structures and a human request to alter it.\n\nBased on the context provided below, apply the changes the user requested to the current workshop design.\n\nNever explain your reasoning or provide any additional information outside of the workshop design.\n\nThe design format is Markdown. Preserve the formatting, indentation and structure of the design. Add nice indentation to the design and do not remove any empty lines.\n\nWorkshop design:\n{current}\n\nHuman request:\n{current_question}\n\nContext:\n{knowledge_docs}",
+      "system": false
+    },
+    {
+      "name": "retrieve_generate",
+      "type": "retrieve",
+      "collection_template": "{bok_id}-knowledge",
+      "query_template": "I need information about Liberating Structures suitable for a {workshop_type} for {audience_size} people held by {role} for {duration} in order to {purpose}.",
+      "n_results": 10,
+      "max_context_chars": 95000,
+      "output_key": "knowledge_docs",
+      "system": false
+    },
+    {
+      "name": "generate",
+      "type": "llm",
+      "input_variables": [
+        "role",
+        "duration",
+        "workshop_type",
+        "purpose",
+        "audience_size",
+        "knowledge_docs"
+      ],
+      "prompt": "Here is information about Liberating Structures that are suitable for the scenario described below. Base your answer ONLY on that and ignore your previous knowledge about Liberating Structures.\n\nLiberating Structures information:\n\n{knowledge_docs}\n\nDesign a workshop for a {workshop_type} for {audience_size} people, held by a {role}, for {duration}, in order to {purpose}, using only the Liberating Structures information provided above.\n\nNever explain your reasoning or provide any additional information outside of the workshop design. The design format is Markdown.",
+      "system": false
+    }
+  ],
+  "edges": [
+    {
+      "from": "START",
+      "to": "check_input"
+    },
+    {
+      "from": "check_input",
+      "on": "complete",
+      "map": {
+        "true": "analyse_last_message",
+        "false": "ask"
+      }
+    },
+    {
+      "from": "ask",
+      "to": "END"
+    },
+    {
+      "from": "analyse_last_message",
+      "on": "action",
+      "map": {
+        "refine": "extract",
+        "generate": "retrieve_generate"
+      },
+      "default": "retrieve_generate"
+    },
+    {
+      "from": "extract",
+      "to": "retrieve_refine"
+    },
+    {
+      "from": "retrieve_refine",
+      "to": "refine"
+    },
+    {
+      "from": "refine",
+      "to": "END"
+    },
+    {
+      "from": "retrieve_generate",
+      "to": "generate"
+    },
+    {
+      "from": "generate",
+      "to": "END"
+    }
+  ]
+}

@@ -10,6 +10,7 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { type Mock, vi } from 'vitest';
+import graphJson from '../prompt-graph/config/prompt.graph.expert.json';
 import { AiPersona } from './ai.persona.entity';
 import { AiPersonaService } from './ai.persona.service';
 
@@ -227,6 +228,73 @@ describe('AiPersonaService', () => {
       );
     });
 
+    it('T-roundtrip-unit: preserves typed-node and conditional-edge fields without materializing omitted optionals', async () => {
+      const workshopGraph = {
+        nodes: [
+          {
+            name: 'retrieve',
+            system: false,
+            type: 'retrieve',
+            collection_template: '{bok_id}-knowledge',
+            query_template: 'information about {topic}',
+            n_results: 10,
+            max_context_chars: 20000,
+            output_key: 'knowledge_docs',
+          },
+          {
+            name: 'echo',
+            system: false,
+            type: 'echo',
+            source: 'question',
+          },
+          {
+            name: 'plain-llm',
+            system: false,
+            prompt: 'Answer {question}',
+          },
+        ],
+        edges: [
+          {
+            from: 'retrieve',
+            on: 'route',
+            map: { answer: 'echo', retry: 'plain-llm' },
+            default: 'plain-llm',
+          },
+        ],
+        state: {
+          type: 'object',
+          properties: [{ name: 'question', type: 'string', optional: false }],
+        },
+      };
+
+      await service.updateAiPersona({
+        ID: 'persona-1',
+        promptGraph: workshopGraph,
+      } as any);
+
+      const savedPersona = aiPersonaRepository.save.mock.calls[0][0];
+      expect(savedPersona.promptGraph).toEqual(workshopGraph);
+      expect(savedPersona.promptGraph.nodes[0]).toEqual(workshopGraph.nodes[0]);
+      expect(savedPersona.promptGraph.edges[0]).toEqual(workshopGraph.edges[0]);
+      expect('n_results' in savedPersona.promptGraph.nodes[2]).toBe(false);
+    });
+
+    it('preserves a plain LLM-only graph byte-for-byte', async () => {
+      const plainGraph = {
+        nodes: [{ name: 'answer', system: false, prompt: 'Answer {question}' }],
+        edges: [{ from: 'START', to: 'answer' }],
+      };
+
+      await service.updateAiPersona({
+        ID: 'persona-1',
+        promptGraph: plainGraph,
+      } as any);
+
+      expect(aiPersonaRepository.save.mock.calls[0][0].promptGraph).toEqual(
+        plainGraph
+      );
+    });
+
     it('should throw EntityNotFoundException when persona does not exist', async () => {
       aiPersonaRepository.findOne.mockResolvedValue(null);
 
@@ -432,6 +500,37 @@ describe('AiPersonaService', () => {
       );
     });
 
+    it('T-inv-expert-cases: preserves the expert default graph and joins array prompts', async () => {
+      const persona = {
+        id: 'persona-1',
+        engine: AiPersonaEngine.EXPERT,
+        prompt: ['test'],
+        externalConfig: {},
+        promptGraph: undefined,
+      };
+      aiPersonaRepository.findOne.mockResolvedValue(persona);
+      aiPersonaEngineAdapter.invoke.mockResolvedValue(undefined);
+
+      await service.invoke(
+        {
+          aiPersonaID: 'persona-1',
+          message: 'Hello',
+          displayName: 'VC',
+          externalMetadata: {},
+          resultHandler: { action: 'none' },
+        } as any,
+        []
+      );
+
+      const adapterInput = aiPersonaEngineAdapter.invoke.mock.calls[0][0];
+      const defaultCheckInput = adapterInput.promptGraph.nodes.find(
+        (node: { name: string }) => node.name === 'check_input'
+      );
+      expect(defaultCheckInput.prompt).toBe(
+        (graphJson.nodes[0].prompt as string[]).join('\n')
+      );
+    });
+
     it('should skip default promptGraph when invocationInput.promptGraph is provided', async () => {
       const persona = {
         id: 'persona-1',
@@ -461,6 +560,122 @@ describe('AiPersonaService', () => {
           promptGraph: expect.any(Object),
         })
       );
+    });
+
+    it('T-inv-generic-stored: forwards the stored graph by reference for GENERIC_OPENAI', async () => {
+      const storedGraph = {
+        nodes: [{ name: 'answer', system: false, prompt: 'Answer {question}' }],
+        edges: [{ from: 'START', to: 'answer' }],
+      };
+      aiPersonaRepository.findOne.mockResolvedValue({
+        id: 'persona-1',
+        engine: AiPersonaEngine.GENERIC_OPENAI,
+        prompt: ['test'],
+        externalConfig: {},
+        promptGraph: storedGraph,
+      });
+      aiPersonaEngineAdapter.invoke.mockResolvedValue(undefined);
+
+      await service.invoke(
+        {
+          aiPersonaID: 'persona-1',
+          message: 'Hello',
+          displayName: 'VC',
+          externalMetadata: {},
+          resultHandler: { action: 'none' },
+        } as any,
+        []
+      );
+
+      const adapterInput = aiPersonaEngineAdapter.invoke.mock.calls[0][0];
+      expect(adapterInput.promptGraph).toBe(storedGraph);
+    });
+
+    it('T-inv-generic-none: omits promptGraph for a GENERIC_OPENAI persona without one stored', async () => {
+      aiPersonaRepository.findOne.mockResolvedValue({
+        id: 'persona-1',
+        engine: AiPersonaEngine.GENERIC_OPENAI,
+        prompt: ['test'],
+        externalConfig: {},
+        promptGraph: undefined,
+      });
+      aiPersonaEngineAdapter.invoke.mockResolvedValue(undefined);
+
+      await service.invoke(
+        {
+          aiPersonaID: 'persona-1',
+          message: 'Hello',
+          displayName: 'VC',
+          externalMetadata: {},
+          resultHandler: { action: 'none' },
+        } as any,
+        []
+      );
+
+      const adapterInput = aiPersonaEngineAdapter.invoke.mock.calls[0][0];
+      expect(aiPersonaEngineAdapter.invoke).toHaveBeenCalledWith(
+        expect.not.objectContaining({ promptGraph: expect.anything() })
+      );
+      expect('promptGraph' in adapterInput).toBe(false);
+    });
+
+    it('T-inv-generic-override: suppresses stored graph when the internal override is present', async () => {
+      aiPersonaRepository.findOne.mockResolvedValue({
+        id: 'persona-1',
+        engine: AiPersonaEngine.GENERIC_OPENAI,
+        prompt: ['test'],
+        externalConfig: {},
+        promptGraph: { nodes: [], edges: [] },
+      });
+      aiPersonaEngineAdapter.invoke.mockResolvedValue(undefined);
+
+      await service.invoke(
+        {
+          aiPersonaID: 'persona-1',
+          message: 'Hello',
+          displayName: 'VC',
+          externalMetadata: {},
+          resultHandler: { action: 'none' },
+          promptGraph: { nodes: [], edges: [] },
+        } as any,
+        []
+      );
+
+      const adapterInput = aiPersonaEngineAdapter.invoke.mock.calls[0][0];
+      expect(aiPersonaEngineAdapter.invoke).toHaveBeenCalledWith(
+        expect.not.objectContaining({ promptGraph: expect.anything() })
+      );
+      expect('promptGraph' in adapterInput).toBe(false);
+    });
+
+    it.each([
+      AiPersonaEngine.GUIDANCE,
+      AiPersonaEngine.OPENAI_ASSISTANT,
+      AiPersonaEngine.LIBRA_FLOW,
+      AiPersonaEngine.COMMUNITY_MANAGER,
+    ])('T-inv-exclusion-cases: omits promptGraph for %s even when one is stored', async engine => {
+      aiPersonaRepository.findOne.mockResolvedValue({
+        id: 'persona-1',
+        engine,
+        prompt: ['test'],
+        externalConfig: {},
+        promptGraph: { nodes: [], edges: [] },
+      });
+      aiPersonaEngineAdapter.invoke.mockResolvedValue(undefined);
+
+      await service.invoke(
+        {
+          aiPersonaID: 'persona-1',
+          message: 'Hello',
+          displayName: 'VC',
+          externalMetadata: {},
+          resultHandler: { action: 'none' },
+        } as any,
+        []
+      );
+
+      const adapterInput = aiPersonaEngineAdapter.invoke.mock.calls[0][0];
+      expect('promptGraph' in adapterInput).toBe(false);
     });
 
     it('should decrypt external config for the engine input', async () => {
