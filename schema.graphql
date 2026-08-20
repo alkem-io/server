@@ -836,6 +836,22 @@ enum SearchVisibility {
   PUBLIC
 }
 
+"""
+The widgets available for the Space sidepanel, per InnovationFlow state (tab).
+"""
+enum SidebarWidget {
+  ABOUT
+  ADD_USER
+  CONTACT_LEADS
+  EVENTS
+  GUIDELINES
+  INDEX
+  INTENT
+  SUBSPACE_LINKS
+  UPDATES
+  VIRTUAL_CONTRIBUTORS
+}
+
 enum SpaceLevel {
   L0
   L1
@@ -2688,6 +2704,10 @@ type CreateInnovationFlowStateSettingsData {
   """
   showPublishDetails: Boolean
   """
+  Optional. Ordered sidebar widgets; defaults to [INTENT, INDEX] when omitted.
+  """
+  sidebar: [SidebarWidget!]
+  """
   Optional. Whether the phase is shown in member-facing navigation. Defaults to true when omitted.
   """
   visible: Boolean
@@ -3257,6 +3277,10 @@ type InnovationFlowStateSettings {
   Whether Posts in this State show publish details (publisher, publish date, avatar) in the feed. Presentation only — does not restrict access to publisher data. Default true.
   """
   showPublishDetails: Boolean!
+  """
+  Ordered widgets shown in the Space sidepanel for this State. May be empty.
+  """
+  sidebar: [SidebarWidget!]!
   """
   Whether this State/phase is shown in the member-facing navigation. Default true. UI-affordance only: it does NOT gate access to the phase content.
   """
@@ -4396,7 +4420,7 @@ type Mutation {
   """
   removePollVote(voteData: RemovePollVoteInput!): Poll!
   """
-  Removes the requesting user's reaction from a Callout. Idempotent — no error when no reaction exists. Self-scoped; requires only authentication (not CONTRIBUTE), so a person who left the space can still retract their own reaction.
+  Removes the requesting user's reaction from a Callout. Idempotent — no error when no reaction exists. Self-scoped; requires only authentication (not CONTRIBUTE). Returns the Callout only when the caller retains READ access on it.
   """
   removeReactionFromCallout(reactionData: RemoveReactionFromCalloutInput!): Callout!
   """Remove a reaction on a message from the specified Room."""
@@ -7958,6 +7982,10 @@ input CreateInnovationFlowStateSettingsInput {
   """
   showPublishDetails: Boolean
   """
+  Optional. Ordered sidebar widgets; defaults to [INTENT, INDEX] when omitted.
+  """
+  sidebar: [SidebarWidget!]
+  """
   Optional. Whether the phase is shown in member-facing navigation. Defaults to true when omitted.
   """
   visible: Boolean
@@ -9419,6 +9447,10 @@ input UpdateInnovationFlowStateSettingsInput {
   Optional. Sets whether Posts in this State show publish details (publisher, publish date, avatar) in the feed; omission leaves the stored value unchanged.
   """
   showPublishDetails: Boolean
+  """
+  Optional. Ordered sidebar widgets for this State; omission leaves the stored value unchanged. Duplicates rejected; max 20 entries.
+  """
+  sidebar: [SidebarWidget!]
   """
   Optional. Sets whether the phase is shown in member-facing navigation; omission leaves the stored value unchanged.
   """
