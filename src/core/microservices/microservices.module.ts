@@ -104,18 +104,32 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
       // guarantees the event is recorded; a confirmed persistent publish keeps
       // it alive across a broker restart between claim and consume. Dedicated
       // queue — never COLLABORATION_SERVICE (the server's own responder). The
-      // producer asserts this queue, so its declaration MUST be byte-equivalent
-      // to collab-service's consumer: durable:true + { 'x-queue-type': 'quorum' }
-      // and NOTHING else — Q1 itself carries no DLX/TTL (those live on the
-      // consumer-owned retry/DLQ queues). The lifecycle TOPOLOGY has a RabbitMQ
-      // >= 3.13.2 deployment floor: on 3.9 a quorum queue silently accepts but
-      // never expires TTL/dead-letter args, so the consumer's retry tiers never
-      // fire. Enforced at deploy (dev-orchestration upgrade + per-env
-      // verification), not here.
+      // producer asserts this queue, so its declaration MUST match collab-service's
+      // consumer: durable:true + { 'x-queue-type': 'quorum', 'x-delivery-limit': -1 }
+      // and nothing else (Q1 carries no DLX/TTL — those live on the consumer-owned
+      // retry/DLQ queues).
+      //
+      // x-delivery-limit = -1 (unlimited) is load-bearing on RabbitMQ 4.0+: a
+      // quorum queue there defaults delivery-limit to 20, and Q1 has no DLX, so
+      // without -1 the deliberate unconfirmed-transfer channel-close redelivery
+      // path would hit 20 and the broker would DROP a document.deleted (proven on
+      // real 4.0.5: shipped Q1 vanished at 21 deliveries; -1 retained 25/25).
+      //
+      // The `{ '!': 'int32', value: -1 }` typed wrapper is amqplib's field-table
+      // trapdoor forcing AMQP type `I` (signed 32-bit), byte-equivalent to
+      // collab-service's Go `int32(-1)`. This is CONVENTION / future-proofing, not
+      // a current equivalence requirement: a real 4.0.5 gate showed RabbitMQ
+      // compares x-delivery-limit by VALUE (int8/16/32/64 all equivalent), only
+      // wrong-value/omission fail. Kept typed so producer + Go consumer stay
+      // byte-identical and unambiguous. (Deployment floor is RabbitMQ 4.0.5, the
+      // production standard; enforced at deploy, not here.)
       useFactory: clientProxyFactory(MessagingQueue.COLLABORATION_LIFECYCLE, {
         durable: true,
         persistent: true,
-        queueArguments: { 'x-queue-type': 'quorum' },
+        queueArguments: {
+          'x-queue-type': 'quorum',
+          'x-delivery-limit': { '!': 'int32', value: -1 },
+        },
       }),
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },

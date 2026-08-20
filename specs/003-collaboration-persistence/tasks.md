@@ -119,7 +119,8 @@ touched collaboration-persistence diff (DEC-7).
   `MessagingQueue.COLLABORATION_LIFECYCLE` entry (`alkemio-collaboration-lifecycle`),
   and registered the client in `src/core/microservices/microservices.module.ts` via
   `clientProxyFactory(MessagingQueue.COLLABORATION_LIFECYCLE, { durable: true,
-  persistent: true, queueArguments: { 'x-queue-type': 'quorum' } })`. Extended
+  persistent: true, queueArguments: { 'x-queue-type': 'quorum', 'x-delivery-limit':
+  { '!': 'int32', value: -1 } } })`. Extended
   `clientProxyFactory` to take a `{ durable, persistent, queueArguments }` options
   object (notifications/matrix-adapter/auth-reset clients keep their classic
   defaults). This is a DEDICATED queue — NOT `COLLABORATION_SERVICE` (which REMAINS
@@ -157,10 +158,13 @@ touched collaboration-persistence diff (DEC-7).
   backoff, stale-inflight reclaim, retention prune, and the fail-fast/inert init
   branches.
 - [x] **S-T003.6** [P2] (FR-006, deployment prerequisite) Coded the quorum-queue
-  declaration + the RabbitMQ ≥ 3.13.2 topology floor (documented at the client
-  registration + in `quickstart.md`). **Per-environment prerequisite (NOT server
-  code, flagged for WS-E/ops):** upgrade local dev-orchestration RabbitMQ and verify
-  each environment ≥ 3.13.2; run the classic→quorum cutover (inspect → stop
+  declaration (`{ 'x-queue-type': 'quorum', 'x-delivery-limit': int32(-1) }`; the
+  `-1` is load-bearing on RabbitMQ 4.0+, where quorum `delivery-limit` defaults to 20
+  and Q1 has no DLX, so a redelivered `document.deleted` would drop) + the RabbitMQ
+  4.0.5 standard (production parity; documented at the client registration + in
+  `quickstart.md`). **Per-environment prerequisite (NOT server code, flagged for
+  WS-E/ops):** upgrade local dev-orchestration RabbitMQ and verify each environment
+  at 4.0.5; run the classic→quorum cutover (inspect → stop
   producers+consumers → if empty delete + let the consumer declare the quorum queue
   first → else drain/reconcile) before the lifecycle queue goes live. This is a
   deployment step, not a DB migration.
@@ -259,7 +263,7 @@ touched collaboration-persistence diff (DEC-7).
 - The migration **runner** + cutover **write-freeze** → WS-E (this slice owns the
   read service only).
 - Legacy-dialect **removal** → the big-bang cutover, not this PR (coexistence now).
-- **RabbitMQ ≥ 3.13.2 upgrade + the classic→quorum lifecycle-queue cutover** (per
+- **RabbitMQ 4.0.5 upgrade + the classic→quorum lifecycle-queue cutover** (per
   environment, incl. local dev-orchestration) → a deployment prerequisite for the
   `alkemio-collaboration-lifecycle` topology (WS-E/ops), not server code and not a DB
   migration. Runbook in `quickstart.md`.

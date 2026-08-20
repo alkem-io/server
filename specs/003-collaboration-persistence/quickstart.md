@@ -78,17 +78,31 @@ redelivery is harmless.
 ## Operational rollout — lifecycle queue cutover (classic → quorum)
 
 The lifecycle event moves onto a NEW dedicated durable **quorum** queue
-`alkemio-collaboration-lifecycle` (declaration args `{ 'x-queue-type': 'quorum' }`).
-This is a **deployment prerequisite**, not a DB migration — the producer (server)
-and consumer (collab service) MUST assert byte-equivalent declarations, and the
-broker floor must be met, or the topology silently misbehaves.
+`alkemio-collaboration-lifecycle` (declaration args
+`{ 'x-queue-type': 'quorum', 'x-delivery-limit': -1 }`). This is a **deployment
+prerequisite**, not a DB migration — the producer (server) and consumer (collab
+service) MUST assert byte-equivalent declarations, and the broker version must be
+met, or the topology silently misbehaves.
 
-**Broker floor: RabbitMQ ≥ 3.13.2 for the lifecycle topology.** On 3.9 a quorum
-queue silently *accepts* but never *expires* TTL / dead-letter arguments, so the
-consumer-owned retry tiers never fire. Q1 (`alkemio-collaboration-lifecycle`) itself
-carries NO TTL/DLX — those live on the consumer-owned retry/DLQ queues — but the
-floor still governs the whole lifecycle topology. Upgrade **local dev-orchestration
-RabbitMQ** and verify per environment before cutover.
+**Broker standard: RabbitMQ 4.0.5** (production parity; the one-way standard
+across server quickstart, devcontainer, dev-orchestration, and infra-ops). Two
+version-sensitive behaviours the topology depends on:
+- On 3.9 a quorum queue silently *accepts* but never *expires* TTL / dead-letter
+  arguments, so the consumer-owned retry tiers never fire (≥ 3.13.2 fixes this).
+- On **RabbitMQ 4.0+** a quorum queue defaults `delivery-limit` to **20** (3.x was
+  unlimited), and Q1 has **no DLX**, so the deliberate unconfirmed-transfer
+  channel-close redelivery path would hit 20 and the broker would **drop a
+  `document.deleted`**. Q1 therefore declares **`x-delivery-limit = -1`**
+  (unlimited). Proven on real 4.0.5: the shipped Q1 vanished at 21 deliveries; the
+  `-1` Q1 retained 25/25. (Q1 carries no TTL/DLX otherwise — those live on the
+  consumer-owned retry/DLQ queues.)
+
+The server producer encodes `x-delivery-limit` as `int32(-1)` (amqplib typed
+field-table trapdoor `{ '!': 'int32', value: -1 }`, AMQP type `I`), byte-equivalent
+to collab-service's Go `int32(-1)`. NOTE: a real 4.0.5 gate showed RabbitMQ compares
+`x-delivery-limit` by **value**, not field width (int8/16/32/64 all equivalent) — the
+typed width is convention/future-proofing, not a `PRECONDITION_FAILED` requirement.
+Upgrade **local dev-orchestration RabbitMQ** and verify per environment before cutover.
 
 **Cutover procedure (per environment):**
 
@@ -109,8 +123,9 @@ rabbitmqctl delete_queue alkemio-collaboration-lifecycle    # only if empty
 ```
 
 Producer and consumer declarations MUST be literally equivalent (`durable: true` +
-`{ 'x-queue-type': 'quorum' }` and nothing else) — whichever declares an
-inequivalent set second fails `PRECONDITION_FAILED`.
+`{ 'x-queue-type': 'quorum', 'x-delivery-limit': -1 }` and nothing else) — whichever
+declares an inequivalent set (wrong value or a missing/extra arg) second fails
+`PRECONDITION_FAILED`.
 
 ## Verify the authZ-eval path (OPEN-1 confirmation)
 
