@@ -151,25 +151,35 @@ server. This **confirms** the collab `authzeval` adapter assumption (DEC-5).
   - `CalloutService.deleteCallout` (`…/callout/callout.service.ts:485-527`) →
     framing + each contribution.
 
-**Implication:** emit `document.deleted` inside the two **leaf** delete methods so
-every cascade path emits exactly once and direct deletes are covered (DEC-4).
+**Implication:** record `document.deleted` in the transactional outbox inside the
+two **leaf** delete methods — in the same `manager.transaction` as the leaf-row
+removal — so every cascade path (framing/contribution/direct) passes through one
+leaf and records one row atomically with the delete (DEC-4).
 
 ### CS-6 — Outbound bus + in-process event bus
 
 - Outbound RMQ: inject a `ClientProxy` token (e.g. `@Inject(NOTIFICATIONS_SERVICE)`)
-  and `client.emit(pattern, payload)` (fire-and-forget) or `.send()` (RPC) — e.g.
+  and `client.emit(pattern, payload)` (event) or `.send()` (RPC) — e.g.
   `src/services/adapters/notification-external-adapter/notification.external.adapter.ts`
   (`notificationsClient.emit(event, payload)`). Provider registered in
-  `microservices.module.ts` via `clientProxyFactory(MessagingQueue.X)`.
-- In-process domain events: `@nestjs/cqrs` `EventBus` +
-  `src/services/infrastructure/event-bus/publisher.ts` (publishes to a RabbitMQ
-  `event-bus` exchange keyed by event class name). Available if `document.deleted`
-  should be published as a domain event handled by a publisher, rather than emitted
-  inline.
+  `microservices.module.ts` via `clientProxyFactory(MessagingQueue.X)`. The factory
+  now takes an options object (`{ durable, persistent, queueArguments }`): the
+  existing notifications/matrix-adapter/auth-reset clients keep the classic
+  fire-and-forget defaults; a persistent/quorum client is possible for a durable
+  bus. Under `amqp-connection-manager` (confirm channel) the `emit` observable can be
+  awaited to a broker publisher-confirm — the property the lifecycle dispatcher
+  relies on.
+- Transactional outbox: a `document.deleted` recorded in a DB table in the same
+  transaction as the delete, then published out-of-band by a `SchedulerRegistry`
+  sweep (the existing `ConversationDigestSweepService` establishes this pattern in
+  server). This is what the lifecycle path uses (DEC-4) — durability an inline
+  publish cannot give.
 
-**Implication:** the lifecycle emitter has two clean options (DEC-4 picks
-fire-and-forget `emit` via a dedicated `COLLABORATION_SERVICE` client for an
-explicit, named contract; the CQRS path is the alternative).
+**Implication:** the lifecycle path is a **transactional outbox** drained by an
+out-of-band dispatcher (DEC-4): the enqueue is atomic with the delete, and the
+dispatcher publishes a confirmed persistent message to a dedicated, durable queue —
+so a crash between the DB delete and the broker publish cannot lose the event
+(at-least-once; idempotent downstream).
 
 ### CS-7 — TypeORM migration workflow
 
@@ -228,18 +238,47 @@ hand-reviewed, reversible migration with a back-fill (DEC-1).
   is the cross-repo contract the collab side flags as its OPEN-3 — must be confirmed
   jointly.**
 
-### DEC-4 — Emit `document.deleted` at the two leaf delete methods, via a dedicated outbound client
-- **Decision**: emit `document.deleted {id}` (fire-and-forget `emit`) inside
-  `MemoService.deleteMemo` and `WhiteboardService.deleteWhiteboard`, through a new
-  `COLLABORATION_SERVICE` `clientProxyFactory` client on a new `MessagingQueue`
-  entry. Idempotent downstream.
+### DEC-4 — Record `document.deleted` in a transactional outbox at the two leaf delete methods; publish out-of-band to a dedicated quorum queue
+- **Decision**: inside `MemoService.deleteMemo` and
+  `WhiteboardService.deleteWhiteboard`, wrap `{ leaf-row removal + a
+  `collaboration_lifecycle_outbox` row insert }` in one `manager.transaction`
+  (via `CollaborationLifecycleService.enqueueDocumentDeleted`), so the
+  `document.deleted {id}` record commits atomically with the delete. The
+  profile/bucket/authorization cascade (which includes an external file-service HTTP
+  blob delete that cannot join a DB tx) runs BEFORE the transaction.
+  `CollaborationLifecycleDispatcherService` (a `SchedulerRegistry` single-flight
+  sweep) then claims one row at a time (pending-first by `createdDate`, then a stale
+  in-flight reclaim by `claimedAt`; `FOR UPDATE SKIP LOCKED`; a monotonic
+  `claimVersion` fence), publishes a **confirmed persistent** message (broker
+  publisher confirm, bounded by a publish timeout strictly below the claim lease) to
+  the dedicated durable **quorum** queue `alkemio-collaboration-lifecycle`
+  (`{ 'x-queue-type': 'quorum' }`) via a new `COLLABORATION_LIFECYCLE_SERVICE`
+  client, marks the row `delivered` (`deliveredAt`) only on confirm, backs failures
+  off with a capped exponential `visibleAt`, and prunes delivered rows after a
+  retention window. Delivery is **at-least-once**; the downstream Purge is idempotent.
 - **Rationale**: the leaf methods are the single choke point every cascade path
-  passes through — exactly-once, covers direct deletes; reuses server's outbound
-  client convention; an explicit named contract (vs an implicit CQRS event name).
-- **Alternatives**: emit in the callout services — rejected (misses direct deletes,
-  risks double-emit). Publish a CQRS domain event via `event-bus/publisher.ts` —
-  viable alternative; rejected for v1 in favor of an explicit, contract-named queue
-  the collab service subscribes to directly (`contracts/lifecycle-events.md`).
+  passes through (covers direct deletes; one row per delete). The **transactional
+  outbox** is the durability fix: the old inline fire-and-forget `emit` could lose
+  the event on a crash between the DB delete and the broker publish — and it
+  published to `COLLABORATION_SERVICE` (the server's OWN responder queue), so nothing
+  reached the collab service at all. The dedicated queue + persistent/quorum
+  declaration + confirmed publish close both bugs; the explicit, contract-named queue
+  the collab service subscribes to directly (`contracts/lifecycle-events.md`) beats an
+  implicit CQRS event name.
+- **Alternatives**: enqueue in the callout services — rejected (misses direct
+  deletes, risks double-enqueue). Inline fire-and-forget `emit` — rejected (loses the
+  event on a mid-delete crash; wrong queue). Publish a CQRS domain event via
+  `event-bus/publisher.ts` — rejected (no atomic-with-delete guarantee; implicit
+  contract).
+- **Boundary (out of scope):** the external profile/bucket/file-service cascade runs
+  before the transaction, so a crash after it but before remove+enqueue can leave a
+  surviving aggregate with missing storage and no event — pre-existing delete-saga
+  debt. This slice closes only the DB-remove → publish window; it is not a deletion
+  saga.
+- **Note (queue naming):** `COLLABORATION_SERVICE` / `alkemio-collaboration` REMAINS
+  the unified RPC responder queue the server CONSUMES (`collaboration-save`/`-fetch`/
+  `-delete`/`-info`/`-contribution`, DEC-3). Only the lifecycle EVENT routing moved to
+  the dedicated `COLLABORATION_LIFECYCLE` queue.
 
 ### DEC-5 — AuthZ: surface `authorizationPolicyId`; verify parity; no evaluate endpoint
 - **Decision**: carry the document's parent-entity `AuthorizationPolicy.id` (=
@@ -284,7 +323,7 @@ hand-reviewed, reversible migration with a back-fill (DEC-1).
 |---|---|
 | Unified `save` (collab → server) | `{id, contentType, version, contentPointer, blobStore}` (+ inline v2 base64 when `blobStore='inline'`) |
 | Unified `fetch` reply (server → collab) | `{id, contentType, version, contentPointer, blobStore, authorizationPolicyId}` (+ inline v2 base64 when inline) |
-| Lifecycle (server → collab) | `document.deleted {id}` (+ optional `document.created {id, contentType, ownerRef}`, `document.access_changed {id}`) |
+| Lifecycle (server → collab) | `document.deleted {id}` only — recorded in `collaboration_lifecycle_outbox` (in the delete tx), published out-of-band (confirmed persistent) to the dedicated quorum queue `alkemio-collaboration-lifecycle` via `COLLABORATION_LIFECYCLE_SERVICE`; at-least-once |
 | AuthZ (collab → auth-eval-service, separate repo) | `POST /internal/auth/evaluate {actorId, "read"\|"update-content", authorizationPolicyId}` → `{allowed, reason}` |
 | Inline blob at rest (server DB) | memo: `bytea` (Yjs v2); whiteboard: gzip-compressed Excalidraw JSON `text` |
 | Migration read (server → migration job) | `{id, contentType, content (v2 base64 / decompressed JSON), authorizationPolicyId}` per row |

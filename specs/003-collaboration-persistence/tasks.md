@@ -96,30 +96,74 @@ touched collaboration-persistence diff (DEC-7).
 
 ## Phase 2 — Lifecycle events + authZ verification (epic T003/T004)
 
-### S-T003 — `document.deleted` lifecycle emitter (epic T003 → FR-006/FR-007/FR-011)
-- [x] **S-T003.1** [P2] (FR-006/FR-011) Added the `COLLABORATION_SERVICE` provider
-  token (`src/common/constants/providers.ts`), the `MessagingQueue` entry, and
-  registered the outbound client in
-  `src/core/microservices/microservices.module.ts` via
-  `clientProxyFactory(MessagingQueue.COLLABORATION_SERVICE)` (+ exported it; +
-  stubbed it in the schema-bootstrap microservices stub).
-- [x] **S-T003.2** [P2] (FR-006) Emit `document.deleted { id }` (fire-and-forget)
-  inside `MemoService.deleteMemo` + `WhiteboardService.deleteWhiteboard`, AFTER the
-  `repository.remove` (so a thrown delete does not emit). Encapsulated in a
-  `CollaborationLifecycleService` (domain layer,
-  `src/domain/common/collaboration-metadata/`) so the named contract lives in one
-  place; the client is `@Optional()` (no-op + log when unwired, e.g. bootstrap).
-- [x] **S-T003.3** [P] [P2] (FR-007) *(optional)* Implemented
-  `emitDocumentCreated` / `emitDocumentAccessChanged` on the lifecycle service
-  (available + tested), but NOT yet wired into create / authorization-reset call
-  sites — left as the optional follow-up the spec marks (the row is created lazily
-  on first save; access re-eval is a Wave-3 concern).
-- [x] **S-T003.4** [P2] (FR-006 → SC-004) Tests: a lifecycle-service spy asserts
-  `emitDocumentDeleted(id)` fires exactly once on a successful `deleteMemo` /
-  `deleteWhiteboard`, and **not** when the delete throws before removal. The
-  lifecycle service itself is tested directly (emit shape, fire-and-forget
-  swallow, no-op without a client). Cascade paths (framing/contribution) reach the
-  same leaf, so the single emission point covers them.
+### S-T003 — `document.deleted` transactional lifecycle outbox + dispatcher (epic T003 → FR-006/FR-011)
+
+> `document.deleted` is the ONLY lifecycle event. The old design published it inline
+> (fire-and-forget `emit`) to `COLLABORATION_SERVICE` — the server's OWN responder
+> queue — so nothing reached collab-service, and a mid-delete crash could lose it.
+> Replaced by a transactional outbox + out-of-band dispatcher + a dedicated quorum
+> queue. No `document.created` / `document.access_changed` producer exists.
+
+- [x] **S-T003.1** [P2] (FR-006/FR-010) Added the outbox entity
+  `src/domain/common/collaboration-metadata/collaboration.lifecycle.outbox.entity.ts`
+  (`collaboration_lifecycle_outbox`: `id` bigint identity, `documentId` uuid,
+  `eventType` varchar32 CHECK `document.deleted`, `status` varchar16 CHECK
+  `pending|inflight|delivered`, `attempts`, `claimVersion`, `lastError`,
+  `createdDate`, `claimedAt`, `visibleAt`, `deliveredAt`) + the reversible migration
+  `src/migrations/1785810000000-CollaborationLifecycleOutbox.ts` with three partial
+  indexes (pending by `createdDate`/`visibleAt`, inflight by `claimedAt`, delivered
+  by `deliveredAt`). Server-owned (written + claimed by the server, unlike the
+  Go-owned `file_backup_outbox`).
+- [x] **S-T003.2** [P2] (FR-006/FR-011) Added the `COLLABORATION_LIFECYCLE_SERVICE`
+  provider token (`src/common/constants/providers.ts`), the new
+  `MessagingQueue.COLLABORATION_LIFECYCLE` entry (`alkemio-collaboration-lifecycle`),
+  and registered the client in `src/core/microservices/microservices.module.ts` via
+  `clientProxyFactory(MessagingQueue.COLLABORATION_LIFECYCLE, { durable: true,
+  persistent: true, queueArguments: { 'x-queue-type': 'quorum' } })`. Extended
+  `clientProxyFactory` to take a `{ durable, persistent, queueArguments }` options
+  object (notifications/matrix-adapter/auth-reset clients keep their classic
+  defaults). This is a DEDICATED queue — NOT `COLLABORATION_SERVICE` (which REMAINS
+  the unified RPC responder queue the server consumes).
+- [x] **S-T003.3** [P2] (FR-006) Enqueue `document.deleted { id }` transactionally
+  inside `MemoService.deleteMemo` + `WhiteboardService.deleteWhiteboard`: the
+  profile/bucket/authorization cascade (incl. the external file-service HTTP blob
+  delete that cannot join a DB tx) runs FIRST, then `{ manager.remove(leaf) +
+  CollaborationLifecycleService.enqueueDocumentDeleted(manager, id) }` is wrapped in
+  one `manager.transaction` — the outbox row commits atomically with the removal
+  (or neither commits). `CollaborationLifecycleService`
+  (`…/collaboration-metadata/collaboration.lifecycle.service.ts`) inserts the row
+  with the caller's `EntityManager`. **Saga boundary noted:** a crash after the
+  pre-transaction cascade but before remove+enqueue is pre-existing delete-saga debt,
+  out of scope (this outbox closes only the DB-remove → publish window).
+- [x] **S-T003.4** [P2] (FR-006) Implemented `CollaborationLifecycleDispatcherService`
+  (`…/collaboration-metadata/collaboration.lifecycle.dispatcher.service.ts`) — a
+  `SchedulerRegistry` sweep with a single-flight guard that claims ONE row at a time
+  (pending-first by `createdDate`, then stale-inflight reclaim by `claimedAt`; `FOR
+  UPDATE SKIP LOCKED`; a monotonic `claimVersion` fence so a lapsed-and-reclaimed
+  worker can't reverse the owner's outcome), publishes a CONFIRMED PERSISTENT message
+  (broker publisher confirm, bounded by a publish timeout strictly below the claim
+  lease), marks the row `delivered` (sets `deliveredAt`) ONLY on confirm, backs
+  failures off with a capped exponential `visibleAt`, and prunes delivered rows by
+  `deliveredAt` after the retention window. `SchedulerRegistry` + client are
+  `@Optional()`: inert on a non-scheduling worker; a MISSING client on a scheduling
+  process THROWS at init (fail fast). Delivery is **at-least-once** (idempotent
+  downstream Purge).
+- [x] **S-T003.5** [P2] (FR-006 → SC-004) Tests: `deleteMemo` / `deleteWhiteboard`
+  enqueue exactly one outbox row inside the removal transaction (row present on
+  success, absent when the delete throws before removal — atomic rollback); cascade
+  paths (framing/contribution) reach the same leaf, so one row covers them. The
+  dispatcher is tested directly: claim ordering + `FOR UPDATE SKIP LOCKED`,
+  single-flight, `claimVersion` fencing, confirm-then-`delivered`, publish-timeout →
+  backoff, stale-inflight reclaim, retention prune, and the fail-fast/inert init
+  branches.
+- [x] **S-T003.6** [P2] (FR-006, deployment prerequisite) Coded the quorum-queue
+  declaration + the RabbitMQ ≥ 3.13.2 topology floor (documented at the client
+  registration + in `quickstart.md`). **Per-environment prerequisite (NOT server
+  code, flagged for WS-E/ops):** upgrade local dev-orchestration RabbitMQ and verify
+  each environment ≥ 3.13.2; run the classic→quorum cutover (inspect → stop
+  producers+consumers → if empty delete + let the consumer declare the quorum queue
+  first → else drain/reconcile) before the lifecycle queue goes live. This is a
+  deployment step, not a DB migration.
 
 ### S-T004 — AuthZ-eval verification + policy-id surfacing (epic T004 → FR-005/FR-008)
 - [x] **S-T004.1** [P2] (FR-008) **(read-only investigation — DONE as spec
@@ -203,9 +247,9 @@ touched collaboration-persistence diff (DEC-7).
 | Phase | Epic tasks | Server milestone tasks | Fine-grained sub-tasks | Status |
 |---|---|---|---|---|
 | 1 (persistence) | T001, T002 | S-T001, S-T002 | 8 | ✅ Implemented (contract frozen) |
-| 2 (lifecycle + authZ) | T003, T004 | S-T003, S-T004 | 8 | ✅ Implemented (authZ parity = cross-repo test) |
+| 2 (lifecycle + authZ) | T003, T004 | S-T003, S-T004 | 10 | ✅ Implemented (transactional outbox + dispatcher; quorum-queue upgrade = WS-E/ops; authZ parity = cross-repo test) |
 | 3 (migration + finalize) | T005, T006 | S-T005, S-T006 | 6 | ✅ Implemented (read service; runner = WS-E) |
-| **Total** | 6 | 6 | 22 | ✅ Implemented — in review (PR open) |
+| **Total** | 6 | 6 | 24 | ✅ Implemented — in review (PR open) |
 
 **Deferred to other owners / CI (not server code gaps):**
 - SC-003 migration up/down snapshot test → `migration:validate` harness needs a live
@@ -215,6 +259,10 @@ touched collaboration-persistence diff (DEC-7).
 - The migration **runner** + cutover **write-freeze** → WS-E (this slice owns the
   read service only).
 - Legacy-dialect **removal** → the big-bang cutover, not this PR (coexistence now).
+- **RabbitMQ ≥ 3.13.2 upgrade + the classic→quorum lifecycle-queue cutover** (per
+  environment, incl. local dev-orchestration) → a deployment prerequisite for the
+  `alkemio-collaboration-lifecycle` topology (WS-E/ops), not server code and not a DB
+  migration. Runbook in `quickstart.md`.
 
 ## Notes
 

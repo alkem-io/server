@@ -1,6 +1,7 @@
 import { APP_ID_PROVIDER } from '@common/app.id.provider';
 import {
   AUTH_RESET_SERVICE,
+  COLLABORATION_LIFECYCLE_SERVICE,
   COLLABORATION_SERVICE,
   IS_SCHEMA_BOOTSTRAP,
   MATRIX_ADAPTER_SERVICE,
@@ -98,6 +99,27 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
+      provide: COLLABORATION_LIFECYCLE_SERVICE,
+      // Durable QUORUM queue + persistent messages: the transactional outbox
+      // guarantees the event is recorded; a confirmed persistent publish keeps
+      // it alive across a broker restart between claim and consume. Dedicated
+      // queue — never COLLABORATION_SERVICE (the server's own responder). The
+      // producer asserts this queue, so its declaration MUST be byte-equivalent
+      // to collab-service's consumer: durable:true + { 'x-queue-type': 'quorum' }
+      // and NOTHING else — Q1 itself carries no DLX/TTL (those live on the
+      // consumer-owned retry/DLQ queues). The lifecycle TOPOLOGY has a RabbitMQ
+      // >= 3.13.2 deployment floor: on 3.9 a quorum queue silently accepts but
+      // never expires TTL/dead-letter args, so the consumer's retry tiers never
+      // fire. Enforced at deploy (dev-orchestration upgrade + per-env
+      // verification), not here.
+      useFactory: clientProxyFactory(MessagingQueue.COLLABORATION_LIFECYCLE, {
+        durable: true,
+        persistent: true,
+        queueArguments: { 'x-queue-type': 'quorum' },
+      }),
+      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
+    },
+    {
       provide: IS_SCHEMA_BOOTSTRAP,
       useValue: false,
     },
@@ -109,6 +131,7 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
     MATRIX_ADAPTER_SERVICE,
     AUTH_RESET_SERVICE,
     COLLABORATION_SERVICE,
+    COLLABORATION_LIFECYCLE_SERVICE,
     IS_SCHEMA_BOOTSTRAP,
   ],
 })

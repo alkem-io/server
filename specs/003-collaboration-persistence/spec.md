@@ -175,31 +175,40 @@ only metadata + pointer and `fetch` returns the pointer (no inline blob).
 
 ---
 
-### User Story 2 - Document delete cascade emits a lifecycle event (Priority: P1) — Phase 2
+### User Story 2 - Document delete cascade enqueues a lifecycle event durably (Priority: P1) — Phase 2
 
 When a memo or whiteboard is deleted (because its parent Callout framing or
-contribution is removed), the server emits a `document.deleted` lifecycle event on
-the bus so the collaboration-service disconnects clients, releases the room, and
-purges the metadata + blob — leaving **no orphan**.
+contribution is removed), the server records a `document.deleted` lifecycle event
+in a **transactional outbox** — atomically with the leaf-row removal — so the
+collaboration-service (once the row is delivered) disconnects clients, releases the
+room, and purges the live collab state, leaving **no orphan**. An out-of-band
+dispatcher publishes the recorded event to the dedicated lifecycle queue.
 
 **Why this priority**: The owner-driven lifecycle invariant (epic FR-023). Without
-it, deleting a Callout leaves a live collab room and an orphaned snapshot.
+it, deleting a Callout leaves a live collab room. The old fire-and-forget publish
+could lose the event on a crash between the DB delete and the broker publish (and it
+went to the server's own responder queue rather than the collab service); the
+transactional outbox closes that DB-remove → publish window.
 
 **Independent Test**: Deleting a memo/whiteboard (directly, or via its parent
-contribution/framing) publishes a `document.deleted {id}` event exactly once; the
-event is idempotent (re-emit on an absent doc is a no-op downstream).
+contribution/framing) inserts one `document.deleted {id}` row into
+`collaboration_lifecycle_outbox` in the same transaction as the row removal; no row
+is written if the delete fails. The dispatcher then delivers the row **at-least-once**
+(the downstream Purge is idempotent, so a redelivery is a no-op).
 
 **Acceptance Scenarios**:
 
 1. **Given** a memo attached to a Callout contribution, **When** the contribution
    is deleted, **Then** `MemoService.deleteMemo` runs and a `document.deleted {id}`
-   event is published before/at the point the row is removed.
+   row is enqueued in `collaboration_lifecycle_outbox` in the SAME transaction that
+   removes the memo row (both commit together, or neither does).
 2. **Given** a whiteboard attached to a Callout framing, **When** the framing is
    deleted, **Then** `WhiteboardService.deleteWhiteboard` runs and a
-   `document.deleted {id}` event is published.
-3. *(Optional)* **Given** a new memo/whiteboard is created, **When** it is
-   persisted, **Then** an optional `document.created {id, contentType, ownerRef}`
-   event may pre-register metadata (otherwise the row is created lazily on first save).
+   `document.deleted {id}` row is enqueued in the same transaction as the removal.
+3. **Given** a committed outbox row, **When** the dispatcher sweeps, **Then** it
+   publishes a confirmed persistent `document.deleted {id}` message to the dedicated
+   lifecycle queue and marks the row delivered only on the broker confirm; a
+   publish failure backs the row off and retries (never a silent drop).
 
 ---
 
@@ -269,11 +278,15 @@ migration job can iterate over completely.
 - **`fetch` for an absent id** → structured `not_found` reply, no exception leak
   (mirror today's `FetchErrorCodes.NOT_FOUND`).
 - **`save` for an absent id** → structured `not_found` (today's behavior — server
-  does not lazily create the row on save; creation is via the create path / optional
-  `document.created`). *Confirm whether the unified contract should lazily upsert.*
-- **Delete during an active collab session** → the `document.deleted` event must
-  still fire; the collab service disconnects clients and purges (its edge case).
-  Server emits regardless of session state.
+  does not lazily create the row on save; creation is via the create path).
+  *Confirm whether the unified contract should lazily upsert.*
+- **Delete during an active collab session** → the `document.deleted` outbox row is
+  still enqueued (atomically with the removal); once delivered, the collab service
+  disconnects clients and purges (its edge case). Server enqueues regardless of
+  session state.
+- **Crash between the DB commit and the broker publish** → the committed outbox row
+  survives; the dispatcher publishes it on a later sweep (a stale in-flight claim is
+  reclaimed after its lease). At-least-once, never lost.
 - **Blob offloaded but pointer dangling** → if `blob_store != 'inline'` and the
   pointer cannot be resolved by the collab service, that is the collab service's
   `save-error`; server's index row is still authoritative for metadata.
@@ -314,17 +327,17 @@ tasks in `tasks.md`. **[Phase N]** marks the phase that delivers it.
   `Whiteboard` via `authorizationId`) **available in the metadata index** returned
   on `fetch`/`Load`, so the collaboration-service's `authzeval` adapter can evaluate
   against it without re-deriving Alkemio's authZ model (epic FR-021; OPEN-1).
-- **FR-006** [Phase 2]: The server MUST **emit a `document.deleted {id}` lifecycle
-  event** on the bus whenever a `Memo` or `Whiteboard` is deleted — at the cascade
-  points `MemoService.deleteMemo` and `WhiteboardService.deleteWhiteboard` (which
-  fire when a parent Callout framing/contribution is removed) — idempotently, so the
-  collaboration-service releases the room and purges metadata + blob with no orphan
-  (epic FR-012/FR-023; `contracts/lifecycle-events.md`).
-- **FR-007** [Phase 2, optional]: The server MAY emit `document.created {id,
-  contentType, ownerRef}` on memo/whiteboard creation (pre-register metadata) and
-  `document.access_changed {id}` when the parent entity's authorization is
-  recomputed, so the collab service can re-evaluate connected clients (epic FR-023;
-  `contracts/lifecycle-events.md`).
+- **FR-006** [Phase 2]: The server MUST **record a `document.deleted {id}` lifecycle
+  event in a transactional outbox** whenever a `Memo` or `Whiteboard` is deleted — at
+  the cascade points `MemoService.deleteMemo` and `WhiteboardService.deleteWhiteboard`
+  (which fire when a parent Callout framing/contribution is removed). The outbox-row
+  insert MUST commit in the **same DB transaction** as the leaf-row removal (atomic
+  enqueue). An out-of-band dispatcher MUST then publish the recorded event to the
+  dedicated lifecycle queue with a confirmed persistent publish and deliver it
+  **at-least-once** (the downstream Purge is idempotent), so the collaboration-service
+  releases the room and purges live collab state with no orphan (epic FR-012/FR-023;
+  `contracts/lifecycle-events.md`). `document.deleted` is the ONLY lifecycle event the
+  server produces.
 - **FR-008** [Phase 2, verification]: The server MUST **verify and document** that
   the authorization-evaluation-service correctly decides `read` and `update-content`
   for collaboration documents addressed by the parent-entity `authorizationPolicyId`
@@ -341,10 +354,14 @@ tasks in `tasks.md`. **[Phase N]** marks the phase that delivers it.
   §4) plus any codegen, and MUST keep the touched code covered by **meaningful,
   risk-based tests** per server constitution §6 (see the coverage tension in
   Assumptions).
-- **FR-011** [Phase 1]: The new persistence consumer and the lifecycle emitter MUST
-  follow server's existing conventions — `@MessagePattern`/`@EventPattern` handlers,
-  the `clientProxyFactory` outbound client, the `MessagingQueue` enum, manual ack —
-  and MUST NOT introduce a bespoke bus abstraction (constitution §2/§4).
+- **FR-011** [Phase 1]: The new persistence consumer and the lifecycle
+  outbox/dispatcher MUST follow server's existing conventions —
+  `@MessagePattern`/`@EventPattern` handlers, the `clientProxyFactory` outbound
+  client (extended with an options object for the durable/persistent/quorum
+  declaration), a TypeORM outbox entity, and a `SchedulerRegistry` sweep for the
+  dispatcher (mirroring the existing `ConversationDigestSweepService` pattern) — the
+  `MessagingQueue` enum, and manual ack, and MUST NOT introduce a bespoke bus
+  abstraction (constitution §2/§4).
 
 ### Key Entities *(server view; details in `data-model.md`)*
 
@@ -362,8 +379,12 @@ tasks in `tasks.md`. **[Phase N]** marks the phase that delivers it.
   on the existing entities, not a new table, in v1.*
 - **Unified Save/Fetch message** — the request/reply payloads of the unified
   persistence contract (`data-model.md`).
-- **LifecycleEvent** — `document.deleted` (+ optional `document.created`/
-  `document.access_changed`) emitted on the bus.
+- **CollaborationLifecycleOutbox (`collaboration_lifecycle_outbox`)** — the
+  server-owned transactional outbox table (`data-model.md`). One row per pending
+  `document.deleted`, inserted in the delete transaction and drained by the
+  out-of-band dispatcher.
+- **LifecycleEvent** — `document.deleted {id}`, the only lifecycle event the server
+  produces; recorded in the outbox and published to the dedicated lifecycle queue.
 
 ## Success Criteria *(mandatory)*
 
@@ -381,9 +402,10 @@ jointly with the collab service's round-trip. Each traces to an epic SC.
   **applies and reverts cleanly** on a schema snapshot, with existing rows
   back-filled to `inline` + self-pointer (constitution Architecture §3).
 - **SC-004** [Phase 2]: Deleting a memo or whiteboard (directly or via parent
-  contribution/framing) emits **exactly one** `document.deleted {id}` event,
-  verified by a spy on the outbound client — no event on a failed delete (epic
-  FR-012/FR-023).
+  contribution/framing) records **one** `document.deleted {id}` row in
+  `collaboration_lifecycle_outbox`, committed atomically with the row removal — no
+  row on a failed delete — and the dispatcher then delivers it at-least-once to the
+  dedicated lifecycle queue (idempotent downstream) (epic FR-012/FR-023).
 - **SC-005** [Phase 2]: For a memo/whiteboard with policy id `P` and a given actor,
   `POST /internal/auth/evaluate {actorId, "read"|"update-content", P}` returns the
   **same decision** as server's in-process `isAccessGranted` — proving the
@@ -558,5 +580,5 @@ location (server CLI vs separate migration runner) with whoever owns WS-E cutove
 | Phase | Scope | Tasks | Status |
 |---|---|---|---|
 | 1 | Schema (`content_pointer`/`blob_store`) + unified `save`/`fetch` consumer + metadata index (incl. `authorizationPolicyId`) + migration | T001, T002, T006 | Forward (blocked on OPEN-1/3 + collab contract) |
-| 2 | Lifecycle: `document.deleted` emitter (+ optional created/access_changed); authZ-eval verification | T003, T004 | Forward (blocked on OPEN-1) |
+| 2 | Lifecycle: transactional `document.deleted` outbox + out-of-band dispatcher (dedicated quorum queue); authZ-eval verification | T003, T004 | Forward (blocked on OPEN-1) |
 | 3 | Migration read access for legacy memo/whiteboard content; migrations + codegen; coverage | T005, T006 | Forward |

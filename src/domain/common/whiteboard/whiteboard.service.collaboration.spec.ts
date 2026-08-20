@@ -25,17 +25,25 @@ describe('WhiteboardService — collaboration metadata + lifecycle', () => {
     findOne: Mock;
     remove: Mock;
     createQueryBuilder: Mock;
+    manager: { transaction: Mock };
   };
-  let lifecycle: { emitDocumentDeleted: Mock };
+  let managerMock: { remove: Mock; insert: Mock };
+  let lifecycle: { enqueueDocumentDeleted: Mock };
   let profileService: { deleteProfile: Mock };
   let authorizationPolicyService: { delete: Mock };
 
   beforeEach(async () => {
     vi.restoreAllMocks();
+    managerMock = { remove: vi.fn(), insert: vi.fn() };
     whiteboardRepo = {
       findOne: vi.fn(),
       remove: vi.fn(),
       createQueryBuilder: vi.fn(),
+      // The delete path runs {leaf remove + outbox insert} in one transaction;
+      // the mock invokes the callback with a stand-in EntityManager.
+      manager: {
+        transaction: vi.fn(async (cb: any) => cb(managerMock)),
+      },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -233,25 +241,63 @@ describe('WhiteboardService — collaboration metadata + lifecycle', () => {
     });
   });
 
-  describe('deleteWhiteboard emits document.deleted (SC-004)', () => {
-    it('emits exactly once after a successful delete', async () => {
+  describe('deleteWhiteboard records document.deleted (SC-004)', () => {
+    it('records exactly once, atomically with the leaf removal, AFTER the profile/auth cascade', async () => {
       const whiteboard = {
         id: 'w1',
         profile: { id: 'p1' },
         authorization: { id: 'a1' },
       };
       whiteboardRepo.findOne.mockResolvedValue(whiteboard);
-      whiteboardRepo.remove.mockResolvedValue({ ...whiteboard });
+      managerMock.remove.mockResolvedValue({ ...whiteboard });
       profileService.deleteProfile.mockResolvedValue({});
       authorizationPolicyService.delete.mockResolvedValue({});
 
       await service.deleteWhiteboard('w1');
 
-      expect(lifecycle.emitDocumentDeleted).toHaveBeenCalledTimes(1);
-      expect(lifecycle.emitDocumentDeleted).toHaveBeenCalledWith('w1');
+      // The leaf removal + the outbox insert run inside ONE transaction.
+      expect(whiteboardRepo.manager.transaction).toHaveBeenCalledTimes(1);
+      expect(managerMock.remove).toHaveBeenCalledTimes(1);
+      expect(lifecycle.enqueueDocumentDeleted).toHaveBeenCalledTimes(1);
+      expect(lifecycle.enqueueDocumentDeleted).toHaveBeenCalledWith(
+        managerMock,
+        'w1'
+      );
+
+      // Ordering the comments claim: the profile + auth cascade (incl. the
+      // external file-service blob delete that cannot join a DB tx) runs BEFORE
+      // the transaction, never inside/after it.
+      const cascadeLast = Math.max(
+        profileService.deleteProfile.mock.invocationCallOrder[0],
+        authorizationPolicyService.delete.mock.invocationCallOrder[0]
+      );
+      expect(cascadeLast).toBeLessThan(
+        whiteboardRepo.manager.transaction.mock.invocationCallOrder[0]
+      );
     });
 
-    it('does NOT emit when the delete fails before removal', async () => {
+    it('rejects the delete (and surfaces the error) when the transactional enqueue fails', async () => {
+      const whiteboard = {
+        id: 'w1',
+        profile: { id: 'p1' },
+        authorization: { id: 'a1' },
+      };
+      whiteboardRepo.findOne.mockResolvedValue(whiteboard);
+      managerMock.remove.mockResolvedValue({ ...whiteboard });
+      profileService.deleteProfile.mockResolvedValue({});
+      authorizationPolicyService.delete.mockResolvedValue({});
+      // The outbox insert inside the transaction fails -> the whole delete rejects
+      // (the transaction rolls back the leaf removal too).
+      lifecycle.enqueueDocumentDeleted.mockRejectedValue(
+        new Error('outbox insert failed')
+      );
+
+      await expect(service.deleteWhiteboard('w1')).rejects.toThrow(
+        'outbox insert failed'
+      );
+    });
+
+    it('does NOT record (or open a transaction) when the delete fails before removal', async () => {
       whiteboardRepo.findOne.mockResolvedValue({
         id: 'w1',
         profile: undefined,
@@ -260,7 +306,8 @@ describe('WhiteboardService — collaboration metadata + lifecycle', () => {
 
       await expect(service.deleteWhiteboard('w1')).rejects.toThrow();
 
-      expect(lifecycle.emitDocumentDeleted).not.toHaveBeenCalled();
+      expect(whiteboardRepo.manager.transaction).not.toHaveBeenCalled();
+      expect(lifecycle.enqueueDocumentDeleted).not.toHaveBeenCalled();
     });
   });
 });

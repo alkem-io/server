@@ -153,17 +153,52 @@ Reply:
 ### Lifecycle events (server → collab) — `contracts/lifecycle-events.md`
 
 ```jsonc
-// document.deleted  (REQUIRED — emitted at the delete cascade leaves)
+// document.deleted  (the ONLY lifecycle event — recorded at the delete cascade leaves)
 { "id": "string (uuid)" }
-
-// document.created  (OPTIONAL — pre-register metadata)
-{ "id": "string", "contentType": "memo | whiteboard", "ownerRef": "string" }
-
-// document.access_changed  (OPTIONAL — re-evaluate connected clients)
-{ "id": "string" }
 ```
-Transport: RabbitMQ, the same bus as persistence; fire-and-forget `emit` via the new
-`COLLABORATION_SERVICE` outbound client. `document.deleted` is idempotent downstream.
+Transport: RabbitMQ, on a **dedicated durable quorum queue**
+`alkemio-collaboration-lifecycle` (declaration args `{ "x-queue-type": "quorum" }`),
+via the new `COLLABORATION_LIFECYCLE_SERVICE` client — NEVER the
+`COLLABORATION_SERVICE` / `alkemio-collaboration` queue (that is the server's own
+unified RPC responder queue). The event is not published inline: it is recorded in
+the `collaboration_lifecycle_outbox` table in the same transaction as the leaf
+removal, and the `CollaborationLifecycleDispatcherService` publishes it out-of-band
+with a confirmed persistent publish. Delivery is **at-least-once**; `document.deleted`
+is idempotent downstream (the collab-side Purge is a no-op on an absent doc). The
+wire payload (`{ id }`) is derived by the dispatcher at publish time — it is not
+stored on the outbox row.
+
+### Transactional lifecycle outbox — `collaboration_lifecycle_outbox`
+
+Server-owned TypeORM entity
+(`src/domain/common/collaboration-metadata/collaboration.lifecycle.outbox.entity.ts`),
+created by migration `1785810000000-CollaborationLifecycleOutbox.ts`. camelCase
+columns (server `DefaultNamingStrategy`). One row per pending `document.deleted`,
+inserted in the delete transaction and drained by the dispatcher.
+
+| field | DB type | nullable | default | notes |
+|---|---|---|---|---|
+| `id` | `bigint` GENERATED ALWAYS AS IDENTITY (PK) | no | identity | surrogate key |
+| `documentId` | `uuid` | no | | the deleted memo/whiteboard id; the wire payload is `{ id: documentId }` |
+| `eventType` | `varchar(32)` | no | | CHECK `IN ('document.deleted')` — the only event carried |
+| `status` | `varchar(16)` | no | `'pending'` | CHECK `IN ('pending', 'inflight', 'delivered')` |
+| `attempts` | `int` | no | `0` | publish attempts (observability, not a discard threshold — a poison row retries at the capped interval, never dropped) |
+| `claimVersion` | `int` | no | `0` | monotonic per-row claim fence: a claim bumps it; every terminal write requires the exact value, so a lapsed-and-reclaimed worker cannot reverse the current owner's outcome |
+| `lastError` | `text` | yes | | truncated last publish error |
+| `createdDate` | `timestamptz` | no | `now()` | enqueue time; pending rows are claimed oldest-first by this |
+| `claimedAt` | `timestamptz` | yes | | lease timestamp; a stale in-flight row (claimedAt past the lease) is reclaimable |
+| `visibleAt` | `timestamptz` | yes | | capped-exponential backoff gate after a failed publish |
+| `deliveredAt` | `timestamptz` | yes | | set on broker confirm; drives retention (delivered rows pruned after the retention window, by `deliveredAt`) |
+
+Three partial indexes back the claim/prune queries:
+
+- `idx_collab_lifecycle_outbox_pending` on `("createdDate", "visibleAt") WHERE status = 'pending'` — the ordered, no-sort pending claim.
+- `idx_collab_lifecycle_outbox_inflight` on `("claimedAt") WHERE status = 'inflight'` — the stale-claim reclaim.
+- `idx_collab_lifecycle_outbox_delivered` on `("deliveredAt") WHERE status = 'delivered'` — the retention prune.
+
+> Unlike the Go-owned `file_backup_outbox` (server never touches it at runtime),
+> THIS outbox is written by the server (in the delete transaction) and claimed by
+> the server dispatcher with `FOR UPDATE SKIP LOCKED`.
 
 ## Validation / rules
 

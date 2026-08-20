@@ -192,14 +192,31 @@ export class MemoService {
     await this.profileService.deleteProfile(memo.profile.id);
     await this.authorizationPolicyService.delete(memo.authorization);
 
-    const deletedMemo = await this.memoRepository.remove(memo as Memo);
-    deletedMemo.id = memoID;
-
     // Owner-driven lifecycle (FR-006/FR-023): the memo is the leaf every cascade
-    // path (callout framing / contribution / direct) passes through, so emitting
-    // here fires exactly once on a successful delete. Fire-and-forget; no event
-    // on a thrown delete above. `document.deleted` is idempotent downstream.
-    this.collaborationLifecycleService.emitDocumentDeleted(memoID);
+    // path (callout framing / contribution / direct) passes through. Remove the
+    // leaf and record `document.deleted` in the SAME transaction, AFTER the
+    // profile/bucket/auth cascade above. The row is transactionally enqueued;
+    // the dispatcher delivers it out-of-band at-least-once (idempotent
+    // downstream). This closes the DB-remove -> emit window the old
+    // fire-and-forget emit had.
+    //
+    // BOUNDARY (not solved here): the profile/bucket/auth cascade above deletes
+    // the checkpoint blob via an external file-service HTTP call that cannot
+    // join a DB tx, and it runs BEFORE this transaction. A crash after that
+    // cascade but before remove+enqueue can leave a surviving aggregate with
+    // missing storage and no event — pre-existing delete-saga debt, deliberately
+    // out of this slice's scope (this outbox is not a deletion saga).
+    const deletedMemo = await this.memoRepository.manager.transaction(
+      async manager => {
+        const removed = await manager.remove(memo as Memo);
+        await this.collaborationLifecycleService.enqueueDocumentDeleted(
+          manager,
+          memoID
+        );
+        return removed;
+      }
+    );
+    deletedMemo.id = memoID;
 
     return deletedMemo;
   }

@@ -12,8 +12,9 @@ Wave-2 contract freeze).
   server must do; *how* (which module, which migration, emit vs CQRS) lives in
   plan.md/research.md.
 - [x] CHK002 Each user story is independently testable and maps to a concrete test
-  or test-to-be (US1→save/fetch round-trip; US2→delete-emit spy; US3→authZ parity;
-  US4→migration completeness).
+  or test-to-be (US1→save/fetch round-trip; US2→delete enqueues an
+  `collaboration_lifecycle_outbox` row atomically + dispatcher delivery; US3→authZ
+  parity; US4→migration completeness).
 - [x] CHK003 Written for the server boundary, not re-specifying the collab-service
   internals, the CRDT core, or the client bindings — scope boundary explicit in the
   header note and Assumptions.
@@ -26,7 +27,7 @@ Wave-2 contract freeze).
 ## Requirement Completeness
 
 - [x] CHK006 Every epic server task (T001–T006) maps to ≥1 server FR + task — traced
-  in tasks.md (T001/T002→FR-001..004; T003→FR-006/007; T004→FR-005/008; T005→FR-009;
+  in tasks.md (T001/T002→FR-001..004; T003→FR-006; T004→FR-005/008; T005→FR-009;
   T006→FR-010).
 - [x] CHK007 Every server FR carries a **phase tag** so "blocked vs forward" is
   unambiguous; the blocking gates are called out (spec ⚠️ + each OPEN).

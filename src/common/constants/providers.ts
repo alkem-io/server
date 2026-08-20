@@ -17,10 +17,18 @@ export const WHITEBOARD_COLLABORATION_SERVICE =
   'alkemio-whiteboard-collaboration';
 export const NOTIFICATIONS_SERVICE = 'alkemio-notifications';
 export const MATRIX_ADAPTER_SERVICE = 'alkemio-matrix-adapter';
-// Outbound client token for the unified collaboration-service (server -> collab
-// lifecycle events, e.g. `document.deleted`). The same queue hosts the inbound
-// unified `collaboration-*` @MessagePattern handlers.
+// Outbound client token for the unified collaboration-service RPC responder
+// queue: the same queue hosts the inbound unified `collaboration-*`
+// @MessagePattern handlers the server itself consumes. It does NOT carry the
+// server -> collab lifecycle events — those go on COLLABORATION_LIFECYCLE_SERVICE.
 export const COLLABORATION_SERVICE = 'alkemio-collaboration';
+// Outbound client token for the dedicated, durable server -> collaboration
+// lifecycle queue. Carries owner-driven `document.deleted` (FR-006/FR-023),
+// published from the transactional lifecycle outbox with a confirmed persistent
+// publish. Separate from COLLABORATION_SERVICE so a lifecycle event is never
+// delivered back to the server's own responder.
+export const COLLABORATION_LIFECYCLE_SERVICE =
+  'alkemio-collaboration-lifecycle';
 export const SUBSCRIPTION_ROOM_EVENT = 'alkemio-subscriptions-room-event';
 export const SUBSCRIPTION_CONVERSATION_EVENT =
   'alkemio-subscriptions-conversation-event';

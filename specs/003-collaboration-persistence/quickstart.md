@@ -52,15 +52,65 @@ payload: { id }
 expect:  { data: { id, contentType, version, contentPointer, blobStore, authorizationPolicyId, snapshotBase64? } }
 ```
 
-## Verify the lifecycle event
+## Verify the lifecycle event (transactional outbox)
 
 ```text
 # delete a memo/whiteboard (directly, or via deleting its parent Callout contribution/framing)
-# assert: exactly one `document.deleted { id }` emitted on the collaboration queue
+# assert (enqueue): one row lands in collaboration_lifecycle_outbox in the SAME
+#   transaction as the leaf-row removal — both commit or neither does; no row on a
+#   failed delete.
+SELECT "documentId", "eventType", "status"
+  FROM "collaboration_lifecycle_outbox"
+ WHERE "documentId" = '<deleted-id>';
+# → one row, eventType = 'document.deleted', status = 'pending'
+
+# assert (delivery): the dispatcher sweep (~every 5s) publishes a confirmed
+#   persistent document.deleted { id } to the dedicated quorum queue
+#   alkemio-collaboration-lifecycle, then flips the row to 'delivered' (deliveredAt set).
 ```
-A unit test spies on the injected `COLLABORATION_SERVICE` `ClientProxy` and asserts
-`emit('document.deleted', { id })` fires exactly once inside `deleteMemo` /
-`deleteWhiteboard`, and not on a failed delete.
+`MemoService.deleteMemo` / `WhiteboardService.deleteWhiteboard` call
+`CollaborationLifecycleService.enqueueDocumentDeleted(manager, id)` inside the
+removal transaction. Verification is on the enqueue (the outbox row) and on the
+`CollaborationLifecycleDispatcherService` delivery, NOT on an inline client `emit` —
+there is none. Delivery is at-least-once; the downstream Purge is idempotent, so a
+redelivery is harmless.
+
+## Operational rollout — lifecycle queue cutover (classic → quorum)
+
+The lifecycle event moves onto a NEW dedicated durable **quorum** queue
+`alkemio-collaboration-lifecycle` (declaration args `{ 'x-queue-type': 'quorum' }`).
+This is a **deployment prerequisite**, not a DB migration — the producer (server)
+and consumer (collab service) MUST assert byte-equivalent declarations, and the
+broker floor must be met, or the topology silently misbehaves.
+
+**Broker floor: RabbitMQ ≥ 3.13.2 for the lifecycle topology.** On 3.9 a quorum
+queue silently *accepts* but never *expires* TTL / dead-letter arguments, so the
+consumer-owned retry tiers never fire. Q1 (`alkemio-collaboration-lifecycle`) itself
+carries NO TTL/DLX — those live on the consumer-owned retry/DLQ queues — but the
+floor still governs the whole lifecycle topology. Upgrade **local dev-orchestration
+RabbitMQ** and verify per environment before cutover.
+
+**Cutover procedure (per environment):**
+
+```bash
+# 1. Inspect the existing queue: type, depth, unacked, consumers.
+rabbitmqctl list_queues name type messages messages_unacknowledged consumers \
+  | grep -E 'collaboration-lifecycle|alkemio-collaboration' || true
+
+# 2. Stop BOTH producers (server) and consumers (collab service) for the lifecycle queue.
+
+# 3a. If the queue is EMPTY (depth 0, no unacked): delete the classic queue, then let
+#     the CONSUMER declare the quorum queue FIRST, then start the producer.
+rabbitmqctl delete_queue alkemio-collaboration-lifecycle    # only if empty
+#     (bring up collab-service → it declares the quorum queue → then start server)
+
+# 3b. If the queue is NON-EMPTY: DO NOT delete it. Drain / export / reconcile the
+#     backlog first (a classic→quorum switch cannot be done in place), then repeat.
+```
+
+Producer and consumer declarations MUST be literally equivalent (`durable: true` +
+`{ 'x-queue-type': 'quorum' }` and nothing else) — whichever declares an
+inequivalent set second fails `PRECONDITION_FAILED`.
 
 ## Verify the authZ-eval path (OPEN-1 confirmation)
 
@@ -100,7 +150,8 @@ pnpm run cli -- collab:migration-export        # (name TBD; see tasks T005)
 | Unified save/fetch round-trip (inline memo) | `collaboration-save`/`-fetch` integration test |
 | Offloaded save writes index only | DB-assertion test (content column empty) |
 | `fetch` carries `authorizationPolicyId` | fetch-reply assertion |
-| `document.deleted` emitted once on delete | ClientProxy spy in `deleteMemo`/`deleteWhiteboard` |
+| `document.deleted` enqueued atomically on delete | outbox-row assertion in `deleteMemo`/`deleteWhiteboard` (row present on success, absent on a failed delete) |
+| dispatcher delivers the outbox row | dispatcher test: claim → confirmed publish → `delivered`; failure → backoff/retry (at-least-once) |
 | authZ-eval parity with in-process check | cross-service parity test (read + update-content) |
 | Migration read returns 100% of rows | migration-export completeness test |
 

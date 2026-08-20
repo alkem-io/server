@@ -26,11 +26,14 @@ slice evolves that into:
    request/reply contract carrying `{id, contentType, version, contentPointer,
    blobStore}` (+ `authorizationPolicyId`); store the inline blob only when
    `blob_store = 'inline'`, else just metadata + pointer.
-2. A **lifecycle emitter** — publish `document.deleted {id}` (+ optional
-   `created`/`access_changed`) at the `MemoService.deleteMemo` /
-   `WhiteboardService.deleteWhiteboard` cascade points, via a new outbound
-   `clientProxyFactory` client, so the collab service releases the room and purges
-   metadata + blob (no orphans).
+2. A **transactional lifecycle outbox** — record `document.deleted {id}` in the
+   `collaboration_lifecycle_outbox` table in the SAME transaction as the leaf-row
+   removal at the `MemoService.deleteMemo` / `WhiteboardService.deleteWhiteboard`
+   cascade points, and drain it out-of-band with a `SchedulerRegistry` dispatcher
+   that publishes a confirmed persistent message to a dedicated durable **quorum**
+   queue (`alkemio-collaboration-lifecycle`) via a new `COLLABORATION_LIFECYCLE_SERVICE`
+   client — at-least-once — so the collab service releases the room and purges live
+   collab state (no orphans). `document.deleted` is the only lifecycle event produced.
 3. An **authZ-eval verification** — confirm the *separate*
    authorization-evaluation-service decides `read`/`update-content` for collab
    documents addressed by the parent-entity `AuthorizationPolicy.id`, and surface
@@ -45,10 +48,13 @@ migrations; the legacy dialects retire only at cutover.
 ## Technical Context
 
 **Language/Version**: TypeScript (NestJS) — server's existing stack.
-**Primary Dependencies**: NestJS microservices `Transport.RMQ` (amqp), TypeORM +
-PostgreSQL, `@nestjs/cqrs` EventBus (in-process), Winston logging, GraphQL. No new
-runtime framework — reuse `clientProxyFactory`, `@MessagePattern`/`@EventPattern`,
-the `MessagingQueue` enum, and the TypeORM migration tooling.
+**Primary Dependencies**: NestJS microservices `Transport.RMQ` (amqp, via
+`amqp-connection-manager`'s confirm channel for publisher confirms), TypeORM +
+PostgreSQL, `@nestjs/schedule` `SchedulerRegistry` (the outbox dispatcher sweep),
+Winston logging, GraphQL. No new runtime framework — reuse `clientProxyFactory`
+(extended with a `{durable, persistent, queueArguments}` options object),
+`@MessagePattern`/`@EventPattern`, the `MessagingQueue` enum, a TypeORM outbox
+entity, and the TypeORM migration tooling.
 **Storage**: main PostgreSQL DB. The metadata/index is **columns on the existing
 `Memo`/`Whiteboard` entities** (not a new table in v1); the inline blob is the
 existing content column. Offloaded blobs (collab-side) are referenced by
@@ -77,7 +83,7 @@ governs the collab-service / y-crdt).*
 | 1. Domain-Centric Design First | PASS | The index columns live on the existing `Memo`/`Whiteboard` domain entities; the persistence consumer + lifecycle emitter sit in the integration/domain services, not in a leaky cross-cutting layer. |
 | 2. Modular NestJS Boundaries | PASS | New work maps to existing modules: unified consumer → the (renamed/merged) collab-integration module; lifecycle emitter → memo/whiteboard services + a new outbound client provider in `MicroservicesModule`; no circular deps introduced. |
 | 3. GraphQL Schema as Stable Contract | PASS | No GraphQL schema change — this is persistence/bus-internal. The new columns are not exposed as API fields (or are nullable+internal if surfaced). |
-| 4. Explicit Data & Event Flow | PASS | `document.deleted` is an explicit, named event on a declared queue; the unified `save`/`fetch` is an explicit `@MessagePattern` contract. Flow is traceable end to end (contracts/lifecycle-events.md, persistence-ports.md). |
+| 4. Explicit Data & Event Flow | PASS | `document.deleted` is an explicit, named event recorded in the `collaboration_lifecycle_outbox` table and published on a dedicated, declared lifecycle queue; the unified `save`/`fetch` is an explicit `@MessagePattern` contract. Flow is traceable end to end — enqueue (in-transaction) → dispatcher publish → collab consume (contracts/lifecycle-events.md, persistence-ports.md). |
 | 5. Observability & Operational Readiness | PASS | Reuse Winston structured logging on the handlers/emitter; the migration read logs progress/failures (whiteboard decompression flagged, not dropped). |
 | 6. Code Quality with Pragmatic Testing | PASS (with tension) | Risk-based tests on the consumer/emitter/migration. **Tension:** epic mandates ≥95% on touched code; server constitution says 100% not required — resolved by applying ≥95% to the *diff* (spec Assumptions). Flag for antst. |
 | 7. API Consistency & Evolution Discipline | PASS | Unified contract replaces two legacy dialects cleanly at cutover (no parallel forever); migration is reversible. |
@@ -127,7 +133,10 @@ coverage configuration is left unmodified.
         │
    delete cascade:  CalloutContribution.delete / CalloutFraming.delete
                       → MemoService.deleteMemo / WhiteboardService.deleteWhiteboard
-                          → emit document.deleted {id} ──(RMQ, new outbound client)──► collab service
+                          → [ manager.transaction: remove leaf row + INSERT collaboration_lifecycle_outbox row (document.deleted {id}) ]
+   lifecycle dispatch:  CollaborationLifecycleDispatcherService (SchedulerRegistry sweep)
+                          → claim one row (FOR UPDATE SKIP LOCKED) → confirmed persistent publish
+                              ──(RMQ quorum queue alkemio-collaboration-lifecycle, COLLABORATION_LIFECYCLE_SERVICE)──► collab service
         │
    authZ:  collab service ──(h2c POST /internal/auth/evaluate {actorId, read|update-content, policyId})──►
                   authorization-evaluation-service (separate repo) ──reads policy/credential rows──► server's DB
@@ -142,23 +151,33 @@ coverage configuration is left unmodified.
 | `content_pointer` + `blob_store` columns | `src/domain/common/memo/memo.entity.ts`, `src/domain/common/whiteboard/whiteboard.entity.ts` | add 2 nullable columns each + a migration |
 | Unified `save`/`fetch` consumer | `src/services/collaborative-document-integration/*` + `src/services/whiteboard-integration/*` (merge/rename toward a unified collaboration-integration module) | new `@MessagePattern` set; route by `contentType`; store index + (inline) blob |
 | Metadata index incl. `authorizationPolicyId` | the integration service(s) reading `entity.authorizationId` | include in the `fetch` reply |
-| `document.deleted` emitter | `src/domain/common/memo/memo.service.ts` (`deleteMemo`), `src/domain/common/whiteboard/whiteboard.service.ts` (`deleteWhiteboard`) | emit at the cascade point, via a new outbound client |
-| Outbound client for lifecycle | `src/core/microservices/microservices.module.ts`, `client.proxy.factory.ts`, `src/common/constants/providers.ts`, `src/common/enums/messaging.queue.ts` | add a `COLLABORATION_SERVICE` provider + queue enum |
+| `document.deleted` transactional enqueue | `src/domain/common/memo/memo.service.ts` (`deleteMemo`), `src/domain/common/whiteboard/whiteboard.service.ts` (`deleteWhiteboard`), `src/domain/common/collaboration-metadata/collaboration.lifecycle.service.ts` | wrap `{ leaf remove + outbox-row insert }` in one `manager.transaction` — the cascade (profile/bucket/auth, incl. an external file-service blob delete) runs BEFORE the transaction |
+| Lifecycle outbox table + dispatcher | `src/domain/common/collaboration-metadata/collaboration.lifecycle.outbox.entity.ts`, `…/collaboration.lifecycle.dispatcher.service.ts`, `src/migrations/1785810000000-CollaborationLifecycleOutbox.ts` | new TypeORM entity + migration (3 partial indexes); a `SchedulerRegistry` single-flight sweep that claims one row (`FOR UPDATE SKIP LOCKED`, `claimVersion` fence), publishes confirmed-persistent, marks delivered on confirm, backs off failures, prunes delivered rows |
+| Dedicated lifecycle client + quorum queue | `src/core/microservices/microservices.module.ts`, `client.proxy.factory.ts`, `src/common/constants/providers.ts`, `src/common/enums/messaging.queue.ts` | add a `COLLABORATION_LIFECYCLE_SERVICE` provider (durable + persistent + `{ 'x-queue-type': 'quorum' }`) on the new `COLLABORATION_LIFECYCLE` queue (`alkemio-collaboration-lifecycle`) — NOT `COLLABORATION_SERVICE` (the server's own responder) |
 | authZ-eval verification | (cross-repo) `authorization-evaluation-service` + server's persisted policy rows | a verification test asserting parity with `isAccessGranted`; no server code |
 | Migration read access | a new NestJS standalone CLI command (or guarded read) over `Memo`/`Whiteboard` repos | one-pass reader yielding content + policy id |
 | Migrations + codegen | `src/migrations/` (timestamp-named, `migration:generate`/`run`/`revert`) | reversible migration; tested on snapshot |
 
-### Delete-cascade emission point (grounded)
+### Delete-cascade enqueue point (grounded)
 
 The cascade is: `CalloutService.deleteCallout` →
 `CalloutFramingService.delete` / `CalloutContributionService.delete` →
-`MemoService.deleteMemo` / `WhiteboardService.deleteWhiteboard` →
-`repository.remove(...)` (hard delete; also deletes profile + authorization). The
-**single correct emission point** is inside `deleteMemo`/`deleteWhiteboard` (so
-every cascade path — framing, contribution, direct — emits exactly once), emitting
-`document.deleted {id}` around the `remove`. Emitting higher (in the callout
-services) would miss direct deletes and risk double-emission. **Decision: emit in
-the two leaf delete methods.**
+`MemoService.deleteMemo` / `WhiteboardService.deleteWhiteboard`. Each leaf method
+first runs the profile/bucket/authorization cascade (which includes an external
+file-service HTTP blob delete that CANNOT join a DB transaction), then wraps
+`{ leaf-row removal + a `collaboration_lifecycle_outbox` row insert }` in one
+`manager.transaction` — so the `document.deleted {id}` record commits atomically
+with the removal (or neither commits). The **single correct enqueue point** is
+inside `deleteMemo`/`deleteWhiteboard` (every cascade path — framing, contribution,
+direct — passes through this one leaf and records one row). Enqueuing higher (in the
+callout services) would miss direct deletes and risk double-enqueue. **Decision:
+enqueue in the two leaf delete methods, inside the removal transaction.**
+
+**Saga boundary (stated honestly, out of scope):** the external
+profile/bucket/file-service cascade runs BEFORE the transaction, so a crash after
+that cascade but before remove+enqueue can leave a surviving aggregate with missing
+storage and no event — pre-existing delete-saga debt. This slice closes only the
+DB-remove → publish window; it is not a deletion saga.
 
 ### AuthZ: why no new code in server
 
@@ -179,14 +198,15 @@ policy-id-from-metadata) is correct.
   T001 schema columns + migration; T002 unified `save`/`fetch` consumer with the
   metadata/blob split + `authorizationPolicyId` in the fetch reply. Lands only once
   the unified wire shape is agreed with the collab Wave-2 adapter.
-- **Phase 2 — lifecycle + authZ verification.** T003 `document.deleted` emitter at
-  the cascade leaves (+ optional created/access_changed); T004 authZ-eval parity
+- **Phase 2 — lifecycle + authZ verification.** T003 transactional `document.deleted`
+  outbox (in-transaction enqueue at the cascade leaves) + the out-of-band dispatcher
+  publishing to the dedicated quorum lifecycle queue; T004 authZ-eval parity
   verification + policy-id surfacing.
 - **Phase 3 — migration.** T005 one-pass migration read access for legacy memo/
   whiteboard content; T006 migrations finalized + codegen + coverage gate.
 
 Phases 2 and 3 can largely proceed in parallel once Phase 1's schema lands; the
-emitter (Phase 2) is independent of the consumer rewrite. The authZ verification
+lifecycle outbox + dispatcher (Phase 2) is independent of the consumer rewrite. The authZ verification
 (T004) can be done **first** as a read-only investigation (it needs no schema) and
 in fact already grounds OPEN-1 in this spec.
 
@@ -209,24 +229,32 @@ specs/003-collaboration-persistence/
 ### Source code (touched areas — no change made by this spec)
 
 ```text
-src/domain/common/memo/{memo.entity.ts, memo.service.ts}                  # +columns, +emit on delete
-src/domain/common/whiteboard/{whiteboard.entity.ts, whiteboard.service.ts} # +columns, +emit on delete
+src/domain/common/memo/{memo.entity.ts, memo.service.ts}                  # +columns, +transactional enqueue on delete
+src/domain/common/whiteboard/{whiteboard.entity.ts, whiteboard.service.ts} # +columns, +transactional enqueue on delete
+src/domain/common/collaboration-metadata/collaboration.lifecycle.service.ts        # enqueueDocumentDeleted(manager, id)
+src/domain/common/collaboration-metadata/collaboration.lifecycle.outbox.entity.ts  # outbox TypeORM entity
+src/domain/common/collaboration-metadata/collaboration.lifecycle.dispatcher.service.ts # SchedulerRegistry sweep dispatcher
+src/domain/common/collaboration-metadata/collaboration.lifecycle.event.pattern.ts  # DELETED = 'document.deleted' (only)
 src/services/collaborative-document-integration/*                          # unified consumer (memo side)
 src/services/whiteboard-integration/*                                      # unified consumer (whiteboard side)
 src/domain/collaboration/callout-contribution/callout.contribution.service.ts # cascade caller (no change)
 src/domain/collaboration/callout-framing/callout.framing.service.ts        # cascade caller (no change)
-src/core/microservices/{microservices.module.ts, client.proxy.factory.ts}  # +outbound collab client
-src/common/constants/providers.ts                                          # +COLLABORATION_SERVICE token
-src/common/enums/messaging.queue.ts                                        # +collaboration queue
-src/migrations/<ts>-AddContentPointerAndBlobStore.ts                       # new reversible migration
+src/core/microservices/{microservices.module.ts, client.proxy.factory.ts}  # +COLLABORATION_LIFECYCLE_SERVICE client + options object
+src/common/constants/providers.ts                                          # +COLLABORATION_LIFECYCLE_SERVICE token
+src/common/enums/messaging.queue.ts                                        # +COLLABORATION_LIFECYCLE quorum queue
+src/migrations/<ts>-AddContentPointerAndBlobStore.ts                       # persistence-columns migration
+src/migrations/1785810000000-CollaborationLifecycleOutbox.ts               # outbox table migration
 src/<cli or migration runner>                                              # migration read path (T005)
 ```
 
 **Structure Decision**: stay within server's existing modular layout — extend the
 two integration modules into one unified collaboration-integration consumer; add
-the lifecycle emitter to the leaf domain services; register one new outbound client
-in `MicroservicesModule`. No new architectural pattern; reuse the
-`@MessagePattern`/`clientProxyFactory`/`MessagingQueue` conventions.
+the in-transaction enqueue to the leaf domain services and the outbox entity +
+dispatcher to the `collaboration-metadata` domain module; register one new outbound
+`COLLABORATION_LIFECYCLE_SERVICE` client in `MicroservicesModule`. No new
+architectural pattern; reuse the `@MessagePattern`/`clientProxyFactory`/`MessagingQueue`
+conventions and the `SchedulerRegistry` sweep pattern already used by
+`ConversationDigestSweepService`.
 
 ## Complexity Tracking
 
@@ -237,8 +265,11 @@ in `MicroservicesModule`. No new architectural pattern; reuse the
   forward path if a version timeline (FR-025) materializes — noted, not built.
 - **Server stays the persistence *responder*** (not a new caller) — minimizes
   change and matches "server owns the store" (OPEN-3). The only new *outbound*
-  client is for the lifecycle event (server→collab), which is genuinely
-  server-originated.
+  client is `COLLABORATION_LIFECYCLE_SERVICE` for the lifecycle event
+  (server→collab), which is genuinely server-originated. It publishes from a
+  **transactional outbox** rather than inline so a crash between the DB delete and
+  the broker publish cannot lose the event (at-least-once; idempotent downstream) —
+  a durability property an inline fire-and-forget publish could not give.
 
 The real risk is **cross-repo contract drift** (the unified wire shape) — mitigated
 by gating implementation on the collab Wave-2 freeze (spec ⚠️).

@@ -1,100 +1,26 @@
-import { COLLABORATION_SERVICE } from '@common/constants/providers';
-import { CollaborationContentType } from '@common/enums/collaboration.content.type';
-import { ClientProxy } from '@nestjs/microservices';
-import { Test, TestingModule } from '@nestjs/testing';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { EMPTY, throwError } from 'rxjs';
-import { type Mocked, vi } from 'vitest';
+import { EntityManager } from 'typeorm';
+import { vi } from 'vitest';
 import { CollaborationLifecycleEvent } from './collaboration.lifecycle.event.pattern';
+import { CollaborationLifecycleOutbox } from './collaboration.lifecycle.outbox.entity';
 import { CollaborationLifecycleService } from './collaboration.lifecycle.service';
 
 describe('CollaborationLifecycleService', () => {
-  let service: CollaborationLifecycleService;
-  let client: Mocked<ClientProxy>;
+  const service = new CollaborationLifecycleService();
 
-  // `emit` returns a hot Observable in production; the service subscribes to it.
-  const clientMock = { emit: vi.fn(() => EMPTY) };
+  it('enqueues a pending document.deleted outbox row via the caller transaction manager', async () => {
+    const insert = vi.fn().mockResolvedValue(undefined);
+    const manager = { insert } as unknown as EntityManager;
 
-  beforeEach(async () => {
-    vi.restoreAllMocks();
-    clientMock.emit.mockReturnValue(EMPTY);
+    await service.enqueueDocumentDeleted(manager, 'doc-1');
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        CollaborationLifecycleService,
-        MockWinstonProvider,
-        { provide: COLLABORATION_SERVICE, useValue: clientMock },
-      ],
-    }).compile();
-
-    service = module.get(CollaborationLifecycleService);
-    client = module.get(COLLABORATION_SERVICE) as Mocked<ClientProxy>;
-  });
-
-  it('emits document.deleted exactly once with the id', () => {
-    service.emitDocumentDeleted('doc-1');
-
-    expect(client.emit).toHaveBeenCalledTimes(1);
-    expect(client.emit).toHaveBeenCalledWith(
-      CollaborationLifecycleEvent.DELETED,
-      { id: 'doc-1' }
-    );
-  });
-
-  it('emits document.created with content type and ownerRef', () => {
-    service.emitDocumentCreated(
-      'doc-1',
-      CollaborationContentType.MEMO,
-      'owner-1'
-    );
-
-    expect(client.emit).toHaveBeenCalledWith(
-      CollaborationLifecycleEvent.CREATED,
-      {
-        id: 'doc-1',
-        contentType: CollaborationContentType.MEMO,
-        ownerRef: 'owner-1',
-      }
-    );
-  });
-
-  it('emits document.access_changed with the id', () => {
-    service.emitDocumentAccessChanged('doc-1');
-
-    expect(client.emit).toHaveBeenCalledWith(
-      CollaborationLifecycleEvent.ACCESS_CHANGED,
-      { id: 'doc-1' }
-    );
-  });
-
-  it('never throws when emit fails synchronously (fire-and-forget)', () => {
-    clientMock.emit.mockImplementationOnce(() => {
-      throw new Error('broker down');
+    // Inserted with the PASSED manager (so it commits atomically with the leaf
+    // removal), status 'pending', documentId the collab Purge needs. No payload
+    // or content type is stored — the dispatcher derives `{ id }` at publish.
+    expect(insert).toHaveBeenCalledTimes(1);
+    expect(insert).toHaveBeenCalledWith(CollaborationLifecycleOutbox, {
+      documentId: 'doc-1',
+      eventType: CollaborationLifecycleEvent.DELETED,
+      status: 'pending',
     });
-
-    expect(() => service.emitDocumentDeleted('doc-1')).not.toThrow();
-  });
-
-  it('swallows async broker failures on the Observable error channel', () => {
-    // `ClientProxy.emit` surfaces broker/publication failures asynchronously
-    // through the returned Observable, not synchronously — the service must
-    // subscribe with an error handler so they never break the owning operation.
-    clientMock.emit.mockReturnValueOnce(
-      throwError(() => new Error('broker down'))
-    );
-
-    expect(() => service.emitDocumentDeleted('doc-1')).not.toThrow();
-  });
-});
-
-describe('CollaborationLifecycleService without a client', () => {
-  it('degrades to a no-op when the collaboration client is absent', async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [CollaborationLifecycleService, MockWinstonProvider],
-    }).compile();
-
-    const service = module.get(CollaborationLifecycleService);
-
-    expect(() => service.emitDocumentDeleted('doc-1')).not.toThrow();
   });
 });

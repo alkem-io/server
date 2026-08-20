@@ -22,17 +22,29 @@ const updateBuilder = () => {
 
 describe('MemoService — collaboration metadata + lifecycle', () => {
   let service: MemoService;
-  let memoRepo: { findOne: Mock; remove: Mock; createQueryBuilder: Mock };
-  let lifecycle: { emitDocumentDeleted: Mock };
+  let memoRepo: {
+    findOne: Mock;
+    remove: Mock;
+    createQueryBuilder: Mock;
+    manager: { transaction: Mock };
+  };
+  let managerMock: { remove: Mock; insert: Mock };
+  let lifecycle: { enqueueDocumentDeleted: Mock };
   let profileService: { deleteProfile: Mock };
   let authorizationPolicyService: { delete: Mock };
 
   beforeEach(async () => {
     vi.restoreAllMocks();
+    managerMock = { remove: vi.fn(), insert: vi.fn() };
     memoRepo = {
       findOne: vi.fn(),
       remove: vi.fn(),
       createQueryBuilder: vi.fn(),
+      // The delete path runs {leaf remove + outbox insert} in one transaction;
+      // the mock invokes the callback with a stand-in EntityManager.
+      manager: {
+        transaction: vi.fn(async (cb: any) => cb(managerMock)),
+      },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -231,25 +243,63 @@ describe('MemoService — collaboration metadata + lifecycle', () => {
     });
   });
 
-  describe('deleteMemo emits document.deleted (SC-004)', () => {
-    it('emits exactly once after a successful delete', async () => {
+  describe('deleteMemo records document.deleted (SC-004)', () => {
+    it('records exactly once, atomically with the leaf removal, AFTER the profile/auth cascade', async () => {
       const memo = {
         id: 'm1',
         profile: { id: 'p1' },
         authorization: { id: 'a1' },
       };
       memoRepo.findOne.mockResolvedValue(memo);
-      memoRepo.remove.mockResolvedValue({ ...memo });
+      managerMock.remove.mockResolvedValue({ ...memo });
       profileService.deleteProfile.mockResolvedValue({});
       authorizationPolicyService.delete.mockResolvedValue({});
 
       await service.deleteMemo('m1');
 
-      expect(lifecycle.emitDocumentDeleted).toHaveBeenCalledTimes(1);
-      expect(lifecycle.emitDocumentDeleted).toHaveBeenCalledWith('m1');
+      // The leaf removal + the outbox insert run inside ONE transaction.
+      expect(memoRepo.manager.transaction).toHaveBeenCalledTimes(1);
+      expect(managerMock.remove).toHaveBeenCalledTimes(1);
+      expect(lifecycle.enqueueDocumentDeleted).toHaveBeenCalledTimes(1);
+      expect(lifecycle.enqueueDocumentDeleted).toHaveBeenCalledWith(
+        managerMock,
+        'm1'
+      );
+
+      // Ordering the comments claim: the profile + auth cascade (incl. the
+      // external file-service blob delete that cannot join a DB tx) runs BEFORE
+      // the transaction, never inside/after it.
+      const cascadeLast = Math.max(
+        profileService.deleteProfile.mock.invocationCallOrder[0],
+        authorizationPolicyService.delete.mock.invocationCallOrder[0]
+      );
+      expect(cascadeLast).toBeLessThan(
+        memoRepo.manager.transaction.mock.invocationCallOrder[0]
+      );
     });
 
-    it('does NOT emit when the delete fails before removal', async () => {
+    it('rejects the delete (and surfaces the error) when the transactional enqueue fails', async () => {
+      const memo = {
+        id: 'm1',
+        profile: { id: 'p1' },
+        authorization: { id: 'a1' },
+      };
+      memoRepo.findOne.mockResolvedValue(memo);
+      managerMock.remove.mockResolvedValue({ ...memo });
+      profileService.deleteProfile.mockResolvedValue({});
+      authorizationPolicyService.delete.mockResolvedValue({});
+      // The outbox insert inside the transaction fails -> the whole delete rejects
+      // (the transaction rolls back the leaf removal too).
+      lifecycle.enqueueDocumentDeleted.mockRejectedValue(
+        new Error('outbox insert failed')
+      );
+
+      await expect(service.deleteMemo('m1')).rejects.toThrow(
+        'outbox insert failed'
+      );
+    });
+
+    it('does NOT record (or open a transaction) when the delete fails before removal', async () => {
       memoRepo.findOne.mockResolvedValue({
         id: 'm1',
         profile: undefined,
@@ -258,7 +308,8 @@ describe('MemoService — collaboration metadata + lifecycle', () => {
 
       await expect(service.deleteMemo('m1')).rejects.toThrow();
 
-      expect(lifecycle.emitDocumentDeleted).not.toHaveBeenCalled();
+      expect(memoRepo.manager.transaction).not.toHaveBeenCalled();
+      expect(lifecycle.enqueueDocumentDeleted).not.toHaveBeenCalled();
     });
   });
 });
