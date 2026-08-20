@@ -60,7 +60,7 @@
     "@alkemio/notifications-lib": "0.19.0",
     "@apollo/server": "^4.13.0",
     "@elastic/elasticsearch": "^8.12.2",
-    "@excalidraw-yjs/element": "https://pkg.pr.new/alkem-io/excalidraw-yjs/@excalidraw-yjs/element@cdf8f67bca0289d4accb1bacfb1e6548891c21c1",
+    "@excalidraw-yjs/excalidraw": "https://pkg.pr.new/alkem-io/excalidraw-yjs/@excalidraw-yjs/excalidraw@2af664c",
     "@golevelup/nestjs-rabbitmq": "^6.1.0",
     "@hedger/nestjs-encryption": "^0.1.5",
     "@modelcontextprotocol/sdk": "^1.25.2",

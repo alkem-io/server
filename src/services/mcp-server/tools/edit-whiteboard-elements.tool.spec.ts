@@ -6,7 +6,7 @@ import { EditWhiteboardElementsTool } from './edit-whiteboard-elements.tool';
 // vitest's module runner cannot drive; mock the loader to a plain dynamic import
 // so the test still exercises the REAL fork writer against a real Y.Doc.
 vi.mock('../collaboration/whiteboard-fork', () => ({
-  loadWhiteboardFork: () => import('@excalidraw-yjs/element/headless'),
+  loadWhiteboardFork: () => import('@excalidraw-yjs/excalidraw/headless'),
 }));
 
 const WB_ID = 'wb-1';

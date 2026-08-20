@@ -14,7 +14,8 @@
  * `Function` indirection preserves a real dynamic import at runtime (ed-yjs
  * verified the bundle has no top-level await / import.meta).
  */
-export type WhiteboardFork = typeof import('@excalidraw-yjs/element/headless');
+export type WhiteboardFork =
+  typeof import('@excalidraw-yjs/excalidraw/headless');
 
 const importEsm = Function('specifier', 'return import(specifier)') as (
   specifier: string
@@ -26,7 +27,7 @@ let cached: Promise<WhiteboardFork> | undefined;
 export function loadWhiteboardFork(): Promise<WhiteboardFork> {
   if (!cached) {
     cached = importEsm(
-      '@excalidraw-yjs/element/headless'
+      '@excalidraw-yjs/excalidraw/headless'
     ) as Promise<WhiteboardFork>;
   }
   return cached;
