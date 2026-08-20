@@ -30,7 +30,10 @@ import { CreateInnovationFlowStateInput } from '../innovation-flow-state/dto/inn
 import { UpdateInnovationFlowStateInput } from '../innovation-flow-state/dto/innovation.flow.state.dto.update';
 import { IInnovationFlowState } from '../innovation-flow-state/innovation.flow.state.interface';
 import { InnovationFlowStateService } from '../innovation-flow-state/innovation.flow.state.service';
-import { normalizeStatesSettings } from '../innovation-flow-state/normalize.state.settings';
+import {
+  normalizeStateSettings,
+  normalizeStatesSettings,
+} from '../innovation-flow-state/normalize.state.settings';
 import { sortBySortOrder } from '../innovation-flow-state/utils/sortBySortOrder';
 import { CreateInnovationFlowInput } from './dto/innovation.flow.dto.create';
 import { DeleteStateOnInnovationFlowInput } from './dto/innovation.flow.dto.state.delete';
@@ -245,7 +248,10 @@ export class InnovationFlowService {
     }
     await this.save(innovationFlow);
 
-    return updatedState;
+    // The states loaded above are raw TypeORM rows and never go through the shared
+    // normalization helper on this path — normalize the mutation's own response so it never
+    // fails to serialize a NonNull settings field on a row the backfill hasn't reached yet.
+    return normalizeStateSettings(updatedState);
   }
 
   /**

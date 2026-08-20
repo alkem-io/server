@@ -441,6 +441,39 @@ describe('InnovationFlowService', () => {
       ).toHaveBeenCalled();
       expect(tagsetService.updateTagsetsSelectedValue).toHaveBeenCalled();
     });
+
+    it('should normalize the returned state so a row missing sidebar carries the generic default', async () => {
+      const states = [
+        { id: 's-1', displayName: 'State A', sortOrder: 10 },
+        { id: 's-2', displayName: 'State B', sortOrder: 20 },
+      ];
+      const flow = {
+        id: 'flow-1',
+        states,
+        currentStateID: 's-1',
+        flowStatesTagsetTemplate: undefined,
+      } as any;
+
+      vi.mocked(repository.findOne).mockResolvedValue(flow);
+      // Simulate a row whose settings never carried a sidebar key.
+      const updatedState = {
+        id: 's-1',
+        displayName: 'State A',
+        sortOrder: 10,
+        settings: { allowNewCallouts: true },
+      } as any;
+      vi.mocked(innovationFlowStateService.update).mockResolvedValue(
+        updatedState
+      );
+      vi.mocked(repository.save).mockResolvedValue(flow);
+
+      const result = await service.updateInnovationFlowState('flow-1', {
+        innovationFlowStateID: 's-1',
+        displayName: 'State A',
+      } as any);
+
+      expect(result.settings.sidebar).toEqual(['intent', 'index']);
+    });
   });
 
   describe('updateCurrentState', () => {

@@ -1,4 +1,5 @@
 import { CalloutDescriptionDisplayMode } from '@common/enums/callout.description.display.mode';
+import { SidebarWidget } from '@common/enums/sidebar.widget';
 import { TemplateType } from '@common/enums/template.type';
 import {
   EntityNotFoundException,
@@ -152,6 +153,50 @@ describe('InnovationFlowStateService', () => {
       const result = await service.createInnovationFlowState(stateData as any);
 
       expect(result.settings.showPublishDetails).toBe(false);
+    });
+
+    it('should default settings.sidebar to [INTENT, INDEX] when not provided', async () => {
+      const stateData = { displayName: 'Draft' };
+
+      const result = await service.createInnovationFlowState(stateData as any);
+
+      expect(result.settings.sidebar).toEqual([
+        SidebarWidget.INTENT,
+        SidebarWidget.INDEX,
+      ]);
+    });
+
+    it('should honor an explicit create-time sidebar list verbatim, content and order (template save/apply leg)', async () => {
+      const stateData = {
+        displayName: 'Home',
+        settings: {
+          allowNewCallouts: true,
+          sidebar: [
+            SidebarWidget.EVENTS,
+            SidebarWidget.INTENT,
+            SidebarWidget.ABOUT,
+          ],
+        },
+      };
+
+      const result = await service.createInnovationFlowState(stateData as any);
+
+      expect(result.settings.sidebar).toEqual([
+        SidebarWidget.EVENTS,
+        SidebarWidget.INTENT,
+        SidebarWidget.ABOUT,
+      ]);
+    });
+
+    it('should honor an explicit empty create-time sidebar list', async () => {
+      const stateData = {
+        displayName: 'Empty Sidebar',
+        settings: { allowNewCallouts: true, sidebar: [] },
+      };
+
+      const result = await service.createInnovationFlowState(stateData as any);
+
+      expect(result.settings.sidebar).toEqual([]);
     });
   });
 
@@ -508,6 +553,141 @@ describe('InnovationFlowStateService', () => {
         settings: { showPublishDetails: false },
       } as any);
 
+      expect(state.settings.descriptionDisplayMode).toBe(
+        CalloutDescriptionDisplayMode.COLLAPSED
+      );
+      expect(state.settings.showPublishDetails).toBe(false);
+    });
+
+    it('should replace sidebar wholesale when an explicit list is sent', async () => {
+      const state = {
+        id: 'state-1',
+        displayName: 'Name',
+        description: '',
+        settings: {
+          allowNewCallouts: true,
+          visible: true,
+          descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+          showPublishDetails: true,
+          sidebar: [SidebarWidget.INTENT, SidebarWidget.INDEX],
+        },
+      } as any;
+
+      vi.mocked(repository.save).mockResolvedValue(state);
+
+      await service.update(state, {
+        displayName: 'Name',
+        settings: { sidebar: [SidebarWidget.EVENTS, SidebarWidget.INTENT] },
+      } as any);
+
+      expect(state.settings.sidebar).toEqual([
+        SidebarWidget.EVENTS,
+        SidebarWidget.INTENT,
+      ]);
+    });
+
+    it('should preserve stored sidebar when omitted from the update', async () => {
+      const state = {
+        id: 'state-1',
+        displayName: 'Name',
+        description: '',
+        settings: {
+          allowNewCallouts: true,
+          visible: true,
+          descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+          showPublishDetails: true,
+          sidebar: [SidebarWidget.INTENT, SidebarWidget.INDEX],
+        },
+      } as any;
+
+      vi.mocked(repository.save).mockResolvedValue(state);
+
+      await service.update(state, {
+        displayName: 'Name',
+        settings: { visible: false },
+      } as any);
+
+      expect(state.settings.sidebar).toEqual([
+        SidebarWidget.INTENT,
+        SidebarWidget.INDEX,
+      ]);
+      expect(state.settings.visible).toBe(false);
+    });
+
+    it('should preserve stored sidebar when the update sends an explicit null', async () => {
+      const state = {
+        id: 'state-1',
+        displayName: 'Name',
+        description: '',
+        settings: {
+          allowNewCallouts: true,
+          visible: true,
+          descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+          showPublishDetails: true,
+          sidebar: [SidebarWidget.INTENT, SidebarWidget.INDEX],
+        },
+      } as any;
+
+      vi.mocked(repository.save).mockResolvedValue(state);
+
+      await service.update(state, {
+        displayName: 'Name',
+        settings: { sidebar: null },
+      } as any);
+
+      expect(state.settings.sidebar).toEqual([
+        SidebarWidget.INTENT,
+        SidebarWidget.INDEX,
+      ]);
+    });
+
+    it('should store an explicit empty sidebar list', async () => {
+      const state = {
+        id: 'state-1',
+        displayName: 'Name',
+        description: '',
+        settings: {
+          allowNewCallouts: true,
+          visible: true,
+          descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+          showPublishDetails: true,
+          sidebar: [SidebarWidget.INTENT, SidebarWidget.INDEX],
+        },
+      } as any;
+
+      vi.mocked(repository.save).mockResolvedValue(state);
+
+      await service.update(state, {
+        displayName: 'Name',
+        settings: { sidebar: [] },
+      } as any);
+
+      expect(state.settings.sidebar).toEqual([]);
+    });
+
+    it('should leave visible/descriptionDisplayMode/showPublishDetails untouched on a sidebar-only save', async () => {
+      const state = {
+        id: 'state-1',
+        displayName: 'Name',
+        description: '',
+        settings: {
+          allowNewCallouts: true,
+          visible: false,
+          descriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
+          showPublishDetails: false,
+          sidebar: [SidebarWidget.INTENT],
+        },
+      } as any;
+
+      vi.mocked(repository.save).mockResolvedValue(state);
+
+      await service.update(state, {
+        displayName: 'Name',
+        settings: { sidebar: [SidebarWidget.EVENTS] },
+      } as any);
+
+      expect(state.settings.sidebar).toEqual([SidebarWidget.EVENTS]);
+      expect(state.settings.visible).toBe(false);
       expect(state.settings.descriptionDisplayMode).toBe(
         CalloutDescriptionDisplayMode.COLLAPSED
       );

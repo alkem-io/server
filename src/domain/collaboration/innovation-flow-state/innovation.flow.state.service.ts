@@ -16,6 +16,7 @@ import { CreateInnovationFlowStateInput } from './dto/innovation.flow.state.dto.
 import { UpdateInnovationFlowStateInput } from './dto/innovation.flow.state.dto.update';
 import { InnovationFlowState } from './innovation.flow.state.entity';
 import { IInnovationFlowState } from './innovation.flow.state.interface';
+import { SIDEBAR_DEFAULT_GENERIC } from './innovation.flow.state.sidebar.defaults';
 import { normalizeStateSettings } from './normalize.state.settings';
 
 @Injectable()
@@ -49,6 +50,13 @@ export class InnovationFlowStateService {
         CalloutDescriptionDisplayMode.EXPANDED,
       // FR-002/021: showPublishDetails defaults to true; honor explicit create-time value.
       showPublishDetails: stateData.settings?.showPublishDetails ?? true,
+      // Honors an explicit create-time sidebar list verbatim (the leg that carries template
+      // save/apply through unchanged); defaults to the generic composition otherwise. This is
+      // the one funnel every state-creation path goes through, so it also covers the create
+      // paths that never send `settings` at all.
+      sidebar: stateData.settings?.sidebar
+        ? [...stateData.settings.sidebar]
+        : [...SIDEBAR_DEFAULT_GENERIC],
     };
     innovationFlowState.sortOrder = stateData.sortOrder ?? 0;
     innovationFlowState.authorization = new AuthorizationPolicy(
@@ -116,6 +124,12 @@ export class InnovationFlowStateService {
       if (updateData.settings.showPublishDetails != null) {
         innovationFlowState.settings.showPublishDetails =
           updateData.settings.showPublishDetails;
+      }
+      // Partial update for sidebar — omission/null preserves the stored list; an explicit
+      // array (including `[]`) replaces it wholesale. Validated (enum, no duplicates, size
+      // bound) upstream by the DTO before it reaches this service.
+      if (updateData.settings.sidebar != null) {
+        innovationFlowState.settings.sidebar = [...updateData.settings.sidebar];
       }
     }
 
