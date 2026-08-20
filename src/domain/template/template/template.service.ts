@@ -188,6 +188,12 @@ export class TemplateService {
             },
             nameID: randomUUID().slice(0, 8),
             content: templateData.whiteboard.content,
+            // Seed the template's whiteboard from the source whiteboard's stored snapshot
+            // (duplicate / import-from-library). `sourceWhiteboardID` takes precedence over
+            // `content` server-side; without forwarding it the standalone whiteboard-template
+            // create dropped it and produced an EMPTY template. Authorization to READ the
+            // source is enforced at the resolver (mirroring the callout create path).
+            sourceWhiteboardID: templateData.whiteboard.sourceWhiteboardID,
             previewSettings: templateData.whiteboard.previewSettings,
           },
           storageAggregator
