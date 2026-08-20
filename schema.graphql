@@ -6,7 +6,9 @@ scalar DateTime
 """An Emoji."""
 scalar Emoji
 
-"""The `JSON` scalar type represents JSON values as specified by ECMA-404."""
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
 scalar JSON
 
 """
@@ -4399,7 +4401,7 @@ type Mutation {
   """
   removePollVote(voteData: RemovePollVoteInput!): Poll!
   """
-  Removes the requesting user's reaction from a Callout. Idempotent — no error when no reaction exists. Self-scoped; requires only authentication (not CONTRIBUTE), so a person who left the space can still retract their own reaction.
+  Removes the requesting user's reaction from a Callout. Idempotent — no error when no reaction exists. Self-scoped; requires only authentication (not CONTRIBUTE). Returns the Callout only when the caller retains READ access on it.
   """
   removeReactionFromCallout(reactionData: RemoveReactionFromCalloutInput!): Callout!
   """Remove a reaction on a message from the specified Room."""
@@ -5338,35 +5340,53 @@ type PromptGraphDefinitionNode {
 }
 
 type PromptGraphEdge {
-  """Conditional routing fallback target — validated by the engine at parse time."""
+  """
+  Conditional routing fallback target — validated by the engine at parse time.
+  """
   default: String
   from: String
-  """Conditional routing-value to node-name map; keys match case-insensitively in the engine."""
+  """
+  Conditional routing-value to node-name map; keys match case-insensitively in the engine.
+  """
   map: JSON
-  """Conditional routing state field — validated by the engine at parse time."""
+  """
+  Conditional routing state field — validated by the engine at parse time.
+  """
   on: String
   to: String
 }
 
 type PromptGraphNode {
-  """Retrieve collection template — validated by the engine contract at parse time."""
+  """
+  Retrieve collection template — validated by the engine contract at parse time.
+  """
   collection_template: String
   input_variables: [String!]
-  """Retrieve context character cap — validated by the engine contract at parse time."""
+  """
+  Retrieve context character cap — validated by the engine contract at parse time.
+  """
   max_context_chars: Int
-  name: String!
-  """Retrieve result count — validated by the engine contract at parse time."""
+  """
+  Retrieve result count — validated by the engine contract at parse time.
+  """
   n_results: Int
+  name: String!
   output: PromptGraphDataStruct
-  """Retrieve output state key — validated by the engine contract at parse time."""
+  """
+  Retrieve output state key — validated by the engine contract at parse time.
+  """
   output_key: String
   prompt: String
-  """Retrieve query template — validated by the engine contract at parse time."""
+  """
+  Retrieve query template — validated by the engine contract at parse time.
+  """
   query_template: String
   """Echo node state key — validated by the engine contract at parse time."""
   source: String
   system: Boolean!
-  """Node type: llm (default) | retrieve | echo — validated by the engine at parse time."""
+  """
+  Node type: llm (default) | retrieve | echo — validated by the engine at parse time.
+  """
   type: String
 }
 
@@ -8798,12 +8818,18 @@ input PromptGraphDataStructInput {
 }
 
 input PromptGraphEdgeInput {
-  """Conditional routing fallback target — validated by the engine at parse time."""
+  """
+  Conditional routing fallback target — validated by the engine at parse time.
+  """
   default: String
   from: String
-  """Conditional routing-value to node-name map; keys match case-insensitively in the engine."""
+  """
+  Conditional routing-value to node-name map; keys match case-insensitively in the engine.
+  """
   map: JSON
-  """Conditional routing state field — validated by the engine at parse time."""
+  """
+  Conditional routing state field — validated by the engine at parse time.
+  """
   on: String
   to: String
 }
@@ -8817,24 +8843,36 @@ input PromptGraphInput {
 }
 
 input PromptGraphNodeInput {
-  """Retrieve collection template — validated by the engine contract at parse time."""
+  """
+  Retrieve collection template — validated by the engine contract at parse time.
+  """
   collection_template: String
   input_variables: [String!]
-  """Retrieve context character cap — validated by the engine contract at parse time."""
+  """
+  Retrieve context character cap — validated by the engine contract at parse time.
+  """
   max_context_chars: Int
-  name: String!
-  """Retrieve result count — validated by the engine contract at parse time."""
+  """
+  Retrieve result count — validated by the engine contract at parse time.
+  """
   n_results: Int
+  name: String!
   output: PromptGraphDataStructInput
-  """Retrieve output state key — validated by the engine contract at parse time."""
+  """
+  Retrieve output state key — validated by the engine contract at parse time.
+  """
   output_key: String
   prompt: String
-  """Retrieve query template — validated by the engine contract at parse time."""
+  """
+  Retrieve query template — validated by the engine contract at parse time.
+  """
   query_template: String
   """Echo node state key — validated by the engine contract at parse time."""
   source: String
   system: Boolean!
-  """Node type: llm (default) | retrieve | echo — validated by the engine at parse time."""
+  """
+  Node type: llm (default) | retrieve | echo — validated by the engine at parse time.
+  """
   type: String
 }
 

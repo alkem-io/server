@@ -2,6 +2,7 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { PlatformOperationsAuditModule } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.module';
 import { AiPersonaEngineAdapterModule } from '../ai-persona-engine-adapter/ai.persona.engine.adapter.module';
 import { AiPersona } from './ai.persona.entity';
 import { AiPersonaExternalConfigResolverFields } from './ai.persona.external.config.resolver.fields';
@@ -14,6 +15,7 @@ import { AiPersonaAuthorizationService } from './ai.persona.service.authorizatio
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
+    PlatformOperationsAuditModule,
     TypeOrmModule.forFeature([AiPersona]),
     AiPersonaEngineAdapterModule,
   ],
