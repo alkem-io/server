@@ -4,12 +4,12 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { WhiteboardCollaborationService } from '../collaboration/whiteboard-collaboration.service';
+import { CollaborationDocumentService } from '@services/collaboration-client/collaboration-document.service';
 import {
   DocumentPurgingError,
   ReadOnlyRoomError,
-} from '../collaboration/whiteboard-collaboration.session';
+} from '@services/collaboration-client/collaboration-document.session';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { loadWhiteboardFork } from '../collaboration/whiteboard-fork';
 import {
   applyEditOps,
@@ -38,7 +38,7 @@ export class EditWhiteboardElementsTool implements McpTool {
   constructor(
     private readonly whiteboardService: WhiteboardService,
     private readonly authorizationService: AuthorizationService,
-    private readonly collaborationService: WhiteboardCollaborationService,
+    private readonly collaborationService: CollaborationDocumentService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -205,6 +205,7 @@ export class EditWhiteboardElementsTool implements McpTool {
       // and return only once the change is durably persisted (ControlSaved).
       await this.collaborationService.mutate(
         whiteboardId,
+        'whiteboard',
         actorContext.actorID,
         doc => {
           result = applyEditOps(doc, fork, operations);

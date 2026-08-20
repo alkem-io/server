@@ -4,9 +4,9 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { CollaborationDocumentService } from '@services/collaboration-client/collaboration-document.service';
+import { DocumentPurgingError } from '@services/collaboration-client/collaboration-document.session';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { WhiteboardCollaborationService } from '../collaboration/whiteboard-collaboration.service';
-import { DocumentPurgingError } from '../collaboration/whiteboard-collaboration.session';
 import { loadWhiteboardFork } from '../collaboration/whiteboard-fork';
 import { readWhiteboardScene } from '../collaboration/whiteboard-scene.reader';
 import {
@@ -26,7 +26,7 @@ const WHITEBOARD_URI_PATTERN = `${MCP_CONSTANTS.URI_SCHEME}://whiteboards/`;
 export class WhiteboardResourceProvider implements McpResourceProvider {
   constructor(
     private readonly whiteboardService: WhiteboardService,
-    private readonly collaborationService: WhiteboardCollaborationService,
+    private readonly collaborationService: CollaborationDocumentService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -94,6 +94,7 @@ export class WhiteboardResourceProvider implements McpResourceProvider {
     try {
       ({ elements, files } = await this.collaborationService.read(
         whiteboardId,
+        'whiteboard',
         agentInfo.actorID,
         doc => readWhiteboardScene(doc, fork)
       ));

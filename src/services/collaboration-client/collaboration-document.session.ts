@@ -30,10 +30,10 @@ interface ControlMessage {
   reason?: string;
 }
 
-/** Raised when the room refuses the join because the whiteboard is being deleted. */
+/** Raised when the room refuses the join because the document is being deleted. */
 export class DocumentPurgingError extends Error {
   constructor(documentId: string) {
-    super(`Whiteboard ${documentId} is deleted (room join refused)`);
+    super(`Document ${documentId} is deleted (room join refused)`);
     this.name = 'DocumentPurgingError';
   }
 }
@@ -45,7 +45,7 @@ export class ReadOnlyRoomError extends Error {
     public readonly reason?: string
   ) {
     super(
-      `Whiteboard ${documentId} joined read-only${reason ? ` (${reason})` : ''}`
+      `Document ${documentId} joined read-only${reason ? ` (${reason})` : ''}`
     );
     this.name = 'ReadOnlyRoomError';
   }
@@ -63,7 +63,7 @@ const WS_CLOSE_POLICY_VIOLATION = 1008;
  * The session is EPHEMERAL: an MCP tool opens it, reads or applies one logical
  * mutation, waits for durability, and closes. It never produces awareness/presence.
  */
-export class WhiteboardCollaborationSession {
+export class CollaborationDocumentSession {
   readonly doc = new Y.Doc();
   private ws?: WebSocket;
   private synced = false;
@@ -117,12 +117,12 @@ export class WhiteboardCollaborationSession {
         this.closeError = new DocumentPurgingError(this.documentId);
       } else if (!this.synced) {
         this.closeError = new Error(
-          `Whiteboard room closed before sync (code ${code}${reason ? `, ${reason}` : ''})`
+          `Collaboration room closed before sync (code ${code}${reason ? `, ${reason}` : ''})`
         );
       }
       this.failPending(
         this.closeError ??
-          new Error(`Whiteboard room connection closed (code ${code})`)
+          new Error(`Collaboration room connection closed (code ${code})`)
       );
     });
 
@@ -264,7 +264,7 @@ export class WhiteboardCollaborationSession {
         break;
       case 'save-error':
         this.rejectSaved(
-          new Error(`Whiteboard save failed: ${msg.error ?? 'unknown error'}`)
+          new Error(`Document save failed: ${msg.error ?? 'unknown error'}`)
         );
         break;
       case 'read-only-state':
@@ -321,7 +321,7 @@ export class WhiteboardCollaborationSession {
         () =>
           reject(
             new Error(
-              `Whiteboard ${label} timed out after ${timeoutMs}ms for ${this.documentId}`
+              `Document ${label} timed out after ${timeoutMs}ms for ${this.documentId}`
             )
           ),
         timeoutMs

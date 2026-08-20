@@ -5,25 +5,30 @@ import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import * as Y from 'yjs';
 import {
+  CollaborationDocumentSession,
   DocumentPurgingError,
   ReadOnlyRoomError,
-  WhiteboardCollaborationSession,
-} from './whiteboard-collaboration.session';
+} from './collaboration-document.session';
+
+/** The unified `/collab/{id}?type=…` document kinds this client can join. */
+export type CollaborationDocumentType = 'whiteboard' | 'memo';
 
 /**
- * The assistant's native Yjs whiteboard client path. MCP tools use this to READ
- * or MUTATE a whiteboard by joining its live collaboration room as an ephemeral,
- * server-side y-protocols collaborator — the SAME room, ordering, per-property
- * CRDT merge, and durable persistence every human editor uses. The server is a
- * real collaborator; it never writes file storage directly and never
- * decode→edit→re-encodes a scene.
+ * The server-side native-Yjs collaboration client. Any server actor (MCP tools, and
+ * the domain content-replace paths) uses this to READ or MUTATE a whiteboard or memo
+ * by joining its live collaboration room as an ephemeral, server-side y-protocols
+ * collaborator — the SAME room, ordering, per-property CRDT merge, and durable
+ * persistence every human editor uses. The server is a real collaborator; it never
+ * writes the document snapshot to file storage directly and never repoints
+ * `contentPointer` — the room's own SAVE remains the sole writer of the snapshot.
  *
- * Element semantics (constructing / mutating elements on the doc) live in the
- * excalidraw-yjs fork and are supplied by the caller as a mutator over the live
- * `Y.Doc`; this service owns only the transport, durability, and retry.
+ * Document semantics (constructing / replacing elements or ProseMirror nodes on the
+ * doc) live in the caller-supplied mutator over the live `Y.Doc` (excalidraw-yjs for
+ * whiteboards, @tiptap/y-tiptap for memos); this service owns only the transport,
+ * durability, and idempotent retry.
  */
 @Injectable()
-export class WhiteboardCollaborationService {
+export class CollaborationDocumentService {
   private readonly wsEndpoint: string;
   private readonly actorHeader: string;
   private readonly connectTimeoutMs: number;
@@ -59,10 +64,11 @@ export class WhiteboardCollaborationService {
    */
   async read<T>(
     documentId: string,
+    type: CollaborationDocumentType,
     actorId: string,
     reader: (doc: Y.Doc) => T
   ): Promise<T> {
-    const session = this.newSession(documentId, actorId);
+    const session = this.newSession(documentId, type, actorId);
     try {
       await session.connect(this.connectTimeoutMs);
       return reader(session.doc);
@@ -81,12 +87,13 @@ export class WhiteboardCollaborationService {
    */
   async mutate(
     documentId: string,
+    type: CollaborationDocumentType,
     actorId: string,
     mutator: (doc: Y.Doc) => void
   ): Promise<void> {
     let update: Uint8Array | null = null;
     for (let attempt = 0; attempt <= this.maxResendRetries; attempt++) {
-      const session = this.newSession(documentId, actorId);
+      const session = this.newSession(documentId, type, actorId);
       try {
         await session.connect(this.connectTimeoutMs);
         if (session.isReadOnly()) {
@@ -125,10 +132,11 @@ export class WhiteboardCollaborationService {
 
   private newSession(
     documentId: string,
+    type: CollaborationDocumentType,
     actorId: string
-  ): WhiteboardCollaborationSession {
-    const url = `${this.wsEndpoint}/collab/${encodeURIComponent(documentId)}?type=whiteboard`;
+  ): CollaborationDocumentSession {
+    const url = `${this.wsEndpoint}/collab/${encodeURIComponent(documentId)}?type=${type}`;
     const headers = { [this.actorHeader]: actorId };
-    return new WhiteboardCollaborationSession(url, headers, documentId);
+    return new CollaborationDocumentSession(url, headers, documentId);
   }
 }

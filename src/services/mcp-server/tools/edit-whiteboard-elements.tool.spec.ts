@@ -15,7 +15,7 @@ const ctx = { actorID: 'actor-1' } as any;
 /**
  * Native contract: `edit_whiteboard_elements` authorizes the whiteboard through the
  * SAME AuthorizationService as GraphQL, then applies the ops as an ephemeral Yjs
- * collaborator via `WhiteboardCollaborationService.mutate`. The collaborator mock
+ * collaborator via `CollaborationDocumentService.mutate`. The collaborator mock
  * runs the mutator against a REAL `Y.Doc` (through the real fork writer), so these
  * tests exercise the actual write path and assert on the resulting doc — and prove
  * no room is joined without UPDATE_CONTENT.
@@ -34,7 +34,12 @@ const buildTool = (opts: { granted?: boolean; found?: boolean } = {}) => {
   let mutatedDoc: Y.Doc | undefined;
   const collaborationService = {
     mutate: vi.fn(
-      async (_id: string, _actor: string, mutator: (doc: Y.Doc) => void) => {
+      async (
+        _id: string,
+        _type: string,
+        _actor: string,
+        mutator: (doc: Y.Doc) => void
+      ) => {
         mutatedDoc = new Y.Doc();
         mutator(mutatedDoc);
       }
@@ -73,6 +78,7 @@ describe('EditWhiteboardElementsTool (native Yjs)', () => {
     expect(result.isError).toBeFalsy();
     expect(collaborationService.mutate).toHaveBeenCalledWith(
       WB_ID,
+      'whiteboard',
       'actor-1',
       expect.any(Function)
     );

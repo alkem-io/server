@@ -24,6 +24,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ActivityModule } from '@platform/activity/activity.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { SearchModule } from '@services/api/search/search.module';
+import { CollaborationClientModule } from '@services/collaboration-client/collaboration-client.module';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
 import { McpApiKeyAuditService } from './auth/mcp-api-key.audit.service';
 import { McpApiKey } from './auth/mcp-api-key.entity';
@@ -33,7 +34,6 @@ import { McpAuthGuard } from './auth/mcp-auth.guard';
 import { McpDelegationStrategy } from './auth/mcp-delegation.strategy';
 import { AssistantCapabilityGateService } from './capabilities/assistant.capability.gate.service';
 import { AssistantCapabilityResolverQueries } from './capabilities/assistant.capability.resolver.queries';
-import { WhiteboardCollaborationModule } from './collaboration/whiteboard-collaboration.module';
 import {
   MCP_RESOURCE_PROVIDER,
   MCP_TOOL,
@@ -107,7 +107,7 @@ const RESOURCE_PROVIDERS = [
     VirtualAssistantModule,
     PlatformAuthorizationPolicyModule,
     WhiteboardModule,
-    WhiteboardCollaborationModule,
+    CollaborationClientModule,
     CalloutModule,
     CalloutsSetModule,
     SpaceModule,
