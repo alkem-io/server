@@ -245,8 +245,13 @@ export class CollaborationMigrationService {
     // no-drop migration guarantee (plan.md §Migration; spec Edge Cases).
     let lastId: string | undefined;
     for (;;) {
-      // Raw column read (bypasses entity hooks) — memo has no @AfterLoad, but
-      // we read only the columns the migration needs.
+      // PRE-DROP legacy reader. `memo.content` is the inline Yjs-V2 column that the
+      // DropMemoAndWhiteboardContent migration REMOVES. `migrateAll` (this service's
+      // only caller — operator-invoked, never wired into the request runtime) MUST run
+      // BEFORE that migration; this raw string select is intentional and does NOT go
+      // through the entity (whose `content` mapping is now gone), so it must never be
+      // invoked against a post-drop schema. Raw read also bypasses entity hooks — memo
+      // has no @AfterLoad, and we read only the columns the migration needs.
       const qb = this.memoRepository
         .createQueryBuilder('memo')
         .select('memo.id', 'id')
@@ -292,9 +297,12 @@ export class CollaborationMigrationService {
     // pagination is unsafe under concurrent inserts/deletes during the run.
     let lastId: string | undefined;
     for (;;) {
-      // Read the RAW (compressed) content via the query builder so the entity
-      // `@AfterLoad` decompression hook does NOT throw on a corrupt blob and
-      // abort the whole batch — we decompress per-row and flag failures.
+      // PRE-DROP legacy reader (see readMemos): `whiteboard.content` is the inline
+      // column DropMemoAndWhiteboardContent REMOVES; `migrateAll` runs before that
+      // migration and must never touch a post-drop schema. Read the RAW (compressed)
+      // content via the query builder so the entity `@AfterLoad` decompression hook
+      // does NOT throw on a corrupt blob and abort the whole batch — we decompress
+      // per-row and flag failures.
       const qb = this.whiteboardRepository
         .createQueryBuilder('whiteboard')
         .select('whiteboard.id', 'id')

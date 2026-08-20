@@ -548,14 +548,11 @@ export class ContributionsAnalyzeTool implements McpTool {
         if (contribution.memo) {
           item.title = contribution.memo.profile?.displayName;
           item.description = contribution.memo.profile?.description;
-          if (contribution.memo.content) {
-            // Memo content is stored as Buffer
-            item.content = {
-              memoContent: contribution.memo.content
-                .toString('utf-8')
-                .slice(0, 500),
-            };
-          }
+          // Memo content is a Yjs-V2 snapshot (WS/pointer-only, no inline column,
+          // and NOT UTF-8 text — decoding it needs the yjs→markdown loader against
+          // the file-service snapshot). Bulk contribution analysis surfaces
+          // title/description only, mirroring the whiteboard case above; per-memo
+          // content extraction is out of scope for this tool (006-collab-content-unification).
         }
         break;
     }
