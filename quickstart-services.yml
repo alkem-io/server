@@ -360,10 +360,9 @@ services:
     container_name: alkemio_dev_rabbitmq
     # The Erlang node name is derived from the hostname, and the node name is
     # the mnesia sub-directory name. Without pinning it, Docker uses the random
-    # container id, so every `compose up` orphans the previous node directory
-    # under ~/.docker-conf/rabbitmq/data and that directory is never reclaimed.
+    # container id, so every `compose up` orphans the previous node directory.
     hostname: rmq
-    image: rabbitmq:3.9.13-management
+    image: rabbitmq:3.13.2-management
     restart: always
     networks:
       - alkemio_dev_net
@@ -374,9 +373,6 @@ services:
       - RABBITMQ_SECURE_PASSWORD=yes
       - RABBITMQ_DEFAULT_USER=alkemio-admin
       - RABBITMQ_DEFAULT_PASS=alkemio!
-      # Ra (Raft) pre-allocates its write-ahead log at boot, ~280MB by default.
-      # The dev stack only declares classic queues, so cap it at 32MB.
-      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-ra wal_max_size_bytes 33554432
     healthcheck:
       test: rabbitmq-diagnostics check_port_connectivity
       interval: 30s
@@ -384,8 +380,13 @@ services:
       retries: 10
       start_period: 5s
     volumes:
-      - ~/.docker-conf/rabbitmq/data/:/var/lib/rabbitmq/mnesia
-      - ~/.docker-conf/rabbitmq/log/:/var/log/rabbitmq
+      # RabbitMQ has no supported in-place upgrade across non-consecutive minor
+      # series (3.9 -> 3.13), so 3.13 starts from a fresh mount. 3.13 is the
+      # standard local broker now (one-way upgrade); the old 3.9 bytes are left
+      # outside the active mount only as recoverability DURING this cutover, not a
+      # supported rollback path.
+      - ~/.docker-conf/rabbitmq/3.13/data/:/var/lib/rabbitmq/mnesia
+      - ~/.docker-conf/rabbitmq/3.13/log/:/var/log/rabbitmq
     command:
       [
         'bash',
