@@ -5,6 +5,7 @@ import { NotificationEventCategory } from '@common/enums/notification.event.cate
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
 import { UrlPathElementSpace } from '@common/enums/url.path.element.space';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CalloutLookupService } from '@domain/collaboration/callout/callout.lookup/callout.lookup.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
@@ -1298,8 +1299,9 @@ export class NotificationSpaceAdapter {
     const event = NotificationEvent.SPACE_COLLABORATION_CALLOUT_REACTION;
 
     // Kill-switch check — all channels silenced when disabled.
-    const killSwitchEnabled = this.configService.get<boolean>(
-      'notifications.callout_reactions.enabled' as any
+    const killSwitchEnabled = this.configService.get(
+      'notifications.callout_reactions.enabled',
+      { infer: true }
     );
     if (!killSwitchEnabled) {
       this.logger.verbose?.(
@@ -1314,7 +1316,7 @@ export class NotificationSpaceAdapter {
 
     // Re-read the callout to get the current publisher at emit time (not the
     // resolver's possibly-stale copy — this is what handles republish cases).
-    let callout;
+    let callout: ICallout;
     try {
       callout = await this.calloutLookupService.getCalloutOrFail(
         eventData.calloutID,
@@ -1324,7 +1326,21 @@ export class NotificationSpaceAdapter {
           },
         }
       );
-    } catch {
+    } catch (error) {
+      // A missing callout is an expected "no recipient" skip. Any other error
+      // (DB failure, etc.) must surface rather than be silently swallowed.
+      if (!(error instanceof EntityNotFoundException)) {
+        this.logger.error(
+          {
+            message: 'Failed to load callout for reaction notification',
+            calloutID: eventData.calloutID,
+            error: (error as Error)?.message,
+          },
+          (error as Error)?.stack,
+          LogContext.NOTIFICATIONS
+        );
+        return;
+      }
       this.logger.verbose?.(
         {
           message: 'Callout not found for reaction notification; skipping',
@@ -1478,9 +1494,9 @@ export class NotificationSpaceAdapter {
         event,
         {
           title: calloutDisplayName,
-          body: `${reactorDisplayName} reacted to your Post with ${emojiGlyph}`,
+          body: `${reactorDisplayName} reacted to your post with ${emojiGlyph}`,
           url: calloutUrl,
-          tag: `SPACE_COLLABORATION_CALLOUT_REACTION:${eventData.calloutID}`,
+          tag: `${event}:${eventData.calloutID}`,
         }
       );
     } else {

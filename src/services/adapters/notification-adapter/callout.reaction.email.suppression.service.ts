@@ -32,8 +32,9 @@ export class CalloutReactionEmailSuppressionService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
-    this.windowSeconds = this.configService.get<number>(
-      'notifications.callout_reactions.email_suppression_window_seconds' as any
+    this.windowSeconds = this.configService.get(
+      'notifications.callout_reactions.email_suppression_window_seconds',
+      { infer: true }
     );
   }
 

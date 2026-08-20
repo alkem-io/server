@@ -11,6 +11,7 @@ import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in
 import { InAppNotificationPayloadSpace } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space';
 import { InAppNotificationPayloadSpaceCollaborationCallout } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout';
 import { InAppNotificationPayloadSpaceCollaborationCalloutPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.post.comment';
+import { InAppNotificationPayloadSpaceCollaborationCalloutReaction } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.reaction';
 import { InAppNotificationPayloadSpaceCommunicationMessageDirect } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.message.direct';
 import { InAppNotificationPayloadSpaceCommunicationUpdate } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.update';
 import { InAppNotificationPayloadSpaceCommunityActor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.actor';
@@ -22,7 +23,6 @@ import { InAppNotificationPayloadUserMessageDirect } from '@platform/in-app-noti
 import { InAppNotificationPayloadUserMessageRoom } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.message.room';
 import { InAppNotificationPayloadVirtualContributor } from '@platform/in-app-notification-payload/dto/virtual-contributor/notification.in.app.payload.virtual.contributor';
 import { InAppNotificationPayloadSpaceCollaborationCalloutComment } from './dto/space/notification.in.app.payload.space.collaboration.callout.comment';
-import { InAppNotificationPayloadSpaceCollaborationCalloutReaction } from './dto/space/notification.in.app.payload.space.collaboration.callout.reaction';
 import { InAppNotificationPayloadSpaceCollaborationPoll } from './dto/space/notification.in.app.payload.space.collaboration.poll';
 import { InAppNotificationPayloadSpaceCommunityCalendarEvent } from './dto/space/notification.in.app.payload.space.community.calendar.event';
 import { InAppNotificationPayloadSpaceCommunityCalendarEventComment } from './dto/space/notification.in.app.payload.space.community.calendar.event.comment';
