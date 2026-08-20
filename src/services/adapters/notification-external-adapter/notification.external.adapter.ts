@@ -12,6 +12,7 @@ import {
   NotificationEventPayloadSpace,
   NotificationEventPayloadSpaceCalendarEvent,
   NotificationEventPayloadSpaceCollaborationCallout,
+  NotificationEventPayloadSpaceCollaborationCalloutReaction,
   NotificationEventPayloadSpaceCommunicationMessageDirect,
   NotificationEventPayloadSpaceCommunicationUpdate,
   NotificationEventPayloadSpaceCommunityApplication,
@@ -77,24 +78,6 @@ import { NotificationInputCollaborationCalloutContributionCreated } from '../not
 import { NotificationInputCollaborationCalloutPostContributionComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { NotificationInputCommentReply } from '../notification-adapter/dto/space/notification.dto.input.space.communication.user.comment.reply';
 import { NotificationInputUserEmailChangeSpaceAdmin } from '../notification-adapter/dto/space/notification.dto.input.space.user.email.change';
-
-// Temporary bridge type for the callout-reaction AMQP payload.
-// Replaced by the @alkemio/notifications-lib export once version 0.20.0 is
-// published to npm and the merge-gate in the tasks is met.
-interface NotificationEventPayloadSpaceCollaborationCalloutReaction
-  extends NotificationEventPayloadSpace {
-  callout: {
-    id: string;
-    framing: {
-      id: string;
-      type: string;
-      displayName: string;
-      description: string;
-      url: string;
-    };
-  };
-  reaction: { emoji: string };
-}
 
 interface CalloutContributionPayload {
   id: string;
