@@ -11,8 +11,10 @@ import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { type Mock, vi } from 'vitest';
 import graphJson from '../prompt-graph/config/prompt.graph.expert.json';
+import { PromptGraph } from '../prompt-graph/dto/prompt.graph.dto';
 import { AiPersona } from './ai.persona.entity';
 import { AiPersonaService } from './ai.persona.service';
+import { PromptGraphTransformer } from './transformers/prompt.graph.transformer';
 
 describe('AiPersonaService', () => {
   let service: AiPersonaService;
@@ -267,15 +269,59 @@ describe('AiPersonaService', () => {
         },
       };
 
+      const expectedGraph = {
+        nodes: [
+          {
+            name: 'retrieve',
+            system: false,
+            type: 'retrieve',
+            collection_template: '{bok_id}-knowledge',
+            query_template: 'information about {topic}',
+            n_results: 10,
+            max_context_chars: 20000,
+            output_key: 'knowledge_docs',
+          },
+          {
+            name: 'echo',
+            system: false,
+            type: 'echo',
+            source: 'question',
+          },
+          {
+            name: 'plain-llm',
+            system: false,
+            prompt: 'Answer {question}',
+          },
+        ],
+        edges: [
+          {
+            from: 'retrieve',
+            on: 'route',
+            map: { answer: 'echo', retry: 'plain-llm' },
+            default: 'plain-llm',
+          },
+        ],
+        state: {
+          type: 'object',
+          properties: [{ name: 'question', type: 'string', optional: false }],
+        },
+      };
+
+      const persistedGraph = JSON.parse(
+        JSON.stringify(PromptGraphTransformer.to(workshopGraph as PromptGraph))
+      );
+      const hydratedGraph = PromptGraphTransformer.from(persistedGraph);
+
+      expect(hydratedGraph).toEqual(expectedGraph);
+      expect('n_results' in hydratedGraph!.nodes![2]).toBe(false);
+
       await service.updateAiPersona({
         ID: 'persona-1',
         promptGraph: workshopGraph,
       } as any);
 
       const savedPersona = aiPersonaRepository.save.mock.calls[0][0];
-      expect(savedPersona.promptGraph).toEqual(workshopGraph);
-      expect(savedPersona.promptGraph.nodes[0]).toEqual(workshopGraph.nodes[0]);
-      expect(savedPersona.promptGraph.edges[0]).toEqual(workshopGraph.edges[0]);
+      expect(savedPersona.promptGraph).toEqual(expectedGraph);
       expect('n_results' in savedPersona.promptGraph.nodes[2]).toBe(false);
     });
 

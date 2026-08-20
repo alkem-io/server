@@ -70,15 +70,28 @@ mutation UpdatePersonaPromptGraph($aiPersonaData: UpdateAiPersonaInput!) {
 The `promptGraph` value above is an object, not a JSON-encoded string. It is
 shown as a placeholder to keep this guide readable; use the fixture unchanged.
 
+Updates merge only the supplied top-level `promptGraph` keys, so omitted keys
+such as `start` and `end` are retained from a previously stored graph. For a
+clean replacement, first update the persona with `promptGraph: null`, then
+send the complete replacement graph in a subsequent update.
+
 ### Retrieval precondition
 
 `retrieve` nodes require the Virtual Contributor invocation to carry a body
-of knowledge. Do not activate a retrieve-bearing graph on a VC without one.
-The server deliberately does not validate that pairing when the persona is
-updated: `bodyOfKnowledgeID` is supplied per invocation, not stored on the
-persona. If it is absent, the engine fails at parse time and the member
+of knowledge. Operators must verify that pairing at activation time; a
+misconfigured retrieve-bearing graph fails every invocation until it is
+corrected. The server deliberately does not validate the pairing when the
+persona is updated: `bodyOfKnowledgeID` is supplied per invocation, not stored
+on the persona. If it is absent, the engine fails at parse time and the member
 receives the standard error response at invocation. This is expected behavior,
 not a server-side validation failure.
+
+### External-provider egress check
+
+Before activating a retrieve-bearing graph, verify that the body of knowledge's
+data classification and the external model provider's processing basis permit
+the egress. Retrieval can send up to 95,000 characters of body-of-knowledge
+content to the external model provider in later prompts.
 
 ## Authoring another engine payload
 

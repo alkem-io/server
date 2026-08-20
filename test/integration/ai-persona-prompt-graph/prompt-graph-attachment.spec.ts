@@ -9,6 +9,7 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { type Mock, vi } from 'vitest';
+import graphJson from '../../../src/services/ai-server/prompt-graph/config/prompt.graph.expert.json';
 
 describe('AI persona prompt-graph attachment matrix', () => {
   let module: TestingModule;
@@ -143,7 +144,14 @@ describe('AI persona prompt-graph attachment matrix', () => {
       if (expected === 'stored') {
         expect(adapterInput.promptGraph).toBe(storedGraph);
       } else if (expected === 'default') {
-        expect(adapterInput.promptGraph).toBeDefined();
+        expect(adapterInput.promptGraph.nodes).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              name: 'check_input',
+              prompt: (graphJson.nodes[0].prompt as string[]).join('\n'),
+            }),
+          ])
+        );
       } else {
         expect('promptGraph' in adapterInput).toBe(false);
       }
