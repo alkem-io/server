@@ -189,6 +189,21 @@ http:
           X-Alkemio-Actor-Name: ""
           X-Alkemio-Session-Id: ""
 
+    # workspace#038 / #1912: local parity with the production `mcp-api`
+    # IngressRoute's `mcp-strip-delegation-headers`. External MCP callers must
+    # never be able to attempt the internal-only delegated flow, so every
+    # X-Alkemio-* identity header is zeroed at the edge — including
+    # X-Alkemio-On-Behalf-Of, which the shared strip-client-alkemio-headers
+    # middleware does NOT cover. Without this, local would be MORE permissive
+    # than production on exactly the header that carries delegation.
+    mcp-strip-delegation-headers:
+      headers:
+        customRequestHeaders:
+          X-Alkemio-On-Behalf-Of: ""
+          X-Alkemio-Actor-Id: ""
+          X-Alkemio-Actor-Name: ""
+          X-Alkemio-Session-Id: ""
+
     # Universal traefik forwardAuth decision endpoint. alkemio-server's
     # AuthenticationService resolves the alkemio_session cookie (or the
     # `?guestName=` query param for guest paths) to a canonical ActorContext
@@ -225,6 +240,29 @@ http:
       entryPoints:
         - 'web'
       priority: 130
+
+    # workspace#038 / #1912 — MCP host at the edge, mirroring the production
+    # `mcp-api` IngressRoute so the connection recipe the product shows
+    # (`<platform-address>/rest/mcp`) works locally exactly as it does on
+    # acceptance and production. Without this route Traefik 404s /rest/mcp and
+    # the SPA catch-all swallows it, so a local client has to be pointed at the
+    # server's own port — a difference between environments that the docs and
+    # the in-product recipe do not mention.
+    #
+    # NO prefix strip: the server owns `/rest/mcp` (`@Controller('/rest/mcp')`),
+    # so the path is forwarded verbatim, same as production.
+    #
+    # Auth is the McpAuthGuard chain in-app (Bearer mcp_… key, Hydra bearer, or
+    # session cookie; anonymous → public data only). The edge only zeroes the
+    # delegation headers.
+    mcp-api:
+      rule: 'PathPrefix(`/rest/mcp`)'
+      service: 'alkemio-server'
+      middlewares:
+        - mcp-strip-delegation-headers
+      entryPoints:
+        - 'web'
+      priority: 150
 
     api-auth-oidc:
       rule: 'PathPrefix(`/api/auth`)'

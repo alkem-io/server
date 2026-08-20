@@ -641,6 +641,15 @@ input AddPollOptionInput {
   text: String!
 }
 
+input AddReactionToCalloutInput {
+  """The ID of the Callout to react to."""
+  calloutID: UUID!
+  """
+  Must be one of the platform allowed emoji slugs; validated server-side (ValidationException on miss).
+  """
+  emoji: String!
+}
+
 input AddVisualToMediaGalleryInput {
   """The ID of the media gallery."""
   mediaGalleryID: String!
@@ -650,6 +659,14 @@ input AddVisualToMediaGalleryInput {
   The type of visual to add (e.g. MEDIA_GALLERY_IMAGE, MEDIA_GALLERY_VIDEO).
   """
   visualType: VisualType!
+}
+
+input AdminRevokeMcpApiKeyInput {
+  keyID: UUID!
+  """
+  Owner of the key. Required — it scopes the revoke and the audit subject.
+  """
+  userID: UUID!
 }
 
 input AdminUserEmailChangeDriftResolveInput {
@@ -743,6 +760,8 @@ type Application {
   state: String!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+  """The User who submitted this Application."""
+  user: User
 }
 
 input ApplicationEventInput {
@@ -794,6 +813,28 @@ input AssignRoleOnRoleSetInput {
 input AssignUserGroupMemberInput {
   groupID: UUID!
   userID: UUID!
+}
+
+type AssistantCapability {
+  """What the capability does (for the settings UI)."""
+  description: String!
+  """Human-readable label for the capability toggle."""
+  displayName: String!
+  """
+  READ | WRITE_ADDITIVE | WRITE_DESTRUCTIVE — drives the default (READ enabled, WRITE_* disabled) and confirmation behaviour.
+  """
+  kind: AssistantCapabilityKind!
+  """The MCP tool name, e.g. "search_content"."""
+  name: String!
+}
+
+"""
+The kind of an assistant capability — READ is enabled by default; WRITE_* are disabled by default and confirmation-gated.
+"""
+enum AssistantCapabilityKind {
+  READ
+  WRITE_ADDITIVE
+  WRITE_DESTRUCTIVE
 }
 
 type AssistantCapabilityToggle {
@@ -1149,6 +1190,14 @@ type Callout {
   publishedBy: User
   """The Date of the publishing of this Callout."""
   publishedDate: DateTime
+  """
+  Who reacted (tier-2). Bounded: 100 most recent by last change, descending. Fetch only on demand.
+  """
+  reactions: [CalloutReaction!]!
+  """
+  Cheap always-shown summary (tier-1). Dataloader-batched; safe to select on feeds.
+  """
+  reactionsSummary: CalloutReactionsSummary!
   """The Callout Settings associated with this Callout."""
   settings: CalloutSettings!
   """The sorting order for this Callout."""
@@ -1323,6 +1372,38 @@ type CalloutPostCreated {
   sortOrder: Float!
 }
 
+type CalloutReaction {
+  """Allow-list slug (e.g. "heart")."""
+  emoji: String!
+  """The unique identifier."""
+  id: UUID!
+  """
+  When this person's reaction was made or last changed (a swap updates this).
+  """
+  updatedDate: DateTime!
+  """
+  The reactor. Null only in the deletion race window; clients skip null users.
+  """
+  user: User
+}
+
+type CalloutReactionsSummary {
+  """The emoji slugs a user may react with on this Callout."""
+  allowedEmojis: [String!]!
+  """
+  Distinct emoji slugs currently in use, in allow-list order. Never carries counts.
+  """
+  emojis: [String!]!
+  """
+  The requesting user's current reaction slug; null when none or unauthenticated.
+  """
+  myReactionEmoji: String
+  """
+  Number of distinct people currently holding a reaction on this Callout.
+  """
+  total: Int!
+}
+
 """
 The selection mode for a collection callout (Contributors or Subspaces). AUTO (default) returns the full computed set; CUSTOM restricts to the admin-curated selectedIds list.
 """
@@ -1477,6 +1558,7 @@ type CollaboraDocument {
 
 enum CollaboraDocumentType {
   DRAWING
+  PDF
   PRESENTATION
   SPREADSHEET
   WORDPROCESSING
@@ -4394,6 +4476,52 @@ type LookupQueryResults {
 """A markdown string."""
 scalar Markdown
 
+"""
+Metadata for one MCP API key. The key value itself is never exposed here.
+"""
+type McpApiKey {
+  createdDate: DateTime!
+  """Optional expiry chosen at mint."""
+  expiresAt: DateTime
+  id: UUID!
+  """When this key last authenticated a request."""
+  lastUsedAt: DateTime
+  """Source address of the last request this key authenticated."""
+  lastUsedFromIp: String
+  """User-supplied label. Not unique."""
+  name: String!
+  """Granted operations, flattened from the stored scope."""
+  operations: [McpApiKeyOperation!]!
+  status: McpApiKeyStatus!
+}
+
+"""
+Result of minting a key. The only place the plaintext is ever returned.
+"""
+type McpApiKeyMintResult {
+  """
+  The plaintext key. Returned EXACTLY ONCE — it is not stored and cannot be re-derived.
+  """
+  apiKey: String!
+  """Metadata for the key just created."""
+  key: McpApiKey!
+}
+
+"""Operations an MCP API key may perform."""
+enum McpApiKeyOperation {
+  READ
+  TOOLS
+}
+
+"""
+Lifecycle status of an MCP API key. REVOKED takes precedence over EXPIRED.
+"""
+enum McpApiKeyStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+}
+
 type MeConversationsResult {
   """
   All conversations (direct and group) for the current authenticated user. Client handles categorization by room type and member actor types.
@@ -4421,6 +4549,10 @@ type MeQueryResults {
   conversations: MeConversationsResult!
   """The query id"""
   id: String!
+  """
+  The current user's MCP API keys, newest first. Includes revoked and expired keys so last-used evidence survives revocation.
+  """
+  mcpApiKeys: [McpApiKey!]!
   """The Spaces I am contributing to"""
   mySpaces(
     """
@@ -4597,6 +4729,17 @@ enum MimeType {
   XPNG
 }
 
+input MintMcpApiKeyInput {
+  """Optional expiry. MUST be in the future when supplied."""
+  expiresAt: DateTime
+  """Label for the key. 1..128 characters after trimming."""
+  name: String!
+  """
+  At least one operation. Duplicates are removed; order is not significant.
+  """
+  operations: [McpApiKeyOperation!]!
+}
+
 type ModelCardAiEngineResult {
   """Access to detailed information on the underlying models specifications"""
   additionalTechnicalDetails: String!
@@ -4691,6 +4834,10 @@ type Mutation {
   Add a new option to a Poll. Requires UPDATE privilege, or CONTRIBUTE privilege when the poll setting allowContributorsAddOptions is enabled. The new option is appended with the next available sort order.
   """
   addPollOption(optionData: AddPollOptionInput!): Poll!
+  """
+  Adds or swaps the requesting user's single reaction on a Callout. Requires CONTRIBUTE on the Callout. The Callout must be published and not a template. The emoji must be on the platform allow-list.
+  """
+  addReactionToCallout(reactionData: AddReactionToCalloutInput!): Callout!
   """Add a reaction to a message from the specified Room."""
   addReactionToMessageInRoom(reactionData: RoomAddReactionToMessageInput!): Reaction!
   """Adds a new visual to the specified media gallery."""
@@ -4721,6 +4868,8 @@ type Mutation {
   adminLicensePolicyDeleteCredentialRule(deleteData: DeleteLicensePolicyCredentialRuleInput!): LicensingCredentialBasedPolicyCredentialRule!
   """Updates a CredentialRule on the LicensePolicy."""
   adminLicensePolicyUpdateCredentialRule(updateData: UpdateLicensePolicyCredentialRuleInput!): LicensingCredentialBasedPolicyCredentialRule!
+  """Platform admin: revoke a named user's MCP API key. Idempotent."""
+  adminRevokeMcpApiKey(revokeData: AdminRevokeMcpApiKeyInput!): McpApiKey!
   """
   Ingests new data into Elasticsearch from scratch. This will delete all existing data and ingest new data from the source. This is an admin only operation.
   """
@@ -4963,6 +5112,10 @@ type Mutation {
   Mark notifications as unread. If no filter is provided, marks all user notifications as unread. If filter with types is provided, marks only those notification types as unread.
   """
   markNotificationsAsUnread(filter: NotificationEventsFilterInput): Boolean!
+  """
+  Mint a new MCP API key for the current user. Returns the plaintext exactly once.
+  """
+  mintMcpApiKey(mintData: MintMcpApiKeyInput!): McpApiKeyMintResult!
   """Moves the specified Contribution to another Callout."""
   moveContributionToCallout(moveContributionData: MoveCalloutContributionInput!): CalloutContribution!
   """
@@ -5007,6 +5160,10 @@ type Mutation {
   Remove the current user vote from a Poll. Requires CONTRIBUTE privilege on the Poll. If the user has not voted, returns a validation error.
   """
   removePollVote(voteData: RemovePollVoteInput!): Poll!
+  """
+  Removes the requesting user's reaction from a Callout. Idempotent — no error when no reaction exists. Self-scoped; requires only authentication (not CONTRIBUTE). Returns the Callout only when the caller retains READ access on it.
+  """
+  removeReactionFromCallout(reactionData: RemoveReactionFromCalloutInput!): Callout!
   """Remove a reaction on a message from the specified Room."""
   removeReactionToMessageInRoom(reactionData: RoomRemoveReactionToMessageInput!): Boolean!
   """
@@ -5043,6 +5200,8 @@ type Mutation {
   revokeLicensePlanFromAccount(planData: RevokeLicensePlanFromAccount!): Account!
   """Revokes the specified LicensePlan on a Space."""
   revokeLicensePlanFromSpace(planData: RevokeLicensePlanFromSpace!): Space!
+  """Revoke one of the current user's own MCP API keys. Idempotent."""
+  revokeMcpApiKey(revokeData: RevokeMcpApiKeyInput!): McpApiKey!
   """
   Send a private (1:1) chat message to each of the given Users individually. Does NOT create a group conversation. Each recipient is processed independently and reported on; partial success is possible.
   """
@@ -5691,6 +5850,10 @@ type PlatformAdminQueryResults {
   The most recent email-change audit entry for the named subject user. Returns null if no audit entry exists.
   """
   latestUserEmailChangeAuditEntry(userID: UUID!): UserEmailChangeAuditEntry
+  """
+  MCP API keys belonging to the named user. Platform admins only. Keys bound to a system actor are never returned.
+  """
+  mcpApiKeys(userID: UUID!): [McpApiKey!]!
   """
   Retrieve all Organizations on the Platform. This is only available to Platform Admins.
   """
@@ -6375,6 +6538,10 @@ type Query {
   platform: Platform!
   """Allow looking up of information for Platform administration."""
   platformAdmin: PlatformAdminQueryResults!
+  """
+  The enumerable assistant capability surface (one per MCP tool), with each tool classified READ / WRITE_ADDITIVE / WRITE_DESTRUCTIVE.
+  """
+  platformCapabilities: [AssistantCapability!]!
   """Get the list of restricted space names."""
   restrictedSpaceNames: [String!]!
   """The roles that the specified Organization has."""
@@ -6637,6 +6804,11 @@ input RemovePollVoteInput {
   pollID: UUID!
 }
 
+input RemoveReactionFromCalloutInput {
+  """The ID of the Callout to remove the reaction from."""
+  calloutID: UUID!
+}
+
 input RemoveRoleOnRoleSetInput {
   actorID: UUID!
   role: RoleName!
@@ -6686,6 +6858,10 @@ input RevokeLicensePlanFromSpace {
   licensingID: UUID
   """The ID of the Space to assign the LicensePlan to."""
   spaceID: UUID!
+}
+
+input RevokeMcpApiKeyInput {
+  keyID: UUID!
 }
 
 input RevokeOrganizationAuthorizationCredentialInput {
