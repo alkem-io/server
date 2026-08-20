@@ -10,6 +10,7 @@ import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { CollaborationLifecycleService } from '@domain/common/collaboration-metadata';
 import { ILicense } from '@domain/common/license/license.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
@@ -54,6 +55,7 @@ describe('WhiteboardService', () => {
   let whiteboardRepository: MockType<Repository<Whiteboard>>;
   let profileService: ProfileService;
   let authorizationPolicyService: AuthorizationPolicyService;
+  let collaborationLifecycleService: CollaborationLifecycleService;
   let communityResolverService: CommunityResolverService;
   let licenseService: LicenseService;
   let profileDocumentsService: ProfileDocumentsService;
@@ -84,6 +86,7 @@ describe('WhiteboardService', () => {
     whiteboardRepository = module.get(getRepositoryToken(Whiteboard));
     profileService = module.get(ProfileService);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
+    collaborationLifecycleService = module.get(CollaborationLifecycleService);
     communityResolverService = module.get(CommunityResolverService);
     licenseService = module.get(LicenseService);
     profileDocumentsService = module.get(ProfileDocumentsService);
@@ -280,11 +283,21 @@ describe('WhiteboardService', () => {
         authorization: { id: 'auth-1' },
       } as unknown as Whiteboard;
       whiteboardRepository.findOne!.mockResolvedValue(whiteboard);
-      whiteboardRepository.remove!.mockResolvedValue({} as Whiteboard);
       vi.mocked(profileService.deleteProfile).mockResolvedValue(
         whiteboard.profile as any
       );
       vi.mocked(authorizationPolicyService.delete).mockResolvedValue({} as any);
+
+      // deleteWhiteboard removes the leaf and enqueues `document.deleted` in one
+      // transaction (lifecycle outbox). Run the callback with a transactional
+      // manager whose remove() returns the removed entity.
+      const txManager = {
+        remove: vi.fn().mockResolvedValue({} as Whiteboard),
+      };
+      // `manager` is a readonly property on Repository; assign through a cast.
+      (whiteboardRepository as unknown as { manager: unknown }).manager = {
+        transaction: vi.fn(async (cb: any) => cb(txManager)),
+      };
 
       const result = await service.deleteWhiteboard('wb-1');
 
@@ -294,7 +307,10 @@ describe('WhiteboardService', () => {
       expect(vi.mocked(authorizationPolicyService.delete)).toHaveBeenCalledWith(
         whiteboard.authorization
       );
-      expect(whiteboardRepository.remove).toHaveBeenCalledWith(whiteboard);
+      expect(txManager.remove).toHaveBeenCalledWith(whiteboard);
+      expect(
+        collaborationLifecycleService.enqueueDocumentDeleted
+      ).toHaveBeenCalledWith(txManager, 'wb-1');
       expect(result.id).toBe('wb-1');
     });
 

@@ -4,6 +4,7 @@ import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { CollaborationLifecycleService } from '@domain/common/collaboration-metadata';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -28,6 +29,7 @@ describe('MemoService', () => {
   let profileService: ProfileService;
   let profileDocumentsService: ProfileDocumentsService;
   let fileServiceAdapter: FileServiceAdapter;
+  let collaborationLifecycleService: CollaborationLifecycleService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -56,6 +58,7 @@ describe('MemoService', () => {
     profileService = module.get(ProfileService);
     profileDocumentsService = module.get(ProfileDocumentsService);
     fileServiceAdapter = module.get(FileServiceAdapter);
+    collaborationLifecycleService = module.get(CollaborationLifecycleService);
   });
 
   describe('getMemoOrFail', () => {
@@ -86,9 +89,19 @@ describe('MemoService', () => {
       } as unknown as Memo;
 
       memoRepository.findOne!.mockResolvedValue(memo);
-      memoRepository.remove!.mockResolvedValue({ ...memo, id: undefined });
       (profileService.deleteProfile as Mock).mockResolvedValue({} as any);
       (authorizationPolicyService.delete as Mock).mockResolvedValue({} as any);
+
+      // deleteMemo removes the leaf and enqueues `document.deleted` in one
+      // transaction (lifecycle outbox). Run the callback with a transactional
+      // manager whose remove() returns the removed entity.
+      const txManager = {
+        remove: vi.fn().mockResolvedValue({ ...memo, id: undefined }),
+      };
+      // `manager` is a readonly property on Repository; assign through a cast.
+      (memoRepository as unknown as { manager: unknown }).manager = {
+        transaction: vi.fn(async (cb: any) => cb(txManager)),
+      };
 
       const result = await service.deleteMemo('memo-1');
 
@@ -96,6 +109,10 @@ describe('MemoService', () => {
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
         memo.authorization
       );
+      expect(txManager.remove).toHaveBeenCalledWith(memo);
+      expect(
+        collaborationLifecycleService.enqueueDocumentDeleted
+      ).toHaveBeenCalledWith(txManager, 'memo-1');
       expect(result.id).toBe('memo-1');
     });
 
