@@ -11,6 +11,19 @@ import * as Y from 'yjs';
 import { newLineReplacement } from './const';
 import { markdownSchema } from './markdown.schema';
 
+// A stateless markdown-it instance used only to compute an image's CommonMark
+// `alt` from its already-parsed inline children. renderInlineAsText is
+// markdown-it's own "alt kludge": it strips markup (keeps text + inline HTML,
+// recurses into nested images, renders soft/hard breaks as newlines, and drops
+// mark tokens like em/strong/code). Using it avoids storing raw markdown markers.
+const altRenderer = markdownIt();
+const imageAltText = (token: MarkdownItToken): string =>
+  altRenderer.renderer.renderInlineAsText(
+    token.children ?? [],
+    altRenderer.options,
+    {}
+  );
+
 /**
 
  * Converts a markdown string to a Yjs state update, encoded in binary.
@@ -160,7 +173,11 @@ const parserRules: MarkdownParser['tokens'] = {
     node: 'image',
     getAttrs: (token: MarkdownItToken) => ({
       src: token.attrGet('src'),
-      alt: token.attrGet('alt'),
+      // markdown-it leaves `attrGet('alt')` as an empty placeholder; the alt text
+      // lives in the token's inline children. CommonMark requires the alt to be
+      // plain text with markup stripped, so render the children via markdown-it's
+      // renderInlineAsText rather than reading the raw `token.content` markers.
+      alt: imageAltText(token),
       title: token.attrGet('title'),
     }),
   },
