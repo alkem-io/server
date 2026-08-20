@@ -18,7 +18,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  *     Join path: innovation_flow_state → innovation_flow → collaboration → space
  *                (space."collaborationId" = collaboration.id, space.level = 0).
  *     Ranked by ROW_NUMBER() per flow (sortOrder, then id as a stable tiebreak);
- *     position 1/2/3/4+ gets the matching FR-009 list.
+ *     position 1/2/3/4+ gets the matching per-tab default list (see the literals below).
  *
  *   Branch B — L0 template-owned states:
  *     Same shape, joined through template_content_space instead of space
@@ -51,7 +51,7 @@ export class BackfillInnovationFlowStateSidebar1786600000000
       `[Migration] BackfillInnovationFlowStateSidebar: ${before} flow state(s) require sidebar backfill`
     );
 
-    // Branch A: L0 space-owned states, positional per FR-009. The ranking CTE deliberately
+    // Branch A: L0 space-owned states, positional (see the class doc comment). The ranking CTE deliberately
     // ranks EVERY state in the flow (not just the ones still missing sidebar) — position
     // must reflect each state's real place in the tab order regardless of which rows a
     // prior partial run already backfilled, or a state that already has row 1 backfilled

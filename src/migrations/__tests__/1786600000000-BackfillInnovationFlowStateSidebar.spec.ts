@@ -76,7 +76,7 @@ describe('BackfillInnovationFlowStateSidebar migration (1786600000000)', () => {
     );
   });
 
-  it('the four FR-009 positional literals appear in both Branch A and Branch B', () => {
+  it('the four per-tab positional literals appear in both Branch A and Branch B', () => {
     const literals = [
       '["intent","about","subspaceLinks","events","updates"]',
       '["intent","contactLeads","addUser","virtualContributors","guidelines"]',
