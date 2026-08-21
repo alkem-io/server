@@ -5,7 +5,6 @@ import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { TagsetTemplate } from '@domain/common/tagset-template/tagset.template.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
 import { vi } from 'vitest';
 import { TaskBoardMoveService } from './task.board.move.service';
 import { TaskBoardService } from './task.board.service';

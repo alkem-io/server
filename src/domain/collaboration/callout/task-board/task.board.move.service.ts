@@ -1,7 +1,6 @@
 import { LogContext } from '@common/enums';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { ValidationException } from '@common/exceptions';
-import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { ICalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.interface';
 import { CalloutContributionService } from '@domain/collaboration/callout-contribution/callout.contribution.service';
 import { Tagset } from '@domain/common/tagset/tagset.entity';
