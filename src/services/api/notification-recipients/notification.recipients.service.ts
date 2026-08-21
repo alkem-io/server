@@ -34,6 +34,16 @@ const DEFAULT_CONVERSATION_MESSAGE_CHANNELS: IUserSettingsNotificationChannels =
     push: true,
   });
 
+// 041-callout-reaction-notifications (FR-007, R-7): defend on read — a
+// `user_settings` row that predates the backfill migration lacks this key.
+// Same mandated defaults as the migration and `@AfterLoad` hook.
+const DEFAULT_CALLOUT_REACTION_CHANNELS: IUserSettingsNotificationChannels =
+  Object.freeze({
+    email: false,
+    inApp: true,
+    push: true,
+  });
+
 @Injectable()
 export class NotificationRecipientsService {
   constructor(
@@ -343,6 +353,16 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE:
         return notificationSettings.space
           .collaborationPollVoteAffectedByOptionChange;
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_REACTION:
+        // corr-server-3 pattern: defend on read against a row that predates
+        // the backfill migration or was inserted by an old pod during a rolling
+        // deploy. `UserSettings.applyCalloutReactionNotificationDefaults`
+        // (@AfterLoad) already heals entity-loaded rows; this covers other
+        // load paths (e.g. raw/partial selects).
+        return (
+          notificationSettings.space?.collaborationCalloutReaction ??
+          DEFAULT_CALLOUT_REACTION_CHANNELS
+        );
       case NotificationEvent.SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED:
         return notificationSettings.space.admin.communityNewMember;
       case NotificationEvent.VIRTUAL_ADMIN_SPACE_COMMUNITY_INVITATION:
@@ -455,8 +475,10 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL:
       case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_POLL_I_VOTED_ON:
       case NotificationEvent.SPACE_COLLABORATION_POLL_MODIFIED_ON_POLL_I_VOTED_ON:
-      case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE: {
-        // Only notify the targeted user (poll creator or prior voter)
+      case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE:
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_REACTION: {
+        // Only notify the targeted user (callout publisher or poll creator/voter).
+        // Self-criteria produces a single-user query — never fans out to space audience.
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;
       }

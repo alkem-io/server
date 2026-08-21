@@ -288,6 +288,11 @@ export type AlkemioConfig = {
       max_notifications_per_user: number;
       max_retention_period_days: number;
     };
+    callout_reactions: {
+      enabled: boolean;
+      /** Leading-edge email suppression window per (recipient, callout) in seconds. */
+      email_suppression_window_seconds: number;
+    };
     messaging: {
       enabled: boolean;
       /**
