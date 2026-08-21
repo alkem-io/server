@@ -187,7 +187,8 @@ export class CalloutService {
           storageAggregator,
           callout.settings.contribution,
           userID,
-          parentSpaceId
+          parentSpaceId,
+          taskBoardTagsetTemplate
         );
     }
 
@@ -898,6 +899,11 @@ export class CalloutService {
     const callout = await this.getCalloutOrFail(calloutID, {
       relations: {
         contributions: true,
+        classification: {
+          tagsets: {
+            tagsetTemplate: true,
+          },
+        },
       },
     });
     if (!callout.settings.contribution)
@@ -949,13 +955,17 @@ export class CalloutService {
     }
 
     const storageAggregator = await this.getStorageAggregator(callout.id);
+    // On a Tasks board, the marker tagset's template drives the task's column.
+    const boardTemplate =
+      this.taskBoardService.getTaskTagset(callout)?.tagsetTemplate;
     const contribution =
       await this.contributionService.createCalloutContribution(
         contributionData,
         storageAggregator,
         callout.settings.contribution,
         undefined, // parentSpaceId — resolved by admin sync for user-initiated contributions
-        userID
+        userID,
+        boardTemplate
       );
     contribution.callout = callout;
 

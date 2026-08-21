@@ -1,6 +1,7 @@
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { LogContext } from '@common/enums/logging.context';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import {
   RelationshipNotFoundException,
   ValidationException,
@@ -10,9 +11,13 @@ import { ICollaboraDocument } from '@domain/collaboration/collabora-document/col
 import { CollaboraDocumentService } from '@domain/collaboration/collabora-document/collabora.document.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { IClassification } from '@domain/common/classification/classification.interface';
+import { ClassificationService } from '@domain/common/classification/classification.service';
 import { IMemo } from '@domain/common/memo/memo.interface';
 import { MemoService } from '@domain/common/memo/memo.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
+import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
+import { matchAllowedValue } from '@domain/common/tagset-template/tagset.template.utils';
 import { IWhiteboard } from '@domain/common/whiteboard/types';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -38,6 +43,7 @@ export class CalloutContributionService {
     private linkService: LinkService,
     private memoService: MemoService,
     private collaboraDocumentService: CollaboraDocumentService,
+    private classificationService: ClassificationService,
     @InjectRepository(CalloutContribution)
     private contributionRepository: Repository<CalloutContribution>
   ) {}
@@ -47,7 +53,8 @@ export class CalloutContributionService {
     storageAggregator: IStorageAggregator,
     contributionSettings: ICalloutSettingsContribution,
     userID: string,
-    parentSpaceId?: string
+    parentSpaceId?: string,
+    boardTemplate?: ITagsetTemplate
   ): Promise<ICalloutContribution[]> {
     const contributions: ICalloutContribution[] = [];
 
@@ -57,7 +64,8 @@ export class CalloutContributionService {
         storageAggregator,
         contributionSettings,
         parentSpaceId,
-        userID
+        userID,
+        boardTemplate
       );
       contributions.push(contribution);
     }
@@ -100,7 +108,8 @@ export class CalloutContributionService {
     storageAggregator: IStorageAggregator,
     contributionSettings: ICalloutSettingsContribution,
     parentSpaceId: string | undefined,
-    userID: string
+    userID: string,
+    boardTemplate?: ITagsetTemplate
   ): Promise<ICalloutContribution> {
     this.validateContributionType(
       calloutContributionData,
@@ -161,7 +170,56 @@ export class CalloutContributionService {
         );
     }
 
+    contribution.classification = this.buildTaskClassification(
+      calloutContributionData.taskColumn,
+      boardTemplate
+    );
+
     return contribution;
+  }
+
+  /**
+   * Builds the classification that carries a task's column, or undefined for a
+   * contribution that is not a task.
+   *
+   * On a Tasks board (boardTemplate present): the requested column must be one
+   * of the board's columns (matched case-insensitively, stored canonically);
+   * an unknown column is rejected, and an omitted column defaults to the first.
+   * Off a board (no boardTemplate): supplying a column is a client error, and a
+   * contribution with no column carries no classification at all.
+   */
+  private buildTaskClassification(
+    taskColumn: string | undefined,
+    boardTemplate?: ITagsetTemplate
+  ): IClassification | undefined {
+    if (!boardTemplate) {
+      if (taskColumn !== undefined) {
+        throw new ValidationException(
+          'A task column can only be set on a Tasks board callout',
+          LogContext.COLLABORATION
+        );
+      }
+      return undefined;
+    }
+
+    const allowedValues = boardTemplate.allowedValues;
+    let column: string | undefined;
+    if (taskColumn === undefined) {
+      column = allowedValues[0];
+    } else {
+      column = matchAllowedValue(allowedValues, taskColumn);
+      if (!column) {
+        throw new ValidationException(
+          'The requested task column does not exist on this Tasks board',
+          LogContext.COLLABORATION,
+          { taskColumn }
+        );
+      }
+    }
+
+    return this.classificationService.createClassification([boardTemplate], {
+      tagsets: [{ name: TagsetReservedName.TASK, tags: [column] }],
+    });
   }
 
   private validateContributionType(
@@ -417,6 +475,27 @@ export class CalloutContributionService {
     }
 
     return calloutContribution.collaboraDocument;
+  }
+
+  /**
+   * The contribution's classification, present only for a task on a Tasks
+   * board (it carries the task's column). Null for every other contribution.
+   */
+  public async getClassification(
+    calloutContributionInput: ICalloutContribution,
+    relations?: FindOptionsRelations<ICalloutContribution>
+  ): Promise<IClassification | null> {
+    const calloutContribution = await this.getCalloutContributionOrFail(
+      calloutContributionInput.id,
+      {
+        relations: { classification: { tagsets: true }, ...relations },
+      }
+    );
+    if (!calloutContribution.classification) {
+      return null;
+    }
+
+    return calloutContribution.classification;
   }
 
   /**

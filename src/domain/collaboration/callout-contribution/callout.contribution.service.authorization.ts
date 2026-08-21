@@ -16,6 +16,7 @@ import { ICredentialDefinition } from '@domain/actor/credential/credential.defin
 import { CollaboraDocumentAuthorizationService } from '@domain/collaboration/collabora-document/collabora.document.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ClassificationAuthorizationService } from '@domain/common/classification/classification.service.authorization';
 import { MemoAuthorizationService } from '@domain/common/memo/memo.service.authorization';
 import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
@@ -35,6 +36,7 @@ export class CalloutContributionAuthorizationService {
     private linkAuthorizationService: LinkAuthorizationService,
     private memoAuthorizationService: MemoAuthorizationService,
     private collaboraDocumentAuthorizationService: CollaboraDocumentAuthorizationService,
+    private classificationAuthorizationService: ClassificationAuthorizationService,
     private platformRolesAccessService: PlatformRolesAccessService,
     private roleSetService: RoleSetService
   ) {}
@@ -86,6 +88,9 @@ export class CalloutContributionAuthorizationService {
                 authorization: true,
               },
             },
+            classification: {
+              authorization: true,
+            },
           },
           select: {
             id: true,
@@ -132,6 +137,11 @@ export class CalloutContributionAuthorizationService {
               profile: {
                 id: true,
               },
+            },
+            classification: {
+              id: true,
+              authorization:
+                this.authorizationPolicyService.authorizationSelectOptions,
             },
           },
         }
@@ -198,6 +208,17 @@ export class CalloutContributionAuthorizationService {
           contribution.authorization
         );
       updatedAuthorizations.push(...collaboraDocumentAuthorizations);
+    }
+
+    // A task on a Tasks board carries its column via a Classification child;
+    // reset its authorization under the contribution's policy.
+    if (contribution.classification) {
+      const classificationAuthorizations =
+        await this.classificationAuthorizationService.applyAuthorizationPolicy(
+          contribution.classification.id,
+          contribution.authorization
+        );
+      updatedAuthorizations.push(...classificationAuthorizations);
     }
 
     return updatedAuthorizations;
