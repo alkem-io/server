@@ -7,6 +7,7 @@ import { GraphqlGuard } from '@core/authorization';
 import {
   CalloutActivityLoaderCreator,
   CalloutReactionsSummaryLoaderCreator,
+  CalloutTaskColumnCountsLoaderCreator,
   UserLoaderCreator,
 } from '@core/dataloader/creators';
 import { CalloutMyReactionLoaderCreator } from '@core/dataloader/creators/loader.creators/callout/callout.my.reaction.loader.creator';
@@ -33,6 +34,7 @@ import {
   ICalloutReactionsSummary,
 } from './dto/callout.dto.reaction';
 import { ContributionsFilterInput } from './dto/contributions.filter';
+import { TaskColumnCount } from './task-board/dto/task.column.count';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -94,6 +96,27 @@ export class CalloutResolverFields {
     @Parent() callout: Callout
   ): Promise<CalloutContributionsCountOutput> {
     return await this.calloutService.getContributionsCount(callout);
+  }
+
+  @ResolveField('taskColumnCounts', () => [TaskColumnCount], {
+    nullable: true,
+    description:
+      'Per-column task counts for a Tasks board callout, in the board-defined column order and zero-filled; null when the callout is not a Tasks board.',
+  })
+  async taskColumnCounts(
+    @Parent() callout: Callout,
+    @Loader(CalloutTaskColumnCountsLoaderCreator)
+    loader: ILoader<Map<string, number>>
+  ): Promise<TaskColumnCount[] | null> {
+    const columns = await this.calloutService.getTaskBoardColumns(callout.id);
+    if (!columns) {
+      return null;
+    }
+    const rawCounts = await loader.load(callout.id);
+    return columns.map(column => ({
+      column,
+      count: rawCounts.get(column) ?? 0,
+    }));
   }
 
   @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
