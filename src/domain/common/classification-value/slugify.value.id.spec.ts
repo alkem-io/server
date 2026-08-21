@@ -127,6 +127,38 @@ describe('deriveClassificationValueIds', () => {
       expect(derived[0].id.length).toBeGreaterThan(0);
     });
   });
+
+  describe('derived ids are bounded to CLASSIFICATION_VALUE_ID_MAX_LENGTH', () => {
+    it('bounds the codepoint fallback for a long non-Latin label', () => {
+      // Each CJK codepoint expands to several base-36 characters plus a
+      // hyphen — a max-length label would otherwise derive an id far past
+      // the 128-character id bound.
+      const derived = deriveClassificationValueIds([
+        { label: '教育'.repeat(64) },
+      ]);
+      expect(derived[0].id.length).toBeLessThanOrEqual(128);
+      expect(derived[0].id.length).toBeGreaterThan(0);
+    });
+
+    it('bounds a compat-expanding Latin label and keeps suffixed collisions within the bound too', () => {
+      const longLabel = 'ﬁ'.repeat(100); // NFKD expands each 'ﬁ' to 'fi'
+      const derived = deriveClassificationValueIds([
+        { label: longLabel },
+        { label: longLabel },
+      ]);
+      for (const value of derived) {
+        expect(value.id.length).toBeLessThanOrEqual(128);
+      }
+      expect(new Set(derived.map(v => v.id)).size).toEqual(2);
+    });
+
+    it('truncation is deterministic — the same label always derives the same id', () => {
+      const label = 'Ω'.repeat(80);
+      const first = deriveClassificationValueIds([{ label }]);
+      const second = deriveClassificationValueIds([{ label }]);
+      expect(first[0].id).toEqual(second[0].id);
+    });
+  });
 });
 
 describe('deriveClassificationValueIdsForEdit', () => {

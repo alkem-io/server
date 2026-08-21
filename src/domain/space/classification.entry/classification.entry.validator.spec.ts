@@ -60,6 +60,32 @@ describe('ClassificationEntryValidator', () => {
     });
   });
 
+  describe('display-label shape guard (blank + length), even for a caller that bypasses the DTO pipe', () => {
+    it('rejects an empty display label', () => {
+      expect(() =>
+        ClassificationEntryValidator.validateDisplayLabel('')
+      ).toThrow(ValidationException);
+    });
+
+    it('rejects a whitespace-only display label', () => {
+      expect(() =>
+        ClassificationEntryValidator.validateDisplayLabel('   ')
+      ).toThrow(ValidationException);
+    });
+
+    it('rejects a display label over SMALL_TEXT_LENGTH', () => {
+      expect(() =>
+        ClassificationEntryValidator.validateDisplayLabel('x'.repeat(129))
+      ).toThrow(ValidationException);
+    });
+
+    it('accepts a display label at exactly SMALL_TEXT_LENGTH', () => {
+      expect(() =>
+        ClassificationEntryValidator.validateDisplayLabel('x'.repeat(128))
+      ).not.toThrow();
+    });
+  });
+
   describe('I-3: selection must be a subset of the value set', () => {
     it('rejects an unknown selected id', () => {
       expect(() =>

@@ -5,6 +5,12 @@ import {
   CLASSIFICATION_VALUE_SET_MAX_SIZE,
 } from './classification.value.interface';
 
+// Room reserved at the end of a truncated derived base for the collision
+// suffix (`-2` … `-9999999`): far more head-room than the I-1 value-set size
+// bound (50) can ever consume, so a suffixed id never exceeds
+// CLASSIFICATION_VALUE_ID_MAX_LENGTH.
+const SUFFIX_LENGTH_RESERVE = 8;
+
 // One value as authored, before id derivation: an explicit id overrides
 // derivation from the label; omitting it means "slugify the label" (FR-002c).
 export interface AuthoredClassificationValue {
@@ -118,7 +124,21 @@ export function deriveClassificationValueIds(
       // ASCII alphanumerics (non-Latin scripts, punctuation-only labels) —
       // slugifyLabel alone would yield '' here, and a stored id must never
       // be empty.
-      const base = slugifyLabel(value.label) || codepointFallback(value.label);
+      //
+      // Bound the base BEFORE collision handling: NFKD compatibility
+      // expansion can lengthen a slug past its label, and codepointFallback
+      // expands every code point to several characters — either can push a
+      // derived id past CLASSIFICATION_VALUE_ID_MAX_LENGTH, which only
+      // explicit ids were checked against. Truncation reserves room for the
+      // collision suffix so a suffixed id stays within the bound too, and
+      // deterministically: the same label always truncates the same way.
+      const raw = slugifyLabel(value.label) || codepointFallback(value.label);
+      const maxBaseLength =
+        CLASSIFICATION_VALUE_ID_MAX_LENGTH - SUFFIX_LENGTH_RESERVE;
+      const base =
+        raw.length > maxBaseLength
+          ? raw.slice(0, maxBaseLength).replace(/-+$/, '')
+          : raw;
       if (!usedIds.has(base) && !nextSuffixByBase.has(base)) {
         id = base;
       } else {
@@ -145,6 +165,17 @@ export function deriveClassificationValueIds(
         'Classification value id derivation produced an empty id',
         LogContext.CLASSIFICATION,
         { label: value.label }
+      );
+    }
+    // Same posture for the upper bound: the base truncation above reserves
+    // SUFFIX_LENGTH_RESERVE characters, which covers every suffix reachable
+    // under the I-1 size bound — this guard exists so a future derivation
+    // change cannot silently reopen unbounded ids.
+    if (id.length > CLASSIFICATION_VALUE_ID_MAX_LENGTH) {
+      throw new ValidationException(
+        'Classification value id derivation exceeded the maximum length',
+        LogContext.CLASSIFICATION,
+        { idLength: id.length }
       );
     }
 

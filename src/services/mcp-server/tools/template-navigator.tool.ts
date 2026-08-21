@@ -75,7 +75,7 @@ export class TemplateNavigatorTool implements McpTool {
       name: 'navigate_templates',
       description:
         'Navigate and discover templates across innovation packs. ' +
-        'Find templates for spaces, callouts, whiteboards, posts, and community guidelines. ' +
+        'Find templates for spaces, callouts, whiteboards, posts, community guidelines, and classifications. ' +
         'Actions: "list" shows available templates, "search" finds templates by name/tags, ' +
         '"details" shows information about a specific template (metadata only — for a whiteboard ' +
         'template it reports an element count, NOT the scene). ' +
@@ -100,6 +100,7 @@ export class TemplateNavigatorTool implements McpTool {
               'whiteboard',
               'post',
               'community-guidelines',
+              'classification',
             ],
             description:
               'Filter by template type. Optional for list/search actions.',
@@ -511,6 +512,7 @@ export class TemplateNavigatorTool implements McpTool {
       whiteboard: TemplateType.WHITEBOARD,
       post: TemplateType.POST,
       'community-guidelines': TemplateType.COMMUNITY_GUIDELINES,
+      classification: TemplateType.CLASSIFICATION,
     };
     return typeMap[type.toLowerCase()];
   }

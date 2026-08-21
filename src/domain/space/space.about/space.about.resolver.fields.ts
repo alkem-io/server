@@ -7,6 +7,7 @@ import { ProfileLoaderCreator } from '@core/dataloader/creators/loader.creators/
 import { SpaceBySpaceAboutIdLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.by.space.about.id.loader.creator';
 import { SpaceMetricsLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.metrics.loader.creator';
 import { SpaceProviderLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.provider.loader.creator';
+import { SpaceAboutClassificationsLoaderCreator } from '@core/dataloader/creators/loader.creators/space.about.classifications.loader.creator';
 import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { IActor } from '@domain/actor/actor/actor.interface';
@@ -153,10 +154,10 @@ export class SpaceAboutResolverFields {
       'The classification entries on this About, in sortOrder. Empty array when none exist — never null, never an error.',
   })
   async classifications(
-    @Parent() spaceAbout: ISpaceAbout
+    @Parent() spaceAbout: ISpaceAbout,
+    @Loader(SpaceAboutClassificationsLoaderCreator)
+    loader: ILoader<IClassificationEntry[]>
   ): Promise<IClassificationEntry[]> {
-    return this.classificationEntryService.getClassificationsForSpaceAbout(
-      spaceAbout.id
-    );
+    return loader.load(spaceAbout.id);
   }
 }

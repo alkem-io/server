@@ -28,7 +28,7 @@ export class AddSpaceClassifications1786600000000
         "createdDate" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
         "updatedDate" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
         "version" integer NOT NULL DEFAULT 1,
-        "displayLabel" text NOT NULL,
+        "displayLabel" character varying(128) NOT NULL,
         "cardinality" character varying(128) NOT NULL,
         "valueSet" jsonb NOT NULL,
         "selectedValueIDs" jsonb NOT NULL DEFAULT '[]',
@@ -61,6 +61,14 @@ export class AddSpaceClassifications1786600000000
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    // ROLLBACK NOTE — destructive and unrecoverable: dropping
+    // `classification_entry` and the two `template` classification columns
+    // permanently deletes every Space classification entry and every
+    // Classification Template's vocabulary. Back up `classification_entry`
+    // and `template.classificationCardinality` /
+    // `template.classificationValueSet` before reverting; re-running up()
+    // recreates empty structures only (the bootstrap seed restores just the
+    // seeded SDGs template, never user data).
     await queryRunner.query(
       `ALTER TABLE "template" DROP COLUMN "classificationValueSet"`
     );

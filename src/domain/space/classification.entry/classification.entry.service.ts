@@ -16,7 +16,7 @@ import { ITemplate } from '@domain/template/template/template.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { ClassificationEntry } from './classification.entry.entity';
 import { IClassificationEntry } from './classification.entry.interface';
 import { ClassificationEntryValidator } from './classification.entry.validator';
@@ -133,19 +133,31 @@ export class ClassificationEntryService {
     // re-derivation.
     const valueSet = deepCloneValueSet(templateValueSet);
 
+    ClassificationEntryValidator.validateDisplayLabel(displayLabel);
     ClassificationEntryValidator.validateValueSet(valueSet);
-    await this.assertDisplayLabelAvailable(spaceAbout.id, displayLabel);
 
-    const entry = new ClassificationEntry();
-    entry.spaceAbout = spaceAbout as SpaceAbout;
-    entry.displayLabel = displayLabel;
-    entry.cardinality = templateCardinality;
-    entry.valueSet = valueSet;
-    entry.selectedValueIDs = [];
-    entry.display = true;
-    entry.sortOrder = await this.nextSortOrder(spaceAbout.id);
+    return this.withSpaceAboutWriteSerialization(
+      spaceAbout.id,
+      async manager => {
+        await this.assertDisplayLabelAvailable(
+          spaceAbout.id,
+          displayLabel,
+          undefined,
+          manager
+        );
 
-    return this.classificationEntryRepository.save(entry);
+        const entry = new ClassificationEntry();
+        entry.spaceAbout = spaceAbout as SpaceAbout;
+        entry.displayLabel = displayLabel;
+        entry.cardinality = templateCardinality;
+        entry.valueSet = valueSet;
+        entry.selectedValueIDs = [];
+        entry.display = true;
+        entry.sortOrder = await this.nextSortOrder(spaceAbout.id, manager);
+
+        return manager.getRepository(ClassificationEntry).save(entry);
+      }
+    );
   }
 
   // Ad-hoc (template-free) create — API-only this iteration (D4). Keyed on
@@ -158,8 +170,8 @@ export class ClassificationEntryService {
     const derived: DerivedClassificationValue[] = deriveClassificationValueIds(
       input.values
     );
+    ClassificationEntryValidator.validateDisplayLabel(input.displayLabel);
     ClassificationEntryValidator.validateValueSet(derived);
-    await this.assertDisplayLabelAvailable(spaceAbout.id, input.displayLabel);
 
     const selectedValueIDs = input.selectedValueIDs ?? [];
     // FR-017a: Step A and Step B in one call — validated in the SAME atomic
@@ -171,16 +183,28 @@ export class ClassificationEntryService {
       selectedValueIDs
     );
 
-    const entry = new ClassificationEntry();
-    entry.spaceAbout = spaceAbout as SpaceAbout;
-    entry.displayLabel = input.displayLabel;
-    entry.cardinality = input.cardinality;
-    entry.valueSet = derived;
-    entry.selectedValueIDs = selectedValueIDs;
-    entry.display = true;
-    entry.sortOrder = await this.nextSortOrder(spaceAbout.id);
+    return this.withSpaceAboutWriteSerialization(
+      spaceAbout.id,
+      async manager => {
+        await this.assertDisplayLabelAvailable(
+          spaceAbout.id,
+          input.displayLabel,
+          undefined,
+          manager
+        );
 
-    return this.classificationEntryRepository.save(entry);
+        const entry = new ClassificationEntry();
+        entry.spaceAbout = spaceAbout as SpaceAbout;
+        entry.displayLabel = input.displayLabel;
+        entry.cardinality = input.cardinality;
+        entry.valueSet = derived;
+        entry.selectedValueIDs = selectedValueIDs;
+        entry.display = true;
+        entry.sortOrder = await this.nextSortOrder(spaceAbout.id, manager);
+
+        return manager.getRepository(ClassificationEntry).save(entry);
+      }
+    );
   }
 
   // Step B — full replacement, idempotent, atomic (S-2). `entry` must have
@@ -211,9 +235,10 @@ export class ClassificationEntryService {
     const nextCardinality = input.cardinality ?? entry.cardinality;
     // Derive-once: a relabel must not change a value's stable id even when
     // the caller omits the id rather than echoing it back — an id-less
-    // incoming value is matched positionally against the entry's CURRENT
-    // valueSet and carries that id forward; only a value beyond the
-    // previous length is genuinely new and gets a fresh slug.
+    // incoming value first matches an unclaimed CURRENT value with the same
+    // label (what makes reorder/removal safe), then falls back to positional
+    // matching (what carries a genuine rename forward); only a value
+    // unresolved by both passes is genuinely new and gets a fresh slug.
     const nextValueSet = input.values
       ? deriveClassificationValueIdsForEdit(entry.valueSet, input.values)
       : entry.valueSet;
@@ -221,12 +246,11 @@ export class ClassificationEntryService {
     if (input.values) {
       ClassificationEntryValidator.validateValueSet(nextValueSet);
     }
-    if (input.displayLabel) {
-      await this.assertDisplayLabelAvailable(
-        entry.spaceAbout!.id,
-        nextDisplayLabel,
-        entry.id
-      );
+    // Definedness, not truthiness: `displayLabel: ''` must reach the shape
+    // guard (which rejects blank labels) instead of being silently persisted
+    // past a skipped uniqueness check.
+    if (input.displayLabel !== undefined) {
+      ClassificationEntryValidator.validateDisplayLabel(nextDisplayLabel);
     }
 
     // I-7 — auto-deselect any value the edit removed. Unambiguous, never
@@ -246,13 +270,30 @@ export class ClassificationEntryService {
       autoDeselected
     );
 
-    entry.displayLabel = nextDisplayLabel;
-    entry.cardinality = nextCardinality;
-    entry.valueSet = nextValueSet;
-    entry.selectedValueIDs = autoDeselected;
+    return this.withSpaceAboutWriteSerialization(
+      entry.spaceAbout!.id,
+      async manager => {
+        // The uniqueness read and the save must share the lock window —
+        // checked-then-released would let a concurrent create claim the
+        // label between the check and this save.
+        if (input.displayLabel !== undefined) {
+          await this.assertDisplayLabelAvailable(
+            entry.spaceAbout!.id,
+            nextDisplayLabel,
+            entry.id,
+            manager
+          );
+        }
 
-    return this.classificationEntryRepository.save(
-      entry as ClassificationEntry
+        entry.displayLabel = nextDisplayLabel;
+        entry.cardinality = nextCardinality;
+        entry.valueSet = nextValueSet;
+        entry.selectedValueIDs = autoDeselected;
+
+        return manager
+          .getRepository(ClassificationEntry)
+          .save(entry as ClassificationEntry);
+      }
     );
   }
 
@@ -283,10 +324,41 @@ export class ClassificationEntryService {
     );
   }
 
+  // Serializes the check-then-write windows (label uniqueness, I-8 sortOrder
+  // allocation) among concurrent writers on the SAME SpaceAbout: without it,
+  // two simultaneous creates can both pass assertDisplayLabelAvailable and
+  // both read the same MAX(sortOrder). A pg_advisory_xact_lock — the
+  // precedent is the bootstrap seed's D3 fix 1 — is preferred over a unique
+  // DB constraint because the I-5 duplicate rule compares under FR-011c
+  // normalization (trim/collapse/NFC/casefold), which no column constraint
+  // can express without persisting a second, derived label column. The lock
+  // is scoped per SpaceAbout (hashtext of a namespaced key), held until the
+  // transaction commits, and every read/write inside the window uses the
+  // transactional manager so the next lock-holder sees this writer's rows.
+  private async withSpaceAboutWriteSerialization<T>(
+    spaceAboutID: string,
+    work: (manager: EntityManager) => Promise<T>
+  ): Promise<T> {
+    return this.classificationEntryRepository.manager.transaction(
+      async manager => {
+        await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+          `classification-entry:${spaceAboutID}`,
+        ]);
+        return work(manager);
+      }
+    );
+  }
+
   // I-8 — sortOrder := max(sibling sortOrder on this About) + 1. A re-added
   // entry lands last (FR-018b).
-  private async nextSortOrder(spaceAboutID: string): Promise<number> {
-    const row = await this.classificationEntryRepository
+  private async nextSortOrder(
+    spaceAboutID: string,
+    manager?: EntityManager
+  ): Promise<number> {
+    const repository = manager
+      ? manager.getRepository(ClassificationEntry)
+      : this.classificationEntryRepository;
+    const row = await repository
       .createQueryBuilder('entry')
       .select('MAX(entry.sortOrder)', 'max')
       .where('entry."spaceAboutId" = :spaceAboutID', { spaceAboutID })
@@ -299,9 +371,13 @@ export class ClassificationEntryService {
   private async assertDisplayLabelAvailable(
     spaceAboutID: string,
     candidateLabel: string,
-    excludeEntryID?: string
+    excludeEntryID?: string,
+    manager?: EntityManager
   ): Promise<void> {
-    const siblings = await this.classificationEntryRepository.find({
+    const repository = manager
+      ? manager.getRepository(ClassificationEntry)
+      : this.classificationEntryRepository;
+    const siblings = await repository.find({
       where: { spaceAbout: { id: spaceAboutID } },
       select: { id: true, displayLabel: true },
     });

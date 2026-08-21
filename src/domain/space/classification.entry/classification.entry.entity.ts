@@ -1,4 +1,7 @@
-import { ENUM_LENGTH } from '@common/constants/entity.field.length.constants';
+import {
+  ENUM_LENGTH,
+  SMALL_TEXT_LENGTH,
+} from '@common/constants/entity.field.length.constants';
 import { ClassificationCardinality } from '@common/enums/classification.cardinality';
 import { IClassificationValue } from '@domain/common/classification-value/classification.value.interface';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity/base.alkemio.entity';
@@ -18,7 +21,10 @@ export class ClassificationEntry
   extends BaseAlkemioEntity
   implements IClassificationEntry
 {
-  @Column('text', { nullable: false })
+  // Bounded like the validator's SMALL_TEXT_LENGTH guard — internal callers
+  // (addFromTemplate, bootstrap) bypass the DTO pipe, so the column itself
+  // must not be an unbounded text sink.
+  @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
   displayLabel!: string;
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })

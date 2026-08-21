@@ -2,6 +2,7 @@ import { ClassificationCardinality } from '@common/enums/classification.cardinal
 import { ValidationException } from '@common/exceptions';
 import { AddClassificationEntryFromTemplateInput } from '@domain/space/classification.entry/dto/classification.entry.dto.add.from.template';
 import { CreateClassificationEntryInput } from '@domain/space/classification.entry/dto/classification.entry.dto.create';
+import { DeleteClassificationEntryInput } from '@domain/space/classification.entry/dto/classification.entry.dto.delete';
 import { UpdateClassificationEntryInput } from '@domain/space/classification.entry/dto/classification.entry.dto.update';
 import { UpdateClassificationEntryDisplayInput } from '@domain/space/classification.entry/dto/classification.entry.dto.update.display';
 import { UpdateClassificationEntrySelectionInput } from '@domain/space/classification.entry/dto/classification.entry.dto.update.selection';
@@ -118,6 +119,24 @@ describe('BaseHandler — classification DTOs are validated at the pipe (sec-ser
     await expect(
       handler.handle(value, AddClassificationEntryFromTemplateInput)
     ).rejects.toThrow(ValidationException);
+  });
+
+  // The sixth allowlisted metatype, DeleteClassificationEntryInput, is
+  // deliberately NOT exercised here: it extends DeleteBaseAlkemioInput,
+  // whose `ID` is a GraphQL UUID scalar with zero class-validator
+  // constraints — with nothing to reject, an allowlisted and a skipped
+  // metatype are observationally identical at the pipe, so a "rejects"
+  // case would assert nothing. Malformed delete ids are rejected by the
+  // UUID scalar at parse time and by getClassificationEntryOrFail at
+  // resolution time instead.
+  it('accepts DeleteClassificationEntryInput (no pipe-level constraints to reject)', async () => {
+    const value = plainToInstance(DeleteClassificationEntryInput, {
+      ID: spaceID,
+    });
+
+    await expect(
+      handler.handle(value, DeleteClassificationEntryInput)
+    ).resolves.toBeNull();
   });
 
   it('accepts a well-formed UpdateClassificationEntryDisplayInput', async () => {

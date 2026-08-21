@@ -44,19 +44,20 @@ describe('ClassificationEntryResolverFields', () => {
 
 describe('SpaceAbout.classifications — S-13, S-14, council operator:Q6', () => {
   it('S-14: about.classifications is [] for an About with zero entries — never null, never a throw', async () => {
-    const classificationEntryService = {
-      getClassificationsForSpaceAbout: vi.fn().mockResolvedValue([]),
-    };
+    const loader = { load: vi.fn().mockResolvedValue([]) };
     const { SpaceAboutResolverFields } = await import(
       '@domain/space/space.about/space.about.resolver.fields'
     );
     const resolver = new SpaceAboutResolverFields(
       {} as any,
       {} as any,
-      classificationEntryService as any
+      {} as any
     );
 
-    const result = await resolver.classifications({ id: 'about-empty' } as any);
+    const result = await resolver.classifications(
+      { id: 'about-empty' } as any,
+      loader as any
+    );
 
     expect(result).toEqual([]);
   });
@@ -67,26 +68,23 @@ describe('SpaceAbout.classifications — S-13, S-14, council operator:Q6', () =>
       makeEntry({ id: 'e2', displayLabel: 'Language', sortOrder: 2 }),
       makeEntry({ id: 'e3', displayLabel: 'SDGs', sortOrder: 3 }),
     ];
-    const classificationEntryService = {
-      getClassificationsForSpaceAbout: vi
-        .fn()
-        .mockResolvedValue(orderedEntries),
-    };
+    const loader = { load: vi.fn().mockResolvedValue(orderedEntries) };
     const { SpaceAboutResolverFields } = await import(
       '@domain/space/space.about/space.about.resolver.fields'
     );
     const resolver = new SpaceAboutResolverFields(
       {} as any,
       {} as any,
-      classificationEntryService as any
+      {} as any
     );
 
-    const result = await resolver.classifications({ id: 'about-1' } as any);
+    const result = await resolver.classifications(
+      { id: 'about-1' } as any,
+      loader as any
+    );
 
     expect(result.map(e => e.id)).toEqual(['e1', 'e2', 'e3']);
-    expect(
-      classificationEntryService.getClassificationsForSpaceAbout
-    ).toHaveBeenCalledWith('about-1');
+    expect(loader.load).toHaveBeenCalledWith('about-1');
   });
 
   it('a hidden (display: false) entry is still returned by the read path — "hidden" is never "private"', async () => {
@@ -94,19 +92,20 @@ describe('SpaceAbout.classifications — S-13, S-14, council operator:Q6', () =>
       makeEntry({ id: 'e1', displayLabel: 'Shown', display: true }),
       makeEntry({ id: 'e2', displayLabel: 'Hidden', display: false }),
     ];
-    const classificationEntryService = {
-      getClassificationsForSpaceAbout: vi.fn().mockResolvedValue(mixedEntries),
-    };
+    const loader = { load: vi.fn().mockResolvedValue(mixedEntries) };
     const { SpaceAboutResolverFields } = await import(
       '@domain/space/space.about/space.about.resolver.fields'
     );
     const resolver = new SpaceAboutResolverFields(
       {} as any,
       {} as any,
-      classificationEntryService as any
+      {} as any
     );
 
-    const result = await resolver.classifications({ id: 'about-1' } as any);
+    const result = await resolver.classifications(
+      { id: 'about-1' } as any,
+      loader as any
+    );
 
     expect(result).toHaveLength(2);
     expect(result.map(e => ({ id: e.id, display: e.display }))).toEqual([

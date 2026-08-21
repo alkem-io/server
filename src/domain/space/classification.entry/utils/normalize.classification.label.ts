@@ -13,5 +13,8 @@
  * module needs it.
  */
 export function normalizeClassificationLabel(label: string): string {
-  return label.trim().replace(/\s+/g, ' ').normalize('NFC').toLocaleLowerCase();
+  // toLowerCase, not toLocaleLowerCase: the comparison key must not depend
+  // on the host locale (on a Turkish runtime "I" folds to "ı", letting
+  // "I"/"i" variants slip past the duplicate guard).
+  return label.trim().replace(/\s+/g, ' ').normalize('NFC').toLowerCase();
 }

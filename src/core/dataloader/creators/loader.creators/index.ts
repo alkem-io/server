@@ -35,6 +35,7 @@ export * from './space/space.collaboration.loader.creator';
 export * from './space/space.community.loader.creator';
 export * from './space/space.metrics.loader.creator';
 export * from './space/space.provider.loader.creator';
+export * from './space.about.classifications.loader.creator';
 export * from './user/user.settings.loader.creator';
 export * from './user.loader.creator';
 export * from './visual.loader.creator';

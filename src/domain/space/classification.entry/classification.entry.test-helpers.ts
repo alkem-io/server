@@ -13,7 +13,7 @@ export function createMockClassificationEntryRepository() {
     where: vi.fn().mockReturnThis(),
     getRawOne: vi.fn().mockResolvedValue({ max: null }),
   };
-  return {
+  const repository: any = {
     find: vi.fn().mockResolvedValue([]),
     findOne: vi.fn(),
     save: vi.fn(async (entity: any) => ({ id: 'entry-1', ...entity })),
@@ -21,6 +21,24 @@ export function createMockClassificationEntryRepository() {
     createQueryBuilder: vi.fn(() => queryBuilder),
     __queryBuilder: queryBuilder,
   };
+  // The write paths serialize via
+  // repository.manager.transaction(m => ...) with an advisory xact lock;
+  // the mock manager hands every getRepository() call straight back to this
+  // repository so specs keep observing the same spies, and query() absorbs
+  // the pg_advisory_xact_lock statement.
+  const transactionalManager = {
+    query: vi.fn().mockResolvedValue(undefined),
+    getRepository: vi.fn(() => repository),
+  };
+  repository.manager = {
+    transaction: vi.fn(
+      async (
+        work: (manager: typeof transactionalManager) => Promise<unknown>
+      ) => work(transactionalManager)
+    ),
+    __transactionalManager: transactionalManager,
+  };
+  return repository;
 }
 
 export function createMockTemplateRepository() {

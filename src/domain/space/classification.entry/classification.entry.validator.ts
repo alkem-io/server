@@ -136,6 +136,30 @@ export class ClassificationEntryValidator {
     }
   }
 
+  // Display-label shape guard: non-blank and bounded. Defence in depth
+  // alongside the DTOs' @MaxLength(SMALL_TEXT_LENGTH): this validator is
+  // also reachable from callers that never pass through the class-validator
+  // pipe (addFromTemplate copying a template's displayName, bootstrap
+  // seeding), and `displayLabel` persists into an unbounded text column
+  // re-served on every anonymous read of a public Space's About. Blank
+  // labels are rejected here because @MaxLength alone accepts ''.
+  static validateDisplayLabel(displayLabel: string): void {
+    if (displayLabel.trim().length === 0) {
+      throw new ValidationException(
+        'A Classification display label must not be empty',
+        LogContext.CLASSIFICATION,
+        { displayLabelLength: displayLabel.length }
+      );
+    }
+    if (displayLabel.length > SMALL_TEXT_LENGTH) {
+      throw new ValidationException(
+        'Classification display label exceeds the maximum length',
+        LogContext.CLASSIFICATION,
+        { displayLabelLength: displayLabel.length }
+      );
+    }
+  }
+
   // I-5 — the display-label duplicate guard, scoped to the SAME SpaceAbout's
   // other entries, comparing under FR-011c normalization. `excludeEntryID`
   // lets an update compare against every sibling except itself.
