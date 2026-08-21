@@ -863,25 +863,6 @@ export class CalloutService {
     return callout.comments;
   }
 
-  /**
-   * The ordered columns of this callout's Tasks board, or undefined when the
-   * callout is not a board. Loads the driving TagsetTemplate so the order and
-   * the exact set of columns come from one source of truth.
-   */
-  public async getTaskBoardColumns(
-    calloutID: string
-  ): Promise<string[] | undefined> {
-    const callout = await this.getCalloutOrFail(calloutID, {
-      relations: {
-        classification: { tagsets: { tagsetTemplate: true } },
-      },
-    });
-    if (!this.taskBoardService.isTaskBoard(callout)) {
-      return undefined;
-    }
-    return this.taskBoardService.getColumns(callout);
-  }
-
   private async getCommentsCount(calloutID: string): Promise<number> {
     const comments = await this.getComments(calloutID);
     if (!comments) return 0;

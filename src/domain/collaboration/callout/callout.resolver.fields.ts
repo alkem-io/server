@@ -106,17 +106,12 @@ export class CalloutResolverFields {
   async taskColumnCounts(
     @Parent() callout: Callout,
     @Loader(CalloutTaskColumnCountsLoaderCreator)
-    loader: ILoader<Map<string, number>>
+    loader: ILoader<TaskColumnCount[] | null>
   ): Promise<TaskColumnCount[] | null> {
-    const columns = await this.calloutService.getTaskBoardColumns(callout.id);
-    if (!columns) {
-      return null;
-    }
-    const rawCounts = await loader.load(callout.id);
-    return columns.map(column => ({
-      column,
-      count: rawCounts.get(column) ?? 0,
-    }));
+    // Board-ness, the ordered columns, and the zero-filled counts are all
+    // resolved by the batched loader — no per-callout callout re-fetch, so a
+    // list of N callouts pays a fixed number of queries, not N.
+    return loader.load(callout.id);
   }
 
   @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)

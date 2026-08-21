@@ -204,8 +204,8 @@ describe('Tasks board read + creation', () => {
 
   describe('per-column counts zero-fill + ordering', () => {
     /**
-     * Mirrors the resolver's merge of the board's ordered columns with the raw
-     * per-column counts from the batch loader.
+     * Mirrors the batch loader's merge of the board's ordered columns with the
+     * raw per-column counts.
      */
     function mergeColumnCounts(
       columns: string[] | undefined,
