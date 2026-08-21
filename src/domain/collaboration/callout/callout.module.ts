@@ -29,6 +29,7 @@ import { CalloutResolverMutations } from './callout.resolver.mutations';
 import { CalloutResolverSubscriptions } from './callout.resolver.subscriptions';
 import { CalloutService } from './callout.service';
 import { CalloutAuthorizationService } from './callout.service.authorization';
+import { TaskBoardColumnService } from './task-board/task.board.column.service';
 import { TaskBoardModule } from './task-board/task.board.module';
 import { TaskBoardMoveService } from './task-board/task.board.move.service';
 import { TaskBoardResolverMutations } from './task-board/task.board.resolver.mutations';
@@ -69,6 +70,7 @@ import { TaskBoardResolverMutations } from './task-board/task.board.resolver.mut
     CalloutResolverSubscriptions,
     CalloutMyReactionLoaderCreator,
     TaskBoardMoveService,
+    TaskBoardColumnService,
     TaskBoardResolverMutations,
   ],
   exports: [
