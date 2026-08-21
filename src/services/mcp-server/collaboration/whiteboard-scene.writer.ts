@@ -1,6 +1,6 @@
+import { WhiteboardFork } from '@domain/common/whiteboard/whiteboard.fork';
 import * as Y from 'yjs';
 import { newCursor, placeAt } from '../tools/whiteboard-placement';
-import { WhiteboardFork } from './whiteboard-fork';
 
 /**
  * The element operations `edit_whiteboard_elements` applies. A discriminated union

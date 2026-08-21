@@ -2,12 +2,12 @@ import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { loadWhiteboardFork } from '@domain/common/whiteboard/whiteboard.fork';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CollaborationDocumentService } from '@services/collaboration-client/collaboration-document.service';
 import { DocumentPurgingError } from '@services/collaboration-client/collaboration-document.session';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { loadWhiteboardFork } from '../collaboration/whiteboard-fork';
 import { readWhiteboardScene } from '../collaboration/whiteboard-scene.reader';
 import {
   MCP_CONSTANTS,

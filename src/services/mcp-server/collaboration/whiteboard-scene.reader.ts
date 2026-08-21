@@ -1,5 +1,5 @@
+import { WhiteboardFork } from '@domain/common/whiteboard/whiteboard.fork';
 import * as Y from 'yjs';
-import { WhiteboardFork } from './whiteboard-fork';
 
 /** A materialized Excalidraw element read from the live Y.Doc (schema-owned by the fork). */
 export type WhiteboardElement = Record<string, unknown> & { id: string };

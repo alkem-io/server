@@ -5,7 +5,7 @@ import { EditWhiteboardElementsTool } from './edit-whiteboard-elements.tool';
 // The runtime loads the ESM fork via a Function-wrapped dynamic import that
 // vitest's module runner cannot drive; mock the loader to a plain dynamic import
 // so the test still exercises the REAL fork writer against a real Y.Doc.
-vi.mock('../collaboration/whiteboard-fork', () => ({
+vi.mock('@domain/common/whiteboard/whiteboard.fork', () => ({
   loadWhiteboardFork: () => import('@excalidraw-yjs/element/headless'),
 }));
 
