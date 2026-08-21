@@ -1,14 +1,18 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 /**
- * Adds the `contentPointer` collaboration index column to the `memo` and
+ * Adds the NULLABLE `contentPointer` collaboration index column to the `memo` and
  * `whiteboard` tables (FR-001): the file-service id of the document's stored
  * Yjs-V2 snapshot. file-service is the SINGLE storage backend for the Alkemio
  * stack, so there is no store-kind column — content always lives in file-service.
  *
- * Existing rows are back-filled so `contentPointer = <row id>`; the up-front batch
- * migration then converts each document's content to a file-service snapshot and
- * repoints it. Reversible: `down()` drops the column.
+ * Release A (staged rollout): the column is added NULLABLE with NO back-fill.
+ * `contentPointer IS NULL` means "not yet migrated" — the operator back-fill
+ * (`CollaborationMigrationService.migrateAll`) converts each legacy document's
+ * content to a real file-service snapshot and sets the pointer to the resulting
+ * file-service id (never the row id). A later Release B enforces `NOT NULL` and
+ * drops the legacy content columns, but only after the back-fill is verified.
+ * Reversible: `down()` drops the column.
  */
 export class AddContentPointer1781802081405 implements MigrationInterface {
   name = 'AddContentPointer1781802081405';
@@ -19,10 +23,6 @@ export class AddContentPointer1781802081405 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE "whiteboard" ADD "contentPointer" character varying(512)`
-    );
-    await queryRunner.query(`UPDATE "memo" SET "contentPointer" = "id"::varchar`);
-    await queryRunner.query(
-      `UPDATE "whiteboard" SET "contentPointer" = "id"::varchar`
     );
   }
 

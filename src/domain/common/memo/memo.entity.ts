@@ -8,11 +8,13 @@ import { IMemo } from './memo.interface';
 
 @Entity()
 export class Memo extends NameableEntity implements IMemo {
-  // The inline `content` column (Yjs-V2 snapshot, `bytea`) is DROPPED
+  // The inline `content` column (Yjs-V2 snapshot, `bytea`) is UNMAPPED
   // (006-collab-content-unification, R2/FR-005), mirroring the Whiteboard entity:
   // memo content is stored ONLY as a Yjs-V2 snapshot in the document's own storage
-  // bucket, located by `contentPointer`. Mapping it would make TypeORM SELECT a
-  // column the DropMemoAndWhiteboardContent migration removed (breaking every load).
+  // bucket, located by `contentPointer`. In Release A the DB column is RETAINED for
+  // the one-time back-fill (migration-only) and dropped only in Release B after the
+  // back-fill is verified. Mapping it here would make TypeORM SELECT the retained
+  // legacy column on every load.
 
   /**
    * The file-service id of this memo's stored Yjs-V2 snapshot — file-service is the

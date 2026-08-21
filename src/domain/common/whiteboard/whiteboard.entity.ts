@@ -10,10 +10,13 @@ import { IWhiteboardPreviewSettings } from './whiteboard.preview.settings.interf
 @Entity()
 export class Whiteboard extends NameableEntity implements IWhiteboard {
   // The inline `content` column (Excalidraw JSON, gzip-compressed) and its
-  // `@BeforeInsert/@BeforeUpdate/@AfterLoad` (de)compression hooks are DROPPED
+  // `@BeforeInsert/@BeforeUpdate/@AfterLoad` (de)compression hooks are UNMAPPED
   // (006-collab-content-unification, R2/FR-005): whiteboard content is stored ONLY
   // as a Yjs-V2 snapshot in the document's own storage bucket, located by
-  // `contentPointer`. The scene is converted server-side at create via the
+  // `contentPointer`. In Release A the DB column is RETAINED for the one-time
+  // back-fill (migration-only, with a temporary `DEFAULT ''` so entity-unmapped
+  // inserts satisfy its NOT NULL) and dropped only in Release B after the back-fill
+  // is verified. The scene is converted server-side at create via the
   // binding-compatible `whiteboardSceneToYjsV2State` and written to the bucket.
 
   /**

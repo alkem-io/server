@@ -100,12 +100,13 @@ export class MemoService {
     // Phase 3: write the creation content as a Yjs-V2 snapshot into the memo's
     // OWN storage bucket and record the pointer (R2/R4 — first-open seed +
     // quota-correct storage). The bucket id is persisted only after Phase 2.
-    // Empty creation content leaves the pointer unset: the room materializes
-    // empty + editable (FR-010) and the first save promotes a real snapshot.
-    const binaryUpdateV2 = this.markdownToStateUpdate(markdown);
-    if (binaryUpdateV2) {
-      await this.writeInitialSnapshot(saved, Buffer.from(binaryUpdateV2));
-    }
+    // Release A (staged rollout): EVERY create seeds a real snapshot — empty
+    // creation content is encoded as the canonical empty Y.Doc
+    // (`markdownToYjsV2State('')`) so the row never carries a NULL/dangling
+    // pointer (the admission-pointer invariant; Release B later enforces NOT
+    // NULL). The room materializes empty + editable (FR-010) either way.
+    const binaryUpdateV2 = markdownToYjsV2State(markdown ?? '');
+    await this.writeInitialSnapshot(saved, Buffer.from(binaryUpdateV2));
     return saved;
   }
 

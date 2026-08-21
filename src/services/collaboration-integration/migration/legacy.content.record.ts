@@ -6,18 +6,24 @@ import { CollaborationContentType } from '@common/enums/collaboration.content.ty
  * whiteboard-JSON -> Y.Doc seeding) consumes these; this server slice only
  * provides the read access.
  *
+ * Release A back-fill: the reader selects ONLY rows whose `contentPointer IS
+ * NULL` (not-yet-migrated) and joins each row's own storage bucket in the SAME
+ * page query, so `storageBucketId` is carried here — the back-fill needs no
+ * per-document metadata SELECT.
+ *
  * - memo: `content` is the raw Yjs v2 binary state as base64
  *   (`Memo.content.toString('base64')`); `undefined` for a never-edited memo
  *   (the job seeds an empty Y.Doc — not a failure).
- * - whiteboard: `content` is the decompressed Excalidraw JSON string (the
- *   entity `@AfterLoad` already decompresses); `flagged = true` marks a
- *   decompression failure surfaced for manual review (not silently dropped).
+ * - whiteboard: `content` is the decompressed Excalidraw JSON string;
+ *   `flagged = true` marks a decompression failure surfaced for manual review
+ *   (not silently dropped).
  */
 export interface LegacyContentRecord {
   id: string;
   contentType: CollaborationContentType;
   content?: string;
-  authorizationPolicyId?: string;
+  /** The document's own storage bucket id, joined in the page query. */
+  storageBucketId?: string;
   /** set when the legacy blob could not be read (e.g. corrupt compression). */
   flagged?: boolean;
   flagReason?: string;

@@ -4,20 +4,22 @@ import { describe, expect, it } from 'vitest';
 import { Memo } from './memo.entity';
 
 /**
- * Regression guard for 006-collab-content-unification (migration
- * `DropMemoAndWhiteboardContent`): the inline `content` columns are dropped from the
- * DB, so the entities MUST NOT map them. TypeORM SELECTs an entity's mapped columns on
- * every load — the callout → framing → memo authorization path
- * (`CalloutService.applyAuthorizationPolicy` → loads the `framing.memo` relation) is one
- * such load. If `Memo` re-maps `content`, that load emits `SELECT ..._memo.content`,
- * which fails with `column "memo.content" does not exist` against the migrated schema and
- * breaks authorization application for EVERY callout (surfacing to the client as error
- * 11106 "AuthorizationPolicy without credential rules" — the whiteboard/memo editors then
- * never load). Asserting the column is unmapped proves no such SELECT can be generated,
- * without needing a live migrated DB (which is the E2E gate's job).
+ * Regression guard for 006-collab-content-unification: the inline `content`
+ * columns are UNMAPPED (migration-only). Release A RETAINS the DB columns for the
+ * one-time back-fill; Release B drops them after verification. Either way the
+ * entities MUST NOT map them: TypeORM SELECTs an entity's mapped columns on every
+ * load — the callout → framing → memo authorization path
+ * (`CalloutService.applyAuthorizationPolicy` → loads the `framing.memo` relation)
+ * is one such load. If `Memo` re-maps `content`, that load emits
+ * `SELECT ..._memo.content` — which loads the RETAINED legacy column in Release A
+ * (unwanted; content is authoritatively the file-service snapshot located by
+ * `contentPointer`) and fails outright once Release B drops it, breaking
+ * authorization for EVERY callout (client error 11106 "AuthorizationPolicy
+ * without credential rules" — the editors then never load). Asserting the column
+ * is unmapped proves no such SELECT can be generated, without a live DB.
  */
-describe('collab-content drop — entity schema regression (DropMemoAndWhiteboardContent)', () => {
-  it('Memo maps NO `content` column, so no load can SELECT the dropped memo.content', () => {
+describe('collab-content unmapped — entity schema regression (Release A retains the DB column; Release B drops it)', () => {
+  it('Memo maps NO `content` column, so no load can SELECT the retained legacy memo.content', () => {
     const columns = getMetadataArgsStorage()
       .filterColumns(Memo)
       .map(column => column.propertyName);
@@ -29,7 +31,7 @@ describe('collab-content drop — entity schema regression (DropMemoAndWhiteboar
     );
   });
 
-  it('Whiteboard maps NO `content` column either (the parallel drop, already correct)', () => {
+  it('Whiteboard maps NO `content` column either (parallel — retained-but-unmapped)', () => {
     const columns = getMetadataArgsStorage()
       .filterColumns(Whiteboard)
       .map(column => column.propertyName);

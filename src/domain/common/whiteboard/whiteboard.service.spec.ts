@@ -672,7 +672,8 @@ describe('WhiteboardService', () => {
       const result = await service.updateWhiteboardContent('wb-1', newContent);
 
       // The snapshot is re-homed and written verbatim to the bucket; the returned
-      // id becomes the contentPointer (the inline column is gone).
+      // id becomes the contentPointer (the inline column is unmapped — retained in
+      // Release A, dropped in Release B).
       expect(fileServiceAdapter.createSnapshotInBucket).toHaveBeenCalledWith(
         expect.any(Buffer),
         'sb-1'
@@ -1052,7 +1053,7 @@ describe('WhiteboardService', () => {
       expect(profileService.createProfile).not.toHaveBeenCalled();
     });
 
-    it('seeds an empty board when the source has no stored content (no fallback to any client content)', async () => {
+    it('seeds the canonical empty snapshot when the source has no stored content (no fallback to any client content)', async () => {
       mockSource({ contentPointer: undefined });
 
       const result = await service.createWhiteboard(
@@ -1061,9 +1062,15 @@ describe('WhiteboardService', () => {
         actorContext
       );
 
+      // Release A: EVERY create seeds a real snapshot — a source with no stored
+      // content seeds the CANONICAL EMPTY Y.Doc (never a fallback to client
+      // content), so the new row carries a real, resolving contentPointer (never
+      // NULL / dangling). The admission-pointer invariant for Release B.
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
-      expect(fileServiceAdapter.createSnapshotInBucket).not.toHaveBeenCalled();
-      expect(result.contentPointer).toBeUndefined();
+      expect(fileServiceAdapter.createSnapshotInBucket).toHaveBeenCalledTimes(
+        1
+      );
+      expect(result.contentPointer).toBe('snap-new');
     });
 
     it('does not dereference any source when sourceWhiteboardID is absent (direct-content path)', async () => {

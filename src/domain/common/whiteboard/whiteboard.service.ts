@@ -37,6 +37,7 @@ import { AuthorizationPolicy } from '../authorization-policy/authorization.polic
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { LicenseService } from '../license/license.service';
 import { ProfileService } from '../profile/profile.service';
+import { whiteboardSceneToYjsV2State } from './conversion';
 import { CreateWhiteboardInput } from './dto/whiteboard.dto.create';
 import { UpdateWhiteboardInput } from './dto/whiteboard.dto.update';
 import { Whiteboard } from './whiteboard.entity';
@@ -172,47 +173,50 @@ export class WhiteboardService {
     // whiteboard's own bucket. `initialScene` is base64-encoded Yjs CRDT state (the
     // single representation everywhere — never an Excalidraw scene/JSON). Embedded
     // media is re-homed into this bucket by operating on the snapshot's own `files`
-    // Y.Map, not a reconstructed scene. Empty creation content leaves the pointer
-    // unset: the room materializes empty + editable (FR-010).
-    if (initialScene) {
-      try {
-        const storageBucketId = saved.profile.storageBucket?.id;
-        if (!storageBucketId) {
-          throw new EntityNotInitializedException(
-            'Whiteboard storage bucket not initialized when writing initial snapshot',
-            LogContext.WHITEBOARDS,
-            { whiteboardId: saved.id }
-          );
-        }
-        const snapshot = await this.rehomeSnapshotAssets(
-          Buffer.from(initialScene, 'base64'),
-          storageBucketId,
-          { actorContext, sourceBucketId }
+    // Y.Map, not a reconstructed scene. Release A (staged rollout): EVERY create
+    // seeds a real snapshot — an empty create is encoded as the canonical empty
+    // Y.Doc (`whiteboardSceneToYjsV2State('')`) so the row never carries a
+    // NULL/dangling pointer (the admission-pointer invariant; Release B later
+    // enforces NOT NULL). The room materializes empty + editable (FR-010) either way.
+    try {
+      const storageBucketId = saved.profile.storageBucket?.id;
+      if (!storageBucketId) {
+        throw new EntityNotInitializedException(
+          'Whiteboard storage bucket not initialized when writing initial snapshot',
+          LogContext.WHITEBOARDS,
+          { whiteboardId: saved.id }
         );
-        const result = await this.fileServiceAdapter.createSnapshotInBucket(
-          snapshot,
-          storageBucketId
-        );
-        saved.contentPointer = result.id;
-        saved.contentVersion = 0;
-        await this.whiteboardRepository.save(saved);
-      } catch (error) {
-        await this.deleteWhiteboard(saved.id).catch(rollbackError => {
-          const stack =
-            rollbackError instanceof Error ? (rollbackError.stack ?? '') : '';
-          this.logger.error?.(
-            {
-              message:
-                'Rollback after WB snapshot write / reupload failure also failed',
-              whiteboardId: saved.id,
-              rollbackError: String(rollbackError),
-            },
-            stack,
-            LogContext.WHITEBOARDS
-          );
-        });
-        throw error;
       }
+      const snapshot = initialScene
+        ? await this.rehomeSnapshotAssets(
+            Buffer.from(initialScene, 'base64'),
+            storageBucketId,
+            { actorContext, sourceBucketId }
+          )
+        : Buffer.from(whiteboardSceneToYjsV2State(''));
+      const result = await this.fileServiceAdapter.createSnapshotInBucket(
+        snapshot,
+        storageBucketId
+      );
+      saved.contentPointer = result.id;
+      saved.contentVersion = 0;
+      await this.whiteboardRepository.save(saved);
+    } catch (error) {
+      await this.deleteWhiteboard(saved.id).catch(rollbackError => {
+        const stack =
+          rollbackError instanceof Error ? (rollbackError.stack ?? '') : '';
+        this.logger.error?.(
+          {
+            message:
+              'Rollback after WB snapshot write / reupload failure also failed',
+            whiteboardId: saved.id,
+            rollbackError: String(rollbackError),
+          },
+          stack,
+          LogContext.WHITEBOARDS
+        );
+      });
+      throw error;
     }
     return saved;
   }
@@ -526,7 +530,8 @@ export class WhiteboardService {
    * Server-side whiteboard content set (template / framing-content edit — NOT a
    * live collab session). Re-homes embedded media into the whiteboard's bucket,
    * converts the scene to a Yjs-V2 snapshot, and replaces the stored snapshot in
-   * the bucket (R1/R2/FR-005) — the inline `content` column is gone. The content
+   * the bucket (R1/R2/FR-005) — the inline `content` column is unmapped (retained
+   * in Release A, dropped in Release B). The content
    * originates server-side here, so it is persisted directly; the next open seeds
    * from this snapshot. The superseded snapshot file is deleted (latest-only).
    */
@@ -594,7 +599,8 @@ export class WhiteboardService {
    * decode/re-encode). The snapshot lives in the whiteboard's own file-service
    * bucket and is located by `contentPointer`; this re-reads it the same way the
    * memo-content loader / input-creator builders do (file-service
-   * `content-batch`), NOT the inline column (gone — 006-collab-content-unification).
+   * `content-batch`), NOT the inline column (unmapped — retained in Release A,
+   * dropped in Release B; 006-collab-content-unification).
    *
    * Server-side copy path (#29): the "Save as Template" flow can no longer read a
    * live whiteboard's content on the client, so the server reads the source

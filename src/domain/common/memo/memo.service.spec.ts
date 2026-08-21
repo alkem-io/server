@@ -284,4 +284,72 @@ describe('MemoService', () => {
       );
     });
   });
+
+  describe('createMemo (Release A: seeds a canonical empty snapshot)', () => {
+    const storageAggregator = {} as any;
+
+    beforeEach(() => {
+      vi.mocked(profileService.createProfile).mockResolvedValue({
+        id: 'p1',
+        storageBucket: { id: 'sb-1' },
+      } as any);
+      vi.mocked(profileService.addOrUpdateTagsetOnProfile).mockResolvedValue(
+        {} as any
+      );
+      vi.mocked(
+        profileService.materializeProfileContentAndVisualsOrRollback
+      ).mockImplementation(async (profile: any) => profile);
+      memoRepository.save!.mockImplementation(async (m: any) => m);
+      vi.mocked(fileServiceAdapter.createSnapshotInBucket).mockResolvedValue({
+        id: 'snap-memo',
+        externalID: 'ext',
+        mimeType: 'application/octet-stream',
+        size: 1,
+        reused: false,
+      } as any);
+    });
+
+    it('seeds the canonical empty Yjs-V2 snapshot for an empty (undefined markdown) create — pointer recorded, contentVersion 0, save after pointer', async () => {
+      const result = await service.createMemo(
+        { markdown: undefined } as any,
+        storageAggregator
+      );
+
+      // Exactly one upload, to the memo's OWN bucket.
+      expect(fileServiceAdapter.createSnapshotInBucket).toHaveBeenCalledTimes(
+        1
+      );
+      const [snapshotArg, bucketArg] = vi.mocked(
+        fileServiceAdapter.createSnapshotInBucket
+      ).mock.calls[0];
+      expect(bucketArg).toBe('sb-1');
+      // Real, non-empty canonical Yjs-V2 bytes that DECODE to an empty memo doc
+      // (not merely a truthy Buffer): round-trips to empty markdown.
+      expect((snapshotArg as Buffer).length).toBeGreaterThan(0);
+      expect(service.binaryToMarkdown(snapshotArg as Buffer)).toBe('');
+      // Pointer + version recorded on the returned entity.
+      expect(result.contentPointer).toBe('snap-memo');
+      expect(result.contentVersion).toBe(0);
+      // The pointer is assigned BEFORE the final save (the last save carries it).
+      const saveCalls = memoRepository.save!.mock.calls;
+      const lastSaved = saveCalls[saveCalls.length - 1][0];
+      expect(lastSaved.contentPointer).toBe('snap-memo');
+      expect(lastSaved.contentVersion).toBe(0);
+    });
+
+    it('rolls back (deleteMemo) and rejects when the initial snapshot upload fails', async () => {
+      const deleteSpy = vi
+        .spyOn(service, 'deleteMemo')
+        .mockResolvedValue({} as any);
+      vi.mocked(fileServiceAdapter.createSnapshotInBucket).mockRejectedValue(
+        new Error('file-service down')
+      );
+
+      await expect(
+        service.createMemo({ markdown: '# x' } as any, storageAggregator)
+      ).rejects.toThrow('file-service down');
+
+      expect(deleteSpy).toHaveBeenCalledTimes(1);
+    });
+  });
 });
