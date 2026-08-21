@@ -10,6 +10,8 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { ReactionType } from '@common/enums/reaction.type';
 import { RoleName } from '@common/enums/role.name';
 import { RoomType } from '@common/enums/room.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { TagsetType } from '@common/enums/tagset.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -28,6 +30,7 @@ import { IClassification } from '@domain/common/classification/classification.in
 import { ClassificationService } from '@domain/common/classification/classification.service';
 import { CreateMemoInput } from '@domain/common/memo/dto/memo.dto.create';
 import { ITagsetTemplate } from '@domain/common/tagset-template';
+import { TagsetTemplateService } from '@domain/common/tagset-template/tagset.template.service';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { RoomService } from '@domain/communication/room/room.service';
@@ -65,6 +68,8 @@ import { CalloutContributionsCountOutput } from './dto/callout.contributions.cou
 import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contribution';
 import { UpdateCalloutInput } from './dto/callout.dto.update';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
+import { TASK_BOARD_DEFAULT_COLUMNS } from './task-board/task.board.constants';
+import { TaskBoardService } from './task-board/task.board.service';
 
 @Injectable()
 export class CalloutService {
@@ -79,6 +84,8 @@ export class CalloutService {
     private collaboraDocumentService: CollaboraDocumentService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private classificationService: ClassificationService,
+    private tagsetTemplateService: TagsetTemplateService,
+    private taskBoardService: TaskBoardService,
     private roleSetService: RoleSetService,
     private reactionService: ReactionService,
     @InjectEntityManager('default')
@@ -149,8 +156,22 @@ export class CalloutService {
       callout.publishedBy = userID;
     }
 
+    // A generic 'task' tagset supplied through the classification input is never
+    // allowed to fabricate board state: only an explicit taskBoard block makes a
+    // board. Strip any such tagset before the classification is built so a
+    // template round-trip or a hand-crafted create cannot smuggle a marker in.
+    this.stripGenericTaskTagsets(calloutData);
+
+    const taskBoardTagsetTemplate = await this.prepareTaskBoardTemplate(
+      calloutData,
+      callout.settings.contribution.allowedTypes
+    );
+    const effectiveTagsetTemplates = taskBoardTagsetTemplate
+      ? [...classificationTagsetTemplates, taskBoardTagsetTemplate]
+      : classificationTagsetTemplates;
+
     callout.classification = this.classificationService.createClassification(
-      classificationTagsetTemplates,
+      effectiveTagsetTemplates,
       calloutData.classification
     );
 
@@ -179,6 +200,69 @@ export class CalloutService {
     }
 
     return callout;
+  }
+
+  /**
+   * Removes any generic 'task'-named tagset from the create input's
+   * classification. The board marker is created only from an explicit taskBoard
+   * block; a tagset named 'task' arriving through the generic classification
+   * path must never seed board state.
+   */
+  private stripGenericTaskTagsets(calloutData: CreateCalloutInput): void {
+    const tagsets = calloutData.classification?.tagsets;
+    if (!tagsets) {
+      return;
+    }
+    calloutData.classification!.tagsets = tagsets.filter(
+      tagset => tagset.name !== TagsetReservedName.TASK
+    );
+  }
+
+  /**
+   * When the create carries a taskBoard block, builds and persists the
+   * standalone per-callout TagsetTemplate that drives the board's columns and
+   * returns it so it can be attached to the callout's classification. The
+   * marker tagset is materialised from this template by createClassification.
+   *
+   * The template is persisted here because the tagset -> tagsetTemplate relation
+   * does not cascade: the callout save would otherwise reference an unsaved
+   * template row. Returns undefined when the callout is not a board.
+   */
+  private async prepareTaskBoardTemplate(
+    calloutData: CreateCalloutInput,
+    allowedTypes: CalloutContributionType[]
+  ): Promise<ITagsetTemplate | undefined> {
+    if (!calloutData.taskBoard) {
+      return undefined;
+    }
+
+    // A Tasks board is a POSTS-only callout: its contributions are the tasks.
+    const isPostOnly =
+      allowedTypes.length === 1 &&
+      allowedTypes[0] === CalloutContributionType.POST;
+    if (!isPostOnly) {
+      throw new ValidationException(
+        'A Tasks board callout must allow only POST contributions',
+        LogContext.COLLABORATION,
+        { allowedTypes }
+      );
+    }
+
+    const requestedColumns =
+      calloutData.taskBoard.columns && calloutData.taskBoard.columns.length > 0
+        ? calloutData.taskBoard.columns
+        : [...TASK_BOARD_DEFAULT_COLUMNS];
+    const columns = this.taskBoardService.validateColumnNames(requestedColumns);
+
+    const tagsetTemplate = this.tagsetTemplateService.createTagsetTemplate({
+      name: TagsetReservedName.TASK,
+      type: TagsetType.SELECT_ONE,
+      allowedValues: columns,
+      defaultSelectedValue: columns[0],
+    });
+    // Standalone template: no tagsetTemplateSet. Persisted before the callout
+    // save because the marker tagset's FK to it does not cascade.
+    return await this.tagsetTemplateService.save(tagsetTemplate);
   }
 
   /**

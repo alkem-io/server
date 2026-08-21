@@ -4,6 +4,7 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ClassificationModule } from '@domain/common/classification/classification.module';
+import { TagsetTemplateModule } from '@domain/common/tagset-template/tagset.template.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { Module } from '@nestjs/common';
@@ -55,6 +56,7 @@ import { TaskBoardModule } from './task-board/task.board.module';
     ReactionModule,
     ActorLookupModule,
     TaskBoardModule,
+    TagsetTemplateModule,
     TypeOrmModule.forFeature([Callout]),
   ],
   providers: [

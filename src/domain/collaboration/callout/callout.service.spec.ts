@@ -11,6 +11,7 @@ import {
 import { ReactionService } from '@domain/collaboration/reaction/reaction.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ClassificationService } from '@domain/common/classification/classification.service';
+import { TagsetTemplateService } from '@domain/common/tagset-template/tagset.template.service';
 import { RoomService } from '@domain/communication/room/room.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -29,6 +30,7 @@ import { CalloutFramingService } from '../callout-framing/callout.framing.servic
 import { Callout } from './callout.entity';
 import { ICallout } from './callout.interface';
 import { CalloutService } from './callout.service';
+import { TaskBoardService } from './task-board/task.board.service';
 
 describe('CalloutService', () => {
   let service: CalloutService;
@@ -73,6 +75,9 @@ describe('CalloutService', () => {
     module = await Test.createTestingModule({
       providers: [
         CalloutService,
+        // Real column-model logic (validation + detection) so board-creation
+        // tests exercise the actual rules rather than an auto-mock.
+        TaskBoardService,
         repositoryProviderMockFactory(Callout),
         {
           provide: getEntityManagerToken('default'),
@@ -276,6 +281,181 @@ describe('CalloutService', () => {
       await expect(
         service.createCallout(calloutData, tagsetTemplates, storageAggregator)
       ).rejects.toThrow(ValidationException);
+    });
+  });
+
+  describe('createCallout task board', () => {
+    const storageAggregator = { id: 'agg-1' } as any;
+    const tagsetTemplates = [] as any[];
+    let tagsetTemplateService: TagsetTemplateService;
+
+    function boardInput(overrides: any = {}) {
+      return {
+        framing: {
+          type: CalloutFramingType.NONE,
+          profile: { displayName: 'Board', tagsets: [] },
+          tags: [],
+        },
+        settings: {
+          contribution: { allowedTypes: [CalloutContributionType.POST] },
+        },
+        sortOrder: 10,
+        ...overrides,
+      };
+    }
+
+    beforeEach(() => {
+      vi.mocked(framingService.createCalloutFraming).mockResolvedValue({
+        id: 'framing-1',
+        profile: { storageBucket: { id: 'sb-1' } },
+      } as any);
+      vi.mocked(
+        contributionDefaultsService.createCalloutContributionDefaults
+      ).mockResolvedValue({ id: 'defaults-1' } as any);
+      // Echo the classification build so the test can read the templates it
+      // was handed.
+      vi.mocked(classificationService.createClassification).mockImplementation(
+        (templates: any) => ({ id: 'classification-1', templates }) as any
+      );
+      tagsetTemplateService = module.get(TagsetTemplateService);
+      // Build a plain template object from the create input (the real service
+      // constructs a TagsetTemplate entity — the fields are all that matters
+      // here).
+      vi.mocked(tagsetTemplateService.createTagsetTemplate).mockImplementation(
+        (input: any) => ({ ...input }) as any
+      );
+      // Persisting the template is a no-op echo in the unit context.
+      vi.mocked(tagsetTemplateService.save).mockImplementation(
+        async (t: any) => ({ id: 'tpl-1', ...t }) as any
+      );
+    });
+
+    it('seeds the four default columns in order when none supplied', async () => {
+      const calloutData = boardInput({ taskBoard: {} });
+
+      await service.createCallout(
+        calloutData,
+        tagsetTemplates,
+        storageAggregator,
+        'user-1'
+      );
+
+      const savedTemplate = vi.mocked(tagsetTemplateService.save).mock
+        .calls[0][0];
+      expect(savedTemplate.name).toBe('task');
+      expect(savedTemplate.type).toBe('select-one');
+      expect(savedTemplate.allowedValues).toEqual([
+        'Backlog',
+        'To do',
+        'In progress',
+        'Done',
+      ]);
+      expect(savedTemplate.defaultSelectedValue).toBe('Backlog');
+    });
+
+    it('validates and canonicalises supplied custom columns', async () => {
+      const calloutData = boardInput({
+        taskBoard: { columns: ['  Ideas', 'Doing ', 'Shipped'] },
+      });
+
+      await service.createCallout(
+        calloutData,
+        tagsetTemplates,
+        storageAggregator,
+        'user-1'
+      );
+
+      const savedTemplate = vi.mocked(tagsetTemplateService.save).mock
+        .calls[0][0];
+      expect(savedTemplate.allowedValues).toEqual([
+        'Ideas',
+        'Doing',
+        'Shipped',
+      ]);
+      expect(savedTemplate.defaultSelectedValue).toBe('Ideas');
+    });
+
+    it('rejects a taskBoard callout that is not POST-only', async () => {
+      const calloutData = boardInput({
+        settings: {
+          contribution: {
+            allowedTypes: [
+              CalloutContributionType.POST,
+              CalloutContributionType.LINK,
+            ],
+          },
+        },
+        taskBoard: {},
+      });
+
+      await expect(
+        service.createCallout(
+          calloutData,
+          tagsetTemplates,
+          storageAggregator,
+          'user-1'
+        )
+      ).rejects.toThrow(ValidationException);
+      expect(tagsetTemplateService.save).not.toHaveBeenCalled();
+    });
+
+    it('rejects duplicate custom columns (case-insensitive)', async () => {
+      const calloutData = boardInput({
+        taskBoard: { columns: ['Backlog', 'BACKLOG'] },
+      });
+
+      await expect(
+        service.createCallout(
+          calloutData,
+          tagsetTemplates,
+          storageAggregator,
+          'user-1'
+        )
+      ).rejects.toThrow(ValidationException);
+    });
+
+    it('strips a generic task tagset when no taskBoard block is present', async () => {
+      const calloutData = boardInput({
+        classification: {
+          tagsets: [
+            { name: 'task', tags: ['x'] },
+            { name: 'keywords', tags: ['k'] },
+          ],
+        },
+      });
+
+      await service.createCallout(
+        calloutData,
+        tagsetTemplates,
+        storageAggregator,
+        'user-1'
+      );
+
+      // No board created, and the smuggled 'task' tagset was removed.
+      expect(tagsetTemplateService.save).not.toHaveBeenCalled();
+      expect(
+        calloutData.classification.tagsets.map((t: any) => t.name)
+      ).toEqual(['keywords']);
+    });
+
+    it('strips a generic task tagset even when a taskBoard block is present', async () => {
+      const calloutData = boardInput({
+        taskBoard: {},
+        classification: {
+          tagsets: [{ name: 'task', tags: ['smuggled'] }],
+        },
+      });
+
+      await service.createCallout(
+        calloutData,
+        tagsetTemplates,
+        storageAggregator,
+        'user-1'
+      );
+
+      expect(calloutData.classification.tagsets).toEqual([]);
+      // The board's own marker template is still created from the taskBoard block.
+      expect(tagsetTemplateService.save).toHaveBeenCalledTimes(1);
     });
   });
 
