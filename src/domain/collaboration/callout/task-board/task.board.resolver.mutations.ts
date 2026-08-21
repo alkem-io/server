@@ -25,7 +25,7 @@ export class TaskBoardResolverMutations {
   })
   async moveTaskToColumn(
     @CurrentActor() actorContext: ActorContext,
-    @Args('moveTaskData') moveTaskData: MoveTaskToColumnInput
+    @Args('moveData') moveData: MoveTaskToColumnInput
   ): Promise<ICalloutContribution> {
     // Authorize against the PARENT CALLOUT's policy, not the contribution's:
     // the board grants MOVE_TASK there to every member, which is exactly the
@@ -33,7 +33,7 @@ export class TaskBoardResolverMutations {
     // task's content).
     const contribution =
       await this.calloutContributionService.getCalloutContributionOrFail(
-        moveTaskData.contributionID,
+        moveData.contributionID,
         {
           relations: { callout: { authorization: true } },
         }
@@ -43,7 +43,7 @@ export class TaskBoardResolverMutations {
       throw new ValidationException(
         'The task has no parent Callout',
         LogContext.COLLABORATION,
-        { contributionID: moveTaskData.contributionID }
+        { contributionID: moveData.contributionID }
       );
     }
 
@@ -55,8 +55,8 @@ export class TaskBoardResolverMutations {
     );
 
     return this.taskBoardMoveService.moveTaskToColumn(
-      moveTaskData.contributionID,
-      moveTaskData.column
+      moveData.contributionID,
+      moveData.column
     );
   }
 }
