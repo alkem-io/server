@@ -883,12 +883,35 @@ export class CalloutResolverMutations {
 
     this.reactionService.validateAllowedEmojiOrFail(reactionData.emoji);
 
-    await this.reactionService.upsertReaction(
+    const { created } = await this.reactionService.upsertReaction(
       ReactionType.POST,
       callout.id,
       actorContext.actorID,
       reactionData.emoji
     );
+
+    // Emit a notification only on a genuine new reaction — swaps and idempotent
+    // re-adds are silent. Fire-and-forget outside the mutation result path so
+    // that a notification failure never fails the reaction itself.
+    if (created) {
+      this.notificationAdapterSpace
+        .spaceCollaborationCalloutReaction({
+          calloutID: callout.id,
+          triggeredBy: actorContext.actorID,
+          emoji: reactionData.emoji,
+        })
+        .catch((err: unknown) => {
+          this.logger.error?.(
+            {
+              message: 'Failed to emit callout reaction notification',
+              calloutId: callout.id,
+              error: (err as Error)?.message,
+            },
+            (err as Error)?.stack,
+            LogContext.NOTIFICATIONS
+          );
+        });
+    }
 
     return this.calloutService.getCalloutOrFail(reactionData.calloutID);
   }
