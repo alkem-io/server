@@ -285,6 +285,7 @@ export class CalloutContributionService {
           link: true,
           memo: true,
           collaboraDocument: true,
+          classification: true,
         },
       }
     );
@@ -307,6 +308,15 @@ export class CalloutContributionService {
     if (contribution.collaboraDocument) {
       await this.collaboraDocumentService.deleteCollaboraDocument(
         contribution.collaboraDocument.id
+      );
+    }
+
+    // A task's column marker lives on its own classification (present only on a
+    // Tasks board task). Remove it — with its tagsets and authorization — before
+    // the row goes, so a deleted task leaves no orphaned classification.
+    if (contribution.classification) {
+      await this.classificationService.deleteClassification(
+        contribution.classification.id
       );
     }
 

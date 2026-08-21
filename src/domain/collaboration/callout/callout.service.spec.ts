@@ -2,6 +2,7 @@ import { CalloutContributionType } from '@common/enums/callout.contribution.type
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { ReactionType } from '@common/enums/reaction.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -45,6 +46,7 @@ describe('CalloutService', () => {
   let classificationService: ClassificationService;
   let authorizationPolicyService: AuthorizationPolicyService;
   let reactionService: ReactionService;
+  let tagsetTemplateService: TagsetTemplateService;
   let _storageAggregatorResolverService: StorageAggregatorResolverService;
   // Transaction-scoped manager handed to the callback by entityManager.transaction.
   let mockManager: { remove: Mock };
@@ -103,6 +105,7 @@ describe('CalloutService', () => {
     classificationService = module.get(ClassificationService);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
     reactionService = module.get(ReactionService);
+    tagsetTemplateService = module.get(TagsetTemplateService);
     _storageAggregatorResolverService = module.get(
       StorageAggregatorResolverService
     );
@@ -287,7 +290,6 @@ describe('CalloutService', () => {
   describe('createCallout task board', () => {
     const storageAggregator = { id: 'agg-1' } as any;
     const tagsetTemplates = [] as any[];
-    let tagsetTemplateService: TagsetTemplateService;
 
     function boardInput(overrides: any = {}) {
       return {
@@ -671,6 +673,76 @@ describe('CalloutService', () => {
       // The external Matrix room deletion happens BEFORE the transaction, so it
       // still runs regardless of the DB rollback.
       expect(roomService.deleteRoom).toHaveBeenCalledWith({ roomID: 'room-1' });
+    });
+
+    it("removes a board's standalone column template last, after the callout row is gone", async () => {
+      const boardTemplate = { id: 'tmpl-1' };
+      const callout = {
+        id: 'callout-1',
+        framing: { id: 'framing-1' },
+        contributions: [],
+        contributionDefaults: { id: 'defaults-1' },
+        settings: { contribution: {} },
+        comments: undefined,
+        authorization: { id: 'auth-1' },
+        classification: {
+          id: 'cls-1',
+          tagsets: [
+            {
+              name: TagsetReservedName.TASK,
+              tags: ['Backlog'],
+              tagsetTemplate: boardTemplate,
+            },
+          ],
+        },
+      } as any;
+
+      vi.mocked(repository.findOne).mockResolvedValue(callout);
+
+      const callOrder: string[] = [];
+      mockManager.remove.mockImplementation(async () => {
+        callOrder.push('managerRemove');
+        return { id: undefined };
+      });
+      vi.mocked(tagsetTemplateService.removeTagsetTemplate).mockImplementation(
+        async () => {
+          callOrder.push('removeTagsetTemplate');
+          return boardTemplate as any;
+        }
+      );
+
+      await service.deleteCallout('callout-1');
+
+      // The driving template is a standalone row owned only by the board callout;
+      // it can only be dropped once the classification that referenced it is gone.
+      expect(tagsetTemplateService.removeTagsetTemplate).toHaveBeenCalledWith(
+        boardTemplate
+      );
+      expect(callOrder.indexOf('managerRemove')).toBeLessThan(
+        callOrder.indexOf('removeTagsetTemplate')
+      );
+    });
+
+    it('leaves the template service untouched for a plain (non-board) callout', async () => {
+      const callout = {
+        id: 'callout-1',
+        framing: { id: 'framing-1' },
+        contributions: [],
+        contributionDefaults: { id: 'defaults-1' },
+        settings: { contribution: {} },
+        comments: undefined,
+        authorization: { id: 'auth-1' },
+        classification: {
+          id: 'cls-1',
+          tagsets: [{ name: TagsetReservedName.KEYWORDS, tags: ['x'] }],
+        },
+      } as any;
+
+      vi.mocked(repository.findOne).mockResolvedValue(callout);
+
+      await service.deleteCallout('callout-1');
+
+      expect(tagsetTemplateService.removeTagsetTemplate).not.toHaveBeenCalled();
     });
   });
 

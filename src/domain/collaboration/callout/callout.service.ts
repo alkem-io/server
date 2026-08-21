@@ -681,6 +681,10 @@ export class CalloutService {
         contributions: true,
         contributionDefaults: true,
         framing: true,
+        // On a Tasks board the marker tagset's template is a standalone,
+        // per-callout row not owned by any tagsetTemplateSet — capture it here
+        // so it can be removed explicitly after the callout is gone.
+        classification: { tagsets: { tagsetTemplate: true } },
       },
     });
 
@@ -694,6 +698,12 @@ export class CalloutService {
         LogContext.COLLABORATION
       );
     }
+
+    // Capture the board's driving column template before the contributions and
+    // the callout's own classification are removed; a Tasks board owns this row
+    // exclusively, so it is removed last (below) to leave no orphaned template.
+    const boardTemplate =
+      this.taskBoardService.getTaskTagset(callout)?.tagsetTemplate;
 
     await this.calloutFramingService.delete(callout.framing);
 
@@ -729,6 +739,14 @@ export class CalloutService {
       return manager.remove(callout as Callout);
     });
     result.id = calloutID;
+
+    // Remove the board's column template LAST: it is a standalone row the
+    // callout's classification referenced, so it is only safe to drop once the
+    // callout (and its cascade-removed classification and marker tagset) is
+    // gone. Non-board callouts have no such template and skip this.
+    if (boardTemplate) {
+      await this.tagsetTemplateService.removeTagsetTemplate(boardTemplate);
+    }
 
     return result;
   }

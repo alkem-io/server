@@ -380,6 +380,46 @@ describe('CalloutContributionService', () => {
         EntityNotFoundException
       );
     });
+
+    it("deletes a task's column classification before removing the contribution", async () => {
+      const contribution = {
+        id: 'contrib-1',
+        post: undefined,
+        whiteboard: undefined,
+        link: undefined,
+        memo: undefined,
+        authorization: undefined,
+        classification: { id: 'cls-1' },
+      } as any;
+
+      vi.mocked(repository.findOne).mockResolvedValue(contribution);
+      vi.mocked(repository.remove).mockResolvedValue({ id: undefined } as any);
+
+      await service.delete('contrib-1');
+
+      expect(classificationService.deleteClassification).toHaveBeenCalledWith(
+        'cls-1'
+      );
+    });
+
+    it('deletes no classification when the contribution is not a task', async () => {
+      const contribution = {
+        id: 'contrib-1',
+        post: { id: 'post-1' },
+        whiteboard: undefined,
+        link: undefined,
+        memo: undefined,
+        authorization: undefined,
+        classification: undefined,
+      } as any;
+
+      vi.mocked(repository.findOne).mockResolvedValue(contribution);
+      vi.mocked(repository.remove).mockResolvedValue({ id: undefined } as any);
+
+      await service.delete('contrib-1');
+
+      expect(classificationService.deleteClassification).not.toHaveBeenCalled();
+    });
   });
 
   describe('save', () => {
