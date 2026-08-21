@@ -24,32 +24,30 @@ describe('clientProxyFactory', () => {
       .mockReturnValue({} as never);
   });
 
-  it('declaration-equivalence pin: the lifecycle client asserts EXACTLY the frozen quorum + int32(-1) delivery-limit literal', async () => {
+  it('declaration-equivalence pin: the lifecycle client asserts EXACTLY the frozen quorum + int32(-1) delivery-limit + diagnostic-DLQ dead-letter literal', async () => {
     await clientProxyFactory(MessagingQueue.COLLABORATION_LIFECYCLE, {
       durable: true,
       persistent: true,
       queueArguments: {
         'x-queue-type': 'quorum',
         'x-delivery-limit': { '!': 'int32', value: -1 },
+        'x-dead-letter-exchange': '',
+        'x-dead-letter-routing-key': `${MessagingQueue.COLLABORATION_LIFECYCLE}.dlq`,
       },
     })(logger, configService);
 
     const opts = (createSpy.mock.calls[0][0] as any).options;
-    // Byte-equivalent to collab-service's consumer declaration: durable + quorum
-    // + x-delivery-limit -1, and NOTHING else (no DLX/TTL; exclusive/autoDelete
-    // default to false in amqplib). x-delivery-limit=-1 is load-bearing on 4.0+
-    // (quorum defaults it to 20, no DLX -> a redelivered document.deleted would
-    // drop at 20). `{ '!': 'int32', value: -1 }` is amqplib's typed field-table
-    // trapdoor forcing AMQP type `I` (signed 32-bit) to match Go's int32(-1)
-    // byte-for-byte. `toEqual` is exact — the width is convention/future-proofing
-    // (a real 4.0.5 gate proved the broker compares x-delivery-limit by value,
-    // not width), but keeping it typed keeps producer + Go consumer unambiguous.
-    // persistent stays a top-level client option, not a queue-declaration argument.
+    // Pins the exact frozen arg table the producer must assert to stay byte-equivalent
+    // to collab-service's main-queue declaration (durable + quorum + x-delivery-limit -1
+    // + the diagnostic dead-letter route); any drift fails PRECONDITION_FAILED at
+    // declare. persistent is a top-level client option, not a queue-declaration argument.
     expect(opts.queueOptions).toEqual({
       durable: true,
       arguments: {
         'x-queue-type': 'quorum',
         'x-delivery-limit': { '!': 'int32', value: -1 },
+        'x-dead-letter-exchange': '',
+        'x-dead-letter-routing-key': 'alkemio-collaboration-lifecycle.dlq',
       },
     });
     expect(opts.queue).toBe(MessagingQueue.COLLABORATION_LIFECYCLE);

@@ -100,35 +100,25 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
     },
     {
       provide: COLLABORATION_LIFECYCLE_SERVICE,
-      // Durable QUORUM queue + persistent messages: the transactional outbox
-      // guarantees the event is recorded; a confirmed persistent publish keeps
-      // it alive across a broker restart between claim and consume. Dedicated
-      // queue — never COLLABORATION_SERVICE (the server's own responder). The
-      // producer asserts this queue, so its declaration MUST match collab-service's
-      // consumer: durable:true + { 'x-queue-type': 'quorum', 'x-delivery-limit': -1 }
-      // and nothing else (Q1 carries no DLX/TTL — those live on the consumer-owned
-      // retry/DLQ queues).
+      // Durable QUORUM queue + persistent messages, on a dedicated queue — never
+      // COLLABORATION_SERVICE (the server's own responder).
       //
-      // x-delivery-limit = -1 (unlimited) is load-bearing on RabbitMQ 4.0+: a
-      // quorum queue there defaults delivery-limit to 20, and Q1 has no DLX, so
-      // without -1 the deliberate unconfirmed-transfer channel-close redelivery
-      // path would hit 20 and the broker would DROP a document.deleted (proven on
-      // real 4.0.5: shipped Q1 vanished at 21 deliveries; -1 retained 25/25).
-      //
-      // The `{ '!': 'int32', value: -1 }` typed wrapper is amqplib's field-table
-      // trapdoor forcing AMQP type `I` (signed 32-bit), byte-equivalent to
-      // collab-service's Go `int32(-1)`. This is CONVENTION / future-proofing, not
-      // a current equivalence requirement: a real 4.0.5 gate showed RabbitMQ
-      // compares x-delivery-limit by VALUE (int8/16/32/64 all equivalent), only
-      // wrong-value/omission fail. Kept typed so producer + Go consumer stay
-      // byte-identical and unambiguous. (Deployment floor is RabbitMQ 4.0.5, the
-      // production standard; enforced at deploy, not here.)
+      // FROZEN CONTRACT: the producer declares ONLY this queue, and its arguments must
+      // equal collab-service's main-queue declaration exactly — any difference fails
+      // PRECONDITION_FAILED and the declaring party does not start. x-delivery-limit -1
+      // keeps redelivery unlimited (RabbitMQ 4.0+ otherwise caps a quorum queue at 20
+      // and drops a requeued event). The dead-letter route ('' exchange + '<queue>.dlq'
+      // routing key) diverts a poison Nack(requeue=false) to the DIAGNOSTIC DLQ so a
+      // producer/consumer mismatch shows as queue depth; the producer neither declares
+      // nor consumes that DLQ.
       useFactory: clientProxyFactory(MessagingQueue.COLLABORATION_LIFECYCLE, {
         durable: true,
         persistent: true,
         queueArguments: {
           'x-queue-type': 'quorum',
           'x-delivery-limit': { '!': 'int32', value: -1 },
+          'x-dead-letter-exchange': '',
+          'x-dead-letter-routing-key': `${MessagingQueue.COLLABORATION_LIFECYCLE}.dlq`,
         },
       }),
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
