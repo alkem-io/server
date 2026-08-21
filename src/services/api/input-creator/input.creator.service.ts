@@ -1,12 +1,14 @@
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutSelectionMode } from '@common/enums/callout.selection.mode';
 import { LogContext } from '@common/enums/logging.context';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { validateAndConvertVisualTypeName } from '@common/enums/visual.type';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
+import { TaskBoardService } from '@domain/collaboration/callout/task-board/task.board.service';
 import { ICalloutContributionDefaults } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.interface';
 import { CreateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto/callout.contribution.defaults.dto.create';
 import { ICalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.interface';
@@ -53,6 +55,7 @@ export class InputCreatorService {
     private collaborationService: CollaborationService,
     private spaceLookupService: SpaceLookupService,
     private calloutService: CalloutService,
+    private taskBoardService: TaskBoardService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -78,7 +81,9 @@ export class InputCreatorService {
       relations: {
         contributionDefaults: true,
         classification: {
-          tagsets: true,
+          // The task marker's template carries the board's ordered columns,
+          // read when serialising a Tasks board to a template.
+          tagsets: { tagsetTemplate: true },
         },
         framing: {
           profile: {
@@ -147,6 +152,11 @@ export class InputCreatorService {
 
     return {
       nameID: callout.nameID,
+      // A Tasks board is captured as its own block, not as a raw 'task' tagset:
+      // emit the ordered columns so a callout created from this template is a
+      // board again, and strip the marker from the generic classification so it
+      // is not double-materialised.
+      taskBoard: this.buildTaskBoardInputFromCallout(callout),
       classification: this.buildCreateClassificationInputFromClassification(
         callout.classification
       ),
@@ -523,9 +533,30 @@ export class InputCreatorService {
   private buildCreateClassificationInputFromClassification(
     classification: IClassification
   ): CreateClassificationInput {
+    // A Tasks board's 'task' marker tagset is captured by the taskBoard block,
+    // not as a generic tagset — strip it so a template doesn't carry a bare
+    // 'task' tagset that would otherwise be re-created without its board state.
+    const tagsets = (classification.tagsets ?? []).filter(
+      tagset => tagset.name !== TagsetReservedName.TASK
+    );
     return {
-      tagsets: this.buildCreateTagsetsInputFromTagsets(classification.tagsets),
+      tagsets: this.buildCreateTagsetsInputFromTagsets(tagsets),
     };
+  }
+
+  /**
+   * The Tasks board block for a callout being serialised to a template. Returns
+   * undefined when the callout is not a board; otherwise the board's ordered
+   * columns, so a callout created from the template is a board with the same
+   * columns and no tasks.
+   */
+  private buildTaskBoardInputFromCallout(
+    callout: ICallout
+  ): { columns: string[] } | undefined {
+    if (!this.taskBoardService.isTaskBoard(callout)) {
+      return undefined;
+    }
+    return { columns: this.taskBoardService.getColumns(callout) };
   }
 
   public buildCreateProfileInputFromProfile(
