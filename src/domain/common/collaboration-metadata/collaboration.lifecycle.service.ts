@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
-import { CollaborationLifecycleEvent } from './collaboration.lifecycle.event.pattern';
 import { CollaborationLifecycleOutbox } from './collaboration.lifecycle.outbox.entity';
 
 /**
@@ -21,8 +20,9 @@ export class CollaborationLifecycleService {
    * removal. REQUIRED at the delete-cascade leaves so the collab service
    * disconnects clients and releases/purges the live room. A lost event leaves
    * an unpurged room editable on a deleted document — NOT a retained blob: the
-   * checkpoint is already gone with the profile/bucket cascade. The dispatcher
-   * derives the wire payload (`{ id }`) at publish time.
+   * checkpoint is already gone with the profile/bucket cascade. The drain derives
+   * the constant wire pattern + payload (`document.deleted { id }`) at publish
+   * time, so the row stores only `documentId` (plus its generated id/createdDate).
    */
   public async enqueueDocumentDeleted(
     manager: EntityManager,
@@ -30,8 +30,6 @@ export class CollaborationLifecycleService {
   ): Promise<void> {
     await manager.insert(CollaborationLifecycleOutbox, {
       documentId: id,
-      eventType: CollaborationLifecycleEvent.DELETED,
-      status: 'pending',
     });
   }
 }

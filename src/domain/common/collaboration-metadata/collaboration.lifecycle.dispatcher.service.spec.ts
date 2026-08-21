@@ -1,269 +1,270 @@
-import { LoggerService } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import { RmqRecord } from '@nestjs/microservices';
 import { SchedulerRegistry } from '@nestjs/schedule';
-import { NEVER, of, Subject, throwError } from 'rxjs';
-import { Repository } from 'typeorm';
+import { of, Subject, throwError } from 'rxjs';
 import { type Mock, vi } from 'vitest';
 import { CollaborationLifecycleDispatcherService } from './collaboration.lifecycle.dispatcher.service';
-import { CollaborationLifecycleOutbox } from './collaboration.lifecycle.outbox.entity';
+import { CollaborationLifecycleEvent } from './collaboration.lifecycle.event.pattern';
 
-const CLAIMED = {
-  id: '1',
-  documentId: 'doc-1',
-  eventType: 'document.deleted',
-  claimVersion: 7,
-  attempts: 0,
+// Discriminating gates for the minimal durable drain (BASIC-006). Each drainOne is one
+// short transaction: SELECT oldest FOR UPDATE SKIP LOCKED -> confirmed emit while locked
+// -> DELETE on confirm -> commit; failure rolls back and the row remains for the next
+// drain. The mock `transaction(cb)` runs cb with a manager whose `query` returns the
+// queued SELECT results (rows array) and records DELETEs.
+
+interface Row {
+  id: string;
+  documentId: string;
+}
+
+/** Flush the microtask queue so a parked `await lastValueFrom(subject)` is reached. */
+const flush = () => new Promise<void>(resolve => setImmediate(resolve));
+
+const makeService = (opts: {
+  selectResults: Row[][];
+  emit: Mock;
+  order?: string[];
+}) => {
+  const queries: { sql: string; params?: unknown[] }[] = [];
+  let selCall = 0;
+  const managerQuery = vi.fn(async (sql: string, params?: unknown[]) => {
+    queries.push({ sql, params });
+    if (/SELECT/i.test(sql)) {
+      opts.order?.push('select');
+      return opts.selectResults[selCall++] ?? [];
+    }
+    if (/DELETE/i.test(sql)) {
+      opts.order?.push('delete');
+      return [[], 1]; // DELETE returns a [rows, count] tuple; unused here
+    }
+    return [];
+  });
+  const transaction = vi.fn(async (cb: (m: unknown) => Promise<boolean>) =>
+    cb({ query: managerQuery })
+  );
+  const outboxRepository = { manager: { transaction } } as any;
+  const client = { emit: opts.emit } as any;
+  const logger = { error: vi.fn(), warn: vi.fn(), verbose: vi.fn() } as any;
+  const service = new CollaborationLifecycleDispatcherService(
+    outboxRepository,
+    undefined,
+    client,
+    logger
+  );
+  const deletes = () => queries.filter(q => /DELETE/i.test(q.sql));
+  const selects = () => queries.filter(q => /SELECT/i.test(q.sql));
+  return { service, queries, transaction, client, deletes, selects };
 };
 
-describe('CollaborationLifecycleDispatcherService', () => {
-  let query: Mock;
-  let emit: Mock;
-  let repo: Repository<CollaborationLifecycleOutbox>;
-  let client: ClientProxy;
-  let logger: LoggerService;
-  // FIFOs the two claim queries hand back, then empty (loop ends). `claimResults`
-  // = the pending claim (the common path most tests use); `inflightClaims` = the
-  // stale-inflight reclaim.
-  let claimResults: unknown[][];
-  let inflightClaims: unknown[][];
-  // Rows the backoff UPDATE ... RETURNING returns: a fresh claimant updates its
-  // row ([{id}]); a stale claimant (claimVersion advanced) matches nothing ([]).
-  let backoffResult: unknown[];
+const ROW: Row = {
+  id: '1',
+  documentId: '11111111-2222-3333-4444-555555555555',
+};
 
-  const build = (schedulerRegistry?: SchedulerRegistry) =>
-    new CollaborationLifecycleDispatcherService(
-      repo,
-      schedulerRegistry,
-      client,
-      logger
+describe('CollaborationLifecycleDispatcherService (minimal drain)', () => {
+  it('gate 1: empty table => ZERO publishes (kills the truthy-[] loop)', async () => {
+    const emit = vi.fn(() => of(undefined));
+    const { service } = makeService({ selectResults: [[]], emit });
+
+    await service.tick();
+
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it('gate 2: one row => one document.deleted carrying { id }, one DELETE keyed by row id', async () => {
+    const emit = vi.fn(() => of(undefined));
+    const { service, deletes } = makeService({
+      selectResults: [[ROW], []],
+      emit,
+    });
+
+    await service.tick();
+
+    expect(emit).toHaveBeenCalledTimes(1);
+    const [pattern, record] = emit.mock.calls[0] as unknown as [
+      unknown,
+      RmqRecord,
+    ];
+    expect(pattern).toBe(CollaborationLifecycleEvent.DELETED);
+    expect(record).toBeInstanceOf(RmqRecord);
+    // The consumer receives the record's DATA ({ id }); the options ride sendToQueue only.
+    expect(record.data).toEqual({ id: ROW.documentId });
+    expect(deletes()).toHaveLength(1);
+    expect(deletes()[0].params).toEqual([ROW.id]);
+  });
+
+  it('gate 3: publish failure => rollback (row remains, no DELETE), a later drain succeeds', async () => {
+    const emit = vi
+      .fn()
+      .mockReturnValueOnce(throwError(() => new Error('broker down')))
+      .mockReturnValueOnce(of(undefined));
+    const { service, deletes } = makeService({
+      selectResults: [[ROW], [ROW], []],
+      emit,
+    });
+
+    // Tick 1: emit throws -> the transaction rolls back -> the row is NOT deleted.
+    await service.tick();
+    expect(deletes()).toHaveLength(0);
+
+    // Tick 2: the row is still there -> emit succeeds -> deleted.
+    await service.tick();
+    expect(emit).toHaveBeenCalledTimes(2);
+    expect(deletes()).toHaveLength(1);
+  });
+
+  it('gate 4: DELETE waits for the publish to COMPLETE, not merely to be issued', async () => {
+    const subject = new Subject<unknown>();
+    const emit = vi.fn(() => subject.asObservable());
+    const { service, deletes } = makeService({
+      selectResults: [[ROW], []],
+      emit,
+    });
+
+    const tickPromise = service.tick();
+    await flush();
+    // The publish is issued but the broker has NOT confirmed yet -> the row must NOT be
+    // deleted. This is what proves the DELETE is awaited on completion (drop the await
+    // and the DELETE would already have run here).
+    expect(emit).toHaveBeenCalledTimes(1);
+    expect(deletes()).toHaveLength(0);
+
+    // Broker confirms -> the drain proceeds to DELETE.
+    subject.next(undefined);
+    subject.complete();
+    await tickPromise;
+    expect(deletes()).toHaveLength(1);
+  });
+
+  it('gate 5: the claim SELECT uses FOR UPDATE SKIP LOCKED (multi-pod safety from the row lock alone)', async () => {
+    const emit = vi.fn(() => of(undefined));
+    const { service, queries } = makeService({
+      selectResults: [[ROW], []],
+      emit,
+    });
+
+    await service.tick();
+
+    const select = queries.find(q => /SELECT/i.test(q.sql));
+    expect(select?.sql).toMatch(/FOR UPDATE SKIP LOCKED/);
+  });
+
+  it('gate 6: derived pattern + { id } payload; no delivered/status/prune SQL anywhere', async () => {
+    const emit = vi.fn(() => of(undefined));
+    const { service, queries } = makeService({
+      selectResults: [[ROW], []],
+      emit,
+    });
+
+    await service.tick();
+
+    const [pattern, record] = emit.mock.calls[0] as unknown as [
+      unknown,
+      RmqRecord,
+    ];
+    expect(pattern).toBe(CollaborationLifecycleEvent.DELETED);
+    expect(pattern).toBeDefined();
+    expect(record.data).toEqual({ id: ROW.documentId });
+    const allSql = queries.map(q => q.sql).join(' ');
+    expect(allSql).not.toMatch(
+      /delivered|status|attempts|claimVersion|visibleAt|claimedAt|lastError|prune/i
     );
-
-  beforeEach(() => {
-    vi.restoreAllMocks();
-    claimResults = [];
-    inflightClaims = [];
-    backoffResult = [{ id: '1' }]; // default: fresh claimant, row backed off
-    query = vi.fn().mockImplementation((sql: string) => {
-      if (typeof sql !== 'string') {
-        return Promise.resolve([]);
-      }
-      if (sql.includes('"visibleAt" IS NULL')) {
-        return Promise.resolve(claimResults.shift() ?? []); // claimPending
-      }
-      if (sql.includes('"claimedAt" < now()')) {
-        return Promise.resolve(inflightClaims.shift() ?? []); // claimStaleInflight
-      }
-      if (sql.includes(`SET "status" = 'delivered'`)) {
-        return Promise.resolve([{ id: '1' }]); // mark: one row affected
-      }
-      if (sql.includes(`"attempts" = "attempts" + 1`)) {
-        return Promise.resolve(backoffResult); // backoff UPDATE ... RETURNING
-      }
-      return Promise.resolve([]); // prune
-    });
-    emit = vi.fn();
-    repo = { query } as unknown as Repository<CollaborationLifecycleOutbox>;
-    client = { emit } as unknown as ClientProxy;
-    logger = { warn: vi.fn(), error: vi.fn() } as unknown as LoggerService;
   });
 
-  describe('tick', () => {
-    it('publishes the derived {id} payload and marks delivered, fenced by claimVersion, after the confirm', async () => {
-      claimResults = [[CLAIMED]]; // one row, then the loop claim returns empty
-      emit.mockReturnValue(of(undefined)); // confirmed publish
+  it('gate 7: bounds a hung publish via the transport-native per-message timeout (a real cancel), not RxJS', async () => {
+    const emit = vi.fn(() => of(undefined));
+    const { service } = makeService({ selectResults: [[ROW], []], emit });
 
-      await build().tick();
+    await service.tick();
 
-      expect(emit).toHaveBeenCalledWith('document.deleted', { id: 'doc-1' });
-      const markDelivered = query.mock.calls.find(
-        c =>
-          typeof c[0] === 'string' &&
-          c[0].includes(`SET "status" = 'delivered'`)
-      );
-      expect(markDelivered).toBeTruthy();
-      // Terminal write is fenced on id + the exact claimVersion we claimed with.
-      expect(markDelivered?.[1]).toEqual(['1', 7]);
-    });
-
-    it('backs off (fenced by claimVersion, never marks delivered) when the publish fails', async () => {
-      claimResults = [[CLAIMED]];
-      emit.mockReturnValue(throwError(() => new Error('broker down')));
-
-      await build().tick();
-
-      const backoff = query.mock.calls.find(
-        c =>
-          typeof c[0] === 'string' &&
-          c[0].includes(`"attempts" = "attempts" + 1`)
-      );
-      expect(backoff).toBeTruthy();
-      // id, maxBackoff, message, lastErrorMax, claimVersion.
-      expect(backoff?.[1]).toEqual(['1', 300, 'broker down', 500, 7]);
-      const markDelivered = query.mock.calls.find(
-        c =>
-          typeof c[0] === 'string' &&
-          c[0].includes(`SET "status" = 'delivered'`)
-      );
-      expect(markDelivered).toBeFalsy();
-      expect(logger.warn).toHaveBeenCalled();
-    });
-
-    it('logs a lapsed-claim failure (NOT a backoff) when the failing claimant was already reclaimed', async () => {
-      claimResults = [[CLAIMED]];
-      emit.mockReturnValue(throwError(() => new Error('broker down')));
-      backoffResult = []; // the backoff UPDATE matches 0 rows — our claimVersion advanced
-
-      await build().tick();
-
-      const warnCalls = (logger.warn as unknown as Mock).mock.calls;
-      const lapsed = warnCalls.find(
-        c =>
-          typeof c[0]?.message === 'string' &&
-          c[0].message.includes('lapsed claim')
-      );
-      const backedOff = warnCalls.find(
-        c =>
-          typeof c[0]?.message === 'string' &&
-          c[0].message.includes('backed off')
-      );
-      // We must NOT claim to have backed off a row we no longer own.
-      expect(lapsed).toBeTruthy();
-      expect(backedOff).toBeFalsy();
-    });
-
-    it('publishes nothing when the first claim comes back empty', async () => {
-      claimResults = []; // both claim queries return empty immediately
-
-      await build().tick();
-
-      expect(emit).not.toHaveBeenCalled();
-    });
-
-    it('claims pending BEFORE reclaiming stale in-flight (fresh-before-reclaim order)', async () => {
-      claimResults = [[CLAIMED]]; // a pending row is available
-      emit.mockReturnValue(of(undefined));
-
-      await build().tick();
-
-      const firstClaim = query.mock.calls.find(
-        c => typeof c[0] === 'string' && c[0].includes('FOR UPDATE SKIP LOCKED')
-      );
-      // The very first claim is the pending query, never the stale-inflight one.
-      expect(firstClaim?.[0]).toContain('"visibleAt" IS NULL');
-      expect(emit).toHaveBeenCalledWith('document.deleted', { id: 'doc-1' });
-    });
-
-    it('reclaims a stale in-flight row when no pending rows remain', async () => {
-      claimResults = []; // pending exhausted
-      inflightClaims = [[{ ...CLAIMED, id: '9', claimVersion: 2 }]];
-      emit.mockReturnValue(of(undefined));
-
-      await build().tick();
-
-      const inflightClaim = query.mock.calls.find(
-        c => typeof c[0] === 'string' && c[0].includes('"claimedAt" < now()')
-      );
-      expect(inflightClaim).toBeTruthy();
-      expect(emit).toHaveBeenCalledWith('document.deleted', { id: 'doc-1' });
-    });
-
-    it('never throws when a claim query fails (a bad tick must not kill the scheduler)', async () => {
-      query.mockImplementationOnce(() => Promise.reject(new Error('db down')));
-
-      await expect(build().tick()).resolves.toBeUndefined();
-      expect(logger.error).toHaveBeenCalled();
-    });
-
-    it('is single-flight: a second tick while the first is mid-publish is a no-op (only one claim/publish begins)', async () => {
-      const publish$ = new Subject<unknown>();
-      claimResults = [[CLAIMED]]; // one row available
-      emit.mockReturnValue(publish$); // first publish blocks until we complete it
-      const dispatcher = build();
-
-      const tick1 = dispatcher.tick(); // claims one row, parks on the blocked publish
-      // Flush microtasks so tick1 reaches the awaited (blocked) publish.
-      await new Promise(resolve => setTimeout(resolve, 0));
-      await dispatcher.tick(); // second tick: the sweeping guard makes it a no-op
-
-      const claimCalls = query.mock.calls.filter(
-        c => typeof c[0] === 'string' && c[0].includes('FOR UPDATE SKIP LOCKED')
-      );
-      expect(claimCalls.length).toBe(1);
-      expect(emit).toHaveBeenCalledTimes(1);
-
-      // Release the first publish so tick1 completes cleanly (also cancels the
-      // rxjs timeout timer, so nothing leaks).
-      publish$.next(undefined);
-      publish$.complete();
-      await tick1;
-    });
-
-    it('times out a hung publish and backs the row off (version-conditioned), never marking delivered', async () => {
-      vi.useFakeTimers();
-      try {
-        claimResults = [[CLAIMED]];
-        emit.mockReturnValue(NEVER); // publish never confirms
-        const tickPromise = build().tick();
-
-        // Advance past any valid publish timeout (which must be < the 60s lease).
-        await vi.advanceTimersByTimeAsync(59_000);
-        await tickPromise;
-
-        const backoff = query.mock.calls.find(
-          c =>
-            typeof c[0] === 'string' &&
-            c[0].includes(`"attempts" = "attempts" + 1`)
-        );
-        expect(backoff).toBeTruthy();
-        // Version-conditioned: the backoff's last param is our claimVersion.
-        expect(backoff?.[1]?.[4]).toBe(7);
-        const markDelivered = query.mock.calls.find(
-          c =>
-            typeof c[0] === 'string' &&
-            c[0].includes(`SET "status" = 'delivered'`)
-        );
-        expect(markDelivered).toBeFalsy();
-      } finally {
-        vi.useRealTimers();
-      }
-    });
+    // The deadline rides the RmqRecord options straight to sendToQueue, where
+    // amqp-connection-manager removes a timed-out message from its queue and rejects —
+    // unlike an RxJS timeout, which would leave the eager publish latent to duplicate.
+    const [, record] = emit.mock.calls[0] as unknown as [
+      unknown,
+      RmqRecord & { options?: { timeout?: number } },
+    ];
+    expect(record.options?.timeout).toBe(30_000);
   });
 
-  describe('onModuleInit gating', () => {
-    it('registers the sweep when both a scheduler and a client are present', () => {
+  it('gate 8: an overlapping tick is a no-op while a drain is in flight (single-flight guard)', async () => {
+    const subject = new Subject<unknown>();
+    const emit = vi.fn(() => subject.asObservable());
+    const { service, selects } = makeService({
+      selectResults: [[ROW], []],
+      emit,
+    });
+
+    const first = service.tick(); // parks at the publish (subject still open)
+    await flush();
+    expect(selects()).toHaveLength(1);
+    expect(emit).toHaveBeenCalledTimes(1);
+
+    // A second tick fired while the first is draining must NOT SELECT or publish;
+    // otherwise two replicas-in-one-process would each hold a row lock.
+    await service.tick();
+    expect(selects()).toHaveLength(1);
+    expect(emit).toHaveBeenCalledTimes(1);
+
+    subject.next(undefined);
+    subject.complete();
+    await first;
+  });
+
+  describe('onModuleInit wiring', () => {
+    it('registers the sweep interval when both scheduler and client are present', () => {
       const addInterval = vi.fn();
-      const reg = { addInterval } as unknown as SchedulerRegistry;
+      const scheduler = {
+        addInterval,
+        doesExist: vi.fn(),
+        deleteInterval: vi.fn(),
+      } as unknown as SchedulerRegistry;
+      const service = new CollaborationLifecycleDispatcherService(
+        {} as any,
+        scheduler,
+        { emit: vi.fn() } as any,
+        { error: vi.fn() } as any
+      );
 
-      build(reg).onModuleInit();
+      service.onModuleInit();
 
       expect(addInterval).toHaveBeenCalledTimes(1);
-      // Clear the real interval the init created so it can't fire after the test.
-      clearInterval(addInterval.mock.calls[0][1] as NodeJS.Timeout);
+      expect(addInterval).toHaveBeenCalledWith(
+        'collaboration-lifecycle-dispatch',
+        expect.anything()
+      );
+      // Clear the real timer the service created so it does not leak across tests.
+      clearInterval(
+        addInterval.mock.calls[0][1] as ReturnType<typeof setInterval>
+      );
     });
 
-    it('stays inert (no throw) on a process with no scheduler, even without a client', () => {
-      const dispatcher = new CollaborationLifecycleDispatcherService(
-        repo,
-        undefined,
-        undefined,
-        logger
+    it('throws on a scheduling process with no outbound client (would silently strand deletions)', () => {
+      const scheduler = {
+        addInterval: vi.fn(),
+        doesExist: vi.fn(),
+        deleteInterval: vi.fn(),
+      } as unknown as SchedulerRegistry;
+      const service = new CollaborationLifecycleDispatcherService(
+        {} as any,
+        scheduler,
+        undefined, // no client
+        { error: vi.fn() } as any
       );
-
-      expect(() => dispatcher.onModuleInit()).not.toThrow();
+      expect(() => service.onModuleInit()).toThrow(
+        /COLLABORATION_LIFECYCLE_SERVICE client is missing/
+      );
     });
 
-    it('THROWS when scheduling exists but the client is missing (DI/config failure, not warn-and-serve)', () => {
-      const reg = { addInterval: vi.fn() } as unknown as SchedulerRegistry;
-      const dispatcher = new CollaborationLifecycleDispatcherService(
-        repo,
-        reg,
-        undefined,
-        logger
+    it('is inert (no throw, no interval) on a process with no scheduler (e.g. the worker)', () => {
+      const addInterval = vi.fn();
+      const service = new CollaborationLifecycleDispatcherService(
+        {} as any,
+        undefined, // no scheduler
+        undefined, // no client — must NOT throw because there is no scheduler
+        { error: vi.fn() } as any
       );
-
-      expect(() => dispatcher.onModuleInit()).toThrow(
-        /COLLABORATION_LIFECYCLE_SERVICE/
-      );
+      expect(() => service.onModuleInit()).not.toThrow();
+      expect(addInterval).not.toHaveBeenCalled();
     });
   });
 });
