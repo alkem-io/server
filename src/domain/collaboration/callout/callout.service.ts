@@ -152,7 +152,10 @@ export class CalloutService {
 
     if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
       callout.publishedDate = new Date();
-      callout.publishedBy = userID;
+      // Empty-string actorID (anonymous/system context, e.g. bootstrap template
+      // seeding) → NULL, never a malformed empty string in the nullable `uuid`
+      // publishedBy column (matches the createdBy guard above).
+      callout.publishedBy = userID || undefined;
     }
 
     callout.classification = this.classificationService.createClassification(

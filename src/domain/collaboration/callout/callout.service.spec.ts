@@ -204,6 +204,25 @@ describe('CalloutService', () => {
       expect(result.publishedBy).toBe('user-1');
     });
 
+    // RED (reproduced on the real isolated stack): fresh-DB bootstrap seeds platform
+    // templates under the anonymous/system context (actorID='' → userID=''); a PUBLISHED
+    // callout then wrote '' into the nullable `uuid` publishedBy column → Postgres
+    // "invalid input syntax for type uuid" → BootstrapException, server never boots.
+    // The guard maps '' → undefined (NULL), same as createdBy.
+    it('maps an empty-string userID to an undefined publishedBy for a PUBLISHED callout', async () => {
+      const result = await service.createCallout(
+        createCalloutInput({
+          settings: { visibility: CalloutVisibility.PUBLISHED },
+        }),
+        tagsetTemplates,
+        storageAggregator,
+        actorContextData.actorContext,
+        ''
+      );
+
+      expect(result.publishedBy).toBeUndefined();
+    });
+
     it('should create contributions when userID and contributions data are provided', async () => {
       const calloutData = createCalloutInput({
         contributions: [
