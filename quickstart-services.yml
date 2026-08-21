@@ -518,10 +518,11 @@ services:
   # server's RabbitMQ bus (queue `alkemio-collaboration`); snapshot blobs are
   # offloaded to file-service.
   #
-  # Alkemio topology (mirrors collaboration-service deploy/k8s/base/configmap.yaml):
-  #   HUB_MODE=redis · METADATA_STORE=rabbitmq · CHECKPOINT_STORE=file-service ·
-  #   AUTH_MODE=authzeval. For a zero-dependency smoke test that isolates the WS
-  #   path from authZ, override AUTH_MODE=open + CHECKPOINT_STORE=inline + METADATA_STORE=inmemory
+  # Supported durable local topology for the current collaboration-service:
+  #   HUB_MODE=inmemory · METADATA_STORE=rabbitmq · CHECKPOINT_STORE=file-service ·
+  #   AUTH_MODE=header (derives AUTHZ_MODE=authzeval). For a zero-dependency
+  #   smoke test that isolates the WS path from authZ, override AUTH_MODE=open +
+  #   CHECKPOINT_STORE=inline + METADATA_STORE=inmemory
   #   (see docs/local-collab-testing.md).
   collaboration:
     extra_hosts:
@@ -545,10 +546,10 @@ services:
       # --- service ---
       - PORT=4006
       # --- pluggable ports: Alkemio topology ---
-      - HUB_MODE=redis
+      - HUB_MODE=inmemory
       - METADATA_STORE=rabbitmq
       - CHECKPOINT_STORE=file-service
-      - AUTH_MODE=authzeval
+      - AUTH_MODE=header
       # The Traefik `collaboration` router resolves identity at the gateway
       # (alkemio-resolve forwardAuth) and forwards the actor id in this header;
       # the WS handshake reads it from here instead of the bearer Authorization
