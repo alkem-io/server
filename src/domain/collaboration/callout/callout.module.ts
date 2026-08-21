@@ -28,6 +28,7 @@ import { CalloutResolverMutations } from './callout.resolver.mutations';
 import { CalloutResolverSubscriptions } from './callout.resolver.subscriptions';
 import { CalloutService } from './callout.service';
 import { CalloutAuthorizationService } from './callout.service.authorization';
+import { TaskBoardModule } from './task-board/task.board.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { CalloutAuthorizationService } from './callout.service.authorization';
     RoleSetModule,
     ReactionModule,
     ActorLookupModule,
+    TaskBoardModule,
     TypeOrmModule.forFeature([Callout]),
   ],
   providers: [
