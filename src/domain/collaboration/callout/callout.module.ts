@@ -30,6 +30,8 @@ import { CalloutResolverSubscriptions } from './callout.resolver.subscriptions';
 import { CalloutService } from './callout.service';
 import { CalloutAuthorizationService } from './callout.service.authorization';
 import { TaskBoardModule } from './task-board/task.board.module';
+import { TaskBoardMoveService } from './task-board/task.board.move.service';
+import { TaskBoardResolverMutations } from './task-board/task.board.resolver.mutations';
 
 @Module({
   imports: [
@@ -66,6 +68,8 @@ import { TaskBoardModule } from './task-board/task.board.module';
     CalloutResolverFields,
     CalloutResolverSubscriptions,
     CalloutMyReactionLoaderCreator,
+    TaskBoardMoveService,
+    TaskBoardResolverMutations,
   ],
   exports: [
     CalloutService,
