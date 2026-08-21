@@ -5,6 +5,7 @@ import { CollaborationMetadataModule } from '@domain/common/collaboration-metada
 import { VisualModule } from '@domain/common/visual/visual.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { ProfileDocumentsModule } from '@domain/profile-documents/profile.documents.module';
+import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -32,6 +33,7 @@ import { WhiteboardAuthorizationService } from './whiteboard.service.authorizati
     RoleSetModule,
     PlatformRolesAccessModule,
     StorageBucketModule,
+    DocumentModule,
     TypeOrmModule.forFeature([Whiteboard]),
     ProfileDocumentsModule,
     CollaborationMetadataModule,

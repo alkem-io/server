@@ -6,6 +6,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { ICollaboraDocument } from '@domain/collaboration/collabora-document/collabora.document.interface';
 import { CollaboraDocumentService } from '@domain/collaboration/collabora-document/collabora.document.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
@@ -46,6 +47,7 @@ export class CalloutContributionService {
     calloutContributionsData: CreateCalloutContributionInput[],
     storageAggregator: IStorageAggregator,
     contributionSettings: ICalloutSettingsContribution,
+    actorContext: ActorContext,
     userID: string,
     parentSpaceId?: string
   ): Promise<ICalloutContribution[]> {
@@ -57,6 +59,7 @@ export class CalloutContributionService {
         storageAggregator,
         contributionSettings,
         parentSpaceId,
+        actorContext,
         userID
       );
       contributions.push(contribution);
@@ -100,6 +103,7 @@ export class CalloutContributionService {
     storageAggregator: IStorageAggregator,
     contributionSettings: ICalloutSettingsContribution,
     parentSpaceId: string | undefined,
+    actorContext: ActorContext,
     userID: string
   ): Promise<ICalloutContribution> {
     this.validateContributionType(
@@ -113,7 +117,9 @@ export class CalloutContributionService {
     contribution.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.CALLOUT_CONTRIBUTION
     );
-    contribution.createdBy = userID;
+    // Empty-string actorID (anonymous/system context, e.g. bootstrap seeding) → NULL,
+    // never a malformed empty string in the nullable `uuid` createdBy column.
+    contribution.createdBy = userID || undefined;
     contribution.sortOrder = calloutContributionData.sortOrder ?? 0;
     contribution.type = calloutContributionData.type;
 
@@ -124,7 +130,7 @@ export class CalloutContributionService {
       contribution.whiteboard = await this.whiteboardService.createWhiteboard(
         whiteboard,
         storageAggregator,
-        userID
+        actorContext
       );
     }
 

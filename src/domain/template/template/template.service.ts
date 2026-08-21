@@ -77,7 +77,8 @@ export class TemplateService {
    */
   async createTemplate(
     templateData: CreateTemplateInput,
-    storageAggregator: IStorageAggregator
+    storageAggregator: IStorageAggregator,
+    actorContext: ActorContext
   ): Promise<ITemplate> {
     // Phase 1: build entity tree in memory (no file-service-go calls).
     const template: ITemplate = Template.create(templateData);
@@ -168,7 +169,8 @@ export class TemplateService {
         template.contentSpace =
           await this.templateContentSpaceService.createTemplateContentSpace(
             spaceData!,
-            storageAggregator
+            storageAggregator,
+            actorContext
           );
 
         break;
@@ -189,14 +191,15 @@ export class TemplateService {
             nameID: randomUUID().slice(0, 8),
             content: templateData.whiteboard.content,
             // Seed the template's whiteboard from the source whiteboard's stored snapshot
-            // (duplicate / import-from-library). `sourceWhiteboardID` takes precedence over
-            // `content` server-side; without forwarding it the standalone whiteboard-template
-            // create dropped it and produced an EMPTY template. Authorization to READ the
-            // source is enforced at the resolver (mirroring the callout create path).
+            // (duplicate / import-from-library). `content` and `sourceWhiteboardID` are now
+            // mutually exclusive; createWhiteboard authorizes READ on the dereferenced source
+            // (and per-document-authorizes any re-homed media) under this actorContext, so the
+            // authorization is centralized in the service, not left to each resolver.
             sourceWhiteboardID: templateData.whiteboard.sourceWhiteboardID,
             previewSettings: templateData.whiteboard.previewSettings,
           },
-          storageAggregator
+          storageAggregator,
+          actorContext
         );
         break;
       }
@@ -213,7 +216,8 @@ export class TemplateService {
         template.callout = await this.calloutService.createCallout(
           templateData.calloutData!,
           [],
-          storageAggregator
+          storageAggregator,
+          actorContext
         );
         break;
       }
@@ -524,6 +528,7 @@ export class TemplateService {
       sourceSpace,
       templateInput.contentSpace,
       true,
+      actorContext,
       actorContext.actorID
     );
 
@@ -576,6 +581,7 @@ export class TemplateService {
     space: ISpace,
     templateContentSpace: ITemplateContentSpace,
     addCallouts: boolean,
+    actorContext: ActorContext,
     userID: string
   ): Promise<ITemplateContentSpace> {
     if (
@@ -616,6 +622,7 @@ export class TemplateService {
         templateContentSpace.collaboration.calloutsSet,
         calloutsFromSourceCollaboration,
         storageAggregator,
+        actorContext,
         userID
       );
       templateContentSpace.collaboration.calloutsSet.callouts?.push(

@@ -185,6 +185,7 @@ export class CalloutsSetResolverMutations {
 
     const callout = await this.calloutsSetService.createCalloutOnCalloutsSet(
       calloutData,
+      actorContext,
       actorContext.actorID
     );
 

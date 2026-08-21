@@ -17,6 +17,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { ICollaboraDocument } from '@domain/collaboration/collabora-document/collabora.document.interface';
 import { CollaboraDocumentService } from '@domain/collaboration/collabora-document/collabora.document.service';
@@ -79,6 +80,7 @@ export class CalloutFramingService {
   public async createCalloutFraming(
     calloutFramingData: CreateCalloutFramingInput,
     storageAggregator: IStorageAggregator,
+    actorContext: ActorContext,
     userID?: string
   ): Promise<ICalloutFraming> {
     const calloutFraming: ICalloutFraming = CalloutFraming.create(
@@ -118,7 +120,7 @@ export class CalloutFramingService {
           calloutFraming,
           calloutFramingData.whiteboard,
           storageAggregator,
-          userID
+          actorContext
         );
       } else {
         throw new ValidationException(
@@ -261,7 +263,7 @@ export class CalloutFramingService {
     calloutFraming: ICalloutFraming,
     whiteboardData: CreateWhiteboardInput,
     storageAggregator: IStorageAggregator,
-    userID?: string
+    actorContext: ActorContext
   ) {
     const reservedNameIDs: string[] = []; // no reserved nameIDs for framing
     whiteboardData.nameID =
@@ -269,10 +271,12 @@ export class CalloutFramingService {
         `${whiteboardData.profile?.displayName ?? 'whiteboard'}`,
         reservedNameIDs
       );
+    // createWhiteboard authorizes the source it dereferences + the per-document media
+    // re-home under this actor, so it needs the real ActorContext, not just an id.
     calloutFraming.whiteboard = await this.whiteboardService.createWhiteboard(
       whiteboardData,
       storageAggregator,
-      userID
+      actorContext
     );
   }
 
@@ -428,6 +432,7 @@ export class CalloutFramingService {
     calloutFramingData: UpdateCalloutFramingInput,
     storageAggregator: IStorageAggregator,
     isParentCalloutTemplate: boolean,
+    actorContext: ActorContext,
     userID?: string
   ): Promise<ICalloutFraming> {
     if (calloutFramingData.profile) {
@@ -499,7 +504,7 @@ export class CalloutFramingService {
               previewSettings: calloutFramingData.whiteboardPreviewSettings,
             },
             storageAggregator,
-            userID
+            actorContext
           );
         }
         break;

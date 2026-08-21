@@ -1,5 +1,6 @@
 import { ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
@@ -8,17 +9,24 @@ import { WhiteboardPreviewMode } from '@common/enums/whiteboard.preview.mode';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  ForbiddenException,
   RelationshipNotFoundException,
+  ValidationException,
 } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CollaborationLifecycleService } from '@domain/common/collaboration-metadata';
 import { ILicense } from '@domain/common/license/license.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
+import { DocumentService } from '@domain/storage/document/document.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { actorContextData } from '@test/data/actorContext.mock';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -30,8 +38,93 @@ import { AuthorizationPolicyService } from '../authorization-policy/authorizatio
 import { LicenseService } from '../license/license.service';
 import { ProfileService } from '../profile/profile.service';
 import { Whiteboard } from './whiteboard.entity';
+import * as whiteboardFork from './whiteboard.fork';
 import { IWhiteboard } from './whiteboard.interface';
 import { WhiteboardService } from './whiteboard.service';
+
+// The authorized actor for every create in these tests (GLOBAL_ADMIN; real UUID).
+const actorContext = actorContextData.actorContext;
+// An anonymous context: actorID defaults to '' → createdBy must resolve to undefined.
+const anonymousActorContext = { ...actorContext, actorID: '' } as ActorContext;
+
+/**
+ * Seed a base64 Yjs-V2 snapshot whose asset map (`FILES`) holds opaque file-service
+ * locator STRINGS keyed by fileId — the schema `rehomeSnapshotAssets` re-homes. Built
+ * through the real fork's `writeAssetLocators` so it round-trips exactly as production reads.
+ */
+const buildAssetSnapshotBase64 = async (
+  locators: Record<string, string>
+): Promise<string> => {
+  const fork: any = await import('@excalidraw-yjs/element/headless');
+  const doc = new Y.Doc();
+  doc.transact(() => {
+    fork.writeAssetLocators(doc.getMap(fork.FILES), locators, { prune: true });
+  }, fork.LOCAL_ORIGIN);
+  const b64 = Buffer.from(Y.encodeStateAsUpdateV2(doc)).toString('base64');
+  doc.destroy();
+  return b64;
+};
+
+/**
+ * Seed a base64 Yjs-V2 snapshot containing one IMAGE element (through the real fork
+ * Scene) that references `fileId`, optionally with a matching asset locator, and
+ * optionally tombstoned. Exercises the desired-snapshot element↔asset preflight.
+ */
+const buildImageSnapshotBase64 = async (opts: {
+  fileId: string;
+  assetLocator?: string;
+  deleted?: boolean;
+}): Promise<string> => {
+  const fork: any = await import('@excalidraw-yjs/element/headless');
+  const doc = new Y.Doc();
+  const scene = new fork.Scene(undefined, { doc });
+  const img = fork.newElement({
+    type: 'image',
+    x: 0,
+    y: 0,
+    width: 10,
+    height: 10,
+  });
+  scene.insertElement(img);
+  scene.mutateElement(img, { fileId: opts.fileId });
+  if (opts.deleted) {
+    scene.mutateElement(img, { isDeleted: true });
+  }
+  if (opts.assetLocator != null) {
+    doc.transact(() => {
+      fork.writeAssetLocators(
+        doc.getMap(fork.FILES),
+        { [opts.fileId]: opts.assetLocator },
+        { prune: true }
+      );
+    }, fork.LOCAL_ORIGIN);
+  }
+  const b64 = Buffer.from(Y.encodeStateAsUpdateV2(doc)).toString('base64');
+  doc.destroy();
+  return b64;
+};
+
+/**
+ * Seed a base64 Yjs-V2 snapshot containing a single non-image shape (rectangle) and
+ * NO assets — a snapshot whose bytes are DISTINCT from an empty/placeholder doc, so a
+ * "seeded from the source's stored bytes, not a fresh empty doc" assertion is discriminating.
+ */
+const buildShapeSnapshotBase64 = async (): Promise<string> => {
+  const fork: any = await import('@excalidraw-yjs/element/headless');
+  const doc = new Y.Doc();
+  const scene = new fork.Scene(undefined, { doc });
+  const rect = fork.newElement({
+    type: 'rectangle',
+    x: 5,
+    y: 5,
+    width: 40,
+    height: 30,
+  });
+  scene.insertElement(rect);
+  const b64 = Buffer.from(Y.encodeStateAsUpdateV2(doc)).toString('base64');
+  doc.destroy();
+  return b64;
+};
 
 /**
  * Build a base64-encoded Yjs-V2 whiteboard snapshot (the single content
@@ -60,9 +153,23 @@ describe('WhiteboardService', () => {
   let licenseService: LicenseService;
   let profileDocumentsService: ProfileDocumentsService;
   let fileServiceAdapter: FileServiceAdapter;
+  let authorizationService: AuthorizationService;
+  let documentService: DocumentService;
+  let storageBucketService: StorageBucketService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
+
+    // The service loads the ESM headless fork via a Function-wrapped dynamic import
+    // that vitest's module runner cannot drive. Spy on the SHARED module export (NOT
+    // vi.mock — the test suite runs with `isolate: false`, so whiteboard.service.ts is
+    // usually already cached real by an earlier spec and a late module-mock is bypassed;
+    // spying the live export mutates the one shared instance every caller resolves).
+    // The substitute is a plain dynamic import, so createWhiteboard exercises the REAL
+    // fork (asset/element schema) against a real Y.Doc — the same fork client-web consumes.
+    vi.spyOn(whiteboardFork, 'loadWhiteboardFork').mockImplementation(
+      () => import('@excalidraw-yjs/element/headless') as any
+    );
 
     // Mock static Whiteboard.create to avoid DataSource requirement
     vi.spyOn(Whiteboard, 'create').mockImplementation((input: any) => {
@@ -91,6 +198,9 @@ describe('WhiteboardService', () => {
     licenseService = module.get(LicenseService);
     profileDocumentsService = module.get(ProfileDocumentsService);
     fileServiceAdapter = module.get(FileServiceAdapter);
+    authorizationService = module.get(AuthorizationService);
+    documentService = module.get(DocumentService);
+    storageBucketService = module.get(StorageBucketService);
   });
 
   describe('createWhiteboard', () => {
@@ -137,7 +247,8 @@ describe('WhiteboardService', () => {
     it('should create whiteboard with profile, visuals, tagset, and authorization', async () => {
       const result = await service.createWhiteboard(
         { content: validEmptyContent },
-        mockStorageAggregator
+        mockStorageAggregator,
+        actorContext
       );
 
       expect(result.authorization).toBeDefined();
@@ -170,20 +281,21 @@ describe('WhiteboardService', () => {
       });
     });
 
-    it('should set createdBy when userID is provided', async () => {
+    it('should set createdBy from the actor context actorID', async () => {
       const result = await service.createWhiteboard(
         { content: validEmptyContent },
         mockStorageAggregator,
-        'user-42'
+        actorContext
       );
 
-      expect(result.createdBy).toBe('user-42');
+      expect(result.createdBy).toBe(actorContext.actorID);
     });
 
-    it('should leave createdBy undefined when userID is not provided', async () => {
+    it('should leave createdBy undefined for an anonymous actor (empty actorID)', async () => {
       const result = await service.createWhiteboard(
         { content: validEmptyContent },
-        mockStorageAggregator
+        mockStorageAggregator,
+        anonymousActorContext
       );
 
       expect(result.createdBy).toBeUndefined();
@@ -192,7 +304,8 @@ describe('WhiteboardService', () => {
     it('should use default preview coordinates as null when not provided', async () => {
       const result = await service.createWhiteboard(
         { content: validEmptyContent },
-        mockStorageAggregator
+        mockStorageAggregator,
+        actorContext
       );
 
       expect(result.previewSettings).toEqual({
@@ -211,7 +324,8 @@ describe('WhiteboardService', () => {
             coordinates,
           },
         },
-        mockStorageAggregator
+        mockStorageAggregator,
+        actorContext
       );
 
       expect(result.previewSettings).toEqual({
@@ -228,7 +342,8 @@ describe('WhiteboardService', () => {
 
       await service.createWhiteboard(
         { content: validEmptyContent, profile: customProfile },
-        mockStorageAggregator
+        mockStorageAggregator,
+        actorContext
       );
 
       expect(vi.mocked(profileService.createProfile)).toHaveBeenCalledWith(
@@ -771,18 +886,19 @@ describe('WhiteboardService', () => {
     });
   });
 
-  describe('createWhiteboard — server-side copy from sourceWhiteboardID (#29)', () => {
+  describe('createWhiteboard — source-clone authz + asset re-home (006 write-path security)', () => {
     const mockStorageAggregator = {} as IStorageAggregator;
+    const TARGET_BUCKET = 'sb-target';
+    const SOURCE_BUCKET = 'sb-source';
     const mockProfile = {
       id: 'profile-new',
       displayName: 'Whiteboard Template',
-      storageBucket: { id: 'sb-new' },
+      storageBucket: { id: TARGET_BUCKET },
     } as unknown as IProfile;
 
-    // A real, openable empty Yjs-V2 snapshot (no embedded media → rehome is a
-    // verbatim pass-through, so no profile-document mocks are needed). Stands in
-    // for the SOURCE whiteboard's content ("content X").
-    const sourceSnapshotBase64 = Buffer.from(
+    // A real, openable empty Yjs-V2 snapshot (no assets, no elements → rehome is a
+    // verbatim pass-through).
+    const emptySnapshotBase64 = Buffer.from(
       Y.encodeStateAsUpdateV2(new Y.Doc())
     ).toString('base64');
 
@@ -802,89 +918,373 @@ describe('WhiteboardService', () => {
         size: 1,
         reused: false,
       });
+      // Default: the freshly-created whiteboard, so the Phase-3 rollback path
+      // (deleteWhiteboard on a re-home failure) can resolve+cascade cleanly.
+      whiteboardRepository.findOne!.mockResolvedValue({
+        id: 'wb-new',
+        authorization: { id: 'wb-auth' },
+        profile: { id: 'profile-new', storageBucket: { id: TARGET_BUCKET } },
+      } as unknown as Whiteboard);
+      vi.mocked(profileService.deleteProfile).mockResolvedValue({} as any);
+      vi.mocked(authorizationPolicyService.delete).mockResolvedValue({} as any);
+      (whiteboardRepository as unknown as { manager: unknown }).manager = {
+        transaction: vi.fn(async (cb: any) =>
+          cb({ remove: vi.fn().mockResolvedValue({}) })
+        ),
+      };
     });
 
-    it("copies the source whiteboard's content (X) into the new whiteboard, overriding the empty client placeholder", async () => {
-      // The SOURCE whiteboard the template is captured from — its content lives in
-      // its own bucket and is read via getWhiteboardContent → file-service batch.
+    // Configure the SOURCE whiteboard a clone dereferences. A single object serves
+    // both the source-load (needs authorization + profile.storageBucket) and the
+    // getWhiteboardContent pointer read.
+    const mockSource = (opts: { contentPointer?: string } = {}) => {
       whiteboardRepository.findOne!.mockResolvedValue({
         id: 'source-wb',
-        contentPointer: 'source-ptr',
+        authorization: { id: 'source-auth' },
+        profile: { storageBucket: { id: SOURCE_BUCKET } },
+        contentPointer: opts.contentPointer,
       } as unknown as Whiteboard);
+    };
+
+    // --- XOR: content and sourceWhiteboardID are mutually exclusive by PRESENCE ---
+    it('rejects a create that supplies BOTH content and sourceWhiteboardID, before any side effect', async () => {
+      await expect(
+        service.createWhiteboard(
+          { content: emptySnapshotBase64, sourceWhiteboardID: 'source-wb' },
+          mockStorageAggregator,
+          actorContext
+        )
+      ).rejects.toThrow(ValidationException);
+      expect(profileService.createProfile).not.toHaveBeenCalled();
+      expect(whiteboardRepository.findOne).not.toHaveBeenCalled();
+    });
+
+    it('rejects when the extra content is an encoded-empty string (present, not truthy)', async () => {
+      await expect(
+        service.createWhiteboard(
+          { content: '', sourceWhiteboardID: 'source-wb' },
+          mockStorageAggregator,
+          actorContext
+        )
+      ).rejects.toThrow(ValidationException);
+      expect(profileService.createProfile).not.toHaveBeenCalled();
+    });
+
+    // --- Path A: source clone authorizes READ on the dereferenced source ---
+    it('authorizes READ on the source whiteboard, then seeds the new bucket from the source snapshot', async () => {
+      mockSource({ contentPointer: 'source-ptr' });
+      // Distinctive (non-empty) source bytes so "seeded from source, not a fresh empty
+      // placeholder doc" is actually discriminating (the shape carries no assets, so
+      // rehome is a verbatim pass-through).
+      const sourceContent = await buildShapeSnapshotBase64();
       vi.mocked(fileServiceAdapter.getContentBatch).mockResolvedValue([
-        { id: 'source-ptr', found: true, contentBase64: sourceSnapshotBase64 },
+        { id: 'source-ptr', found: true, contentBase64: sourceContent },
       ]);
 
       const result = await service.createWhiteboard(
         {
-          // The client now sends an EMPTY placeholder here for the
-          // Save-as-Template flow; the source copy must win.
-          content: Buffer.from('EMPTY-PLACEHOLDER').toString('base64'),
           sourceWhiteboardID: 'source-wb',
           profile: { displayName: 'Whiteboard Template' },
         },
-        mockStorageAggregator
+        mockStorageAggregator,
+        actorContext
       );
 
-      // The new whiteboard's bucket is seeded from the SOURCE snapshot bytes, NOT
-      // the empty placeholder — the snapshot written is byte-equal to the source's
-      // (an empty Y.Doc has no embedded media, so rehome is a verbatim pass).
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        expect.objectContaining({ id: 'source-auth' }),
+        AuthorizationPrivilege.READ,
+        expect.any(String)
+      );
       expect(fileServiceAdapter.getContentBatch).toHaveBeenCalledWith([
         'source-ptr',
       ]);
       const [writtenSnapshot, bucketId] = vi.mocked(
         fileServiceAdapter.createSnapshotInBucket
       ).mock.calls[0];
-      expect(bucketId).toBe('sb-new');
+      expect(bucketId).toBe(TARGET_BUCKET);
       expect(Buffer.from(writtenSnapshot).toString('base64')).toBe(
-        sourceSnapshotBase64
+        sourceContent
       );
+      expect(sourceContent).not.toBe(emptySnapshotBase64);
       expect(result.contentPointer).toBe('snap-new');
     });
 
-    it('falls back to the client `content` when the source whiteboard has no stored content (never edited)', async () => {
+    it('rejects the clone when the actor lacks READ on the source — no profile created, no snapshot written', async () => {
+      mockSource({ contentPointer: 'source-ptr' });
+      vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(
+        () => {
+          throw new ForbiddenException('denied', 'test' as any);
+        }
+      );
+
+      await expect(
+        service.createWhiteboard(
+          { sourceWhiteboardID: 'source-wb' },
+          mockStorageAggregator,
+          actorContext
+        )
+      ).rejects.toThrow(ForbiddenException);
+      expect(profileService.createProfile).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.createSnapshotInBucket).not.toHaveBeenCalled();
+    });
+
+    it('RED: a source whose storage bucket is unresolved fails closed (never downgrades the clone media gate)', async () => {
+      // Source authorized, but its profile.storageBucket did not resolve → the strict
+      // source-bucket media constraint is unenforceable, so the clone must abort rather
+      // than silently fall through to the untrusted per-document branch.
       whiteboardRepository.findOne!.mockResolvedValue({
         id: 'source-wb',
-        contentPointer: undefined,
+        authorization: { id: 'source-auth' },
+        profile: {},
+        contentPointer: 'source-ptr',
       } as unknown as Whiteboard);
-      vi.mocked(profileService.getProfileOrFail).mockResolvedValue({
-        id: 'profile-new',
-        storageBucket: { id: 'sb-new', documents: [] },
-      } as any);
 
-      const fallbackContent = Buffer.from(
-        Y.encodeStateAsUpdateV2(new Y.Doc())
-      ).toString('base64');
-
-      const result = await service.createWhiteboard(
-        {
-          content: fallbackContent,
-          sourceWhiteboardID: 'source-wb',
-          profile: { displayName: 'Whiteboard Template' },
-        },
-        mockStorageAggregator
-      );
-
-      // Source returned "" → the create content is used instead.
-      const [writtenSnapshot] = vi.mocked(
-        fileServiceAdapter.createSnapshotInBucket
-      ).mock.calls[0];
-      expect(Buffer.from(writtenSnapshot).toString('base64')).toBe(
-        fallbackContent
-      );
-      expect(result.contentPointer).toBe('snap-new');
+      await expect(
+        service.createWhiteboard(
+          { sourceWhiteboardID: 'source-wb' },
+          mockStorageAggregator,
+          actorContext
+        )
+      ).rejects.toThrow(EntityNotInitializedException);
+      // Aborts after the source READ but before reading source content or creating anything.
+      expect(fileServiceAdapter.getContentBatch).not.toHaveBeenCalled();
+      expect(profileService.createProfile).not.toHaveBeenCalled();
     });
 
-    it('does not read a source when sourceWhiteboardID is absent', async () => {
+    it('seeds an empty board when the source has no stored content (no fallback to any client content)', async () => {
+      mockSource({ contentPointer: undefined });
+
       const result = await service.createWhiteboard(
-        {
-          content: sourceSnapshotBase64,
-          profile: { displayName: 'Whiteboard Template' },
-        },
-        mockStorageAggregator
+        { sourceWhiteboardID: 'source-wb' },
+        mockStorageAggregator,
+        actorContext
+      );
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
+      expect(fileServiceAdapter.createSnapshotInBucket).not.toHaveBeenCalled();
+      expect(result.contentPointer).toBeUndefined();
+    });
+
+    it('does not dereference any source when sourceWhiteboardID is absent (direct-content path)', async () => {
+      const result = await service.createWhiteboard(
+        { content: emptySnapshotBase64, profile: { displayName: 'x' } },
+        mockStorageAggregator,
+        actorContext
       );
 
       expect(fileServiceAdapter.getContentBatch).not.toHaveBeenCalled();
+      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+      expect(result.contentPointer).toBe('snap-new');
+    });
+
+    // --- Asset re-home authorization (the exfiltration boundary) ---
+    it('RED: a source-clone locator pointing outside the source bucket is rejected — zero copies, zero persistence', async () => {
+      mockSource({ contentPointer: 'source-ptr' });
+      const sourceWithAsset = await buildAssetSnapshotBase64({
+        'file-1': 'loc-1',
+      });
+      vi.mocked(fileServiceAdapter.getContentBatch).mockResolvedValue([
+        { id: 'source-ptr', found: true, contentBase64: sourceWithAsset },
+      ]);
+      // The referenced document lives in a DIFFERENT bucket than the authorized source.
+      vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
+        id: 'loc-1',
+        authorization: { id: 'doc-auth' },
+        storageBucket: { id: 'sb-foreign' },
+      } as any);
+
+      await expect(
+        service.createWhiteboard(
+          { sourceWhiteboardID: 'source-wb' },
+          mockStorageAggregator,
+          actorContext
+        )
+      ).rejects.toThrow(ForbiddenException);
+      expect(storageBucketService.copyDocumentToBucket).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.createSnapshotInBucket).not.toHaveBeenCalled();
+    });
+
+    it('retains a locator already in the target bucket without copying it', async () => {
+      const content = await buildAssetSnapshotBase64({ 'file-1': 'loc-1' });
+      vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
+        id: 'loc-1',
+        authorization: { id: 'doc-auth' },
+        storageBucket: { id: TARGET_BUCKET },
+      } as any);
+
+      const result = await service.createWhiteboard(
+        { content },
+        mockStorageAggregator,
+        actorContext
+      );
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        expect.objectContaining({ id: 'doc-auth' }),
+        AuthorizationPrivilege.READ,
+        expect.any(String)
+      );
+      expect(storageBucketService.copyDocumentToBucket).not.toHaveBeenCalled();
+      expect(result.contentPointer).toBe('snap-new');
+    });
+
+    it('RED: direct content referencing a document the actor cannot READ aborts in Phase 3 — zero copy, zero persist, rollback', async () => {
+      // The exfiltration boundary for UNTRUSTED direct content (no sourceWhiteboardID →
+      // per-document READ). Denial here throws AFTER the entity+profile are saved, so
+      // this exercises the Phase-3 abort + deleteWhiteboard rollback, distinct from the
+      // pre-Phase-1 source-clone rejection.
+      const content = await buildAssetSnapshotBase64({ 'file-1': 'loc-1' });
+      vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
+        id: 'loc-1',
+        authorization: { id: 'doc-auth' },
+        storageBucket: { id: 'sb-other' },
+      } as any);
+      // The initiating actor lacks READ on the referenced document.
+      vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(
+        () => {
+          throw new ForbiddenException('denied', 'test' as any);
+        }
+      );
+
+      await expect(
+        service.createWhiteboard(
+          { content },
+          mockStorageAggregator,
+          actorContext
+        )
+      ).rejects.toThrow(ForbiddenException);
+      expect(storageBucketService.copyDocumentToBucket).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.createSnapshotInBucket).not.toHaveBeenCalled();
+    });
+
+    it('RED: a copy failure on the 2nd asset deletes the already-copied 1st and persists nothing', async () => {
+      const content = await buildAssetSnapshotBase64({
+        'file-1': 'loc-1',
+        'file-2': 'loc-2',
+      });
+      vi.mocked(documentService.getDocumentOrFail).mockImplementation(
+        async (id: any) =>
+          ({
+            id,
+            authorization: { id: `${id}-auth` },
+            storageBucket: { id: 'sb-other' },
+          }) as any
+      );
+      vi.mocked(storageBucketService.copyDocumentToBucket)
+        .mockResolvedValueOnce({ id: 'copy-1' } as any)
+        .mockRejectedValueOnce(new Error('copy failed'));
+
+      await expect(
+        service.createWhiteboard(
+          { content },
+          mockStorageAggregator,
+          actorContext
+        )
+      ).rejects.toThrow();
+
+      expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith('copy-1');
+      expect(fileServiceAdapter.createSnapshotInBucket).not.toHaveBeenCalled();
+    });
+
+    it('copies foreign-content assets into the target bucket with skipDedup=true (never a foreign dedup row)', async () => {
+      const content = await buildAssetSnapshotBase64({ 'file-1': 'loc-1' });
+      vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
+        id: 'loc-1',
+        authorization: { id: 'doc-auth' },
+        storageBucket: { id: 'sb-other' },
+      } as any);
+      vi.mocked(storageBucketService.copyDocumentToBucket).mockResolvedValue({
+        id: 'copy-1',
+      } as any);
+
+      const result = await service.createWhiteboard(
+        { content },
+        mockStorageAggregator,
+        actorContext
+      );
+
+      expect(storageBucketService.copyDocumentToBucket).toHaveBeenCalledWith(
+        TARGET_BUCKET,
+        expect.objectContaining({ id: 'loc-1' }),
+        actorContext.actorID,
+        true
+      );
+      expect(result.contentPointer).toBe('snap-new');
+    });
+
+    it('RED: rejects a snapshot whose asset map holds a descriptor object instead of a locator string', async () => {
+      const content = buildSnapshotBase64({
+        'file-1': { url: 'http://x/y.png' },
+      });
+
+      await expect(
+        service.createWhiteboard(
+          { content },
+          mockStorageAggregator,
+          actorContext
+        )
+      ).rejects.toThrow();
+      expect(storageBucketService.copyDocumentToBucket).not.toHaveBeenCalled();
+    });
+
+    // --- Desired-snapshot element↔asset preflight (collab-service parity) ---
+    it('RED: a live image whose fileId has no asset locator is rejected before any copy or persist', async () => {
+      const content = await buildImageSnapshotBase64({ fileId: 'f1' });
+
+      await expect(
+        service.createWhiteboard(
+          { content },
+          mockStorageAggregator,
+          actorContext
+        )
+      ).rejects.toThrow(ValidationException);
+      expect(storageBucketService.copyDocumentToBucket).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.createSnapshotInBucket).not.toHaveBeenCalled();
+    });
+
+    it('ignores a missing asset for a DELETED image (preflight examines desired, not prior, elements)', async () => {
+      const content = await buildImageSnapshotBase64({
+        fileId: 'f1',
+        deleted: true,
+      });
+
+      const result = await service.createWhiteboard(
+        { content },
+        mockStorageAggregator,
+        actorContext
+      );
+
+      expect(result.contentPointer).toBe('snap-new');
+      expect(storageBucketService.copyDocumentToBucket).not.toHaveBeenCalled();
+    });
+
+    it('re-homes an image asset and persists exactly one seeded snapshot when everything resolves', async () => {
+      const content = await buildImageSnapshotBase64({
+        fileId: 'f1',
+        assetLocator: 'loc-1',
+      });
+      vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
+        id: 'loc-1',
+        authorization: { id: 'doc-auth' },
+        storageBucket: { id: 'sb-other' },
+      } as any);
+      vi.mocked(storageBucketService.copyDocumentToBucket).mockResolvedValue({
+        id: 'copy-1',
+      } as any);
+
+      const result = await service.createWhiteboard(
+        { content },
+        mockStorageAggregator,
+        actorContext
+      );
+
+      expect(storageBucketService.copyDocumentToBucket).toHaveBeenCalledTimes(
+        1
+      );
+      expect(fileServiceAdapter.createSnapshotInBucket).toHaveBeenCalledTimes(
+        1
+      );
       expect(result.contentPointer).toBe('snap-new');
     });
   });

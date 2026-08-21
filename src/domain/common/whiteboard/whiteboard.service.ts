@@ -1,5 +1,6 @@
 import { LogContext, ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
@@ -8,9 +9,13 @@ import { WhiteboardPreviewMode } from '@common/enums/whiteboard.preview.mode';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  ForbiddenException,
   RelationshipNotFoundException,
+  ValidationException,
 } from '@common/exceptions';
 import { ExcalidrawContent } from '@common/interfaces';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
   CollaborationLifecycleService,
   CollaborationMetadata,
@@ -18,7 +23,9 @@ import {
 } from '@domain/common/collaboration-metadata';
 import { IProfile } from '@domain/common/profile';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
+import { DocumentService } from '@domain/storage/document/document.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
@@ -33,6 +40,7 @@ import { ProfileService } from '../profile/profile.service';
 import { CreateWhiteboardInput } from './dto/whiteboard.dto.create';
 import { UpdateWhiteboardInput } from './dto/whiteboard.dto.update';
 import { Whiteboard } from './whiteboard.entity';
+import { loadWhiteboardFork, WhiteboardFork } from './whiteboard.fork';
 import { IWhiteboard } from './whiteboard.interface';
 
 @Injectable()
@@ -48,13 +56,16 @@ export class WhiteboardService {
     private communityResolverService: CommunityResolverService,
     private licenseService: LicenseService,
     private collaborationLifecycleService: CollaborationLifecycleService,
-    private fileServiceAdapter: FileServiceAdapter
+    private fileServiceAdapter: FileServiceAdapter,
+    private authorizationService: AuthorizationService,
+    private documentService: DocumentService,
+    private storageBucketService: StorageBucketService
   ) {}
 
   async createWhiteboard(
     whiteboardData: CreateWhiteboardInput,
     storageAggregator: IStorageAggregator,
-    userID?: string
+    actorContext: ActorContext
   ): Promise<IWhiteboard> {
     // The initial content arrives server-side as a base64 Yjs-V2 snapshot (the
     // single CRDT representation — never an Excalidraw scene/JSON) on client
@@ -63,18 +74,58 @@ export class WhiteboardService {
     // `Whiteboard.create` no longer carries it, nor the source-copy pointer.
     const { content, sourceWhiteboardID, ...entityData } = whiteboardData;
 
-    // #29 server-side copy: when the create references a source whiteboard, read
-    // its stored snapshot and seed the new whiteboard with it. The client can no
-    // longer read a live whiteboard's content (it is WS-only since 006), so the
-    // "Save as Template" flow relies on this. A resolved, non-empty source wins
-    // over `content` (the client sends an empty placeholder there); an
-    // unresolvable / never-edited source (returns `''`) falls back to `content`.
-    let initialScene = content;
-    if (sourceWhiteboardID) {
-      const sourceContent = await this.getWhiteboardContent(sourceWhiteboardID);
-      if (sourceContent) {
-        initialScene = sourceContent;
+    // XOR by PRESENCE (not truthiness): `content` and `sourceWhiteboardID` are
+    // mutually exclusive. A create that supplies BOTH is malformed — reject BEFORE
+    // any DB / file / collab side effect. `content === ''` (or an encoded-empty
+    // snapshot) still counts as present, so a source clone can never smuggle a
+    // second, untrusted content representation alongside it.
+    if (content != null && sourceWhiteboardID != null) {
+      throw new ValidationException(
+        'A whiteboard create must supply EITHER content OR sourceWhiteboardID, not both',
+        LogContext.WHITEBOARDS
+      );
+    }
+
+    // Resolve the initial snapshot + the authorization boundary for its embedded
+    // media. The two branches carry DIFFERENT trust:
+    //  - `sourceWhiteboardID` (clone / Save-as-Template): the service authorizes
+    //    READ on the source it dereferences HERE (the resolver only authorizes
+    //    CREATE on the destination parent); embedded-media locators are then
+    //    constrained to the source's OWN bucket. A source with no stored snapshot
+    //    seeds an EMPTY board — never a fallback to client `content`.
+    //  - direct `content`: locators are untrusted → per-document READ under the
+    //    initiating actor (identical rule to a live content replacement).
+    let initialScene: string | undefined;
+    let sourceBucketId: string | undefined;
+    if (sourceWhiteboardID != null) {
+      const source = await this.getWhiteboardOrFail(sourceWhiteboardID, {
+        loadEagerRelations: false,
+        relations: { authorization: true, profile: { storageBucket: true } },
+      });
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        source.authorization,
+        AuthorizationPrivilege.READ,
+        `create whiteboard from source: ${sourceWhiteboardID}`
+      );
+      sourceBucketId = source.profile?.storageBucket?.id;
+      // Fail CLOSED: the source-clone media constraint ("every locator must live in
+      // the source's own bucket") is only enforceable when we know that bucket. An
+      // unresolved source bucket (legacy row / partial load) must NOT silently fall
+      // through to the untrusted per-document branch — that would drop the strict gate
+      // undetected. A source whiteboard always has a bucket, so this is a data-integrity
+      // guard, never a normal path.
+      if (sourceBucketId == null) {
+        throw new EntityNotInitializedException(
+          'Source whiteboard storage bucket unresolved; cannot constrain clone media to the source bucket',
+          LogContext.WHITEBOARDS,
+          { sourceWhiteboardID }
+        );
       }
+      initialScene =
+        (await this.getWhiteboardContent(sourceWhiteboardID)) || undefined;
+    } else {
+      initialScene = content ?? undefined;
     }
 
     // Phase 1: build entity tree in memory (no file-service-go calls).
@@ -84,7 +135,9 @@ export class WhiteboardService {
     whiteboard.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.WHITEBOARD
     );
-    whiteboard.createdBy = userID;
+    // `ActorContext.actorID` is typed `string` and defaults to '' for an empty/anonymous
+    // context; `|| undefined` keeps a malformed empty-string out of the UUID column (NULL).
+    whiteboard.createdBy = actorContext.actorID || undefined;
     whiteboard.contentUpdatePolicy = ContentUpdatePolicy.CONTRIBUTORS;
 
     whiteboard.profile = await this.profileService.createProfile(
@@ -131,9 +184,10 @@ export class WhiteboardService {
             { whiteboardId: saved.id }
           );
         }
-        const snapshot = await this.rehomeSnapshotMedia(
+        const snapshot = await this.rehomeSnapshotAssets(
           Buffer.from(initialScene, 'base64'),
-          saved.profile.id
+          storageBucketId,
+          { actorContext, sourceBucketId }
         );
         const result = await this.fileServiceAdapter.createSnapshotInBucket(
           snapshot,
@@ -198,6 +252,166 @@ export class WhiteboardService {
       return Buffer.from(Y.encodeStateAsUpdateV2(doc));
     } finally {
       doc.destroy();
+    }
+  }
+
+  /**
+   * Authorized locator-only re-home of a Yjs-V2 whiteboard snapshot's embedded media
+   * into `targetBucketId` (006-collab-content-unification write-path). The snapshot's
+   * asset map is the physical `FILES` Y.Map of opaque file-service locator STRINGS — the
+   * logical API name is `assets`; the physical root name `files` is a FROZEN legacy schema
+   * name from the BinaryFileData era (renaming it is a stored-format break, not cleanup;
+   * see whiteboard.fork). For every locator this loads its source document, AUTHORIZES it,
+   * and — unless it already lives in the target bucket — copies it there (content-addressed;
+   * `skipDedup` so the copy is target-OWNED, never a foreign dedup row). Authorization is
+   * caller-scoped:
+   *   - source clone (`sourceBucketId` set): the locator's document MUST live in that exact
+   *     resolver-authorized source bucket — a foreign locator is a crafted reference → reject;
+   *   - direct untrusted content: per-document READ under `actorContext` (same rule as a
+   *     live content replacement).
+   * PHASE 1 authorizes + copies EVERY locator; PHASE 2 rewrites the map in ONE `doc.transact`
+   * under `LOCAL_ORIGIN`. A copy failure before the rewrite best-effort deletes the fresh
+   * target copies and publishes NO locator (the caller's entity rollback removes a
+   * half-created whiteboard). An empty asset map returns the snapshot verbatim (no lookups).
+   * The loaded doc is edited IN PLACE (never decode→edit→re-encode, which would discard CRDT
+   * lineage / deletion / reconciliation state).
+   */
+  private async rehomeSnapshotAssets(
+    snapshot: Uint8Array,
+    targetBucketId: string,
+    authz: { actorContext: ActorContext; sourceBucketId?: string }
+  ): Promise<Buffer> {
+    const fork = await loadWhiteboardFork();
+    const doc = new Y.Doc();
+    const createdTargetLocators: string[] = [];
+    try {
+      Y.applyUpdateV2(doc, snapshot);
+      const yAssets = doc.getMap<unknown>(fork.FILES);
+      // `readAssetLocators` is loud on legacy/invalid (non-string) values.
+      const current = fork.readAssetLocators(yAssets) as Record<string, string>;
+
+      // Desired-snapshot preflight (shared with the live-replace path): every live
+      // image element that names a fileId MUST have a matching asset locator here.
+      // This runs BEFORE the empty-map early return and BEFORE any copy — a snapshot
+      // carrying an image(fileId=f1) with no assets entry would otherwise slip through
+      // as "no assets to re-home" and land an unresolvable image (ed-yjs: a prune-write
+      // over such a map is silent, not an error). It examines the DESIRED elements, so a
+      // locator whose only referencing image was removed by this snapshot is not required.
+      this.assertDesiredAssetsResolveImages(doc, fork, current);
+
+      const fileIds = Object.keys(current);
+      if (fileIds.length === 0) {
+        return Buffer.from(snapshot);
+      }
+
+      // PHASE 1: authorize + copy EVERY asset into the target bucket first
+      // (abort-before-mutation — the Y.Map is not touched until all copies succeed).
+      const desired: Record<string, string> = {};
+      for (const fileId of fileIds) {
+        const sourceLocator = current[fileId];
+        const sourceDocument = await this.documentService.getDocumentOrFail(
+          sourceLocator,
+          {
+            loadEagerRelations: false,
+            relations: { authorization: true, storageBucket: true },
+          }
+        );
+        const sourceDocumentBucketId = sourceDocument.storageBucket?.id;
+
+        if (authz.sourceBucketId != null) {
+          // Source clone: every locator MUST belong to the authorized source bucket.
+          if (sourceDocumentBucketId !== authz.sourceBucketId) {
+            throw new ForbiddenException(
+              'Whiteboard source-copy references a document outside the authorized source bucket',
+              LogContext.WHITEBOARDS,
+              { fileId }
+            );
+          }
+        } else {
+          // Direct untrusted content: per-document READ under the initiating actor.
+          this.authorizationService.grantAccessOrFail(
+            authz.actorContext,
+            sourceDocument.authorization,
+            AuthorizationPrivilege.READ,
+            `re-home whiteboard media document: ${sourceLocator}`
+          );
+        }
+
+        if (sourceDocumentBucketId === targetBucketId) {
+          // Already target-owned — retain the locator, do not copy.
+          desired[fileId] = sourceLocator;
+          continue;
+        }
+        const copied = await this.storageBucketService.copyDocumentToBucket(
+          targetBucketId,
+          sourceDocument,
+          authz.actorContext.actorID || undefined,
+          true // skipDedup: the copy must be target-owned, never a foreign dedup row
+        );
+        createdTargetLocators.push(copied.id);
+        desired[fileId] = copied.id;
+      }
+
+      // PHASE 2: all copies succeeded → rewrite the asset map in ONE transaction.
+      doc.transact(() => {
+        fork.writeAssetLocators(yAssets, desired, { prune: true });
+      }, fork.LOCAL_ORIGIN);
+      return Buffer.from(Y.encodeStateAsUpdateV2(doc));
+    } catch (error) {
+      // Pre-rewrite failure: best-effort delete the fresh target copies; publish NO locator.
+      await Promise.all(
+        createdTargetLocators.map(id =>
+          this.fileServiceAdapter.deleteDocument(id).catch(() => undefined)
+        )
+      );
+      throw error;
+    } finally {
+      doc.destroy();
+    }
+  }
+
+  /**
+   * Desired-snapshot consistency preflight, shared by creation/source-copy (here) and
+   * the live whole-scene replacement path. For every non-deleted IMAGE element carrying
+   * a non-null `fileId`, the snapshot's asset map MUST hold a valid (non-empty string)
+   * locator for that `fileId`. A missing/invalid reference is rejected BEFORE any asset
+   * copy or Scene mutation.
+   *
+   * Why it examines the DESIRED elements (this exact snapshot), not a prior scene: a
+   * whole-scene replacement legitimately drops elements, so a locator whose only
+   * referencing image is gone here should be pruned — but a NEW image that names an
+   * absent asset must never land, because `setAssetLocators(...,{prune:true})` removes
+   * unreferenced locators silently (no write/encode error; measured in ed-yjs), which
+   * would otherwise leave a live image pointing at nothing.
+   */
+  private assertDesiredAssetsResolveImages(
+    doc: Y.Doc,
+    fork: WhiteboardFork,
+    assets: Record<string, string>
+  ): void {
+    const elementsMap = doc.getMap<Y.Map<unknown>>(fork.ELEMENTS);
+    for (const [id, ymap] of elementsMap.entries()) {
+      const element = fork.yMapToElement(ymap) as Record<string, unknown> & {
+        id?: string;
+      };
+      if (element.isDeleted) {
+        continue;
+      }
+      if (element.type !== 'image') {
+        continue;
+      }
+      const fileId = element.fileId;
+      if (fileId == null) {
+        continue;
+      }
+      const locator = assets[fileId as string];
+      if (typeof locator !== 'string' || locator.length === 0) {
+        throw new ValidationException(
+          'Whiteboard snapshot references an image asset that is missing from its file map',
+          LogContext.WHITEBOARDS,
+          { elementId: element.id ?? id, fileId }
+        );
+      }
     }
   }
 

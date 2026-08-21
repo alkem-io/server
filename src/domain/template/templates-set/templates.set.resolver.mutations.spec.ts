@@ -84,7 +84,8 @@ describe('TemplatesSetResolverMutations', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
       expect(templatesSetService.createTemplate).toHaveBeenCalledWith(
         templatesSet,
-        templateData
+        templateData,
+        actorContext
       );
       expect(authorizationPolicyService.saveAll).toHaveBeenCalled();
       expect(result).toBe(template);
@@ -200,7 +201,8 @@ describe('TemplatesSetResolverMutations', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledTimes(2);
       expect(templatesSetService.createTemplateFromSpace).toHaveBeenCalledWith(
         templatesSet,
-        templateData
+        templateData,
+        actorContext
       );
     });
   });
@@ -238,7 +240,7 @@ describe('TemplatesSetResolverMutations', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledTimes(2);
       expect(
         templatesSetService.createTemplateFromContentSpace
-      ).toHaveBeenCalledWith(templatesSet, templateData);
+      ).toHaveBeenCalledWith(templatesSet, templateData, actorContext);
     });
   });
 });

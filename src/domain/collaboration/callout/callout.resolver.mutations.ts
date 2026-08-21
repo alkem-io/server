@@ -214,6 +214,7 @@ export class CalloutResolverMutations {
     const updatedCallout = await this.calloutService.updateCallout(
       callout,
       calloutData,
+      actorContext,
       actorContext.actorID
     );
 
@@ -421,6 +422,7 @@ export class CalloutResolverMutations {
 
     let contribution = await this.calloutService.createContributionOnCallout(
       contributionData,
+      actorContext,
       actorContext.actorID
     );
 

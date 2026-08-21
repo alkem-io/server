@@ -9,6 +9,7 @@ import { MemoService } from '@domain/common/memo/memo.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { actorContextData } from '@test/data/actorContext.mock';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -81,6 +82,7 @@ describe('CalloutContributionService', () => {
         storageAggregator,
         contributionSettings,
         undefined,
+        actorContextData.actorContext,
         userID
       );
 
@@ -94,6 +96,30 @@ describe('CalloutContributionService', () => {
         userID,
         undefined
       );
+    });
+
+    // Defense-in-depth for anonymous/system contexts (actorID='' → userID=''): the
+    // contribution's createdBy must map to NULL/undefined, never the empty string into
+    // its nullable `uuid` column.
+    it('maps an empty-string userID to an undefined contribution createdBy', async () => {
+      vi.mocked(postService.createPost).mockResolvedValue({
+        id: 'post-1',
+      } as any);
+
+      const result = await service.createCalloutContribution(
+        {
+          type: CalloutContributionType.POST,
+          post: { profileData: { displayName: 'Test Post' } },
+          sortOrder: 5,
+        } as any,
+        storageAggregator,
+        { allowedTypes: [CalloutContributionType.POST] } as any,
+        undefined,
+        actorContextData.actorContext,
+        ''
+      );
+
+      expect(result.createdBy).toBeUndefined();
     });
 
     it('should create a WHITEBOARD contribution when type is allowed', async () => {
@@ -115,6 +141,7 @@ describe('CalloutContributionService', () => {
         storageAggregator,
         contributionSettings,
         undefined,
+        actorContextData.actorContext,
         userID
       );
 
@@ -138,6 +165,7 @@ describe('CalloutContributionService', () => {
         storageAggregator,
         contributionSettings,
         undefined,
+        actorContextData.actorContext,
         userID
       );
 
@@ -161,6 +189,7 @@ describe('CalloutContributionService', () => {
         storageAggregator,
         contributionSettings,
         undefined,
+        actorContextData.actorContext,
         userID
       );
 
@@ -183,6 +212,7 @@ describe('CalloutContributionService', () => {
         storageAggregator,
         contributionSettings,
         undefined,
+        actorContextData.actorContext,
         userID
       );
 
@@ -204,6 +234,7 @@ describe('CalloutContributionService', () => {
           storageAggregator,
           contributionSettings,
           undefined,
+          actorContextData.actorContext,
           userID
         )
       ).rejects.toThrow(ValidationException);
@@ -224,6 +255,7 @@ describe('CalloutContributionService', () => {
           storageAggregator,
           contributionSettings,
           undefined,
+          actorContextData.actorContext,
           userID
         )
       ).rejects.toThrow(ValidationException);
@@ -245,6 +277,7 @@ describe('CalloutContributionService', () => {
           storageAggregator,
           contributionSettings,
           undefined,
+          actorContextData.actorContext,
           userID
         )
       ).rejects.toThrow(ValidationException);
@@ -276,6 +309,7 @@ describe('CalloutContributionService', () => {
         contributionsData,
         storageAggregator,
         contributionSettings,
+        actorContextData.actorContext,
         'user-1'
       );
 

@@ -14,6 +14,7 @@ import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service'
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { actorContextData } from '@test/data/actorContext.mock';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -89,7 +90,8 @@ describe('CalloutFramingService', () => {
 
       const result = await service.createCalloutFraming(
         framingData,
-        storageAggregator
+        storageAggregator,
+        actorContextData.actorContext
       );
 
       expect(result.type).toBe(CalloutFramingType.NONE);
@@ -121,6 +123,7 @@ describe('CalloutFramingService', () => {
       const result = await service.createCalloutFraming(
         framingData,
         storageAggregator,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -142,7 +145,11 @@ describe('CalloutFramingService', () => {
       } as any);
 
       await expect(
-        service.createCalloutFraming(framingData, storageAggregator)
+        service.createCalloutFraming(
+          framingData,
+          storageAggregator,
+          actorContextData.actorContext
+        )
       ).rejects.toThrow(ValidationException);
     });
 
@@ -164,7 +171,8 @@ describe('CalloutFramingService', () => {
 
       const result = await service.createCalloutFraming(
         framingData,
-        storageAggregator
+        storageAggregator,
+        actorContextData.actorContext
       );
 
       expect(result.type).toBe(CalloutFramingType.LINK);
@@ -184,7 +192,11 @@ describe('CalloutFramingService', () => {
       } as any);
 
       await expect(
-        service.createCalloutFraming(framingData, storageAggregator)
+        service.createCalloutFraming(
+          framingData,
+          storageAggregator,
+          actorContextData.actorContext
+        )
       ).rejects.toThrow(ValidationException);
     });
 
@@ -201,7 +213,11 @@ describe('CalloutFramingService', () => {
       } as any);
 
       await expect(
-        service.createCalloutFraming(framingData, storageAggregator)
+        service.createCalloutFraming(
+          framingData,
+          storageAggregator,
+          actorContextData.actorContext
+        )
       ).rejects.toThrow(ValidationException);
     });
 
@@ -228,6 +244,7 @@ describe('CalloutFramingService', () => {
       const result = await service.createCalloutFraming(
         framingData,
         storageAggregator,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -257,7 +274,8 @@ describe('CalloutFramingService', () => {
 
       const result = await service.createCalloutFraming(
         framingData,
-        storageAggregator
+        storageAggregator,
+        actorContextData.actorContext
       );
 
       expect(result.type).toBe(CalloutFramingType.POLL);
@@ -277,7 +295,11 @@ describe('CalloutFramingService', () => {
       } as any);
 
       await expect(
-        service.createCalloutFraming(framingData, storageAggregator)
+        service.createCalloutFraming(
+          framingData,
+          storageAggregator,
+          actorContextData.actorContext
+        )
       ).rejects.toThrow(ValidationException);
     });
 
@@ -300,6 +322,7 @@ describe('CalloutFramingService', () => {
       const result = await service.createCalloutFraming(
         framingData,
         storageAggregator,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -329,6 +352,7 @@ describe('CalloutFramingService', () => {
       const result = await service.createCalloutFraming(
         framingData,
         { id: 'agg-1' } as any,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -368,6 +392,7 @@ describe('CalloutFramingService', () => {
       await service.createCalloutFraming(
         framingData,
         { id: 'agg-1' } as any,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -393,7 +418,11 @@ describe('CalloutFramingService', () => {
       } as any);
 
       await expect(
-        service.createCalloutFraming(framingData, { id: 'agg-1' } as any)
+        service.createCalloutFraming(
+          framingData,
+          { id: 'agg-1' } as any,
+          actorContextData.actorContext
+        )
       ).rejects.toThrow(ValidationException);
       expect(
         collaboraDocumentService.createCollaboraDocument
@@ -423,7 +452,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(profileService.updateProfile).toHaveBeenCalledWith(
@@ -447,7 +477,8 @@ describe('CalloutFramingService', () => {
           framing,
           updateData,
           storageAggregator,
-          true // isParentCalloutTemplate
+          true, // isParentCalloutTemplate
+          actorContextData.actorContext
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -467,7 +498,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        true
+        true,
+        actorContextData.actorContext
       );
 
       expect(result.type).toBe(CalloutFramingType.NONE);
@@ -492,7 +524,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(whiteboardService.updateWhiteboardContent).toHaveBeenCalledWith(
@@ -524,6 +557,7 @@ describe('CalloutFramingService', () => {
         updateData,
         storageAggregator,
         false,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -543,7 +577,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(result).toBe(framing);
@@ -570,7 +605,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(linkService.updateLink).toHaveBeenCalledWith(updateData.link);
@@ -598,7 +634,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(pollService.getPollOrFail).toHaveBeenCalledWith('poll-1');
@@ -621,7 +658,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(result).toBe(framing);
@@ -648,6 +686,7 @@ describe('CalloutFramingService', () => {
         updateData,
         storageAggregator,
         true, // isParentCalloutTemplate
+        actorContextData.actorContext,
         'actor-1' // initiating actor threaded to the live-room replacement
       );
 
@@ -682,6 +721,7 @@ describe('CalloutFramingService', () => {
         updateData,
         storageAggregator,
         false,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -706,6 +746,7 @@ describe('CalloutFramingService', () => {
         updateData,
         storageAggregator,
         false,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -725,7 +766,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(mediaGalleryService.createMediaGallery).not.toHaveBeenCalled();
@@ -747,7 +789,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(whiteboardService.deleteWhiteboard).toHaveBeenCalledWith('wb-1');
@@ -769,7 +812,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(memoService.deleteMemo).toHaveBeenCalledWith('memo-1');
@@ -791,7 +835,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(linkService.deleteLink).toHaveBeenCalledWith('link-1');
@@ -813,7 +858,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(pollService.deletePoll).toHaveBeenCalledWith('poll-1');
@@ -836,7 +882,8 @@ describe('CalloutFramingService', () => {
           framing,
           updateData,
           storageAggregator,
-          false
+          false,
+          actorContextData.actorContext
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -856,7 +903,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(mediaGalleryService.deleteMediaGallery).toHaveBeenCalledWith(
@@ -888,7 +936,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(whiteboardService.updateWhiteboardContent).toHaveBeenCalled();
@@ -915,7 +964,8 @@ describe('CalloutFramingService', () => {
           framing,
           updateData,
           storageAggregator,
-          false
+          false,
+          actorContextData.actorContext
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -934,7 +984,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(result.type).toBe(CalloutFramingType.SPACES);
@@ -962,7 +1013,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(linkService.createLink).toHaveBeenCalled();

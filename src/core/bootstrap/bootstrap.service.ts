@@ -131,13 +131,13 @@ export class BootstrapService {
 
       await this.platformService.ensureForumCreated();
       await this.ensureMessagingCreated();
-      await this.ensurePlatformTemplatesArePresent();
+      await this.ensurePlatformTemplatesArePresent(anonymousActorContext);
 
       // Create Org first (without admin if needed)
       await this.ensureOrganizationSingleton();
 
       // Create VC (needs Org)
-      await this.ensureGuidanceChat();
+      await this.ensureGuidanceChat(anonymousActorContext);
 
       // Create Users (including Admin)
       await this.bootstrapUserProfiles();
@@ -232,29 +232,33 @@ export class BootstrapService {
     );
   }
 
-  private async ensurePlatformTemplatesArePresent() {
+  private async ensurePlatformTemplatesArePresent(actorContext: ActorContext) {
     let authResetNeeded = await this.ensureSpaceTemplateIsPresent(
       TemplateDefaultType.PLATFORM_SPACE,
       'space',
-      bootstrapTemplateSpaceContentSpaceL0
+      bootstrapTemplateSpaceContentSpaceL0,
+      actorContext
     );
     authResetNeeded =
       (await this.ensureSpaceTemplateIsPresent(
         TemplateDefaultType.PLATFORM_SUBSPACE,
         'subspace',
-        bootstrapTemplateSpaceContentSubspace
+        bootstrapTemplateSpaceContentSubspace,
+        actorContext
       )) || authResetNeeded;
     authResetNeeded =
       (await this.ensureSpaceTemplateIsPresent(
         TemplateDefaultType.PLATFORM_SPACE_TUTORIALS,
         'space-tutorials',
-        bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials
+        bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials,
+        actorContext
       )) || authResetNeeded;
     authResetNeeded =
       (await this.ensureSpaceTemplateIsPresent(
         TemplateDefaultType.PLATFORM_SUBSPACE_KNOWLEDGE,
         'knowledge',
-        bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase
+        bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase,
+        actorContext
       )) || authResetNeeded;
     if (authResetNeeded) {
       this.logger.verbose?.(
@@ -270,7 +274,8 @@ export class BootstrapService {
   private async ensureSpaceTemplateIsPresent(
     templateDefaultType: TemplateDefaultType,
     nameID: string,
-    spaceContentData: CreateTemplateContentSpaceInput
+    spaceContentData: CreateTemplateContentSpaceInput,
+    actorContext: ActorContext
   ): Promise<boolean> {
     const templatesSet =
       await this.platformTemplatesService.getPlatformTemplatesSet();
@@ -298,7 +303,8 @@ export class BootstrapService {
           },
           type: TemplateType.SPACE,
           contentSpaceData: spaceContentData,
-        }
+        },
+        actorContext
       );
       // Set the default template
       templateDefault.template = template;
@@ -602,7 +608,7 @@ export class BootstrapService {
     }
   }
 
-  private async ensureGuidanceChat() {
+  private async ensureGuidanceChat(actorContext: ActorContext) {
     // Check if the CHAT_GUIDANCE well-known VC is configured
     const wellKnownVCId =
       await this.platformWellKnownVirtualContributorsService.getVirtualContributorID(
@@ -619,29 +625,32 @@ export class BootstrapService {
         await this.organizationService.getAccount(hostOrganization);
 
       // Create the VC
-      const vc = await this.accountService.createVirtualContributorOnAccount({
-        accountID: account.id,
-        aiPersona: {
-          engine: AiPersonaEngine.GUIDANCE,
-          prompt: [],
-          externalConfig: undefined,
-        },
-        profileData: {
-          displayName: 'Guidance',
-          description: 'Guidance Virtual Contributor',
-        },
-        dataAccessMode: VirtualContributorDataAccessMode.NONE,
-        bodyOfKnowledgeType: VirtualContributorBodyOfKnowledgeType.WEBSITE,
-        interactionModes: [
-          VirtualContributorInteractionMode.DISCUSSION_TAGGING,
-        ],
-        knowledgeBaseData: {
-          profile: {
-            displayName: 'Knowledge Base for Virtual Contributor',
+      const vc = await this.accountService.createVirtualContributorOnAccount(
+        {
+          accountID: account.id,
+          aiPersona: {
+            engine: AiPersonaEngine.GUIDANCE,
+            prompt: [],
+            externalConfig: undefined,
           },
-          calloutsSetData: {},
+          profileData: {
+            displayName: 'Guidance',
+            description: 'Guidance Virtual Contributor',
+          },
+          dataAccessMode: VirtualContributorDataAccessMode.NONE,
+          bodyOfKnowledgeType: VirtualContributorBodyOfKnowledgeType.WEBSITE,
+          interactionModes: [
+            VirtualContributorInteractionMode.DISCUSSION_TAGGING,
+          ],
+          knowledgeBaseData: {
+            profile: {
+              displayName: 'Knowledge Base for Virtual Contributor',
+            },
+            calloutsSetData: {},
+          },
         },
-      });
+        actorContext
+      );
 
       // Apply authorization for the newly created VC via account auth reset
       // (the earlier account auth reset in ensureOrganizationSingleton ran before

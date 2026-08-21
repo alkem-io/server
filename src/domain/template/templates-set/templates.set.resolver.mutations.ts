@@ -68,7 +68,8 @@ export class TemplatesSetResolverMutations {
     }
     const template = await this.templatesSetService.createTemplate(
       templatesSet,
-      templateData
+      templateData,
+      actorContext
     );
     const authorizations =
       await this.templateAuthorizationService.applyAuthorizationPolicy(
@@ -110,7 +111,8 @@ export class TemplatesSetResolverMutations {
     );
     const template = await this.templatesSetService.createTemplateFromSpace(
       templatesSet,
-      templateData
+      templateData,
+      actorContext
     );
     const authorizations =
       await this.templateAuthorizationService.applyAuthorizationPolicy(
@@ -155,7 +157,8 @@ export class TemplatesSetResolverMutations {
     const template =
       await this.templatesSetService.createTemplateFromContentSpace(
         templatesSet,
-        templateData
+        templateData,
+        actorContext
       );
     const authorizations =
       await this.templateAuthorizationService.applyAuthorizationPolicy(
