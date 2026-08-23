@@ -858,6 +858,86 @@ describe('WhiteboardService', () => {
       );
     });
 
+    it('RED: does NOT delete a REUSED checkpoint on save failure — an unchanged update that dedups to the previous pointer keeps it durable', async () => {
+      whiteboardRepository.findOne!.mockResolvedValue({
+        id: 'wb-1',
+        contentPointer: 'prev-ptr',
+        profile: { id: 'profile-1', storageBucket: { id: 'sb-1' } },
+      } as unknown as Whiteboard);
+      vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
+        id: 'src-loc',
+        authorization: { id: 'doc-auth' },
+        storageBucket: { id: 'sb-foreign' },
+      } as any);
+      vi.mocked(storageBucketService.copyDocumentToBucket).mockResolvedValue({
+        id: 'copied-loc',
+      } as any);
+      // Unchanged content dedups back to the CURRENT durable checkpoint (reused:true).
+      vi.mocked(fileServiceAdapter.createSnapshotInBucket).mockResolvedValue({
+        id: 'prev-ptr',
+        externalID: 'ext',
+        mimeType: 'application/octet-stream',
+        size: 1,
+        reused: true,
+      });
+      whiteboardRepository.save!.mockRejectedValue(new Error('save failed'));
+
+      await expect(
+        service.updateWhiteboardContent(
+          'wb-1',
+          await buildAssetSnapshotBase64({ 'file-1': 'src-loc' }),
+          actorContext
+        )
+      ).rejects.toThrow('save failed');
+      // The copied (skipDedup) media is still cleaned up ...
+      expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith(
+        'copied-loc'
+      );
+      // ... but the REUSED checkpoint (== the durable previous pointer) is NEVER deleted.
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalledWith(
+        'prev-ptr'
+      );
+    });
+
+    it('RED: does NOT delete a REUSED checkpoint owned by another row on save failure', async () => {
+      whiteboardRepository.findOne!.mockResolvedValue({
+        id: 'wb-1',
+        contentPointer: 'prev-ptr',
+        profile: { id: 'profile-1', storageBucket: { id: 'sb-1' } },
+      } as unknown as Whiteboard);
+      vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
+        id: 'src-loc',
+        authorization: { id: 'doc-auth' },
+        storageBucket: { id: 'sb-foreign' },
+      } as any);
+      vi.mocked(storageBucketService.copyDocumentToBucket).mockResolvedValue({
+        id: 'copied-loc',
+      } as any);
+      // The new snapshot content-dedups to a shared row owned elsewhere (reused:true).
+      vi.mocked(fileServiceAdapter.createSnapshotInBucket).mockResolvedValue({
+        id: 'shared-row',
+        externalID: 'ext',
+        mimeType: 'application/octet-stream',
+        size: 1,
+        reused: true,
+      });
+      whiteboardRepository.save!.mockRejectedValue(new Error('save failed'));
+
+      await expect(
+        service.updateWhiteboardContent(
+          'wb-1',
+          await buildAssetSnapshotBase64({ 'file-1': 'src-loc' }),
+          actorContext
+        )
+      ).rejects.toThrow('save failed');
+      expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith(
+        'copied-loc'
+      );
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalledWith(
+        'shared-row'
+      );
+    });
+
     it('preserves the original error when compensation cleanup also fails', async () => {
       whiteboardRepository.findOne!.mockResolvedValue(loadedWhiteboard());
       vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({

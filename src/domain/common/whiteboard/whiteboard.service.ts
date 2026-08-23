@@ -556,7 +556,15 @@ export class WhiteboardService {
         snapshot,
         whiteboard.profile.storageBucket.id
       );
-      newCheckpointId = result.id;
+      // Only a NEWLY-created checkpoint is ours to compensate. createSnapshotInBucket
+      // can DEDUP (`reused: true`) to an existing same-bucket row — possibly the current
+      // `previousPointer` for an unchanged update, or a row owned by another whiteboard —
+      // which must NEVER be deleted (storage.bucket.service guards cleanup with
+      // `!result.reused`). Defensively also refuse to compensate the previous pointer.
+      newCheckpointId =
+        result.reused === false && result.id !== previousPointer
+          ? result.id
+          : undefined;
       whiteboard.contentPointer = result.id;
       const saved = await this.save(whiteboard);
 
