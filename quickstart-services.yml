@@ -529,10 +529,11 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_collaboration
     hostname: collaboration
-    # OPEN-1 PR image (waves 1-4 + the client-facing `reason` field on auth
-    # control messages). Tracks the latest push on collaboration-service PR #5;
-    # repin the digest once the PR settles.
-    image: ghcr.io/alkem-io/collaboration-service:pr-5
+    # 006 integration image, tracking the collaboration-service PR #10 head (the
+    # current integration PR; PR #5 is superseded). NOTE: a `pr-N` tag is MUTABLE —
+    # it moves on every push to that PR — so this is reproducible only within a
+    # window; pin the image DIGEST if a stable quickstart runtime is required.
+    image: ghcr.io/alkem-io/collaboration-service:pr-10
     depends_on:
       rabbitmq:
         condition: service_healthy
