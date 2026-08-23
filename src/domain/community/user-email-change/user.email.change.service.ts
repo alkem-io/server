@@ -66,7 +66,13 @@ export class UserEmailChangeService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
-    this.clientWebUrl = this.configService.get('endpoints.client_web', {
+    // Login deep link base for the email-change notifications. Sourced from
+    // hosting.endpoint_cluster — the canonical per-env platform base that every
+    // other notification email uses for platform.url (and which the SPA is
+    // served from). The dedicated endpoints.client_web key is not reliably set
+    // outside local dev, so it fell back to its http://localhost:3000 default on
+    // deployed envs, producing localhost login links (client-web#10161).
+    this.clientWebUrl = this.configService.get('hosting.endpoint_cluster', {
       infer: true,
     });
   }

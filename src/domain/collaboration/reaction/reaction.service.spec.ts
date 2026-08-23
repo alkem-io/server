@@ -95,14 +95,16 @@ describe('ReactionService', () => {
     it('executes a single INSERT … ON CONFLICT DO UPDATE and returns the record', async () => {
       const qb = makeQueryBuilder([]);
       repo.createQueryBuilder.mockReturnValue(qb as any);
+      const now = new Date();
       const existingReaction = {
         id: 'r1',
         type: ReactionType.POST,
         entityID: 'e1',
         createdBy: 'u1',
         emoji: 'heart',
-        updatedDate: new Date(),
-        createdDate: new Date(),
+        // Same dates (within 1ms) signals a genuine INSERT
+        updatedDate: now,
+        createdDate: now,
       } as Reaction;
       repo.findOneOrFail.mockResolvedValue(existingReaction);
 
@@ -114,20 +116,24 @@ describe('ReactionService', () => {
       );
 
       expect(qb.execute).toHaveBeenCalledTimes(1);
-      expect(result.emoji).toBe('heart');
+      expect(result.reaction.emoji).toBe('heart');
+      expect(result.created).toBe(true);
     });
 
     it('swap: a second upsert with a different emoji hits the same code path without inserting a second row', async () => {
       const qb = makeQueryBuilder([]);
       repo.createQueryBuilder.mockReturnValue(qb as any);
+      const now = new Date();
+      const olderDate = new Date(now.getTime() - 5000);
       const updatedReaction = {
         id: 'r1',
         type: ReactionType.POST,
         entityID: 'e1',
         createdBy: 'u1',
         emoji: 'rocket',
-        updatedDate: new Date(),
-        createdDate: new Date(),
+        // Different dates signal this was an ON CONFLICT update (swap), not an insert
+        updatedDate: now,
+        createdDate: olderDate,
       } as Reaction;
       repo.findOneOrFail.mockResolvedValue(updatedReaction);
 
@@ -139,8 +145,10 @@ describe('ReactionService', () => {
       );
 
       // The upsert ran once and the returned emoji reflects the new choice.
+      // Swap is signaled by created:false (dates differ > 1ms).
       expect(qb.execute).toHaveBeenCalledTimes(1);
-      expect(result.emoji).toBe('rocket');
+      expect(result.reaction.emoji).toBe('rocket');
+      expect(result.created).toBe(false);
     });
   });
 

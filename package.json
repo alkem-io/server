@@ -56,7 +56,7 @@
   },
   "dependencies": {
     "@alkemio/matrix-adapter-lib": "0.8.16",
-    "@alkemio/notifications-lib": "0.19.0",
+    "@alkemio/notifications-lib": "0.20.0",
     "@apollo/server": "^4.13.0",
     "@elastic/elasticsearch": "^8.12.2",
     "@excalidraw-yjs/element": "https://pkg.pr.new/alkem-io/excalidraw-yjs/@excalidraw-yjs/element@2af664c",

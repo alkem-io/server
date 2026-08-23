@@ -12,6 +12,7 @@ import {
   NotificationEventPayloadSpace,
   NotificationEventPayloadSpaceCalendarEvent,
   NotificationEventPayloadSpaceCollaborationCallout,
+  NotificationEventPayloadSpaceCollaborationCalloutReaction,
   NotificationEventPayloadSpaceCommunicationMessageDirect,
   NotificationEventPayloadSpaceCommunicationUpdate,
   NotificationEventPayloadSpaceCommunityApplication,
@@ -778,6 +779,45 @@ export class NotificationExternalAdapter {
         calloutTitle: callout.framing.profile.displayName,
         calloutUrl: calloutURL,
       },
+    };
+  }
+
+  /**
+   * Builds the AMQP payload for a callout-reaction email notification.
+   * The shape is no-content-by-construction: framing.description is always
+   * empty so no callout body is ever transmitted.
+   */
+  async buildSpaceCollaborationCalloutReactionPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    space: ISpace,
+    calloutId: string,
+    calloutDisplayName: string,
+    emoji: string
+  ): Promise<NotificationEventPayloadSpaceCollaborationCalloutReaction> {
+    const spacePayload = await this.buildSpacePayload(
+      eventType,
+      triggeredBy,
+      recipients,
+      space
+    );
+    const calloutURL =
+      await this.urlGeneratorService.getCalloutUrlPath(calloutId);
+
+    return {
+      ...spacePayload,
+      callout: {
+        id: calloutId,
+        framing: {
+          id: '',
+          type: '',
+          displayName: calloutDisplayName,
+          description: '',
+          url: calloutURL,
+        },
+      },
+      reaction: { emoji },
     };
   }
 
