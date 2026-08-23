@@ -760,6 +760,8 @@ describe('WhiteboardService', () => {
       expect(await readSnapshotAssetLocators(captured.buffer!)).toEqual({
         'file-1': 'copied-loc',
       });
+      // Success path: the new media/checkpoint are NOT cleaned up (no previous pointer here).
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
     });
 
     it('leaves a TARGET-OWNED locator unchanged (no copy, retained in the stored map)', async () => {
@@ -783,6 +785,104 @@ describe('WhiteboardService', () => {
       expect(await readSnapshotAssetLocators(captured.buffer!)).toEqual({
         'file-1': 'owned-loc',
       });
+    });
+
+    it('RED: deletes the copied locator and does not save when the checkpoint write fails', async () => {
+      whiteboardRepository.findOne!.mockResolvedValue(loadedWhiteboard());
+      vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
+        id: 'src-loc',
+        authorization: { id: 'doc-auth' },
+        storageBucket: { id: 'sb-foreign' },
+      } as any);
+      vi.mocked(storageBucketService.copyDocumentToBucket).mockResolvedValue({
+        id: 'copied-loc',
+      } as any);
+      vi.mocked(fileServiceAdapter.createSnapshotInBucket).mockRejectedValue(
+        new Error('checkpoint write failed')
+      );
+
+      await expect(
+        service.updateWhiteboardContent(
+          'wb-1',
+          await buildAssetSnapshotBase64({ 'file-1': 'src-loc' }),
+          actorContext
+        )
+      ).rejects.toThrow('checkpoint write failed');
+      // The copied target-owned media is cleaned up; the entity is never saved.
+      expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith(
+        'copied-loc'
+      );
+      expect(whiteboardRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('RED: deletes the copied locator AND the new checkpoint when the entity save fails; previous pointer remains', async () => {
+      whiteboardRepository.findOne!.mockResolvedValue({
+        id: 'wb-1',
+        contentPointer: 'prev-ptr',
+        profile: { id: 'profile-1', storageBucket: { id: 'sb-1' } },
+      } as unknown as Whiteboard);
+      vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
+        id: 'src-loc',
+        authorization: { id: 'doc-auth' },
+        storageBucket: { id: 'sb-foreign' },
+      } as any);
+      vi.mocked(storageBucketService.copyDocumentToBucket).mockResolvedValue({
+        id: 'copied-loc',
+      } as any);
+      vi.mocked(fileServiceAdapter.createSnapshotInBucket).mockResolvedValue({
+        id: 'new-snap',
+        externalID: 'ext',
+        mimeType: 'application/octet-stream',
+        size: 1,
+        reused: false,
+      });
+      whiteboardRepository.save!.mockRejectedValue(new Error('save failed'));
+
+      await expect(
+        service.updateWhiteboardContent(
+          'wb-1',
+          await buildAssetSnapshotBase64({ 'file-1': 'src-loc' }),
+          actorContext
+        )
+      ).rejects.toThrow('save failed');
+      // Both the copied media and the freshly-written checkpoint are cleaned up ...
+      expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith(
+        'copied-loc'
+      );
+      expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith(
+        'new-snap'
+      );
+      // ... but the previous durable pointer is NEVER deleted (it stays the owner).
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalledWith(
+        'prev-ptr'
+      );
+    });
+
+    it('preserves the original error when compensation cleanup also fails', async () => {
+      whiteboardRepository.findOne!.mockResolvedValue(loadedWhiteboard());
+      vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
+        id: 'src-loc',
+        authorization: { id: 'doc-auth' },
+        storageBucket: { id: 'sb-foreign' },
+      } as any);
+      vi.mocked(storageBucketService.copyDocumentToBucket).mockResolvedValue({
+        id: 'copied-loc',
+      } as any);
+      vi.mocked(fileServiceAdapter.createSnapshotInBucket).mockRejectedValue(
+        new Error('original checkpoint failure')
+      );
+      vi.mocked(fileServiceAdapter.deleteDocument).mockRejectedValue(
+        new Error('cleanup also failed')
+      );
+
+      // The ORIGINAL error propagates, not the swallowed cleanup error.
+      await expect(
+        service.updateWhiteboardContent(
+          'wb-1',
+          await buildAssetSnapshotBase64({ 'file-1': 'src-loc' }),
+          actorContext
+        )
+      ).rejects.toThrow('original checkpoint failure');
     });
 
     it('RED: rejects an UNAUTHORIZED locator BEFORE any copy or snapshot write', async () => {

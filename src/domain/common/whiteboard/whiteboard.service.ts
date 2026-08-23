@@ -184,13 +184,19 @@ export class WhiteboardService {
           { whiteboardId: saved.id }
         );
       }
-      const snapshot = initialScene
-        ? await this.rehomeSnapshotAssets(
-            Buffer.from(initialScene, 'base64'),
-            storageBucketId,
-            { actorContext, sourceBucketId }
-          )
-        : Buffer.from(whiteboardSceneToYjsV2State(''));
+      let snapshot: Buffer;
+      if (initialScene) {
+        // Create's outer catch deletes the whole whiteboard on failure, which cascades a
+        // bucket cleanup, so the copied `createdTargetLocators` need no separate
+        // compensation here (unlike the pre-existing-whiteboard UPDATE path).
+        ({ snapshot } = await this.rehomeSnapshotAssets(
+          Buffer.from(initialScene, 'base64'),
+          storageBucketId,
+          { actorContext, sourceBucketId }
+        ));
+      } else {
+        snapshot = Buffer.from(whiteboardSceneToYjsV2State(''));
+      }
       const result = await this.fileServiceAdapter.createSnapshotInBucket(
         snapshot,
         storageBucketId
@@ -243,7 +249,13 @@ export class WhiteboardService {
     snapshot: Uint8Array,
     targetBucketId: string,
     authz: { actorContext: ActorContext; sourceBucketId?: string }
-  ): Promise<Buffer> {
+  ): Promise<{ snapshot: Buffer; createdTargetLocators: string[] }> {
+    // Returns the re-homed snapshot AND the file-service ids of any media copied into
+    // `targetBucketId` on this call. A failure DURING re-home is compensated here (the
+    // catch below best-effort deletes the fresh copies). A failure AFTER this returns
+    // (checkpoint write / entity save) has no such cascade on the UPDATE path, so the
+    // caller MUST delete `createdTargetLocators` itself; create relies on its own
+    // whiteboard/bucket-delete cascade and may ignore them.
     const fork = await loadWhiteboardFork();
     const doc = new Y.Doc();
     const createdTargetLocators: string[] = [];
@@ -264,7 +276,7 @@ export class WhiteboardService {
 
       const fileIds = Object.keys(current);
       if (fileIds.length === 0) {
-        return Buffer.from(snapshot);
+        return { snapshot: Buffer.from(snapshot), createdTargetLocators };
       }
 
       // PHASE 1: authorize + copy EVERY asset into the target bucket first
@@ -319,7 +331,10 @@ export class WhiteboardService {
       doc.transact(() => {
         fork.writeAssetLocators(yAssets, desired, { prune: true });
       }, fork.LOCAL_ORIGIN);
-      return Buffer.from(Y.encodeStateAsUpdateV2(doc));
+      return {
+        snapshot: Buffer.from(Y.encodeStateAsUpdateV2(doc)),
+        createdTargetLocators,
+      };
     } catch (error) {
       // Pre-rewrite failure: best-effort delete the fresh target copies; publish NO locator.
       await Promise.all(
@@ -529,35 +544,68 @@ export class WhiteboardService {
     // elsewhere. Direct untrusted content → no `sourceBucketId` (per-document READ),
     // matching the live-replacement rule. One owner for both create and update — the
     // BinaryFileData-shaped `rehomeSnapshotMedia` no-op path is gone.
-    const snapshot = await this.rehomeSnapshotAssets(
+    const { snapshot, createdTargetLocators } = await this.rehomeSnapshotAssets(
       Buffer.from(updateWhiteboardContent, 'base64'),
       whiteboard.profile.storageBucket.id,
       { actorContext }
     );
     const previousPointer = whiteboard.contentPointer;
-    const result = await this.fileServiceAdapter.createSnapshotInBucket(
-      snapshot,
-      whiteboard.profile.storageBucket.id
-    );
-    whiteboard.contentPointer = result.id;
-    const saved = await this.save(whiteboard);
+    let newCheckpointId: string | undefined;
+    try {
+      const result = await this.fileServiceAdapter.createSnapshotInBucket(
+        snapshot,
+        whiteboard.profile.storageBucket.id
+      );
+      newCheckpointId = result.id;
+      whiteboard.contentPointer = result.id;
+      const saved = await this.save(whiteboard);
 
-    if (previousPointer && previousPointer !== result.id) {
-      await this.fileServiceAdapter
-        .deleteDocument(previousPointer)
-        .catch(error => {
-          this.logger.warn?.(
-            {
-              message: 'Failed to delete superseded whiteboard snapshot',
-              whiteboardId: whiteboard.id,
-              previousPointer,
-              error: String(error),
-            },
-            LogContext.WHITEBOARDS
-          );
-        });
+      // Success: the superseded previous snapshot is now unreferenced — best-effort delete.
+      if (previousPointer && previousPointer !== result.id) {
+        await this.fileServiceAdapter
+          .deleteDocument(previousPointer)
+          .catch(error => {
+            this.logger.warn?.(
+              {
+                message: 'Failed to delete superseded whiteboard snapshot',
+                whiteboardId: whiteboard.id,
+                previousPointer,
+                error: String(error),
+              },
+              LogContext.WHITEBOARDS
+            );
+          });
+      }
+      return saved;
+    } catch (error) {
+      // The whiteboard already exists, so there is NO entity-cascade cleanup as on create.
+      // Compensate at the earliest owner: best-effort delete the media rehomeSnapshotAssets
+      // copied into this bucket AND the freshly-written checkpoint, so a failed update leaks
+      // neither target-owned media nor an orphan snapshot. `contentPointer` was never
+      // persisted (the save failed or never ran), so the PREVIOUS pointer stays the durable
+      // owner. Preserve + rethrow the original error.
+      const orphans = [...createdTargetLocators];
+      if (newCheckpointId) {
+        orphans.push(newCheckpointId);
+      }
+      await Promise.all(
+        orphans.map(id =>
+          this.fileServiceAdapter.deleteDocument(id).catch(cleanupError => {
+            this.logger.warn?.(
+              {
+                message:
+                  'Failed to clean up orphaned asset/checkpoint after whiteboard content-update failure',
+                whiteboardId: whiteboard.id,
+                orphanId: id,
+                error: String(cleanupError),
+              },
+              LogContext.WHITEBOARDS
+            );
+          })
+        )
+      );
+      throw error;
     }
-    return saved;
   }
 
   /**
