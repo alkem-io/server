@@ -52,10 +52,15 @@ type El = Record<string, unknown> & {
  * Apply a list of element operations to a whiteboard's live `Y.Doc`, going through
  * the fork's `Scene` scoped-intent API (`insertElement` / `mutateElement`) — the
  * fork owns element semantics; the server never reimplements them and never does a
- * whole-scene reconcile. Runs inside the caller's single collaborator transaction,
- * so the whole batch travels as one update frame. Returns the ids added and a
- * per-op summary, or throws `{ opError }` on the first invalid op (nothing partial
- * is persisted — the caller aborts the transaction).
+ * whole-scene reconcile. The session collects every update the ops produce and
+ * merges them into ONE wire frame, so the whole batch travels as a single update
+ * frame. Returns the ids added and a per-op summary.
+ *
+ * On the first invalid op it throws `EditOpError`. This is NOT a Yjs transaction
+ * rollback: the throw is synchronous inside the session's `sendMutation`, so it
+ * propagates BEFORE that method emits any frame — ZERO WS update frame is sent and
+ * the failed edit never reaches the server. Any mutations already applied live only
+ * in the ephemeral local `Y.Doc`, which is discarded when the session closes.
  */
 export function applyEditOps(
   doc: Y.Doc,

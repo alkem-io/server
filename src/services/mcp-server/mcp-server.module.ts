@@ -48,36 +48,8 @@ import { CalloutResourceProvider } from './resources/callout.resource';
 import { ResourceRegistry } from './resources/resource.registry';
 import { SpaceResourceProvider } from './resources/space.resource';
 import { WhiteboardResourceProvider } from './resources/whiteboard.resource';
-import { AuditLogAnalyzeTool } from './tools/audit-log-analyze.tool';
-import { CommunityActivitySummaryTool } from './tools/community-activity-summary.tool';
-import { ContributionsAnalyzeTool } from './tools/contributions-analyze.tool';
-import { CreateWhiteboardTool } from './tools/create-whiteboard.tool';
-import { CreateWhiteboardInSpaceTool } from './tools/create-whiteboard-in-space.tool';
-import { EditWhiteboardElementsTool } from './tools/edit-whiteboard-elements.tool';
-import { SearchContentTool } from './tools/search-content.tool';
-import { TemplateNavigatorTool } from './tools/template-navigator.tool';
+import { TOOL_PROVIDERS } from './tools/tool.providers';
 import { ToolRegistry } from './tools/tool.registry';
-import { WhiteboardAnalyzeTool } from './tools/whiteboard-analyze.tool';
-import { WhiteboardListTool } from './tools/whiteboard-list.tool';
-
-/**
- * Single source of truth for the MCP tool set. Each entry is registered as a
- * provider AND injected into the MCP_TOOL aggregator factory below — so adding
- * a tool is a one-line edit here, with no register() call or constructor wiring
- * to keep in sync.
- */
-const TOOL_PROVIDERS = [
-  WhiteboardAnalyzeTool,
-  WhiteboardListTool,
-  ContributionsAnalyzeTool,
-  CommunityActivitySummaryTool,
-  TemplateNavigatorTool,
-  AuditLogAnalyzeTool,
-  CreateWhiteboardTool,
-  CreateWhiteboardInSpaceTool,
-  EditWhiteboardElementsTool,
-  SearchContentTool,
-];
 
 /** Single source of truth for the MCP resource providers (see TOOL_PROVIDERS). */
 const RESOURCE_PROVIDERS = [
@@ -142,7 +114,7 @@ const RESOURCE_PROVIDERS = [
     {
       provide: MCP_TOOL,
       useFactory: (...tools: McpTool[]) => tools,
-      inject: TOOL_PROVIDERS,
+      inject: [...TOOL_PROVIDERS],
     },
     {
       provide: MCP_RESOURCE_PROVIDER,

@@ -6,7 +6,6 @@ import { loadWhiteboardFork } from '@domain/common/whiteboard/whiteboard.fork';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CollaborationDocumentService } from '@services/collaboration-client/collaboration-document.service';
-import { DocumentPurgingError } from '@services/collaboration-client/collaboration-document.session';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { readWhiteboardScene } from '../collaboration/whiteboard-scene.reader';
 import {
@@ -88,24 +87,18 @@ export class WhiteboardResourceProvider implements McpResourceProvider {
     // Read the LIVE scene from the collaboration room via the fork's schema
     // (cold rooms materialize from the durable snapshot). No inline column, no
     // server-side scene reimplementation.
+    //
+    // A read REJECTION propagates — a failed read (including a purging/deleted
+    // room, DocumentPurgingError) must surface as an error to the caller, never
+    // be masked as a synthetic empty scene. A genuinely-empty SUCCESSFUL read
+    // legitimately returns no elements/files.
     const fork = await loadWhiteboardFork();
-    let elements: unknown[] = [];
-    let files: Record<string, unknown> = {};
-    try {
-      ({ elements, files } = await this.collaborationService.read(
-        whiteboardId,
-        'whiteboard',
-        agentInfo.actorID,
-        doc => readWhiteboardScene(doc, fork)
-      ));
-    } catch (error) {
-      if (!(error instanceof DocumentPurgingError)) {
-        this.logger.warn?.(
-          `Failed to read whiteboard scene for ${whiteboardId}: ${error instanceof Error ? error.message : 'unknown error'}`,
-          LogContext.MCP_SERVER
-        );
-      }
-    }
+    const { elements, files } = await this.collaborationService.read(
+      whiteboardId,
+      'whiteboard',
+      agentInfo.actorID,
+      doc => readWhiteboardScene(doc, fork)
+    );
 
     const resourceData = {
       id: whiteboard.id,

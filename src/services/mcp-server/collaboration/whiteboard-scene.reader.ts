@@ -8,7 +8,9 @@ export type WhiteboardElement = Record<string, unknown> & { id: string };
  * Read the live scene from a synced whiteboard `Y.Doc` using the fork's element↔Y.Map
  * schema (`yMapToElement`) — NOT the server's own reimplementation, and NOT a
  * decode→rebuild (which would mint fresh lineage). Tombstoned (`isDeleted`) elements
- * are skipped. Files are returned as the raw `fileId → descriptor` map.
+ * are skipped. Files are returned as the raw `fileId → locator` map, where each value
+ * is the opaque file-service locator string (the blob-ownership invariant), not a
+ * decoded blob or descriptor.
  */
 export function readWhiteboardScene(
   doc: Y.Doc,
@@ -28,8 +30,8 @@ export function readWhiteboardScene(
 
   const filesMap = doc.getMap<unknown>(fork.FILES);
   const files: Record<string, unknown> = {};
-  for (const [fileId, descriptor] of filesMap.entries()) {
-    files[fileId] = descriptor;
+  for (const [fileId, locator] of filesMap.entries()) {
+    files[fileId] = locator;
   }
 
   return { elements, files };
