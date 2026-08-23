@@ -1,7 +1,6 @@
 import configuration from '@config/configuration';
 import { buildRuntimeDataSourceOptions } from '@config/runtime.datasource.options';
 import { WinstonConfigService } from '@config/winston.config';
-import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { Memo } from '@domain/common/memo/memo.entity';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { DocumentModule } from '@domain/storage/document/document.module';
@@ -72,11 +71,6 @@ import { join } from 'path';
     // one-shot context stays side-effect-free (only the shared DataSource pool
     // connects; `FileServiceAdapter` connects lazily on first call).
     StorageBucketModule,
-    // Provides `AuthorizationPolicyService` (`saveAll`) so the up-home path can inherit +
-    // persist the target bucket's authorization onto the new document, exactly as the
-    // ordinary upload boundary does. (`DocumentAuthorizationService` comes from
-    // `DocumentModule`.) Pure DI service module — no side effects.
-    AuthorizationPolicyModule,
   ],
   providers: [CollaborationMigrationService],
 })

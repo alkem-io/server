@@ -1,6 +1,5 @@
 import { CollaborationContentType, LogContext } from '@common/enums';
 import { decompressText } from '@common/utils/compression.util';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { markdownToYjsV2State } from '@domain/common/memo/conversion';
 import { Memo } from '@domain/common/memo/memo.entity';
 import {
@@ -135,8 +134,7 @@ export class CollaborationMigrationService {
     private readonly fileServiceAdapter: FileServiceAdapter,
     private readonly documentService: DocumentService,
     private readonly storageBucketService: StorageBucketService,
-    private readonly documentAuthorizationService: DocumentAuthorizationService,
-    private readonly authorizationPolicyService: AuthorizationPolicyService
+    private readonly documentAuthorizationService: DocumentAuthorizationService
   ) {}
 
   /**
@@ -508,11 +506,12 @@ export class CollaborationMigrationService {
    * with a BLANK document authorization; the ordinary upload boundary
    * (`StorageBucketResolverMutations.uploadFileOnStorageBucket`) immediately inherits the
    * bucket policy via `DocumentAuthorizationService.applyAuthorizationPolicy(document,
-   * bucket.authorization)` + `AuthorizationPolicyService.saveAll(...)`, so the migration
-   * MUST do the same through those SAME owners — otherwise the locator resolves to bytes
-   * but is UNREADABLE to the whiteboard's legitimate actors (the clone/update read path
-   * authorizes against the document's own authorization). The authorization is applied +
-   * persisted BEFORE the locator is returned — hence before the snapshot write and the
+   * bucket.authorization)`, so the migration MUST do the same through that SAME owner —
+   * otherwise the locator resolves to bytes but is UNREADABLE to the whiteboard's
+   * legitimate actors (the clone/update read path authorizes against the document's own
+   * authorization). `applyAuthorizationPolicy` both applies AND persists the inherited
+   * policy internally (its own `saveAll`; it returns no rules for the caller to save), and
+   * it is awaited BEFORE the locator is returned — hence before the snapshot write and the
    * `contentPointer` CAS in `migrateRecord`. Returns `undefined` (letting the caller
    * decide the fallback — preserve a dangling id, or skip) when there is nothing to
    * up-home: NO `dataURL` (silently), an undecodable `data:` URI (surfaced), or a missing
@@ -571,12 +570,15 @@ export class CollaborationMigrationService {
     const bucket = await this.storageBucketService.getStorageBucketOrFail(
       record.storageBucketId
     );
-    const documentAuthorizations =
-      await this.documentAuthorizationService.applyAuthorizationPolicy(
-        document,
-        bucket.authorization
-      );
-    await this.authorizationPolicyService.saveAll(documentAuthorizations);
+    // `applyAuthorizationPolicy` is the SOLE authorization owner here: it inherits the
+    // bucket policy AND persists it internally (its own `saveAll` over the document +
+    // tagset authorizations), returning no rules for the caller to save — so there is no
+    // redundant outer `saveAll([])`. Awaited BEFORE the locator is returned — hence before
+    // the snapshot write and the `contentPointer` CAS in `migrateRecord`.
+    await this.documentAuthorizationService.applyAuthorizationPolicy(
+      document,
+      bucket.authorization
+    );
 
     return document.id;
   }

@@ -1,6 +1,5 @@
 import { CollaborationContentType } from '@common/enums/collaboration.content.type';
 import { compressText } from '@common/utils/compression.util';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Memo } from '@domain/common/memo/memo.entity';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import * as whiteboardFork from '@domain/common/whiteboard/whiteboard.fork';
@@ -75,10 +74,16 @@ const documentAuthorizationServiceMock = () => ({
   ),
 });
 
-/** `AuthorizationPolicyService` stub — persists the authorizations `applyAuthorizationPolicy` returns. */
-const authorizationPolicyServiceMock = () => ({
-  saveAll: vi.fn(async (_authorizations: any) => undefined),
-});
+/**
+ * A COMPLETE minimal valid PNG (1x1 RGB: signature + IHDR + IDAT + IEND). The up-home
+ * SUCCESS fixtures use it so they represent bytes real file-service / libvips actually
+ * accepts — not a truncated 8-byte signature (which the in-memory store tolerates but
+ * production rejects). Used as BOTH the inline dataURL payload and the exact-byte
+ * assertion so they stay in lockstep.
+ */
+const VALID_PNG_B64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC';
+const VALID_PNG_DATA_URL = `data:image/png;base64,${VALID_PNG_B64}`;
 
 /**
  * Full cold-load chain resolver: decode the STORED fork snapshot → find the LIVE
@@ -254,10 +259,6 @@ describe('CollaborationMigrationService', () => {
         {
           provide: DocumentAuthorizationService,
           useValue: documentAuthorizationServiceMock(),
-        },
-        {
-          provide: AuthorizationPolicyService,
-          useValue: authorizationPolicyServiceMock(),
         },
       ],
     }).compile();
@@ -469,9 +470,6 @@ describe('CollaborationMigrationService', () => {
     let documentAuthorizationService: ReturnType<
       typeof documentAuthorizationServiceMock
     >;
-    let authorizationPolicyService: ReturnType<
-      typeof authorizationPolicyServiceMock
-    >;
 
     const updateQB = (affected = 1) => {
       const qb: any = {};
@@ -512,7 +510,6 @@ describe('CollaborationMigrationService', () => {
       documentService = documentServiceMock();
       storageBucketService = storageBucketServiceMock();
       documentAuthorizationService = documentAuthorizationServiceMock();
-      authorizationPolicyService = authorizationPolicyServiceMock();
       const module: TestingModule = await Test.createTestingModule({
         providers: [
           CollaborationMigrationService,
@@ -528,10 +525,6 @@ describe('CollaborationMigrationService', () => {
           {
             provide: DocumentAuthorizationService,
             useValue: documentAuthorizationService,
-          },
-          {
-            provide: AuthorizationPolicyService,
-            useValue: authorizationPolicyService,
           },
         ],
       }).compile();
@@ -813,7 +806,7 @@ describe('CollaborationMigrationService', () => {
       // the inline bytes are valid, pre-006 rendered from the bytes — a RECOVERABLE image.
       // Returning the dead-doc id would turn it into an unresolvable locator = data loss.
       documentService.getDocumentFromURL.mockResolvedValue(undefined);
-      const expectedBytes = Buffer.from('iVBORw0KGgo=', 'base64');
+      const expectedBytes = Buffer.from(VALID_PNG_B64, 'base64');
 
       const { summary, captured } = await migrateOneWhiteboard(
         legacyMediaScene({
@@ -822,7 +815,7 @@ describe('CollaborationMigrationService', () => {
             id: 'file-1',
             mimeType: 'image/png',
             url: 'https://alkem.io/api/private/rest/storage/document/DEAD-DOC',
-            dataURL: 'data:image/png;base64,iVBORw0KGgo=',
+            dataURL: VALID_PNG_DATA_URL,
           },
         })
       );
@@ -877,14 +870,14 @@ describe('CollaborationMigrationService', () => {
       // / Portal.ts) and the server reupload left stored: files[fileId] = { dataURL, NO url }.
       // Skipping it was SILENT IMAGE LOSS — the exact data-loss class S2 closes. Uses the
       // store-backed bucket mock (no override), so the locator RESOLVES to real bytes.
-      const expectedBytes = Buffer.from('iVBORw0KGgo=', 'base64');
+      const expectedBytes = Buffer.from(VALID_PNG_B64, 'base64');
       const { summary, captured } = await migrateOneWhiteboard(
         legacyMediaScene({
           fileId: 'file-1',
           file: {
             id: 'file-1',
             mimeType: 'image/png',
-            dataURL: 'data:image/png;base64,iVBORw0KGgo=',
+            dataURL: VALID_PNG_DATA_URL,
           },
         })
       );
@@ -947,7 +940,7 @@ describe('CollaborationMigrationService', () => {
           file: {
             id: 'file-1',
             mimeType: 'image/png',
-            dataURL: 'data:image/png;base64,iVBORw0KGgo=',
+            dataURL: VALID_PNG_DATA_URL,
           },
         })
       );
@@ -1002,7 +995,7 @@ describe('CollaborationMigrationService', () => {
         file: {
           id: 'file-1',
           mimeType: 'image/png',
-          dataURL: 'data:image/png;base64,iVBORw0KGgo=',
+          dataURL: VALID_PNG_DATA_URL,
         },
       });
       const compressed = await compressText(sceneJSON);
@@ -1016,12 +1009,9 @@ describe('CollaborationMigrationService', () => {
       documentAuthorizationService.applyAuthorizationPolicy.mockImplementation(
         async (_doc: any, parent: any) => {
           order.push(`apply:${parent?.id}`);
-          return [{ id: 'doc-auth' }] as any;
-        }
-      );
-      authorizationPolicyService.saveAll.mockImplementation(
-        async (auths: any) => {
-          order.push(`saveAll:${auths?.[0]?.id}`);
+          // The real service persists the inherited policy INTERNALLY (its own saveAll) and
+          // returns [] — the migration awaits it as the SOLE owner, no outer saveAll.
+          return [] as any;
         }
       );
 
@@ -1054,17 +1044,9 @@ describe('CollaborationMigrationService', () => {
         expect.objectContaining({ id: expect.any(String) }),
         expect.objectContaining({ id: 'bucket-auth' })
       );
-      // ... and persisted every returned authorization ...
-      expect(authorizationPolicyService.saveAll).toHaveBeenCalledWith([
-        { id: 'doc-auth' },
-      ]);
-      // ... BOTH strictly BEFORE the snapshot write and the pointer CAS.
-      expect(order).toEqual([
-        'apply:bucket-auth',
-        'saveAll:doc-auth',
-        'createSnapshot',
-        'cas',
-      ]);
+      // ... and (persisting the inherited policy internally as the SOLE owner) runs
+      // strictly BEFORE the snapshot write and the pointer CAS.
+      expect(order).toEqual(['apply:bucket-auth', 'createSnapshot', 'cas']);
     });
 
     it('an authorization APPLY failure leaves the record unmigrated (re-runnable) — no snapshot, no pointer', async () => {
@@ -1088,31 +1070,6 @@ describe('CollaborationMigrationService', () => {
       );
 
       // An unreadable locator is never written: the record fails (re-runnable), no snapshot.
-      expect(summary.failed).toBe(1);
-      expect(summary.migrated).toBe(0);
-      expect(fileService.createSnapshotInBucket).not.toHaveBeenCalled();
-    });
-
-    it('an authorization SAVE-ALL failure leaves the record unmigrated (re-runnable) — no snapshot, no pointer', async () => {
-      storageBucketService.getStorageBucketOrFail.mockResolvedValue({
-        id: 'sb-w1',
-        authorization: { id: 'bucket-auth' },
-      } as any);
-      authorizationPolicyService.saveAll.mockRejectedValue(
-        new Error('saveAll failed')
-      );
-
-      const { summary } = await migrateOneWhiteboard(
-        legacyMediaScene({
-          fileId: 'file-1',
-          file: {
-            id: 'file-1',
-            mimeType: 'image/png',
-            dataURL: 'data:image/png;base64,AAAA',
-          },
-        })
-      );
-
       expect(summary.failed).toBe(1);
       expect(summary.migrated).toBe(0);
       expect(fileService.createSnapshotInBucket).not.toHaveBeenCalled();
