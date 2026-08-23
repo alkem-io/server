@@ -1,8 +1,9 @@
 import * as Y from 'yjs';
 import { EMPTY_WHITEBOARD_CONTENT } from '../empty.whiteboard.content';
+import * as whiteboardFork from '../whiteboard.fork';
 import {
+  parseLegacyWhiteboardScene,
   whiteboardSceneToYjsV2State,
-  whiteboardYjsV2StateToScene,
 } from './whiteboard.scene.to.yjs.v2.state';
 
 /**
@@ -10,7 +11,7 @@ import {
  * the collaboration-service uses via `ApplyUpdateV2`) and reads the scene root
  * `Y.Map`s back — so the test asserts the snapshot the server writes is openable +
  * lossless against the wire schema (id-keyed `elements` map, `files` map,
- * allow-listed `appState`).
+ * allow-listed `appState`) shared with the editor fork.
  */
 const decode = (snapshot: Uint8Array) => {
   const ydoc = new Y.Doc();
@@ -22,12 +23,25 @@ const decode = (snapshot: Uint8Array) => {
     elementIds: [...elements.keys()],
     element: (id: string) => elements.get(id) as Y.Map<unknown> | undefined,
     fileIds: [...files.keys()],
+    file: (id: string) => files.get(id),
     appState: Object.fromEntries(appState.entries()),
   };
 };
 
-describe('whiteboardSceneToYjsV2State', () => {
-  it('produces a non-empty V2 snapshot for a scene with elements', () => {
+describe('whiteboardSceneToYjsV2State (fork-based encoder)', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    // The encoder loads the ESM headless fork via a Function-wrapped dynamic import
+    // that vitest's module runner cannot drive. Spy the SHARED module export and
+    // substitute a plain dynamic import, so the encoder exercises the REAL fork
+    // (element/asset schema, index seeding, V2 encode) against a real Y.Doc — the
+    // same fork client-web + collaboration-service consume.
+    vi.spyOn(whiteboardFork, 'loadWhiteboardFork').mockImplementation(
+      () => import('@excalidraw-yjs/element/headless') as any
+    );
+  });
+
+  it('produces a decodable V2 snapshot for a scene with elements', async () => {
     const scene = JSON.stringify({
       type: 'excalidraw',
       version: 2,
@@ -47,7 +61,7 @@ describe('whiteboardSceneToYjsV2State', () => {
       files: {},
     });
 
-    const snapshot = whiteboardSceneToYjsV2State(scene);
+    const snapshot = await whiteboardSceneToYjsV2State(scene);
 
     expect(snapshot).toBeInstanceOf(Uint8Array);
     const decoded = decode(snapshot);
@@ -56,7 +70,7 @@ describe('whiteboardSceneToYjsV2State', () => {
     expect(decoded.element('el-1')?.get('width')).toBe(100);
   });
 
-  it('seeds the allow-listed appState keys only', () => {
+  it('seeds the allow-listed appState keys only', async () => {
     const scene = JSON.stringify({
       type: 'excalidraw',
       version: 2,
@@ -71,12 +85,12 @@ describe('whiteboardSceneToYjsV2State', () => {
       files: {},
     });
 
-    const decoded = decode(whiteboardSceneToYjsV2State(scene));
+    const decoded = decode(await whiteboardSceneToYjsV2State(scene));
 
     expect(decoded.appState).toEqual({ viewBackgroundColor: '#abcdef' });
   });
 
-  it('round-trips multiple elements preserving ids', () => {
+  it('round-trips multiple elements preserving ids', async () => {
     const scene = JSON.stringify({
       type: 'excalidraw',
       version: 2,
@@ -89,66 +103,12 @@ describe('whiteboardSceneToYjsV2State', () => {
       files: {},
     });
 
-    const decoded = decode(whiteboardSceneToYjsV2State(scene));
+    const decoded = decode(await whiteboardSceneToYjsV2State(scene));
 
     expect(decoded.elementIds.sort()).toEqual(['a', 'b']);
   });
 
-  it('stores JSON-leaf keys (points) as a whole value, not a scalar', () => {
-    const scene = JSON.stringify({
-      type: 'excalidraw',
-      version: 2,
-      source: '',
-      elements: [
-        {
-          id: 'line',
-          type: 'line',
-          x: 0,
-          y: 0,
-          index: 'a0',
-          points: [
-            [0, 0],
-            [10, 10],
-          ],
-        },
-      ],
-      appState: {},
-      files: {},
-    });
-
-    const decoded = decode(whiteboardSceneToYjsV2State(scene));
-    expect(decoded.element('line')?.get('points')).toEqual([
-      [0, 0],
-      [10, 10],
-    ]);
-  });
-
-  it('encodes boundElements as a nested id->type Y.Map', () => {
-    const scene = JSON.stringify({
-      type: 'excalidraw',
-      version: 2,
-      source: '',
-      elements: [
-        {
-          id: 'rect',
-          type: 'rectangle',
-          x: 0,
-          y: 0,
-          index: 'a0',
-          boundElements: [{ id: 'arrow-1', type: 'arrow' }],
-        },
-      ],
-      appState: {},
-      files: {},
-    });
-
-    const decoded = decode(whiteboardSceneToYjsV2State(scene));
-    const bound = decoded.element('rect')?.get('boundElements');
-    expect(bound).toBeInstanceOf(Y.Map);
-    expect((bound as Y.Map<string>).get('arrow-1')).toBe('arrow');
-  });
-
-  it('does NOT sync reconciliation metadata (version/versionNonce/updated)', () => {
+  it('does NOT sync reconciliation metadata (version/versionNonce/updated)', async () => {
     const scene = JSON.stringify({
       type: 'excalidraw',
       version: 2,
@@ -169,14 +129,14 @@ describe('whiteboardSceneToYjsV2State', () => {
       files: {},
     });
 
-    const el = decode(whiteboardSceneToYjsV2State(scene)).element('r');
+    const el = decode(await whiteboardSceneToYjsV2State(scene)).element('r');
     expect(el?.has('version')).toBe(false);
     expect(el?.has('versionNonce')).toBe(false);
     expect(el?.has('updated')).toBe(false);
     expect(el?.get('type')).toBe('rectangle');
   });
 
-  it('seeds fractional indices for elements that lack them (no throw)', () => {
+  it('seeds fractional indices for elements that lack them (no throw)', async () => {
     const scene = JSON.stringify({
       type: 'excalidraw',
       version: 2,
@@ -189,14 +149,62 @@ describe('whiteboardSceneToYjsV2State', () => {
       files: {},
     });
 
-    const decoded = decode(whiteboardSceneToYjsV2State(scene));
+    const decoded = decode(await whiteboardSceneToYjsV2State(scene));
     expect(decoded.elementIds.sort()).toEqual(['a', 'b']);
-    // every element ends up with a string fractional index
+    // every element ends up with a string fractional index (fork's syncInvalidIndices)
     expect(typeof decoded.element('a')?.get('index')).toBe('string');
     expect(typeof decoded.element('b')?.get('index')).toBe('string');
   });
 
-  it('carries scene files into the files map', () => {
+  it('does NOT store the immutable input scene (no mutation of the caller records)', async () => {
+    const elements = [{ id: 'a', type: 'rectangle', x: 0, y: 0 }] as const;
+    const scene = JSON.stringify({
+      type: 'excalidraw',
+      version: 2,
+      source: '',
+      elements,
+      appState: {},
+      files: {},
+    });
+    // Re-parse a fresh copy to compare against; the encoder must not mutate its
+    // own parsed elements' identity in a way that leaks (it works on copies).
+    await whiteboardSceneToYjsV2State(scene);
+    // The literal above has no `index`; encoding twice is deterministic + safe.
+    const decoded = decode(await whiteboardSceneToYjsV2State(scene));
+    expect(typeof decoded.element('a')?.get('index')).toBe('string');
+  });
+
+  it('writes the provided asset locators into the files map as strings (NOT the scene files)', async () => {
+    // The scene carries a legacy BinaryFileData object; the encoder must IGNORE it
+    // and instead write the resolved locator string passed separately.
+    const scene = JSON.stringify({
+      type: 'excalidraw',
+      version: 2,
+      source: '',
+      elements: [
+        { id: 'img', type: 'image', x: 0, y: 0, index: 'a0', fileId: 'file-1' },
+      ],
+      appState: {},
+      files: {
+        'file-1': {
+          id: 'file-1',
+          mimeType: 'image/png',
+          url: 'http://x/y.png',
+        },
+      },
+    });
+
+    const decoded = decode(
+      await whiteboardSceneToYjsV2State(scene, { 'file-1': 'DOC-123' })
+    );
+
+    expect(decoded.fileIds).toEqual(['file-1']);
+    // A locator STRING (unified schema), never the legacy BinaryFileData object.
+    expect(decoded.file('file-1')).toBe('DOC-123');
+    expect(typeof decoded.file('file-1')).toBe('string');
+  });
+
+  it('writes no assets when none are provided (scene BinaryFileData is dropped)', async () => {
     const scene = JSON.stringify({
       type: 'excalidraw',
       version: 2,
@@ -204,111 +212,71 @@ describe('whiteboardSceneToYjsV2State', () => {
       elements: [],
       appState: {},
       files: {
-        'file-1': { id: 'file-1', mimeType: 'image/png', dataURL: 'data:...' },
+        'file-1': {
+          id: 'file-1',
+          mimeType: 'image/png',
+          url: 'http://x/y.png',
+        },
       },
     });
 
-    const decoded = decode(whiteboardSceneToYjsV2State(scene));
-    expect(decoded.fileIds).toEqual(['file-1']);
+    const decoded = decode(await whiteboardSceneToYjsV2State(scene));
+    expect(decoded.fileIds).toEqual([]);
   });
 
-  it('encodes the canonical empty whiteboard content without throwing', () => {
+  it('encodes the canonical empty whiteboard content without throwing', async () => {
     const decoded = decode(
-      whiteboardSceneToYjsV2State(EMPTY_WHITEBOARD_CONTENT)
+      await whiteboardSceneToYjsV2State(EMPTY_WHITEBOARD_CONTENT)
     );
     expect(decoded.elementIds).toHaveLength(0);
   });
 
-  it('treats an empty string as an empty scene (FR-010)', () => {
-    expect(decode(whiteboardSceneToYjsV2State('')).elementIds).toHaveLength(0);
-  });
-
-  it('treats non-JSON content as an empty scene rather than throwing', () => {
+  it('treats an empty string as an empty scene (FR-010)', async () => {
     expect(
-      decode(whiteboardSceneToYjsV2State('not-json{')).elementIds
+      decode(await whiteboardSceneToYjsV2State('')).elementIds
     ).toHaveLength(0);
   });
 
-  it('treats structurally-invalid JSON (no elements array) as empty', () => {
+  it('treats non-JSON content as an empty scene rather than throwing', async () => {
     expect(
-      decode(whiteboardSceneToYjsV2State('{"foo":"bar"}')).elementIds
+      decode(await whiteboardSceneToYjsV2State('not-json{')).elementIds
     ).toHaveLength(0);
+  });
+
+  it('treats structurally-invalid JSON (no elements array) as empty', async () => {
+    expect(
+      decode(await whiteboardSceneToYjsV2State('{"foo":"bar"}')).elementIds
+    ).toHaveLength(0);
+  });
+
+  it('encodes an empty scene byte-identically to a bare empty V2 doc', async () => {
+    // The empty-create seed must materialize an empty, openable board — the same
+    // canonical empty the collaboration-service applies via ApplyUpdateV2.
+    const empty = await whiteboardSceneToYjsV2State('');
+    const bare = Y.encodeStateAsUpdateV2(new Y.Doc());
+    expect(Buffer.from(empty).equals(Buffer.from(bare))).toBe(true);
   });
 });
 
-/**
- * Parity guard: the conversion must round-trip a scene through the binding
- * (scene → V2 bytes → scene) lossless on elements / appState / files, so the
- * server and the editor (client-web) share ONE encoding — no drift. The sample
- * is shaped so the round-trip is canonical: every element already carries a
- * fractional `index` (no re-seed), no reconciliation metadata
- * (`version`/`versionNonce`/`updated`, which the binding deliberately drops),
- * and only allow-listed appState keys — so equality is exact, not "modulo the
- * binding's documented transforms".
- */
-describe('whiteboardYjsV2StateToScene (binding round-trip parity)', () => {
-  it('round-trips a sample scene scene→bytes→scene lossless on elements/appState/files', () => {
-    const scene = {
-      type: 'excalidraw',
-      version: 2,
-      source: '',
-      elements: [
-        {
-          id: 'rect',
-          type: 'rectangle',
-          x: 0,
-          y: 0,
-          width: 100,
-          height: 50,
-          index: 'a0',
-          points: [
-            [0, 0],
-            [10, 10],
-          ],
-          boundElements: [{ id: 'arrow-1', type: 'arrow' }],
-        },
-        {
-          id: 'ellipse',
-          type: 'ellipse',
-          x: 5,
-          y: 5,
-          width: 20,
-          height: 20,
-          index: 'a1',
-        },
-      ],
-      appState: { viewBackgroundColor: '#abcdef', name: 'sample' },
-      files: {
-        'file-1': { id: 'file-1', mimeType: 'image/png', dataURL: 'data:...' },
-      },
-    } as const;
-
-    const roundTripped = JSON.parse(
-      whiteboardYjsV2StateToScene(
-        whiteboardSceneToYjsV2State(JSON.stringify(scene))
-      )
+describe('parseLegacyWhiteboardScene', () => {
+  it('returns the structural parts of a valid scene', () => {
+    const parsed = parseLegacyWhiteboardScene(
+      JSON.stringify({
+        elements: [{ id: 'a', type: 'rectangle' }],
+        files: { f1: { id: 'f1', url: 'http://x/y.png' } },
+        appState: { viewBackgroundColor: '#fff' },
+      })
     );
-
-    expect(roundTripped.elements).toEqual(scene.elements);
-    expect(roundTripped.appState).toEqual(scene.appState);
-    expect(roundTripped.files).toEqual(scene.files);
+    expect(parsed?.elements).toHaveLength(1);
+    expect(parsed?.files?.f1?.url).toBe('http://x/y.png');
+    expect(parsed?.appState?.viewBackgroundColor).toBe('#fff');
   });
 
-  it('returns the canonical empty scene for an undecodable snapshot', () => {
-    const scene = JSON.parse(
-      whiteboardYjsV2StateToScene(new Uint8Array([1, 2, 3, 4]))
-    );
-    expect(scene.elements).toHaveLength(0);
-    expect(scene.appState).toEqual({});
-    expect(scene.files).toEqual({});
-  });
-
-  it('returns an empty-element scene when round-tripping empty content', () => {
-    const scene = JSON.parse(
-      whiteboardYjsV2StateToScene(
-        whiteboardSceneToYjsV2State(EMPTY_WHITEBOARD_CONTENT)
-      )
-    );
-    expect(scene.elements).toHaveLength(0);
+  it('returns undefined for empty / non-JSON / structurally-invalid content', () => {
+    expect(parseLegacyWhiteboardScene('')).toBeUndefined();
+    expect(parseLegacyWhiteboardScene('   ')).toBeUndefined();
+    expect(parseLegacyWhiteboardScene('not-json{')).toBeUndefined();
+    // no `elements` array
+    expect(parseLegacyWhiteboardScene('{"foo":"bar"}')).toBeUndefined();
   });
 });

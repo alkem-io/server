@@ -1,4 +1,6 @@
 export {
+  type LegacyBinaryFileData,
+  type LegacyWhiteboardScene,
+  parseLegacyWhiteboardScene,
   whiteboardSceneToYjsV2State,
-  whiteboardYjsV2StateToScene,
 } from './whiteboard.scene.to.yjs.v2.state';

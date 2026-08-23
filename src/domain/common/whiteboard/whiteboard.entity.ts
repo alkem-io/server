@@ -16,8 +16,9 @@ export class Whiteboard extends NameableEntity implements IWhiteboard {
   // `contentPointer`. In Release A the DB column is RETAINED for the one-time
   // back-fill (migration-only, with a temporary `DEFAULT ''` so entity-unmapped
   // inserts satisfy its NOT NULL) and dropped only in Release B after the back-fill
-  // is verified. The scene is converted server-side at create via the
-  // binding-compatible `whiteboardSceneToYjsV2State` and written to the bucket.
+  // is verified. Legacy Excalidraw scenes are converted server-side (the one-time
+  // migration) via the fork-based `whiteboardSceneToYjsV2State` and written to the
+  // bucket; the live create/update paths persist the editor's Yjs-V2 snapshot verbatim.
 
   /**
    * The file-service id of this whiteboard's stored Yjs-V2 snapshot — file-service

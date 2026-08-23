@@ -4,13 +4,13 @@ import { RelationshipNotFoundException } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { whiteboardSceneToYjsV2State } from '@domain/common/whiteboard/conversion';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock, vi } from 'vitest';
+import * as Y from 'yjs';
 import { InputCreatorService } from './input.creator.service';
 
 describe('InputCreatorService', () => {
@@ -213,16 +213,11 @@ describe('InputCreatorService', () => {
       // Content is no longer an inline column — the builder reads the stored
       // Yjs-V2 snapshot by contentPointer and carries it through verbatim as an
       // opaque base64 CRDT blob (no scene/JSON round trip — 006).
-      const scene = JSON.stringify({
-        type: 'excalidraw',
-        version: 2,
-        source: '',
-        elements: [],
-        appState: {},
-        files: {},
-      });
+      // Any valid Yjs-V2 snapshot works — the builder carries it through verbatim
+      // as an opaque base64 CRDT blob; a bare empty doc keeps this fixture free of
+      // the editor fork (exercised in the whiteboard + migration specs).
       const contentBase64 = Buffer.from(
-        whiteboardSceneToYjsV2State(scene)
+        Y.encodeStateAsUpdateV2(new Y.Doc())
       ).toString('base64');
       fileServiceAdapter.getContentBatch.mockResolvedValue([
         { id: 'wb-pointer', found: true, contentBase64 },

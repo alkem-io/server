@@ -195,7 +195,7 @@ export class WhiteboardService {
           { actorContext, sourceBucketId }
         ));
       } else {
-        snapshot = Buffer.from(whiteboardSceneToYjsV2State(''));
+        snapshot = Buffer.from(await whiteboardSceneToYjsV2State(''));
       }
       const result = await this.fileServiceAdapter.createSnapshotInBucket(
         snapshot,

@@ -1,8 +1,12 @@
 import configuration from '@config/configuration';
 import { buildRuntimeDataSourceOptions } from '@config/runtime.datasource.options';
 import { WinstonConfigService } from '@config/winston.config';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { Memo } from '@domain/common/memo/memo.entity';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
+import { DocumentModule } from '@domain/storage/document/document.module';
+import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
+import { CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -49,6 +53,30 @@ import { join } from 'path';
     }),
     TypeOrmModule.forFeature([Memo, Whiteboard]),
     FileServiceAdapterModule,
+    // In-memory (no-store) cache purely to satisfy the global `CACHE_MANAGER`
+    // token that `StorageBucketService`'s transitive `UrlGeneratorCacheService`
+    // injects. The migration never calls the URL generator, so this cache is
+    // never exercised; it is NOT Redis and opens no connection — the one-shot
+    // context stays side-effect-free.
+    CacheModule.register({ isGlobal: true }),
+    // Provides `DocumentService`, used to resolve legacy whiteboard media URLs
+    // (`BinaryFileData.url`) to file-service document-id locators during the
+    // whiteboard back-fill.
+    DocumentModule,
+    // Provides `StorageBucketService`, used to UP-HOME legacy inline `dataURL`
+    // whiteboard media into the whiteboard's own bucket as a real authorized
+    // file-service document (so dataURL-only assets survive the migration instead
+    // of being silently dropped). Its transitive imports (authorization / tagset /
+    // document / url-generator / avatar-creator / file-service) are all pure DI
+    // service modules — no scheduler, RMQ, Redis, GraphQL or HTTP listener — so the
+    // one-shot context stays side-effect-free (only the shared DataSource pool
+    // connects; `FileServiceAdapter` connects lazily on first call).
+    StorageBucketModule,
+    // Provides `AuthorizationPolicyService` (`saveAll`) so the up-home path can inherit +
+    // persist the target bucket's authorization onto the new document, exactly as the
+    // ordinary upload boundary does. (`DocumentAuthorizationService` comes from
+    // `DocumentModule`.) Pure DI service module — no side effects.
+    AuthorizationPolicyModule,
   ],
   providers: [CollaborationMigrationService],
 })
