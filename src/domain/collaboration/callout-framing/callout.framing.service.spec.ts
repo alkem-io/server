@@ -505,7 +505,7 @@ describe('CalloutFramingService', () => {
       expect(result.type).toBe(CalloutFramingType.NONE);
     });
 
-    it('should update whiteboard content when framing type is WHITEBOARD and content is provided', async () => {
+    it('replaces whiteboard content only for a TEMPLATE callout (framing WHITEBOARD, content provided)', async () => {
       const framing = {
         id: 'framing-1',
         type: CalloutFramingType.WHITEBOARD,
@@ -524,14 +524,37 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false,
+        true, // isParentCalloutTemplate — direct content replacement is template-only
         actorContextData.actorContext
       );
 
       expect(whiteboardService.updateWhiteboardContent).toHaveBeenCalledWith(
         'wb-1',
-        '{"new":"content"}'
+        '{"new":"content"}',
+        actorContextData.actorContext
       );
+    });
+
+    it('does NOT replace whiteboard content for a NON-template callout (live room is authoritative)', async () => {
+      const framing = {
+        id: 'framing-1',
+        type: CalloutFramingType.WHITEBOARD,
+        profile: { id: 'profile-1' },
+        whiteboard: { id: 'wb-1' },
+      } as any;
+      const updateData = {
+        whiteboardContent: '{"new":"content"}',
+      } as any;
+
+      const _result = await service.updateCalloutFraming(
+        framing,
+        updateData,
+        storageAggregator,
+        false, // non-template → out-of-band content is ignored (would clobber the live room)
+        actorContextData.actorContext
+      );
+
+      expect(whiteboardService.updateWhiteboardContent).not.toHaveBeenCalled();
     });
 
     it('should create new whiteboard when WHITEBOARD type has content but no existing whiteboard', async () => {
@@ -913,7 +936,7 @@ describe('CalloutFramingService', () => {
       expect(framing.mediaGallery).toBeUndefined();
     });
 
-    it('should update whiteboard preview settings when provided with content', async () => {
+    it('applies whiteboard preview settings even for a non-template callout (content ignored)', async () => {
       const framing = {
         id: 'framing-1',
         type: CalloutFramingType.WHITEBOARD,
@@ -940,7 +963,7 @@ describe('CalloutFramingService', () => {
         actorContextData.actorContext
       );
 
-      expect(whiteboardService.updateWhiteboardContent).toHaveBeenCalled();
+      expect(whiteboardService.updateWhiteboardContent).not.toHaveBeenCalled();
       expect(whiteboardService.updateWhiteboard).toHaveBeenCalledWith(
         { id: 'wb-1' },
         { previewSettings: { zoom: 1 } }

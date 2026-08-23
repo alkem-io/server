@@ -49,7 +49,11 @@ export class TemplateResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `update template: ${template.id}`
     );
-    return await this.templateService.updateTemplate(template, updateData);
+    return await this.templateService.updateTemplate(
+      template,
+      updateData,
+      actorContext
+    );
   }
 
   @Mutation(() => ITemplate, {

@@ -13,7 +13,6 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { ExcalidrawContent } from '@common/interfaces';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
@@ -22,7 +21,6 @@ import {
   CollaborationMetadataUpdate,
 } from '@domain/common/collaboration-metadata';
 import { IProfile } from '@domain/common/profile';
-import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
@@ -53,7 +51,6 @@ export class WhiteboardService {
     private whiteboardRepository: Repository<Whiteboard>,
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileService: ProfileService,
-    private profileDocumentsService: ProfileDocumentsService,
     private communityResolverService: CommunityResolverService,
     private licenseService: LicenseService,
     private collaborationLifecycleService: CollaborationLifecycleService,
@@ -219,44 +216,6 @@ export class WhiteboardService {
       throw error;
     }
     return saved;
-  }
-
-  /**
-   * Re-home a Yjs-V2 whiteboard snapshot's embedded media into `profileId`'s
-   * bucket, operating on the snapshot's own `files` Y.Map — there is no Excalidraw
-   * scene anywhere on this path (the CRDT bytes are the single representation).
-   * Media already in the bucket is untouched; cloned/templated media (referencing
-   * another bucket) is re-uploaded and its `files` entry rewritten in place, then
-   * the snapshot is re-encoded. A snapshot with no media is returned verbatim.
-   */
-  private async rehomeSnapshotMedia(
-    snapshot: Uint8Array,
-    profileId: string
-  ): Promise<Buffer> {
-    const doc = new Y.Doc();
-    try {
-      Y.applyUpdateV2(doc, snapshot);
-      const filesMap = doc.getMap<unknown>('files');
-      if (filesMap.size === 0) {
-        return Buffer.from(snapshot);
-      }
-      const files: Record<string, unknown> = {};
-      filesMap.forEach((value, key) => {
-        files[key] = value;
-      });
-      const rehomed = await this.reuploadDocumentsIfNotInBucket(
-        { elements: [], files } as unknown as ExcalidrawContent,
-        profileId
-      );
-      doc.transact(() => {
-        for (const [key, value] of Object.entries(rehomed.files ?? {})) {
-          filesMap.set(key, value);
-        }
-      });
-      return Buffer.from(Y.encodeStateAsUpdateV2(doc));
-    } finally {
-      doc.destroy();
-    }
   }
 
   /**
@@ -537,7 +496,8 @@ export class WhiteboardService {
    */
   async updateWhiteboardContent(
     whiteboardInputId: string,
-    updateWhiteboardContent: string
+    updateWhiteboardContent: string,
+    actorContext: ActorContext
   ): Promise<IWhiteboard> {
     const whiteboard = await this.getWhiteboardOrFail(whiteboardInputId, {
       loadEagerRelations: false,
@@ -561,11 +521,18 @@ export class WhiteboardService {
     }
 
     // `updateWhiteboardContent` is a base64-encoded Yjs-V2 snapshot (the single CRDT
-    // representation — no Excalidraw scene/JSON). Re-home embedded media via the
-    // snapshot's own `files` Y.Map, then replace the stored snapshot verbatim.
-    const snapshot = await this.rehomeSnapshotMedia(
+    // representation — no Excalidraw scene/JSON). Re-home embedded media through the
+    // SAME authorized, locator-native owner the create/clone flow uses
+    // (`rehomeSnapshotAssets`): the snapshot's FILES Y.Map holds opaque file-service
+    // locator strings, and every locator is per-document READ-authorized under the
+    // initiating actor and copied into this whiteboard's own bucket if it lives
+    // elsewhere. Direct untrusted content → no `sourceBucketId` (per-document READ),
+    // matching the live-replacement rule. One owner for both create and update — the
+    // BinaryFileData-shaped `rehomeSnapshotMedia` no-op path is gone.
+    const snapshot = await this.rehomeSnapshotAssets(
       Buffer.from(updateWhiteboardContent, 'base64'),
-      whiteboard.profile.id
+      whiteboard.profile.storageBucket.id,
+      { actorContext }
     );
     const previousPointer = whiteboard.contentPointer;
     const result = await this.fileServiceAdapter.createSnapshotInBucket(
@@ -798,82 +765,4 @@ export class WhiteboardService {
     return this.whiteboardRepository.save(whiteboard);
   }
   // todo: use one optimized query with a "where not exists"
-  // to return just the ones not in the bucket
-  // https://github.com/alkem-io/server/issues/4559
-  /**
-   * Re-uploads documents if not in the bucket.
-   * @throws {EntityNotInitializedException} if profile or storage bucket is not found.
-   */
-  private async reuploadDocumentsIfNotInBucket(
-    whiteboardContent: ExcalidrawContent,
-    profileIdToCheck: string
-  ): Promise<ExcalidrawContent> {
-    if (!whiteboardContent.files) {
-      return whiteboardContent;
-    }
-
-    const files = Object.entries(whiteboardContent.files);
-
-    if (!files.length) {
-      return whiteboardContent;
-    }
-
-    const profile = await this.profileService.getProfileOrFail(
-      profileIdToCheck,
-      {
-        relations: {
-          storageBucket: {
-            documents: true,
-          },
-        },
-      }
-    );
-    if (!profile.storageBucket) {
-      throw new EntityNotInitializedException(
-        'Profile: no definition of StorageBucket',
-        LogContext.PROFILE
-      );
-    }
-
-    for (const [, file] of files) {
-      if (!file.url) {
-        continue;
-      }
-      let newDocUrl: string | undefined;
-      try {
-        newDocUrl =
-          await this.profileDocumentsService.reuploadFileOnStorageBucket(
-            file.url,
-            profile.storageBucket,
-            true
-          );
-      } catch (e: any) {
-        if (e instanceof EntityNotFoundException) {
-          this.logger.warn?.(
-            `Tried to re-upload file (${file.url}) but file was not found: ${e?.message}`,
-            LogContext.WHITEBOARDS
-          );
-        } else {
-          this.logger.warn?.(
-            `Tried to re-upload file (${file.url}) but an error occurred: ${e?.message}`,
-            LogContext.WHITEBOARDS
-          );
-        }
-
-        newDocUrl = undefined;
-      }
-
-      if (!newDocUrl || newDocUrl === file.url) {
-        continue;
-      }
-
-      // change the url to the new document
-      whiteboardContent.files[file.id] = {
-        ...file,
-        url: newDocUrl,
-      };
-    }
-
-    return whiteboardContent;
-  }
 }

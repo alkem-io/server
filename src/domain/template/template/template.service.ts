@@ -395,7 +395,8 @@ export class TemplateService {
   // be done directly using the updateXXX mutation.
   async updateTemplate(
     templateInput: ITemplate,
-    templateData: UpdateTemplateInput
+    templateData: UpdateTemplateInput,
+    actorContext: ActorContext
   ): Promise<ITemplate> {
     const template = await this.getTemplateOrFail(templateInput.id, {
       relations: {
@@ -439,7 +440,8 @@ export class TemplateService {
       // first-open seed) reflect the template update.
       await this.whiteboardService.updateWhiteboardContent(
         template.whiteboard.id,
-        templateData.whiteboardContent
+        templateData.whiteboardContent,
+        actorContext
       );
     }
 

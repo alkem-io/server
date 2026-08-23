@@ -455,7 +455,8 @@ describe('TemplateService', () => {
 
       const _result = await service.updateTemplate(
         { id: 'tpl-1', type: TemplateType.POST } as ITemplate,
-        { ID: 'tpl-1', profile: { displayName: 'Updated' } } as any
+        { ID: 'tpl-1', profile: { displayName: 'Updated' } } as any,
+        actorContextData.actorContext
       );
 
       expect(profileService.updateProfile).toHaveBeenCalledWith(
@@ -477,7 +478,8 @@ describe('TemplateService', () => {
 
       const result = await service.updateTemplate(
         { id: 'tpl-1', type: TemplateType.POST } as ITemplate,
-        { ID: 'tpl-1', postDefaultDescription: 'new desc' } as any
+        { ID: 'tpl-1', postDefaultDescription: 'new desc' } as any,
+        actorContextData.actorContext
       );
 
       expect(result.postDefaultDescription).toBe('new desc');
@@ -497,14 +499,16 @@ describe('TemplateService', () => {
 
       await service.updateTemplate(
         { id: 'tpl-1', type: TemplateType.WHITEBOARD } as ITemplate,
-        { ID: 'tpl-1', whiteboardContent: 'new content' } as any
+        { ID: 'tpl-1', whiteboardContent: 'new content' } as any,
+        actorContextData.actorContext
       );
 
       // Whiteboard content is no longer an inline column: the new scene is routed
       // through the snapshot-write path (006-collab-content-unification).
       expect(whiteboardService.updateWhiteboardContent).toHaveBeenCalledWith(
         'wb-1',
-        'new content'
+        'new content',
+        actorContextData.actorContext
       );
     });
 
@@ -521,7 +525,8 @@ describe('TemplateService', () => {
 
       const result = await service.updateTemplate(
         { id: 'tpl-1', type: TemplateType.WHITEBOARD } as ITemplate,
-        { ID: 'tpl-1', postDefaultDescription: 'should be ignored' } as any
+        { ID: 'tpl-1', postDefaultDescription: 'should be ignored' } as any,
+        actorContextData.actorContext
       );
 
       expect(result.postDefaultDescription).toBeUndefined();

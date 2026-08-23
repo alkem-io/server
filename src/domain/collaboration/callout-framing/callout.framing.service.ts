@@ -477,13 +477,22 @@ export class CalloutFramingService {
         if (!calloutFramingData.whiteboardContent) {
           return calloutFraming;
         }
-        // if there is content and a whiteboard, we update it
         if (calloutFraming.whiteboard) {
-          calloutFraming.whiteboard =
-            await this.whiteboardService.updateWhiteboardContent(
-              calloutFraming.whiteboard.id,
-              calloutFramingData.whiteboardContent
-            );
+          // Direct whiteboard-content replacement is TEMPLATE-ONLY, mirroring the memo
+          // branch below (and the client's `mapFormToCalloutUpdateInput`, T048/T048a, which
+          // never sends whiteboardContent on a live-callout update). A template stores its
+          // whiteboard content statically; a live (non-template) callout's whiteboard is
+          // edited through its collaborative room, so an out-of-band snapshot write here
+          // would be clobbered by the room's next save. For a non-template callout the
+          // content is ignored (the room is authoritative); preview settings still apply.
+          if (isParentCalloutTemplate) {
+            calloutFraming.whiteboard =
+              await this.whiteboardService.updateWhiteboardContent(
+                calloutFraming.whiteboard.id,
+                calloutFramingData.whiteboardContent,
+                actorContext
+              );
+          }
           if (calloutFramingData.whiteboardPreviewSettings) {
             await this.whiteboardService.updateWhiteboard(
               calloutFraming.whiteboard,

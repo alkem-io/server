@@ -18,7 +18,6 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { CollaborationLifecycleService } from '@domain/common/collaboration-metadata';
 import { ILicense } from '@domain/common/license/license.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
@@ -127,10 +126,10 @@ const buildShapeSnapshotBase64 = async (): Promise<string> => {
 };
 
 /**
- * Build a base64-encoded Yjs-V2 whiteboard snapshot (the single content
- * representation since 006-collab-content-unification — never Excalidraw JSON).
- * Mirrors the wire schema `rehomeSnapshotMedia` operates on: a `files` Y.Map
- * keyed by file id. Pass `files` to exercise the embedded-media re-home path.
+ * Build a base64-encoded Yjs-V2 whiteboard snapshot with a RAW `FILES` map — used to
+ * inject values the locator-native re-home does NOT expect (e.g. a non-string
+ * BinaryFileData-shaped object), so a "loud on non-string" assertion is discriminating.
+ * For well-formed locator-string snapshots use `buildAssetSnapshotBase64` instead.
  */
 const buildSnapshotBase64 = (files: Record<string, unknown> = {}): string => {
   const doc = new Y.Doc();
@@ -143,6 +142,25 @@ const buildSnapshotBase64 = (files: Record<string, unknown> = {}): string => {
   return snapshot.toString('base64');
 };
 
+/**
+ * Decode a stored Yjs-V2 snapshot and read its FILES asset-locator map back through the
+ * REAL fork — lets a test assert the update path actually re-homed/rewrote the locators
+ * that landed in storage (the discriminating check the old no-op path could never pass).
+ */
+const readSnapshotAssetLocators = async (
+  snapshot: Uint8Array
+): Promise<Record<string, string>> => {
+  const fork: any = await import('@excalidraw-yjs/element/headless');
+  const doc = new Y.Doc();
+  Y.applyUpdateV2(doc, snapshot);
+  const locators = fork.readAssetLocators(doc.getMap(fork.FILES)) as Record<
+    string,
+    string
+  >;
+  doc.destroy();
+  return locators;
+};
+
 describe('WhiteboardService', () => {
   let service: WhiteboardService;
   let whiteboardRepository: MockType<Repository<Whiteboard>>;
@@ -151,7 +169,6 @@ describe('WhiteboardService', () => {
   let collaborationLifecycleService: CollaborationLifecycleService;
   let communityResolverService: CommunityResolverService;
   let licenseService: LicenseService;
-  let profileDocumentsService: ProfileDocumentsService;
   let fileServiceAdapter: FileServiceAdapter;
   let authorizationService: AuthorizationService;
   let documentService: DocumentService;
@@ -196,7 +213,6 @@ describe('WhiteboardService', () => {
     collaborationLifecycleService = module.get(CollaborationLifecycleService);
     communityResolverService = module.get(CommunityResolverService);
     licenseService = module.get(LicenseService);
-    profileDocumentsService = module.get(ProfileDocumentsService);
     fileServiceAdapter = module.get(FileServiceAdapter);
     authorizationService = module.get(AuthorizationService);
     documentService = module.get(DocumentService);
@@ -646,188 +662,198 @@ describe('WhiteboardService', () => {
   });
 
   describe('updateWhiteboardContent', () => {
-    it('should encode a snapshot, reupload documents, and save', async () => {
-      const whiteboard = {
+    const loadedWhiteboard = () =>
+      ({
         id: 'wb-1',
         profile: { id: 'profile-1', storageBucket: { id: 'sb-1' } },
-      } as unknown as Whiteboard;
-      whiteboardRepository.findOne!.mockResolvedValue(whiteboard);
+      }) as unknown as Whiteboard;
+
+    const mockStoredSnapshot = () => {
+      const captured: { buffer?: Uint8Array } = {};
+      vi.mocked(fileServiceAdapter.createSnapshotInBucket).mockImplementation(
+        async (buf: any) => {
+          captured.buffer = buf;
+          return {
+            id: 'snap-1',
+            externalID: 'ext-1',
+            mimeType: 'application/octet-stream',
+            size: 1,
+            reused: false,
+          };
+        }
+      );
+      return captured;
+    };
+
+    it('re-homes through the authorized locator-native path and saves the snapshot', async () => {
+      whiteboardRepository.findOne!.mockResolvedValue(loadedWhiteboard());
       whiteboardRepository.save!.mockImplementation(async (wb: any) => wb);
+      mockStoredSnapshot();
 
-      // Mock getProfileOrFail on profileService
-      vi.mocked(profileService.getProfileOrFail).mockResolvedValue({
-        id: 'profile-1',
-        storageBucket: { id: 'sb-1', documents: [] },
-      } as any);
-      vi.mocked(fileServiceAdapter.createSnapshotInBucket).mockResolvedValue({
-        id: 'snap-1',
-        externalID: 'ext-1',
-        mimeType: 'application/octet-stream',
-        size: 1,
-        reused: false,
-      });
+      // No assets → rehomeSnapshotAssets returns the snapshot verbatim, no copy/authz.
+      const result = await service.updateWhiteboardContent(
+        'wb-1',
+        await buildAssetSnapshotBase64({}),
+        actorContext
+      );
 
-      const newContent = buildSnapshotBase64();
-
-      const result = await service.updateWhiteboardContent('wb-1', newContent);
-
-      // The snapshot is re-homed and written verbatim to the bucket; the returned
-      // id becomes the contentPointer (the inline column is unmapped — retained in
-      // Release A, dropped in Release B).
       expect(fileServiceAdapter.createSnapshotInBucket).toHaveBeenCalledWith(
         expect.any(Buffer),
         'sb-1'
       );
+      expect(documentService.getDocumentOrFail).not.toHaveBeenCalled();
       expect(result.contentPointer).toBe('snap-1');
       expect(whiteboardRepository.save).toHaveBeenCalled();
     });
 
     it('should throw EntityNotInitializedException when profile not initialized', async () => {
-      const whiteboard = {
+      whiteboardRepository.findOne!.mockResolvedValue({
         id: 'wb-1',
         profile: undefined,
-      } as unknown as Whiteboard;
-      whiteboardRepository.findOne!.mockResolvedValue(whiteboard);
+      } as unknown as Whiteboard);
 
       await expect(
-        service.updateWhiteboardContent('wb-1', '{"elements":[]}')
+        service.updateWhiteboardContent(
+          'wb-1',
+          await buildAssetSnapshotBase64({}),
+          actorContext
+        )
       ).rejects.toThrow(EntityNotInitializedException);
     });
 
-    it('should still write a snapshot when no files in whiteboard content', async () => {
-      const whiteboard = {
-        id: 'wb-1',
-        profile: { id: 'profile-1', storageBucket: { id: 'sb-1' } },
-      } as unknown as Whiteboard;
-      whiteboardRepository.findOne!.mockResolvedValue(whiteboard);
+    it('RED: copies a FOREIGN-bucket locator into the whiteboard bucket and REWRITES the stored map (no silent no-op)', async () => {
+      whiteboardRepository.findOne!.mockResolvedValue(loadedWhiteboard());
       whiteboardRepository.save!.mockImplementation(async (wb: any) => wb);
-
-      vi.mocked(profileService.getProfileOrFail).mockResolvedValue({
-        id: 'profile-1',
-        storageBucket: { id: 'sb-1', documents: [] },
+      // The referenced media document lives in a DIFFERENT bucket than the whiteboard.
+      vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
+        id: 'src-loc',
+        authorization: { id: 'doc-auth' },
+        storageBucket: { id: 'sb-foreign' },
       } as any);
-      vi.mocked(fileServiceAdapter.createSnapshotInBucket).mockResolvedValue({
-        id: 'snap-1',
-        externalID: 'ext-1',
-        mimeType: 'application/octet-stream',
-        size: 1,
-        reused: false,
-      });
+      vi.mocked(storageBucketService.copyDocumentToBucket).mockResolvedValue({
+        id: 'copied-loc',
+      } as any);
+      const captured = mockStoredSnapshot();
 
-      const newContent = buildSnapshotBase64();
-      const result = await service.updateWhiteboardContent('wb-1', newContent);
+      await service.updateWhiteboardContent(
+        'wb-1',
+        await buildAssetSnapshotBase64({ 'file-1': 'src-loc' }),
+        actorContext
+      );
+
+      // Per-document READ authorized under the initiating actor, then copied into the
+      // whiteboard's OWN bucket as a target-owned copy (skipDedup=true).
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        expect.objectContaining({ id: 'doc-auth' }),
+        AuthorizationPrivilege.READ,
+        expect.any(String)
+      );
+      expect(storageBucketService.copyDocumentToBucket).toHaveBeenCalledWith(
+        'sb-1',
+        expect.objectContaining({ id: 'src-loc' }),
+        actorContext.actorID,
+        true
+      );
+      // The STORED snapshot's asset map now points at the copied locator — the exact
+      // behaviour the BinaryFileData-shaped no-op path silently skipped.
+      expect(await readSnapshotAssetLocators(captured.buffer!)).toEqual({
+        'file-1': 'copied-loc',
+      });
+    });
+
+    it('leaves a TARGET-OWNED locator unchanged (no copy, retained in the stored map)', async () => {
+      whiteboardRepository.findOne!.mockResolvedValue(loadedWhiteboard());
+      whiteboardRepository.save!.mockImplementation(async (wb: any) => wb);
+      // The referenced document already lives in the whiteboard's own bucket.
+      vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
+        id: 'owned-loc',
+        authorization: { id: 'doc-auth' },
+        storageBucket: { id: 'sb-1' },
+      } as any);
+      const captured = mockStoredSnapshot();
+
+      await service.updateWhiteboardContent(
+        'wb-1',
+        await buildAssetSnapshotBase64({ 'file-1': 'owned-loc' }),
+        actorContext
+      );
+
+      expect(storageBucketService.copyDocumentToBucket).not.toHaveBeenCalled();
+      expect(await readSnapshotAssetLocators(captured.buffer!)).toEqual({
+        'file-1': 'owned-loc',
+      });
+    });
+
+    it('RED: rejects an UNAUTHORIZED locator BEFORE any copy or snapshot write', async () => {
+      whiteboardRepository.findOne!.mockResolvedValue(loadedWhiteboard());
+      vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
+        id: 'foreign-loc',
+        authorization: { id: 'doc-auth' },
+        storageBucket: { id: 'sb-foreign' },
+      } as any);
+      // The initiating actor lacks READ on the referenced document.
+      vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(
+        () => {
+          throw new ForbiddenException('denied', 'test' as any);
+        }
+      );
+
+      await expect(
+        service.updateWhiteboardContent(
+          'wb-1',
+          await buildAssetSnapshotBase64({ 'file-1': 'foreign-loc' }),
+          actorContext
+        )
+      ).rejects.toThrow(ForbiddenException);
+      expect(storageBucketService.copyDocumentToBucket).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.createSnapshotInBucket).not.toHaveBeenCalled();
+    });
+
+    it('RED: is LOUD on a non-string FILES value — never silently no-ops the way the old path did', async () => {
+      whiteboardRepository.findOne!.mockResolvedValue(loadedWhiteboard());
+
+      // A BinaryFileData-shaped object in the FILES map is exactly what the deleted
+      // reupload path silently accepted; readAssetLocators must reject it loudly.
+      await expect(
+        service.updateWhiteboardContent(
+          'wb-1',
+          buildSnapshotBase64({
+            'file-1': { id: 'file-1', url: 'http://x/y.png' },
+          }),
+          actorContext
+        )
+      ).rejects.toThrow();
+      expect(fileServiceAdapter.createSnapshotInBucket).not.toHaveBeenCalled();
+    });
+
+    it('should still write a snapshot when there are no assets', async () => {
+      whiteboardRepository.findOne!.mockResolvedValue(loadedWhiteboard());
+      whiteboardRepository.save!.mockImplementation(async (wb: any) => wb);
+      mockStoredSnapshot();
+
+      const result = await service.updateWhiteboardContent(
+        'wb-1',
+        await buildAssetSnapshotBase64({}),
+        actorContext
+      );
 
       expect(result.contentPointer).toBe('snap-1');
       expect(fileServiceAdapter.createSnapshotInBucket).toHaveBeenCalled();
     });
 
-    it('should handle file reupload errors gracefully', async () => {
-      const whiteboard = {
-        id: 'wb-1',
-        profile: { id: 'profile-1', storageBucket: { id: 'sb-1' } },
-      } as unknown as Whiteboard;
-      whiteboardRepository.findOne!.mockResolvedValue(whiteboard);
-      whiteboardRepository.save!.mockImplementation(async (wb: any) => wb);
-
-      vi.mocked(profileService.getProfileOrFail).mockResolvedValue({
-        id: 'profile-1',
-        storageBucket: { id: 'sb-1', documents: [] },
-      } as any);
-      vi.mocked(fileServiceAdapter.createSnapshotInBucket).mockResolvedValue({
-        id: 'snap-1',
-        externalID: 'ext-1',
-        mimeType: 'application/octet-stream',
-        size: 1,
-        reused: false,
-      });
-
-      vi.mocked(
-        profileDocumentsService.reuploadFileOnStorageBucket
-      ).mockRejectedValue(
-        new EntityNotFoundException('File not found', 'test' as any)
-      );
-
-      const contentWithFiles = buildSnapshotBase64({
-        'file-1': { id: 'file-1', url: 'http://old.url/file.png' },
-      });
-
-      const result = await service.updateWhiteboardContent(
-        'wb-1',
-        contentWithFiles
-      );
-
-      // Should not throw, should handle gracefully and still persist a snapshot
-      expect(result.contentPointer).toBe('snap-1');
-    });
-
-    it('should reupload referenced files before encoding the snapshot', async () => {
-      const whiteboard = {
-        id: 'wb-1',
-        profile: { id: 'profile-1', storageBucket: { id: 'sb-1' } },
-      } as unknown as Whiteboard;
-      whiteboardRepository.findOne!.mockResolvedValue(whiteboard);
-      whiteboardRepository.save!.mockImplementation(async (wb: any) => wb);
-
-      vi.mocked(profileService.getProfileOrFail).mockResolvedValue({
-        id: 'profile-1',
-        storageBucket: { id: 'sb-1', documents: [] },
-      } as any);
-      vi.mocked(fileServiceAdapter.createSnapshotInBucket).mockResolvedValue({
-        id: 'snap-1',
-        externalID: 'ext-1',
-        mimeType: 'application/octet-stream',
-        size: 1,
-        reused: false,
-      });
-
-      vi.mocked(
-        profileDocumentsService.reuploadFileOnStorageBucket
-      ).mockResolvedValue('http://new.url/file.png');
-
-      const contentWithFiles = buildSnapshotBase64({
-        'file-1': { id: 'file-1', url: 'http://old.url/file.png' },
-      });
-
-      const result = await service.updateWhiteboardContent(
-        'wb-1',
-        contentWithFiles
-      );
-
-      // The embedded media is re-homed into the WB's bucket, then the scene is
-      // encoded to a Yjs-V2 snapshot and stored (content is no longer inline).
-      expect(
-        profileDocumentsService.reuploadFileOnStorageBucket
-      ).toHaveBeenCalledWith(
-        'http://old.url/file.png',
-        expect.objectContaining({ id: 'sb-1' }),
-        true
-      );
-      expect(fileServiceAdapter.createSnapshotInBucket).toHaveBeenCalledWith(
-        expect.any(Buffer),
-        'sb-1'
-      );
-      expect(result.contentPointer).toBe('snap-1');
-    });
-
     it('should throw EntityNotInitializedException when storageBucket not found', async () => {
-      const whiteboard = {
+      whiteboardRepository.findOne!.mockResolvedValue({
         id: 'wb-1',
-        content: '{}',
         profile: { id: 'profile-1' },
-      } as unknown as Whiteboard;
-      whiteboardRepository.findOne!.mockResolvedValue(whiteboard);
-
-      vi.mocked(profileService.getProfileOrFail).mockResolvedValue({
-        id: 'profile-1',
-        storageBucket: undefined,
-      } as any);
-
-      const contentWithFiles = buildSnapshotBase64({
-        'file-1': { id: 'file-1', url: 'http://old.url/file.png' },
-      });
+      } as unknown as Whiteboard);
 
       await expect(
-        service.updateWhiteboardContent('wb-1', contentWithFiles)
+        service.updateWhiteboardContent(
+          'wb-1',
+          await buildAssetSnapshotBase64({ 'file-1': 'loc-1' }),
+          actorContext
+        )
       ).rejects.toThrow(EntityNotInitializedException);
     });
   });
