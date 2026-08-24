@@ -151,4 +151,31 @@ export class TemplatesSetResolverFields {
       TemplateType.WHITEBOARD
     );
   }
+
+  @ResolveField('classificationTemplates', () => [ITemplate], {
+    nullable: false,
+    description: 'The Classification Templates in this TemplatesSet.',
+  })
+  async classificationTemplates(
+    @Parent() templatesSet: ITemplatesSet
+  ): Promise<ITemplate[]> {
+    return this.templatesSetService.getTemplatesOfType(
+      templatesSet,
+      TemplateType.CLASSIFICATION
+    );
+  }
+
+  @ResolveField('classificationTemplatesCount', () => Float, {
+    nullable: false,
+    description:
+      'The total number of Classification Templates in this TemplatesSet.',
+  })
+  classificationTemplatesCount(
+    @Parent() templatesSet: ITemplatesSet
+  ): Promise<number> {
+    return this.templatesSetService.getTemplatesCountForType(
+      templatesSet.id,
+      TemplateType.CLASSIFICATION
+    );
+  }
 }

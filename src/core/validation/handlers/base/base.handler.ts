@@ -88,6 +88,12 @@ import { UpdateVirtualContributorSettingsInput } from '@domain/community/virtual
 import { UpdateVirtualContributorSettingsEntityInput } from '@domain/community/virtual-contributor-settings';
 import { UpdateVirtualContributorSettingsPrivacyInput } from '@domain/community/virtual-contributor-settings/dto/virtual.contributor.settings.privacy.dto.update';
 import { UpdateBaselineLicensePlanOnAccount } from '@domain/space/account/dto/account.dto.update.baseline.license.plan';
+import { AddClassificationEntryFromTemplateInput } from '@domain/space/classification.entry/dto/classification.entry.dto.add.from.template';
+import { CreateClassificationEntryInput } from '@domain/space/classification.entry/dto/classification.entry.dto.create';
+import { DeleteClassificationEntryInput } from '@domain/space/classification.entry/dto/classification.entry.dto.delete';
+import { UpdateClassificationEntryInput } from '@domain/space/classification.entry/dto/classification.entry.dto.update';
+import { UpdateClassificationEntryDisplayInput } from '@domain/space/classification.entry/dto/classification.entry.dto.update.display';
+import { UpdateClassificationEntrySelectionInput } from '@domain/space/classification.entry/dto/classification.entry.dto.update.selection';
 import { CreateCollaborationOnSpaceInput } from '@domain/space/space/dto/space.dto.create.collaboration';
 import { CreateSubspaceInput } from '@domain/space/space/dto/space.dto.create.subspace';
 import { UpdateSpaceInput } from '@domain/space/space/dto/space.dto.update';
@@ -229,6 +235,12 @@ export class BaseHandler extends AbstractHandler {
       MintMcpApiKeyInput,
       RevokeMcpApiKeyInput,
       AdminRevokeMcpApiKeyInput,
+      AddClassificationEntryFromTemplateInput,
+      CreateClassificationEntryInput,
+      UpdateClassificationEntryInput,
+      UpdateClassificationEntrySelectionInput,
+      UpdateClassificationEntryDisplayInput,
+      DeleteClassificationEntryInput,
     ];
 
     if (types.includes(metatype)) {
