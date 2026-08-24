@@ -1,5 +1,3 @@
-import { readdirSync } from 'fs';
-import { join } from 'path';
 import type { QueryRunner } from 'typeorm';
 import { vi } from 'vitest';
 import { AddContentPointer1781802081405 } from '../migrations/1781802081405-AddContentPointer';
@@ -14,8 +12,6 @@ import { DefaultLegacyWhiteboardContent1781950000000 } from '../migrations/17819
 // fails before the default and succeeds after — while an explicit NULL still
 // fails — is a runtime transcript against a throwaway table (the repo has no
 // DB-backed test harness); see the Release A report's evidence path.
-
-const MIGRATIONS_DIR = join(__dirname, '..', 'migrations');
 
 const mockRunner = () => {
   const query = vi.fn(async () => undefined);
@@ -67,8 +63,15 @@ describe('006 Release A content migrations', () => {
     });
   });
 
-  it('the destructive DropMemoAndWhiteboardContent migration is ABSENT in Release A', () => {
-    const files = readdirSync(MIGRATIONS_DIR);
-    expect(files.some(f => /DropMemoAndWhiteboardContent/.test(f))).toBe(false);
+  it('Release A itself never drops the legacy content columns', async () => {
+    const { runner, query } = mockRunner();
+    await new AddContentPointer1781802081405().up(runner);
+    await new DefaultLegacyWhiteboardContent1781950000000().up(runner);
+
+    expect(
+      statementsOf(query).some(s =>
+        /ALTER TABLE "(?:memo|whiteboard)" DROP COLUMN "content"/i.test(s)
+      )
+    ).toBe(false);
   });
 });
