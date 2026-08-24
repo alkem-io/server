@@ -13,6 +13,7 @@ export interface FetchOutputData {
   contentType?: CollaborationContentType;
   version?: number;
   contentPointer?: string;
+  migrated?: boolean;
   /** OPEN-1 / FR-005 — the entity's own AuthorizationPolicy.id. */
   authorizationPolicyId?: string;
   /**

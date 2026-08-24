@@ -6,15 +6,15 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * Yjs-V2 snapshot. file-service is the SINGLE storage backend for the Alkemio
  * stack, so there is no store-kind column — content always lives in file-service.
  *
- * Release A (staged rollout): the column is added NULLABLE with NO back-fill.
- * `contentPointer IS NULL` means "not yet migrated" — the operator back-fill
- * (`CollaborationMigrationService.migrateAll`) converts each legacy document's
- * content to a real file-service snapshot and sets the pointer to the resulting
- * file-service id (never the row id). A later Release B fails-closed on any
+ * Release A: the column is added NULLABLE with NO back-fill. The temporary
+ * `migrated` marker added by the companion migration identifies the legacy
+ * cohort; the operator mutations convert each legacy document's content to a
+ * real file-service snapshot and atomically publish the pointer + marker. A
+ * later cleanup release fails-closed on any
  * NULL/blank pointer under its write fence and drops ONLY the legacy content
  * columns (`memo.content`, `whiteboard.content`), after the back-fill is verified;
- * the `contentPointer` column STAYS NULLABLE — a freshly-created row legitimately
- * has a transient NULL before its initial snapshot pointer is attached.
+ * the `contentPointer` column STAYS NULLABLE — the ordinary create path has a
+ * transient NULL before its initial snapshot pointer is attached.
  * Reversible: `down()` drops the column.
  */
 export class AddContentPointer1781802081405 implements MigrationInterface {

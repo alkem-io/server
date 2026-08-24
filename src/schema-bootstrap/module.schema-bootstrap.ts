@@ -50,6 +50,7 @@ import { SearchModule } from '@services/api/search/search.module';
 import { UrlResolverModule } from '@services/api/url-resolver/url.resolver.module';
 import { IdentityResolveModule } from '@services/api-rest/identity-resolve/identity-resolve.module';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
+import { CollaborationMigrationModule } from '@services/collaboration-integration/migration';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { GeoLocationModule } from '@services/external/geo-location';
 import { WingbackManagerModule } from '@services/external/wingback';
@@ -211,6 +212,7 @@ class SchemaBootstrapStubModule {}
     AdminMcpApiKeyModule,
     AdminCommunicationModule,
     AdminSearchIngestModule,
+    CollaborationMigrationModule,
     AdminLicensingModule,
     AdminGeoLocationModule,
     LicensingWingbackSubscriptionModule,

@@ -71,6 +71,7 @@ import { IdentityResolveModule } from '@services/api-rest/identity-resolve/ident
 import { InternalAdminModule } from '@services/api-rest/internal-admin/internal-admin.module';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
 import { CollaborationIntegrationModule } from '@services/collaboration-integration';
+import { CollaborationMigrationModule } from '@services/collaboration-integration/migration';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { GeoLocationModule } from '@services/external/geo-location';
 import { KratosEventsModule } from '@services/external/kratos-events/kratos.events.module';
@@ -318,6 +319,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     ActivityFeedModule,
     EventBusModule,
     CollaborationIntegrationModule,
+    CollaborationMigrationModule,
     MatrixRoomCheckModule,
     DomainPlatformSettingsModule,
     PlatformRoleModule,

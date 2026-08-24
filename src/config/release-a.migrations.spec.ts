@@ -3,6 +3,7 @@ import { join } from 'path';
 import type { QueryRunner } from 'typeorm';
 import { vi } from 'vitest';
 import { AddContentPointer1781802081405 } from '../migrations/1781802081405-AddContentPointer';
+import { AddCollaborationMigrated1781870000000 } from '../migrations/1781870000000-AddCollaborationMigrated';
 import { DefaultLegacyWhiteboardContent1781950000000 } from '../migrations/1781950000000-DefaultLegacyWhiteboardContent';
 
 // RED/pins for the 006 staged rollout — Release A migration shape. Lives in
@@ -44,6 +45,38 @@ describe('006 Release A content migrations', () => {
       expect(statements.some(s => /"contentPointer"\s*=\s*"id"/i.test(s))).toBe(
         false
       );
+    });
+  });
+
+  describe('AddCollaborationMigrated1781870000000', () => {
+    it('defaults new rows true and marks the legacy cohort from pointer readiness', async () => {
+      const { runner, query } = mockRunner();
+      await new AddCollaborationMigrated1781870000000().up(runner);
+      const statements = statementsOf(query);
+
+      expect(statements).toHaveLength(4);
+      expect(statements[0]).toMatch(
+        /ALTER TABLE "memo" ADD "migrated" boolean NOT NULL DEFAULT true/
+      );
+      expect(statements[1]).toMatch(
+        /ALTER TABLE "whiteboard" ADD "migrated" boolean NOT NULL DEFAULT true/
+      );
+      expect(statements[2]).toContain(
+        'SET "migrated" = ("contentPointer" IS NOT NULL'
+      );
+      expect(statements[3]).toContain(
+        'SET "migrated" = ("contentPointer" IS NOT NULL'
+      );
+    });
+
+    it('rolls back only the temporary marker, in reverse dependency order', async () => {
+      const { runner, query } = mockRunner();
+      await new AddCollaborationMigrated1781870000000().down(runner);
+
+      expect(statementsOf(query)).toEqual([
+        `ALTER TABLE "whiteboard" DROP COLUMN "migrated"`,
+        `ALTER TABLE "memo" DROP COLUMN "migrated"`,
+      ]);
     });
   });
 

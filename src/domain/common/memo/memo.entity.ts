@@ -12,7 +12,7 @@ export class Memo extends NameableEntity implements IMemo {
   // (006-collab-content-unification, R2/FR-005), mirroring the Whiteboard entity:
   // memo content is stored ONLY as a Yjs-V2 snapshot in the document's own storage
   // bucket, located by `contentPointer`. In Release A the DB column is RETAINED for
-  // the one-time back-fill (migration-only) and dropped only in Release B after the
+  // the progressive back-fill (migration-only) and dropped only in cleanup after the
   // back-fill is verified. Mapping it here would make TypeORM SELECT the retained
   // legacy column on every load.
 
@@ -23,6 +23,10 @@ export class Memo extends NameableEntity implements IMemo {
    */
   @Column('varchar', { length: MID_TEXT_LENGTH, nullable: true })
   contentPointer?: string;
+
+  /** Temporary progressive-rollout marker; removed after the legacy back-fill. */
+  @Column('boolean', { nullable: false, default: true })
+  migrated!: boolean;
 
   /**
    * The collaboration content version owned by the collaboration-service room

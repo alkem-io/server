@@ -6,8 +6,8 @@ import { CollaborationContentType } from '@common/enums/collaboration.content.ty
  * whiteboard-JSON -> Y.Doc seeding) consumes these; this server slice only
  * provides the read access.
  *
- * Release A back-fill: the reader selects ONLY rows whose `contentPointer IS
- * NULL` (not-yet-migrated) and joins each row's own storage bucket in the SAME
+ * Release A back-fill: the reader selects ONLY rows whose temporary `migrated`
+ * marker is false and joins each row's own storage bucket in the SAME
  * page query, so `storageBucketId` is carried here — the back-fill needs no
  * per-document metadata SELECT.
  *
@@ -22,6 +22,8 @@ export interface LegacyContentRecord {
   id: string;
   contentType: CollaborationContentType;
   content?: string;
+  /** A canonical pointer written after cohort marking but before migration won. */
+  contentPointer?: string;
   /** The document's own storage bucket id, joined in the page query. */
   storageBucketId?: string;
   /** set when the legacy blob could not be read (e.g. corrupt compression). */

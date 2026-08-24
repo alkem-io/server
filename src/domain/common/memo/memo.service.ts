@@ -102,8 +102,9 @@ export class MemoService {
     // quota-correct storage). The bucket id is persisted only after Phase 2.
     // Release A (staged rollout): EVERY create seeds a real snapshot — empty
     // creation content is encoded as the canonical empty Y.Doc
-    // (`markdownToYjsV2State('')`) so the row never carries a NULL/dangling
-    // pointer (the admission-pointer invariant). Release B fails-closed on any
+    // (`markdownToYjsV2State('')`). The existing create sequence may have a short
+    // internal NULL-pointer interval, but it publishes the pointer before returning
+    // the document to its caller. Cleanup fails closed on any
     // NULL/blank pointer under its write fence but leaves the column NULLABLE for
     // the transient new-row window. The room materializes empty + editable
     // (FR-010) either way.
@@ -267,6 +268,7 @@ export class MemoService {
         id: true,
         contentVersion: true,
         contentPointer: true,
+        migrated: true,
         authorization: { id: true },
         profile: { id: true, storageBucket: { id: true } },
       },
@@ -279,9 +281,10 @@ export class MemoService {
       // Coerce a DB NULL (a freshly-created row before its initial snapshot
       // pointer is attached) to `undefined` so the contract reply shape stays
       // `string | undefined`. The pointer column is legitimately nullable for
-      // this transient window; Release B fails-closed on NULL/blank under the
-      // write fence, it does not make the column NOT NULL.
+      // this transient window; cleanup requires zero NULL/blank pointers, but
+      // does not make the column NOT NULL.
       contentPointer: memo.contentPointer ?? undefined,
+      migrated: memo.migrated,
       authorizationPolicyId: memo.authorization?.id,
       // The memo's OWN storage bucket (via its profile) — the collab service
       // persists this doc's snapshot into this bucket, not a flat platform one.
@@ -342,6 +345,7 @@ export class MemoService {
         id: true,
         contentVersion: true,
         contentPointer: true,
+        migrated: true,
         authorization: { id: true },
       },
     })) as Memo;
@@ -349,6 +353,7 @@ export class MemoService {
     return {
       version: memo.contentVersion ?? 0,
       contentPointer: memo.contentPointer ?? undefined,
+      migrated: memo.migrated,
       authorizationPolicyId: memo.authorization?.id,
     };
   }

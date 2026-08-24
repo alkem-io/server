@@ -17,6 +17,8 @@ export interface CollaborationMetadata {
    */
   version: number;
   contentPointer?: string;
+  /** Temporary rollout gate: false while retained legacy content awaits migration. */
+  migrated: boolean;
   /** the entity's own AuthorizationPolicy.id (= `authorizationId`), FR-005. */
   authorizationPolicyId?: string;
   /**

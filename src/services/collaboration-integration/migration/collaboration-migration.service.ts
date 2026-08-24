@@ -144,7 +144,7 @@ const extensionForMimeType = (mimeType: string): string => {
  * Outcome of one `migrateAll` run (US6/FR-007). Counters let an operator confirm
  * a clean migration: every reached legacy document either got a snapshot pointer,
  * was flagged (un-decodable, surfaced for review — NEVER silently dropped), or
- * failed (re-runnable). NULL-only at source means every reached record migrates.
+ * failed (re-runnable). Pending-only at source means every reached record migrates.
  */
 export interface MigrationSummary {
   total: number;
@@ -159,6 +159,8 @@ export interface MigrationSummary {
   failed: number;
   /** The flagged document ids + reasons, for operator follow-up. */
   flaggedDocuments: { id: string; reason: string }[];
+  /** Runtime failures with ids + reasons, for retry/remediation. */
+  failedDocuments: { id: string; reason: string }[];
   /** True when no snapshot was written / pointer mutated (preview only). */
   dryRun: boolean;
 }
@@ -171,13 +173,16 @@ export interface MigrationOptions {
 }
 
 /**
- * Outcome of one `verifyAll` run — the Release B pre-flight (operator preflight,
+ * Outcome of one `verifyAll` run — the post-release cleanup pre-flight,
  * READ-ONLY). `ok` is true only when every memo/whiteboard row carries a `contentPointer`
  * (zero NULL), every pointer RESOLVES in file-service, every resolved snapshot passes the
  * explicit cold-load-critical invariants for its type, AND every live-image locator in a
  * whiteboard resolves to non-empty content in file-service.
  */
 export interface VerificationSummary {
+  memoPendingMigrations: number;
+  whiteboardPendingMigrations: number;
+  pendingMigrationTotal: number;
   memoNullPointers: number;
   whiteboardNullPointers: number;
   nullPointerTotal: number;
@@ -252,10 +257,10 @@ export class CollaborationMigrationService {
    * drop.
    *
    * - Idempotent + resumable at SOURCE: the reader selects only rows whose
-   *   `contentPointer IS NULL`, so a re-run after an interruption processes only
-   *   the remainder; a failed upload leaves the row NULL and is retried on re-run.
+   *   temporary `migrated` marker is false, so a re-run after an interruption
+   *   processes only the remainder; a failed upload leaves the row pending.
    * - Empty content → seeded with the canonical empty snapshot, so every back-filled
-   *   row gets a resolving pointer (Release B's fenced guard requires zero NULL/blank
+   *   row gets a resolving pointer (post-release cleanup requires zero NULL/blank
    *   pointers, then drops only the legacy content columns — the pointer stays nullable).
    *   The room still materializes empty + editable (FR-010).
    * - Un-decodable content → flagged + surfaced in the summary, NEVER dropped.
@@ -264,17 +269,42 @@ export class CollaborationMigrationService {
   public async migrateAll(
     options: MigrationOptions = {}
   ): Promise<MigrationSummary> {
-    const { dryRun = false, batchSize = DEFAULT_BATCH_SIZE } = options;
+    return this.migrateRecords(this.readAll(options.batchSize), options);
+  }
+
+  /** Migrates only legacy memos. Safe to invoke repeatedly. */
+  public async migrateMemos(
+    options: MigrationOptions = {}
+  ): Promise<MigrationSummary> {
+    return this.migrateRecords(this.readMemos(options.batchSize), options);
+  }
+
+  /** Migrates only legacy whiteboards. Safe to invoke repeatedly. */
+  public async migrateWhiteboards(
+    options: MigrationOptions = {}
+  ): Promise<MigrationSummary> {
+    return this.migrateRecords(
+      this.readWhiteboards(options.batchSize),
+      options
+    );
+  }
+
+  private async migrateRecords(
+    records: AsyncIterable<LegacyContentRecord>,
+    options: MigrationOptions
+  ): Promise<MigrationSummary> {
+    const { dryRun = false } = options;
     const summary: MigrationSummary = {
       total: 0,
       migrated: 0,
       flagged: 0,
       failed: 0,
       flaggedDocuments: [],
+      failedDocuments: [],
       dryRun,
     };
 
-    for await (const record of this.readAll(batchSize)) {
+    for await (const record of records) {
       summary.total++;
 
       if (record.flagged) {
@@ -291,6 +321,10 @@ export class CollaborationMigrationService {
         summary.migrated++;
       } catch (error) {
         summary.failed++;
+        summary.failedDocuments.push({
+          id: record.id,
+          reason: error instanceof Error ? error.message : String(error),
+        });
         this.logger.error?.(
           {
             message: 'Collaboration migration: failed to migrate document',
@@ -307,8 +341,11 @@ export class CollaborationMigrationService {
     this.logger.verbose?.(
       {
         message: 'Collaboration migration complete',
-        ...summary,
-        flaggedDocuments: undefined,
+        total: summary.total,
+        migrated: summary.migrated,
+        flagged: summary.flagged,
+        failed: summary.failed,
+        dryRun: summary.dryRun,
       },
       LogContext.COLLABORATION_INTEGRATION
     );
@@ -316,11 +353,11 @@ export class CollaborationMigrationService {
   }
 
   /**
-   * Release B pre-flight (US6/FR-007) — READ-ONLY: proves every memo/whiteboard
+   * Post-release cleanup pre-flight (US6/FR-007) — READ-ONLY: proves every memo/whiteboard
    * carries a `contentPointer` (zero NULL), every pointer resolves in file-service, every
    * resolved snapshot passes the explicit cold-load-critical invariants for its type, and
    * every whiteboard live-image locator resolves to non-empty content. `ok` gates the
-   * destructive Release B migration. No writes — peak memory is ONE snapshot decoded at a
+   * destructive content-column cleanup. No writes — peak memory is ONE snapshot decoded at a
    * time (destroyed immediately) plus AT MOST one live-media blob
    * during byte resolution, never a whole DB page; each per-row fetch/decode/schema failure is
    * captured to `invalid` while the run continues.
@@ -328,7 +365,14 @@ export class CollaborationMigrationService {
   public async verifyAll(
     batchSize = DEFAULT_BATCH_SIZE
   ): Promise<VerificationSummary> {
-    const [memoNullPointers, whiteboardNullPointers] = await Promise.all([
+    const [
+      memoPendingMigrations,
+      whiteboardPendingMigrations,
+      memoNullPointers,
+      whiteboardNullPointers,
+    ] = await Promise.all([
+      this.memoRepository.count({ where: { migrated: false } }),
+      this.whiteboardRepository.count({ where: { migrated: false } }),
       this.memoRepository.count({ where: { contentPointer: IsNull() } }),
       this.whiteboardRepository.count({ where: { contentPointer: IsNull() } }),
     ]);
@@ -354,7 +398,12 @@ export class CollaborationMigrationService {
       fork
     );
     const nullPointerTotal = memoNullPointers + whiteboardNullPointers;
+    const pendingMigrationTotal =
+      memoPendingMigrations + whiteboardPendingMigrations;
     return {
+      memoPendingMigrations,
+      whiteboardPendingMigrations,
+      pendingMigrationTotal,
       memoNullPointers,
       whiteboardNullPointers,
       nullPointerTotal,
@@ -362,6 +411,7 @@ export class CollaborationMigrationService {
       unresolved,
       invalid,
       ok:
+        pendingMigrationTotal === 0 &&
         nullPointerTotal === 0 &&
         unresolved.length === 0 &&
         invalid.length === 0,
@@ -428,9 +478,9 @@ export class CollaborationMigrationService {
               contentType,
               contentPointer: row.contentPointer,
               reason:
-                "contentPointer is blank/whitespace (Release B guard: NULL OR btrim(contentPointer) = '')",
+                "contentPointer is blank/whitespace (cleanup guard: NULL OR btrim(contentPointer) = '')",
             });
-            continue; // blank pointer — do NOT fetch; express the Release B boundary here
+            continue; // blank pointer — do NOT fetch; express the cleanup boundary here
           }
           if (!row.storageBucketId) {
             invalid.push({
@@ -739,8 +789,8 @@ export class CollaborationMigrationService {
   }
 
   /**
-   * Migrates one NULL-pointer legacy record (the reader selects `contentPointer
-   * IS NULL` at source and joins the storage bucket, so there is NO per-document
+   * Migrates one legacy record (the reader selects `migrated = false` at source
+   * and joins the storage bucket, so there is NO per-document
    * metadata SELECT here): encodes the content (empty → canonical empty snapshot),
    * uploads it to the record's OWN storage bucket, and sets the pointer ONLY after
    * a successful upload (a failure throws → the row stays NULL / rerunnable). A
@@ -755,6 +805,22 @@ export class CollaborationMigrationService {
     if (!record.storageBucketId) {
       throw new Error(
         `Document ${record.id} has no storage bucket; cannot write snapshot`
+      );
+    }
+
+    const isMemo = record.contentType === CollaborationContentType.MEMO;
+    const repository = (
+      isMemo ? this.memoRepository : this.whiteboardRepository
+    ) as Repository<Memo | Whiteboard>;
+
+    // `migrated=false` plus a pointer is an INCONSISTENT state. A competing
+    // migration cannot produce it because its CAS writes pointer + marker in one
+    // statement; it therefore identifies an incompatible/non-atomic writer. Do
+    // not bless that pointer: it may be an empty snapshot produced without ever
+    // reading the retained legacy content.
+    if (record.contentPointer?.trim()) {
+      throw new Error(
+        `Document ${record.id} is not migrated but already has content pointer ${record.contentPointer}; refusing to trust a non-atomic writer`
       );
     }
 
@@ -773,11 +839,6 @@ export class CollaborationMigrationService {
       return; // dry-run stops after planning — provably zero writes
     }
 
-    const isMemo = record.contentType === CollaborationContentType.MEMO;
-    const repository = (
-      isMemo ? this.memoRepository : this.whiteboardRepository
-    ) as Repository<Memo | Whiteboard>;
-
     // 2. REAL: resolve media for real (Alkemio-doc lookups + dataURL up-home writes), build the
     //    FINAL snapshot, and verifyContent it BEFORE upload/CAS — never persist bytes the
     //    verifier would reject. EVERY reached (null-pointer) record is seeded, including empty
@@ -791,26 +852,49 @@ export class CollaborationMigrationService {
     // First-writer-wins CAS: the live collab-service save path can assign a NEWER
     // pointer while this upload is in flight (Release A has NOT retired that path),
     // so an `id`-only UPDATE could clobber a newer pointer with the stale legacy
-    // snapshot — a content regression that Release B's column drop would make
-    // permanent. The `contentPointer IS NULL` guard makes the write a no-op if a
-    // concurrent writer already won: `affected === 0` is reported as a failure
-    // (re-runnable), never a success. The just-created snapshot is NOT deleted — it
-    // may be content-deduped/shared with that writer, and an orphan snapshot is
-    // harmless where overwriting is not.
+    // snapshot — a content regression that the later column drop would make
+    // permanent. The `migrated = false AND contentPointer IS NULL` guard makes
+    // the write a no-op if a
+    // concurrent writer already won. The just-created snapshot is not deleted
+    // here because create may have deduplicated it with the winning writer; file
+    // lifecycle/GC owns any genuinely unreachable artifact.
     const updateResult = await repository
       .createQueryBuilder()
       .update()
       .set({
         contentPointer: result.id,
         contentVersion: 0,
+        migrated: true,
       })
-      .where('id = :id AND "contentPointer" IS NULL', { id: record.id })
+      .where('id = :id AND "migrated" = false AND "contentPointer" IS NULL', {
+        id: record.id,
+      })
       .execute();
-    if (updateResult.affected !== 1) {
-      throw new Error(
-        `Document ${record.id} pointer was set by a concurrent writer during migration; refusing to overwrite (affected=${updateResult.affected})`
-      );
+    if (updateResult.affected === 1) {
+      return;
     }
+
+    // A concurrent migration may already have completed both fields. That is
+    // success for the document even though our stale CAS matched nothing.
+    if (await this.hasConverged(repository, record.id)) {
+      return;
+    }
+    throw new Error(
+      `Document ${record.id} did not converge after migration CAS (affected=${updateResult.affected})`
+    );
+  }
+
+  private async hasConverged(
+    repository: Repository<Memo | Whiteboard>,
+    id: string
+  ): Promise<boolean> {
+    const current = await repository
+      .createQueryBuilder('doc')
+      .select('doc.migrated', 'migrated')
+      .addSelect('doc.contentPointer', 'contentPointer')
+      .where('doc.id = :id', { id })
+      .getRawOne<{ migrated: boolean; contentPointer: string | null }>();
+    return Boolean(current?.migrated && current.contentPointer?.trim());
   }
 
   /**
@@ -827,7 +911,7 @@ export class CollaborationMigrationService {
    * `BinaryFileData` objects are never stored (that is exactly the pre-006 shape
    * `readAssetLocators` rejects loudly). Release A back-fills EVERY selected row: empty content
    * (never-edited memo / empty whiteboard) is encoded as the canonical empty Y.Doc
-   * so the back-fill still assigns a resolving pointer — never a NULL/skip (Release B's
+   * so the back-fill still assigns a resolving pointer — never a NULL/skip (cleanup's
    * fenced guard requires zero NULL/blank pointers before dropping only the legacy content
    * columns; the pointer column stays nullable). Same canonical empty encodings the create
    * path seeds.
@@ -1127,11 +1211,11 @@ export class CollaborationMigrationService {
     // no-drop migration guarantee (plan.md §Migration; spec Edge Cases).
     let lastId: string | undefined;
     for (;;) {
-      // NULL-only at source: select ONLY not-yet-migrated memos
-      // (`contentPointer IS NULL`) and join the document's own storage bucket in
+      // Select ONLY not-yet-migrated memos (`migrated = false`) and join the
+      // document's own storage bucket in
       // the SAME page query — so the back-fill needs no per-document metadata
       // SELECT. `memo.content` is the inline Yjs-V2 column RETAINED in Release A
-      // (unmapped on the entity, migration-only) and dropped only in Release B;
+      // (unmapped on the entity, migration-only) and dropped only in cleanup;
       // this raw select intentionally does NOT go through the entity mapping.
       const qb = this.memoRepository
         .createQueryBuilder('memo')
@@ -1139,8 +1223,9 @@ export class CollaborationMigrationService {
         .leftJoin('profile.storageBucket', 'storageBucket')
         .select('memo.id', 'id')
         .addSelect('memo.content', 'content')
+        .addSelect('memo.contentPointer', 'contentPointer')
         .addSelect('storageBucket.id', 'storageBucketId')
-        .where('memo.contentPointer IS NULL')
+        .where('memo.migrated = false')
         .orderBy('memo.id', 'ASC')
         .limit(batchSize);
       if (lastId !== undefined) {
@@ -1149,6 +1234,7 @@ export class CollaborationMigrationService {
       const rows = await qb.getRawMany<{
         id: string;
         content: Buffer | null;
+        contentPointer: string | null;
         storageBucketId: string | null;
       }>();
 
@@ -1163,6 +1249,7 @@ export class CollaborationMigrationService {
           content: row.content
             ? Buffer.from(row.content).toString('base64')
             : undefined,
+          contentPointer: row.contentPointer ?? undefined,
           storageBucketId: row.storageBucketId ?? undefined,
         };
       }
@@ -1181,11 +1268,11 @@ export class CollaborationMigrationService {
     // pagination is unsafe under concurrent inserts/deletes during the run.
     let lastId: string | undefined;
     for (;;) {
-      // NULL-only at source (see readMemos): only not-yet-migrated whiteboards are
+      // Pending-only at source (see readMemos): only not-yet-migrated whiteboards are
       // selected + decompressed, so an already-migrated whiteboard with stale/
       // corrupt RETAINED legacy content is never touched. `whiteboard.content` is
       // the inline column RETAINED in Release A (unmapped on the entity,
-      // migration-only) and dropped only in Release B. Read the RAW (compressed)
+      // migration-only) and dropped only in cleanup. Read the RAW (compressed)
       // content via the query builder so the corrupt-blob case is flagged per-row
       // rather than aborting the batch; the storage bucket is joined here.
       const qb = this.whiteboardRepository
@@ -1194,8 +1281,9 @@ export class CollaborationMigrationService {
         .leftJoin('profile.storageBucket', 'storageBucket')
         .select('whiteboard.id', 'id')
         .addSelect('whiteboard.content', 'content')
+        .addSelect('whiteboard.contentPointer', 'contentPointer')
         .addSelect('storageBucket.id', 'storageBucketId')
-        .where('whiteboard.contentPointer IS NULL')
+        .where('whiteboard.migrated = false')
         .orderBy('whiteboard.id', 'ASC')
         .limit(batchSize);
       if (lastId !== undefined) {
@@ -1204,6 +1292,7 @@ export class CollaborationMigrationService {
       const rows = await qb.getRawMany<{
         id: string;
         content: string | null;
+        contentPointer: string | null;
         storageBucketId: string | null;
       }>();
 
@@ -1225,11 +1314,13 @@ export class CollaborationMigrationService {
   private async toWhiteboardRecord(row: {
     id: string;
     content: string | null;
+    contentPointer: string | null;
     storageBucketId: string | null;
   }): Promise<LegacyContentRecord> {
     const base: LegacyContentRecord = {
       id: row.id,
       contentType: CollaborationContentType.WHITEBOARD,
+      contentPointer: row.contentPointer ?? undefined,
       storageBucketId: row.storageBucketId ?? undefined,
     };
 

@@ -124,6 +124,7 @@ export class CollaborationIntegrationService {
           contentType: CollaborationContentType.MEMO,
           version: memo.version,
           contentPointer: memo.contentPointer,
+          migrated: memo.migrated,
           authorizationPolicyId: memo.authorizationPolicyId,
           // The memo's OWN storage bucket — collab persists this doc's snapshot
           // there, not into a single flat platform bucket.
@@ -138,6 +139,7 @@ export class CollaborationIntegrationService {
           contentType: CollaborationContentType.WHITEBOARD,
           version: whiteboard.version,
           contentPointer: whiteboard.contentPointer,
+          migrated: whiteboard.migrated,
           authorizationPolicyId: whiteboard.authorizationPolicyId,
           // The whiteboard's OWN storage bucket (see memo note above).
           storageBucketId: whiteboard.storageBucketId,

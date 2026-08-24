@@ -13,10 +13,10 @@ export class Whiteboard extends NameableEntity implements IWhiteboard {
   // `@BeforeInsert/@BeforeUpdate/@AfterLoad` (de)compression hooks are UNMAPPED
   // (006-collab-content-unification, R2/FR-005): whiteboard content is stored ONLY
   // as a Yjs-V2 snapshot in the document's own storage bucket, located by
-  // `contentPointer`. In Release A the DB column is RETAINED for the one-time
+  // `contentPointer`. In the staged release the DB column is RETAINED for the progressive
   // back-fill (migration-only, with a temporary `DEFAULT ''` so entity-unmapped
-  // inserts satisfy its NOT NULL) and dropped only in Release B after the back-fill
-  // is verified. Legacy Excalidraw scenes are converted server-side (the one-time
+  // inserts satisfy its NOT NULL) and dropped only in cleanup after the back-fill
+  // is verified. Legacy Excalidraw scenes are converted server-side (the progressive
   // migration) via the fork-based `whiteboardSceneToYjsV2State` and written to the
   // bucket; the live create/update paths persist the editor's Yjs-V2 snapshot verbatim.
 
@@ -27,6 +27,10 @@ export class Whiteboard extends NameableEntity implements IWhiteboard {
    */
   @Column('varchar', { length: MID_TEXT_LENGTH, nullable: true })
   contentPointer?: string;
+
+  /** Temporary progressive-rollout marker; removed after the legacy back-fill. */
+  @Column('boolean', { nullable: false, default: true })
+  migrated!: boolean;
 
   /**
    * The collaboration content version owned by the collaboration-service room

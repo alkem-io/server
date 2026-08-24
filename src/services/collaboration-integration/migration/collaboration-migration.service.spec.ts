@@ -216,7 +216,7 @@ const queryBuilderMock = (pages: any[][]) => {
     select: vi.fn(() => qb),
     addSelect: vi.fn(() => qb),
     orderBy: vi.fn(() => qb),
-    // NULL-only reader: `where('contentPointer IS NULL')` + keyset `andWhere`.
+    // Pending-only reader: `where('migrated = false')` + keyset `andWhere`.
     // Keep `where`/`skip`/`take` chainable too so the mock tolerates either style.
     limit: vi.fn(() => qb),
     where: vi.fn(() => qb),
@@ -494,6 +494,17 @@ describe('CollaborationMigrationService', () => {
       qb.execute = execute;
       return { qb, set, where, execute };
     };
+    const convergenceQB = (row: {
+      migrated: boolean;
+      contentPointer: string | null;
+    }) => {
+      const qb: any = {};
+      qb.select = vi.fn(() => qb);
+      qb.addSelect = vi.fn(() => qb);
+      qb.where = vi.fn(() => qb);
+      qb.getRawOne = vi.fn(async () => row);
+      return qb;
+    };
     const verifyQB = (pages: any[][]) => {
       let call = 0;
       const qb: any = {};
@@ -551,20 +562,56 @@ describe('CollaborationMigrationService', () => {
       // specs.
     });
 
-    it('readMemos filters contentPointer IS NULL at source (NULL-only boundary at the reader)', async () => {
+    it('readMemos filters migrated=false at source', async () => {
       const qb = queryBuilderMock([[]]);
       memo.createQueryBuilder.mockReturnValue(qb);
       await collect(svc.readMemos(50));
-      expect(qb.where).toHaveBeenCalledWith('memo.contentPointer IS NULL');
+      expect(qb.where).toHaveBeenCalledWith('memo.migrated = false');
     });
 
-    it('readWhiteboards filters contentPointer IS NULL at source', async () => {
+    it('readWhiteboards filters migrated=false at source', async () => {
       const qb = queryBuilderMock([[]]);
       whiteboard.createQueryBuilder.mockReturnValue(qb);
       await collect(svc.readWhiteboards(50));
-      expect(qb.where).toHaveBeenCalledWith(
-        'whiteboard.contentPointer IS NULL'
-      );
+      expect(qb.where).toHaveBeenCalledWith('whiteboard.migrated = false');
+    });
+
+    it('migrateMemos is idempotent and never scans whiteboards', async () => {
+      const update = updateQB();
+      memo.createQueryBuilder
+        .mockReturnValueOnce(
+          queryBuilderMock([
+            [{ id: 'm1', content: null, storageBucketId: 'sb1' }],
+          ])
+        )
+        .mockReturnValueOnce(update.qb)
+        .mockReturnValueOnce(queryBuilderMock([[]]));
+      fileService.createSnapshotInBucket.mockResolvedValue({ id: 'snap-m1' });
+
+      const first = await svc.migrateMemos();
+      const second = await svc.migrateMemos();
+
+      expect(first).toMatchObject({ total: 1, migrated: 1, failed: 0 });
+      expect(second).toMatchObject({ total: 0, migrated: 0, failed: 0 });
+      expect(fileService.createSnapshotInBucket).toHaveBeenCalledTimes(1);
+      expect(whiteboard.createQueryBuilder).not.toHaveBeenCalled();
+    });
+
+    it('migrateWhiteboards scans only whiteboards', async () => {
+      const update = updateQB();
+      whiteboard.createQueryBuilder
+        .mockReturnValueOnce(
+          queryBuilderMock([
+            [{ id: 'w1', content: '', storageBucketId: 'sb-w1' }],
+          ])
+        )
+        .mockReturnValueOnce(update.qb);
+      fileService.createSnapshotInBucket.mockResolvedValue({ id: 'snap-w1' });
+
+      const result = await svc.migrateWhiteboards();
+
+      expect(result).toMatchObject({ total: 1, migrated: 1, failed: 0 });
+      expect(memo.createQueryBuilder).not.toHaveBeenCalled();
     });
 
     it("seeds a never-edited (NULL-content) memo with the canonical empty snapshot in the RECORD's bucket, with NO per-row metadata SELECT", async () => {
@@ -592,11 +639,12 @@ describe('CollaborationMigrationService', () => {
       expect(update.set).toHaveBeenCalledWith({
         contentPointer: 'snap-m1',
         contentVersion: 0,
+        migrated: true,
       });
       // First-writer-wins CAS guard: the UPDATE is conditioned on the pointer
-      // still being NULL.
+      // still being pending and NULL.
       expect(update.where).toHaveBeenCalledWith(
-        'id = :id AND "contentPointer" IS NULL',
+        'id = :id AND "migrated" = false AND "contentPointer" IS NULL',
         { id: 'm1' }
       );
       expect(update.execute).toHaveBeenCalledTimes(1);
@@ -604,9 +652,7 @@ describe('CollaborationMigrationService', () => {
       expect(memo.createQueryBuilder).toHaveBeenCalledTimes(2);
     });
 
-    it('does NOT overwrite a pointer set by a concurrent writer (CAS affected=0 → failed, no success, file not deleted)', async () => {
-      // The `contentPointer IS NULL` guard matches 0 rows: a live collab-service
-      // save assigned a newer pointer while this upload was in flight.
+    it("treats another migration's atomic completion as convergence after losing the CAS", async () => {
       const update = updateQB(0);
       memo.createQueryBuilder
         .mockReturnValueOnce(
@@ -614,19 +660,75 @@ describe('CollaborationMigrationService', () => {
             [{ id: 'm1', content: null, storageBucketId: 'sb1' }],
           ])
         )
-        .mockReturnValueOnce(update.qb);
+        .mockReturnValueOnce(update.qb)
+        .mockReturnValueOnce(
+          convergenceQB({ migrated: true, contentPointer: 'winner-snapshot' })
+        );
       whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
       fileService.createSnapshotInBucket.mockResolvedValue({ id: 'snap-m1' });
 
       const summary = await svc.migrateAll();
 
-      expect(summary.failed).toBe(1);
-      expect(summary.migrated).toBe(0);
-      // The snapshot WAS created (a concurrent writer won), the CAS UPDATE ran and
-      // matched nothing, and the stale legacy snapshot is NEVER classified a
-      // success. The created file is NOT deleted (it may be deduped/shared).
+      expect(summary.failed).toBe(0);
+      expect(summary.migrated).toBe(1);
+      // Our snapshot was created, but another migration atomically published its
+      // own pointer + marker first. The stale CAS does not overwrite it.
       expect(fileService.createSnapshotInBucket).toHaveBeenCalledTimes(1);
       expect(update.execute).toHaveBeenCalledTimes(1);
+    });
+
+    it('refuses an already-present pointer on a pending row without touching legacy content', async () => {
+      memo.createQueryBuilder.mockReturnValueOnce(
+        queryBuilderMock([
+          [
+            {
+              id: 'm1',
+              content: Buffer.from('stale legacy'),
+              contentPointer: 'canonical-newer',
+              storageBucketId: 'sb1',
+            },
+          ],
+        ])
+      );
+      whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+
+      const summary = await svc.migrateAll();
+
+      expect(summary).toMatchObject({ total: 1, migrated: 0, failed: 1 });
+      expect(summary.failedDocuments).toEqual([
+        {
+          id: 'm1',
+          reason: expect.stringMatching(
+            /refusing to trust a non-atomic writer/
+          ),
+        },
+      ]);
+      expect(fileService.createSnapshotInBucket).not.toHaveBeenCalled();
+      expect(memo.createQueryBuilder).toHaveBeenCalledTimes(1);
+    });
+
+    it('refuses a pointer-only writer that wins while migration upload is in flight', async () => {
+      const update = updateQB(0);
+      memo.createQueryBuilder
+        .mockReturnValueOnce(
+          queryBuilderMock([
+            [{ id: 'm1', content: null, storageBucketId: 'sb1' }],
+          ])
+        )
+        .mockReturnValueOnce(update.qb)
+        .mockReturnValueOnce(
+          convergenceQB({ migrated: false, contentPointer: 'unsafe-writer' })
+        );
+      whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+      fileService.createSnapshotInBucket.mockResolvedValue({ id: 'snap-m1' });
+
+      const summary = await svc.migrateAll();
+
+      expect(summary).toMatchObject({ total: 1, migrated: 0, failed: 1 });
+      expect(summary.failedDocuments[0]).toMatchObject({
+        id: 'm1',
+        reason: expect.stringMatching(/did not converge/),
+      });
     });
 
     it('leaves the pointer NULL (failed, rerunnable) when the snapshot upload throws — no update runs', async () => {
@@ -780,6 +882,7 @@ describe('CollaborationMigrationService', () => {
       expect(update.set).toHaveBeenCalledWith({
         contentPointer: 'snap-w1',
         contentVersion: 0,
+        migrated: true,
       });
     });
 
@@ -871,7 +974,7 @@ describe('CollaborationMigrationService', () => {
 
       // An external-only url can never become a locator, and a LIVE image references it —
       // migrating would ship a permanently-broken image. Fail instead: pointer stays NULL
-      // (the NULL-only worker retries after the operator remediates), no snapshot, no CAS.
+      // (the pending-only worker retries after the operator remediates), no snapshot, no CAS.
       expect(summary.migrated).toBe(0);
       expect(summary.failed).toBe(1);
       expect(fileService.createSnapshotInBucket).not.toHaveBeenCalled();
@@ -1141,7 +1244,7 @@ describe('CollaborationMigrationService', () => {
       );
 
       // The image bytes are unrecoverable (no url, no dataURL) and a LIVE image references
-      // it → fail the row (blocks Release B until remediated) rather than migrate a broken
+      // it → fail the row (blocks cleanup until remediated) rather than migrate a broken
       // image. No up-home, no snapshot, no CAS; pointer stays NULL/rerunnable.
       expect(summary.migrated).toBe(0);
       expect(summary.failed).toBe(1);
@@ -1533,6 +1636,22 @@ describe('CollaborationMigrationService', () => {
       expect(summary.ok).toBe(false);
       expect(summary.nullPointerTotal).toBe(2);
       expect(summary.memoNullPointers).toBe(2);
+    });
+
+    it('verifyAll: NOT ok when a valid pointer remains behind migrated=false', async () => {
+      memo.count
+        .mockResolvedValueOnce(1) // pending marker
+        .mockResolvedValueOnce(0); // null pointer
+      whiteboard.count.mockResolvedValue(0);
+      memo.createQueryBuilder.mockReturnValue(verifyQB([[]]));
+      whiteboard.createQueryBuilder.mockReturnValue(verifyQB([[]]));
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.ok).toBe(false);
+      expect(summary.pendingMigrationTotal).toBe(1);
+      expect(summary.memoPendingMigrations).toBe(1);
+      expect(summary.nullPointerTotal).toBe(0);
     });
 
     it('verifyAll resolves ONE pointer per file-service call — never a whole page as one getContentBatch request', async () => {

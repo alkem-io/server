@@ -2175,6 +2175,20 @@ type Collaboration {
   updatedDate: DateTime!
 }
 
+type CollaborationMigrationIssue {
+  id: String!
+  reason: String!
+}
+
+type CollaborationMigrationResult {
+  failed: Int!
+  failedDocuments: [CollaborationMigrationIssue!]!
+  flagged: Int!
+  flaggedDocuments: [CollaborationMigrationIssue!]!
+  migrated: Int!
+  total: Int!
+}
+
 type Communication {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -4364,6 +4378,14 @@ type Mutation {
   Mark notifications as unread. If no filter is provided, marks all user notifications as unread. If filter with types is provided, marks only those notification types as unread.
   """
   markNotificationsAsUnread(filter: NotificationEventsFilterInput): Boolean!
+  """
+  Migrates all pending legacy memo content. Idempotent: repeated calls process only rows whose migrated marker is false.
+  """
+  migrateLegacyMemoContent: CollaborationMigrationResult!
+  """
+  Migrates all pending legacy whiteboard content. Idempotent: repeated calls process only rows whose migrated marker is false.
+  """
+  migrateLegacyWhiteboardContent: CollaborationMigrationResult!
   """
   Mint a new MCP API key for the current user. Returns the plaintext exactly once.
   """

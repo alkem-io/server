@@ -45,7 +45,7 @@ const run = async (): Promise<number> => {
         `${JSON.stringify({ mode: 'verify', ...summary })}\n`
       );
       process.stdout.write(
-        `verify: ${summary.ok ? 'OK' : 'FAILED'} — nullPointers=${summary.nullPointerTotal} (memo=${summary.memoNullPointers}, whiteboard=${summary.whiteboardNullPointers}), pointersChecked=${summary.pointersChecked}, unresolved=${summary.unresolved.length}, invalid=${summary.invalid.length}\n`
+        `verify: ${summary.ok ? 'OK' : 'FAILED'} — pending=${summary.pendingMigrationTotal} (memo=${summary.memoPendingMigrations}, whiteboard=${summary.whiteboardPendingMigrations}), nullPointers=${summary.nullPointerTotal} (memo=${summary.memoNullPointers}, whiteboard=${summary.whiteboardNullPointers}), pointersChecked=${summary.pointersChecked}, unresolved=${summary.unresolved.length}, invalid=${summary.invalid.length}\n`
       );
       return summary.ok ? 0 : 1;
     }

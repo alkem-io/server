@@ -1273,7 +1273,7 @@ describe('WhiteboardService', () => {
       // Release A: EVERY create seeds a real snapshot — a source with no stored
       // content seeds the CANONICAL EMPTY Y.Doc (never a fallback to client
       // content), so the new row carries a real, resolving contentPointer (never
-      // NULL / dangling). The admission-pointer invariant for Release B.
+      // NULL / dangling). The cleanup admission-pointer invariant.
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
       expect(fileServiceAdapter.createSnapshotInBucket).toHaveBeenCalledTimes(
         1

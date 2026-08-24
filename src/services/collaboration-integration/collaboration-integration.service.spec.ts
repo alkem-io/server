@@ -14,12 +14,14 @@ import { CollaborationErrorCode } from './types';
 const memoMeta = {
   version: 4,
   contentPointer: 'memo-1',
+  migrated: true,
   authorizationPolicyId: 'policy-memo',
   storageBucketId: 'bucket-memo',
 };
 const whiteboardMeta = {
   version: 7,
   contentPointer: 'wb-1',
+  migrated: true,
   authorizationPolicyId: 'policy-wb',
   storageBucketId: 'bucket-wb',
 };
@@ -157,6 +159,7 @@ describe('CollaborationIntegrationService', () => {
         contentType: CollaborationContentType.MEMO,
         version: 4,
         contentPointer: 'memo-1',
+        migrated: true,
         authorizationPolicyId: 'policy-memo',
         // The memo's OWN bucket flows through the reply so the collab service
         // persists this doc's snapshot there, not into a flat platform bucket.
@@ -174,6 +177,7 @@ describe('CollaborationIntegrationService', () => {
 
       expect(result.found).toBe(true);
       expect(result.contentType).toBe(CollaborationContentType.WHITEBOARD);
+      expect(result.migrated).toBe(true);
       expect(result.authorizationPolicyId).toBe('policy-wb');
       // The whiteboard carries its OWN storage bucket, distinct from the memo's.
       expect(result.storageBucketId).toBe('bucket-wb');

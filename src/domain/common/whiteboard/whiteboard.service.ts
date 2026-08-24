@@ -187,8 +187,9 @@ export class WhiteboardService {
     // media is re-homed into this bucket by operating on the snapshot's own `files`
     // Y.Map, not a reconstructed scene. Release A (staged rollout): EVERY create
     // seeds a real snapshot — an empty create is encoded as the canonical empty
-    // Y.Doc (`whiteboardSceneToYjsV2State('')`) so the row never carries a
-    // NULL/dangling pointer (the admission-pointer invariant). Release B fails-
+    // Y.Doc (`whiteboardSceneToYjsV2State('')`). The existing create sequence may
+    // have a short internal NULL-pointer interval, but it publishes the pointer
+    // before returning the document to its caller. Cleanup fails
     // closed on any NULL/blank pointer under its write fence but leaves the column
     // NULLABLE for the transient new-row window. The room materializes empty +
     // editable (FR-010) either way.
@@ -508,7 +509,7 @@ export class WhiteboardService {
    * live collab session). Re-homes embedded media into the whiteboard's bucket,
    * converts the scene to a Yjs-V2 snapshot, and replaces the stored snapshot in
    * the bucket (R1/R2/FR-005) — the inline `content` column is unmapped (retained
-   * in Release A, dropped in Release B). The content
+   * during progressive migration, dropped in cleanup). The content
    * originates server-side here, so it is persisted directly; the next open seeds
    * from this snapshot. The superseded snapshot file is deleted (latest-only).
    */
@@ -626,7 +627,7 @@ export class WhiteboardService {
    * bucket and is located by `contentPointer`; this re-reads it the same way the
    * memo-content loader / input-creator builders do (file-service
    * `content-batch`), NOT the inline column (unmapped — retained in Release A,
-   * dropped in Release B; 006-collab-content-unification).
+   * dropped in post-release cleanup; 006-collab-content-unification).
    *
    * Server-side copy path (#29): the "Save as Template" flow can no longer read a
    * live whiteboard's content on the client, so the server reads the source
@@ -679,6 +680,7 @@ export class WhiteboardService {
         id: true,
         contentVersion: true,
         contentPointer: true,
+        migrated: true,
         authorization: { id: true },
         profile: { id: true, storageBucket: { id: true } },
       },
@@ -691,9 +693,10 @@ export class WhiteboardService {
       // Coerce a DB NULL (a freshly-created row before its initial snapshot
       // pointer is attached) to `undefined` so the contract reply shape stays
       // `string | undefined`. The pointer column is legitimately nullable for
-      // this transient window; Release B fails-closed on NULL/blank under the
-      // write fence, it does not make the column NOT NULL.
+      // this transient window; cleanup requires zero NULL/blank pointers, but
+      // does not make the column NOT NULL.
       contentPointer: whiteboard.contentPointer ?? undefined,
+      migrated: whiteboard.migrated,
       authorizationPolicyId: whiteboard.authorization?.id,
       // The whiteboard's OWN storage bucket (via its profile) — the collab
       // service persists this doc's snapshot into this bucket, not a flat one.
@@ -756,6 +759,7 @@ export class WhiteboardService {
         id: true,
         contentVersion: true,
         contentPointer: true,
+        migrated: true,
         authorization: { id: true },
       },
     })) as Whiteboard;
@@ -763,6 +767,7 @@ export class WhiteboardService {
     return {
       version: whiteboard.contentVersion ?? 0,
       contentPointer: whiteboard.contentPointer ?? undefined,
+      migrated: whiteboard.migrated,
       authorizationPolicyId: whiteboard.authorization?.id,
     };
   }
