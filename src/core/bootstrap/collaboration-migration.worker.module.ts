@@ -24,7 +24,7 @@ import { join } from 'path';
  * the Memo/Whiteboard repos, and `FileServiceAdapter`.
  *
  * Deliberately excluded (§12 side-effect trace): `ScheduleModule` (so the
- * collaboration lifecycle dispatcher + digest-sweep schedulers never start),
+ * collaboration lifecycle publisher is inert because this worker never deletes),
  * every RabbitMQ consumer/`@MessagePattern`, the event bus, Redis, MCP, the
  * GraphQL/Apollo HTTP LISTENER, the REST controllers, OIDC/session authentication,
  * and the app bootstrap (authorization IS now present via `GraphqlGuardModule`,

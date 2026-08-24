@@ -1,35 +1,43 @@
-import { Injectable } from '@nestjs/common';
-import { EntityManager } from 'typeorm';
-import { CollaborationLifecycleOutbox } from './collaboration.lifecycle.outbox.entity';
+import { COLLABORATION_LIFECYCLE_SERVICE } from '@common/constants/providers';
+import { Inject, Injectable, Optional } from '@nestjs/common';
+import {
+  ClientProxy,
+  RmqRecordBuilder,
+  type RmqRecordOptions,
+} from '@nestjs/microservices';
+import { lastValueFrom } from 'rxjs';
+import { CollaborationLifecycleEvent } from './collaboration.lifecycle.event.pattern';
+
+const PUBLISH_TIMEOUT_MS = 30_000;
+
+/** amqp-connection-manager's per-message timeout is absent from Nest's type. */
+type RmqPublishOptions = RmqRecordOptions & { timeout: number };
 
 /**
- * Records the durable owner-driven lifecycle event (`document.deleted`,
- * FR-006/FR-023) into the transactional outbox. The row is inserted with the
- * caller's `EntityManager`, so it commits ATOMICALLY with the leaf Memo/
- * Whiteboard removal — a crash between the delete commit and the broker publish
- * can no longer lose the purge (the previous fire-and-forget `emit` could, and
- * it went to the server's own responder queue rather than the collab service).
- * `CollaborationLifecycleDispatcherService` does the confirmed persistent
- * publish out-of-band; nothing is emitted inline here. `document.deleted` is the
- * only lifecycle event produced.
+ * Publishes the sole owner-driven lifecycle event (`document.deleted`) before
+ * deletion begins. The dedicated RabbitMQ client uses a durable quorum queue and
+ * persistent messages; awaiting the publisher confirm means a successful delete
+ * never outruns its eviction signal. If RabbitMQ is unavailable, deletion fails
+ * before profile, bucket, authorization, or document state is changed.
  */
 @Injectable()
 export class CollaborationLifecycleService {
-  /**
-   * Enqueue `document.deleted` for `id` in the SAME transaction as the leaf
-   * removal. REQUIRED at the delete-cascade leaves so the collab service
-   * disconnects clients and releases/purges the live room. A lost event leaves
-   * an unpurged room editable on a deleted document — NOT a retained blob: the
-   * checkpoint is already gone with the profile/bucket cascade. The drain derives
-   * the constant wire pattern + payload (`document.deleted { id }`) at publish
-   * time, so the row stores only `documentId` (plus its generated id/createdDate).
-   */
-  public async enqueueDocumentDeleted(
-    manager: EntityManager,
-    id: string
-  ): Promise<void> {
-    await manager.insert(CollaborationLifecycleOutbox, {
-      documentId: id,
-    });
+  constructor(
+    @Optional()
+    @Inject(COLLABORATION_LIFECYCLE_SERVICE)
+    private readonly client: ClientProxy | undefined
+  ) {}
+
+  public async publishDocumentDeleted(id: string): Promise<void> {
+    if (!this.client) {
+      throw new Error(
+        'CollaborationLifecycleService: COLLABORATION_LIFECYCLE_SERVICE client is unavailable'
+      );
+    }
+    const options: RmqPublishOptions = { timeout: PUBLISH_TIMEOUT_MS };
+    const record = new RmqRecordBuilder({ id }).setOptions(options).build();
+    await lastValueFrom(
+      this.client.emit(CollaborationLifecycleEvent.DELETED, record)
+    );
   }
 }

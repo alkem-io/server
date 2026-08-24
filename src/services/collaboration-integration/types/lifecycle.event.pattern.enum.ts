@@ -6,8 +6,8 @@
  * `DELETED` is the only lifecycle event: emitted at the delete-cascade leaves
  * (`MemoService.deleteMemo` / `WhiteboardService.deleteWhiteboard`) so the
  * collab service disconnects clients, releases the room and purges the live
- * session. Recorded in the transactional lifecycle outbox and delivered with a
- * confirmed persistent publish on the dedicated lifecycle queue. Idempotent
+ * session. Delivered with a confirmed persistent publish on the dedicated
+ * lifecycle queue before owner deletion begins. Idempotent
  * downstream.
  */
 export enum CollaborationLifecycleEventPattern {

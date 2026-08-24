@@ -1,5 +1,13 @@
 # Tasks: Collaboration Persistence, Lifecycle & AuthZ (server slice, WS-E)
 
+> **Lifecycle amendment (006, 2026-08-24).** The transactional lifecycle outbox
+> and dispatcher recorded below are preserved as implementation history and are
+> **SUPERSEDED**. Current behavior confirms a persistent `document.deleted {id}`
+> publish before changing owner state; collaboration-service installs a five-minute
+> tombstone and close/evicts. There is no `collaboration_lifecycle_outbox` table or
+> scheduler in the shipping design. Do not execute the historical outbox runbook.
+
+
 **Input**: Design documents in `specs/003-collaboration-persistence/`
 **Prerequisites**: spec.md, plan.md, research.md, data-model.md
 **Tests**: Test-first where it adds signal (server constitution §6); ≥95% on the

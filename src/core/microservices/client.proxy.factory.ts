@@ -14,7 +14,7 @@ export interface ClientProxyOptions {
   /**
    * Marks published messages persistent (delivery mode 2) so they survive a
    * broker restart while sitting in a durable queue — required for
-   * at-least-once buses like the lifecycle outbox dispatcher. Default false, to
+   * durable buses like the confirmed lifecycle publisher. Default false, to
    * preserve the existing fire-and-forget clients' behaviour.
    */
   persistent?: boolean;

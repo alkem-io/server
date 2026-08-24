@@ -24,8 +24,8 @@ export const MATRIX_ADAPTER_SERVICE = 'alkemio-matrix-adapter';
 export const COLLABORATION_SERVICE = 'alkemio-collaboration';
 // Outbound client token for the dedicated, durable server -> collaboration
 // lifecycle queue. Carries owner-driven `document.deleted` (FR-006/FR-023),
-// published from the transactional lifecycle outbox with a confirmed persistent
-// publish. Separate from COLLABORATION_SERVICE so a lifecycle event is never
+// published and confirmed before deletion begins. Separate from
+// COLLABORATION_SERVICE so a lifecycle event is never
 // delivered back to the server's own responder.
 export const COLLABORATION_LIFECYCLE_SERVICE =
   'alkemio-collaboration-lifecycle';

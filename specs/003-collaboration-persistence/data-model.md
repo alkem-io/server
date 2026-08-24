@@ -1,5 +1,13 @@
 # Data Model — Collaboration Persistence (server slice, Phase 1)
 
+> **Lifecycle amendment (006, 2026-08-24).** The transactional lifecycle outbox
+> and dispatcher recorded below are preserved as implementation history and are
+> **SUPERSEDED**. Current behavior confirms a persistent `document.deleted {id}`
+> publish before changing owner state; collaboration-service installs a five-minute
+> tombstone and close/evicts. There is no `collaboration_lifecycle_outbox` table or
+> scheduler in the shipping design. Do not execute the historical outbox runbook.
+
+
 Two layers: the **TypeORM entity/column changes** (the metadata/index, server-owned)
 and the **unified message schemas** (the request/reply + lifecycle wire shapes). The
 epic `data-model.md` (`../agents-hq/specs/003-unify-collab-yjs/data-model.md`) is

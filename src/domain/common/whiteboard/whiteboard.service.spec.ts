@@ -421,16 +421,7 @@ describe('WhiteboardService', () => {
       );
       vi.mocked(authorizationPolicyService.delete).mockResolvedValue({} as any);
 
-      // deleteWhiteboard removes the leaf and enqueues `document.deleted` in one
-      // transaction (lifecycle outbox). Run the callback with a transactional
-      // manager whose remove() returns the removed entity.
-      const txManager = {
-        remove: vi.fn().mockResolvedValue({} as Whiteboard),
-      };
-      // `manager` is a readonly property on Repository; assign through a cast.
-      (whiteboardRepository as unknown as { manager: unknown }).manager = {
-        transaction: vi.fn(async (cb: any) => cb(txManager)),
-      };
+      whiteboardRepository.remove!.mockResolvedValue({} as Whiteboard);
 
       const result = await service.deleteWhiteboard('wb-1');
 
@@ -440,10 +431,10 @@ describe('WhiteboardService', () => {
       expect(vi.mocked(authorizationPolicyService.delete)).toHaveBeenCalledWith(
         whiteboard.authorization
       );
-      expect(txManager.remove).toHaveBeenCalledWith(whiteboard);
       expect(
-        collaborationLifecycleService.enqueueDocumentDeleted
-      ).toHaveBeenCalledWith(txManager, 'wb-1');
+        collaborationLifecycleService.publishDocumentDeleted
+      ).toHaveBeenCalledWith('wb-1');
+      expect(whiteboardRepository.remove).toHaveBeenCalledWith(whiteboard);
       expect(result.id).toBe('wb-1');
     });
 
@@ -1136,11 +1127,7 @@ describe('WhiteboardService', () => {
       } as unknown as Whiteboard);
       vi.mocked(profileService.deleteProfile).mockResolvedValue({} as any);
       vi.mocked(authorizationPolicyService.delete).mockResolvedValue({} as any);
-      (whiteboardRepository as unknown as { manager: unknown }).manager = {
-        transaction: vi.fn(async (cb: any) =>
-          cb({ remove: vi.fn().mockResolvedValue({}) })
-        ),
-      };
+      whiteboardRepository.remove!.mockResolvedValue({} as Whiteboard);
     });
 
     // Configure the SOURCE whiteboard a clone dereferences. A single object serves

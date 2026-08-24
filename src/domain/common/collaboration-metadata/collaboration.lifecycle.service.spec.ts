@@ -1,24 +1,39 @@
-import { EntityManager } from 'typeorm';
+import { RmqRecord } from '@nestjs/microservices';
+import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
-import { CollaborationLifecycleOutbox } from './collaboration.lifecycle.outbox.entity';
+import { CollaborationLifecycleEvent } from './collaboration.lifecycle.event.pattern';
 import { CollaborationLifecycleService } from './collaboration.lifecycle.service';
 
 describe('CollaborationLifecycleService', () => {
-  const service = new CollaborationLifecycleService();
+  it('awaits a confirmed document.deleted publish before resolving', async () => {
+    const emit = vi.fn().mockReturnValue(of(undefined));
+    const service = new CollaborationLifecycleService({ emit } as any);
 
-  it('enqueues a document.deleted outbox row via the caller transaction manager (same-tx as the leaf removal)', async () => {
-    const insert = vi.fn().mockResolvedValue(undefined);
-    const manager = { insert } as unknown as EntityManager;
+    await service.publishDocumentDeleted('doc-1');
 
-    await service.enqueueDocumentDeleted(manager, 'doc-1');
+    expect(emit).toHaveBeenCalledTimes(1);
+    const [pattern, record] = emit.mock.calls[0] as [string, RmqRecord<string>];
+    expect(pattern).toBe(CollaborationLifecycleEvent.DELETED);
+    expect(record.data).toEqual({ id: 'doc-1' });
+    expect(record.options).toEqual({ timeout: 30_000 });
+  });
 
-    // Inserted with the PASSED manager, so it commits ATOMICALLY with the leaf
-    // Memo/Whiteboard removal. The row stores ONLY documentId (id/createdDate are
-    // generated) — no eventType/status/payload: the drain derives the constant
-    // `document.deleted { id }` at publish time.
-    expect(insert).toHaveBeenCalledTimes(1);
-    expect(insert).toHaveBeenCalledWith(CollaborationLifecycleOutbox, {
-      documentId: 'doc-1',
-    });
+  it('fails before deletion when RabbitMQ does not confirm the publish', async () => {
+    const emit = vi
+      .fn()
+      .mockReturnValue(throwError(() => new Error('broker unavailable')));
+    const service = new CollaborationLifecycleService({ emit } as any);
+
+    await expect(service.publishDocumentDeleted('doc-1')).rejects.toThrow(
+      'broker unavailable'
+    );
+  });
+
+  it('fails explicitly in worker contexts without the lifecycle client', async () => {
+    const service = new CollaborationLifecycleService(undefined);
+
+    await expect(service.publishDocumentDeleted('doc-1')).rejects.toThrow(
+      /client is unavailable/
+    );
   });
 });

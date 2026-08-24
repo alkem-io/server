@@ -95,16 +95,7 @@ describe('MemoService', () => {
       (profileService.deleteProfile as Mock).mockResolvedValue({} as any);
       (authorizationPolicyService.delete as Mock).mockResolvedValue({} as any);
 
-      // deleteMemo removes the leaf and enqueues `document.deleted` in one
-      // transaction (lifecycle outbox). Run the callback with a transactional
-      // manager whose remove() returns the removed entity.
-      const txManager = {
-        remove: vi.fn().mockResolvedValue({ ...memo, id: undefined }),
-      };
-      // `manager` is a readonly property on Repository; assign through a cast.
-      (memoRepository as unknown as { manager: unknown }).manager = {
-        transaction: vi.fn(async (cb: any) => cb(txManager)),
-      };
+      memoRepository.remove!.mockResolvedValue({ ...memo, id: undefined });
 
       const result = await service.deleteMemo('memo-1');
 
@@ -112,10 +103,10 @@ describe('MemoService', () => {
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
         memo.authorization
       );
-      expect(txManager.remove).toHaveBeenCalledWith(memo);
       expect(
-        collaborationLifecycleService.enqueueDocumentDeleted
-      ).toHaveBeenCalledWith(txManager, 'memo-1');
+        collaborationLifecycleService.publishDocumentDeleted
+      ).toHaveBeenCalledWith('memo-1');
+      expect(memoRepository.remove).toHaveBeenCalledWith(memo);
       expect(result.id).toBe('memo-1');
     });
 

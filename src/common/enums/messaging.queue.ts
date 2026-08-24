@@ -48,8 +48,8 @@ export enum MessagingQueue {
   // COLLABORATION_DOCUMENT_SERVICE + WHITEBOARDS.
   COLLABORATION_SERVICE = 'alkemio-collaboration',
   // Dedicated, durable server -> collaboration-service lifecycle queue. Carries
-  // owner-driven `document.deleted` (FR-006/FR-023), published from the
-  // transactional lifecycle outbox with a confirmed persistent publish. Consumed
+  // owner-driven `document.deleted` (FR-006/FR-023), published and confirmed
+  // before deletion begins. Consumed
   // ONLY by the collaboration service — MUST NOT reuse COLLABORATION_SERVICE
   // (that is the server's own responder queue). Cross-repo contract: the collab
   // consumer binds this exact name.

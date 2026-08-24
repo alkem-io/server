@@ -1,5 +1,13 @@
 # Quickstart — Collaboration Persistence (server slice)
 
+> **Lifecycle amendment (006, 2026-08-24).** The transactional lifecycle outbox
+> and dispatcher recorded below are preserved as implementation history and are
+> **SUPERSEDED**. Current behavior confirms a persistent `document.deleted {id}`
+> publish before changing owner state; collaboration-service installs a five-minute
+> tombstone and close/evicts. There is no `collaboration_lifecycle_outbox` table or
+> scheduler in the shipping design. Do not execute the historical outbox runbook.
+
+
 How to build, run, and test the touched paths. The module is the Alkemio `server`
 (NestJS/TypeORM/GraphQL). **The slice is implemented in this PR — the commands below
 describe the workflow against the delivered code.**

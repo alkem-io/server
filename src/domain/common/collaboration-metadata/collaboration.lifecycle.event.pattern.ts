@@ -5,9 +5,8 @@
  * `CollaborationLifecycleEventPattern`; kept as a plain string so the domain
  * layer does not depend on the `services/` layer.
  *
- * `DELETED` is the only owner-driven lifecycle event: it is recorded in the
- * transactional lifecycle outbox at the delete-cascade leaves and published to
- * the dedicated lifecycle queue.
+ * `DELETED` is the only owner-driven lifecycle event: its persistent publish is
+ * confirmed at the delete-cascade leaves before owner deletion begins.
  */
 export enum CollaborationLifecycleEvent {
   DELETED = 'document.deleted',
