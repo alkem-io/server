@@ -61,10 +61,11 @@ export class CollaborationMigrationResolverMutations {
         action
       );
       const summary = await migrate();
+      const completedCleanly = summary.flagged === 0 && summary.failed === 0;
       await this.platformOperationsAuditService.recordOperation({
         actorID: actorContext.actorID,
         action,
-        outcome: 'success',
+        outcome: completedCleanly ? 'success' : 'failure',
         target: {
           total: summary.total,
           migrated: summary.migrated,

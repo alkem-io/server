@@ -413,6 +413,7 @@ export class StorageBucketService {
     if (result.imageHeight !== undefined) {
       document.imageHeight = result.imageHeight;
     }
+    document.reused = result.reused;
 
     this.logger.verbose?.(
       `Materialized document '${result.externalID}' via file-service on storage bucket: ${bucketId}`,

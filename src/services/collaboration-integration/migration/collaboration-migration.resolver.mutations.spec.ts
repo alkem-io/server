@@ -76,7 +76,7 @@ describe('CollaborationMigrationResolverMutations', () => {
     expect(ctx.audit.recordOperation).toHaveBeenCalledWith({
       actorID: 'actor-1',
       action: 'migrateLegacyWhiteboardContent',
-      outcome: 'success',
+      outcome: 'failure',
       target: {
         total: 3,
         migrated: 2,
@@ -86,6 +86,48 @@ describe('CollaborationMigrationResolverMutations', () => {
         failedDocuments: [],
       },
     });
+  });
+
+  it('audits a clean migration result as success', async () => {
+    const ctx = createResolver();
+    ctx.migration.migrateMemos.mockResolvedValue({
+      total: 3,
+      migrated: 3,
+      flagged: 0,
+      failed: 0,
+      flaggedDocuments: [],
+      failedDocuments: [],
+      dryRun: false,
+    });
+
+    await ctx.resolver.migrateLegacyMemoContent(ctx.actor);
+
+    expect(ctx.audit.recordOperation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorID: 'actor-1',
+        action: 'migrateLegacyMemoContent',
+        outcome: 'success',
+      })
+    );
+  });
+
+  it('audits runtime failures as failure even when nothing is flagged', async () => {
+    const ctx = createResolver();
+    ctx.migration.migrateMemos.mockResolvedValue({
+      total: 2,
+      migrated: 1,
+      flagged: 0,
+      failed: 1,
+      flaggedDocuments: [],
+      failedDocuments: [{ id: 'memo-2', reason: 'snapshot write failed' }],
+      dryRun: false,
+    });
+
+    await ctx.resolver.migrateLegacyMemoContent(ctx.actor);
+
+    expect(ctx.audit.recordOperation).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: 'failure' })
+    );
   });
 
   it('does not start migration when platform-operations authorization fails', async () => {

@@ -304,6 +304,34 @@ describe('FileServiceAdapter', () => {
       expect(serialized).toContain('filename="snapshot.ybin"');
       // The snapshot is a NULL-authz internal blob — no authorizationId field.
       expect(serialized).not.toContain('name="authorizationId"');
+      expect(serialized).not.toContain('name="skipDedup"');
+    });
+
+    it('can force a migration-owned snapshot row by sending skipDedup=true', async () => {
+      (httpService.request as Mock).mockReturnValue(
+        of(
+          axiosResponse(
+            {
+              id: 'snap-unique',
+              externalID: 'hash-snap',
+              mimeType: 'application/octet-stream',
+              size: 42,
+              reused: false,
+            },
+            201
+          )
+        )
+      );
+
+      await adapter.createSnapshotInBucket(
+        Buffer.from([1, 2, 3]),
+        'bucket-1',
+        true
+      );
+
+      const callArgs = (httpService.request as Mock).mock.calls[0][0];
+      const serialized = callArgs.data.getBuffer().toString('utf8');
+      expect(serialized).toMatch(/name="skipDedup"\r\n\r\ntrue/);
     });
 
     it('throws when the adapter is disabled', async () => {

@@ -35,6 +35,7 @@ const Y = createRequire(__filename)('yjs') as typeof import('yjs');
  */
 const documentServiceMock = () => ({
   getDocumentFromURL: vi.fn(),
+  deleteDocument: vi.fn().mockResolvedValue(undefined),
   isAlkemioDocumentURL: vi.fn((url: string) =>
     url.startsWith('https://alkem.io/api/private/rest/storage/document')
   ),
@@ -59,11 +60,15 @@ const storageBucketServiceMock = () => {
       bucketId: string,
       buffer: Uint8Array,
       _filename?: string,
-      _mimeType?: string
+      _mimeType?: string,
+      _userID?: string,
+      _temporaryLocation?: boolean,
+      _skipDedup?: boolean,
+      _allowedMimeTypesOverride?: string[]
     ) => {
       const id = `uphomed-doc-${++seq}`;
       store.set(id, { bucketId, bytes: Buffer.from(buffer) });
-      return { id } as any;
+      return { id, reused: false } as any;
     }
   );
   // The up-home path re-loads the bucket to inherit its (eager) authorization onto the
@@ -475,6 +480,7 @@ describe('CollaborationMigrationService', () => {
     };
     let fileService: {
       createSnapshotInBucket: ReturnType<typeof vi.fn>;
+      deleteDocument: ReturnType<typeof vi.fn>;
       getContentBatch: ReturnType<typeof vi.fn>;
     };
     let documentService: ReturnType<typeof documentServiceMock>;
@@ -529,6 +535,7 @@ describe('CollaborationMigrationService', () => {
       whiteboard = { createQueryBuilder: vi.fn(), count: vi.fn() };
       fileService = {
         createSnapshotInBucket: vi.fn(),
+        deleteDocument: vi.fn().mockResolvedValue(undefined),
         getContentBatch: vi.fn(),
       };
       documentService = documentServiceMock();
@@ -586,7 +593,10 @@ describe('CollaborationMigrationService', () => {
         )
         .mockReturnValueOnce(update.qb)
         .mockReturnValueOnce(queryBuilderMock([[]]));
-      fileService.createSnapshotInBucket.mockResolvedValue({ id: 'snap-m1' });
+      fileService.createSnapshotInBucket.mockResolvedValue({
+        id: 'snap-m1',
+        reused: false,
+      });
 
       const first = await svc.migrateMemos();
       const second = await svc.migrateMemos();
@@ -606,7 +616,10 @@ describe('CollaborationMigrationService', () => {
           ])
         )
         .mockReturnValueOnce(update.qb);
-      fileService.createSnapshotInBucket.mockResolvedValue({ id: 'snap-w1' });
+      fileService.createSnapshotInBucket.mockResolvedValue({
+        id: 'snap-w1',
+        reused: false,
+      });
 
       const result = await svc.migrateWhiteboards();
 
@@ -624,7 +637,10 @@ describe('CollaborationMigrationService', () => {
         )
         .mockReturnValueOnce(update.qb);
       whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
-      fileService.createSnapshotInBucket.mockResolvedValue({ id: 'snap-m1' });
+      fileService.createSnapshotInBucket.mockResolvedValue({
+        id: 'snap-m1',
+        reused: false,
+      });
 
       const summary = await svc.migrateAll();
 
@@ -633,7 +649,8 @@ describe('CollaborationMigrationService', () => {
       // second per-document metadata SELECT.
       expect(fileService.createSnapshotInBucket).toHaveBeenCalledWith(
         expect.any(Buffer),
-        'sb1'
+        'sb1',
+        true
       );
       // Pointer written only AFTER a successful upload, with the file-service id.
       expect(update.set).toHaveBeenCalledWith({
@@ -665,7 +682,10 @@ describe('CollaborationMigrationService', () => {
           convergenceQB({ migrated: true, contentPointer: 'winner-snapshot' })
         );
       whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
-      fileService.createSnapshotInBucket.mockResolvedValue({ id: 'snap-m1' });
+      fileService.createSnapshotInBucket.mockResolvedValue({
+        id: 'snap-m1',
+        reused: false,
+      });
 
       const summary = await svc.migrateAll();
 
@@ -675,6 +695,60 @@ describe('CollaborationMigrationService', () => {
       // own pointer + marker first. The stale CAS does not overwrite it.
       expect(fileService.createSnapshotInBucket).toHaveBeenCalledTimes(1);
       expect(update.execute).toHaveBeenCalledTimes(1);
+      expect(fileService.deleteDocument).toHaveBeenCalledWith('snap-m1');
+    });
+
+    it('reports a converged loser as failed when its orphan snapshot cannot be compensated', async () => {
+      const update = updateQB(0);
+      memo.createQueryBuilder
+        .mockReturnValueOnce(
+          queryBuilderMock([
+            [{ id: 'm1', content: null, storageBucketId: 'sb1' }],
+          ])
+        )
+        .mockReturnValueOnce(update.qb)
+        .mockReturnValueOnce(
+          convergenceQB({ migrated: true, contentPointer: 'winner-snapshot' })
+        );
+      whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+      fileService.createSnapshotInBucket.mockResolvedValue({
+        id: 'snap-m1',
+        reused: false,
+      });
+      fileService.deleteDocument.mockRejectedValue(
+        new Error('cleanup unavailable')
+      );
+
+      const summary = await svc.migrateAll();
+
+      expect(summary).toMatchObject({ migrated: 0, failed: 1 });
+      expect(summary.failedDocuments[0].reason).toMatch(
+        /compensation was incomplete/
+      );
+    });
+
+    it('defensively retains the snapshot when convergence reports that exact pointer', async () => {
+      const update = updateQB(0);
+      memo.createQueryBuilder
+        .mockReturnValueOnce(
+          queryBuilderMock([
+            [{ id: 'm1', content: null, storageBucketId: 'sb1' }],
+          ])
+        )
+        .mockReturnValueOnce(update.qb)
+        .mockReturnValueOnce(
+          convergenceQB({ migrated: true, contentPointer: 'snap-m1' })
+        );
+      whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+      fileService.createSnapshotInBucket.mockResolvedValue({
+        id: 'snap-m1',
+        reused: false,
+      });
+
+      const summary = await svc.migrateAll();
+
+      expect(summary).toMatchObject({ migrated: 1, failed: 0 });
+      expect(fileService.deleteDocument).not.toHaveBeenCalled();
     });
 
     it('refuses an already-present pointer on a pending row without touching legacy content', async () => {
@@ -720,7 +794,10 @@ describe('CollaborationMigrationService', () => {
           convergenceQB({ migrated: false, contentPointer: 'unsafe-writer' })
         );
       whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
-      fileService.createSnapshotInBucket.mockResolvedValue({ id: 'snap-m1' });
+      fileService.createSnapshotInBucket.mockResolvedValue({
+        id: 'snap-m1',
+        reused: false,
+      });
 
       const summary = await svc.migrateAll();
 
@@ -729,12 +806,120 @@ describe('CollaborationMigrationService', () => {
         id: 'm1',
         reason: expect.stringMatching(/did not converge/),
       });
+      expect(fileService.deleteDocument).toHaveBeenCalledWith('snap-m1');
+    });
+
+    it('reconciles an ambiguous CAS error and retains the snapshot when that pointer committed', async () => {
+      const update = updateQB();
+      update.execute.mockRejectedValue(new Error('connection lost after send'));
+      memo.createQueryBuilder
+        .mockReturnValueOnce(
+          queryBuilderMock([
+            [{ id: 'm1', content: null, storageBucketId: 'sb1' }],
+          ])
+        )
+        .mockReturnValueOnce(update.qb)
+        .mockReturnValueOnce(
+          convergenceQB({ migrated: true, contentPointer: 'snap-m1' })
+        );
+      whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+      fileService.createSnapshotInBucket.mockResolvedValue({
+        id: 'snap-m1',
+        reused: false,
+      });
+
+      const summary = await svc.migrateAll();
+
+      expect(summary).toMatchObject({ migrated: 1, failed: 0 });
+      expect(fileService.deleteDocument).not.toHaveBeenCalled();
+    });
+
+    it('reconciles an ambiguous CAS error to a different winner and compensates this attempt', async () => {
+      const update = updateQB();
+      update.execute.mockRejectedValue(new Error('connection lost after send'));
+      memo.createQueryBuilder
+        .mockReturnValueOnce(
+          queryBuilderMock([
+            [{ id: 'm1', content: null, storageBucketId: 'sb1' }],
+          ])
+        )
+        .mockReturnValueOnce(update.qb)
+        .mockReturnValueOnce(
+          convergenceQB({ migrated: true, contentPointer: 'winner-snapshot' })
+        );
+      whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+      fileService.createSnapshotInBucket.mockResolvedValue({
+        id: 'snap-m1',
+        reused: false,
+      });
+
+      const summary = await svc.migrateAll();
+
+      expect(summary).toMatchObject({ migrated: 1, failed: 0 });
+      expect(fileService.deleteDocument).toHaveBeenCalledWith('snap-m1');
+    });
+
+    it('compensates an exclusive snapshot when an ambiguous CAS error is proven not committed', async () => {
+      const update = updateQB();
+      update.execute.mockRejectedValue(
+        new Error('connection lost before send')
+      );
+      memo.createQueryBuilder
+        .mockReturnValueOnce(
+          queryBuilderMock([
+            [{ id: 'm1', content: null, storageBucketId: 'sb1' }],
+          ])
+        )
+        .mockReturnValueOnce(update.qb)
+        .mockReturnValueOnce(
+          convergenceQB({ migrated: false, contentPointer: null })
+        );
+      whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+      fileService.createSnapshotInBucket.mockResolvedValue({
+        id: 'snap-m1',
+        reused: false,
+      });
+
+      const summary = await svc.migrateAll();
+
+      expect(summary).toMatchObject({ migrated: 0, failed: 1 });
+      expect(fileService.deleteDocument).toHaveBeenCalledWith('snap-m1');
+    });
+
+    it('preserves artifacts when both CAS outcome and reconciliation are unavailable', async () => {
+      const update = updateQB();
+      update.execute.mockRejectedValue(new Error('connection lost after send'));
+      const reconciliation = convergenceQB({
+        migrated: false,
+        contentPointer: null,
+      });
+      reconciliation.getRawOne.mockRejectedValue(
+        new Error('database unavailable')
+      );
+      memo.createQueryBuilder
+        .mockReturnValueOnce(
+          queryBuilderMock([
+            [{ id: 'm1', content: null, storageBucketId: 'sb1' }],
+          ])
+        )
+        .mockReturnValueOnce(update.qb)
+        .mockReturnValueOnce(reconciliation);
+      whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+      fileService.createSnapshotInBucket.mockResolvedValue({
+        id: 'snap-m1',
+        reused: false,
+      });
+
+      const summary = await svc.migrateAll();
+
+      expect(summary).toMatchObject({ migrated: 0, failed: 1 });
+      expect(fileService.deleteDocument).not.toHaveBeenCalled();
     });
 
     it('leaves the pointer NULL (failed, rerunnable) when the snapshot upload throws — no update runs', async () => {
       memo.createQueryBuilder.mockReturnValueOnce(
         queryBuilderMock([
-          [{ id: 'm1', content: Buffer.from('x'), storageBucketId: 'sb1' }],
+          [{ id: 'm1', content: null, storageBucketId: 'sb1' }],
         ])
       );
       whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
@@ -748,6 +933,30 @@ describe('CollaborationMigrationService', () => {
       expect(summary.migrated).toBe(0);
       // Only the read page QB was created — the upload threw before the update, so
       // no pointer was written (the row stays NULL / rerunnable).
+      expect(memo.createQueryBuilder).toHaveBeenCalledTimes(1);
+    });
+
+    it('fails safely without deleting when file-service unexpectedly reuses a migration snapshot', async () => {
+      memo.createQueryBuilder.mockReturnValueOnce(
+        queryBuilderMock([
+          [{ id: 'm1', content: null, storageBucketId: 'sb1' }],
+        ])
+      );
+      whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+      fileService.createSnapshotInBucket.mockResolvedValue({
+        id: 'existing-snapshot',
+        reused: true,
+      });
+
+      const summary = await svc.migrateAll();
+
+      expect(summary).toMatchObject({ migrated: 0, failed: 1 });
+      expect(fileService.deleteDocument).not.toHaveBeenCalled();
+      expect(fileService.createSnapshotInBucket).toHaveBeenCalledWith(
+        expect.any(Buffer),
+        'sb1',
+        true
+      );
       expect(memo.createQueryBuilder).toHaveBeenCalledTimes(1);
     });
 
@@ -814,7 +1023,10 @@ describe('CollaborationMigrationService', () => {
 
     // Wire a single legacy whiteboard through migrateAll and capture the snapshot
     // buffer handed to file-service. Returns the captured buffer.
-    const migrateOneWhiteboard = async (sceneJSON: string) => {
+    const migrateOneWhiteboard = async (
+      sceneJSON: string,
+      options: { snapshotError?: Error } = {}
+    ) => {
       const compressed = await compressText(sceneJSON);
       const update = updateQB();
       whiteboard.createQueryBuilder
@@ -826,12 +1038,18 @@ describe('CollaborationMigrationService', () => {
         .mockReturnValueOnce(update.qb);
       memo.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
       const captured: { buffer?: Uint8Array } = {};
-      fileService.createSnapshotInBucket.mockImplementation(
-        async (buf: Uint8Array) => {
-          captured.buffer = buf;
-          return { id: 'snap-w1' };
-        }
-      );
+      if (options.snapshotError) {
+        fileService.createSnapshotInBucket.mockRejectedValue(
+          options.snapshotError
+        );
+      } else {
+        fileService.createSnapshotInBucket.mockImplementation(
+          async (buf: Uint8Array) => {
+            captured.buffer = buf;
+            return { id: 'snap-w1', reused: false };
+          }
+        );
+      }
       const summary = await svc.migrateAll();
       return { summary, captured, update };
     };
@@ -877,7 +1095,8 @@ describe('CollaborationMigrationService', () => {
       // Written to the record's OWN bucket; pointer set after upload via the CAS.
       expect(fileService.createSnapshotInBucket).toHaveBeenCalledWith(
         expect.any(Buffer),
-        'sb-w1'
+        'sb-w1',
+        true
       );
       expect(update.set).toHaveBeenCalledWith({
         contentPointer: 'snap-w1',
@@ -1164,7 +1383,7 @@ describe('CollaborationMigrationService', () => {
       memo.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
       fileService.createSnapshotInBucket.mockImplementation(async () => {
         order.push('createSnapshot');
-        return { id: 'snap-w1' };
+        return { id: 'snap-w1', reused: false };
       });
 
       const summary = await svc.migrateAll();
@@ -1207,11 +1426,170 @@ describe('CollaborationMigrationService', () => {
       expect(summary.failed).toBe(1);
       expect(summary.migrated).toBe(0);
       expect(fileService.createSnapshotInBucket).not.toHaveBeenCalled();
+      expect(documentService.deleteDocument).toHaveBeenCalledWith({
+        ID: expect.stringMatching(/^uphomed-doc-/),
+      });
+    });
+
+    it('compensates newly up-homed media when the later snapshot upload fails', async () => {
+      const { summary } = await migrateOneWhiteboard(
+        legacyMediaScene({
+          fileId: 'file-1',
+          file: {
+            id: 'file-1',
+            mimeType: 'image/png',
+            dataURL: VALID_PNG_DATA_URL,
+          },
+        }),
+        { snapshotError: new Error('snapshot failed') }
+      );
+
+      expect(summary).toMatchObject({ migrated: 0, failed: 1 });
+      expect(documentService.deleteDocument).toHaveBeenCalledWith({
+        ID: expect.stringMatching(/^uphomed-doc-/),
+      });
+      expect(fileService.deleteDocument).not.toHaveBeenCalled();
+    });
+
+    it('compensates both exclusive media and snapshot rows after a proven losing CAS', async () => {
+      const compressed = await compressText(
+        legacyMediaScene({
+          fileId: 'file-1',
+          file: {
+            id: 'file-1',
+            mimeType: 'image/png',
+            dataURL: VALID_PNG_DATA_URL,
+          },
+        })
+      );
+      const update = updateQB(0);
+      whiteboard.createQueryBuilder
+        .mockReturnValueOnce(
+          queryBuilderMock([
+            [{ id: 'w1', content: compressed, storageBucketId: 'sb-w1' }],
+          ])
+        )
+        .mockReturnValueOnce(update.qb)
+        .mockReturnValueOnce(
+          convergenceQB({
+            migrated: true,
+            contentPointer: 'winner-snapshot',
+          })
+        );
+      memo.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+      fileService.createSnapshotInBucket.mockResolvedValue({
+        id: 'loser-snapshot',
+        reused: false,
+      });
+
+      const summary = await svc.migrateAll();
+
+      expect(summary).toMatchObject({ migrated: 1, failed: 0 });
+      expect(documentService.deleteDocument).toHaveBeenCalledWith({
+        ID: expect.stringMatching(/^uphomed-doc-/),
+      });
+      expect(fileService.deleteDocument).toHaveBeenCalledWith('loser-snapshot');
+      expect(fileService.createSnapshotInBucket).toHaveBeenCalledWith(
+        expect.any(Buffer),
+        'sb-w1',
+        true
+      );
+      expect(
+        storageBucketService.uploadFileAsDocumentFromBuffer.mock.calls[0][6]
+      ).toBe(true);
+    });
+
+    it('compensates a newly up-homed row when the post-upload bucket lookup fails', async () => {
+      storageBucketService.getStorageBucketOrFail.mockRejectedValue(
+        new Error('bucket reload failed')
+      );
+
+      const { summary } = await migrateOneWhiteboard(
+        legacyMediaScene({
+          fileId: 'file-1',
+          file: {
+            id: 'file-1',
+            mimeType: 'image/png',
+            dataURL: VALID_PNG_DATA_URL,
+          },
+        })
+      );
+
+      expect(summary).toMatchObject({ migrated: 0, failed: 1 });
+      expect(documentService.deleteDocument).toHaveBeenCalledWith({
+        ID: expect.stringMatching(/^uphomed-doc-/),
+      });
+      expect(fileService.createSnapshotInBucket).not.toHaveBeenCalled();
+    });
+
+    it('compensates earlier media when a later asset up-home fails', async () => {
+      const scene = JSON.parse(
+        legacyMediaScene({
+          fileId: 'file-1',
+          file: {
+            id: 'file-1',
+            mimeType: 'image/png',
+            dataURL: VALID_PNG_DATA_URL,
+          },
+        })
+      );
+      scene.elements.push({
+        id: 'img-2',
+        type: 'image',
+        x: 60,
+        y: 60,
+        width: 30,
+        height: 30,
+        fileId: 'file-2',
+        index: 'a2',
+      });
+      scene.files['file-2'] = {
+        id: 'file-2',
+        mimeType: 'image/png',
+        dataURL: VALID_PNG_DATA_URL,
+      };
+      storageBucketService.uploadFileAsDocumentFromBuffer
+        .mockResolvedValueOnce({ id: 'first-media', reused: false } as any)
+        .mockRejectedValueOnce(new Error('second upload failed'));
+
+      const { summary } = await migrateOneWhiteboard(JSON.stringify(scene));
+
+      expect(summary).toMatchObject({ migrated: 0, failed: 1 });
+      expect(documentService.deleteDocument).toHaveBeenCalledWith({
+        ID: 'first-media',
+      });
+      expect(fileService.createSnapshotInBucket).not.toHaveBeenCalled();
+    });
+
+    it('requires exclusive migration artifacts and never deletes an unexpected dedup reuse', async () => {
+      storageBucketService.uploadFileAsDocumentFromBuffer.mockResolvedValue({
+        id: 'existing-media',
+        reused: true,
+      } as any);
+
+      const { summary } = await migrateOneWhiteboard(
+        legacyMediaScene({
+          fileId: 'file-1',
+          file: {
+            id: 'file-1',
+            mimeType: 'image/png',
+            dataURL: VALID_PNG_DATA_URL,
+          },
+        })
+      );
+
+      expect(summary).toMatchObject({ migrated: 0, failed: 1 });
+      expect(documentService.deleteDocument).not.toHaveBeenCalled();
+      expect(fileService.createSnapshotInBucket).not.toHaveBeenCalled();
+      expect(
+        storageBucketService.uploadFileAsDocumentFromBuffer.mock.calls[0][6]
+      ).toBe(true);
     });
 
     it('up-homes dataURL bytes when the url is a non-Alkemio external url (external url unusable → inline bytes win)', async () => {
       storageBucketService.uploadFileAsDocumentFromBuffer.mockResolvedValue({
         id: 'UPHOMED-DOC2',
+        reused: false,
       } as any);
 
       const { summary, captured } = await migrateOneWhiteboard(

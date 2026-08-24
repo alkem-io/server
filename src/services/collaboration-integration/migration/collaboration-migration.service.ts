@@ -23,6 +23,7 @@ import { DocumentAuthorizationService } from '@domain/storage/document/document.
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import type { CreateDocumentResult } from '@services/adapters/file-service-adapter/dto/create.document.result';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IsNull, Repository } from 'typeorm';
@@ -170,6 +171,11 @@ export interface MigrationOptions {
   /** When true, compute the plan + counters but write nothing (preview). */
   dryRun?: boolean;
   batchSize?: number;
+}
+
+interface CreatedMigrationArtifacts {
+  assetDocumentIds: string[];
+  snapshotDocumentId?: string;
 }
 
 /**
@@ -825,6 +831,9 @@ export class CollaborationMigrationService {
     }
 
     const fork = await loadWhiteboardFork();
+    const createdArtifacts: CreatedMigrationArtifacts = {
+      assetDocumentIds: [],
+    };
 
     // 1. PLANNING (zero writes): build a REPRESENTABILITY-only snapshot — media resolved to
     //    synthetic/structural locators, no uploads, no auth, no Alkemio-doc lookups — then
@@ -843,58 +852,220 @@ export class CollaborationMigrationService {
     //    FINAL snapshot, and verifyContent it BEFORE upload/CAS — never persist bytes the
     //    verifier would reject. EVERY reached (null-pointer) record is seeded, including empty
     //    content (encodeSnapshot returns the canonical empty Y.Doc), so no row is left null.
-    const snapshot = await this.encodeSnapshot(record, false);
-    this.verifyContent(snapshot, record.contentType, fork);
-    const result = await this.fileServiceAdapter.createSnapshotInBucket(
-      snapshot,
-      record.storageBucketId
-    );
+    let result: CreateDocumentResult;
+    try {
+      const snapshot = await this.encodeSnapshot(
+        record,
+        false,
+        createdArtifacts
+      );
+      this.verifyContent(snapshot, record.contentType, fork);
+      result = await this.fileServiceAdapter.createSnapshotInBucket(
+        snapshot,
+        record.storageBucketId,
+        true
+      );
+      if (result.reused !== false) {
+        throw new Error(
+          `Migration snapshot for document ${record.id} unexpectedly reused an existing file`
+        );
+      }
+      createdArtifacts.snapshotDocumentId = result.id;
+    } catch (error) {
+      // The pointer CAS has not started. The pending-document collaboration
+      // gate prevents live room writers, and every migrator requests skipDedup,
+      // so these attempt-owned artifacts are unreachable and safe to compensate.
+      const cleanupFailures = await this.cleanupCreatedArtifacts(
+        record.id,
+        createdArtifacts
+      );
+      if (cleanupFailures > 0) {
+        throw new Error(
+          `Migration failed and artifact compensation was incomplete: ${String(error)}`
+        );
+      }
+      throw error;
+    }
+
     // First-writer-wins CAS: the live collab-service save path can assign a NEWER
-    // pointer while this upload is in flight (Release A has NOT retired that path),
-    // so an `id`-only UPDATE could clobber a newer pointer with the stale legacy
-    // snapshot — a content regression that the later column drop would make
-    // permanent. The `migrated = false AND contentPointer IS NULL` guard makes
-    // the write a no-op if a
-    // concurrent writer already won. The just-created snapshot is not deleted
-    // here because create may have deduplicated it with the winning writer; file
-    // lifecycle/GC owns any genuinely unreachable artifact.
-    const updateResult = await repository
-      .createQueryBuilder()
-      .update()
-      .set({
-        contentPointer: result.id,
-        contentVersion: 0,
-        migrated: true,
-      })
-      .where('id = :id AND "migrated" = false AND "contentPointer" IS NULL', {
-        id: record.id,
-      })
-      .execute();
+    // pointer while this upload is in flight, so an `id`-only UPDATE could clobber
+    // newer content. The pointer + marker move atomically while still pending.
+    let updateResult;
+    try {
+      updateResult = await repository
+        .createQueryBuilder()
+        .update()
+        .set({
+          contentPointer: result.id,
+          contentVersion: 0,
+          migrated: true,
+        })
+        .where('id = :id AND "migrated" = false AND "contentPointer" IS NULL', {
+          id: record.id,
+        })
+        .execute();
+    } catch (error) {
+      // A transport/driver error does not prove whether PostgreSQL committed.
+      // Re-read the atomic tuple before compensating. Under the pending-document
+      // collaboration gate, every possible writer here is another skipDedup
+      // migrator: a different/no winner makes this attempt's rows safe to delete;
+      // the same pointer is canonical and must stay.
+      let convergedPointer: string | undefined;
+      try {
+        convergedPointer = await this.getConvergedPointer(
+          repository,
+          record.id
+        );
+      } catch (reconciliationError) {
+        // If reconciliation itself is unavailable, preserving a possible orphan
+        // is safer than deleting a snapshot that may be canonical.
+        this.logger.warn?.(
+          {
+            message:
+              'Migration: pointer publication outcome is unknown; preserving created artifacts',
+            id: record.id,
+            error: String(error),
+            reconciliationError: String(reconciliationError),
+          },
+          LogContext.COLLABORATION_INTEGRATION
+        );
+        throw error;
+      }
+      if (convergedPointer === result.id) {
+        return;
+      }
+      const cleanupFailures = await this.cleanupCreatedArtifacts(
+        record.id,
+        createdArtifacts
+      );
+      if (cleanupFailures > 0) {
+        throw new Error(
+          'Pointer publication was inconclusive and artifact compensation was incomplete'
+        );
+      }
+      if (convergedPointer) {
+        return;
+      }
+      throw error;
+    }
     if (updateResult.affected === 1) {
       return;
     }
 
-    // A concurrent migration may already have completed both fields. That is
-    // success for the document even though our stale CAS matched nothing.
-    if (await this.hasConverged(repository, record.id)) {
+    // A concurrent migration may already have completed both fields. If the
+    // canonical pointer is our exact result, it must stay. A different winner
+    // owns distinct skipDedup artifacts, so compensate this attempt's rows before
+    // reporting convergence.
+    let convergedPointer: string | undefined;
+    try {
+      convergedPointer = await this.getConvergedPointer(repository, record.id);
+    } catch (error) {
+      // The CAS definitely did not update, but without the current pointer we
+      // cannot prove whether our exact snapshot became canonical through an
+      // ambiguous concurrent path. Preserve rather than risk deleting content.
+      this.logger.warn?.(
+        {
+          message:
+            'Migration: could not reconcile a losing CAS; preserving created artifacts',
+          id: record.id,
+          error: String(error),
+        },
+        LogContext.COLLABORATION_INTEGRATION
+      );
+      throw error;
+    }
+    if (convergedPointer) {
+      if (convergedPointer !== result.id) {
+        const cleanupFailures = await this.cleanupCreatedArtifacts(
+          record.id,
+          createdArtifacts
+        );
+        if (cleanupFailures > 0) {
+          throw new Error(
+            'Concurrent migration converged but artifact compensation was incomplete'
+          );
+        }
+      }
       return;
+    }
+
+    // Known negative outcome: our CAS changed nothing and no atomic winner is
+    // visible. This attempt's explicitly-new artifacts are unreachable.
+    const cleanupFailures = await this.cleanupCreatedArtifacts(
+      record.id,
+      createdArtifacts
+    );
+    if (cleanupFailures > 0) {
+      throw new Error(
+        'Migration CAS did not converge and artifact compensation was incomplete'
+      );
     }
     throw new Error(
       `Document ${record.id} did not converge after migration CAS (affected=${updateResult.affected})`
     );
   }
 
-  private async hasConverged(
+  private async getConvergedPointer(
     repository: Repository<Memo | Whiteboard>,
     id: string
-  ): Promise<boolean> {
+  ): Promise<string | undefined> {
     const current = await repository
       .createQueryBuilder('doc')
       .select('doc.migrated', 'migrated')
       .addSelect('doc.contentPointer', 'contentPointer')
       .where('doc.id = :id', { id })
       .getRawOne<{ migrated: boolean; contentPointer: string | null }>();
-    return Boolean(current?.migrated && current.contentPointer?.trim());
+    return current?.migrated && current.contentPointer?.trim()
+      ? current.contentPointer
+      : undefined;
+  }
+
+  private async cleanupCreatedArtifacts(
+    recordId: string,
+    artifacts: CreatedMigrationArtifacts
+  ): Promise<number> {
+    const assetDocumentIds = artifacts.assetDocumentIds.splice(0);
+    const snapshotDocumentId = artifacts.snapshotDocumentId;
+    artifacts.snapshotDocumentId = undefined;
+    let failures = 0;
+
+    await Promise.all([
+      ...assetDocumentIds.map(id =>
+        this.documentService.deleteDocument({ ID: id }).catch(error => {
+          failures += 1;
+          this.logger.warn?.(
+            {
+              message:
+                'Migration: failed to compensate an up-homed asset after migration failure',
+              id: recordId,
+              artifactId: id,
+              error: String(error),
+            },
+            LogContext.COLLABORATION_INTEGRATION
+          );
+        })
+      ),
+      ...(snapshotDocumentId
+        ? [
+            this.fileServiceAdapter
+              .deleteDocument(snapshotDocumentId)
+              .catch(error => {
+                failures += 1;
+                this.logger.warn?.(
+                  {
+                    message:
+                      'Migration: failed to compensate a snapshot after migration failure',
+                    id: recordId,
+                    artifactId: snapshotDocumentId,
+                    error: String(error),
+                  },
+                  LogContext.COLLABORATION_INTEGRATION
+                );
+              }),
+          ]
+        : []),
+    ]);
+    return failures;
   }
 
   /**
@@ -918,7 +1089,8 @@ export class CollaborationMigrationService {
    */
   private async encodeSnapshot(
     record: LegacyContentRecord,
-    planning: boolean
+    planning: boolean,
+    createdArtifacts?: CreatedMigrationArtifacts
   ): Promise<Buffer> {
     if (record.contentType === CollaborationContentType.MEMO) {
       return record.content
@@ -951,7 +1123,8 @@ export class CollaborationMigrationService {
     const assetLocators = await this.resolveWhiteboardAssetLocators(
       sceneJSON,
       record,
-      planning
+      planning,
+      createdArtifacts
     );
     return Buffer.from(
       await whiteboardSceneToYjsV2State(sceneJSON, assetLocators)
@@ -976,7 +1149,8 @@ export class CollaborationMigrationService {
   private async resolveWhiteboardAssetLocators(
     sceneJSON: string,
     record: LegacyContentRecord,
-    planning: boolean
+    planning: boolean,
+    createdArtifacts?: CreatedMigrationArtifacts
   ): Promise<Record<string, string>> {
     const files = parseLegacyWhiteboardScene(sceneJSON)?.files;
     if (!files) {
@@ -988,7 +1162,8 @@ export class CollaborationMigrationService {
         fileId,
         file,
         record,
-        planning
+        planning,
+        createdArtifacts
       );
       if (locator) {
         locators[fileId] = locator;
@@ -1019,7 +1194,8 @@ export class CollaborationMigrationService {
     fileId: string,
     file: LegacyBinaryFileData,
     record: LegacyContentRecord,
-    planning: boolean
+    planning: boolean,
+    createdArtifacts?: CreatedMigrationArtifacts
   ): Promise<string | undefined> {
     const url = typeof file?.url === 'string' ? file.url.trim() : '';
     const isAlkemioUrl =
@@ -1052,7 +1228,12 @@ export class CollaborationMigrationService {
         return document.id; // 1. live row → its document id.
       }
       // 2. Row gone, but inline bytes are still there (recoverable) → up-home them.
-      const uphomed = await this.uphomeDataUrlAsset(fileId, file, record);
+      const uphomed = await this.uphomeDataUrlAsset(
+        fileId,
+        file,
+        record,
+        createdArtifacts
+      );
       if (uphomed) {
         return uphomed;
       }
@@ -1072,7 +1253,12 @@ export class CollaborationMigrationService {
     }
 
     // 4. No usable Alkemio url → up-home inline bytes if present, else skip + surface.
-    const uphomed = await this.uphomeDataUrlAsset(fileId, file, record);
+    const uphomed = await this.uphomeDataUrlAsset(
+      fileId,
+      file,
+      record,
+      createdArtifacts
+    );
     if (uphomed) {
       return uphomed;
     }
@@ -1130,7 +1316,8 @@ export class CollaborationMigrationService {
   private async uphomeDataUrlAsset(
     fileId: string,
     file: LegacyBinaryFileData,
-    record: LegacyContentRecord
+    record: LegacyContentRecord,
+    createdArtifacts?: CreatedMigrationArtifacts
   ): Promise<string | undefined> {
     const dataURL = typeof file?.dataURL === 'string' ? file.dataURL : '';
     if (!dataURL) {
@@ -1166,9 +1353,21 @@ export class CollaborationMigrationService {
         record.storageBucketId,
         decoded.buffer,
         `${fileId}${extensionForMimeType(decoded.mimeType)}`,
-        decoded.mimeType
+        decoded.mimeType,
+        undefined,
+        false,
+        true
         // No actor in the one-shot operator context → createdBy stays NULL.
       );
+
+    if (document.reused !== false) {
+      throw new Error(
+        `Migration asset for document ${record.id} unexpectedly reused an existing file`
+      );
+    }
+    // Track at the earliest point after creation. Bucket lookup or authorization
+    // can still fail, and the outer record-level compensation must see this row.
+    createdArtifacts?.assetDocumentIds.push(document.id);
 
     // Inherit + persist the TARGET bucket's authorization onto the new document through
     // the SAME owners the ordinary upload boundary uses, so the up-homed media is READABLE
