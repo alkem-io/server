@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import * as decoding from 'lib0/decoding';
 import * as encoding from 'lib0/encoding';
 import { WebSocket } from 'ws';
@@ -8,12 +9,14 @@ import * as Y from 'yjs';
  * The go-yjs wire envelope every frame carries: `[type as VarUint][payload]`
  * (collaboration-service `internal/domain/model/control.go`). Types 0/1 are
  * standard y-protocols; 2 (ephemeral presence) is volatile and ignored here; 3
- * (control) carries a JSON {@link ControlMessage} payload.
+ * (control) carries a JSON {@link ControlMessage} payload; 4 (durability-request)
+ * is the CLIENT→SERVER persist-barrier request — raw JSON `{"requestId"}`.
  */
 const WIRE_SYNC = 0;
 const WIRE_AWARENESS = 1;
 const WIRE_EPHEMERAL = 2;
 const WIRE_CONTROL = 3;
+const WIRE_DURABILITY_REQUEST = 4;
 
 /**
  * Server→client control payload (collaboration-service `ControlMessage`). Only
@@ -23,11 +26,25 @@ const WIRE_CONTROL = 3;
  * regained. Test key presence, never truthiness.
  */
 interface ControlMessage {
-  kind: 'saved' | 'save-error' | 'read-only-state' | string;
+  kind:
+    | 'saved'
+    | 'save-error'
+    | 'read-only-state'
+    | 'persisted'
+    | 'persist-failed'
+    | 'update-rejected'
+    | string;
   version?: number;
   error?: string;
   readOnly?: boolean;
   reason?: string;
+  /**
+   * Correlates a `persisted` / `persist-failed` reply to the durability request
+   * that asked. ABSENT on every other kind — in particular on `update-rejected`,
+   * which answers the preceding update (sent before the barrier request exists),
+   * so it is matched by nothing and settles the sole outstanding barrier uncorrelated.
+   */
+  requestId?: string;
 }
 
 /** Raised when the room refuses the join because the document is being deleted. */
@@ -48,6 +65,25 @@ export class ReadOnlyRoomError extends Error {
       `Document ${documentId} joined read-only${reason ? ` (${reason})` : ''}`
     );
     this.name = 'ReadOnlyRoomError';
+  }
+}
+
+/**
+ * Raised when the server REJECTED a local update on this session (an `update-rejected`
+ * control): the connection's generation holds a struct the server refused, so nothing
+ * it wrote is durable and no barrier may ever answer `persisted`. TERMINAL for the
+ * ephemeral MCP caller — resending identical rejected bytes is futile; a genuine fresh
+ * generation (new session / resync) is the only recovery.
+ */
+export class UpdateRejectedError extends Error {
+  constructor(
+    documentId: string,
+    public readonly reason?: string
+  ) {
+    super(
+      `Document ${documentId} update rejected by the server${reason ? ` (${reason})` : ''}`
+    );
+    this.name = 'UpdateRejectedError';
   }
 }
 
@@ -76,11 +112,26 @@ export class CollaborationDocumentSession {
   private readOnlyReason?: string;
   /** Terminal close cause distinguished by the 1008 close reason string. */
   private closeError?: Error;
-  /** Resolvers waiting for the next `ControlSaved` after a write. */
-  private savedWaiters: Array<{
+  /**
+   * The single OUTSTANDING durability barrier (at most one per connection). It owns
+   * its own timer and is settled EXACTLY ONCE via {@link settleBarrier} — on the
+   * matching `persisted` (resolve) / `persist-failed` (reject), an `update-rejected`
+   * or terminal close/ws error (reject), timeout, or session close — clearing both
+   * the waiter and the timer so a later frame can never act on stale state.
+   */
+  private barrier?: {
+    requestId: string;
     resolve: () => void;
     reject: (err: Error) => void;
-  }> = [];
+    timer: ReturnType<typeof setTimeout>;
+  };
+  /**
+   * STICKY once the server rejects a local update on this connection (`update-rejected`):
+   * that generation holds a struct the server refused, so no barrier may ever answer
+   * `persisted`. Mirrors the server's per-member `durabilityPoisoned`; cleared only by a
+   * fresh session.
+   */
+  private durabilityPoisoned = false;
 
   constructor(
     private readonly url: string,
@@ -187,21 +238,82 @@ export class CollaborationDocumentSession {
   }
 
   /**
-   * Resolve once the next `ControlSaved` arrives (durable: a checkpoint is always a
-   * COMPLETE snapshot and applies are single-writer-ordered, so any saved after our
-   * update covers it). Rejects on `save-error` (not-yet-durable) or a terminal close.
+   * Request a CORRELATED durability barrier for the update(s) already sent on this
+   * connection, resolving only when the server confirms THEM durable.
+   *
+   * The service answers a `persist-request(requestId)` — enqueued on the same
+   * per-connection FIFO, after the update — with `persisted(requestId)` once that state
+   * has reached the durable store, or `persist-failed(requestId)` if it cannot. A
+   * room-wide `saved` broadcast answers NOBODY and never stands in for this: correlation
+   * is by the `requestId` this call mints. At most ONE barrier may be outstanding per
+   * connection; a second concurrent call rejects WITHOUT sending anything. The waiter is
+   * installed BEFORE the request frame is sent, so an immediate reply cannot race ahead
+   * of it. Rejects on `persist-failed`, an `update-rejected` (which sticky-poisons this
+   * session), a terminal close/ws error, or timeout — every path clears the waiter+timer.
    */
-  waitForNextSaved(timeoutMs: number): Promise<void> {
+  requestDurability(timeoutMs: number): Promise<void> {
     if (this.closeError) {
       return Promise.reject(this.closeError);
     }
-    const waiter = new Promise<void>((resolve, reject) => {
-      this.savedWaiters.push({ resolve, reject });
+    if (this.durabilityPoisoned) {
+      return Promise.reject(new UpdateRejectedError(this.documentId));
+    }
+    if (this.barrier) {
+      return Promise.reject(
+        new Error(
+          `A durability request is already outstanding for ${this.documentId}`
+        )
+      );
+    }
+    const requestId = randomUUID();
+    const promise = new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.settleBarrier(
+          requestId,
+          new Error(
+            `Document durable persist timed out after ${timeoutMs}ms for ${this.documentId}`
+          )
+        );
+      }, timeoutMs);
+      // Install the waiter (synchronously, in this executor) BEFORE the send below.
+      this.barrier = { requestId, resolve, reject, timer };
     });
-    return this.withTimeout(waiter, timeoutMs, 'durable save');
+    try {
+      this.sendDurabilityRequest(requestId);
+    } catch (err) {
+      // A synchronous send failure (the socket already crossed to CLOSING/CLOSED)
+      // settles THIS barrier — clearing its timer — so the rejection is observed
+      // through the returned promise's normal async path, never left as an orphan the
+      // caller's later close() would reject into an unhandled rejection.
+      this.settleBarrier(
+        requestId,
+        err instanceof Error ? err : new Error(String(err))
+      );
+    }
+    return promise;
+  }
+
+  /** Frame + send a `persist-request` (`[type 4][raw JSON {"requestId"}]`). */
+  private sendDurabilityRequest(requestId: string): void {
+    const encoder = encoding.createEncoder();
+    encoding.writeVarUint(encoder, WIRE_DURABILITY_REQUEST);
+    // RAW JSON remainder (no VarString length) — mirrors the service's
+    // `protocol.WriteMessage(type, body)` framing that `durabilityRequestID` reads.
+    encoding.writeUint8Array(
+      encoder,
+      new TextEncoder().encode(JSON.stringify({ requestId }))
+    );
+    this.send(encoding.toUint8Array(encoder));
   }
 
   close(): void {
+    // Mark the session terminally closed FIRST, so any post-close requestDurability
+    // rejects WITHOUT sending, then settle any still-outstanding barrier synchronously
+    // (clearing its timer) so a late frame on a dying socket can never act on it.
+    this.closeError ??= new Error(
+      `Collaboration session closed for ${this.documentId}`
+    );
+    this.settleBarrier(undefined, this.closeError);
     try {
       this.ws?.close(1000);
     } catch {
@@ -259,13 +371,36 @@ export class CollaborationDocumentSession {
       return;
     }
     switch (msg.kind) {
-      case 'saved':
-        this.resolveSaved();
+      case 'persisted':
+        // The correlated durable confirmation for OUR request — resolves the sole
+        // barrier IFF its requestId matches (a wrong/other requestId is ignored).
+        this.settleBarrier(msg.requestId);
         break;
-      case 'save-error':
-        this.rejectSaved(
-          new Error(`Document save failed: ${msg.error ?? 'unknown error'}`)
+      case 'persist-failed':
+        // The correlated failure for OUR request — rejects the matching barrier.
+        this.settleBarrier(
+          msg.requestId,
+          new Error(
+            `Document durable persist failed: ${msg.error ?? 'unknown error'}`
+          )
         );
+        break;
+      case 'update-rejected':
+        // The server refused a local update on THIS connection (it answers the
+        // preceding update and carries NO requestId). Poison the session permanently
+        // and reject the sole outstanding barrier UNCORRELATED — nothing this
+        // generation wrote is durable, and a later persisted/persist-failed after this
+        // finds no barrier, so it can never flip the outcome back to success.
+        this.durabilityPoisoned = true;
+        this.settleBarrier(
+          undefined,
+          new UpdateRejectedError(this.documentId, msg.error)
+        );
+        break;
+      case 'saved':
+      case 'save-error':
+        // Room-wide broadcasts — NOT correlated to any per-request barrier. The durable
+        // signal for our write is `persisted(requestId)`, never a room-wide `saved`.
         break;
       case 'read-only-state':
         // Key PRESENCE, not truthiness: an absent key says nothing; explicit true
@@ -283,19 +418,28 @@ export class CollaborationDocumentSession {
     }
   }
 
-  private resolveSaved(): void {
-    const waiters = this.savedWaiters;
-    this.savedWaiters = [];
-    for (const w of waiters) {
-      w.resolve();
+  /**
+   * Settle the single outstanding barrier EXACTLY ONCE, clearing both the waiter and
+   * its timer. When `requestId` is provided (a `persisted`/`persist-failed` reply) the
+   * barrier is settled ONLY if it matches — a mismatched/stale reply is ignored. When
+   * `requestId` is undefined (close / ws error / `update-rejected`, and the barrier's own
+   * timeout which passes its own id) it settles whatever barrier is outstanding. A
+   * non-null `err` rejects; its absence resolves.
+   */
+  private settleBarrier(requestId: string | undefined, err?: Error): void {
+    const b = this.barrier;
+    if (!b) {
+      return;
     }
-  }
-
-  private rejectSaved(err: Error): void {
-    const waiters = this.savedWaiters;
-    this.savedWaiters = [];
-    for (const w of waiters) {
-      w.reject(err);
+    if (requestId !== undefined && requestId !== b.requestId) {
+      return;
+    }
+    this.barrier = undefined;
+    clearTimeout(b.timer);
+    if (err) {
+      b.reject(err);
+    } else {
+      b.resolve();
     }
   }
 
@@ -303,7 +447,8 @@ export class CollaborationDocumentSession {
     if (!this.synced) {
       this.syncedReject?.(err);
     }
-    this.rejectSaved(err);
+    // A terminal close / ws error fails whatever barrier is outstanding (uncorrelated).
+    this.settleBarrier(undefined, err);
   }
 
   private send(bytes: Uint8Array): void {

@@ -202,7 +202,8 @@ export class EditWhiteboardElementsTool implements McpTool {
     let result: { added: string[]; summary: string[] } | undefined;
     try {
       // Join the live room, apply the ops as ONE Yjs transaction (one update frame),
-      // and return only once the change is durably persisted (ControlSaved).
+      // and return only once the change is durably persisted (a correlated persist
+      // barrier — `persisted(requestId)`, never a room-wide `saved`).
       await this.collaborationService.mutate(
         whiteboardId,
         'whiteboard',

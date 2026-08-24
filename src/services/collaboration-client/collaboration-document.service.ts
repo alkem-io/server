@@ -8,6 +8,7 @@ import {
   CollaborationDocumentSession,
   DocumentPurgingError,
   ReadOnlyRoomError,
+  UpdateRejectedError,
 } from './collaboration-document.session';
 
 /** The unified `/collab/{id}?type=…` document kinds this client can join. */
@@ -79,11 +80,15 @@ export class CollaborationDocumentService {
 
   /**
    * Join the room, apply `mutator` as ONE logical Yjs transaction (a single update
-   * frame → one rate-limit token), and return only once the change is DURABLE (a
-   * `ControlSaved` covering it, guaranteed by single-writer ordering + complete
-   * snapshots). A read-only join fails immediately. On an ambiguous disconnect
-   * before durability, reconnects and resends the SAME update bytes (Yjs-idempotent);
-   * a deleted board (`DocumentPurgingError`) is terminal.
+   * frame → one rate-limit token), and return only once the change is DURABLE via a
+   * CORRELATED persist barrier (`requestDurability`): the server answers this session's
+   * `persist-request(requestId)` with `persisted(requestId)` once that exact state has
+   * reached the durable store. A room-wide `saved` broadcast never stands in for it. A
+   * read-only join fails immediately. On an ambiguous transport/persist failure before
+   * durability, reconnects (a fresh session → a fresh requestId) and resends the SAME
+   * update bytes (Yjs-idempotent). A deleted board (`DocumentPurgingError`) and a
+   * server-refused update (`UpdateRejectedError` — resending identical rejected bytes is
+   * futile) are both terminal.
    */
   async mutate(
     documentId: string,
@@ -109,12 +114,13 @@ export class CollaborationDocumentService {
           // from tool input (a fresh clock/ids would double the edit).
           session.resend(update as Uint8Array);
         }
-        await session.waitForNextSaved(this.saveTimeoutMs);
+        await session.requestDurability(this.saveTimeoutMs);
         return; // durable
       } catch (err) {
         if (
           err instanceof DocumentPurgingError ||
           err instanceof ReadOnlyRoomError ||
+          err instanceof UpdateRejectedError ||
           update === null ||
           attempt === this.maxResendRetries
         ) {
