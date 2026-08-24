@@ -5,6 +5,7 @@ import { registerEnumType } from '@nestjs/graphql';
 export enum SidebarWidget {
   INTENT = 'intent',
   ABOUT = 'about',
+  CREATE_POST = 'createPost',
   SUBSPACE_LINKS = 'subspaceLinks',
   EVENTS = 'events',
   UPDATES = 'updates',

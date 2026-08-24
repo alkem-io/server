@@ -473,7 +473,7 @@ describe('InnovationFlowService', () => {
         displayName: 'State A',
       } as any);
 
-      expect(result.settings.sidebar).toEqual(['intent', 'index']);
+      expect(result.settings.sidebar).toEqual(['createPost', 'intent', 'index']);
     });
   });
 

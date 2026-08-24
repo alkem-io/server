@@ -155,12 +155,13 @@ describe('InnovationFlowStateService', () => {
       expect(result.settings.showPublishDetails).toBe(false);
     });
 
-    it('should default settings.sidebar to [INTENT, INDEX] when not provided', async () => {
+    it('should default settings.sidebar to [CREATE_POST, INTENT, INDEX] when not provided', async () => {
       const stateData = { displayName: 'Draft' };
 
       const result = await service.createInnovationFlowState(stateData as any);
 
       expect(result.settings.sidebar).toEqual([
+        SidebarWidget.CREATE_POST,
         SidebarWidget.INTENT,
         SidebarWidget.INDEX,
       ]);
