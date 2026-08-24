@@ -36,10 +36,16 @@ Traefik router: `.build/traefik/http.yml` → router `collaboration`
 
 ```
 PORT=4006
-HUB_MODE=redis                 REDIS_URL=redis://redis:6379/0
-METADATA_STORE=rabbitmq           RABBITMQ_QUEUE=alkemio-collaboration
-CHECKPOINT_STORE=file-service           FILE_SERVICE_URL=http://file-service:4003
-AUTH_MODE=authzeval               AUTH_SERVICE_URL=http://authorization-evaluation:6060
+HUB_MODE=inmemory
+METADATA_STORE=rabbitmq
+RABBITMQ_QUEUE=alkemio-collaboration
+LIFECYCLE_QUEUE=alkemio-collaboration-lifecycle
+CHECKPOINT_STORE=file-service
+FILE_SERVICE_URL=http://file-service:4003
+AUTH_MODE=header
+AUTH_TOKEN_HEADER=X-Alkemio-Actor-Id
+AUTHZ_MODE=authzeval
+AUTH_SERVICE_URL=http://authorization-evaluation:6060
 MAX_UPLOAD_SIZE=33554432
 ```
 
@@ -61,8 +67,6 @@ MAX_UPLOAD_SIZE=33554432
 From the server worktree root:
 
 ```bash
-cd ~/work/alkemio/worktrees/003-unify-collab-yjs/server
-
 # Tear down EVERYTHING incl. volumes (fresh data).
 docker compose -f quickstart-services.yml --env-file .env.docker down -v
 
@@ -139,7 +143,8 @@ step 4.**
 ```bash
 docker logs alkemio_dev_collaboration --tail 40
 # expect a startup line naming the topology:
-#   HUB_MODE=redis METADATA_STORE=rabbitmq CHECKPOINT_STORE=file-service AUTH_MODE=authzeval
+#   HUB_MODE=inmemory METADATA_STORE=rabbitmq CHECKPOINT_STORE=file-service
+#   AUTH_MODE=header AUTHZ_MODE=authzeval
 docker ps --filter name=alkemio_dev_collaboration   # should be Up (not restarting)
 ```
 

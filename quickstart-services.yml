@@ -529,16 +529,12 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_collaboration
     hostname: collaboration
-    # 006 integration image, tracking the collaboration-service PR #10 head (the
-    # current integration PR; PR #5 is superseded). NOTE: a `pr-N` tag is MUTABLE —
-    # it moves on every push to that PR — so this is reproducible only within a
-    # window; pin the image DIGEST if a stable quickstart runtime is required.
-    image: ghcr.io/alkem-io/collaboration-service:pr-10
+    # >>> MERGE GATE (006) <<< Exact PR #10 review image used by the canonical E2E.
+    # Replace with the immutable RELEASED collaboration-service digest before merge.
+    image: ghcr.io/alkem-io/collaboration-service:pr-10@sha256:3982550a5423d036f99b52dd5f3386b1cb1d9da4894b8c83d1786d7792aaa856
     depends_on:
       rabbitmq:
         condition: service_healthy
-      redis:
-        condition: service_started
       file-service:
         condition: service_started
       authorization-evaluation:
@@ -551,21 +547,22 @@ services:
       - METADATA_STORE=rabbitmq
       - CHECKPOINT_STORE=file-service
       - AUTH_MODE=header
+      - AUTHZ_MODE=authzeval
       # The Traefik `collaboration` router resolves identity at the gateway
       # (alkemio-resolve forwardAuth) and forwards the actor id in this header;
       # the WS handshake reads it from here instead of the bearer Authorization
       # header. Must match the authResponseHeader alkemio-resolve injects.
       - AUTH_TOKEN_HEADER=X-Alkemio-Actor-Id
-      # --- redis fan-out (HUB_MODE=redis) ---
-      - REDIS_URL=redis://redis:6379/0
       # --- RabbitMQ metadata bus (METADATA_STORE=rabbitmq) ---
-      # Unified contract: collaboration-save/-fetch/-delete/-info/-contribution
-      # on the queue shared with the server (main.ts connects the same queue).
+      # Unified contract: collaboration-save/-fetch RPCs plus the contribution
+      # event on the metadata queue shared with the server. document.deleted is
+      # consumed from the distinct lifecycle queue.
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
       - RABBITMQ_USER
       - RABBITMQ_PASSWORD
       - RABBITMQ_QUEUE=alkemio-collaboration
+      - LIFECYCLE_QUEUE=alkemio-collaboration-lifecycle
       # --- file-service blob offload (CHECKPOINT_STORE=file-service) ---
       - FILE_SERVICE_URL=http://file-service:4003
       - MAX_UPLOAD_SIZE=33554432
@@ -574,7 +571,7 @@ services:
       # metadata). It no longer reads a platform-bucket fallback, so `FILE_SERVICE_URL`
       # is the only file-service config it needs (a save for an index row lacking its
       # own bucket fails ErrCorrupt; `--verify` flags bucketless owners pre-rollout).
-      # --- authZ via authorization-evaluation-service (AUTH_MODE=authzeval) ---
+      # --- authZ via authorization-evaluation-service (AUTHZ_MODE=authzeval) ---
       # Dev hostname is `authorization-evaluation` (the configmap default
       # `authorization-evaluation-service` is the k8s service name).
       - AUTH_SERVICE_URL=http://authorization-evaluation:6060
@@ -595,7 +592,10 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service:v0.2.3
+    # >>> MERGE GATE (006) <<< PR #53 supplies the bounded content-batch endpoint
+    # required by the Release-A verifier. Replace with the immutable RELEASED
+    # file-service digest before merge.
+    image: ghcr.io/alkem-io/file-service:pr-53@sha256:5acefd468b8c4790832cdcaa4f7273e262822405bdb1f0c6059cb02072584c3f
     depends_on:
       postgres:
         condition: service_healthy
