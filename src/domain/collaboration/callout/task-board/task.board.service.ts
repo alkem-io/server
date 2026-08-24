@@ -6,6 +6,7 @@ import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { getSelectableValues } from '@domain/common/tagset-template/tagset.template.utils';
 import { Injectable } from '@nestjs/common';
+import { MAX_TASK_BOARD_COLUMNS } from './task.board.constants';
 
 /**
  * Pure column-model logic for a Tasks board: detecting whether a callout is a
@@ -126,6 +127,14 @@ export class TaskBoardService {
       throw new ValidationException(
         'A task board must keep at least one column',
         LogContext.COLLABORATION
+      );
+    }
+
+    if (candidates.length > MAX_TASK_BOARD_COLUMNS) {
+      throw new ValidationException(
+        'A task board cannot exceed the maximum number of columns',
+        LogContext.COLLABORATION,
+        { requested: candidates.length, max: MAX_TASK_BOARD_COLUMNS }
       );
     }
 

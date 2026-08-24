@@ -1,5 +1,7 @@
+import { SMALL_TEXT_LENGTH } from '@common/constants/entity.field.length.constants';
 import { Field, InputType, ObjectType } from '@nestjs/graphql';
-import { IsOptional } from 'class-validator';
+import { ArrayMaxSize, IsOptional, MaxLength } from 'class-validator';
+import { MAX_TASK_BOARD_COLUMNS } from '../task.board.constants';
 
 /**
  * Presence of this block on a callout create flips a POSTS callout into a Tasks
@@ -16,5 +18,7 @@ export class CreateCalloutTaskBoardInput {
       'The ordered columns of the Tasks board. The first is the default column. Omit to seed the default set.',
   })
   @IsOptional()
+  @ArrayMaxSize(MAX_TASK_BOARD_COLUMNS)
+  @MaxLength(SMALL_TEXT_LENGTH, { each: true })
   columns?: string[];
 }

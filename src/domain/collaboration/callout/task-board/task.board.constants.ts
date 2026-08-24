@@ -13,3 +13,10 @@ export const TASK_BOARD_DEFAULT_COLUMNS: readonly string[] = [
 // TagsetReservedName.TASK; kept here so the task-board layer does not have to
 // reach into the enum for the common membership check.
 export const TASK_BOARD_TAGSET_NAME = 'task';
+
+// The maximum number of columns a Tasks board may hold. The board's per-column
+// task counts are returned in full on every board query, so an unbounded column
+// list would let a caller inflate that response without limit. This cap is the
+// authoritative board-width limit, enforced by the domain services on both the
+// initial-column and add-column paths; the DTOs mirror it as a fast-fail.
+export const MAX_TASK_BOARD_COLUMNS = 20;
