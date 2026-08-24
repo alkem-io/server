@@ -18,6 +18,7 @@ import { CollaboraDocumentEventsService } from '@domain/collaboration/collabora-
 import { ReactionService } from '@domain/collaboration/reaction/reaction.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -40,6 +41,7 @@ describe('CalloutResolverMutations', () => {
   let calloutAuthorizationService: CalloutAuthorizationService;
   let reactionService: ReactionService;
   let actorLookupService: ActorLookupService;
+  let notificationAdapterSpace: NotificationSpaceAdapter;
   let _contributionAuthorizationService: CalloutContributionAuthorizationService;
   let _calloutContributionService: CalloutContributionService;
   let collaboraDocumentEventsService: CollaboraDocumentEventsService;
@@ -81,6 +83,7 @@ describe('CalloutResolverMutations', () => {
     calloutAuthorizationService = module.get(CalloutAuthorizationService);
     reactionService = module.get(ReactionService);
     actorLookupService = module.get(ActorLookupService);
+    notificationAdapterSpace = module.get(NotificationSpaceAdapter);
     _contributionAuthorizationService = module.get(
       CalloutContributionAuthorizationService
     );
@@ -916,7 +919,10 @@ describe('CalloutResolverMutations', () => {
       vi.mocked(actorLookupService.getActorTypeByIdOrFail).mockResolvedValue(
         ActorType.USER
       );
-      vi.mocked(reactionService.upsertReaction).mockResolvedValue({} as any);
+      vi.mocked(reactionService.upsertReaction).mockResolvedValue({
+        reaction: {},
+        created: false,
+      } as any);
 
       const result = await resolver.addReactionToCallout(
         { actorID: 'user-1' } as any,
@@ -930,6 +936,149 @@ describe('CalloutResolverMutations', () => {
         'heart'
       );
       expect(result).toBe(refreshedCallout);
+    });
+
+    it('emits exactly one notification dispatch when the reaction is genuine (created:true)', async () => {
+      const callout = makePublishedCallout();
+      const refreshedCallout = { ...callout } as any;
+      vi.mocked(calloutService.getCalloutOrFail)
+        .mockResolvedValueOnce(callout)
+        .mockResolvedValueOnce(refreshedCallout);
+      vi.mocked(actorLookupService.getActorTypeByIdOrFail).mockResolvedValue(
+        ActorType.USER
+      );
+      vi.mocked(reactionService.upsertReaction).mockResolvedValue({
+        reaction: {},
+        created: true,
+      } as any);
+      vi.mocked(
+        notificationAdapterSpace.spaceCollaborationCalloutReaction
+      ).mockResolvedValue(undefined);
+
+      await resolver.addReactionToCallout(
+        { actorID: 'user-1' } as any,
+        { calloutID: 'callout-1', emoji: 'heart' } as any
+      );
+
+      // Fire-and-forget is async; flush the microtask queue so the promise
+      // callback runs before we assert.
+      await Promise.resolve();
+
+      expect(
+        notificationAdapterSpace.spaceCollaborationCalloutReaction
+      ).toHaveBeenCalledExactlyOnceWith({
+        calloutID: 'callout-1',
+        triggeredBy: 'user-1',
+        emoji: 'heart',
+      });
+    });
+
+    it('emits zero notification dispatches when the reaction is a swap (created:false)', async () => {
+      const callout = makePublishedCallout();
+      const refreshedCallout = { ...callout } as any;
+      vi.mocked(calloutService.getCalloutOrFail)
+        .mockResolvedValueOnce(callout)
+        .mockResolvedValueOnce(refreshedCallout);
+      vi.mocked(actorLookupService.getActorTypeByIdOrFail).mockResolvedValue(
+        ActorType.USER
+      );
+      // Swap: same user re-reacts with a different emoji — service returns created:false.
+      vi.mocked(reactionService.upsertReaction).mockResolvedValue({
+        reaction: {},
+        created: false,
+      } as any);
+
+      await resolver.addReactionToCallout(
+        { actorID: 'user-1' } as any,
+        { calloutID: 'callout-1', emoji: 'thumbsup' } as any
+      );
+
+      await Promise.resolve();
+
+      expect(
+        notificationAdapterSpace.spaceCollaborationCalloutReaction
+      ).not.toHaveBeenCalled();
+    });
+
+    it('emits zero notification dispatches when an idempotent re-add is detected (created:false)', async () => {
+      const callout = makePublishedCallout();
+      const refreshedCallout = { ...callout } as any;
+      vi.mocked(calloutService.getCalloutOrFail)
+        .mockResolvedValueOnce(callout)
+        .mockResolvedValueOnce(refreshedCallout);
+      vi.mocked(actorLookupService.getActorTypeByIdOrFail).mockResolvedValue(
+        ActorType.USER
+      );
+      // Idempotent re-add: the ON CONFLICT upsert found an existing row, created:false.
+      vi.mocked(reactionService.upsertReaction).mockResolvedValue({
+        reaction: {},
+        created: false,
+      } as any);
+
+      await resolver.addReactionToCallout(
+        { actorID: 'user-1' } as any,
+        { calloutID: 'callout-1', emoji: 'heart' } as any
+      );
+
+      await Promise.resolve();
+
+      expect(
+        notificationAdapterSpace.spaceCollaborationCalloutReaction
+      ).not.toHaveBeenCalled();
+    });
+
+    it('does not fail the mutation when the notification adapter rejects (fire-and-forget)', async () => {
+      const callout = makePublishedCallout();
+      const refreshedCallout = { ...callout } as any;
+      vi.mocked(calloutService.getCalloutOrFail)
+        .mockResolvedValueOnce(callout)
+        .mockResolvedValueOnce(refreshedCallout);
+      vi.mocked(actorLookupService.getActorTypeByIdOrFail).mockResolvedValue(
+        ActorType.USER
+      );
+      vi.mocked(reactionService.upsertReaction).mockResolvedValue({
+        reaction: {},
+        created: true,
+      } as any);
+      vi.mocked(
+        notificationAdapterSpace.spaceCollaborationCalloutReaction
+      ).mockRejectedValue(new Error('adapter failure'));
+
+      // The mutation must resolve, not reject, even though the adapter rejects.
+      await expect(
+        resolver.addReactionToCallout(
+          { actorID: 'user-1' } as any,
+          { calloutID: 'callout-1', emoji: 'heart' } as any
+        )
+      ).resolves.toBeDefined();
+
+      // Allow the fire-and-forget rejection handler to run.
+      await Promise.resolve();
+    });
+  });
+
+  describe('removeReactionFromCallout — notification invariant', () => {
+    it('never dispatches a notification on remove', async () => {
+      const callout = {
+        id: 'callout-1',
+        authorization: { id: 'auth-1' },
+      } as any;
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(actorLookupService.getActorTypeByIdOrFail).mockResolvedValue(
+        ActorType.USER
+      );
+      vi.mocked(reactionService.removeReaction).mockResolvedValue(undefined);
+
+      await resolver.removeReactionFromCallout(
+        { actorID: 'user-1' } as any,
+        { calloutID: 'callout-1' } as any
+      );
+
+      await Promise.resolve();
+
+      expect(
+        notificationAdapterSpace.spaceCollaborationCalloutReaction
+      ).not.toHaveBeenCalled();
     });
   });
 

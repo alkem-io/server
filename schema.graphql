@@ -573,6 +573,7 @@ enum NotificationEvent {
   SPACE_COLLABORATION_CALLOUT_CONTRIBUTION
   SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT
   SPACE_COLLABORATION_CALLOUT_PUBLISHED
+  SPACE_COLLABORATION_CALLOUT_REACTION
   SPACE_COLLABORATION_POLL_MODIFIED_ON_POLL_I_VOTED_ON
   SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE
   SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL
@@ -625,6 +626,7 @@ enum NotificationEventPayload {
   SPACE_COLLABORATION_CALLOUT
   SPACE_COLLABORATION_CALLOUT_COMMENT
   SPACE_COLLABORATION_CALLOUT_POST_COMMENT
+  SPACE_COLLABORATION_CALLOUT_REACTION
   SPACE_COLLABORATION_POLL
   SPACE_COMMUNICATION_MESSAGE_DIRECT
   SPACE_COMMUNICATION_UPDATE
@@ -3112,6 +3114,19 @@ type InAppNotificationPayloadSpaceCollaborationCalloutPostComment implements InA
   """The details of the message."""
   messageDetails: MessageDetails
   """The Space where the comment was made."""
+  space: Space!
+  """The payload type."""
+  type: NotificationEventPayload!
+}
+
+type InAppNotificationPayloadSpaceCollaborationCalloutReaction implements InAppNotificationPayload {
+  """The Callout that was reacted to."""
+  callout: Callout!
+  """
+  The emoji slug from the platform allow-list. Clients own slug-to-glyph rendering.
+  """
+  emoji: String!
+  """The Space where the reaction was made."""
   space: Space!
   """The payload type."""
   type: NotificationEventPayload!
@@ -7098,6 +7113,8 @@ type UserSettingsNotificationSpace {
   collaborationCalloutPostContributionComment: UserSettingsNotificationChannels!
   """Receive a notification when a callout is published"""
   collaborationCalloutPublished: UserSettingsNotificationChannels!
+  """Receive a notification when someone reacts to a callout you published"""
+  collaborationCalloutReaction: UserSettingsNotificationChannels!
   """Receive a notification when a poll you voted on is modified"""
   collaborationPollModifiedOnPollIVotedOn: UserSettingsNotificationChannels!
   """
@@ -10027,6 +10044,8 @@ input UpdateUserSettingsNotificationSpaceInput {
   collaborationCalloutPostContributionComment: NotificationSettingInput
   """Receive a notification when a callout is published"""
   collaborationCalloutPublished: NotificationSettingInput
+  """Receive a notification when someone reacts to a callout you published"""
+  collaborationCalloutReaction: NotificationSettingInput
   """Receive a notification when a poll you voted on is modified"""
   collaborationPollModifiedOnPollIVotedOn: NotificationSettingInput
   """

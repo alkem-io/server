@@ -74,4 +74,11 @@ export abstract class IUserSettingsNotificationSpace {
       'Receive a notification when a poll option you voted for is changed or removed',
   })
   collaborationPollVoteAffectedByOptionChange!: IUserSettingsNotificationChannels;
+
+  @Field(() => IUserSettingsNotificationChannels, {
+    nullable: false,
+    description:
+      'Receive a notification when someone reacts to a callout you published',
+  })
+  collaborationCalloutReaction!: IUserSettingsNotificationChannels;
 }

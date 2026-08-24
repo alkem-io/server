@@ -233,6 +233,10 @@ export class UserSettingsService {
         settings.notification.space.collaborationPollVoteAffectedByOptionChange,
         notificationSpaceData.collaborationPollVoteAffectedByOptionChange
       );
+      this.updateNotificationSetting(
+        settings.notification.space.collaborationCalloutReaction,
+        notificationSpaceData.collaborationCalloutReaction
+      );
     }
 
     const notificationUserData = updateData.notification?.user;

@@ -23,6 +23,7 @@ import {
   InAppNotificationPayloadUserMessageRoomResolverFields,
   InAppNotificationPayloadVirtualContributorFieldsResolver,
 } from './field-resolvers';
+import { InAppNotificationPayloadSpaceCollaborationCalloutReactionResolverFields } from './field-resolvers/space/in.app.notification.payload.space.collaboration.callout.reaction.resolver.fields';
 import { InAppNotificationPayloadSpaceCollaborationCalloutResolverFields } from './field-resolvers/space/in.app.notification.payload.space.collaboration.callout.resolver.fields';
 import { InAppNotificationPayloadSpaceCollaborationPollResolverFields } from './field-resolvers/space/in.app.notification.payload.space.collaboration.poll.resolver.fields';
 import { InAppNotificationPayloadSpaceCommunityCalendarEventCommentResolverFields } from './field-resolvers/space/in.app.notification.payload.space.community.calendar.event.comment.resolver.fields';
@@ -33,6 +34,7 @@ import { InAppNotificationPayloadSpaceCommunityCalendarEventCommentResolverField
     // add in all the other payload resolvers from the ../field-resolvers directory
     InAppNotificationPayloadSpaceCollaborationCalloutResolverFields,
     InAppNotificationPayloadSpaceCollaborationCalloutPostCommentResolverFields,
+    InAppNotificationPayloadSpaceCollaborationCalloutReactionResolverFields,
     InAppNotificationPayloadSpaceCollaborationPollResolverFields,
     InAppNotificationPayloadSpaceCollaborationCalloutCommentResolverFields,
     InAppNotificationPayloadSpaceResolverFields,

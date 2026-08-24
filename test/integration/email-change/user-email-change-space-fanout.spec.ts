@@ -211,7 +211,9 @@ function makeHarness({
     spaceLookupService as any,
     undefined as any, // urlGeneratorService — unused
     userLookupService,
-    undefined as any // calloutLookupService — unused
+    undefined as any, // calloutLookupService — unused
+    undefined as any, // calloutReactionEmailSuppressionService — unused
+    undefined as any // configService — unused
   );
 
   const notificationPlatformAdapter = {

@@ -523,6 +523,13 @@ notifications:
   in_app:
     max_notifications_per_user: ${IN_APP_MAX_NOTIFICATIONS_PER_USER}:100
     max_retention_period_days: ${IN_APP_MAX_RETENTION_PERIOD_DAYS}:90
+  # Callout-reaction notifications (041-callout-reaction-notifications).
+  # NOT declared on any deployment manifest this release — the in-code defaults
+  # below govern everywhere; flipping `enabled` requires a deploy (risk R-11).
+  callout_reactions:
+    enabled: ${CALLOUT_REACTION_NOTIFICATIONS_ENABLED}:true
+    email_suppression_window_seconds: ${CALLOUT_REACTION_EMAIL_SUPPRESSION_WINDOW_SECONDS}:300
+
   # Chat/conversation message notifications (034-messaging-notifications).
   # NOT declared on any deployment manifest this release (Operator Ruling 3b) —
   # the in-code defaults below govern everywhere; flipping `enabled` in
