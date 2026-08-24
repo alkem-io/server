@@ -12,27 +12,39 @@ export class TaskBoardContributionClassification1787315924637
   name = 'TaskBoardContributionClassification1787315924637';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    // Idempotent: ADD COLUMN IF NOT EXISTS, and guard the constraint additions
+    // with a catalog check (PostgreSQL has no ADD CONSTRAINT IF NOT EXISTS), so
+    // a re-run is a no-op rather than an error.
     await queryRunner.query(
-      `ALTER TABLE "callout_contribution" ADD "classificationId" uuid`
+      `ALTER TABLE "callout_contribution" ADD COLUMN IF NOT EXISTS "classificationId" uuid`
     );
     await queryRunner.query(
-      `ALTER TABLE "callout_contribution" ADD CONSTRAINT "UQ_c8dcb5c0d8ec78f673d1b0376d5" UNIQUE ("classificationId")`
+      `DO $$ BEGIN
+         IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'UQ_c8dcb5c0d8ec78f673d1b0376d5') THEN
+           ALTER TABLE "callout_contribution" ADD CONSTRAINT "UQ_c8dcb5c0d8ec78f673d1b0376d5" UNIQUE ("classificationId");
+         END IF;
+       END $$;`
     );
     await queryRunner.query(
-      `ALTER TABLE "callout_contribution" ADD CONSTRAINT "FK_c8dcb5c0d8ec78f673d1b0376d5" FOREIGN KEY ("classificationId") REFERENCES "classification"("id") ON DELETE SET NULL ON UPDATE NO ACTION`
+      `DO $$ BEGIN
+         IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FK_c8dcb5c0d8ec78f673d1b0376d5') THEN
+           ALTER TABLE "callout_contribution" ADD CONSTRAINT "FK_c8dcb5c0d8ec78f673d1b0376d5" FOREIGN KEY ("classificationId") REFERENCES "classification"("id") ON DELETE SET NULL ON UPDATE NO ACTION;
+         END IF;
+       END $$;`
     );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // Reverse order of up(): drop FK before UNIQUE before the column.
+    // Reverse order of up(): drop FK before UNIQUE before the column. IF EXISTS
+    // guards keep a re-run (or a partial up()) reversible without error.
     await queryRunner.query(
-      `ALTER TABLE "callout_contribution" DROP CONSTRAINT "FK_c8dcb5c0d8ec78f673d1b0376d5"`
+      `ALTER TABLE "callout_contribution" DROP CONSTRAINT IF EXISTS "FK_c8dcb5c0d8ec78f673d1b0376d5"`
     );
     await queryRunner.query(
-      `ALTER TABLE "callout_contribution" DROP CONSTRAINT "UQ_c8dcb5c0d8ec78f673d1b0376d5"`
+      `ALTER TABLE "callout_contribution" DROP CONSTRAINT IF EXISTS "UQ_c8dcb5c0d8ec78f673d1b0376d5"`
     );
     await queryRunner.query(
-      `ALTER TABLE "callout_contribution" DROP COLUMN "classificationId"`
+      `ALTER TABLE "callout_contribution" DROP COLUMN IF EXISTS "classificationId"`
     );
   }
 }
