@@ -14,7 +14,6 @@ import { ContributionReporterModule } from '@services/external/elasticsearch/con
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { CollaborationIntegrationController } from './collaboration-integration.controller';
 import { CollaborationIntegrationService } from './collaboration-integration.service';
-import { CollaborationMigrationService } from './migration';
 
 /**
  * The unified collaboration-integration consumer module (memo + whiteboard).
@@ -38,7 +37,7 @@ import { CollaborationMigrationService } from './migration';
     TypeOrmModule.forFeature([Memo, Whiteboard]),
   ],
   controllers: [CollaborationIntegrationController],
-  providers: [CollaborationIntegrationService, CollaborationMigrationService],
-  exports: [CollaborationIntegrationService, CollaborationMigrationService],
+  providers: [CollaborationIntegrationService],
+  exports: [CollaborationIntegrationService],
 })
 export class CollaborationIntegrationModule {}
