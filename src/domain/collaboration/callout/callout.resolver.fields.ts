@@ -98,6 +98,8 @@ export class CalloutResolverFields {
     return await this.calloutService.getContributionsCount(callout);
   }
 
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('taskColumnCounts', () => [TaskColumnCount], {
     nullable: true,
     description:
