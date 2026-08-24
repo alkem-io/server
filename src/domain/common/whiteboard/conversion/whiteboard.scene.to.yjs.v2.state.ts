@@ -16,9 +16,12 @@ import { loadWhiteboardFork } from '../whiteboard.fork';
  * `ApplyUpdateV2`. (An EMPTY doc carries no structs, so an empty encode IS
  * byte-identical to a bare empty V2 doc — the create path relies on this.)
  *
- * The fork is loaded on the server's single shared `yjs` instance (it is the
- * fork's peerDependency — see `whiteboard.fork.ts`), so no cross-`yjs`-instance
- * `instanceof` split can arise (yjs#438).
+ * `loadWhiteboardFork` loads the fork's `require`/CJS build, which shares the server's
+ * single `yjs.cjs` runtime instance (see `whiteboard.fork.ts`), so no cross-`yjs`-instance
+ * split arises here. (The `yjs` peerDependency alone only pins one VERSION, not one
+ * runtime INSTANCE — the `require`-condition load is what guarantees the single instance.)
+ * This conversion is additionally self-contained: it builds and encodes inside the fork's
+ * own doc and returns bytes, so it would be instance-safe regardless.
  *
  * Assets are NOT read from the scene's own `files` (legacy `BinaryFileData`
  * objects, which the unified schema does not store): the caller passes an already

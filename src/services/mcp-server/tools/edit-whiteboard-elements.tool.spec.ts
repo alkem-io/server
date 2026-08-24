@@ -1,13 +1,19 @@
+import { createRequire } from 'node:module';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as Y from 'yjs';
+import type * as Yjs from 'yjs';
 import { EditWhiteboardElementsTool } from './edit-whiteboard-elements.tool';
 
-// The runtime loads the ESM fork via a Function-wrapped dynamic import that
-// vitest's module runner cannot drive; mock the loader to a plain dynamic import
-// so the test still exercises the REAL fork writer against a real Y.Doc.
-vi.mock('@domain/common/whiteboard/whiteboard.fork', () => ({
-  loadWhiteboardFork: () => import('@excalidraw-yjs/element/headless'),
-}));
+// The real `loadWhiteboardFork` loads the fork's CommonJS `require` build (needs no mock),
+// so the tool exercises the real fork writer end to end. The WRITE PATH under test is
+// single-instance: the doc below is built from the SAME native `yjs.cjs` the fork uses
+// (createRequire), not Vitest's `import 'yjs'` (which would be a second instance and cross
+// the boundary). NOTE: this is NOT a whole-graph single-instance claim — the tool's other
+// transitively-imported DI/writer graph (CollaborationDocumentService, session, scene-writer)
+// is resolved by Vitest to yjs's ESM build, so Vitest loads BOTH builds at import time and
+// prints a benign, harness-only `[yjs#438]` BEFORE the actual CJS doc/fork write below.
+// Production is all-CommonJS (one instance); the clean isolate-safe single-instance proof
+// lives in `whiteboard.fork.cjs-boundary.spec.ts` (plus the canonical E2E).
+const Y = createRequire(__filename)('yjs') as typeof import('yjs');
 
 const WB_ID = 'wb-1';
 const ctx = { actorID: 'actor-1' } as any;
@@ -31,14 +37,14 @@ const buildTool = (opts: { granted?: boolean; found?: boolean } = {}) => {
   const authorizationService = {
     isAccessGranted: vi.fn().mockReturnValue(granted),
   };
-  let mutatedDoc: Y.Doc | undefined;
+  let mutatedDoc: Yjs.Doc | undefined;
   const collaborationService = {
     mutate: vi.fn(
       async (
         _id: string,
         _type: string,
         _actor: string,
-        mutator: (doc: Y.Doc) => void
+        mutator: (doc: Yjs.Doc) => void
       ) => {
         mutatedDoc = new Y.Doc();
         mutator(mutatedDoc);
