@@ -332,7 +332,7 @@ describe('CalloutService', () => {
       );
     });
 
-    it('seeds the four default columns in order when none supplied', async () => {
+    it('seeds the default columns in order when none supplied', async () => {
       const calloutData = boardInput({ taskBoard: {} });
 
       await service.createCallout(
@@ -347,12 +347,11 @@ describe('CalloutService', () => {
       expect(savedTemplate.name).toBe('task');
       expect(savedTemplate.type).toBe('select-one');
       expect(savedTemplate.allowedValues).toEqual([
-        'Backlog',
-        'To do',
-        'In progress',
+        'To Do',
+        'In Progress',
         'Done',
       ]);
-      expect(savedTemplate.defaultSelectedValue).toBe('Backlog');
+      expect(savedTemplate.defaultSelectedValue).toBe('To Do');
     });
 
     it('validates and canonicalises supplied custom columns', async () => {

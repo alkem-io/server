@@ -104,12 +104,11 @@ describe('Tasks board read + creation', () => {
 
       expect(taskBoardService.isTaskBoard(callout)).toBe(true);
       expect(taskBoardService.getColumns(callout)).toEqual([
-        'Backlog',
-        'To do',
-        'In progress',
+        'To Do',
+        'In Progress',
         'Done',
       ]);
-      expect(taskBoardService.getDefaultColumn(callout)).toBe('Backlog');
+      expect(taskBoardService.getDefaultColumn(callout)).toBe('To Do');
     });
 
     it('treats a plain callout as not a board with no columns', () => {
@@ -152,7 +151,7 @@ describe('Tasks board read + creation', () => {
       );
 
       expect(result.classification).toEqual({
-        tagsets: [{ name: TagsetReservedName.TASK, tags: ['In progress'] }],
+        tagsets: [{ name: TagsetReservedName.TASK, tags: ['In Progress'] }],
       });
     });
 
@@ -169,7 +168,7 @@ describe('Tasks board read + creation', () => {
       );
 
       expect(result.classification).toEqual({
-        tagsets: [{ name: TagsetReservedName.TASK, tags: ['Backlog'] }],
+        tagsets: [{ name: TagsetReservedName.TASK, tags: ['To Do'] }],
       });
     });
 
@@ -223,14 +222,13 @@ describe('Tasks board read + creation', () => {
     it('zero-fills empty columns and keeps board order', () => {
       const columns = [...TASK_BOARD_DEFAULT_COLUMNS];
       const raw = new Map<string, number>([
-        ['In progress', 2],
-        ['Backlog', 1],
+        ['In Progress', 2],
+        ['To Do', 1],
       ]);
 
       expect(mergeColumnCounts(columns, raw)).toEqual([
-        { column: 'Backlog', count: 1 },
-        { column: 'To do', count: 0 },
-        { column: 'In progress', count: 2 },
+        { column: 'To Do', count: 1 },
+        { column: 'In Progress', count: 2 },
         { column: 'Done', count: 0 },
       ]);
     });
@@ -238,7 +236,7 @@ describe('Tasks board read + creation', () => {
     it('sums to the total number of tasks', () => {
       const columns = [...TASK_BOARD_DEFAULT_COLUMNS];
       const raw = new Map<string, number>([
-        ['Backlog', 3],
+        ['To Do', 3],
         ['Done', 5],
       ]);
 

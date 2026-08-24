@@ -3,9 +3,8 @@
 // created without an explicit column lands here, and it is the column a task
 // reflows to when its own column is deleted. It can never itself be deleted.
 export const TASK_BOARD_DEFAULT_COLUMNS: readonly string[] = [
-  'Backlog',
-  'To do',
-  'In progress',
+  'To Do',
+  'In Progress',
   'Done',
 ];
 
