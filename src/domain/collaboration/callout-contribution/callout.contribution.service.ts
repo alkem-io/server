@@ -129,6 +129,15 @@ export class CalloutContributionService {
     const { post, whiteboard, link, memo, collaboraDocument } =
       calloutContributionData;
 
+    // Resolve and validate the task column before any child content is
+    // materialised: an unknown column (or a column on a non-board callout)
+    // must reject the request before a post/link/memo/whiteboard/document leaf
+    // is ever created, so an invalid taskColumn cannot orphan content.
+    const classification = this.buildTaskClassification(
+      calloutContributionData.taskColumn,
+      boardTemplate
+    );
+
     if (whiteboard) {
       contribution.whiteboard = await this.whiteboardService.createWhiteboard(
         whiteboard,
@@ -170,10 +179,7 @@ export class CalloutContributionService {
         );
     }
 
-    contribution.classification = this.buildTaskClassification(
-      calloutContributionData.taskColumn,
-      boardTemplate
-    );
+    contribution.classification = classification;
 
     return contribution;
   }
