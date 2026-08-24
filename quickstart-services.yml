@@ -520,9 +520,9 @@ services:
   #
   # Supported durable local topology for the current collaboration-service:
   #   HUB_MODE=inmemory · METADATA_STORE=rabbitmq · CHECKPOINT_STORE=file-service ·
-  #   AUTH_MODE=header (derives AUTHZ_MODE=authzeval). For a zero-dependency
-  #   smoke test that isolates the WS path from authZ, override AUTH_MODE=open +
-  #   CHECKPOINT_STORE=inline + METADATA_STORE=inmemory
+  #   AUTH_MODE=header · AUTHZ_MODE=authzeval. For a zero-dependency smoke test
+  #   that isolates the WS path from authZ, override AUTH_MODE=open +
+  #   AUTHZ_MODE=open + CHECKPOINT_STORE=inline + METADATA_STORE=inmemory
   #   (see docs/local-collab-testing.md).
   collaboration:
     extra_hosts:

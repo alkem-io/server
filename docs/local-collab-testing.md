@@ -176,13 +176,16 @@ curl -i -N \
 #   Traefik router didn't match — re-check .build/traefik/http.yml.
 ```
 
-A full authenticated WS round-trip is easiest from the browser (step 6); for a
-scripted y-protocols handshake, point a `y-websocket` Node client at
-`ws://localhost:3000/collab/<docId>?type=memo` with the `Authorization` header
-set to a valid actor id (the same value Oathkeeper would resolve).
+A full authenticated WS round-trip is easiest from the browser (step 6). For a
+scripted local-only y-protocols handshake, connect directly to
+`ws://localhost:4006/collab/<docId>?type=memo` with
+`X-Alkemio-Actor-Id: <actor UUID>`. That deliberately bypasses the gateway; a client
+using the public `:3000` route must carry a real authenticated BFF session and must
+not spoof the gateway-owned actor header.
 
 To isolate the WS/Yjs path from auth entirely, temporarily run the service with
-`AUTH_MODE=open` (any handshake accepted) — see "Assumptions / risks".
+`AUTH_MODE=open` **and** `AUTHZ_MODE=open` (any handshake accepted and document
+authorization bypassed) — see "Assumptions / risks".
 
 ---
 
@@ -355,11 +358,12 @@ docker compose -f quickstart-services.yml --env-file .env.docker down -v   # inc
 5. **Fast path to isolate WS/Yjs from infra (tests/local fixture ONLY).** To prove
    just the real-time sync path without file-service or authZ, the collaboration
    container can run an explicit in-process **tests/local fixture** configuration:
-   `AUTH_MODE=open`, `CHECKPOINT_STORE=inline`, `METADATA_STORE=inmemory`,
-   `HUB_MODE=inmemory`. It boots with no DB/bus/file-service wiring and accepts any
-   WS handshake — useful to confirm `/collab/{id}` convergence before layering auth
-   + persistence back on. This is **open-auth and non-durable** (nothing survives a
-   restart) and is **NOT a supported deployment / product mode** — the
+   `AUTH_MODE=open`, `AUTHZ_MODE=open`, `CHECKPOINT_STORE=inline`,
+   `METADATA_STORE=inmemory`, `HUB_MODE=inmemory`. It boots with no
+   DB/bus/file-service wiring and accepts any WS handshake — useful to confirm
+   `/collab/{id}` convergence before layering auth + persistence back on. This is
+   **open-auth and non-durable** (nothing survives a restart) and is **NOT a
+   supported deployment / product mode** — the
    collaboration service withdraws standalone as a deployment topology; use it only
    as a local smoke fixture.
 
