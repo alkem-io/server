@@ -3,13 +3,12 @@ import { DocumentPurgingError } from '@services/collaboration-client/collaborati
 import { vi } from 'vitest';
 import { WhiteboardResourceProvider } from './whiteboard.resource';
 
-// The provider awaits `loadWhiteboardFork()` before joining the room; the mocked
-// collaboration service below ignores the reader callback, so the fork value is
-// irrelevant — resolve it to a trivial object so the runtime's Function-wrapped
-// dynamic import never runs under vitest.
-vi.mock('@domain/common/whiteboard/whiteboard.fork', () => ({
-  loadWhiteboardFork: vi.fn().mockResolvedValue({}),
-}));
+// No fork mock: the provider DOES await the real `loadWhiteboardFork()` before joining the
+// room, but the mocked collaboration service below ignores the reader callback, so the
+// returned fork is never used — running the real loader here is harmless. A GLOBAL
+// `vi.mock` of `whiteboard.fork` would instead, under isolate:false, poison the real-loader
+// boundary spec (`whiteboard.fork.cjs-boundary.spec.ts`) by worker/order; the real loader
+// is now Vitest-drivable (CommonJS `require`), so no mock is warranted.
 
 const WB_ID = 'wb-1';
 const URI = `alkemio://whiteboards/${WB_ID}`;
