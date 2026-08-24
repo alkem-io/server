@@ -1,6 +1,7 @@
 import configuration from '@config/configuration';
 import { buildRuntimeDataSourceOptions } from '@config/runtime.datasource.options';
 import { WinstonConfigService } from '@config/winston.config';
+import { GraphqlGuardModule } from '@core/authorization/graphql.guard.module';
 import { Memo } from '@domain/common/memo/memo.entity';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { DocumentModule } from '@domain/storage/document/document.module';
@@ -24,11 +25,22 @@ import { join } from 'path';
  *
  * Deliberately excluded (§12 side-effect trace): `ScheduleModule` (so the
  * collaboration lifecycle dispatcher + digest-sweep schedulers never start),
- * every RabbitMQ consumer/`@MessagePattern`, the event bus, Redis, MCP,
- * GraphQL/Apollo, the REST controllers, OIDC/auth, and the app bootstrap. Booted
- * via `NestFactory.createApplicationContext` (no HTTP listener) from
- * `main.collaboration-migration.ts`. The only lifecycle effect is the TypeORM
+ * every RabbitMQ consumer/`@MessagePattern`, the event bus, Redis, MCP, the
+ * GraphQL/Apollo HTTP LISTENER, the REST controllers, OIDC/session authentication,
+ * and the app bootstrap (authorization IS now present via `GraphqlGuardModule`,
+ * below). Booted via `NestFactory.createApplicationContext` (no HTTP listener)
+ * from `main.collaboration-migration.ts`. The only lifecycle effect is the TypeORM
  * DataSource pool connect (`FileServiceAdapter` connects lazily on first call).
+ *
+ * `GraphqlGuardModule` IS imported (NOT the Apollo listener): `StorageBucketModule`
+ * bundles GraphQL resolvers whose fields carry `@UseGuards(GraphqlGuard)`, so Nest
+ * instantiates that guard even in this listener-less context. `GraphqlGuardModule`
+ * is the `@Global` architectural owner of the guard (it re-exports
+ * `AuthorizationModule` + `ActorContextModule`), so a module using `@UseGuards`
+ * never wires the guard's deps itself — the same pattern `AuthResetWorkerModule`
+ * uses for this exact isolated-worker problem. Its imports are pure DI
+ * (`AuthorizationModule`; `ActorContextModule` → `ActorLookupModule`) — no
+ * scheduler/RMQ/Redis/GraphQL-HTTP — so the one-shot context stays side-effect-free.
  */
 @Module({
   imports: [
@@ -71,6 +83,12 @@ import { join } from 'path';
     // one-shot context stays side-effect-free (only the shared DataSource pool
     // connects; `FileServiceAdapter` connects lazily on first call).
     StorageBucketModule,
+    // The `@Global` architectural owner of `GraphqlGuard` (see the class doc):
+    // required because `StorageBucketModule` bundles GraphQL resolvers whose fields
+    // carry `@UseGuards(GraphqlGuard)`, which Nest instantiates even here. Re-exports
+    // `AuthorizationModule` + `ActorContextModule`; pure DI, no HTTP/RMQ/Redis. Same
+    // pattern `AuthResetWorkerModule` uses for its isolated worker.
+    GraphqlGuardModule,
   ],
   providers: [CollaborationMigrationService],
 })
