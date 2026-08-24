@@ -636,17 +636,6 @@ enum ActorType {
   VIRTUAL_CONTRIBUTOR
 }
 
-input AddClassificationEntryFromTemplateInput {
-  """
-  Override for the entry's display label. Defaults to the source template's display name.
-  """
-  displayLabel: String
-  """The Space to add the Classification to."""
-  spaceID: UUID!
-  """The Classification Template to copy the vocabulary from."""
-  templateID: UUID!
-}
-
 input AddPollOptionInput {
   pollID: UUID!
   text: String!
@@ -1550,57 +1539,6 @@ type Classification {
   updatedDate: DateTime!
 }
 
-enum ClassificationCardinality {
-  MULTI_SELECT
-  SINGLE_SELECT
-}
-
-"""One vocabulary group on a host entity — the spec's 'a Classification'."""
-type ClassificationEntry {
-  """Whether one or several values may be selected."""
-  cardinality: ClassificationCardinality!
-  """The date at which the entity was created."""
-  createdDate: DateTime!
-  """
-  Render-only: false means 'not shown on the Space page'. NOT an access control.
-  """
-  display: Boolean!
-  """
-  Per-instance display label; defaults to the source template's, overridable to resolve a conflict.
-  """
-  displayLabel: String!
-  """The ID of the entity"""
-  id: UUID!
-  """Ids of the currently selected values."""
-  selectedValueIDs: [String!]!
-  """The selected values resolved against `values`, in authored order."""
-  selectedValues: [ClassificationValue!]!
-  """Render order on the host entity — order of addition, oldest first."""
-  sortOrder: Float!
-  """The date at which the entity was last updated."""
-  updatedDate: DateTime!
-  """The snapshot vocabulary, in authored order. Never re-sorted."""
-  values: [ClassificationValue!]!
-}
-
-"""
-Cardinality + value set of a Classification Template. Null unless type == CLASSIFICATION.
-"""
-type ClassificationTemplateContent {
-  cardinality: ClassificationCardinality!
-  values: [ClassificationValue!]!
-}
-
-"""One selectable option in a classification's vocabulary."""
-type ClassificationValue {
-  """
-  Stable identifier — aggregation key. Copied verbatim into every snapshot; never re-derived on rename.
-  """
-  id: String!
-  """Human-readable, single-language label."""
-  label: String!
-}
-
 type CollaboraDocument {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -2423,33 +2361,8 @@ type CreateClassificationData {
   tagsets: [CreateTagsetData!]!
 }
 
-input CreateClassificationEntryInput {
-  cardinality: ClassificationCardinality!
-  displayLabel: String!
-  """
-  Optional selection to apply in the same write. Omitted -> selectedValueIDs: [].
-  """
-  selectedValueIDs: [String!]
-  """The Space to add the Classification to."""
-  spaceID: UUID!
-  values: [CreateClassificationValueInput!]!
-}
-
 input CreateClassificationInput {
   tagsets: [CreateTagsetInput!]!
-}
-
-input CreateClassificationTemplateContentInput {
-  cardinality: ClassificationCardinality!
-  values: [CreateClassificationValueInput!]!
-}
-
-input CreateClassificationValueInput {
-  """
-  Optional explicit stable id. Omitted -> slugified from `label` once, at authoring time.
-  """
-  id: String
-  label: String!
 }
 
 type CreateCollaboraDocumentData {
@@ -2982,8 +2895,6 @@ input CreateTemplateFromSpaceOnTemplatesSetInput {
 input CreateTemplateOnTemplatesSetInput {
   """The Callout to associate with this template."""
   calloutData: CreateCalloutInput
-  """The cardinality and value set for a Classification Template."""
-  classificationData: CreateClassificationTemplateContentInput
   """The Community guidelines to associate with this template."""
   communityGuidelinesData: CreateCommunityGuidelinesInput
   """The Template Content for a Space to associate with this template."""
@@ -3163,10 +3074,6 @@ input DeleteCalendarEventInput {
 }
 
 input DeleteCalloutInput {
-  ID: UUID!
-}
-
-input DeleteClassificationEntryInput {
   ID: UUID!
 }
 
@@ -4932,10 +4839,6 @@ input MoveSpaceL2ToSpaceL1Input {
 }
 
 type Mutation {
-  """
-  Adds a Classification to a Space by copying a Classification Template (Step A).
-  """
-  addClassificationEntryFromTemplate(classificationData: AddClassificationEntryFromTemplateInput!): ClassificationEntry!
   """Adds an Iframe Allowed URL to the Platform Settings"""
   addIframeAllowedURL(whitelistedURL: String!): [String!]!
   """Adds a full email address to the platform notification blacklist"""
@@ -5074,10 +4977,6 @@ type Mutation {
   Create a new Callout on the CalloutsSet. When `file` is supplied alongside a COLLABORA_DOCUMENT framing, the new callout is framed with a Collabora document populated from the uploaded bytes (file-service-go sniffs MIME, validates format and size, and derives the document type; any documentType in the input is ignored on the upload path; displayName defaults from the filename when absent). When `file` is omitted, the existing blank-create behaviour applies and framing.collaboraDocument must specify both displayName and documentType.
   """
   createCalloutOnCalloutsSet(calloutData: CreateCalloutOnCalloutsSetInput!, file: Upload): Callout!
-  """
-  Creates a Classification on a Space ad hoc, without a Template (API-only).
-  """
-  createClassificationEntry(classificationData: CreateClassificationEntryInput!): ClassificationEntry!
   """Create a new Contribution on the Callout."""
   createContributionOnCallout(contributionData: CreateContributionOnCalloutInput!): CalloutContribution!
   """
@@ -5132,10 +5031,6 @@ type Mutation {
   deleteCalendarEvent(deleteData: DeleteCalendarEventInput!): CalendarEvent!
   """Delete a Callout."""
   deleteCallout(deleteData: DeleteCalloutInput!): Callout!
-  """
-  Permanently removes a Classification from a Space. No template and no other Space is affected.
-  """
-  deleteClassificationEntry(classificationData: DeleteClassificationEntryInput!): ClassificationEntry!
   """Deletes the specified CollaboraDocument."""
   deleteCollaboraDocument(deleteData: DeleteCollaboraDocumentInput!): CollaboraDocument!
   """Deletes a contribution."""
@@ -5382,16 +5277,6 @@ type Mutation {
   Update the sortOrder field of the supplied Callouts to increase as per the order that they are provided in.
   """
   updateCalloutsSortOrder(sortOrderData: UpdateCalloutsSortOrderInput!): [Callout!]!
-  """
-  Updates a Classification's definition — label, cardinality and/or value set (API-only).
-  """
-  updateClassificationEntry(classificationData: UpdateClassificationEntryInput!): ClassificationEntry!
-  """
-  Toggles a Classification's shown/hidden state on the Space's About page.
-  """
-  updateClassificationEntryDisplay(classificationData: UpdateClassificationEntryDisplayInput!): ClassificationEntry!
-  """Replaces the selected values of a Classification (Step B)."""
-  updateClassificationEntrySelection(classificationData: UpdateClassificationEntrySelectionInput!): ClassificationEntry!
   """Updates a Tagset on a Classification."""
   updateClassificationTagset(updateData: UpdateClassificationSelectTagsetValueInput!): Tagset!
   """Updates the specified CollaboraDocument."""
@@ -7768,10 +7653,6 @@ type Space implements ActorFull {
 type SpaceAbout {
   """The authorization rules for the entity"""
   authorization: Authorization
-  """
-  The classification entries on this About, in sortOrder. Empty array when none exist — never null, never an error.
-  """
-  classifications: [ClassificationEntry!]!
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The guidelines for members of this Community."""
@@ -8204,10 +8085,6 @@ type Template {
   authorization: Authorization
   """The Callout for this Template."""
   callout: Callout
-  """
-  The classification vocabulary; null unless this Template is of type CLASSIFICATION — and never null when it is.
-  """
-  classification: ClassificationTemplateContent
   """The Community Guidelines for this Template."""
   communityGuidelines: CommunityGuidelines
   """The Space for this Template."""
@@ -8287,7 +8164,6 @@ type TemplateResult {
 
 enum TemplateType {
   CALLOUT
-  CLASSIFICATION
   COMMUNITY_GUIDELINES
   POST
   SPACE
@@ -8316,10 +8192,6 @@ type TemplatesSet {
   calloutTemplates: [Template!]!
   """The total number of CalloutTemplates in this TemplatesSet."""
   calloutTemplatesCount: Float!
-  """The Classification Templates in this TemplatesSet."""
-  classificationTemplates: [Template!]!
-  """The total number of Classification Templates in this TemplatesSet."""
-  classificationTemplatesCount: Float!
   """The CommunityGuidelines in this TemplatesSet."""
   communityGuidelinesTemplates: [Template!]!
   """The total number of CommunityGuidelinesTemplates in this TemplatesSet."""
@@ -8585,26 +8457,6 @@ input UpdateCalloutsSortOrderInput {
   """The IDs of the callouts to update the sort order on"""
   calloutIDs: [UUID!]!
   calloutsSetID: UUID!
-}
-
-input UpdateClassificationEntryDisplayInput {
-  classificationEntryID: UUID!
-  display: Boolean!
-}
-
-input UpdateClassificationEntryInput {
-  cardinality: ClassificationCardinality
-  classificationEntryID: UUID!
-  displayLabel: String
-  values: [CreateClassificationValueInput!]
-}
-
-input UpdateClassificationEntrySelectionInput {
-  classificationEntryID: UUID!
-  """
-  The complete set of selected value ids. An empty list clears the selection.
-  """
-  selectedValueIDs: [String!]!
 }
 
 input UpdateClassificationInput {
@@ -9129,8 +8981,6 @@ input UpdateTemplateFromSpaceInput {
 
 input UpdateTemplateInput {
   ID: UUID!
-  """The cardinality and value set for a Classification Template."""
-  classificationData: CreateClassificationTemplateContentInput
   """
   The default description to be pre-filled when users create Posts based on this template.
   """
