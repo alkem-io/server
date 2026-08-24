@@ -1,15 +1,15 @@
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { ValidationException } from '@common/exceptions';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { TaskBoardColumnService } from '@domain/collaboration/callout/task-board/task.board.column.service';
+import { TaskBoardMoveService } from '@domain/collaboration/callout/task-board/task.board.move.service';
+import { TaskBoardService } from '@domain/collaboration/callout/task-board/task.board.service';
 import { CalloutContributionService } from '@domain/collaboration/callout-contribution/callout.contribution.service';
 import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { TagsetTemplate } from '@domain/common/tagset-template/tagset.template.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken } from '@nestjs/typeorm';
 import { vi } from 'vitest';
-import { Callout } from '../../../src/domain/collaboration/callout/callout.entity';
-import { TaskBoardColumnService } from '../../../src/domain/collaboration/callout/task-board/task.board.column.service';
-import { TaskBoardMoveService } from '../../../src/domain/collaboration/callout/task-board/task.board.move.service';
-import { TaskBoardService } from '../../../src/domain/collaboration/callout/task-board/task.board.service';
 
 /**
  * The transactional column-administration contract. Column edits are the only
@@ -17,11 +17,14 @@ import { TaskBoardService } from '../../../src/domain/collaboration/callout/task
  * template AND sweeps every affected task marker, and both must land — or
  * neither. This spec drives the real column service against an in-memory board
  * whose template row and task markers are shared state, so a bulk reflow, an
- * induced mid-edit failure, and a move racing a delete are all observable end
- * to end. The persistence boundary is a scripted EntityManager; the concurrency
- * guarantee (one transaction, one template-row lock) is modelled by running
- * transaction callbacks to completion one at a time, which is exactly what the
- * pessimistic write lock enforces in the database.
+ * induced mid-edit save failure, and a move following a delete are all
+ * observable end to end. The persistence boundary is a scripted EntityManager
+ * that runs each transaction callback to completion without modelling rollback;
+ * it therefore proves error surfacing and the lock's serialisation of edits,
+ * not database-level atomicity. The concurrency guarantee (one transaction, one
+ * template-row lock) is modelled by running transaction callbacks to completion
+ * one at a time, which is exactly the serialisation the pessimistic write lock
+ * enforces in the database.
  */
 
 const COLUMNS = ['Backlog', 'To do', 'In progress', 'Done'];
@@ -163,7 +166,7 @@ describe('Task board column administration (transactional)', () => {
     expect(board.entityManager.transaction).toHaveBeenCalledTimes(1);
   });
 
-  it('leaves columns AND tasks unchanged when a mid-edit save fails', async () => {
+  it('surfaces an error when a mid-edit marker sweep save fails', async () => {
     const board = makeBoard(['To do', 'To do']);
     const { columns } = await buildServices(board);
     // Trip a failure the moment the marker sweep is saved.
@@ -226,7 +229,7 @@ describe('Task board column administration (transactional)', () => {
     });
   });
 
-  it('a move racing a delete is deterministic: the task never rests on the deleted column', async () => {
+  it('rejects a move onto a column that a preceding delete removed', async () => {
     const board = makeBoard(['To do']);
     const { columns, move } = await buildServices(board);
     // The move service reads the contribution via its own service double; point
@@ -262,7 +265,7 @@ describe('Task board column administration (transactional)', () => {
     expect(board.markers[0].tags).toEqual(['Backlog']);
   });
 
-  it('move-vs-move of the same task ends in exactly one target (last write wins)', async () => {
+  it('sequential moves of the same task end on the last target', async () => {
     const board = makeBoard(['Backlog']);
     const { move } = await buildServices(board);
     const contributionService = (move as any).calloutContributionService;

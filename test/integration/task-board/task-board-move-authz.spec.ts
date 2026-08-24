@@ -3,6 +3,9 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { TaskBoardMoveService } from '@domain/collaboration/callout/task-board/task.board.move.service';
+import { TaskBoardResolverMutations } from '@domain/collaboration/callout/task-board/task.board.resolver.mutations';
+import { TaskBoardService } from '@domain/collaboration/callout/task-board/task.board.service';
 import { CalloutContributionService } from '@domain/collaboration/callout-contribution/callout.contribution.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { Tagset } from '@domain/common/tagset/tagset.entity';
@@ -11,9 +14,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { vi } from 'vitest';
-import { TaskBoardMoveService } from '../../../src/domain/collaboration/callout/task-board/task.board.move.service';
-import { TaskBoardResolverMutations } from '../../../src/domain/collaboration/callout/task-board/task.board.resolver.mutations';
-import { TaskBoardService } from '../../../src/domain/collaboration/callout/task-board/task.board.service';
 
 /**
  * The member-move-authorization contract, exercised end to end through the real
