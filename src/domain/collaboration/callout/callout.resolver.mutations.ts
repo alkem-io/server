@@ -72,6 +72,7 @@ import { DeleteTaskColumnOnCalloutInput } from './task-board/dto/task.board.dto.
 import { UpdateTaskColumnsSortOrderOnCalloutInput } from './task-board/dto/task.board.dto.column.sort.order';
 import { UpdateTaskColumnOnCalloutInput } from './task-board/dto/task.board.dto.column.update';
 import { TaskBoardColumnService } from './task-board/task.board.column.service';
+import { TaskBoardService } from './task-board/task.board.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -97,6 +98,7 @@ export class CalloutResolverMutations {
     private readonly reactionService: ReactionService,
     private readonly actorLookupService: ActorLookupService,
     private readonly taskBoardColumnService: TaskBoardColumnService,
+    private readonly taskBoardService: TaskBoardService,
     @Inject(SUBSCRIPTION_CALLOUT_POST_CREATED)
     private readonly postCreatedSubscription: PubSubEngine
   ) {}
@@ -895,13 +897,24 @@ export class CalloutResolverMutations {
     sortOrderData: UpdateContributionCalloutsSortOrderInput
   ): Promise<ICalloutContribution[]> {
     const callout = await this.calloutService.getCalloutOrFail(
-      sortOrderData.calloutID
+      sortOrderData.calloutID,
+      { relations: { authorization: true, classification: { tagsets: true } } }
     );
+
+    // A Tasks board persists its drag-and-drop ordering through this same
+    // mutation. Reordering tasks is a board-member action, not a callout-admin
+    // one, so a board is authorized on MOVE_TASK — the exact privilege that
+    // already gates moving a task between columns — rather than the callout-wide
+    // UPDATE. This reuses the existing board privilege (no new credential rules)
+    // and keeps non-board callouts on UPDATE, where reordering is an admin edit.
+    const requiredPrivilege = this.taskBoardService.isTaskBoard(callout)
+      ? AuthorizationPrivilege.MOVE_TASK
+      : AuthorizationPrivilege.UPDATE;
 
     this.authorizationService.grantAccessOrFail(
       actorContext,
       callout.authorization,
-      AuthorizationPrivilege.UPDATE,
+      requiredPrivilege,
       `update contribution sort order on callout: ${sortOrderData.calloutID}`
     );
 
