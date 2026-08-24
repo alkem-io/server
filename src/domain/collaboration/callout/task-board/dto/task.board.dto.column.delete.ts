@@ -12,7 +12,7 @@ export class DeleteTaskColumnOnCalloutInput {
   @Field(() => String, {
     nullable: false,
     description:
-      'The column to remove. Matched case-insensitively; the first (default) column cannot be removed and its tasks reflow to the default.',
+      'The column to remove. Matched case-insensitively. The first (default) column cannot be removed; removing any other column reflows its tasks onto the first column.',
   })
   name!: string;
 }
