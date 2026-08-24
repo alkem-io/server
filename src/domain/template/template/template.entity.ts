@@ -1,5 +1,8 @@
+import { ENUM_LENGTH } from '@common/constants/entity.field.length.constants';
+import { ClassificationCardinality } from '@common/enums/classification.cardinality';
 import { TemplateType } from '@common/enums/template.type';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { IClassificationValue } from '@domain/common/classification-value/classification.value.interface';
 import { NameableEntity } from '@domain/common/entity/nameable-entity';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
@@ -82,4 +85,14 @@ export class Template extends NameableEntity implements ITemplate {
   })
   @JoinColumn()
   contentSpace?: TemplateContentSpace;
+
+  // Classification Template storage (type === CLASSIFICATION). Nullable by
+  // necessity — one `template` table serves every TemplateType — so I-9
+  // (template.service.ts) is what stops a CLASSIFICATION template ever
+  // existing with either column empty.
+  @Column('varchar', { length: ENUM_LENGTH, nullable: true })
+  classificationCardinality?: ClassificationCardinality;
+
+  @Column('jsonb', { nullable: true })
+  classificationValueSet?: IClassificationValue[];
 }
