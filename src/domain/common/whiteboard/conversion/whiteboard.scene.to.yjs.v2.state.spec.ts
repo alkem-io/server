@@ -1,27 +1,36 @@
-import * as Y from 'yjs';
+import { createRequire } from 'node:module';
+import type * as Yjs from 'yjs';
 import { EMPTY_WHITEBOARD_CONTENT } from '../empty.whiteboard.content';
-import * as whiteboardFork from '../whiteboard.fork';
 import {
   parseLegacyWhiteboardScene,
   whiteboardSceneToYjsV2State,
 } from './whiteboard.scene.to.yjs.v2.state';
 
 /**
- * Applies a V2 snapshot into a fresh server-side `Y.Doc` (the same `yjs` instance
- * the collaboration-service uses via `ApplyUpdateV2`) and reads the scene root
- * `Y.Map`s back — so the test asserts the snapshot the server writes is openable +
- * lossless against the wire schema (id-keyed `elements` map, `files` map,
- * allow-listed `appState`) shared with the editor fork.
+ * Native-CJS `yjs` — the SAME single instance the real CJS headless fork resolves, in prod and
+ * under the Vitest ESM runner. Decoding fixtures on this one instance keeps the spec's `Y.Doc`s
+ * and the fork's `Scene` on one runtime, so `loadWhiteboardFork` runs for real (no ESM-import
+ * spy, no `[yjs#509]` dual-instance split, and nothing to leak under `isolate:false`).
+ */
+const Y = createRequire(__filename)('yjs') as typeof import('yjs');
+
+/**
+ * Applies a V2 snapshot into a fresh server-side `Y.Doc` (the native-CJS `yjs` instance the
+ * server shares with its headless fork) and reads the scene root `Y.Map`s back — so the test
+ * asserts the snapshot the server writes is openable + lossless against the wire schema
+ * (id-keyed `elements` map, `files` map, allow-listed `appState`) shared with the editor fork.
+ * The V2 bytes are wire-compatible with the collaboration-service's Go `go-yjs` `ApplyUpdateV2`
+ * (a separate runtime — there is no shared JS instance with the collaboration-service).
  */
 const decode = (snapshot: Uint8Array) => {
   const ydoc = new Y.Doc();
   Y.applyUpdateV2(ydoc, snapshot);
-  const elements = ydoc.getMap<Y.Map<unknown>>('elements');
+  const elements = ydoc.getMap<Yjs.Map<unknown>>('elements');
   const files = ydoc.getMap<unknown>('files');
   const appState = ydoc.getMap<unknown>('appState');
   return {
     elementIds: [...elements.keys()],
-    element: (id: string) => elements.get(id) as Y.Map<unknown> | undefined,
+    element: (id: string) => elements.get(id) as Yjs.Map<unknown> | undefined,
     fileIds: [...files.keys()],
     file: (id: string) => files.get(id),
     appState: Object.fromEntries(appState.entries()),
@@ -31,14 +40,9 @@ const decode = (snapshot: Uint8Array) => {
 describe('whiteboardSceneToYjsV2State (fork-based encoder)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    // The encoder loads the ESM headless fork via a Function-wrapped dynamic import
-    // that vitest's module runner cannot drive. Spy the SHARED module export and
-    // substitute a plain dynamic import, so the encoder exercises the REAL fork
-    // (element/asset schema, index seeding, V2 encode) against a real Y.Doc — the
-    // same fork client-web + collaboration-service consume.
-    vi.spyOn(whiteboardFork, 'loadWhiteboardFork').mockImplementation(
-      () => import('@excalidraw-yjs/element/headless') as any
-    );
+    // No `loadWhiteboardFork` spy: the loader uses `createRequire(__filename)`, which resolves
+    // the REAL CJS headless fork under vitest's module runner too (the same `yjs.cjs` this spec
+    // decodes with), so the encoder exercises the real fork with no dual-instance split.
   });
 
   it('produces a decodable V2 snapshot for a scene with elements', async () => {

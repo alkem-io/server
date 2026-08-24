@@ -35,7 +35,10 @@ import { AuthorizationPolicy } from '../authorization-policy/authorization.polic
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { LicenseService } from '../license/license.service';
 import { ProfileService } from '../profile/profile.service';
-import { whiteboardSceneToYjsV2State } from './conversion';
+import {
+  findUnresolvedLiveImage,
+  whiteboardSceneToYjsV2State,
+} from './conversion';
 import { CreateWhiteboardInput } from './dto/whiteboard.dto.create';
 import { UpdateWhiteboardInput } from './dto/whiteboard.dto.update';
 import { Whiteboard } from './whiteboard.entity';
@@ -367,29 +370,15 @@ export class WhiteboardService {
     fork: WhiteboardFork,
     assets: Record<string, string>
   ): void {
-    const elementsMap = doc.getMap<Y.Map<unknown>>(fork.ELEMENTS);
-    for (const [id, ymap] of elementsMap.entries()) {
-      const element = fork.yMapToElement(ymap) as Record<string, unknown> & {
-        id?: string;
-      };
-      if (element.isDeleted) {
-        continue;
-      }
-      if (element.type !== 'image') {
-        continue;
-      }
-      const fileId = element.fileId;
-      if (fileId == null) {
-        continue;
-      }
-      const locator = assets[fileId as string];
-      if (typeof locator !== 'string' || locator.length === 0) {
-        throw new ValidationException(
-          'Whiteboard snapshot references an image asset that is missing from its file map',
-          LogContext.WHITEBOARDS,
-          { elementId: element.id ?? id, fileId }
-        );
-      }
+    // Shared cold-load image→asset integrity invariant (also enforced by the Release-A
+    // migration verifier) — a live image element whose fileId has no file-map locator.
+    const offender = findUnresolvedLiveImage(doc, fork, assets);
+    if (offender) {
+      throw new ValidationException(
+        'Whiteboard snapshot references an image asset that is missing from its file map',
+        LogContext.WHITEBOARDS,
+        { elementId: offender.elementId, fileId: offender.fileId }
+      );
     }
   }
 

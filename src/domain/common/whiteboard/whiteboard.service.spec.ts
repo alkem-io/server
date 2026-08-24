@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module';
 import { ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -32,7 +33,6 @@ import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { MockType } from '@test/utils/mock.type';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { Repository } from 'typeorm';
-import * as Y from 'yjs';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { LicenseService } from '../license/license.service';
 import { ProfileService } from '../profile/profile.service';
@@ -40,6 +40,14 @@ import { Whiteboard } from './whiteboard.entity';
 import * as whiteboardFork from './whiteboard.fork';
 import { IWhiteboard } from './whiteboard.interface';
 import { WhiteboardService } from './whiteboard.service';
+
+/**
+ * Native-CJS `yjs` — the SAME single instance the real CJS headless fork resolves, in prod and
+ * under the Vitest ESM runner. Building fixtures on this one instance keeps the spec's `Y.Doc`s
+ * and the fork's `Scene` on one runtime, so `loadWhiteboardFork` runs for real (no ESM-import
+ * spy, no `[yjs#509]` split, and nothing to leak under `isolate: false`).
+ */
+const Y = createRequire(__filename)('yjs') as typeof import('yjs');
 
 // The authorized actor for every create in these tests (GLOBAL_ADMIN; real UUID).
 const actorContext = actorContextData.actorContext;
@@ -54,7 +62,7 @@ const anonymousActorContext = { ...actorContext, actorID: '' } as ActorContext;
 const buildAssetSnapshotBase64 = async (
   locators: Record<string, string>
 ): Promise<string> => {
-  const fork: any = await import('@excalidraw-yjs/element/headless');
+  const fork: any = await whiteboardFork.loadWhiteboardFork();
   const doc = new Y.Doc();
   doc.transact(() => {
     fork.writeAssetLocators(doc.getMap(fork.FILES), locators, { prune: true });
@@ -74,7 +82,7 @@ const buildImageSnapshotBase64 = async (opts: {
   assetLocator?: string;
   deleted?: boolean;
 }): Promise<string> => {
-  const fork: any = await import('@excalidraw-yjs/element/headless');
+  const fork: any = await whiteboardFork.loadWhiteboardFork();
   const doc = new Y.Doc();
   const scene = new fork.Scene(undefined, { doc });
   const img = fork.newElement({
@@ -109,7 +117,7 @@ const buildImageSnapshotBase64 = async (opts: {
  * "seeded from the source's stored bytes, not a fresh empty doc" assertion is discriminating.
  */
 const buildShapeSnapshotBase64 = async (): Promise<string> => {
-  const fork: any = await import('@excalidraw-yjs/element/headless');
+  const fork: any = await whiteboardFork.loadWhiteboardFork();
   const doc = new Y.Doc();
   const scene = new fork.Scene(undefined, { doc });
   const rect = fork.newElement({
@@ -150,7 +158,7 @@ const buildSnapshotBase64 = (files: Record<string, unknown> = {}): string => {
 const readSnapshotAssetLocators = async (
   snapshot: Uint8Array
 ): Promise<Record<string, string>> => {
-  const fork: any = await import('@excalidraw-yjs/element/headless');
+  const fork: any = await whiteboardFork.loadWhiteboardFork();
   const doc = new Y.Doc();
   Y.applyUpdateV2(doc, snapshot);
   const locators = fork.readAssetLocators(doc.getMap(fork.FILES)) as Record<
@@ -177,16 +185,10 @@ describe('WhiteboardService', () => {
   beforeEach(async () => {
     vi.restoreAllMocks();
 
-    // The service loads the ESM headless fork via a Function-wrapped dynamic import
-    // that vitest's module runner cannot drive. Spy on the SHARED module export (NOT
-    // vi.mock — the test suite runs with `isolate: false`, so whiteboard.service.ts is
-    // usually already cached real by an earlier spec and a late module-mock is bypassed;
-    // spying the live export mutates the one shared instance every caller resolves).
-    // The substitute is a plain dynamic import, so createWhiteboard exercises the REAL
-    // fork (asset/element schema) against a real Y.Doc — the same fork client-web consumes.
-    vi.spyOn(whiteboardFork, 'loadWhiteboardFork').mockImplementation(
-      () => import('@excalidraw-yjs/element/headless') as any
-    );
+    // No `loadWhiteboardFork` spy: the loader uses `createRequire(__filename)`, which resolves
+    // the REAL CJS headless fork under vitest's module runner too (the same `yjs.cjs` this spec
+    // builds fixtures with), so createWhiteboard exercises the real fork with no dual-instance
+    // split and nothing to leak into sibling specs under `isolate: false`.
 
     // Mock static Whiteboard.create to avoid DataSource requirement
     vi.spyOn(Whiteboard, 'create').mockImplementation((input: any) => {

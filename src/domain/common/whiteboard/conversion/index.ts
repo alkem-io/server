@@ -1,4 +1,9 @@
 export {
+  enumerateLiveImageRefs,
+  findUnresolvedLiveImage,
+  type LiveImageRef,
+} from './assert.live.images.resolve';
+export {
   type LegacyBinaryFileData,
   type LegacyWhiteboardScene,
   parseLegacyWhiteboardScene,

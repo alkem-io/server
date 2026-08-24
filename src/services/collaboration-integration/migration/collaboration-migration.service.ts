@@ -1,13 +1,23 @@
+import { createRequire } from 'node:module';
 import { CollaborationContentType, LogContext } from '@common/enums';
 import { decompressText } from '@common/utils/compression.util';
-import { markdownToYjsV2State } from '@domain/common/memo/conversion';
+import {
+  markdownToYjsV2State,
+  yjsStateToMarkdown,
+} from '@domain/common/memo/conversion';
 import { Memo } from '@domain/common/memo/memo.entity';
 import {
+  enumerateLiveImageRefs,
   type LegacyBinaryFileData,
+  type LiveImageRef,
   parseLegacyWhiteboardScene,
   whiteboardSceneToYjsV2State,
 } from '@domain/common/whiteboard/conversion';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
+import {
+  loadWhiteboardFork,
+  type WhiteboardFork,
+} from '@domain/common/whiteboard/whiteboard.fork';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
@@ -18,7 +28,54 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IsNull, Repository } from 'typeorm';
 import { LegacyContentRecord } from './legacy.content.record';
 
+const nodeRequire = createRequire(__filename);
+
+/**
+ * Decode snapshots with the NATIVE CommonJS `yjs` — the SAME instance the CJS headless
+ * fork's `require('yjs')` resolves (path-cached), in BOTH the compiled prod worker AND
+ * under the Vitest ESM runner. A bare `import * as Y from 'yjs'` resolves to `yjs.mjs`
+ * under Vitest — a SECOND instance whose `Y.Doc` the fork's `Scene` (built on `yjs.cjs`)
+ * cannot bind (`[yjs#509] Not same Y.Doc` → `Unexpected content type` on the first
+ * write) — so the decode doc + `fork.Scene` MUST share one runtime. This makes the
+ * verifier's fork path real in tests (no `loadWhiteboardFork` spy needed) and identical
+ * to production. See whiteboard.fork.ts for the mirror rationale.
+ */
+const Y = nodeRequire('yjs') as typeof import('yjs');
+
 const DEFAULT_BATCH_SIZE = 200;
+
+/** The one canonical top-level Y root of a memo doc — a `Y.XmlFragment` named this. */
+const MEMO_ROOT = 'default';
+
+/**
+ * Strictly decode a valid STANDARD base64 string to bytes, or `undefined` if it is NOT valid
+ * standard base64 OR decodes to zero bytes. Node's `Buffer.from(x, 'base64')` is LENIENT — it
+ * silently drops any non-alphabet byte and decodes whatever remains ('not-base64!!!' → 7 junk
+ * bytes), so it cannot tell valid content from corruption. This validates the STANDARD alphabet
+ * with padding ONLY at the end — either the canonical amount for the final quantum OR omitted
+ * for an unpadded tail (a bare length `≡ 1 (mod 4)` is impossible) — after stripping historical
+ * line-wrap whitespace. Shared by the inline-dataURL up-home decision AND the verifier's
+ * snapshot + media byte gates so all three reject malformed/empty base64 identically.
+ */
+const decodeStrictBase64 = (input: string): Buffer | undefined => {
+  const normalized = input.replace(/\s+/g, '');
+  const match = /^([A-Za-z0-9+/]*)(=*)$/.exec(normalized);
+  if (!match) {
+    return undefined; // a non-alphabet byte anywhere (or padding not at the end)
+  }
+  const body = match[1];
+  const pad = match[2].length;
+  const remainder = body.length % 4;
+  if (remainder === 1) {
+    return undefined; // impossible bare base64 length
+  }
+  const requiredPad = remainder === 2 ? 2 : remainder === 3 ? 1 : 0;
+  if (pad !== 0 && pad !== requiredPad) {
+    return undefined; // malformed padding (wrong count / padding a complete quantum)
+  }
+  const buffer = Buffer.from(body, 'base64');
+  return buffer.length === 0 ? undefined : buffer;
+};
 
 /**
  * Decode a `data:` URI into its media type + raw bytes. Legacy `BinaryFileData` can
@@ -39,12 +96,36 @@ const parseDataUrl = (
   const mimeType = match[1] || 'application/octet-stream';
   const params = match[2] ?? '';
   const data = match[3] ?? '';
-  const isBase64 = /;base64/i.test(params);
+  // The base64 flag must be an EXACT bare `;base64` parameter token (case-insensitive), NOT a
+  // substring — `/;base64/i` would accept `;base64junk`. Parse the `;`-separated params: a bare
+  // token is valid ONLY when it is exactly `base64`; any OTHER bare token (`base64junk`,
+  // `x-base64`) is a malformed marker → reject the whole descriptor (it must not silently fall
+  // through and be decoded as literal ASCII). `key=value` params are ordinary and ignored, so
+  // `;charset=utf-8;base64` stays valid.
+  let isBase64 = false;
+  for (const token of params
+    .split(';')
+    .map(p => p.trim())
+    .filter(Boolean)) {
+    if (token.toLowerCase() === 'base64') {
+      isBase64 = true;
+    } else if (!token.includes('=')) {
+      return undefined;
+    }
+  }
   try {
-    const buffer = isBase64
-      ? Buffer.from(data, 'base64')
-      : Buffer.from(decodeURIComponent(data), 'utf8');
-    if (buffer.length === 0) {
+    let buffer: Buffer | undefined;
+    if (isBase64) {
+      // STRICT base64 via the shared decoder — rejects any non-alphabet byte or malformed
+      // padding ('not-base64!!!' would otherwise decode to 7 junk bytes and up-home garbage).
+      // `undefined` here FAILS the record.
+      buffer = decodeStrictBase64(data);
+    } else {
+      // URI-encoded (non-base64) data URL — historically supported; keep the lenient decode.
+      const decoded = Buffer.from(decodeURIComponent(data), 'utf8');
+      buffer = decoded.length === 0 ? undefined : decoded;
+    }
+    if (!buffer) {
       return undefined;
     }
     return { mimeType, buffer };
@@ -70,7 +151,11 @@ export interface MigrationSummary {
   migrated: number;
   /** Un-decodable legacy content surfaced for manual review (not migrated). */
   flagged: number;
-  /** A snapshot write / pointer update failed for these (re-runnable). */
+  /**
+   * A record could not be migrated (re-runnable): planning/encode rejected it (malformed
+   * scene, unrepresentable live media, invalid schema/element), a snapshot write / up-home /
+   * authorization failed, or the pointer CAS lost to a concurrent writer.
+   */
   failed: number;
   /** The flagged document ids + reasons, for operator follow-up. */
   flaggedDocuments: { id: string; reason: string }[];
@@ -87,19 +172,38 @@ export interface MigrationOptions {
 
 /**
  * Outcome of one `verifyAll` run — the Release B pre-flight (operator preflight,
- * READ-ONLY). `ok` is true only when every memo/whiteboard row carries a
- * `contentPointer` (zero NULL) AND every pointer resolves in file-service.
+ * READ-ONLY). `ok` is true only when every memo/whiteboard row carries a `contentPointer`
+ * (zero NULL), every pointer RESOLVES in file-service, every resolved snapshot passes the
+ * explicit cold-load-critical invariants for its type, AND every live-image locator in a
+ * whiteboard resolves to non-empty content in file-service.
  */
 export interface VerificationSummary {
   memoNullPointers: number;
   whiteboardNullPointers: number;
   nullPointerTotal: number;
   pointersChecked: number;
-  /** Rows whose non-null pointer does NOT resolve in file-service. */
+  /** Rows whose non-null pointer does NOT resolve in file-service (with a reason). */
   unresolved: {
     id: string;
     contentType: CollaborationContentType;
     contentPointer: string;
+    reason: string;
+  }[];
+  /**
+   * Rows whose snapshot resolved but FAILED per-row validation — corrupt / malformed-base64
+   * bytes, a bucketless owner, a found-without-content or wrong-id response, a missing/unknown
+   * top-level root, an invalid element ordering / element type / asset locator / appState /
+   * deletion marker, OR a live image whose media locator is missing, mismatched, or resolves to
+   * malformed/empty content — or whose fetch threw. Each carries id/type/pointer + a human
+   * reason; the run never aborts. (Yjs does NOT encode a top-level type's constructor, so a
+   * canonical root stored as the WRONG Yjs type binds to an empty canonical type and cannot be
+   * rejected from bytes — a format residual, not validated here.)
+   */
+  invalid: {
+    id: string;
+    contentType: CollaborationContentType;
+    contentPointer: string;
+    reason: string;
   }[];
   ok: boolean;
 }
@@ -150,9 +254,10 @@ export class CollaborationMigrationService {
    * - Idempotent + resumable at SOURCE: the reader selects only rows whose
    *   `contentPointer IS NULL`, so a re-run after an interruption processes only
    *   the remainder; a failed upload leaves the row NULL and is retried on re-run.
-   * - Empty content → seeded with the canonical empty snapshot,
-   *   so every back-filled row gets a resolving pointer (Release B enforces NOT
-   *   NULL). The room still materializes empty + editable (FR-010).
+   * - Empty content → seeded with the canonical empty snapshot, so every back-filled
+   *   row gets a resolving pointer (Release B's fenced guard requires zero NULL/blank
+   *   pointers, then drops only the legacy content columns — the pointer stays nullable).
+   *   The room still materializes empty + editable (FR-010).
    * - Un-decodable content → flagged + surfaced in the summary, NEVER dropped.
    * - `dryRun` computes the plan + counters but writes nothing.
    */
@@ -212,9 +317,13 @@ export class CollaborationMigrationService {
 
   /**
    * Release B pre-flight (US6/FR-007) — READ-ONLY: proves every memo/whiteboard
-   * carries a `contentPointer` (zero NULL) and every pointer resolves in
-   * file-service. `ok` gates the destructive Release B migration. No writes — a
-   * plain count + batched file-service reads, not a scheduler/state machine.
+   * carries a `contentPointer` (zero NULL), every pointer resolves in file-service, every
+   * resolved snapshot passes the explicit cold-load-critical invariants for its type, and
+   * every whiteboard live-image locator resolves to non-empty content. `ok` gates the
+   * destructive Release B migration. No writes — peak memory is ONE snapshot decoded at a
+   * time (destroyed immediately) plus AT MOST one live-media blob
+   * during byte resolution, never a whole DB page; each per-row fetch/decode/schema failure is
+   * captured to `invalid` while the run continues.
    */
   public async verifyAll(
     batchSize = DEFAULT_BATCH_SIZE
@@ -223,18 +332,26 @@ export class CollaborationMigrationService {
       this.memoRepository.count({ where: { contentPointer: IsNull() } }),
       this.whiteboardRepository.count({ where: { contentPointer: IsNull() } }),
     ]);
+    // The whiteboard schema validator binds the decoded doc through the fork's `Scene`,
+    // so load the single CommonJS fork instance once (shared `yjs.cjs` — whiteboard.fork.ts).
+    const fork = await loadWhiteboardFork();
     const unresolved: VerificationSummary['unresolved'] = [];
+    const invalid: VerificationSummary['invalid'] = [];
     const memoChecked = await this.verifyPointers(
       this.memoRepository as Repository<Memo | Whiteboard>,
       CollaborationContentType.MEMO,
       batchSize,
-      unresolved
+      unresolved,
+      invalid,
+      fork
     );
     const whiteboardChecked = await this.verifyPointers(
       this.whiteboardRepository as Repository<Memo | Whiteboard>,
       CollaborationContentType.WHITEBOARD,
       batchSize,
-      unresolved
+      unresolved,
+      invalid,
+      fork
     );
     const nullPointerTotal = memoNullPointers + whiteboardNullPointers;
     return {
@@ -243,29 +360,46 @@ export class CollaborationMigrationService {
       nullPointerTotal,
       pointersChecked: memoChecked + whiteboardChecked,
       unresolved,
-      ok: nullPointerTotal === 0 && unresolved.length === 0,
+      invalid,
+      ok:
+        nullPointerTotal === 0 &&
+        unresolved.length === 0 &&
+        invalid.length === 0,
     };
   }
 
   /**
-   * Keyset-paginate the non-null pointers of one repository and resolve each
-   * batch against file-service (`getContentBatch` echoes results positionally —
-   * duplicates honoured — so match by index). Appends any that do not resolve to
-   * `unresolved`; returns the count checked.
+   * Keyset-paginate the non-null pointers of one repository (joining the owner's storage
+   * bucket). For EACH pointer, resolve + strict-decode its snapshot, validate the cold-load-
+   * critical invariants, then resolve each unique live-image locator's bytes — ONE AT A TIME
+   * (peak memory = one snapshot + at most one media response). A pointer that does not resolve
+   * → `unresolved`; a bucketless owner row, a wrong-id or malformed/empty response, a resolved-
+   * but-invalid snapshot, an unresolved/mismatched live-media locator, or a fetch/decode/schema
+   * throw → `invalid` with a reason. Never aborts the batch. Returns the count checked.
    */
   private async verifyPointers(
     repository: Repository<Memo | Whiteboard>,
     contentType: CollaborationContentType,
     batchSize: number,
-    unresolved: VerificationSummary['unresolved']
+    unresolved: VerificationSummary['unresolved'],
+    invalid: VerificationSummary['invalid'],
+    fork: WhiteboardFork
   ): Promise<number> {
     let lastId: string | undefined;
     let checked = 0;
     for (;;) {
+      // Join the owner's storage bucket in the SAME page query — the fenced verifier must
+      // catch a non-null-pointer row whose owner has NO bucket: after the collab-service
+      // retires the FILE_SERVICE_STORAGE_BUCKET_ID fallback, that row would save-fail, so
+      // `--verify` must expose it pre-rollout. This explicit relation select is the load,
+      // so an unloaded relation is never the producer.
       const qb = repository
         .createQueryBuilder('doc')
+        .leftJoin('doc.profile', 'profile')
+        .leftJoin('profile.storageBucket', 'storageBucket')
         .select('doc.id', 'id')
         .addSelect('doc.contentPointer', 'contentPointer')
+        .addSelect('storageBucket.id', 'storageBucketId')
         .where('doc.contentPointer IS NOT NULL')
         .orderBy('doc.id', 'ASC')
         .limit(batchSize);
@@ -275,24 +409,145 @@ export class CollaborationMigrationService {
       const rows = await qb.getRawMany<{
         id: string;
         contentPointer: string;
+        storageBucketId: string | null;
       }>();
       if (rows.length === 0) {
         break;
       }
-      // Resolve ONE pointer per file-service call and discard each response before
-      // the next. `getContentBatch` is a CONTENT endpoint (it reads + base64-
-      // encodes the full blob), so peak memory is a single snapshot regardless of
-      // the DB page size — never the whole page as one multi-hundred-MiB request.
+      // Resolve + decode + validate ONE pointer per file-service call and discard each
+      // response before the next. `getContentBatch` is a CONTENT endpoint (reads +
+      // base64-encodes the full blob), so peak memory is one snapshot plus at most one live-
+      // media response regardless of the DB page size — never the whole page. Any failure is
+      // captured, not thrown.
       for (const row of rows) {
         checked++;
-        const [result] = await this.fileServiceAdapter.getContentBatch([
-          row.contentPointer,
-        ]);
-        if (!result?.found) {
-          unresolved.push({
+        try {
+          if (!row.contentPointer || row.contentPointer.trim() === '') {
+            invalid.push({
+              id: row.id,
+              contentType,
+              contentPointer: row.contentPointer,
+              reason:
+                "contentPointer is blank/whitespace (Release B guard: NULL OR btrim(contentPointer) = '')",
+            });
+            continue; // blank pointer — do NOT fetch; express the Release B boundary here
+          }
+          if (!row.storageBucketId) {
+            invalid.push({
+              id: row.id,
+              contentType,
+              contentPointer: row.contentPointer,
+              reason:
+                'owner row has no storage bucket (would save-fail once the FILE_SERVICE_STORAGE_BUCKET_ID fallback is retired)',
+            });
+            continue; // bucketless owner — do NOT fetch the blob
+          }
+          const [result] = await this.fileServiceAdapter.getContentBatch([
+            row.contentPointer,
+          ]);
+          if (!result?.found) {
+            unresolved.push({
+              id: row.id,
+              contentType,
+              contentPointer: row.contentPointer,
+              reason: 'file-service reported the pointer as not found',
+            });
+            continue;
+          }
+          // `getContentBatch` echoes the requested id positionally; a mismatch means file-service
+          // returned content for a DIFFERENT object — reject rather than prove bytes for the
+          // wrong one.
+          if (result.id !== row.contentPointer) {
+            invalid.push({
+              id: row.id,
+              contentType,
+              contentPointer: row.contentPointer,
+              reason: `file-service returned content for a different id (requested '${row.contentPointer}', got '${result.id}')`,
+            });
+            continue;
+          }
+          // STRICT decode: reject malformed base64, not merely zero-length — a migrated snapshot
+          // is canonical base64 of a NON-empty Yjs update.
+          const snapshotBytes =
+            typeof result.contentBase64 === 'string'
+              ? decodeStrictBase64(result.contentBase64)
+              : undefined;
+          if (!snapshotBytes) {
+            invalid.push({
+              id: row.id,
+              contentType,
+              contentPointer: row.contentPointer,
+              reason:
+                'resolved but returned no valid content (missing contentBase64, or malformed / decodes to zero bytes — a migrated snapshot is never empty)',
+            });
+            continue;
+          }
+          const liveRefs = this.verifyContent(snapshotBytes, contentType, fork);
+
+          // Byte-resolution gate: every UNIQUE live-image locator must resolve to non-empty
+          // content that is valid STANDARD base64 (canonical OR omitted padding) in file-service.
+          // (The residual left un-checked is that
+          // NON-empty bytes may still be an invalid image codec — deliberately not decoded here
+          // because legacy content spans broad media types; the migration's exact-byte up-home
+          // tests cover fidelity.) One locator per call — peak is the already-decoded snapshot
+          // plus AT MOST one media response at a time. Deleted / unreferenced descriptors were
+          // never enumerated, so they issue ZERO fetches; the first failing locator marks the
+          // owner row invalid (naming elementId/fileId/locator).
+          const seenLocators = new Set<string>();
+          for (const ref of liveRefs) {
+            const locator = ref.locator as string; // non-empty (structurally guaranteed by verifyContent)
+            if (seenLocators.has(locator)) {
+              continue;
+            }
+            seenLocators.add(locator);
+            // Resolve the media in its OWN try/catch so a thrown fetch still names the
+            // elementId/fileId/locator. The positional id MUST echo the locator (else
+            // file-service returned a DIFFERENT object's bytes), and the content must STRICT-
+            // decode to non-empty bytes.
+            let mediaBytes: Buffer | undefined;
+            let mediaReason: string | undefined;
+            try {
+              const [media] = await this.fileServiceAdapter.getContentBatch([
+                locator,
+              ]);
+              if (media && media.id !== locator) {
+                mediaReason = `media locator '${locator}' resolved to a different id (got '${media.id}')`;
+              } else if (!media?.found) {
+                mediaReason = `media locator '${locator}' does not resolve in file-service (not found)`;
+              } else if (typeof media.contentBase64 !== 'string') {
+                mediaReason = `media locator '${locator}' resolved without content`;
+              } else {
+                mediaBytes = decodeStrictBase64(media.contentBase64);
+                if (!mediaBytes) {
+                  mediaReason = `media locator '${locator}' resolved to malformed or empty base64 content`;
+                }
+              }
+            } catch (mediaError) {
+              mediaReason = `media locator '${locator}' failed to resolve in file-service: ${
+                mediaError instanceof Error
+                  ? mediaError.message
+                  : 'unknown error'
+              }`;
+            }
+            if (mediaReason) {
+              invalid.push({
+                id: row.id,
+                contentType,
+                contentPointer: row.contentPointer,
+                reason: `live image '${ref.elementId}' (fileId '${ref.fileId}') ${mediaReason}`,
+              });
+              break; // one invalid entry per row is enough
+            }
+          }
+        } catch (error) {
+          invalid.push({
             id: row.id,
             contentType,
             contentPointer: row.contentPointer,
+            reason:
+              error instanceof Error
+                ? error.message
+                : 'unknown verification error',
           });
         }
       }
@@ -302,6 +557,185 @@ export class CollaborationMigrationService {
       }
     }
     return checked;
+  }
+
+  /**
+   * Decode a resolved v2 snapshot and validate its content-root/SCHEMA for `contentType`
+   * (SYNCHRONOUS — no I/O). THROWS with a human reason on any decode/schema violation (the
+   * caller records it as `invalid` and continues). Returns the snapshot's LIVE image refs
+   * (empty for memo, and for a whiteboard only AFTER its explicit cold-load-critical invariants
+   * hold) so the async caller can resolve each live locator's BYTES as a SEPARATE gate. Decodes
+   * ONE snapshot `Y.Doc`, destroyed before returning — one decoded snapshot at a time.
+   */
+  private verifyContent(
+    bytes: Buffer,
+    contentType: CollaborationContentType,
+    fork: WhiteboardFork
+  ): LiveImageRef[] {
+    if (contentType === CollaborationContentType.MEMO) {
+      this.verifyMemoContent(bytes);
+      return [];
+    }
+    return this.verifyWhiteboardContent(bytes, fork);
+  }
+
+  /**
+   * A memo snapshot must carry EXACTLY the canonical `default` root and nothing else, and
+   * must convert cleanly through the real ProseMirror/markdown schema. Rejects corrupt
+   * bytes, an unknown/extra root, a missing `default`, and any ProseMirror-schema violation
+   * that `yjsStateToMarkdown` surfaces. (A same-named root stored as the wrong Yjs type is
+   * not structurally distinguishable in Yjs — the top-level constructor is not encoded — so
+   * that residual is covered only insofar as the schema conversion rejects it.)
+   */
+  private verifyMemoContent(bytes: Buffer): void {
+    const doc = new Y.Doc();
+    try {
+      Y.applyUpdateV2(doc, new Uint8Array(bytes)); // throws on corrupt/undecodable bytes
+      const roots = [...doc.share.keys()];
+      const unknown = roots.filter(root => root !== MEMO_ROOT);
+      if (unknown.length > 0) {
+        throw new Error(
+          `memo has unknown top-level root(s): ${unknown.join(', ')}`
+        );
+      }
+      if (!doc.share.has(MEMO_ROOT)) {
+        throw new Error(`memo is missing the canonical '${MEMO_ROOT}' root`);
+      }
+    } finally {
+      doc.destroy();
+    }
+    // Exercise the real Yjs→ProseMirror→markdown conversion (binds getXmlFragment(default);
+    // re-decodes internally — one small blob). A malformed fragment / unsupported node throws.
+    yjsStateToMarkdown(bytes);
+  }
+
+  /**
+   * Validate a whiteboard snapshot against the explicitly enforced, COLD-LOAD-CRITICAL schema
+   * invariants (NOT a full Excalidraw JSON validator), then return its LIVE image refs (never
+   * fetches). Valid when it is a truly empty bare doc, OR its top-level roots are a SUBSET of
+   * the fork's canonical set (`elements`/`files`/`appState`/`elementDeletions` — a valid
+   * partial is accepted) AND: every element is a real Excalidraw element (known type) with
+   * valid fractional-index + bound-text ordering; asset locators are well-formed strings;
+   * every LIVE image's non-null `fileId` is a non-empty string; appState carries only
+   * allow-list keys with string values; and every deletion marker is a finite, non-negative
+   * number. Unknown roots are captured BEFORE constructing `Scene` (whose constructor binds
+   * all four canonical roots). Live image refs are enumerated ONLY after those invariants
+   * hold, and each must resolve to a non-empty file-map locator (structural). The returned
+   * refs feed the async byte-resolution gate. Scene + doc destroyed.
+   */
+  private verifyWhiteboardContent(
+    bytes: Buffer,
+    fork: WhiteboardFork
+  ): LiveImageRef[] {
+    const doc = new Y.Doc();
+    let scene: InstanceType<WhiteboardFork['Scene']> | undefined;
+    try {
+      Y.applyUpdateV2(doc, new Uint8Array(bytes)); // throws on corrupt/undecodable bytes
+
+      // Roots must be captured BEFORE Scene binds the canonical roots. A truly empty bare
+      // doc (no roots) is valid; otherwise every root must be canonical (partial allowed).
+      const canonicalRoots = new Set<string>([
+        fork.ELEMENTS,
+        fork.FILES,
+        fork.APPSTATE,
+        fork.ELEMENT_DELETIONS,
+      ]);
+      const unknown = [...doc.share.keys()].filter(
+        root => !canonicalRoots.has(root)
+      );
+      if (unknown.length > 0) {
+        throw new Error(
+          `whiteboard has unknown top-level root(s): ${unknown.join(', ')}`
+        );
+      }
+
+      // Bind + materialize through the real fork Scene, then validate element ordering +
+      // bound text (throws on an invalid fractional index / bound-text structure).
+      scene = new fork.Scene(undefined, { doc });
+      const elements = scene.getElementsIncludingDeleted();
+      fork.validateFractionalIndices(elements, {
+        shouldThrow: true,
+        includeBoundTextValidation: true,
+        ignoreLogs: true,
+      });
+
+      // Materialized-element schema (cold-load-critical, NOT a full Excalidraw validator):
+      // `validateFractionalIndices` checks only ordering + bound text, and `yMapToElement` is
+      // a raw duck materializer, so an element with an UNKNOWN `type` (e.g. 'garbage') would
+      // otherwise pass. Require every element to be a real Excalidraw element, and every LIVE
+      // image's non-null `fileId` to be a NON-EMPTY string BEFORE enumeration casts it (a
+      // number, or '' paired with a FILES[''] entry, must not slip through). A `null`/absent
+      // fileId is a permitted uninitialized image — simply not an asset reference.
+      for (const element of elements) {
+        if (!fork.isExcalidrawElement(element)) {
+          throw new Error(
+            `whiteboard element '${(element as { id?: string }).id ?? '?'}' is not a valid Excalidraw element (unknown or malformed type)`
+          );
+        }
+        const image = element as {
+          id?: string;
+          type?: string;
+          isDeleted?: boolean;
+          fileId?: unknown;
+        };
+        if (
+          image.type === 'image' &&
+          image.isDeleted !== true &&
+          image.fileId != null &&
+          (typeof image.fileId !== 'string' || image.fileId.length === 0)
+        ) {
+          throw new Error(
+            `whiteboard live image element '${image.id ?? '?'}' has a non-string or empty fileId`
+          );
+        }
+      }
+
+      // Asset locators: readAssetLocators throws on any non-string / malformed FILES value.
+      const assets = fork.readAssetLocators(doc.getMap(fork.FILES));
+
+      // appState: readAppState silently ignores unknown keys, so inspect the map DIRECTLY —
+      // reject any non-allow-list key and require each stored allowed value be a string.
+      const appState = doc.getMap(fork.APPSTATE);
+      const allow = new Set<string>(fork.APPSTATE_ALLOW_LIST);
+      for (const [key, value] of appState.entries()) {
+        if (!allow.has(key)) {
+          throw new Error(
+            `whiteboard appState has a non-allow-list key '${key}'`
+          );
+        }
+        if (typeof value !== 'string') {
+          throw new Error(
+            `whiteboard appState key '${key}' must be a string (got ${typeof value})`
+          );
+        }
+      }
+
+      // Deletion markers (element id → deletion timestamp): every value finite and >= 0.
+      const deletions = doc.getMap(fork.ELEMENT_DELETIONS);
+      for (const [id, value] of deletions.entries()) {
+        if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+          throw new Error(
+            `whiteboard deletion marker for '${id}' must be a finite, non-negative number`
+          );
+        }
+      }
+
+      // Only AFTER the cold-load-critical invariants hold: enumerate the LIVE image refs and
+      // require each carries a non-empty file-map locator (the STRUCTURAL cold-load invariant).
+      // Return the refs — plain strings, safe past the `finally` teardown — for the byte gate.
+      const liveRefs = enumerateLiveImageRefs(doc, fork, assets);
+      for (const ref of liveRefs) {
+        if (typeof ref.locator !== 'string' || ref.locator.length === 0) {
+          throw new Error(
+            `whiteboard live image element '${ref.elementId}' references fileId '${ref.fileId}' with no file-map locator`
+          );
+        }
+      }
+      return liveRefs;
+    } finally {
+      scene?.destroy();
+      doc.destroy();
+    }
   }
 
   /**
@@ -324,8 +758,19 @@ export class CollaborationMigrationService {
       );
     }
 
+    const fork = await loadWhiteboardFork();
+
+    // 1. PLANNING (zero writes): build a REPRESENTABILITY-only snapshot — media resolved to
+    //    synthetic/structural locators, no uploads, no auth, no Alkemio-doc lookups — then
+    //    verifyContent it. This catches a malformed scene and every schema/structural defect
+    //    (an external-only live image, a non-array `elements`, a corrupt memo) BEFORE any side
+    //    effect. A throw propagates to migrateAll's per-record catch as `failed`, leaving the
+    //    pointer NULL and re-runnable. (Dry-run does NOT prove file-service resolution of the
+    //    CURRENT locators — post-migrate `--verify` is the definitive resolution gate.)
+    const planned = await this.encodeSnapshot(record, true);
+    this.verifyContent(planned, record.contentType, fork);
     if (dryRun) {
-      return;
+      return; // dry-run stops after planning — provably zero writes
     }
 
     const isMemo = record.contentType === CollaborationContentType.MEMO;
@@ -333,9 +778,12 @@ export class CollaborationMigrationService {
       isMemo ? this.memoRepository : this.whiteboardRepository
     ) as Repository<Memo | Whiteboard>;
 
-    // EVERY reached (null-pointer) record is seeded, including empty content
-    // (encodeSnapshot returns the canonical empty Y.Doc), so no row is left null.
-    const snapshot = await this.encodeSnapshot(record);
+    // 2. REAL: resolve media for real (Alkemio-doc lookups + dataURL up-home writes), build the
+    //    FINAL snapshot, and verifyContent it BEFORE upload/CAS — never persist bytes the
+    //    verifier would reject. EVERY reached (null-pointer) record is seeded, including empty
+    //    content (encodeSnapshot returns the canonical empty Y.Doc), so no row is left null.
+    const snapshot = await this.encodeSnapshot(record, false);
+    this.verifyContent(snapshot, record.contentType, fork);
     const result = await this.fileServiceAdapter.createSnapshotInBucket(
       snapshot,
       record.storageBucketId
@@ -379,10 +827,15 @@ export class CollaborationMigrationService {
    * `BinaryFileData` objects are never stored (that is exactly the pre-006 shape
    * `readAssetLocators` rejects loudly). Release A back-fills EVERY selected row: empty content
    * (never-edited memo / empty whiteboard) is encoded as the canonical empty Y.Doc
-   * so the back-fill still assigns a resolving pointer — never a NULL/skip (Release
-   * B enforces NOT NULL). Same canonical empty encodings the create path seeds.
+   * so the back-fill still assigns a resolving pointer — never a NULL/skip (Release B's
+   * fenced guard requires zero NULL/blank pointers before dropping only the legacy content
+   * columns; the pointer column stays nullable). Same canonical empty encodings the create
+   * path seeds.
    */
-  private async encodeSnapshot(record: LegacyContentRecord): Promise<Buffer> {
+  private async encodeSnapshot(
+    record: LegacyContentRecord,
+    planning: boolean
+  ): Promise<Buffer> {
     if (record.contentType === CollaborationContentType.MEMO) {
       return record.content
         ? Buffer.from(record.content, 'base64')
@@ -393,9 +846,28 @@ export class CollaborationMigrationService {
     // whiteboard's bucket), then encode via the fork. An empty/absent scene yields the
     // canonical empty fork doc (never throws).
     const sceneJSON = record.content ?? '';
+    // Malformed-nonempty-scene gate: `parseLegacyWhiteboardScene` returns `undefined` for
+    // unparseable JSON OR a valid-JSON object whose `elements` is missing / not an array —
+    // the SAME `undefined` the encoder maps to the canonical EMPTY doc, which would SILENTLY
+    // discard real content. Fail the record instead. A genuinely empty / whitespace legacy
+    // value is canonical-empty and passes (it is never parsed as a scene).
+    if (
+      sceneJSON.trim() !== '' &&
+      parseLegacyWhiteboardScene(sceneJSON) === undefined
+    ) {
+      throw new Error(
+        'whiteboard legacy content is nonempty but not a parseable Excalidraw scene (malformed JSON or missing/non-array elements); refusing to migrate it as empty'
+      );
+    }
+    // `planning` (dry-run) resolves media to REPRESENTABLE synthetic/structural locators with
+    // ZERO writes; the real path performs the Alkemio-doc lookups + dataURL up-home. The
+    // shared cold-load image→locator invariant is enforced by the CALLER's `verifyContent` on
+    // the resulting snapshot (one owner) BEFORE any upload/CAS — a live image that resolved to
+    // no locator fails the record there.
     const assetLocators = await this.resolveWhiteboardAssetLocators(
       sceneJSON,
-      record
+      record,
+      planning
     );
     return Buffer.from(
       await whiteboardSceneToYjsV2State(sceneJSON, assetLocators)
@@ -407,14 +879,20 @@ export class CollaborationMigrationService {
    * (`fileId -> BinaryFileData`) to the unified `fileId -> file-service locator
    * string` map the fork writes into the snapshot's `FILES` `Y.Map`. Iterates the
    * scene's own `files`; each entry that resolves to a locator is kept. A genuinely
-   * unrecoverable entry (malformed/undecodable, no usable url or bytes) is skipped +
-   * surfaced (never a crash); a transient upload/read failure THROWS and fails the
-   * record (re-runnable) rather than silently dropping media. Returns an empty map
-   * for an empty/undecodable scene or one with no media.
+   * unrecoverable entry (malformed/undecodable, no usable url or bytes) is dropped here
+   * (never a crash) — but if a LIVE image element references it, `migrateRecord`'s
+   * `verifyContent` then FAILS the record at the shared image→locator boundary
+   * (`enumerateLiveImageRefs`), so a broken live image never migrates; only an UNREFERENCED
+   * (or deleted-only) dropped entry passes. `planning` selects representability-only
+   * resolution (zero writes) vs the real Alkemio-doc lookups + dataURL up-home.
+   * A transient upload/read failure THROWS and fails the record (re-runnable) rather than
+   * silently dropping media. Returns an empty map for an empty/undecodable scene or one
+   * with no media.
    */
   private async resolveWhiteboardAssetLocators(
     sceneJSON: string,
-    record: LegacyContentRecord
+    record: LegacyContentRecord,
+    planning: boolean
   ): Promise<Record<string, string>> {
     const files = parseLegacyWhiteboardScene(sceneJSON)?.files;
     if (!files) {
@@ -422,7 +900,12 @@ export class CollaborationMigrationService {
     }
     const locators: Record<string, string> = {};
     for (const [fileId, file] of Object.entries(files)) {
-      const locator = await this.resolveLegacyFileLocator(fileId, file, record);
+      const locator = await this.resolveLegacyFileLocator(
+        fileId,
+        file,
+        record,
+        planning
+      );
       if (locator) {
         locators[fileId] = locator;
       }
@@ -451,11 +934,33 @@ export class CollaborationMigrationService {
   private async resolveLegacyFileLocator(
     fileId: string,
     file: LegacyBinaryFileData,
-    record: LegacyContentRecord
+    record: LegacyContentRecord,
+    planning: boolean
   ): Promise<string | undefined> {
     const url = typeof file?.url === 'string' ? file.url.trim() : '';
+    const isAlkemioUrl =
+      url !== '' && this.documentService.isAlkemioDocumentURL(url);
+
+    if (planning) {
+      // PLANNING (dry-run): prove the descriptor is REPRESENTABLE with ZERO writes, no auth,
+      // and no DB — never the real locator. An Alkemio doc URL is representable by its embedded
+      // structural id; a decodable inline dataURL is representable by a deterministic synthetic
+      // locator; everything else (external-only url with no bytes, undecodable dataURL) is
+      // UNREPRESENTABLE → undefined, so a LIVE image referencing it FAILS the planning
+      // snapshot's verifyContent before any real work. Post-migrate `--verify` remains the
+      // definitive file-service-resolution gate for the CURRENT locators.
+      if (isAlkemioUrl) {
+        const base = this.documentService.getDocumentsBaseUrlPath();
+        const id = url.substring(base.length + 1);
+        if (id) {
+          return id;
+        }
+      }
+      return this.planDataUrlLocator(fileId, file);
+    }
+
     // 1–3. Alkemio file-service document URL.
-    if (url && this.documentService.isAlkemioDocumentURL(url)) {
+    if (isAlkemioUrl) {
       const document = await this.documentService.getDocumentFromURL(url, {
         loadEagerRelations: false,
       });
@@ -497,6 +1002,25 @@ export class CollaborationMigrationService {
       LogContext.COLLABORATION_INTEGRATION
     );
     return undefined;
+  }
+
+  /**
+   * PLANNING-only (dry-run) counterpart to {@link uphomeDataUrlAsset}: decides whether an
+   * inline `dataURL` is REPRESENTABLE without any write. A decodable `data:` URI yields a
+   * deterministic synthetic locator (`planning-locator:<fileId>`) — non-empty and bounded, so
+   * a live image referencing it passes the structural cold-load check; the planning snapshot
+   * is validated then DISCARDED (never uploaded), so the synthetic string never persists. No
+   * `dataURL`, or an undecodable one, is unrepresentable → `undefined`.
+   */
+  private planDataUrlLocator(
+    fileId: string,
+    file: LegacyBinaryFileData
+  ): string | undefined {
+    const dataURL = typeof file?.dataURL === 'string' ? file.dataURL : '';
+    if (!dataURL || !parseDataUrl(dataURL)) {
+      return undefined;
+    }
+    return `planning-locator:${fileId}`;
   }
 
   /**

@@ -30,10 +30,15 @@ import { loadWhiteboardFork } from '../whiteboard.fork';
  * the legacy `BinaryFileData` (its `url`, or up-homed `dataURL` bytes); the create
  * path seeds an empty map.
  *
- * An empty / unparseable scene yields the canonical empty fork doc (no elements,
- * no assets) rather than throwing, so an empty-on-create whiteboard stays empty +
- * editable (FR-010) and a never-decodable legacy blob is flagged by the caller
- * (migration) without aborting the batch.
+ * An empty / unparseable scene yields the canonical empty fork doc (no elements, no
+ * assets) rather than throwing — this is how the CREATE path seeds a genuinely empty
+ * whiteboard (empty stays empty + editable, FR-010). The converter is deliberately
+ * TOLERANT and does NOT itself distinguish "genuinely empty" from "nonempty but corrupt".
+ * The MIGRATION must therefore not lean on that tolerance for real content: it gates a
+ * malformed NONEMPTY legacy scene BEFORE calling this (`parseLegacyWhiteboardScene`
+ * returns `undefined` on a non-blank blob → the record FAILS and stays re-runnable, never
+ * aborting the batch), rather than silently emptying it. Only a blank / whitespace legacy
+ * value reaches here as canonical-empty.
  */
 export const whiteboardSceneToYjsV2State = async (
   sceneJSON: string,

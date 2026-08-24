@@ -36,6 +36,34 @@ describe('yjsStateToMarkdown', () => {
     return yjsStateToMarkdown(Buffer.from(state));
   };
 
+  it('destroys its internal scratch Y.Doc (no per-call leak — regression)', () => {
+    // Build the state BEFORE spying so only the helper's own doc.destroy() is counted.
+    const state = Buffer.from(markdownToYjsV2State('leak check'));
+    const destroySpy = vi.spyOn(Y.Doc.prototype, 'destroy');
+    try {
+      yjsStateToMarkdown(state);
+      // The scratch doc created inside the helper MUST be destroyed (try/finally),
+      // else every per-row verifier / read-path call leaks one Y.Doc.
+      expect(destroySpy).toHaveBeenCalled();
+    } finally {
+      destroySpy.mockRestore();
+    }
+  });
+
+  it('destroys its internal scratch Y.Doc even when decode THROWS (regression)', () => {
+    const destroySpy = vi.spyOn(Y.Doc.prototype, 'destroy');
+    try {
+      // Demonstrably invalid update bytes → applyUpdateV2 throws inside the try; the
+      // finally must still free the scratch doc rather than leak it on the error path.
+      expect(() =>
+        yjsStateToMarkdown(Buffer.from([1, 2, 3, 4, 5, 6, 7, 8, 9]))
+      ).toThrow();
+      expect(destroySpy).toHaveBeenCalled();
+    } finally {
+      destroySpy.mockRestore();
+    }
+  });
+
   describe('basic text', () => {
     it('should convert simple paragraph text', () => {
       const result = roundTrip('Hello world');

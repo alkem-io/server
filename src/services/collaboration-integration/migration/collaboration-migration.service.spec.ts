@@ -1,6 +1,9 @@
+import { createRequire } from 'node:module';
 import { CollaborationContentType } from '@common/enums/collaboration.content.type';
 import { compressText } from '@common/utils/compression.util';
+import { markdownToYjsV2State } from '@domain/common/memo/conversion';
 import { Memo } from '@domain/common/memo/memo.entity';
+import { whiteboardSceneToYjsV2State } from '@domain/common/whiteboard/conversion';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import * as whiteboardFork from '@domain/common/whiteboard/whiteboard.fork';
 import { DocumentService } from '@domain/storage/document/document.service';
@@ -11,9 +14,18 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { vi } from 'vitest';
-import * as Y from 'yjs';
+import type * as Yjs from 'yjs';
 import { CollaborationMigrationService } from './collaboration-migration.service';
 import { LegacyContentRecord } from './legacy.content.record';
+
+/**
+ * Native-CJS `yjs` — the SAME single instance the service's verifier and the CJS headless
+ * fork resolve, in BOTH prod and under the Vitest ESM runner. Building fixtures on this one
+ * instance (rather than a bare `import * as Y from 'yjs'`, which is `yjs.mjs` under Vitest)
+ * keeps the spec's `Y.Doc`s and the fork's `Scene` on ONE runtime — no `[yjs#509]` split —
+ * and is why no `loadWhiteboardFork` spy is needed.
+ */
+const Y = createRequire(__filename)('yjs') as typeof import('yjs');
 
 /**
  * A minimal `DocumentService` stub. `getDocumentFromURL` resolves a legacy
@@ -97,7 +109,7 @@ const resolveImageFromStore = async (
   fileId: string,
   store: Map<string, { bucketId: string; bytes: Buffer }>
 ): Promise<{ bucketId: string; bytes: Buffer }> => {
-  const fork: any = await import('@excalidraw-yjs/element/headless');
+  const fork: any = await whiteboardFork.loadWhiteboardFork();
   const doc = new Y.Doc();
   Y.applyUpdateV2(doc, snapshot);
   let liveImage = false;
@@ -131,7 +143,7 @@ const tamperLocator = async (
   fileId: string,
   badLocator: string
 ): Promise<Uint8Array> => {
-  const fork: any = await import('@excalidraw-yjs/element/headless');
+  const fork: any = await whiteboardFork.loadWhiteboardFork();
   const doc = new Y.Doc();
   Y.applyUpdateV2(doc, snapshot);
   doc.transact(() => {
@@ -151,12 +163,12 @@ const tamperImageFileId = async (
   snapshot: Uint8Array,
   newFileId: string
 ): Promise<Uint8Array> => {
-  const fork: any = await import('@excalidraw-yjs/element/headless');
+  const fork: any = await whiteboardFork.loadWhiteboardFork();
   const doc = new Y.Doc();
   Y.applyUpdateV2(doc, snapshot);
   doc.transact(() => {
     for (const [, ymap] of doc.getMap(fork.ELEMENTS).entries()) {
-      const map = ymap as Y.Map<unknown>;
+      const map = ymap as Yjs.Map<unknown>;
       if (map.get('type') === 'image') {
         map.set('fileId', newFileId);
       }
@@ -171,7 +183,7 @@ const tamperImageFileId = async (
 const readStoredAssetLocators = async (
   snapshot: Uint8Array
 ): Promise<Record<string, string>> => {
-  const fork: any = await import('@excalidraw-yjs/element/headless');
+  const fork: any = await whiteboardFork.loadWhiteboardFork();
   const doc = new Y.Doc();
   Y.applyUpdateV2(doc, snapshot);
   const locators = fork.readAssetLocators(doc.getMap(fork.FILES)) as Record<
@@ -486,6 +498,7 @@ describe('CollaborationMigrationService', () => {
       let call = 0;
       const qb: any = {};
       for (const m of [
+        'leftJoin',
         'select',
         'addSelect',
         'where',
@@ -530,13 +543,12 @@ describe('CollaborationMigrationService', () => {
       }).compile();
       svc = module.get(CollaborationMigrationService);
 
-      // The fork-based whiteboard encoder loads the ESM headless fork via a
-      // Function-wrapped dynamic import vitest's module runner cannot drive; spy the
-      // shared export and substitute a plain dynamic import so the migration
-      // exercises the REAL fork (structurally identical to editor/collab-service docs).
-      vi.spyOn(whiteboardFork, 'loadWhiteboardFork').mockImplementation(
-        () => import('@excalidraw-yjs/element/headless') as any
-      );
+      // No `loadWhiteboardFork` spy: the loader uses `createRequire(__filename)`, which
+      // resolves the REAL CJS headless fork under vitest's module runner too — the SAME
+      // single `yjs.cjs` instance the service's verifier decodes with and this spec's
+      // fixtures build with. Spying it (as an earlier ESM-import workaround did) would both
+      // reintroduce the dual-instance split and, under `isolate:false`, leak onto sibling
+      // specs.
     });
 
     it('readMemos filters contentPointer IS NULL at source (NULL-only boundary at the reader)', async () => {
@@ -849,20 +861,39 @@ describe('CollaborationMigrationService', () => {
       expect(resolved.bytes.equals(expectedBytes)).toBe(true);
     });
 
-    it('skips a non-Alkemio external media url and still migrates the whiteboard', async () => {
-      const { summary, captured } = await migrateOneWhiteboard(
+    it('FAILS the record when a LIVE image references a non-Alkemio external url that cannot become a locator (no broken migration; pointer stays NULL/rerunnable; no snapshot/CAS)', async () => {
+      const { summary, captured, update } = await migrateOneWhiteboard(
         legacyMediaScene({
           fileId: 'file-1',
           file: { id: 'file-1', url: 'https://evil.example.com/x.png' },
         })
       );
 
+      // An external-only url can never become a locator, and a LIVE image references it —
+      // migrating would ship a permanently-broken image. Fail instead: pointer stays NULL
+      // (the NULL-only worker retries after the operator remediates), no snapshot, no CAS.
+      expect(summary.migrated).toBe(0);
+      expect(summary.failed).toBe(1);
+      expect(fileService.createSnapshotInBucket).not.toHaveBeenCalled();
+      expect(captured.buffer).toBeUndefined();
+      expect(update.set).not.toHaveBeenCalled();
+      // Never fetched or stored the external url (SSRF / no-external-locator).
+      expect(documentService.getDocumentFromURL).not.toHaveBeenCalled();
+    });
+
+    it('an UNREFERENCED unsupported file descriptor (no live image) is skipped, and the whiteboard still migrates', async () => {
+      const { summary, captured } = await migrateOneWhiteboard(
+        legacyMediaScene({
+          fileId: 'file-1',
+          file: { id: 'file-1', url: 'https://evil.example.com/x.png' },
+          withImage: false,
+        })
+      );
+
+      // Orphan file entry (no live image references it) → dropped, no broken cold-load.
       expect(summary.migrated).toBe(1);
       expect(summary.failed).toBe(0);
-      // A non-Alkemio url can never become an opaque file-service locator → dropped.
       expect(await readStoredAssetLocators(captured.buffer!)).toEqual({});
-      // Never consulted the DB resolver for a non-Alkemio url.
-      expect(documentService.getDocumentFromURL).not.toHaveBeenCalled();
     });
 
     it('CRITICAL (dataURL up-home): the image survives cold-load — element→FILES→bucket resolves to the exact decoded bytes', async () => {
@@ -899,7 +930,7 @@ describe('CollaborationMigrationService', () => {
       expect(call[3]).toBe('image/png');
 
       // (1) The stored snapshot still carries the LIVE image element referencing file-1.
-      const fork: any = await import('@excalidraw-yjs/element/headless');
+      const fork: any = await whiteboardFork.loadWhiteboardFork();
       const doc = new Y.Doc();
       Y.applyUpdateV2(doc, captured.buffer!);
       let image: Record<string, unknown> | undefined;
@@ -1101,17 +1132,38 @@ describe('CollaborationMigrationService', () => {
       });
     });
 
-    it('skips an asset with no usable url and no inline bytes, still migrating the whiteboard', async () => {
-      const { summary, captured } = await migrateOneWhiteboard(
+    it('FAILS the record when a LIVE image references a descriptor with no usable url and no inline bytes (unrepresentable live media blocks the row, not a broken migration)', async () => {
+      const { summary, captured, update } = await migrateOneWhiteboard(
         legacyMediaScene({
           fileId: 'file-1',
           file: { id: 'file-1', mimeType: 'image/png' },
         })
       );
 
+      // The image bytes are unrecoverable (no url, no dataURL) and a LIVE image references
+      // it → fail the row (blocks Release B until remediated) rather than migrate a broken
+      // image. No up-home, no snapshot, no CAS; pointer stays NULL/rerunnable.
+      expect(summary.migrated).toBe(0);
+      expect(summary.failed).toBe(1);
+      expect(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).not.toHaveBeenCalled();
+      expect(fileService.createSnapshotInBucket).not.toHaveBeenCalled();
+      expect(captured.buffer).toBeUndefined();
+      expect(update.set).not.toHaveBeenCalled();
+    });
+
+    it('an UNREFERENCED descriptor with no usable url and no bytes (no live image) is skipped, still migrating', async () => {
+      const { summary, captured } = await migrateOneWhiteboard(
+        legacyMediaScene({
+          fileId: 'file-1',
+          file: { id: 'file-1', mimeType: 'image/png' },
+          withImage: false,
+        })
+      );
+
       expect(summary.migrated).toBe(1);
       expect(summary.failed).toBe(0);
-      // Nothing to up-home (no bytes) and no Alkemio url → dropped + surfaced, never a crash.
       expect(await readStoredAssetLocators(captured.buffer!)).toEqual({});
       expect(
         storageBucketService.uploadFileAsDocumentFromBuffer
@@ -1140,16 +1192,304 @@ describe('CollaborationMigrationService', () => {
       expect(summary.migrated).toBe(0);
     });
 
-    it('verifyAll: ok when zero NULL pointers and every pointer resolves', async () => {
+    // --- Release-A migration WRITE-PATH guards: planning builds a REPRESENTABLE snapshot with
+    // ZERO writes, then verifyContent rejects a malformed scene, an unrepresentable live image,
+    // a malformed-base64 dataURL, an unknown element type, or a corrupt memo BEFORE any upload
+    // or pointer CAS (pointer stays NULL / re-runnable). ---
+
+    // Wire one legacy whiteboard row for a DRY-RUN (no second update QB — dry-run never writes
+    // a pointer), then run migrateAll in preview mode.
+    const dryRunOneWhiteboard = async (sceneJSON: string) => {
+      const compressed = await compressText(sceneJSON);
+      whiteboard.createQueryBuilder.mockReturnValue(
+        queryBuilderMock([
+          [{ id: 'w1', content: compressed, storageBucketId: 'sb-w1' }],
+        ])
+      );
+      memo.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+      return svc.migrateAll({ dryRun: true });
+    };
+
+    // Assert the migration touched NO side-effect surface: no snapshot upload, no dataURL
+    // up-home, no up-home authorization, and no Alkemio-document DB lookup. (The pointer CAS is
+    // asserted per-test via its own update QB where one is wired.)
+    const expectNoMigrationWrites = () => {
+      expect(fileService.createSnapshotInBucket).not.toHaveBeenCalled();
+      expect(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).not.toHaveBeenCalled();
+      expect(
+        documentAuthorizationService.applyAuthorizationPolicy
+      ).not.toHaveBeenCalled();
+      expect(documentService.getDocumentFromURL).not.toHaveBeenCalled();
+    };
+
+    it('dry-run: a LIVE image referencing an external-only url (no inline bytes) is UNREPRESENTABLE → failed in planning, ZERO writes', async () => {
+      const summary = await dryRunOneWhiteboard(
+        legacyMediaScene({
+          fileId: 'file-x',
+          file: {
+            id: 'file-x',
+            mimeType: 'image/png',
+            url: 'https://evil.example.com/x.png',
+          },
+        })
+      );
+      expect(summary.dryRun).toBe(true);
+      expect(summary.failed).toBe(1);
+      expect(summary.migrated).toBe(0);
+      expectNoMigrationWrites();
+    });
+
+    it('dry-run: a LIVE image with a decodable inline dataURL is representable → planned/migrated, ZERO writes', async () => {
+      const summary = await dryRunOneWhiteboard(
+        legacyMediaScene({
+          fileId: 'file-x',
+          file: {
+            id: 'file-x',
+            mimeType: 'image/png',
+            dataURL: VALID_PNG_DATA_URL,
+          },
+        })
+      );
+      expect(summary.dryRun).toBe(true);
+      expect(summary.migrated).toBe(1);
+      expect(summary.failed).toBe(0);
+      expectNoMigrationWrites();
+    });
+
+    it('dry-run: a LIVE image dataURL with MALFORMED base64 padding (TQ=) → unrepresentable → failed, ZERO writes (strict base64)', async () => {
+      const summary = await dryRunOneWhiteboard(
+        legacyMediaScene({
+          fileId: 'file-x',
+          file: {
+            id: 'file-x',
+            mimeType: 'image/png',
+            dataURL: 'data:image/png;base64,TQ=',
+          },
+        })
+      );
+      expect(summary.failed).toBe(1);
+      expect(summary.migrated).toBe(0);
+      expectNoMigrationWrites();
+    });
+
+    it('dry-run: a LIVE image dataURL with VALID UNPADDED base64 (TWE) is representable → planned/migrated, ZERO writes', async () => {
+      const summary = await dryRunOneWhiteboard(
+        legacyMediaScene({
+          fileId: 'file-x',
+          file: {
+            id: 'file-x',
+            mimeType: 'application/octet-stream',
+            dataURL: 'data:application/octet-stream;base64,TWE',
+          },
+        })
+      );
+      expect(summary.migrated).toBe(1);
+      expect(summary.failed).toBe(0);
+      expectNoMigrationWrites();
+    });
+
+    it('dry-run: a LIVE image dataURL whose base64 marker is a MALFORMED token (;base64junk) → unrepresentable → failed, ZERO writes', async () => {
+      const summary = await dryRunOneWhiteboard(
+        legacyMediaScene({
+          fileId: 'file-x',
+          file: {
+            id: 'file-x',
+            mimeType: 'image/png',
+            // ';base64junk' is NOT the exact ';base64' flag — it must be rejected, never
+            // silently decoded as literal ASCII.
+            dataURL: 'data:image/png;base64junk,TWE',
+          },
+        })
+      );
+      expect(summary.failed).toBe(1);
+      expect(summary.migrated).toBe(0);
+      expectNoMigrationWrites();
+    });
+
+    it('dry-run: a LIVE image dataURL with an ordinary param BEFORE the exact base64 flag (;charset=utf-8;base64) is representable → planned/migrated, ZERO writes', async () => {
+      const summary = await dryRunOneWhiteboard(
+        legacyMediaScene({
+          fileId: 'file-x',
+          file: {
+            id: 'file-x',
+            mimeType: 'image/png',
+            dataURL: 'data:image/png;charset=utf-8;base64,TWE',
+          },
+        })
+      );
+      expect(summary.migrated).toBe(1);
+      expect(summary.failed).toBe(0);
+      expectNoMigrationWrites();
+    });
+
+    it('migrate (real): a LIVE image dataURL with MALFORMED base64 → failed, pointer stays NULL, ZERO upload/authz/snapshot/CAS', async () => {
+      const compressed = await compressText(
+        legacyMediaScene({
+          fileId: 'file-x',
+          file: {
+            id: 'file-x',
+            mimeType: 'image/png',
+            dataURL: 'data:image/png;base64,TQ=',
+          },
+        })
+      );
+      const update = updateQB();
+      whiteboard.createQueryBuilder
+        .mockReturnValueOnce(
+          queryBuilderMock([
+            [{ id: 'w1', content: compressed, storageBucketId: 'sb-w1' }],
+          ])
+        )
+        .mockReturnValueOnce(update.qb);
+      memo.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+
+      const summary = await svc.migrateAll();
+
+      expect(summary.failed).toBe(1);
+      expect(summary.migrated).toBe(0);
+      // Rejected in PLANNING → no up-home upload, no up-home authz, no snapshot, and the
+      // pointer CAS never runs (stays NULL / re-runnable).
+      expectNoMigrationWrites();
+      expect(update.set).not.toHaveBeenCalled();
+    });
+
+    it('migrate: a MALFORMED nonempty scene (unparseable JSON) → failed, ZERO writes (never silently emptied)', async () => {
+      const compressed = await compressText('{ not valid json');
+      const update = updateQB();
+      whiteboard.createQueryBuilder
+        .mockReturnValueOnce(
+          queryBuilderMock([
+            [{ id: 'w1', content: compressed, storageBucketId: 'sb-w1' }],
+          ])
+        )
+        .mockReturnValueOnce(update.qb);
+      memo.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+
+      const summary = await svc.migrateAll();
+
+      expect(summary.failed).toBe(1);
+      expect(summary.migrated).toBe(0);
+      expect(fileService.createSnapshotInBucket).not.toHaveBeenCalled();
+      expect(update.set).not.toHaveBeenCalled();
+    });
+
+    it('migrate: a valid-JSON scene whose elements is NOT an array → failed, ZERO writes', async () => {
+      const compressed = await compressText(
+        JSON.stringify({ type: 'excalidraw', elements: 'nope', appState: {} })
+      );
+      const update = updateQB();
+      whiteboard.createQueryBuilder
+        .mockReturnValueOnce(
+          queryBuilderMock([
+            [{ id: 'w1', content: compressed, storageBucketId: 'sb-w1' }],
+          ])
+        )
+        .mockReturnValueOnce(update.qb);
+      memo.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+
+      const summary = await svc.migrateAll();
+
+      expect(summary.failed).toBe(1);
+      expect(summary.migrated).toBe(0);
+      expect(fileService.createSnapshotInBucket).not.toHaveBeenCalled();
+    });
+
+    it('migrate: an UNKNOWN element type in the legacy scene → failed, ZERO writes (verifyContent rejects before upload)', async () => {
+      const compressed = await compressText(
+        JSON.stringify({
+          type: 'excalidraw',
+          version: 2,
+          source: '',
+          elements: [
+            {
+              id: 'bad-1',
+              type: 'garbage',
+              x: 0,
+              y: 0,
+              width: 10,
+              height: 10,
+              index: 'a0',
+            },
+          ],
+          appState: {},
+          files: {},
+        })
+      );
+      const update = updateQB();
+      whiteboard.createQueryBuilder
+        .mockReturnValueOnce(
+          queryBuilderMock([
+            [{ id: 'w1', content: compressed, storageBucketId: 'sb-w1' }],
+          ])
+        )
+        .mockReturnValueOnce(update.qb);
+      memo.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+
+      const summary = await svc.migrateAll();
+
+      expect(summary.failed).toBe(1);
+      expect(summary.migrated).toBe(0);
+      expect(fileService.createSnapshotInBucket).not.toHaveBeenCalled();
+    });
+
+    it('migrate: a memo whose stored content decodes to invalid schema → failed, NO pointer (planning rejects before any write)', async () => {
+      const update = updateQB();
+      memo.createQueryBuilder
+        .mockReturnValueOnce(
+          queryBuilderMock([
+            [
+              {
+                id: 'm1',
+                content: Buffer.from([1, 2, 3, 4, 5]),
+                storageBucketId: 'sb-m1',
+              },
+            ],
+          ])
+        )
+        .mockReturnValueOnce(update.qb);
+      whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+
+      const summary = await svc.migrateAll();
+
+      expect(summary.failed).toBe(1);
+      expect(summary.migrated).toBe(0);
+      expect(fileService.createSnapshotInBucket).not.toHaveBeenCalled();
+      expect(update.set).not.toHaveBeenCalled();
+    });
+
+    // --- verifyAll snapshot builders. The fork is the REAL CJS headless fork (via
+    // loadWhiteboardFork) and this spec's `Y` is the matching `yjs.cjs`, so the decoded doc +
+    // fork Scene share the one instance the service's verifier uses — no spy, no split. ---
+    const b64 = (u8: Uint8Array) => Buffer.from(u8).toString('base64');
+    const memoB64 = (md: string) => b64(markdownToYjsV2State(md));
+    const wbFork = () => whiteboardFork.loadWhiteboardFork() as Promise<any>;
+    const oneMemoRow = (contentBase64: string | undefined, found = true) => {
       memo.count.mockResolvedValue(0);
       whiteboard.count.mockResolvedValue(0);
       memo.createQueryBuilder.mockReturnValue(
-        verifyQB([[{ id: 'm1', contentPointer: 'p1' }]])
+        verifyQB([[{ id: 'm1', contentPointer: 'p1', storageBucketId: 'b1' }]])
       );
       whiteboard.createQueryBuilder.mockReturnValue(verifyQB([[]]));
       fileService.getContentBatch.mockResolvedValue([
-        { id: 'p1', found: true },
+        { id: 'p1', found, contentBase64 },
       ]);
+    };
+    const oneWbRow = (contentBase64: string) => {
+      memo.count.mockResolvedValue(0);
+      whiteboard.count.mockResolvedValue(0);
+      memo.createQueryBuilder.mockReturnValue(verifyQB([[]]));
+      whiteboard.createQueryBuilder.mockReturnValue(
+        verifyQB([[{ id: 'w1', contentPointer: 'p1', storageBucketId: 'b1' }]])
+      );
+      fileService.getContentBatch.mockResolvedValue([
+        { id: 'p1', found: true, contentBase64 },
+      ]);
+    };
+
+    it('verifyAll: ok when zero NULL pointers and every pointer resolves + decodes', async () => {
+      oneMemoRow(memoB64('hello **world**'));
 
       const summary = await svc.verifyAll();
 
@@ -1157,13 +1497,14 @@ describe('CollaborationMigrationService', () => {
       expect(summary.nullPointerTotal).toBe(0);
       expect(summary.pointersChecked).toBe(1);
       expect(summary.unresolved).toEqual([]);
+      expect(summary.invalid).toEqual([]);
     });
 
-    it('verifyAll: NOT ok when a pointer does not resolve in file-service', async () => {
+    it('verifyAll: NOT ok when a pointer does not resolve in file-service (with a reason)', async () => {
       memo.count.mockResolvedValue(0);
       whiteboard.count.mockResolvedValue(0);
       memo.createQueryBuilder.mockReturnValue(
-        verifyQB([[{ id: 'm1', contentPointer: 'p1' }]])
+        verifyQB([[{ id: 'm1', contentPointer: 'p1', storageBucketId: 'b1' }]])
       );
       whiteboard.createQueryBuilder.mockReturnValue(verifyQB([[]]));
       fileService.getContentBatch.mockResolvedValue([
@@ -1177,6 +1518,7 @@ describe('CollaborationMigrationService', () => {
         id: 'm1',
         contentType: CollaborationContentType.MEMO,
         contentPointer: 'p1',
+        reason: expect.stringContaining('not found'),
       });
     });
 
@@ -1199,14 +1541,14 @@ describe('CollaborationMigrationService', () => {
       memo.createQueryBuilder.mockReturnValue(
         verifyQB([
           [
-            { id: 'm1', contentPointer: 'p1' },
-            { id: 'm2', contentPointer: 'p2' },
+            { id: 'm1', contentPointer: 'p1', storageBucketId: 'b1' },
+            { id: 'm2', contentPointer: 'p2', storageBucketId: 'b1' },
           ],
         ])
       );
       whiteboard.createQueryBuilder.mockReturnValue(verifyQB([[]]));
       fileService.getContentBatch.mockImplementation(async (ids: string[]) => [
-        { id: ids[0], found: true },
+        { id: ids[0], found: true, contentBase64: memoB64('x') },
       ]);
 
       const summary = await svc.verifyAll();
@@ -1217,6 +1559,594 @@ describe('CollaborationMigrationService', () => {
       expect(fileService.getContentBatch).toHaveBeenCalledTimes(2);
       expect(fileService.getContentBatch).toHaveBeenNthCalledWith(1, ['p1']);
       expect(fileService.getContentBatch).toHaveBeenNthCalledWith(2, ['p2']);
+      expect(summary.ok).toBe(true);
+    });
+
+    // --- Enhanced decode/schema validation (Release-A verifier) ---
+
+    it('verify: a valid non-empty whiteboard snapshot passes', async () => {
+      const fork = await wbFork();
+      const doc = new Y.Doc();
+      const scene = new fork.Scene(undefined, { doc });
+      scene.insertElement(
+        fork.newElement({
+          type: 'rectangle',
+          x: 0,
+          y: 0,
+          width: 10,
+          height: 10,
+        })
+      );
+      oneWbRow(b64(Y.encodeStateAsUpdateV2(doc)));
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.ok).toBe(true);
+      expect(summary.invalid).toEqual([]);
+    });
+
+    it('verify: a canonical empty whiteboard snapshot passes', async () => {
+      oneWbRow(b64(await whiteboardSceneToYjsV2State('', {})));
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.ok).toBe(true);
+      expect(summary.invalid).toEqual([]);
+    });
+
+    it('verify: corrupt snapshot bytes → invalid (never ok)', async () => {
+      oneMemoRow(Buffer.from([1, 2, 3, 4, 5, 6, 7, 8, 9]).toString('base64'));
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.ok).toBe(false);
+      expect(summary.invalid).toHaveLength(1);
+      expect(summary.invalid[0]).toMatchObject({
+        id: 'm1',
+        contentType: CollaborationContentType.MEMO,
+        contentPointer: 'p1',
+      });
+      expect(summary.invalid[0].reason).toBeTruthy();
+    });
+
+    it('verify: found but no contentBase64 → invalid (found without content)', async () => {
+      oneMemoRow(undefined);
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.ok).toBe(false);
+      expect(summary.invalid[0].reason).toMatch(
+        /no valid content|missing contentBase64/i
+      );
+    });
+
+    it('verify: a snapshot pointer whose contentBase64 DECODES to zero bytes (====) → invalid (never a valid snapshot)', async () => {
+      // '====' is a non-empty string that base64-decodes to zero bytes — a migrated snapshot is
+      // never empty, so the pointer content itself must be rejected (not just live media).
+      oneMemoRow('====');
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.ok).toBe(false);
+      expect(summary.invalid).toHaveLength(1);
+      expect(summary.invalid[0].reason).toMatch(
+        /zero bytes|malformed|no valid content/i
+      );
+    });
+
+    it('verify: a snapshot pointer whose contentBase64 is non-alphabet JUNK (not-base64!!!) → invalid (strict decode before Yjs)', async () => {
+      // A lenient Buffer.from would decode 'not-base64!!!' to 7 junk bytes and hand them to Yjs;
+      // the strict decoder rejects it as the pointer-content owner, before any Yjs decode.
+      oneMemoRow('not-base64!!!');
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.ok).toBe(false);
+      expect(summary.invalid).toHaveLength(1);
+      expect(summary.invalid[0].reason).toMatch(/no valid content|malformed/i);
+    });
+
+    it('verify: a snapshot getContentBatch echoing a DIFFERENT id than the requested pointer → invalid (wrong-object bytes rejected)', async () => {
+      memo.count.mockResolvedValue(0);
+      whiteboard.count.mockResolvedValue(0);
+      memo.createQueryBuilder.mockReturnValue(
+        verifyQB([[{ id: 'm1', contentPointer: 'p1', storageBucketId: 'b1' }]])
+      );
+      whiteboard.createQueryBuilder.mockReturnValue(verifyQB([[]]));
+      // file-service resolves, but echoes a different id than the requested pointer 'p1'.
+      fileService.getContentBatch.mockResolvedValue([
+        { id: 'WRONG-P', found: true, contentBase64: memoB64('x') },
+      ]);
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.ok).toBe(false);
+      const reason = summary.invalid[0].reason;
+      expect(reason).toMatch(/different id/);
+      expect(reason).toContain('p1'); // requested pointer
+      expect(reason).toContain('WRONG-P'); // returned id
+    });
+
+    it('verify: a getContentBatch throw → invalid with reason; the run continues to the next row', async () => {
+      memo.count.mockResolvedValue(0);
+      whiteboard.count.mockResolvedValue(0);
+      memo.createQueryBuilder.mockReturnValue(
+        verifyQB([
+          [
+            { id: 'm1', contentPointer: 'p1', storageBucketId: 'b1' },
+            { id: 'm2', contentPointer: 'p2', storageBucketId: 'b1' },
+          ],
+        ])
+      );
+      whiteboard.createQueryBuilder.mockReturnValue(verifyQB([[]]));
+      fileService.getContentBatch.mockImplementation(async (ids: string[]) => {
+        if (ids[0] === 'p1') throw new Error('file-service down');
+        return [{ id: ids[0], found: true, contentBase64: memoB64('ok') }];
+      });
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.pointersChecked).toBe(2); // m2 still verified after m1 threw
+      expect(summary.invalid).toHaveLength(1);
+      expect(summary.invalid[0].id).toBe('m1');
+      expect(summary.invalid[0].reason).toMatch(/file-service down/);
+      expect(summary.ok).toBe(false);
+    });
+
+    it('verify: a non-null-pointer row whose owner has NO storage bucket → invalid, never fetched; next row still verifies', async () => {
+      memo.count.mockResolvedValue(0);
+      whiteboard.count.mockResolvedValue(0);
+      memo.createQueryBuilder.mockReturnValue(
+        verifyQB([
+          [
+            { id: 'm1', contentPointer: 'p1', storageBucketId: null },
+            { id: 'm2', contentPointer: 'p2', storageBucketId: 'b1' },
+          ],
+        ])
+      );
+      whiteboard.createQueryBuilder.mockReturnValue(verifyQB([[]]));
+      fileService.getContentBatch.mockResolvedValue([
+        { id: 'p2', found: true, contentBase64: memoB64('ok') },
+      ]);
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.invalid).toContainEqual(
+        expect.objectContaining({
+          id: 'm1',
+          reason: expect.stringContaining('no storage bucket'),
+        })
+      );
+      // The bucketless row is never fetched; the healthy row is.
+      expect(fileService.getContentBatch).not.toHaveBeenCalledWith(['p1']);
+      expect(fileService.getContentBatch).toHaveBeenCalledWith(['p2']);
+      expect(summary.ok).toBe(false);
+    });
+
+    it('verify: a blank/whitespace contentPointer → invalid, never fetched', async () => {
+      memo.count.mockResolvedValue(0);
+      whiteboard.count.mockResolvedValue(0);
+      memo.createQueryBuilder.mockReturnValue(
+        verifyQB([[{ id: 'm1', contentPointer: '   ', storageBucketId: 'b1' }]])
+      );
+      whiteboard.createQueryBuilder.mockReturnValue(verifyQB([[]]));
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.invalid).toContainEqual(
+        expect.objectContaining({
+          id: 'm1',
+          reason: expect.stringContaining('blank'),
+        })
+      );
+      expect(fileService.getContentBatch).not.toHaveBeenCalled();
+      expect(summary.ok).toBe(false);
+    });
+
+    it('verify: a memo with a non-canonical (unknown/missing default) root → invalid', async () => {
+      const doc = new Y.Doc();
+      doc.getXmlFragment('other').insert(0, [new Y.XmlText('x')]);
+      oneMemoRow(b64(Y.encodeStateAsUpdateV2(doc)));
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.ok).toBe(false);
+      expect(summary.invalid[0].reason).toMatch(/root/);
+    });
+
+    it('verify: a whiteboard with an unknown top-level root → invalid', async () => {
+      const doc = new Y.Doc();
+      doc.getMap('bogus').set('k', 'v');
+      oneWbRow(b64(Y.encodeStateAsUpdateV2(doc)));
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.ok).toBe(false);
+      expect(summary.invalid[0].reason).toMatch(/unknown top-level root/);
+    });
+
+    it('verify: a whiteboard FILES map with a non-string locator → invalid', async () => {
+      const doc = new Y.Doc();
+      doc.getMap('files').set('f1', 123);
+      oneWbRow(b64(Y.encodeStateAsUpdateV2(doc)));
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.ok).toBe(false);
+      expect(summary.invalid).toHaveLength(1);
+    });
+
+    it('verify: a whiteboard appState with a non-allow-list key → invalid', async () => {
+      const doc = new Y.Doc();
+      doc.getMap('appState').set('evil', 'x');
+      oneWbRow(b64(Y.encodeStateAsUpdateV2(doc)));
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.ok).toBe(false);
+      expect(summary.invalid[0].reason).toMatch(/appState/);
+    });
+
+    it('verify: a whiteboard appState allow-list key with a non-string value → invalid', async () => {
+      const doc = new Y.Doc();
+      doc.getMap('appState').set('name', 123);
+      oneWbRow(b64(Y.encodeStateAsUpdateV2(doc)));
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.ok).toBe(false);
+      expect(summary.invalid[0].reason).toMatch(/must be a string/);
+    });
+
+    it('verify: a whiteboard deletion marker that is negative → invalid', async () => {
+      const doc = new Y.Doc();
+      doc.getMap('elementDeletions').set('e1', -5);
+      oneWbRow(b64(Y.encodeStateAsUpdateV2(doc)));
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.ok).toBe(false);
+      expect(summary.invalid[0].reason).toMatch(/deletion marker/);
+    });
+
+    it('verify: a whiteboard LIVE image element whose fileId has no file-map locator → invalid (cold-load integrity)', async () => {
+      const fork = await wbFork();
+      const doc = new Y.Doc();
+      const scene = new fork.Scene(undefined, { doc });
+      const img = fork.newElement({
+        type: 'image',
+        x: 0,
+        y: 0,
+        width: 10,
+        height: 10,
+      });
+      scene.insertElement(img);
+      // newElement does not carry fileId; set it on the stored element map so the
+      // materialized element is a LIVE image referencing a fileId with no FILES entry.
+      (doc.getMap(fork.ELEMENTS).get(img.id) as any).set(
+        'fileId',
+        'missing-file'
+      );
+      oneWbRow(b64(Y.encodeStateAsUpdateV2(doc)));
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.ok).toBe(false);
+      expect(summary.invalid[0].reason).toMatch(/live image/);
+    });
+
+    it('verify: a DELETED image element with no locator is exempt (passes)', async () => {
+      const fork = await wbFork();
+      const doc = new Y.Doc();
+      const scene = new fork.Scene(undefined, { doc });
+      const img = fork.newElement({
+        type: 'image',
+        x: 0,
+        y: 0,
+        width: 10,
+        height: 10,
+      });
+      scene.insertElement(img);
+      const ymap = doc.getMap(fork.ELEMENTS).get(img.id) as any;
+      ymap.set('fileId', 'gone'); // references a fileId with no locator ...
+      ymap.set('isDeleted', true); // ... but a DELETED image is exempt from the invariant.
+      oneWbRow(b64(Y.encodeStateAsUpdateV2(doc)));
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.ok).toBe(true);
+      expect(summary.invalid).toEqual([]);
+    });
+
+    // --- Live-image BYTE-resolution gate + element-schema REDs ---
+
+    // Build a whiteboard snapshot with one LIVE image whose fileId maps, in FILES, to
+    // `locator` (a well-formed string → passes SCHEMA; the byte gate resolves it separately).
+    const liveImageWhiteboard = async (fileId: string, locator: string) => {
+      const fork = await wbFork();
+      const doc = new Y.Doc();
+      const scene = new fork.Scene(undefined, { doc });
+      const img = fork.newElement({
+        type: 'image',
+        x: 0,
+        y: 0,
+        width: 10,
+        height: 10,
+      });
+      scene.insertElement(img);
+      (doc.getMap(fork.ELEMENTS).get(img.id) as any).set('fileId', fileId);
+      doc.transact(() => {
+        fork.writeAssetLocators(
+          doc.getMap(fork.FILES),
+          { [fileId]: locator },
+          { prune: true }
+        );
+      }, fork.LOCAL_ORIGIN);
+      const snapshot = b64(Y.encodeStateAsUpdateV2(doc));
+      doc.destroy();
+      return snapshot;
+    };
+
+    // Wire a single whiteboard row whose pointer 'p1' resolves to `snapshot`, and route every
+    // OTHER (live-image locator) content request through `media`.
+    const wbRowWithMedia = (
+      snapshot: string,
+      media: (id: string) => {
+        id: string;
+        found: boolean;
+        contentBase64?: string;
+      }
+    ) => {
+      memo.count.mockResolvedValue(0);
+      whiteboard.count.mockResolvedValue(0);
+      memo.createQueryBuilder.mockReturnValue(verifyQB([[]]));
+      whiteboard.createQueryBuilder.mockReturnValue(
+        verifyQB([[{ id: 'w1', contentPointer: 'p1', storageBucketId: 'b1' }]])
+      );
+      fileService.getContentBatch.mockImplementation(async (ids: string[]) =>
+        ids[0] === 'p1'
+          ? [{ id: 'p1', found: true, contentBase64: snapshot }]
+          : [media(ids[0])]
+      );
+    };
+
+    it('verify: a LIVE image whose well-formed FILES locator does NOT resolve in file-service → invalid (byte gate; reason names element/file/locator)', async () => {
+      wbRowWithMedia(await liveImageWhiteboard('file-1', 'loc-1'), id => ({
+        id,
+        found: false,
+      }));
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.ok).toBe(false);
+      expect(summary.invalid).toHaveLength(1);
+      expect(summary.invalid[0]).toMatchObject({
+        id: 'w1',
+        contentPointer: 'p1',
+      });
+      expect(summary.invalid[0].reason).toMatch(/live image/);
+      expect(summary.invalid[0].reason).toContain('loc-1');
+      // exactly two content calls: the snapshot pointer, then the one unique live locator.
+      expect(fileService.getContentBatch).toHaveBeenCalledTimes(2);
+      expect(fileService.getContentBatch).toHaveBeenNthCalledWith(1, ['p1']);
+      expect(fileService.getContentBatch).toHaveBeenNthCalledWith(2, ['loc-1']);
+    });
+
+    it('verify: a LIVE image whose locator resolves to NON-EMPTY bytes passes (resolvability only — byte IDENTITY is proven by the migrate up-home tests, not here)', async () => {
+      wbRowWithMedia(await liveImageWhiteboard('file-1', 'loc-1'), id => ({
+        id,
+        found: true,
+        contentBase64: VALID_PNG_B64,
+      }));
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.ok).toBe(true);
+      expect(summary.invalid).toEqual([]);
+      expect(fileService.getContentBatch).toHaveBeenCalledTimes(2);
+      expect(fileService.getContentBatch).toHaveBeenNthCalledWith(2, ['loc-1']);
+    });
+
+    it('verify: two LIVE images with DIFFERENT fileIds mapping to ONE locator are DEDUPED BY LOCATOR to a single media fetch', async () => {
+      const fork = await wbFork();
+      const doc = new Y.Doc();
+      const scene = new fork.Scene(undefined, { doc });
+      const imgA = fork.newElement({
+        type: 'image',
+        x: 0,
+        y: 0,
+        width: 10,
+        height: 10,
+      });
+      const imgB = fork.newElement({
+        type: 'image',
+        x: 20,
+        y: 20,
+        width: 10,
+        height: 10,
+      });
+      scene.insertElement(imgA);
+      scene.insertElement(imgB);
+      // DISTINCT fileIds that both resolve to the SAME locator — so a (wrong) fileId-based
+      // dedupe would still fetch twice; only LOCATOR-based dedupe collapses to one fetch.
+      (doc.getMap(fork.ELEMENTS).get(imgA.id) as any).set('fileId', 'file-a');
+      (doc.getMap(fork.ELEMENTS).get(imgB.id) as any).set('fileId', 'file-b');
+      doc.transact(() => {
+        fork.writeAssetLocators(
+          doc.getMap(fork.FILES),
+          { 'file-a': 'loc-1', 'file-b': 'loc-1' },
+          { prune: true }
+        );
+      }, fork.LOCAL_ORIGIN);
+      const snapshot = b64(Y.encodeStateAsUpdateV2(doc));
+      doc.destroy();
+      wbRowWithMedia(snapshot, id => ({
+        id,
+        found: true,
+        contentBase64: VALID_PNG_B64,
+      }));
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.ok).toBe(true);
+      // snapshot + EXACTLY ONE media fetch — the shared locator resolves once across BOTH
+      // distinct-fileId images (locator-set dedupe, not fileId-set).
+      expect(fileService.getContentBatch).toHaveBeenCalledTimes(2);
+      expect(fileService.getContentBatch).toHaveBeenNthCalledWith(2, ['loc-1']);
+    });
+
+    it('verify: a media getContentBatch THROW → invalid naming the element, file, and locator (not a bare error)', async () => {
+      wbRowWithMedia(await liveImageWhiteboard('file-1', 'loc-1'), () => {
+        throw new Error('file-service unreachable');
+      });
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.ok).toBe(false);
+      expect(summary.invalid).toHaveLength(1);
+      const reason = summary.invalid[0].reason;
+      // all three identifiers survive the thrown media fetch, plus the underlying cause.
+      expect(reason).toMatch(/live image '[^']+'/); // a non-empty elementId
+      expect(reason).toContain('file-1'); // the fileId
+      expect(reason).toContain('loc-1'); // the locator
+      expect(reason).toContain('file-service unreachable'); // the cause
+    });
+
+    it('verify: a LIVE image whose media contentBase64 is non-alphabet JUNK (not-base64!!!) → invalid (strict decode; a lenient Buffer would false-green 7 junk bytes)', async () => {
+      wbRowWithMedia(await liveImageWhiteboard('file-1', 'loc-1'), id => ({
+        id,
+        found: true,
+        contentBase64: 'not-base64!!!',
+      }));
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.ok).toBe(false);
+      expect(summary.invalid[0].reason).toMatch(/malformed or empty base64/);
+    });
+
+    it('verify: a media response whose echoed id does NOT match the requested locator → invalid (wrong-object bytes rejected)', async () => {
+      wbRowWithMedia(await liveImageWhiteboard('file-1', 'loc-1'), () => ({
+        id: 'WRONG-LOCATOR',
+        found: true,
+        contentBase64: VALID_PNG_B64,
+      }));
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.ok).toBe(false);
+      const reason = summary.invalid[0].reason;
+      expect(reason).toMatch(/different id/);
+      expect(reason).toContain('loc-1'); // requested locator
+      expect(reason).toContain('WRONG-LOCATOR'); // returned id
+    });
+
+    it('verify: a LIVE image whose media locator resolves but DECODES to zero bytes (====) → invalid', async () => {
+      wbRowWithMedia(await liveImageWhiteboard('file-1', 'loc-1'), id => ({
+        id,
+        found: true,
+        contentBase64: '====',
+      }));
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.ok).toBe(false);
+      expect(summary.invalid[0].reason).toMatch(/malformed or empty base64/);
+    });
+
+    it('verify: a DELETED image + an UNREFERENCED FILES entry issue ZERO media fetches beyond the snapshot', async () => {
+      const fork = await wbFork();
+      const doc = new Y.Doc();
+      const scene = new fork.Scene(undefined, { doc });
+      const img = fork.newElement({
+        type: 'image',
+        x: 0,
+        y: 0,
+        width: 10,
+        height: 10,
+      });
+      scene.insertElement(img);
+      const ymap = doc.getMap(fork.ELEMENTS).get(img.id) as any;
+      ymap.set('fileId', 'file-del');
+      ymap.set('isDeleted', true); // deleted → never enumerated
+      doc.transact(() => {
+        // a locator for the deleted image AND an entirely unreferenced entry.
+        fork.writeAssetLocators(
+          doc.getMap(fork.FILES),
+          { 'file-del': 'loc-del', 'file-orphan': 'loc-orphan' },
+          { prune: true }
+        );
+      }, fork.LOCAL_ORIGIN);
+      const snapshot = b64(Y.encodeStateAsUpdateV2(doc));
+      doc.destroy();
+      wbRowWithMedia(snapshot, id => ({ id, found: false }));
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.ok).toBe(true);
+      expect(summary.invalid).toEqual([]);
+      // ONLY the snapshot pointer is fetched — no media call for a deleted / unreferenced ref.
+      expect(fileService.getContentBatch).toHaveBeenCalledTimes(1);
+      expect(fileService.getContentBatch).toHaveBeenCalledWith(['p1']);
+    });
+
+    it('verify: an element with an UNKNOWN type (garbage) → invalid (cold-load-critical schema)', async () => {
+      const fork = await wbFork();
+      const doc = new Y.Doc();
+      const scene = new fork.Scene(undefined, { doc });
+      const rect = fork.newElement({
+        type: 'rectangle',
+        x: 0,
+        y: 0,
+        width: 10,
+        height: 10,
+      });
+      scene.insertElement(rect);
+      (doc.getMap(fork.ELEMENTS).get(rect.id) as any).set('type', 'garbage');
+      oneWbRow(b64(Y.encodeStateAsUpdateV2(doc)));
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.ok).toBe(false);
+      expect(summary.invalid[0].reason).toMatch(
+        /not a valid Excalidraw element/
+      );
+    });
+
+    it.each([
+      { label: 'a number', fileId: 123 },
+      { label: 'an empty string (even with FILES[""] present)', fileId: '' },
+    ])('verify: a LIVE image whose fileId is $label → invalid (rejected before enumeration casts it)', async ({
+      fileId,
+    }) => {
+      const fork = await wbFork();
+      const doc = new Y.Doc();
+      const scene = new fork.Scene(undefined, { doc });
+      const img = fork.newElement({
+        type: 'image',
+        x: 0,
+        y: 0,
+        width: 10,
+        height: 10,
+      });
+      scene.insertElement(img);
+      (doc.getMap(fork.ELEMENTS).get(img.id) as any).set('fileId', fileId);
+      if (fileId === '') {
+        // an empty-string fileId paired with a FILES[''] locator must STILL be rejected.
+        doc.transact(() => {
+          fork.writeAssetLocators(
+            doc.getMap(fork.FILES),
+            { '': 'loc-empty' },
+            { prune: true }
+          );
+        }, fork.LOCAL_ORIGIN);
+      }
+      oneWbRow(b64(Y.encodeStateAsUpdateV2(doc)));
+
+      const summary = await svc.verifyAll();
+
+      expect(summary.ok).toBe(false);
+      expect(summary.invalid[0].reason).toMatch(/non-string or empty fileId/);
     });
   });
 });

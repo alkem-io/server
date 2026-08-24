@@ -12,7 +12,8 @@ import { CollaborationMigrationService } from '@services/collaboration-integrati
  *
  * Prints one machine-readable JSON line and a human-readable summary (no
  * secrets), and exits non-zero on any failure (migrate: flagged/failed rows;
- * verify: any NULL pointer or any pointer that does not resolve in file-service).
+ * verify: any NULL pointer, any pointer that does not resolve in file-service, or
+ * any snapshot that fails decode / content-root-schema validation).
  * Boots a minimal side-effect-free Nest application context (no scheduler / RMQ /
  * Redis / HTTP) — see `CollaborationMigrationWorkerModule`.
  */
@@ -44,7 +45,7 @@ const run = async (): Promise<number> => {
         `${JSON.stringify({ mode: 'verify', ...summary })}\n`
       );
       process.stdout.write(
-        `verify: ${summary.ok ? 'OK' : 'FAILED'} — nullPointers=${summary.nullPointerTotal} (memo=${summary.memoNullPointers}, whiteboard=${summary.whiteboardNullPointers}), pointersChecked=${summary.pointersChecked}, unresolved=${summary.unresolved.length}\n`
+        `verify: ${summary.ok ? 'OK' : 'FAILED'} — nullPointers=${summary.nullPointerTotal} (memo=${summary.memoNullPointers}, whiteboard=${summary.whiteboardNullPointers}), pointersChecked=${summary.pointersChecked}, unresolved=${summary.unresolved.length}, invalid=${summary.invalid.length}\n`
       );
       return summary.ok ? 0 : 1;
     }
