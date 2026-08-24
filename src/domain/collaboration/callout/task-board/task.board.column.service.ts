@@ -9,6 +9,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
 import { Callout } from '../callout.entity';
+import { MAX_TASK_BOARD_COLUMNS } from './task.board.constants';
 import { TaskBoardService } from './task.board.service';
 
 /**
@@ -39,6 +40,13 @@ export class TaskBoardColumnService {
   ): Promise<ICallout> {
     return this.withLockedBoard(calloutID, async (manager, template) => {
       const columns = getSelectableValues(template.allowedValues);
+      if (columns.length >= MAX_TASK_BOARD_COLUMNS) {
+        throw new ValidationException(
+          'A task board cannot exceed the maximum number of columns',
+          LogContext.COLLABORATION,
+          { current: columns.length, max: MAX_TASK_BOARD_COLUMNS }
+        );
+      }
       const accepted = this.taskBoardService.validateColumnName(name, columns);
       const next = [...columns, accepted];
       await this.saveColumns(manager, template, next);
@@ -187,7 +195,18 @@ export class TaskBoardColumnService {
       await work(manager, lockedTemplate);
     });
 
-    return callout;
+    // Re-read the callout after the transaction commits: `work` edits the
+    // template instance loaded inside the transaction, which TypeORM does not
+    // share identity with the `callout` graph loaded above. Returning the
+    // pre-transaction `callout` would report the pre-edit column set to the
+    // client, so reload the post-edit state to return.
+    const updated = await this.entityManager.findOne(Callout, {
+      where: { id: calloutID },
+      relations: {
+        classification: { tagsets: { tagsetTemplate: true } },
+      },
+    });
+    return updated ?? callout;
   }
 
   /**

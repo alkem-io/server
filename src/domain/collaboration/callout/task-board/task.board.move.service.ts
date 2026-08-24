@@ -124,6 +124,17 @@ export class TaskBoardMoveService {
         await manager.save(markerTagset);
       }
 
+      // The persisted `markerTagset` is a distinct instance from the marker on
+      // the `contribution` graph loaded before the transaction; mirror the new
+      // column onto that in-memory marker so the mutation response reflects the
+      // post-move state rather than the pre-move column.
+      const contributionMarker = contribution.classification?.tagsets?.find(
+        tagset => tagset.id === markerTagsetID
+      );
+      if (contributionMarker) {
+        contributionMarker.tags = [target];
+      }
+
       return contribution;
     });
   }
