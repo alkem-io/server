@@ -1,6 +1,9 @@
 import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { CalloutLookupService } from '@domain/collaboration/callout/callout.lookup/callout.lookup.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -8,6 +11,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { vi } from 'vitest';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
+import { CalloutReactionEmailSuppressionService } from './callout.reaction.email.suppression.service';
 import { NotificationAdapter } from './notification.adapter';
 import { NotificationSpaceAdapter } from './notification.space.adapter';
 import { NotificationUserAdapter } from './notification.user.adapter';
@@ -20,6 +24,10 @@ describe('NotificationSpaceAdapter', () => {
   let communityResolverService: CommunityResolverService;
   let spaceLookupService: SpaceLookupService;
   let notificationUserAdapter: NotificationUserAdapter;
+  let calloutLookupService: CalloutLookupService;
+  let calloutReactionEmailSuppressionService: CalloutReactionEmailSuppressionService;
+  let configService: ConfigService;
+  let userLookupService: UserLookupService;
 
   const mockRecipients = (
     emailRecipients: any[] = [],
@@ -68,6 +76,23 @@ describe('NotificationSpaceAdapter', () => {
     notificationUserAdapter = module.get<NotificationUserAdapter>(
       NotificationUserAdapter
     );
+    calloutLookupService =
+      module.get<CalloutLookupService>(CalloutLookupService);
+    calloutReactionEmailSuppressionService =
+      module.get<CalloutReactionEmailSuppressionService>(
+        CalloutReactionEmailSuppressionService
+      );
+    configService = module.get<ConfigService>(ConfigService);
+    userLookupService = module.get<UserLookupService>(UserLookupService);
+
+    // Default: kill switch enabled
+    vi.mocked(configService.get).mockReturnValue(true as any);
+
+    // Default: reactor display name resolves to a string
+    vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue({
+      id: 'user-2',
+      profile: { displayName: 'Reactor User' },
+    } as any);
   });
 
   it('should be defined', () => {
@@ -488,6 +513,309 @@ describe('NotificationSpaceAdapter', () => {
         [expect.objectContaining({ id: 'user-2' })],
         expect.any(Object),
         'Hello admins'
+      );
+    });
+  });
+
+  // ── T011 / T017 / T018: spaceCollaborationCalloutReaction ─────────────────
+
+  describe('spaceCollaborationCalloutReaction', () => {
+    const mockCallout = (overrides: Record<string, unknown> = {}) => ({
+      id: 'callout-1',
+      publishedBy: 'publisher-1',
+      createdBy: 'creator-1',
+      framing: { profile: { displayName: 'My Callout' } },
+      ...overrides,
+    });
+
+    const setupDefault = () => {
+      // Callout lookup returns a valid callout with a known publisher
+      vi.mocked(calloutLookupService.getCalloutOrFail).mockResolvedValue(
+        mockCallout() as any
+      );
+      // Community and space resolution
+      vi.mocked(
+        communityResolverService.getCommunityFromCollaborationCalloutOrFail
+      ).mockResolvedValue({ id: 'community-1' } as any);
+      vi.mocked(
+        communityResolverService.getSpaceForCommunityOrFail
+      ).mockResolvedValue({ id: 'space-1' } as any);
+      // URL generator
+      vi.mocked(
+        externalAdapter.buildSpaceCollaborationCalloutReactionPayload
+      ).mockResolvedValue({} as any);
+    };
+
+    it('genuine reaction: dispatches exactly one sendInAppNotifications for the publisher (US1-AS1)', async () => {
+      setupDefault();
+      // publisher-1 is the in-app recipient, NOT the reactor (reactor is user-2)
+      mockRecipients([], [{ id: 'publisher-1' }]);
+
+      await adapter.spaceCollaborationCalloutReaction({
+        calloutID: 'callout-1',
+        triggeredBy: 'user-2',
+        emoji: 'heart',
+      });
+
+      expect(inAppAdapter.sendInAppNotifications).toHaveBeenCalledTimes(1);
+      expect(inAppAdapter.sendInAppNotifications).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(String),
+        'user-2',
+        ['publisher-1'],
+        expect.objectContaining({ emoji: 'heart', calloutID: 'callout-1' })
+      );
+    });
+
+    it('self-reaction: reactor equals publisher — zero dispatches on all channels (US1-AS4)', async () => {
+      setupDefault();
+      // publishedBy = 'publisher-1'; triggeredBy = 'publisher-1' (same person)
+      mockRecipients([{ id: 'publisher-1' }], [{ id: 'publisher-1' }]);
+
+      await adapter.spaceCollaborationCalloutReaction({
+        calloutID: 'callout-1',
+        triggeredBy: 'publisher-1',
+        emoji: 'rocket',
+      });
+
+      expect(inAppAdapter.sendInAppNotifications).not.toHaveBeenCalled();
+      expect(externalAdapter.sendExternalNotifications).not.toHaveBeenCalled();
+    });
+
+    it('publishedBy → createdBy fallback: when publishedBy is null, createdBy is the recipient (US4-AS2)', async () => {
+      vi.mocked(calloutLookupService.getCalloutOrFail).mockResolvedValue(
+        mockCallout({ publishedBy: null }) as any
+      );
+      vi.mocked(
+        communityResolverService.getCommunityFromCollaborationCalloutOrFail
+      ).mockResolvedValue({ id: 'community-1' } as any);
+      vi.mocked(
+        communityResolverService.getSpaceForCommunityOrFail
+      ).mockResolvedValue({ id: 'space-1' } as any);
+      mockRecipients([], [{ id: 'creator-1' }]);
+
+      await adapter.spaceCollaborationCalloutReaction({
+        calloutID: 'callout-1',
+        triggeredBy: 'user-2',
+        emoji: 'heart',
+      });
+
+      // Creator is notified via in-app
+      expect(inAppAdapter.sendInAppNotifications).toHaveBeenCalledTimes(1);
+    });
+
+    it('both-null publisher and creator: zero dispatches + skip logged (US4-AS3)', async () => {
+      vi.mocked(calloutLookupService.getCalloutOrFail).mockResolvedValue(
+        mockCallout({ publishedBy: null, createdBy: null }) as any
+      );
+
+      await adapter.spaceCollaborationCalloutReaction({
+        calloutID: 'callout-1',
+        triggeredBy: 'user-2',
+        emoji: 'heart',
+      });
+
+      expect(inAppAdapter.sendInAppNotifications).not.toHaveBeenCalled();
+      expect(
+        externalAdapter.buildSpaceCollaborationCalloutReactionPayload
+      ).not.toHaveBeenCalled();
+    });
+
+    it('kill-switch off: zero dispatches on all channels (R-11)', async () => {
+      vi.mocked(configService.get).mockReturnValue(false as any);
+      setupDefault();
+      mockRecipients([{ id: 'publisher-1' }], [{ id: 'publisher-1' }]);
+
+      await adapter.spaceCollaborationCalloutReaction({
+        calloutID: 'callout-1',
+        triggeredBy: 'user-2',
+        emoji: 'heart',
+      });
+
+      expect(inAppAdapter.sendInAppNotifications).not.toHaveBeenCalled();
+      expect(externalAdapter.sendExternalNotifications).not.toHaveBeenCalled();
+      // Kill-switch is checked before callout lookup
+      expect(calloutLookupService.getCalloutOrFail).not.toHaveBeenCalled();
+    });
+
+    it('adapter rejection does not reject the mutation (FR-004)', async () => {
+      // The caller wraps spaceCollaborationCalloutReaction in a fire-and-forget
+      // catch; this test proves the method itself does not throw on missing callout.
+      vi.mocked(calloutLookupService.getCalloutOrFail).mockRejectedValue(
+        new EntityNotFoundException('not found', LogContext.NOTIFICATIONS)
+      );
+
+      await expect(
+        adapter.spaceCollaborationCalloutReaction({
+          calloutID: 'unknown-callout',
+          triggeredBy: 'user-2',
+          emoji: 'heart',
+        })
+      ).resolves.toBeUndefined();
+    });
+
+    // T017: email + push volume control ───────────────────────────────────────
+
+    it('T017: burst of reactions with email-enabled publisher — exactly ONE sendExternalNotifications call (US3-AS1)', async () => {
+      setupDefault();
+      // Email recipient is the publisher; suppression allows first call only
+      mockRecipients([{ id: 'publisher-1' }], [{ id: 'publisher-1' }]);
+      vi.mocked(
+        calloutReactionEmailSuppressionService.shouldSendLeadingEmail
+      ).mockResolvedValue(true);
+      vi.mocked(
+        externalAdapter.buildSpaceCollaborationCalloutReactionPayload
+      ).mockResolvedValue({} as any);
+
+      await adapter.spaceCollaborationCalloutReaction({
+        calloutID: 'callout-1',
+        triggeredBy: 'user-2',
+        emoji: 'heart',
+      });
+
+      expect(externalAdapter.sendExternalNotifications).toHaveBeenCalledTimes(
+        1
+      );
+    });
+
+    it('T017: suppression window active — zero email sends, no external notification (US3-AS1 window)', async () => {
+      setupDefault();
+      mockRecipients([{ id: 'publisher-1' }], [{ id: 'publisher-1' }]);
+      vi.mocked(
+        calloutReactionEmailSuppressionService.shouldSendLeadingEmail
+      ).mockResolvedValue(false);
+
+      await adapter.spaceCollaborationCalloutReaction({
+        calloutID: 'callout-1',
+        triggeredBy: 'user-2',
+        emoji: 'rocket',
+      });
+
+      expect(
+        externalAdapter.buildSpaceCollaborationCalloutReactionPayload
+      ).not.toHaveBeenCalled();
+      expect(externalAdapter.sendExternalNotifications).not.toHaveBeenCalled();
+    });
+
+    it('T017: suppression service returns true (fail-open, e.g. after a Redis blip) — email is dispatched (D-10)', async () => {
+      setupDefault();
+      mockRecipients([{ id: 'publisher-1' }], [{ id: 'publisher-1' }]);
+      // Suppression service returns true (fail-open path — Redis error was caught internally)
+      vi.mocked(
+        calloutReactionEmailSuppressionService.shouldSendLeadingEmail
+      ).mockResolvedValue(true);
+      vi.mocked(
+        externalAdapter.buildSpaceCollaborationCalloutReactionPayload
+      ).mockResolvedValue({} as any);
+
+      await adapter.spaceCollaborationCalloutReaction({
+        calloutID: 'callout-1',
+        triggeredBy: 'user-2',
+        emoji: 'heart',
+      });
+
+      expect(externalAdapter.sendExternalNotifications).toHaveBeenCalledTimes(
+        1
+      );
+    });
+
+    it('T017: push called via sendPushNotifications with stable replace-tag (US3-AS4, R-10)', async () => {
+      setupDefault();
+      mockRecipients([], [], undefined);
+      // Override to have a push recipient
+      vi.mocked(
+        notificationAdapter.getNotificationRecipients
+      ).mockResolvedValue({
+        emailRecipients: [],
+        inAppRecipients: [],
+        pushRecipients: [{ id: 'publisher-1' }],
+      } as any);
+      vi.mocked(
+        calloutReactionEmailSuppressionService.shouldSendLeadingEmail
+      ).mockResolvedValue(true);
+
+      await adapter.spaceCollaborationCalloutReaction({
+        calloutID: 'callout-1',
+        triggeredBy: 'user-2',
+        emoji: 'heart',
+      });
+
+      // Verify the stable tag was used
+      expect(
+        (adapter as any).notificationPushAdapter.sendPushNotifications
+      ).toHaveBeenCalledWith(
+        expect.any(Array),
+        expect.any(String),
+        expect.objectContaining({
+          tag: 'SPACE_COLLABORATION_CALLOUT_REACTION:callout-1',
+        })
+      );
+    });
+
+    it('T017: email-off setting — zero external sends, suppression marker NOT claimed (US3-AS4)', async () => {
+      setupDefault();
+      // No email recipients (channel disabled)
+      mockRecipients([], [{ id: 'publisher-1' }]);
+
+      await adapter.spaceCollaborationCalloutReaction({
+        calloutID: 'callout-1',
+        triggeredBy: 'user-2',
+        emoji: 'heart',
+      });
+
+      expect(
+        calloutReactionEmailSuppressionService.shouldSendLeadingEmail
+      ).not.toHaveBeenCalled();
+      expect(externalAdapter.sendExternalNotifications).not.toHaveBeenCalled();
+    });
+
+    // T018: republish re-read ─────────────────────────────────────────────────
+
+    it('T018: re-read at emit time resolves current publishedBy, not the stale resolver copy (US4-AS1)', async () => {
+      // The callout was originally loaded (before republish) with publishedBy=B,
+      // but by emit time the DB has publishedBy=C. The adapter re-reads the callout.
+      vi.mocked(calloutLookupService.getCalloutOrFail).mockResolvedValue(
+        mockCallout({
+          publishedBy: 'publisher-C',
+          createdBy: 'creator-1',
+        }) as any
+      );
+      vi.mocked(
+        communityResolverService.getCommunityFromCollaborationCalloutOrFail
+      ).mockResolvedValue({ id: 'community-1' } as any);
+      vi.mocked(
+        communityResolverService.getSpaceForCommunityOrFail
+      ).mockResolvedValue({ id: 'space-1' } as any);
+      // Recipients resolved for publisher-C (the new publisher)
+      vi.mocked(
+        notificationAdapter.getNotificationRecipients
+      ).mockResolvedValue({
+        emailRecipients: [],
+        inAppRecipients: [{ id: 'publisher-C' }],
+        pushRecipients: [],
+      } as any);
+
+      await adapter.spaceCollaborationCalloutReaction({
+        calloutID: 'callout-1',
+        triggeredBy: 'user-2',
+        emoji: 'heart',
+      });
+
+      // The fresh publisherID from the re-read is used as the recipient ID arg
+      expect(
+        notificationAdapter.getNotificationRecipients
+      ).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(Object),
+        'space-1',
+        'publisher-C'
+      );
+      expect(inAppAdapter.sendInAppNotifications).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(String),
+        'user-2',
+        ['publisher-C'],
+        expect.any(Object)
       );
     });
   });

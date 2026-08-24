@@ -5,6 +5,7 @@ export enum CollaboraDocumentType {
   PRESENTATION = 'presentation',
   WORDPROCESSING = 'wordprocessing',
   DRAWING = 'drawing',
+  PDF = 'pdf',
 }
 
 registerEnumType(CollaboraDocumentType, {

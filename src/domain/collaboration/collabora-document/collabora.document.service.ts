@@ -602,9 +602,14 @@ export class CollaboraDocumentService {
    * SPREADSHEET → .xlsx, PRESENTATION → .pptx, WORDPROCESSING → .docx,
    * DRAWING → .odg. Imported documents preserve their actual sniffed
    * MIME instead (stored on `originalMimeType`).
+   *
+   * PDF is deliberately absent from this map: it is import-only —
+   * Collabora's PDF mode is annotation-first, with no blank-document concept
+   * to create. A blank-create request for PDF has no canonical MIME to stage
+   * and must be rejected here rather than silently falling through.
    */
   private getDefaultMimeForCreate(documentType: CollaboraDocumentType): string {
-    const mimeMap: Record<CollaboraDocumentType, string> = {
+    const mimeMap: Partial<Record<CollaboraDocumentType, string>> = {
       [CollaboraDocumentType.SPREADSHEET]:
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       [CollaboraDocumentType.PRESENTATION]:
@@ -614,6 +619,14 @@ export class CollaboraDocumentService {
       [CollaboraDocumentType.DRAWING]:
         'application/vnd.oasis.opendocument.graphics',
     };
-    return mimeMap[documentType];
+    const mime = mimeMap[documentType];
+    if (!mime) {
+      throw new ValidationException(
+        'Blank-create is not supported for this Collabora document type; this type is import-only.',
+        LogContext.COLLABORATION,
+        { documentType }
+      );
+    }
+    return mime;
   }
 }

@@ -10,6 +10,10 @@ import { ICalloutContributionDefaults } from '../callout-contribution-defaults/c
 import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
 import { ICalloutSettings } from '../callout-settings/callout.settings.interface';
 import { ICalloutsSet } from '../callouts-set/callouts.set.interface';
+import {
+  ICalloutReaction,
+  ICalloutReactionsSummary,
+} from './dto/callout.dto.reaction';
 
 @ObjectType('Callout')
 export abstract class ICallout extends IAuthorizable {
@@ -68,4 +72,18 @@ export abstract class ICallout extends IAuthorizable {
     description: 'Whether this callout is a Template or not.',
   })
   isTemplate!: boolean;
+
+  @Field(() => ICalloutReactionsSummary, {
+    nullable: false,
+    description:
+      'Cheap always-shown summary (tier-1). Dataloader-batched; safe to select on feeds.',
+  })
+  reactionsSummary?: ICalloutReactionsSummary;
+
+  @Field(() => [ICalloutReaction], {
+    nullable: false,
+    description:
+      'Who reacted (tier-2). Bounded: 100 most recent by last change, descending. Fetch only on demand.',
+  })
+  reactions?: ICalloutReaction[];
 }

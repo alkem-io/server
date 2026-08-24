@@ -641,6 +641,15 @@ input AddPollOptionInput {
   text: String!
 }
 
+input AddReactionToCalloutInput {
+  """The ID of the Callout to react to."""
+  calloutID: UUID!
+  """
+  Must be one of the platform allowed emoji slugs; validated server-side (ValidationException on miss).
+  """
+  emoji: String!
+}
+
 input AddVisualToMediaGalleryInput {
   """The ID of the media gallery."""
   mediaGalleryID: String!
@@ -751,6 +760,8 @@ type Application {
   state: String!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+  """The User who submitted this Application."""
+  user: User
 }
 
 input ApplicationEventInput {
@@ -1179,6 +1190,14 @@ type Callout {
   publishedBy: User
   """The Date of the publishing of this Callout."""
   publishedDate: DateTime
+  """
+  Who reacted (tier-2). Bounded: 100 most recent by last change, descending. Fetch only on demand.
+  """
+  reactions: [CalloutReaction!]!
+  """
+  Cheap always-shown summary (tier-1). Dataloader-batched; safe to select on feeds.
+  """
+  reactionsSummary: CalloutReactionsSummary!
   """The Callout Settings associated with this Callout."""
   settings: CalloutSettings!
   """The sorting order for this Callout."""
@@ -1353,6 +1372,38 @@ type CalloutPostCreated {
   sortOrder: Float!
 }
 
+type CalloutReaction {
+  """Allow-list slug (e.g. "heart")."""
+  emoji: String!
+  """The unique identifier."""
+  id: UUID!
+  """
+  When this person's reaction was made or last changed (a swap updates this).
+  """
+  updatedDate: DateTime!
+  """
+  The reactor. Null only in the deletion race window; clients skip null users.
+  """
+  user: User
+}
+
+type CalloutReactionsSummary {
+  """The emoji slugs a user may react with on this Callout."""
+  allowedEmojis: [String!]!
+  """
+  Distinct emoji slugs currently in use, in allow-list order. Never carries counts.
+  """
+  emojis: [String!]!
+  """
+  The requesting user's current reaction slug; null when none or unauthenticated.
+  """
+  myReactionEmoji: String
+  """
+  Number of distinct people currently holding a reaction on this Callout.
+  """
+  total: Int!
+}
+
 """
 The selection mode for a collection callout (Contributors or Subspaces). AUTO (default) returns the full computed set; CUSTOM restricts to the admin-curated selectedIds list.
 """
@@ -1507,6 +1558,7 @@ type CollaboraDocument {
 
 enum CollaboraDocumentType {
   DRAWING
+  PDF
   PRESENTATION
   SPREADSHEET
   WORDPROCESSING
@@ -3589,6 +3641,19 @@ type InAppNotificationPayloadSpaceCollaborationCalloutPostComment implements InA
   type: NotificationEventPayload!
 }
 
+type InAppNotificationPayloadSpaceCollaborationCalloutReaction implements InAppNotificationPayload {
+  """The Callout that was reacted to."""
+  callout: Callout!
+  """
+  The emoji slug from the platform allow-list. Clients own slug-to-glyph rendering.
+  """
+  emoji: String!
+  """The Space where the reaction was made."""
+  space: Space!
+  """The payload type."""
+  type: NotificationEventPayload!
+}
+
 type InAppNotificationPayloadSpaceCollaborationPoll implements InAppNotificationPayload {
   """The Callout that contains the poll."""
   callout: Callout!
@@ -4782,6 +4847,10 @@ type Mutation {
   Add a new option to a Poll. Requires UPDATE privilege, or CONTRIBUTE privilege when the poll setting allowContributorsAddOptions is enabled. The new option is appended with the next available sort order.
   """
   addPollOption(optionData: AddPollOptionInput!): Poll!
+  """
+  Adds or swaps the requesting user's single reaction on a Callout. Requires CONTRIBUTE on the Callout. The Callout must be published and not a template. The emoji must be on the platform allow-list.
+  """
+  addReactionToCallout(reactionData: AddReactionToCalloutInput!): Callout!
   """Add a reaction to a message from the specified Room."""
   addReactionToMessageInRoom(reactionData: RoomAddReactionToMessageInput!): Reaction!
   """Adds a new visual to the specified media gallery."""
@@ -5104,6 +5173,10 @@ type Mutation {
   Remove the current user vote from a Poll. Requires CONTRIBUTE privilege on the Poll. If the user has not voted, returns a validation error.
   """
   removePollVote(voteData: RemovePollVoteInput!): Poll!
+  """
+  Removes the requesting user's reaction from a Callout. Idempotent — no error when no reaction exists. Self-scoped; requires only authentication (not CONTRIBUTE). Returns the Callout only when the caller retains READ access on it.
+  """
+  removeReactionFromCallout(reactionData: RemoveReactionFromCalloutInput!): Callout!
   """Remove a reaction on a message from the specified Room."""
   removeReactionToMessageInRoom(reactionData: RoomRemoveReactionToMessageInput!): Boolean!
   """
@@ -5384,6 +5457,7 @@ enum NotificationEvent {
   SPACE_COLLABORATION_CALLOUT_CONTRIBUTION
   SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT
   SPACE_COLLABORATION_CALLOUT_PUBLISHED
+  SPACE_COLLABORATION_CALLOUT_REACTION
   SPACE_COLLABORATION_POLL_MODIFIED_ON_POLL_I_VOTED_ON
   SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE
   SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL
@@ -5436,6 +5510,7 @@ enum NotificationEventPayload {
   SPACE_COLLABORATION_CALLOUT
   SPACE_COLLABORATION_CALLOUT_COMMENT
   SPACE_COLLABORATION_CALLOUT_POST_COMMENT
+  SPACE_COLLABORATION_CALLOUT_REACTION
   SPACE_COLLABORATION_POLL
   SPACE_COMMUNICATION_MESSAGE_DIRECT
   SPACE_COMMUNICATION_UPDATE
@@ -6742,6 +6817,11 @@ input RemovePollOptionInput {
 input RemovePollVoteInput {
   """The ID of the Poll from which to remove the current user vote."""
   pollID: UUID!
+}
+
+input RemoveReactionFromCalloutInput {
+  """The ID of the Callout to remove the reaction from."""
+  calloutID: UUID!
 }
 
 input RemoveRoleOnRoleSetInput {
@@ -9095,6 +9175,8 @@ input UpdateUserSettingsNotificationSpaceInput {
   collaborationCalloutPostContributionComment: NotificationSettingInput
   """Receive a notification when a callout is published"""
   collaborationCalloutPublished: NotificationSettingInput
+  """Receive a notification when someone reacts to a callout you published"""
+  collaborationCalloutReaction: NotificationSettingInput
   """Receive a notification when a poll you voted on is modified"""
   collaborationPollModifiedOnPollIVotedOn: NotificationSettingInput
   """
@@ -9700,6 +9782,8 @@ type UserSettingsNotificationSpace {
   collaborationCalloutPostContributionComment: UserSettingsNotificationChannels!
   """Receive a notification when a callout is published"""
   collaborationCalloutPublished: UserSettingsNotificationChannels!
+  """Receive a notification when someone reacts to a callout you published"""
+  collaborationCalloutReaction: UserSettingsNotificationChannels!
   """Receive a notification when a poll you voted on is modified"""
   collaborationPollModifiedOnPollIVotedOn: UserSettingsNotificationChannels!
   """
