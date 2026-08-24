@@ -587,7 +587,10 @@ services:
     networks:
       - alkemio_dev_net
     ports:
-      - 4006
+      # Explicit host publication so the host-run server reaches the WS at
+      # ws://localhost:4006 (COLLABORATION_SERVICE_URL default). A bare `- 4006`
+      # maps to a random host port, which the server cannot address.
+      - '4006:4006'
 
   file-service:
     extra_hosts:

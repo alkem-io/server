@@ -33,7 +33,7 @@ export class CollaborationDocumentService {
   private readonly wsEndpoint: string;
   private readonly actorHeader: string;
   private readonly connectTimeoutMs: number;
-  private readonly saveTimeoutMs: number;
+  private readonly durabilityTimeoutMs: number;
   private readonly maxResendRetries = 2;
 
   constructor(
@@ -41,22 +41,21 @@ export class CollaborationDocumentService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
-    const cfg = this.configService.get('collaboration', { infer: true }) as
-      | {
-          whiteboard?: {
-            ws_endpoint?: string;
-            actor_id_header?: string;
-            connect_timeout_ms?: number;
-            save_timeout_ms?: number;
-          };
-        }
-      | undefined;
-    this.wsEndpoint = (
-      cfg?.whiteboard?.ws_endpoint ?? 'ws://collaboration-service:4004'
-    ).replace(/\/$/, '');
-    this.actorHeader = cfg?.whiteboard?.actor_id_header ?? 'X-Alkemio-Actor-Id';
-    this.connectTimeoutMs = cfg?.whiteboard?.connect_timeout_ms ?? 15_000;
-    this.saveTimeoutMs = cfg?.whiteboard?.save_timeout_ms ?? 20_000;
+    this.wsEndpoint = this.configService
+      .get('collaboration.service.url', { infer: true })
+      .replace(/\/$/, '');
+    this.actorHeader = this.configService.get(
+      'collaboration.service.actor_id_header',
+      { infer: true }
+    );
+    this.connectTimeoutMs = this.configService.get(
+      'collaboration.service.connect_timeout',
+      { infer: true }
+    );
+    this.durabilityTimeoutMs = this.configService.get(
+      'collaboration.service.durability_timeout',
+      { infer: true }
+    );
   }
 
   /**
@@ -114,7 +113,7 @@ export class CollaborationDocumentService {
           // from tool input (a fresh clock/ids would double the edit).
           session.resend(update as Uint8Array);
         }
-        await session.requestDurability(this.saveTimeoutMs);
+        await session.requestDurability(this.durabilityTimeoutMs);
         return; // durable
       } catch (err) {
         if (

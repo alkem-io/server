@@ -15,8 +15,14 @@ import { UpdateRejectedError } from './collaboration-document.session';
  */
 describe('CollaborationDocumentService.mutate — correlated-barrier retry semantics', () => {
   const buildService = () => {
+    const configValues: Record<string, unknown> = {
+      'collaboration.service.url': 'ws://localhost:4006',
+      'collaboration.service.actor_id_header': 'X-Alkemio-Actor-Id',
+      'collaboration.service.connect_timeout': 15_000,
+      'collaboration.service.durability_timeout': 20_000,
+    };
     const configService = {
-      get: vi.fn().mockReturnValue({ whiteboard: {} }),
+      get: vi.fn((key: string) => configValues[key]),
     };
     const logger = { warn: vi.fn(), verbose: vi.fn(), error: vi.fn() };
     return new CollaborationDocumentService(

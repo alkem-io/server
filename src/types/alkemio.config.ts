@@ -318,6 +318,12 @@ export type AlkemioConfig = {
     };
   };
   collaboration: {
+    service: {
+      url: string;
+      actor_id_header: string;
+      connect_timeout: number;
+      durability_timeout: number;
+    };
     membership: {
       cache_ttl: number;
     };
