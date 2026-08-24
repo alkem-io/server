@@ -703,6 +703,12 @@ describe('CalloutService', () => {
         callOrder.push('managerRemove');
         return { id: undefined };
       });
+      vi.mocked(classificationService.deleteClassification).mockImplementation(
+        async () => {
+          callOrder.push('deleteClassification');
+          return {} as any;
+        }
+      );
       vi.mocked(tagsetTemplateService.removeTagsetTemplate).mockImplementation(
         async () => {
           callOrder.push('removeTagsetTemplate');
@@ -713,11 +719,20 @@ describe('CalloutService', () => {
       await service.deleteCallout('callout-1');
 
       // The driving template is a standalone row owned only by the board callout;
-      // it can only be dropped once the classification that referenced it is gone.
+      // it can only be dropped once the classification whose marker tagset
+      // references it is gone. The callout's own classification is NOT
+      // cascade-removed with the callout row, so it is deleted explicitly
+      // (releasing the FK) before the template.
+      expect(classificationService.deleteClassification).toHaveBeenCalledWith(
+        'cls-1'
+      );
       expect(tagsetTemplateService.removeTagsetTemplate).toHaveBeenCalledWith(
         boardTemplate
       );
       expect(callOrder.indexOf('managerRemove')).toBeLessThan(
+        callOrder.indexOf('deleteClassification')
+      );
+      expect(callOrder.indexOf('deleteClassification')).toBeLessThan(
         callOrder.indexOf('removeTagsetTemplate')
       );
     });
@@ -742,6 +757,9 @@ describe('CalloutService', () => {
       await service.deleteCallout('callout-1');
 
       expect(tagsetTemplateService.removeTagsetTemplate).not.toHaveBeenCalled();
+      // The explicit classification cleanup is board-only (guarded by the
+      // presence of a standalone board template); a plain callout skips it.
+      expect(classificationService.deleteClassification).not.toHaveBeenCalled();
     });
   });
 
