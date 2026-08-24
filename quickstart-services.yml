@@ -569,13 +569,11 @@ services:
       # --- file-service blob offload (CHECKPOINT_STORE=file-service) ---
       - FILE_SERVICE_URL=http://file-service:4003
       - MAX_UPLOAD_SIZE=33554432
-      # Environment-scoped UUIDs naming rows provisioned in THIS dev DB's seed
-      # (the platform direct storage bucket + its authorization policy). They are
-      # random per seed run, so they must be filled in from .env.docker AFTER the
-      # DB is seeded — see docs/local-collab-testing.md for the extraction SQL.
-      # These are NOT secrets; they are pure references.
-      - FILE_SERVICE_STORAGE_BUCKET_ID=${COLLAB_FILE_SERVICE_STORAGE_BUCKET_ID}
-      - FILE_SERVICE_AUTHORIZATION_ID=${COLLAB_FILE_SERVICE_AUTHORIZATION_ID}
+      # The collaboration service persists each document's snapshot into that
+      # document's OWN storage bucket (the server supplies `storageBucketId` in the
+      # metadata). It no longer reads a platform-bucket fallback, so `FILE_SERVICE_URL`
+      # is the only file-service config it needs (a save for an index row lacking its
+      # own bucket fails ErrCorrupt; `--verify` flags bucketless owners pre-rollout).
       # --- authZ via authorization-evaluation-service (AUTH_MODE=authzeval) ---
       # Dev hostname is `authorization-evaluation` (the configmap default
       # `authorization-evaluation-service` is the k8s service name).

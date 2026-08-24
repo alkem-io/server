@@ -1,8 +1,6 @@
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
 import { EntityNotFoundException } from '@common/exceptions';
-import { ActorContextService } from '@core/actor-context/actor.context.service';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { CollaboraDocumentService } from '@domain/collaboration/collabora-document/collabora.document.service';
 import { MemoService } from '@domain/common/memo';
@@ -12,32 +10,24 @@ import {
   UserLookupService,
 } from '@domain/community/user-lookup/user.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import {
   TypedActorSet,
   UNKNOWN_ACTOR_TYPE,
 } from '@services/external/elasticsearch/types';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
   ContributionInputData,
-  DeleteInputData,
   FetchInputData,
-  InfoInputData,
   OfficeDocumentContributionsInputData,
   OfficeDocumentRenameInputData,
   SaveInputData,
 } from './inputs';
 import {
-  DeleteOutputData,
-  deleteError,
-  deleteSuccess,
   FetchOutputData,
   fetchError,
   fetchNotFound,
-  InfoOutputData,
   SaveOutputData,
   saveError,
   saveSuccess,
@@ -54,32 +44,17 @@ import { CollaborationContentType, CollaborationErrorCode } from './types';
  */
 @Injectable()
 export class CollaborationIntegrationService {
-  private readonly memoMaxCollaboratorsInRoom: number;
-  private readonly whiteboardMaxCollaboratorsInRoom: number;
-
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private readonly authorizationService: AuthorizationService,
-    private readonly actorContextService: ActorContextService,
     private readonly memoService: MemoService,
     private readonly whiteboardService: WhiteboardService,
     private readonly contributionReporter: ContributionReporterService,
     private readonly communityResolver: CommunityResolverService,
-    private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly collaboraDocumentService: CollaboraDocumentService,
     private readonly actorLookupService: ActorLookupService,
     private readonly userLookupService: UserLookupService
-  ) {
-    this.memoMaxCollaboratorsInRoom = this.configService.get(
-      'collaboration.memo.max_collaborators_in_room',
-      { infer: true }
-    );
-    this.whiteboardMaxCollaboratorsInRoom = this.configService.get(
-      'collaboration.whiteboards.max_collaborators_in_room',
-      { infer: true }
-    );
-  }
+  ) {}
 
   /**
    * `collaboration-save` — upsert the index row (FR-003). The blob is held by
@@ -181,67 +156,14 @@ export class CollaborationIntegrationService {
   }
 
   /**
-   * `collaboration-delete` — idempotently purge the index row on the
-   * owner-delete cascade. Deleting an absent row is success (the contract /
-   * FR-006). Entity lifecycle stays owner-driven; this only forgets the index.
-   */
-  public async delete(data: DeleteInputData): Promise<DeleteOutputData> {
-    try {
-      await this.memoService.deleteCollaborationMetadata(data.id);
-      await this.whiteboardService.deleteCollaborationMetadata(data.id);
-      return deleteSuccess();
-    } catch (e: any) {
-      // The domain delete uses an idempotent UPDATE that does not throw on a
-      // missing row, so a not-found never reaches here — any error is a real
-      // failure. Log the cause server-side; reply with only a typed error code.
-      this.logger.error?.(
-        e?.message,
-        e?.stack,
-        LogContext.COLLABORATION_INTEGRATION
-      );
-      return deleteError(CollaborationErrorCode.INTERNAL_ERROR);
-    }
-  }
-
-  /**
-   * `collaboration-info` — collaborator-mode inputs for an actor + document
-   * (read / update / maxCollaborators / isMultiUser). Mirrors the legacy `info`
-   * authZ decision: `read` for read, `update-content` for collaborate, against
-   * the entity's own authorization policy (OPEN-1).
-   */
-  public async info(data: InfoInputData): Promise<InfoOutputData> {
-    // Like save/fetch/delete, the responder must never throw on the bus: a
-    // metadata-lookup or service failure normalizes to a deny.
-    try {
-      const memo = await this.tryGetMemoMetadata(data.id);
-      if (memo) {
-        return this.infoForMemo(data.actorId, data.id);
-      }
-      const whiteboard = await this.tryGetWhiteboardMetadata(data.id);
-      if (whiteboard) {
-        return this.infoForWhiteboard(data.actorId, data.id);
-      }
-      // Unknown document — deny.
-      return { read: false, update: false };
-    } catch (e: any) {
-      this.logger.error?.(
-        e?.message,
-        e?.stack,
-        LogContext.COLLABORATION_INTEGRATION
-      );
-      return { read: false, update: false };
-    }
-  }
-
-  /**
    * `collaboration-contribution` (fire-and-forget) — the per-window set of
    * contributing actors. Routes by id to the memo / whiteboard contribution
    * reporter (carried forward from the two legacy contribution events).
    */
   public async contribution(data: ContributionInputData): Promise<void> {
-    // Fire-and-forget event handler: like save/fetch/delete/info, it must never
-    // throw on the bus. A metadata lookup or downstream reporter failure is
-    // logged and swallowed rather than failing RMQ message handling.
+    // Fire-and-forget event handler: like save/fetch, it must never throw on the
+    // bus. A metadata lookup or downstream reporter failure is logged and
+    // swallowed rather than failing RMQ message handling.
     try {
       if (await this.tryGetMemoMetadata(data.id)) {
         return await this.reportMemoContribution(data);
@@ -262,100 +184,6 @@ export class CollaborationIntegrationService {
         e?.stack,
         LogContext.COLLABORATION_INTEGRATION
       );
-    }
-  }
-
-  private async infoForMemo(
-    actorId: string,
-    memoId: string
-  ): Promise<InfoOutputData> {
-    const read = await this.accessGrantedMemo(
-      actorId,
-      memoId,
-      AuthorizationPrivilege.READ
-    );
-    if (!read) {
-      return { read: false, update: false, isMultiUser: false };
-    }
-    const update = await this.accessGrantedMemo(
-      actorId,
-      memoId,
-      AuthorizationPrivilege.UPDATE_CONTENT
-    );
-    const isMultiUser = await this.memoService.isMultiUser(memoId);
-    const maxCollaborators = isMultiUser ? this.memoMaxCollaboratorsInRoom : 1;
-    return { read, update, isMultiUser, maxCollaborators };
-  }
-
-  private async infoForWhiteboard(
-    actorId: string,
-    whiteboardId: string
-  ): Promise<InfoOutputData> {
-    const read = await this.accessGrantedWhiteboard(
-      actorId,
-      whiteboardId,
-      AuthorizationPrivilege.READ
-    );
-    if (!read) {
-      return { read: false, update: false };
-    }
-    const update = await this.accessGrantedWhiteboard(
-      actorId,
-      whiteboardId,
-      AuthorizationPrivilege.UPDATE_CONTENT
-    );
-    const maxCollaborators = (await this.whiteboardService.isMultiUser(
-      whiteboardId
-    ))
-      ? this.whiteboardMaxCollaboratorsInRoom
-      : 1;
-    return { read, update, maxCollaborators };
-  }
-
-  private async accessGrantedMemo(
-    actorId: string,
-    memoId: string,
-    privilege: AuthorizationPrivilege
-  ): Promise<boolean> {
-    try {
-      const memo = await this.memoService.getMemoOrFail(memoId);
-      const actorContext = await this.actorContextService.buildForUser(actorId);
-      return this.authorizationService.isAccessGranted(
-        actorContext,
-        memo.authorization,
-        privilege
-      );
-    } catch (e: any) {
-      this.logger.error?.(
-        e?.message,
-        e?.stack,
-        LogContext.COLLABORATION_INTEGRATION
-      );
-      return false;
-    }
-  }
-
-  private async accessGrantedWhiteboard(
-    actorId: string,
-    whiteboardId: string,
-    privilege: AuthorizationPrivilege
-  ): Promise<boolean> {
-    try {
-      const whiteboard =
-        await this.whiteboardService.getWhiteboardOrFail(whiteboardId);
-      const actorContext = await this.actorContextService.buildForUser(actorId);
-      return this.authorizationService.isAccessGranted(
-        actorContext,
-        whiteboard.authorization,
-        privilege
-      );
-    } catch (e: any) {
-      this.logger.error?.(
-        e?.message,
-        e?.stack,
-        LogContext.COLLABORATION_INTEGRATION
-      );
-      return false;
     }
   }
 

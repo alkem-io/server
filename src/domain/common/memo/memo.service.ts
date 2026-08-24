@@ -103,8 +103,10 @@ export class MemoService {
     // Release A (staged rollout): EVERY create seeds a real snapshot — empty
     // creation content is encoded as the canonical empty Y.Doc
     // (`markdownToYjsV2State('')`) so the row never carries a NULL/dangling
-    // pointer (the admission-pointer invariant; Release B later enforces NOT
-    // NULL). The room materializes empty + editable (FR-010) either way.
+    // pointer (the admission-pointer invariant). Release B fails-closed on any
+    // NULL/blank pointer under its write fence but leaves the column NULLABLE for
+    // the transient new-row window. The room materializes empty + editable
+    // (FR-010) either way.
     const binaryUpdateV2 = markdownToYjsV2State(markdown ?? '');
     await this.writeInitialSnapshot(saved, Buffer.from(binaryUpdateV2));
     return saved;
@@ -274,8 +276,11 @@ export class MemoService {
       // Return the persisted contract version (`contentVersion`), NOT the
       // TypeORM `@VersionColumn`, so a reloaded room sees the version it owns.
       version: memo.contentVersion ?? 0,
-      // Coerce DB NULLs (e.g. after `deleteCollaborationMetadata`) to
-      // `undefined` so the contract reply shape stays `string | undefined`.
+      // Coerce a DB NULL (a freshly-created row before its initial snapshot
+      // pointer is attached) to `undefined` so the contract reply shape stays
+      // `string | undefined`. The pointer column is legitimately nullable for
+      // this transient window; Release B fails-closed on NULL/blank under the
+      // write fence, it does not make the column NOT NULL.
       contentPointer: memo.contentPointer ?? undefined,
       authorizationPolicyId: memo.authorization?.id,
       // The memo's OWN storage bucket (via its profile) — the collab service
@@ -436,29 +441,6 @@ export class MemoService {
       doc => replaceMemoDocContent(doc, desiredNode)
     );
     return memo;
-  }
-
-  /**
-   * Idempotently purges the unified collaboration metadata/index for a memo
-   * (the collab-side `MetadataStore.Delete` port). v1 stores the index as
-   * columns on the entity, so this clears the pointer + store if the row still
-   * exists; an absent row is a no-op (idempotent — FR-006 / contract). It does
-   * NOT delete the memo entity itself: entity lifecycle is owner-driven
-   * (`deleteMemo`), and server emits `document.deleted` to the collab service.
-   */
-  async deleteCollaborationMetadata(memoId: string): Promise<void> {
-    // Clear `contentVersion` alongside the pointer + store so a post-delete
-    // `getCollaborationMetadata` does not round-trip a stale non-zero version
-    // (it derives `version` from `contentVersion`).
-    await this.memoRepository
-      .createQueryBuilder()
-      .update(Memo)
-      .set({
-        contentVersion: null as any,
-        contentPointer: null as any,
-      })
-      .where('id = :id', { id: memoId })
-      .execute();
   }
 
   public async isMultiUser(memoId: string): Promise<boolean> {

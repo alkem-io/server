@@ -1,11 +1,7 @@
-import { AuthorizationPrivilege } from '@common/enums';
 import { CollaborationContentType } from '@common/enums/collaboration.content.type';
 import { EntityNotFoundException } from '@common/exceptions';
-import { ActorContextService } from '@core/actor-context/actor.context.service';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { MemoService } from '@domain/common/memo';
 import { WhiteboardService } from '@domain/common/whiteboard';
-import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
@@ -33,21 +29,13 @@ describe('CollaborationIntegrationService', () => {
   let memoService: {
     getCollaborationMetadata: Mock;
     saveCollaborationMetadata: Mock;
-    deleteCollaborationMetadata: Mock;
-    getMemoOrFail: Mock;
-    isMultiUser: Mock;
     getProfile: Mock;
   };
   let whiteboardService: {
     getCollaborationMetadata: Mock;
     saveCollaborationMetadata: Mock;
-    deleteCollaborationMetadata: Mock;
-    getWhiteboardOrFail: Mock;
-    isMultiUser: Mock;
     getProfile: Mock;
   };
-  let authorizationService: { isAccessGranted: Mock };
-  let actorContextService: { buildForUser: Mock };
   let contributionReporter: {
     memoContribution: Mock;
     whiteboardContribution: Mock;
@@ -58,15 +46,6 @@ describe('CollaborationIntegrationService', () => {
     getLevelZeroSpaceIdForCommunity: Mock;
   };
 
-  const configServiceMock = {
-    get: vi.fn((key: string) => {
-      if (key === 'collaboration.memo.max_collaborators_in_room') return 10;
-      if (key === 'collaboration.whiteboards.max_collaborators_in_room')
-        return 12;
-      return undefined;
-    }),
-  };
-
   const notFound = () =>
     new EntityNotFoundException('not found', 'MEMOS' as any);
 
@@ -74,11 +53,7 @@ describe('CollaborationIntegrationService', () => {
     vi.restoreAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        CollaborationIntegrationService,
-        { provide: ConfigService, useValue: configServiceMock },
-        MockWinstonProvider,
-      ],
+      providers: [CollaborationIntegrationService, MockWinstonProvider],
     })
       .useMocker(defaultMockerFactory)
       .compile();
@@ -86,8 +61,6 @@ describe('CollaborationIntegrationService', () => {
     service = module.get(CollaborationIntegrationService);
     memoService = module.get(MemoService) as any;
     whiteboardService = module.get(WhiteboardService) as any;
-    authorizationService = module.get(AuthorizationService) as any;
-    actorContextService = module.get(ActorContextService) as any;
     contributionReporter = module.get(ContributionReporterService) as any;
     communityResolver = module.get(CommunityResolverService) as any;
   });
@@ -307,218 +280,6 @@ describe('CollaborationIntegrationService', () => {
       const fetchResult = await service.fetch({ id: 'wb-rt' });
       expect(fetchResult.found).toBe(true);
       expect(fetchResult.version).toBe(9);
-    });
-  });
-
-  describe('delete', () => {
-    it('idempotently purges both memo and whiteboard index', async () => {
-      memoService.deleteCollaborationMetadata.mockResolvedValue(undefined);
-      whiteboardService.deleteCollaborationMetadata.mockResolvedValue(
-        undefined
-      );
-
-      const result = await service.delete({ id: 'doc-1' });
-
-      expect(result).toEqual({ success: true });
-      expect(memoService.deleteCollaborationMetadata).toHaveBeenCalledWith(
-        'doc-1'
-      );
-      expect(
-        whiteboardService.deleteCollaborationMetadata
-      ).toHaveBeenCalledWith('doc-1');
-    });
-
-    it('treats an absent document as success (idempotent)', async () => {
-      // The domain delete is an idempotent UPDATE: a missing row resolves
-      // without throwing, so deleting an absent document is success.
-      memoService.deleteCollaborationMetadata.mockResolvedValue(undefined);
-      whiteboardService.deleteCollaborationMetadata.mockResolvedValue(
-        undefined
-      );
-
-      const result = await service.delete({ id: 'gone' });
-
-      expect(result).toEqual({ success: true });
-    });
-
-    it('returns a structured error (no leak) on an unexpected failure', async () => {
-      memoService.deleteCollaborationMetadata.mockRejectedValue(
-        new Error('boom')
-      );
-
-      const result = await service.delete({ id: 'doc-1' });
-
-      expect(result.success).toBe(false);
-      // The raw cause must not cross the bus — only the typed code.
-      expect(result.error).toBe(CollaborationErrorCode.INTERNAL_ERROR);
-    });
-  });
-
-  describe('info', () => {
-    it('returns read+update for a memo with full access (update-content)', async () => {
-      memoService.getCollaborationMetadata.mockResolvedValue(memoMeta);
-      memoService.getMemoOrFail.mockResolvedValue({
-        authorization: { id: 'policy-memo' },
-      });
-      actorContextService.buildForUser.mockResolvedValue({});
-      authorizationService.isAccessGranted.mockReturnValue(true);
-      memoService.isMultiUser.mockResolvedValue(true);
-
-      const result = await service.info({ actorId: 'actor-1', id: 'memo-1' });
-
-      expect(result).toEqual({
-        read: true,
-        update: true,
-        isMultiUser: true,
-        maxCollaborators: 10,
-      });
-      // read = AuthorizationPrivilege.READ, collaborate = UPDATE_CONTENT (OPEN-1)
-      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.anything(),
-        AuthorizationPrivilege.READ
-      );
-      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.anything(),
-        AuthorizationPrivilege.UPDATE_CONTENT
-      );
-    });
-
-    it('denies update when only read is granted', async () => {
-      memoService.getCollaborationMetadata.mockResolvedValue(memoMeta);
-      memoService.getMemoOrFail.mockResolvedValue({
-        authorization: { id: 'policy-memo' },
-      });
-      actorContextService.buildForUser.mockResolvedValue({});
-      authorizationService.isAccessGranted
-        .mockReturnValueOnce(true) // READ
-        .mockReturnValueOnce(false); // UPDATE_CONTENT
-      memoService.isMultiUser.mockResolvedValue(false);
-
-      const result = await service.info({ actorId: 'actor-1', id: 'memo-1' });
-
-      expect(result.read).toBe(true);
-      expect(result.update).toBe(false);
-      expect(result.maxCollaborators).toBe(1);
-    });
-
-    it('returns whiteboard info (maxCollaborators from config)', async () => {
-      memoService.getCollaborationMetadata.mockRejectedValue(notFound());
-      whiteboardService.getCollaborationMetadata.mockResolvedValue(
-        whiteboardMeta
-      );
-      whiteboardService.getWhiteboardOrFail.mockResolvedValue({
-        authorization: { id: 'policy-wb' },
-      });
-      actorContextService.buildForUser.mockResolvedValue({});
-      authorizationService.isAccessGranted.mockReturnValue(true);
-      whiteboardService.isMultiUser.mockResolvedValue(true);
-
-      const result = await service.info({ actorId: 'actor-1', id: 'wb-1' });
-
-      expect(result).toEqual({
-        read: true,
-        update: true,
-        maxCollaborators: 12,
-      });
-    });
-
-    it('returns maxCollaborators = 1 for a single-user whiteboard', async () => {
-      memoService.getCollaborationMetadata.mockRejectedValue(notFound());
-      whiteboardService.getCollaborationMetadata.mockResolvedValue(
-        whiteboardMeta
-      );
-      whiteboardService.getWhiteboardOrFail.mockResolvedValue({
-        authorization: { id: 'policy-wb' },
-      });
-      actorContextService.buildForUser.mockResolvedValue({});
-      authorizationService.isAccessGranted.mockReturnValue(true);
-      whiteboardService.isMultiUser.mockResolvedValue(false);
-
-      const result = await service.info({ actorId: 'actor-1', id: 'wb-1' });
-
-      expect(result.maxCollaborators).toBe(1);
-    });
-
-    it('denies an unknown document', async () => {
-      memoService.getCollaborationMetadata.mockRejectedValue(notFound());
-      whiteboardService.getCollaborationMetadata.mockRejectedValue(notFound());
-
-      const result = await service.info({ actorId: 'actor-1', id: 'nope' });
-
-      expect(result).toEqual({ read: false, update: false });
-    });
-
-    it('returns all-false for a memo when read is denied (no update check)', async () => {
-      memoService.getCollaborationMetadata.mockResolvedValue(memoMeta);
-      memoService.getMemoOrFail.mockResolvedValue({
-        authorization: { id: 'policy-memo' },
-      });
-      actorContextService.buildForUser.mockResolvedValue({});
-      authorizationService.isAccessGranted.mockReturnValue(false); // READ denied
-
-      const result = await service.info({ actorId: 'actor-1', id: 'memo-1' });
-
-      expect(result).toEqual({
-        read: false,
-        update: false,
-        isMultiUser: false,
-      });
-      // Only the READ check runs; UPDATE_CONTENT is never evaluated.
-      expect(authorizationService.isAccessGranted).toHaveBeenCalledTimes(1);
-    });
-
-    it('returns read-only for a whiteboard when read is denied', async () => {
-      memoService.getCollaborationMetadata.mockRejectedValue(notFound());
-      whiteboardService.getCollaborationMetadata.mockResolvedValue(
-        whiteboardMeta
-      );
-      whiteboardService.getWhiteboardOrFail.mockResolvedValue({
-        authorization: { id: 'policy-wb' },
-      });
-      actorContextService.buildForUser.mockResolvedValue({});
-      authorizationService.isAccessGranted.mockReturnValue(false); // READ denied
-
-      const result = await service.info({ actorId: 'actor-1', id: 'wb-1' });
-
-      expect(result).toEqual({ read: false, update: false });
-    });
-
-    it('denies access (read=false) when the memo lookup throws (access-granted catch)', async () => {
-      memoService.getCollaborationMetadata.mockResolvedValue(memoMeta);
-      memoService.getMemoOrFail.mockRejectedValue(new Error('DB blip'));
-
-      const result = await service.info({ actorId: 'actor-1', id: 'memo-1' });
-
-      expect(result.read).toBe(false);
-      expect(result.update).toBe(false);
-    });
-
-    it('denies access (read=false) when the whiteboard lookup throws (access-granted catch)', async () => {
-      memoService.getCollaborationMetadata.mockRejectedValue(notFound());
-      whiteboardService.getCollaborationMetadata.mockResolvedValue(
-        whiteboardMeta
-      );
-      whiteboardService.getWhiteboardOrFail.mockRejectedValue(
-        new Error('DB blip')
-      );
-
-      const result = await service.info({ actorId: 'actor-1', id: 'wb-1' });
-
-      expect(result.read).toBe(false);
-    });
-
-    it('normalizes an unexpected lookup failure into a deny (never throws on the bus)', async () => {
-      // A non-not-found error from the metadata lookup must not escape the
-      // responder: info degrades to a deny like save/fetch/delete.
-      memoService.getCollaborationMetadata.mockRejectedValue(
-        new Error('DB down')
-      );
-
-      const result = await service.info({ actorId: 'actor-1', id: 'memo-1' });
-
-      expect(result).toEqual({ read: false, update: false });
     });
   });
 

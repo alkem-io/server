@@ -389,10 +389,10 @@ export class CollaborationMigrationService {
     let checked = 0;
     for (;;) {
       // Join the owner's storage bucket in the SAME page query — the fenced verifier must
-      // catch a non-null-pointer row whose owner has NO bucket: after the collab-service
-      // retires the FILE_SERVICE_STORAGE_BUCKET_ID fallback, that row would save-fail, so
-      // `--verify` must expose it pre-rollout. This explicit relation select is the load,
-      // so an unloaded relation is never the producer.
+      // catch a non-null-pointer row whose owner has NO bucket: the collab-service persists
+      // into each document's OWN bucket and no longer has a platform-bucket fallback, so such
+      // a row now save-fails (ErrCorrupt), and `--verify` must expose it pre-rollout. This
+      // explicit relation select is the load, so an unloaded relation is never the producer.
       const qb = repository
         .createQueryBuilder('doc')
         .leftJoin('doc.profile', 'profile')
@@ -438,7 +438,7 @@ export class CollaborationMigrationService {
               contentType,
               contentPointer: row.contentPointer,
               reason:
-                'owner row has no storage bucket (would save-fail once the FILE_SERVICE_STORAGE_BUCKET_ID fallback is retired)',
+                "owner row has no storage bucket (the collab-service persists into each document's own bucket with no platform-bucket fallback, so this row save-fails)",
             });
             continue; // bucketless owner — do NOT fetch the blob
           }

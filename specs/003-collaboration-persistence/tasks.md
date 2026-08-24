@@ -52,6 +52,20 @@ touched collaboration-persistence diff (DEC-7).
   runnable in this worktree; flagged for the PR's migration-validate CI step.
 
 ### S-T002 — Unified `collaboration-save`/`collaboration-fetch` consumer (epic T001/T002)
+
+> **SUPERSEDED — Release-A producerless cleanup (006, 2026-08-24).** The records
+> below (S-T002.0/.2/.3) recorded four RPC patterns
+> (`-save`/`-fetch`/`-delete`/`-info`); the **current** surface is
+> **`collaboration-save` + `collaboration-fetch` only**, plus the
+> `collaboration-contribution` **event** (unchanged). `collaboration-delete` was
+> retired as redundant/producerless — the server OWNS document deletion and then
+> emits the lifecycle `document.deleted` (DEC-4), so the collab-service never issues
+> a delete-index RPC. `collaboration-info` was retired as producerless — authz is
+> owned by the authzeval path, not a server RPC. The index-only
+> `deleteCollaborationMetadata` domain methods (S-T002.3) were removed together with
+> the DELETE handler. The checkboxes below are preserved as original execution
+> history; they are NOT the current contract.
+
 - [x] **S-T002.0** [P1] **(GATE)** Froze the unified wire contract against the
   collab-service's already-implemented `contract.go` (the canonical source). Server
   = RESPONDER. Patterns: `collaboration-save`/`-fetch`/`-delete`/`-info` (RPC) +

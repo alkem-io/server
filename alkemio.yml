@@ -606,7 +606,8 @@ collaboration:
 
 ## MCP Server ##
 # Model Context Protocol server for AI client integrations.
-# Provides read-only access to platform content for AI assistants.
+# Exposes both read and write tools to AI assistants (platform content reads
+# plus whiteboard create/edit), not read-only access.
 mcp:
   # Enable/disable the MCP server endpoint
   enabled: ${MCP_ENABLED}:false

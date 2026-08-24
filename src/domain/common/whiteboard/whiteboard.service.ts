@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module';
 import { LogContext, ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -30,7 +31,7 @@ import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
-import * as Y from 'yjs';
+import type * as Yjs from 'yjs';
 import { AuthorizationPolicy } from '../authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { LicenseService } from '../license/license.service';
@@ -44,6 +45,17 @@ import { UpdateWhiteboardInput } from './dto/whiteboard.dto.update';
 import { Whiteboard } from './whiteboard.entity';
 import { loadWhiteboardFork, WhiteboardFork } from './whiteboard.fork';
 import { IWhiteboard } from './whiteboard.interface';
+
+/**
+ * Native-CJS `yjs` — the SAME single instance the CJS headless fork (`loadWhiteboardFork`)
+ * resolves, in production (server is CJS: `import * as Y` compiles to `require('yjs')`) AND
+ * under the Vitest ESM runner (where a bare `import` would resolve to `yjs.mjs`, a SECOND
+ * instance). `rehomeSnapshotAssets` decodes a snapshot into a `Y.Doc` and hands it to the
+ * fork's `readAssetLocators`/`writeAssetLocators`, so decode + fork MUST share one runtime;
+ * `createRequire(__filename)` is zero semantic change in compiled CommonJS and removes the
+ * cross-runtime discrepancy at this fork-crossing site under test.
+ */
+const Y = createRequire(__filename)('yjs') as typeof import('yjs');
 
 @Injectable()
 export class WhiteboardService {
@@ -176,8 +188,10 @@ export class WhiteboardService {
     // Y.Map, not a reconstructed scene. Release A (staged rollout): EVERY create
     // seeds a real snapshot — an empty create is encoded as the canonical empty
     // Y.Doc (`whiteboardSceneToYjsV2State('')`) so the row never carries a
-    // NULL/dangling pointer (the admission-pointer invariant; Release B later
-    // enforces NOT NULL). The room materializes empty + editable (FR-010) either way.
+    // NULL/dangling pointer (the admission-pointer invariant). Release B fails-
+    // closed on any NULL/blank pointer under its write fence but leaves the column
+    // NULLABLE for the transient new-row window. The room materializes empty +
+    // editable (FR-010) either way.
     try {
       const storageBucketId = saved.profile.storageBucket?.id;
       if (!storageBucketId) {
@@ -366,7 +380,7 @@ export class WhiteboardService {
    * would otherwise leave a live image pointing at nothing.
    */
   private assertDesiredAssetsResolveImages(
-    doc: Y.Doc,
+    doc: Yjs.Doc,
     fork: WhiteboardFork,
     assets: Record<string, string>
   ): void {
@@ -674,8 +688,11 @@ export class WhiteboardService {
       // Return the persisted contract version (`contentVersion`), NOT the
       // TypeORM `@VersionColumn`, so a reloaded room sees the version it owns.
       version: whiteboard.contentVersion ?? 0,
-      // Coerce DB NULLs (e.g. after `deleteCollaborationMetadata`) to
-      // `undefined` so the contract reply shape stays `string | undefined`.
+      // Coerce a DB NULL (a freshly-created row before its initial snapshot
+      // pointer is attached) to `undefined` so the contract reply shape stays
+      // `string | undefined`. The pointer column is legitimately nullable for
+      // this transient window; Release B fails-closed on NULL/blank under the
+      // write fence, it does not make the column NOT NULL.
       contentPointer: whiteboard.contentPointer ?? undefined,
       authorizationPolicyId: whiteboard.authorization?.id,
       // The whiteboard's OWN storage bucket (via its profile) — the collab
@@ -748,30 +765,6 @@ export class WhiteboardService {
       contentPointer: whiteboard.contentPointer ?? undefined,
       authorizationPolicyId: whiteboard.authorization?.id,
     };
-  }
-
-  /**
-   * Idempotently purges the unified collaboration metadata/index for a
-   * whiteboard (the collab-side `MetadataStore.Delete` port). v1 stores the
-   * index as columns on the entity, so this clears the pointer + store if the
-   * row still exists; an absent row is a no-op (idempotent — FR-006 /
-   * contract). It does NOT delete the whiteboard entity itself: entity
-   * lifecycle is owner-driven (`deleteWhiteboard`), and server emits
-   * `document.deleted` to the collab service.
-   */
-  async deleteCollaborationMetadata(whiteboardId: string): Promise<void> {
-    // Clear `contentVersion` alongside the pointer + store so a post-delete
-    // `getCollaborationMetadata` does not round-trip a stale non-zero version
-    // (it derives `version` from `contentVersion`).
-    await this.whiteboardRepository
-      .createQueryBuilder()
-      .update(Whiteboard)
-      .set({
-        contentVersion: null as any,
-        contentPointer: null as any,
-      })
-      .where('id = :id', { id: whiteboardId })
-      .execute();
   }
 
   public async isMultiUser(whiteboardId: string): Promise<boolean> {

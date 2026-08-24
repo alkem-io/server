@@ -11,6 +11,4 @@
 export enum CollaborationMessagePattern {
   SAVE = 'collaboration-save',
   FETCH = 'collaboration-fetch',
-  DELETE = 'collaboration-delete',
-  INFO = 'collaboration-info',
 }

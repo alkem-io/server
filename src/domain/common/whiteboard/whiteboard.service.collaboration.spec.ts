@@ -223,24 +223,6 @@ describe('WhiteboardService — collaboration metadata + lifecycle', () => {
     });
   });
 
-  describe('deleteCollaborationMetadata', () => {
-    it('clears the index columns idempotently', async () => {
-      const qb = updateBuilder();
-      whiteboardRepo.createQueryBuilder.mockReturnValue(qb);
-
-      await service.deleteCollaborationMetadata('w1');
-
-      // contentVersion is cleared too, so a post-delete fetch can't round-trip
-      // a stale non-zero version.
-      expect(qb.set).toHaveBeenCalledWith(
-        expect.objectContaining({
-          contentVersion: null,
-          contentPointer: null,
-        })
-      );
-    });
-  });
-
   describe('deleteWhiteboard records document.deleted (SC-004)', () => {
     it('records exactly once, atomically with the leaf removal, AFTER the profile/auth cascade', async () => {
       const whiteboard = {

@@ -41,14 +41,13 @@ METADATA_STORE=rabbitmq           RABBITMQ_QUEUE=alkemio-collaboration
 CHECKPOINT_STORE=file-service           FILE_SERVICE_URL=http://file-service:4003
 AUTH_MODE=authzeval               AUTH_SERVICE_URL=http://authorization-evaluation:6060
 MAX_UPLOAD_SIZE=33554432
-FILE_SERVICE_STORAGE_BUCKET_ID=${COLLAB_FILE_SERVICE_STORAGE_BUCKET_ID}   # filled post-seed
-FILE_SERVICE_AUTHORIZATION_ID=${COLLAB_FILE_SERVICE_AUTHORIZATION_ID}     # filled post-seed
 ```
 
-> The collaboration service validates its config at startup and **fails fast**
-> if `CHECKPOINT_STORE=file-service` and either of the two file-service IDs is empty.
-> That is intentional — the two IDs are seeded with **random UUIDs per DB reset**
-> and must be filled in (step 3) before the container can start.
+> With `CHECKPOINT_STORE=file-service` the collaboration service needs only
+> `FILE_SERVICE_URL`. It persists each document's snapshot into that document's
+> OWN storage bucket (the server supplies `storageBucketId` in the `collaboration-*`
+> metadata) — there is no platform-bucket fallback and no
+> `FILE_SERVICE_STORAGE_BUCKET_ID` to fill in.
 
 ---
 
@@ -72,10 +71,8 @@ docker compose -f quickstart-services.yml --env-file .env.docker down -v
 pnpm run start:services
 ```
 
-Because `FILE_SERVICE_STORAGE_BUCKET_ID` / `FILE_SERVICE_AUTHORIZATION_ID` are
-still blank, the `collaboration` container will **crash-loop** at this point.
-That is expected — it comes up healthy after step 3. Everything else starts
-normally.
+The `collaboration` container comes up healthy immediately — it needs only
+`FILE_SERVICE_URL` (no per-seed IDs to fill in). Everything else starts normally.
 
 Validate the compose file at any time (no bring-up):
 
@@ -117,48 +114,21 @@ pnpm start:dev        # host server on :4000 (Traefik proxies it on :3000)
 ```
 
 The migration that matters is `…-seed.ts`, which creates the **platform storage
-aggregator** (`type='platform'`) with its **direct storage bucket** and that
-bucket's authorization policy — the two UUIDs the collaboration service needs.
+aggregator** (`type='platform'`) with its **direct storage bucket**. Each
+collaboration document persists into its OWN storage bucket, so the collaboration
+service does not need any platform-bucket UUIDs.
 
 ---
 
-## 3. Extract + wire the file-service IDs (the only manual step)
+## 3. File-service IDs — no longer a manual step
 
-After seeding, pull the platform direct storage bucket UUID and its authorization
-policy UUID out of the DB and put them into `.env.docker`, then recreate the
-`collaboration` container so it boots healthy.
-
-```bash
-# Both IDs in one query (psql inside the postgres container):
-docker exec alkemio_dev_postgres psql -U synapse -d alkemio -tA -c "
-  SELECT sb.id || ' ' || sb.\"authorizationId\"
-  FROM storage_bucket sb
-  JOIN storage_aggregator sa ON sb.id = sa.\"directStorageId\"
-  WHERE sa.type = 'platform';"
-# → prints:  <storage_bucket_id> <storage_bucket_authorization_id>
-```
-
-Set the two values in `.env.docker`:
-
-```bash
-# replace the two empty assignments
-COLLAB_FILE_SERVICE_STORAGE_BUCKET_ID=<storage_bucket_id>
-COLLAB_FILE_SERVICE_AUTHORIZATION_ID=<storage_bucket_authorization_id>
-```
-
-Recreate just the collaboration container so it picks up the new env:
-
-```bash
-docker compose -f quickstart-services.yml --env-file .env.docker up -d --force-recreate collaboration
-```
-
-> Why this is manual: the seed uses `randomUUID()` for both the bucket and its
-> authorization policy, so the values differ on every `down -v` / reset. They are
-> **references, not secrets** (file-service does not validate that the bucket row
-> exists — it stores documents under whatever UUIDs the caller supplies), but
-> using the real platform bucket keeps the blobs consistent with the rest of the
-> platform's storage. See the "Assumptions / risks" section for the
-> `CHECKPOINT_STORE=inline` shortcut that skips this step entirely.
+The collaboration service no longer takes a platform-bucket fallback: it persists
+each document's snapshot into that document's OWN storage bucket. The server
+supplies `storageBucketId` in the `collaboration-save` / `collaboration-fetch`
+metadata, and the migration's `--verify` mode flags any bucketless owner before
+rollout. There is nothing to extract or wire — the `collaboration` container boots
+healthy on `FILE_SERVICE_URL` alone. **This step requires no action; continue to
+step 4.**
 
 ---
 
@@ -377,16 +347,17 @@ docker compose -f quickstart-services.yml --env-file .env.docker down -v   # inc
    `authorization-evaluation` (no `-service` suffix). The compose env uses the
    dev hostname.
 
-5. **Fast path to isolate WS/Yjs from infra.** If you only want to prove the
-   real-time sync path and skip the file-service IDs + authZ entirely, run the
-   collaboration container with the zero-dependency standalone modes:
+5. **Fast path to isolate WS/Yjs from infra (tests/local fixture ONLY).** To prove
+   just the real-time sync path without file-service or authZ, the collaboration
+   container can run an explicit in-process **tests/local fixture** configuration:
    `AUTH_MODE=open`, `CHECKPOINT_STORE=inline`, `METADATA_STORE=inmemory`,
-   `HUB_MODE=inmemory`. It boots with no DB/bus/file-service wiring and any
-   WS handshake is accepted — useful to confirm `/collab/{id}` convergence before
-   layering auth + persistence back on. (Persistence won't survive a restart in
-   this mode.)
+   `HUB_MODE=inmemory`. It boots with no DB/bus/file-service wiring and accepts any
+   WS handshake — useful to confirm `/collab/{id}` convergence before layering auth
+   + persistence back on. This is **open-auth and non-durable** (nothing survives a
+   restart) and is **NOT a supported deployment / product mode** — the
+   collaboration service withdraws standalone as a deployment topology; use it only
+   as a local smoke fixture.
 
 6. **No migration on first boot.** This runbook deliberately starts from empty
    volumes; legacy memo/whiteboard content migration is out of scope. Rooms
-   lazily materialize, so a fresh stack needs nothing pre-provisioned beyond the
-   two file-service reference IDs (step 3).
+   lazily materialize, so a fresh stack needs nothing pre-provisioned.

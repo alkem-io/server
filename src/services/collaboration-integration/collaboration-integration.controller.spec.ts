@@ -5,6 +5,7 @@ import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock, vi } from 'vitest';
 import { CollaborationIntegrationController } from './collaboration-integration.controller';
 import { CollaborationIntegrationService } from './collaboration-integration.service';
+import { CollaborationMessagePattern } from './types';
 
 // A minimal RmqContext stub exposing the channel + message the `ack` util uses.
 const rmqContext = () => {
@@ -25,8 +26,6 @@ describe('CollaborationIntegrationController', () => {
   let integrationService: {
     save: Mock;
     fetch: Mock;
-    delete: Mock;
-    info: Mock;
     contribution: Mock;
   };
 
@@ -72,29 +71,6 @@ describe('CollaborationIntegrationController', () => {
     expect(result).toEqual({ found: false });
   });
 
-  it('acks and delegates delete', async () => {
-    const { ctx, channel } = rmqContext();
-    integrationService.delete.mockResolvedValue({ success: true });
-
-    await controller.delete({ id: 'x' }, ctx);
-
-    expect(channel.ack).toHaveBeenCalledTimes(1);
-    expect(integrationService.delete).toHaveBeenCalledWith({ id: 'x' });
-  });
-
-  it('acks and delegates info', async () => {
-    const { ctx, channel } = rmqContext();
-    integrationService.info.mockResolvedValue({ read: true, update: false });
-
-    await controller.info({ actorId: 'a', id: 'x' }, ctx);
-
-    expect(channel.ack).toHaveBeenCalledTimes(1);
-    expect(integrationService.info).toHaveBeenCalledWith({
-      actorId: 'a',
-      id: 'x',
-    });
-  });
-
   it('acks and delegates contribution', async () => {
     const { ctx, channel } = rmqContext();
     integrationService.contribution.mockResolvedValue(undefined);
@@ -106,5 +82,27 @@ describe('CollaborationIntegrationController', () => {
       id: 'x',
       users: [{ id: 'u' }],
     });
+  });
+
+  it('registers EXACTLY the unified message patterns SAVE + FETCH — the producerless delete/info patterns are retired', () => {
+    expect(Object.values(CollaborationMessagePattern)).toEqual([
+      'collaboration-save',
+      'collaboration-fetch',
+    ]);
+  });
+
+  it('exposes no delete/info RPC handlers, only the surviving save/fetch/contribution + office-document surfaces', () => {
+    expect((controller as unknown as Record<string, unknown>).delete).toBe(
+      undefined
+    );
+    expect((controller as unknown as Record<string, unknown>).info).toBe(
+      undefined
+    );
+    expect(typeof controller.save).toBe('function');
+    expect(typeof controller.fetch).toBe('function');
+    expect(typeof controller.contribution).toBe('function');
+    expect(typeof controller.officeDocumentContribution).toBe('function');
+    expect(typeof controller.officeDocumentView).toBe('function');
+    expect(typeof controller.officeDocumentRename).toBe('function');
   });
 });

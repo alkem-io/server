@@ -13,19 +13,12 @@ import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { CollaborationIntegrationService } from './collaboration-integration.service';
 import {
   ContributionInputData,
-  DeleteInputData,
   FetchInputData,
-  InfoInputData,
   OfficeDocumentContributionsInputData,
   OfficeDocumentRenameInputData,
   SaveInputData,
 } from './inputs';
-import {
-  DeleteOutputData,
-  FetchOutputData,
-  InfoOutputData,
-  SaveOutputData,
-} from './outputs';
+import { FetchOutputData, SaveOutputData } from './outputs';
 import {
   CollaborationEventPattern,
   CollaborationMessagePattern,
@@ -74,32 +67,6 @@ export class CollaborationIntegrationController {
     );
     ack(context);
     return this.integrationService.fetch(data);
-  }
-
-  @MessagePattern(CollaborationMessagePattern.DELETE, Transport.RMQ)
-  public delete(
-    @Payload() data: DeleteInputData,
-    @Ctx() context: RmqContext
-  ): Promise<DeleteOutputData> {
-    this.logger.verbose?.(
-      `Received collaboration-delete for document: ${data.id}`,
-      LogContext.COLLABORATION_INTEGRATION
-    );
-    ack(context);
-    return this.integrationService.delete(data);
-  }
-
-  @MessagePattern(CollaborationMessagePattern.INFO, Transport.RMQ)
-  public info(
-    @Payload() data: InfoInputData,
-    @Ctx() context: RmqContext
-  ): Promise<InfoOutputData> {
-    this.logger.verbose?.(
-      `Received collaboration-info for document: ${data.id}`,
-      LogContext.COLLABORATION_INTEGRATION
-    );
-    ack(context);
-    return this.integrationService.info(data);
   }
 
   @EventPattern(CollaborationEventPattern.CONTRIBUTION, Transport.RMQ)

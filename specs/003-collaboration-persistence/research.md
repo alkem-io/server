@@ -279,6 +279,12 @@ hand-reviewed, reversible migration with a back-fill (DEC-1).
   the unified RPC responder queue the server CONSUMES (`collaboration-save`/`-fetch`/
   `-delete`/`-info`/`-contribution`, DEC-3). Only the lifecycle EVENT routing moved to
   the dedicated `COLLABORATION_LIFECYCLE` queue.
+  - **SUPERSEDED (Release-A producerless cleanup, 006, 2026-08-24):** the CURRENT RPC
+    surface on this queue is `collaboration-save` + `collaboration-fetch` only, plus
+    the `collaboration-contribution` EVENT. `collaboration-delete` (the server owns
+    document deletion and then emits `document.deleted`, DEC-4) and
+    `collaboration-info` (authz owned by the authzeval path) were retired as
+    producerless. The line above is the original DEC-3 record, preserved.
 
 ### DEC-5 — AuthZ: surface `authorizationPolicyId`; verify parity; no evaluate endpoint
 - **Decision**: carry the document's parent-entity `AuthorizationPolicy.id` (=

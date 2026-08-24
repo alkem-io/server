@@ -10,8 +10,11 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * `contentPointer IS NULL` means "not yet migrated" — the operator back-fill
  * (`CollaborationMigrationService.migrateAll`) converts each legacy document's
  * content to a real file-service snapshot and sets the pointer to the resulting
- * file-service id (never the row id). A later Release B enforces `NOT NULL` and
- * drops the legacy content columns, but only after the back-fill is verified.
+ * file-service id (never the row id). A later Release B fails-closed on any
+ * NULL/blank pointer under its write fence and drops ONLY the legacy content
+ * columns (`memo.content`, `whiteboard.content`), after the back-fill is verified;
+ * the `contentPointer` column STAYS NULLABLE — a freshly-created row legitimately
+ * has a transient NULL before its initial snapshot pointer is attached.
  * Reversible: `down()` drops the column.
  */
 export class AddContentPointer1781802081405 implements MigrationInterface {
