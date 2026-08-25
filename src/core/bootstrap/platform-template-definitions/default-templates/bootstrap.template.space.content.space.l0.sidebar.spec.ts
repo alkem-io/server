@@ -19,6 +19,8 @@ describe('bootstrapTemplateSpaceContentSpaceL0 — sidebar defaults', () => {
     expect(findState(FlowState.HOME)?.settings?.sidebar).toEqual([
       SidebarWidget.INTENT,
       SidebarWidget.ABOUT,
+      SidebarWidget.CREATE_POST,
+      SidebarWidget.APPLICATION_BUTTON,
       SidebarWidget.SUBSPACE_LINKS,
       SidebarWidget.EVENTS,
       SidebarWidget.UPDATES,
@@ -27,6 +29,8 @@ describe('bootstrapTemplateSpaceContentSpaceL0 — sidebar defaults', () => {
 
   it('gives Community the second-tab widget set, in order', () => {
     expect(findState(FlowState.COMMUNITY)?.settings?.sidebar).toEqual([
+      SidebarWidget.CREATE_POST,
+      SidebarWidget.APPLICATION_BUTTON,
       SidebarWidget.INTENT,
       SidebarWidget.CONTACT_LEADS,
       SidebarWidget.ADD_USER,
@@ -35,14 +39,18 @@ describe('bootstrapTemplateSpaceContentSpaceL0 — sidebar defaults', () => {
     ]);
   });
 
-  it('gives Subspaces only the Intention & Leads card', () => {
+  it('gives Subspaces the third-tab widget set, in order', () => {
     expect(findState(FlowState.SUBSPACES)?.settings?.sidebar).toEqual([
+      SidebarWidget.CREATE_POST,
+      SidebarWidget.APPLICATION_BUTTON,
       SidebarWidget.INTENT,
     ]);
   });
 
   it('gives Knowledge the generic default', () => {
     expect(findState(FlowState.KNOWLEDGE)?.settings?.sidebar).toEqual([
+      SidebarWidget.CREATE_POST,
+      SidebarWidget.APPLICATION_BUTTON,
       SidebarWidget.INTENT,
       SidebarWidget.INDEX,
     ]);

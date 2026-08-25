@@ -73,10 +73,10 @@ export class BackfillInnovationFlowStateSidebar1786600000000
         ifs.settings,
         '{sidebar}',
         CASE ranked.position
-          WHEN 1 THEN '["intent","about","createPost","subspaceLinks","events","updates"]'::jsonb
-          WHEN 2 THEN '["createPost","intent","contactLeads","addUser","virtualContributors","guidelines"]'::jsonb
-          WHEN 3 THEN '["createPost","intent"]'::jsonb
-          ELSE '["createPost","intent","index"]'::jsonb
+          WHEN 1 THEN '["intent","about","createPost","applicationButton","subspaceLinks","events","updates"]'::jsonb
+          WHEN 2 THEN '["createPost","applicationButton","intent","contactLeads","addUser","virtualContributors","guidelines"]'::jsonb
+          WHEN 3 THEN '["createPost","applicationButton","intent"]'::jsonb
+          ELSE '["createPost","applicationButton","intent","index"]'::jsonb
         END,
         true
       )
@@ -106,10 +106,10 @@ export class BackfillInnovationFlowStateSidebar1786600000000
         ifs.settings,
         '{sidebar}',
         CASE ranked.position
-          WHEN 1 THEN '["intent","about","createPost","subspaceLinks","events","updates"]'::jsonb
-          WHEN 2 THEN '["createPost","intent","contactLeads","addUser","virtualContributors","guidelines"]'::jsonb
-          WHEN 3 THEN '["createPost","intent"]'::jsonb
-          ELSE '["createPost","intent","index"]'::jsonb
+          WHEN 1 THEN '["intent","about","createPost","applicationButton","subspaceLinks","events","updates"]'::jsonb
+          WHEN 2 THEN '["createPost","applicationButton","intent","contactLeads","addUser","virtualContributors","guidelines"]'::jsonb
+          WHEN 3 THEN '["createPost","applicationButton","intent"]'::jsonb
+          ELSE '["createPost","applicationButton","intent","index"]'::jsonb
         END,
         true
       )
@@ -121,7 +121,7 @@ export class BackfillInnovationFlowStateSidebar1786600000000
     // Branch C: catch-all — L1/L2 space flows, non-L0 templates, and orphaned states.
     await queryRunner.query(`
       UPDATE innovation_flow_state
-      SET settings = jsonb_set(settings, '{sidebar}', '["createPost","intent","index"]'::jsonb, true)
+      SET settings = jsonb_set(settings, '{sidebar}', '["createPost","applicationButton","intent","index"]'::jsonb, true)
       WHERE settings -> 'sidebar' IS NULL
     `);
 

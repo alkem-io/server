@@ -849,6 +849,7 @@ The widgets available for the Space sidepanel, per InnovationFlow state (tab).
 enum SidebarWidget {
   ABOUT
   ADD_USER
+  APPLICATION_BUTTON
   CONTACT_LEADS
   CREATE_POST
   EVENTS
