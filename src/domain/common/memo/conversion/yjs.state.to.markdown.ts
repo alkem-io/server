@@ -16,13 +16,22 @@ import { ImageExtension } from './image.extension';
 export const yjsStateToMarkdown = (state: Buffer) => {
   const binaryV2State = new Uint8Array(state);
 
+  // Decode into a scratch Y.Doc, extract the ProseMirror tree, and destroy the doc
+  // immediately (try/finally so a decode/convert throw still frees it). This helper is
+  // called per row by the migration verifier and several read paths, so a leaked doc per
+  // call would accumulate — the doc is not needed once `pmDoc` is materialized.
   const doc = new Y.Doc();
-  Y.applyUpdateV2(doc, new Uint8Array(binaryV2State));
-  // Convert the Yjs document to a ProseMirror document
-  const pmDoc = yXmlFragmentToProseMirrorRootNode(
-    doc.getXmlFragment('default'),
-    markdownSchema
-  );
+  let pmDoc: ProseMirrorNode;
+  try {
+    Y.applyUpdateV2(doc, binaryV2State);
+    // Convert the Yjs document to a ProseMirror document
+    pmDoc = yXmlFragmentToProseMirrorRootNode(
+      doc.getXmlFragment('default'),
+      markdownSchema
+    );
+  } finally {
+    doc.destroy();
+  }
   // Build a new array of child nodes, replacing empty paragraphs with paragraphs containing a non-breaking space
   // This ensures that empty paragraphs are preserved in the markdown output
   // (ProseMirror and TipTap tend to ignore completely empty paragraphs)

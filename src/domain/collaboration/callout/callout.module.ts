@@ -5,6 +5,7 @@ import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.modul
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ClassificationModule } from '@domain/common/classification/classification.module';
 import { TagsetTemplateModule } from '@domain/common/tagset-template/tagset.template.module';
+import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { Module } from '@nestjs/common';
@@ -46,6 +47,7 @@ import { TaskBoardResolverMutations } from './task-board/task.board.resolver.mut
     EntityResolverModule,
     UserLookupModule,
     NamingModule,
+    WhiteboardModule,
     CalloutFramingModule,
     CalloutContributionModule,
     CalloutContributionDefaultsModule,

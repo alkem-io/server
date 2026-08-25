@@ -19,6 +19,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken, getRepositoryToken } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { actorContextData } from '@test/data/actorContext.mock';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -152,6 +153,7 @@ describe('CalloutService', () => {
         calloutData,
         tagsetTemplates,
         storageAggregator,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -164,13 +166,30 @@ describe('CalloutService', () => {
       ).toHaveBeenCalled();
     });
 
+    // RED: an anonymous/system context (e.g. bootstrap template seeding) carries
+    // actorID='' → userID=''. That must NOT land in the nullable `uuid` createdBy
+    // column verbatim (Postgres rejects '' as a uuid, breaking fresh-DB bootstrap);
+    // it must map to NULL/undefined.
+    it('maps an empty-string userID to an undefined createdBy (never a malformed uuid)', async () => {
+      const result = await service.createCallout(
+        createCalloutInput(),
+        tagsetTemplates,
+        storageAggregator,
+        actorContextData.actorContext,
+        ''
+      );
+
+      expect(result.createdBy).toBeUndefined();
+    });
+
     it('should default sortOrder to 10 when not provided', async () => {
       const calloutData = createCalloutInput();
 
       await service.createCallout(
         calloutData,
         tagsetTemplates,
-        storageAggregator
+        storageAggregator,
+        actorContextData.actorContext
       );
 
       expect(calloutData.sortOrder).toBe(10);
@@ -185,11 +204,31 @@ describe('CalloutService', () => {
         calloutData,
         tagsetTemplates,
         storageAggregator,
+        actorContextData.actorContext,
         'user-1'
       );
 
       expect(result.publishedDate).toBeInstanceOf(Date);
       expect(result.publishedBy).toBe('user-1');
+    });
+
+    // RED (reproduced on the real isolated stack): fresh-DB bootstrap seeds platform
+    // templates under the anonymous/system context (actorID='' → userID=''); a PUBLISHED
+    // callout then wrote '' into the nullable `uuid` publishedBy column → Postgres
+    // "invalid input syntax for type uuid" → BootstrapException, server never boots.
+    // The guard maps '' → undefined (NULL), same as createdBy.
+    it('maps an empty-string userID to an undefined publishedBy for a PUBLISHED callout', async () => {
+      const result = await service.createCallout(
+        createCalloutInput({
+          settings: { visibility: CalloutVisibility.PUBLISHED },
+        }),
+        tagsetTemplates,
+        storageAggregator,
+        actorContextData.actorContext,
+        ''
+      );
+
+      expect(result.publishedBy).toBeUndefined();
     });
 
     it('should create contributions when userID and contributions data are provided', async () => {
@@ -213,6 +252,7 @@ describe('CalloutService', () => {
         calloutData,
         tagsetTemplates,
         storageAggregator,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -233,6 +273,7 @@ describe('CalloutService', () => {
         calloutData,
         tagsetTemplates,
         storageAggregator,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -252,7 +293,12 @@ describe('CalloutService', () => {
       });
 
       await expect(
-        service.createCallout(calloutData, tagsetTemplates, storageAggregator)
+        service.createCallout(
+          calloutData,
+          tagsetTemplates,
+          storageAggregator,
+          actorContextData.actorContext
+        )
       ).rejects.toThrow(ValidationException);
     });
 
@@ -267,7 +313,12 @@ describe('CalloutService', () => {
       });
 
       await expect(
-        service.createCallout(calloutData, tagsetTemplates, storageAggregator)
+        service.createCallout(
+          calloutData,
+          tagsetTemplates,
+          storageAggregator,
+          actorContextData.actorContext
+        )
       ).rejects.toThrow(ValidationException);
     });
 
@@ -282,7 +333,12 @@ describe('CalloutService', () => {
       });
 
       await expect(
-        service.createCallout(calloutData, tagsetTemplates, storageAggregator)
+        service.createCallout(
+          calloutData,
+          tagsetTemplates,
+          storageAggregator,
+          actorContextData.actorContext
+        )
       ).rejects.toThrow(ValidationException);
     });
   });
@@ -339,6 +395,7 @@ describe('CalloutService', () => {
         calloutData,
         tagsetTemplates,
         storageAggregator,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -363,6 +420,7 @@ describe('CalloutService', () => {
         calloutData,
         tagsetTemplates,
         storageAggregator,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -394,6 +452,7 @@ describe('CalloutService', () => {
           calloutData,
           tagsetTemplates,
           storageAggregator,
+          actorContextData.actorContext,
           'user-1'
         )
       ).rejects.toThrow(ValidationException);
@@ -410,6 +469,7 @@ describe('CalloutService', () => {
           calloutData,
           tagsetTemplates,
           storageAggregator,
+          actorContextData.actorContext,
           'user-1'
         )
       ).rejects.toThrow(ValidationException);
@@ -429,6 +489,7 @@ describe('CalloutService', () => {
         calloutData,
         tagsetTemplates,
         storageAggregator,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -451,6 +512,7 @@ describe('CalloutService', () => {
         calloutData,
         tagsetTemplates,
         storageAggregator,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -961,6 +1023,7 @@ describe('CalloutService', () => {
           contributionDefaults: {},
           sortOrder: 5,
         } as any,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -985,9 +1048,9 @@ describe('CalloutService', () => {
         storageAggregatorResolverService.getStorageAggregatorForCallout
       ).mockResolvedValue({ id: 'agg-1' } as any);
 
-      await expect(service.updateCallout(callout, {} as any)).rejects.toThrow(
-        EntityNotInitializedException
-      );
+      await expect(
+        service.updateCallout(callout, {} as any, actorContextData.actorContext)
+      ).rejects.toThrow(EntityNotInitializedException);
     });
 
     it('should create comments room when enabled and not existing', async () => {
@@ -1019,7 +1082,11 @@ describe('CalloutService', () => {
         id: 'new-room',
       } as any);
 
-      await service.updateCallout(callout, {} as any);
+      await service.updateCallout(
+        callout,
+        {} as any,
+        actorContextData.actorContext
+      );
 
       expect(roomService.createRoom).toHaveBeenCalled();
     });
@@ -1078,6 +1145,7 @@ describe('CalloutService', () => {
       await service.updateCallout(
         callout,
         { framing: { type: CalloutFramingType.NONE } } as any,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -1189,6 +1257,7 @@ describe('CalloutService', () => {
 
       const result = await service.createContributionOnCallout(
         { calloutID: 'callout-1' } as any,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -1208,6 +1277,7 @@ describe('CalloutService', () => {
       await expect(
         service.createContributionOnCallout(
           { calloutID: 'callout-1' } as any,
+          actorContextData.actorContext,
           'user-1'
         )
       ).rejects.toThrow(EntityNotInitializedException);
@@ -1230,6 +1300,7 @@ describe('CalloutService', () => {
       await expect(
         service.createContributionOnCallout(
           { calloutID: 'callout-1' } as any,
+          actorContextData.actorContext,
           'user-1'
         )
       ).rejects.toThrow(EntityNotInitializedException);

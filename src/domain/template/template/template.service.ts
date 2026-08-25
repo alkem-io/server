@@ -82,7 +82,8 @@ export class TemplateService {
    */
   async createTemplate(
     templateData: CreateTemplateInput,
-    storageAggregator: IStorageAggregator
+    storageAggregator: IStorageAggregator,
+    actorContext: ActorContext
   ): Promise<ITemplate> {
     // Phase 1: build entity tree in memory (no file-service-go calls).
     const template: ITemplate = Template.create(templateData);
@@ -189,7 +190,8 @@ export class TemplateService {
         template.contentSpace =
           await this.templateContentSpaceService.createTemplateContentSpace(
             spaceData!,
-            storageAggregator
+            storageAggregator,
+            actorContext
           );
 
         break;
@@ -209,9 +211,16 @@ export class TemplateService {
             },
             nameID: randomUUID().slice(0, 8),
             content: templateData.whiteboard.content,
+            // Seed the template's whiteboard from the source whiteboard's stored snapshot
+            // (duplicate / import-from-library). `content` and `sourceWhiteboardID` are now
+            // mutually exclusive; createWhiteboard authorizes READ on the dereferenced source
+            // (and per-document-authorizes any re-homed media) under this actorContext, so the
+            // authorization is centralized in the service, not left to each resolver.
+            sourceWhiteboardID: templateData.whiteboard.sourceWhiteboardID,
             previewSettings: templateData.whiteboard.previewSettings,
           },
-          storageAggregator
+          storageAggregator,
+          actorContext
         );
         break;
       }
@@ -228,7 +237,8 @@ export class TemplateService {
         template.callout = await this.calloutService.createCallout(
           templateData.calloutData!,
           [],
-          storageAggregator
+          storageAggregator,
+          actorContext
         );
         break;
       }
@@ -425,7 +435,8 @@ export class TemplateService {
   // be done directly using the updateXXX mutation.
   async updateTemplate(
     templateInput: ITemplate,
-    templateData: UpdateTemplateInput
+    templateData: UpdateTemplateInput,
+    actorContext: ActorContext
   ): Promise<ITemplate> {
     const template = await this.getTemplateOrFail(templateInput.id, {
       relations: {
@@ -480,8 +491,15 @@ export class TemplateService {
       template.whiteboard &&
       templateData.whiteboardContent
     ) {
-      // If we don't update the content here, the whiteboard will is overwritten with the old content
-      template.whiteboard.content = templateData.whiteboardContent;
+      // Whiteboard content is stored as a Yjs-V2 snapshot in the whiteboard's
+      // bucket, not an inline column (006-collab-content-unification): route the
+      // new scene through the snapshot-write path so the stored snapshot (and the
+      // first-open seed) reflect the template update.
+      await this.whiteboardService.updateWhiteboardContent(
+        template.whiteboard.id,
+        templateData.whiteboardContent,
+        actorContext
+      );
     }
     if (
       template.type === TemplateType.CLASSIFICATION &&
@@ -590,6 +608,7 @@ export class TemplateService {
       sourceSpace,
       templateInput.contentSpace,
       true,
+      actorContext,
       actorContext.actorID
     );
 
@@ -642,6 +661,7 @@ export class TemplateService {
     space: ISpace,
     templateContentSpace: ITemplateContentSpace,
     addCallouts: boolean,
+    actorContext: ActorContext,
     userID: string
   ): Promise<ITemplateContentSpace> {
     if (
@@ -682,6 +702,7 @@ export class TemplateService {
         templateContentSpace.collaboration.calloutsSet,
         calloutsFromSourceCollaboration,
         storageAggregator,
+        actorContext,
         userID
       );
       templateContentSpace.collaboration.calloutsSet.callouts?.push(

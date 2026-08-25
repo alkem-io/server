@@ -57,8 +57,10 @@ pnpm run migration:run
 # ---------- Step 5: Start dev server in background ----------
 info "Step 5/6: Starting dev server"
 : > "$SERVER_LOG"
-setsid pnpm start:dev >> "$SERVER_LOG" 2>&1 &
+set -m
+pnpm start:dev >> "$SERVER_LOG" 2>&1 &
 DEV_SERVER_PID=$!
+set +m
 echo "  PID: $DEV_SERVER_PID | log: $SERVER_LOG"
 
 echo "  Waiting for Kratos..."

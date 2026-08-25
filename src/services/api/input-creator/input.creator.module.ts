@@ -7,6 +7,7 @@ import { WhiteboardModule } from '@domain/common/whiteboard';
 import { CommunityGuidelinesModule } from '@domain/community/community-guidelines/community.guidelines.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
 import { Module } from '@nestjs/common';
+import { FileServiceAdapterModule } from '@services/adapters/file-service-adapter/file.service.adapter.module';
 import { InputCreatorResolverFields } from './input.creator.resolver.fields';
 import { InputCreatorResolverQueries } from './input.creator.resolver.queries';
 import { InputCreatorService } from './input.creator.service';
@@ -21,6 +22,7 @@ import { InputCreatorService } from './input.creator.service';
     TaskBoardModule,
     CommunityGuidelinesModule,
     SpaceLookupModule,
+    FileServiceAdapterModule,
   ],
   providers: [
     InputCreatorService,

@@ -37,4 +37,21 @@ export enum MessagingQueue {
   IN_APP_NOTIFICATIONS = 'alkemio-in-app-notifications',
   PUSH_NOTIFICATIONS = 'alkemio-push-notifications',
   COLLABORATION_DOCUMENT_SERVICE = 'collaboration-document-service',
+  // Unified collaboration-service RPC responder queue (memo + whiteboard): the
+  // server CONSUMES the unified `collaboration-save` / `collaboration-fetch` RPC
+  // handlers + the `collaboration-contribution` event here. (The `-delete` / `-info`
+  // RPCs were retired as producerless — the server owns document deletion and emits
+  // `document.deleted`, and authz is owned by the authzeval path.) It does NOT carry
+  // the server -> collab lifecycle events — those go on the dedicated
+  // COLLABORATION_LIFECYCLE queue, so a `document.deleted` is never delivered back to
+  // the server's own responder. At cutover this replaces
+  // COLLABORATION_DOCUMENT_SERVICE + WHITEBOARDS.
+  COLLABORATION_SERVICE = 'alkemio-collaboration',
+  // Dedicated, durable server -> collaboration-service lifecycle queue. Carries
+  // owner-driven `document.deleted` (FR-006/FR-023), published and confirmed
+  // before deletion begins. Consumed
+  // ONLY by the collaboration service — MUST NOT reuse COLLABORATION_SERVICE
+  // (that is the server's own responder queue). Cross-repo contract: the collab
+  // consumer binds this exact name.
+  COLLABORATION_LIFECYCLE = 'alkemio-collaboration-lifecycle',
 }

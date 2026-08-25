@@ -1,5 +1,33 @@
+import { yXmlFragmentToProseMirrorRootNode } from '@tiptap/y-tiptap';
+import type { Node as ProseMirrorNode } from 'prosemirror-model';
+import * as Y from 'yjs';
+import { markdownSchema } from './markdown.schema';
 import { markdownToYjsV2State } from './markdown.to.yjs.v2.state';
 import { yjsStateToMarkdown } from './yjs.state.to.markdown';
+
+// Decode a forward-converted Yjs state back to a ProseMirror doc (no reverse
+// markdown serialization involved) so a test can assert exactly what the forward
+// converter stored on a node's attrs.
+const decodeForward = (markdown: string): ProseMirrorNode => {
+  const state = markdownToYjsV2State(markdown);
+  const doc = new Y.Doc();
+  Y.applyUpdateV2(doc, new Uint8Array(state));
+  return yXmlFragmentToProseMirrorRootNode(
+    doc.getXmlFragment('default'),
+    markdownSchema
+  );
+};
+
+const firstNodeOfType = (
+  doc: ProseMirrorNode,
+  typeName: string
+): ProseMirrorNode | undefined => {
+  let found: ProseMirrorNode | undefined;
+  doc.descendants(node => {
+    if (!found && node.type.name === typeName) found = node;
+  });
+  return found;
+};
 
 describe('yjsStateToMarkdown', () => {
   // Helper: convert markdown -> yjs state -> markdown to verify round-trip
@@ -7,6 +35,34 @@ describe('yjsStateToMarkdown', () => {
     const state = markdownToYjsV2State(markdown);
     return yjsStateToMarkdown(Buffer.from(state));
   };
+
+  it('destroys its internal scratch Y.Doc (no per-call leak — regression)', () => {
+    // Build the state BEFORE spying so only the helper's own doc.destroy() is counted.
+    const state = Buffer.from(markdownToYjsV2State('leak check'));
+    const destroySpy = vi.spyOn(Y.Doc.prototype, 'destroy');
+    try {
+      yjsStateToMarkdown(state);
+      // The scratch doc created inside the helper MUST be destroyed (try/finally),
+      // else every per-row verifier / read-path call leaks one Y.Doc.
+      expect(destroySpy).toHaveBeenCalled();
+    } finally {
+      destroySpy.mockRestore();
+    }
+  });
+
+  it('destroys its internal scratch Y.Doc even when decode THROWS (regression)', () => {
+    const destroySpy = vi.spyOn(Y.Doc.prototype, 'destroy');
+    try {
+      // Demonstrably invalid update bytes → applyUpdateV2 throws inside the try; the
+      // finally must still free the scratch doc rather than leak it on the error path.
+      expect(() =>
+        yjsStateToMarkdown(Buffer.from([1, 2, 3, 4, 5, 6, 7, 8, 9]))
+      ).toThrow();
+      expect(destroySpy).toHaveBeenCalled();
+    } finally {
+      destroySpy.mockRestore();
+    }
+  });
 
   describe('basic text', () => {
     it('should convert simple paragraph text', () => {
@@ -155,11 +211,35 @@ describe('yjsStateToMarkdown', () => {
   });
 
   describe('images', () => {
-    it('should preserve image URL', () => {
+    it('should preserve image URL and alt text through a round-trip', () => {
       const result = roundTrip('![alt text](https://example.com/img.png)');
 
-      // Alt text may be lost in round-trip, but URL should be preserved
-      expect(result).toContain('https://example.com/img.png');
+      // Exact preservation — no tolerated loss. The forward converter reads the alt
+      // from the image token's children via renderInlineAsText (attrGet('alt') is an
+      // empty placeholder), so the reverse renderToMarkdown can re-emit it.
+      expect(result).toContain('![alt text](https://example.com/img.png)');
+    });
+
+    it('forward converter stores src, alt and title on the image node', () => {
+      const image = firstNodeOfType(
+        decodeForward('![alt text](https://example.com/img.png "a title")'),
+        'image'
+      );
+
+      expect(image).toBeDefined();
+      expect(image?.attrs.src).toBe('https://example.com/img.png');
+      expect(image?.attrs.alt).toBe('alt text');
+      expect(image?.attrs.title).toBe('a title');
+    });
+
+    it('stores CommonMark plain-text alt with markup stripped (not raw markers)', () => {
+      // CommonMark alt is plain text: emphasis markers are dropped, the text kept.
+      const image = firstNodeOfType(
+        decodeForward('![*em* text](https://example.com/img.png)'),
+        'image'
+      );
+
+      expect(image?.attrs.alt).toBe('em text');
     });
   });
 });

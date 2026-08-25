@@ -1,4 +1,3 @@
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { vi } from 'vitest';
 import {
@@ -6,24 +5,17 @@ import {
   CAPABILITY_DISABLED_REASON,
 } from '../capabilities/assistant.capability.gate.service';
 import { CreateWhiteboardTool } from './create-whiteboard.tool';
-import { UpdateWhiteboardContentTool } from './update-whiteboard-content.tool';
 
 /**
  * US2 (T024/T025) — delegated WRITE tools are authorization- AND gate-enforced
  * server-side. The confirmation FLOW lives in assistant-service; the server only
- * enforces (a) entity authorization via the SAME AuthorizationService as GraphQL,
- * and (b) the per-tool capability gate over the write tools.
+ * enforces (a) entity authorization via the SAME AuthorizationService as GraphQL
+ * (delegated to the resolver path the GraphQL mutation uses), and (b) the per-tool
+ * capability gate over the write tools.
  *
- *  - T024 (FR-012): a delegated `create_whiteboard` / `update_whiteboard_content`
- *    runs under the on-behalf-of user's ActorContext through the byte-identical
- *    AuthorizationService — a permitted user's write succeeds; an unpermitted
- *    user's is REFUSED with a clear reason (never executes the mutation).
- *  - T025 (FR-018/SC-009): the capability gate (T021) covers the write tools — a
- *    delegated call whose write capability is disabled → `capability_disabled`,
- *    even when the user could perform the write directly.
- *
- * Authorization is the SAME path as GraphQL — these tests assert the write tools
- * delegate to it under the DELEGATED ActorContext, never re-implementing auth.
+ * Whiteboard CONTENT writes (`edit_whiteboard_elements`) go through the native Yjs
+ * collaborator and are covered in `edit-whiteboard-elements.tool.spec.ts`; this
+ * suite covers the create path (`create_whiteboard`) + the capability gate.
  */
 describe('US2 — delegated writes are authorization-enforced (T024)', () => {
   const USER_ACTOR_ID = 'user-actor-1';
@@ -40,85 +32,6 @@ describe('US2 — delegated writes are authorization-enforced (T024)', () => {
         onBehalfOfUserId: USER_ACTOR_ID,
       },
     });
-
-  const validScene = JSON.stringify({
-    type: 'excalidraw',
-    version: 2,
-    elements: [],
-    appState: {},
-  });
-
-  describe('update_whiteboard_content', () => {
-    const whiteboardId = 'wb-1';
-    const authorization = { id: 'auth-policy-1' };
-
-    const buildTool = (granted: boolean) => {
-      const whiteboardService = {
-        getWhiteboardOrFail: vi
-          .fn()
-          .mockResolvedValue({ id: whiteboardId, authorization }),
-        updateWhiteboardContent: vi
-          .fn()
-          .mockResolvedValue({ id: whiteboardId, nameID: 'wb-1-name' }),
-      };
-      const authorizationService = {
-        isAccessGranted: vi.fn().mockReturnValue(granted),
-      };
-      const logger = { verbose: vi.fn(), warn: vi.fn(), error: vi.fn() };
-      const tool = new UpdateWhiteboardContentTool(
-        whiteboardService as any,
-        authorizationService as any,
-        {
-          getWhiteboardUrlPath: vi
-            .fn()
-            .mockResolvedValue('https://example/whiteboards/wb-1'),
-        } as any,
-        // templateService — only used for the fromTemplateId path; these tests
-        // pass explicit `content`, so a bare mock suffices.
-        { getTemplateOrFail: vi.fn(), getWhiteboard: vi.fn() } as any,
-        { emit: vi.fn() } as any,
-        logger as any
-      );
-      return { tool, whiteboardService, authorizationService };
-    };
-
-    it("a PERMITTED user's delegated write succeeds, authorizing as the user (UPDATE_CONTENT)", async () => {
-      const { tool, whiteboardService, authorizationService } = buildTool(true);
-      const ctx = delegatedUserContext();
-
-      const result = await tool.execute(
-        { whiteboardId, content: validScene },
-        ctx
-      );
-
-      // Authorization flows through the SAME AuthorizationService as GraphQL,
-      // against the DELEGATED user context (effective ⊆ user privileges).
-      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
-        ctx,
-        authorization,
-        AuthorizationPrivilege.UPDATE_CONTENT
-      );
-      expect(result.isError).toBeFalsy();
-      expect(whiteboardService.updateWhiteboardContent).toHaveBeenCalledWith(
-        whiteboardId,
-        validScene
-      );
-    });
-
-    it("an UNPERMITTED user's delegated write is REFUSED and never executes (FR-012)", async () => {
-      const { tool, whiteboardService } = buildTool(false);
-
-      const result = await tool.execute(
-        { whiteboardId, content: validScene },
-        delegatedUserContext()
-      );
-
-      expect(result.isError).toBe(true);
-      expect(result.content[0].text).toMatch(/Access denied/);
-      // The mutation must NOT run when authorization is refused.
-      expect(whiteboardService.updateWhiteboardContent).not.toHaveBeenCalled();
-    });
-  });
 
   describe('create_whiteboard', () => {
     const calloutId = 'callout-1';
@@ -149,7 +62,7 @@ describe('US2 — delegated writes are authorization-enforced (T024)', () => {
             .mockResolvedValue('https://example/whiteboards/wb-new'),
         } as any,
         // templateService + authorizationService — only used for the fromTemplateId
-        // path; these tests create with explicit/blank content, so bare mocks suffice.
+        // path; these tests create a blank board, so bare mocks suffice.
         { getTemplateOrFail: vi.fn(), getWhiteboard: vi.fn() } as any,
         { isAccessGranted: vi.fn().mockReturnValue(true) } as any,
         logger as any
@@ -162,7 +75,7 @@ describe('US2 — delegated writes are authorization-enforced (T024)', () => {
       const ctx = delegatedUserContext();
 
       const result = await tool.execute(
-        { calloutId, displayName: 'My board', content: validScene },
+        { calloutId, displayName: 'My board' },
         ctx
       );
 
@@ -181,7 +94,7 @@ describe('US2 — delegated writes are authorization-enforced (T024)', () => {
       const { tool } = buildTool(false);
 
       const result = await tool.execute(
-        { calloutId, displayName: 'My board', content: validScene },
+        { calloutId, displayName: 'My board' },
         delegatedUserContext()
       );
 
@@ -192,8 +105,8 @@ describe('US2 — delegated writes are authorization-enforced (T024)', () => {
 });
 
 /**
- * T025 — the per-tool capability gate (T021) covers the WRITE tools: a delegated
- * call whose write capability is disabled in the user's grant is refused
+ * T025 — the per-tool capability gate covers the WRITE tools: a delegated call
+ * whose write capability is disabled in the user's grant is refused
  * (`capability_disabled`) BEFORE the tool executes, even though the user could
  * perform the write directly (it is layered ON TOP of authorization).
  */
@@ -227,7 +140,7 @@ describe('US2 — the capability gate covers writes (T025)', () => {
     );
   };
 
-  for (const writeTool of ['create_whiteboard', 'update_whiteboard_content']) {
+  for (const writeTool of ['create_whiteboard', 'edit_whiteboard_elements']) {
     it(`refuses '${writeTool}' when the write capability is disabled (capability_disabled)`, async () => {
       const gate = buildGate([{ capability: writeTool, enabled: false }]);
       const reason = await gate.checkToolAllowed(writeTool, delegatedContext());

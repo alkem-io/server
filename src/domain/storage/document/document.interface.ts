@@ -51,4 +51,13 @@ export abstract class IDocument extends IAuthorizable {
    */
   imageWidth?: number;
   imageHeight?: number;
+
+  /**
+   * Transient file-service create/copy outcome. `false` means this request
+   * inserted the row; a caller with an exclusive/skip-dedup operation may use
+   * that fact for compensation. `true` means an existing per-bucket dedup row
+   * was reused and must never be deleted by the caller. Not persisted or exposed
+   * through GraphQL.
+   */
+  reused?: boolean;
 }

@@ -19,6 +19,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { limitAndShuffle } from '@common/utils';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
@@ -98,6 +99,7 @@ export class CalloutService {
     calloutData: CreateCalloutInput,
     classificationTagsetTemplates: ITagsetTemplate[],
     storageAggregator: IStorageAggregator,
+    actorContext: ActorContext,
     userID?: string,
     parentSpaceId?: string
   ): Promise<ICallout> {
@@ -113,12 +115,16 @@ export class CalloutService {
     callout.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.CALLOUT
     );
-    callout.createdBy = userID;
+    // `userID` is the initiating actor's UUID, but an anonymous/system context
+    // (e.g. bootstrap template seeding) carries actorID='' — map that to NULL so a
+    // malformed empty string never hits the nullable `uuid` createdBy column.
+    callout.createdBy = userID || undefined;
     callout.contributions = [];
 
     callout.framing = await this.calloutFramingService.createCalloutFraming(
       calloutData.framing,
       storageAggregator,
+      actorContext,
       userID
     );
 
@@ -153,7 +159,10 @@ export class CalloutService {
 
     if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
       callout.publishedDate = new Date();
-      callout.publishedBy = userID;
+      // Empty-string actorID (anonymous/system context, e.g. bootstrap template
+      // seeding) → NULL, never a malformed empty string in the nullable `uuid`
+      // publishedBy column (matches the createdBy guard above).
+      callout.publishedBy = userID || undefined;
     }
 
     // A generic 'task' tagset supplied through the classification input is never
@@ -186,6 +195,7 @@ export class CalloutService {
           calloutData.contributions,
           storageAggregator,
           callout.settings.contribution,
+          actorContext,
           userID,
           parentSpaceId,
           taskBoardTagsetTemplate
@@ -521,6 +531,7 @@ export class CalloutService {
   public async updateCallout(
     calloutInput: ICallout,
     calloutUpdateData: UpdateCalloutInput,
+    actorContext: ActorContext,
     userID?: string
   ): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(calloutInput.id, {
@@ -556,6 +567,7 @@ export class CalloutService {
         calloutUpdateData.framing,
         storageAggregator,
         callout.isTemplate,
+        actorContext,
         userID
       );
     }
@@ -920,6 +932,7 @@ export class CalloutService {
 
   public async createContributionOnCallout(
     contributionData: CreateContributionOnCalloutInput,
+    actorContext: ActorContext,
     userID: string
   ): Promise<ICalloutContribution> {
     const calloutID = contributionData.calloutID;
@@ -991,6 +1004,7 @@ export class CalloutService {
         storageAggregator,
         callout.settings.contribution,
         undefined, // parentSpaceId — resolved by admin sync for user-initiated contributions
+        actorContext,
         userID,
         boardTemplate
       );
@@ -1071,7 +1085,8 @@ export class CalloutService {
     contribution.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.CALLOUT_CONTRIBUTION
     );
-    contribution.createdBy = userID;
+    // Empty-string actorID (anonymous/system context) → NULL, never a malformed uuid.
+    contribution.createdBy = userID || undefined;
     contribution.collaboraDocument = collaboraDocument;
     contribution.callout = callout;
 
