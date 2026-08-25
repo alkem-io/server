@@ -529,9 +529,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_collaboration
     hostname: collaboration
-    # >>> MERGE GATE (006) <<< Exact PR #10 review image used by the canonical E2E.
-    # Replace with the immutable RELEASED collaboration-service digest before merge.
-    image: ghcr.io/alkem-io/collaboration-service:pr-10@sha256:3982550a5423d036f99b52dd5f3386b1cb1d9da4894b8c83d1786d7792aaa856
+    image: alkemio/collaboration-service:v0.0.1
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -592,10 +590,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_file_service
     hostname: file-service
-    # >>> MERGE GATE (006) <<< PR #53 supplies the bounded content-batch endpoint
-    # required by the Release-A verifier. Replace with the immutable RELEASED
-    # file-service digest before merge.
-    image: ghcr.io/alkem-io/file-service:pr-53@sha256:5acefd468b8c4790832cdcaa4f7273e262822405bdb1f0c6059cb02072584c3f
+    image: alkemio/file-service:v0.2.6
     depends_on:
       postgres:
         condition: service_healthy
