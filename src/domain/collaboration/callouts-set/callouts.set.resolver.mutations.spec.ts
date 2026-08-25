@@ -14,6 +14,7 @@ import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { Readable } from 'stream';
+import { CalloutContributionDefaultSourceService } from '../callout/callout.contribution.default.source.service';
 import { CalloutService } from '../callout/callout.service';
 import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
 import { CalloutsSetResolverMutations } from './callouts.set.resolver.mutations';
@@ -23,6 +24,7 @@ describe('CalloutsSetResolverMutations', () => {
   let resolver: CalloutsSetResolverMutations;
   let calloutsSetService: CalloutsSetService;
   let calloutService: CalloutService;
+  let contributionDefaultSourceService: CalloutContributionDefaultSourceService;
   let authorizationService: AuthorizationService;
   let _authorizationPolicyService: AuthorizationPolicyService;
   let calloutAuthorizationService: CalloutAuthorizationService;
@@ -45,6 +47,9 @@ describe('CalloutsSetResolverMutations', () => {
     resolver = module.get(CalloutsSetResolverMutations);
     calloutsSetService = module.get(CalloutsSetService);
     calloutService = module.get(CalloutService);
+    contributionDefaultSourceService = module.get(
+      CalloutContributionDefaultSourceService
+    );
     authorizationService = module.get(AuthorizationService);
     _authorizationPolicyService = module.get(AuthorizationPolicyService);
     calloutAuthorizationService = module.get(CalloutAuthorizationService);
@@ -210,17 +215,16 @@ describe('CalloutsSetResolverMutations', () => {
 
     it('copies an internal Whiteboard default from a source Callout by id before delegating', async () => {
       const calloutsSet = framingCloneCalloutsSet();
-      const sourceCallout = {
-        id: 'source-callout',
-        authorization: { id: 'source-auth' },
-        contributionDefaults: { whiteboardContent: 'canonical-internal' },
-        framing: { profile: { storageBucket: { id: 'source-bucket' } } },
-      } as any;
       vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
         calloutsSet
       );
-      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(
-        sourceCallout
+      vi.mocked(contributionDefaultSourceService.prepare).mockImplementation(
+        async defaults => {
+          Object.assign(defaults ?? {}, {
+            whiteboardContent: 'canonical-internal',
+            sourceStorageBucketID: 'source-bucket',
+          });
+        }
       );
       const reachedDelegate = new Error('reached-delegate-sentinel');
       vi.mocked(
@@ -236,17 +240,9 @@ describe('CalloutsSetResolverMutations', () => {
         resolver.createCalloutOnCalloutsSet(actorContext, input)
       ).rejects.toBe(reachedDelegate);
 
-      expect(calloutService.getCalloutOrFail).toHaveBeenCalledWith(
-        'source-callout',
-        expect.objectContaining({
-          relations: expect.objectContaining({ contributionDefaults: true }),
-        })
-      );
-      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
-        actorContext,
-        sourceCallout.authorization,
-        AuthorizationPrivilege.READ,
-        expect.any(String)
+      expect(contributionDefaultSourceService.prepare).toHaveBeenCalledWith(
+        input.contributionDefaults,
+        actorContext
       );
       expect(input.contributionDefaults).toMatchObject({
         sourceCalloutID: 'source-callout',
@@ -258,6 +254,9 @@ describe('CalloutsSetResolverMutations', () => {
     it('rejects selecting both a source Whiteboard and a source Callout for one default', async () => {
       vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
         framingCloneCalloutsSet()
+      );
+      vi.mocked(contributionDefaultSourceService.prepare).mockRejectedValue(
+        new ValidationException('mutually exclusive', LogContext.WHITEBOARDS)
       );
 
       await expect(
@@ -273,8 +272,7 @@ describe('CalloutsSetResolverMutations', () => {
         )
       ).rejects.toThrow(ValidationException);
 
-      expect(calloutService.getCalloutOrFail).not.toHaveBeenCalled();
-      expect(whiteboardService.resolveContentSource).not.toHaveBeenCalled();
+      expect(contributionDefaultSourceService.prepare).toHaveBeenCalled();
       expect(
         calloutsSetService.createCalloutOnCalloutsSet
       ).not.toHaveBeenCalled();

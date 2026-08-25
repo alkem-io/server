@@ -615,6 +615,41 @@ describe('CalloutFramingService', () => {
       expect(whiteboardService.createWhiteboard).toHaveBeenCalled();
     });
 
+    it('creates an empty whiteboard when a live framing transitions to WHITEBOARD without replacement content', async () => {
+      const framing = {
+        id: 'framing-1',
+        type: CalloutFramingType.NONE,
+        profile: { id: 'profile-1' },
+        whiteboard: undefined,
+      } as any;
+      vi.mocked(
+        namingService.createNameIdAvoidingReservedNameIDs
+      ).mockReturnValue('wb-name');
+      vi.mocked(whiteboardService.createWhiteboard).mockResolvedValue({
+        id: 'new-wb',
+      } as any);
+
+      const result = await service.updateCalloutFraming(
+        framing,
+        { type: CalloutFramingType.WHITEBOARD } as any,
+        storageAggregator,
+        false,
+        actorContextData.actorContext,
+        'user-1'
+      );
+
+      expect(whiteboardService.createWhiteboard).toHaveBeenCalledWith(
+        expect.objectContaining({
+          profile: { displayName: 'Callout Framing Whiteboard' },
+          content: undefined,
+          sourceWhiteboardID: undefined,
+        }),
+        storageAggregator,
+        actorContextData.actorContext
+      );
+      expect(result.whiteboard).toMatchObject({ id: 'new-wb' });
+    });
+
     it('should return framing unchanged when WHITEBOARD type has no content update', async () => {
       const framing = {
         id: 'framing-1',

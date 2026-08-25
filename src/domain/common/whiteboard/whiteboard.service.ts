@@ -339,7 +339,17 @@ export class WhiteboardService {
   ): Promise<void> {
     await Promise.all(
       documentIDs.map(id =>
-        this.fileServiceAdapter.deleteDocument(id).catch(() => undefined)
+        this.fileServiceAdapter.deleteDocument(id).catch(cleanupError => {
+          this.logger.warn?.(
+            {
+              message:
+                'Failed to clean up materialized whiteboard media document',
+              documentId: id,
+              error: String(cleanupError),
+            },
+            LogContext.WHITEBOARDS
+          );
+        })
       )
     );
   }

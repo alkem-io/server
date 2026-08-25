@@ -473,9 +473,6 @@ export class CalloutFramingService {
     await this.deleteInconsistentFramingContent(calloutFraming);
     switch (calloutFraming.type) {
       case CalloutFramingType.WHITEBOARD: {
-        const hasReplacement =
-          calloutFramingData.sourceWhiteboardID !== undefined ||
-          calloutFramingData.whiteboardContent !== undefined;
         if (calloutFraming.whiteboard) {
           // Direct whiteboard-content replacement is TEMPLATE-ONLY, mirroring the memo
           // branch below (and the client's `mapFormToCalloutUpdateInput`, T048/T048a, which
@@ -510,8 +507,11 @@ export class CalloutFramingService {
               }
             );
           }
-        } else if (hasReplacement) {
-          // if there is content and no whiteboard, we create a new one
+        } else {
+          // A WHITEBOARD framing always owns a whiteboard. This also covers a live
+          // Callout changing type without supplying replacement content: the ordinary
+          // empty-whiteboard path establishes the invariant instead of persisting an
+          // unusable WHITEBOARD framing with a null relation.
           await this.createNewWhiteboardInCalloutFraming(
             calloutFraming,
             {

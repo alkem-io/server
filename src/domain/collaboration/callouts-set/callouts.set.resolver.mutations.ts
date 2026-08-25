@@ -28,6 +28,7 @@ import { InstrumentResolver } from '@src/apm/decorators';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { CalloutContributionDefaultSourceService } from '../callout/callout.contribution.default.source.service';
 import { ICallout } from '../callout/callout.interface';
 import { CalloutService } from '../callout/callout.service';
 import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
@@ -46,6 +47,7 @@ export class CalloutsSetResolverMutations {
     private calloutsSetService: CalloutsSetService,
     private calloutAuthorizationService: CalloutAuthorizationService,
     private calloutService: CalloutService,
+    private contributionDefaultSourceService: CalloutContributionDefaultSourceService,
     private communityResolverService: CommunityResolverService,
     private contributionReporter: ContributionReporterService,
     private activityAdapter: ActivityAdapter,
@@ -80,60 +82,6 @@ export class CalloutsSetResolverMutations {
       AuthorizationPrivilege.READ,
       `clone whiteboard content from source: ${sourceWhiteboardID}`
     );
-  }
-
-  private async resolveContributionDefaultSource(
-    actorContext: ActorContext,
-    defaults?: CreateCalloutOnCalloutsSetInput['contributionDefaults']
-  ): Promise<void> {
-    if (!defaults) {
-      return;
-    }
-    if (defaults.sourceWhiteboardID && defaults.sourceCalloutID) {
-      throw new ValidationException(
-        'sourceWhiteboardID and sourceCalloutID are mutually exclusive',
-        LogContext.WHITEBOARDS
-      );
-    }
-    if (defaults.sourceCalloutID) {
-      const sourceCallout = await this.calloutService.getCalloutOrFail(
-        defaults.sourceCalloutID,
-        {
-          relations: {
-            authorization: true,
-            contributionDefaults: true,
-            framing: { profile: { storageBucket: true } },
-          },
-        }
-      );
-      this.authorizationService.grantAccessOrFail(
-        actorContext,
-        sourceCallout.authorization,
-        AuthorizationPrivilege.READ,
-        'copy Whiteboard contribution default from source Callout'
-      );
-      defaults.whiteboardContent =
-        sourceCallout.contributionDefaults?.whiteboardContent;
-      defaults.sourceStorageBucketID = defaults.whiteboardContent
-        ? sourceCallout.framing?.profile?.storageBucket?.id
-        : undefined;
-      if (defaults.whiteboardContent && !defaults.sourceStorageBucketID) {
-        throw new ValidationException(
-          'Source Callout has a Whiteboard default but no owning storage bucket',
-          LogContext.WHITEBOARDS
-        );
-      }
-      return;
-    }
-    if (!defaults.sourceWhiteboardID) {
-      return;
-    }
-    const source = await this.whiteboardService.resolveContentSource(
-      defaults.sourceWhiteboardID,
-      actorContext
-    );
-    defaults.whiteboardContent = source.content;
-    defaults.sourceStorageBucketID = source.storageBucketID;
   }
 
   @Mutation(() => ICallout, {
@@ -184,9 +132,9 @@ export class CalloutsSetResolverMutations {
         ? calloutData.framing.whiteboard?.sourceWhiteboardID
         : undefined
     );
-    await this.resolveContributionDefaultSource(
-      actorContext,
-      calloutData.contributionDefaults
+    await this.contributionDefaultSourceService.prepare(
+      calloutData.contributionDefaults,
+      actorContext
     );
 
     // Office Docs entitlement gate (FR-001/FR-004/FR-009): block introduction of a

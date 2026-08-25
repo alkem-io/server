@@ -1670,4 +1670,27 @@ describe('WhiteboardService', () => {
       );
     });
   });
+
+  describe('materialized media cleanup', () => {
+    it('logs failed deletions while keeping cleanup best-effort', async () => {
+      const cleanupError = new Error('file-service unavailable');
+      vi.mocked(fileServiceAdapter.deleteDocument)
+        .mockResolvedValueOnce(undefined as never)
+        .mockRejectedValueOnce(cleanupError);
+
+      await expect(
+        service.deleteMaterializedContentDocuments(['deleted', 'orphaned'])
+      ).resolves.toBeUndefined();
+
+      expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledTimes(2);
+      expect(MockWinstonProvider.useValue.warn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Failed to clean up materialized whiteboard media document',
+          documentId: 'orphaned',
+          error: String(cleanupError),
+        }),
+        expect.any(String)
+      );
+    });
+  });
 });
