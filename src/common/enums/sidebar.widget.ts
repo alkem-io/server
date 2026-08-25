@@ -7,6 +7,7 @@ export enum SidebarWidget {
   ABOUT = 'about',
   CREATE_POST = 'createPost',
   APPLICATION_BUTTON = 'applicationButton',
+  CREATE_SUBSPACE = 'createSubspace',
   SUBSPACE_LINKS = 'subspaceLinks',
   EVENTS = 'events',
   UPDATES = 'updates',
