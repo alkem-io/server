@@ -524,6 +524,7 @@ describe('StorageBucketService', () => {
       );
 
       expect(result).toBe(existingDoc);
+      expect(result.reused).toBe(true);
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith({
         id: 'auth-saved-reuse',
       });
@@ -555,7 +556,7 @@ describe('StorageBucketService', () => {
       });
       (documentService.getDocumentOrFail as Mock).mockResolvedValue(freshDoc);
 
-      await service.uploadFileAsDocumentFromBuffer(
+      const result = await service.uploadFileAsDocumentFromBuffer(
         'bucket-fresh',
         buffer,
         'file.png',
@@ -563,6 +564,7 @@ describe('StorageBucketService', () => {
         'user-1'
       );
 
+      expect(result.reused).toBe(false);
       expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
       expect(tagsetService.removeTagset).not.toHaveBeenCalled();
     });

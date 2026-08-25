@@ -360,10 +360,9 @@ services:
     container_name: alkemio_dev_rabbitmq
     # The Erlang node name is derived from the hostname, and the node name is
     # the mnesia sub-directory name. Without pinning it, Docker uses the random
-    # container id, so every `compose up` orphans the previous node directory
-    # under ~/.docker-conf/rabbitmq/data and that directory is never reclaimed.
+    # container id, so every `compose up` orphans the previous node directory.
     hostname: rmq
-    image: rabbitmq:3.9.13-management
+    image: rabbitmq:4.0.5-management
     restart: always
     networks:
       - alkemio_dev_net
@@ -374,9 +373,6 @@ services:
       - RABBITMQ_SECURE_PASSWORD=yes
       - RABBITMQ_DEFAULT_USER=alkemio-admin
       - RABBITMQ_DEFAULT_PASS=alkemio!
-      # Ra (Raft) pre-allocates its write-ahead log at boot, ~280MB by default.
-      # The dev stack only declares classic queues, so cap it at 32MB.
-      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-ra wal_max_size_bytes 33554432
     healthcheck:
       test: rabbitmq-diagnostics check_port_connectivity
       interval: 30s
@@ -384,8 +380,11 @@ services:
       retries: 10
       start_period: 5s
     volumes:
-      - ~/.docker-conf/rabbitmq/data/:/var/lib/rabbitmq/mnesia
-      - ~/.docker-conf/rabbitmq/log/:/var/log/rabbitmq
+      # Local state is versioned so 4.0 starts clean instead of depending on
+      # feature flags in a developer's existing 3.13 data directory. The old
+      # bytes stay outside the active mount; they are not a rollback path.
+      - ~/.docker-conf/rabbitmq/4.0/data/:/var/lib/rabbitmq/mnesia
+      - ~/.docker-conf/rabbitmq/4.0/log/:/var/log/rabbitmq
     command:
       [
         'bash',
@@ -510,34 +509,88 @@ services:
     depends_on:
       - redis
 
-  whiteboard-collaboration:
-    container_name: alkemio_dev_whiteboard_collaboration
-    hostname: whiteboard-collaboration
-    # External scene updates (Option A: merge external writes as a collaborator)
-    # shipped in v0.12.0 (2026-06-29), superseding the earlier livepush-local build.
-    image: alkemio/whiteboard-collaboration-service:v0.12.0
+  # Unified real-time collaboration service (epic 003-unify-collab-yjs).
+  # Replaces the two legacy backends: whiteboard-collaboration-service (was 4002)
+  # and collaborative-document-service (was 4004). One Go service, one CRDT
+  # protocol (Yjs), serving BOTH whiteboards and memos over raw WebSocket at
+  # /collab/{documentId}. The browser reaches it through Traefik (see the
+  # `collaboration` router in .build/traefik/http.yml). Persistence rides the
+  # server's RabbitMQ bus (queue `alkemio-collaboration`); snapshot blobs are
+  # offloaded to file-service.
+  #
+  # Supported durable local topology for the current collaboration-service:
+  #   HUB_MODE=inmemory · METADATA_STORE=rabbitmq · CHECKPOINT_STORE=file-service ·
+  #   AUTH_MODE=header · AUTHZ_MODE=authzeval. For a zero-dependency smoke test
+  #   that isolates the WS path from authZ, override AUTH_MODE=open +
+  #   AUTHZ_MODE=open + CHECKPOINT_STORE=inline + METADATA_STORE=inmemory
+  #   (see docs/local-collab-testing.md).
+  collaboration:
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    container_name: alkemio_dev_collaboration
+    hostname: collaboration
+    image: alkemio/collaboration-service:v0.0.1
     depends_on:
       rabbitmq:
         condition: service_healthy
+      file-service:
+        condition: service_started
+      authorization-evaluation:
+        condition: service_started
     environment:
-      - RABBITMQ_HOST
+      # --- service ---
+      - PORT=4006
+      # --- pluggable ports: Alkemio topology ---
+      - HUB_MODE=inmemory
+      - METADATA_STORE=rabbitmq
+      - CHECKPOINT_STORE=file-service
+      - AUTH_MODE=header
+      - AUTHZ_MODE=authzeval
+      # The Traefik `collaboration` router resolves identity at the gateway
+      # (alkemio-resolve forwardAuth) and forwards the actor id in this header;
+      # the WS handshake reads it from here instead of the bearer Authorization
+      # header. Must match the authResponseHeader alkemio-resolve injects.
+      - AUTH_TOKEN_HEADER=X-Alkemio-Actor-Id
+      # --- RabbitMQ metadata bus (METADATA_STORE=rabbitmq) ---
+      # Unified contract: collaboration-save/-fetch RPCs plus the contribution
+      # event on the metadata queue shared with the server. document.deleted is
+      # consumed from the distinct lifecycle queue.
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
       - RABBITMQ_USER
       - RABBITMQ_PASSWORD
-      - LOGGING_CONSOLE_ENABLED
-      - LOGGING_LEVEL_CONSOLE
-      - ENVIRONMENT=dev
+      - RABBITMQ_QUEUE=alkemio-collaboration
+      - LIFECYCLE_QUEUE=alkemio-collaboration-lifecycle
+      # --- file-service blob offload (CHECKPOINT_STORE=file-service) ---
+      - FILE_SERVICE_URL=http://file-service:4003
+      - MAX_UPLOAD_SIZE=33554432
+      # The collaboration service persists each document's snapshot into that
+      # document's OWN storage bucket (the server supplies `storageBucketId` in the
+      # metadata). It no longer reads a platform-bucket fallback, so `FILE_SERVICE_URL`
+      # is the only file-service config it needs (a save for an index row lacking its
+      # own bucket fails ErrCorrupt; `--verify` flags bucketless owners pre-rollout).
+      # --- authZ via authorization-evaluation-service (AUTHZ_MODE=authzeval) ---
+      # Dev hostname is `authorization-evaluation` (the configmap default
+      # `authorization-evaluation-service` is the k8s service name).
+      - AUTH_SERVICE_URL=http://authorization-evaluation:6060
+      - AUTH_BREAKER_FAILURE_THRESHOLD=3
+      - AUTH_BREAKER_TIMEOUT_SECONDS=15
+      - AUTH_BREAKER_HALF_OPEN_MAX_REQUESTS=2
     restart: always
     networks:
       - alkemio_dev_net
     ports:
-      - 4002
+      # Explicit host publication so the host-run server reaches the WS at
+      # ws://localhost:4006 (COLLABORATION_SERVICE_URL default). A bare `- 4006`
+      # maps to a random host port, which the server cannot address.
+      - '4006:4006'
 
   file-service:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service:v0.2.3
+    image: alkemio/file-service:v0.2.6
     depends_on:
       postgres:
         condition: service_healthy
@@ -662,25 +715,10 @@ services:
     ports:
       - 8080
 
-  collaborative-document:
-    container_name: alkemio_dev_collaborative-document
-    hostname: collaborative-document
-    image: alkemio/collaborative-document-service:v0.4.0
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    environment:
-      - RABBITMQ_HOST
-      - RABBITMQ_USER
-      - RABBITMQ_PASSWORD
-      - LOGGING_CONSOLE_ENABLED
-      - LOGGING_LEVEL_CONSOLE
-      - ENVIRONMENT=dev
-    restart: always
-    networks:
-      - alkemio_dev_net
-    ports:
-      - 4004
+  # NOTE: collaborative-document-service (legacy memo backend, was port 4004)
+  # and whiteboard-collaboration-service (legacy whiteboard backend, was 4002)
+  # are removed — both are superseded by the unified `collaboration` service
+  # above (epic 003-unify-collab-yjs).
 
   authorization-evaluation:
     extra_hosts:

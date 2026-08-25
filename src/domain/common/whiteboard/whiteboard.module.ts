@@ -1,12 +1,15 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { PlatformRolesAccessModule } from '@domain/access/platform-roles-access/platform.roles.access.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { CollaborationMetadataModule } from '@domain/common/collaboration-metadata';
 import { VisualModule } from '@domain/common/visual/visual.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { ProfileDocumentsModule } from '@domain/profile-documents/profile.documents.module';
+import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { FileServiceAdapterModule } from '@services/adapters/file-service-adapter/file.service.adapter.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { AuthorizationPolicyModule } from '../authorization-policy/authorization.policy.module';
 import { LicenseModule } from '../license/license.module';
@@ -30,8 +33,11 @@ import { WhiteboardAuthorizationService } from './whiteboard.service.authorizati
     RoleSetModule,
     PlatformRolesAccessModule,
     StorageBucketModule,
+    DocumentModule,
     TypeOrmModule.forFeature([Whiteboard]),
     ProfileDocumentsModule,
+    CollaborationMetadataModule,
+    FileServiceAdapterModule,
   ],
   providers: [
     WhiteboardService,

@@ -1665,6 +1665,20 @@ type Collaboration {
   updatedDate: DateTime!
 }
 
+type CollaborationMigrationIssue {
+  id: String!
+  reason: String!
+}
+
+type CollaborationMigrationResult {
+  failed: Int!
+  failedDocuments: [CollaborationMigrationIssue!]!
+  flagged: Int!
+  flaggedDocuments: [CollaborationMigrationIssue!]!
+  migrated: Int!
+  total: Int!
+}
+
 type Communication {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -3114,6 +3128,10 @@ type CreateWhiteboardData {
   """The preview settings for the whiteboard."""
   previewSettings: CreateWhiteboardPreviewSettingsData
   profile: CreateProfileData
+  """
+  Seed the new Whiteboard from the stored content of an existing Whiteboard (server-side copy). Mutually exclusive with `content` — supply exactly one.
+  """
+  sourceWhiteboardID: UUID
 }
 
 input CreateWhiteboardInput {
@@ -3123,6 +3141,10 @@ input CreateWhiteboardInput {
   """The preview settings for the whiteboard."""
   previewSettings: CreateWhiteboardPreviewSettingsInput
   profile: CreateProfileInput
+  """
+  Seed the new Whiteboard from the stored content of an existing Whiteboard (server-side copy). Mutually exclusive with `content` — supply exactly one.
+  """
+  sourceWhiteboardID: UUID
 }
 
 type CreateWhiteboardPreviewSettingsData {
@@ -4777,10 +4799,6 @@ type MediaGallery {
 type Memo {
   """The authorization rules for the entity"""
   authorization: Authorization
-  """
-  The last saved binary stateV2 of the Yjs document, used to collaborate on the Memo, represented in base64.
-  """
-  content: String
   """The policy governing who can update the Memo content."""
   contentUpdatePolicy: ContentUpdatePolicy!
   """The user that created this Memo"""
@@ -5306,6 +5324,14 @@ type Mutation {
   Mark notifications as unread. If no filter is provided, marks all user notifications as unread. If filter with types is provided, marks only those notification types as unread.
   """
   markNotificationsAsUnread(filter: NotificationEventsFilterInput): Boolean!
+  """
+  Migrates all pending legacy memo content. Idempotent: repeated calls process only rows whose migrated marker is false.
+  """
+  migrateLegacyMemoContent: CollaborationMigrationResult!
+  """
+  Migrates all pending legacy whiteboard content. Idempotent: repeated calls process only rows whose migrated marker is false.
+  """
+  migrateLegacyWhiteboardContent: CollaborationMigrationResult!
   """
   Mint a new MCP API key for the current user. Returns the plaintext exactly once.
   """
@@ -10390,8 +10416,6 @@ input VisualUploadImageInput {
 type Whiteboard {
   """The authorization rules for the entity"""
   authorization: Authorization
-  """The visual content of the Whiteboard."""
-  content: WhiteboardContent!
   """The policy governing who can update the Whiteboard content."""
   contentUpdatePolicy: ContentUpdatePolicy!
   """The user that created this Whiteboard"""
@@ -10416,7 +10440,9 @@ type Whiteboard {
   updatedDate: DateTime!
 }
 
-"""Content of a Whiteboard, as JSON."""
+"""
+Content of a Whiteboard as a base64-encoded Yjs-V2 document snapshot (CRDT state, not an Excalidraw scene).
+"""
 scalar WhiteboardContent
 
 type WhiteboardPreviewCoordinates {

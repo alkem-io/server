@@ -28,6 +28,7 @@ import { ReactionService } from '@domain/collaboration/reaction/reaction.service
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IMemo } from '@domain/common/memo/types';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
+import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { Inject } from '@nestjs/common/decorators';
 import { ConfigService } from '@nestjs/config';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
@@ -95,6 +96,7 @@ export class CalloutResolverMutations {
     private readonly temporaryStorageService: TemporaryStorageService,
     private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly collaborationLicenseService: CollaborationLicenseService,
+    private readonly whiteboardService: WhiteboardService,
     private readonly reactionService: ReactionService,
     private readonly actorLookupService: ActorLookupService,
     private readonly taskBoardColumnService: TaskBoardColumnService,
@@ -102,6 +104,30 @@ export class CalloutResolverMutations {
     @Inject(SUBSCRIPTION_CALLOUT_POST_CREATED)
     private readonly postCreatedSubscription: PubSubEngine
   ) {}
+
+  /**
+   * A clone may read its source only after the actor is granted READ: when a
+   * `sourceWhiteboardID` is present, load it with its authorization and
+   * `grantAccessOrFail` READ (throws Forbidden). No-op when there is no source.
+   */
+  private async assertActorCanReadSourceWhiteboard(
+    actorContext: ActorContext,
+    sourceWhiteboardID?: string
+  ): Promise<void> {
+    if (!sourceWhiteboardID) {
+      return;
+    }
+    const source = await this.whiteboardService.getWhiteboardOrFail(
+      sourceWhiteboardID,
+      { relations: { authorization: true } }
+    );
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      source.authorization,
+      AuthorizationPrivilege.READ,
+      `clone whiteboard content from source: ${sourceWhiteboardID}`
+    );
+  }
 
   @Mutation(() => ICallout, {
     description: 'Delete a Callout.',
@@ -196,6 +222,7 @@ export class CalloutResolverMutations {
     const updatedCallout = await this.calloutService.updateCallout(
       callout,
       calloutData,
+      actorContext,
       actorContext.actorID
     );
 
@@ -475,8 +502,18 @@ export class CalloutResolverMutations {
       );
     }
 
+    // A clone (a WHITEBOARD contribution's `whiteboard.sourceWhiteboardID`) may read
+    // its source only after the actor is granted READ.
+    await this.assertActorCanReadSourceWhiteboard(
+      actorContext,
+      contributionData.type === CalloutContributionType.WHITEBOARD
+        ? contributionData.whiteboard?.sourceWhiteboardID
+        : undefined
+    );
+
     let contribution = await this.calloutService.createContributionOnCallout(
       contributionData,
+      actorContext,
       actorContext.actorID
     );
 

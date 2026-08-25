@@ -9,6 +9,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { actorContextData } from '@test/data/actorContext.mock';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -182,12 +183,16 @@ describe('TemplatesSetService', () => {
       ]);
 
       await expect(
-        service.createTemplate(templatesSet, {
-          nameID: 'existing-name',
-          type: TemplateType.POST,
-          profileData: { displayName: 'Test' },
-          tags: [],
-        } as any)
+        service.createTemplate(
+          templatesSet,
+          {
+            nameID: 'existing-name',
+            type: TemplateType.POST,
+            profileData: { displayName: 'Test' },
+            tags: [],
+          } as any,
+          actorContextData.actorContext
+        )
       ).rejects.toThrow(ValidationException);
     });
 
@@ -202,12 +207,17 @@ describe('TemplatesSetService', () => {
         postDefaultDescription: 'desc',
       } as any;
 
-      await service.createTemplate(templatesSet, input);
+      await service.createTemplate(
+        templatesSet,
+        input,
+        actorContextData.actorContext
+      );
 
       expect(input.nameID).toBe('unique-name');
       expect(templateService.createTemplate).toHaveBeenCalledWith(
         input,
-        storageAggregator
+        storageAggregator,
+        actorContextData.actorContext
       );
     });
 
@@ -225,7 +235,11 @@ describe('TemplatesSetService', () => {
         postDefaultDescription: 'desc',
       } as any;
 
-      await service.createTemplate(templatesSet, input);
+      await service.createTemplate(
+        templatesSet,
+        input,
+        actorContextData.actorContext
+      );
 
       expect(
         namingService.createNameIdAvoidingReservedNameIDs
@@ -243,13 +257,17 @@ describe('TemplatesSetService', () => {
         templatesSet,
       });
 
-      await service.createTemplate(templatesSet, {
-        nameID: 'name',
-        type: TemplateType.POST,
-        profileData: { displayName: 'Test' },
-        tags: [],
-        postDefaultDescription: 'desc',
-      } as any);
+      await service.createTemplate(
+        templatesSet,
+        {
+          nameID: 'name',
+          type: TemplateType.POST,
+          profileData: { displayName: 'Test' },
+          tags: [],
+          postDefaultDescription: 'desc',
+        } as any,
+        actorContextData.actorContext
+      );
 
       expect(createdTemplate.templatesSet).toBe(templatesSet);
       expect(templateService.save).toHaveBeenCalledWith(createdTemplate);
@@ -276,12 +294,16 @@ describe('TemplatesSetService', () => {
       } as any);
       templateService.save.mockImplementation(async (entity: any) => entity);
 
-      await service.createTemplateFromSpace(templatesSet, {
-        spaceID: 'space-1',
-        recursive: true,
-        profileData: { displayName: 'From Space' },
-        tags: [],
-      } as any);
+      await service.createTemplateFromSpace(
+        templatesSet,
+        {
+          spaceID: 'space-1',
+          recursive: true,
+          profileData: { displayName: 'From Space' },
+          tags: [],
+        } as any,
+        actorContextData.actorContext
+      );
 
       expect(
         inputCreatorService.buildCreateTemplateContentSpaceInputFromSpace
@@ -291,7 +313,8 @@ describe('TemplatesSetService', () => {
           type: TemplateType.SPACE,
           contentSpaceData: contentSpaceInput,
         }),
-        expect.anything()
+        expect.anything(),
+        actorContextData.actorContext
       );
     });
   });
@@ -316,11 +339,15 @@ describe('TemplatesSetService', () => {
       } as any);
       templateService.save.mockImplementation(async (entity: any) => entity);
 
-      await service.createTemplateFromContentSpace(templatesSet, {
-        contentSpaceID: 'tcs-1',
-        profileData: { displayName: 'From Content' },
-        tags: [],
-      } as any);
+      await service.createTemplateFromContentSpace(
+        templatesSet,
+        {
+          contentSpaceID: 'tcs-1',
+          profileData: { displayName: 'From Content' },
+          tags: [],
+        } as any,
+        actorContextData.actorContext
+      );
 
       expect(
         inputCreatorService.buildCreateTemplateContentSpaceInputFromContentSpace
@@ -330,7 +357,8 @@ describe('TemplatesSetService', () => {
           type: TemplateType.SPACE,
           contentSpaceData: contentInput,
         }),
-        expect.anything()
+        expect.anything(),
+        actorContextData.actorContext
       );
     });
   });

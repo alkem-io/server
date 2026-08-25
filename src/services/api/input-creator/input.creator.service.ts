@@ -46,6 +46,7 @@ import { CreateTemplateContentSpaceInput } from '@domain/template/template-conte
 import { TemplateContentSpace } from '@domain/template/template-content-space/template.content.space.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager } from 'typeorm';
 
@@ -58,8 +59,32 @@ export class InputCreatorService {
     private taskBoardService: TaskBoardService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    private fileServiceAdapter: FileServiceAdapter
   ) {}
+
+  /**
+   * Reads a document's stored Yjs-V2 snapshot from file-service by pointer
+   * (006-collab-content-unification): content is no longer an inline column, so
+   * the duplicate/export builders below re-read it from the document's bucket.
+   * Returns the raw snapshot bytes, or `undefined` when there is no pointer / the
+   * snapshot is missing.
+   */
+  private async fetchSnapshot(
+    contentPointer?: string
+  ): Promise<Buffer | undefined> {
+    if (!contentPointer) {
+      return undefined;
+    }
+    const [item] = await this.fileServiceAdapter.getContentBatch([
+      contentPointer,
+    ]);
+    if (!item?.found || !item.contentBase64) {
+      return undefined;
+    }
+    return Buffer.from(item.contentBase64, 'base64');
+  }
 
   public async buildCreateCalloutInputsFromCallouts(
     callouts: ICallout[]
@@ -160,7 +185,7 @@ export class InputCreatorService {
       classification: this.buildCreateClassificationInputFromClassification(
         callout.classification
       ),
-      framing: this.buildCreateCalloutFramingInputFromCalloutFraming(
+      framing: await this.buildCreateCalloutFramingInputFromCalloutFraming(
         callout.framing
       ),
       settings: this.stripSelectionFromSettings(
@@ -428,19 +453,26 @@ export class InputCreatorService {
     return result;
   }
 
-  public buildCreateWhiteboardInputFromWhiteboard(
+  public async buildCreateWhiteboardInputFromWhiteboard(
     whiteboard?: IWhiteboard
-  ): CreateWhiteboardInput | undefined {
+  ): Promise<CreateWhiteboardInput | undefined> {
     if (!whiteboard) return undefined;
+    // Content is the stored Yjs-V2 snapshot in the whiteboard's bucket. A duplicate
+    // carries the SAME CRDT bytes (base64) verbatim — no Excalidraw scene/JSON round
+    // trip; create re-homes the snapshot's embedded media into the new bucket
+    // (006-collab-content-unification).
+    const snapshot = await this.fetchSnapshot(whiteboard.contentPointer);
     return {
       profile: this.buildCreateProfileInputFromProfile(whiteboard.profile),
-      content: whiteboard.content,
+      content: snapshot ? Buffer.from(snapshot).toString('base64') : undefined,
       nameID: whiteboard.nameID,
       previewSettings: whiteboard.previewSettings,
     };
   }
 
-  public buildCreateMemoInputFromMemo(memo: IMemo): CreateMemoInput {
+  public async buildCreateMemoInputFromMemo(
+    memo: IMemo
+  ): Promise<CreateMemoInput> {
     if (!memo.profile) {
       throw new EntityNotInitializedException(
         'Memo not fully initialised',
@@ -451,9 +483,11 @@ export class InputCreatorService {
         }
       );
     }
+    // Derive the markdown from the stored snapshot (content is no longer inline).
+    const snapshot = await this.fetchSnapshot(memo.contentPointer);
     return {
       nameID: memo.nameID,
-      markdown: memo.content ? yjsStateToMarkdown(memo.content) : undefined,
+      markdown: snapshot ? yjsStateToMarkdown(snapshot) : undefined,
       profile: this.buildCreateProfileInputFromProfile(memo.profile),
     };
   }
@@ -475,9 +509,9 @@ export class InputCreatorService {
     return result;
   }
 
-  private buildCreateCalloutFramingInputFromCalloutFraming(
+  private async buildCreateCalloutFramingInputFromCalloutFraming(
     calloutFraming: ICalloutFraming
-  ): CreateCalloutFramingInput {
+  ): Promise<CreateCalloutFramingInput> {
     if (!calloutFraming.profile) {
       throw new EntityNotInitializedException(
         'CalloutFraming not fully initialised',
@@ -491,7 +525,7 @@ export class InputCreatorService {
     return {
       type: calloutFraming.type,
       profile: this.buildCreateProfileInputFromProfile(calloutFraming.profile),
-      whiteboard: this.buildCreateWhiteboardInputFromWhiteboard(
+      whiteboard: await this.buildCreateWhiteboardInputFromWhiteboard(
         calloutFraming.whiteboard
       ),
       link: calloutFraming.link?.profile
@@ -503,7 +537,7 @@ export class InputCreatorService {
           }
         : undefined,
       memo: calloutFraming.memo
-        ? this.buildCreateMemoInputFromMemo(calloutFraming.memo)
+        ? await this.buildCreateMemoInputFromMemo(calloutFraming.memo)
         : undefined,
       mediaGallery: calloutFraming.mediaGallery?.visuals
         ? {

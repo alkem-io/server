@@ -6,9 +6,11 @@ import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock, vi } from 'vitest';
+import * as Y from 'yjs';
 import { InputCreatorService } from './input.creator.service';
 
 describe('InputCreatorService', () => {
@@ -16,6 +18,7 @@ describe('InputCreatorService', () => {
   let calloutService: Record<string, Mock>;
   let collaborationService: Record<string, Mock>;
   let spaceLookupService: Record<string, Mock>;
+  let fileServiceAdapter: Record<string, Mock>;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -42,6 +45,10 @@ describe('InputCreatorService', () => {
       CollaborationService
     ) as unknown as Record<string, Mock>;
     spaceLookupService = module.get(SpaceLookupService) as unknown as Record<
+      string,
+      Mock
+    >;
+    fileServiceAdapter = module.get(FileServiceAdapter) as unknown as Record<
       string,
       Mock
     >;
@@ -195,55 +202,75 @@ describe('InputCreatorService', () => {
   });
 
   describe('buildCreateWhiteboardInputFromWhiteboard', () => {
-    it('should return undefined when whiteboard is undefined', () => {
+    it('should return undefined when whiteboard is undefined', async () => {
       const result =
-        service.buildCreateWhiteboardInputFromWhiteboard(undefined);
+        await service.buildCreateWhiteboardInputFromWhiteboard(undefined);
 
       expect(result).toBeUndefined();
     });
 
-    it('should return create input with profile, content, nameID, and previewSettings', () => {
+    it('should return create input with profile, content, nameID, and previewSettings', async () => {
+      // Content is no longer an inline column — the builder reads the stored
+      // Yjs-V2 snapshot by contentPointer and carries it through verbatim as an
+      // opaque base64 CRDT blob (no scene/JSON round trip — 006).
+      // Any valid Yjs-V2 snapshot works — the builder carries it through verbatim
+      // as an opaque base64 CRDT blob; a bare empty doc keeps this fixture free of
+      // the editor fork (exercised in the whiteboard + migration specs).
+      const contentBase64 = Buffer.from(
+        Y.encodeStateAsUpdateV2(new Y.Doc())
+      ).toString('base64');
+      fileServiceAdapter.getContentBatch.mockResolvedValue([
+        { id: 'wb-pointer', found: true, contentBase64 },
+      ]);
+
       const whiteboard = {
         profile: {
           displayName: 'My Board',
           description: 'desc',
         },
-        content: '{"data":"test"}',
+        contentPointer: 'wb-pointer',
         nameID: 'my-board',
         previewSettings: { zoom: 1 },
       } as any;
 
       const result =
-        service.buildCreateWhiteboardInputFromWhiteboard(whiteboard);
+        await service.buildCreateWhiteboardInputFromWhiteboard(whiteboard);
 
       expect(result).toBeDefined();
-      expect(result!.content).toBe('{"data":"test"}');
+      expect(fileServiceAdapter.getContentBatch).toHaveBeenCalledWith([
+        'wb-pointer',
+      ]);
+      // The create input seeds with the SAME base64 Yjs-V2 snapshot read from the
+      // source whiteboard's bucket — opaque, byte-for-byte.
+      expect(result!.content).toBe(contentBase64);
       expect(result!.nameID).toBe('my-board');
       expect(result!.previewSettings).toEqual({ zoom: 1 });
     });
   });
 
   describe('buildCreateMemoInputFromMemo', () => {
-    it('should throw EntityNotInitializedException when memo profile is missing', () => {
+    it('should throw EntityNotInitializedException when memo profile is missing', async () => {
       const memo = { id: 'memo-1', profile: undefined } as any;
 
-      expect(() => service.buildCreateMemoInputFromMemo(memo)).toThrow(
+      await expect(service.buildCreateMemoInputFromMemo(memo)).rejects.toThrow(
         EntityNotInitializedException
       );
     });
 
-    it('should return create input with nameID and profile when content is undefined', () => {
+    it('should return create input with nameID and profile when content is undefined', async () => {
+      // No contentPointer → no stored snapshot → markdown stays undefined
+      // (006-collab-content-unification).
       const memo = {
         id: 'memo-1',
         nameID: 'test-memo',
-        content: undefined,
+        contentPointer: undefined,
         profile: {
           displayName: 'Test Memo',
           description: 'A memo',
         },
       } as any;
 
-      const result = service.buildCreateMemoInputFromMemo(memo);
+      const result = await service.buildCreateMemoInputFromMemo(memo);
 
       expect(result.nameID).toBe('test-memo');
       expect(result.markdown).toBeUndefined();

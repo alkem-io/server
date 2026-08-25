@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { SceneElement } from './whiteboard-element.factory';
+import type { SceneElement } from './whiteboard-placement';
 import { liveBoundingBox, newCursor, placeAt } from './whiteboard-placement';
 
 const el = (over: Partial<SceneElement>): SceneElement => ({

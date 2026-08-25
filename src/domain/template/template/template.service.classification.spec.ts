@@ -20,6 +20,7 @@ describe('TemplateService — Classification Template (FR-002, I-9)', () => {
   let profileService: Mocked<ProfileService>;
 
   const storageAggregator = {} as any;
+  const actorContext = { actorID: 'actor-1' } as any;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -70,7 +71,8 @@ describe('TemplateService — Classification Template (FR-002, I-9)', () => {
     it('derives a slugified id for each value that omits one', async () => {
       const result = await service.createTemplate(
         classificationInput() as any,
-        storageAggregator
+        storageAggregator,
+        actorContext
       );
 
       expect(result.classificationValueSet).toEqual([
@@ -90,7 +92,8 @@ describe('TemplateService — Classification Template (FR-002, I-9)', () => {
             values: [{ label: 'Dutch' }, { label: 'Dutch' }],
           },
         }) as any,
-        storageAggregator
+        storageAggregator,
+        actorContext
       );
 
       expect(result.classificationValueSet?.map((v: any) => v.id)).toEqual([
@@ -113,7 +116,8 @@ describe('TemplateService — Classification Template (FR-002, I-9)', () => {
               ],
             },
           }) as any,
-          storageAggregator
+          storageAggregator,
+          actorContext
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -129,7 +133,8 @@ describe('TemplateService — Classification Template (FR-002, I-9)', () => {
               values: [],
             },
           }) as any,
-          storageAggregator
+          storageAggregator,
+          actorContext
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -146,7 +151,8 @@ describe('TemplateService — Classification Template (FR-002, I-9)', () => {
               values,
             },
           }) as any,
-          storageAggregator
+          storageAggregator,
+          actorContext
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -157,7 +163,8 @@ describe('TemplateService — Classification Template (FR-002, I-9)', () => {
       await expect(
         service.createTemplate(
           classificationInput({ classificationData: undefined }) as any,
-          storageAggregator
+          storageAggregator,
+          actorContext
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -174,7 +181,8 @@ describe('TemplateService — Classification Template (FR-002, I-9)', () => {
               values: [{ label: 'A' }],
             },
           } as any,
-          storageAggregator
+          storageAggregator,
+          actorContext
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -187,14 +195,16 @@ describe('TemplateService — Classification Template (FR-002, I-9)', () => {
           nameID: 'language-pack-a',
           profileData: { displayName: 'Language', visuals: [] },
         }) as any,
-        storageAggregator
+        storageAggregator,
+        actorContext
       );
       const b = await service.createTemplate(
         classificationInput({
           nameID: 'language-pack-b',
           profileData: { displayName: 'Language', visuals: [] },
         }) as any,
-        storageAggregator
+        storageAggregator,
+        actorContext
       );
 
       expect(a.nameID).toEqual('language-pack-a');
@@ -221,7 +231,8 @@ describe('TemplateService — Classification Template (FR-002, I-9)', () => {
             cardinality: ClassificationCardinality.MULTI_SELECT,
             values: [{ id: 'dutch', label: 'Nederlands' }],
           },
-        } as any
+        } as any,
+        actorContext
       );
 
       expect(updated.classificationValueSet).toEqual([
@@ -246,7 +257,8 @@ describe('TemplateService — Classification Template (FR-002, I-9)', () => {
             cardinality: ClassificationCardinality.MULTI_SELECT,
             values: [{ label: 'Nederlands' }],
           },
-        } as any
+        } as any,
+        actorContext
       );
 
       expect(updated.classificationValueSet).toEqual([
@@ -271,7 +283,8 @@ describe('TemplateService — Classification Template (FR-002, I-9)', () => {
             cardinality: ClassificationCardinality.MULTI_SELECT,
             values: [{ label: 'Nederlands' }, { label: 'French' }],
           },
-        } as any
+        } as any,
+        actorContext
       );
 
       expect(updated.classificationValueSet).toEqual([
@@ -300,7 +313,8 @@ describe('TemplateService — Classification Template (FR-002, I-9)', () => {
             cardinality: ClassificationCardinality.MULTI_SELECT,
             values: [{ label: 'French' }],
           },
-        } as any
+        } as any,
+        actorContext
       );
 
       expect(updated.classificationValueSet).toEqual([
@@ -328,7 +342,8 @@ describe('TemplateService — Classification Template (FR-002, I-9)', () => {
             cardinality: ClassificationCardinality.MULTI_SELECT,
             values: [{ label: 'French' }, { label: 'Dutch' }],
           },
-        } as any
+        } as any,
+        actorContext
       );
 
       expect(updated.classificationValueSet).toEqual([
@@ -352,7 +367,8 @@ describe('TemplateService — Classification Template (FR-002, I-9)', () => {
               cardinality: ClassificationCardinality.MULTI_SELECT,
               values: [{ label: 'A' }],
             },
-          } as any
+          } as any,
+          actorContext
         )
       ).rejects.toThrow(ValidationException);
     });
