@@ -14,6 +14,11 @@ export const POLICY_RULE_FORUM_CREATE = 'policyRule-forumCreate';
 export const POLICY_RULE_PLATFORM_DELETE = 'policyRule-platformDelete';
 export const POLICY_RULE_CALLOUT_CREATE = 'policyRule-calloutCreate';
 export const POLICY_RULE_CALLOUT_CONTRIBUTE = 'policyRule-calloutContribute';
+// On a Tasks board, anyone who may contribute a task may also move one between
+// columns, and anyone who may update the callout may move tasks too.
+export const POLICY_RULE_CALLOUT_TASK_MOVE = 'policyRule-calloutTaskMove';
+export const POLICY_RULE_CALLOUT_TASK_MOVE_ADMIN =
+  'policyRule-calloutTaskMoveAdmin';
 export const POLICY_RULE_COLLABORATION_CREATE =
   'policyRule-collaborationCreate';
 export const POLICY_RULE_COLLABORATION_WHITEBOARD_CREATE =

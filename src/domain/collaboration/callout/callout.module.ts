@@ -4,6 +4,7 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ClassificationModule } from '@domain/common/classification/classification.module';
+import { TagsetTemplateModule } from '@domain/common/tagset-template/tagset.template.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { Module } from '@nestjs/common';
@@ -28,6 +29,10 @@ import { CalloutResolverMutations } from './callout.resolver.mutations';
 import { CalloutResolverSubscriptions } from './callout.resolver.subscriptions';
 import { CalloutService } from './callout.service';
 import { CalloutAuthorizationService } from './callout.service.authorization';
+import { TaskBoardColumnService } from './task-board/task.board.column.service';
+import { TaskBoardModule } from './task-board/task.board.module';
+import { TaskBoardMoveService } from './task-board/task.board.move.service';
+import { TaskBoardResolverMutations } from './task-board/task.board.resolver.mutations';
 
 @Module({
   imports: [
@@ -53,6 +58,8 @@ import { CalloutAuthorizationService } from './callout.service.authorization';
     RoleSetModule,
     ReactionModule,
     ActorLookupModule,
+    TaskBoardModule,
+    TagsetTemplateModule,
     TypeOrmModule.forFeature([Callout]),
   ],
   providers: [
@@ -62,6 +69,9 @@ import { CalloutAuthorizationService } from './callout.service.authorization';
     CalloutResolverFields,
     CalloutResolverSubscriptions,
     CalloutMyReactionLoaderCreator,
+    TaskBoardMoveService,
+    TaskBoardColumnService,
+    TaskBoardResolverMutations,
   ],
   exports: [
     CalloutService,
