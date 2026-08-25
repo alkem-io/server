@@ -59,7 +59,10 @@ curl -sD - -o /dev/null -X POST $URL/rest/mcp \
 
 **Tools** — read: `list_whiteboards`, `analyze_whiteboard`, `analyze_contributions`,
 `community_activity_summary`, `navigate_templates`, `analyze_audit_log`
-(platform-admin only); write: `create_whiteboard`, `update_whiteboard_content`.
+(platform-admin only); write: `create_whiteboard`, `create_whiteboard_in_space`,
+`edit_whiteboard_elements` (the earlier `update_whiteboard_content` is RETIRED —
+superseded by `edit_whiteboard_elements`, which applies element deltas with no
+whole-scene overwrite).
 (`search_content` is added by spec 102.)
 
 **Resources** — `alkemio://whiteboards/{id}`, `alkemio://callouts/{id}`,

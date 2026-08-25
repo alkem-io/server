@@ -1,22 +1,24 @@
 import { LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions';
-import { validateExcalidrawContent } from '@core/validation/excalidraw/validateExcalidrawContent';
 import { CustomScalar, Scalar } from '@nestjs/graphql';
-import { ErrorObject } from 'ajv';
 import { Kind, ValueNode } from 'graphql';
 
 const WHITEBOARD_CONTENT_LENGTH = 8388608;
+// A base64 payload: the standard alphabet plus optional `=` padding. The empty
+// string is allowed (a never-edited whiteboard carries no snapshot).
+const BASE64_RE = /^[A-Za-z0-9+/]*={0,2}$/;
 
 @Scalar('WhiteboardContent')
 export class WhiteboardContent implements CustomScalar<string, string> {
-  description = 'Content of a Whiteboard, as JSON.';
+  description =
+    'Content of a Whiteboard as a base64-encoded Yjs-V2 document snapshot (CRDT state, not an Excalidraw scene).';
 
   parseValue(value: unknown): string {
     return WhiteboardContent.validate(value);
   }
 
   serialize(value: any): string {
-    return value; // value sent to the client
+    return value; // value sent to the client (base64 Yjs-V2 snapshot)
   }
 
   parseLiteral(ast: ValueNode): string {
@@ -29,7 +31,7 @@ export class WhiteboardContent implements CustomScalar<string, string> {
   static validate(value: any) {
     if (typeof value !== 'string') {
       throw new ValidationException(
-        'Whiteboard content is not string',
+        'Whiteboard content is not a string',
         LogContext.API
       );
     }
@@ -41,21 +43,12 @@ export class WhiteboardContent implements CustomScalar<string, string> {
       );
     }
 
-    // todo: json validation can be expanded
-    const errors = validateExcalidrawContent(value);
-
-    if (errors) {
-      let message: string;
-      if (Array.isArray(errors)) {
-        const errorTuple = Object.entries(formatErrors(errors));
-        message = errorTuple
-          .map(([path, messages]) => `${path}: ${messages.join(', ')}`)
-          .join('; ');
-      } else {
-        message = errors.message;
-      }
+    // The content is an opaque base64-encoded Yjs-V2 snapshot — the single CRDT
+    // representation the editor and collaboration-service own. No Excalidraw
+    // scene/JSON crosses this boundary, so the only structural check is base64.
+    if (value !== '' && !BASE64_RE.test(value)) {
       throw new ValidationException(
-        `Value is not valid excalidraw content definition: ${message}`,
+        'Whiteboard content must be a base64-encoded Yjs-V2 snapshot',
         LogContext.API
       );
     }
@@ -63,20 +56,3 @@ export class WhiteboardContent implements CustomScalar<string, string> {
     return value;
   }
 }
-
-const formatErrors = (errors: ErrorObject[]) => {
-  const map = errors.map(formatError).reduce((acc, { path, message }) => {
-    const messages = acc.get(path) ?? [];
-    messages.push(message);
-    acc.set(path, messages);
-    return acc;
-  }, new Map<string, Array<string>>());
-  return Object.fromEntries(map);
-};
-
-const formatError = (error: ErrorObject) => {
-  return {
-    path: error.instancePath.substring(1).replace(/\//g, '.'),
-    message: error.message ?? '',
-  };
-};

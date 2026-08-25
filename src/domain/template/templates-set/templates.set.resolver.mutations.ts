@@ -3,6 +3,7 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { WhiteboardService } from '@domain/common/whiteboard';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { TemplateContentSpaceService } from '@domain/template/template-content-space/template.content.space.service';
 import { Inject, LoggerService } from '@nestjs/common';
@@ -28,6 +29,7 @@ export class TemplatesSetResolverMutations {
     private templateService: TemplateService,
     private spaceLookupService: SpaceLookupService,
     private templateContentSpaceService: TemplateContentSpaceService,
+    private whiteboardService: WhiteboardService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -48,9 +50,26 @@ export class TemplatesSetResolverMutations {
       AuthorizationPrivilege.CREATE,
       `templates set create template: ${templatesSet.id}`
     );
+    // A whiteboard template that seeds from a source whiteboard (duplicate / import) must
+    // first prove the actor can READ that source before the server copies its stored
+    // snapshot — mirrors the callout create path. No-op for any other template.
+    const sourceWhiteboardID = templateData.whiteboard?.sourceWhiteboardID;
+    if (sourceWhiteboardID) {
+      const source = await this.whiteboardService.getWhiteboardOrFail(
+        sourceWhiteboardID,
+        { relations: { authorization: true } }
+      );
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        source.authorization,
+        AuthorizationPrivilege.READ,
+        `template create clone whiteboard content from source: ${sourceWhiteboardID}`
+      );
+    }
     const template = await this.templatesSetService.createTemplate(
       templatesSet,
-      templateData
+      templateData,
+      actorContext
     );
     const authorizations =
       await this.templateAuthorizationService.applyAuthorizationPolicy(
@@ -92,7 +111,8 @@ export class TemplatesSetResolverMutations {
     );
     const template = await this.templatesSetService.createTemplateFromSpace(
       templatesSet,
-      templateData
+      templateData,
+      actorContext
     );
     const authorizations =
       await this.templateAuthorizationService.applyAuthorizationPolicy(
@@ -137,7 +157,8 @@ export class TemplatesSetResolverMutations {
     const template =
       await this.templatesSetService.createTemplateFromContentSpace(
         templatesSet,
-        templateData
+        templateData,
+        actorContext
       );
     const authorizations =
       await this.templateAuthorizationService.applyAuthorizationPolicy(

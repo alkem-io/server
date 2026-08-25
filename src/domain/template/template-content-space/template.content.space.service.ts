@@ -44,7 +44,7 @@ export class TemplateContentSpaceService {
   public async createTemplateContentSpace(
     templateContentSpaceData: CreateTemplateContentSpaceInput,
     storageAggregator: IStorageAggregator,
-    actorContext?: ActorContext
+    actorContext: ActorContext
   ): Promise<ITemplateContentSpace> {
     const templateContentSpace: ITemplateContentSpace =
       TemplateContentSpace.create(templateContentSpaceData);

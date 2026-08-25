@@ -580,6 +580,21 @@ notifications:
           max_delay_seconds: ${MESSAGING_DIGEST_EMAIL_GROUP_MAX_DELAY_SECONDS}:3600
 
 collaboration:
+  # Server-side collaboration client: the unified collaboration-service the
+  # server joins as an ephemeral Yjs collaborator (MCP tools + content-replace
+  # paths). The url default is the host-run dev server; container deployments
+  # override COLLABORATION_SERVICE_URL to the in-cluster ws://collaboration-service:4006.
+  service:
+    # WebSocket base URL of the unified collaboration-service
+    url: ${COLLABORATION_SERVICE_URL}:ws://localhost:4006
+    # Actor-id header sent on the direct WS handshake; must match the
+    # collaboration-service AUTH_TOKEN_HEADER (the server connects directly, not
+    # through the gateway, so the header is not stripped/replaced by forwardAuth).
+    actor_id_header: ${COLLABORATION_SERVICE_ACTOR_ID_HEADER}:X-Alkemio-Actor-Id
+    # Connection handshake timeout in milliseconds
+    connect_timeout: ${COLLABORATION_SERVICE_CONNECT_TIMEOUT}:15000
+    # Correlated durability-barrier timeout in milliseconds
+    durability_timeout: ${COLLABORATION_SERVICE_DURABILITY_TIMEOUT}:20000
   membership:
     cache_ttl: ${MEMBERSHIP_TTL}:14400
   whiteboards:
@@ -591,7 +606,8 @@ collaboration:
 
 ## MCP Server ##
 # Model Context Protocol server for AI client integrations.
-# Provides read-only access to platform content for AI assistants.
+# Exposes both read and write tools to AI assistants (platform content reads
+# plus whiteboard create/edit), not read-only access.
 mcp:
   # Enable/disable the MCP server endpoint
   enabled: ${MCP_ENABLED}:false

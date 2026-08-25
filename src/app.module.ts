@@ -8,6 +8,7 @@ import {
   platformMetadataQuery,
   spacesQuery,
 } from '@config/graphql';
+import { buildRuntimeDataSourceOptions } from '@config/runtime.datasource.options';
 import { NonInteractiveLoginModule } from '@core/auth/non-interactive-login/non-interactive-login.module';
 import { OidcModule } from '@core/auth/oidc/oidc.module';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
@@ -69,7 +70,8 @@ import { CalendarEventIcsModule } from '@services/api-rest/calendar-event-ics/ca
 import { IdentityResolveModule } from '@services/api-rest/identity-resolve/identity-resolve.module';
 import { InternalAdminModule } from '@services/api-rest/internal-admin/internal-admin.module';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
-import { CollaborativeDocumentIntegrationModule } from '@services/collaborative-document-integration';
+import { CollaborationIntegrationModule } from '@services/collaboration-integration';
+import { CollaborationMigrationModule } from '@services/collaboration-integration/migration';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { GeoLocationModule } from '@services/external/geo-location';
 import { KratosEventsModule } from '@services/external/kratos-events/kratos.events.module';
@@ -77,7 +79,6 @@ import { WingbackManagerModule } from '@services/external/wingback/wingback.mana
 import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
 import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.module';
 import { McpServerModule } from '@services/mcp-server/mcp-server.module';
-import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/whiteboard.integration.module';
 import { AppController } from '@src/app.controller';
 import { WinstonConfigService } from '@src/config/winston.config';
 
@@ -108,7 +109,6 @@ import {
 import { print } from 'graphql/language/printer';
 import { CloseCode } from 'graphql-ws';
 import { WinstonModule } from 'nest-winston';
-import { join } from 'path';
 import { ApmApolloPlugin } from './apm/plugins';
 import { PlatformAdminModule } from './platform-admin/admin/platform.admin.module';
 import { InAppNotificationAdminModule } from './platform-admin/in-app-notification/in.app.notification.admin.module';
@@ -147,43 +147,8 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
       name: 'default',
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: async (configService: ConfigService<AlkemioConfig, true>) => {
-        const dbOptions = configService.get('storage.database', {
-          infer: true,
-        });
-
-        const pgbouncerEnabled = dbOptions.pgbouncer?.enabled ?? false;
-        const statementTimeoutMs =
-          dbOptions.pgbouncer?.statement_timeout_ms ?? 60000;
-
-        return {
-          type: 'postgres' as const,
-          synchronize: false,
-          cache: true,
-          entities: [join(__dirname, '**', '*.entity.{ts,js}')],
-          subscribers: [join(__dirname, '**', '*.write.guard.{ts,js}')],
-          host: dbOptions.host,
-          port: dbOptions.port,
-          username: dbOptions.username,
-          password: dbOptions.password,
-          database: dbOptions.database,
-          logging: dbOptions.logging,
-          // Connection pool settings for PostgreSQL
-          extra: {
-            max: dbOptions.pool?.max ?? 50,
-            idleTimeoutMillis: dbOptions.pool?.idle_timeout_ms ?? 30000,
-            connectionTimeoutMillis:
-              dbOptions.pool?.connection_timeout_ms ?? 10000,
-            // PgBouncer compatibility: set statement_timeout to prevent
-            // long-running queries from holding pooled connections
-            ...(pgbouncerEnabled && {
-              statement_timeout: statementTimeoutMs,
-              // Disable idle_in_transaction_session_timeout to let PgBouncer manage
-              idle_in_transaction_session_timeout: statementTimeoutMs * 2,
-            }),
-          },
-        };
-      },
+      useFactory: async (configService: ConfigService<AlkemioConfig, true>) =>
+        buildRuntimeDataSourceOptions(configService, __dirname),
     }),
     WinstonModule.forRootAsync({
       useClass: WinstonConfigService,
@@ -353,8 +318,8 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     PushSubscriptionModule,
     ActivityFeedModule,
     EventBusModule,
-    WhiteboardIntegrationModule,
-    CollaborativeDocumentIntegrationModule,
+    CollaborationIntegrationModule,
+    CollaborationMigrationModule,
     MatrixRoomCheckModule,
     DomainPlatformSettingsModule,
     PlatformRoleModule,

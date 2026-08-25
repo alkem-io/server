@@ -3,9 +3,11 @@ import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { CollaboraDocumentType } from '@common/enums/collabora.document.type';
-import { ValidationException } from '@common/exceptions';
+import { LogContext } from '@common/enums/logging.context';
+import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -25,6 +27,7 @@ describe('CalloutsSetResolverMutations', () => {
   let _authorizationPolicyService: AuthorizationPolicyService;
   let calloutAuthorizationService: CalloutAuthorizationService;
   let configService: ConfigService;
+  let whiteboardService: WhiteboardService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -46,6 +49,7 @@ describe('CalloutsSetResolverMutations', () => {
     _authorizationPolicyService = module.get(AuthorizationPolicyService);
     calloutAuthorizationService = module.get(CalloutAuthorizationService);
     configService = module.get(ConfigService);
+    whiteboardService = module.get(WhiteboardService);
     vi.mocked(configService.get).mockReturnValue(5000 as any);
   });
 
@@ -99,6 +103,109 @@ describe('CalloutsSetResolverMutations', () => {
         expect.any(String)
       );
       expect(calloutsSetService.createCalloutOnCalloutsSet).toHaveBeenCalled();
+    });
+
+    // Contract: a clone (a WHITEBOARD framing's whiteboard.sourceWhiteboardID) may
+    // read its source only after the actor is granted READ.
+    const framingCloneCalloutsSet = () =>
+      ({
+        id: 'cs-1',
+        type: CalloutsSetType.KNOWLEDGE_BASE,
+        authorization: { id: 'auth-1' },
+      }) as any;
+    const framingCloneInput = () =>
+      ({
+        calloutsSetID: 'cs-1',
+        framing: {
+          type: CalloutFramingType.WHITEBOARD,
+          whiteboard: { sourceWhiteboardID: 'src-1' },
+        },
+      }) as any;
+
+    it('refuses a framing whiteboard clone when the actor cannot READ the source, and never delegates', async () => {
+      vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
+        framingCloneCalloutsSet()
+      );
+      vi.mocked(whiteboardService.getWhiteboardOrFail).mockResolvedValue({
+        id: 'src-1',
+        authorization: { id: 'auth-src' },
+      } as any);
+      const forbidden = new ForbiddenException('denied', LogContext.AUTH);
+      vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(
+        (_a: any, _b: any, privilege: any) => {
+          if (privilege === AuthorizationPrivilege.READ) throw forbidden;
+          return true;
+        }
+      );
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await expect(
+        resolver.createCalloutOnCalloutsSet(actorContext, framingCloneInput())
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(whiteboardService.getWhiteboardOrFail).toHaveBeenCalledWith(
+        'src-1',
+        { relations: { authorization: true } }
+      );
+      expect(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).not.toHaveBeenCalled();
+    });
+
+    it('allows a framing whiteboard clone when the actor CAN READ the source (reaches the delegate)', async () => {
+      vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
+        framingCloneCalloutsSet()
+      );
+      vi.mocked(whiteboardService.getWhiteboardOrFail).mockResolvedValue({
+        id: 'src-1',
+        authorization: { id: 'auth-src' },
+      } as any);
+      vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(
+        undefined as any
+      );
+      const reachedDelegate = new Error('reached-delegate-sentinel');
+      vi.mocked(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).mockRejectedValue(reachedDelegate);
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await expect(
+        resolver.createCalloutOnCalloutsSet(actorContext, framingCloneInput())
+      ).rejects.toBe(reachedDelegate);
+
+      expect(whiteboardService.getWhiteboardOrFail).toHaveBeenCalledWith(
+        'src-1',
+        { relations: { authorization: true } }
+      );
+      expect(calloutsSetService.createCalloutOnCalloutsSet).toHaveBeenCalled();
+    });
+
+    it('does NOT load the source for a non-WHITEBOARD framing carrying a stray sourceWhiteboardID', async () => {
+      vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
+        framingCloneCalloutsSet()
+      );
+      vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(
+        undefined as any
+      );
+      const reachedDelegate = new Error('reached-delegate-sentinel');
+      vi.mocked(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).mockRejectedValue(reachedDelegate);
+      const actorContext = { actorID: 'user-1' } as any;
+
+      // framing.type NONE with a stray whiteboard.sourceWhiteboardID — the type must
+      // gate the check so it cannot probe source existence/auth.
+      await expect(
+        resolver.createCalloutOnCalloutsSet(actorContext, {
+          calloutsSetID: 'cs-1',
+          framing: {
+            type: CalloutFramingType.NONE,
+            whiteboard: { sourceWhiteboardID: 'src-1' },
+          },
+        } as any)
+      ).rejects.toBe(reachedDelegate);
+
+      expect(whiteboardService.getWhiteboardOrFail).not.toHaveBeenCalled();
     });
 
     it('should trigger notifications and activity when published on COLLABORATION type', async () => {

@@ -14,6 +14,7 @@ import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service'
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { actorContextData } from '@test/data/actorContext.mock';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -89,7 +90,8 @@ describe('CalloutFramingService', () => {
 
       const result = await service.createCalloutFraming(
         framingData,
-        storageAggregator
+        storageAggregator,
+        actorContextData.actorContext
       );
 
       expect(result.type).toBe(CalloutFramingType.NONE);
@@ -121,6 +123,7 @@ describe('CalloutFramingService', () => {
       const result = await service.createCalloutFraming(
         framingData,
         storageAggregator,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -142,7 +145,11 @@ describe('CalloutFramingService', () => {
       } as any);
 
       await expect(
-        service.createCalloutFraming(framingData, storageAggregator)
+        service.createCalloutFraming(
+          framingData,
+          storageAggregator,
+          actorContextData.actorContext
+        )
       ).rejects.toThrow(ValidationException);
     });
 
@@ -164,7 +171,8 @@ describe('CalloutFramingService', () => {
 
       const result = await service.createCalloutFraming(
         framingData,
-        storageAggregator
+        storageAggregator,
+        actorContextData.actorContext
       );
 
       expect(result.type).toBe(CalloutFramingType.LINK);
@@ -184,7 +192,11 @@ describe('CalloutFramingService', () => {
       } as any);
 
       await expect(
-        service.createCalloutFraming(framingData, storageAggregator)
+        service.createCalloutFraming(
+          framingData,
+          storageAggregator,
+          actorContextData.actorContext
+        )
       ).rejects.toThrow(ValidationException);
     });
 
@@ -201,7 +213,11 @@ describe('CalloutFramingService', () => {
       } as any);
 
       await expect(
-        service.createCalloutFraming(framingData, storageAggregator)
+        service.createCalloutFraming(
+          framingData,
+          storageAggregator,
+          actorContextData.actorContext
+        )
       ).rejects.toThrow(ValidationException);
     });
 
@@ -228,6 +244,7 @@ describe('CalloutFramingService', () => {
       const result = await service.createCalloutFraming(
         framingData,
         storageAggregator,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -257,7 +274,8 @@ describe('CalloutFramingService', () => {
 
       const result = await service.createCalloutFraming(
         framingData,
-        storageAggregator
+        storageAggregator,
+        actorContextData.actorContext
       );
 
       expect(result.type).toBe(CalloutFramingType.POLL);
@@ -277,7 +295,11 @@ describe('CalloutFramingService', () => {
       } as any);
 
       await expect(
-        service.createCalloutFraming(framingData, storageAggregator)
+        service.createCalloutFraming(
+          framingData,
+          storageAggregator,
+          actorContextData.actorContext
+        )
       ).rejects.toThrow(ValidationException);
     });
 
@@ -300,6 +322,7 @@ describe('CalloutFramingService', () => {
       const result = await service.createCalloutFraming(
         framingData,
         storageAggregator,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -329,6 +352,7 @@ describe('CalloutFramingService', () => {
       const result = await service.createCalloutFraming(
         framingData,
         { id: 'agg-1' } as any,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -368,6 +392,7 @@ describe('CalloutFramingService', () => {
       await service.createCalloutFraming(
         framingData,
         { id: 'agg-1' } as any,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -393,7 +418,11 @@ describe('CalloutFramingService', () => {
       } as any);
 
       await expect(
-        service.createCalloutFraming(framingData, { id: 'agg-1' } as any)
+        service.createCalloutFraming(
+          framingData,
+          { id: 'agg-1' } as any,
+          actorContextData.actorContext
+        )
       ).rejects.toThrow(ValidationException);
       expect(
         collaboraDocumentService.createCollaboraDocument
@@ -423,7 +452,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(profileService.updateProfile).toHaveBeenCalledWith(
@@ -447,7 +477,8 @@ describe('CalloutFramingService', () => {
           framing,
           updateData,
           storageAggregator,
-          true // isParentCalloutTemplate
+          true, // isParentCalloutTemplate
+          actorContextData.actorContext
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -467,13 +498,14 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        true
+        true,
+        actorContextData.actorContext
       );
 
       expect(result.type).toBe(CalloutFramingType.NONE);
     });
 
-    it('should update whiteboard content when framing type is WHITEBOARD and content is provided', async () => {
+    it('replaces whiteboard content only for a TEMPLATE callout (framing WHITEBOARD, content provided)', async () => {
       const framing = {
         id: 'framing-1',
         type: CalloutFramingType.WHITEBOARD,
@@ -492,13 +524,37 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        true, // isParentCalloutTemplate — direct content replacement is template-only
+        actorContextData.actorContext
       );
 
       expect(whiteboardService.updateWhiteboardContent).toHaveBeenCalledWith(
         'wb-1',
-        '{"new":"content"}'
+        '{"new":"content"}',
+        actorContextData.actorContext
       );
+    });
+
+    it('does NOT replace whiteboard content for a NON-template callout (live room is authoritative)', async () => {
+      const framing = {
+        id: 'framing-1',
+        type: CalloutFramingType.WHITEBOARD,
+        profile: { id: 'profile-1' },
+        whiteboard: { id: 'wb-1' },
+      } as any;
+      const updateData = {
+        whiteboardContent: '{"new":"content"}',
+      } as any;
+
+      const _result = await service.updateCalloutFraming(
+        framing,
+        updateData,
+        storageAggregator,
+        false, // non-template → out-of-band content is ignored (would clobber the live room)
+        actorContextData.actorContext
+      );
+
+      expect(whiteboardService.updateWhiteboardContent).not.toHaveBeenCalled();
     });
 
     it('should create new whiteboard when WHITEBOARD type has content but no existing whiteboard', async () => {
@@ -524,6 +580,7 @@ describe('CalloutFramingService', () => {
         updateData,
         storageAggregator,
         false,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -543,7 +600,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(result).toBe(framing);
@@ -570,7 +628,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(linkService.updateLink).toHaveBeenCalledWith(updateData.link);
@@ -598,7 +657,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(pollService.getPollOrFail).toHaveBeenCalledWith('poll-1');
@@ -621,11 +681,12 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(result).toBe(framing);
-      expect(memoService.updateMemoContent).not.toHaveBeenCalled();
+      expect(memoService.replaceMemoContent).not.toHaveBeenCalled();
     });
 
     it('should update memo content when MEMO type, is template, and memo content provided', async () => {
@@ -639,7 +700,7 @@ describe('CalloutFramingService', () => {
         memoContent: 'new content',
       } as any;
 
-      vi.mocked(memoService.updateMemoContent).mockResolvedValue({
+      vi.mocked(memoService.replaceMemoContent).mockResolvedValue({
         id: 'memo-1',
       } as any);
 
@@ -647,11 +708,14 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        true // isParentCalloutTemplate
+        true, // isParentCalloutTemplate
+        actorContextData.actorContext,
+        'actor-1' // initiating actor threaded to the live-room replacement
       );
 
-      expect(memoService.updateMemoContent).toHaveBeenCalledWith(
+      expect(memoService.replaceMemoContent).toHaveBeenCalledWith(
         'memo-1',
+        'actor-1',
         'new content'
       );
     });
@@ -680,6 +744,7 @@ describe('CalloutFramingService', () => {
         updateData,
         storageAggregator,
         false,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -704,6 +769,7 @@ describe('CalloutFramingService', () => {
         updateData,
         storageAggregator,
         false,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -723,7 +789,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(mediaGalleryService.createMediaGallery).not.toHaveBeenCalled();
@@ -745,7 +812,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(whiteboardService.deleteWhiteboard).toHaveBeenCalledWith('wb-1');
@@ -767,7 +835,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(memoService.deleteMemo).toHaveBeenCalledWith('memo-1');
@@ -789,7 +858,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(linkService.deleteLink).toHaveBeenCalledWith('link-1');
@@ -811,7 +881,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(pollService.deletePoll).toHaveBeenCalledWith('poll-1');
@@ -834,7 +905,8 @@ describe('CalloutFramingService', () => {
           framing,
           updateData,
           storageAggregator,
-          false
+          false,
+          actorContextData.actorContext
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -854,7 +926,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(mediaGalleryService.deleteMediaGallery).toHaveBeenCalledWith(
@@ -863,7 +936,7 @@ describe('CalloutFramingService', () => {
       expect(framing.mediaGallery).toBeUndefined();
     });
 
-    it('should update whiteboard preview settings when provided with content', async () => {
+    it('applies whiteboard preview settings even for a non-template callout (content ignored)', async () => {
       const framing = {
         id: 'framing-1',
         type: CalloutFramingType.WHITEBOARD,
@@ -886,10 +959,11 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
-      expect(whiteboardService.updateWhiteboardContent).toHaveBeenCalled();
+      expect(whiteboardService.updateWhiteboardContent).not.toHaveBeenCalled();
       expect(whiteboardService.updateWhiteboard).toHaveBeenCalledWith(
         { id: 'wb-1' },
         { previewSettings: { zoom: 1 } }
@@ -913,7 +987,8 @@ describe('CalloutFramingService', () => {
           framing,
           updateData,
           storageAggregator,
-          false
+          false,
+          actorContextData.actorContext
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -932,7 +1007,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(result.type).toBe(CalloutFramingType.SPACES);
@@ -960,7 +1036,8 @@ describe('CalloutFramingService', () => {
         framing,
         updateData,
         storageAggregator,
-        false
+        false,
+        actorContextData.actorContext
       );
 
       expect(linkService.createLink).toHaveBeenCalled();
