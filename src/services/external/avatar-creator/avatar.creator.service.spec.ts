@@ -6,6 +6,8 @@ import axios from 'axios';
 import {
   AvatarCreatorService,
   DEFAULT_AVATAR_SERVICE_URL,
+  IMAGE_FETCH_ERROR_MESSAGE,
+  IMAGE_FETCH_USER_AGENT,
 } from './avatar.creator.service';
 
 describe('AvatarCreatorService', () => {
@@ -80,19 +82,73 @@ describe('AvatarCreatorService', () => {
   });
 
   describe('urlToBuffer', () => {
-    it('should send an explicit non-axios User-Agent so image CDNs do not block the request', async () => {
+    const SIGNED_AVATAR_URL =
+      'https://media.licdn.com/dms/image/v2/abc?e=1234&v=beta&t=SIGNING-TOKEN';
+
+    it('should send the full CDN-compatibility header contract so image CDNs do not block the request', async () => {
       // media.licdn.com (LinkedIn avatars) answers 403 to the default
       // `User-Agent: axios/<version>` that the Node adapter sends.
       const getSpy = vi
         .spyOn(axios, 'get')
         .mockResolvedValue({ data: Buffer.from('image'), status: 200 } as any);
 
-      await service.urlToBuffer('https://media.licdn.com/dms/image/v2/abc');
+      await service.urlToBuffer(SIGNED_AVATAR_URL);
 
       const config = getSpy.mock.calls[0][1] as Record<string, any>;
-      const userAgent = config?.headers?.['User-Agent'];
-      expect(userAgent).toBeDefined();
-      expect(userAgent).not.toMatch(/axios/i);
+      expect(config?.headers?.['User-Agent']).toBe(IMAGE_FETCH_USER_AGENT);
+      expect(config?.headers?.Accept).toBe('image/*');
+      // The whole point of the override: never the axios default.
+      expect(IMAGE_FETCH_USER_AGENT).not.toMatch(/axios/i);
+    });
+
+    it('should keep the source URL out of the failure message when the download is rejected', async () => {
+      // The URL carries a provider signing token and callers log this error,
+      // so the message must stay static and the status must ride structurally.
+      const rejection: any = new Error('Request failed with status code 403');
+      rejection.response = { status: 403 };
+      vi.spyOn(axios, 'get').mockRejectedValue(rejection);
+
+      const error = await service
+        .urlToBuffer(SIGNED_AVATAR_URL)
+        .then(() => undefined)
+        .catch((e: any) => e);
+
+      expect(error.message).toBe(IMAGE_FETCH_ERROR_MESSAGE);
+      expect(error.message).not.toContain('SIGNING-TOKEN');
+      expect(error.message).not.toContain('media.licdn.com');
+      expect(error.httpStatus).toBe(403);
+      expect(error.cause).toBe(rejection);
+    });
+
+    it('should carry the transport failure code when the request never gets a status', async () => {
+      const rejection: any = new Error('getaddrinfo ENOTFOUND media.licdn.com');
+      rejection.code = 'ENOTFOUND';
+      vi.spyOn(axios, 'get').mockRejectedValue(rejection);
+
+      const error = await service
+        .urlToBuffer(SIGNED_AVATAR_URL)
+        .then(() => undefined)
+        .catch((e: any) => e);
+
+      expect(error.message).toBe(IMAGE_FETCH_ERROR_MESSAGE);
+      expect(error.httpStatus).toBeUndefined();
+      expect(error.errorCode).toBe('ENOTFOUND');
+    });
+
+    it('should keep the source URL out of the failure message on a non-200 response', async () => {
+      vi.spyOn(axios, 'get').mockResolvedValue({
+        data: Buffer.from(''),
+        status: 404,
+      } as any);
+
+      const error = await service
+        .urlToBuffer(SIGNED_AVATAR_URL)
+        .then(() => undefined)
+        .catch((e: any) => e);
+
+      expect(error.message).toBe(IMAGE_FETCH_ERROR_MESSAGE);
+      expect(error.message).not.toContain('SIGNING-TOKEN');
+      expect(error.httpStatus).toBe(404);
     });
   });
 });

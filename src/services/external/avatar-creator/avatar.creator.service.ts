@@ -17,6 +17,25 @@ export const DEFAULT_AVATAR_SERVICE_URL = 'https://eu.ui-avatars.com/api/';
  */
 export const IMAGE_FETCH_USER_AGENT = 'Alkemio-Server (+https://alkem.io)';
 
+/**
+ * Static message for every `urlToBuffer` failure.
+ *
+ * `imageUrl` can carry provider signing tokens (LinkedIn signs its
+ * `media.licdn.com` avatar URLs), and callers log this error — so the URL must
+ * never reach the message. Diagnostics travel structurally instead: the HTTP
+ * status on `error.httpStatus`, the host in the caller's structured log.
+ */
+export const IMAGE_FETCH_ERROR_MESSAGE =
+  'Error fetching or processing the image';
+
+/** An image-download failure carrying only non-sensitive diagnostics. */
+export type ImageFetchError = Error & {
+  /** Upstream HTTP status, when the request got that far. */
+  httpStatus?: number;
+  /** Transport failure code (axios `ENOTFOUND`, `ECONNABORTED`, …) — never URL data. */
+  errorCode?: string;
+};
+
 @Injectable()
 export class AvatarCreatorService {
   constructor(
@@ -73,19 +92,26 @@ export class AvatarCreatorService {
         );
         return data;
       } else {
-        throw new Error(
-          `Failed to fetch image using URL ${imageUrl}. Status code: ${status}`
-        );
+        // Rethrown by the catch below, which reads `httpStatus` back off it.
+        const nonOk: ImageFetchError = new Error(IMAGE_FETCH_ERROR_MESSAGE);
+        nonOk.httpStatus = status;
+        throw nonOk;
       }
     } catch (error: any) {
-      const httpStatus: number | undefined = error?.response?.status;
+      // `response.status` for an axios rejection, `httpStatus` for the non-200
+      // branch above.
+      const httpStatus: number | undefined =
+        error?.response?.status ?? error?.httpStatus;
       // Callers swallow this failure (an avatar must never block contributor
-      // creation), so carry the status on the error rather than only inside
-      // the message — it is what tells a CDN block apart from a dead link.
-      const wrapped: Error & { httpStatus?: number } = new Error(
-        `Error fetching or processing the image at URL ${imageUrl}: ${error.message}`
-      );
+      // creation) and log the error, so the message stays static and the
+      // status rides on the error instead — it is what tells a CDN block
+      // apart from a dead link. The original stays reachable as `cause`.
+      const wrapped: ImageFetchError = new Error(IMAGE_FETCH_ERROR_MESSAGE, {
+        cause: error,
+      });
       wrapped.httpStatus = httpStatus;
+      // Covers the failures that never produce a status at all (DNS, timeout).
+      wrapped.errorCode = error?.code;
       throw wrapped;
     }
   }

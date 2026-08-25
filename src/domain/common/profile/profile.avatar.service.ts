@@ -145,6 +145,7 @@ export class ProfileAvatarService {
           profileID: profile.id,
           avatarHost: this.getHost(sourceURI),
           httpStatus: error?.httpStatus,
+          errorCode: error?.errorCode,
           error: error?.message,
         },
         error?.stack,
