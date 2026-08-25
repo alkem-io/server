@@ -440,12 +440,7 @@ describe('TemplateNavigatorTool', () => {
       expect(content.error).toContain('do not have access');
     });
 
-    it('should surface compact whiteboard metadata (element count + apply hint), NOT the scene', async () => {
-      const scene = JSON.stringify({
-        type: 'excalidraw',
-        elements: [{ id: 'a', type: 'rectangle' }],
-        files: {},
-      });
+    it('should surface whiteboard template metadata (hasContent + apply hint), NOT the scene', async () => {
       const mockTemplate = createMockTemplate({
         id: 'wb-template-1',
         type: TemplateType.WHITEBOARD,
@@ -454,10 +449,10 @@ describe('TemplateNavigatorTool', () => {
       vi.mocked(templateService.getTemplateOrFail).mockResolvedValue(
         mockTemplate
       );
-      // The Whiteboard entity's @AfterLoad already decompresses `content` to
-      // plain Excalidraw JSON, so the tool receives a decompressed string.
+      // Whiteboard content is a Yjs-V2 snapshot in file storage (contentPointer);
+      // the details view reports only whether a stored snapshot exists.
       vi.mocked(templateService.getWhiteboard).mockResolvedValue({
-        content: scene,
+        contentPointer: 'snapshot-ptr-1',
       } as any);
       vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
 
@@ -471,40 +466,10 @@ describe('TemplateNavigatorTool', () => {
       const content = parseResultContent(result);
       expect(content.content.type).toBe('whiteboard');
       expect(content.content.hasContent).toBe(true);
-      // Only compact metadata — the scene is applied BY REFERENCE via
-      // update_whiteboard_content(fromTemplateId) and never surfaced to the model
-      // (a large scene through the LLM stalls the turn).
-      expect(content.content.elementCount).toBe(1);
+      // Only metadata — the scene is copied BY REFERENCE at create time
+      // (create_whiteboard fromTemplateId), never surfaced to the model.
       expect(content.content.scene).toBeUndefined();
       expect(content.content.applyHint).toContain('fromTemplateId');
-    });
-
-    it('should degrade gracefully when the whiteboard scene is not valid JSON', async () => {
-      const mockTemplate = createMockTemplate({
-        id: 'wb-template-2',
-        type: TemplateType.WHITEBOARD,
-      });
-
-      vi.mocked(templateService.getTemplateOrFail).mockResolvedValue(
-        mockTemplate
-      );
-      vi.mocked(templateService.getWhiteboard).mockResolvedValue({
-        content: 'not-json{',
-      } as any);
-      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
-
-      const agentInfo = createMockActorContext();
-      const result = await tool.execute(
-        { action: 'details', templateId: 'wb-template-2' },
-        agentInfo
-      );
-
-      expect(result.isError).toBeFalsy();
-      const content = parseResultContent(result);
-      expect(content.content.type).toBe('whiteboard');
-      // hasContent is kept for back-compat; scene is omitted on parse failure.
-      expect(content.content.hasContent).toBe(true);
-      expect(content.content.scene).toBeUndefined();
     });
 
     it('should report no content for an empty whiteboard template', async () => {

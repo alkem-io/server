@@ -5,6 +5,7 @@ import { LogContext } from '@common/enums/logging.context';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
@@ -41,6 +42,7 @@ export class KnowledgeBaseService {
   public async createKnowledgeBase(
     knowledgeBaseData: CreateKnowledgeBaseInput,
     storageAggregator: IStorageAggregator,
+    actorContext: ActorContext,
     userID: string | undefined
   ): Promise<IKnowledgeBase> {
     // Phase 1: build entity tree in memory (no file-service-go calls).
@@ -94,6 +96,7 @@ export class KnowledgeBaseService {
           knowledgeBase.calloutsSet,
           knowledgeBaseData.calloutsSetData.calloutsData,
           storageAggregator,
+          actorContext,
           userID
         );
       // Persist the newly-added callouts so their bucket ids are real

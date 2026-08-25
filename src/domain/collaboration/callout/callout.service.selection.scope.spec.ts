@@ -4,6 +4,7 @@ import { ValidationException } from '@common/exceptions';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { Space } from '@domain/space/space/space.entity';
 import { Test, TestingModule } from '@nestjs/testing';
+import { actorContextData } from '@test/data/actorContext.mock';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -229,6 +230,7 @@ describe('CalloutService — selection scope guard (T008)', () => {
           }),
           [],
           { id: 'agg-1' } as any,
+          actorContextData.actorContext,
           'user-1',
           'host-space-1'
         )
@@ -252,6 +254,7 @@ describe('CalloutService — selection scope guard (T008)', () => {
           }),
           [],
           { id: 'agg-1' } as any,
+          actorContextData.actorContext,
           'user-1',
           'host-space-1'
         )
@@ -270,6 +273,7 @@ describe('CalloutService — selection scope guard (T008)', () => {
           }),
           [],
           { id: 'agg-1' } as any,
+          actorContextData.actorContext,
           'user-1',
           'host-space-1'
         )
@@ -285,6 +289,7 @@ describe('CalloutService — selection scope guard (T008)', () => {
           }),
           [],
           { id: 'agg-1' } as any,
+          actorContextData.actorContext,
           'user-1',
           undefined // no parentSpaceId → template/KB context
         )
@@ -302,6 +307,7 @@ describe('CalloutService — selection scope guard (T008)', () => {
           }),
           [],
           { id: 'agg-1' } as any,
+          actorContextData.actorContext,
           'user-1',
           'host-space-1'
         )
@@ -328,6 +334,7 @@ describe('CalloutService — selection scope guard (T008)', () => {
           }),
           [],
           { id: 'agg-1' } as any,
+          actorContextData.actorContext,
           'user-1',
           'host-space-1'
         )
@@ -351,6 +358,7 @@ describe('CalloutService — selection scope guard (T008)', () => {
           }),
           [],
           { id: 'agg-1' } as any,
+          actorContextData.actorContext,
           'user-1',
           'host-space-1'
         )
@@ -372,6 +380,7 @@ describe('CalloutService — selection scope guard (T008)', () => {
           }),
           [],
           { id: 'agg-1' } as any,
+          actorContextData.actorContext,
           'user-1',
           undefined
         )
@@ -405,7 +414,13 @@ describe('CalloutService — selection scope guard (T008)', () => {
       } as any;
 
       await expect(
-        service.createCallout(input, [], { id: 'agg-1' } as any, 'user-1')
+        service.createCallout(
+          input,
+          [],
+          { id: 'agg-1' } as any,
+          actorContextData.actorContext,
+          'user-1'
+        )
       ).resolves.toBeDefined();
 
       expect(roleSetService.getUsersWithRole).not.toHaveBeenCalled();

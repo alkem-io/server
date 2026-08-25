@@ -10,6 +10,8 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { ReactionType } from '@common/enums/reaction.type';
 import { RoleName } from '@common/enums/role.name';
 import { RoomType } from '@common/enums/room.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { TagsetType } from '@common/enums/tagset.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -17,6 +19,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { limitAndShuffle } from '@common/utils';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
@@ -28,6 +31,7 @@ import { IClassification } from '@domain/common/classification/classification.in
 import { ClassificationService } from '@domain/common/classification/classification.service';
 import { CreateMemoInput } from '@domain/common/memo/dto/memo.dto.create';
 import { ITagsetTemplate } from '@domain/common/tagset-template';
+import { TagsetTemplateService } from '@domain/common/tagset-template/tagset.template.service';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { RoomService } from '@domain/communication/room/room.service';
@@ -65,6 +69,8 @@ import { CalloutContributionsCountOutput } from './dto/callout.contributions.cou
 import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contribution';
 import { UpdateCalloutInput } from './dto/callout.dto.update';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
+import { TASK_BOARD_DEFAULT_COLUMNS } from './task-board/task.board.constants';
+import { TaskBoardService } from './task-board/task.board.service';
 
 @Injectable()
 export class CalloutService {
@@ -79,6 +85,8 @@ export class CalloutService {
     private collaboraDocumentService: CollaboraDocumentService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private classificationService: ClassificationService,
+    private tagsetTemplateService: TagsetTemplateService,
+    private taskBoardService: TaskBoardService,
     private roleSetService: RoleSetService,
     private reactionService: ReactionService,
     @InjectEntityManager('default')
@@ -91,6 +99,7 @@ export class CalloutService {
     calloutData: CreateCalloutInput,
     classificationTagsetTemplates: ITagsetTemplate[],
     storageAggregator: IStorageAggregator,
+    actorContext: ActorContext,
     userID?: string,
     parentSpaceId?: string
   ): Promise<ICallout> {
@@ -106,12 +115,16 @@ export class CalloutService {
     callout.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.CALLOUT
     );
-    callout.createdBy = userID;
+    // `userID` is the initiating actor's UUID, but an anonymous/system context
+    // (e.g. bootstrap template seeding) carries actorID='' — map that to NULL so a
+    // malformed empty string never hits the nullable `uuid` createdBy column.
+    callout.createdBy = userID || undefined;
     callout.contributions = [];
 
     callout.framing = await this.calloutFramingService.createCalloutFraming(
       calloutData.framing,
       storageAggregator,
+      actorContext,
       userID
     );
 
@@ -146,11 +159,28 @@ export class CalloutService {
 
     if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
       callout.publishedDate = new Date();
-      callout.publishedBy = userID;
+      // Empty-string actorID (anonymous/system context, e.g. bootstrap template
+      // seeding) → NULL, never a malformed empty string in the nullable `uuid`
+      // publishedBy column (matches the createdBy guard above).
+      callout.publishedBy = userID || undefined;
     }
 
+    // A generic 'task' tagset supplied through the classification input is never
+    // allowed to fabricate board state: only an explicit taskBoard block makes a
+    // board. Strip any such tagset before the classification is built so a
+    // template round-trip or a hand-crafted create cannot smuggle a marker in.
+    this.stripGenericTaskTagsets(calloutData);
+
+    const taskBoardTagsetTemplate = await this.prepareTaskBoardTemplate(
+      calloutData,
+      callout.settings.contribution.allowedTypes
+    );
+    const effectiveTagsetTemplates = taskBoardTagsetTemplate
+      ? [...classificationTagsetTemplates, taskBoardTagsetTemplate]
+      : classificationTagsetTemplates;
+
     callout.classification = this.classificationService.createClassification(
-      classificationTagsetTemplates,
+      effectiveTagsetTemplates,
       calloutData.classification
     );
 
@@ -165,8 +195,10 @@ export class CalloutService {
           calloutData.contributions,
           storageAggregator,
           callout.settings.contribution,
+          actorContext,
           userID,
-          parentSpaceId
+          parentSpaceId,
+          taskBoardTagsetTemplate
         );
     }
 
@@ -179,6 +211,69 @@ export class CalloutService {
     }
 
     return callout;
+  }
+
+  /**
+   * Removes any generic 'task'-named tagset from the create input's
+   * classification. The board marker is created only from an explicit taskBoard
+   * block; a tagset named 'task' arriving through the generic classification
+   * path must never seed board state.
+   */
+  private stripGenericTaskTagsets(calloutData: CreateCalloutInput): void {
+    const tagsets = calloutData.classification?.tagsets;
+    if (!tagsets) {
+      return;
+    }
+    calloutData.classification!.tagsets = tagsets.filter(
+      tagset => tagset.name !== TagsetReservedName.TASK
+    );
+  }
+
+  /**
+   * When the create carries a taskBoard block, builds and persists the
+   * standalone per-callout TagsetTemplate that drives the board's columns and
+   * returns it so it can be attached to the callout's classification. The
+   * marker tagset is materialised from this template by createClassification.
+   *
+   * The template is persisted here because the tagset -> tagsetTemplate relation
+   * does not cascade: the callout save would otherwise reference an unsaved
+   * template row. Returns undefined when the callout is not a board.
+   */
+  private async prepareTaskBoardTemplate(
+    calloutData: CreateCalloutInput,
+    allowedTypes: CalloutContributionType[]
+  ): Promise<ITagsetTemplate | undefined> {
+    if (!calloutData.taskBoard) {
+      return undefined;
+    }
+
+    // A Tasks board is a POSTS-only callout: its contributions are the tasks.
+    const isPostOnly =
+      allowedTypes.length === 1 &&
+      allowedTypes[0] === CalloutContributionType.POST;
+    if (!isPostOnly) {
+      throw new ValidationException(
+        'A Tasks board callout must allow only POST contributions',
+        LogContext.COLLABORATION,
+        { allowedTypes }
+      );
+    }
+
+    const requestedColumns =
+      calloutData.taskBoard.columns && calloutData.taskBoard.columns.length > 0
+        ? calloutData.taskBoard.columns
+        : [...TASK_BOARD_DEFAULT_COLUMNS];
+    const columns = this.taskBoardService.validateColumnNames(requestedColumns);
+
+    const tagsetTemplate = this.tagsetTemplateService.createTagsetTemplate({
+      name: TagsetReservedName.TASK,
+      type: TagsetType.SELECT_ONE,
+      allowedValues: columns,
+      defaultSelectedValue: columns[0],
+    });
+    // Standalone template: no tagsetTemplateSet. Persisted before the callout
+    // save because the marker tagset's FK to it does not cascade.
+    return await this.tagsetTemplateService.save(tagsetTemplate);
   }
 
   /**
@@ -436,6 +531,7 @@ export class CalloutService {
   public async updateCallout(
     calloutInput: ICallout,
     calloutUpdateData: UpdateCalloutInput,
+    actorContext: ActorContext,
     userID?: string
   ): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(calloutInput.id, {
@@ -471,6 +567,7 @@ export class CalloutService {
         calloutUpdateData.framing,
         storageAggregator,
         callout.isTemplate,
+        actorContext,
         userID
       );
     }
@@ -596,6 +693,10 @@ export class CalloutService {
         contributions: true,
         contributionDefaults: true,
         framing: true,
+        // On a Tasks board the marker tagset's template is a standalone,
+        // per-callout row not owned by any tagsetTemplateSet — capture it here
+        // so it can be removed explicitly after the callout is gone.
+        classification: { tagsets: { tagsetTemplate: true } },
       },
     });
 
@@ -609,6 +710,12 @@ export class CalloutService {
         LogContext.COLLABORATION
       );
     }
+
+    // Capture the board's driving column template before the contributions and
+    // the callout's own classification are removed; a Tasks board owns this row
+    // exclusively, so it is removed last (below) to leave no orphaned template.
+    const boardTemplate =
+      this.taskBoardService.getTaskTagset(callout)?.tagsetTemplate;
 
     await this.calloutFramingService.delete(callout.framing);
 
@@ -644,6 +751,23 @@ export class CalloutService {
       return manager.remove(callout as Callout);
     });
     result.id = calloutID;
+
+    // Remove the board's column template LAST — but the callout's own
+    // classification (which carries the board's marker tagset) is NOT
+    // cascade-removed with the callout: removing the callout row leaves the
+    // classification and its marker tagset orphaned, and that marker tagset's
+    // FK to the template would block the drop below (QueryFailedError on
+    // tagset_template). Delete the orphaned classification first to release the
+    // FK, then drop the standalone template it referenced. Non-board callouts
+    // have no such template and skip both.
+    if (boardTemplate) {
+      if (callout.classification) {
+        await this.classificationService.deleteClassification(
+          callout.classification.id
+        );
+      }
+      await this.tagsetTemplateService.removeTagsetTemplate(boardTemplate);
+    }
 
     return result;
   }
@@ -808,12 +932,18 @@ export class CalloutService {
 
   public async createContributionOnCallout(
     contributionData: CreateContributionOnCalloutInput,
+    actorContext: ActorContext,
     userID: string
   ): Promise<ICalloutContribution> {
     const calloutID = contributionData.calloutID;
     const callout = await this.getCalloutOrFail(calloutID, {
       relations: {
         contributions: true,
+        classification: {
+          tagsets: {
+            tagsetTemplate: true,
+          },
+        },
       },
     });
     if (!callout.settings.contribution)
@@ -865,13 +995,18 @@ export class CalloutService {
     }
 
     const storageAggregator = await this.getStorageAggregator(callout.id);
+    // On a Tasks board, the marker tagset's template drives the task's column.
+    const boardTemplate =
+      this.taskBoardService.getTaskTagset(callout)?.tagsetTemplate;
     const contribution =
       await this.contributionService.createCalloutContribution(
         contributionData,
         storageAggregator,
         callout.settings.contribution,
         undefined, // parentSpaceId — resolved by admin sync for user-initiated contributions
-        userID
+        actorContext,
+        userID,
+        boardTemplate
       );
     contribution.callout = callout;
 
@@ -950,7 +1085,8 @@ export class CalloutService {
     contribution.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.CALLOUT_CONTRIBUTION
     );
-    contribution.createdBy = userID;
+    // Empty-string actorID (anonymous/system context) → NULL, never a malformed uuid.
+    contribution.createdBy = userID || undefined;
     contribution.collaboraDocument = collaboraDocument;
     contribution.callout = callout;
 

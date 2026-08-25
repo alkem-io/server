@@ -2,13 +2,10 @@ import { ValidationException } from '@common/exceptions';
 import { Kind } from 'graphql';
 import { WhiteboardContent } from './scalar.whiteboard.content';
 
-// Minimal valid excalidraw content
-const validContent = JSON.stringify({
-  type: 'excalidraw',
-  version: 2,
-  elements: [],
-  appState: {},
-});
+// A valid whiteboard content value is now an opaque base64-encoded Yjs-V2
+// snapshot (006-collab-content-unification) — NOT Excalidraw JSON. The scalar's
+// only structural check is base64; the empty string is also accepted.
+const validContent = Buffer.from('yjs-v2-snapshot-bytes').toString('base64');
 
 describe('WhiteboardContent', () => {
   let scalar: WhiteboardContent;
@@ -76,16 +73,17 @@ describe('WhiteboardContent', () => {
       );
     });
 
-    it('throws ValidationException for invalid JSON', () => {
-      expect(() => WhiteboardContent.validate('not-json')).toThrow(
+    it('throws ValidationException for a non-base64 string (hyphen not in the alphabet)', () => {
+      expect(() => WhiteboardContent.validate('not-base64!')).toThrow(
         ValidationException
       );
     });
 
-    it('throws ValidationException for invalid excalidraw content with array errors', () => {
-      // Valid JSON but missing required excalidraw fields
-      const invalidContent = JSON.stringify({ invalid: true });
-      expect(() => WhiteboardContent.validate(invalidContent)).toThrow(
+    it('throws ValidationException for a JSON string (braces/quotes are not base64)', () => {
+      // Excalidraw JSON no longer crosses this boundary — its `{`, `"`, `:` chars
+      // are outside the base64 alphabet, so the scalar rejects it.
+      const jsonContent = JSON.stringify({ invalid: true });
+      expect(() => WhiteboardContent.validate(jsonContent)).toThrow(
         ValidationException
       );
     });

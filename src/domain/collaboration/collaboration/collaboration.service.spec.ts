@@ -8,6 +8,7 @@ import { LicenseService } from '@domain/common/license/license.service';
 import { TimelineService } from '@domain/timeline/timeline/timeline.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken, getRepositoryToken } from '@nestjs/typeorm';
+import { actorContextData } from '@test/data/actorContext.mock';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -77,7 +78,11 @@ describe('CollaborationService', () => {
       } as any;
 
       await expect(
-        service.createCollaboration(collaborationData, storageAggregator)
+        service.createCollaboration(
+          collaborationData,
+          storageAggregator,
+          actorContextData.actorContext
+        )
       ).rejects.toThrow(RelationshipNotFoundException);
     });
 
@@ -88,7 +93,11 @@ describe('CollaborationService', () => {
       } as any;
 
       await expect(
-        service.createCollaboration(collaborationData, storageAggregator)
+        service.createCollaboration(
+          collaborationData,
+          storageAggregator,
+          actorContextData.actorContext
+        )
       ).rejects.toThrow(RelationshipNotFoundException);
     });
 
@@ -140,7 +149,8 @@ describe('CollaborationService', () => {
 
       const result = await service.createCollaboration(
         collaborationData,
-        storageAggregator
+        storageAggregator,
+        actorContextData.actorContext
       );
 
       expect(result.authorization).toBeDefined();
@@ -185,7 +195,8 @@ describe('CollaborationService', () => {
 
       const result = await service.createCollaboration(
         collaborationData,
-        storageAggregator
+        storageAggregator,
+        actorContextData.actorContext
       );
 
       expect(result.isTemplate).toBe(true);
@@ -223,7 +234,11 @@ describe('CollaborationService', () => {
       } as any);
 
       await expect(
-        service.createCollaboration(collaborationData, storageAggregator)
+        service.createCollaboration(
+          collaborationData,
+          storageAggregator,
+          actorContextData.actorContext
+        )
       ).rejects.toThrow(RelationshipNotFoundException);
     });
   });

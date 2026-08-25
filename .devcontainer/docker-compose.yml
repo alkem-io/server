@@ -2,7 +2,7 @@ volumes:
   pnpm-store:
   postgres-data:
   redis-data:
-  rabbitmq-data:
+  rabbitmq-data-4-0:
   synapse-data:
   storage-data:
 
@@ -97,13 +97,14 @@ services:
       - "6379:6379"
 
   rabbitmq:
-    image: rabbitmq:3.9.13-management
+    image: rabbitmq:4.0.5-management
     restart: unless-stopped
     environment:
       - RABBITMQ_DEFAULT_USER=alkemio-admin
       - RABBITMQ_DEFAULT_PASS=alkemio!
     volumes:
-      - rabbitmq-data:/var/lib/rabbitmq
+      # Do not open the legacy 3.9 volume directly with RabbitMQ 4.0.
+      - rabbitmq-data-4-0:/var/lib/rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"

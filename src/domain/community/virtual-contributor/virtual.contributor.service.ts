@@ -78,7 +78,7 @@ export class VirtualContributorService {
     virtualContributorData: CreateVirtualContributorInput,
     knowledgeBaseDefaultCallouts: CreateCalloutInput[],
     storageAggregator: IStorageAggregator,
-    actorContext?: ActorContext
+    actorContext: ActorContext
   ): Promise<IVirtualContributor> {
     if (virtualContributorData.nameID) {
       // Convert nameID to lower case
@@ -125,7 +125,8 @@ export class VirtualContributorService {
       await this.knowledgeBaseService.createKnowledgeBase(
         knowledgeBaseData,
         storageAggregator,
-        actorContext?.actorID
+        actorContext,
+        actorContext.actorID
       );
 
     const aiPersonaInput: CreateAiPersonaInput = {

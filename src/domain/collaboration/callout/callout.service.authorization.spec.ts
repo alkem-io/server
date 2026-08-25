@@ -1,5 +1,7 @@
+import { AuthorizationPrivilege } from '@common/enums';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -11,6 +13,7 @@ import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
 import { CalloutService } from './callout.service';
 import { CalloutAuthorizationService } from './callout.service.authorization';
+import { TaskBoardService } from './task-board/task.board.service';
 
 describe('CalloutAuthorizationService', () => {
   let service: CalloutAuthorizationService;
@@ -26,6 +29,8 @@ describe('CalloutAuthorizationService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CalloutAuthorizationService,
+        // Real board detection so the MOVE_TASK rule branch is exercised.
+        TaskBoardService,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -359,6 +364,113 @@ describe('CalloutAuthorizationService', () => {
       expect(
         authorizationPolicyService.appendPrivilegeAuthorizationRules
       ).toHaveBeenCalled();
+    });
+  });
+
+  describe('task board privilege rules', () => {
+    const platformRolesAccess = { roles: [] } as any;
+
+    function makeCallout(overrides: any = {}) {
+      return {
+        id: 'callout-1',
+        authorization: {
+          id: 'auth-1',
+          credentialRules: [],
+          privilegeRules: [],
+        },
+        contributions: [],
+        contributionDefaults: { id: 'defaults-1' },
+        settings: {
+          visibility: CalloutVisibility.PUBLISHED,
+          contribution: { allowedTypes: [CalloutContributionType.POST] },
+          framing: { commentsEnabled: false },
+        },
+        framing: { id: 'framing-1', profile: { id: 'p-1' } },
+        comments: undefined,
+        classification: undefined,
+        calloutsSet: undefined,
+        createdBy: undefined,
+        isTemplate: false,
+        ...overrides,
+      } as any;
+    }
+
+    // Returns the flattened set of granted privileges across every
+    // appendPrivilegeAuthorizationRules call.
+    function grantedPrivileges(): string[] {
+      const mock = vi.mocked(
+        authorizationPolicyService.appendPrivilegeAuthorizationRules
+      );
+      return mock.mock.calls.flatMap(([, rules]: any) =>
+        (rules ?? []).flatMap((rule: any) => rule.grantedPrivileges ?? [])
+      );
+    }
+
+    function primeCommonMocks(callout: any) {
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(
+        authorizationPolicyService.inheritParentAuthorization
+      ).mockReturnValue(callout.authorization);
+      vi.mocked(
+        authorizationPolicyService.appendPrivilegeAuthorizationRules
+      ).mockReturnValue(callout.authorization);
+      vi.mocked(
+        authorizationPolicyService.appendCredentialAuthorizationRules
+      ).mockReturnValue(callout.authorization);
+      const framingAuthService = (service as any)
+        .calloutFramingAuthorizationService;
+      vi.mocked(framingAuthService.applyAuthorizationPolicy).mockResolvedValue(
+        []
+      );
+    }
+
+    it('grants MOVE_TASK to CONTRIBUTE and UPDATE holders on a board callout', async () => {
+      const callout = makeCallout({
+        classification: {
+          id: 'cls-1',
+          tagsets: [{ name: TagsetReservedName.TASK, tags: ['Backlog'] }],
+        },
+      });
+      primeCommonMocks(callout);
+
+      await service.applyAuthorizationPolicy(
+        'callout-1',
+        undefined,
+        platformRolesAccess
+      );
+
+      const moveRules = vi
+        .mocked(authorizationPolicyService.appendPrivilegeAuthorizationRules)
+        .mock.calls.flatMap(([, rules]: any) => rules ?? [])
+        .filter((rule: any) =>
+          rule.grantedPrivileges?.includes(AuthorizationPrivilege.MOVE_TASK)
+        );
+
+      const sourcePrivileges = moveRules.map(
+        (rule: any) => rule.sourcePrivilege
+      );
+      expect(sourcePrivileges).toContain(AuthorizationPrivilege.CONTRIBUTE);
+      expect(sourcePrivileges).toContain(AuthorizationPrivilege.UPDATE);
+    });
+
+    it('grants no MOVE_TASK rule on a non-board callout', async () => {
+      const callout = makeCallout({
+        classification: {
+          id: 'cls-1',
+          tagsets: [{ name: TagsetReservedName.KEYWORDS, tags: ['x'] }],
+        },
+      });
+      primeCommonMocks(callout);
+
+      await service.applyAuthorizationPolicy(
+        'callout-1',
+        undefined,
+        platformRolesAccess
+      );
+
+      expect(grantedPrivileges()).not.toContain(
+        AuthorizationPrivilege.MOVE_TASK
+      );
     });
   });
 });

@@ -28,6 +28,7 @@ import { ReactionService } from '@domain/collaboration/reaction/reaction.service
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IMemo } from '@domain/common/memo/types';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
+import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { Inject } from '@nestjs/common/decorators';
 import { ConfigService } from '@nestjs/config';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
@@ -67,6 +68,12 @@ import {
 } from './dto/callout.dto.reaction.input';
 import { UpdateCalloutPublishInfoInput } from './dto/callout.dto.update.publish.info';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
+import { CreateTaskColumnOnCalloutInput } from './task-board/dto/task.board.dto.column.create';
+import { DeleteTaskColumnOnCalloutInput } from './task-board/dto/task.board.dto.column.delete';
+import { UpdateTaskColumnsSortOrderOnCalloutInput } from './task-board/dto/task.board.dto.column.sort.order';
+import { UpdateTaskColumnOnCalloutInput } from './task-board/dto/task.board.dto.column.update';
+import { TaskBoardColumnService } from './task-board/task.board.column.service';
+import { TaskBoardService } from './task-board/task.board.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -89,11 +96,38 @@ export class CalloutResolverMutations {
     private readonly temporaryStorageService: TemporaryStorageService,
     private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly collaborationLicenseService: CollaborationLicenseService,
+    private readonly whiteboardService: WhiteboardService,
     private readonly reactionService: ReactionService,
     private readonly actorLookupService: ActorLookupService,
+    private readonly taskBoardColumnService: TaskBoardColumnService,
+    private readonly taskBoardService: TaskBoardService,
     @Inject(SUBSCRIPTION_CALLOUT_POST_CREATED)
     private readonly postCreatedSubscription: PubSubEngine
   ) {}
+
+  /**
+   * A clone may read its source only after the actor is granted READ: when a
+   * `sourceWhiteboardID` is present, load it with its authorization and
+   * `grantAccessOrFail` READ (throws Forbidden). No-op when there is no source.
+   */
+  private async assertActorCanReadSourceWhiteboard(
+    actorContext: ActorContext,
+    sourceWhiteboardID?: string
+  ): Promise<void> {
+    if (!sourceWhiteboardID) {
+      return;
+    }
+    const source = await this.whiteboardService.getWhiteboardOrFail(
+      sourceWhiteboardID,
+      { relations: { authorization: true } }
+    );
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      source.authorization,
+      AuthorizationPrivilege.READ,
+      `clone whiteboard content from source: ${sourceWhiteboardID}`
+    );
+  }
 
   @Mutation(() => ICallout, {
     description: 'Delete a Callout.',
@@ -188,6 +222,7 @@ export class CalloutResolverMutations {
     const updatedCallout = await this.calloutService.updateCallout(
       callout,
       calloutData,
+      actorContext,
       actorContext.actorID
     );
 
@@ -209,6 +244,89 @@ export class CalloutResolverMutations {
 
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
     return updatedCallout;
+  }
+
+  // Column administration on a Tasks board. Each is gated on UPDATE of the
+  // callout — configuring the board's columns is an admin capability, distinct
+  // from the MOVE_TASK any member holds to move a task between columns. The
+  // rename/delete sweeps and the reorder run transactionally under a template
+  // row lock inside the service.
+
+  @Mutation(() => ICallout, {
+    description: 'Add a column to a Tasks board Callout.',
+  })
+  async createTaskColumnOnCallout(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('columnData') columnData: CreateTaskColumnOnCalloutInput
+  ): Promise<ICallout> {
+    await this.authorizeTaskColumnEdit(actorContext, columnData.calloutID);
+    return this.taskBoardColumnService.createTaskColumn(
+      columnData.calloutID,
+      columnData.name
+    );
+  }
+
+  @Mutation(() => ICallout, {
+    description: 'Rename a column on a Tasks board Callout.',
+  })
+  async updateTaskColumnOnCallout(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('columnData') columnData: UpdateTaskColumnOnCalloutInput
+  ): Promise<ICallout> {
+    await this.authorizeTaskColumnEdit(actorContext, columnData.calloutID);
+    return this.taskBoardColumnService.renameTaskColumn(
+      columnData.calloutID,
+      columnData.currentName,
+      columnData.newName
+    );
+  }
+
+  @Mutation(() => ICallout, {
+    description: 'Remove a column from a Tasks board Callout.',
+  })
+  async deleteTaskColumnOnCallout(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('columnData') columnData: DeleteTaskColumnOnCalloutInput
+  ): Promise<ICallout> {
+    await this.authorizeTaskColumnEdit(actorContext, columnData.calloutID);
+    return this.taskBoardColumnService.deleteTaskColumn(
+      columnData.calloutID,
+      columnData.name
+    );
+  }
+
+  @Mutation(() => ICallout, {
+    description: 'Reorder the columns of a Tasks board Callout.',
+  })
+  async updateTaskColumnsSortOrderOnCallout(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('sortOrderData')
+    sortOrderData: UpdateTaskColumnsSortOrderOnCalloutInput
+  ): Promise<ICallout> {
+    await this.authorizeTaskColumnEdit(actorContext, sortOrderData.calloutID);
+    return this.taskBoardColumnService.reorderTaskColumns(
+      sortOrderData.calloutID,
+      sortOrderData.columnNames
+    );
+  }
+
+  /**
+   * Loads the callout's authorization and fails unless the actor may UPDATE it.
+   * Shared by every column-administration mutation so they gate identically.
+   */
+  private async authorizeTaskColumnEdit(
+    actorContext: ActorContext,
+    calloutID: string
+  ): Promise<void> {
+    const callout = await this.calloutService.getCalloutOrFail(calloutID, {
+      relations: { authorization: true },
+    });
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      callout.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `configure task board columns: ${callout.id}`
+    );
   }
 
   @Mutation(() => ICallout, {
@@ -384,8 +502,18 @@ export class CalloutResolverMutations {
       );
     }
 
+    // A clone (a WHITEBOARD contribution's `whiteboard.sourceWhiteboardID`) may read
+    // its source only after the actor is granted READ.
+    await this.assertActorCanReadSourceWhiteboard(
+      actorContext,
+      contributionData.type === CalloutContributionType.WHITEBOARD
+        ? contributionData.whiteboard?.sourceWhiteboardID
+        : undefined
+    );
+
     let contribution = await this.calloutService.createContributionOnCallout(
       contributionData,
+      actorContext,
       actorContext.actorID
     );
 
@@ -806,13 +934,24 @@ export class CalloutResolverMutations {
     sortOrderData: UpdateContributionCalloutsSortOrderInput
   ): Promise<ICalloutContribution[]> {
     const callout = await this.calloutService.getCalloutOrFail(
-      sortOrderData.calloutID
+      sortOrderData.calloutID,
+      { relations: { authorization: true, classification: { tagsets: true } } }
     );
+
+    // A Tasks board persists its drag-and-drop ordering through this same
+    // mutation. Reordering tasks is a board-member action, not a callout-admin
+    // one, so a board is authorized on MOVE_TASK — the exact privilege that
+    // already gates moving a task between columns — rather than the callout-wide
+    // UPDATE. This reuses the existing board privilege (no new credential rules)
+    // and keeps non-board callouts on UPDATE, where reordering is an admin edit.
+    const requiredPrivilege = this.taskBoardService.isTaskBoard(callout)
+      ? AuthorizationPrivilege.MOVE_TASK
+      : AuthorizationPrivilege.UPDATE;
 
     this.authorizationService.grantAccessOrFail(
       actorContext,
       callout.authorization,
-      AuthorizationPrivilege.UPDATE,
+      requiredPrivilege,
       `update contribution sort order on callout: ${sortOrderData.calloutID}`
     );
 
