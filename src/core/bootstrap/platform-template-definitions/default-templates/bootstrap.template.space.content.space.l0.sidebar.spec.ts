@@ -41,8 +41,8 @@ describe('bootstrapTemplateSpaceContentSpaceL0 — sidebar defaults', () => {
 
   it('gives Subspaces the third-tab widget set, in order', () => {
     expect(findState(FlowState.SUBSPACES)?.settings?.sidebar).toEqual([
-      SidebarWidget.CREATE_SUBSPACE,
       SidebarWidget.INTENT,
+      SidebarWidget.CREATE_SUBSPACE,
       SidebarWidget.CREATE_POST,
       SidebarWidget.APPLICATION_BUTTON,
     ]);

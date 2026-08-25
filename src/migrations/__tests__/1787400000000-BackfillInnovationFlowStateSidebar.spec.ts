@@ -91,7 +91,7 @@ describe('BackfillInnovationFlowStateSidebar migration (1787400000000)', () => {
     const literals = [
       '["intent","about","createPost","applicationButton","subspaceLinks","events","updates"]',
       '["intent","createPost","applicationButton","contactLeads","addUser","virtualContributors","guidelines"]',
-      '["createSubspace","intent","createPost","applicationButton"]',
+      '["intent","createSubspace","createPost","applicationButton"]',
       '["intent","createPost","applicationButton","index"]',
     ];
     for (const literal of literals) {

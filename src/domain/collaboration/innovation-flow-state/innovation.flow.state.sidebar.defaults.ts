@@ -35,12 +35,13 @@ export const SIDEBAR_DEFAULT_L0_TAB_2: readonly SidebarWidget[] = Object.freeze(
 );
 
 // CREATE_SUBSPACE (the Create Subspace button, promoted from a position-driven
-// action into the configurable vocabulary) leads the 3rd-tab default ONLY —
-// it joins no other default list.
+// action into the configurable vocabulary) appears in the 3rd-tab default ONLY —
+// right after intent, per the 2026-08-26 operator ruling; it joins no other
+// default list.
 export const SIDEBAR_DEFAULT_L0_TAB_3: readonly SidebarWidget[] = Object.freeze(
   [
-    SidebarWidget.CREATE_SUBSPACE,
     SidebarWidget.INTENT,
+    SidebarWidget.CREATE_SUBSPACE,
     SidebarWidget.CREATE_POST,
     SidebarWidget.APPLICATION_BUTTON,
   ]

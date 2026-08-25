@@ -76,7 +76,7 @@ export class BackfillInnovationFlowStateSidebar1787400000000
         CASE ranked.position
           WHEN 1 THEN '["intent","about","createPost","applicationButton","subspaceLinks","events","updates"]'::jsonb
           WHEN 2 THEN '["intent","createPost","applicationButton","contactLeads","addUser","virtualContributors","guidelines"]'::jsonb
-          WHEN 3 THEN '["createSubspace","intent","createPost","applicationButton"]'::jsonb
+          WHEN 3 THEN '["intent","createSubspace","createPost","applicationButton"]'::jsonb
           ELSE '["intent","createPost","applicationButton","index"]'::jsonb
         END,
         true
@@ -109,7 +109,7 @@ export class BackfillInnovationFlowStateSidebar1787400000000
         CASE ranked.position
           WHEN 1 THEN '["intent","about","createPost","applicationButton","subspaceLinks","events","updates"]'::jsonb
           WHEN 2 THEN '["intent","createPost","applicationButton","contactLeads","addUser","virtualContributors","guidelines"]'::jsonb
-          WHEN 3 THEN '["createSubspace","intent","createPost","applicationButton"]'::jsonb
+          WHEN 3 THEN '["intent","createSubspace","createPost","applicationButton"]'::jsonb
           ELSE '["intent","createPost","applicationButton","index"]'::jsonb
         END,
         true
