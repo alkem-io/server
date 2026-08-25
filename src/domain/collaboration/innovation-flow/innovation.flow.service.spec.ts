@@ -474,9 +474,9 @@ describe('InnovationFlowService', () => {
       } as any);
 
       expect(result.settings.sidebar).toEqual([
+        'intent',
         'createPost',
         'applicationButton',
-        'intent',
         'index',
       ]);
     });

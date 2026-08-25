@@ -24,9 +24,9 @@ export const SIDEBAR_DEFAULT_L0_TAB_1: readonly SidebarWidget[] = Object.freeze(
 
 export const SIDEBAR_DEFAULT_L0_TAB_2: readonly SidebarWidget[] = Object.freeze(
   [
+    SidebarWidget.INTENT,
     SidebarWidget.CREATE_POST,
     SidebarWidget.APPLICATION_BUTTON,
-    SidebarWidget.INTENT,
     SidebarWidget.CONTACT_LEADS,
     SidebarWidget.ADD_USER,
     SidebarWidget.VIRTUAL_CONTRIBUTORS,
@@ -40,9 +40,9 @@ export const SIDEBAR_DEFAULT_L0_TAB_2: readonly SidebarWidget[] = Object.freeze(
 export const SIDEBAR_DEFAULT_L0_TAB_3: readonly SidebarWidget[] = Object.freeze(
   [
     SidebarWidget.CREATE_SUBSPACE,
+    SidebarWidget.INTENT,
     SidebarWidget.CREATE_POST,
     SidebarWidget.APPLICATION_BUTTON,
-    SidebarWidget.INTENT,
   ]
 );
 
@@ -50,8 +50,8 @@ export const SIDEBAR_DEFAULT_L0_TAB_3: readonly SidebarWidget[] = Object.freeze(
 // read-normalization fallback for a row missing the key, and the L0 4th+/subspace/orphan
 // backfill default.
 export const SIDEBAR_DEFAULT_GENERIC: readonly SidebarWidget[] = Object.freeze([
+  SidebarWidget.INTENT,
   SidebarWidget.CREATE_POST,
   SidebarWidget.APPLICATION_BUTTON,
-  SidebarWidget.INTENT,
   SidebarWidget.INDEX,
 ]);

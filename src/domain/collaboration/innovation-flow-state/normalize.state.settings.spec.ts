@@ -12,28 +12,28 @@ const buildState = (
   }) as IInnovationFlowState;
 
 describe('normalizeStateSettings — sidebar', () => {
-  it('defaults sidebar to [CREATE_POST, APPLICATION_BUTTON, INTENT, INDEX] when the key is missing on an existing settings object', () => {
+  it('defaults sidebar to [INTENT, CREATE_POST, APPLICATION_BUTTON, INDEX] when the key is missing on an existing settings object', () => {
     const state = buildState({ allowNewCallouts: true });
 
     const result = normalizeStateSettings(state);
 
     expect(result.settings.sidebar).toEqual([
+      SidebarWidget.INTENT,
       SidebarWidget.CREATE_POST,
       SidebarWidget.APPLICATION_BUTTON,
-      SidebarWidget.INTENT,
       SidebarWidget.INDEX,
     ]);
   });
 
-  it('defaults sidebar to [CREATE_POST, APPLICATION_BUTTON, INTENT, INDEX] when settings is entirely absent', () => {
+  it('defaults sidebar to [INTENT, CREATE_POST, APPLICATION_BUTTON, INDEX] when settings is entirely absent', () => {
     const state = { id: 'state-1' } as IInnovationFlowState;
 
     const result = normalizeStateSettings(state);
 
     expect(result.settings.sidebar).toEqual([
+      SidebarWidget.INTENT,
       SidebarWidget.CREATE_POST,
       SidebarWidget.APPLICATION_BUTTON,
-      SidebarWidget.INTENT,
       SidebarWidget.INDEX,
     ]);
   });
