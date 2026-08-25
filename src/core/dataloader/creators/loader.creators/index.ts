@@ -7,6 +7,7 @@ export * from './authorization.loader.creator';
 export * from './callout/callout.activity.loader.creator';
 export * from './callout/callout.my.reaction.loader.creator';
 export * from './callout/callout.reactions.summary.loader.creator';
+export * from './callout/callout.task.column.counts.loader.creator';
 export * from './callout-framing/callout.framing.whiteboard.loader';
 export * from './classification.tagsets.loader.creator';
 export * from './collaboration/collaboration.callouts.set.loader.creator';

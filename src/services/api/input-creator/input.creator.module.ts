@@ -1,5 +1,6 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { CalloutModule } from '@domain/collaboration/callout/callout.module';
+import { TaskBoardModule } from '@domain/collaboration/callout/task-board/task.board.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/innovation.flow.module';
 import { WhiteboardModule } from '@domain/common/whiteboard';
@@ -18,6 +19,7 @@ import { InputCreatorService } from './input.creator.service';
     WhiteboardModule,
     InnovationFlowModule,
     CalloutModule,
+    TaskBoardModule,
     CommunityGuidelinesModule,
     SpaceLookupModule,
     FileServiceAdapterModule,

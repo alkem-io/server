@@ -226,6 +226,7 @@ enum AuthorizationPrivilege {
   LICENSE_RESET
   MOVE_CONTRIBUTION
   MOVE_POST
+  MOVE_TASK
   PLATFORM_ADMIN
   PLATFORM_OPERATIONS_ADMIN
   PLATFORM_SETTINGS_ADMIN
@@ -882,6 +883,7 @@ enum TagsetReservedName {
   FLOW_STATE
   KEYWORDS
   SKILLS
+  TASK
 }
 
 enum TagsetType {
@@ -1855,6 +1857,10 @@ type Callout {
   settings: CalloutSettings!
   """The sorting order for this Callout."""
   sortOrder: Float!
+  """
+  Per-column task counts for a Tasks board callout, in the board-defined column order and zero-filled; null when the callout is not a Tasks board.
+  """
+  taskColumnCounts: [TaskColumnCount!]
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
 }
@@ -1862,6 +1868,10 @@ type Callout {
 type CalloutContribution {
   """The authorization rules for the entity"""
   authorization: Authorization
+  """
+  The Classification of this Contribution, present only for a task on a Tasks board (carries the task column).
+  """
+  classification: Classification
   """The CollaboraDocument that was contributed."""
   collaboraDocument: CollaboraDocument
   """The user that created this Document"""
@@ -2581,6 +2591,10 @@ type CreateCalloutContributionData {
   post: CreatePostData
   """The sort order to assign to this Contribution."""
   sortOrder: Float
+  """
+  The Tasks board column this task starts in. Only valid when the parent Callout is a Tasks board; defaults to the first column.
+  """
+  taskColumn: String
   type: CalloutContributionType!
   whiteboard: CreateWhiteboardData
 }
@@ -2636,6 +2650,10 @@ type CreateCalloutData {
   settings: CreateCalloutSettingsData
   """The sort order to assign to this Callout."""
   sortOrder: Float
+  """
+  When present, creates this Callout as a Tasks board. Requires a POST-only contribution type.
+  """
+  taskBoard: CreateCalloutTaskBoardData
 }
 
 type CreateCalloutFramingData {
@@ -2701,6 +2719,13 @@ type CreateCalloutSettingsFramingData {
 type CreateCalloutsSetData {
   """The Callouts to add to this Collaboration."""
   calloutsData: [CreateCalloutData!]
+}
+
+type CreateCalloutTaskBoardData {
+  """
+  The ordered columns of the Tasks board. The first is the default column. Omit to seed the default set.
+  """
+  columns: [String!]
 }
 
 type CreateClassificationData {
@@ -4322,6 +4347,8 @@ type Mutation {
   createSubspace(subspaceData: CreateSubspaceInput!): Space!
   """Creates a new Tagset on the specified Profile"""
   createTagsetOnProfile(tagsetData: CreateTagsetOnProfileInput!): Tagset!
+  """Add a column to a Tasks board Callout."""
+  createTaskColumnOnCallout(columnData: CreateTaskColumnOnCalloutInput!): Callout!
   """Creates a new Template on the specified TemplatesSet."""
   createTemplate(templateData: CreateTemplateOnTemplatesSetInput!): Template!
   """
@@ -4386,6 +4413,8 @@ type Mutation {
   deleteStateOnInnovationFlow(stateData: DeleteStateOnInnovationFlowInput!): InnovationFlowState!
   """Deletes a Storage Bucket"""
   deleteStorageBucket(deleteData: DeleteStorageBuckeetInput!): StorageBucket!
+  """Remove a column from a Tasks board Callout."""
+  deleteTaskColumnOnCallout(columnData: DeleteTaskColumnOnCalloutInput!): Callout!
   """Deletes the specified Template."""
   deleteTemplate(deleteData: DeleteTemplateInput!): Template!
   """Deletes the specified User."""
@@ -4468,6 +4497,10 @@ type Mutation {
   Move an L2 sub-subspace to become an L2 subspace under a target L1 in a different L0 space.       The subspace stays at level 2 but changes both its parent L1 and its top-level L0.       All community roles (including admins) are cleared and pending invitations dropped.       Platform access rules are recomputed from the new parent hierarchy.       Requires platform admin privileges.
   """
   moveSpaceL2ToSpaceL1(moveData: MoveSpaceL2ToSpaceL1Input!): Space!
+  """
+  Moves a task to another column on its Tasks board. Authorized as MOVE_TASK on the parent Callout, so a board member can move any task.
+  """
+  moveTaskToColumn(moveData: MoveTaskToColumnInput!): CalloutContribution!
   """Refresh the Bodies of Knowledge on All VCs"""
   refreshAllBodiesOfKnowledge: Boolean!
   """
@@ -4692,6 +4725,10 @@ type Mutation {
   updateSubspacesSortOrder(sortOrderData: UpdateSubspacesSortOrderInput!): [Space!]!
   """Updates the specified Tagset."""
   updateTagset(updateData: UpdateTagsetInput!): Tagset!
+  """Rename a column on a Tasks board Callout."""
+  updateTaskColumnOnCallout(columnData: UpdateTaskColumnOnCalloutInput!): Callout!
+  """Reorder the columns of a Tasks board Callout."""
+  updateTaskColumnsSortOrderOnCallout(sortOrderData: UpdateTaskColumnsSortOrderOnCalloutInput!): Callout!
   """Updates the specified Template."""
   updateTemplate(updateData: UpdateTemplateInput!): Template!
   """Updates the TemplateContentSpace."""
@@ -6688,6 +6725,13 @@ type Task {
   type: String
 }
 
+type TaskColumnCount {
+  """The Tasks board column, in the board-defined order."""
+  column: String!
+  """The number of tasks currently in this column."""
+  count: Int!
+}
+
 type Template {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -7865,6 +7909,10 @@ input CreateCalloutContributionInput {
   post: CreatePostInput
   """The sort order to assign to this Contribution."""
   sortOrder: Float
+  """
+  The Tasks board column this task starts in. Only valid when the parent Callout is a Tasks board; defaults to the first column.
+  """
+  taskColumn: String
   type: CalloutContributionType!
   whiteboard: CreateWhiteboardInput
 }
@@ -7930,6 +7978,10 @@ input CreateCalloutInput {
   settings: CreateCalloutSettingsInput
   """The sort order to assign to this Callout."""
   sortOrder: Float
+  """
+  When present, creates this Callout as a Tasks board. Requires a POST-only contribution type.
+  """
+  taskBoard: CreateCalloutTaskBoardInput
 }
 
 input CreateCalloutOnCalloutsSetInput {
@@ -7948,6 +8000,10 @@ input CreateCalloutOnCalloutsSetInput {
   settings: CreateCalloutSettingsInput
   """The sort order to assign to this Callout."""
   sortOrder: Float
+  """
+  When present, creates this Callout as a Tasks board. Requires a POST-only contribution type.
+  """
+  taskBoard: CreateCalloutTaskBoardInput
 }
 
 input CreateCalloutSelectionSettingsInput {
@@ -7995,6 +8051,13 @@ input CreateCalloutSettingsInput {
 input CreateCalloutsSetInput {
   """The Callouts to add to this Collaboration."""
   calloutsData: [CreateCalloutInput!]
+}
+
+input CreateCalloutTaskBoardInput {
+  """
+  The ordered columns of the Tasks board. The first is the default column. Omit to seed the default set.
+  """
+  columns: [String!]
 }
 
 input CreateClassificationEntryInput {
@@ -8067,6 +8130,10 @@ input CreateContributionOnCalloutInput {
   post: CreatePostInput
   """The sort order to assign to this Contribution."""
   sortOrder: Float
+  """
+  The Tasks board column this task starts in. Only valid when the parent Callout is a Tasks board; defaults to the first column.
+  """
+  taskColumn: String
   type: CalloutContributionType!
   whiteboard: CreateWhiteboardInput
 }
@@ -8402,6 +8469,13 @@ input CreateTagsetOnProfileInput {
   type: TagsetType
 }
 
+input CreateTaskColumnOnCalloutInput {
+  """The Tasks board Callout to add a column to."""
+  calloutID: UUID!
+  """The name of the new column. Appended after the last column."""
+  name: String!
+}
+
 input CreateTemplateContentSpaceInput {
   about: CreateSpaceAboutInput!
   collaborationData: CreateCollaborationInput!
@@ -8614,6 +8688,15 @@ input DeleteStateOnInnovationFlowInput {
 
 input DeleteStorageBuckeetInput {
   ID: UUID!
+}
+
+input DeleteTaskColumnOnCalloutInput {
+  """The Tasks board Callout to remove a column from."""
+  calloutID: UUID!
+  """
+  The column to remove. Matched case-insensitively. The first (default) column cannot be removed; removing any other column reflows its tasks onto the first column.
+  """
+  name: String!
 }
 
 input DeleteTemplateInput {
@@ -8856,6 +8939,15 @@ input MoveSpaceL2ToSpaceL1Input {
   The target L1 subspace in a different L0 (new parent for the moved L2).
   """
   targetSpaceL1ID: UUID!
+}
+
+input MoveTaskToColumnInput {
+  """
+  The destination column on the Tasks board. Matched case-insensitively to an existing column.
+  """
+  column: String!
+  """The task (Callout Contribution) to move."""
+  contributionID: UUID!
 }
 
 input NotificationEmailAddressInput {
@@ -9964,6 +10056,26 @@ input UpdateTagsetInput {
   ID: UUID!
   name: String
   tags: [String!]!
+}
+
+input UpdateTaskColumnOnCalloutInput {
+  """The Tasks board Callout whose column is being renamed."""
+  calloutID: UUID!
+  """
+  The current column name. Matched case-insensitively to an existing column.
+  """
+  currentName: String!
+  """The new column name. Tasks in the column follow the rename."""
+  newName: String!
+}
+
+input UpdateTaskColumnsSortOrderOnCalloutInput {
+  """The Tasks board Callout whose columns are being reordered."""
+  calloutID: UUID!
+  """
+  Every existing column exactly once, in the new left-to-right order. Matched case-insensitively.
+  """
+  columnNames: [String!]!
 }
 
 input UpdateTemplateContentSpaceInput {

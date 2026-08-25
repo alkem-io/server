@@ -7,6 +7,7 @@ import { GraphqlGuard } from '@core/authorization';
 import {
   CalloutActivityLoaderCreator,
   CalloutReactionsSummaryLoaderCreator,
+  CalloutTaskColumnCountsLoaderCreator,
   UserLoaderCreator,
 } from '@core/dataloader/creators';
 import { CalloutMyReactionLoaderCreator } from '@core/dataloader/creators/loader.creators/callout/callout.my.reaction.loader.creator';
@@ -33,6 +34,7 @@ import {
   ICalloutReactionsSummary,
 } from './dto/callout.dto.reaction';
 import { ContributionsFilterInput } from './dto/contributions.filter';
+import { TaskColumnCount } from './task-board/dto/task.column.count';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -94,6 +96,24 @@ export class CalloutResolverFields {
     @Parent() callout: Callout
   ): Promise<CalloutContributionsCountOutput> {
     return await this.calloutService.getContributionsCount(callout);
+  }
+
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('taskColumnCounts', () => [TaskColumnCount], {
+    nullable: true,
+    description:
+      'Per-column task counts for a Tasks board callout, in the board-defined column order and zero-filled; null when the callout is not a Tasks board.',
+  })
+  async taskColumnCounts(
+    @Parent() callout: Callout,
+    @Loader(CalloutTaskColumnCountsLoaderCreator)
+    loader: ILoader<TaskColumnCount[] | null>
+  ): Promise<TaskColumnCount[] | null> {
+    // Board-ness, the ordered columns, and the zero-filled counts are all
+    // resolved by the batched loader — no per-callout callout re-fetch, so a
+    // list of N callouts pays a fixed number of queries, not N.
+    return loader.load(callout.id);
   }
 
   @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)

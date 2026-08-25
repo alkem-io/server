@@ -3,6 +3,8 @@ import {
   CREDENTIAL_RULE_TYPES_CALLOUT_UPDATE_PUBLISHER_ADMINS,
   POLICY_RULE_CALLOUT_CONTRIBUTE,
   POLICY_RULE_CALLOUT_CREATE,
+  POLICY_RULE_CALLOUT_TASK_MOVE,
+  POLICY_RULE_CALLOUT_TASK_MOVE_ADMIN,
 } from '@common/constants';
 import {
   AuthorizationCredential,
@@ -29,6 +31,7 @@ import { Injectable } from '@nestjs/common';
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
 import { CalloutFramingAuthorizationService } from '../callout-framing/callout.framing.service.authorization';
 import { CalloutService } from './callout.service';
+import { TaskBoardService } from './task-board/task.board.service';
 
 @Injectable()
 export class CalloutAuthorizationService {
@@ -39,7 +42,8 @@ export class CalloutAuthorizationService {
     private contributionAuthorizationService: CalloutContributionAuthorizationService,
     private calloutFramingAuthorizationService: CalloutFramingAuthorizationService,
     private roomAuthorizationService: RoomAuthorizationService,
-    private roleSetService: RoleSetService
+    private roleSetService: RoleSetService,
+    private taskBoardService: TaskBoardService
   ) {}
 
   public async applyAuthorizationPolicy(
@@ -55,7 +59,9 @@ export class CalloutAuthorizationService {
         comments: true,
         contributions: true,
         contributionDefaults: true,
-        classification: true,
+        classification: {
+          tagsets: true,
+        },
         calloutsSet: {
           collaboration: {
             space: {
@@ -110,6 +116,15 @@ export class CalloutAuthorizationService {
       callout.authorization,
       callout.settings.contribution.allowedTypes
     );
+
+    // On a Tasks board, grant MOVE_TASK to contributors and to callout editors.
+    // Adds only privilege rules, and only for board callouts — non-board
+    // callouts and every other move privilege are left untouched.
+    if (this.taskBoardService.isTaskBoard(callout)) {
+      callout.authorization = this.appendTaskBoardPrivilegeRules(
+        callout.authorization
+      );
+    }
 
     callout.authorization = this.appendCredentialRules(callout);
     updatedAuthorizations.push(callout.authorization);
@@ -322,6 +337,35 @@ export class CalloutAuthorizationService {
       );
       privilegeRules.push(contributorsPrivilege);
     }
+
+    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      authorization,
+      privilegeRules
+    );
+  }
+
+  /**
+   * Grants MOVE_TASK on a Tasks board. A holder of CONTRIBUTE (any board
+   * member who may add a task) and a holder of UPDATE (a callout editor) may
+   * both move a task between columns. This deliberately does not widen
+   * MOVE_CONTRIBUTION and does not touch the classification UPDATE privilege:
+   * moving a task is its own, member-executable capability.
+   */
+  private appendTaskBoardPrivilegeRules(
+    authorization: IAuthorizationPolicy
+  ): IAuthorizationPolicy {
+    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [
+      new AuthorizationPolicyRulePrivilege(
+        [AuthorizationPrivilege.MOVE_TASK],
+        AuthorizationPrivilege.CONTRIBUTE,
+        POLICY_RULE_CALLOUT_TASK_MOVE
+      ),
+      new AuthorizationPolicyRulePrivilege(
+        [AuthorizationPrivilege.MOVE_TASK],
+        AuthorizationPrivilege.UPDATE,
+        POLICY_RULE_CALLOUT_TASK_MOVE_ADMIN
+      ),
+    ];
 
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
       authorization,

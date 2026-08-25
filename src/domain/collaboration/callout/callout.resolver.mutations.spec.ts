@@ -31,6 +31,7 @@ import { CalloutContributionAuthorizationService } from '../callout-contribution
 import { CalloutResolverMutations } from './callout.resolver.mutations';
 import { CalloutService } from './callout.service';
 import { CalloutAuthorizationService } from './callout.service.authorization';
+import { TaskBoardService } from './task-board/task.board.service';
 
 vi.mock('@common/utils/file.util', () => ({
   streamToBuffer: vi.fn().mockResolvedValue(Buffer.from('test')),
@@ -44,6 +45,7 @@ describe('CalloutResolverMutations', () => {
   let calloutAuthorizationService: CalloutAuthorizationService;
   let reactionService: ReactionService;
   let actorLookupService: ActorLookupService;
+  let taskBoardService: TaskBoardService;
   let notificationAdapterSpace: NotificationSpaceAdapter;
   let _contributionAuthorizationService: CalloutContributionAuthorizationService;
   let _calloutContributionService: CalloutContributionService;
@@ -87,6 +89,7 @@ describe('CalloutResolverMutations', () => {
     calloutAuthorizationService = module.get(CalloutAuthorizationService);
     reactionService = module.get(ReactionService);
     actorLookupService = module.get(ActorLookupService);
+    taskBoardService = module.get(TaskBoardService);
     notificationAdapterSpace = module.get(NotificationSpaceAdapter);
     _contributionAuthorizationService = module.get(
       CalloutContributionAuthorizationService
@@ -876,12 +879,13 @@ describe('CalloutResolverMutations', () => {
   });
 
   describe('updateContributionsSortOrder', () => {
-    it('should check authorization and delegate to service', async () => {
+    it('a plain (non-board) callout requires UPDATE and delegates to service', async () => {
       const callout = {
         id: 'callout-1',
         authorization: { id: 'auth-1' },
       } as any;
       vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(taskBoardService.isTaskBoard).mockReturnValue(false);
       vi.mocked(
         calloutService.updateContributionCalloutsSortOrder
       ).mockResolvedValue([{ id: 'c-1' }] as any);
@@ -900,6 +904,32 @@ describe('CalloutResolverMutations', () => {
         expect.any(String)
       );
       expect(result).toHaveLength(1);
+    });
+
+    it('a Tasks board is authorized on MOVE_TASK (board members reorder without callout UPDATE)', async () => {
+      const callout = {
+        id: 'callout-1',
+        authorization: { id: 'auth-1' },
+      } as any;
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(taskBoardService.isTaskBoard).mockReturnValue(true);
+      vi.mocked(
+        calloutService.updateContributionCalloutsSortOrder
+      ).mockResolvedValue([{ id: 'c-1' }] as any);
+
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await resolver.updateContributionsSortOrder(actorContext, {
+        calloutID: 'callout-1',
+        contributionIDs: ['c-1', 'c-2'],
+      } as any);
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        callout.authorization,
+        AuthorizationPrivilege.MOVE_TASK,
+        expect.any(String)
+      );
     });
   });
 
