@@ -7,12 +7,15 @@ import { ProfileLoaderCreator } from '@core/dataloader/creators/loader.creators/
 import { SpaceBySpaceAboutIdLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.by.space.about.id.loader.creator';
 import { SpaceMetricsLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.metrics.loader.creator';
 import { SpaceProviderLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.provider.loader.creator';
+import { SpaceAboutClassificationsLoaderCreator } from '@core/dataloader/creators/loader.creators/space.about.classifications.loader.creator';
 import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { IActor } from '@domain/actor/actor/actor.interface';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
+import { IClassificationEntry } from '@domain/space/classification.entry/classification.entry.interface';
+import { ClassificationEntryService } from '@domain/space/classification.entry/classification.entry.service';
 import { TemplateContentSpaceLookupService } from '@domain/template/template-content-space/template-content-space.lookup/template-content-space.lookup.service';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
@@ -26,7 +29,8 @@ import { SpaceAboutService } from './space.about.service';
 export class SpaceAboutResolverFields {
   constructor(
     private readonly spaceAboutService: SpaceAboutService,
-    private templateContentSpaceLookupService: TemplateContentSpaceLookupService
+    private templateContentSpaceLookupService: TemplateContentSpaceLookupService,
+    private classificationEntryService: ClassificationEntryService
   ) {}
 
   @ResolveField('profile', () => IProfile, {
@@ -136,5 +140,24 @@ export class SpaceAboutResolverFields {
     @Parent() spaceAbout: ISpaceAbout
   ): Promise<ICommunityGuidelines> {
     return await this.spaceAboutService.getCommunityGuidelines(spaceAbout);
+  }
+
+  // No @AuthorizationActorHasPrivilege decorator here, deliberately: read
+  // authorization for classifications is inherited from the About query
+  // path, and adding one would break S-13/FR-010d (any principal who may
+  // read the About receives every entry, including a hidden one,
+  // anonymously on a public Space). Writes are gated separately, on the
+  // owning About's UPDATE privilege, in ClassificationEntryResolverMutations.
+  @ResolveField('classifications', () => [IClassificationEntry], {
+    nullable: false,
+    description:
+      'The classification entries on this About, in sortOrder. Empty array when none exist — never null, never an error.',
+  })
+  async classifications(
+    @Parent() spaceAbout: ISpaceAbout,
+    @Loader(SpaceAboutClassificationsLoaderCreator)
+    loader: ILoader<IClassificationEntry[]>
+  ): Promise<IClassificationEntry[]> {
+    return loader.load(spaceAbout.id);
   }
 }

@@ -8,6 +8,7 @@ import { Profiling } from '@common/decorators';
 import { LogContext } from '@common/enums';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { RoleName } from '@common/enums/role.name';
+import { SearchVisibility } from '@common/enums/search.visibility';
 import { SpaceLevel } from '@common/enums/space.level';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { TemplateType } from '@common/enums/template.type';
@@ -41,9 +42,11 @@ import { SpaceAuthorizationService } from '@domain/space/space/space.service.aut
 import { CreateTemplateContentSpaceInput } from '@domain/template/template-content-space/dto/template.content.space.dto.create';
 import { TemplateDefaultService } from '@domain/template/template-default/template.default.service';
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
+import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
+import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { LicensePlanService } from '@platform/licensing/credential-based/license-plan/license.plan.service';
 import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
 import { PlatformService } from '@platform/platform/platform.service';
@@ -55,7 +58,8 @@ import { AiServerAuthorizationService } from '@services/ai-server/ai-server/ai.s
 import { McpApiKeyService } from '@services/mcp-server/auth/mcp-api-key.service';
 import { AdminAuthorizationService } from '@src/platform-admin/domain/authorization/admin.authorization.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
+import { bootstrapClassificationTemplateDefinitions } from './platform-template-definitions/classification-templates/classification.template.definitions';
 import { bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials } from './platform-template-definitions/default-templates/bootstrap.template.space.content.callouts.space.l0.tutorials';
 import { bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase } from './platform-template-definitions/default-templates/bootstrap.template.space.content.callouts.vc.knowledge.base';
 import { bootstrapTemplateSpaceContentSpaceL0 } from './platform-template-definitions/default-templates/bootstrap.template.space.content.space.l0';
@@ -99,7 +103,10 @@ export class BootstrapService {
     private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService,
     private roleSetService: RoleSetService,
     private readonly virtualAssistantService: VirtualAssistantService,
-    private readonly mcpApiKeyService: McpApiKeyService
+    private readonly mcpApiKeyService: McpApiKeyService,
+    private readonly innovationPackService: InnovationPackService,
+    @InjectEntityManager('default')
+    private readonly entityManager: EntityManager
   ) {}
 
   async bootstrap() {
@@ -135,6 +142,12 @@ export class BootstrapService {
 
       // Create Org first (without admin if needed)
       await this.ensureOrganizationSingleton();
+
+      // Classification Template defaults (SDGs) need the
+      // host organization's Account to exist, hence AFTER
+      // ensureOrganizationSingleton — ensurePlatformTemplatesArePresent
+      // above runs too early for this (research D-9).
+      await this.ensureClassificationTemplatesArePresent();
 
       // Create VC (needs Org)
       await this.ensureGuidanceChat();
@@ -493,6 +506,175 @@ export class BootstrapService {
       const accountEntitlements =
         await this.accountLicenseService.applyLicensePolicy(account.id);
       await this.licenseService.saveAll(accountEntitlements);
+    }
+  }
+
+  // The name-id this feature's seed is create-if-absent keyed on, WITHIN
+  // this dedicated pack alone (never any other pack — spec §Session
+  // 2026-08-11, "the platform Template Pack").
+  private static readonly CLASSIFICATION_PACK_NAME_ID =
+    'platform-classifications';
+
+  /**
+   * Ensures the dedicated platform Classification Template pack (SDGs)
+   * exists, with all three operator-mandated fixes:
+   *
+   * (1) A `pg_advisory_xact_lock` held for the whole ensure step, so the
+   *     6-pod parallel-bootstrap race can't create the pack or a template
+   *     twice. Serialization, not atomicity, is the goal — the create-if-
+   *     absent calls below use their own auto-committing connections, so
+   *     each one is visible to the NEXT lock-holder before this transaction
+   *     releases the lock (precedent: messaging.service.ts's dedup lock).
+   * (2) `createInnovationPack` hardcodes `searchVisibility: ACCOUNT` on the
+   *     create path and ignores any supplied value (`innovation.pack.
+   *     service.ts` — the input-honouring path is a separate `update()`), so
+   *     the pack is forced `PUBLIC` explicitly, every time, after any
+   *     create-or-fix-up — the picker (`library.service.ts`) requires it.
+   * (3) When this run created the pack or any template, OR an already-
+   *     seeded CLASSIFICATION template is found carrying an empty
+   *     `credentialRules` (a stale policy left behind by a prior bootstrap
+   *     run that predates this reset, or one that raced past it), the
+   *     seed's OWN scoped authorization reset runs — re-applying the host
+   *     organization's Account policy, which cascades down through every
+   *     owned InnovationPack's templatesSet and templates.
+   *     `ensureAuthorizationsPopulated` only fires when the PLATFORM policy
+   *     has zero rules, true on a fresh DB but false on every real deploy,
+   *     so without this the seeded pack's policies stay empty in
+   *     production. Gating the reset on "created something" alone is NOT
+   *     enough: an install that seeded its templates once with the reset
+   *     broken (or skipped) stays permanently broken across every later
+   *     restart, since nothing is ever created again — the empty-
+   *     credentialRules check is what makes this self-healing on the
+   *     already-seeded / upgrade path, not just the fresh-install path.
+   *
+   * Never modifies or overwrites an existing template — create-if-absent,
+   * matched by nameID within this pack alone, so an admin's edits survive
+   * every later re-seed.
+   *
+   * It keeps NO record of deletions, so a seeded template a platform admin
+   * has DELETED is re-created on the next bootstrap. That is deliberate
+   * (operator ruling D5, 2026-08-19): suppressing it needed a persisted
+   * tombstone column this feature is not authorised to add, to guard an
+   * action that is rare, trivially repeatable, and harmless when undone.
+   */
+  private async ensureClassificationTemplatesArePresent(): Promise<void> {
+    const { createdSomething, staleAuthFound } =
+      await this.entityManager.transaction(async manager => {
+        // Fix 1 — held for the duration of this callback; released when the
+        // outer transaction commits on return.
+        await manager.query(
+          "SELECT pg_advisory_xact_lock(hashtext('bootstrap:classification-templates'))"
+        );
+
+        let created = false;
+        let pack = await this.getClassificationPackIfExists();
+
+        if (!pack) {
+          const hostOrganization =
+            await this.organizationLookupService.getOrganizationByNameIdOrFail(
+              DEFAULT_HOST_ORG_NAMEID
+            );
+          const account =
+            await this.organizationService.getAccount(hostOrganization);
+          pack = await this.accountService.createInnovationPackOnAccount({
+            accountID: account.id,
+            nameID: BootstrapService.CLASSIFICATION_PACK_NAME_ID,
+            profileData: {
+              displayName: 'Classifications',
+              description: 'Platform default Classification Templates.',
+            },
+          });
+          created = true;
+        }
+
+        // Fix 2 — unconditional: even a pre-existing pack from a partially
+        // completed earlier run is forced PUBLIC here, every time.
+        if (
+          pack.searchVisibility !== SearchVisibility.PUBLIC ||
+          !pack.listedInStore
+        ) {
+          pack.searchVisibility = SearchVisibility.PUBLIC;
+          pack.listedInStore = true;
+          pack = await this.innovationPackService.save(pack);
+        }
+
+        const templatesSet =
+          await this.innovationPackService.getTemplatesSetOrFail(pack.id);
+        const existingClassificationTemplates =
+          await this.templatesSetService.getTemplatesOfType(
+            templatesSet,
+            TemplateType.CLASSIFICATION
+          );
+        const existingNameIDs = new Set(
+          existingClassificationTemplates.map(template => template.nameID)
+        );
+        // Self-heal detector: the `authorization` relation is eager on
+        // AuthorizableEntity, so every template returned above already
+        // carries its policy row — no extra query needed.
+        const staleAuthFound = existingClassificationTemplates.some(
+          template =>
+            (template.authorization?.credentialRules?.length ?? 0) === 0
+        );
+
+        for (const definition of bootstrapClassificationTemplateDefinitions) {
+          if (existingNameIDs.has(definition.nameID)) {
+            continue;
+          }
+          await this.templatesSetService.createTemplate(templatesSet, {
+            nameID: definition.nameID,
+            profileData: {
+              displayName: definition.displayName,
+              description: definition.description,
+            },
+            type: TemplateType.CLASSIFICATION,
+            classificationData: {
+              cardinality: definition.cardinality,
+              values: definition.values,
+            },
+          });
+          created = true;
+        }
+
+        return { createdSomething: created, staleAuthFound };
+      });
+
+    if (!createdSomething && !staleAuthFound) {
+      return;
+    }
+
+    this.logger.verbose?.(
+      createdSomething
+        ? "=== Classification Template defaults were (re)created; running the seed's own scoped authorization reset ==="
+        : '=== Classification Templates already present but carrying empty credentialRules from a prior bootstrap; running the scoped authorization reset to self-heal ===',
+      LogContext.BOOTSTRAP
+    );
+    // Fix 3 — scoped to the host organization's Account (the pack's policy
+    // parent), NOT a platform-wide reset (council systems-architect:OQ-3 —
+    // never seed authorization rules in SQL, and never reach for
+    // authorizationPolicyResetOnPlatform, which never reaches SpaceAbout
+    // trees at all).
+    const hostOrganization =
+      await this.organizationLookupService.getOrganizationByNameIdOrFail(
+        DEFAULT_HOST_ORG_NAMEID
+      );
+    const account = await this.organizationService.getAccount(hostOrganization);
+    const accountAuthorizations =
+      await this.accountAuthorizationService.applyAuthorizationPolicy(account);
+    await this.authorizationPolicyService.saveAll(accountAuthorizations);
+  }
+
+  private async getClassificationPackIfExists(): Promise<
+    IInnovationPack | undefined
+  > {
+    try {
+      return await this.innovationPackService.getInnovationPackByNameIdOrFail(
+        BootstrapService.CLASSIFICATION_PACK_NAME_ID
+      );
+    } catch (error) {
+      if (error instanceof EntityNotFoundException) {
+        return undefined;
+      }
+      throw error;
     }
   }
 

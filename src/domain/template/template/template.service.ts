@@ -17,12 +17,17 @@ import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.
 import { ICollaboration } from '@domain/collaboration/collaboration';
 import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import {
+  deriveClassificationValueIds,
+  deriveClassificationValueIdsForEdit,
+} from '@domain/common/classification-value/slugify.value.id';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
 import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.create';
+import { ClassificationEntryValidator } from '@domain/space/classification.entry/classification.entry.validator';
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -94,6 +99,22 @@ export class TemplateService {
       name: TagsetReservedName.DEFAULT,
       tags: templateData.tags,
     });
+
+    // I-9 (data-model.md §4): classificationData for any type OTHER than
+    // CLASSIFICATION is rejected — the two columns are nullable by necessity
+    // (one table, six types), so nothing else stops a mismatched payload
+    // from being silently ignored.
+    if (
+      templateData.classificationData &&
+      template.type !== TemplateType.CLASSIFICATION
+    ) {
+      throw new ValidationException(
+        'classificationData may only be supplied for a Classification Template',
+        LogContext.TEMPLATES,
+        { templateType: template.type }
+      );
+    }
+
     switch (template.type) {
       case TemplateType.POST: {
         if (!templateData.postDefaultDescription) {
@@ -209,6 +230,25 @@ export class TemplateService {
           [],
           storageAggregator
         );
+        break;
+      }
+      case TemplateType.CLASSIFICATION: {
+        if (!templateData.classificationData) {
+          throw new ValidationException(
+            'Classification Template requires classification data input',
+            LogContext.TEMPLATES,
+            { templateType: template.type, missing: 'classificationData' }
+          );
+        }
+        // I-9: 1-50 values, unique ids — same bound the entry side enforces
+        // (FR-002a), so a template can never reach the picker half-built.
+        const derivedValues = deriveClassificationValueIds(
+          templateData.classificationData.values
+        );
+        ClassificationEntryValidator.validateValueSet(derivedValues);
+        template.classificationCardinality =
+          templateData.classificationData.cardinality;
+        template.classificationValueSet = derivedValues;
         break;
       }
       default:
@@ -397,6 +437,10 @@ export class TemplateService {
         type: true,
         nameID: true,
         postDefaultDescription: templateInput.type === TemplateType.POST,
+        classificationCardinality:
+          templateInput.type === TemplateType.CLASSIFICATION,
+        classificationValueSet:
+          templateInput.type === TemplateType.CLASSIFICATION,
         whiteboard:
           templateInput.type === TemplateType.WHITEBOARD
             ? {
@@ -405,6 +449,19 @@ export class TemplateService {
             : undefined,
       },
     });
+
+    // I-9: classificationData for any type OTHER than CLASSIFICATION is
+    // rejected, same rule as on create.
+    if (
+      templateData.classificationData &&
+      template.type !== TemplateType.CLASSIFICATION
+    ) {
+      throw new ValidationException(
+        'classificationData may only be supplied for a Classification Template',
+        LogContext.TEMPLATES,
+        { templateType: template.type }
+      );
+    }
 
     if (templateData.profile) {
       template.profile = await this.profileService.updateProfile(
@@ -425,6 +482,27 @@ export class TemplateService {
     ) {
       // If we don't update the content here, the whiteboard will is overwritten with the old content
       template.whiteboard.content = templateData.whiteboardContent;
+    }
+    if (
+      template.type === TemplateType.CLASSIFICATION &&
+      templateData.classificationData
+    ) {
+      // Derive-once: an id supplied by the caller (e.g. an existing value
+      // being relabeled) is kept verbatim, never re-derived. An id-LESS
+      // incoming value is matched positionally against the
+      // template's CURRENT classificationValueSet and carries that id
+      // forward too — a relabel must not change the stable id merely
+      // because the caller omitted it rather than echoing it back; only a
+      // value beyond the previous length is genuinely new and gets a fresh
+      // slug.
+      const derivedValues = deriveClassificationValueIdsForEdit(
+        template.classificationValueSet ?? [],
+        templateData.classificationData.values
+      );
+      ClassificationEntryValidator.validateValueSet(derivedValues);
+      template.classificationCardinality =
+        templateData.classificationData.cardinality;
+      template.classificationValueSet = derivedValues;
     }
 
     return await this.templateRepository.save(template);
@@ -678,6 +756,7 @@ export class TemplateService {
         callout: true,
         whiteboard: true,
         contentSpace: true,
+        templatesSet: true,
       },
     });
 
@@ -734,6 +813,10 @@ export class TemplateService {
       }
       case TemplateType.POST: {
         // Nothing to do
+        break;
+      }
+      case TemplateType.CLASSIFICATION: {
+        // Cardinality and value set live as columns on the Template row itself, so there is nothing extra to cascade-delete.
         break;
       }
       default: {

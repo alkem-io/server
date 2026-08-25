@@ -114,6 +114,37 @@ describe('TemplateAuthorizationService', () => {
     expect(result.length).toBeGreaterThanOrEqual(2);
   });
 
+  it('should inherit parent authorization and cascade to profile for CLASSIFICATION template, with no further sub-entity cascade', async () => {
+    templateService.getTemplateOrFail.mockResolvedValue(
+      makeTemplate(TemplateType.CLASSIFICATION) as any
+    );
+
+    const result = await service.applyAuthorizationPolicy(
+      { id: 'tpl-1' } as ITemplate,
+      parentAuth
+    );
+
+    expect(
+      authorizationPolicyService.inheritParentAuthorization
+    ).toHaveBeenCalled();
+    expect(
+      profileAuthorizationService.applyAuthorizationPolicy
+    ).toHaveBeenCalledWith('profile-1', expect.anything());
+    expect(
+      communityGuidelinesAuthorizationService.applyAuthorizationPolicy
+    ).not.toHaveBeenCalled();
+    expect(
+      calloutAuthorizationService.applyAuthorizationPolicy
+    ).not.toHaveBeenCalled();
+    expect(
+      whiteboardAuthorizationService.applyAuthorizationPolicy
+    ).not.toHaveBeenCalled();
+    expect(
+      templateContentSpaceAuthorizationService.applyAuthorizationPolicy
+    ).not.toHaveBeenCalled();
+    expect(result.length).toBeGreaterThanOrEqual(2);
+  });
+
   it('should cascade to community guidelines for COMMUNITY_GUIDELINES template', async () => {
     templateService.getTemplateOrFail.mockResolvedValue(
       makeTemplate(TemplateType.COMMUNITY_GUIDELINES, {
