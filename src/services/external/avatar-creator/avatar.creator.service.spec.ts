@@ -2,6 +2,7 @@ import { MimeFileType } from '@common/enums/mime.file.type';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import axios from 'axios';
 import {
   AvatarCreatorService,
   DEFAULT_AVATAR_SERVICE_URL,
@@ -75,6 +76,23 @@ describe('AvatarCreatorService', () => {
       const result = await service.getFileType(buffer);
 
       expect(result).toBe(MimeFileType.PNG);
+    });
+  });
+
+  describe('urlToBuffer', () => {
+    it('should send an explicit non-axios User-Agent so image CDNs do not block the request', async () => {
+      // media.licdn.com (LinkedIn avatars) answers 403 to the default
+      // `User-Agent: axios/<version>` that the Node adapter sends.
+      const getSpy = vi
+        .spyOn(axios, 'get')
+        .mockResolvedValue({ data: Buffer.from('image'), status: 200 } as any);
+
+      await service.urlToBuffer('https://media.licdn.com/dms/image/v2/abc');
+
+      const config = getSpy.mock.calls[0][1] as Record<string, any>;
+      const userAgent = config?.headers?.['User-Agent'];
+      expect(userAgent).toBeDefined();
+      expect(userAgent).not.toMatch(/axios/i);
     });
   });
 });

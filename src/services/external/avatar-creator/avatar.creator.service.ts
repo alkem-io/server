@@ -6,6 +6,17 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import replaceSpecialCharacters from 'replace-special-characters';
 
 export const DEFAULT_AVATAR_SERVICE_URL = 'https://eu.ui-avatars.com/api/';
+
+/**
+ * Explicit User-Agent for outbound image downloads.
+ *
+ * Node's axios adapter otherwise sends `User-Agent: axios/<version>`, which
+ * some image CDNs treat as a scraper and reject. LinkedIn's `media.licdn.com`
+ * answers 403 to it, so every LinkedIn-sourced avatar failed to be re-hosted
+ * on Alkemio. Identify ourselves honestly instead of impersonating a browser.
+ */
+export const IMAGE_FETCH_USER_AGENT = 'Alkemio-Server (+https://alkem.io)';
+
 @Injectable()
 export class AvatarCreatorService {
   constructor(
@@ -47,6 +58,10 @@ export class AvatarCreatorService {
         imageUrl,
         {
           responseType: 'arraybuffer',
+          headers: {
+            'User-Agent': IMAGE_FETCH_USER_AGENT,
+            Accept: 'image/*',
+          },
         }
       );
 
@@ -63,9 +78,15 @@ export class AvatarCreatorService {
         );
       }
     } catch (error: any) {
-      throw new Error(
+      const httpStatus: number | undefined = error?.response?.status;
+      // Callers swallow this failure (an avatar must never block contributor
+      // creation), so carry the status on the error rather than only inside
+      // the message — it is what tells a CDN block apart from a dead link.
+      const wrapped: Error & { httpStatus?: number } = new Error(
         `Error fetching or processing the image at URL ${imageUrl}: ${error.message}`
       );
+      wrapped.httpStatus = httpStatus;
+      throw wrapped;
     }
   }
 
