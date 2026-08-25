@@ -6,6 +6,7 @@ export enum TemplateType {
   WHITEBOARD = 'whiteboard',
   COMMUNITY_GUIDELINES = 'community-guidelines',
   SPACE = 'space',
+  CLASSIFICATION = 'classification',
 }
 
 registerEnumType(TemplateType, {

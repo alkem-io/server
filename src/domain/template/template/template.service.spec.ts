@@ -645,6 +645,23 @@ describe('TemplateService', () => {
       expect(profileService.deleteProfile).toHaveBeenCalledWith('p-1');
     });
 
+    it('should not delete any related entity for CLASSIFICATION template type', async () => {
+      const template = makeTemplate(TemplateType.CLASSIFICATION);
+      templateRepository.find.mockResolvedValue([template]);
+
+      await service.delete({ id: 'tpl-1' } as ITemplate);
+
+      expect(
+        communityGuidelinesService.deleteCommunityGuidelines
+      ).not.toHaveBeenCalled();
+      expect(calloutService.deleteCallout).not.toHaveBeenCalled();
+      expect(whiteboardService.deleteWhiteboard).not.toHaveBeenCalled();
+      expect(
+        templateContentSpaceService.deleteTemplateContentSpaceOrFail
+      ).not.toHaveBeenCalled();
+      expect(profileService.deleteProfile).toHaveBeenCalledWith('p-1');
+    });
+
     it('should throw EntityNotFoundException for unrecognized template type', async () => {
       templateRepository.find.mockResolvedValue([
         makeTemplate('unknown' as TemplateType),

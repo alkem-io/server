@@ -16,6 +16,7 @@ import { SpaceModule } from '@domain/space/space/space.module';
 import { TemplateDefaultModule } from '@domain/template/template-default/template.default.module';
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
+import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
@@ -56,6 +57,7 @@ import { BootstrapService } from './bootstrap.service';
     SearchIngestModule,
     TemplatesSetModule,
     TemplatesManagerModule,
+    InnovationPackModule,
     PlatformTemplatesModule,
     TemplateDefaultModule,
     LicensingFrameworkModule,
