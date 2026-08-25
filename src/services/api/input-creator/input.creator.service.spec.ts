@@ -547,6 +547,37 @@ describe('InputCreatorService', () => {
       });
     });
 
+    it('rejects a stored Whiteboard default whose owning Callout bucket is missing', async () => {
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue({
+        id: 'callout-with-bucketless-default',
+        nameID: 'bucketless-default',
+        sortOrder: 1,
+        framing: {
+          id: 'framing-1',
+          type: CalloutFramingType.NONE,
+          profile: {
+            displayName: 'Test',
+            description: '',
+            tagsets: [],
+          },
+        },
+        contributionDefaults: {
+          id: 'defaults-1',
+          whiteboardContent: 'canonical-default-with-media-locators',
+        },
+        settings: {},
+        classification: { tagsets: [] },
+      });
+
+      await expect(
+        service.buildCreateCalloutInputFromCallout(
+          'callout-with-bucketless-default'
+        )
+      ).rejects.toThrow(
+        'Source Callout has a Whiteboard default but no owning storage bucket'
+      );
+    });
+
     it('should return null for a POLL framing callout (not templatable)', async () => {
       vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue({
         id: 'poll-callout-1',

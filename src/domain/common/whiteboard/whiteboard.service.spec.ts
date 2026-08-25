@@ -1210,6 +1210,10 @@ describe('WhiteboardService', () => {
     });
 
     it('re-homes the source WHITEBOARD_PREVIEW visual through the new profile bucket', async () => {
+      const suppliedProfile = {
+        displayName: 'Reusable profile input',
+        visuals: [{ name: VisualType.CARD, uri: 'card-source' }],
+      };
       whiteboardRepository.findOne!.mockResolvedValue({
         id: 'source-wb',
         authorization: { id: 'source-auth' },
@@ -1225,19 +1229,24 @@ describe('WhiteboardService', () => {
       } as unknown as Whiteboard);
 
       await service.createWhiteboard(
-        { sourceWhiteboardID: 'source-wb' },
+        { sourceWhiteboardID: 'source-wb', profile: suppliedProfile },
         mockStorageAggregator,
         actorContext
       );
 
+      expect(suppliedProfile.visuals).toEqual([
+        { name: VisualType.CARD, uri: 'card-source' },
+      ]);
+
       expect(profileService.createProfile).toHaveBeenCalledWith(
         expect.objectContaining({
-          visuals: [
+          visuals: expect.arrayContaining([
+            { name: VisualType.CARD, uri: 'card-source' },
             {
               name: VisualType.WHITEBOARD_PREVIEW,
               uri: 'https://alkem.io/api/private/rest/storage/document/preview-source',
             },
-          ],
+          ]),
         }),
         ProfileType.WHITEBOARD,
         mockStorageAggregator

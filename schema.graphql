@@ -2246,6 +2246,10 @@ type CollaborationMigrationResult {
   flaggedDocuments: [CollaborationMigrationIssue!]!
   migrated: Int!
   total: Int!
+  """
+  Legacy Whiteboard contribution defaults without a complete owning Callout path.
+  """
+  unattached: Int!
 }
 
 type Communication {
@@ -9138,7 +9142,9 @@ input ReplaceCollaboraDocumentInput {
 }
 
 input ReplaceWhiteboardContentFromSourceInput {
+  """The Whiteboard whose content and media are copied into the target."""
   sourceWhiteboardID: UUID!
+  """The Whiteboard whose content is replaced."""
   targetWhiteboardID: UUID!
 }
 

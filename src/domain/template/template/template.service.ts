@@ -1,5 +1,6 @@
 import { LogContext, ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TemplateType } from '@common/enums/template.type';
 import { VisualType } from '@common/enums/visual.type';
@@ -10,9 +11,11 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto';
+import { CreateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto/callout.contribution.defaults.dto.create';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { ICollaboration } from '@domain/collaboration/collaboration';
 import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
@@ -57,6 +60,7 @@ export class TemplateService {
     private inputCreatorService: InputCreatorService,
     private innovationFlowService: InnovationFlowService,
     private calloutService: CalloutService,
+    private authorizationService: AuthorizationService,
     private whiteboardService: WhiteboardService,
     private templateContentSpaceService: TemplateContentSpaceService,
     private calloutsSetService: CalloutsSetService,
@@ -77,6 +81,57 @@ export class TemplateService {
         framing: { profile: { storageBucket: true } },
       },
     });
+  }
+
+  /**
+   * Resolves the public source selector for a Callout template's Whiteboard
+   * contribution default into the canonical, server-internal content + owning
+   * bucket pair consumed by the ordinary template creation path.
+   */
+  public async prepareContributionDefaultSource(
+    defaults: CreateCalloutContributionDefaultsInput | undefined,
+    actorContext: ActorContext
+  ): Promise<void> {
+    if (!defaults) {
+      return;
+    }
+    const { sourceWhiteboardID, sourceCalloutID } = defaults;
+    if (sourceWhiteboardID && sourceCalloutID) {
+      throw new ValidationException(
+        'sourceWhiteboardID and sourceCalloutID are mutually exclusive',
+        LogContext.WHITEBOARDS
+      );
+    }
+    if (sourceCalloutID) {
+      const sourceCallout =
+        await this.getSourceCalloutForContributionDefaultCopy(sourceCalloutID);
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        sourceCallout.authorization,
+        AuthorizationPrivilege.READ,
+        'copy Whiteboard contribution default from source Callout'
+      );
+      defaults.whiteboardContent =
+        sourceCallout.contributionDefaults?.whiteboardContent;
+      defaults.sourceStorageBucketID = defaults.whiteboardContent
+        ? sourceCallout.framing?.profile?.storageBucket?.id
+        : undefined;
+      if (defaults.whiteboardContent && !defaults.sourceStorageBucketID) {
+        throw new ValidationException(
+          'Source Callout has a Whiteboard default but no owning storage bucket',
+          LogContext.WHITEBOARDS
+        );
+      }
+      return;
+    }
+    if (sourceWhiteboardID) {
+      const source = await this.whiteboardService.resolveContentSource(
+        sourceWhiteboardID,
+        actorContext
+      );
+      defaults.whiteboardContent = source.content;
+      defaults.sourceStorageBucketID = source.storageBucketID;
+    }
   }
 
   /**

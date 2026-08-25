@@ -346,6 +346,31 @@ describe('MemoService', () => {
       expect(deleteSpy).toHaveBeenCalledTimes(1);
     });
 
+    it('preserves the missing-bucket error when rollback also fails', async () => {
+      vi.mocked(profileService.createProfile).mockResolvedValue({
+        id: 'p1',
+      } as any);
+      const deleteSpy = vi
+        .spyOn(service, 'deleteMemo')
+        .mockRejectedValue(new Error('rollback failed'));
+
+      await expect(
+        service.createMemo({ markdown: '# x' } as any, storageAggregator)
+      ).rejects.toThrow(
+        'Memo storage bucket not initialized when materializing Markdown media'
+      );
+
+      expect(deleteSpy).toHaveBeenCalledTimes(1);
+      expect(MockWinstonProvider.useValue.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Rollback after uninitialized memo storage bucket failed',
+          rollbackError: 'Error: rollback failed',
+        }),
+        expect.any(String),
+        expect.any(String)
+      );
+    });
+
     it('re-homes Markdown media into the new memo bucket before encoding the initial Yjs snapshot', async () => {
       vi.mocked(
         profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket

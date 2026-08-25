@@ -658,8 +658,9 @@ export class CalloutService {
         !targetStorageBucketID
       ) {
         throw new EntityNotInitializedException(
-          `Callout (${callout.id}) has no storage bucket for its Whiteboard default`,
-          LogContext.COLLABORATION
+          'Callout has no storage bucket for its Whiteboard default',
+          LogContext.COLLABORATION,
+          { calloutId: callout.id }
         );
       }
       const materialized = targetStorageBucketID
@@ -986,8 +987,9 @@ export class CalloutService {
       const sourceStorageBucketID = callout.framing?.profile?.storageBucket?.id;
       if (!sourceStorageBucketID) {
         throw new EntityNotInitializedException(
-          `Callout (${calloutID}) has Whiteboard defaults but no owning storage bucket`,
-          LogContext.COLLABORATION
+          'Callout has Whiteboard defaults but no owning storage bucket',
+          LogContext.COLLABORATION,
+          { calloutId: calloutID }
         );
       }
       contributionData.whiteboard.content =

@@ -154,8 +154,8 @@ export class WhiteboardService {
     whiteboard.createdBy = actorContext.actorID || undefined;
     whiteboard.contentUpdatePolicy = ContentUpdatePolicy.CONTRIBUTORS;
 
-    const profileData = whiteboardData.profile ?? {
-      displayName: 'Whiteboard',
+    const profileData = {
+      ...(whiteboardData.profile ?? { displayName: 'Whiteboard' }),
     };
     if (
       sourcePreviewURI &&
@@ -365,8 +365,9 @@ export class WhiteboardService {
     const targetStorageBucketID = target.profile?.storageBucket?.id;
     if (!targetStorageBucketID) {
       throw new EntityNotInitializedException(
-        `Target whiteboard storage bucket unresolved: ${targetWhiteboardID}`,
-        LogContext.WHITEBOARDS
+        'Target whiteboard storage bucket unresolved; cannot replace content',
+        LogContext.WHITEBOARDS,
+        { targetWhiteboardID }
       );
     }
 

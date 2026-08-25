@@ -151,6 +151,8 @@ const extensionForMimeType = (mimeType: string): string => {
 export interface MigrationSummary {
   total: number;
   migrated: number;
+  /** Legacy contribution defaults with no complete owning Callout path. */
+  unattached: number;
   /** Un-decodable legacy content surfaced for manual review (not migrated). */
   flagged: number;
   /**
@@ -181,6 +183,7 @@ interface CreatedMigrationArtifacts {
 
 interface LegacyWhiteboardDefaultRecord extends LegacyContentRecord {
   storedContent: string;
+  unattached?: boolean;
 }
 
 /**
@@ -316,6 +319,7 @@ export class CollaborationMigrationService {
     return {
       total: left.total + right.total,
       migrated: left.migrated + right.migrated,
+      unattached: left.unattached + right.unattached,
       flagged: left.flagged + right.flagged,
       failed: left.failed + right.failed,
       flaggedDocuments: [...left.flaggedDocuments, ...right.flaggedDocuments],
@@ -331,6 +335,7 @@ export class CollaborationMigrationService {
     const summary: MigrationSummary = {
       total: 0,
       migrated: 0,
+      unattached: 0,
       flagged: 0,
       failed: 0,
       flaggedDocuments: [],
@@ -341,6 +346,26 @@ export class CollaborationMigrationService {
       options.batchSize
     )) {
       summary.total++;
+      if (record.unattached) {
+        summary.unattached++;
+        summary.failed++;
+        const issue = {
+          id: record.id,
+          reason:
+            'Contribution default has no complete owning Callout, framing, and profile path',
+        };
+        summary.failedDocuments.push(issue);
+        this.logger.error?.(
+          {
+            message:
+              'Collaboration migration: unattached contribution default cannot be migrated',
+            id: record.id,
+          },
+          undefined,
+          LogContext.COLLABORATION_INTEGRATION
+        );
+        continue;
+      }
       if (record.flagged) {
         summary.flagged++;
         summary.flaggedDocuments.push({
@@ -358,8 +383,30 @@ export class CollaborationMigrationService {
           id: record.id,
           reason: error instanceof Error ? error.message : String(error),
         });
+        this.logger.error?.(
+          {
+            message:
+              'Collaboration migration: failed to migrate contribution default',
+            id: record.id,
+            error: String(error),
+          },
+          error instanceof Error ? error.stack : undefined,
+          LogContext.COLLABORATION_INTEGRATION
+        );
       }
     }
+    this.logger.verbose?.(
+      {
+        message: 'Collaboration migration: contribution defaults complete',
+        total: summary.total,
+        migrated: summary.migrated,
+        unattached: summary.unattached,
+        flagged: summary.flagged,
+        failed: summary.failed,
+        dryRun: summary.dryRun,
+      },
+      LogContext.COLLABORATION_INTEGRATION
+    );
     return summary;
   }
 
@@ -371,6 +418,7 @@ export class CollaborationMigrationService {
     const summary: MigrationSummary = {
       total: 0,
       migrated: 0,
+      unattached: 0,
       flagged: 0,
       failed: 0,
       flaggedDocuments: [],
@@ -1598,13 +1646,16 @@ export class CollaborationMigrationService {
       const rows = await this.contributionDefaultsRepository.query(
         `SELECT defaults."id" AS "id",
                 defaults."whiteboardContent" AS "storedContent",
-                bucket."id" AS "storageBucketId"
+                bucket."id" AS "storageBucketId",
+                (callout."id" IS NOT NULL
+                 AND framing."id" IS NOT NULL
+                 AND profile."id" IS NOT NULL) AS "attached"
            FROM "callout_contribution_defaults" defaults
-           JOIN "callout" callout
+      LEFT JOIN "callout" callout
              ON callout."contributionDefaultsId" = defaults."id"
-           JOIN "callout_framing" framing
+      LEFT JOIN "callout_framing" framing
              ON callout."framingId" = framing."id"
-           JOIN "profile" profile
+      LEFT JOIN "profile" profile
              ON framing."profileId" = profile."id"
       LEFT JOIN "storage_bucket" bucket
              ON profile."storageBucketId" = bucket."id"
@@ -1621,8 +1672,20 @@ export class CollaborationMigrationService {
         id: string;
         storedContent: string;
         storageBucketId: string | null;
+        attached?: boolean;
       }>) {
         lastId = row.id;
+        if (row.attached === false) {
+          yield {
+            id: row.id,
+            contentType: CollaborationContentType.WHITEBOARD,
+            content: '',
+            storageBucketId: row.storageBucketId ?? undefined,
+            storedContent: row.storedContent,
+            unattached: true,
+          };
+          continue;
+        }
         let content: string;
         try {
           content = await decompressText(row.storedContent);

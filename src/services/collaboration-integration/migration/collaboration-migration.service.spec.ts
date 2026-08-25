@@ -1125,6 +1125,35 @@ describe('CollaborationMigrationService', () => {
       expect(contributionDefaults.createQueryBuilder).toHaveBeenCalledTimes(1);
     });
 
+    it('counts and reports a legacy contribution default with no complete owning Callout path', async () => {
+      whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+      contributionDefaults.query.mockResolvedValueOnce([
+        {
+          id: 'unattached-default',
+          storedContent: await compressText(''),
+          storageBucketId: null,
+          attached: false,
+        },
+      ]);
+
+      const summary = await svc.migrateWhiteboards();
+
+      expect(summary).toMatchObject({
+        total: 1,
+        migrated: 0,
+        unattached: 1,
+        failed: 1,
+      });
+      expect(summary.failedDocuments).toEqual([
+        {
+          id: 'unattached-default',
+          reason:
+            'Contribution default has no complete owning Callout, framing, and profile path',
+        },
+      ]);
+      expect(contributionDefaults.createQueryBuilder).not.toHaveBeenCalled();
+    });
+
     it('up-homes embedded default media into the owning Callout bucket and stores locator strings', async () => {
       const storedContent = await compressText(
         legacyMediaScene({

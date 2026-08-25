@@ -69,6 +69,7 @@ export class CollaborationMigrationResolverMutations {
         target: {
           total: summary.total,
           migrated: summary.migrated,
+          unattached: summary.unattached,
           flagged: summary.flagged,
           failed: summary.failed,
           flaggedDocuments: summary.flaggedDocuments,

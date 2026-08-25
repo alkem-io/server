@@ -1,7 +1,5 @@
 import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { LogContext } from '@common/enums/logging.context';
-import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -68,49 +66,10 @@ export class TemplatesSetResolverMutations {
         `template create clone whiteboard content from source: ${sourceWhiteboardID}`
       );
     }
-    const defaultSourceWhiteboardID =
-      templateData.calloutData?.contributionDefaults?.sourceWhiteboardID;
-    const defaultSourceCalloutID =
-      templateData.calloutData?.contributionDefaults?.sourceCalloutID;
-    if (defaultSourceWhiteboardID && defaultSourceCalloutID) {
-      throw new ValidationException(
-        'sourceWhiteboardID and sourceCalloutID are mutually exclusive',
-        LogContext.WHITEBOARDS
-      );
-    }
-    if (defaultSourceCalloutID) {
-      const sourceCallout =
-        await this.templateService.getSourceCalloutForContributionDefaultCopy(
-          defaultSourceCalloutID
-        );
-      this.authorizationService.grantAccessOrFail(
-        actorContext,
-        sourceCallout.authorization,
-        AuthorizationPrivilege.READ,
-        'copy Whiteboard contribution default from source Callout'
-      );
-      const defaults = templateData.calloutData!.contributionDefaults!;
-      defaults.whiteboardContent =
-        sourceCallout.contributionDefaults?.whiteboardContent;
-      defaults.sourceStorageBucketID = defaults.whiteboardContent
-        ? sourceCallout.framing?.profile?.storageBucket?.id
-        : undefined;
-      if (defaults.whiteboardContent && !defaults.sourceStorageBucketID) {
-        throw new ValidationException(
-          'Source Callout has a Whiteboard default but no owning storage bucket',
-          LogContext.WHITEBOARDS
-        );
-      }
-    } else if (defaultSourceWhiteboardID) {
-      const source = await this.whiteboardService.resolveContentSource(
-        defaultSourceWhiteboardID,
-        actorContext
-      );
-      templateData.calloutData!.contributionDefaults!.whiteboardContent =
-        source.content;
-      templateData.calloutData!.contributionDefaults!.sourceStorageBucketID =
-        source.storageBucketID;
-    }
+    await this.templateService.prepareContributionDefaultSource(
+      templateData.calloutData?.contributionDefaults,
+      actorContext
+    );
     const template = await this.templatesSetService.createTemplate(
       templatesSet,
       templateData,

@@ -559,6 +559,16 @@ export class InputCreatorService {
     if (!calloutContributionDefaults) {
       return undefined;
     }
+    if (
+      calloutContributionDefaults.whiteboardContent &&
+      !sourceStorageBucketID
+    ) {
+      throw new EntityNotInitializedException(
+        'Source Callout has a Whiteboard default but no owning storage bucket',
+        LogContext.INPUT_CREATOR,
+        { calloutContributionDefaultsId: calloutContributionDefaults.id }
+      );
+    }
     const result: CreateCalloutContributionDefaultsInput = {
       defaultDisplayName: calloutContributionDefaults.defaultDisplayName,
       postDescription: calloutContributionDefaults.postDescription,

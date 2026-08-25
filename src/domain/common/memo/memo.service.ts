@@ -110,7 +110,19 @@ export class MemoService {
     // (FR-010) either way.
     const storageBucket = saved.profile?.storageBucket;
     if (!storageBucket) {
-      await this.deleteMemo(saved.id);
+      await this.deleteMemo(saved.id).catch(rollbackError => {
+        const stack =
+          rollbackError instanceof Error ? (rollbackError.stack ?? '') : '';
+        this.logger.error?.(
+          {
+            message: 'Rollback after uninitialized memo storage bucket failed',
+            memoId: saved.id,
+            rollbackError: String(rollbackError),
+          },
+          stack,
+          LogContext.MEMOS
+        );
+      });
       throw new EntityNotInitializedException(
         'Memo storage bucket not initialized when materializing Markdown media',
         LogContext.MEMOS,

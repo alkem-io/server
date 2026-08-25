@@ -1,9 +1,11 @@
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { TemplateType } from '@common/enums/template.type';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
@@ -33,6 +35,7 @@ describe('TemplateService', () => {
   let whiteboardService: Mocked<WhiteboardService>;
   let templateContentSpaceService: Mocked<TemplateContentSpaceService>;
   let calloutService: Mocked<CalloutService>;
+  let authorizationService: Mocked<AuthorizationService>;
   let calloutsSetService: Mocked<CalloutsSetService>;
 
   const mockEntityManager = {
@@ -83,9 +86,94 @@ describe('TemplateService', () => {
       TemplateContentSpaceService
     ) as Mocked<TemplateContentSpaceService>;
     calloutService = module.get(CalloutService) as Mocked<CalloutService>;
+    authorizationService = module.get(
+      AuthorizationService
+    ) as Mocked<AuthorizationService>;
     calloutsSetService = module.get(
       CalloutsSetService
     ) as Mocked<CalloutsSetService>;
+  });
+
+  describe('prepareContributionDefaultSource', () => {
+    it('rejects mutually exclusive source selectors before loading either source', async () => {
+      await expect(
+        service.prepareContributionDefaultSource(
+          {
+            sourceCalloutID: 'callout-1',
+            sourceWhiteboardID: 'whiteboard-1',
+          },
+          actorContextData.actorContext
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(calloutService.getCalloutOrFail).not.toHaveBeenCalled();
+      expect(whiteboardService.resolveContentSource).not.toHaveBeenCalled();
+    });
+
+    it('authorizes and resolves a source Callout into canonical content plus its owning bucket', async () => {
+      const sourceCallout = {
+        authorization: { id: 'source-auth' },
+        contributionDefaults: { whiteboardContent: 'canonical-content' },
+        framing: { profile: { storageBucket: { id: 'source-bucket' } } },
+      } as any;
+      calloutService.getCalloutOrFail.mockResolvedValue(sourceCallout);
+      const defaults = { sourceCalloutID: 'callout-1' };
+
+      await service.prepareContributionDefaultSource(
+        defaults,
+        actorContextData.actorContext
+      );
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContextData.actorContext,
+        sourceCallout.authorization,
+        AuthorizationPrivilege.READ,
+        expect.any(String)
+      );
+      expect(defaults).toMatchObject({
+        whiteboardContent: 'canonical-content',
+        sourceStorageBucketID: 'source-bucket',
+      });
+    });
+
+    it('rejects source Callout content without an owning storage bucket', async () => {
+      calloutService.getCalloutOrFail.mockResolvedValue({
+        authorization: { id: 'source-auth' },
+        contributionDefaults: { whiteboardContent: 'canonical-content' },
+        framing: { profile: {} },
+      } as any);
+
+      await expect(
+        service.prepareContributionDefaultSource(
+          { sourceCalloutID: 'callout-1' },
+          actorContextData.actorContext
+        )
+      ).rejects.toThrow(
+        'Source Callout has a Whiteboard default but no owning storage bucket'
+      );
+    });
+
+    it('resolves a source Whiteboard through the authorization-owning service', async () => {
+      whiteboardService.resolveContentSource.mockResolvedValue({
+        content: 'canonical-content',
+        storageBucketID: 'source-bucket',
+      } as any);
+      const defaults = { sourceWhiteboardID: 'whiteboard-1' };
+
+      await service.prepareContributionDefaultSource(
+        defaults,
+        actorContextData.actorContext
+      );
+
+      expect(whiteboardService.resolveContentSource).toHaveBeenCalledWith(
+        'whiteboard-1',
+        actorContextData.actorContext
+      );
+      expect(defaults).toMatchObject({
+        whiteboardContent: 'canonical-content',
+        sourceStorageBucketID: 'source-bucket',
+      });
+    });
   });
 
   describe('getTemplateOrFail', () => {
