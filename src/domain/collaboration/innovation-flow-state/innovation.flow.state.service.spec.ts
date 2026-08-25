@@ -915,10 +915,59 @@ describe('InnovationFlowStateService', () => {
         'template-1'
       );
 
-      expect(result).toBe(flowState);
+      // The service returns a normalized DETACHED copy (so read-path settings
+      // normalization never persists); identity with the raw entity is not expected.
+      expect(result.id).toBe('state-1');
+      expect((result as InnovationFlowState).defaultCalloutTemplate).toBe(
+        template
+      );
       expect((flowState as InnovationFlowState).defaultCalloutTemplate).toBe(
         template
       );
+      expect(repository.save).toHaveBeenCalledWith(flowState);
+    });
+
+    it('does not persist read-path sidebar normalization (rolling-deploy safety)', async () => {
+      // A widget slug this node's enum does not know — e.g. written by a NEWER release
+      // during a rolling deploy. The unrelated set-default-template save must not strip it.
+      const storedSidebar = [
+        SidebarWidget.INTENT,
+        'widgetFromANewerRelease',
+        SidebarWidget.INDEX,
+      ];
+      const flowState = {
+        id: 'state-1',
+        settings: {
+          allowNewCallouts: true,
+          visible: true,
+          descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+          showPublishDetails: true,
+          sidebar: [...storedSidebar],
+        },
+      } as any;
+      const template = {
+        id: 'template-1',
+        type: TemplateType.CALLOUT,
+      } as Template;
+
+      vi.mocked(repository.findOne).mockResolvedValue(flowState);
+      vi.mocked(templateRepository.find).mockResolvedValue([template]);
+      vi.mocked(repository.save).mockImplementation(async e => e as any);
+
+      const result = await service.setDefaultCalloutTemplate(
+        'state-1',
+        'template-1'
+      );
+
+      // Persisted entity keeps the stored list verbatim — the unknown value survives.
+      const savedEntity = vi.mocked(repository.save).mock.calls[0][0] as any;
+      expect(savedEntity.settings.sidebar).toEqual(storedSidebar);
+      expect(flowState.settings.sidebar).toEqual(storedSidebar);
+      // The API-visible response is still filtered to the known vocabulary.
+      expect(result.settings.sidebar).toEqual([
+        SidebarWidget.INTENT,
+        SidebarWidget.INDEX,
+      ]);
     });
 
     it('should throw EntityNotFoundException when template is not found', async () => {
@@ -960,8 +1009,46 @@ describe('InnovationFlowStateService', () => {
 
       const result = await service.removeDefaultCalloutTemplate('state-1');
 
-      expect(result).toBe(flowState);
+      // The service returns a normalized DETACHED copy (so read-path settings
+      // normalization never persists); identity with the raw entity is not expected.
+      expect(result.id).toBe('state-1');
+      expect((result as InnovationFlowState).defaultCalloutTemplate).toBeNull();
       expect(flowState.defaultCalloutTemplate).toBeNull();
+      expect(repository.save).toHaveBeenCalledWith(flowState);
+    });
+
+    it('does not persist read-path sidebar normalization (rolling-deploy safety)', async () => {
+      const storedSidebar = [
+        SidebarWidget.INTENT,
+        'widgetFromANewerRelease',
+        SidebarWidget.INDEX,
+      ];
+      const flowState = {
+        id: 'state-1',
+        defaultCalloutTemplate: { id: 'template-1' },
+        settings: {
+          allowNewCallouts: true,
+          visible: true,
+          descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+          showPublishDetails: true,
+          sidebar: [...storedSidebar],
+        },
+      } as any;
+
+      vi.mocked(repository.findOne).mockResolvedValue(flowState);
+      vi.mocked(repository.save).mockImplementation(async e => e as any);
+
+      const result = await service.removeDefaultCalloutTemplate('state-1');
+
+      // Persisted entity keeps the stored list verbatim — the unknown value survives.
+      const savedEntity = vi.mocked(repository.save).mock.calls[0][0] as any;
+      expect(savedEntity.settings.sidebar).toEqual(storedSidebar);
+      expect(flowState.settings.sidebar).toEqual(storedSidebar);
+      // The API-visible response is still filtered to the known vocabulary.
+      expect(result.settings.sidebar).toEqual([
+        SidebarWidget.INTENT,
+        SidebarWidget.INDEX,
+      ]);
     });
 
     it('should throw EntityNotFoundException when flow state is not found', async () => {

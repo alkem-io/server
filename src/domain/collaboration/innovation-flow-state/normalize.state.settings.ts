@@ -45,6 +45,12 @@ const normalizeSidebar = (sidebar: unknown): SidebarWidget[] => {
  * constraint.
  *
  * Mutates and returns the state so it can be used inline on a mapped array.
+ *
+ * PERSISTENCE WARNING: because this mutates the passed object, a write path must NEVER
+ * repository.save() an entity that went through this helper — it would persist the
+ * read-path filtering (e.g. strip a sidebar widget a newer release wrote, during a
+ * rolling deploy). Write paths load raw (see getRawInnovationFlowStateOrFail) and
+ * normalize only a detached copy for the API response.
  */
 export const normalizeStateSettings = (
   state: IInnovationFlowState
