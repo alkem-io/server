@@ -473,10 +473,9 @@ export class CalloutFramingService {
     await this.deleteInconsistentFramingContent(calloutFraming);
     switch (calloutFraming.type) {
       case CalloutFramingType.WHITEBOARD: {
-        // if there is no content coming with the mutation, we do nothing with the whiteboard
-        if (!calloutFramingData.whiteboardContent) {
-          return calloutFraming;
-        }
+        const hasReplacement =
+          calloutFramingData.sourceWhiteboardID !== undefined ||
+          calloutFramingData.whiteboardContent !== undefined;
         if (calloutFraming.whiteboard) {
           // Direct whiteboard-content replacement is TEMPLATE-ONLY, mirroring the memo
           // branch below (and the client's `mapFormToCalloutUpdateInput`, T048/T048a, which
@@ -485,7 +484,17 @@ export class CalloutFramingService {
           // edited through its collaborative room, so an out-of-band snapshot write here
           // would be clobbered by the room's next save. For a non-template callout the
           // content is ignored (the room is authoritative); preview settings still apply.
-          if (isParentCalloutTemplate) {
+          if (calloutFramingData.sourceWhiteboardID) {
+            calloutFraming.whiteboard =
+              await this.whiteboardService.replaceContentFromSource(
+                calloutFraming.whiteboard.id,
+                calloutFramingData.sourceWhiteboardID,
+                actorContext
+              );
+          } else if (
+            isParentCalloutTemplate &&
+            calloutFramingData.whiteboardContent
+          ) {
             calloutFraming.whiteboard =
               await this.whiteboardService.updateWhiteboardContent(
                 calloutFraming.whiteboard.id,
@@ -501,7 +510,7 @@ export class CalloutFramingService {
               }
             );
           }
-        } else {
+        } else if (hasReplacement) {
           // if there is content and no whiteboard, we create a new one
           await this.createNewWhiteboardInCalloutFraming(
             calloutFraming,
@@ -510,6 +519,7 @@ export class CalloutFramingService {
                 displayName: 'Callout Framing Whiteboard',
               },
               content: calloutFramingData.whiteboardContent,
+              sourceWhiteboardID: calloutFramingData.sourceWhiteboardID,
               previewSettings: calloutFramingData.whiteboardPreviewSettings,
             },
             storageAggregator,

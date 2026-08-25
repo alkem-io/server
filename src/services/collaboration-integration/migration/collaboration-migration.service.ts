@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import { CollaborationContentType, LogContext } from '@common/enums';
-import { decompressText } from '@common/utils/compression.util';
+import { compressText, decompressText } from '@common/utils/compression.util';
+import { CalloutContributionDefaults } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.entity';
 import {
   markdownToYjsV2State,
   yjsStateToMarkdown,
@@ -178,6 +179,10 @@ interface CreatedMigrationArtifacts {
   snapshotDocumentId?: string;
 }
 
+interface LegacyWhiteboardDefaultRecord extends LegacyContentRecord {
+  storedContent: string;
+}
+
 /**
  * Outcome of one `verifyAll` run — the post-release cleanup pre-flight,
  * READ-ONLY). `ok` is true only when every memo/whiteboard row carries a `contentPointer`
@@ -246,6 +251,8 @@ export class CollaborationMigrationService {
     private readonly memoRepository: Repository<Memo>,
     @InjectRepository(Whiteboard)
     private readonly whiteboardRepository: Repository<Whiteboard>,
+    @InjectRepository(CalloutContributionDefaults)
+    private readonly contributionDefaultsRepository: Repository<CalloutContributionDefaults>,
     private readonly fileServiceAdapter: FileServiceAdapter,
     private readonly documentService: DocumentService,
     private readonly storageBucketService: StorageBucketService,
@@ -275,7 +282,12 @@ export class CollaborationMigrationService {
   public async migrateAll(
     options: MigrationOptions = {}
   ): Promise<MigrationSummary> {
-    return this.migrateRecords(this.readAll(options.batchSize), options);
+    const documents = await this.migrateRecords(
+      this.readAll(options.batchSize),
+      options
+    );
+    const defaults = await this.migrateWhiteboardDefaults(options);
+    return this.mergeMigrationSummaries(documents, defaults);
   }
 
   /** Migrates only legacy memos. Safe to invoke repeatedly. */
@@ -289,10 +301,66 @@ export class CollaborationMigrationService {
   public async migrateWhiteboards(
     options: MigrationOptions = {}
   ): Promise<MigrationSummary> {
-    return this.migrateRecords(
+    const documents = await this.migrateRecords(
       this.readWhiteboards(options.batchSize),
       options
     );
+    const defaults = await this.migrateWhiteboardDefaults(options);
+    return this.mergeMigrationSummaries(documents, defaults);
+  }
+
+  private mergeMigrationSummaries(
+    left: MigrationSummary,
+    right: MigrationSummary
+  ): MigrationSummary {
+    return {
+      total: left.total + right.total,
+      migrated: left.migrated + right.migrated,
+      flagged: left.flagged + right.flagged,
+      failed: left.failed + right.failed,
+      flaggedDocuments: [...left.flaggedDocuments, ...right.flaggedDocuments],
+      failedDocuments: [...left.failedDocuments, ...right.failedDocuments],
+      dryRun: left.dryRun,
+    };
+  }
+
+  private async migrateWhiteboardDefaults(
+    options: MigrationOptions
+  ): Promise<MigrationSummary> {
+    const { dryRun = false } = options;
+    const summary: MigrationSummary = {
+      total: 0,
+      migrated: 0,
+      flagged: 0,
+      failed: 0,
+      flaggedDocuments: [],
+      failedDocuments: [],
+      dryRun,
+    };
+    for await (const record of this.readLegacyWhiteboardDefaults(
+      options.batchSize
+    )) {
+      summary.total++;
+      if (record.flagged) {
+        summary.flagged++;
+        summary.flaggedDocuments.push({
+          id: record.id,
+          reason: record.flagReason ?? 'undecodable contribution default',
+        });
+        continue;
+      }
+      try {
+        await this.migrateWhiteboardDefault(record, dryRun);
+        summary.migrated++;
+      } catch (error) {
+        summary.failed++;
+        summary.failedDocuments.push({
+          id: record.id,
+          reason: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+    return summary;
   }
 
   private async migrateRecords(
@@ -1001,6 +1069,145 @@ export class CollaborationMigrationService {
     );
   }
 
+  private async migrateWhiteboardDefault(
+    record: LegacyWhiteboardDefaultRecord,
+    dryRun: boolean
+  ): Promise<void> {
+    if (!record.storageBucketId) {
+      throw new Error(
+        `Contribution default ${record.id} has no owning Callout storage bucket`
+      );
+    }
+    const fork = await loadWhiteboardFork();
+    const planned = await this.encodeSnapshot(record, true);
+    this.verifyContent(planned, CollaborationContentType.WHITEBOARD, fork);
+    if (dryRun) {
+      return;
+    }
+
+    const createdArtifacts: CreatedMigrationArtifacts = {
+      assetDocumentIds: [],
+    };
+    let canonical: string;
+    try {
+      const snapshot = await this.encodeSnapshot(
+        record,
+        false,
+        createdArtifacts
+      );
+      this.verifyContent(snapshot, CollaborationContentType.WHITEBOARD, fork);
+      canonical = await compressText(snapshot.toString('base64'));
+    } catch (error) {
+      const cleanupFailures = await this.cleanupCreatedArtifacts(
+        record.id,
+        createdArtifacts
+      );
+      if (cleanupFailures > 0) {
+        throw new Error(
+          `Contribution-default migration failed and media compensation was incomplete: ${String(error)}`
+        );
+      }
+      throw error;
+    }
+
+    let affected: number | undefined;
+    try {
+      const result = await this.contributionDefaultsRepository
+        .createQueryBuilder()
+        .update()
+        .set({ whiteboardContent: canonical })
+        .where('id = :id AND "whiteboardContent" = :storedContent', {
+          id: record.id,
+          storedContent: record.storedContent,
+        })
+        .execute();
+      affected = result.affected;
+    } catch (error) {
+      const current = await this.readStoredDefaultContent(record.id).catch(
+        () => undefined
+      );
+      if (current === canonical) {
+        return;
+      }
+      if (current === undefined) {
+        this.logger.warn?.(
+          {
+            message:
+              'Migration: contribution-default publication outcome is unknown; preserving up-homed media',
+            id: record.id,
+            error: String(error),
+          },
+          LogContext.COLLABORATION_INTEGRATION
+        );
+        throw error;
+      }
+      const cleanupFailures = await this.cleanupCreatedArtifacts(
+        record.id,
+        createdArtifacts
+      );
+      if (cleanupFailures > 0) {
+        throw new Error(
+          `Contribution-default publication failed and media compensation was incomplete: ${String(error)}`
+        );
+      }
+      throw error;
+    }
+
+    if (affected === 1) {
+      return;
+    }
+    const current = await this.readStoredDefaultContent(record.id);
+    if (current === canonical) {
+      return;
+    }
+    const cleanupFailures = await this.cleanupCreatedArtifacts(
+      record.id,
+      createdArtifacts
+    );
+    if (cleanupFailures > 0) {
+      throw new Error(
+        'Contribution-default CAS lost and media compensation was incomplete'
+      );
+    }
+    if (
+      current &&
+      current !== record.storedContent &&
+      (await this.isCanonicalStoredWhiteboardDefault(current))
+    ) {
+      return;
+    }
+    throw new Error(
+      `Contribution default ${record.id} did not converge after migration CAS`
+    );
+  }
+
+  private async readStoredDefaultContent(
+    id: string
+  ): Promise<string | undefined> {
+    const rows = await this.contributionDefaultsRepository.query(
+      'SELECT "whiteboardContent" FROM "callout_contribution_defaults" WHERE "id" = $1',
+      [id]
+    );
+    return rows[0]?.whiteboardContent ?? undefined;
+  }
+
+  private async isCanonicalStoredWhiteboardDefault(
+    storedContent: string
+  ): Promise<boolean> {
+    try {
+      const content = await decompressText(storedContent);
+      const bytes = decodeStrictBase64(content);
+      if (!bytes) {
+        return false;
+      }
+      const fork = await loadWhiteboardFork();
+      this.verifyContent(bytes, CollaborationContentType.WHITEBOARD, fork);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   private async getConvergedPointer(
     repository: Repository<Memo | Whiteboard>,
     id: string
@@ -1380,6 +1587,88 @@ export class CollaborationMigrationService {
     );
 
     return document.id;
+  }
+
+  private async *readLegacyWhiteboardDefaults(
+    batchSize = DEFAULT_BATCH_SIZE
+  ): AsyncGenerator<LegacyWhiteboardDefaultRecord> {
+    const fork = await loadWhiteboardFork();
+    let lastId = '';
+    for (;;) {
+      const rows = await this.contributionDefaultsRepository.query(
+        `SELECT defaults."id" AS "id",
+                defaults."whiteboardContent" AS "storedContent",
+                bucket."id" AS "storageBucketId"
+           FROM "callout_contribution_defaults" defaults
+           JOIN "callout" callout
+             ON callout."contributionDefaultsId" = defaults."id"
+           JOIN "callout_framing" framing
+             ON callout."framingId" = framing."id"
+           JOIN "profile" profile
+             ON framing."profileId" = profile."id"
+      LEFT JOIN "storage_bucket" bucket
+             ON profile."storageBucketId" = bucket."id"
+          WHERE defaults."whiteboardContent" IS NOT NULL
+            AND defaults."id" > $1
+       ORDER BY defaults."id" ASC
+          LIMIT $2`,
+        [lastId, batchSize]
+      );
+      if (rows.length === 0) {
+        break;
+      }
+      for (const row of rows as Array<{
+        id: string;
+        storedContent: string;
+        storageBucketId: string | null;
+      }>) {
+        lastId = row.id;
+        let content: string;
+        try {
+          content = await decompressText(row.storedContent);
+        } catch (error) {
+          yield {
+            id: row.id,
+            contentType: CollaborationContentType.WHITEBOARD,
+            storageBucketId: row.storageBucketId ?? undefined,
+            storedContent: row.storedContent,
+            flagged: true,
+            flagReason: `contribution_default_decompression_failed: ${String(error)}`,
+          };
+          continue;
+        }
+        if (!content.trim() || parseLegacyWhiteboardScene(content)) {
+          yield {
+            id: row.id,
+            contentType: CollaborationContentType.WHITEBOARD,
+            content,
+            storageBucketId: row.storageBucketId ?? undefined,
+            storedContent: row.storedContent,
+          };
+          continue;
+        }
+        try {
+          const bytes = decodeStrictBase64(content);
+          if (!bytes) {
+            throw new Error('not a non-empty canonical base64 snapshot');
+          }
+          this.verifyContent(bytes, CollaborationContentType.WHITEBOARD, fork);
+        } catch (error) {
+          yield {
+            id: row.id,
+            contentType: CollaborationContentType.WHITEBOARD,
+            content,
+            storageBucketId: row.storageBucketId ?? undefined,
+            storedContent: row.storedContent,
+            flagged: true,
+            flagReason: `contribution_default_invalid: ${String(error)}`,
+          };
+        }
+      }
+      if (rows.length < batchSize) {
+        break;
+      }
+    }
   }
 
   /**

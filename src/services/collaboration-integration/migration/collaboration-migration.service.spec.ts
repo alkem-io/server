@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import { CollaborationContentType } from '@common/enums/collaboration.content.type';
-import { compressText } from '@common/utils/compression.util';
+import { compressText, decompressText } from '@common/utils/compression.util';
+import { CalloutContributionDefaults } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.entity';
 import { markdownToYjsV2State } from '@domain/common/memo/conversion';
 import { Memo } from '@domain/common/memo/memo.entity';
 import { whiteboardSceneToYjsV2State } from '@domain/common/whiteboard/conversion';
@@ -246,11 +247,19 @@ describe('CollaborationMigrationService', () => {
   let service: CollaborationMigrationService;
   let memoRepo: { createQueryBuilder: ReturnType<typeof vi.fn> };
   let whiteboardRepo: { createQueryBuilder: ReturnType<typeof vi.fn> };
+  let contributionDefaultsRepo: {
+    createQueryBuilder: ReturnType<typeof vi.fn>;
+    query: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(async () => {
     vi.restoreAllMocks();
     memoRepo = { createQueryBuilder: vi.fn() };
     whiteboardRepo = { createQueryBuilder: vi.fn() };
+    contributionDefaultsRepo = {
+      createQueryBuilder: vi.fn(),
+      query: vi.fn().mockResolvedValue([]),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -258,6 +267,10 @@ describe('CollaborationMigrationService', () => {
         MockWinstonProvider,
         { provide: getRepositoryToken(Memo), useValue: memoRepo },
         { provide: getRepositoryToken(Whiteboard), useValue: whiteboardRepo },
+        {
+          provide: getRepositoryToken(CalloutContributionDefaults),
+          useValue: contributionDefaultsRepo,
+        },
         {
           provide: FileServiceAdapter,
           useValue: {
@@ -477,6 +490,10 @@ describe('CollaborationMigrationService', () => {
       createQueryBuilder: ReturnType<typeof vi.fn>;
       count: ReturnType<typeof vi.fn>;
     };
+    let contributionDefaults: {
+      createQueryBuilder: ReturnType<typeof vi.fn>;
+      query: ReturnType<typeof vi.fn>;
+    };
     let fileService: {
       createSnapshotInBucket: ReturnType<typeof vi.fn>;
       deleteDocument: ReturnType<typeof vi.fn>;
@@ -532,6 +549,10 @@ describe('CollaborationMigrationService', () => {
       vi.restoreAllMocks();
       memo = { createQueryBuilder: vi.fn(), count: vi.fn() };
       whiteboard = { createQueryBuilder: vi.fn(), count: vi.fn() };
+      contributionDefaults = {
+        createQueryBuilder: vi.fn(),
+        query: vi.fn().mockResolvedValue([]),
+      };
       fileService = {
         createSnapshotInBucket: vi.fn(),
         deleteDocument: vi.fn().mockResolvedValue(undefined),
@@ -546,6 +567,10 @@ describe('CollaborationMigrationService', () => {
           MockWinstonProvider,
           { provide: getRepositoryToken(Memo), useValue: memo },
           { provide: getRepositoryToken(Whiteboard), useValue: whiteboard },
+          {
+            provide: getRepositoryToken(CalloutContributionDefaults),
+            useValue: contributionDefaults,
+          },
           { provide: FileServiceAdapter, useValue: fileService },
           { provide: DocumentService, useValue: documentService },
           {
@@ -1055,6 +1080,170 @@ describe('CollaborationMigrationService', () => {
       const summary = await svc.migrateAll();
       return { summary, captured, update };
     };
+
+    it('migrates an omitted legacy contribution default independently of already-migrated Whiteboard rows, then skips the canonical row on rerun', async () => {
+      const scene = legacyMediaScene({
+        fileId: 'unused',
+        file: {},
+        withImage: false,
+      });
+      const storedContent = await compressText(scene);
+      const update = updateQB();
+      whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+      contributionDefaults.query.mockResolvedValueOnce([
+        {
+          id: 'default-1',
+          storedContent,
+          storageBucketId: 'callout-bucket-1',
+        },
+      ]);
+      contributionDefaults.createQueryBuilder.mockReturnValue(update.qb);
+
+      const first = await svc.migrateWhiteboards();
+
+      expect(first).toMatchObject({ total: 1, migrated: 1, failed: 0 });
+      const canonicalStored = (
+        update.set.mock.calls as unknown as Array<
+          [{ whiteboardContent: string }]
+        >
+      )[0][0].whiteboardContent;
+      const canonical = await decompressText(canonicalStored);
+      expect(Buffer.from(canonical, 'base64').length).toBeGreaterThan(0);
+      expect(
+        await readStoredElementIds(Buffer.from(canonical, 'base64'))
+      ).toEqual(['rect-1']);
+
+      contributionDefaults.query.mockReset().mockResolvedValueOnce([
+        {
+          id: 'default-1',
+          storedContent: canonicalStored,
+          storageBucketId: 'callout-bucket-1',
+        },
+      ]);
+      const second = await svc.migrateWhiteboards();
+      expect(second).toMatchObject({ total: 0, migrated: 0, failed: 0 });
+      expect(contributionDefaults.createQueryBuilder).toHaveBeenCalledTimes(1);
+    });
+
+    it('up-homes embedded default media into the owning Callout bucket and stores locator strings', async () => {
+      const storedContent = await compressText(
+        legacyMediaScene({
+          fileId: 'file-default',
+          file: {
+            id: 'file-default',
+            mimeType: 'image/png',
+            dataURL: VALID_PNG_DATA_URL,
+          },
+        })
+      );
+      const update = updateQB();
+      whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+      contributionDefaults.query.mockResolvedValueOnce([
+        {
+          id: 'default-media',
+          storedContent,
+          storageBucketId: 'callout-bucket-media',
+        },
+      ]);
+      contributionDefaults.createQueryBuilder.mockReturnValue(update.qb);
+
+      const summary = await svc.migrateWhiteboards();
+
+      expect(summary).toMatchObject({ total: 1, migrated: 1, failed: 0 });
+      expect(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).toHaveBeenCalledWith(
+        'callout-bucket-media',
+        expect.any(Buffer),
+        expect.any(String),
+        'image/png'
+      );
+      const canonical = await decompressText(
+        (
+          update.set.mock.calls as unknown as Array<
+            [{ whiteboardContent: string }]
+          >
+        )[0][0].whiteboardContent
+      );
+      expect(
+        await readStoredAssetLocators(Buffer.from(canonical, 'base64'))
+      ).toEqual({ 'file-default': 'uphomed-doc-1' });
+      expect(storageBucketService.store.get('uphomed-doc-1')).toMatchObject({
+        bucketId: 'callout-bucket-media',
+      });
+    });
+
+    it('does not partially publish a default when media authorization fails and compensates the up-homed file', async () => {
+      const storedContent = await compressText(
+        legacyMediaScene({
+          fileId: 'file-default',
+          file: {
+            id: 'file-default',
+            mimeType: 'image/png',
+            dataURL: VALID_PNG_DATA_URL,
+          },
+        })
+      );
+      whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+      contributionDefaults.query.mockResolvedValueOnce([
+        {
+          id: 'default-fail',
+          storedContent,
+          storageBucketId: 'callout-bucket-fail',
+        },
+      ]);
+      documentAuthorizationService.applyAuthorizationPolicy.mockRejectedValue(
+        new Error('authorization persistence failed')
+      );
+
+      const summary = await svc.migrateWhiteboards();
+
+      expect(summary).toMatchObject({ total: 1, migrated: 0, failed: 1 });
+      expect(contributionDefaults.createQueryBuilder).not.toHaveBeenCalled();
+      expect(documentService.deleteDocument).toHaveBeenCalledWith({
+        ID: 'uphomed-doc-1',
+      });
+    });
+
+    it('reports a lost default CAS as failed when the concurrent value is not canonical', async () => {
+      const storedContent = await compressText(
+        legacyMediaScene({ fileId: 'unused', file: {}, withImage: false })
+      );
+      const concurrentlyWrittenLegacy = await compressText(
+        JSON.stringify({
+          type: 'excalidraw',
+          version: 2,
+          elements: [{ id: 'still-legacy', type: 'rectangle' }],
+          appState: {},
+          files: {},
+        })
+      );
+      const update = updateQB();
+      update.execute.mockResolvedValue({ affected: 0 });
+      whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+      contributionDefaults.query
+        .mockResolvedValueOnce([
+          {
+            id: 'default-cas-loser',
+            storedContent,
+            storageBucketId: 'callout-bucket-cas',
+          },
+        ])
+        .mockResolvedValueOnce([
+          { whiteboardContent: concurrentlyWrittenLegacy },
+        ]);
+      contributionDefaults.createQueryBuilder.mockReturnValue(update.qb);
+
+      const summary = await svc.migrateWhiteboards();
+
+      expect(summary).toMatchObject({ total: 1, migrated: 0, failed: 1 });
+      expect(summary.failedDocuments).toEqual([
+        expect.objectContaining({
+          id: 'default-cas-loser',
+          reason: expect.stringContaining('did not converge'),
+        }),
+      ]);
+    });
 
     it('CRITICAL: migrates a legacy media whiteboard — FILES holds locator STRINGS (resolved via getDocumentFromURL), never BinaryFileData objects', async () => {
       const url = 'https://alkem.io/api/private/rest/storage/document/DOC-XYZ';

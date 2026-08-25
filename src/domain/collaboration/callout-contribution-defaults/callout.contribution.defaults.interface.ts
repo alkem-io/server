@@ -1,7 +1,6 @@
 import { SMALL_TEXT_LENGTH } from '@common/constants';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
-import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IsOptional, MaxLength, MinLength } from 'class-validator';
 
@@ -22,9 +21,13 @@ export abstract class ICalloutContributionDefaults extends IBaseAlkemio {
   })
   postDescription?: string;
 
-  @Field(() => WhiteboardContent, {
-    nullable: true,
-    description: 'The default whiteboard content for whiteboard responses.',
-  })
+  /** Canonical Yjs-V2 content persisted server-side; never exposed through GraphQL. */
   whiteboardContent?: string;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description:
+      'Whether this Callout has a non-empty default for Whiteboard contributions.',
+  })
+  whiteboardContentAvailable!: boolean;
 }

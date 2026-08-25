@@ -82,6 +82,60 @@ export class CalloutsSetResolverMutations {
     );
   }
 
+  private async resolveContributionDefaultSource(
+    actorContext: ActorContext,
+    defaults?: CreateCalloutOnCalloutsSetInput['contributionDefaults']
+  ): Promise<void> {
+    if (!defaults) {
+      return;
+    }
+    if (defaults.sourceWhiteboardID && defaults.sourceCalloutID) {
+      throw new ValidationException(
+        'sourceWhiteboardID and sourceCalloutID are mutually exclusive',
+        LogContext.WHITEBOARDS
+      );
+    }
+    if (defaults.sourceCalloutID) {
+      const sourceCallout = await this.calloutService.getCalloutOrFail(
+        defaults.sourceCalloutID,
+        {
+          relations: {
+            authorization: true,
+            contributionDefaults: true,
+            framing: { profile: { storageBucket: true } },
+          },
+        }
+      );
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        sourceCallout.authorization,
+        AuthorizationPrivilege.READ,
+        'copy Whiteboard contribution default from source Callout'
+      );
+      defaults.whiteboardContent =
+        sourceCallout.contributionDefaults?.whiteboardContent;
+      defaults.sourceStorageBucketID = defaults.whiteboardContent
+        ? sourceCallout.framing?.profile?.storageBucket?.id
+        : undefined;
+      if (defaults.whiteboardContent && !defaults.sourceStorageBucketID) {
+        throw new ValidationException(
+          'Source Callout has a Whiteboard default but no owning storage bucket',
+          LogContext.WHITEBOARDS
+        );
+      }
+      return;
+    }
+    if (!defaults.sourceWhiteboardID) {
+      return;
+    }
+    const source = await this.whiteboardService.resolveContentSource(
+      defaults.sourceWhiteboardID,
+      actorContext
+    );
+    defaults.whiteboardContent = source.content;
+    defaults.sourceStorageBucketID = source.storageBucketID;
+  }
+
   @Mutation(() => ICallout, {
     description:
       'Create a new Callout on the CalloutsSet. When `file` is supplied alongside a COLLABORA_DOCUMENT framing, the new callout is framed with a Collabora document populated from the uploaded bytes (file-service-go sniffs MIME, validates format and size, and derives the document type; any documentType in the input is ignored on the upload path; displayName defaults from the filename when absent). When `file` is omitted, the existing blank-create behaviour applies and framing.collaboraDocument must specify both displayName and documentType.',
@@ -129,6 +183,10 @@ export class CalloutsSetResolverMutations {
       calloutData.framing?.type === CalloutFramingType.WHITEBOARD
         ? calloutData.framing.whiteboard?.sourceWhiteboardID
         : undefined
+    );
+    await this.resolveContributionDefaultSource(
+      actorContext,
+      calloutData.contributionDefaults
     );
 
     // Office Docs entitlement gate (FR-001/FR-004/FR-009): block introduction of a

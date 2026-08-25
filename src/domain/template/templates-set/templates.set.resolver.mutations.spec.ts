@@ -25,12 +25,18 @@ describe('TemplatesSetResolverMutations', () => {
   let templateAuthorizationService: {
     applyAuthorizationPolicy: ReturnType<typeof vi.fn>;
   };
-  let templateService: { getTemplateOrFail: ReturnType<typeof vi.fn> };
+  let templateService: {
+    getTemplateOrFail: ReturnType<typeof vi.fn>;
+    getSourceCalloutForContributionDefaultCopy: ReturnType<typeof vi.fn>;
+  };
   let spaceLookupService: { getSpaceOrFail: ReturnType<typeof vi.fn> };
   let templateContentSpaceService: {
     getTemplateContentSpaceOrFail: ReturnType<typeof vi.fn>;
   };
-  let whiteboardService: { getWhiteboardOrFail: ReturnType<typeof vi.fn> };
+  let whiteboardService: {
+    getWhiteboardOrFail: ReturnType<typeof vi.fn>;
+    resolveContentSource: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     authorizationService = { grantAccessOrFail: vi.fn() };
@@ -42,10 +48,16 @@ describe('TemplatesSetResolverMutations', () => {
       createTemplateFromContentSpace: vi.fn(),
     };
     templateAuthorizationService = { applyAuthorizationPolicy: vi.fn() };
-    templateService = { getTemplateOrFail: vi.fn() };
+    templateService = {
+      getTemplateOrFail: vi.fn(),
+      getSourceCalloutForContributionDefaultCopy: vi.fn(),
+    };
     spaceLookupService = { getSpaceOrFail: vi.fn() };
     templateContentSpaceService = { getTemplateContentSpaceOrFail: vi.fn() };
-    whiteboardService = { getWhiteboardOrFail: vi.fn() };
+    whiteboardService = {
+      getWhiteboardOrFail: vi.fn(),
+      resolveContentSource: vi.fn(),
+    };
 
     resolver = new TemplatesSetResolverMutations(
       authorizationService as unknown as AuthorizationService,
@@ -172,6 +184,51 @@ describe('TemplatesSetResolverMutations', () => {
       ).rejects.toThrow('Forbidden');
 
       expect(templatesSetService.createTemplate).not.toHaveBeenCalled();
+    });
+
+    it('copies a Callout-template Whiteboard default internally by source Callout id', async () => {
+      const templatesSet = { id: 'ts-1', authorization: { id: 'ts-auth' } };
+      templatesSetService.getTemplatesSetOrFail.mockResolvedValue(templatesSet);
+      const sourceCallout = {
+        id: 'source-callout',
+        authorization: { id: 'source-auth' },
+        contributionDefaults: { whiteboardContent: 'canonical-internal' },
+        framing: { profile: { storageBucket: { id: 'source-bucket' } } },
+      };
+      templateService.getSourceCalloutForContributionDefaultCopy.mockResolvedValue(
+        sourceCallout
+      );
+      templatesSetService.createTemplate.mockResolvedValue({ id: 'tpl-1' });
+      templateAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
+      templateService.getTemplateOrFail.mockResolvedValue({ id: 'tpl-1' });
+      const input = {
+        templatesSetID: 'ts-1',
+        calloutData: {
+          contributionDefaults: { sourceCalloutID: 'source-callout' },
+        },
+      } as any;
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await resolver.createTemplate(actorContext, input);
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        sourceCallout.authorization,
+        AuthorizationPrivilege.READ,
+        expect.any(String)
+      );
+      expect(input.calloutData.contributionDefaults).toMatchObject({
+        sourceCalloutID: 'source-callout',
+        whiteboardContent: 'canonical-internal',
+        sourceStorageBucketID: 'source-bucket',
+      });
+      expect(templatesSetService.createTemplate).toHaveBeenCalledWith(
+        templatesSet,
+        input,
+        actorContext
+      );
     });
   });
 

@@ -6,7 +6,6 @@ import { MessageID } from './scalar.messageid';
 import { NameID } from './scalar.nameid';
 import { SearchCursor } from './scalar.search.cursor';
 import { UUID } from './scalar.uuid';
-import { WhiteboardContent } from './scalar.whiteboard.content';
 
 @Module({
   imports: [],
@@ -17,7 +16,6 @@ import { WhiteboardContent } from './scalar.whiteboard.content';
     Markdown,
     MessageID,
     LifecycleDefinitionScalar,
-    WhiteboardContent,
     SearchCursor,
   ],
   exports: [],

@@ -175,6 +175,67 @@ describe('CalloutResolverMutations', () => {
       expect(authorizationPolicyService.saveAll).toHaveBeenCalled();
     });
 
+    it('resolves an ID-only source Callout into internal default content before update', async () => {
+      const target = {
+        id: 'target-callout',
+        authorization: { id: 'target-auth' },
+      } as any;
+      const source = {
+        id: 'source-callout',
+        authorization: { id: 'source-auth' },
+        contributionDefaults: { whiteboardContent: 'canonical-internal' },
+        framing: { profile: { storageBucket: { id: 'source-bucket' } } },
+      } as any;
+      vi.mocked(calloutService.getCalloutOrFail)
+        .mockResolvedValueOnce(target)
+        .mockResolvedValueOnce(source);
+      const reachedUpdate = new Error('reached-update-sentinel');
+      vi.mocked(calloutService.updateCallout).mockRejectedValue(reachedUpdate);
+      const input = {
+        ID: target.id,
+        contributionDefaults: { sourceCalloutID: source.id },
+      } as any;
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await expect(resolver.updateCallout(actorContext, input)).rejects.toBe(
+        reachedUpdate
+      );
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        source.authorization,
+        AuthorizationPrivilege.READ,
+        expect.any(String)
+      );
+      expect(input.contributionDefaults).toMatchObject({
+        sourceCalloutID: source.id,
+        whiteboardContent: 'canonical-internal',
+        sourceStorageBucketID: 'source-bucket',
+      });
+    });
+
+    it('rejects clear plus any source selection before updating', async () => {
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue({
+        id: 'target-callout',
+        authorization: { id: 'target-auth' },
+      } as any);
+
+      await expect(
+        resolver.updateCallout(
+          { actorID: 'user-1' } as any,
+          {
+            ID: 'target-callout',
+            contributionDefaults: {
+              sourceCalloutID: 'source-callout',
+              clearWhiteboardContent: true,
+            },
+          } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(calloutService.updateCallout).not.toHaveBeenCalled();
+    });
+
     // The CONTRIBUTORS framing guard must hold on the UPDATE path too, not just
     // create — otherwise the admin-only / collaboration-only restriction
     // (FR-004a/FR-004f) is bypassable by converting a callout via updateCallout.

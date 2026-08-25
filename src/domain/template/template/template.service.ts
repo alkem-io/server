@@ -69,6 +69,16 @@ export class TemplateService {
     private readonly logger: LoggerService
   ) {}
 
+  public async getSourceCalloutForContributionDefaultCopy(calloutID: string) {
+    return this.calloutService.getCalloutOrFail(calloutID, {
+      relations: {
+        authorization: true,
+        contributionDefaults: true,
+        framing: { profile: { storageBucket: true } },
+      },
+    });
+  }
+
   /**
    * Self-contained: builds the template (with any nested entity for the
    * declared TemplateType), persists, then runs phase-2 materialization
@@ -489,17 +499,25 @@ export class TemplateService {
     if (
       template.type === TemplateType.WHITEBOARD &&
       template.whiteboard &&
-      templateData.whiteboardContent
+      (templateData.sourceWhiteboardID || templateData.whiteboardContent)
     ) {
       // Whiteboard content is stored as a Yjs-V2 snapshot in the whiteboard's
       // bucket, not an inline column (006-collab-content-unification): route the
       // new scene through the snapshot-write path so the stored snapshot (and the
       // first-open seed) reflect the template update.
-      await this.whiteboardService.updateWhiteboardContent(
-        template.whiteboard.id,
-        templateData.whiteboardContent,
-        actorContext
-      );
+      if (templateData.sourceWhiteboardID) {
+        await this.whiteboardService.replaceContentFromSource(
+          template.whiteboard.id,
+          templateData.sourceWhiteboardID,
+          actorContext
+        );
+      } else if (templateData.whiteboardContent) {
+        await this.whiteboardService.updateWhiteboardContent(
+          template.whiteboard.id,
+          templateData.whiteboardContent,
+          actorContext
+        );
+      }
     }
     if (
       template.type === TemplateType.CLASSIFICATION &&

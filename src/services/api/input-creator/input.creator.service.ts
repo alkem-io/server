@@ -115,6 +115,7 @@ export class InputCreatorService {
             tagsets: true,
             references: true,
             visuals: true,
+            storageBucket: true,
           },
           whiteboard: {
             profile: {
@@ -194,7 +195,8 @@ export class InputCreatorService {
       ),
       contributionDefaults:
         this.buildCreateCalloutContributionDefaultsInputFromCalloutContributionDefaults(
-          callout.contributionDefaults
+          callout.contributionDefaults,
+          callout.framing.profile.storageBucket?.id
         ),
       sortOrder: callout.sortOrder,
     };
@@ -551,7 +553,8 @@ export class InputCreatorService {
   }
 
   private buildCreateCalloutContributionDefaultsInputFromCalloutContributionDefaults(
-    calloutContributionDefaults?: ICalloutContributionDefaults
+    calloutContributionDefaults?: ICalloutContributionDefaults,
+    sourceStorageBucketID?: string
   ): CreateCalloutContributionDefaultsInput | undefined {
     if (!calloutContributionDefaults) {
       return undefined;
@@ -560,6 +563,9 @@ export class InputCreatorService {
       defaultDisplayName: calloutContributionDefaults.defaultDisplayName,
       postDescription: calloutContributionDefaults.postDescription,
       whiteboardContent: calloutContributionDefaults.whiteboardContent,
+      sourceStorageBucketID: calloutContributionDefaults.whiteboardContent
+        ? sourceStorageBucketID
+        : undefined,
     };
     return result;
   }

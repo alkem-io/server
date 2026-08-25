@@ -1,6 +1,6 @@
 import { SMALL_TEXT_LENGTH } from '@common/constants';
+import { UUID } from '@domain/common/scalars';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
-import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 import { Field, InputType, ObjectType } from '@nestjs/graphql';
 import { IsOptional, MaxLength, MinLength } from 'class-validator';
 
@@ -22,7 +22,25 @@ export class CreateCalloutContributionDefaultsInput {
   })
   postDescription?: string;
 
-  @Field(() => WhiteboardContent, { nullable: true })
-  @IsOptional()
+  /** Server-internal canonical content used while cloning persisted callouts. */
   whiteboardContent?: string;
+
+  /** Server-internal ownership constraint paired with `whiteboardContent`. */
+  sourceStorageBucketID?: string;
+
+  @Field(() => UUID, {
+    nullable: true,
+    description:
+      'Seed the default from an existing Whiteboard. The server copies its content and media into the owning Callout bucket; the source id is not persisted.',
+  })
+  @IsOptional()
+  sourceWhiteboardID?: string;
+
+  @Field(() => UUID, {
+    nullable: true,
+    description:
+      'Copy the internal Whiteboard contribution default from this source Callout. Mutually exclusive with sourceWhiteboardID.',
+  })
+  @IsOptional()
+  sourceCalloutID?: string;
 }

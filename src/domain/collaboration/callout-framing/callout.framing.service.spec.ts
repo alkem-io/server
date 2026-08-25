@@ -535,6 +535,34 @@ describe('CalloutFramingService', () => {
       );
     });
 
+    it('replaces an existing framing Whiteboard from an ID-only source through the live room', async () => {
+      const framing = {
+        id: 'framing-1',
+        type: CalloutFramingType.WHITEBOARD,
+        profile: { id: 'profile-1' },
+        whiteboard: { id: 'target-wb' },
+      } as any;
+      const updateData = { sourceWhiteboardID: 'source-wb' } as any;
+      vi.mocked(whiteboardService.replaceContentFromSource).mockResolvedValue({
+        id: 'target-wb',
+      } as any);
+
+      await service.updateCalloutFraming(
+        framing,
+        updateData,
+        storageAggregator,
+        false,
+        actorContextData.actorContext
+      );
+
+      expect(whiteboardService.replaceContentFromSource).toHaveBeenCalledWith(
+        'target-wb',
+        'source-wb',
+        actorContextData.actorContext
+      );
+      expect(whiteboardService.updateWhiteboardContent).not.toHaveBeenCalled();
+    });
+
     it('does NOT replace whiteboard content for a NON-template callout (live room is authoritative)', async () => {
       const framing = {
         id: 'framing-1',

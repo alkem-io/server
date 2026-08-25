@@ -1,4 +1,5 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { CalloutContributionDefaults } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.entity';
 import { Memo } from '@domain/common/memo/memo.entity';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { DocumentModule } from '@domain/storage/document/document.module';
@@ -16,7 +17,7 @@ import { CollaborationMigrationService } from './collaboration-migration.service
     AuthorizationModule,
     PlatformAuthorizationPolicyModule,
     PlatformOperationsAuditModule,
-    TypeOrmModule.forFeature([Memo, Whiteboard]),
+    TypeOrmModule.forFeature([Memo, Whiteboard, CalloutContributionDefaults]),
     FileServiceAdapterModule,
     DocumentModule,
     StorageBucketModule,

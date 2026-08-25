@@ -512,6 +512,31 @@ describe('TemplateService', () => {
       );
     });
 
+    it('replaces a WHITEBOARD template from an ID-only source through the live room', async () => {
+      const template = {
+        id: 'tpl-1',
+        type: TemplateType.WHITEBOARD,
+        profile: { id: 'p-1' },
+        whiteboard: { id: 'target-wb' },
+      } as unknown as Template;
+      templateRepository.find.mockResolvedValue([template]);
+      templateRepository.save.mockImplementation(async (entity: any) => entity);
+      whiteboardService.replaceContentFromSource.mockResolvedValue({} as any);
+
+      await service.updateTemplate(
+        { id: 'tpl-1', type: TemplateType.WHITEBOARD } as ITemplate,
+        { ID: 'tpl-1', sourceWhiteboardID: 'source-wb' } as any,
+        actorContextData.actorContext
+      );
+
+      expect(whiteboardService.replaceContentFromSource).toHaveBeenCalledWith(
+        'target-wb',
+        'source-wb',
+        actorContextData.actorContext
+      );
+      expect(whiteboardService.updateWhiteboardContent).not.toHaveBeenCalled();
+    });
+
     it('should not update postDefaultDescription when template type is not POST', async () => {
       const template = {
         id: 'tpl-1',

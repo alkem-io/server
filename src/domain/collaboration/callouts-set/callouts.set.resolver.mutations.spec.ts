@@ -208,6 +208,78 @@ describe('CalloutsSetResolverMutations', () => {
       expect(whiteboardService.getWhiteboardOrFail).not.toHaveBeenCalled();
     });
 
+    it('copies an internal Whiteboard default from a source Callout by id before delegating', async () => {
+      const calloutsSet = framingCloneCalloutsSet();
+      const sourceCallout = {
+        id: 'source-callout',
+        authorization: { id: 'source-auth' },
+        contributionDefaults: { whiteboardContent: 'canonical-internal' },
+        framing: { profile: { storageBucket: { id: 'source-bucket' } } },
+      } as any;
+      vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
+        calloutsSet
+      );
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(
+        sourceCallout
+      );
+      const reachedDelegate = new Error('reached-delegate-sentinel');
+      vi.mocked(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).mockRejectedValue(reachedDelegate);
+      const input = {
+        calloutsSetID: 'cs-1',
+        contributionDefaults: { sourceCalloutID: 'source-callout' },
+      } as any;
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await expect(
+        resolver.createCalloutOnCalloutsSet(actorContext, input)
+      ).rejects.toBe(reachedDelegate);
+
+      expect(calloutService.getCalloutOrFail).toHaveBeenCalledWith(
+        'source-callout',
+        expect.objectContaining({
+          relations: expect.objectContaining({ contributionDefaults: true }),
+        })
+      );
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        sourceCallout.authorization,
+        AuthorizationPrivilege.READ,
+        expect.any(String)
+      );
+      expect(input.contributionDefaults).toMatchObject({
+        sourceCalloutID: 'source-callout',
+        whiteboardContent: 'canonical-internal',
+        sourceStorageBucketID: 'source-bucket',
+      });
+    });
+
+    it('rejects selecting both a source Whiteboard and a source Callout for one default', async () => {
+      vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
+        framingCloneCalloutsSet()
+      );
+
+      await expect(
+        resolver.createCalloutOnCalloutsSet(
+          { actorID: 'user-1' } as any,
+          {
+            calloutsSetID: 'cs-1',
+            contributionDefaults: {
+              sourceWhiteboardID: 'source-whiteboard',
+              sourceCalloutID: 'source-callout',
+            },
+          } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(calloutService.getCalloutOrFail).not.toHaveBeenCalled();
+      expect(whiteboardService.resolveContentSource).not.toHaveBeenCalled();
+      expect(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).not.toHaveBeenCalled();
+    });
+
     it('should trigger notifications and activity when published on COLLABORATION type', async () => {
       const calloutsSet = {
         id: 'cs-1',

@@ -2,6 +2,7 @@ import configuration from '@config/configuration';
 import { buildRuntimeDataSourceOptions } from '@config/runtime.datasource.options';
 import { WinstonConfigService } from '@config/winston.config';
 import { GraphqlGuardModule } from '@core/authorization/graphql.guard.module';
+import { CalloutContributionDefaults } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.entity';
 import { Memo } from '@domain/common/memo/memo.entity';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { DocumentModule } from '@domain/storage/document/document.module';
@@ -62,7 +63,7 @@ import { join } from 'path';
           join(__dirname, '..', '..')
         ),
     }),
-    TypeOrmModule.forFeature([Memo, Whiteboard]),
+    TypeOrmModule.forFeature([Memo, Whiteboard, CalloutContributionDefaults]),
     FileServiceAdapterModule,
     // In-memory (no-store) cache purely to satisfy the global `CACHE_MANAGER`
     // token that `StorageBucketService`'s transitive `UrlGeneratorCacheService`

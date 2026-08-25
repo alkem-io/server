@@ -1,6 +1,5 @@
 import { CreateProfileInput } from '@domain/common/profile/dto';
 import { NameID, UUID } from '@domain/common/scalars';
-import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 import { Field, InputType, ObjectType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { IsOptional, ValidateNested } from 'class-validator';
@@ -20,8 +19,7 @@ export class CreateWhiteboardInput {
   })
   nameID?: string;
 
-  @Field(() => WhiteboardContent, { nullable: true })
-  @IsOptional()
+  /** Server-internal canonical snapshot used by trusted copy/materialization paths. */
   content?: string;
 
   // 006-collab-content-unification (#29): a live whiteboard's content is no
@@ -32,18 +30,22 @@ export class CreateWhiteboardInput {
   // Yjs-V2 snapshot (under a READ authorization on the source) and seeds the new
   // whiteboard's bucket with it, re-homing embedded media into the new bucket.
   //
-  // `content` and `sourceWhiteboardID` are MUTUALLY EXCLUSIVE — supply exactly one.
-  // The client sends `sourceWhiteboardID` ALONE for Save-as-Template (no empty
-  // `content` placeholder alongside it): the server rejects a create that carries BOTH
-  // (by presence, so `content: ''` also collides). An empty / unresolvable source seeds
-  // an EMPTY, editable board — it does NOT fall back to `content`.
+  // The client sends `sourceWhiteboardID` ALONE for Save-as-Template. Omission creates
+  // a canonical empty board. The internal `content` property exists only for trusted
+  // server-owned serialization/materialization paths and is never a GraphQL field.
   @Field(() => UUID, {
     nullable: true,
     description:
-      'Seed the new Whiteboard from the stored content of an existing Whiteboard (server-side copy). Mutually exclusive with `content` — supply exactly one.',
+      'Seed the new Whiteboard from the stored content of an existing Whiteboard through a server-side authorized copy. Omission creates an empty Whiteboard.',
   })
   @IsOptional()
   sourceWhiteboardID?: string;
+
+  /**
+   * Server-internal ownership boundary for canonical content copied from a
+   * persisted Callout default. It is deliberately not a GraphQL field.
+   */
+  sourceStorageBucketID?: string;
 
   @Field(() => CreateWhiteboardPreviewSettingsInput, {
     nullable: true,

@@ -36,7 +36,7 @@ export class CollaborationMigrationResolverMutations {
 
   @Mutation(() => CollaborationMigrationResult, {
     description:
-      'Migrates all pending legacy whiteboard content. Idempotent: repeated calls process only rows whose migrated marker is false.',
+      'Migrates pending legacy Whiteboard documents and independently normalizes every legacy Whiteboard contribution default, including defaults stored by Callout templates. Idempotent: repeated calls process only unmigrated documents and non-canonical defaults.',
   })
   async migrateLegacyWhiteboardContent(
     @CurrentActor() actorContext: ActorContext

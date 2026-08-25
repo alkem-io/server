@@ -347,7 +347,8 @@ export class CalloutService {
     await this.contributionDefaultsService.materializeCalloutContributionDefaultsContent(
       callout.contributionDefaults,
       callout.framing.profile.storageBucket,
-      rollback
+      rollback,
+      calloutData?.contributionDefaults
     );
     // Pair persisted contributions to their input data by `type` + the
     // nested entity's stable identifier (Link.uri for LINK, nameID for
@@ -421,19 +422,6 @@ export class CalloutService {
   }
 
   private validateCreateCalloutData(calloutData: CreateCalloutInput) {
-    if (
-      // If can contribute with whiteboard
-      (calloutData.settings?.contribution?.allowedTypes ?? []).includes(
-        CalloutContributionType.WHITEBOARD
-      ) && //  but no whiteboard template provided
-      !calloutData.contributionDefaults?.whiteboardContent
-    ) {
-      throw new ValidationException(
-        'Please provide a whiteboard template',
-        LogContext.COLLABORATION
-      );
-    }
-
     if (
       calloutData.framing.type == CalloutFramingType.WHITEBOARD &&
       !calloutData.framing.whiteboard
@@ -538,7 +526,7 @@ export class CalloutService {
       relations: {
         contributionDefaults: true,
         framing: {
-          profile: true,
+          profile: { storageBucket: true },
           whiteboard: true,
           link: true,
           memo: true,
@@ -652,12 +640,38 @@ export class CalloutService {
       );
     }
 
+    let previousWhiteboardContent: string | undefined;
+    let materializedWhiteboardDocumentIDs: string[] = [];
     if (calloutUpdateData.contributionDefaults) {
+      previousWhiteboardContent =
+        callout.contributionDefaults.whiteboardContent;
       callout.contributionDefaults =
         this.contributionDefaultsService.updateCalloutContributionDefaults(
           callout.contributionDefaults,
           calloutUpdateData.contributionDefaults
         );
+
+      const targetStorageBucketID = callout.framing.profile?.storageBucket?.id;
+      if (
+        calloutUpdateData.contributionDefaults.whiteboardContent !==
+          undefined &&
+        !targetStorageBucketID
+      ) {
+        throw new EntityNotInitializedException(
+          `Callout (${callout.id}) has no storage bucket for its Whiteboard default`,
+          LogContext.COLLABORATION
+        );
+      }
+      const materialized = targetStorageBucketID
+        ? await this.contributionDefaultsService.materializeWhiteboardDefault(
+            calloutUpdateData.contributionDefaults,
+            targetStorageBucketID
+          )
+        : undefined;
+      if (materialized) {
+        callout.contributionDefaults.whiteboardContent = materialized.content;
+        materializedWhiteboardDocumentIDs = materialized.createdDocumentIDs;
+      }
     }
 
     // Create the Matrix room for comments if it doesn't yet exist
@@ -679,7 +693,16 @@ export class CalloutService {
     if (calloutUpdateData.sortOrder)
       callout.sortOrder = calloutUpdateData.sortOrder;
 
-    return await this.calloutRepository.save(callout);
+    try {
+      return await this.calloutRepository.save(callout);
+    } catch (error) {
+      callout.contributionDefaults.whiteboardContent =
+        previousWhiteboardContent;
+      await this.contributionDefaultsService.deleteMaterializedWhiteboardDocuments(
+        materializedWhiteboardDocumentIDs
+      );
+      throw error;
+    }
   }
 
   async save(callout: ICallout): Promise<ICallout> {
@@ -939,6 +962,8 @@ export class CalloutService {
     const callout = await this.getCalloutOrFail(calloutID, {
       relations: {
         contributions: true,
+        contributionDefaults: true,
+        framing: { profile: { storageBucket: true } },
         classification: {
           tagsets: {
             tagsetTemplate: true,
@@ -951,6 +976,24 @@ export class CalloutService {
         `Callout (${calloutID}) not initialised as no contributions`,
         LogContext.COLLABORATION
       );
+
+    if (
+      contributionData.whiteboard &&
+      contributionData.whiteboard.content === undefined &&
+      contributionData.whiteboard.sourceWhiteboardID === undefined &&
+      callout.contributionDefaults?.whiteboardContent
+    ) {
+      const sourceStorageBucketID = callout.framing?.profile?.storageBucket?.id;
+      if (!sourceStorageBucketID) {
+        throw new EntityNotInitializedException(
+          `Callout (${calloutID}) has Whiteboard defaults but no owning storage bucket`,
+          LogContext.COLLABORATION
+        );
+      }
+      contributionData.whiteboard.content =
+        callout.contributionDefaults.whiteboardContent;
+      contributionData.whiteboard.sourceStorageBucketID = sourceStorageBucketID;
+    }
 
     const reservedNameIDs =
       await this.namingService.getReservedNameIDsInCalloutContributions(

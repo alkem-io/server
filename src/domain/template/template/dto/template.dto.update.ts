@@ -1,8 +1,8 @@
 import { VERY_LONG_TEXT_LENGTH } from '@common/constants/entity.field.length.constants';
 import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity/dto/base.alkemio.dto.update';
 import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
+import { UUID } from '@domain/common/scalars';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
-import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
@@ -28,12 +28,16 @@ export class UpdateTemplateInput extends UpdateBaseAlkemioInput {
   @MaxLength(VERY_LONG_TEXT_LENGTH)
   postDefaultDescription!: string;
 
-  @Field(() => WhiteboardContent, {
+  /** Server-internal canonical snapshot used by trusted template serialization. */
+  whiteboardContent?: string;
+
+  @Field(() => UUID, {
     nullable: true,
-    description: 'The new content to be used.',
+    description:
+      'Replace this Whiteboard Template from an existing Whiteboard through a server-side authorized copy.',
   })
   @IsOptional()
-  whiteboardContent?: string;
+  sourceWhiteboardID?: string;
 
   @Field(() => CreateClassificationTemplateContentInput, {
     nullable: true,
