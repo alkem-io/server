@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { BackfillInnovationFlowStateSidebar1786600000000 } from '../1786600000000-BackfillInnovationFlowStateSidebar';
+import { BackfillInnovationFlowStateSidebar1787400000000 } from '../1787400000000-BackfillInnovationFlowStateSidebar';
 
 /**
  * Static-analysis assertions for the BackfillInnovationFlowStateSidebar migration.
@@ -10,29 +10,40 @@ import { BackfillInnovationFlowStateSidebar1786600000000 } from '../178660000000
  * PostgreSQL container (minimal synthetic schema and the full real migration chain) before
  * this change was committed.
  */
-describe('BackfillInnovationFlowStateSidebar migration (1786600000000)', () => {
+describe('BackfillInnovationFlowStateSidebar migration (1787400000000)', () => {
   const migrationSrc = readFileSync(
-    resolve(__dirname, '../1786600000000-BackfillInnovationFlowStateSidebar.ts'),
+    resolve(__dirname, '../1787400000000-BackfillInnovationFlowStateSidebar.ts'),
     'utf8'
   );
 
   it('exports the expected class', () => {
-    expect(BackfillInnovationFlowStateSidebar1786600000000).toBeDefined();
-    const instance = new BackfillInnovationFlowStateSidebar1786600000000();
+    expect(BackfillInnovationFlowStateSidebar1787400000000).toBeDefined();
+    const instance = new BackfillInnovationFlowStateSidebar1787400000000();
     expect(typeof instance.up).toBe('function');
     expect(typeof instance.down).toBe('function');
   });
 
-  it('up() SQL is idempotent: every write is guarded by a sidebar IS NULL check', () => {
+  it('up() SQL is idempotent: EACH UPDATE statement carries its own sidebar IS NULL guard', () => {
     const sqlBlocks =
       migrationSrc.match(/await queryRunner\.query\(`([\s\S]*?)`\)/g) ?? [];
-    const combinedSql = sqlBlocks.join('\n');
-    const updates = combinedSql.match(/UPDATE\s+innovation_flow_state/gi) ?? [];
-    const guards = combinedSql.match(/settings\s*->\s*'sidebar'\s*IS NULL/gi) ?? [];
-    // Every UPDATE statement region must carry the guard at least once — the exact
-    // count check below asserts one guard per branch (Branch A/B/C = 3 UPDATEs).
-    expect(updates.length).toBe(3);
-    expect(guards.length).toBeGreaterThanOrEqual(3);
+    // A global guard count across all blocks would be satisfied by the two verification
+    // SELECTs alone — an UPDATE that lost its NOT-overwrite guard would still pass. So
+    // isolate the UPDATE-bearing blocks and assert the guard per statement, in the SQL
+    // that follows the UPDATE keyword (i.e. its own WHERE region).
+    const updateBlocks = sqlBlocks.filter(block =>
+      /UPDATE\s+innovation_flow_state/i.test(block)
+    );
+    // One UPDATE per branch (Branch A/B/C), exactly one UPDATE statement per block.
+    expect(updateBlocks.length).toBe(3);
+    for (const block of updateBlocks) {
+      const updateMatches =
+        block.match(/UPDATE\s+innovation_flow_state/gi) ?? [];
+      expect(updateMatches.length).toBe(1);
+      const afterUpdate = block.slice(
+        block.search(/UPDATE\s+innovation_flow_state/i)
+      );
+      expect(afterUpdate).toMatch(/settings\s*->\s*'sidebar'\s*IS NULL/i);
+    }
   });
 
   it('the positional ranking CTEs are NOT filtered to unbackfilled rows only', () => {
@@ -103,9 +114,9 @@ describe('BackfillInnovationFlowStateSidebar migration (1786600000000)', () => {
     expect(downSection).not.toMatch(/queryRunner\.query/);
   });
 
-  it('migration class name includes the timestamp 1786600000000', () => {
+  it('migration class name includes the timestamp 1787400000000', () => {
     expect(migrationSrc).toMatch(
-      /BackfillInnovationFlowStateSidebar1786600000000/
+      /BackfillInnovationFlowStateSidebar1787400000000/
     );
   });
 });

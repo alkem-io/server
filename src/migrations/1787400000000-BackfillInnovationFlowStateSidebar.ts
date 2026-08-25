@@ -37,10 +37,10 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * code ignores, and admins can edit it after this migration runs — stripping it on
  * rollback would silently delete those later edits.
  */
-export class BackfillInnovationFlowStateSidebar1786600000000
+export class BackfillInnovationFlowStateSidebar1787400000000
   implements MigrationInterface
 {
-  name = 'BackfillInnovationFlowStateSidebar1786600000000';
+  name = 'BackfillInnovationFlowStateSidebar1787400000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     const [{ count: before }] = await queryRunner.query(`
