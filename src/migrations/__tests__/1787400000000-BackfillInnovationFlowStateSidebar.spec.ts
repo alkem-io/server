@@ -90,9 +90,9 @@ describe('BackfillInnovationFlowStateSidebar migration (1787400000000)', () => {
   it('the four per-tab positional literals appear in both Branch A and Branch B', () => {
     const literals = [
       '["intent","about","createPost","applicationButton","subspaceLinks","events","updates"]',
-      '["createPost","applicationButton","intent","contactLeads","addUser","virtualContributors","guidelines"]',
-      '["createPost","applicationButton","intent"]',
-      '["createPost","applicationButton","intent","index"]',
+      '["intent","createPost","applicationButton","contactLeads","addUser","virtualContributors","guidelines"]',
+      '["intent","createPost","applicationButton"]',
+      '["intent","createPost","applicationButton","index"]',
     ];
     for (const literal of literals) {
       const occurrences = migrationSrc.split(literal).length - 1;
@@ -104,7 +104,7 @@ describe('BackfillInnovationFlowStateSidebar migration (1787400000000)', () => {
     const catchAllIndex = migrationSrc.indexOf('Branch C');
     const catchAllSection = migrationSrc.slice(catchAllIndex);
     expect(catchAllSection).toMatch(
-      /UPDATE innovation_flow_state\s*\n\s*SET settings = jsonb_set\(settings, '\{sidebar\}', '\["createPost","applicationButton","intent","index"\]'::jsonb, true\)/
+      /UPDATE innovation_flow_state\s*\n\s*SET settings = jsonb_set\(settings, '\{sidebar\}', '\["intent","createPost","applicationButton","index"\]'::jsonb, true\)/
     );
   });
 
