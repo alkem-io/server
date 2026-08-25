@@ -26,7 +26,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  *     MUST run before Branch C, or these rows fall through to the generic default.
  *
  *   Branch C — catch-all (L1/L2 spaces, non-L0 templates, orphaned states):
- *     Every remaining row still missing `sidebar` gets `[intent, index]` — the same
+ *     Every remaining row still missing `sidebar` gets
+ *     `[createPost, applicationButton, intent, index]` — the same
  *     generic default the create path and read normalization already use.
  *
  * Idempotent: every statement is guarded `settings -> 'sidebar' IS NULL`, so re-running
