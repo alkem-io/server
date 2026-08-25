@@ -136,16 +136,10 @@ export class FileServiceAdapter extends HttpClientBase {
    * storage quota because it lives in the document's own bucket under the space's
    * storage aggregator.
    *
-   * `skipDedup=true` is reserved for flows that must retain attempt ownership
-   * until a later pointer publication succeeds. The legacy-content migrator uses
-   * it together with the pending-document writer gate (and requires all concurrent
-   * migrators to do the same), so a known failed/losing attempt can compensate its
-   * row. Ordinary collaboration saves keep the default dedup behavior.
    */
   async createSnapshotInBucket(
     snapshot: Buffer,
-    storageBucketId: string,
-    skipDedup = false
+    storageBucketId: string
   ): Promise<CreateDocumentResult> {
     this.checkEnabledAndCircuit('createSnapshotInBucket');
 
@@ -156,9 +150,6 @@ export class FileServiceAdapter extends HttpClientBase {
     });
     form.append('displayName', SNAPSHOT_DISPLAY_NAME);
     form.append('storageBucketId', storageBucketId);
-    if (skipDedup) {
-      form.append('skipDedup', 'true');
-    }
     // authorizationId intentionally omitted — see method doc (NULL authz).
 
     return this.sendRequest<CreateDocumentResult>(

@@ -63,7 +63,6 @@ const storageBucketServiceMock = () => {
       _mimeType?: string,
       _userID?: string,
       _temporaryLocation?: boolean,
-      _skipDedup?: boolean,
       _allowedMimeTypesOverride?: string[]
     ) => {
       const id = `uphomed-doc-${++seq}`;
@@ -649,8 +648,7 @@ describe('CollaborationMigrationService', () => {
       // second per-document metadata SELECT.
       expect(fileService.createSnapshotInBucket).toHaveBeenCalledWith(
         expect.any(Buffer),
-        'sb1',
-        true
+        'sb1'
       );
       // Pointer written only AFTER a successful upload, with the file-service id.
       expect(update.set).toHaveBeenCalledWith({
@@ -936,12 +934,15 @@ describe('CollaborationMigrationService', () => {
       expect(memo.createQueryBuilder).toHaveBeenCalledTimes(1);
     });
 
-    it('fails safely without deleting when file-service unexpectedly reuses a migration snapshot', async () => {
-      memo.createQueryBuilder.mockReturnValueOnce(
-        queryBuilderMock([
-          [{ id: 'm1', content: null, storageBucketId: 'sb1' }],
-        ])
-      );
+    it('publishes a reused snapshot id without treating it as an attempt-owned row', async () => {
+      const update = updateQB(1);
+      memo.createQueryBuilder
+        .mockReturnValueOnce(
+          queryBuilderMock([
+            [{ id: 'm1', content: null, storageBucketId: 'sb1' }],
+          ])
+        )
+        .mockReturnValueOnce(update.qb);
       whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
       fileService.createSnapshotInBucket.mockResolvedValue({
         id: 'existing-snapshot',
@@ -950,14 +951,15 @@ describe('CollaborationMigrationService', () => {
 
       const summary = await svc.migrateAll();
 
-      expect(summary).toMatchObject({ migrated: 0, failed: 1 });
+      expect(summary).toMatchObject({ migrated: 1, failed: 0 });
       expect(fileService.deleteDocument).not.toHaveBeenCalled();
       expect(fileService.createSnapshotInBucket).toHaveBeenCalledWith(
         expect.any(Buffer),
-        'sb1',
-        true
+        'sb1'
       );
-      expect(memo.createQueryBuilder).toHaveBeenCalledTimes(1);
+      expect(update.set).toHaveBeenCalledWith(
+        expect.objectContaining({ contentPointer: 'existing-snapshot' })
+      );
     });
 
     it('fails a record with no storage bucket (missing bucket fails from the record)', async () => {
@@ -1095,8 +1097,7 @@ describe('CollaborationMigrationService', () => {
       // Written to the record's OWN bucket; pointer set after upload via the CAS.
       expect(fileService.createSnapshotInBucket).toHaveBeenCalledWith(
         expect.any(Buffer),
-        'sb-w1',
-        true
+        'sb-w1'
       );
       expect(update.set).toHaveBeenCalledWith({
         contentPointer: 'snap-w1',
@@ -1451,7 +1452,7 @@ describe('CollaborationMigrationService', () => {
       expect(fileService.deleteDocument).not.toHaveBeenCalled();
     });
 
-    it('compensates both exclusive media and snapshot rows after a proven losing CAS', async () => {
+    it('compensates newly inserted media and snapshot rows after a proven losing CAS', async () => {
       const compressed = await compressText(
         legacyMediaScene({
           fileId: 'file-1',
@@ -1491,12 +1492,8 @@ describe('CollaborationMigrationService', () => {
       expect(fileService.deleteDocument).toHaveBeenCalledWith('loser-snapshot');
       expect(fileService.createSnapshotInBucket).toHaveBeenCalledWith(
         expect.any(Buffer),
-        'sb-w1',
-        true
+        'sb-w1'
       );
-      expect(
-        storageBucketService.uploadFileAsDocumentFromBuffer.mock.calls[0][6]
-      ).toBe(true);
     });
 
     it('compensates a newly up-homed row when the post-upload bucket lookup fails', async () => {
@@ -1561,7 +1558,7 @@ describe('CollaborationMigrationService', () => {
       expect(fileService.createSnapshotInBucket).not.toHaveBeenCalled();
     });
 
-    it('requires exclusive migration artifacts and never deletes an unexpected dedup reuse', async () => {
+    it('publishes a reused media id without treating it as an attempt-owned row', async () => {
       storageBucketService.uploadFileAsDocumentFromBuffer.mockResolvedValue({
         id: 'existing-media',
         reused: true,
@@ -1578,12 +1575,9 @@ describe('CollaborationMigrationService', () => {
         })
       );
 
-      expect(summary).toMatchObject({ migrated: 0, failed: 1 });
+      expect(summary).toMatchObject({ migrated: 1, failed: 0 });
       expect(documentService.deleteDocument).not.toHaveBeenCalled();
-      expect(fileService.createSnapshotInBucket).not.toHaveBeenCalled();
-      expect(
-        storageBucketService.uploadFileAsDocumentFromBuffer.mock.calls[0][6]
-      ).toBe(true);
+      expect(fileService.createSnapshotInBucket).toHaveBeenCalledTimes(1);
     });
 
     it('up-homes dataURL bytes when the url is a non-Alkemio external url (external url unusable → inline bytes win)', async () => {

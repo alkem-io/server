@@ -862,19 +862,16 @@ export class CollaborationMigrationService {
       this.verifyContent(snapshot, record.contentType, fork);
       result = await this.fileServiceAdapter.createSnapshotInBucket(
         snapshot,
-        record.storageBucketId,
-        true
+        record.storageBucketId
       );
-      if (result.reused !== false) {
-        throw new Error(
-          `Migration snapshot for document ${record.id} unexpectedly reused an existing file`
-        );
+      // Only a row inserted by this request belongs to this attempt. A reused
+      // file id is owned by file-service and must never be compensated here.
+      if (result.reused === false) {
+        createdArtifacts.snapshotDocumentId = result.id;
       }
-      createdArtifacts.snapshotDocumentId = result.id;
     } catch (error) {
-      // The pointer CAS has not started. The pending-document collaboration
-      // gate prevents live room writers, and every migrator requests skipDedup,
-      // so these attempt-owned artifacts are unreachable and safe to compensate.
+      // The pointer CAS has not started. Compensate only rows that file-service
+      // reports were inserted by this request; reused ids are never tracked.
       const cleanupFailures = await this.cleanupCreatedArtifacts(
         record.id,
         createdArtifacts
@@ -906,10 +903,9 @@ export class CollaborationMigrationService {
         .execute();
     } catch (error) {
       // A transport/driver error does not prove whether PostgreSQL committed.
-      // Re-read the atomic tuple before compensating. Under the pending-document
-      // collaboration gate, every possible writer here is another skipDedup
-      // migrator: a different/no winner makes this attempt's rows safe to delete;
-      // the same pointer is canonical and must stay.
+      // Re-read the atomic tuple before compensating. A different/no winner lets
+      // us remove only rows inserted by this attempt; the same pointer is
+      // canonical and must stay.
       let convergedPointer: string | undefined;
       try {
         convergedPointer = await this.getConvergedPointer(
@@ -953,9 +949,9 @@ export class CollaborationMigrationService {
     }
 
     // A concurrent migration may already have completed both fields. If the
-    // canonical pointer is our exact result, it must stay. A different winner
-    // owns distinct skipDedup artifacts, so compensate this attempt's rows before
-    // reporting convergence.
+    // canonical pointer is our exact result, it must stay. With a different
+    // winner, compensate only rows inserted by this attempt before reporting
+    // convergence.
     let convergedPointer: string | undefined;
     try {
       convergedPointer = await this.getConvergedPointer(repository, record.id);
@@ -1353,21 +1349,17 @@ export class CollaborationMigrationService {
         record.storageBucketId,
         decoded.buffer,
         `${fileId}${extensionForMimeType(decoded.mimeType)}`,
-        decoded.mimeType,
-        undefined,
-        false,
-        true
+        decoded.mimeType
         // No actor in the one-shot operator context → createdBy stays NULL.
       );
 
-    if (document.reused !== false) {
-      throw new Error(
-        `Migration asset for document ${record.id} unexpectedly reused an existing file`
-      );
+    // Only rows inserted by this request are attempt-owned. A reused file id
+    // belongs to file-service and must never be compensated by the migration.
+    if (document.reused === false) {
+      // Track at the earliest point after creation. Bucket lookup or authorization
+      // can still fail, and the outer record-level compensation must see this row.
+      createdArtifacts?.assetDocumentIds.push(document.id);
     }
-    // Track at the earliest point after creation. Bucket lookup or authorization
-    // can still fail, and the outer record-level compensation must see this row.
-    createdArtifacts?.assetDocumentIds.push(document.id);
 
     // Inherit + persist the TARGET bucket's authorization onto the new document through
     // the SAME owners the ordinary upload boundary uses, so the up-homed media is READABLE
