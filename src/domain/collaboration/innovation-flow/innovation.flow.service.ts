@@ -304,21 +304,22 @@ export class InnovationFlowService {
 
     // The fixed-phase preservation rule governs tab identity (name, description,
     // position), not the sidebar payload: a fixed slot's sidebar still comes from
-    // the incoming template, paired to the slot by position. The template state at
-    // the same rank supplies its sidebar verbatim when present; when the template
-    // has no state at that rank, or that state carries no explicit sidebar,
-    // `settings.sidebar` is left undefined here so the shared create funnel in
-    // createInnovationFlowState applies the same generic default it would give any
-    // other state with no explicit sidebar input.
-    const sortedTemplateStates = [...templateStates].sort(sortBySortOrder);
-
+    // the incoming template, paired to the slot by displayName — never by rank,
+    // which would hand a fixed tab the sidebar of an unrelated template state
+    // whenever the template's ordering diverges from the fixed leading order.
+    // When the template has no same-named state, or that state carries no
+    // explicit sidebar, `settings.sidebar` is left undefined here so the shared
+    // create funnel in createInnovationFlowState applies the same generic
+    // default it would give any other state with no explicit sidebar input.
     const fixedStateInputs: CreateInnovationFlowStateInput[] = fixedStates.map(
-      (state, index) => ({
+      state => ({
         displayName: state.displayName,
         description: state.description,
         settings: {
           ...state.settings,
-          sidebar: sortedTemplateStates[index]?.settings?.sidebar,
+          sidebar: templateStates.find(
+            templateState => templateState.displayName === state.displayName
+          )?.settings?.sidebar,
         },
         sortOrder: state.sortOrder,
       })
