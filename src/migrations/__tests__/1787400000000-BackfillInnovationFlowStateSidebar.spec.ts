@@ -43,6 +43,28 @@ describe('BackfillInnovationFlowStateSidebar migration (1787400000000)', () => {
         block.search(/UPDATE\s+innovation_flow_state/i)
       );
       expect(afterUpdate).toMatch(/settings\s*->\s*'sidebar'\s*IS NULL/i);
+      // The guard also repairs invalid non-array values (hand-edited `"sidebar": null`
+      // or scalars) instead of counting them as backfilled.
+      expect(afterUpdate).toMatch(
+        /jsonb_typeof\((?:ifs\.)?settings\s*->\s*'sidebar'\)\s*<>\s*'array'/i
+      );
+    }
+  });
+
+  it('the residual verification throws (rolls back) instead of warning, and checks non-array values too', () => {
+    const verifySection = migrationSrc.slice(
+      migrationSrc.indexOf('count: residual')
+    );
+    expect(verifySection).toMatch(/throw new Error\(/);
+    expect(verifySection).not.toMatch(/console\.warn/);
+    // Both verification SELECTs (before-count and residual) use the widened predicate.
+    const selectBlocks =
+      migrationSrc.match(
+        /SELECT COUNT\(\*\) AS count FROM innovation_flow_state[\s\S]*?`/g
+      ) ?? [];
+    expect(selectBlocks.length).toBe(2);
+    for (const block of selectBlocks) {
+      expect(block).toMatch(/jsonb_typeof\(settings\s*->\s*'sidebar'\)\s*<>\s*'array'/i);
     }
   });
 

@@ -30,8 +30,11 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  *     `[intent, createPost, applicationButton, index]` — the same
  *     generic default the create path and read normalization already use.
  *
- * Idempotent: every statement is guarded `settings -> 'sidebar' IS NULL`, so re-running
- * is a no-op and admin-chosen values (set after this migration ran) are never overwritten.
+ * Idempotent: every statement is guarded on the sidebar key being absent OR not a JSON
+ * array (`IS NULL OR jsonb_typeof(...) <> 'array'`), so re-running is a no-op and
+ * admin-chosen values (always arrays, set after this migration ran) are never
+ * overwritten — while a hand-edited `"sidebar": null` or scalar value is repaired
+ * rather than reported as backfilled.
  *
  * Rollback note: `down()` is an intentional no-op, following the precedent of
  * BackfillInnovationFlowStateLayout. `sidebar` is an additive JSONB key that pre-feature
@@ -47,6 +50,7 @@ export class BackfillInnovationFlowStateSidebar1787400000000
     const [{ count: before }] = await queryRunner.query(`
       SELECT COUNT(*) AS count FROM innovation_flow_state
       WHERE settings -> 'sidebar' IS NULL
+         OR jsonb_typeof(settings -> 'sidebar') <> 'array'
     `);
     console.log(
       `[Migration] BackfillInnovationFlowStateSidebar: ${before} flow state(s) require sidebar backfill`
@@ -83,7 +87,8 @@ export class BackfillInnovationFlowStateSidebar1787400000000
       )
       FROM ranked
       WHERE ifs.id = ranked.id
-        AND ifs.settings -> 'sidebar' IS NULL
+        AND (ifs.settings -> 'sidebar' IS NULL
+          OR jsonb_typeof(ifs.settings -> 'sidebar') <> 'array')
     `);
 
     // Branch B: L0 template-owned states. Must run before Branch C, or these rows fall
@@ -116,7 +121,8 @@ export class BackfillInnovationFlowStateSidebar1787400000000
       )
       FROM ranked
       WHERE ifs.id = ranked.id
-        AND ifs.settings -> 'sidebar' IS NULL
+        AND (ifs.settings -> 'sidebar' IS NULL
+          OR jsonb_typeof(ifs.settings -> 'sidebar') <> 'array')
     `);
 
     // Branch C: catch-all — L1/L2 space flows, non-L0 templates, and orphaned states.
@@ -124,23 +130,25 @@ export class BackfillInnovationFlowStateSidebar1787400000000
       UPDATE innovation_flow_state
       SET settings = jsonb_set(settings, '{sidebar}', '["intent","createPost","applicationButton","index"]'::jsonb, true)
       WHERE settings -> 'sidebar' IS NULL
+         OR jsonb_typeof(settings -> 'sidebar') <> 'array'
     `);
 
-    // Verify: the failure mode of this migration is silently backfilling nothing, so assert
-    // that no row is left without a sidebar key.
+    // Verify (FR-008: MUST verify zero rows remain): the failure mode of this migration is
+    // silently backfilling nothing, so a residual row is a hard error — throwing rolls the
+    // migration transaction back and stops the run instead of shipping a partial backfill.
     const [{ count: residual }] = await queryRunner.query(`
       SELECT COUNT(*) AS count FROM innovation_flow_state
       WHERE settings -> 'sidebar' IS NULL
+         OR jsonb_typeof(settings -> 'sidebar') <> 'array'
     `);
     if (Number(residual) > 0) {
-      console.warn(
-        `[Migration] WARNING BackfillInnovationFlowStateSidebar: ${residual} flow state(s) still missing sidebar after backfill — investigate before proceeding`
-      );
-    } else {
-      console.log(
-        '[Migration] BackfillInnovationFlowStateSidebar: verification passed — 0 flow states missing a sidebar list'
+      throw new Error(
+        `BackfillInnovationFlowStateSidebar: ${residual} flow state(s) still lack a sidebar array after backfill — rolling back; investigate before re-running`
       );
     }
+    console.log(
+      '[Migration] BackfillInnovationFlowStateSidebar: verification passed — 0 flow states missing a sidebar list'
+    );
   }
 
   // Intentional no-op — see the "Rollback note" above.
