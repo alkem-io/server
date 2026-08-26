@@ -32,7 +32,12 @@ import { PlatformTemplatesService } from '@platform/platform-templates/platform.
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { InstrumentService } from '@src/apm/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
+import {
+  EntityManager,
+  FindManyOptions,
+  FindOneOptions,
+  Repository,
+} from 'typeorm';
 import { AccountHostService } from '../account.host/account.host.service';
 import { AccountLookupService } from '../account.lookup/account.lookup.service';
 import { ISpace } from '../space/space.interface';
@@ -191,8 +196,9 @@ export class AccountService {
     return await this.accountRepository.save(account);
   }
 
-  async deleteAccountOrFail(accountInput: IAccount): Promise<IAccount | never> {
-    const accountID = accountInput.id;
+  private async loadAccountForDeletionOrFail(
+    accountID: string
+  ): Promise<IAccount> {
     const account = await this.getAccountOrFail(accountID, {
       relations: {
         spaces: true,
@@ -218,6 +224,76 @@ export class AccountService {
         LogContext.ACCOUNT
       );
     }
+
+    return account;
+  }
+
+  /**
+   * DB-only deletion mode for the account-deletion saga: joins the caller's
+   * transactional EntityManager and defers every document's byte deletion
+   * to after commit. Every caller of this method has already refused
+   * deletion for an account holding a space, virtual contributor,
+   * innovation pack, or innovation hub (the blocker predicate this feature
+   * adds), so those four collections are asserted empty rather than run
+   * through their own deep, un-threaded deletion machinery — a non-empty
+   * collection here means that invariant broke upstream, and this refuses
+   * loudly rather than deleting resources it was never asked to delete.
+   */
+  async deleteAccountOrFailForAccountDeletion(
+    accountInput: IAccount,
+    em: EntityManager
+  ): Promise<{ account: IAccount; documentExternalIDs: string[] }> {
+    const accountID = accountInput.id;
+    const account = await this.loadAccountForDeletionOrFail(accountID);
+
+    if (
+      account.spaces.length > 0 ||
+      account.virtualContributors.length > 0 ||
+      account.innovationPacks.length > 0 ||
+      account.innovationHubs.length > 0
+    ) {
+      throw new RelationshipNotFoundException(
+        `Account ${accountID} still holds resources at deletion time`,
+        LogContext.ACCOUNT
+      );
+    }
+
+    const aggregatorResult =
+      await this.storageAggregatorService.deleteForAccountDeletion(
+        account.storageAggregator!.id,
+        em
+      );
+    let documentExternalIDs = [...aggregatorResult.documentExternalIDs];
+
+    await this.licenseService.removeLicenseOrFail(account.license!.id, em);
+
+    if (account.profile) {
+      const profileResult =
+        await this.profileService.deleteProfileForAccountDeletion(
+          account.profile.id,
+          em
+        );
+      documentExternalIDs = [
+        ...documentExternalIDs,
+        ...profileResult.documentExternalIDs,
+      ];
+    }
+
+    if (account.authorization) {
+      await this.authorizationPolicyService.delete(account.authorization, em);
+    }
+
+    // Delete actor — cascades to delete the account row via FK (account.id → actor.id ON DELETE CASCADE).
+    // Also cascades to delete credentials (credential.actorID → actor.id ON DELETE CASCADE).
+    await this.actorService.deleteActorById(accountID, em);
+
+    account.id = accountID;
+    return { account, documentExternalIDs };
+  }
+
+  async deleteAccountOrFail(accountInput: IAccount): Promise<IAccount | never> {
+    const accountID = accountInput.id;
+    const account = await this.loadAccountForDeletionOrFail(accountID);
 
     // All DB deletions in a single transaction so a partial failure
     // does not leave the account in an inconsistent state.
