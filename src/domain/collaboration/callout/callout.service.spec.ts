@@ -280,7 +280,7 @@ describe('CalloutService', () => {
       expect(roomService.createRoom).toHaveBeenCalled();
     });
 
-    it('should throw ValidationException when whiteboard contributions are allowed but no template', async () => {
+    it('allows whiteboard contributions without a stored default (server seeds an empty board)', async () => {
       const calloutData = createCalloutInput({
         settings: {
           contribution: {
@@ -299,7 +299,7 @@ describe('CalloutService', () => {
           storageAggregator,
           actorContextData.actorContext
         )
-      ).rejects.toThrow(ValidationException);
+      ).resolves.toBeDefined();
     });
 
     it('should throw ValidationException when framing type is WHITEBOARD but no whiteboard data', async () => {
@@ -1263,6 +1263,55 @@ describe('CalloutService', () => {
 
       expect(result).toBe(contribution);
       expect(contribution.callout).toBe(callout);
+    });
+
+    it('injects the Callout-owned canonical default when a Whiteboard contribution is profile-only', async () => {
+      const callout = {
+        id: 'callout-1',
+        settings: { contribution: { allowedTypes: [] } },
+        contributionDefaults: { whiteboardContent: 'canonical-default' },
+        framing: { profile: { storageBucket: { id: 'callout-bucket' } } },
+        contributions: [],
+        posts: [],
+      } as any;
+      vi.mocked(repository.findOne).mockResolvedValue(callout);
+      vi.mocked(
+        _namingService.getReservedNameIDsInCalloutContributions
+      ).mockResolvedValue([]);
+      vi.mocked(
+        _storageAggregatorResolverService.getStorageAggregatorForCallout
+      ).mockResolvedValue({ id: 'agg-1' } as any);
+      const contribution = { id: 'contrib-1' } as any;
+      vi.mocked(
+        contributionService.createCalloutContribution
+      ).mockResolvedValue(contribution);
+      vi.mocked(contributionService.save).mockResolvedValue(contribution);
+      const input = {
+        calloutID: 'callout-1',
+        whiteboard: { profile: { displayName: 'New Whiteboard' } },
+      } as any;
+
+      await service.createContributionOnCallout(
+        input,
+        actorContextData.actorContext,
+        'user-1'
+      );
+
+      expect(input.whiteboard).toMatchObject({
+        content: 'canonical-default',
+        sourceStorageBucketID: 'callout-bucket',
+      });
+      expect(
+        contributionService.createCalloutContribution
+      ).toHaveBeenCalledWith(
+        input,
+        { id: 'agg-1' },
+        callout.settings.contribution,
+        undefined,
+        actorContextData.actorContext,
+        'user-1',
+        undefined
+      );
     });
 
     it('should throw EntityNotInitializedException when contributions setting is missing', async () => {

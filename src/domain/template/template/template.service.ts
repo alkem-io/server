@@ -10,9 +10,11 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { CalloutContributionDefaultSourceService } from '@domain/collaboration/callout/callout.contribution.default.source.service';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto';
+import { CreateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto/callout.contribution.defaults.dto.create';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { ICollaboration } from '@domain/collaboration/collaboration';
 import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
@@ -57,6 +59,7 @@ export class TemplateService {
     private inputCreatorService: InputCreatorService,
     private innovationFlowService: InnovationFlowService,
     private calloutService: CalloutService,
+    private contributionDefaultSourceService: CalloutContributionDefaultSourceService,
     private whiteboardService: WhiteboardService,
     private templateContentSpaceService: TemplateContentSpaceService,
     private calloutsSetService: CalloutsSetService,
@@ -68,6 +71,18 @@ export class TemplateService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
+
+  /**
+   * Resolves the public source selector for a Callout template's Whiteboard
+   * contribution default into the canonical, server-internal content + owning
+   * bucket pair consumed by the ordinary template creation path.
+   */
+  public async prepareContributionDefaultSource(
+    defaults: CreateCalloutContributionDefaultsInput | undefined,
+    actorContext: ActorContext
+  ): Promise<void> {
+    await this.contributionDefaultSourceService.prepare(defaults, actorContext);
+  }
 
   /**
    * Self-contained: builds the template (with any nested entity for the
@@ -489,17 +504,25 @@ export class TemplateService {
     if (
       template.type === TemplateType.WHITEBOARD &&
       template.whiteboard &&
-      templateData.whiteboardContent
+      (templateData.sourceWhiteboardID || templateData.whiteboardContent)
     ) {
       // Whiteboard content is stored as a Yjs-V2 snapshot in the whiteboard's
       // bucket, not an inline column (006-collab-content-unification): route the
       // new scene through the snapshot-write path so the stored snapshot (and the
       // first-open seed) reflect the template update.
-      await this.whiteboardService.updateWhiteboardContent(
-        template.whiteboard.id,
-        templateData.whiteboardContent,
-        actorContext
-      );
+      if (templateData.sourceWhiteboardID) {
+        await this.whiteboardService.replaceContentFromSource(
+          template.whiteboard.id,
+          templateData.sourceWhiteboardID,
+          actorContext
+        );
+      } else if (templateData.whiteboardContent) {
+        await this.whiteboardService.updateWhiteboardContent(
+          template.whiteboard.id,
+          templateData.whiteboardContent,
+          actorContext
+        );
+      }
     }
     if (
       template.type === TemplateType.CLASSIFICATION &&

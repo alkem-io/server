@@ -21,6 +21,7 @@ import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
 import {
   GraphqlExceptionFilter,
   HttpExceptionFilter,
+  sanitizeGraphQLFormattedError,
   UnhandledExceptionFilter,
 } from '@core/error-handling';
 import { HealthModule } from '@core/health/health.module';
@@ -196,6 +197,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
           },
           fieldResolverEnhancers: ['guards', 'filters'],
           plugins: [ApmApolloPlugin],
+          formatError: sanitizeGraphQLFormattedError,
           sortSchema: true,
           persistedQueries: false,
           /***

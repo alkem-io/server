@@ -59,7 +59,7 @@
     "@alkemio/notifications-lib": "0.20.0",
     "@apollo/server": "^4.13.0",
     "@elastic/elasticsearch": "^8.12.2",
-    "@excalidraw-yjs/element": "0.5.0",
+    "@excalidraw-yjs/element": "0.5.1",
     "@golevelup/nestjs-rabbitmq": "^6.1.0",
     "@hedger/nestjs-encryption": "^0.1.5",
     "@modelcontextprotocol/sdk": "^1.25.2",

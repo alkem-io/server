@@ -25,12 +25,17 @@ describe('TemplatesSetResolverMutations', () => {
   let templateAuthorizationService: {
     applyAuthorizationPolicy: ReturnType<typeof vi.fn>;
   };
-  let templateService: { getTemplateOrFail: ReturnType<typeof vi.fn> };
+  let templateService: {
+    getTemplateOrFail: ReturnType<typeof vi.fn>;
+    prepareContributionDefaultSource: ReturnType<typeof vi.fn>;
+  };
   let spaceLookupService: { getSpaceOrFail: ReturnType<typeof vi.fn> };
   let templateContentSpaceService: {
     getTemplateContentSpaceOrFail: ReturnType<typeof vi.fn>;
   };
-  let whiteboardService: { getWhiteboardOrFail: ReturnType<typeof vi.fn> };
+  let whiteboardService: {
+    getWhiteboardOrFail: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     authorizationService = { grantAccessOrFail: vi.fn() };
@@ -42,10 +47,15 @@ describe('TemplatesSetResolverMutations', () => {
       createTemplateFromContentSpace: vi.fn(),
     };
     templateAuthorizationService = { applyAuthorizationPolicy: vi.fn() };
-    templateService = { getTemplateOrFail: vi.fn() };
+    templateService = {
+      getTemplateOrFail: vi.fn(),
+      prepareContributionDefaultSource: vi.fn(),
+    };
     spaceLookupService = { getSpaceOrFail: vi.fn() };
     templateContentSpaceService = { getTemplateContentSpaceOrFail: vi.fn() };
-    whiteboardService = { getWhiteboardOrFail: vi.fn() };
+    whiteboardService = {
+      getWhiteboardOrFail: vi.fn(),
+    };
 
     resolver = new TemplatesSetResolverMutations(
       authorizationService as unknown as AuthorizationService,
@@ -172,6 +182,37 @@ describe('TemplatesSetResolverMutations', () => {
       ).rejects.toThrow('Forbidden');
 
       expect(templatesSetService.createTemplate).not.toHaveBeenCalled();
+    });
+
+    it('delegates contribution-default source preparation to TemplateService', async () => {
+      const templatesSet = { id: 'ts-1', authorization: { id: 'ts-auth' } };
+      templatesSetService.getTemplatesSetOrFail.mockResolvedValue(templatesSet);
+      templatesSetService.createTemplate.mockResolvedValue({ id: 'tpl-1' });
+      templateAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
+      templateService.getTemplateOrFail.mockResolvedValue({ id: 'tpl-1' });
+      const input = {
+        templatesSetID: 'ts-1',
+        calloutData: {
+          contributionDefaults: { sourceCalloutID: 'source-callout' },
+        },
+      } as any;
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await resolver.createTemplate(actorContext, input);
+
+      expect(
+        templateService.prepareContributionDefaultSource
+      ).toHaveBeenCalledWith(
+        input.calloutData.contributionDefaults,
+        actorContext
+      );
+      expect(templatesSetService.createTemplate).toHaveBeenCalledWith(
+        templatesSet,
+        input,
+        actorContext
+      );
     });
   });
 

@@ -66,6 +66,10 @@ export class TemplatesSetResolverMutations {
         `template create clone whiteboard content from source: ${sourceWhiteboardID}`
       );
     }
+    await this.templateService.prepareContributionDefaultSource(
+      templateData.calloutData?.contributionDefaults,
+      actorContext
+    );
     const template = await this.templatesSetService.createTemplate(
       templatesSet,
       templateData,

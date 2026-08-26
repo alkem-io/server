@@ -14,6 +14,7 @@ import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { Readable } from 'stream';
+import { CalloutContributionDefaultSourceService } from '../callout/callout.contribution.default.source.service';
 import { CalloutService } from '../callout/callout.service';
 import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
 import { CalloutsSetResolverMutations } from './callouts.set.resolver.mutations';
@@ -23,6 +24,7 @@ describe('CalloutsSetResolverMutations', () => {
   let resolver: CalloutsSetResolverMutations;
   let calloutsSetService: CalloutsSetService;
   let calloutService: CalloutService;
+  let contributionDefaultSourceService: CalloutContributionDefaultSourceService;
   let authorizationService: AuthorizationService;
   let _authorizationPolicyService: AuthorizationPolicyService;
   let calloutAuthorizationService: CalloutAuthorizationService;
@@ -45,6 +47,9 @@ describe('CalloutsSetResolverMutations', () => {
     resolver = module.get(CalloutsSetResolverMutations);
     calloutsSetService = module.get(CalloutsSetService);
     calloutService = module.get(CalloutService);
+    contributionDefaultSourceService = module.get(
+      CalloutContributionDefaultSourceService
+    );
     authorizationService = module.get(AuthorizationService);
     _authorizationPolicyService = module.get(AuthorizationPolicyService);
     calloutAuthorizationService = module.get(CalloutAuthorizationService);
@@ -206,6 +211,71 @@ describe('CalloutsSetResolverMutations', () => {
       ).rejects.toBe(reachedDelegate);
 
       expect(whiteboardService.getWhiteboardOrFail).not.toHaveBeenCalled();
+    });
+
+    it('copies an internal Whiteboard default from a source Callout by id before delegating', async () => {
+      const calloutsSet = framingCloneCalloutsSet();
+      vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
+        calloutsSet
+      );
+      vi.mocked(contributionDefaultSourceService.prepare).mockImplementation(
+        async defaults => {
+          Object.assign(defaults ?? {}, {
+            whiteboardContent: 'canonical-internal',
+            sourceStorageBucketID: 'source-bucket',
+          });
+        }
+      );
+      const reachedDelegate = new Error('reached-delegate-sentinel');
+      vi.mocked(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).mockRejectedValue(reachedDelegate);
+      const input = {
+        calloutsSetID: 'cs-1',
+        contributionDefaults: { sourceCalloutID: 'source-callout' },
+      } as any;
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await expect(
+        resolver.createCalloutOnCalloutsSet(actorContext, input)
+      ).rejects.toBe(reachedDelegate);
+
+      expect(contributionDefaultSourceService.prepare).toHaveBeenCalledWith(
+        input.contributionDefaults,
+        actorContext
+      );
+      expect(input.contributionDefaults).toMatchObject({
+        sourceCalloutID: 'source-callout',
+        whiteboardContent: 'canonical-internal',
+        sourceStorageBucketID: 'source-bucket',
+      });
+    });
+
+    it('rejects selecting both a source Whiteboard and a source Callout for one default', async () => {
+      vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
+        framingCloneCalloutsSet()
+      );
+      vi.mocked(contributionDefaultSourceService.prepare).mockRejectedValue(
+        new ValidationException('mutually exclusive', LogContext.WHITEBOARDS)
+      );
+
+      await expect(
+        resolver.createCalloutOnCalloutsSet(
+          { actorID: 'user-1' } as any,
+          {
+            calloutsSetID: 'cs-1',
+            contributionDefaults: {
+              sourceWhiteboardID: 'source-whiteboard',
+              sourceCalloutID: 'source-callout',
+            },
+          } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(contributionDefaultSourceService.prepare).toHaveBeenCalled();
+      expect(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).not.toHaveBeenCalled();
     });
 
     it('should trigger notifications and activity when published on COLLABORATION type', async () => {
