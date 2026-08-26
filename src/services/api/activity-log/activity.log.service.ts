@@ -8,6 +8,7 @@ import { MemoService } from '@domain/common/memo/memo.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { RoomService } from '@domain/communication/room/room.service';
 import { CommunityService } from '@domain/community/community/community.service';
+import { DELETED_USER_SENTINEL } from '@domain/community/user/account-deletion/deleted.user.sentinel';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
@@ -126,6 +127,35 @@ export class ActivityLogService {
     );
   }
 
+  /**
+   * Resolves the actor who triggered an activity entry, substituting the
+   * static "Former member" sentinel for a deleted user instead of letting
+   * the lookup fail. Two paths:
+   *
+   * - Batch (`userById` supplied): every triggeredBy id was already looked
+   *   up once by `getUsersByIds`, so a miss here means the actor no longer
+   *   exists — resolve to the sentinel immediately, no further query, no
+   *   per-entry warning. This is what turns a wave of account deletions
+   *   from an O(orphaned entries) lookup storm + warn flood into O(1).
+   * - Single-entry: still one lookup (unavoidable without a batch
+   *   context), but a not-found result now resolves to the sentinel rather
+   *   than propagating out to the caller's catch, which used to drop the
+   *   entire entry and log a warning.
+   */
+  private async resolveTriggeredByOrSentinel(
+    triggeredById: string,
+    userById?: Map<string, IUser>
+  ): Promise<IUser> {
+    if (userById) {
+      return userById.get(triggeredById) ?? DELETED_USER_SENTINEL;
+    }
+    try {
+      return await this.userService.getUserByIdOrFail(triggeredById);
+    } catch {
+      return DELETED_USER_SENTINEL;
+    }
+  }
+
   public async convertRawActivityToResult(
     rawActivity: IActivity,
     spaceByCollabId?: Map<string, ISpace>,
@@ -140,10 +170,10 @@ export class ActivityLogService {
         return undefined;
       }
 
-      // Use pre-loaded user or fall back to individual query
-      const userTriggeringActivity =
-        userById?.get(rawActivity.triggeredBy) ??
-        (await this.userService.getUserByIdOrFail(rawActivity.triggeredBy));
+      const userTriggeringActivity = await this.resolveTriggeredByOrSentinel(
+        rawActivity.triggeredBy,
+        userById
+      );
 
       // Use pre-loaded space or fall back to individual query
       const space =

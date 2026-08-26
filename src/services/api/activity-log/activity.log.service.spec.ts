@@ -243,25 +243,29 @@ describe('ActivityLogService', () => {
       ).toHaveBeenCalledWith('collab-1', expect.anything());
     });
 
-    it('should fall back to individual query when user not found in map', async () => {
-      const user = makeUser('user-1');
+    it('resolves to the deleted-user sentinel — no individual lookup, no warn — when a batch-loaded user is not found in the map', async () => {
       const space = makeSpace('collab-1', 'Space One');
 
       const spaceMap = new Map<string, ISpace>([
         ['collab-1', space as unknown as ISpace],
       ]);
-      // Empty user map — user not pre-loaded
+      // Empty user map: the batch loader already tried every triggeredBy id
+      // and came up empty for this one — the actor no longer exists.
       const userMap = new Map<string, IUser>();
-
-      userService.getUserByIdOrFail.mockResolvedValueOnce(user);
 
       const rawActivity = makeRawActivity('act-1', 'collab-1', 'user-1');
 
-      await service.convertRawActivityToResult(rawActivity, spaceMap, userMap);
+      const result = await service.convertRawActivityToResult(
+        rawActivity,
+        spaceMap,
+        userMap
+      );
 
-      // User should be loaded individually since not in map
-      expect(userService.getUserByIdOrFail).toHaveBeenCalledWith('user-1');
-      // Space should come from map
+      // No per-entry lookup for a known-missing batch id (R9 fix).
+      expect(userService.getUserByIdOrFail).not.toHaveBeenCalled();
+      expect(logger.warn).not.toHaveBeenCalled();
+      expect(result?.triggeredBy.profile.displayName).toBe('Former member');
+      // Space should still come from the map.
       expect(
         communityResolverService.getSpaceForCollaborationOrFail
       ).not.toHaveBeenCalled();
@@ -289,6 +293,24 @@ describe('ActivityLogService', () => {
       ).toHaveBeenCalledWith('collab-1', expect.anything());
       // User should come from map
       expect(userService.getUserByIdOrFail).not.toHaveBeenCalled();
+    });
+
+    it('resolves to the sentinel (not a dropped entry, no warn) on the single-entry path when the user lookup throws not-found', async () => {
+      const space = makeSpace('collab-1', 'Space One');
+
+      userService.getUserByIdOrFail.mockRejectedValueOnce(
+        new Error('Unable to find user with given ID')
+      );
+      communityResolverService.getSpaceForCollaborationOrFail.mockResolvedValueOnce(
+        space as unknown as ISpace
+      );
+
+      const rawActivity = makeRawActivity('act-1', 'collab-1', 'user-1');
+      const result = await service.convertRawActivityToResult(rawActivity);
+
+      expect(result).toBeDefined();
+      expect(result?.triggeredBy.profile.displayName).toBe('Former member');
+      expect(logger.warn).not.toHaveBeenCalled();
     });
 
     it('should extract parentDisplayName from the pre-loaded space', async () => {
