@@ -13,6 +13,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -29,7 +30,6 @@ import { type Mock } from 'vitest';
 import { Document } from '../document/document.entity';
 import { IDocument } from '../document/document.interface';
 import { DocumentService } from '../document/document.service';
-import { DocumentAuthorizationService } from '../document/document.service.authorization';
 import { StorageBucket } from './storage.bucket.entity';
 import { IStorageBucket } from './storage.bucket.interface';
 import { StorageBucketService } from './storage.bucket.service';

@@ -21,6 +21,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -34,7 +35,6 @@ import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { Document } from '../document/document.entity';
 import { IDocument } from '../document/document.interface';
 import { DocumentService } from '../document/document.service';
-import { DocumentAuthorizationService } from '../document/document.service.authorization';
 import { StorageBucketArgsDocuments } from './dto/storage.bucket.args.documents';
 import { CreateStorageBucketInput } from './dto/storage.bucket.dto.create';
 import { IStorageBucketParent } from './dto/storage.bucket.dto.parent';
