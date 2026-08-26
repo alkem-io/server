@@ -48,6 +48,14 @@ export class Whiteboard extends NameableEntity implements IWhiteboard {
   @Column('uuid', { nullable: true })
   createdBy?: string;
 
+  /**
+   * Non-NULL only while this Whiteboard is a temporary live form draft.
+   * Ordinary and finalized Whiteboards always keep this NULL, which makes the
+   * cleanup boundary explicit without a parallel draft model.
+   */
+  @Column('timestamptz', { nullable: true })
+  draftExpiresAt?: Date | null;
+
   @Column('varchar', {
     length: ENUM_LENGTH,
     nullable: false,

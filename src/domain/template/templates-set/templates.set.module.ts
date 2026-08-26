@@ -1,6 +1,7 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
+import { WhiteboardDraftModule } from '@domain/common/whiteboard-draft';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
 import { TemplateContentSpaceModule } from '@domain/template/template-content-space/template.content.space.module';
 import { Module } from '@nestjs/common';
@@ -26,6 +27,7 @@ import { TemplatesSetAuthorizationService } from './templates.set.service.author
     InputCreatorModule,
     TemplateContentSpaceModule,
     WhiteboardModule,
+    WhiteboardDraftModule,
     TypeOrmModule.forFeature([TemplatesSet]),
   ],
   providers: [

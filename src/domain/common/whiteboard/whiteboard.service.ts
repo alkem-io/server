@@ -103,6 +103,8 @@ export class WhiteboardService {
       content,
       sourceWhiteboardID,
       sourceStorageBucketID,
+      draftWhiteboardID: _draftWhiteboardID,
+      draftExpiresAt,
       ...entityData
     } = whiteboardData;
 
@@ -114,6 +116,12 @@ export class WhiteboardService {
     if (content != null && sourceWhiteboardID != null) {
       throw new ValidationException(
         'A whiteboard create must supply EITHER content OR sourceWhiteboardID, not both',
+        LogContext.WHITEBOARDS
+      );
+    }
+    if (_draftWhiteboardID != null) {
+      throw new ValidationException(
+        'draftWhiteboardID must be claimed by the owning create mutation before Whiteboard materialization',
         LogContext.WHITEBOARDS
       );
     }
@@ -152,6 +160,7 @@ export class WhiteboardService {
     // `ActorContext.actorID` is typed `string` and defaults to '' for an empty/anonymous
     // context; `|| undefined` keeps a malformed empty-string out of the UUID column (NULL).
     whiteboard.createdBy = actorContext.actorID || undefined;
+    whiteboard.draftExpiresAt = draftExpiresAt;
     whiteboard.contentUpdatePolicy = ContentUpdatePolicy.CONTRIBUTORS;
 
     const profileData = {

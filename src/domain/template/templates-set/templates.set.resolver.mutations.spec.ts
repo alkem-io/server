@@ -2,9 +2,11 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
+import { WhiteboardDraftService } from '@domain/common/whiteboard-draft';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { TemplateContentSpaceService } from '@domain/template/template-content-space/template.content.space.service';
 import { LoggerService } from '@nestjs/common';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { vi } from 'vitest';
 import { TemplateService } from '../template/template.service';
@@ -66,6 +68,14 @@ describe('TemplatesSetResolverMutations', () => {
       spaceLookupService as unknown as SpaceLookupService,
       templateContentSpaceService as unknown as TemplateContentSpaceService,
       whiteboardService as unknown as WhiteboardService,
+      {
+        getForConsumption: vi.fn(),
+        cleanupConsumed: vi.fn(),
+        materialize: vi.fn(),
+      } as unknown as WhiteboardDraftService,
+      {
+        getStorageAggregatorForTemplatesSet: vi.fn(),
+      } as unknown as StorageAggregatorResolverService,
       MockWinstonProvider.useValue as unknown as LoggerService
     );
   });

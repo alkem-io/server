@@ -8,6 +8,7 @@ import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
+import { WhiteboardDraftService } from '@domain/common/whiteboard-draft';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -30,6 +31,7 @@ describe('CalloutsSetResolverMutations', () => {
   let calloutAuthorizationService: CalloutAuthorizationService;
   let configService: ConfigService;
   let whiteboardService: WhiteboardService;
+  let whiteboardDraftService: WhiteboardDraftService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -55,11 +57,45 @@ describe('CalloutsSetResolverMutations', () => {
     calloutAuthorizationService = module.get(CalloutAuthorizationService);
     configService = module.get(ConfigService);
     whiteboardService = module.get(WhiteboardService);
+    whiteboardDraftService = module.get(WhiteboardDraftService);
     vi.mocked(configService.get).mockReturnValue(5000 as any);
   });
 
   it('should be defined', () => {
     expect(resolver).toBeDefined();
+  });
+
+  describe('createWhiteboardDraftOnCalloutsSet', () => {
+    it('requires READ on a source Whiteboard before materializing a draft', async () => {
+      vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue({
+        id: 'cs-1',
+        authorization: { id: 'auth-cs' },
+      } as any);
+      vi.mocked(whiteboardService.getWhiteboardOrFail).mockResolvedValue({
+        id: 'source-wb-1',
+        authorization: { id: 'auth-source' },
+      } as any);
+      vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(
+        (_actor, _authorization, privilege) => {
+          if (privilege === AuthorizationPrivilege.READ) {
+            throw new ForbiddenException('denied', LogContext.AUTH);
+          }
+          return true as never;
+        }
+      );
+
+      await expect(
+        resolver.createWhiteboardDraftOnCalloutsSet(
+          { actorID: 'user-1' } as any,
+          {
+            calloutsSetID: 'cs-1',
+            sourceWhiteboardID: 'source-wb-1',
+          } as any
+        )
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(whiteboardDraftService.materialize).not.toHaveBeenCalled();
+    });
   });
 
   describe('createCalloutOnCalloutsSet', () => {
@@ -276,6 +312,43 @@ describe('CalloutsSetResolverMutations', () => {
       expect(
         calloutsSetService.createCalloutOnCalloutsSet
       ).not.toHaveBeenCalled();
+    });
+
+    it('uses an owned draft as a server-side source and leaves it intact when final creation fails', async () => {
+      const calloutsSet = framingCloneCalloutsSet();
+      vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
+        calloutsSet
+      );
+      const draft = { id: 'draft-whiteboard-1' } as any;
+      vi.mocked(whiteboardDraftService.getForConsumption).mockResolvedValue(
+        draft
+      );
+      const failed = new Error('final create failed');
+      vi.mocked(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).mockRejectedValue(failed);
+      const input = {
+        calloutsSetID: calloutsSet.id,
+        framing: {
+          type: CalloutFramingType.WHITEBOARD,
+          whiteboard: { draftWhiteboardID: 'draft-whiteboard-1' },
+        },
+      } as any;
+      const actor = { actorID: 'user-1' } as any;
+
+      await expect(
+        resolver.createCalloutOnCalloutsSet(actor, input)
+      ).rejects.toBe(failed);
+
+      expect(whiteboardDraftService.getForConsumption).toHaveBeenCalledWith(
+        'draft-whiteboard-1',
+        actor
+      );
+      expect(input.framing.whiteboard).toEqual({
+        draftWhiteboardID: undefined,
+        sourceWhiteboardID: draft.id,
+      });
+      expect(whiteboardDraftService.cleanupConsumed).not.toHaveBeenCalled();
     });
 
     it('should trigger notifications and activity when published on COLLABORATION type', async () => {
