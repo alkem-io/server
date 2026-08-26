@@ -1154,6 +1154,21 @@ describe('CollaborationMigrationService', () => {
       expect(contributionDefaults.createQueryBuilder).not.toHaveBeenCalled();
     });
 
+    it('does not bind an invalid empty UUID cursor on the first defaults page', async () => {
+      whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+
+      await svc.migrateWhiteboards();
+
+      expect(contributionDefaults.query).toHaveBeenCalledTimes(1);
+      const [query, parameters] = contributionDefaults.query.mock.calls[0] as [
+        string,
+        unknown[],
+      ];
+      expect(query).not.toContain('defaults."id" >');
+      expect(parameters).toEqual([expect.any(Number)]);
+      expect(parameters).not.toContain('');
+    });
+
     it('up-homes embedded default media into the owning Callout bucket and stores locator strings', async () => {
       const storedContent = await compressText(
         legacyMediaScene({

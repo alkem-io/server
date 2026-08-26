@@ -1123,7 +1123,7 @@ export class CollaborationMigrationService {
   ): Promise<void> {
     if (!record.storageBucketId) {
       throw new Error(
-        `Contribution default ${record.id} has no owning Callout storage bucket`
+        'Contribution default has no owning Callout storage bucket'
       );
     }
     const fork = await loadWhiteboardFork();
@@ -1225,7 +1225,7 @@ export class CollaborationMigrationService {
       return;
     }
     throw new Error(
-      `Contribution default ${record.id} did not converge after migration CAS`
+      'Contribution default did not converge after migration CAS'
     );
   }
 
@@ -1641,8 +1641,10 @@ export class CollaborationMigrationService {
     batchSize = DEFAULT_BATCH_SIZE
   ): AsyncGenerator<LegacyWhiteboardDefaultRecord> {
     const fork = await loadWhiteboardFork();
-    let lastId = '';
+    let lastId: string | undefined;
     for (;;) {
+      const cursorClause = lastId ? 'AND defaults."id" > $1' : '';
+      const limitParameter = lastId ? '$2' : '$1';
       const rows = await this.contributionDefaultsRepository.query(
         `SELECT defaults."id" AS "id",
                 defaults."whiteboardContent" AS "storedContent",
@@ -1660,10 +1662,10 @@ export class CollaborationMigrationService {
       LEFT JOIN "storage_bucket" bucket
              ON profile."storageBucketId" = bucket."id"
           WHERE defaults."whiteboardContent" IS NOT NULL
-            AND defaults."id" > $1
+            ${cursorClause}
        ORDER BY defaults."id" ASC
-          LIMIT $2`,
-        [lastId, batchSize]
+          LIMIT ${limitParameter}`,
+        lastId ? [lastId, batchSize] : [batchSize]
       );
       if (rows.length === 0) {
         break;
