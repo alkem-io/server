@@ -12,7 +12,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { Document } from './document.entity';
 import { IDocument } from './document.interface';
 import { DeleteDocumentInput } from './dto/document.dto.delete';
@@ -30,6 +30,36 @@ export class DocumentService {
     private readonly logger: LoggerService,
     private fileServiceAdapter: FileServiceAdapter
   ) {}
+
+  /**
+   * DB-only deletion mode for the account-deletion saga: cleans up the
+   * document's own server-owned entities (its authorization policy, its
+   * tagset — both already eager-loaded on the entity) using the caller's
+   * transactional EntityManager, but does NOT call the Go file-service to
+   * delete the bytes. The row itself is left for the storage bucket's own
+   * removal to cascade-delete. Returns the document's `externalID` so the
+   * caller can queue the actual byte deletion for after the transaction
+   * commits — a degraded file-service must never make deletion impossible.
+   */
+  public async deleteDocumentDbOnly(
+    deleteData: DeleteDocumentInput,
+    em: EntityManager
+  ): Promise<{ document: IDocument; externalID: string }> {
+    const documentID = deleteData.ID;
+    const document = await this.getDocumentOrFail(documentID);
+
+    if (document.authorization) {
+      await this.authorizationPolicyService.deleteById(
+        document.authorization.id,
+        em
+      );
+    }
+    if (document.tagset) {
+      await this.tagsetService.removeTagset(document.tagset.id, em);
+    }
+
+    return { document, externalID: document.externalID };
+  }
 
   public async deleteDocument(
     deleteData: DeleteDocumentInput

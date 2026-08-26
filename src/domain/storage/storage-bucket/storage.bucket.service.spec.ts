@@ -258,6 +258,47 @@ describe('StorageBucketService', () => {
     });
   });
 
+  // ── deleteStorageBucketForAccountDeletion ────────────────────────
+
+  describe('deleteStorageBucketForAccountDeletion', () => {
+    it('joins the passed EntityManager, never calls the file-service delete, and collects external ids', async () => {
+      const doc1 = { id: 'doc-1' };
+      const doc2 = { id: 'doc-2' };
+      const bucket = {
+        id: 'bucket-1',
+        authorization: { id: 'auth-1' },
+        documents: [doc1, doc2],
+      };
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.delete as Mock).mockResolvedValue(undefined);
+      (documentService.deleteDocumentDbOnly as Mock)
+        .mockResolvedValueOnce({ document: doc1, externalID: 'ext-1' })
+        .mockResolvedValueOnce({ document: doc2, externalID: 'ext-2' });
+      const em = {
+        remove: vi.fn().mockResolvedValue({ ...bucket, id: '' }),
+      } as any;
+
+      const result = await service.deleteStorageBucketForAccountDeletion(
+        'bucket-1',
+        em
+      );
+
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        bucket.authorization,
+        em
+      );
+      expect(documentService.deleteDocumentDbOnly).toHaveBeenCalledTimes(2);
+      expect(documentService.deleteDocumentDbOnly).toHaveBeenCalledWith(
+        { ID: 'doc-1' },
+        em
+      );
+      expect(documentService.deleteDocument).not.toHaveBeenCalled();
+      expect(em.remove).toHaveBeenCalledWith(bucket);
+      expect(result.documentExternalIDs).toEqual(['ext-1', 'ext-2']);
+      expect(result.storageBucket.id).toBe('bucket-1');
+    });
+  });
+
   // ── getStorageBucketOrFail ──────────────────────────────────────
 
   describe('getStorageBucketOrFail', () => {

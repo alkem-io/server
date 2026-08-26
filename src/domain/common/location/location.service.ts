@@ -3,7 +3,7 @@ import { EntityNotInitializedException } from '@common/exceptions';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { GeoapifyService } from '@services/external/geoapify/geoapify.service';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { CreateLocationInput, UpdateLocationInput } from './dto';
 import { IGeoLocation } from './geolocation.interface';
 import { Location } from './location.entity';
@@ -27,7 +27,13 @@ export class LocationService {
     location.geoLocation = await this.checkAndUpdateGeoLocation(location);
     return location;
   }
-  async removeLocation(location: ILocation): Promise<ILocation> {
+  async removeLocation(
+    location: ILocation,
+    em?: EntityManager
+  ): Promise<ILocation> {
+    if (em) {
+      return await em.remove(location as Location);
+    }
     return await this.locationRepository.remove(location as Location);
   }
 

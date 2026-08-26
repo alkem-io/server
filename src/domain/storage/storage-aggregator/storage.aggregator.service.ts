@@ -60,6 +60,48 @@ export class StorageAggregatorService {
     return this.storageAggregatorRepository.manager.transaction(doCreate);
   }
 
+  /**
+   * DB-only deletion mode for the account-deletion saga: joins the caller's
+   * transactional EntityManager and defers every document's byte deletion
+   * to after commit (see `StorageBucketService.deleteStorageBucketForAccountDeletion`).
+   */
+  public async deleteForAccountDeletion(
+    storageAggregatorID: string,
+    em: EntityManager
+  ): Promise<{
+    storageAggregator: IStorageAggregator;
+    documentExternalIDs: string[];
+  }> {
+    const storageAggregator = await this.getStorageAggregatorOrFail(
+      storageAggregatorID,
+      { relations: { directStorage: true } }
+    );
+
+    if (!storageAggregator.directStorage) {
+      throw new EntityNotInitializedException(
+        `Unable to load direct storage on storage aggregator: ${storageAggregator.id}`,
+        LogContext.STORAGE_AGGREGATOR
+      );
+    }
+
+    if (storageAggregator.authorization) {
+      await this.authorizationPolicyService.delete(
+        storageAggregator.authorization,
+        em
+      );
+    }
+
+    const { documentExternalIDs } =
+      await this.storageBucketService.deleteStorageBucketForAccountDeletion(
+        storageAggregator.directStorage.id,
+        em
+      );
+
+    const result = await em.remove(storageAggregator as StorageAggregator);
+    result.id = storageAggregatorID;
+    return { storageAggregator: result, documentExternalIDs };
+  }
+
   async delete(storageAggregatorID: string): Promise<IStorageAggregator> {
     const storageAggregator = await this.getStorageAggregatorOrFail(
       storageAggregatorID,

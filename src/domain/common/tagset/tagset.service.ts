@@ -56,12 +56,14 @@ export class TagsetService {
     return tagset as ITagset;
   }
 
-  async removeTagset(tagsetID: string): Promise<ITagset> {
+  async removeTagset(tagsetID: string, em?: EntityManager): Promise<ITagset> {
     const tagset = await this.getTagsetOrFail(tagsetID);
     if (tagset.authorization)
-      await this.authorizationPolicyService.delete(tagset.authorization);
+      await this.authorizationPolicyService.delete(tagset.authorization, em);
 
-    const result = await this.tagsetRepository.remove(tagset as Tagset);
+    const result = em
+      ? await em.remove(tagset as Tagset)
+      : await this.tagsetRepository.remove(tagset as Tagset);
     result.id = tagsetID;
     return result;
   }

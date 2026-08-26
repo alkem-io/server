@@ -25,7 +25,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DEFAULT_AVATAR_SERVICE_URL } from '@services/external/avatar-creator/avatar.creator.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { CreateTagsetInput } from '../tagset';
 import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
 import { CreateProfileInput, UpdateProfileInput } from './dto';
@@ -273,6 +273,71 @@ export class ProfileService {
     }
 
     return await this.profileRepository.save(profile);
+  }
+
+  /**
+   * DB-only deletion mode for the account-deletion saga: every write joins
+   * the caller's transactional EntityManager, and stored-file bytes are
+   * never deleted inline — their external ids are collected and returned so
+   * the caller can delete the actual bytes after commit (see
+   * `StorageBucketService.deleteStorageBucketForAccountDeletion`). Kept as
+   * a separate method from `deleteProfile` rather than an added flag: every
+   * OTHER caller of profile deletion (spaces, callouts, organizations, ...)
+   * must keep working exactly as before.
+   */
+  async deleteProfileForAccountDeletion(
+    profileID: string,
+    em: EntityManager
+  ): Promise<{ profile: IProfile; documentExternalIDs: string[] }> {
+    const profile = await this.getProfileOrFail(profileID, {
+      relations: {
+        references: true,
+        location: true,
+        tagsets: true,
+        authorization: true,
+        visuals: true,
+        storageBucket: true,
+      },
+    });
+
+    if (profile.tagsets) {
+      for (const tagset of profile.tagsets) {
+        await this.tagsetService.removeTagset(tagset.id, em);
+      }
+    }
+
+    if (profile.references) {
+      for (const reference of profile.references) {
+        await this.referenceService.deleteReference({ ID: reference.id }, em);
+      }
+    }
+
+    let documentExternalIDs: string[] = [];
+    if (profile.storageBucket) {
+      const result =
+        await this.storageBucketService.deleteStorageBucketForAccountDeletion(
+          profile.storageBucket.id,
+          em
+        );
+      documentExternalIDs = result.documentExternalIDs;
+    }
+
+    if (profile.visuals) {
+      for (const visual of profile.visuals) {
+        await this.visualService.deleteVisual({ ID: visual.id }, em);
+      }
+    }
+
+    if (profile.location) {
+      await this.locationService.removeLocation(profile.location, em);
+    }
+
+    if (profile.authorization) {
+      await this.authorizationPolicyService.delete(profile.authorization, em);
+    }
+
+    const removed = await em.remove(profile as Profile);
+    return { profile: removed, documentExternalIDs };
   }
 
   async deleteProfile(profileID: string): Promise<IProfile> {

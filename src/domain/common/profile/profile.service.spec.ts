@@ -469,6 +469,60 @@ describe('ProfileService', () => {
     });
   });
 
+  describe('deleteProfileForAccountDeletion', () => {
+    it('threads the passed EntityManager everywhere and surfaces collected document external ids', async () => {
+      const profile = {
+        id: 'p-1',
+        tagsets: [{ id: 'ts-1' }],
+        references: [{ id: 'ref-1' }],
+        storageBucket: { id: 'sb-1' },
+        visuals: [{ id: 'v-1' }],
+        location: { id: 'loc-1' },
+        authorization: { id: 'auth-1' },
+      } as unknown as Profile;
+
+      vi.spyOn(Profile, 'findOne').mockResolvedValue(profile);
+      vi.mocked(tagsetService.removeTagset).mockResolvedValue({} as any);
+      vi.mocked(referenceService.deleteReference).mockResolvedValue({} as any);
+      vi.mocked(
+        storageBucketService.deleteStorageBucketForAccountDeletion
+      ).mockResolvedValue({
+        storageBucket: {} as any,
+        documentExternalIDs: ['ext-1'],
+      });
+      vi.mocked(visualService.deleteVisual).mockResolvedValue({} as any);
+      vi.mocked(locationService.removeLocation).mockResolvedValue({} as any);
+      vi.mocked(authorizationPolicyService.delete).mockResolvedValue({} as any);
+      const em = { remove: vi.fn().mockResolvedValue(profile) } as any;
+
+      const result = await service.deleteProfileForAccountDeletion('p-1', em);
+
+      expect(tagsetService.removeTagset).toHaveBeenCalledWith('ts-1', em);
+      expect(referenceService.deleteReference).toHaveBeenCalledWith(
+        { ID: 'ref-1' },
+        em
+      );
+      expect(
+        storageBucketService.deleteStorageBucketForAccountDeletion
+      ).toHaveBeenCalledWith('sb-1', em);
+      expect(storageBucketService.deleteStorageBucket).not.toHaveBeenCalled();
+      expect(visualService.deleteVisual).toHaveBeenCalledWith(
+        { ID: 'v-1' },
+        em
+      );
+      expect(locationService.removeLocation).toHaveBeenCalledWith(
+        profile.location,
+        em
+      );
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        profile.authorization,
+        em
+      );
+      expect(em.remove).toHaveBeenCalledWith(profile);
+      expect(result.documentExternalIDs).toEqual(['ext-1']);
+    });
+  });
+
   describe('addVisualsOnProfile', () => {
     it('should create correct visual for AVATAR, BANNER, and CARD types', async () => {
       const avatarVisual = { id: 'av-1', name: VisualType.AVATAR, uri: '' };
