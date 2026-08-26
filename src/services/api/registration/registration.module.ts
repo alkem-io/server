@@ -6,10 +6,12 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
+import { AccountDeletionModule } from '@domain/community/user/account-deletion/account.deletion.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { AccountModule } from '@domain/space/account/account.module';
 import { Module } from '@nestjs/common';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
+import { FileServiceAdapterModule } from '@services/adapters/file-service-adapter/file.service.adapter.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { RegistrationResolverMutations } from './registration.resolver.mutations';
 import { RegistrationService } from './registration.service';
@@ -28,6 +30,8 @@ import { RegistrationService } from './registration.service';
     PlatformInvitationModule,
     PlatformAuthorizationPolicyModule,
     ApplicationModule,
+    AccountDeletionModule,
+    FileServiceAdapterModule,
   ],
   providers: [RegistrationService, RegistrationResolverMutations],
   exports: [RegistrationService, RegistrationResolverMutations],

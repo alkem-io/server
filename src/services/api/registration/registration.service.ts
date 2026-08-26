@@ -5,6 +5,10 @@ import { RoleName } from '@common/enums/role.name';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { UserNotVerifiedException } from '@common/exceptions/user/user.not.verified.exception';
 import { getEmailDomain } from '@common/utils';
+import {
+  redactError,
+  redactStack,
+} from '@core/auth/oidc/revocation/oidc-session-revocation.service';
 import { KratosSessionData } from '@core/authentication/kratos.session';
 import { ApplicationService } from '@domain/access/application/application.service';
 import { CreateInvitationInput } from '@domain/access/invitation/dto/invitation.dto.create';
@@ -18,18 +22,25 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IOrganization } from '@domain/community/organization';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { AccountDeletionAuditService } from '@domain/community/user/account-deletion/account.deletion.audit.service';
+import { AccountDeletionInitiatorBranch } from '@domain/community/user/account-deletion/account.deletion.blocker.service';
 import { DeleteUserInput } from '@domain/community/user/dto/user.dto.delete';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
+import { PlatformAuditInitiatorRole } from '@domain/community/user-email-change/enums/platform.audit.initiator.role';
+import { PlatformAuditOutcome } from '@domain/community/user-email-change/enums/platform.audit.outcome';
 import { AccountService } from '@domain/space/account/account.service';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 import { Inject, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { NotificationInputPlatformUserRegistered } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.user.registered';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager } from 'typeorm';
 
 export class RegistrationService {
   constructor(
@@ -46,7 +57,10 @@ export class RegistrationService {
     private applicationService: ApplicationService,
     private roleSetService: RoleSetService,
     private notificationPlatformAdapter: NotificationPlatformAdapter,
+    private accountDeletionAuditService: AccountDeletionAuditService,
+    private fileServiceAdapter: FileServiceAdapter,
     private configService: ConfigService<AlkemioConfig, true>,
+    @InjectEntityManager('default') private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -326,29 +340,164 @@ export class RegistrationService {
     }
   }
 
+  /**
+   * The account-deletion saga: one genuine transaction spanning invitations,
+   * applications, the user tree, and the account tree — an interrupted
+   * deletion leaves every one of those fully intact, never half-gone — plus
+   * a primary audit record written atomically with it. `branch` came from
+   * the resolver's actor==target derivation and decides which blocker set
+   * and exception shape apply (self also blocks on sole organization
+   * ownership; see `AccountDeletionBlockerService`) and which initiator role
+   * the audit trail records.
+   *
+   * Slower external legs — session revocation, Kratos identity removal,
+   * stored-file bytes — run AFTER this commits, each best-effort and each
+   * individually appended to the audit trail; none of them can fail the
+   * mutation.
+   */
   async deleteUserWithPendingMemberships(
-    deleteData: DeleteUserInput
+    deleteData: DeleteUserInput,
+    branch: AccountDeletionInitiatorBranch
   ): Promise<IUser> {
     const userID = deleteData.ID;
+    const initiatorRole =
+      branch === 'self'
+        ? PlatformAuditInitiatorRole.SELF
+        : PlatformAuditInitiatorRole.PLATFORM_ADMIN;
 
-    const invitations =
-      await this.invitationService.findInvitationsForActor(userID);
-    for (const invitation of invitations) {
-      await this.invitationService.deleteInvitation({ ID: invitation.id });
-    }
-
-    const applications =
-      await this.applicationService.findApplicationsForUser(userID);
-    for (const application of applications) {
-      await this.applicationService.deleteApplication({ ID: application.id });
-    }
-
-    let user = await this.userService.getUserByIdOrFail(userID);
+    const user = await this.userService.getUserByIdOrFail(userID);
     const account = await this.userService.getAccount(user);
 
-    user = await this.userService.deleteUser(deleteData);
-    await this.accountService.deleteAccountOrFail(account);
-    return user;
+    const { deletedUser, documentIDs } = await this.entityManager.transaction(
+      async em => {
+        const invitations =
+          await this.invitationService.findInvitationsForActor(userID);
+        for (const invitation of invitations) {
+          await this.invitationService.deleteInvitation(
+            { ID: invitation.id },
+            em
+          );
+        }
+
+        const applications =
+          await this.applicationService.findApplicationsForUser(userID);
+        for (const application of applications) {
+          await this.applicationService.deleteApplication(
+            { ID: application.id },
+            em
+          );
+        }
+
+        const userResult = await this.userService.deleteUserDbOnly(
+          deleteData,
+          em,
+          branch
+        );
+        const accountResult =
+          await this.accountService.deleteAccountOrFailForAccountDeletion(
+            account,
+            em
+          );
+        const documentIDs = [
+          ...userResult.documentIDs,
+          ...accountResult.documentIDs,
+        ];
+
+        await this.accountDeletionAuditService.writePrimary(em, {
+          subjectUserId: userID,
+          initiatorRole,
+          accountID: account.id,
+          externalSubscriptionID: account.externalSubscriptionID ?? null,
+          documentCount: documentIDs.length,
+        });
+
+        return { deletedUser: userResult.user, documentIDs };
+      }
+    );
+
+    await this.runPostCommitDeletionLegs(
+      deletedUser,
+      deleteData,
+      initiatorRole,
+      documentIDs
+    );
+
+    return deletedUser;
+  }
+
+  /**
+   * Post-commit external legs for a completed account deletion — session
+   * revocation, Kratos identity removal, stored-file bytes — each
+   * best-effort and each individually appended to the audit trail. A
+   * failure here is recorded, logged, and NEVER re-thrown: by the time this
+   * runs, the primary-store deletion has already committed and the mutation
+   * must still report success (FR-017).
+   */
+  private async runPostCommitDeletionLegs(
+    deletedUser: IUser,
+    deleteData: DeleteUserInput,
+    initiatorRole: PlatformAuditInitiatorRole,
+    documentIDs: string[]
+  ): Promise<void> {
+    const userID = deleteData.ID;
+
+    const legOutcomes = await this.userService.revokeUserSessionsAndIdentity(
+      deletedUser,
+      deleteData
+    );
+
+    await this.accountDeletionAuditService.appendLegOutcome(
+      userID,
+      initiatorRole,
+      legOutcomes.sessionRevocationSucceeded
+        ? PlatformAuditOutcome.SESSION_REVOCATION_COMPLETED
+        : PlatformAuditOutcome.SESSION_INVALIDATION_FAILED
+    );
+
+    if (legOutcomes.identityDeletionAttempted) {
+      await this.accountDeletionAuditService.appendLegOutcome(
+        userID,
+        initiatorRole,
+        legOutcomes.identityDeletionSucceeded
+          ? PlatformAuditOutcome.IDENTITY_DELETION_COMPLETED
+          : PlatformAuditOutcome.IDENTITY_DELETION_FAILED
+      );
+    }
+
+    if (documentIDs.length === 0) {
+      return;
+    }
+
+    const failures: string[] = [];
+    for (const documentID of documentIDs) {
+      try {
+        await this.fileServiceAdapter.deleteDocument(documentID);
+      } catch (error: any) {
+        failures.push(redactError(error));
+        this.logger.error?.(
+          {
+            message:
+              'Failed to delete document bytes during account deletion; the deletion still stands',
+            userID,
+            documentID,
+            error: redactError(error),
+          },
+          redactStack(error),
+          LogContext.STORAGE_BUCKET
+        );
+      }
+    }
+
+    await this.accountDeletionAuditService.appendLegOutcome(
+      userID,
+      initiatorRole,
+      failures.length === 0
+        ? PlatformAuditOutcome.FILE_BYTES_CLEANUP_COMPLETED
+        : PlatformAuditOutcome.FILE_BYTES_CLEANUP_FAILED,
+      failures.length === 0
+        ? undefined
+        : { error: failures.slice(0, 3).join('; ').slice(0, 250) }
+    );
   }
 
   async deleteOrganizationWithPendingMemberships(

@@ -1,4 +1,6 @@
+import { PRIVILEGED_SESSION_WINDOW_MS } from '@common/constants';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { SessionRefreshRequiredException } from '@common/exceptions';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
@@ -173,6 +175,123 @@ describe('RegistrationResolverMutations', () => {
           user,
         })
       );
+      expect(
+        registrationService.deleteUserWithPendingMemberships
+      ).toHaveBeenCalledWith({ ID: 'user-1' }, 'admin');
+    });
+
+    it('does not fail the mutation when the notification adapter throws (best-effort)', async () => {
+      const user = {
+        id: 'user-1',
+        authorization: { id: 'auth-1' },
+        profile: { displayName: 'John' },
+      };
+      userService.getUserByIdOrFail.mockResolvedValue(user);
+      authorizationService.grantAccessOrFail.mockReturnValue(undefined);
+      registrationService.deleteUserWithPendingMemberships.mockResolvedValue(
+        user
+      );
+      notificationPlatformAdapter.platformUserRemoved.mockRejectedValue(
+        new Error('notification adapter exploded')
+      );
+
+      const result = await resolver.deleteUser(actorContext, {
+        ID: 'user-1',
+      });
+
+      expect(result).toBe(user);
+    });
+
+    describe('self-deletion (actor == target)', () => {
+      const selfActorContext = (issuedAt?: number) =>
+        ({
+          actorID: 'user-1',
+          credentials: [],
+          issuedAt,
+        }) as any;
+
+      it('refuses with SessionRefreshRequiredException when the session is older than the privileged window', async () => {
+        const staleIssuedAt = Date.now() - PRIVILEGED_SESSION_WINDOW_MS - 1;
+
+        await expect(
+          resolver.deleteUser(selfActorContext(staleIssuedAt), {
+            ID: 'user-1',
+          })
+        ).rejects.toThrow(SessionRefreshRequiredException);
+        expect(
+          registrationService.deleteUserWithPendingMemberships
+        ).not.toHaveBeenCalled();
+      });
+
+      it('fails closed — refuses when issuedAt is missing', async () => {
+        await expect(
+          resolver.deleteUser(selfActorContext(undefined), { ID: 'user-1' })
+        ).rejects.toThrow(SessionRefreshRequiredException);
+      });
+
+      it('fails closed — refuses when issuedAt is zero', async () => {
+        await expect(
+          resolver.deleteUser(selfActorContext(0), { ID: 'user-1' })
+        ).rejects.toThrow(SessionRefreshRequiredException);
+      });
+
+      it('proceeds, pins deleteIdentity, and passes branch self when the session is fresh', async () => {
+        const freshIssuedAt = Date.now() - 60_000;
+        const user = {
+          id: 'user-1',
+          authorization: { id: 'auth-1' },
+          profile: { displayName: 'Self' },
+        };
+        userService.getUserByIdOrFail.mockResolvedValue(user);
+        authorizationService.grantAccessOrFail.mockReturnValue(undefined);
+        registrationService.deleteUserWithPendingMemberships.mockResolvedValue(
+          user
+        );
+        notificationPlatformAdapter.platformUserRemoved.mockResolvedValue(
+          undefined
+        );
+
+        const result = await resolver.deleteUser(
+          selfActorContext(freshIssuedAt),
+          { ID: 'user-1', deleteIdentity: false }
+        );
+
+        expect(result).toBe(user);
+        expect(
+          registrationService.deleteUserWithPendingMemberships
+        ).toHaveBeenCalledWith({ ID: 'user-1', deleteIdentity: true }, 'self');
+      });
+
+      it('does not gate an admin deleting someone else even with a stale/missing issuedAt', async () => {
+        const user = {
+          id: 'other-user',
+          authorization: { id: 'auth-1' },
+          profile: { displayName: 'Other' },
+        };
+        userService.getUserByIdOrFail.mockResolvedValue(user);
+        authorizationService.grantAccessOrFail.mockReturnValue(undefined);
+        registrationService.deleteUserWithPendingMemberships.mockResolvedValue(
+          user
+        );
+        notificationPlatformAdapter.platformUserRemoved.mockResolvedValue(
+          undefined
+        );
+
+        const staleAdminContext = {
+          actorID: 'admin-1',
+          credentials: [],
+          issuedAt: undefined,
+        } as any;
+
+        const result = await resolver.deleteUser(staleAdminContext, {
+          ID: 'other-user',
+        });
+
+        expect(result).toBe(user);
+        expect(
+          registrationService.deleteUserWithPendingMemberships
+        ).toHaveBeenCalledWith({ ID: 'other-user' }, 'admin');
+      });
     });
   });
 
