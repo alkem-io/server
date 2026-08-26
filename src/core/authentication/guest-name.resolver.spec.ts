@@ -63,6 +63,29 @@ describe('guest-name resolver', () => {
     ).toBeUndefined();
   });
 
+  it.each([
+    {
+      source: 'direct query',
+      req: request(),
+      direct: 'Alice\u0000Mallory',
+    },
+    {
+      source: 'forwarded URI',
+      req: request({
+        'x-forwarded-uri': '/collab/wb-1?guestName=Alice%00Mallory',
+      }),
+      direct: undefined,
+    },
+    {
+      source: 'raw compatibility header',
+      req: request({ 'x-guest-name': 'Alice\u0000Mallory' }),
+      direct: undefined,
+    },
+  ])('rejects control characters from the $source', ({ req, direct }) => {
+    expect(resolveForwardAuthGuestName(req, direct)).toBeUndefined();
+    expect(decodeGuestNameHeader(req)).toBeUndefined();
+  });
+
   it('uses the compatibility sources in direct, forwarded, header order', () => {
     const req = request({
       'x-forwarded-uri': '/collab/wb-1?guestName=Forwarded',

@@ -22,7 +22,11 @@ const normalizeGuestName = (value: unknown): string | undefined => {
   }
 
   const normalized = value.trim();
-  if (!normalized || normalized.includes('\uFFFD')) {
+  if (
+    !normalized ||
+    normalized.includes('\uFFFD') ||
+    CONTROL_CHARACTER_PATTERN.test(normalized)
+  ) {
     return undefined;
   }
   return normalized;
@@ -45,7 +49,7 @@ const decodeEncodedGuestName = (encoded: string): EncodedGuestName => {
     }
     const decoded = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
     const guestName = normalizeGuestName(decoded);
-    if (guestName && CONTROL_CHARACTER_PATTERN.test(guestName)) {
+    if (CONTROL_CHARACTER_PATTERN.test(decoded)) {
       return { matched: false };
     }
     return { matched: true, guestName };
