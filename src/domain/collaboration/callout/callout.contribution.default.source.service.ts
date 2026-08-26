@@ -12,6 +12,7 @@ export interface ContributionDefaultSourceInput {
   clearWhiteboardContent?: boolean;
   whiteboardContent?: string;
   sourceStorageBucketID?: string;
+  draftWhiteboardID?: string;
 }
 
 /**
@@ -37,11 +38,12 @@ export class CalloutContributionDefaultSourceService {
     const selectedSources = [
       defaults.sourceWhiteboardID,
       defaults.sourceCalloutID,
+      defaults.draftWhiteboardID,
       defaults.clearWhiteboardContent ? 'clear' : undefined,
     ].filter(Boolean);
     if (selectedSources.length > 1) {
       throw new ValidationException(
-        'sourceWhiteboardID, sourceCalloutID, and clearWhiteboardContent are mutually exclusive',
+        'sourceWhiteboardID, sourceCalloutID, draftWhiteboardID, and clearWhiteboardContent are mutually exclusive',
         LogContext.WHITEBOARDS
       );
     }
@@ -74,6 +76,15 @@ export class CalloutContributionDefaultSourceService {
         );
       }
       return;
+    }
+    // A draft is claimed and normalized to sourceWhiteboardID by the owning
+    // Callout/TemplatesSet mutation before this service runs. Seeing the raw id
+    // here would bypass actor/scope/purpose validation.
+    if (defaults.draftWhiteboardID) {
+      throw new ValidationException(
+        'draftWhiteboardID must be claimed before preparing contribution defaults',
+        LogContext.WHITEBOARDS
+      );
     }
     if (!defaults.sourceWhiteboardID) {
       return;

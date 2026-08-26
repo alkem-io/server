@@ -41,11 +41,22 @@ export class CreateWhiteboardInput {
   @IsOptional()
   sourceWhiteboardID?: string;
 
+  @Field(() => UUID, {
+    nullable: true,
+    description:
+      'Use a server-owned live Whiteboard draft as the trusted source for final materialization. Mutually exclusive with sourceWhiteboardID.',
+  })
+  @IsOptional()
+  draftWhiteboardID?: string;
+
   /**
    * Server-internal ownership boundary for canonical content copied from a
    * persisted Callout default. It is deliberately not a GraphQL field.
    */
   sourceStorageBucketID?: string;
+
+  /** Server-internal expiry marker for a live form draft. */
+  draftExpiresAt?: Date;
 
   @Field(() => CreateWhiteboardPreviewSettingsInput, {
     nullable: true,
