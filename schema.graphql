@@ -3175,10 +3175,6 @@ type InAppNotificationPayloadPlatformUserMessageRoom implements InAppNotificatio
 type InAppNotificationPayloadPlatformUserProfileRemoved implements InAppNotificationPayload {
   """The payload type."""
   type: NotificationEventPayload!
-  """The display name of the User that was removed."""
-  userDisplayName: String!
-  """The email of the User that was removed."""
-  userEmail: String!
 }
 
 type InAppNotificationPayloadSpace implements InAppNotificationPayload {
