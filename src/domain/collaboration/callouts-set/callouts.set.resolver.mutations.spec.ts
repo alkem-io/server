@@ -58,6 +58,13 @@ describe('CalloutsSetResolverMutations', () => {
     configService = module.get(ConfigService);
     whiteboardService = module.get(WhiteboardService);
     whiteboardDraftService = module.get(WhiteboardDraftService);
+    const releaseDraftLock = vi.fn();
+    vi.mocked(whiteboardDraftService.acquireForConsumption).mockResolvedValue({
+      drafts: new Map(),
+      complete: vi.fn(),
+      release: releaseDraftLock,
+      [Symbol.asyncDispose]: releaseDraftLock,
+    });
     vi.mocked(configService.get).mockReturnValue(5000 as any);
   });
 
@@ -320,8 +327,15 @@ describe('CalloutsSetResolverMutations', () => {
         calloutsSet
       );
       const draft = { id: 'draft-whiteboard-1' } as any;
-      vi.mocked(whiteboardDraftService.getForConsumption).mockResolvedValue(
-        draft
+      const complete = vi.fn();
+      const release = vi.fn();
+      vi.mocked(whiteboardDraftService.acquireForConsumption).mockResolvedValue(
+        {
+          drafts: new Map([[draft.id, draft]]),
+          complete,
+          release,
+          [Symbol.asyncDispose]: release,
+        }
       );
       const failed = new Error('final create failed');
       vi.mocked(
@@ -340,15 +354,70 @@ describe('CalloutsSetResolverMutations', () => {
         resolver.createCalloutOnCalloutsSet(actor, input)
       ).rejects.toBe(failed);
 
-      expect(whiteboardDraftService.getForConsumption).toHaveBeenCalledWith(
-        'draft-whiteboard-1',
+      expect(whiteboardDraftService.acquireForConsumption).toHaveBeenCalledWith(
+        ['draft-whiteboard-1'],
         actor
       );
       expect(input.framing.whiteboard).toEqual({
         draftWhiteboardID: undefined,
         sourceWhiteboardID: draft.id,
       });
-      expect(whiteboardDraftService.cleanupConsumed).not.toHaveBeenCalled();
+      expect(complete).not.toHaveBeenCalled();
+      expect(release).toHaveBeenCalledOnce();
+    });
+
+    it('deletes a consumed draft before releasing the final-callout lock', async () => {
+      const calloutsSet = framingCloneCalloutsSet();
+      const callout = {
+        id: 'callout-1',
+        nameID: 'test-callout',
+        settings: { visibility: CalloutVisibility.DRAFT },
+      } as any;
+      vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
+        calloutsSet
+      );
+      vi.mocked(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).mockResolvedValue(callout);
+      vi.mocked(calloutService.save).mockResolvedValue(callout);
+      vi.mocked(calloutService.getStorageBucket).mockResolvedValue({
+        id: 'sb-1',
+      } as any);
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(
+        calloutAuthorizationService.applyAuthorizationPolicy
+      ).mockResolvedValue([]);
+      const order: string[] = [];
+      const complete = vi.fn(async () => {
+        order.push('complete');
+      });
+      const release = vi.fn(async () => {
+        order.push('release');
+      });
+      vi.mocked(whiteboardDraftService.acquireForConsumption).mockResolvedValue(
+        {
+          drafts: new Map([
+            ['draft-whiteboard-1', { id: 'draft-whiteboard-1' } as any],
+          ]),
+          complete,
+          release,
+          [Symbol.asyncDispose]: release,
+        }
+      );
+      const input = {
+        calloutsSetID: calloutsSet.id,
+        framing: {
+          type: CalloutFramingType.WHITEBOARD,
+          whiteboard: { draftWhiteboardID: 'draft-whiteboard-1' },
+        },
+      } as any;
+
+      await resolver.createCalloutOnCalloutsSet(
+        { actorID: 'user-1' } as any,
+        input
+      );
+
+      expect(order).toEqual(['complete', 'release']);
     });
 
     it('should trigger notifications and activity when published on COLLABORATION type', async () => {

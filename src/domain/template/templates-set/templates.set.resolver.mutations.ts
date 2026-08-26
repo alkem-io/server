@@ -14,11 +14,9 @@ import {
 } from '@domain/common/whiteboard-draft';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { TemplateContentSpaceService } from '@domain/template/template-content-space/template.content.space.service';
-import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ITemplate } from '../template/template.interface';
 import { TemplateService } from '../template/template.service';
 import { TemplateAuthorizationService } from '../template/template.service.authorization';
@@ -40,8 +38,7 @@ export class TemplatesSetResolverMutations {
     private templateContentSpaceService: TemplateContentSpaceService,
     private whiteboardService: WhiteboardService,
     private whiteboardDraftService: WhiteboardDraftService,
-    private storageAggregatorResolverService: StorageAggregatorResolverService,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    private storageAggregatorResolverService: StorageAggregatorResolverService
   ) {}
 
   @Mutation(() => UUID, {
@@ -120,7 +117,6 @@ export class TemplatesSetResolverMutations {
       AuthorizationPrivilege.CREATE,
       `templates set create template: ${templatesSet.id}`
     );
-    const consumedDraftIDs: string[] = [];
     const whiteboardInputs = [
       templateData.whiteboard,
       templateData.calloutData?.framing?.whiteboard,
@@ -132,6 +128,14 @@ export class TemplatesSetResolverMutations {
       );
     }
     const framingInput = whiteboardInputs[0];
+    const defaults = templateData.calloutData?.contributionDefaults;
+    await using draftConsumption =
+      await this.whiteboardDraftService.acquireForConsumption(
+        [framingInput?.draftWhiteboardID, defaults?.draftWhiteboardID].filter(
+          (id): id is string => id !== undefined
+        ),
+        actorContext
+      );
     if (framingInput?.draftWhiteboardID) {
       if (framingInput.sourceWhiteboardID) {
         throw new ValidationException(
@@ -139,15 +143,12 @@ export class TemplatesSetResolverMutations {
           LogContext.WHITEBOARDS
         );
       }
-      const draft = await this.whiteboardDraftService.getForConsumption(
-        framingInput.draftWhiteboardID,
-        actorContext
-      );
-      consumedDraftIDs.push(draft.id);
+      const draft = draftConsumption.drafts.get(
+        framingInput.draftWhiteboardID
+      )!;
       framingInput.sourceWhiteboardID = draft.id;
       framingInput.draftWhiteboardID = undefined;
     }
-    const defaults = templateData.calloutData?.contributionDefaults;
     if (defaults?.draftWhiteboardID) {
       if (defaults.sourceWhiteboardID || defaults.sourceCalloutID) {
         throw new ValidationException(
@@ -155,11 +156,7 @@ export class TemplatesSetResolverMutations {
           LogContext.WHITEBOARDS
         );
       }
-      const draft = await this.whiteboardDraftService.getForConsumption(
-        defaults.draftWhiteboardID,
-        actorContext
-      );
-      consumedDraftIDs.push(draft.id);
+      const draft = draftConsumption.drafts.get(defaults.draftWhiteboardID)!;
       defaults.sourceWhiteboardID = draft.id;
       defaults.draftWhiteboardID = undefined;
     }
@@ -196,22 +193,7 @@ export class TemplatesSetResolverMutations {
 
     await this.authorizationPolicyService.saveAll(authorizations);
     const result = await this.templateService.getTemplateOrFail(template.id);
-    for (const draftID of consumedDraftIDs) {
-      try {
-        await this.whiteboardDraftService.cleanupConsumed(draftID);
-      } catch (error) {
-        this.logger.error?.(
-          {
-            message:
-              'Final Template was created but Whiteboard draft cleanup remains retryable',
-            templateID: result.id,
-            draftID,
-            error: error instanceof Error ? error.message : String(error),
-          },
-          error instanceof Error ? (error.stack ?? '') : ''
-        );
-      }
-    }
+    await draftConsumption.complete();
     return result;
   }
 

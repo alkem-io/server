@@ -13,8 +13,8 @@ import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service'
 import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, LessThanOrEqual, Not, Repository } from 'typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { DataSource, LessThanOrEqual, QueryRunner, Repository } from 'typeorm';
 import { CreateWhiteboardDraftInput } from './dto';
 
 const DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -25,6 +25,13 @@ export interface WhiteboardDraftMaterializationInput
   sourceStorageBucketID?: string;
 }
 
+export interface WhiteboardDraftConsumption {
+  drafts: ReadonlyMap<string, Whiteboard>;
+  complete(): Promise<void>;
+  release(): Promise<void>;
+  [Symbol.asyncDispose](): Promise<void>;
+}
+
 /** A live draft is an ordinary Whiteboard with a non-NULL expiry marker. */
 @Injectable()
 export class WhiteboardDraftService {
@@ -33,7 +40,9 @@ export class WhiteboardDraftService {
     private readonly repository: Repository<Whiteboard>,
     private readonly whiteboardService: WhiteboardService,
     private readonly whiteboardAuthorizationService: WhiteboardAuthorizationService,
-    private readonly authorizationPolicyService: AuthorizationPolicyService
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
+    @InjectDataSource()
+    private readonly dataSource: DataSource
   ) {}
 
   async materialize(
@@ -71,14 +80,110 @@ export class WhiteboardDraftService {
     return whiteboard.id;
   }
 
-  async getForConsumption(
+  async acquireForConsumption(
+    whiteboardIDs: string[],
+    actorContext: ActorContext
+  ): Promise<WhiteboardDraftConsumption> {
+    this.assertActor(actorContext);
+    const draftIDs = [...new Set(whiteboardIDs)].sort();
+    if (draftIDs.length === 0) {
+      return {
+        drafts: new Map(),
+        complete: async () => undefined,
+        release: async () => undefined,
+        [Symbol.asyncDispose]: async () => undefined,
+      };
+    }
+    const queryRunner = await this.acquireLocks(draftIDs);
+    let released = false;
+    const release = async (): Promise<void> => {
+      if (released) return;
+      released = true;
+      await this.releaseLocks(queryRunner, draftIDs);
+    };
+
+    try {
+      const lockedRepository = queryRunner.manager.getRepository(Whiteboard);
+      const drafts = new Map<string, Whiteboard>();
+      for (const whiteboardID of draftIDs) {
+        const draft = await lockedRepository.findOne({
+          where: { id: whiteboardID },
+        });
+        this.assertConsumable(draft, whiteboardID, actorContext);
+        drafts.set(whiteboardID, draft);
+      }
+      return {
+        drafts,
+        complete: async () => {
+          for (const draftID of draftIDs) {
+            await this.whiteboardService.deleteWhiteboard(draftID);
+          }
+        },
+        release,
+        [Symbol.asyncDispose]: release,
+      };
+    } catch (error) {
+      await release();
+      throw error;
+    }
+  }
+
+  async discard(
     whiteboardID: string,
     actorContext: ActorContext
-  ): Promise<Whiteboard> {
+  ): Promise<string> {
     this.assertActor(actorContext);
-    const draft = await this.repository.findOne({
-      where: { id: whiteboardID },
+    return this.withLocks([whiteboardID], async queryRunner => {
+      const draft = await queryRunner.manager
+        .getRepository(Whiteboard)
+        .findOne({ where: { id: whiteboardID } });
+      if (!draft?.draftExpiresAt) return whiteboardID;
+      if (draft.createdBy !== actorContext.actorID) {
+        throw new ForbiddenException(
+          'Only the actor that created a Whiteboard draft may discard it',
+          LogContext.WHITEBOARDS,
+          { whiteboardID }
+        );
+      }
+      await this.whiteboardService.deleteWhiteboard(whiteboardID);
+      return whiteboardID;
     });
+  }
+
+  async findExpired(limit: number): Promise<string[]> {
+    // This is the complete cleanup corpus. Ordinary Whiteboards have NULL and
+    // cannot be selected by this query.
+    const drafts = await this.repository.find({
+      select: { id: true },
+      where: { draftExpiresAt: LessThanOrEqual(new Date()) },
+      order: { draftExpiresAt: 'ASC' },
+      take: limit,
+    });
+    return drafts.map(draft => draft.id);
+  }
+
+  async cleanupExpired(whiteboardID: string): Promise<void> {
+    await this.withLocks([whiteboardID], async queryRunner => {
+      // The sweep selection is only a candidate list. Re-read the marker while
+      // holding the same cross-replica lock used by consumption and discard.
+      const draft = await queryRunner.manager
+        .getRepository(Whiteboard)
+        .findOne({
+          where: {
+            id: whiteboardID,
+            draftExpiresAt: LessThanOrEqual(new Date()),
+          },
+        });
+      if (!draft) return;
+      await this.whiteboardService.deleteWhiteboard(draft.id);
+    });
+  }
+
+  private assertConsumable(
+    draft: Whiteboard | null,
+    whiteboardID: string,
+    actorContext: ActorContext
+  ): asserts draft is Whiteboard {
     if (!draft?.draftExpiresAt) {
       throw new EntityNotFoundException(
         'Whiteboard draft not found',
@@ -100,59 +205,54 @@ export class WhiteboardDraftService {
         { whiteboardID }
       );
     }
-    return draft;
   }
 
-  async discard(
-    whiteboardID: string,
-    actorContext: ActorContext
-  ): Promise<string> {
-    this.assertActor(actorContext);
-    const draft = await this.repository.findOne({
-      where: { id: whiteboardID },
-    });
-    if (!draft?.draftExpiresAt) return whiteboardID;
-    if (draft.createdBy !== actorContext.actorID) {
-      throw new ForbiddenException(
-        'Only the actor that created a Whiteboard draft may discard it',
-        LogContext.WHITEBOARDS,
-        { whiteboardID }
-      );
+  private async withLocks<T>(
+    whiteboardIDs: string[],
+    operation: (queryRunner: QueryRunner) => Promise<T>
+  ): Promise<T> {
+    const draftIDs = [...new Set(whiteboardIDs)].sort();
+    const queryRunner = await this.acquireLocks(draftIDs);
+    try {
+      return await operation(queryRunner);
+    } finally {
+      await this.releaseLocks(queryRunner, draftIDs);
     }
-    await this.whiteboardService.deleteWhiteboard(whiteboardID);
-    return whiteboardID;
   }
 
-  async cleanupConsumed(whiteboardID: string): Promise<void> {
-    const draft = await this.repository.findOne({
-      where: { id: whiteboardID, draftExpiresAt: Not(IsNull()) },
-    });
-    if (!draft) return;
-    await this.whiteboardService.deleteWhiteboard(draft.id);
+  private async acquireLocks(whiteboardIDs: string[]): Promise<QueryRunner> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    const acquiredIDs: string[] = [];
+    try {
+      for (const whiteboardID of whiteboardIDs) {
+        await queryRunner.query(
+          'SELECT pg_advisory_lock(hashtextextended($1, 0))',
+          [`whiteboard-draft:${whiteboardID}`]
+        );
+        acquiredIDs.push(whiteboardID);
+      }
+      return queryRunner;
+    } catch (error) {
+      await this.releaseLocks(queryRunner, acquiredIDs);
+      throw error;
+    }
   }
 
-  async findExpired(limit: number): Promise<string[]> {
-    // This is the complete cleanup corpus. Ordinary Whiteboards have NULL and
-    // cannot be selected by this query.
-    const drafts = await this.repository.find({
-      select: { id: true },
-      where: { draftExpiresAt: LessThanOrEqual(new Date()) },
-      order: { draftExpiresAt: 'ASC' },
-      take: limit,
-    });
-    return drafts.map(draft => draft.id);
-  }
-
-  async cleanupExpired(whiteboardID: string): Promise<void> {
-    // Recheck the exact id and expiry immediately before canonical deletion.
-    const draft = await this.repository.findOne({
-      where: {
-        id: whiteboardID,
-        draftExpiresAt: LessThanOrEqual(new Date()),
-      },
-    });
-    if (!draft) return;
-    await this.whiteboardService.deleteWhiteboard(draft.id);
+  private async releaseLocks(
+    queryRunner: QueryRunner,
+    whiteboardIDs: string[]
+  ): Promise<void> {
+    try {
+      for (const whiteboardID of [...whiteboardIDs].reverse()) {
+        await queryRunner.query(
+          'SELECT pg_advisory_unlock(hashtextextended($1, 0))',
+          [`whiteboard-draft:${whiteboardID}`]
+        );
+      }
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   private assertActor(actorContext: ActorContext): void {

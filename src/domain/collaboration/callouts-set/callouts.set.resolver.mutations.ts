@@ -164,8 +164,15 @@ export class CalloutsSetResolverMutations {
       `create callout on callouts Set: ${calloutsSet.id}`
     );
 
-    const consumedDraftIDs: string[] = [];
     const framingDraftID = calloutData.framing?.whiteboard?.draftWhiteboardID;
+    const defaultsDraftID = calloutData.contributionDefaults?.draftWhiteboardID;
+    await using draftConsumption =
+      await this.whiteboardDraftService.acquireForConsumption(
+        [framingDraftID, defaultsDraftID].filter(
+          (id): id is string => id !== undefined
+        ),
+        actorContext
+      );
     if (framingDraftID) {
       const whiteboardInput = calloutData.framing.whiteboard!;
       if (whiteboardInput.sourceWhiteboardID) {
@@ -174,15 +181,10 @@ export class CalloutsSetResolverMutations {
           LogContext.WHITEBOARDS
         );
       }
-      const draft = await this.whiteboardDraftService.getForConsumption(
-        framingDraftID,
-        actorContext
-      );
-      consumedDraftIDs.push(draft.id);
+      const draft = draftConsumption.drafts.get(framingDraftID)!;
       whiteboardInput.sourceWhiteboardID = draft.id;
       whiteboardInput.draftWhiteboardID = undefined;
     }
-    const defaultsDraftID = calloutData.contributionDefaults?.draftWhiteboardID;
     if (defaultsDraftID) {
       const defaults = calloutData.contributionDefaults!;
       if (defaults.sourceWhiteboardID || defaults.sourceCalloutID) {
@@ -191,11 +193,7 @@ export class CalloutsSetResolverMutations {
           LogContext.WHITEBOARDS
         );
       }
-      const draft = await this.whiteboardDraftService.getForConsumption(
-        defaultsDraftID,
-        actorContext
-      );
-      consumedDraftIDs.push(draft.id);
+      const draft = draftConsumption.drafts.get(defaultsDraftID)!;
       defaults.sourceWhiteboardID = draft.id;
       defaults.draftWhiteboardID = undefined;
     }
@@ -392,23 +390,7 @@ export class CalloutsSetResolverMutations {
     }
 
     const result = await this.calloutService.getCalloutOrFail(callout.id);
-    for (const draftID of consumedDraftIDs) {
-      try {
-        await this.whiteboardDraftService.cleanupConsumed(draftID);
-      } catch (error) {
-        this.logger.error?.(
-          {
-            message:
-              'Final Callout was created but Whiteboard draft cleanup remains retryable',
-            calloutID: result.id,
-            draftID,
-            error: error instanceof Error ? error.message : String(error),
-          },
-          error instanceof Error ? (error.stack ?? '') : '',
-          LogContext.WHITEBOARDS
-        );
-      }
-    }
+    await draftConsumption.complete();
     return result;
   }
 

@@ -5,36 +5,125 @@ import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { Repository } from 'typeorm';
+import { DataSource, QueryRunner, Repository } from 'typeorm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WhiteboardDraftService } from './whiteboard.draft.service';
+
+class AdvisoryLockHarness {
+  private readonly held = new Set<string>();
+  private readonly waiters = new Map<string, Array<() => void>>();
+
+  async acquire(key: string): Promise<void> {
+    if (!this.held.has(key)) {
+      this.held.add(key);
+      return;
+    }
+    await new Promise<void>(resolve => {
+      const waiters = this.waiters.get(key) ?? [];
+      waiters.push(resolve);
+      this.waiters.set(key, waiters);
+    });
+  }
+
+  release(key: string): void {
+    const next = this.waiters.get(key)?.shift();
+    if (next) {
+      next();
+      return;
+    }
+    this.held.delete(key);
+  }
+
+  waiting(key: string): number {
+    return this.waiters.get(key)?.length ?? 0;
+  }
+}
 
 describe('WhiteboardDraftService', () => {
   const actorContext = {
     actorID: '6c0552d4-a1e6-4e52-b008-28c3fbd29e67',
   } as ActorContext;
   const parentAuthorization = { id: 'parent-auth' } as IAuthorizationPolicy;
-  let repository: Pick<Repository<Whiteboard>, 'find' | 'findOne'>;
+  const draftID = 'draft-wb';
+  let drafts: Map<string, Whiteboard>;
+  let repository: Pick<Repository<Whiteboard>, 'find'>;
+  let lockedRepository: Pick<Repository<Whiteboard>, 'findOne'>;
   let whiteboardService: Pick<
     WhiteboardService,
     'createWhiteboard' | 'deleteWhiteboard'
   >;
   const whiteboardAuthorizationService = { applyAuthorizationPolicy: vi.fn() };
   const authorizationPolicyService = { saveAll: vi.fn() };
+  let lockHarness: AdvisoryLockHarness;
+  let dataSource: Pick<DataSource, 'createQueryRunner'>;
   let service: WhiteboardDraftService;
+
+  const futureDraft = (id = draftID): Whiteboard =>
+    ({
+      id,
+      createdBy: actorContext.actorID,
+      draftExpiresAt: new Date(Date.now() + 60_000),
+    }) as Whiteboard;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    repository = { find: vi.fn(), findOne: vi.fn() };
+    drafts = new Map();
+    repository = { find: vi.fn() };
+    lockedRepository = {
+      findOne: vi.fn(async options => {
+        const where = options.where as {
+          id: string;
+          draftExpiresAt?: unknown;
+        };
+        const draft = drafts.get(where.id);
+        if (!draft) return null;
+        if (
+          where.draftExpiresAt !== undefined &&
+          (!draft.draftExpiresAt || draft.draftExpiresAt.getTime() > Date.now())
+        ) {
+          return null;
+        }
+        return draft;
+      }),
+    };
     whiteboardService = {
       createWhiteboard: vi.fn(),
-      deleteWhiteboard: vi.fn(),
+      deleteWhiteboard: vi.fn(async id => {
+        drafts.delete(id);
+        return {} as Whiteboard;
+      }),
+    };
+    lockHarness = new AdvisoryLockHarness();
+    dataSource = {
+      createQueryRunner: vi.fn(() => {
+        const runner = {
+          connect: vi.fn(),
+          release: vi.fn(),
+          manager: {
+            getRepository: vi.fn(() => lockedRepository),
+          },
+          query: vi.fn(async (sql: string, parameters: string[]) => {
+            const key = parameters[0];
+            if (sql.includes('pg_advisory_unlock')) {
+              lockHarness.release(key);
+              return [{ pg_advisory_unlock: true }];
+            }
+            if (!sql.includes('pg_advisory_lock')) {
+              throw new Error('expected PostgreSQL advisory lock query');
+            }
+            await lockHarness.acquire(key);
+            return [{ pg_advisory_lock: null }];
+          }),
+        } as unknown as QueryRunner;
+        return runner;
+      }),
     };
     service = new WhiteboardDraftService(
       repository as Repository<Whiteboard>,
       whiteboardService as WhiteboardService,
       whiteboardAuthorizationService as unknown as WhiteboardAuthorizationService,
-      authorizationPolicyService as unknown as AuthorizationPolicyService
+      authorizationPolicyService as unknown as AuthorizationPolicyService,
+      dataSource as DataSource
     );
     whiteboardAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
       []
@@ -88,53 +177,163 @@ describe('WhiteboardDraftService', () => {
     expect(whiteboardService.deleteWhiteboard).toHaveBeenCalledWith('wb-1');
   });
 
+  it('serializes concurrent final submissions so only one materializes', async () => {
+    drafts.set(draftID, futureDraft());
+    let materializations = 0;
+    let allowFirstToFinish!: () => void;
+    let firstStarted!: () => void;
+    const firstStartedPromise = new Promise<void>(resolve => {
+      firstStarted = resolve;
+    });
+    const finishFirstPromise = new Promise<void>(resolve => {
+      allowFirstToFinish = resolve;
+    });
+
+    const finalize = async (): Promise<void> => {
+      const consumption = await service.acquireForConsumption(
+        [draftID],
+        actorContext
+      );
+      try {
+        materializations++;
+        firstStarted();
+        await finishFirstPromise;
+        await consumption.complete();
+      } finally {
+        await consumption.release();
+      }
+    };
+
+    const first = finalize();
+    await firstStartedPromise;
+    const second = finalize();
+    await vi.waitFor(() => {
+      expect(lockHarness.waiting(`whiteboard-draft:${draftID}`)).toBe(1);
+    });
+    expect(materializations).toBe(1);
+
+    allowFirstToFinish();
+    const results = await Promise.allSettled([first, second]);
+
+    expect(results.map(result => result.status).sort()).toEqual([
+      'fulfilled',
+      'rejected',
+    ]);
+    expect(materializations).toBe(1);
+    expect(whiteboardService.deleteWhiteboard).toHaveBeenCalledTimes(1);
+  });
+
+  it('makes discard wait until an in-flight source copy releases the draft', async () => {
+    drafts.set(draftID, futureDraft());
+    const consumption = await service.acquireForConsumption(
+      [draftID],
+      actorContext
+    );
+
+    const discard = service.discard(draftID, actorContext);
+    await vi.waitFor(() => {
+      expect(lockHarness.waiting(`whiteboard-draft:${draftID}`)).toBe(1);
+    });
+    expect(whiteboardService.deleteWhiteboard).not.toHaveBeenCalled();
+
+    await consumption.release();
+    await expect(discard).resolves.toBe(draftID);
+    expect(whiteboardService.deleteWhiteboard).toHaveBeenCalledWith(draftID);
+  });
+
+  it("refuses to discard another actor's draft", async () => {
+    drafts.set(draftID, {
+      ...futureDraft(),
+      createdBy: 'other-actor',
+    } as Whiteboard);
+
+    await expect(service.discard(draftID, actorContext)).rejects.toThrow(
+      'Only the actor that created a Whiteboard draft may discard it'
+    );
+    expect(whiteboardService.deleteWhiteboard).not.toHaveBeenCalled();
+  });
+
+  it('deletes an unchanged expired draft through the canonical path', async () => {
+    drafts.set(draftID, {
+      ...futureDraft(),
+      draftExpiresAt: new Date(Date.now() - 60_000),
+    } as Whiteboard);
+
+    await service.cleanupExpired(draftID);
+
+    expect(whiteboardService.deleteWhiteboard).toHaveBeenCalledWith(draftID);
+  });
+
+  it.each([
+    ['cleared', null],
+    ['extended', 'future'],
+  ])('does not delete a selected expiry candidate after its marker is %s', async (_label, marker) => {
+    drafts.set(draftID, {
+      ...futureDraft(),
+      draftExpiresAt: new Date(Date.now() - 60_000),
+    } as Whiteboard);
+    vi.mocked(repository.find).mockResolvedValue([
+      { id: draftID } as Whiteboard,
+    ]);
+
+    await expect(service.findExpired(25)).resolves.toEqual([draftID]);
+    drafts.get(draftID)!.draftExpiresAt =
+      marker === null ? null : new Date(Date.now() + 60_000);
+
+    await service.cleanupExpired(draftID);
+
+    expect(whiteboardService.deleteWhiteboard).not.toHaveBeenCalled();
+  });
+
+  it('never deletes an ordinary Whiteboard through discard or expiry cleanup', async () => {
+    drafts.set('ordinary-wb', {
+      id: 'ordinary-wb',
+      createdBy: actorContext.actorID,
+      draftExpiresAt: null,
+    } as Whiteboard);
+
+    await expect(service.discard('ordinary-wb', actorContext)).resolves.toBe(
+      'ordinary-wb'
+    );
+    await service.cleanupExpired('ordinary-wb');
+
+    expect(whiteboardService.deleteWhiteboard).not.toHaveBeenCalled();
+  });
+
   it('refuses an ordinary Whiteboard as a draft source', async () => {
-    vi.mocked(repository.findOne).mockResolvedValue({
+    drafts.set('ordinary-wb', {
       id: 'ordinary-wb',
       createdBy: actorContext.actorID,
       draftExpiresAt: null,
     } as Whiteboard);
 
     await expect(
-      service.getForConsumption('ordinary-wb', actorContext)
+      service.acquireForConsumption(['ordinary-wb'], actorContext)
     ).rejects.toThrow('Whiteboard draft not found');
   });
 
   it('refuses a draft owned by another actor', async () => {
-    vi.mocked(repository.findOne).mockResolvedValue({
-      id: 'draft-wb',
+    drafts.set(draftID, {
+      ...futureDraft(),
       createdBy: 'other-actor',
-      draftExpiresAt: new Date(Date.now() + 60_000),
     } as Whiteboard);
 
     await expect(
-      service.getForConsumption('draft-wb', actorContext)
+      service.acquireForConsumption([draftID], actorContext)
     ).rejects.toThrow(
       'Only the actor that created a Whiteboard draft may consume it'
     );
   });
 
   it('refuses an expired draft as a final-create source', async () => {
-    vi.mocked(repository.findOne).mockResolvedValue({
-      id: 'draft-wb',
-      createdBy: actorContext.actorID,
+    drafts.set(draftID, {
+      ...futureDraft(),
       draftExpiresAt: new Date(Date.now() - 1),
     } as Whiteboard);
 
     await expect(
-      service.getForConsumption('draft-wb', actorContext)
+      service.acquireForConsumption([draftID], actorContext)
     ).rejects.toThrow('Whiteboard draft has expired');
-  });
-
-  it('does not delete an ordinary Whiteboard even when cleanup receives its id', async () => {
-    vi.mocked(repository.findOne).mockResolvedValue(null);
-
-    await service.cleanupConsumed('ordinary-wb');
-
-    expect(repository.findOne).toHaveBeenCalledWith({
-      where: { id: 'ordinary-wb', draftExpiresAt: expect.anything() },
-    });
-    expect(whiteboardService.deleteWhiteboard).not.toHaveBeenCalled();
   });
 
   it('periodic cleanup discovers only expired non-NULL draft expiries', async () => {
@@ -150,33 +349,5 @@ describe('WhiteboardDraftService', () => {
       order: { draftExpiresAt: 'ASC' },
       take: 25,
     });
-  });
-
-  it('rechecks exact id and expired draftness before periodic deletion', async () => {
-    vi.mocked(repository.findOne).mockResolvedValue({
-      id: 'expired-draft',
-    } as Whiteboard);
-
-    await service.cleanupExpired('expired-draft');
-
-    expect(repository.findOne).toHaveBeenCalledWith({
-      where: { id: 'expired-draft', draftExpiresAt: expect.anything() },
-    });
-    expect(whiteboardService.deleteWhiteboard).toHaveBeenCalledWith(
-      'expired-draft'
-    );
-  });
-
-  it('explicit discard requires creator ownership and a non-NULL expiry', async () => {
-    vi.mocked(repository.findOne).mockResolvedValue({
-      id: 'draft-wb',
-      createdBy: actorContext.actorID,
-      draftExpiresAt: new Date(Date.now() + 60_000),
-    } as Whiteboard);
-
-    await expect(service.discard('draft-wb', actorContext)).resolves.toBe(
-      'draft-wb'
-    );
-    expect(whiteboardService.deleteWhiteboard).toHaveBeenCalledWith('draft-wb');
   });
 });

@@ -5,9 +5,7 @@ import { WhiteboardService } from '@domain/common/whiteboard';
 import { WhiteboardDraftService } from '@domain/common/whiteboard-draft';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { TemplateContentSpaceService } from '@domain/template/template-content-space/template.content.space.service';
-import { LoggerService } from '@nestjs/common';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { vi } from 'vitest';
 import { TemplateService } from '../template/template.service';
 import { TemplateAuthorizationService } from '../template/template.service.authorization';
@@ -38,6 +36,10 @@ describe('TemplatesSetResolverMutations', () => {
   let whiteboardService: {
     getWhiteboardOrFail: ReturnType<typeof vi.fn>;
   };
+  let whiteboardDraftService: {
+    acquireForConsumption: ReturnType<typeof vi.fn>;
+    materialize: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     authorizationService = { grantAccessOrFail: vi.fn() };
@@ -58,6 +60,16 @@ describe('TemplatesSetResolverMutations', () => {
     whiteboardService = {
       getWhiteboardOrFail: vi.fn(),
     };
+    const releaseDraftLock = vi.fn();
+    whiteboardDraftService = {
+      acquireForConsumption: vi.fn().mockResolvedValue({
+        drafts: new Map(),
+        complete: vi.fn(),
+        release: releaseDraftLock,
+        [Symbol.asyncDispose]: releaseDraftLock,
+      }),
+      materialize: vi.fn(),
+    };
 
     resolver = new TemplatesSetResolverMutations(
       authorizationService as unknown as AuthorizationService,
@@ -68,15 +80,10 @@ describe('TemplatesSetResolverMutations', () => {
       spaceLookupService as unknown as SpaceLookupService,
       templateContentSpaceService as unknown as TemplateContentSpaceService,
       whiteboardService as unknown as WhiteboardService,
-      {
-        getForConsumption: vi.fn(),
-        cleanupConsumed: vi.fn(),
-        materialize: vi.fn(),
-      } as unknown as WhiteboardDraftService,
+      whiteboardDraftService as unknown as WhiteboardDraftService,
       {
         getStorageAggregatorForTemplatesSet: vi.fn(),
-      } as unknown as StorageAggregatorResolverService,
-      MockWinstonProvider.useValue as unknown as LoggerService
+      } as unknown as StorageAggregatorResolverService
     );
   });
 
@@ -109,6 +116,51 @@ describe('TemplatesSetResolverMutations', () => {
       );
       expect(authorizationPolicyService.saveAll).toHaveBeenCalled();
       expect(result).toBe(template);
+    });
+
+    it('holds an owned framing draft through final creation and deletes it before releasing', async () => {
+      const templatesSet = { id: 'ts-1', authorization: { id: 'ts-auth' } };
+      templatesSetService.getTemplatesSetOrFail.mockResolvedValue(templatesSet);
+      const template = { id: 'tpl-1' };
+      templatesSetService.createTemplate.mockResolvedValue(template);
+      templateAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
+      templateService.getTemplateOrFail.mockResolvedValue(template);
+      whiteboardService.getWhiteboardOrFail.mockResolvedValue({
+        id: 'draft-wb',
+        authorization: { id: 'draft-auth' },
+      });
+      const order: string[] = [];
+      const complete = vi.fn(async () => {
+        order.push('complete');
+      });
+      const release = vi.fn(async () => {
+        order.push('release');
+      });
+      whiteboardDraftService.acquireForConsumption.mockResolvedValue({
+        drafts: new Map([['draft-wb', { id: 'draft-wb' }]]),
+        complete,
+        release,
+        [Symbol.asyncDispose]: release,
+      });
+      const input = {
+        templatesSetID: 'ts-1',
+        whiteboard: { draftWhiteboardID: 'draft-wb' },
+      } as any;
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await resolver.createTemplate(actorContext, input);
+
+      expect(whiteboardDraftService.acquireForConsumption).toHaveBeenCalledWith(
+        ['draft-wb'],
+        actorContext
+      );
+      expect(input.whiteboard).toEqual({
+        draftWhiteboardID: undefined,
+        sourceWhiteboardID: 'draft-wb',
+      });
+      expect(order).toEqual(['complete', 'release']);
     });
 
     it('does NOT load a source whiteboard when the template has no sourceWhiteboardID', async () => {
