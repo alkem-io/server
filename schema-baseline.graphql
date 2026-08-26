@@ -2190,6 +2190,10 @@ type CreateCalloutContributionData {
 type CreateCalloutContributionDefaultsData {
   """The default title to use for new contributions."""
   defaultDisplayName: String
+  """
+  Use a server-owned live Whiteboard contribution-default draft. Mutually exclusive with either source field.
+  """
+  draftWhiteboardID: UUID
   """The default description to use for new Post contributions."""
   postDescription: Markdown
   """
@@ -2205,6 +2209,10 @@ type CreateCalloutContributionDefaultsData {
 input CreateCalloutContributionDefaultsInput {
   """The default title to use for new contributions."""
   defaultDisplayName: String
+  """
+  Use a server-owned live Whiteboard contribution-default draft. Mutually exclusive with either source field.
+  """
+  draftWhiteboardID: UUID
   """The default description to use for new Post contributions."""
   postDescription: Markdown
   """
@@ -3150,6 +3158,10 @@ input CreateVisualOnProfileInput {
 }
 
 type CreateWhiteboardData {
+  """
+  Use a server-owned live Whiteboard draft as the trusted source for final materialization. Mutually exclusive with sourceWhiteboardID.
+  """
+  draftWhiteboardID: UUID
   """A readable identifier, unique within the containing scope."""
   nameID: NameID
   """The preview settings for the whiteboard."""
@@ -3161,7 +3173,23 @@ type CreateWhiteboardData {
   sourceWhiteboardID: UUID
 }
 
+input CreateWhiteboardDraftOnCalloutsSetInput {
+  calloutsSetID: UUID!
+  sourceCalloutID: UUID
+  sourceWhiteboardID: UUID
+}
+
+input CreateWhiteboardDraftOnTemplatesSetInput {
+  sourceCalloutID: UUID
+  sourceWhiteboardID: UUID
+  templatesSetID: UUID!
+}
+
 input CreateWhiteboardInput {
+  """
+  Use a server-owned live Whiteboard draft as the trusted source for final materialization. Mutually exclusive with sourceWhiteboardID.
+  """
+  draftWhiteboardID: UUID
   """A readable identifier, unique within the containing scope."""
   nameID: NameID
   """The preview settings for the whiteboard."""
@@ -5246,6 +5274,14 @@ type Mutation {
   createUser(userData: CreateUserInput!): User!
   """Creates a new VirtualContributor on an Account."""
   createVirtualContributor(virtualContributorData: CreateVirtualContributorOnAccountInput!): VirtualContributor!
+  """
+  Materializes a server-owned live Whiteboard draft for a Callout form. Content remains on the collaboration transport; GraphQL returns identifiers only.
+  """
+  createWhiteboardDraftOnCalloutsSet(draftData: CreateWhiteboardDraftOnCalloutsSetInput!): UUID!
+  """
+  Materializes a server-owned live Whiteboard draft for a Template form. GraphQL returns identifiers only.
+  """
+  createWhiteboardDraftOnTemplatesSet(draftData: CreateWhiteboardDraftOnTemplatesSetInput!): UUID!
   """Creates an account in Wingback"""
   createWingbackAccount(accountID: UUID!): String!
   """Removes the specified Application."""
@@ -5310,6 +5346,10 @@ type Mutation {
   deleteVisualFromMediaGallery(deleteData: DeleteVisualFromMediaGalleryInput!): Visual!
   """Deletes the specified Whiteboard."""
   deleteWhiteboard(whiteboardData: DeleteWhiteboardInput!): Whiteboard!
+  """
+  Idempotently discards a server-owned live Whiteboard draft through the canonical Whiteboard deletion path.
+  """
+  deleteWhiteboardDraft(whiteboardID: UUID!): UUID!
   """
   Re-enable a previously disabled push notification subscription for the current user.
   """
