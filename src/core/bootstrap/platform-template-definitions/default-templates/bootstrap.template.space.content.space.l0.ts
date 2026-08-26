@@ -4,6 +4,12 @@ import { CommunityMembershipPolicy } from '@common/enums/community.membership.po
 import { ContributorCollectionView } from '@common/enums/contributor.collection.view';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import {
+  SIDEBAR_DEFAULT_GENERIC,
+  SIDEBAR_DEFAULT_L0_TAB_1,
+  SIDEBAR_DEFAULT_L0_TAB_2,
+  SIDEBAR_DEFAULT_L0_TAB_3,
+} from '@domain/collaboration/innovation-flow-state/innovation.flow.state.sidebar.defaults';
 import { CreateTemplateContentSpaceInput } from '@domain/template/template-content-space/dto/template.content.space.dto.create';
 
 export enum FlowState {
@@ -31,20 +37,36 @@ export const bootstrapTemplateSpaceContentSpaceL0: CreateTemplateContentSpaceInp
             displayName: FlowState.HOME,
             description:
               '🔍 A journey of discovery! Gather insights through research and observation.',
+            settings: {
+              allowNewCallouts: true,
+              sidebar: [...SIDEBAR_DEFAULT_L0_TAB_1],
+            },
           },
           {
             displayName: FlowState.COMMUNITY,
             description: '🔍 The contributors to this Space!',
+            settings: {
+              allowNewCallouts: true,
+              sidebar: [...SIDEBAR_DEFAULT_L0_TAB_2],
+            },
           },
           {
             displayName: FlowState.SUBSPACES,
             description:
               '🔍 Here you can explore the hosted Subspaces. Filter by key words to show just the topics you care about.',
+            settings: {
+              allowNewCallouts: true,
+              sidebar: [...SIDEBAR_DEFAULT_L0_TAB_3],
+            },
           },
           {
             displayName: FlowState.KNOWLEDGE,
             description:
               '🔍 In the Knowledge Base you will find relevant documents, insights and other materials about the topic. The leads of the Space can provide the content, but also community members can contribute.',
+            settings: {
+              allowNewCallouts: true,
+              sidebar: [...SIDEBAR_DEFAULT_GENERIC],
+            },
           },
         ],
       },
