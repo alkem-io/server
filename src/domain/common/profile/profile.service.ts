@@ -288,7 +288,7 @@ export class ProfileService {
   async deleteProfileForAccountDeletion(
     profileID: string,
     em: EntityManager
-  ): Promise<{ profile: IProfile; documentExternalIDs: string[] }> {
+  ): Promise<{ profile: IProfile; documentIDs: string[] }> {
     const profile = await this.getProfileOrFail(profileID, {
       relations: {
         references: true,
@@ -312,14 +312,14 @@ export class ProfileService {
       }
     }
 
-    let documentExternalIDs: string[] = [];
+    let documentIDs: string[] = [];
     if (profile.storageBucket) {
       const result =
         await this.storageBucketService.deleteStorageBucketForAccountDeletion(
           profile.storageBucket.id,
           em
         );
-      documentExternalIDs = result.documentExternalIDs;
+      documentIDs = result.documentIDs;
     }
 
     if (profile.visuals) {
@@ -337,7 +337,7 @@ export class ProfileService {
     }
 
     const removed = await em.remove(profile as Profile);
-    return { profile: removed, documentExternalIDs };
+    return { profile: removed, documentIDs };
   }
 
   async deleteProfile(profileID: string): Promise<IProfile> {

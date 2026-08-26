@@ -272,8 +272,8 @@ describe('StorageBucketService', () => {
       (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
       (authorizationPolicyService.delete as Mock).mockResolvedValue(undefined);
       (documentService.deleteDocumentDbOnly as Mock)
-        .mockResolvedValueOnce({ document: doc1, externalID: 'ext-1' })
-        .mockResolvedValueOnce({ document: doc2, externalID: 'ext-2' });
+        .mockResolvedValueOnce({ document: doc1, documentID: 'doc-1' })
+        .mockResolvedValueOnce({ document: doc2, documentID: 'doc-2' });
       const em = {
         remove: vi.fn().mockResolvedValue({ ...bucket, id: '' }),
       } as any;
@@ -294,7 +294,7 @@ describe('StorageBucketService', () => {
       );
       expect(documentService.deleteDocument).not.toHaveBeenCalled();
       expect(em.remove).toHaveBeenCalledWith(bucket);
-      expect(result.documentExternalIDs).toEqual(['ext-1', 'ext-2']);
+      expect(result.documentIDs).toEqual(['doc-1', 'doc-2']);
       expect(result.storageBucket.id).toBe('bucket-1');
     });
   });

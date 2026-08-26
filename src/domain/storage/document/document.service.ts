@@ -37,14 +37,17 @@ export class DocumentService {
    * tagset — both already eager-loaded on the entity) using the caller's
    * transactional EntityManager, but does NOT call the Go file-service to
    * delete the bytes. The row itself is left for the storage bucket's own
-   * removal to cascade-delete. Returns the document's `externalID` so the
-   * caller can queue the actual byte deletion for after the transaction
-   * commits — a degraded file-service must never make deletion impossible.
+   * removal to cascade-delete. Returns the document's own `id` — the
+   * identifier `FileServiceAdapter.deleteDocument` actually addresses
+   * (`DELETE /files/{id}`, NOT the file-service's own `externalID`) — so
+   * the caller can queue the actual byte deletion for after the
+   * transaction commits: a degraded file-service must never make deletion
+   * impossible.
    */
   public async deleteDocumentDbOnly(
     deleteData: DeleteDocumentInput,
     em: EntityManager
-  ): Promise<{ document: IDocument; externalID: string }> {
+  ): Promise<{ document: IDocument; documentID: string }> {
     const documentID = deleteData.ID;
     const document = await this.getDocumentOrFail(documentID);
 
@@ -58,7 +61,7 @@ export class DocumentService {
       await this.tagsetService.removeTagset(document.tagset.id, em);
     }
 
-    return { document, externalID: document.externalID };
+    return { document, documentID };
   }
 
   public async deleteDocument(

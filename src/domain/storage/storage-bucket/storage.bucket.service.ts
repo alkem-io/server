@@ -90,14 +90,15 @@ export class StorageBucketService {
    * bucket's own authorization policy and cascade-deletes its documents
    * (via the caller's transactional EntityManager) WITHOUT calling the Go
    * file-service for any of them — see
-   * `DocumentService.deleteDocumentDbOnly`. Collects every document's
-   * `externalID` so the caller can delete the actual bytes after the
+   * `DocumentService.deleteDocumentDbOnly`. Collects every document's own
+   * `id` (the identifier `FileServiceAdapter.deleteDocument` actually
+   * addresses) so the caller can delete the actual bytes after the
    * transaction commits.
    */
   public async deleteStorageBucketForAccountDeletion(
     storageID: string,
     em: EntityManager
-  ): Promise<{ storageBucket: IStorageBucket; documentExternalIDs: string[] }> {
+  ): Promise<{ storageBucket: IStorageBucket; documentIDs: string[] }> {
     const storage = await this.getStorageBucketOrFail(storageID, {
       relations: { documents: true },
     });
@@ -106,20 +107,20 @@ export class StorageBucketService {
       await this.authorizationPolicyService.delete(storage.authorization, em);
     }
 
-    const documentExternalIDs: string[] = [];
+    const documentIDs: string[] = [];
     if (storage.documents) {
       for (const document of storage.documents) {
-        const { externalID } = await this.documentService.deleteDocumentDbOnly(
+        const { documentID } = await this.documentService.deleteDocumentDbOnly(
           { ID: document.id },
           em
         );
-        documentExternalIDs.push(externalID);
+        documentIDs.push(documentID);
       }
     }
 
     const result = await em.remove(storage as StorageBucket);
     result.id = storageID;
-    return { storageBucket: result, documentExternalIDs };
+    return { storageBucket: result, documentIDs };
   }
 
   async deleteStorageBucket(storageID: string): Promise<IStorageBucket> {

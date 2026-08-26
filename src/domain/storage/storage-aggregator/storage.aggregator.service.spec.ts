@@ -224,7 +224,7 @@ describe('StorageAggregatorService', () => {
         storageBucketService.deleteStorageBucketForAccountDeletion as Mock
       ).mockResolvedValue({
         storageBucket: { id: 'bucket-1' },
-        documentExternalIDs: ['ext-1', 'ext-2'],
+        documentIDs: ['ext-1', 'ext-2'],
       });
       const em = {
         remove: vi.fn().mockResolvedValue({ ...aggregator, id: '' }),
@@ -240,7 +240,7 @@ describe('StorageAggregatorService', () => {
         storageBucketService.deleteStorageBucketForAccountDeletion
       ).toHaveBeenCalledWith('bucket-1', em);
       expect(em.remove).toHaveBeenCalledWith(aggregator);
-      expect(result.documentExternalIDs).toEqual(['ext-1', 'ext-2']);
+      expect(result.documentIDs).toEqual(['ext-1', 'ext-2']);
       expect(result.storageAggregator.id).toBe('agg-1');
     });
 

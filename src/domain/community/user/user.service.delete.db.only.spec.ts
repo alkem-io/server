@@ -2,12 +2,16 @@
 // (`deleteUserDbOnly`) and the extracted post-commit external legs
 // (`revokeUserSessionsAndIdentity`).
 import { LogContext } from '@common/enums';
-import { ForbiddenException } from '@common/exceptions';
+import {
+  AccountDeletionBlockedException,
+  ForbiddenException,
+} from '@common/exceptions';
 import { ActorContextCacheService } from '@core/actor-context/actor.context.cache.service';
 import { OidcSessionRevocationService } from '@core/auth/oidc/revocation/oidc-session-revocation.service';
 import { ActorService } from '@domain/actor/actor/actor.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
+import { AccountDeletionBlockerService } from '@domain/community/user/account-deletion/account.deletion.blocker.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { ConfigService } from '@nestjs/config';
@@ -37,6 +41,7 @@ describe('UserService — account-deletion saga methods', () => {
   let service: UserService;
   let userLookupService: { getUserById: Mock };
   let accountLookupService: { areResourcesInAccount: Mock };
+  let accountDeletionBlockerService: { getBlockers: Mock };
   let actorContextCacheService: { deleteByActorID: Mock };
   let profileService: { deleteProfileForAccountDeletion: Mock };
   let authorizationPolicyService: { delete: Mock };
@@ -86,6 +91,9 @@ describe('UserService — account-deletion saga methods', () => {
 
     userLookupService = module.get(UserLookupService) as any;
     accountLookupService = module.get(AccountLookupService) as any;
+    accountDeletionBlockerService = module.get(
+      AccountDeletionBlockerService
+    ) as any;
     actorContextCacheService = module.get(ActorContextCacheService) as any;
     profileService = module.get(ProfileService) as any;
     authorizationPolicyService = module.get(AuthorizationPolicyService) as any;
@@ -99,15 +107,21 @@ describe('UserService — account-deletion saga methods', () => {
     logger = module.get(WINSTON_MODULE_NEST_PROVIDER) as any;
 
     accountLookupService.areResourcesInAccount.mockResolvedValue(false);
+    accountDeletionBlockerService.getBlockers.mockResolvedValue({
+      canDelete: true,
+      blockers: [],
+      totals: [],
+      truncated: false,
+    });
     actorContextCacheService.deleteByActorID.mockResolvedValue(undefined);
     profileService.deleteProfileForAccountDeletion.mockResolvedValue({
       profile: {},
-      documentExternalIDs: [],
+      documentIDs: [],
     });
     authorizationPolicyService.delete.mockResolvedValue(undefined);
     storageAggregatorService.deleteForAccountDeletion.mockResolvedValue({
       storageAggregator: {},
-      documentExternalIDs: [],
+      documentIDs: [],
     });
     userSettingsService.deleteUserSettings.mockResolvedValue(undefined);
     actorService.deleteActorById.mockResolvedValue(undefined);
@@ -123,8 +137,17 @@ describe('UserService — account-deletion saga methods', () => {
       userLookupService.getUserById.mockResolvedValue(user);
       const em = {} as EntityManager;
 
-      const result = await service.deleteUserDbOnly({ ID: 'user-1' }, em);
+      const result = await service.deleteUserDbOnly(
+        { ID: 'user-1' },
+        em,
+        'self'
+      );
 
+      expect(accountDeletionBlockerService.getBlockers).toHaveBeenCalledWith(
+        'user-1',
+        'account-1',
+        'self'
+      );
       expect(
         profileService.deleteProfileForAccountDeletion
       ).toHaveBeenCalledWith('profile-1', em);
@@ -155,28 +178,66 @@ describe('UserService — account-deletion saga methods', () => {
       userLookupService.getUserById.mockResolvedValue(user);
       profileService.deleteProfileForAccountDeletion.mockResolvedValue({
         profile: {},
-        documentExternalIDs: ['ext-1'],
+        documentIDs: ['ext-1'],
       });
       storageAggregatorService.deleteForAccountDeletion.mockResolvedValue({
         storageAggregator: {},
-        documentExternalIDs: ['ext-2', 'ext-3'],
+        documentIDs: ['ext-2', 'ext-3'],
       });
 
       const result = await service.deleteUserDbOnly(
         { ID: 'user-1' },
-        {} as EntityManager
+        {} as EntityManager,
+        'self'
       );
 
-      expect(result.documentExternalIDs).toEqual(['ext-1', 'ext-2', 'ext-3']);
+      expect(result.documentIDs).toEqual(['ext-1', 'ext-2', 'ext-3']);
     });
 
-    it('still refuses when the account holds resources', async () => {
+    it('refuses with ACCOUNT_DELETION_BLOCKED on the self branch when blocked', async () => {
       const user = buildUser();
       userLookupService.getUserById.mockResolvedValue(user);
-      accountLookupService.areResourcesInAccount.mockResolvedValue(true);
+      accountDeletionBlockerService.getBlockers.mockResolvedValue({
+        canDelete: false,
+        blockers: [
+          {
+            kind: 'ACCOUNT_SPACE',
+            resourceID: 's-1',
+            displayName: 'Space',
+            selfResolvable: true,
+          },
+        ],
+        totals: [{ kind: 'ACCOUNT_SPACE', total: 1 }],
+        truncated: false,
+      });
 
       await expect(
-        service.deleteUserDbOnly({ ID: 'user-1' }, {} as EntityManager)
+        service.deleteUserDbOnly({ ID: 'user-1' }, {} as EntityManager, 'self')
+      ).rejects.toThrow(AccountDeletionBlockedException);
+      expect(
+        profileService.deleteProfileForAccountDeletion
+      ).not.toHaveBeenCalled();
+    });
+
+    it('refuses with the pre-existing ForbiddenException on the admin branch when blocked', async () => {
+      const user = buildUser();
+      userLookupService.getUserById.mockResolvedValue(user);
+      accountDeletionBlockerService.getBlockers.mockResolvedValue({
+        canDelete: false,
+        blockers: [
+          {
+            kind: 'ACCOUNT_SPACE',
+            resourceID: 's-1',
+            displayName: 'Space',
+            selfResolvable: true,
+          },
+        ],
+        totals: [{ kind: 'ACCOUNT_SPACE', total: 1 }],
+        truncated: false,
+      });
+
+      await expect(
+        service.deleteUserDbOnly({ ID: 'user-1' }, {} as EntityManager, 'admin')
       ).rejects.toThrow(ForbiddenException);
     });
   });

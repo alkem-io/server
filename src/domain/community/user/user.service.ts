@@ -5,6 +5,7 @@ import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import {
+  AccountDeletionBlockedException,
   EntityNotFoundException,
   ForbiddenException,
   RelationshipNotFoundException,
@@ -42,6 +43,10 @@ import {
   DeleteUserInput,
   UpdateUserInput,
 } from '@domain/community/user';
+import {
+  AccountDeletionBlockerService,
+  AccountDeletionInitiatorBranch,
+} from '@domain/community/user/account-deletion/account.deletion.blocker.service';
 import { IAccount } from '@domain/space/account/account.interface';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
@@ -102,6 +107,7 @@ export class UserService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private storageAggregatorService: StorageAggregatorService,
     private accountLookupService: AccountLookupService,
+    private accountDeletionBlockerService: AccountDeletionBlockerService,
     private userLookupService: UserLookupService,
     private actorLookupService: ActorLookupService,
     private actorService: ActorService,
@@ -559,7 +565,16 @@ export class UserService {
    * cache — the preamble shared by every deletion entry point (`deleteUser`
    * and the transactional `deleteUserDbOnly`).
    */
-  private async loadAndValidateUserForDeletion(userID: string): Promise<IUser> {
+  /**
+   * Loads the user with its child entities, validates them, and invalidates
+   * the actor-context cache — the load/validate preamble shared by every
+   * deletion entry point. Deliberately does NOT check for blocking
+   * resources: each caller applies its own predicate (`deleteUser` the
+   * original boolean check; `deleteUserDbOnly` the itemized,
+   * initiator-branch-aware one), because they throw different exception
+   * shapes and — on the self branch — check a wider blocker set.
+   */
+  private async loadUserForDeletion(userID: string): Promise<IUser> {
     const user = await this.getUserByIdOrFail(userID, {
       relations: {
         profile: true,
@@ -580,6 +595,14 @@ export class UserService {
       );
     }
 
+    await this.invalidateActorContextCache(user);
+
+    return user;
+  }
+
+  private async loadAndValidateUserForDeletion(userID: string): Promise<IUser> {
+    const user = await this.loadUserForDeletion(userID);
+
     const accountHasResources =
       await this.accountLookupService.areResourcesInAccount(user.accountID);
     if (accountHasResources) {
@@ -588,8 +611,6 @@ export class UserService {
         LogContext.SPACES
       );
     }
-
-    await this.invalidateActorContextCache(user);
 
     return user;
   }
@@ -606,10 +627,37 @@ export class UserService {
    */
   async deleteUserDbOnly(
     deleteData: DeleteUserInput,
-    em: EntityManager
-  ): Promise<{ user: IUser; documentExternalIDs: string[] }> {
+    em: EntityManager,
+    branch: AccountDeletionInitiatorBranch
+  ): Promise<{ user: IUser; documentIDs: string[] }> {
     const userID = deleteData.ID;
-    const user = await this.loadAndValidateUserForDeletion(userID);
+    const user = await this.loadUserForDeletion(userID);
+
+    // FR-006: the same predicate that answers the pre-flight read also
+    // authoritatively refuses the mutation, so the two can never drift. The
+    // exception shape differs by branch: the self branch gets the distinct,
+    // client-recognizable ACCOUNT_DELETION_BLOCKED code (so the client
+    // re-runs the pre-flight and renders the itemized dialog); the admin
+    // branch keeps the pre-existing ForbiddenException, unchanged.
+    const blockers = await this.accountDeletionBlockerService.getBlockers(
+      userID,
+      user.accountID,
+      branch
+    );
+    if (!blockers.canDelete) {
+      if (branch === 'self') {
+        throw new AccountDeletionBlockedException(
+          'Unable to delete User: account is blocked from deletion',
+          LogContext.SPACES,
+          { blockers: blockers.blockers.map(b => b.kind) }
+        );
+      }
+      throw new ForbiddenException(
+        'Unable to delete User: account contains one or more resources',
+        LogContext.SPACES
+      );
+    }
+
     const { id } = user;
 
     const profileResult =
@@ -636,9 +684,9 @@ export class UserService {
     user.id = id;
     return {
       user,
-      documentExternalIDs: [
-        ...profileResult.documentExternalIDs,
-        ...aggregatorResult.documentExternalIDs,
+      documentIDs: [
+        ...profileResult.documentIDs,
+        ...aggregatorResult.documentIDs,
       ],
     };
   }

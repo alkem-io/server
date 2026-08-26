@@ -70,7 +70,7 @@ export class StorageAggregatorService {
     em: EntityManager
   ): Promise<{
     storageAggregator: IStorageAggregator;
-    documentExternalIDs: string[];
+    documentIDs: string[];
   }> {
     const storageAggregator = await this.getStorageAggregatorOrFail(
       storageAggregatorID,
@@ -91,7 +91,7 @@ export class StorageAggregatorService {
       );
     }
 
-    const { documentExternalIDs } =
+    const { documentIDs } =
       await this.storageBucketService.deleteStorageBucketForAccountDeletion(
         storageAggregator.directStorage.id,
         em
@@ -99,7 +99,7 @@ export class StorageAggregatorService {
 
     const result = await em.remove(storageAggregator as StorageAggregator);
     result.id = storageAggregatorID;
-    return { storageAggregator: result, documentExternalIDs };
+    return { storageAggregator: result, documentIDs };
   }
 
   async delete(storageAggregatorID: string): Promise<IStorageAggregator> {

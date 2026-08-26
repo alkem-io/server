@@ -242,7 +242,7 @@ export class AccountService {
   async deleteAccountOrFailForAccountDeletion(
     accountInput: IAccount,
     em: EntityManager
-  ): Promise<{ account: IAccount; documentExternalIDs: string[] }> {
+  ): Promise<{ account: IAccount; documentIDs: string[] }> {
     const accountID = accountInput.id;
     const account = await this.loadAccountForDeletionOrFail(accountID);
 
@@ -263,7 +263,7 @@ export class AccountService {
         account.storageAggregator!.id,
         em
       );
-    let documentExternalIDs = [...aggregatorResult.documentExternalIDs];
+    let documentIDs = [...aggregatorResult.documentIDs];
 
     await this.licenseService.removeLicenseOrFail(account.license!.id, em);
 
@@ -273,10 +273,7 @@ export class AccountService {
           account.profile.id,
           em
         );
-      documentExternalIDs = [
-        ...documentExternalIDs,
-        ...profileResult.documentExternalIDs,
-      ];
+      documentIDs = [...documentIDs, ...profileResult.documentIDs];
     }
 
     if (account.authorization) {
@@ -288,7 +285,7 @@ export class AccountService {
     await this.actorService.deleteActorById(accountID, em);
 
     account.id = accountID;
-    return { account, documentExternalIDs };
+    return { account, documentIDs };
   }
 
   async deleteAccountOrFail(accountInput: IAccount): Promise<IAccount | never> {

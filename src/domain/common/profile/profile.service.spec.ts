@@ -488,7 +488,7 @@ describe('ProfileService', () => {
         storageBucketService.deleteStorageBucketForAccountDeletion
       ).mockResolvedValue({
         storageBucket: {} as any,
-        documentExternalIDs: ['ext-1'],
+        documentIDs: ['ext-1'],
       });
       vi.mocked(visualService.deleteVisual).mockResolvedValue({} as any);
       vi.mocked(locationService.removeLocation).mockResolvedValue({} as any);
@@ -519,7 +519,7 @@ describe('ProfileService', () => {
         em
       );
       expect(em.remove).toHaveBeenCalledWith(profile);
-      expect(result.documentExternalIDs).toEqual(['ext-1']);
+      expect(result.documentIDs).toEqual(['ext-1']);
     });
   });
 

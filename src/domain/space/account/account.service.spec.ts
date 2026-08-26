@@ -265,12 +265,12 @@ describe('AccountService', () => {
       vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
       storageAggregatorService.deleteForAccountDeletion.mockResolvedValue({
         storageAggregator: {} as any,
-        documentExternalIDs: ['ext-1'],
+        documentIDs: ['ext-1'],
       });
       licenseService.removeLicenseOrFail.mockResolvedValue(undefined!);
       profileService.deleteProfileForAccountDeletion.mockResolvedValue({
         profile: {} as any,
-        documentExternalIDs: ['ext-2'],
+        documentIDs: ['ext-2'],
       });
       authorizationPolicyService.delete.mockResolvedValue(undefined!);
       actorService.deleteActorById.mockResolvedValue(undefined!);
@@ -299,7 +299,7 @@ describe('AccountService', () => {
         'account-1',
         em
       );
-      expect(result.documentExternalIDs).toEqual(['ext-1', 'ext-2']);
+      expect(result.documentIDs).toEqual(['ext-1', 'ext-2']);
       expect(result.account.id).toBe('account-1');
       expect(storageAggregatorService.delete).not.toHaveBeenCalled();
       expect(spaceService.deleteSpaceOrFail).not.toHaveBeenCalled();

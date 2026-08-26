@@ -179,7 +179,7 @@ describe('DocumentService', () => {
         em
       );
       expect(tagsetService.removeTagset).toHaveBeenCalledWith('tagset-1', em);
-      expect(result.externalID).toBe('ext-1');
+      expect(result.documentID).toBe('doc-1');
     });
 
     it('skips authorization/tagset cleanup when the document has neither', async () => {
