@@ -1,13 +1,22 @@
 import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { LogContext } from '@common/enums/logging.context';
+import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { ContributionDefaultSourceInput } from '@domain/collaboration/callout/callout.contribution.default.source.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { UUID } from '@domain/common/scalars';
 import { WhiteboardService } from '@domain/common/whiteboard';
+import {
+  CreateWhiteboardDraftOnTemplatesSetInput,
+  WhiteboardDraftService,
+} from '@domain/common/whiteboard-draft';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { TemplateContentSpaceService } from '@domain/template/template-content-space/template.content.space.service';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ITemplate } from '../template/template.interface';
@@ -30,8 +39,69 @@ export class TemplatesSetResolverMutations {
     private spaceLookupService: SpaceLookupService,
     private templateContentSpaceService: TemplateContentSpaceService,
     private whiteboardService: WhiteboardService,
+    private whiteboardDraftService: WhiteboardDraftService,
+    private storageAggregatorResolverService: StorageAggregatorResolverService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
+
+  @Mutation(() => UUID, {
+    description:
+      'Materializes a server-owned live Whiteboard draft for a Template form. GraphQL returns identifiers only.',
+  })
+  async createWhiteboardDraftOnTemplatesSet(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('draftData') draftData: CreateWhiteboardDraftOnTemplatesSetInput
+  ): Promise<string> {
+    const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
+      draftData.templatesSetID
+    );
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      templatesSet.authorization,
+      AuthorizationPrivilege.CREATE,
+      `templates set create whiteboard draft: ${templatesSet.id}`
+    );
+
+    let sourceContent: string | undefined;
+    let sourceStorageBucketID: string | undefined;
+    if (draftData.sourceWhiteboardID) {
+      const source = await this.whiteboardService.getWhiteboardOrFail(
+        draftData.sourceWhiteboardID,
+        { relations: { authorization: true } }
+      );
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        source.authorization,
+        AuthorizationPrivilege.READ,
+        `template draft clone whiteboard content from source: ${source.id}`
+      );
+    }
+    if (draftData.sourceCalloutID) {
+      const source: ContributionDefaultSourceInput = {
+        sourceCalloutID: draftData.sourceCalloutID,
+      };
+      await this.templateService.prepareContributionDefaultSource(
+        source,
+        actorContext
+      );
+      sourceContent = source.whiteboardContent;
+      sourceStorageBucketID = source.sourceStorageBucketID;
+    }
+    const storageAggregator =
+      await this.storageAggregatorResolverService.getStorageAggregatorForTemplatesSet(
+        templatesSet.id
+      );
+    return this.whiteboardDraftService.materialize(
+      {
+        ...draftData,
+        sourceContent,
+        sourceStorageBucketID,
+      },
+      storageAggregator,
+      templatesSet.authorization,
+      actorContext
+    );
+  }
 
   @Mutation(() => ITemplate, {
     description: 'Creates a new Template on the specified TemplatesSet.',
@@ -50,6 +120,49 @@ export class TemplatesSetResolverMutations {
       AuthorizationPrivilege.CREATE,
       `templates set create template: ${templatesSet.id}`
     );
+    const consumedDraftIDs: string[] = [];
+    const whiteboardInputs = [
+      templateData.whiteboard,
+      templateData.calloutData?.framing?.whiteboard,
+    ].filter(input => input?.draftWhiteboardID);
+    if (whiteboardInputs.length > 1) {
+      throw new ValidationException(
+        'A Template create may consume only one framing draft',
+        LogContext.TEMPLATES
+      );
+    }
+    const framingInput = whiteboardInputs[0];
+    if (framingInput?.draftWhiteboardID) {
+      if (framingInput.sourceWhiteboardID) {
+        throw new ValidationException(
+          'draftWhiteboardID and sourceWhiteboardID are mutually exclusive',
+          LogContext.WHITEBOARDS
+        );
+      }
+      const draft = await this.whiteboardDraftService.getForConsumption(
+        framingInput.draftWhiteboardID,
+        actorContext
+      );
+      consumedDraftIDs.push(draft.id);
+      framingInput.sourceWhiteboardID = draft.id;
+      framingInput.draftWhiteboardID = undefined;
+    }
+    const defaults = templateData.calloutData?.contributionDefaults;
+    if (defaults?.draftWhiteboardID) {
+      if (defaults.sourceWhiteboardID || defaults.sourceCalloutID) {
+        throw new ValidationException(
+          'draftWhiteboardID and contribution-default source fields are mutually exclusive',
+          LogContext.WHITEBOARDS
+        );
+      }
+      const draft = await this.whiteboardDraftService.getForConsumption(
+        defaults.draftWhiteboardID,
+        actorContext
+      );
+      consumedDraftIDs.push(draft.id);
+      defaults.sourceWhiteboardID = draft.id;
+      defaults.draftWhiteboardID = undefined;
+    }
     // A whiteboard template that seeds from a source whiteboard (duplicate / import) must
     // first prove the actor can READ that source before the server copies its stored
     // snapshot — mirrors the callout create path. No-op for any other template.
@@ -82,7 +195,24 @@ export class TemplatesSetResolverMutations {
       );
 
     await this.authorizationPolicyService.saveAll(authorizations);
-    return this.templateService.getTemplateOrFail(template.id);
+    const result = await this.templateService.getTemplateOrFail(template.id);
+    for (const draftID of consumedDraftIDs) {
+      try {
+        await this.whiteboardDraftService.cleanupConsumed(draftID);
+      } catch (error) {
+        this.logger.error?.(
+          {
+            message:
+              'Final Template was created but Whiteboard draft cleanup remains retryable',
+            templateID: result.id,
+            draftID,
+            error: error instanceof Error ? error.message : String(error),
+          },
+          error instanceof Error ? (error.stack ?? '') : ''
+        );
+      }
+    }
+    return result;
   }
 
   @Mutation(() => ITemplate, {

@@ -43,5 +43,9 @@ export abstract class IWhiteboard extends INameable {
 
   createdBy?: string;
 
+  // Internal lifecycle marker. NULL means this is an ordinary Whiteboard and
+  // therefore outside the draft cleanup corpus.
+  draftExpiresAt?: Date | null;
+
   callout?: ICallout;
 }

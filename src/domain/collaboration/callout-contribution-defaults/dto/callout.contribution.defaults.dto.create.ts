@@ -43,4 +43,12 @@ export class CreateCalloutContributionDefaultsInput {
   })
   @IsOptional()
   sourceCalloutID?: string;
+
+  @Field(() => UUID, {
+    nullable: true,
+    description:
+      'Use a server-owned live Whiteboard contribution-default draft. Mutually exclusive with either source field.',
+  })
+  @IsOptional()
+  draftWhiteboardID?: string;
 }
