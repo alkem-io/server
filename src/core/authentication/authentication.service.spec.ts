@@ -1,6 +1,7 @@
 import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextCacheService } from '@core/actor-context/actor.context.cache.service';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
+import type { AlkemioSessionPayload } from '@core/auth/oidc/session-store.redis';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -64,6 +65,57 @@ describe('AuthenticationService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('getActorContextFromBffPayload', () => {
+    it('creates a guest only when a signed-out request carries a name', async () => {
+      const guestContext = {
+        ...mockActorContext,
+        actorID: '',
+        isGuest: true,
+        guestName: 'José',
+      };
+      actorContextService.createGuest.mockReturnValue(guestContext);
+
+      const result = await service.getActorContextFromBffPayload(
+        null,
+        ' José '
+      );
+
+      expect(actorContextService.createGuest).toHaveBeenCalledWith('José');
+      expect(result).toBe(guestContext);
+    });
+
+    it('keeps an authenticated session authoritative over guest metadata', async () => {
+      const session = {
+        alkemio_actor_id: 'actor-1',
+        absolute_expires_at: Math.floor(Date.now() / 1000) + 3600,
+      } as AlkemioSessionPayload;
+      const authenticatedContext = { ...mockActorContext, actorID: 'actor-1' };
+      vi.spyOn(service, 'createActorContext').mockResolvedValue(
+        authenticatedContext
+      );
+
+      const result = await service.getActorContextFromBffPayload(
+        session,
+        'Mallory'
+      );
+
+      expect(service.createActorContext).toHaveBeenCalledWith('actor-1');
+      expect(actorContextService.createGuest).not.toHaveBeenCalled();
+      expect(result).toBe(authenticatedContext);
+    });
+
+    it('keeps a signed-out request without a name anonymous', async () => {
+      const anonymousContext = { ...mockActorContext, isAnonymous: true };
+      actorContextService.createAnonymous.mockReturnValue(anonymousContext);
+
+      const result = await service.getActorContextFromBffPayload(null);
+
+      expect(actorContextService.createAnonymous).toHaveBeenCalled();
+      expect(actorContextService.createGuest).not.toHaveBeenCalled();
+      expect(result).toBe(anonymousContext);
+    });
   });
 
   describe('createActorContext', () => {
