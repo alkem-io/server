@@ -1,3 +1,5 @@
+import { registerEnumType } from '@nestjs/graphql';
+
 /**
  * The kinds of resource that can block a user from deleting their own
  * account. The first four mirror the account-resource set the platform
@@ -12,3 +14,9 @@ export enum AccountDeletionBlockerKind {
   ACCOUNT_INNOVATION_HUB = 'ACCOUNT_INNOVATION_HUB',
   SOLE_ORGANIZATION_OWNER = 'SOLE_ORGANIZATION_OWNER',
 }
+
+registerEnumType(AccountDeletionBlockerKind, {
+  name: 'AccountDeletionBlockerKind',
+  description:
+    'The kind of resource blocking a user from deleting their own account.',
+});

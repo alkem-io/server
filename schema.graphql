@@ -36,6 +36,15 @@ Content of a Whiteboard as a base64-encoded Yjs-V2 document snapshot (CRDT state
 """
 scalar WhiteboardContent
 
+"""The kind of resource blocking a user from deleting their own account."""
+enum AccountDeletionBlockerKind {
+  ACCOUNT_INNOVATION_HUB
+  ACCOUNT_INNOVATION_PACK
+  ACCOUNT_SPACE
+  ACCOUNT_VIRTUAL_CONTRIBUTOR
+  SOLE_ORGANIZATION_OWNER
+}
+
 enum AccountType {
   ORGANIZATION
   USER
@@ -1188,6 +1197,29 @@ type Account implements ActorFull {
   updatedDate: DateTime!
   """The virtual contributors for this Account."""
   virtualContributors: [VirtualContributor!]!
+}
+
+"""
+One item blocking a user from deleting their own account — a space, virtual contributor, innovation pack, innovation hub, or an organization the user is the sole owner of.
+"""
+type AccountDeletionBlocker {
+  displayName: String!
+  kind: AccountDeletionBlockerKind!
+  resourceID: UUID!
+  """
+  True when the user can resolve the blocker alone, via the existing account-resources page. False for a sole-owned organization — ownership must be handed over, or support contacted.
+  """
+  selfResolvable: Boolean!
+  """Client-navigable URL of the blocking resource, when one exists."""
+  url: String
+}
+
+"""
+Accurate per-kind total, independent of whether the itemized blocker list was truncated.
+"""
+type AccountDeletionBlockerTotal {
+  kind: AccountDeletionBlockerKind!
+  total: Int!
 }
 
 type AccountLicensePlan {
@@ -3989,6 +4021,28 @@ type McpApiKeyMintResult {
   key: McpApiKey!
 }
 
+"""
+Self-scoped pre-flight read for account deletion: whether the calling user can delete their own account right now, and if not, exactly what blocks them. Computed by the same predicate the deleteUser mutation's self-branch guard uses, so the two can never drift. Not gated on session freshness — see sessionFresh.
+"""
+type MeAccountDeletionStatus {
+  """Itemized blockers, capped at 25."""
+  blockers: [AccountDeletionBlocker!]!
+  """True iff no blockers exist for the self branch."""
+  canDelete: Boolean!
+  """
+  True when the account carries a stored external billing linkage. Surfaced for transparency and captured in the audit record on deletion — never a blocker.
+  """
+  externalSubscriptionLinked: Boolean!
+  """
+  True iff the calling session currently satisfies the privileged freshness window. Advisory for client routing; the deleteUser mutation re-enforces this authoritatively at mutation time.
+  """
+  sessionFresh: Boolean!
+  """Accurate per-kind totals, independent of truncation."""
+  totals: [AccountDeletionBlockerTotal!]!
+  """True when the blocker list above was truncated at the cap."""
+  truncated: Boolean!
+}
+
 type MeConversationsResult {
   """
   All conversations (direct and group) for the current authenticated user. Client handles categorization by room type and member actor types.
@@ -4036,6 +4090,10 @@ type Memo {
 }
 
 type MeQueryResults {
+  """
+  Self-scoped pre-flight read for account deletion: whether the calling user can delete their own account right now, and if not, exactly what blocks them.
+  """
+  accountDeletion: MeAccountDeletionStatus!
   """The community applications current authenticated user can act on."""
   communityApplications(
     """The state names you want to filter on"""
