@@ -1,3 +1,4 @@
+import { SidebarWidget } from '@common/enums/sidebar.widget';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -440,6 +441,44 @@ describe('InnovationFlowService', () => {
         tagsetTemplateService.updateTagsetTemplateDefinition
       ).toHaveBeenCalled();
       expect(tagsetService.updateTagsetsSelectedValue).toHaveBeenCalled();
+    });
+
+    it('should normalize the returned state so a row missing sidebar carries the generic default', async () => {
+      const states = [
+        { id: 's-1', displayName: 'State A', sortOrder: 10 },
+        { id: 's-2', displayName: 'State B', sortOrder: 20 },
+      ];
+      const flow = {
+        id: 'flow-1',
+        states,
+        currentStateID: 's-1',
+        flowStatesTagsetTemplate: undefined,
+      } as any;
+
+      vi.mocked(repository.findOne).mockResolvedValue(flow);
+      // Simulate a row whose settings never carried a sidebar key.
+      const updatedState = {
+        id: 's-1',
+        displayName: 'State A',
+        sortOrder: 10,
+        settings: { allowNewCallouts: true },
+      } as any;
+      vi.mocked(innovationFlowStateService.update).mockResolvedValue(
+        updatedState
+      );
+      vi.mocked(repository.save).mockResolvedValue(flow);
+
+      const result = await service.updateInnovationFlowState('flow-1', {
+        innovationFlowStateID: 's-1',
+        displayName: 'State A',
+      } as any);
+
+      expect(result.settings.sidebar).toEqual([
+        'intent',
+        'createPost',
+        'applicationButton',
+        'index',
+      ]);
     });
   });
 
@@ -1104,6 +1143,281 @@ describe('InnovationFlowService', () => {
 
       // Subspace path passes the template states through untouched.
       expect(updateSpy).toHaveBeenCalledWith(flow, templateStates);
+    });
+
+    // US3-AS2/US3-AS3: the fixed-phase preservation rule governs tab identity, not the
+    // sidebar payload — a fixed slot's sidebar is sourced from the incoming template
+    // (matched to the slot by displayName), never carried over from the target's own
+    // state, and never taken from an unrelated template state by rank.
+    describe('fixed-slot sidebar sourcing (US3-AS2/US3-AS3)', () => {
+      const targetFixedStates = (ownSidebar: SidebarWidget[]) =>
+        fixedL0States.map(state => ({
+          ...state,
+          settings: {
+            allowNewCallouts: true,
+            visible: true,
+            descriptionDisplayMode: 'EXPANDED',
+            showPublishDetails: false,
+            sidebar: ownSidebar,
+          },
+        }));
+
+      it('US3-AS2: honors each template state sidebar for the fixed slots, matched by name, discarding the target own sidebar', async () => {
+        mockOwningSpaceLevel(0);
+        const flow = {
+          id: 'flow-l0',
+          states: targetFixedStates([SidebarWidget.INDEX]),
+          settings: l0Settings,
+        } as any;
+
+        const updateSpy = vi
+          .spyOn(service, 'updateInnovationFlowStates')
+          .mockResolvedValue(flow);
+
+        const templateSidebars = [
+          [SidebarWidget.EVENTS, SidebarWidget.UPDATES, SidebarWidget.INTENT],
+          [SidebarWidget.GUIDELINES, SidebarWidget.INTENT],
+          [SidebarWidget.SUBSPACE_LINKS, SidebarWidget.INTENT],
+          [SidebarWidget.ABOUT, SidebarWidget.EVENTS, SidebarWidget.INTENT],
+        ];
+        const templateStates = fixedL0States.map((state, index) => ({
+          displayName: state.displayName,
+          sortOrder: state.sortOrder,
+          settings: {
+            allowNewCallouts: true,
+            sidebar: templateSidebars[index],
+          },
+        })) as any;
+
+        await service.updateInnovationFlowStatesFromTemplate(
+          flow,
+          templateStates
+        );
+
+        const combined: any[] = updateSpy.mock.calls[0][1];
+        expect(combined.slice(0, 4).map(s => s.settings.sidebar)).toEqual(
+          templateSidebars
+        );
+      });
+
+      it('US3-AS3: leaves settings.sidebar undefined for a fixed slot whose matched template state carries no explicit sidebar (legacy template), so the create funnel applies the generic default', async () => {
+        mockOwningSpaceLevel(0);
+        const flow = {
+          id: 'flow-l0',
+          states: targetFixedStates([
+            SidebarWidget.EVENTS,
+            SidebarWidget.INTENT,
+          ]),
+          settings: l0Settings,
+        } as any;
+
+        const updateSpy = vi
+          .spyOn(service, 'updateInnovationFlowStates')
+          .mockResolvedValue(flow);
+
+        // Legacy template: same-named states, no `sidebar` key at all.
+        const templateStates = fixedL0States.map(state => ({
+          displayName: state.displayName,
+          sortOrder: state.sortOrder,
+          settings: { allowNewCallouts: true },
+        })) as any;
+
+        await service.updateInnovationFlowStatesFromTemplate(
+          flow,
+          templateStates
+        );
+
+        const combined: any[] = updateSpy.mock.calls[0][1];
+        combined.slice(0, 4).forEach(state => {
+          expect(state.settings.sidebar).toBeUndefined();
+        });
+      });
+
+      it('edge case: a template with fewer states than fixed slots leaves the uncovered slots without a name match, so those also fall through to the generic default rather than keeping the target own sidebar', async () => {
+        mockOwningSpaceLevel(0);
+        const flow = {
+          id: 'flow-l0',
+          states: targetFixedStates([
+            SidebarWidget.EVENTS,
+            SidebarWidget.INTENT,
+          ]),
+          settings: l0Settings,
+        } as any;
+
+        const updateSpy = vi
+          .spyOn(service, 'updateInnovationFlowStates')
+          .mockResolvedValue(flow);
+
+        // Only 2 template states — 'Develop' and 'Deliver' have no same-named counterpart.
+        const templateStates = [
+          {
+            displayName: 'Define',
+            sortOrder: 1,
+            settings: {
+              allowNewCallouts: true,
+              sidebar: [SidebarWidget.INTENT],
+            },
+          },
+          {
+            displayName: 'Discover',
+            sortOrder: 2,
+            settings: {
+              allowNewCallouts: true,
+              sidebar: [SidebarWidget.GUIDELINES],
+            },
+          },
+        ] as any;
+
+        await service.updateInnovationFlowStatesFromTemplate(
+          flow,
+          templateStates
+        );
+
+        const combined: any[] = updateSpy.mock.calls[0][1];
+        expect(combined[0].settings.sidebar).toEqual([SidebarWidget.INTENT]);
+        expect(combined[1].settings.sidebar).toEqual([
+          SidebarWidget.GUIDELINES,
+        ]);
+        // No same-named template counterpart for the 3rd/4th fixed slots.
+        expect(combined[2].settings.sidebar).toBeUndefined();
+        expect(combined[3].settings.sidebar).toBeUndefined();
+      });
+
+      it('pairs by name, not rank: a same-named template state delivers its sidebar to its fixed slot even when the template orders states differently', async () => {
+        mockOwningSpaceLevel(0);
+        const flow = {
+          id: 'flow-l0',
+          states: targetFixedStates([SidebarWidget.INDEX]),
+          settings: l0Settings,
+        } as any;
+
+        const updateSpy = vi
+          .spyOn(service, 'updateInnovationFlowStates')
+          .mockResolvedValue(flow);
+
+        // 'Deliver' and 'Define' sit at ranks 0 and 2 of the template — rank
+        // pairing would hand Deliver's sidebar to the Define slot and vice versa.
+        const templateStates = [
+          {
+            displayName: 'Deliver',
+            sortOrder: 1,
+            settings: {
+              allowNewCallouts: true,
+              sidebar: [SidebarWidget.EVENTS],
+            },
+          },
+          {
+            displayName: 'Extra',
+            sortOrder: 2,
+            settings: {
+              allowNewCallouts: true,
+              sidebar: [SidebarWidget.GUIDELINES],
+            },
+          },
+          {
+            displayName: 'Define',
+            sortOrder: 3,
+            settings: {
+              allowNewCallouts: true,
+              sidebar: [SidebarWidget.ABOUT],
+            },
+          },
+        ] as any;
+
+        await service.updateInnovationFlowStatesFromTemplate(
+          flow,
+          templateStates
+        );
+
+        const combined: any[] = updateSpy.mock.calls[0][1];
+        // Fixed slots keep their leading order: Define, Discover, Develop, Deliver.
+        expect(combined[0].settings.sidebar).toEqual([SidebarWidget.ABOUT]);
+        expect(combined[1].settings.sidebar).toBeUndefined();
+        expect(combined[2].settings.sidebar).toBeUndefined();
+        expect(combined[3].settings.sidebar).toEqual([SidebarWidget.EVENTS]);
+        // The non-fixed-name state is appended carrying its own sidebar.
+        expect(combined[4].displayName).toBe('Extra');
+        expect(combined[4].settings.sidebar).toEqual([
+          SidebarWidget.GUIDELINES,
+        ]);
+      });
+
+      it('never delivers an additional (non-fixed-name) template state sidebar to a fixed slot', async () => {
+        mockOwningSpaceLevel(0);
+        const flow = {
+          id: 'flow-l0',
+          states: targetFixedStates([SidebarWidget.INDEX]),
+          settings: l0Settings,
+        } as any;
+
+        const updateSpy = vi
+          .spyOn(service, 'updateInnovationFlowStates')
+          .mockResolvedValue(flow);
+
+        // Rank pairing would put Extra's sidebar on the 2nd fixed slot (Discover).
+        const templateStates = [
+          {
+            displayName: 'Define',
+            sortOrder: 1,
+            settings: { allowNewCallouts: true },
+          },
+          {
+            displayName: 'Extra',
+            sortOrder: 2,
+            settings: {
+              allowNewCallouts: true,
+              sidebar: [SidebarWidget.CONTACT_LEADS],
+            },
+          },
+        ] as any;
+
+        await service.updateInnovationFlowStatesFromTemplate(
+          flow,
+          templateStates
+        );
+
+        const combined: any[] = updateSpy.mock.calls[0][1];
+        combined.slice(0, 4).forEach(state => {
+          expect(state.settings.sidebar).toBeUndefined();
+        });
+        // Extra's sidebar appears exactly once — on the appended Extra state.
+        expect(combined[4].displayName).toBe('Extra');
+        expect(combined[4].settings.sidebar).toEqual([
+          SidebarWidget.CONTACT_LEADS,
+        ]);
+      });
+
+      it('preserves the target own allowNewCallouts/visible/descriptionDisplayMode/showPublishDetails for fixed slots — only sidebar sourcing changed', async () => {
+        mockOwningSpaceLevel(0);
+        const flow = {
+          id: 'flow-l0',
+          states: targetFixedStates([SidebarWidget.INDEX]),
+          settings: l0Settings,
+        } as any;
+
+        const updateSpy = vi
+          .spyOn(service, 'updateInnovationFlowStates')
+          .mockResolvedValue(flow);
+
+        const templateStates = fixedL0States.map(state => ({
+          displayName: state.displayName,
+          sortOrder: state.sortOrder,
+          settings: { allowNewCallouts: true, sidebar: [SidebarWidget.ABOUT] },
+        })) as any;
+
+        await service.updateInnovationFlowStatesFromTemplate(
+          flow,
+          templateStates
+        );
+
+        const combined: any[] = updateSpy.mock.calls[0][1];
+        combined.slice(0, 4).forEach(state => {
+          expect(state.settings.allowNewCallouts).toBe(true);
+          expect(state.settings.visible).toBe(true);
+          expect(state.settings.descriptionDisplayMode).toBe('EXPANDED');
+          expect(state.settings.showPublishDetails).toBe(false);
+        });
+      });
     });
   });
 });

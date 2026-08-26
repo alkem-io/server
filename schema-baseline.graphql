@@ -2645,6 +2645,10 @@ type CreateInnovationFlowStateSettingsData {
   """
   showPublishDetails: Boolean
   """
+  Optional. Ordered sidebar widgets; defaults to [INTENT, CREATE_POST, APPLICATION_BUTTON, INDEX] when omitted.
+  """
+  sidebar: [SidebarWidget!]
+  """
   Optional. Whether the phase is shown in member-facing navigation. Defaults to true when omitted.
   """
   visible: Boolean
@@ -2661,6 +2665,10 @@ input CreateInnovationFlowStateSettingsInput {
   Optional. Whether Posts in this State show publish details in the feed. Defaults to true when omitted.
   """
   showPublishDetails: Boolean
+  """
+  Optional. Ordered sidebar widgets; defaults to [INTENT, CREATE_POST, APPLICATION_BUTTON, INDEX] when omitted.
+  """
+  sidebar: [SidebarWidget!]
   """
   Optional. Whether the phase is shown in member-facing navigation. Defaults to true when omitted.
   """
@@ -3992,6 +4000,10 @@ type InnovationFlowStateSettings {
   Whether Posts in this State show publish details (publisher, publish date, avatar) in the feed. Presentation only — does not restrict access to publisher data. Default true.
   """
   showPublishDetails: Boolean!
+  """
+  Ordered widgets shown in the Space sidepanel for this State. May be empty.
+  """
+  sidebar: [SidebarWidget!]!
   """
   Whether this State/phase is shown in the member-facing navigation. Default true. UI-affordance only: it does NOT gate access to the phase content.
   """
@@ -7793,6 +7805,25 @@ input SetPlatformWellKnownVirtualContributorInput {
   wellKnown: VirtualContributorWellKnown!
 }
 
+"""
+The widgets available for the Space sidepanel, per InnovationFlow state (tab).
+"""
+enum SidebarWidget {
+  ABOUT
+  ADD_USER
+  APPLICATION_BUTTON
+  CONTACT_LEADS
+  CREATE_POST
+  CREATE_SUBSPACE
+  EVENTS
+  GUIDELINES
+  INDEX
+  INTENT
+  SUBSPACE_LINKS
+  UPDATES
+  VIRTUAL_CONTRIBUTORS
+}
+
 type Space implements ActorFull {
   """About this space."""
   about: SpaceAbout!
@@ -8865,6 +8896,10 @@ input UpdateInnovationFlowStateSettingsInput {
   Optional. Sets whether Posts in this State show publish details (publisher, publish date, avatar) in the feed; omission leaves the stored value unchanged.
   """
   showPublishDetails: Boolean
+  """
+  Optional. Ordered sidebar widgets for this State; omission leaves the stored value unchanged. Duplicates rejected; max 20 entries.
+  """
+  sidebar: [SidebarWidget!]
   """
   Optional. Sets whether the phase is shown in member-facing navigation; omission leaves the stored value unchanged.
   """

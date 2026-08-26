@@ -30,7 +30,10 @@ import { CreateInnovationFlowStateInput } from '../innovation-flow-state/dto/inn
 import { UpdateInnovationFlowStateInput } from '../innovation-flow-state/dto/innovation.flow.state.dto.update';
 import { IInnovationFlowState } from '../innovation-flow-state/innovation.flow.state.interface';
 import { InnovationFlowStateService } from '../innovation-flow-state/innovation.flow.state.service';
-import { normalizeStatesSettings } from '../innovation-flow-state/normalize.state.settings';
+import {
+  normalizeStateSettings,
+  normalizeStatesSettings,
+} from '../innovation-flow-state/normalize.state.settings';
 import { sortBySortOrder } from '../innovation-flow-state/utils/sortBySortOrder';
 import { CreateInnovationFlowInput } from './dto/innovation.flow.dto.create';
 import { DeleteStateOnInnovationFlowInput } from './dto/innovation.flow.dto.state.delete';
@@ -245,7 +248,10 @@ export class InnovationFlowService {
     }
     await this.save(innovationFlow);
 
-    return updatedState;
+    // The states loaded above are raw TypeORM rows and never go through the shared
+    // normalization helper on this path — normalize the mutation's own response so it never
+    // fails to serialize a NonNull settings field on a row the backfill hasn't reached yet.
+    return normalizeStateSettings(updatedState);
   }
 
   /**
@@ -296,11 +302,25 @@ export class InnovationFlowService {
       fixedStates.map(state => state.displayName)
     );
 
+    // The fixed-phase preservation rule governs tab identity (name, description,
+    // position), not the sidebar payload: a fixed slot's sidebar still comes from
+    // the incoming template, paired to the slot by displayName — never by rank,
+    // which would hand a fixed tab the sidebar of an unrelated template state
+    // whenever the template's ordering diverges from the fixed leading order.
+    // When the template has no same-named state, or that state carries no
+    // explicit sidebar, `settings.sidebar` is left undefined here so the shared
+    // create funnel in createInnovationFlowState applies the same generic
+    // default it would give any other state with no explicit sidebar input.
     const fixedStateInputs: CreateInnovationFlowStateInput[] = fixedStates.map(
       state => ({
         displayName: state.displayName,
         description: state.description,
-        settings: state.settings,
+        settings: {
+          ...state.settings,
+          sidebar: templateStates.find(
+            templateState => templateState.displayName === state.displayName
+          )?.settings?.sidebar,
+        },
         sortOrder: state.sortOrder,
       })
     );

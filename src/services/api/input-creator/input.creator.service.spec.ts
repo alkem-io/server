@@ -1,5 +1,6 @@
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutSelectionMode } from '@common/enums/callout.selection.mode';
+import { SidebarWidget } from '@common/enums/sidebar.widget';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
@@ -98,6 +99,56 @@ describe('InputCreatorService', () => {
         service.buildCreateInnovationFlowStateInputFromInnovationFlowState([]);
 
       expect(result).toEqual([]);
+    });
+
+    it('should copy a customized sidebar list verbatim, content and order (save-as-template leg)', () => {
+      const states = [
+        {
+          id: 's1',
+          displayName: 'Home',
+          description: 'First state',
+          settings: {
+            allowNewCallouts: true,
+            visible: true,
+            sidebar: [
+              SidebarWidget.EVENTS,
+              SidebarWidget.INTENT,
+              SidebarWidget.ABOUT,
+            ],
+          },
+          sortOrder: 0,
+        },
+      ] as any[];
+
+      const result =
+        service.buildCreateInnovationFlowStateInputFromInnovationFlowState(
+          states
+        );
+
+      expect(result[0].settings?.sidebar).toEqual([
+        SidebarWidget.EVENTS,
+        SidebarWidget.INTENT,
+        SidebarWidget.ABOUT,
+      ]);
+    });
+
+    it('should copy an empty sidebar list verbatim', () => {
+      const states = [
+        {
+          id: 's1',
+          displayName: 'Empty',
+          description: '',
+          settings: { allowNewCallouts: true, visible: true, sidebar: [] },
+          sortOrder: 0,
+        },
+      ] as any[];
+
+      const result =
+        service.buildCreateInnovationFlowStateInputFromInnovationFlowState(
+          states
+        );
+
+      expect(result[0].settings?.sidebar).toEqual([]);
     });
   });
 
