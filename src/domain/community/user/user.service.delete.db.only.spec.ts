@@ -16,7 +16,6 @@ import { AccountLookupService } from '@domain/space/account.lookup/account.looku
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
