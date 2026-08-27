@@ -17,9 +17,11 @@ import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -51,6 +53,7 @@ export class StorageBucketService {
 
   constructor(
     private documentService: DocumentService,
+    private documentAuthorizationService: DocumentAuthorizationService,
     private avatarCreatorService: AvatarCreatorService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
@@ -339,7 +342,7 @@ export class StorageBucketService {
     skipDedup = false
   ): Promise<IDocument> {
     const destination = await this.getStorageBucketOrFail(destinationBucketId, {
-      relations: {},
+      relations: { authorization: true },
     });
 
     this.validateMimeTypes(destination, sourceDocument.mimeType);
@@ -355,7 +358,8 @@ export class StorageBucketService {
           tagsetId,
           createdBy: userID || sourceDocument.createdBy || undefined,
           skipDedup: skipDedup || undefined,
-        })
+        }),
+      destination.authorization
     );
   }
 
@@ -377,7 +381,8 @@ export class StorageBucketService {
    */
   private async persistDocumentWithPreparedAuth(
     bucketId: string,
-    goCall: (authId: string, tagsetId: string) => Promise<CreateDocumentResult>
+    goCall: (authId: string, tagsetId: string) => Promise<CreateDocumentResult>,
+    parentAuthorization?: IAuthorizationPolicy
   ): Promise<IDocument> {
     let savedAuth;
     let savedTagset;
@@ -406,6 +411,17 @@ export class StorageBucketService {
           storageBucket: true,
         },
       });
+
+      // A copy creates a logical document in the destination bucket. Finish its
+      // inherited policy before its opaque file ID can escape to a whiteboard
+      // snapshot or another caller. Upload mutations apply authorization at
+      // their resolver boundary, so only copy supplies a parent here.
+      if (!result.reused && parentAuthorization) {
+        await this.documentAuthorizationService.applyAuthorizationPolicy(
+          document,
+          parentAuthorization
+        );
+      }
     } catch (error) {
       // Independent rollbacks so one cleanup failure doesn't skip the rest.
       // Bind narrowed values into const locals so the closures don't re-widen.
@@ -593,10 +609,14 @@ export class StorageBucketService {
         LogContext.STORAGE_BUCKET
       );
 
-    // First filter the documents the current user has READ privilege to
-    const readableDocuments = allDocuments.filter(document =>
-      this.hasAgentAccessToDocument(document, actorContext)
-    );
+    // Policy-less rows are internal collaboration snapshots. They are real
+    // file rows for quota and lifecycle purposes, but are not user-facing
+    // Documents and must never enter per-document authorization.
+    const readableDocuments = allDocuments
+      .filter(document => this.documentService.isUserFacingDocument(document))
+      .filter(document =>
+        this.hasAgentAccessToDocument(document, actorContext)
+      );
 
     // (a) by IDs, results in order specified by IDs
     if (args.IDs) {

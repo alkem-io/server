@@ -25,6 +25,7 @@ import { StorageBucketService } from '@domain/storage/storage-bucket/storage.buc
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
+import { CollaborationDocumentService } from '@services/collaboration-client/collaboration-document.service';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { actorContextData } from '@test/data/actorContext.mock';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -181,6 +182,7 @@ describe('WhiteboardService', () => {
   let authorizationService: AuthorizationService;
   let documentService: DocumentService;
   let storageBucketService: StorageBucketService;
+  let collaborationDocumentService: CollaborationDocumentService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -219,6 +221,7 @@ describe('WhiteboardService', () => {
     authorizationService = module.get(AuthorizationService);
     documentService = module.get(DocumentService);
     storageBucketService = module.get(StorageBucketService);
+    collaborationDocumentService = module.get(CollaborationDocumentService);
   });
 
   describe('createWhiteboard', () => {
@@ -735,7 +738,8 @@ describe('WhiteboardService', () => {
       );
 
       // Per-document READ authorized under the initiating actor, then copied into the
-      // whiteboard's OWN bucket as a target-owned copy (skipDedup=true).
+      // whiteboard's OWN bucket. File-service alone decides whether the logical
+      // copy can reuse an existing row.
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         expect.objectContaining({ id: 'doc-auth' }),
@@ -745,8 +749,7 @@ describe('WhiteboardService', () => {
       expect(storageBucketService.copyDocumentToBucket).toHaveBeenCalledWith(
         'sb-1',
         expect.objectContaining({ id: 'src-loc' }),
-        actorContext.actorID,
-        true
+        actorContext.actorID
       );
       // The STORED snapshot's asset map now points at the copied locator — the exact
       // behaviour the BinaryFileData-shaped no-op path silently skipped.
@@ -882,7 +885,7 @@ describe('WhiteboardService', () => {
           actorContext
         )
       ).rejects.toThrow('save failed');
-      // The copied (skipDedup) media is still cleaned up ...
+      // The newly-created media is still cleaned up ...
       expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith(
         'copied-loc'
       );
@@ -1206,6 +1209,63 @@ describe('WhiteboardService', () => {
       expect(result.contentPointer).toBe('snap-new');
     });
 
+    it('re-homes the source WHITEBOARD_PREVIEW visual through the new profile bucket', async () => {
+      const suppliedProfile = {
+        displayName: 'Reusable profile input',
+        visuals: [{ name: VisualType.CARD, uri: 'card-source' }],
+      };
+      whiteboardRepository.findOne!.mockResolvedValue({
+        id: 'source-wb',
+        authorization: { id: 'source-auth' },
+        profile: {
+          storageBucket: { id: SOURCE_BUCKET },
+          visuals: [
+            {
+              name: VisualType.WHITEBOARD_PREVIEW,
+              uri: 'https://alkem.io/api/private/rest/storage/document/preview-source',
+            },
+          ],
+        },
+      } as unknown as Whiteboard);
+
+      await service.createWhiteboard(
+        { sourceWhiteboardID: 'source-wb', profile: suppliedProfile },
+        mockStorageAggregator,
+        actorContext
+      );
+
+      expect(suppliedProfile.visuals).toEqual([
+        { name: VisualType.CARD, uri: 'card-source' },
+      ]);
+
+      expect(profileService.createProfile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          visuals: expect.arrayContaining([
+            { name: VisualType.CARD, uri: 'card-source' },
+            {
+              name: VisualType.WHITEBOARD_PREVIEW,
+              uri: 'https://alkem.io/api/private/rest/storage/document/preview-source',
+            },
+          ]),
+        }),
+        ProfileType.WHITEBOARD,
+        mockStorageAggregator
+      );
+      expect(
+        profileService.materializeProfileContentAndVisualsOrRollback
+      ).toHaveBeenCalledWith(
+        mockProfile,
+        expect.arrayContaining([
+          expect.objectContaining({
+            name: VisualType.WHITEBOARD_PREVIEW,
+            uri: expect.stringContaining('preview-source'),
+          }),
+        ]),
+        [VisualType.CARD, VisualType.WHITEBOARD_PREVIEW],
+        expect.any(Function)
+      );
+    });
+
     it('rejects the clone when the actor lacks READ on the source — no profile created, no snapshot written', async () => {
       mockSource({ contentPointer: 'source-ptr' });
       vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(
@@ -1389,7 +1449,38 @@ describe('WhiteboardService', () => {
       expect(fileServiceAdapter.createSnapshotInBucket).not.toHaveBeenCalled();
     });
 
-    it('copies foreign-content assets into the target bucket with skipDedup=true (never a foreign dedup row)', async () => {
+    it('RED: never compensates a file-service-reused logical row when a later asset copy fails', async () => {
+      const content = await buildAssetSnapshotBase64({
+        'file-1': 'loc-1',
+        'file-2': 'loc-2',
+      });
+      vi.mocked(documentService.getDocumentOrFail).mockImplementation(
+        async (id: any) =>
+          ({
+            id,
+            authorization: { id: `${id}-auth` },
+            storageBucket: { id: 'sb-other' },
+          }) as any
+      );
+      vi.mocked(storageBucketService.copyDocumentToBucket)
+        .mockResolvedValueOnce({ id: 'reused-row', reused: true } as any)
+        .mockRejectedValueOnce(new Error('copy failed'));
+
+      await expect(
+        service.createWhiteboard(
+          { content },
+          mockStorageAggregator,
+          actorContext
+        )
+      ).rejects.toThrow('copy failed');
+
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalledWith(
+        'reused-row'
+      );
+      expect(fileServiceAdapter.createSnapshotInBucket).not.toHaveBeenCalled();
+    });
+
+    it('delegates foreign-content deduplication to file-service', async () => {
       const content = await buildAssetSnapshotBase64({ 'file-1': 'loc-1' });
       vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
         id: 'loc-1',
@@ -1409,8 +1500,7 @@ describe('WhiteboardService', () => {
       expect(storageBucketService.copyDocumentToBucket).toHaveBeenCalledWith(
         TARGET_BUCKET,
         expect.objectContaining({ id: 'loc-1' }),
-        actorContext.actorID,
-        true
+        actorContext.actorID
       );
       expect(result.contentPointer).toBe('snap-new');
     });
@@ -1488,6 +1578,119 @@ describe('WhiteboardService', () => {
         1
       );
       expect(result.contentPointer).toBe('snap-new');
+    });
+  });
+
+  describe('server-side live Whiteboard replacement', () => {
+    it('authorizes both ends and replaces the live room from an ID-only source', async () => {
+      const sourceContent = await buildShapeSnapshotBase64();
+      whiteboardRepository
+        .findOne!.mockResolvedValueOnce({
+          id: 'target-wb',
+          authorization: { id: 'target-auth' },
+          profile: { storageBucket: { id: 'target-bucket' } },
+        } as unknown as Whiteboard)
+        .mockResolvedValueOnce({
+          id: 'source-wb',
+          authorization: { id: 'source-auth' },
+          profile: { storageBucket: { id: 'source-bucket' }, visuals: [] },
+        } as unknown as Whiteboard)
+        .mockResolvedValueOnce({
+          id: 'source-wb',
+          contentPointer: 'source-pointer',
+        } as unknown as Whiteboard);
+      vi.mocked(fileServiceAdapter.getContentBatch).mockResolvedValue([
+        {
+          id: 'source-pointer',
+          found: true,
+          contentBase64: sourceContent,
+        },
+      ]);
+      let resultingElementIDs: string[] = [];
+      vi.mocked(collaborationDocumentService.mutate).mockImplementation(
+        async (_id: string, _type: string, _actor: string, mutate: any) => {
+          const doc = new Y.Doc();
+          await mutate(doc);
+          const fork: any = await whiteboardFork.loadWhiteboardFork();
+          const scene = new fork.Scene(undefined, { doc });
+          resultingElementIDs = scene
+            .getElementsIncludingDeleted()
+            .filter((element: any) => !element.isDeleted)
+            .map((element: any) => element.id);
+          scene.destroy();
+          doc.destroy();
+          return undefined as never;
+        }
+      );
+
+      const result = await service.replaceContentFromSource(
+        'target-wb',
+        'source-wb',
+        actorContext
+      );
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        expect.objectContaining({ id: 'target-auth' }),
+        AuthorizationPrivilege.UPDATE_CONTENT,
+        expect.any(String)
+      );
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        expect.objectContaining({ id: 'source-auth' }),
+        AuthorizationPrivilege.READ,
+        expect.any(String)
+      );
+      expect(collaborationDocumentService.mutate).toHaveBeenCalledWith(
+        'target-wb',
+        'whiteboard',
+        actorContext.actorID,
+        expect.any(Function)
+      );
+      expect(resultingElementIDs).toHaveLength(1);
+      expect(result).toMatchObject({ id: 'target-wb' });
+    });
+  });
+
+  describe('non-binary content availability', () => {
+    it('reports visible legacy and canonical scenes without returning their bytes', async () => {
+      const canonical = await buildShapeSnapshotBase64();
+      const legacy = JSON.stringify({
+        type: 'excalidraw',
+        elements: [{ id: 'legacy-shape', type: 'rectangle' }],
+        appState: {},
+        files: {},
+      });
+
+      await expect(service.hasVisibleContent(canonical)).resolves.toBe(true);
+      await expect(service.hasVisibleContent(legacy)).resolves.toBe(true);
+      await expect(service.hasVisibleContent(undefined)).resolves.toBe(false);
+      await expect(service.hasVisibleContent('not-content')).resolves.toBe(
+        false
+      );
+    });
+  });
+
+  describe('materialized media cleanup', () => {
+    it('logs failed deletions while keeping cleanup best-effort', async () => {
+      const cleanupError = new Error('file-service unavailable');
+      vi.mocked(fileServiceAdapter.deleteDocument)
+        .mockResolvedValueOnce(undefined as never)
+        .mockRejectedValueOnce(cleanupError);
+
+      await expect(
+        service.deleteMaterializedContentDocuments(['deleted', 'orphaned'])
+      ).resolves.toBeUndefined();
+
+      expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledTimes(2);
+      expect(MockWinstonProvider.useValue.warn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Failed to clean up materialized whiteboard media document',
+          documentId: 'orphaned',
+          error: String(cleanupError),
+        }),
+        expect.any(String)
+      );
     });
   });
 });

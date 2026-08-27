@@ -1,4 +1,5 @@
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import {
   DEFAULT_ALLOWED_MIME_TYPES,
   MimeFileType,
@@ -12,6 +13,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -83,6 +85,7 @@ describe('StorageBucketService', () => {
   let _documentRepository: Repository<Document>;
   let profileRepository: Repository<Profile>;
   let documentService: DocumentService;
+  let documentAuthorizationService: DocumentAuthorizationService;
   let authorizationPolicyService: AuthorizationPolicyService;
   let authorizationService: AuthorizationService;
   let avatarCreatorService: AvatarCreatorService;
@@ -114,6 +117,12 @@ describe('StorageBucketService', () => {
             deleteDocument: vi.fn(),
           },
         },
+        {
+          provide: DocumentAuthorizationService,
+          useValue: {
+            applyAuthorizationPolicy: vi.fn(),
+          },
+        },
       ],
     })
       .useMocker(defaultMockerFactory)
@@ -130,6 +139,12 @@ describe('StorageBucketService', () => {
       getRepositoryToken(Profile)
     );
     documentService = module.get<DocumentService>(DocumentService);
+    (documentService.isUserFacingDocument as Mock).mockImplementation(
+      document => Boolean(document.authorization)
+    );
+    documentAuthorizationService = module.get<DocumentAuthorizationService>(
+      DocumentAuthorizationService
+    );
     authorizationPolicyService = module.get<AuthorizationPolicyService>(
       AuthorizationPolicyService
     );
@@ -723,6 +738,115 @@ describe('StorageBucketService', () => {
       expect(tagsetService.removeTagset).not.toHaveBeenCalled();
     });
 
+    it('applies the destination bucket authorization before returning a fresh copied document', async () => {
+      const inheritedReadRule = {
+        name: 'destination-read',
+        grantedPrivileges: [AuthorizationPrivilege.READ],
+        criterias: [],
+        cascade: true,
+      };
+      const destinationAuthorization = {
+        id: 'bucket-auth',
+        credentialRules: [inheritedReadRule],
+        privilegeRules: [],
+      };
+      const bucket = mockStorageBucket({
+        id: 'bucket-dst',
+        authorization: destinationAuthorization as any,
+      });
+      const source = makeSourceDoc();
+      const copiedDocument = mockDocument({
+        id: 'doc-new',
+        createdBy: 'user-caller',
+        authorization: {
+          id: 'doc-auth',
+          type: AuthorizationPolicyType.DOCUMENT,
+          credentialRules: [],
+          privilegeRules: [],
+        } as any,
+        tagset: {
+          id: 'tagset-saved',
+          name: 'default',
+          tags: [],
+          authorization: {
+            id: 'tagset-auth',
+            credentialRules: [],
+            privilegeRules: [],
+          },
+        } as any,
+      });
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset-saved' });
+      (fileServiceAdapter.copyDocument as Mock).mockResolvedValue({
+        id: 'doc-new',
+        externalID: 'ext-shared',
+        mimeType: MimeTypeVisual.PNG,
+        size: 1234,
+        reused: false,
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(
+        copiedDocument
+      );
+      (
+        authorizationPolicyService.inheritParentAuthorization as Mock
+      ).mockImplementation((child: any, parent: any) => ({
+        ...child,
+        credentialRules: [...(parent?.credentialRules ?? [])],
+        privilegeRules: [...(parent?.privilegeRules ?? [])],
+      }));
+      (
+        authorizationPolicyService.createCredentialRule as Mock
+      ).mockImplementation((grantedPrivileges, criterias, name) => ({
+        name,
+        grantedPrivileges,
+        criterias,
+        cascade: true,
+      }));
+      (
+        authorizationPolicyService.appendCredentialAuthorizationRules as Mock
+      ).mockImplementation((authorization: any, rules: any[]) => ({
+        ...authorization,
+        credentialRules: [...authorization.credentialRules, ...rules],
+      }));
+      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
+      const realDocumentAuthorizationService = new DocumentAuthorizationService(
+        authorizationPolicyService
+      );
+      (
+        documentAuthorizationService.applyAuthorizationPolicy as Mock
+      ).mockImplementation(
+        realDocumentAuthorizationService.applyAuthorizationPolicy.bind(
+          realDocumentAuthorizationService
+        )
+      );
+
+      const result = await service.copyDocumentToBucket(
+        'bucket-dst',
+        source,
+        'user-caller'
+      );
+
+      expect(
+        documentAuthorizationService.applyAuthorizationPolicy
+      ).toHaveBeenCalledWith(copiedDocument, destinationAuthorization);
+      expect(result.authorization?.credentialRules).toEqual([
+        inheritedReadRule,
+        expect.objectContaining({
+          grantedPrivileges: [
+            AuthorizationPrivilege.CREATE,
+            AuthorizationPrivilege.READ,
+            AuthorizationPrivilege.UPDATE,
+            AuthorizationPrivilege.DELETE,
+          ],
+          criterias: [expect.objectContaining({ resourceID: 'user-caller' })],
+        }),
+      ]);
+    });
+
     it('releases pre-created auth + tagset when Go responds reused:true', async () => {
       // Same dedup-reuse contract as createDocument: when Go returns an
       // existing row, our pre-created auth/tagset are orphans and must be
@@ -943,6 +1067,86 @@ describe('StorageBucketService', () => {
       );
 
       expect(result).toEqual([doc1, doc2]);
+    });
+
+    it('omits policy-less internal files before authorizing user-facing documents', async () => {
+      const internalSnapshot = mockDocument({
+        id: 'snapshot-1',
+        authorization: undefined,
+        tagset: undefined,
+      });
+      const document = mockDocument({ id: 'document-1' });
+      const bucket = mockStorageBucket({
+        id: 'bucket-mixed',
+        documents: [internalSnapshot, document],
+      });
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationService.isAccessGranted as Mock).mockImplementation(
+        (_actorContext, authorization) => {
+          if (!authorization) {
+            throw new Error('authorization must not run for internal files');
+          }
+          return true;
+        }
+      );
+
+      const result = await service.getFilteredDocuments(
+        bucket,
+        {},
+        actorContext
+      );
+
+      expect(result).toEqual([document]);
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledTimes(1);
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        actorContext,
+        document.authorization,
+        AuthorizationPrivilege.READ
+      );
+    });
+
+    it('returns an empty collection when a bucket contains only policy-less internal files', async () => {
+      const internalSnapshot = mockDocument({
+        id: 'snapshot-only',
+        authorization: undefined,
+        tagset: undefined,
+      });
+      const bucket = mockStorageBucket({
+        id: 'bucket-internal-only',
+        documents: [internalSnapshot],
+      });
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+
+      const result = await service.getFilteredDocuments(
+        bucket,
+        {},
+        actorContext
+      );
+
+      expect(result).toEqual([]);
+      expect(authorizationService.isAccessGranted).not.toHaveBeenCalled();
+    });
+
+    it('fails an ID lookup for a policy-less internal file without authorizing it', async () => {
+      const internalSnapshot = mockDocument({
+        id: 'snapshot-by-id',
+        authorization: undefined,
+        tagset: undefined,
+      });
+      const bucket = mockStorageBucket({
+        id: 'bucket-internal-id',
+        documents: [internalSnapshot],
+      });
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+
+      await expect(
+        service.getFilteredDocuments(
+          bucket,
+          { IDs: [internalSnapshot.id] },
+          actorContext
+        )
+      ).rejects.toThrow(EntityNotFoundException);
+      expect(authorizationService.isAccessGranted).not.toHaveBeenCalled();
     });
 
     it('should filter out documents the agent does not have READ access to', async () => {

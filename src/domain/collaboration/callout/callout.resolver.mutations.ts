@@ -58,6 +58,7 @@ import { ICollaboraDocument } from '../collabora-document/collabora.document.int
 import { ImportCollaboraDocumentInput } from '../collabora-document/dto/collabora.document.dto.import';
 import { CollaborationLicenseService } from '../collaboration/collaboration.service.license';
 import { ILink } from '../link/link.interface';
+import { CalloutContributionDefaultSourceService } from './callout.contribution.default.source.service';
 import { ICallout } from './callout.interface';
 import { CalloutService } from './callout.service';
 import { CalloutAuthorizationService } from './callout.service.authorization';
@@ -89,6 +90,7 @@ export class CalloutResolverMutations {
     private readonly authorizationService: AuthorizationService,
     private readonly authorizationPolicyService: AuthorizationPolicyService,
     private readonly calloutService: CalloutService,
+    private readonly contributionDefaultSourceService: CalloutContributionDefaultSourceService,
     private readonly calloutAuthorizationService: CalloutAuthorizationService,
     private readonly roomResolverService: RoomResolverService,
     private readonly contributionAuthorizationService: CalloutContributionAuthorizationService,
@@ -165,6 +167,10 @@ export class CalloutResolverMutations {
       callout.authorization,
       AuthorizationPrivilege.UPDATE,
       `update callout: ${callout.id}`
+    );
+    await this.contributionDefaultSourceService.prepare(
+      calloutData.contributionDefaults,
+      actorContext
     );
 
     // CONTRIBUTORS framing is admin-only and collaboration-only for LIVE callouts

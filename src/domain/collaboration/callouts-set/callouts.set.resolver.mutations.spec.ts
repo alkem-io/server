@@ -8,12 +8,14 @@ import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
+import { WhiteboardDraftService } from '@domain/common/whiteboard-draft';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { Readable } from 'stream';
+import { CalloutContributionDefaultSourceService } from '../callout/callout.contribution.default.source.service';
 import { CalloutService } from '../callout/callout.service';
 import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
 import { CalloutsSetResolverMutations } from './callouts.set.resolver.mutations';
@@ -23,11 +25,13 @@ describe('CalloutsSetResolverMutations', () => {
   let resolver: CalloutsSetResolverMutations;
   let calloutsSetService: CalloutsSetService;
   let calloutService: CalloutService;
+  let contributionDefaultSourceService: CalloutContributionDefaultSourceService;
   let authorizationService: AuthorizationService;
   let _authorizationPolicyService: AuthorizationPolicyService;
   let calloutAuthorizationService: CalloutAuthorizationService;
   let configService: ConfigService;
   let whiteboardService: WhiteboardService;
+  let whiteboardDraftService: WhiteboardDraftService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -45,16 +49,61 @@ describe('CalloutsSetResolverMutations', () => {
     resolver = module.get(CalloutsSetResolverMutations);
     calloutsSetService = module.get(CalloutsSetService);
     calloutService = module.get(CalloutService);
+    contributionDefaultSourceService = module.get(
+      CalloutContributionDefaultSourceService
+    );
     authorizationService = module.get(AuthorizationService);
     _authorizationPolicyService = module.get(AuthorizationPolicyService);
     calloutAuthorizationService = module.get(CalloutAuthorizationService);
     configService = module.get(ConfigService);
     whiteboardService = module.get(WhiteboardService);
+    whiteboardDraftService = module.get(WhiteboardDraftService);
+    const releaseDraftLock = vi.fn();
+    vi.mocked(whiteboardDraftService.acquireForConsumption).mockResolvedValue({
+      drafts: new Map(),
+      markConsumed: vi.fn(),
+      complete: vi.fn(),
+      release: releaseDraftLock,
+      [Symbol.asyncDispose]: releaseDraftLock,
+    });
     vi.mocked(configService.get).mockReturnValue(5000 as any);
   });
 
   it('should be defined', () => {
     expect(resolver).toBeDefined();
+  });
+
+  describe('createWhiteboardDraftOnCalloutsSet', () => {
+    it('requires READ on a source Whiteboard before materializing a draft', async () => {
+      vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue({
+        id: 'cs-1',
+        authorization: { id: 'auth-cs' },
+      } as any);
+      vi.mocked(whiteboardService.getWhiteboardOrFail).mockResolvedValue({
+        id: 'source-wb-1',
+        authorization: { id: 'auth-source' },
+      } as any);
+      vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(
+        (_actor, _authorization, privilege) => {
+          if (privilege === AuthorizationPrivilege.READ) {
+            throw new ForbiddenException('denied', LogContext.AUTH);
+          }
+          return true as never;
+        }
+      );
+
+      await expect(
+        resolver.createWhiteboardDraftOnCalloutsSet(
+          { actorID: 'user-1' } as any,
+          {
+            calloutsSetID: 'cs-1',
+            sourceWhiteboardID: 'source-wb-1',
+          } as any
+        )
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(whiteboardDraftService.materialize).not.toHaveBeenCalled();
+    });
   });
 
   describe('createCalloutOnCalloutsSet', () => {
@@ -206,6 +255,265 @@ describe('CalloutsSetResolverMutations', () => {
       ).rejects.toBe(reachedDelegate);
 
       expect(whiteboardService.getWhiteboardOrFail).not.toHaveBeenCalled();
+    });
+
+    it('copies an internal Whiteboard default from a source Callout by id before delegating', async () => {
+      const calloutsSet = framingCloneCalloutsSet();
+      vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
+        calloutsSet
+      );
+      vi.mocked(contributionDefaultSourceService.prepare).mockImplementation(
+        async defaults => {
+          Object.assign(defaults ?? {}, {
+            whiteboardContent: 'canonical-internal',
+            sourceStorageBucketID: 'source-bucket',
+          });
+        }
+      );
+      const reachedDelegate = new Error('reached-delegate-sentinel');
+      vi.mocked(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).mockRejectedValue(reachedDelegate);
+      const input = {
+        calloutsSetID: 'cs-1',
+        contributionDefaults: { sourceCalloutID: 'source-callout' },
+      } as any;
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await expect(
+        resolver.createCalloutOnCalloutsSet(actorContext, input)
+      ).rejects.toBe(reachedDelegate);
+
+      expect(contributionDefaultSourceService.prepare).toHaveBeenCalledWith(
+        input.contributionDefaults,
+        actorContext
+      );
+      expect(input.contributionDefaults).toMatchObject({
+        sourceCalloutID: 'source-callout',
+        whiteboardContent: 'canonical-internal',
+        sourceStorageBucketID: 'source-bucket',
+      });
+    });
+
+    it('rejects selecting both a source Whiteboard and a source Callout for one default', async () => {
+      vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
+        framingCloneCalloutsSet()
+      );
+      vi.mocked(contributionDefaultSourceService.prepare).mockRejectedValue(
+        new ValidationException('mutually exclusive', LogContext.WHITEBOARDS)
+      );
+
+      await expect(
+        resolver.createCalloutOnCalloutsSet(
+          { actorID: 'user-1' } as any,
+          {
+            calloutsSetID: 'cs-1',
+            contributionDefaults: {
+              sourceWhiteboardID: 'source-whiteboard',
+              sourceCalloutID: 'source-callout',
+            },
+          } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(contributionDefaultSourceService.prepare).toHaveBeenCalled();
+      expect(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).not.toHaveBeenCalled();
+    });
+
+    it('uses an owned draft as a server-side source and leaves it intact when final creation fails', async () => {
+      const calloutsSet = framingCloneCalloutsSet();
+      vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
+        calloutsSet
+      );
+      const draft = { id: 'draft-whiteboard-1' } as any;
+      const complete = vi.fn();
+      const release = vi.fn();
+      vi.mocked(whiteboardDraftService.acquireForConsumption).mockResolvedValue(
+        {
+          drafts: new Map([[draft.id, draft]]),
+          markConsumed: vi.fn(),
+          complete,
+          release,
+          [Symbol.asyncDispose]: release,
+        }
+      );
+      const failed = new Error('final create failed');
+      vi.mocked(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).mockRejectedValue(failed);
+      const input = {
+        calloutsSetID: calloutsSet.id,
+        framing: {
+          type: CalloutFramingType.WHITEBOARD,
+          whiteboard: { draftWhiteboardID: 'draft-whiteboard-1' },
+        },
+      } as any;
+      const actor = { actorID: 'user-1' } as any;
+
+      await expect(
+        resolver.createCalloutOnCalloutsSet(actor, input)
+      ).rejects.toBe(failed);
+
+      expect(whiteboardDraftService.acquireForConsumption).toHaveBeenCalledWith(
+        ['draft-whiteboard-1'],
+        actor
+      );
+      expect(input.framing.whiteboard).toEqual({
+        draftWhiteboardID: undefined,
+        sourceWhiteboardID: draft.id,
+      });
+      expect(complete).not.toHaveBeenCalled();
+      expect(release).toHaveBeenCalledOnce();
+    });
+
+    it('does not consume a nullable GraphQL draft ID', async () => {
+      const calloutsSet = framingCloneCalloutsSet();
+      vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
+        calloutsSet
+      );
+      vi.mocked(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).mockRejectedValue(new Error('stop after draft acquisition'));
+
+      await expect(
+        resolver.createCalloutOnCalloutsSet(
+          { actorID: 'user-1' } as any,
+          {
+            calloutsSetID: calloutsSet.id,
+            framing: {
+              type: CalloutFramingType.WHITEBOARD,
+              whiteboard: { draftWhiteboardID: null },
+            },
+          } as any
+        )
+      ).rejects.toThrow('stop after draft acquisition');
+
+      expect(whiteboardDraftService.acquireForConsumption).toHaveBeenCalledWith(
+        [],
+        { actorID: 'user-1' }
+      );
+    });
+
+    it('deletes a consumed draft before releasing the final-callout lock', async () => {
+      const calloutsSet = framingCloneCalloutsSet();
+      const callout = {
+        id: 'callout-1',
+        nameID: 'test-callout',
+        settings: { visibility: CalloutVisibility.DRAFT },
+      } as any;
+      vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
+        calloutsSet
+      );
+      vi.mocked(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).mockResolvedValue(callout);
+      vi.mocked(calloutService.save).mockResolvedValue(callout);
+      vi.mocked(calloutService.getStorageBucket).mockResolvedValue({
+        id: 'sb-1',
+      } as any);
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(
+        calloutAuthorizationService.applyAuthorizationPolicy
+      ).mockResolvedValue([]);
+      const order: string[] = [];
+      const complete = vi.fn(async () => {
+        order.push('complete');
+      });
+      const release = vi.fn(async () => {
+        order.push('release');
+      });
+      vi.mocked(whiteboardDraftService.acquireForConsumption).mockResolvedValue(
+        {
+          drafts: new Map([
+            ['draft-whiteboard-1', { id: 'draft-whiteboard-1' } as any],
+          ]),
+          markConsumed: vi.fn(async () => {
+            order.push('markConsumed');
+          }),
+          complete,
+          release,
+          [Symbol.asyncDispose]: release,
+        }
+      );
+      const input = {
+        calloutsSetID: calloutsSet.id,
+        framing: {
+          type: CalloutFramingType.WHITEBOARD,
+          whiteboard: { draftWhiteboardID: 'draft-whiteboard-1' },
+        },
+      } as any;
+
+      await resolver.createCalloutOnCalloutsSet(
+        { actorID: 'user-1' } as any,
+        input
+      );
+
+      expect(order).toEqual(['markConsumed', 'complete', 'release']);
+    });
+
+    it('does not create a duplicate after a post-persistence failure', async () => {
+      const calloutsSet = framingCloneCalloutsSet();
+      const callout = {
+        id: 'callout-1',
+        nameID: 'test-callout',
+        settings: { visibility: CalloutVisibility.DRAFT },
+      } as any;
+      vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
+        calloutsSet
+      );
+      vi.mocked(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).mockResolvedValue(callout);
+      vi.mocked(calloutService.save).mockResolvedValue(callout);
+      const temporaryStorageService = (resolver as any).temporaryStorageService;
+      vi.mocked(
+        temporaryStorageService.moveTemporaryDocuments
+      ).mockRejectedValue(new Error('post-persistence integration failed'));
+      let consumed = false;
+      vi.mocked(
+        whiteboardDraftService.acquireForConsumption
+      ).mockImplementation(async () => {
+        if (consumed) {
+          throw new ValidationException(
+            'Whiteboard draft has expired',
+            LogContext.WHITEBOARDS
+          );
+        }
+        const release = vi.fn();
+        return {
+          drafts: new Map([
+            ['draft-whiteboard-1', { id: 'draft-whiteboard-1' } as any],
+          ]),
+          markConsumed: vi.fn(async () => {
+            consumed = true;
+          }),
+          complete: vi.fn(),
+          release,
+          [Symbol.asyncDispose]: release,
+        };
+      });
+      const input = () =>
+        ({
+          calloutsSetID: calloutsSet.id,
+          framing: {
+            type: CalloutFramingType.WHITEBOARD,
+            whiteboard: { draftWhiteboardID: 'draft-whiteboard-1' },
+          },
+        }) as any;
+      const actor = { actorID: 'user-1' } as any;
+
+      await expect(
+        resolver.createCalloutOnCalloutsSet(actor, input())
+      ).rejects.toThrow('post-persistence integration failed');
+      await expect(
+        resolver.createCalloutOnCalloutsSet(actor, input())
+      ).rejects.toThrow('Whiteboard draft has expired');
+
+      expect(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).toHaveBeenCalledOnce();
     });
 
     it('should trigger notifications and activity when published on COLLABORATION type', async () => {

@@ -61,8 +61,8 @@ importers:
         specifier: ^8.12.2
         version: 8.19.1
       '@excalidraw-yjs/element':
-        specifier: 0.5.0
-        version: 0.5.0(yjs@13.6.27)
+        specifier: 0.5.2
+        version: 0.5.2(yjs@13.6.27)
       '@golevelup/nestjs-rabbitmq':
         specifier: ^6.1.0
         version: 6.1.0(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.0)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@10.4.20)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -1178,20 +1178,20 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@excalidraw-yjs/common@0.5.0':
-    resolution: {integrity: sha512-an83/zqIWVpwq1hEitnt0GnJo/vjLEeS2IDG65fQ1yTKY2yq7q00tgWZxGllSvWLJcX9+Y6z07e+Qvg/1syiLw==}
+  '@excalidraw-yjs/common@0.5.2':
+    resolution: {integrity: sha512-zGydAF2Rhewxb6b++S2dVm16M4l8HRlH6DG1/Ox3hD0s317TRFjMtZJfCjGCsC6HORA4IlUI5wlkwYFDTnwjRg==}
 
-  '@excalidraw-yjs/element@0.5.0':
-    resolution: {integrity: sha512-qF1Qa+HdgKVwx4q/Z/Xax6HBlybNHeZ/h9P8jZOT/s6ihEgD//KK9b8++0m5oEaX3kT85d59IXxvfxE6AieePw==}
+  '@excalidraw-yjs/element@0.5.2':
+    resolution: {integrity: sha512-3SlXumkQ5dVqKz2WFUxD+kEJoqtNdy35kVeFL0CEnBkaVwvD17EJnWQw/bKKnJvlWmJHtFBIIYEC1QNvs9ViBg==}
     peerDependencies:
       yjs: ^13.6.27
 
-  '@excalidraw-yjs/fractional-indexing@0.5.0':
-    resolution: {integrity: sha512-nmdO/6iROFTdoqhHnwefeziqc0sINanfMRFslsIgIwIdE0y4DOAiwmMLFslcHxwjn3yYhKoyZaHzlyfkWs/ckg==}
+  '@excalidraw-yjs/fractional-indexing@0.5.2':
+    resolution: {integrity: sha512-+kHb4JYOiljxflKXk+BEEc0oEneh7VVCxiR0uO9zh6dlqHmP4XWKNrKiv0zyGgM/vv+Lw2nbElcfOMT9J1yv2Q==}
     engines: {node: ^14.13.1 || >=16.0.0}
 
-  '@excalidraw-yjs/math@0.5.0':
-    resolution: {integrity: sha512-UjxIYEC6kqi/yYF5ngMILaX9vj0vBnKPspnLiZFAV/B4cvIKfEhJjuuXhoFE6LNUXsprb7PLC0DxNTXdf72R4A==}
+  '@excalidraw-yjs/math@0.5.2':
+    resolution: {integrity: sha512-+g5VcBUFSGJOFkV5FOmXFJMn6IQAZewXoR6QBfKaNGAA88stF4o56/UuyF+6d8I4UPzUx/seg0z8zgRmScx8AA==}
 
   '@exodus/bytes@1.9.0':
     resolution: {integrity: sha512-lagqsvnk09NKogQaN/XrtlWeUF8SRhT12odMvbTIIaVObqzwAogL6jhR4DAp0gPuKoM1AOVrKUshJpRdpMFrww==}
@@ -7401,21 +7401,21 @@ snapshots:
   '@esbuild/win32-x64@0.27.2':
     optional: true
 
-  '@excalidraw-yjs/common@0.5.0':
+  '@excalidraw-yjs/common@0.5.2':
     dependencies:
-      '@excalidraw-yjs/math': 0.5.0
+      '@excalidraw-yjs/math': 0.5.2
       tinycolor2: 1.6.0
 
-  '@excalidraw-yjs/element@0.5.0(yjs@13.6.27)':
+  '@excalidraw-yjs/element@0.5.2(yjs@13.6.27)':
     dependencies:
-      '@excalidraw-yjs/common': 0.5.0
-      '@excalidraw-yjs/fractional-indexing': 0.5.0
-      '@excalidraw-yjs/math': 0.5.0
+      '@excalidraw-yjs/common': 0.5.2
+      '@excalidraw-yjs/fractional-indexing': 0.5.2
+      '@excalidraw-yjs/math': 0.5.2
       yjs: 13.6.27
 
-  '@excalidraw-yjs/fractional-indexing@0.5.0': {}
+  '@excalidraw-yjs/fractional-indexing@0.5.2': {}
 
-  '@excalidraw-yjs/math@0.5.0': {}
+  '@excalidraw-yjs/math@0.5.2': {}
 
   '@exodus/bytes@1.9.0(@noble/hashes@1.8.0)':
     optionalDependencies:

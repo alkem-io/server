@@ -31,11 +31,6 @@ scalar Upload
 """A uuid identifier. Length 36 characters."""
 scalar UUID
 
-"""
-Content of a Whiteboard as a base64-encoded Yjs-V2 document snapshot (CRDT state, not an Excalidraw scene).
-"""
-scalar WhiteboardContent
-
 """The kind of resource blocking a user from deleting their own account."""
 enum AccountDeletionBlockerKind {
   ACCOUNT_INNOVATION_HUB
@@ -1956,8 +1951,10 @@ type CalloutContributionDefaults {
   postDescription: Markdown
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
-  """The default whiteboard content for whiteboard responses."""
-  whiteboardContent: WhiteboardContent
+  """
+  Whether this Callout has a non-empty default for Whiteboard contributions.
+  """
+  whiteboardContentAvailable: Boolean!
 }
 
 type CalloutContributionsCountOutput {
@@ -2300,6 +2297,10 @@ type CollaborationMigrationResult {
   flaggedDocuments: [CollaborationMigrationIssue!]!
   migrated: Int!
   total: Int!
+  """
+  Legacy Whiteboard contribution defaults without a complete owning Callout path.
+  """
+  unattached: Int!
 }
 
 type Communication {
@@ -2653,9 +2654,20 @@ type CreateCalloutContributionData {
 type CreateCalloutContributionDefaultsData {
   """The default title to use for new contributions."""
   defaultDisplayName: String
+  """
+  Use a server-owned live Whiteboard contribution-default draft. Mutually exclusive with either source field.
+  """
+  draftWhiteboardID: UUID
   """The default description to use for new Post contributions."""
   postDescription: Markdown
-  whiteboardContent: WhiteboardContent
+  """
+  Copy the internal Whiteboard contribution default from this source Callout. Mutually exclusive with sourceWhiteboardID.
+  """
+  sourceCalloutID: UUID
+  """
+  Seed the default from an existing Whiteboard. The server copies its content and media into the owning Callout bucket; the source id is not persisted.
+  """
+  sourceWhiteboardID: UUID
 }
 
 type CreateCalloutContributorsMapViewData {
@@ -2917,14 +2929,17 @@ type CreateVisualOnProfileData {
 }
 
 type CreateWhiteboardData {
-  content: WhiteboardContent
+  """
+  Use a server-owned live Whiteboard draft as the trusted source for final materialization. Mutually exclusive with sourceWhiteboardID.
+  """
+  draftWhiteboardID: UUID
   """A readable identifier, unique within the containing scope."""
   nameID: NameID
   """The preview settings for the whiteboard."""
   previewSettings: CreateWhiteboardPreviewSettingsData
   profile: CreateProfileData
   """
-  Seed the new Whiteboard from the stored content of an existing Whiteboard (server-side copy). Mutually exclusive with `content` — supply exactly one.
+  Seed the new Whiteboard from the stored content of an existing Whiteboard through a server-side authorized copy. Omission creates an empty Whiteboard.
   """
   sourceWhiteboardID: UUID
 }
@@ -4444,6 +4459,14 @@ type Mutation {
   createUser(userData: CreateUserInput!): User!
   """Creates a new VirtualContributor on an Account."""
   createVirtualContributor(virtualContributorData: CreateVirtualContributorOnAccountInput!): VirtualContributor!
+  """
+  Materializes a server-owned live Whiteboard draft for a Callout form. Content remains on the collaboration transport; GraphQL returns identifiers only.
+  """
+  createWhiteboardDraftOnCalloutsSet(draftData: CreateWhiteboardDraftOnCalloutsSetInput!): UUID!
+  """
+  Materializes a server-owned live Whiteboard draft for a Template form. GraphQL returns identifiers only.
+  """
+  createWhiteboardDraftOnTemplatesSet(draftData: CreateWhiteboardDraftOnTemplatesSetInput!): UUID!
   """Creates an account in Wingback"""
   createWingbackAccount(accountID: UUID!): String!
   """Removes the specified Application."""
@@ -4509,6 +4532,10 @@ type Mutation {
   """Deletes the specified Whiteboard."""
   deleteWhiteboard(whiteboardData: DeleteWhiteboardInput!): Whiteboard!
   """
+  Idempotently discards a server-owned live Whiteboard draft through the canonical Whiteboard deletion path.
+  """
+  deleteWhiteboardDraft(whiteboardID: UUID!): UUID!
+  """
   Re-enable a previously disabled push notification subscription for the current user.
   """
   enablePushSubscription(subscriptionData: UnsubscribeFromPushNotificationsInput!): PushSubscription!
@@ -4557,7 +4584,7 @@ type Mutation {
   """
   migrateLegacyMemoContent: CollaborationMigrationResult!
   """
-  Migrates all pending legacy whiteboard content. Idempotent: repeated calls process only rows whose migrated marker is false.
+  Migrates pending legacy Whiteboard documents and independently normalizes every legacy Whiteboard contribution default, including defaults stored by Callout templates. Idempotent: repeated calls process only unmigrated documents and non-canonical defaults.
   """
   migrateLegacyWhiteboardContent: CollaborationMigrationResult!
   """
@@ -4638,6 +4665,10 @@ type Mutation {
   Replace the backing file of an existing CollaboraDocument in place, preserving its identity. Requires UPDATE on the document. The replacement must be an allowed OfficeDocs format, within the size cap, and the SAME document type as the current file. Refused while the document is being edited.
   """
   replaceCollaboraDocument(file: Upload!, replaceData: ReplaceCollaboraDocumentInput!): CollaboraDocument!
+  """
+  Replace a Whiteboard from another Whiteboard through the live collaboration room. Content and media are copied server-side; snapshot bytes never pass through GraphQL.
+  """
+  replaceWhiteboardContentFromSource(input: ReplaceWhiteboardContentFromSourceInput!): Whiteboard!
   """Resets the interaction with the VC by recreating the room."""
   resetConversationVc(input: ConversationVcResetInput!): Conversation!
   """Reset all license plans on Accounts"""
@@ -7978,9 +8009,20 @@ input CreateCalendarEventOnCalendarInput {
 input CreateCalloutContributionDefaultsInput {
   """The default title to use for new contributions."""
   defaultDisplayName: String
+  """
+  Use a server-owned live Whiteboard contribution-default draft. Mutually exclusive with either source field.
+  """
+  draftWhiteboardID: UUID
   """The default description to use for new Post contributions."""
   postDescription: Markdown
-  whiteboardContent: WhiteboardContent
+  """
+  Copy the internal Whiteboard contribution default from this source Callout. Mutually exclusive with sourceWhiteboardID.
+  """
+  sourceCalloutID: UUID
+  """
+  Seed the default from an existing Whiteboard. The server copies its content and media into the owning Callout bucket; the source id is not persisted.
+  """
+  sourceWhiteboardID: UUID
 }
 
 input CreateCalloutContributionInput {
@@ -8657,15 +8699,30 @@ input CreateVisualOnProfileInput {
   uri: String!
 }
 
+input CreateWhiteboardDraftOnCalloutsSetInput {
+  calloutsSetID: UUID!
+  sourceCalloutID: UUID
+  sourceWhiteboardID: UUID
+}
+
+input CreateWhiteboardDraftOnTemplatesSetInput {
+  sourceCalloutID: UUID
+  sourceWhiteboardID: UUID
+  templatesSetID: UUID!
+}
+
 input CreateWhiteboardInput {
-  content: WhiteboardContent
+  """
+  Use a server-owned live Whiteboard draft as the trusted source for final materialization. Mutually exclusive with sourceWhiteboardID.
+  """
+  draftWhiteboardID: UUID
   """A readable identifier, unique within the containing scope."""
   nameID: NameID
   """The preview settings for the whiteboard."""
   previewSettings: CreateWhiteboardPreviewSettingsInput
   profile: CreateProfileInput
   """
-  Seed the new Whiteboard from the stored content of an existing Whiteboard (server-side copy). Mutually exclusive with `content` — supply exactly one.
+  Seed the new Whiteboard from the stored content of an existing Whiteboard through a server-side authorized copy. Omission creates an empty Whiteboard.
   """
   sourceWhiteboardID: UUID
 }
@@ -9209,6 +9266,13 @@ input ReplaceCollaboraDocumentInput {
   ID: UUID!
 }
 
+input ReplaceWhiteboardContentFromSourceInput {
+  """The Whiteboard whose content and media are copied into the target."""
+  sourceWhiteboardID: UUID!
+  """The Whiteboard whose content is replaced."""
+  targetWhiteboardID: UUID!
+}
+
 input RevokeAuthorizationCredentialInput {
   """The resource to which access is being removed."""
   resourceID: String!
@@ -9498,12 +9562,22 @@ input UpdateCalendarEventInput {
 }
 
 input UpdateCalloutContributionDefaultsInput {
+  """
+  Remove the stored Whiteboard contribution default. Mutually exclusive with sourceWhiteboardID and sourceCalloutID.
+  """
+  clearWhiteboardContent: Boolean
   """The default title to use for new contributions."""
   defaultDisplayName: String
   """The default description to use for new Post contributions."""
   postDescription: Markdown
-  """The default description to use for new Whiteboard contributions."""
-  whiteboardContent: WhiteboardContent
+  """
+  Copy the internal Whiteboard contribution default from this source Callout. Mutually exclusive with sourceWhiteboardID and clearWhiteboardContent.
+  """
+  sourceCalloutID: UUID
+  """
+  Replace the default from an existing Whiteboard. The server copies its content and media into the owning Callout bucket; the source id is not persisted.
+  """
+  sourceWhiteboardID: UUID
 }
 
 input UpdateCalloutContributorsSettingsInput {
@@ -9553,10 +9627,12 @@ input UpdateCalloutFramingInput {
   poll: UpdatePollInput
   """The Profile of the Template."""
   profile: UpdateProfileInput
+  """
+  Replace the framing Whiteboard from another Whiteboard through a server-side authorized copy.
+  """
+  sourceWhiteboardID: UUID
   """The type of additional content attached to the framing of the callout."""
   type: CalloutFramingType
-  """The new content to be used."""
-  whiteboardContent: WhiteboardContent
   """The new preview settings for the Whiteboard."""
   whiteboardPreviewSettings: UpdateWhiteboardPreviewSettingsInput
 }
@@ -10201,8 +10277,10 @@ input UpdateTemplateInput {
   postDefaultDescription: Markdown
   """The Profile of the Template."""
   profile: UpdateProfileInput
-  """The new content to be used."""
-  whiteboardContent: WhiteboardContent
+  """
+  Replace this Whiteboard Template from an existing Whiteboard through a server-side authorized copy.
+  """
+  sourceWhiteboardID: UUID
 }
 
 input UpdateUserGroupInput {

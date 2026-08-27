@@ -115,6 +115,7 @@ export class InputCreatorService {
             tagsets: true,
             references: true,
             visuals: true,
+            storageBucket: true,
           },
           whiteboard: {
             profile: {
@@ -194,7 +195,8 @@ export class InputCreatorService {
       ),
       contributionDefaults:
         this.buildCreateCalloutContributionDefaultsInputFromCalloutContributionDefaults(
-          callout.contributionDefaults
+          callout.contributionDefaults,
+          callout.framing.profile.storageBucket?.id
         ),
       sortOrder: callout.sortOrder,
     };
@@ -551,15 +553,29 @@ export class InputCreatorService {
   }
 
   private buildCreateCalloutContributionDefaultsInputFromCalloutContributionDefaults(
-    calloutContributionDefaults?: ICalloutContributionDefaults
+    calloutContributionDefaults?: ICalloutContributionDefaults,
+    sourceStorageBucketID?: string
   ): CreateCalloutContributionDefaultsInput | undefined {
     if (!calloutContributionDefaults) {
       return undefined;
+    }
+    if (
+      calloutContributionDefaults.whiteboardContent &&
+      !sourceStorageBucketID
+    ) {
+      throw new EntityNotInitializedException(
+        'Source Callout has a Whiteboard default but no owning storage bucket',
+        LogContext.INPUT_CREATOR,
+        { calloutContributionDefaultsId: calloutContributionDefaults.id }
+      );
     }
     const result: CreateCalloutContributionDefaultsInput = {
       defaultDisplayName: calloutContributionDefaults.defaultDisplayName,
       postDescription: calloutContributionDefaults.postDescription,
       whiteboardContent: calloutContributionDefaults.whiteboardContent,
+      sourceStorageBucketID: calloutContributionDefaults.whiteboardContent
+        ? sourceStorageBucketID
+        : undefined,
     };
     return result;
   }

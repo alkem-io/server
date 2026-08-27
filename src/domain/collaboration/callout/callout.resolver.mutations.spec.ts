@@ -28,6 +28,7 @@ import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { Readable } from 'stream';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
+import { CalloutContributionDefaultSourceService } from './callout.contribution.default.source.service';
 import { CalloutResolverMutations } from './callout.resolver.mutations';
 import { CalloutService } from './callout.service';
 import { CalloutAuthorizationService } from './callout.service.authorization';
@@ -40,6 +41,7 @@ vi.mock('@common/utils/file.util', () => ({
 describe('CalloutResolverMutations', () => {
   let resolver: CalloutResolverMutations;
   let calloutService: CalloutService;
+  let contributionDefaultSourceService: CalloutContributionDefaultSourceService;
   let authorizationService: AuthorizationService;
   let authorizationPolicyService: AuthorizationPolicyService;
   let calloutAuthorizationService: CalloutAuthorizationService;
@@ -84,6 +86,9 @@ describe('CalloutResolverMutations', () => {
 
     resolver = module.get(CalloutResolverMutations);
     calloutService = module.get(CalloutService);
+    contributionDefaultSourceService = module.get(
+      CalloutContributionDefaultSourceService
+    );
     authorizationService = module.get(AuthorizationService);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
     calloutAuthorizationService = module.get(CalloutAuthorizationService);
@@ -173,6 +178,68 @@ describe('CalloutResolverMutations', () => {
         calloutAuthorizationService.applyAuthorizationPolicy
       ).toHaveBeenCalled();
       expect(authorizationPolicyService.saveAll).toHaveBeenCalled();
+    });
+
+    it('resolves an ID-only source Callout into internal default content before update', async () => {
+      const target = {
+        id: 'target-callout',
+        authorization: { id: 'target-auth' },
+      } as any;
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(target);
+      const reachedUpdate = new Error('reached-update-sentinel');
+      vi.mocked(calloutService.updateCallout).mockRejectedValue(reachedUpdate);
+      const input = {
+        ID: target.id,
+        contributionDefaults: { sourceCalloutID: 'source-callout' },
+      } as any;
+      const actorContext = { actorID: 'user-1' } as any;
+      vi.mocked(contributionDefaultSourceService.prepare).mockImplementation(
+        async defaults => {
+          Object.assign(defaults ?? {}, {
+            whiteboardContent: 'canonical-internal',
+            sourceStorageBucketID: 'source-bucket',
+          });
+        }
+      );
+
+      await expect(resolver.updateCallout(actorContext, input)).rejects.toBe(
+        reachedUpdate
+      );
+
+      expect(contributionDefaultSourceService.prepare).toHaveBeenCalledWith(
+        input.contributionDefaults,
+        actorContext
+      );
+      expect(input.contributionDefaults).toMatchObject({
+        sourceCalloutID: 'source-callout',
+        whiteboardContent: 'canonical-internal',
+        sourceStorageBucketID: 'source-bucket',
+      });
+    });
+
+    it('rejects clear plus any source selection before updating', async () => {
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue({
+        id: 'target-callout',
+        authorization: { id: 'target-auth' },
+      } as any);
+      vi.mocked(contributionDefaultSourceService.prepare).mockRejectedValue(
+        new ValidationException('mutually exclusive', LogContext.WHITEBOARDS)
+      );
+
+      await expect(
+        resolver.updateCallout(
+          { actorID: 'user-1' } as any,
+          {
+            ID: 'target-callout',
+            contributionDefaults: {
+              sourceCalloutID: 'source-callout',
+              clearWhiteboardContent: true,
+            },
+          } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(calloutService.updateCallout).not.toHaveBeenCalled();
     });
 
     // The CONTRIBUTORS framing guard must hold on the UPDATE path too, not just

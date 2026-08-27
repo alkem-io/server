@@ -290,6 +290,9 @@ describe('MemoService', () => {
       vi.mocked(
         profileService.materializeProfileContentAndVisualsOrRollback
       ).mockImplementation(async (profile: any) => profile);
+      vi.mocked(
+        profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket
+      ).mockImplementation(async markdown => markdown);
       memoRepository.save!.mockImplementation(async (m: any) => m);
       vi.mocked(fileServiceAdapter.createSnapshotInBucket).mockResolvedValue({
         id: 'snap-memo',
@@ -341,6 +344,74 @@ describe('MemoService', () => {
       ).rejects.toThrow('file-service down');
 
       expect(deleteSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('preserves the missing-bucket error when rollback also fails', async () => {
+      vi.mocked(profileService.createProfile).mockResolvedValue({
+        id: 'p1',
+      } as any);
+      const deleteSpy = vi
+        .spyOn(service, 'deleteMemo')
+        .mockRejectedValue(new Error('rollback failed'));
+
+      await expect(
+        service.createMemo({ markdown: '# x' } as any, storageAggregator)
+      ).rejects.toThrow(
+        'Memo storage bucket not initialized when materializing Markdown media'
+      );
+
+      expect(deleteSpy).toHaveBeenCalledTimes(1);
+      expect(MockWinstonProvider.useValue.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Rollback after uninitialized memo storage bucket failed',
+          rollbackError: 'Error: rollback failed',
+        }),
+        expect.any(String),
+        expect.any(String)
+      );
+    });
+
+    it('re-homes Markdown media into the new memo bucket before encoding the initial Yjs snapshot', async () => {
+      vi.mocked(
+        profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket
+      ).mockResolvedValue('![image](https://alkem.io/re-homed-document)');
+
+      const result = await service.createMemo(
+        { markdown: '![image](https://alkem.io/source-document)' } as any,
+        storageAggregator
+      );
+
+      expect(
+        profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket
+      ).toHaveBeenCalledWith(
+        '![image](https://alkem.io/source-document)',
+        expect.objectContaining({ id: 'sb-1' })
+      );
+      const [snapshot] = vi.mocked(fileServiceAdapter.createSnapshotInBucket)
+        .mock.calls[0];
+      expect(service.binaryToMarkdown(snapshot as Buffer)).toContain(
+        'https://alkem.io/re-homed-document'
+      );
+      expect(result.contentPointer).toBe('snap-memo');
+    });
+
+    it('rolls back the memo when Markdown media cannot be re-homed and never writes a snapshot', async () => {
+      const deleteSpy = vi
+        .spyOn(service, 'deleteMemo')
+        .mockResolvedValue({} as any);
+      vi.mocked(
+        profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket
+      ).mockRejectedValue(new Error('media copy failed'));
+
+      await expect(
+        service.createMemo(
+          { markdown: '![image](https://alkem.io/source-document)' } as any,
+          storageAggregator
+        )
+      ).rejects.toThrow('media copy failed');
+
+      expect(deleteSpy).toHaveBeenCalledTimes(1);
+      expect(fileServiceAdapter.createSnapshotInBucket).not.toHaveBeenCalled();
     });
   });
 });

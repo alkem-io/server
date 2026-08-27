@@ -4,6 +4,7 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { CalloutContributionDefaultSourceService } from '@domain/collaboration/callout/callout.contribution.default.source.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
@@ -33,6 +34,7 @@ describe('TemplateService', () => {
   let whiteboardService: Mocked<WhiteboardService>;
   let templateContentSpaceService: Mocked<TemplateContentSpaceService>;
   let calloutService: Mocked<CalloutService>;
+  let contributionDefaultSourceService: Mocked<CalloutContributionDefaultSourceService>;
   let calloutsSetService: Mocked<CalloutsSetService>;
 
   const mockEntityManager = {
@@ -83,9 +85,28 @@ describe('TemplateService', () => {
       TemplateContentSpaceService
     ) as Mocked<TemplateContentSpaceService>;
     calloutService = module.get(CalloutService) as Mocked<CalloutService>;
+    contributionDefaultSourceService = module.get(
+      CalloutContributionDefaultSourceService
+    ) as Mocked<CalloutContributionDefaultSourceService>;
     calloutsSetService = module.get(
       CalloutsSetService
     ) as Mocked<CalloutsSetService>;
+  });
+
+  describe('prepareContributionDefaultSource', () => {
+    it('delegates source resolution to the shared authorization boundary', async () => {
+      const defaults = { sourceCalloutID: 'callout-1' };
+
+      await service.prepareContributionDefaultSource(
+        defaults,
+        actorContextData.actorContext
+      );
+
+      expect(contributionDefaultSourceService.prepare).toHaveBeenCalledWith(
+        defaults,
+        actorContextData.actorContext
+      );
+    });
   });
 
   describe('getTemplateOrFail', () => {
@@ -510,6 +531,31 @@ describe('TemplateService', () => {
         'new content',
         actorContextData.actorContext
       );
+    });
+
+    it('replaces a WHITEBOARD template from an ID-only source through the live room', async () => {
+      const template = {
+        id: 'tpl-1',
+        type: TemplateType.WHITEBOARD,
+        profile: { id: 'p-1' },
+        whiteboard: { id: 'target-wb' },
+      } as unknown as Template;
+      templateRepository.find.mockResolvedValue([template]);
+      templateRepository.save.mockImplementation(async (entity: any) => entity);
+      whiteboardService.replaceContentFromSource.mockResolvedValue({} as any);
+
+      await service.updateTemplate(
+        { id: 'tpl-1', type: TemplateType.WHITEBOARD } as ITemplate,
+        { ID: 'tpl-1', sourceWhiteboardID: 'source-wb' } as any,
+        actorContextData.actorContext
+      );
+
+      expect(whiteboardService.replaceContentFromSource).toHaveBeenCalledWith(
+        'target-wb',
+        'source-wb',
+        actorContextData.actorContext
+      );
+      expect(whiteboardService.updateWhiteboardContent).not.toHaveBeenCalled();
     });
 
     it('should not update postDefaultDescription when template type is not POST', async () => {

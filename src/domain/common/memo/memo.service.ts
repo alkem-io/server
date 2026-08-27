@@ -108,7 +108,51 @@ export class MemoService {
     // NULL/blank pointer under its write fence but leaves the column NULLABLE for
     // the transient new-row window. The room materializes empty + editable
     // (FR-010) either way.
-    const binaryUpdateV2 = markdownToYjsV2State(markdown ?? '');
+    const storageBucket = saved.profile?.storageBucket;
+    if (!storageBucket) {
+      await this.deleteMemo(saved.id).catch(rollbackError => {
+        const stack =
+          rollbackError instanceof Error ? (rollbackError.stack ?? '') : '';
+        this.logger.error?.(
+          {
+            message: 'Rollback after uninitialized memo storage bucket failed',
+            memoId: saved.id,
+            rollbackError: String(rollbackError),
+          },
+          stack,
+          LogContext.MEMOS
+        );
+      });
+      throw new EntityNotInitializedException(
+        'Memo storage bucket not initialized when materializing Markdown media',
+        LogContext.MEMOS,
+        { memoId: saved.id }
+      );
+    }
+    let ownedMarkdown = markdown ?? '';
+    try {
+      ownedMarkdown =
+        await this.profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket(
+          ownedMarkdown,
+          storageBucket
+        );
+    } catch (error) {
+      await this.deleteMemo(saved.id).catch(rollbackError => {
+        const stack =
+          rollbackError instanceof Error ? (rollbackError.stack ?? '') : '';
+        this.logger.error?.(
+          {
+            message: 'Rollback after memo Markdown media re-home failed',
+            memoId: saved.id,
+            rollbackError: String(rollbackError),
+          },
+          stack,
+          LogContext.MEMOS
+        );
+      });
+      throw error;
+    }
+    const binaryUpdateV2 = markdownToYjsV2State(ownedMarkdown);
     await this.writeInitialSnapshot(saved, Buffer.from(binaryUpdateV2));
     return saved;
   }

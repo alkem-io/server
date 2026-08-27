@@ -12,7 +12,12 @@ import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platf
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { introducesCollaboraDocument } from '@domain/collaboration/callout/callout.collabora.gate.util';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { UUID } from '@domain/common/scalars';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
+import {
+  CreateWhiteboardDraftOnCalloutsSetInput,
+  WhiteboardDraftService,
+} from '@domain/common/whiteboard-draft';
 import { Inject, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
@@ -23,11 +28,16 @@ import { NotificationSpaceAdapter } from '@services/adapters/notification-adapte
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter/contribution.reporter.service';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { TemporaryStorageService } from '@services/infrastructure/temporary-storage/temporary.storage.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import {
+  CalloutContributionDefaultSourceService,
+  ContributionDefaultSourceInput,
+} from '../callout/callout.contribution.default.source.service';
 import { ICallout } from '../callout/callout.interface';
 import { CalloutService } from '../callout/callout.service';
 import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
@@ -46,6 +56,7 @@ export class CalloutsSetResolverMutations {
     private calloutsSetService: CalloutsSetService,
     private calloutAuthorizationService: CalloutAuthorizationService,
     private calloutService: CalloutService,
+    private contributionDefaultSourceService: CalloutContributionDefaultSourceService,
     private communityResolverService: CommunityResolverService,
     private contributionReporter: ContributionReporterService,
     private activityAdapter: ActivityAdapter,
@@ -55,8 +66,58 @@ export class CalloutsSetResolverMutations {
     private configService: ConfigService<AlkemioConfig, true>,
     private collaborationLicenseService: CollaborationLicenseService,
     private whiteboardService: WhiteboardService,
+    private whiteboardDraftService: WhiteboardDraftService,
+    private storageAggregatorResolverService: StorageAggregatorResolverService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
+
+  @Mutation(() => UUID, {
+    description:
+      'Materializes a server-owned live Whiteboard draft for a Callout form. Content remains on the collaboration transport; GraphQL returns identifiers only.',
+  })
+  async createWhiteboardDraftOnCalloutsSet(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('draftData') draftData: CreateWhiteboardDraftOnCalloutsSetInput
+  ): Promise<string> {
+    const calloutsSet = await this.calloutsSetService.getCalloutsSetOrFail(
+      draftData.calloutsSetID
+    );
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      calloutsSet.authorization,
+      AuthorizationPrivilege.CREATE_CALLOUT,
+      `create whiteboard draft on callouts Set: ${calloutsSet.id}`
+    );
+
+    let sourceContent: string | undefined;
+    let sourceStorageBucketID: string | undefined;
+    await this.assertActorCanReadSourceWhiteboard(
+      actorContext,
+      draftData.sourceWhiteboardID
+    );
+    if (draftData.sourceCalloutID) {
+      const source: ContributionDefaultSourceInput = {
+        sourceCalloutID: draftData.sourceCalloutID,
+      };
+      await this.contributionDefaultSourceService.prepare(source, actorContext);
+      sourceContent = source.whiteboardContent;
+      sourceStorageBucketID = source.sourceStorageBucketID;
+    }
+    const storageAggregator =
+      await this.storageAggregatorResolverService.getStorageAggregatorForCalloutsSet(
+        calloutsSet.id
+      );
+    return this.whiteboardDraftService.materialize(
+      {
+        ...draftData,
+        sourceContent,
+        sourceStorageBucketID,
+      },
+      storageAggregator,
+      calloutsSet.authorization,
+      actorContext
+    );
+  }
 
   /**
    * A clone may read its source only after the actor is granted READ: when a
@@ -103,6 +164,40 @@ export class CalloutsSetResolverMutations {
       `create callout on callouts Set: ${calloutsSet.id}`
     );
 
+    const framingDraftID = calloutData.framing?.whiteboard?.draftWhiteboardID;
+    const defaultsDraftID = calloutData.contributionDefaults?.draftWhiteboardID;
+    await using draftConsumption =
+      await this.whiteboardDraftService.acquireForConsumption(
+        [framingDraftID, defaultsDraftID].filter(
+          (id): id is string => typeof id === 'string'
+        ),
+        actorContext
+      );
+    if (framingDraftID) {
+      const whiteboardInput = calloutData.framing.whiteboard!;
+      if (whiteboardInput.sourceWhiteboardID) {
+        throw new ValidationException(
+          'draftWhiteboardID and sourceWhiteboardID are mutually exclusive',
+          LogContext.WHITEBOARDS
+        );
+      }
+      const draft = draftConsumption.drafts.get(framingDraftID)!;
+      whiteboardInput.sourceWhiteboardID = draft.id;
+      whiteboardInput.draftWhiteboardID = undefined;
+    }
+    if (defaultsDraftID) {
+      const defaults = calloutData.contributionDefaults!;
+      if (defaults.sourceWhiteboardID || defaults.sourceCalloutID) {
+        throw new ValidationException(
+          'draftWhiteboardID and contribution-default source fields are mutually exclusive',
+          LogContext.WHITEBOARDS
+        );
+      }
+      const draft = draftConsumption.drafts.get(defaultsDraftID)!;
+      defaults.sourceWhiteboardID = draft.id;
+      defaults.draftWhiteboardID = undefined;
+    }
+
     // CONTRIBUTORS and SPACES framings are admin-only and collaboration-only
     // (FR-004a/FR-004d/FR-004f, R5): reject on non-COLLABORATION callouts sets and
     // require CREATE (space admin) even when allowMembersToCreateCallouts maps
@@ -129,6 +224,10 @@ export class CalloutsSetResolverMutations {
       calloutData.framing?.type === CalloutFramingType.WHITEBOARD
         ? calloutData.framing.whiteboard?.sourceWhiteboardID
         : undefined
+    );
+    await this.contributionDefaultSourceService.prepare(
+      calloutData.contributionDefaults,
+      actorContext
     );
 
     // Office Docs entitlement gate (FR-001/FR-004/FR-009): block introduction of a
@@ -200,6 +299,11 @@ export class CalloutsSetResolverMutations {
       calloutData,
       () => this.calloutService.deleteCallout(savedCallout.id)
     );
+
+    // The final callout is now durable and fully materialized. Persist the
+    // draft-consumption marker before any later integration/notification step
+    // can fail, so a client retry cannot create a duplicate final object.
+    await draftConsumption.markConsumed();
 
     // Now the contribution is saved, we can look to move any temporary documents
     // to be stored in the storage bucket of the profile.
@@ -290,7 +394,9 @@ export class CalloutsSetResolverMutations {
       }
     }
 
-    return await this.calloutService.getCalloutOrFail(callout.id);
+    const result = await this.calloutService.getCalloutOrFail(callout.id);
+    await draftConsumption.complete();
+    return result;
   }
 
   @Mutation(() => [ICallout], {

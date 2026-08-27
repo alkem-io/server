@@ -24,6 +24,7 @@ import { CollaboraDocumentModule } from '../collabora-document/collabora.documen
 import { CollaborationLicenseModule } from '../collaboration/collaboration.license.module';
 import { PostModule } from '../post/post.module';
 import { ReactionModule } from '../reaction/reaction.module';
+import { CalloutContributionDefaultSourceService } from './callout.contribution.default.source.service';
 import { Callout } from './callout.entity';
 import { CalloutResolverFields } from './callout.resolver.fields';
 import { CalloutResolverMutations } from './callout.resolver.mutations';
@@ -66,6 +67,7 @@ import { TaskBoardResolverMutations } from './task-board/task.board.resolver.mut
   ],
   providers: [
     CalloutResolverMutations,
+    CalloutContributionDefaultSourceService,
     CalloutService,
     CalloutAuthorizationService,
     CalloutResolverFields,
@@ -77,6 +79,7 @@ import { TaskBoardResolverMutations } from './task-board/task.board.resolver.mut
   ],
   exports: [
     CalloutService,
+    CalloutContributionDefaultSourceService,
     CalloutAuthorizationService,
     CalloutResolverMutations,
   ],

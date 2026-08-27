@@ -18,6 +18,12 @@ export class CollaborationMigrationResult {
   @Field(() => Int)
   migrated!: number;
 
+  @Field(() => Int, {
+    description:
+      'Legacy Whiteboard contribution defaults without a complete owning Callout path.',
+  })
+  unattached!: number;
+
   @Field(() => Int)
   flagged!: number;
 
@@ -34,6 +40,7 @@ export class CollaborationMigrationResult {
     return {
       total: summary.total,
       migrated: summary.migrated,
+      unattached: summary.unattached,
       flagged: summary.flagged,
       failed: summary.failed,
       flaggedDocuments: summary.flaggedDocuments,

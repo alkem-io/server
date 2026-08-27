@@ -6,6 +6,7 @@ import { CollaborationMigrationResolverMutations } from './collaboration-migrati
 const summary = {
   total: 3,
   migrated: 2,
+  unattached: 0,
   flagged: 1,
   failed: 0,
   flaggedDocuments: [{ id: 'bad', reason: 'bad content' }],
@@ -51,6 +52,7 @@ describe('CollaborationMigrationResolverMutations', () => {
     ).resolves.toEqual({
       total: 3,
       migrated: 2,
+      unattached: 0,
       flagged: 1,
       failed: 0,
       flaggedDocuments: [{ id: 'bad', reason: 'bad content' }],
@@ -80,6 +82,7 @@ describe('CollaborationMigrationResolverMutations', () => {
       target: {
         total: 3,
         migrated: 2,
+        unattached: 0,
         flagged: 1,
         failed: 0,
         flaggedDocuments: [{ id: 'bad', reason: 'bad content' }],
@@ -93,6 +96,7 @@ describe('CollaborationMigrationResolverMutations', () => {
     ctx.migration.migrateMemos.mockResolvedValue({
       total: 3,
       migrated: 3,
+      unattached: 0,
       flagged: 0,
       failed: 0,
       flaggedDocuments: [],
@@ -116,6 +120,7 @@ describe('CollaborationMigrationResolverMutations', () => {
     ctx.migration.migrateMemos.mockResolvedValue({
       total: 2,
       migrated: 1,
+      unattached: 0,
       flagged: 0,
       failed: 1,
       flaggedDocuments: [],

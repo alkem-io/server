@@ -2,6 +2,7 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { TagsetTemplateSetModule } from '@domain/common/tagset-template-set/tagset.template.set.module';
 import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
+import { WhiteboardDraftModule } from '@domain/common/whiteboard-draft';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
@@ -35,6 +36,7 @@ import { CalloutsSetAuthorizationService } from './callouts.set.service.authoriz
     NamingModule,
     EntityResolverModule,
     WhiteboardModule,
+    WhiteboardDraftModule,
     PostModule,
     TypeOrmModule.forFeature([CalloutsSet]),
   ],

@@ -55,7 +55,7 @@ const run = async (): Promise<number> => {
       `${JSON.stringify({ mode: 'migrate', ...summary })}\n`
     );
     process.stdout.write(
-      `migrate${dryRun ? ' (dry-run)' : ''}: total=${summary.total} migrated=${summary.migrated} flagged=${summary.flagged} failed=${summary.failed}\n`
+      `migrate${dryRun ? ' (dry-run)' : ''}: total=${summary.total} migrated=${summary.migrated} unattached=${summary.unattached} flagged=${summary.flagged} failed=${summary.failed}\n`
     );
     return summary.failed === 0 && summary.flagged === 0 ? 0 : 1;
   } finally {
