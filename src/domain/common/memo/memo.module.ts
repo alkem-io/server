@@ -1,10 +1,13 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { CollaborationMetadataModule } from '@domain/common/collaboration-metadata';
 import { VisualModule } from '@domain/common/visual/visual.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { ProfileDocumentsModule } from '@domain/profile-documents/profile.documents.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { FileServiceAdapterModule } from '@services/adapters/file-service-adapter/file.service.adapter.module';
+import { CollaborationClientModule } from '@services/collaboration-client/collaboration-client.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { AuthorizationPolicyModule } from '../authorization-policy/authorization.policy.module';
 import { LicenseModule } from '../license/license.module';
@@ -27,6 +30,9 @@ import { MemoAuthorizationService } from './memo.service.authorization';
     StorageBucketModule,
     TypeOrmModule.forFeature([Memo]),
     ProfileDocumentsModule,
+    CollaborationMetadataModule,
+    FileServiceAdapterModule,
+    CollaborationClientModule,
   ],
   providers: [
     MemoService,

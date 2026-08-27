@@ -75,13 +75,13 @@ export class TemplateNavigatorTool implements McpTool {
       name: 'navigate_templates',
       description:
         'Navigate and discover templates across innovation packs. ' +
-        'Find templates for spaces, callouts, whiteboards, posts, and community guidelines. ' +
+        'Find templates for spaces, callouts, whiteboards, posts, community guidelines, and classifications. ' +
         'Actions: "list" shows available templates, "search" finds templates by name/tags, ' +
         '"details" shows information about a specific template (metadata only — for a whiteboard ' +
-        'template it reports an element count, NOT the scene). ' +
-        'To APPLY a whiteboard template to a board, call update_whiteboard_content with ' +
-        '`fromTemplateId` set to the template id — the server applies the scene by reference. ' +
-        'Never fetch or pass the scene JSON yourself.',
+        'template it reports whether it has stored content, NOT the scene). ' +
+        'To create a whiteboard from a template, call create_whiteboard (or ' +
+        'create_whiteboard_in_space) with `fromTemplateId` set to the template id — the server ' +
+        'copies the template content by reference. Never fetch or pass any scene yourself.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -90,7 +90,7 @@ export class TemplateNavigatorTool implements McpTool {
             enum: ['list', 'search', 'details'],
             description:
               'Action to perform: "list" templates, "search" by query, or get "details" of a template. ' +
-              'To apply a whiteboard template, call update_whiteboard_content with fromTemplateId — do not pass a scene.',
+              'To create a whiteboard from a template, call create_whiteboard with fromTemplateId — do not pass a scene.',
           },
           templateType: {
             type: 'string',
@@ -100,6 +100,7 @@ export class TemplateNavigatorTool implements McpTool {
               'whiteboard',
               'post',
               'community-guidelines',
+              'classification',
             ],
             description:
               'Filter by template type. Optional for list/search actions.',
@@ -511,6 +512,7 @@ export class TemplateNavigatorTool implements McpTool {
       whiteboard: TemplateType.WHITEBOARD,
       post: TemplateType.POST,
       'community-guidelines': TemplateType.COMMUNITY_GUIDELINES,
+      classification: TemplateType.CLASSIFICATION,
     };
     return typeMap[type.toLowerCase()];
   }
@@ -694,32 +696,17 @@ export class TemplateNavigatorTool implements McpTool {
           const whiteboard = await this.templateService.getWhiteboard(
             template.id
           );
-          const summary: Record<string, unknown> = {
+          // Whiteboard content is a Yjs-V2 snapshot in file storage, not inline
+          // scene JSON. Report only whether a stored snapshot exists — decoding it
+          // for an element count is not worth a room join in a template listing.
+          return {
             type: 'whiteboard',
-            hasContent: !!whiteboard.content,
+            hasContent: !!whiteboard.contentPointer,
+            applyHint:
+              'To create a whiteboard from this template, call create_whiteboard (or ' +
+              'create_whiteboard_in_space) with fromTemplateId set to this template id. ' +
+              'Do not fetch or pass the scene yourself.',
           };
-          // Surface only COMPACT metadata — never the scene itself. The Excalidraw
-          // scene can be tens-to-hundreds of KB; routing it through the model (in
-          // here, then back out as update_whiteboard_content's `content`) stalls the
-          // turn. To APPLY this template, the model calls update_whiteboard_content
-          // with `fromTemplateId` and the server applies the scene by reference —
-          // the scene never touches the model.
-          if (whiteboard.content) {
-            try {
-              const scene = JSON.parse(whiteboard.content);
-              if (scene && Array.isArray(scene.elements)) {
-                summary.elementCount = scene.elements.length;
-              }
-            } catch (sceneError) {
-              this.logger.warn?.(
-                `navigate_templates details: could not parse whiteboard scene for template ${template.id}: ${sceneError instanceof Error ? sceneError.message : 'unknown error'}`,
-                LogContext.MCP_SERVER
-              );
-            }
-          }
-          summary.applyHint =
-            'To apply this template to a whiteboard, call update_whiteboard_content with fromTemplateId set to this template id. Do not fetch or pass the scene yourself.';
-          return summary;
         } catch {
           return { type: 'whiteboard', hasContent: false };
         }
@@ -783,6 +770,8 @@ export class TemplateNavigatorTool implements McpTool {
         'Apply this template when creating posts to get consistent formatting and structure.',
       [TemplateType.COMMUNITY_GUIDELINES]:
         'Use this template to set up community guidelines for your space.',
+      [TemplateType.CLASSIFICATION]:
+        'Use this template to add a structured Classification (e.g. SDGs, Language, Sector) to a Space.',
     };
     return hints[type] || 'Apply this template to create new content.';
   }

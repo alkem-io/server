@@ -1,4 +1,5 @@
 import { CalloutDescriptionDisplayMode } from '@common/enums/callout.description.display.mode';
+import { SidebarWidget } from '@common/enums/sidebar.widget';
 import { TemplateType } from '@common/enums/template.type';
 import {
   EntityNotFoundException,
@@ -152,6 +153,52 @@ describe('InnovationFlowStateService', () => {
       const result = await service.createInnovationFlowState(stateData as any);
 
       expect(result.settings.showPublishDetails).toBe(false);
+    });
+
+    it('should default settings.sidebar to [INTENT, CREATE_POST, APPLICATION_BUTTON, INDEX] when not provided', async () => {
+      const stateData = { displayName: 'Draft' };
+
+      const result = await service.createInnovationFlowState(stateData as any);
+
+      expect(result.settings.sidebar).toEqual([
+        SidebarWidget.INTENT,
+        SidebarWidget.CREATE_POST,
+        SidebarWidget.APPLICATION_BUTTON,
+        SidebarWidget.INDEX,
+      ]);
+    });
+
+    it('should honor an explicit create-time sidebar list verbatim, content and order (template save/apply leg)', async () => {
+      const stateData = {
+        displayName: 'Home',
+        settings: {
+          allowNewCallouts: true,
+          sidebar: [
+            SidebarWidget.EVENTS,
+            SidebarWidget.INTENT,
+            SidebarWidget.ABOUT,
+          ],
+        },
+      };
+
+      const result = await service.createInnovationFlowState(stateData as any);
+
+      expect(result.settings.sidebar).toEqual([
+        SidebarWidget.EVENTS,
+        SidebarWidget.INTENT,
+        SidebarWidget.ABOUT,
+      ]);
+    });
+
+    it('should honor an explicit empty create-time sidebar list', async () => {
+      const stateData = {
+        displayName: 'Empty Sidebar',
+        settings: { allowNewCallouts: true, sidebar: [] },
+      };
+
+      const result = await service.createInnovationFlowState(stateData as any);
+
+      expect(result.settings.sidebar).toEqual([]);
     });
   });
 
@@ -513,6 +560,141 @@ describe('InnovationFlowStateService', () => {
       );
       expect(state.settings.showPublishDetails).toBe(false);
     });
+
+    it('should replace sidebar wholesale when an explicit list is sent', async () => {
+      const state = {
+        id: 'state-1',
+        displayName: 'Name',
+        description: '',
+        settings: {
+          allowNewCallouts: true,
+          visible: true,
+          descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+          showPublishDetails: true,
+          sidebar: [SidebarWidget.INTENT, SidebarWidget.INDEX],
+        },
+      } as any;
+
+      vi.mocked(repository.save).mockResolvedValue(state);
+
+      await service.update(state, {
+        displayName: 'Name',
+        settings: { sidebar: [SidebarWidget.EVENTS, SidebarWidget.INTENT] },
+      } as any);
+
+      expect(state.settings.sidebar).toEqual([
+        SidebarWidget.EVENTS,
+        SidebarWidget.INTENT,
+      ]);
+    });
+
+    it('should preserve stored sidebar when omitted from the update', async () => {
+      const state = {
+        id: 'state-1',
+        displayName: 'Name',
+        description: '',
+        settings: {
+          allowNewCallouts: true,
+          visible: true,
+          descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+          showPublishDetails: true,
+          sidebar: [SidebarWidget.INTENT, SidebarWidget.INDEX],
+        },
+      } as any;
+
+      vi.mocked(repository.save).mockResolvedValue(state);
+
+      await service.update(state, {
+        displayName: 'Name',
+        settings: { visible: false },
+      } as any);
+
+      expect(state.settings.sidebar).toEqual([
+        SidebarWidget.INTENT,
+        SidebarWidget.INDEX,
+      ]);
+      expect(state.settings.visible).toBe(false);
+    });
+
+    it('should preserve stored sidebar when the update sends an explicit null', async () => {
+      const state = {
+        id: 'state-1',
+        displayName: 'Name',
+        description: '',
+        settings: {
+          allowNewCallouts: true,
+          visible: true,
+          descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+          showPublishDetails: true,
+          sidebar: [SidebarWidget.INTENT, SidebarWidget.INDEX],
+        },
+      } as any;
+
+      vi.mocked(repository.save).mockResolvedValue(state);
+
+      await service.update(state, {
+        displayName: 'Name',
+        settings: { sidebar: null },
+      } as any);
+
+      expect(state.settings.sidebar).toEqual([
+        SidebarWidget.INTENT,
+        SidebarWidget.INDEX,
+      ]);
+    });
+
+    it('should store an explicit empty sidebar list', async () => {
+      const state = {
+        id: 'state-1',
+        displayName: 'Name',
+        description: '',
+        settings: {
+          allowNewCallouts: true,
+          visible: true,
+          descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+          showPublishDetails: true,
+          sidebar: [SidebarWidget.INTENT, SidebarWidget.INDEX],
+        },
+      } as any;
+
+      vi.mocked(repository.save).mockResolvedValue(state);
+
+      await service.update(state, {
+        displayName: 'Name',
+        settings: { sidebar: [] },
+      } as any);
+
+      expect(state.settings.sidebar).toEqual([]);
+    });
+
+    it('should leave visible/descriptionDisplayMode/showPublishDetails untouched on a sidebar-only save', async () => {
+      const state = {
+        id: 'state-1',
+        displayName: 'Name',
+        description: '',
+        settings: {
+          allowNewCallouts: true,
+          visible: false,
+          descriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
+          showPublishDetails: false,
+          sidebar: [SidebarWidget.INTENT],
+        },
+      } as any;
+
+      vi.mocked(repository.save).mockResolvedValue(state);
+
+      await service.update(state, {
+        displayName: 'Name',
+        settings: { sidebar: [SidebarWidget.EVENTS] },
+      } as any);
+
+      expect(state.settings.sidebar).toEqual([SidebarWidget.EVENTS]);
+      expect(state.settings.visible).toBe(false);
+      expect(state.settings.descriptionDisplayMode).toBe(
+        CalloutDescriptionDisplayMode.COLLAPSED
+      );
+      expect(state.settings.showPublishDetails).toBe(false);
+    });
   });
 
   describe('delete', () => {
@@ -733,10 +915,59 @@ describe('InnovationFlowStateService', () => {
         'template-1'
       );
 
-      expect(result).toBe(flowState);
+      // The service returns a normalized DETACHED copy (so read-path settings
+      // normalization never persists); identity with the raw entity is not expected.
+      expect(result.id).toBe('state-1');
+      expect((result as InnovationFlowState).defaultCalloutTemplate).toBe(
+        template
+      );
       expect((flowState as InnovationFlowState).defaultCalloutTemplate).toBe(
         template
       );
+      expect(repository.save).toHaveBeenCalledWith(flowState);
+    });
+
+    it('does not persist read-path sidebar normalization (rolling-deploy safety)', async () => {
+      // A widget slug this node's enum does not know — e.g. written by a NEWER release
+      // during a rolling deploy. The unrelated set-default-template save must not strip it.
+      const storedSidebar = [
+        SidebarWidget.INTENT,
+        'widgetFromANewerRelease',
+        SidebarWidget.INDEX,
+      ];
+      const flowState = {
+        id: 'state-1',
+        settings: {
+          allowNewCallouts: true,
+          visible: true,
+          descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+          showPublishDetails: true,
+          sidebar: [...storedSidebar],
+        },
+      } as any;
+      const template = {
+        id: 'template-1',
+        type: TemplateType.CALLOUT,
+      } as Template;
+
+      vi.mocked(repository.findOne).mockResolvedValue(flowState);
+      vi.mocked(templateRepository.find).mockResolvedValue([template]);
+      vi.mocked(repository.save).mockImplementation(async e => e as any);
+
+      const result = await service.setDefaultCalloutTemplate(
+        'state-1',
+        'template-1'
+      );
+
+      // Persisted entity keeps the stored list verbatim — the unknown value survives.
+      const savedEntity = vi.mocked(repository.save).mock.calls[0][0] as any;
+      expect(savedEntity.settings.sidebar).toEqual(storedSidebar);
+      expect(flowState.settings.sidebar).toEqual(storedSidebar);
+      // The API-visible response is still filtered to the known vocabulary.
+      expect(result.settings.sidebar).toEqual([
+        SidebarWidget.INTENT,
+        SidebarWidget.INDEX,
+      ]);
     });
 
     it('should throw EntityNotFoundException when template is not found', async () => {
@@ -778,8 +1009,46 @@ describe('InnovationFlowStateService', () => {
 
       const result = await service.removeDefaultCalloutTemplate('state-1');
 
-      expect(result).toBe(flowState);
+      // The service returns a normalized DETACHED copy (so read-path settings
+      // normalization never persists); identity with the raw entity is not expected.
+      expect(result.id).toBe('state-1');
+      expect((result as InnovationFlowState).defaultCalloutTemplate).toBeNull();
       expect(flowState.defaultCalloutTemplate).toBeNull();
+      expect(repository.save).toHaveBeenCalledWith(flowState);
+    });
+
+    it('does not persist read-path sidebar normalization (rolling-deploy safety)', async () => {
+      const storedSidebar = [
+        SidebarWidget.INTENT,
+        'widgetFromANewerRelease',
+        SidebarWidget.INDEX,
+      ];
+      const flowState = {
+        id: 'state-1',
+        defaultCalloutTemplate: { id: 'template-1' },
+        settings: {
+          allowNewCallouts: true,
+          visible: true,
+          descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+          showPublishDetails: true,
+          sidebar: [...storedSidebar],
+        },
+      } as any;
+
+      vi.mocked(repository.findOne).mockResolvedValue(flowState);
+      vi.mocked(repository.save).mockImplementation(async e => e as any);
+
+      const result = await service.removeDefaultCalloutTemplate('state-1');
+
+      // Persisted entity keeps the stored list verbatim — the unknown value survives.
+      const savedEntity = vi.mocked(repository.save).mock.calls[0][0] as any;
+      expect(savedEntity.settings.sidebar).toEqual(storedSidebar);
+      expect(flowState.settings.sidebar).toEqual(storedSidebar);
+      // The API-visible response is still filtered to the known vocabulary.
+      expect(result.settings.sidebar).toEqual([
+        SidebarWidget.INTENT,
+        SidebarWidget.INDEX,
+      ]);
     });
 
     it('should throw EntityNotFoundException when flow state is not found', async () => {
