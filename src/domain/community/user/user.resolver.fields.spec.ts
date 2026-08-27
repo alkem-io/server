@@ -1,6 +1,10 @@
 import { AuthorizationCredential } from '@common/enums';
 import { AuthenticationType } from '@common/enums/authentication.type';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import {
+  DELETED_USER_SENTINEL,
+  DELETED_USER_SENTINEL_ID,
+} from '@domain/community/user/account-deletion/deleted.user.sentinel';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
@@ -258,6 +262,29 @@ describe('UserResolverFields', () => {
       const result = await resolver.authentication(user, actorContext);
 
       expect(result.methods).toEqual([AuthenticationType.UNKNOWN]);
+    });
+  });
+
+  describe('profile', () => {
+    it('short-circuits the deleted-user sentinel to its static profile, never touching the loader', async () => {
+      const sentinelUser = { id: DELETED_USER_SENTINEL_ID } as any;
+      const loader = { load: vi.fn() } as any;
+
+      const result = await resolver.profile(sentinelUser, loader);
+
+      expect(result).toBe(DELETED_USER_SENTINEL.profile);
+      expect(loader.load).not.toHaveBeenCalled();
+    });
+
+    it('resolves a real user through the loader as before', async () => {
+      const user = { id: 'user-1' } as any;
+      const profile = { id: 'profile-1', displayName: 'Real User' };
+      const loader = { load: vi.fn().mockResolvedValue(profile) } as any;
+
+      const result = await resolver.profile(user, loader);
+
+      expect(loader.load).toHaveBeenCalledWith('user-1');
+      expect(result).toBe(profile);
     });
   });
 

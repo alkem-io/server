@@ -15,6 +15,10 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { IActor } from '@domain/actor/actor/actor.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
+import {
+  DELETED_USER_SENTINEL,
+  DELETED_USER_SENTINEL_ID,
+} from '@domain/community/user/account-deletion/deleted.user.sentinel';
 import { IUser } from '@domain/community/user/user.interface';
 import { IAccount } from '@domain/space/account/account.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -52,6 +56,18 @@ export class UserResolverFields {
     })
     loader: ILoader<IProfile>
   ): Promise<IProfile> {
+    // The deleted-user sentinel's id is never a real `user` row, so the
+    // (non-null, one-to-one) profile loader would reject the whole batch
+    // key with an EntityNotFoundException — this `@ResolveField` always
+    // takes precedence over the sentinel's own in-memory `profile`
+    // property, so that fallback is otherwise never consulted. Short-
+    // circuit before the loader runs, returning the sentinel's static
+    // profile directly, so an activity-feed entry attributed to a departed
+    // user still renders its neutral attribution instead of failing the
+    // whole query.
+    if (user.id === DELETED_USER_SENTINEL_ID) {
+      return DELETED_USER_SENTINEL.profile as unknown as IProfile;
+    }
     return loader.load(user.id);
   }
 
