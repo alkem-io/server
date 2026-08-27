@@ -476,11 +476,13 @@ export class RegistrationService {
 
     if (documentIDs.length > 0) {
       const failures: string[] = [];
+      const failedDocumentIDs: string[] = [];
       for (const documentID of documentIDs) {
         try {
           await this.fileServiceAdapter.deleteDocument(documentID);
         } catch (error: any) {
           failures.push(redactError(error));
+          failedDocumentIDs.push(documentID);
           this.logger.error?.(
             {
               message:
@@ -495,6 +497,10 @@ export class RegistrationService {
         }
       }
 
+      // `fileExternalIDs` names exactly which documents' bytes survive a
+      // degraded file-service: the `file` rows that named them are removed
+      // right below (via the bucket-row cascade), so this audit row is the
+      // only durable identifier an operator can reconcile from.
       await this.accountDeletionAuditService.appendLegOutcome(
         userID,
         initiatorRole,
@@ -503,7 +509,10 @@ export class RegistrationService {
           : PlatformAuditOutcome.FILE_BYTES_CLEANUP_FAILED,
         failures.length === 0
           ? undefined
-          : { error: failures.slice(0, 3).join('; ').slice(0, 250) }
+          : {
+              error: failures.slice(0, 3).join('; ').slice(0, 250),
+              fileExternalIDs: failedDocumentIDs,
+            }
       );
     }
 

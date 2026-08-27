@@ -804,7 +804,30 @@ describe('RegistrationService', () => {
         'user-1',
         'self',
         'file_bytes_cleanup_failed',
-        expect.objectContaining({ error: expect.any(String) })
+        expect.objectContaining({
+          error: expect.any(String),
+          fileExternalIDs: ['doc-1', 'doc-2'],
+        })
+      );
+    });
+
+    it('names only the documents that actually failed in fileExternalIDs, not the ones that succeeded', async () => {
+      const { deleteData } = setUpHappyPath();
+      fileServiceAdapter.deleteDocument.mockImplementation(
+        async (documentID: string) => {
+          if (documentID === 'doc-2') {
+            throw new Error('file-service unreachable');
+          }
+        }
+      );
+
+      await service.deleteUserWithPendingMemberships(deleteData as any, 'self');
+
+      expect(accountDeletionAuditService.appendLegOutcome).toHaveBeenCalledWith(
+        'user-1',
+        'self',
+        'file_bytes_cleanup_failed',
+        expect.objectContaining({ fileExternalIDs: ['doc-2'] })
       );
     });
 
