@@ -290,6 +290,9 @@ describe('StorageBucketService', () => {
         .mockResolvedValueOnce({ document: doc1, documentID: 'doc-1' })
         .mockResolvedValueOnce({ document: doc2, documentID: 'doc-2' });
       const em = {
+        // The bucket is now READ through the deletion transaction too, so the
+        // document list is the one that transaction sees.
+        findOneOrFail: vi.fn().mockResolvedValue(bucket),
         remove: vi.fn().mockResolvedValue({ ...bucket, id: '' }),
       } as any;
 

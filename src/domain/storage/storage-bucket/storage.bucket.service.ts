@@ -114,9 +114,13 @@ export class StorageBucketService {
     storageID: string,
     em: EntityManager
   ): Promise<{ storageBucketID: string; documentIDs: string[] }> {
-    const storage = await this.getStorageBucketOrFail(storageID, {
-      relations: { documents: true },
-    });
+    // Enumerate through the deletion transaction, so the document list is the
+    // one this transaction sees rather than a second connection's snapshot.
+    const storage = await this.getStorageBucketOrFail(
+      storageID,
+      { relations: { documents: true } },
+      em
+    );
 
     if (storage.authorization) {
       await this.authorizationPolicyService.delete(storage.authorization, em);
@@ -187,7 +191,8 @@ export class StorageBucketService {
 
   async getStorageBucketOrFail(
     storageBucketID: string,
-    options?: FindOneOptions<StorageBucket>
+    options?: FindOneOptions<StorageBucket>,
+    em?: EntityManager
   ): Promise<IStorageBucket> {
     if (!storageBucketID) {
       throw new EntityNotFoundException(
@@ -195,10 +200,15 @@ export class StorageBucketService {
         LogContext.STORAGE_BUCKET
       );
     }
-    const storageBucket = await this.storageBucketRepository.findOneOrFail({
-      where: { id: storageBucketID },
-      ...options,
-    });
+    const storageBucket = em
+      ? await em.findOneOrFail(StorageBucket, {
+          ...options,
+          where: { ...options?.where, id: storageBucketID },
+        })
+      : await this.storageBucketRepository.findOneOrFail({
+          where: { id: storageBucketID },
+          ...options,
+        });
     if (!storageBucket)
       throw new EntityNotFoundException(
         `StorageBucket not found: ${storageBucketID}`,
