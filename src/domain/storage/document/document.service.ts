@@ -86,6 +86,25 @@ export class DocumentService {
     return document;
   }
 
+  public isUserFacingDocument(document: IDocument): boolean {
+    return Boolean(document.authorization);
+  }
+
+  public async getUserFacingDocumentOrFail(
+    documentID: string,
+    options?: FindOneOptions<Document>
+  ): Promise<IDocument> {
+    const document = await this.getDocumentOrFail(documentID, options);
+    if (!this.isUserFacingDocument(document)) {
+      throw new EntityNotFoundException(
+        'Not able to locate document with the specified ID',
+        LogContext.STORAGE_BUCKET,
+        { documentID }
+      );
+    }
+    return document;
+  }
+
   public async getDocumentByExternalIdOrFail(
     externalID: string,
     { where, ...rest }: FindOneOptions<Document>
