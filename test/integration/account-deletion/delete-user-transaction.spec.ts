@@ -34,6 +34,7 @@ import { UserService } from '@domain/community/user/user.service';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { AccountService } from '@domain/space/account/account.service';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken } from '@nestjs/typeorm';
@@ -68,6 +69,7 @@ describe('Integration — account-deletion transaction mechanism (falsification-
     appendLegOutcome: Mock;
   };
   let fileServiceAdapter: { deleteDocument: Mock };
+  let storageBucketService: { removeStorageBucketRowForAccountDeletion: Mock };
 
   const REAL_TRANSACTION_MARKER = {
     isTheOneTransactionalEntityManager: true,
@@ -107,6 +109,7 @@ describe('Integration — account-deletion transaction mechanism (falsification-
       AccountDeletionAuditService
     ) as any;
     fileServiceAdapter = module.get(FileServiceAdapter) as any;
+    storageBucketService = module.get(StorageBucketService) as any;
 
     // Silence unrelated providers this module resolves but this spec does
     // not exercise (registerNewUser/createOrganization machinery, etc.).
@@ -137,10 +140,12 @@ describe('Integration — account-deletion transaction mechanism (falsification-
     userService.deleteUserDbOnly.mockResolvedValue({
       user: { id: 'user-1' },
       documentIDs: ['doc-1'],
+      storageBucketIDs: ['sb-1'],
     });
     accountService.deleteAccountOrFailForAccountDeletion.mockResolvedValue({
       account: { id: 'account-1' },
       documentIDs: ['doc-2'],
+      storageBucketIDs: ['sb-2'],
     });
     accountDeletionAuditService.writePrimary.mockResolvedValue(undefined);
     accountDeletionAuditService.appendLegOutcome.mockResolvedValue(undefined);
@@ -150,6 +155,9 @@ describe('Integration — account-deletion transaction mechanism (falsification-
       identityDeletionSucceeded: false,
     });
     fileServiceAdapter.deleteDocument.mockResolvedValue(undefined);
+    storageBucketService.removeStorageBucketRowForAccountDeletion.mockResolvedValue(
+      undefined
+    );
   });
 
   it('threads the SAME transactional EntityManager to every primary-store write in the deletion tree', async () => {
@@ -207,6 +215,9 @@ describe('Integration — account-deletion transaction mechanism (falsification-
     expect(userService.revokeUserSessionsAndIdentity).not.toHaveBeenCalled();
     expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
     expect(accountDeletionAuditService.appendLegOutcome).not.toHaveBeenCalled();
+    expect(
+      storageBucketService.removeStorageBucketRowForAccountDeletion
+    ).not.toHaveBeenCalled();
   });
 
   it('a throw at an EARLIER step (application deletion) still propagates with no later writes and no post-commit legs', async () => {

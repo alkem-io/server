@@ -37,9 +37,10 @@ export class AccountLookupService {
 
   async getAccountOrFail(
     accountID: string,
-    options?: FindOneOptions<Account>
+    options?: FindOneOptions<Account>,
+    em?: EntityManager
   ): Promise<IAccount | never> {
-    const account = await this.getAccount(accountID, options);
+    const account = await this.getAccount(accountID, options, em);
     if (!account)
       throw new EntityNotFoundException(
         `Unable to find Account on Host with ID: ${accountID}`,
@@ -50,12 +51,20 @@ export class AccountLookupService {
 
   async getAccount(
     accountID: string,
-    options?: FindOneOptions<Account>
+    options?: FindOneOptions<Account>,
+    em?: EntityManager
   ): Promise<IAccount | null> {
-    const account: IAccount | null = await this.entityManager.findOne(Account, {
-      ...options,
-      where: { ...options?.where, id: accountID },
-    });
+    // Reads through the caller's transactional EntityManager when supplied,
+    // so a re-assertion made from inside a transaction observes that same
+    // transaction's snapshot rather than a separately-read view a
+    // concurrent write could race.
+    const account: IAccount | null = await (em ?? this.entityManager).findOne(
+      Account,
+      {
+        ...options,
+        where: { ...options?.where, id: accountID },
+      }
+    );
     return account;
   }
 
@@ -112,16 +121,21 @@ export class AccountLookupService {
    */
   public async getAccountResourceBlockers(
     accountID: string,
-    options: { cap: number }
+    options: { cap: number },
+    em?: EntityManager
   ): Promise<AccountResourceBlockersResult> {
-    const account = await this.getAccountOrFail(accountID, {
-      relations: {
-        spaces: { profile: true },
-        virtualContributors: { profile: true },
-        innovationPacks: { profile: true },
-        innovationHubs: { profile: true },
+    const account = await this.getAccountOrFail(
+      accountID,
+      {
+        relations: {
+          spaces: { profile: true },
+          virtualContributors: { profile: true },
+          innovationPacks: { profile: true },
+          innovationHubs: { profile: true },
+        },
       },
-    });
+      em
+    );
 
     const groups: {
       kind: AccountDeletionBlockerKind;

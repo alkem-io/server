@@ -4,6 +4,7 @@ import { CredentialService } from '@domain/actor/credential/credential.service';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { Injectable } from '@nestjs/common';
+import type { EntityManager } from 'typeorm';
 
 export const ACCOUNT_DELETION_BLOCKER_LIST_CAP = 25;
 
@@ -57,12 +58,15 @@ export class AccountDeletionBlockerService {
   public async getBlockers(
     userID: string,
     accountID: string,
-    branch: AccountDeletionInitiatorBranch
+    branch: AccountDeletionInitiatorBranch,
+    em?: EntityManager
   ): Promise<AccountDeletionBlockersResult> {
     const resourceResult =
-      await this.accountLookupService.getAccountResourceBlockers(accountID, {
-        cap: ACCOUNT_DELETION_BLOCKER_LIST_CAP,
-      });
+      await this.accountLookupService.getAccountResourceBlockers(
+        accountID,
+        { cap: ACCOUNT_DELETION_BLOCKER_LIST_CAP },
+        em
+      );
 
     const blockers: AccountDeletionBlocker[] = resourceResult.blockers.map(
       blocker => ({

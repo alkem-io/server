@@ -487,7 +487,7 @@ describe('ProfileService', () => {
       vi.mocked(
         storageBucketService.deleteStorageBucketForAccountDeletion
       ).mockResolvedValue({
-        storageBucket: {} as any,
+        storageBucketID: 'sb-1',
         documentIDs: ['ext-1'],
       });
       vi.mocked(visualService.deleteVisual).mockResolvedValue({} as any);
@@ -518,8 +518,10 @@ describe('ProfileService', () => {
         profile.authorization,
         em
       );
+      expect(profile.storageBucket).toBeUndefined();
       expect(em.remove).toHaveBeenCalledWith(profile);
       expect(result.documentIDs).toEqual(['ext-1']);
+      expect(result.storageBucketIDs).toEqual(['sb-1']);
     });
   });
 

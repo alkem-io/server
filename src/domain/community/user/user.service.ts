@@ -629,7 +629,11 @@ export class UserService {
     deleteData: DeleteUserInput,
     em: EntityManager,
     branch: AccountDeletionInitiatorBranch
-  ): Promise<{ user: IUser; documentIDs: string[] }> {
+  ): Promise<{
+    user: IUser;
+    documentIDs: string[];
+    storageBucketIDs: string[];
+  }> {
     const userID = deleteData.ID;
     const user = await this.loadUserForDeletion(userID);
 
@@ -639,10 +643,14 @@ export class UserService {
     // client-recognizable ACCOUNT_DELETION_BLOCKED code (so the client
     // re-runs the pre-flight and renders the itemized dialog); the admin
     // branch keeps the pre-existing ForbiddenException, unchanged.
+    // Reads `em` so the blocker check observes the same in-flight
+    // transactional snapshot as the deletion writes below it, rather than a
+    // separately-read view that a concurrent resource creation could race.
     const blockers = await this.accountDeletionBlockerService.getBlockers(
       userID,
       user.accountID,
-      branch
+      branch,
+      em
     );
     if (!blockers.canDelete) {
       if (branch === 'self') {
@@ -687,6 +695,10 @@ export class UserService {
       documentIDs: [
         ...profileResult.documentIDs,
         ...aggregatorResult.documentIDs,
+      ],
+      storageBucketIDs: [
+        ...profileResult.storageBucketIDs,
+        ...aggregatorResult.storageBucketIDs,
       ],
     };
   }

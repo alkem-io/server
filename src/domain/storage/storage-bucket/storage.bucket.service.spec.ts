@@ -261,7 +261,7 @@ describe('StorageBucketService', () => {
   // ── deleteStorageBucketForAccountDeletion ────────────────────────
 
   describe('deleteStorageBucketForAccountDeletion', () => {
-    it('joins the passed EntityManager, never calls the file-service delete, and collects external ids', async () => {
+    it('joins the passed EntityManager, never calls the file-service delete, collects external ids, and never removes the bucket or file rows', async () => {
       const doc1 = { id: 'doc-1' };
       const doc2 = { id: 'doc-2' };
       const bucket = {
@@ -293,9 +293,25 @@ describe('StorageBucketService', () => {
         em
       );
       expect(documentService.deleteDocument).not.toHaveBeenCalled();
-      expect(em.remove).toHaveBeenCalledWith(bucket);
+      // The bucket row (and any `file` row it would cascade) is
+      // deliberately left in place — only the post-commit leg (see
+      // `removeStorageBucketRowForAccountDeletion`) removes it, once every
+      // document has actually gone through the file-service.
+      expect(em.remove).not.toHaveBeenCalled();
       expect(result.documentIDs).toEqual(['doc-1', 'doc-2']);
-      expect(result.storageBucket.id).toBe('bucket-1');
+      expect(result.storageBucketID).toBe('bucket-1');
+    });
+  });
+
+  describe('removeStorageBucketRowForAccountDeletion', () => {
+    it('deletes the bucket row directly by id, outside any EntityManager', async () => {
+      (storageBucketRepository.delete as Mock).mockResolvedValue({
+        affected: 1,
+      });
+
+      await service.removeStorageBucketRowForAccountDeletion('bucket-1');
+
+      expect(storageBucketRepository.delete).toHaveBeenCalledWith('bucket-1');
     });
   });
 

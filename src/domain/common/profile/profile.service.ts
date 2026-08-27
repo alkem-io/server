@@ -288,7 +288,11 @@ export class ProfileService {
   async deleteProfileForAccountDeletion(
     profileID: string,
     em: EntityManager
-  ): Promise<{ profile: IProfile; documentIDs: string[] }> {
+  ): Promise<{
+    profile: IProfile;
+    documentIDs: string[];
+    storageBucketIDs: string[];
+  }> {
     const profile = await this.getProfileOrFail(profileID, {
       relations: {
         references: true,
@@ -313,6 +317,7 @@ export class ProfileService {
     }
 
     let documentIDs: string[] = [];
+    let storageBucketIDs: string[] = [];
     if (profile.storageBucket) {
       const result =
         await this.storageBucketService.deleteStorageBucketForAccountDeletion(
@@ -320,6 +325,12 @@ export class ProfileService {
           em
         );
       documentIDs = result.documentIDs;
+      storageBucketIDs = [result.storageBucketID];
+      // Detach before removing the profile below: this relation carries
+      // `cascade: true`, and the bucket row was deliberately left in place
+      // (see `deleteStorageBucketForAccountDeletion`) — an attached child
+      // would let TypeORM cascade-remove it anyway.
+      profile.storageBucket = undefined;
     }
 
     if (profile.visuals) {
@@ -337,7 +348,7 @@ export class ProfileService {
     }
 
     const removed = await em.remove(profile as Profile);
-    return { profile: removed, documentIDs };
+    return { profile: removed, documentIDs, storageBucketIDs };
   }
 
   async deleteProfile(profileID: string): Promise<IProfile> {

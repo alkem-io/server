@@ -116,11 +116,13 @@ describe('UserService — account-deletion saga methods', () => {
     profileService.deleteProfileForAccountDeletion.mockResolvedValue({
       profile: {},
       documentIDs: [],
+      storageBucketIDs: [],
     });
     authorizationPolicyService.delete.mockResolvedValue(undefined);
     storageAggregatorService.deleteForAccountDeletion.mockResolvedValue({
       storageAggregator: {},
       documentIDs: [],
+      storageBucketIDs: [],
     });
     userSettingsService.deleteUserSettings.mockResolvedValue(undefined);
     actorService.deleteActorById.mockResolvedValue(undefined);
@@ -145,7 +147,8 @@ describe('UserService — account-deletion saga methods', () => {
       expect(accountDeletionBlockerService.getBlockers).toHaveBeenCalledWith(
         'user-1',
         'account-1',
-        'self'
+        'self',
+        em
       );
       expect(
         profileService.deleteProfileForAccountDeletion
@@ -178,10 +181,12 @@ describe('UserService — account-deletion saga methods', () => {
       profileService.deleteProfileForAccountDeletion.mockResolvedValue({
         profile: {},
         documentIDs: ['ext-1'],
+        storageBucketIDs: ['sb-profile'],
       });
       storageAggregatorService.deleteForAccountDeletion.mockResolvedValue({
         storageAggregator: {},
         documentIDs: ['ext-2', 'ext-3'],
+        storageBucketIDs: ['sb-aggregator'],
       });
 
       const result = await service.deleteUserDbOnly(
@@ -191,6 +196,7 @@ describe('UserService — account-deletion saga methods', () => {
       );
 
       expect(result.documentIDs).toEqual(['ext-1', 'ext-2', 'ext-3']);
+      expect(result.storageBucketIDs).toEqual(['sb-profile', 'sb-aggregator']);
     });
 
     it('refuses with ACCOUNT_DELETION_BLOCKED on the self branch when blocked', async () => {

@@ -197,19 +197,28 @@ export class AccountService {
   }
 
   private async loadAccountForDeletionOrFail(
-    accountID: string
+    accountID: string,
+    em?: EntityManager
   ): Promise<IAccount> {
-    const account = await this.getAccountOrFail(accountID, {
-      relations: {
-        spaces: true,
-        virtualContributors: true,
-        innovationPacks: true,
-        storageAggregator: true,
-        innovationHubs: true,
-        license: true,
-        profile: true,
+    // Reads through the caller's transactional EntityManager when supplied,
+    // so a re-assertion made from inside a transaction observes that same
+    // transaction's snapshot rather than a separately-read view a
+    // concurrent write could race.
+    const account = await this.getAccountOrFail(
+      accountID,
+      {
+        relations: {
+          spaces: true,
+          virtualContributors: true,
+          innovationPacks: true,
+          storageAggregator: true,
+          innovationHubs: true,
+          license: true,
+          profile: true,
+        },
       },
-    });
+      em
+    );
 
     if (
       !account.spaces ||
@@ -242,9 +251,13 @@ export class AccountService {
   async deleteAccountOrFailForAccountDeletion(
     accountInput: IAccount,
     em: EntityManager
-  ): Promise<{ account: IAccount; documentIDs: string[] }> {
+  ): Promise<{
+    account: IAccount;
+    documentIDs: string[];
+    storageBucketIDs: string[];
+  }> {
     const accountID = accountInput.id;
-    const account = await this.loadAccountForDeletionOrFail(accountID);
+    const account = await this.loadAccountForDeletionOrFail(accountID, em);
 
     if (
       account.spaces.length > 0 ||
@@ -264,6 +277,7 @@ export class AccountService {
         em
       );
     let documentIDs = [...aggregatorResult.documentIDs];
+    let storageBucketIDs = [...aggregatorResult.storageBucketIDs];
 
     await this.licenseService.removeLicenseOrFail(account.license!.id, em);
 
@@ -274,6 +288,10 @@ export class AccountService {
           em
         );
       documentIDs = [...documentIDs, ...profileResult.documentIDs];
+      storageBucketIDs = [
+        ...storageBucketIDs,
+        ...profileResult.storageBucketIDs,
+      ];
     }
 
     if (account.authorization) {
@@ -285,7 +303,7 @@ export class AccountService {
     await this.actorService.deleteActorById(accountID, em);
 
     account.id = accountID;
-    return { account, documentIDs };
+    return { account, documentIDs, storageBucketIDs };
   }
 
   async deleteAccountOrFail(accountInput: IAccount): Promise<IAccount | never> {
@@ -349,9 +367,10 @@ export class AccountService {
 
   async getAccountOrFail(
     accountID: string,
-    options?: FindOneOptions<Account>
+    options?: FindOneOptions<Account>,
+    em?: EntityManager
   ): Promise<IAccount | never> {
-    const account = await this.getAccount(accountID, options);
+    const account = await this.getAccount(accountID, options, em);
     if (!account)
       throw new EntityNotFoundException(
         `Unable to find Account with ID: ${accountID}`,
@@ -362,8 +381,15 @@ export class AccountService {
 
   async getAccount(
     accountID: string,
-    options?: FindOneOptions<Account>
+    options?: FindOneOptions<Account>,
+    em?: EntityManager
   ): Promise<IAccount | null> {
+    if (em) {
+      return await em.findOne(Account, {
+        where: { id: accountID },
+        ...options,
+      });
+    }
     return await this.accountRepository.findOne({
       where: { id: accountID },
       ...options,

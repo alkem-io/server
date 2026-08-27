@@ -62,8 +62,9 @@ export class StorageAggregatorService {
 
   /**
    * DB-only deletion mode for the account-deletion saga: joins the caller's
-   * transactional EntityManager and defers every document's byte deletion
-   * to after commit (see `StorageBucketService.deleteStorageBucketForAccountDeletion`).
+   * transactional EntityManager and defers every document's byte deletion,
+   * and the emptied bucket row itself, to after commit (see
+   * `StorageBucketService.deleteStorageBucketForAccountDeletion`).
    */
   public async deleteForAccountDeletion(
     storageAggregatorID: string,
@@ -71,6 +72,7 @@ export class StorageAggregatorService {
   ): Promise<{
     storageAggregator: IStorageAggregator;
     documentIDs: string[];
+    storageBucketIDs: string[];
   }> {
     const storageAggregator = await this.getStorageAggregatorOrFail(
       storageAggregatorID,
@@ -91,15 +93,26 @@ export class StorageAggregatorService {
       );
     }
 
-    const { documentIDs } =
+    const { storageBucketID, documentIDs } =
       await this.storageBucketService.deleteStorageBucketForAccountDeletion(
         storageAggregator.directStorage.id,
         em
       );
 
+    // Detach the loaded relation before removing the aggregator: the
+    // bucket row above was deliberately left in place, and this relation
+    // carries `cascade: true` — an attached child would let TypeORM
+    // cascade-remove it right back out from under
+    // `deleteStorageBucketForAccountDeletion`'s guarantee.
+    storageAggregator.directStorage = undefined;
+
     const result = await em.remove(storageAggregator as StorageAggregator);
     result.id = storageAggregatorID;
-    return { storageAggregator: result, documentIDs };
+    return {
+      storageAggregator: result,
+      documentIDs,
+      storageBucketIDs: [storageBucketID],
+    };
   }
 
   async delete(storageAggregatorID: string): Promise<IStorageAggregator> {

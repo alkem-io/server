@@ -14,6 +14,7 @@ import { UserService } from '@domain/community/user/user.service';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { AccountService } from '@domain/space/account/account.service';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken } from '@nestjs/typeorm';
@@ -41,6 +42,7 @@ describe('RegistrationService', () => {
     appendLegOutcome: Mock;
   };
   let fileServiceAdapter: { deleteDocument: Mock };
+  let storageBucketService: { removeStorageBucketRowForAccountDeletion: Mock };
   let entityManager: { transaction: Mock };
   let userAuthorizationService: {
     grantCredentialsAllUsersReceive: Mock;
@@ -103,6 +105,10 @@ describe('RegistrationService', () => {
       AccountDeletionAuditService
     ) as any;
     fileServiceAdapter = module.get(FileServiceAdapter) as any;
+    storageBucketService = module.get(StorageBucketService) as any;
+    storageBucketService.removeStorageBucketRowForAccountDeletion.mockResolvedValue(
+      undefined
+    );
     entityManager = module.get(getEntityManagerToken('default')) as any;
     userAuthorizationService = module.get(UserAuthorizationService) as any;
     accountAuthorizationService = module.get(
@@ -598,10 +604,12 @@ describe('RegistrationService', () => {
       userService.deleteUserDbOnly.mockResolvedValue({
         user: deletedUser,
         documentIDs: ['doc-1'],
+        storageBucketIDs: ['sb-1'],
       });
       accountService.deleteAccountOrFailForAccountDeletion.mockResolvedValue({
         account,
         documentIDs: ['doc-2'],
+        storageBucketIDs: ['sb-2'],
       });
       accountDeletionAuditService.writePrimary.mockResolvedValue(undefined);
       accountDeletionAuditService.appendLegOutcome.mockResolvedValue(undefined);
@@ -694,6 +702,64 @@ describe('RegistrationService', () => {
         'file_bytes_cleanup_completed',
         undefined
       );
+      expect(
+        storageBucketService.removeStorageBucketRowForAccountDeletion
+      ).toHaveBeenCalledWith('sb-1');
+      expect(
+        storageBucketService.removeStorageBucketRowForAccountDeletion
+      ).toHaveBeenCalledWith('sb-2');
+    });
+
+    it('removes emptied storage bucket rows only after every document has gone through the file-service delete', async () => {
+      const { deleteData } = setUpHappyPath();
+      const callOrder: string[] = [];
+      fileServiceAdapter.deleteDocument.mockImplementation(
+        async (documentID: string) => {
+          callOrder.push(`file:${documentID}`);
+        }
+      );
+      storageBucketService.removeStorageBucketRowForAccountDeletion.mockImplementation(
+        async (storageBucketID: string) => {
+          callOrder.push(`bucket:${storageBucketID}`);
+        }
+      );
+
+      await service.deleteUserWithPendingMemberships(deleteData as any, 'self');
+
+      expect(callOrder.indexOf('file:doc-1')).toBeLessThan(
+        callOrder.indexOf('bucket:sb-1')
+      );
+      expect(callOrder.indexOf('file:doc-2')).toBeLessThan(
+        callOrder.indexOf('bucket:sb-2')
+      );
+    });
+
+    it('logs and swallows a storage-bucket-row removal failure without failing the mutation', async () => {
+      const { deleteData } = setUpHappyPath();
+      storageBucketService.removeStorageBucketRowForAccountDeletion.mockRejectedValue(
+        new Error('db unreachable')
+      );
+
+      const result = await service.deleteUserWithPendingMemberships(
+        deleteData as any,
+        'self'
+      );
+
+      expect(result).toBeDefined();
+    });
+
+    it('logs and swallows an unexpected post-commit failure (e.g. an audit write rejecting) without failing the mutation', async () => {
+      const { deleteData } = setUpHappyPath();
+      accountDeletionAuditService.appendLegOutcome.mockRejectedValueOnce(
+        new Error('audit db unreachable')
+      );
+
+      const result = await service.deleteUserWithPendingMemberships(
+        deleteData as any,
+        'self'
+      );
+
+      expect(result).toBeDefined();
     });
 
     it('appends failed leg outcomes when session revocation and identity deletion fail, without failing the mutation', async () => {
@@ -747,15 +813,20 @@ describe('RegistrationService', () => {
       userService.deleteUserDbOnly.mockResolvedValue({
         user: { id: 'user-1' },
         documentIDs: [],
+        storageBucketIDs: [],
       });
       accountService.deleteAccountOrFailForAccountDeletion.mockResolvedValue({
         account: { id: 'account-1' },
         documentIDs: [],
+        storageBucketIDs: [],
       });
 
       await service.deleteUserWithPendingMemberships(deleteData as any, 'self');
 
       expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+      expect(
+        storageBucketService.removeStorageBucketRowForAccountDeletion
+      ).not.toHaveBeenCalled();
       expect(
         accountDeletionAuditService.appendLegOutcome
       ).not.toHaveBeenCalledWith(

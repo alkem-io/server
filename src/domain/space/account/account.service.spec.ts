@@ -262,25 +262,32 @@ describe('AccountService', () => {
         profile: { id: 'profile-1' },
         authorization: { id: 'auth-1' },
       } as unknown as Account;
-      vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
+      const em = {
+        findOne: vi.fn().mockResolvedValue(mockAccount),
+      } as any;
       storageAggregatorService.deleteForAccountDeletion.mockResolvedValue({
         storageAggregator: {} as any,
         documentIDs: ['ext-1'],
+        storageBucketIDs: ['sb-aggregator'],
       });
       licenseService.removeLicenseOrFail.mockResolvedValue(undefined!);
       profileService.deleteProfileForAccountDeletion.mockResolvedValue({
         profile: {} as any,
         documentIDs: ['ext-2'],
+        storageBucketIDs: ['sb-profile'],
       });
       authorizationPolicyService.delete.mockResolvedValue(undefined!);
       actorService.deleteActorById.mockResolvedValue(undefined!);
-      const em = {} as any;
 
       const result = await service.deleteAccountOrFailForAccountDeletion(
         mockAccount,
         em
       );
 
+      // The account re-assertion reads through the passed-in transactional
+      // EntityManager, not the repository, so the check and the deletion
+      // writes below it observe the same snapshot.
+      expect(em.findOne).toHaveBeenCalled();
       expect(
         storageAggregatorService.deleteForAccountDeletion
       ).toHaveBeenCalledWith('storage-1', em);
@@ -300,6 +307,7 @@ describe('AccountService', () => {
         em
       );
       expect(result.documentIDs).toEqual(['ext-1', 'ext-2']);
+      expect(result.storageBucketIDs).toEqual(['sb-aggregator', 'sb-profile']);
       expect(result.account.id).toBe('account-1');
       expect(storageAggregatorService.delete).not.toHaveBeenCalled();
       expect(spaceService.deleteSpaceOrFail).not.toHaveBeenCalled();
@@ -316,9 +324,10 @@ describe('AccountService', () => {
         license: { id: 'license-1' },
       } as unknown as Account;
       vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
+      const em = { findOne: vi.fn().mockResolvedValue(mockAccount) } as any;
 
       await expect(
-        service.deleteAccountOrFailForAccountDeletion(mockAccount, {} as any)
+        service.deleteAccountOrFailForAccountDeletion(mockAccount, em)
       ).rejects.toThrow(RelationshipNotFoundException);
       expect(
         storageAggregatorService.deleteForAccountDeletion

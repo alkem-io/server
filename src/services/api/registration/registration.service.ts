@@ -32,6 +32,7 @@ import { PlatformAuditInitiatorRole } from '@domain/community/user-email-change/
 import { PlatformAuditOutcome } from '@domain/community/user-email-change/enums/platform.audit.outcome';
 import { AccountService } from '@domain/space/account/account.service';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Inject, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectEntityManager } from '@nestjs/typeorm';
@@ -59,6 +60,7 @@ export class RegistrationService {
     private notificationPlatformAdapter: NotificationPlatformAdapter,
     private accountDeletionAuditService: AccountDeletionAuditService,
     private fileServiceAdapter: FileServiceAdapter,
+    private storageBucketService: StorageBucketService,
     private configService: ConfigService<AlkemioConfig, true>,
     @InjectEntityManager('default') private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -368,8 +370,8 @@ export class RegistrationService {
     const user = await this.userService.getUserByIdOrFail(userID);
     const account = await this.userService.getAccount(user);
 
-    const { deletedUser, documentIDs } = await this.entityManager.transaction(
-      async em => {
+    const { deletedUser, documentIDs, storageBucketIDs } =
+      await this.entityManager.transaction(async em => {
         const invitations =
           await this.invitationService.findInvitationsForActor(userID);
         for (const invitation of invitations) {
@@ -402,6 +404,10 @@ export class RegistrationService {
           ...userResult.documentIDs,
           ...accountResult.documentIDs,
         ];
+        const storageBucketIDs = [
+          ...userResult.storageBucketIDs,
+          ...accountResult.storageBucketIDs,
+        ];
 
         await this.accountDeletionAuditService.writePrimary(em, {
           subjectUserId: userID,
@@ -411,15 +417,15 @@ export class RegistrationService {
           documentCount: documentIDs.length,
         });
 
-        return { deletedUser: userResult.user, documentIDs };
-      }
-    );
+        return { deletedUser: userResult.user, documentIDs, storageBucketIDs };
+      });
 
     await this.runPostCommitDeletionLegs(
       deletedUser,
       deleteData,
       initiatorRole,
-      documentIDs
+      documentIDs,
+      storageBucketIDs
     );
 
     return deletedUser;
@@ -431,13 +437,17 @@ export class RegistrationService {
    * best-effort and each individually appended to the audit trail. A
    * failure here is recorded, logged, and NEVER re-thrown: by the time this
    * runs, the primary-store deletion has already committed and the mutation
-   * must still report success (FR-017).
+   * must still report success (FR-017). The whole body runs inside an
+   * outer guard (see the wrapping `runPostCommitDeletionLegs`) so even an
+   * unexpected failure in the itemized guards below — not just the legs
+   * they wrap — can never escape as a user-visible error.
    */
-  private async runPostCommitDeletionLegs(
+  private async runPostCommitDeletionLegsGuarded(
     deletedUser: IUser,
     deleteData: DeleteUserInput,
     initiatorRole: PlatformAuditInitiatorRole,
-    documentIDs: string[]
+    documentIDs: string[],
+    storageBucketIDs: string[]
   ): Promise<void> {
     const userID = deleteData.ID;
 
@@ -464,22 +474,58 @@ export class RegistrationService {
       );
     }
 
-    if (documentIDs.length === 0) {
-      return;
+    if (documentIDs.length > 0) {
+      const failures: string[] = [];
+      for (const documentID of documentIDs) {
+        try {
+          await this.fileServiceAdapter.deleteDocument(documentID);
+        } catch (error: any) {
+          failures.push(redactError(error));
+          this.logger.error?.(
+            {
+              message:
+                'Failed to delete document bytes during account deletion; the deletion still stands',
+              userID,
+              documentID,
+              error: redactError(error),
+            },
+            redactStack(error),
+            LogContext.STORAGE_BUCKET
+          );
+        }
+      }
+
+      await this.accountDeletionAuditService.appendLegOutcome(
+        userID,
+        initiatorRole,
+        failures.length === 0
+          ? PlatformAuditOutcome.FILE_BYTES_CLEANUP_COMPLETED
+          : PlatformAuditOutcome.FILE_BYTES_CLEANUP_FAILED,
+        failures.length === 0
+          ? undefined
+          : { error: failures.slice(0, 3).join('; ').slice(0, 250) }
+      );
     }
 
-    const failures: string[] = [];
-    for (const documentID of documentIDs) {
+    // Finalize the now-emptied storage bucket rows, once every document
+    // above has actually gone through the Go file-service delete (never
+    // through this ORM — see
+    // `StorageBucketService.deleteStorageBucketForAccountDeletion`). Each
+    // bucket is independently best-effort: a stray bucket row left behind
+    // by a transient failure here never blocks the deletion that already
+    // committed.
+    for (const storageBucketID of storageBucketIDs) {
       try {
-        await this.fileServiceAdapter.deleteDocument(documentID);
+        await this.storageBucketService.removeStorageBucketRowForAccountDeletion(
+          storageBucketID
+        );
       } catch (error: any) {
-        failures.push(redactError(error));
         this.logger.error?.(
           {
             message:
-              'Failed to delete document bytes during account deletion; the deletion still stands',
+              'Failed to remove an emptied storage bucket row during account deletion; the deletion still stands',
             userID,
-            documentID,
+            storageBucketID,
             error: redactError(error),
           },
           redactStack(error),
@@ -487,17 +533,42 @@ export class RegistrationService {
         );
       }
     }
+  }
 
-    await this.accountDeletionAuditService.appendLegOutcome(
-      userID,
-      initiatorRole,
-      failures.length === 0
-        ? PlatformAuditOutcome.FILE_BYTES_CLEANUP_COMPLETED
-        : PlatformAuditOutcome.FILE_BYTES_CLEANUP_FAILED,
-      failures.length === 0
-        ? undefined
-        : { error: failures.slice(0, 3).join('; ').slice(0, 250) }
-    );
+  /**
+   * Entry point for the post-commit external legs: wraps
+   * `runPostCommitDeletionLegsGuarded` in a final catch-all so that even a
+   * failure the itemized per-leg guards don't anticipate — e.g. the audit
+   * write itself rejecting — is recorded and swallowed rather than
+   * propagating out of an already-committed deletion (FR-017, FR-019).
+   */
+  private async runPostCommitDeletionLegs(
+    deletedUser: IUser,
+    deleteData: DeleteUserInput,
+    initiatorRole: PlatformAuditInitiatorRole,
+    documentIDs: string[],
+    storageBucketIDs: string[]
+  ): Promise<void> {
+    try {
+      await this.runPostCommitDeletionLegsGuarded(
+        deletedUser,
+        deleteData,
+        initiatorRole,
+        documentIDs,
+        storageBucketIDs
+      );
+    } catch (error: any) {
+      this.logger.error?.(
+        {
+          message:
+            'A post-commit account-deletion leg failed unexpectedly; the deletion still stands',
+          userID: deleteData.ID,
+          error: redactError(error),
+        },
+        redactStack(error),
+        LogContext.COMMUNITY
+      );
+    }
   }
 
   async deleteOrganizationWithPendingMemberships(

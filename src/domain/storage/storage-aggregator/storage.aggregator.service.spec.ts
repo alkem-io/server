@@ -210,7 +210,7 @@ describe('StorageAggregatorService', () => {
   });
 
   describe('deleteForAccountDeletion', () => {
-    it('joins the passed EntityManager throughout and surfaces the collected external ids', async () => {
+    it('joins the passed EntityManager throughout, surfaces the collected external ids and bucket id, and detaches directStorage before removing itself', async () => {
       const aggregator = {
         id: 'agg-1',
         authorization: { id: 'auth-1' },
@@ -223,7 +223,7 @@ describe('StorageAggregatorService', () => {
       (
         storageBucketService.deleteStorageBucketForAccountDeletion as Mock
       ).mockResolvedValue({
-        storageBucket: { id: 'bucket-1' },
+        storageBucketID: 'bucket-1',
         documentIDs: ['ext-1', 'ext-2'],
       });
       const em = {
@@ -239,8 +239,10 @@ describe('StorageAggregatorService', () => {
       expect(
         storageBucketService.deleteStorageBucketForAccountDeletion
       ).toHaveBeenCalledWith('bucket-1', em);
+      expect(aggregator.directStorage).toBeUndefined();
       expect(em.remove).toHaveBeenCalledWith(aggregator);
       expect(result.documentIDs).toEqual(['ext-1', 'ext-2']);
+      expect(result.storageBucketIDs).toEqual(['bucket-1']);
       expect(result.storageAggregator.id).toBe('agg-1');
     });
 
