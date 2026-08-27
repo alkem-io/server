@@ -10,6 +10,7 @@ import { AccountAuthorizationService } from '@domain/space/account/account.servi
 import { Test, TestingModule } from '@nestjs/testing';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
+import { NotificationExternalAdapter } from '@services/adapters/notification-external-adapter/notification.external.adapter';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock } from 'vitest';
@@ -37,6 +38,7 @@ describe('RegistrationResolverMutations', () => {
   let accountAuthorizationService: { applyAuthorizationPolicy: Mock };
   let authorizationPolicyService: { saveAll: Mock };
   let notificationPlatformAdapter: { platformUserRemoved: Mock };
+  let notificationExternalAdapter: { createUserPayloadFromUser: Mock };
 
   const actorContext = { actorID: 'actor-1', credentials: [] } as any;
 
@@ -66,6 +68,9 @@ describe('RegistrationResolverMutations', () => {
     authorizationPolicyService = module.get(AuthorizationPolicyService) as any;
     notificationPlatformAdapter = module.get(
       NotificationPlatformAdapter
+    ) as any;
+    notificationExternalAdapter = module.get(
+      NotificationExternalAdapter
     ) as any;
   });
 
@@ -173,8 +178,14 @@ describe('RegistrationResolverMutations', () => {
         expect.objectContaining({
           triggeredBy: 'actor-1',
           user,
+          triggeredByPayload: undefined,
         })
       );
+      // The admin-on-other branch never pre-resolves a payload — only the
+      // self branch can safely look the initiator up post-deletion.
+      expect(
+        notificationExternalAdapter.createUserPayloadFromUser
+      ).not.toHaveBeenCalled();
       expect(
         registrationService.deleteUserWithPendingMemberships
       ).toHaveBeenCalledWith({ ID: 'user-1' }, 'admin');
@@ -250,6 +261,10 @@ describe('RegistrationResolverMutations', () => {
         notificationPlatformAdapter.platformUserRemoved.mockResolvedValue(
           undefined
         );
+        const preResolvedPayload = { id: 'user-1' };
+        notificationExternalAdapter.createUserPayloadFromUser.mockReturnValue(
+          preResolvedPayload
+        );
 
         const result = await resolver.deleteUser(
           selfActorContext(freshIssuedAt),
@@ -260,6 +275,18 @@ describe('RegistrationResolverMutations', () => {
         expect(
           registrationService.deleteUserWithPendingMemberships
         ).toHaveBeenCalledWith({ ID: 'user-1', deleteIdentity: true }, 'self');
+        // The self branch pre-resolves the initiator's notification payload
+        // from the still-loaded pre-deletion entity, BEFORE the deletion
+        // call — a post-deletion lookup by id would fail, since the
+        // initiator IS the departed user.
+        expect(
+          notificationExternalAdapter.createUserPayloadFromUser
+        ).toHaveBeenCalledWith(user);
+        expect(
+          notificationPlatformAdapter.platformUserRemoved
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({ triggeredByPayload: preResolvedPayload })
+        );
       });
 
       it('does not gate an admin deleting someone else even with a stale/missing issuedAt', async () => {

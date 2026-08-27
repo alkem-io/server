@@ -25,6 +25,7 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { NotificationInputPlatformUserRemoved } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.user.removed';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
+import { NotificationExternalAdapter } from '@services/adapters/notification-external-adapter/notification.external.adapter';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor, Profiling } from '@src/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -35,6 +36,7 @@ import { RegistrationService } from './registration.service';
 export class RegistrationResolverMutations {
   constructor(
     private notificationPlatformAdapter: NotificationPlatformAdapter,
+    private notificationExternalAdapter: NotificationExternalAdapter,
     private registrationService: RegistrationService,
     private userService: UserService,
     private organizationService: OrganizationService,
@@ -156,6 +158,15 @@ export class RegistrationResolverMutations {
       ? { ...deleteData, deleteIdentity: true }
       : deleteData;
 
+    // On the self branch the initiator IS `user`, whose row is gone from
+    // the primary store by the time the notification below runs — resolve
+    // its payload now, from the still-loaded pre-deletion entity, so the
+    // notification never has to look the (about to be) deleted initiator
+    // up by id after the fact.
+    const triggeredByPayload = isSelf
+      ? this.notificationExternalAdapter.createUserPayloadFromUser(user)
+      : undefined;
+
     const userDeleted =
       await this.registrationService.deleteUserWithPendingMemberships(
         effectiveDeleteData,
@@ -169,6 +180,7 @@ export class RegistrationResolverMutations {
     const notificationInput: NotificationInputPlatformUserRemoved = {
       triggeredBy: actorContext.actorID,
       user,
+      triggeredByPayload,
     };
     try {
       await this.notificationPlatformAdapter.platformUserRemoved(
