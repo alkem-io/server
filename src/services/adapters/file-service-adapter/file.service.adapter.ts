@@ -131,10 +131,12 @@ export class FileServiceAdapter extends HttpClientBase {
    * (its `UNIQUE(authorizationId)` permits any number of NULLs). The snapshot is
    * therefore pointer-compatible with the ones the collaboration-service writes
    * on every later save (latest-only: the room deletes the previous pointer's
-   * file on its first save), and it is NOT tracked as a server-side `Document`
-   * entity (no auth-policy / tagset rows). It still counts toward the space's
-   * storage quota because it lives in the document's own bucket under the space's
-   * storage aggregator.
+   * file on its first save). It is a real `file` row mapped by the server's
+   * `Document` entity, but it is not provisioned as a user-visible document: it
+   * has no authorization-policy or tagset rows and is filtered from public
+   * document collections and lookups. It still counts toward the space's storage
+   * quota because it lives in the document's own bucket under the space's storage
+   * aggregator.
    *
    */
   async createSnapshotInBucket(
