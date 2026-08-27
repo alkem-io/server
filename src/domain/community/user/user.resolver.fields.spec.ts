@@ -288,6 +288,78 @@ describe('UserResolverFields', () => {
     });
   });
 
+  describe('the deleted-user sentinel — every downstream field, not just profile', () => {
+    const sentinelUser = { id: DELETED_USER_SENTINEL_ID } as any;
+    const actorContext = { actorID: 'viewer-1', credentials: [] } as any;
+
+    it('resolves actor to the sentinel without touching the loader', async () => {
+      const loader = { load: vi.fn() } as any;
+
+      const result = await resolver.agent(sentinelUser, loader);
+
+      expect(result).toBe(DELETED_USER_SENTINEL);
+      expect(loader.load).not.toHaveBeenCalled();
+    });
+
+    it('resolves authorization to the closed sentinel policy without touching the loader', async () => {
+      const loader = { load: vi.fn() } as any;
+
+      const result = await resolver.authorization(sentinelUser, loader);
+
+      expect(result).toBe(DELETED_USER_SENTINEL.authorization);
+      expect(loader.load).not.toHaveBeenCalled();
+    });
+
+    it('resolves email to "not accessible" without reloading the user', async () => {
+      const result = await resolver.email(sentinelUser, actorContext);
+
+      expect(result).toBe('not accessible');
+      expect(userService.getUserByIdOrFail).not.toHaveBeenCalled();
+      expect(authorizationService.isAccessGranted).not.toHaveBeenCalled();
+    });
+
+    it('resolves phone to "not accessible" without reloading the user', async () => {
+      const result = await resolver.phone(sentinelUser, actorContext);
+
+      expect(result).toBe('not accessible');
+      expect(userService.getUserByIdOrFail).not.toHaveBeenCalled();
+    });
+
+    it('resolves account to undefined without reloading the user', async () => {
+      const result = await resolver.account(sentinelUser, actorContext);
+
+      expect(result).toBeUndefined();
+      expect(userService.getAccount).not.toHaveBeenCalled();
+    });
+
+    it('resolves isContactable to false without touching the loader', async () => {
+      const loader = { load: vi.fn() } as any;
+
+      const result = await resolver.isContactable(sentinelUser, loader);
+
+      expect(result).toBe(false);
+      expect(loader.load).not.toHaveBeenCalled();
+    });
+
+    it('resolves isContactableViaEmail to false without touching the loader', async () => {
+      const loader = { load: vi.fn() } as any;
+
+      const result = await resolver.isContactableViaEmail(sentinelUser, loader);
+
+      expect(result).toBe(false);
+      expect(loader.load).not.toHaveBeenCalled();
+    });
+
+    it('resolves storageAggregator to undefined without touching the loader', async () => {
+      const loader = { load: vi.fn() } as any;
+
+      const result = await resolver.storageAggregator(sentinelUser, loader);
+
+      expect(result).toBeUndefined();
+      expect(loader.load).not.toHaveBeenCalled();
+    });
+  });
+
   describe('isAccessGranted (private, tested indirectly via email)', () => {
     it('should reload authorization when not available on user entity', async () => {
       const user = {

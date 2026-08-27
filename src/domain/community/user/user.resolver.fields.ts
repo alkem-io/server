@@ -17,6 +17,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { IProfile } from '@domain/common/profile/profile.interface';
 import {
   DELETED_USER_SENTINEL,
+  DELETED_USER_SENTINEL_AUTHORIZATION,
   DELETED_USER_SENTINEL_ID,
 } from '@domain/community/user/account-deletion/deleted.user.sentinel';
 import { IUser } from '@domain/community/user/user.interface';
@@ -80,6 +81,11 @@ export class UserResolverFields {
     @Loader(ActorLoaderCreator, { parentClassRef: User })
     loader: ILoader<IActor>
   ): Promise<IActor> {
+    // Same short-circuit as `profile` above: the sentinel is itself
+    // already shaped like the lightweight `Actor` type it stands in for.
+    if (user.id === DELETED_USER_SENTINEL_ID) {
+      return DELETED_USER_SENTINEL as unknown as IActor;
+    }
     return loader.load(user.id);
   }
 
@@ -92,6 +98,9 @@ export class UserResolverFields {
     @Loader(AuthorizationLoaderCreator, { parentClassRef: User })
     loader: ILoader<IAuthorizationPolicy>
   ) {
+    if (user.id === DELETED_USER_SENTINEL_ID) {
+      return DELETED_USER_SENTINEL_AUTHORIZATION;
+    }
     return loader.load(user.id);
   }
 
@@ -103,6 +112,12 @@ export class UserResolverFields {
     @Parent() user: User,
     @CurrentActor() actorContext: ActorContext
   ): Promise<string | 'not accessible'> {
+    // The sentinel's id is never a real `user` row, so `isAccessGranted`'s
+    // fallback reload (`getUserByIdOrFail`) would throw. PII is never
+    // accessible for a departed user regardless of the caller's privileges.
+    if (user.id === DELETED_USER_SENTINEL_ID) {
+      return 'not accessible';
+    }
     if (
       await this.isAccessGranted(
         user,
@@ -123,6 +138,9 @@ export class UserResolverFields {
     @Parent() user: User,
     @CurrentActor() actorContext: ActorContext
   ): Promise<string | null | 'not accessible'> {
+    if (user.id === DELETED_USER_SENTINEL_ID) {
+      return 'not accessible';
+    }
     if (
       await this.isAccessGranted(
         user,
@@ -143,6 +161,12 @@ export class UserResolverFields {
     @Parent() user: User,
     @CurrentActor() actorContext: ActorContext
   ): Promise<IAccount | undefined> {
+    // A departed user hosts no account any more; short-circuit before
+    // `isAccessGranted`'s fallback reload throws on the sentinel's
+    // nonexistent id.
+    if (user.id === DELETED_USER_SENTINEL_ID) {
+      return undefined;
+    }
     const accountVisible =
       user.id === actorContext.actorID || // user can see their own account
       (await this.isAccessGranted(
@@ -168,6 +192,12 @@ export class UserResolverFields {
     })
     loader: ILoader<IUserSettings>
   ): Promise<IUserSettings> {
+    // Not short-circuited for the sentinel: `READ_USER_SETTINGS` is
+    // self-only, so a real caller can never legitimately reach this field
+    // for a departed user's `triggeredBy` in the first place (denied by
+    // the loader's own privilege check, same as any other user's
+    // settings) — there is no neutral "former member" settings payload to
+    // fabricate in place of one, unlike `profile`/`authorization`/`actor`.
     return loader.load(user.id);
   }
 
@@ -183,6 +213,10 @@ export class UserResolverFields {
     })
     loader: ILoader<IUserSettings>
   ): Promise<boolean> {
+    // A departed user cannot be messaged.
+    if (user.id === DELETED_USER_SENTINEL_ID) {
+      return false;
+    }
     const userSettings = await loader.load(user.id);
 
     return userSettings.communication.allowOtherUsersToSendMessages;
@@ -201,6 +235,9 @@ export class UserResolverFields {
     })
     loader: ILoader<IUserSettings>
   ): Promise<boolean> {
+    if (user.id === DELETED_USER_SENTINEL_ID) {
+      return false;
+    }
     const userSettings = await loader.load(user.id);
 
     return userSettings.communication.allowOtherUsersToContactViaEmail;
@@ -218,6 +255,12 @@ export class UserResolverFields {
     })
     loader: ILoader<IStorageAggregator>
   ): Promise<IStorageAggregator> {
+    // A departed user has no storage aggregator any more; short-circuit
+    // before the loader's own `checkParentPrivilege` reload has a chance
+    // to look up the nonexistent `user` row.
+    if (user.id === DELETED_USER_SENTINEL_ID) {
+      return undefined as unknown as IStorageAggregator;
+    }
     return loader.load(user.id);
   }
 
