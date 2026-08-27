@@ -543,10 +543,14 @@ export class StorageBucketService {
         LogContext.STORAGE_BUCKET
       );
 
-    // First filter the documents the current user has READ privilege to
-    const readableDocuments = allDocuments.filter(document =>
-      this.hasAgentAccessToDocument(document, actorContext)
-    );
+    // Policy-less rows are internal collaboration snapshots. They are real
+    // file rows for quota and lifecycle purposes, but are not user-facing
+    // Documents and must never enter per-document authorization.
+    const readableDocuments = allDocuments
+      .filter(document => this.documentService.isUserFacingDocument(document))
+      .filter(document =>
+        this.hasAgentAccessToDocument(document, actorContext)
+      );
 
     // (a) by IDs, results in order specified by IDs
     if (args.IDs) {

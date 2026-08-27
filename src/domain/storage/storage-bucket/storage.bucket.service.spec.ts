@@ -139,6 +139,9 @@ describe('StorageBucketService', () => {
       getRepositoryToken(Profile)
     );
     documentService = module.get<DocumentService>(DocumentService);
+    (documentService.isUserFacingDocument as Mock).mockImplementation(
+      document => Boolean(document.authorization)
+    );
     documentAuthorizationService = module.get<DocumentAuthorizationService>(
       DocumentAuthorizationService
     );
@@ -1007,6 +1010,86 @@ describe('StorageBucketService', () => {
       );
 
       expect(result).toEqual([doc1, doc2]);
+    });
+
+    it('omits policy-less internal files before authorizing user-facing documents', async () => {
+      const internalSnapshot = mockDocument({
+        id: 'snapshot-1',
+        authorization: undefined,
+        tagset: undefined,
+      });
+      const document = mockDocument({ id: 'document-1' });
+      const bucket = mockStorageBucket({
+        id: 'bucket-mixed',
+        documents: [internalSnapshot, document],
+      });
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationService.isAccessGranted as Mock).mockImplementation(
+        (_actorContext, authorization) => {
+          if (!authorization) {
+            throw new Error('authorization must not run for internal files');
+          }
+          return true;
+        }
+      );
+
+      const result = await service.getFilteredDocuments(
+        bucket,
+        {},
+        actorContext
+      );
+
+      expect(result).toEqual([document]);
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledTimes(1);
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        actorContext,
+        document.authorization,
+        AuthorizationPrivilege.READ
+      );
+    });
+
+    it('returns an empty collection when a bucket contains only policy-less internal files', async () => {
+      const internalSnapshot = mockDocument({
+        id: 'snapshot-only',
+        authorization: undefined,
+        tagset: undefined,
+      });
+      const bucket = mockStorageBucket({
+        id: 'bucket-internal-only',
+        documents: [internalSnapshot],
+      });
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+
+      const result = await service.getFilteredDocuments(
+        bucket,
+        {},
+        actorContext
+      );
+
+      expect(result).toEqual([]);
+      expect(authorizationService.isAccessGranted).not.toHaveBeenCalled();
+    });
+
+    it('fails an ID lookup for a policy-less internal file without authorizing it', async () => {
+      const internalSnapshot = mockDocument({
+        id: 'snapshot-by-id',
+        authorization: undefined,
+        tagset: undefined,
+      });
+      const bucket = mockStorageBucket({
+        id: 'bucket-internal-id',
+        documents: [internalSnapshot],
+      });
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+
+      await expect(
+        service.getFilteredDocuments(
+          bucket,
+          { IDs: [internalSnapshot.id] },
+          actorContext
+        )
+      ).rejects.toThrow(EntityNotFoundException);
+      expect(authorizationService.isAccessGranted).not.toHaveBeenCalled();
     });
 
     it('should filter out documents the agent does not have READ access to', async () => {
