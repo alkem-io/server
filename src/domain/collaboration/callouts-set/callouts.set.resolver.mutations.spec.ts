@@ -366,6 +366,34 @@ describe('CalloutsSetResolverMutations', () => {
       expect(release).toHaveBeenCalledOnce();
     });
 
+    it('does not consume a nullable GraphQL draft ID', async () => {
+      const calloutsSet = framingCloneCalloutsSet();
+      vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
+        calloutsSet
+      );
+      vi.mocked(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).mockRejectedValue(new Error('stop after draft acquisition'));
+
+      await expect(
+        resolver.createCalloutOnCalloutsSet(
+          { actorID: 'user-1' } as any,
+          {
+            calloutsSetID: calloutsSet.id,
+            framing: {
+              type: CalloutFramingType.WHITEBOARD,
+              whiteboard: { draftWhiteboardID: null },
+            },
+          } as any
+        )
+      ).rejects.toThrow('stop after draft acquisition');
+
+      expect(whiteboardDraftService.acquireForConsumption).toHaveBeenCalledWith(
+        [],
+        { actorID: 'user-1' }
+      );
+    });
+
     it('deletes a consumed draft before releasing the final-callout lock', async () => {
       const calloutsSet = framingCloneCalloutsSet();
       const callout = {

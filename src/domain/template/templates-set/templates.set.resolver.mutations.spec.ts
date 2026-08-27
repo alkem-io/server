@@ -163,6 +163,27 @@ describe('TemplatesSetResolverMutations', () => {
       expect(order).toEqual(['complete', 'release']);
     });
 
+    it('does not consume a nullable GraphQL draft ID', async () => {
+      const templatesSet = { id: 'ts-1', authorization: { id: 'ts-auth' } };
+      templatesSetService.getTemplatesSetOrFail.mockResolvedValue(templatesSet);
+      templatesSetService.createTemplate.mockRejectedValue(
+        new Error('stop after draft acquisition')
+      );
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await expect(
+        resolver.createTemplate(actorContext, {
+          templatesSetID: 'ts-1',
+          whiteboard: { draftWhiteboardID: null },
+        } as any)
+      ).rejects.toThrow('stop after draft acquisition');
+
+      expect(whiteboardDraftService.acquireForConsumption).toHaveBeenCalledWith(
+        [],
+        actorContext
+      );
+    });
+
     it('does NOT load a source whiteboard when the template has no sourceWhiteboardID', async () => {
       const templatesSet = { id: 'ts-1', authorization: { id: 'ts-auth' } };
       templatesSetService.getTemplatesSetOrFail.mockResolvedValue(templatesSet);

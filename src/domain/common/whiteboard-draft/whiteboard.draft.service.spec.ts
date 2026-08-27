@@ -47,7 +47,7 @@ describe('WhiteboardDraftService', () => {
   const draftID = 'draft-wb';
   let drafts: Map<string, Whiteboard>;
   let repository: Pick<Repository<Whiteboard>, 'find'>;
-  let lockedRepository: Pick<Repository<Whiteboard>, 'findOne'>;
+  let lockedRepository: Pick<Repository<Whiteboard>, 'findOne' | 'update'>;
   let whiteboardService: Pick<
     WhiteboardService,
     'createWhiteboard' | 'deleteWhiteboard'
@@ -84,6 +84,15 @@ describe('WhiteboardDraftService', () => {
           return null;
         }
         return draft;
+      }),
+      update: vi.fn(async (ids: string | string[], update) => {
+        for (const id of Array.isArray(ids) ? ids : [ids]) {
+          const draft = drafts.get(id);
+          if (draft && update.draftExpiresAt !== undefined) {
+            draft.draftExpiresAt = update.draftExpiresAt as Date;
+          }
+        }
+        return { affected: 1, raw: [], generatedMaps: [] };
       }),
     };
     whiteboardService = {
@@ -221,6 +230,66 @@ describe('WhiteboardDraftService', () => {
     ]);
     expect(materializations).toBe(1);
     expect(whiteboardService.deleteWhiteboard).toHaveBeenCalledTimes(1);
+  });
+
+  it('expires a consumed draft before best-effort canonical deletion', async () => {
+    drafts.set(draftID, futureDraft());
+    vi.mocked(whiteboardService.deleteWhiteboard).mockRejectedValueOnce(
+      new Error('file service unavailable')
+    );
+
+    const consumption = await service.acquireForConsumption(
+      [draftID],
+      actorContext
+    );
+    await expect(consumption.complete()).resolves.toBeUndefined();
+    await consumption.release();
+
+    expect(drafts.get(draftID)?.draftExpiresAt?.getTime()).toBe(0);
+    await expect(
+      service.acquireForConsumption([draftID], actorContext)
+    ).rejects.toThrow('Whiteboard draft has expired');
+  });
+
+  it('unlocks every acquired draft and clears the session after a keyed unlock fails', async () => {
+    const firstID = 'draft-a';
+    const secondID = 'draft-b';
+    drafts.set(firstID, futureDraft(firstID));
+    drafts.set(secondID, futureDraft(secondID));
+    const consumption = await service.acquireForConsumption(
+      [firstID, secondID],
+      actorContext
+    );
+    const runner = vi.mocked(dataSource.createQueryRunner).mock.results[0]
+      .value as QueryRunner;
+    let keyedUnlocks = 0;
+    vi.mocked(runner.query).mockImplementation(
+      async (sql: string, parameters?: string[]) => {
+        if (sql.includes('pg_advisory_unlock_all')) {
+          lockHarness.release(`whiteboard-draft:${firstID}`);
+          lockHarness.release(`whiteboard-draft:${secondID}`);
+          return [{ pg_advisory_unlock_all: null }];
+        }
+        if (sql.includes('pg_advisory_unlock')) {
+          keyedUnlocks++;
+          if (keyedUnlocks === 1) {
+            throw new Error('keyed unlock failed');
+          }
+          lockHarness.release(parameters![0]);
+          return [{ pg_advisory_unlock: true }];
+        }
+        await lockHarness.acquire(parameters![0]);
+        return [{ pg_advisory_lock: null }];
+      }
+    );
+
+    await expect(consumption.release()).resolves.toBeUndefined();
+
+    expect(keyedUnlocks).toBe(2);
+    expect(runner.query).toHaveBeenCalledWith(
+      'SELECT pg_advisory_unlock_all()'
+    );
+    expect(runner.release).toHaveBeenCalledOnce();
   });
 
   it('makes discard wait until an in-flight source copy releases the draft', async () => {

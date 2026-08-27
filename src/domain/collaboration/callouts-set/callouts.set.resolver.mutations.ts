@@ -169,7 +169,7 @@ export class CalloutsSetResolverMutations {
     await using draftConsumption =
       await this.whiteboardDraftService.acquireForConsumption(
         [framingDraftID, defaultsDraftID].filter(
-          (id): id is string => id !== undefined
+          (id): id is string => typeof id === 'string'
         ),
         actorContext
       );

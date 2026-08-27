@@ -132,7 +132,7 @@ export class TemplatesSetResolverMutations {
     await using draftConsumption =
       await this.whiteboardDraftService.acquireForConsumption(
         [framingInput?.draftWhiteboardID, defaults?.draftWhiteboardID].filter(
-          (id): id is string => id !== undefined
+          (id): id is string => typeof id === 'string'
         ),
         actorContext
       );

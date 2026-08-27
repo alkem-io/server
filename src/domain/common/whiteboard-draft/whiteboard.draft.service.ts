@@ -115,8 +115,18 @@ export class WhiteboardDraftService {
       return {
         drafts,
         complete: async () => {
+          // Make every consumed draft immediately non-consumable while its
+          // advisory lock is held. Canonical deletion also removes its files,
+          // but a transient delete failure must not allow a retry to create a
+          // second final Whiteboard from the same draft. The expiry sweep will
+          // retry canonical deletion for any row left behind.
+          await lockedRepository.update(draftIDs, {
+            draftExpiresAt: new Date(0),
+          });
           for (const draftID of draftIDs) {
-            await this.whiteboardService.deleteWhiteboard(draftID);
+            await this.whiteboardService
+              .deleteWhiteboard(draftID)
+              .catch(() => undefined);
           }
         },
         release,
@@ -243,12 +253,23 @@ export class WhiteboardDraftService {
     queryRunner: QueryRunner,
     whiteboardIDs: string[]
   ): Promise<void> {
+    let exactUnlockFailed = false;
     try {
       for (const whiteboardID of [...whiteboardIDs].reverse()) {
-        await queryRunner.query(
-          'SELECT pg_advisory_unlock(hashtextextended($1, 0))',
-          [`whiteboard-draft:${whiteboardID}`]
-        );
+        try {
+          await queryRunner.query(
+            'SELECT pg_advisory_unlock(hashtextextended($1, 0))',
+            [`whiteboard-draft:${whiteboardID}`]
+          );
+        } catch {
+          exactUnlockFailed = true;
+        }
+      }
+      if (exactUnlockFailed) {
+        // A QueryRunner owns one PostgreSQL session exclusively. Clear any
+        // lock left by a failed keyed unlock before returning that session to
+        // the pool; otherwise an unrelated request could inherit the lock.
+        await queryRunner.query('SELECT pg_advisory_unlock_all()');
       }
     } finally {
       await queryRunner.release();
