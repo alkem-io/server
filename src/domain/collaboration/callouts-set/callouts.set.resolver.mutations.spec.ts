@@ -61,6 +61,7 @@ describe('CalloutsSetResolverMutations', () => {
     const releaseDraftLock = vi.fn();
     vi.mocked(whiteboardDraftService.acquireForConsumption).mockResolvedValue({
       drafts: new Map(),
+      markConsumed: vi.fn(),
       complete: vi.fn(),
       release: releaseDraftLock,
       [Symbol.asyncDispose]: releaseDraftLock,
@@ -332,6 +333,7 @@ describe('CalloutsSetResolverMutations', () => {
       vi.mocked(whiteboardDraftService.acquireForConsumption).mockResolvedValue(
         {
           drafts: new Map([[draft.id, draft]]),
+          markConsumed: vi.fn(),
           complete,
           release,
           [Symbol.asyncDispose]: release,
@@ -427,6 +429,9 @@ describe('CalloutsSetResolverMutations', () => {
           drafts: new Map([
             ['draft-whiteboard-1', { id: 'draft-whiteboard-1' } as any],
           ]),
+          markConsumed: vi.fn(async () => {
+            order.push('markConsumed');
+          }),
           complete,
           release,
           [Symbol.asyncDispose]: release,
@@ -445,7 +450,70 @@ describe('CalloutsSetResolverMutations', () => {
         input
       );
 
-      expect(order).toEqual(['complete', 'release']);
+      expect(order).toEqual(['markConsumed', 'complete', 'release']);
+    });
+
+    it('does not create a duplicate after a post-persistence failure', async () => {
+      const calloutsSet = framingCloneCalloutsSet();
+      const callout = {
+        id: 'callout-1',
+        nameID: 'test-callout',
+        settings: { visibility: CalloutVisibility.DRAFT },
+      } as any;
+      vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
+        calloutsSet
+      );
+      vi.mocked(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).mockResolvedValue(callout);
+      vi.mocked(calloutService.save).mockResolvedValue(callout);
+      const temporaryStorageService = (resolver as any).temporaryStorageService;
+      vi.mocked(
+        temporaryStorageService.moveTemporaryDocuments
+      ).mockRejectedValue(new Error('post-persistence integration failed'));
+      let consumed = false;
+      vi.mocked(
+        whiteboardDraftService.acquireForConsumption
+      ).mockImplementation(async () => {
+        if (consumed) {
+          throw new ValidationException(
+            'Whiteboard draft has expired',
+            LogContext.WHITEBOARDS
+          );
+        }
+        const release = vi.fn();
+        return {
+          drafts: new Map([
+            ['draft-whiteboard-1', { id: 'draft-whiteboard-1' } as any],
+          ]),
+          markConsumed: vi.fn(async () => {
+            consumed = true;
+          }),
+          complete: vi.fn(),
+          release,
+          [Symbol.asyncDispose]: release,
+        };
+      });
+      const input = () =>
+        ({
+          calloutsSetID: calloutsSet.id,
+          framing: {
+            type: CalloutFramingType.WHITEBOARD,
+            whiteboard: { draftWhiteboardID: 'draft-whiteboard-1' },
+          },
+        }) as any;
+      const actor = { actorID: 'user-1' } as any;
+
+      await expect(
+        resolver.createCalloutOnCalloutsSet(actor, input())
+      ).rejects.toThrow('post-persistence integration failed');
+      await expect(
+        resolver.createCalloutOnCalloutsSet(actor, input())
+      ).rejects.toThrow('Whiteboard draft has expired');
+
+      expect(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).toHaveBeenCalledOnce();
     });
 
     it('should trigger notifications and activity when published on COLLABORATION type', async () => {

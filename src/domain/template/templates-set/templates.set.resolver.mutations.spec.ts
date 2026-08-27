@@ -64,6 +64,7 @@ describe('TemplatesSetResolverMutations', () => {
     whiteboardDraftService = {
       acquireForConsumption: vi.fn().mockResolvedValue({
         drafts: new Map(),
+        markConsumed: vi.fn(),
         complete: vi.fn(),
         release: releaseDraftLock,
         [Symbol.asyncDispose]: releaseDraftLock,
@@ -140,6 +141,9 @@ describe('TemplatesSetResolverMutations', () => {
       });
       whiteboardDraftService.acquireForConsumption.mockResolvedValue({
         drafts: new Map([['draft-wb', { id: 'draft-wb' }]]),
+        markConsumed: vi.fn(async () => {
+          order.push('markConsumed');
+        }),
         complete,
         release,
         [Symbol.asyncDispose]: release,
@@ -160,7 +164,53 @@ describe('TemplatesSetResolverMutations', () => {
         draftWhiteboardID: undefined,
         sourceWhiteboardID: 'draft-wb',
       });
-      expect(order).toEqual(['complete', 'release']);
+      expect(order).toEqual(['markConsumed', 'complete', 'release']);
+    });
+
+    it('does not create a duplicate after a post-persistence failure', async () => {
+      const templatesSet = { id: 'ts-1', authorization: { id: 'ts-auth' } };
+      templatesSetService.getTemplatesSetOrFail.mockResolvedValue(templatesSet);
+      templatesSetService.createTemplate.mockResolvedValue({ id: 'tpl-1' });
+      whiteboardService.getWhiteboardOrFail.mockResolvedValue({
+        id: 'draft-wb',
+        authorization: { id: 'draft-auth' },
+      });
+      templateAuthorizationService.applyAuthorizationPolicy.mockRejectedValue(
+        new Error('post-persistence authorization failed')
+      );
+      let consumed = false;
+      whiteboardDraftService.acquireForConsumption.mockImplementation(
+        async () => {
+          if (consumed) {
+            throw new Error('Whiteboard draft has expired');
+          }
+          const release = vi.fn();
+          return {
+            drafts: new Map([['draft-wb', { id: 'draft-wb' }]]),
+            markConsumed: vi.fn(async () => {
+              consumed = true;
+            }),
+            complete: vi.fn(),
+            release,
+            [Symbol.asyncDispose]: release,
+          };
+        }
+      );
+      const input = () =>
+        ({
+          templatesSetID: 'ts-1',
+          whiteboard: { draftWhiteboardID: 'draft-wb' },
+        }) as any;
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await expect(
+        resolver.createTemplate(actorContext, input())
+      ).rejects.toThrow('post-persistence authorization failed');
+      await expect(
+        resolver.createTemplate(actorContext, input())
+      ).rejects.toThrow('Whiteboard draft has expired');
+
+      expect(templatesSetService.createTemplate).toHaveBeenCalledOnce();
     });
 
     it('does not consume a nullable GraphQL draft ID', async () => {

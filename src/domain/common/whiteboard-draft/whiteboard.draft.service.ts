@@ -12,12 +12,14 @@ import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { DataSource, LessThanOrEqual, QueryRunner, Repository } from 'typeorm';
 import { CreateWhiteboardDraftInput } from './dto';
 
 const DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const DRAFT_LOCK_TIMEOUT_MS = 5_000;
 
 export interface WhiteboardDraftMaterializationInput
   extends CreateWhiteboardDraftInput {
@@ -27,6 +29,7 @@ export interface WhiteboardDraftMaterializationInput
 
 export interface WhiteboardDraftConsumption {
   drafts: ReadonlyMap<string, Whiteboard>;
+  markConsumed(): Promise<void>;
   complete(): Promise<void>;
   release(): Promise<void>;
   [Symbol.asyncDispose](): Promise<void>;
@@ -41,8 +44,9 @@ export class WhiteboardDraftService {
     private readonly whiteboardService: WhiteboardService,
     private readonly whiteboardAuthorizationService: WhiteboardAuthorizationService,
     private readonly authorizationPolicyService: AuthorizationPolicyService,
-    @InjectDataSource()
-    private readonly dataSource: DataSource
+    @InjectDataSource() private readonly dataSource: DataSource,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   async materialize(
@@ -89,6 +93,7 @@ export class WhiteboardDraftService {
     if (draftIDs.length === 0) {
       return {
         drafts: new Map(),
+        markConsumed: async () => undefined,
         complete: async () => undefined,
         release: async () => undefined,
         [Symbol.asyncDispose]: async () => undefined,
@@ -112,21 +117,39 @@ export class WhiteboardDraftService {
         this.assertConsumable(draft, whiteboardID, actorContext);
         drafts.set(whiteboardID, draft);
       }
+      let consumed = false;
+      const markConsumed = async (): Promise<void> => {
+        if (consumed) return;
+        await lockedRepository.update(draftIDs, {
+          draftExpiresAt: new Date(0),
+        });
+        consumed = true;
+      };
       return {
         drafts,
+        markConsumed,
         complete: async () => {
           // Make every consumed draft immediately non-consumable while its
           // advisory lock is held. Canonical deletion also removes its files,
           // but a transient delete failure must not allow a retry to create a
           // second final Whiteboard from the same draft. The expiry sweep will
           // retry canonical deletion for any row left behind.
-          await lockedRepository.update(draftIDs, {
-            draftExpiresAt: new Date(0),
-          });
+          await markConsumed();
           for (const draftID of draftIDs) {
             await this.whiteboardService
               .deleteWhiteboard(draftID)
-              .catch(() => undefined);
+              .catch(error => {
+                this.logger.warn?.(
+                  {
+                    message:
+                      'Consumed Whiteboard draft deletion failed; expiry sweep will retry',
+                    whiteboardID: draftID,
+                    error:
+                      error instanceof Error ? error.message : String(error),
+                  },
+                  LogContext.WHITEBOARDS
+                );
+              });
           }
         },
         release,
@@ -235,6 +258,9 @@ export class WhiteboardDraftService {
     await queryRunner.connect();
     const acquiredIDs: string[] = [];
     try {
+      await queryRunner.query(
+        `SET lock_timeout = '${DRAFT_LOCK_TIMEOUT_MS}ms'`
+      );
       for (const whiteboardID of whiteboardIDs) {
         await queryRunner.query(
           'SELECT pg_advisory_lock(hashtextextended($1, 0))',
@@ -272,7 +298,11 @@ export class WhiteboardDraftService {
         await queryRunner.query('SELECT pg_advisory_unlock_all()');
       }
     } finally {
-      await queryRunner.release();
+      try {
+        await queryRunner.query('SET lock_timeout = DEFAULT');
+      } finally {
+        await queryRunner.release();
+      }
     }
   }
 

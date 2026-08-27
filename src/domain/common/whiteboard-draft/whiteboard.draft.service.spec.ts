@@ -1,3 +1,4 @@
+import { LogContext } from '@common/enums';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -54,6 +55,7 @@ describe('WhiteboardDraftService', () => {
   >;
   const whiteboardAuthorizationService = { applyAuthorizationPolicy: vi.fn() };
   const authorizationPolicyService = { saveAll: vi.fn() };
+  const logger = { log: vi.fn(), error: vi.fn(), warn: vi.fn() };
   let lockHarness: AdvisoryLockHarness;
   let dataSource: Pick<DataSource, 'createQueryRunner'>;
   let service: WhiteboardDraftService;
@@ -112,6 +114,9 @@ describe('WhiteboardDraftService', () => {
             getRepository: vi.fn(() => lockedRepository),
           },
           query: vi.fn(async (sql: string, parameters: string[]) => {
+            if (sql.startsWith('SET lock_timeout')) {
+              return [];
+            }
             const key = parameters[0];
             if (sql.includes('pg_advisory_unlock')) {
               lockHarness.release(key);
@@ -132,7 +137,8 @@ describe('WhiteboardDraftService', () => {
       whiteboardService as WhiteboardService,
       whiteboardAuthorizationService as unknown as WhiteboardAuthorizationService,
       authorizationPolicyService as unknown as AuthorizationPolicyService,
-      dataSource as DataSource
+      dataSource as DataSource,
+      logger
     );
     whiteboardAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
       []
@@ -246,9 +252,58 @@ describe('WhiteboardDraftService', () => {
     await consumption.release();
 
     expect(drafts.get(draftID)?.draftExpiresAt?.getTime()).toBe(0);
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message:
+          'Consumed Whiteboard draft deletion failed; expiry sweep will retry',
+        whiteboardID: draftID,
+        error: 'file service unavailable',
+      }),
+      LogContext.WHITEBOARDS
+    );
     await expect(
       service.acquireForConsumption([draftID], actorContext)
     ).rejects.toThrow('Whiteboard draft has expired');
+  });
+
+  it('marks a persisted final source consumed without deleting it yet', async () => {
+    drafts.set(draftID, futureDraft());
+    const consumption = await service.acquireForConsumption(
+      [draftID],
+      actorContext
+    );
+
+    await consumption.markConsumed();
+
+    expect(drafts.get(draftID)?.draftExpiresAt?.getTime()).toBe(0);
+    expect(whiteboardService.deleteWhiteboard).not.toHaveBeenCalled();
+    await consumption.release();
+    await expect(
+      service.acquireForConsumption([draftID], actorContext)
+    ).rejects.toThrow('Whiteboard draft has expired');
+  });
+
+  it('bounds a blocked advisory-lock acquisition and releases the runner', async () => {
+    drafts.set(draftID, futureDraft());
+    const runner = dataSource.createQueryRunner() as QueryRunner;
+    vi.mocked(runner.query).mockImplementation(
+      async (sql: string, _parameters?: string[]) => {
+        if (sql.startsWith('SET lock_timeout')) return [];
+        if (sql.includes('pg_advisory_lock')) {
+          throw new Error('canceling statement due to lock timeout');
+        }
+        return [];
+      }
+    );
+    vi.mocked(dataSource.createQueryRunner).mockReturnValueOnce(runner);
+
+    await expect(
+      service.acquireForConsumption([draftID], actorContext)
+    ).rejects.toThrow('canceling statement due to lock timeout');
+
+    expect(runner.query).toHaveBeenCalledWith("SET lock_timeout = '5000ms'");
+    expect(runner.query).toHaveBeenCalledWith('SET lock_timeout = DEFAULT');
+    expect(runner.release).toHaveBeenCalledOnce();
   });
 
   it('unlocks every acquired draft and clears the session after a keyed unlock fails', async () => {
@@ -265,6 +320,9 @@ describe('WhiteboardDraftService', () => {
     let keyedUnlocks = 0;
     vi.mocked(runner.query).mockImplementation(
       async (sql: string, parameters?: string[]) => {
+        if (sql.startsWith('SET lock_timeout')) {
+          return [];
+        }
         if (sql.includes('pg_advisory_unlock_all')) {
           lockHarness.release(`whiteboard-draft:${firstID}`);
           lockHarness.release(`whiteboard-draft:${secondID}`);

@@ -300,6 +300,11 @@ export class CalloutsSetResolverMutations {
       () => this.calloutService.deleteCallout(savedCallout.id)
     );
 
+    // The final callout is now durable and fully materialized. Persist the
+    // draft-consumption marker before any later integration/notification step
+    // can fail, so a client retry cannot create a duplicate final object.
+    await draftConsumption.markConsumed();
+
     // Now the contribution is saved, we can look to move any temporary documents
     // to be stored in the storage bucket of the profile.
     // Note: important to do before auth reset is done

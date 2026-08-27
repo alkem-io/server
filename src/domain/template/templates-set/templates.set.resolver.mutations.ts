@@ -185,6 +185,10 @@ export class TemplatesSetResolverMutations {
       templateData,
       actorContext
     );
+    // createTemplate returns only after the final template is persisted and
+    // materialized. Mark its draft consumed before later authorization/read
+    // work can fail and make a retry create a duplicate template.
+    await draftConsumption.markConsumed();
     const authorizations =
       await this.templateAuthorizationService.applyAuthorizationPolicy(
         template,
