@@ -170,7 +170,8 @@ export class RegistrationResolverMutations {
     const userDeleted =
       await this.registrationService.deleteUserWithPendingMemberships(
         effectiveDeleteData,
-        branch
+        branch,
+        actorContext.actorID
       );
 
     // Best-effort: the mutation must resolve successfully regardless of

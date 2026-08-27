@@ -78,7 +78,10 @@ export class AccountDeletionBlockerService {
     let truncated = resourceResult.truncated;
 
     if (branch === 'self') {
-      const soleOwnerships = await this.getSoleOrganizationOwnerships(userID);
+      const soleOwnerships = await this.getSoleOrganizationOwnerships(
+        userID,
+        em
+      );
       totals.push({
         kind: AccountDeletionBlockerKind.SOLE_ORGANIZATION_OWNER,
         total: soleOwnerships.length,
@@ -115,10 +118,16 @@ export class AccountDeletionBlockerService {
    * enforces that invariant on the deletion path.
    */
   private async getSoleOrganizationOwnerships(
-    userID: string
+    userID: string,
+    em?: EntityManager
   ): Promise<{ id: string; displayName: string }[]> {
-    const credentials =
-      await this.credentialService.findCredentialsByActorID(userID);
+    // Read through the deletion transaction when there is one: this is a
+    // re-assertion made inside it, so it must observe that transaction's
+    // snapshot rather than a second connection's.
+    const credentials = await this.credentialService.findCredentialsByActorID(
+      userID,
+      em
+    );
     const ownedOrganizationIDs = credentials
       .filter(
         credential =>
@@ -128,17 +137,21 @@ export class AccountDeletionBlockerService {
 
     const soleOwnerships: { id: string; displayName: string }[] = [];
     for (const organizationID of ownedOrganizationIDs) {
-      const ownerCount = await this.credentialService.countMatchingCredentials({
-        type: AuthorizationCredential.ORGANIZATION_OWNER,
-        resourceID: organizationID,
-      });
+      const ownerCount = await this.credentialService.countMatchingCredentials(
+        {
+          type: AuthorizationCredential.ORGANIZATION_OWNER,
+          resourceID: organizationID,
+        },
+        em
+      );
       if (ownerCount !== 1) {
         continue;
       }
       const organization =
         await this.organizationLookupService.getOrganizationById(
           organizationID,
-          { relations: { profile: true } }
+          { relations: { profile: true } },
+          em
         );
       if (!organization) {
         continue;

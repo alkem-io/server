@@ -266,8 +266,9 @@ export class AccountService {
       account.innovationHubs.length > 0
     ) {
       throw new RelationshipNotFoundException(
-        `Account ${accountID} still holds resources at deletion time`,
-        LogContext.ACCOUNT
+        'Account still holds resources at deletion time',
+        LogContext.ACCOUNT,
+        { accountID }
       );
     }
 

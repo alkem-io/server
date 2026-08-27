@@ -1,4 +1,6 @@
+import { LogContext } from '@common/enums';
 import { ActivityEventType } from '@common/enums/activity.event.type';
+import { EntityNotFoundException } from '@common/exceptions';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
@@ -299,7 +301,10 @@ describe('ActivityLogService', () => {
       const space = makeSpace('collab-1', 'Space One');
 
       userService.getUserByIdOrFail.mockRejectedValueOnce(
-        new Error('Unable to find user with given ID')
+        new EntityNotFoundException(
+          'Unable to find user with given ID',
+          LogContext.COMMUNITY
+        )
       );
       communityResolverService.getSpaceForCollaborationOrFail.mockResolvedValueOnce(
         space as unknown as ISpace

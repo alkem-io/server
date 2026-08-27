@@ -188,7 +188,7 @@ describe('RegistrationResolverMutations', () => {
       ).not.toHaveBeenCalled();
       expect(
         registrationService.deleteUserWithPendingMemberships
-      ).toHaveBeenCalledWith({ ID: 'user-1' }, 'admin');
+      ).toHaveBeenCalledWith({ ID: 'user-1' }, 'admin', 'actor-1');
     });
 
     it('does not fail the mutation when the notification adapter throws (best-effort)', async () => {
@@ -274,7 +274,11 @@ describe('RegistrationResolverMutations', () => {
         expect(result).toBe(user);
         expect(
           registrationService.deleteUserWithPendingMemberships
-        ).toHaveBeenCalledWith({ ID: 'user-1', deleteIdentity: true }, 'self');
+        ).toHaveBeenCalledWith(
+          { ID: 'user-1', deleteIdentity: true },
+          'self',
+          'user-1'
+        );
         // The self branch pre-resolves the initiator's notification payload
         // from the still-loaded pre-deletion entity, BEFORE the deletion
         // call — a post-deletion lookup by id would fail, since the
@@ -317,7 +321,7 @@ describe('RegistrationResolverMutations', () => {
         expect(result).toBe(user);
         expect(
           registrationService.deleteUserWithPendingMemberships
-        ).toHaveBeenCalledWith({ ID: 'other-user' }, 'admin');
+        ).toHaveBeenCalledWith({ ID: 'other-user' }, 'admin', 'admin-1');
       });
     });
   });

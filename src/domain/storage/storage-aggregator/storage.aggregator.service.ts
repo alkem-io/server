@@ -81,8 +81,9 @@ export class StorageAggregatorService {
 
     if (!storageAggregator.directStorage) {
       throw new EntityNotInitializedException(
-        `Unable to load direct storage on storage aggregator: ${storageAggregator.id}`,
-        LogContext.STORAGE_AGGREGATOR
+        'Unable to load direct storage on storage aggregator',
+        LogContext.STORAGE_AGGREGATOR,
+        { storageAggregatorID: storageAggregator.id }
       );
     }
 

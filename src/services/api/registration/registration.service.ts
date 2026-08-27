@@ -359,7 +359,8 @@ export class RegistrationService {
    */
   async deleteUserWithPendingMemberships(
     deleteData: DeleteUserInput,
-    branch: AccountDeletionInitiatorBranch
+    branch: AccountDeletionInitiatorBranch,
+    initiatorUserId?: string
   ): Promise<IUser> {
     const userID = deleteData.ID;
     const initiatorRole =
@@ -411,6 +412,7 @@ export class RegistrationService {
 
         await this.accountDeletionAuditService.writePrimary(em, {
           subjectUserId: userID,
+          initiatorUserId,
           initiatorRole,
           accountID: account.id,
           externalSubscriptionID: account.externalSubscriptionID ?? null,

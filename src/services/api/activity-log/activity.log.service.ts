@@ -1,5 +1,6 @@
 import { LogContext } from '@common/enums';
 import { ActivityEventType } from '@common/enums/activity.event.type';
+import { EntityNotFoundException } from '@common/exceptions';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { LinkService } from '@domain/collaboration/link/link.service';
@@ -151,8 +152,14 @@ export class ActivityLogService {
     }
     try {
       return await this.userService.getUserByIdOrFail(triggeredById);
-    } catch {
-      return DELETED_USER_SENTINEL;
+    } catch (error) {
+      // Only a genuinely absent user resolves to the sentinel. Anything else
+      // (a dropped connection, a query timeout) must surface rather than be
+      // rendered to every reader as "Former member".
+      if (error instanceof EntityNotFoundException) {
+        return DELETED_USER_SENTINEL;
+      }
+      throw error;
     }
   }
 

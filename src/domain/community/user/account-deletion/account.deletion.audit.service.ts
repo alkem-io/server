@@ -10,6 +10,12 @@ import { EntityManager } from 'typeorm';
 
 export interface WriteAccountDeletionPrimaryInput {
   subjectUserId: string;
+  /**
+   * The actor who performed the deletion. Equal to `subjectUserId` on the
+   * self branch; on the admin branch this is the ONLY thing that identifies
+   * which administrator acted, since `initiatorRole` alone cannot.
+   */
+  initiatorUserId?: string;
   initiatorRole: PlatformAuditInitiatorRole;
   accountID: string;
   externalSubscriptionID?: string | null;
@@ -45,6 +51,7 @@ export class AccountDeletionAuditService {
     return this.auditEntryRepository.appendAccountDeletionEntry(
       {
         subjectUserId: input.subjectUserId,
+        initiatorUserId: input.initiatorUserId,
         initiatorRole: input.initiatorRole,
         outcome: PlatformAuditOutcome.ACCOUNT_DELETED,
         details,
