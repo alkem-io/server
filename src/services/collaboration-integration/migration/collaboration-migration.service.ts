@@ -26,6 +26,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import type { CreateDocumentResult } from '@services/adapters/file-service-adapter/dto/create.document.result';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
+import { isUUID } from 'class-validator';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IsNull, Repository } from 'typeorm';
 import { LegacyContentRecord } from './legacy.content.record';
@@ -1451,6 +1452,8 @@ export class CollaborationMigrationService {
     const url = typeof file?.url === 'string' ? file.url.trim() : '';
     const isAlkemioUrl =
       url !== '' && this.documentService.isAlkemioDocumentURL(url);
+    const embeddedDocumentId =
+      url !== '' ? this.extractLegacyDocumentId(url) : undefined;
 
     if (planning) {
       // PLANNING (dry-run): prove the descriptor is REPRESENTABLE with ZERO writes, no auth,
@@ -1466,6 +1469,9 @@ export class CollaborationMigrationService {
         if (id) {
           return id;
         }
+      }
+      if (embeddedDocumentId) {
+        return embeddedDocumentId;
       }
       return this.planDataUrlLocator(fileId, file);
     }
@@ -1503,6 +1509,37 @@ export class CollaborationMigrationService {
       return id || undefined;
     }
 
+    // Historical scenes can retain a document URL from another Alkemio
+    // deployment host. The host-specific live URL check above intentionally
+    // rejects it, but the exact document route still carries the opaque UUID
+    // understood by the current file-service. Resolve that UUID against the
+    // current database only; never request the historical host.
+    if (embeddedDocumentId) {
+      try {
+        const document = await this.documentService.getDocumentOrFail(
+          embeddedDocumentId,
+          { loadEagerRelations: false }
+        );
+        return document.id;
+      } catch {
+        // Match the current-host recovery order: retained inline bytes are
+        // stronger evidence than a dangling URL, so up-home them first.
+        const uphomed = await this.uphomeDataUrlAsset(
+          fileId,
+          file,
+          record,
+          createdArtifacts
+        );
+        if (uphomed) {
+          return uphomed;
+        }
+      }
+      // Preserve the original opaque id when neither the current row nor
+      // inline bytes exist. This is no worse than the legacy reference, and
+      // the post-migration verifier will report it if it still has no bytes.
+      return embeddedDocumentId;
+    }
+
     // 4. No usable Alkemio url → up-home inline bytes if present, else skip + surface.
     const uphomed = await this.uphomeDataUrlAsset(
       fileId,
@@ -1523,6 +1560,35 @@ export class CollaborationMigrationService {
       LogContext.COLLABORATION_INTEGRATION
     );
     return undefined;
+  }
+
+  /**
+   * Extracts the opaque document UUID from the configured Alkemio document
+   * route while deliberately ignoring the URL host. Legacy database copies
+   * and environment renames leave otherwise-valid document URLs pointing at
+   * an historical host. Matching the exact route plus a UUID is safe because
+   * this method performs no network request; arbitrary external paths and
+   * non-UUID suffixes remain unrecoverable and fail closed when referenced.
+   */
+  private extractLegacyDocumentId(url: string): string | undefined {
+    try {
+      const candidate = new URL(url);
+      if (candidate.protocol !== 'https:' && candidate.protocol !== 'http:') {
+        return undefined;
+      }
+      const configured = new URL(
+        this.documentService.getDocumentsBaseUrlPath()
+      );
+      const route = configured.pathname.replace(/\/+$/, '');
+      const prefix = `${route}/`;
+      if (!candidate.pathname.startsWith(prefix)) {
+        return undefined;
+      }
+      const id = candidate.pathname.slice(prefix.length);
+      return !id.includes('/') && isUUID(id) ? id : undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   /**

@@ -36,6 +36,7 @@ const Y = createRequire(__filename)('yjs') as typeof import('yjs');
  */
 const documentServiceMock = () => ({
   getDocumentFromURL: vi.fn(),
+  getDocumentOrFail: vi.fn(),
   deleteDocument: vi.fn().mockResolvedValue(undefined),
   isAlkemioDocumentURL: vi.fn((url: string) =>
     url.startsWith('https://alkem.io/api/private/rest/storage/document')
@@ -1337,6 +1338,82 @@ describe('CollaborationMigrationService', () => {
         contentVersion: 0,
         migrated: true,
       });
+    });
+
+    it('recovers a legacy file locator from an historical Alkemio document URL on another deployment host', async () => {
+      // Minimized from a failed production-shaped row: the Excalidraw fileId is
+      // content-derived, while the opaque file-service locator is the UUID in
+      // the legacy document URL. Historical scenes can retain another Alkemio
+      // deployment host even after the owning rows move to the current stack.
+      const fileId = '0123456789abcdef0123456789abcdef01234567';
+      const locator = '11111111-2222-4333-8444-555555555555';
+      const historicalUrl = `https://acc.alkem.io/api/private/rest/storage/document/${locator}`;
+      documentService.getDocumentOrFail.mockResolvedValue({ id: locator });
+
+      const { summary, captured } = await migrateOneWhiteboard(
+        legacyMediaScene({
+          fileId,
+          file: {
+            id: fileId,
+            mimeType: 'image/jpeg',
+            url: historicalUrl,
+          },
+        })
+      );
+
+      expect(summary).toMatchObject({ migrated: 1, failed: 0 });
+      expect(await readStoredAssetLocators(captured.buffer!)).toEqual({
+        [fileId]: locator,
+      });
+      // Cross-host recovery extracts an opaque id only. It never fetches the
+      // historical host and therefore does not create an SSRF surface.
+      expect(documentService.getDocumentFromURL).not.toHaveBeenCalled();
+      expect(documentService.getDocumentOrFail).toHaveBeenCalledWith(locator, {
+        loadEagerRelations: false,
+      });
+    });
+
+    it('fails closed for a cross-host URL on the document route whose suffix is not a UUID', async () => {
+      const { summary, captured } = await migrateOneWhiteboard(
+        legacyMediaScene({
+          fileId: 'file-1',
+          file: {
+            id: 'file-1',
+            url: 'https://external.example/api/private/rest/storage/document/not-a-uuid',
+          },
+        })
+      );
+
+      expect(summary).toMatchObject({ migrated: 0, failed: 1 });
+      expect(captured.buffer).toBeUndefined();
+      expect(documentService.getDocumentOrFail).not.toHaveBeenCalled();
+      expect(documentService.getDocumentFromURL).not.toHaveBeenCalled();
+    });
+
+    it('up-homes retained inline bytes when an historical URL locator no longer exists', async () => {
+      const deadLocator = '11111111-2222-4333-8444-555555555555';
+      documentService.getDocumentOrFail.mockRejectedValue(
+        new Error('missing current row')
+      );
+
+      const { summary, captured } = await migrateOneWhiteboard(
+        legacyMediaScene({
+          fileId: 'file-1',
+          file: {
+            id: 'file-1',
+            mimeType: 'image/png',
+            url: `https://acc.alkem.io/api/private/rest/storage/document/${deadLocator}`,
+            dataURL: VALID_PNG_DATA_URL,
+          },
+        })
+      );
+
+      expect(summary).toMatchObject({ migrated: 1, failed: 0 });
+      const [uphomedId] = [...storageBucketService.store.keys()];
+      expect(await readStoredAssetLocators(captured.buffer!)).toEqual({
+        'file-1': uphomedId,
+      });
+      expect(uphomedId).not.toBe(deadLocator);
     });
 
     it('preserves the embedded document id for a dangling media ref — valid Alkemio URL, no live row, and NO inline bytes (case 3)', async () => {
