@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { CollaborationContentType, LogContext } from '@common/enums';
+import { EntityNotFoundException } from '@common/exceptions';
 import { compressText, decompressText } from '@common/utils/compression.util';
 import { CalloutContributionDefaults } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.entity';
 import {
@@ -10,6 +11,7 @@ import { Memo } from '@domain/common/memo/memo.entity';
 import {
   enumerateLiveImageRefs,
   type LegacyBinaryFileData,
+  type LegacyWhiteboardScene,
   type LiveImageRef,
   parseLegacyWhiteboardScene,
   whiteboardSceneToYjsV2State,
@@ -26,6 +28,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import type { CreateDocumentResult } from '@services/adapters/file-service-adapter/dto/create.document.result';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
+import { isUUID } from 'class-validator';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IsNull, Repository } from 'typeorm';
 import { LegacyContentRecord } from './legacy.content.record';
@@ -48,6 +51,17 @@ const DEFAULT_BATCH_SIZE = 200;
 
 /** The one canonical top-level Y root of a memo doc — a `Y.XmlFragment` named this. */
 const MEMO_ROOT = 'default';
+
+/**
+ * `content-batch` reports both definitive misses and per-item read failures as
+ * `found: false`. Only these stable endpoint reasons prove that no usable
+ * document/content exists; every other reason is inconclusive and must leave
+ * the source row pending for a retry.
+ */
+const PROVEN_MISSING_CONTENT_REASONS = new Set([
+  'document not found',
+  'content not found',
+]);
 
 /**
  * Strictly decode a valid STANDARD base64 string to bytes, or `undefined` if it is NOT valid
@@ -120,7 +134,8 @@ const parseDataUrl = (
     if (isBase64) {
       // STRICT base64 via the shared decoder — rejects any non-alphabet byte or malformed
       // padding ('not-base64!!!' would otherwise decode to 7 junk bytes and up-home garbage).
-      // `undefined` here FAILS the record.
+      // `undefined` marks these inline bytes unusable; migration can still salvage the
+      // remaining board while explicitly flagging removal of affected live images.
       buffer = decodeStrictBase64(data);
     } else {
       // URI-encoded (non-base64) data URL — historically supported; keep the lenient decode.
@@ -145,23 +160,28 @@ const extensionForMimeType = (mimeType: string): string => {
 /**
  * Outcome of one `migrateAll` run (US6/FR-007). Counters let an operator confirm
  * a clean migration: every reached legacy document either got a snapshot pointer,
- * was flagged (un-decodable, surfaced for review — NEVER silently dropped), or
- * failed (re-runnable). Pending-only at source means every reached record migrates.
+ * was source-flagged and left pending, or failed re-runnably. A board whose usable
+ * content migrated after irrecoverable live visuals were removed increments BOTH
+ * `migrated` and `flagged`, so loss is visible and the operator result is non-clean.
  */
 export interface MigrationSummary {
   total: number;
   migrated: number;
   /** Legacy contribution defaults with no complete owning Callout path. */
   unattached: number;
-  /** Un-decodable legacy content surfaced for manual review (not migrated). */
+  /**
+   * Rows requiring manual review. Source-decode failures are not migrated; lossy
+   * visual salvage is migrated and therefore overlaps with `migrated`.
+   */
   flagged: number;
   /**
    * A record could not be migrated (re-runnable): planning/encode rejected it (malformed
-   * scene, unrepresentable live media, invalid schema/element), a snapshot write / up-home /
-   * authorization failed, or the pointer CAS lost to a concurrent writer.
+   * scene, invalid schema/element, or an inconclusive metadata/content lookup), a snapshot
+   * write / up-home / authorization failed, or publication did not converge to a canonical
+   * pointer/default.
    */
   failed: number;
-  /** The flagged document ids + reasons, for operator follow-up. */
+  /** Flagged document ids + reasons, including explicit migrated-with-loss warnings. */
   flaggedDocuments: { id: string; reason: string }[];
   /** Runtime failures with ids + reasons, for retry/remediation. */
   failedDocuments: { id: string; reason: string }[];
@@ -179,6 +199,11 @@ export interface MigrationOptions {
 interface CreatedMigrationArtifacts {
   assetDocumentIds: string[];
   snapshotDocumentId?: string;
+}
+
+interface EncodedSnapshot {
+  bytes: Buffer;
+  warnings: string[];
 }
 
 interface LegacyWhiteboardDefaultRecord extends LegacyContentRecord {
@@ -375,8 +400,9 @@ export class CollaborationMigrationService {
         continue;
       }
       try {
-        await this.migrateWhiteboardDefault(record, dryRun);
+        const warnings = await this.migrateWhiteboardDefault(record, dryRun);
         summary.migrated++;
+        this.recordMigrationWarnings(summary, record.id, warnings);
       } catch (error) {
         summary.failed++;
         summary.failedDocuments.push({
@@ -439,8 +465,9 @@ export class CollaborationMigrationService {
       }
 
       try {
-        await this.migrateRecord(record, dryRun);
+        const warnings = await this.migrateRecord(record, dryRun);
         summary.migrated++;
+        this.recordMigrationWarnings(summary, record.id, warnings);
       } catch (error) {
         summary.failed++;
         summary.failedDocuments.push({
@@ -472,6 +499,28 @@ export class CollaborationMigrationService {
       LogContext.COLLABORATION_INTEGRATION
     );
     return summary;
+  }
+
+  private recordMigrationWarnings(
+    summary: MigrationSummary,
+    id: string,
+    warnings: string[]
+  ): void {
+    if (warnings.length === 0) {
+      return;
+    }
+    const reason = warnings.join('; ');
+    summary.flagged++;
+    summary.flaggedDocuments.push({ id, reason });
+    this.logger.warn?.(
+      {
+        message:
+          'Collaboration migration: document migrated with explicit visual loss',
+        id,
+        reason,
+      },
+      LogContext.COLLABORATION_INTEGRATION
+    );
   }
 
   /**
@@ -923,7 +972,7 @@ export class CollaborationMigrationService {
   private async migrateRecord(
     record: LegacyContentRecord,
     dryRun: boolean
-  ): Promise<void> {
+  ): Promise<string[]> {
     if (!record.storageBucketId) {
       throw new Error(
         `Document ${record.id} has no storage bucket; cannot write snapshot`
@@ -951,17 +1000,16 @@ export class CollaborationMigrationService {
       assetDocumentIds: [],
     };
 
-    // 1. PLANNING (zero writes): build a REPRESENTABILITY-only snapshot — media resolved to
-    //    synthetic/structural locators, no uploads, no auth, no Alkemio-doc lookups — then
-    //    verifyContent it. This catches a malformed scene and every schema/structural defect
-    //    (an external-only live image, a non-array `elements`, a corrupt memo) BEFORE any side
-    //    effect. A throw propagates to migrateAll's per-record catch as `failed`, leaving the
-    //    pointer NULL and re-runnable. (Dry-run does NOT prove file-service resolution of the
-    //    CURRENT locators — post-migrate `--verify` is the definitive resolution gate.)
+    // 1. PLANNING (zero writes): resolve existing media metadata + bytes READ-ONLY and use
+    //    synthetic locators for valid inline bytes, then remove only proven-unrecoverable live
+    //    images and verify the exact planned structure. Malformed scenes/schema, transient
+    //    lookup failures, and corrupt memos fail BEFORE any side effect; proven visual loss is
+    //    returned as an explicit warning. Dry-run therefore predicts real salvage without
+    //    uploading media/snapshots, applying authorization, or mutating the pointer.
     const planned = await this.encodeSnapshot(record, true);
-    this.verifyContent(planned, record.contentType, fork);
+    this.verifyContent(planned.bytes, record.contentType, fork);
     if (dryRun) {
-      return; // dry-run stops after planning — provably zero writes
+      return planned.warnings; // dry-run stops after planning — provably zero writes
     }
 
     // 2. REAL: resolve media for real (Alkemio-doc lookups + dataURL up-home writes), build the
@@ -969,15 +1017,17 @@ export class CollaborationMigrationService {
     //    verifier would reject. EVERY reached (null-pointer) record is seeded, including empty
     //    content (encodeSnapshot returns the canonical empty Y.Doc), so no row is left null.
     let result: CreateDocumentResult;
+    let warnings: string[];
     try {
-      const snapshot = await this.encodeSnapshot(
+      const encoded = await this.encodeSnapshot(
         record,
         false,
         createdArtifacts
       );
-      this.verifyContent(snapshot, record.contentType, fork);
+      this.verifyContent(encoded.bytes, record.contentType, fork);
+      warnings = encoded.warnings;
       result = await this.fileServiceAdapter.createSnapshotInBucket(
-        snapshot,
+        encoded.bytes,
         record.storageBucketId
       );
       // Only a row inserted by this request belongs to this attempt. A reused
@@ -1044,7 +1094,7 @@ export class CollaborationMigrationService {
         throw error;
       }
       if (convergedPointer === result.id) {
-        return;
+        return warnings;
       }
       const cleanupFailures = await this.cleanupCreatedArtifacts(
         record.id,
@@ -1056,12 +1106,12 @@ export class CollaborationMigrationService {
         );
       }
       if (convergedPointer) {
-        return;
+        return [];
       }
       throw error;
     }
     if (updateResult.affected === 1) {
-      return;
+      return warnings;
     }
 
     // A concurrent migration may already have completed both fields. If the
@@ -1097,8 +1147,9 @@ export class CollaborationMigrationService {
             'Concurrent migration converged but artifact compensation was incomplete'
           );
         }
+        return [];
       }
-      return;
+      return warnings;
     }
 
     // Known negative outcome: our CAS changed nothing and no atomic winner is
@@ -1120,7 +1171,7 @@ export class CollaborationMigrationService {
   private async migrateWhiteboardDefault(
     record: LegacyWhiteboardDefaultRecord,
     dryRun: boolean
-  ): Promise<void> {
+  ): Promise<string[]> {
     if (!record.storageBucketId) {
       throw new Error(
         'Contribution default has no owning Callout storage bucket'
@@ -1128,23 +1179,33 @@ export class CollaborationMigrationService {
     }
     const fork = await loadWhiteboardFork();
     const planned = await this.encodeSnapshot(record, true);
-    this.verifyContent(planned, CollaborationContentType.WHITEBOARD, fork);
+    this.verifyContent(
+      planned.bytes,
+      CollaborationContentType.WHITEBOARD,
+      fork
+    );
     if (dryRun) {
-      return;
+      return planned.warnings;
     }
 
     const createdArtifacts: CreatedMigrationArtifacts = {
       assetDocumentIds: [],
     };
     let canonical: string;
+    let warnings: string[];
     try {
-      const snapshot = await this.encodeSnapshot(
+      const encoded = await this.encodeSnapshot(
         record,
         false,
         createdArtifacts
       );
-      this.verifyContent(snapshot, CollaborationContentType.WHITEBOARD, fork);
-      canonical = await compressText(snapshot.toString('base64'));
+      this.verifyContent(
+        encoded.bytes,
+        CollaborationContentType.WHITEBOARD,
+        fork
+      );
+      warnings = encoded.warnings;
+      canonical = await compressText(encoded.bytes.toString('base64'));
     } catch (error) {
       const cleanupFailures = await this.cleanupCreatedArtifacts(
         record.id,
@@ -1171,23 +1232,27 @@ export class CollaborationMigrationService {
         .execute();
       affected = result.affected;
     } catch (error) {
-      const current = await this.readStoredDefaultContent(record.id).catch(
-        () => undefined
-      );
-      if (current === canonical) {
-        return;
-      }
-      if (current === undefined) {
+      let current: string | undefined;
+      try {
+        current = await this.readStoredDefaultContent(record.id);
+      } catch (reconciliationError) {
+        // As with document rows, an unavailable reconciliation read leaves the
+        // publication outcome unknown. Preserve possible canonical media rather
+        // than deleting assets that the ambiguous UPDATE may have published.
         this.logger.warn?.(
           {
             message:
               'Migration: contribution-default publication outcome is unknown; preserving up-homed media',
             id: record.id,
             error: String(error),
+            reconciliationError: String(reconciliationError),
           },
           LogContext.COLLABORATION_INTEGRATION
         );
         throw error;
+      }
+      if (current === canonical) {
+        return warnings;
       }
       const cleanupFailures = await this.cleanupCreatedArtifacts(
         record.id,
@@ -1198,15 +1263,25 @@ export class CollaborationMigrationService {
           `Contribution-default publication failed and media compensation was incomplete: ${String(error)}`
         );
       }
+      // A different canonical writer owns both the published content and any
+      // visual-loss warning. Once this attempt's artifacts are compensated,
+      // converge successfully without attributing its discarded warnings.
+      if (
+        current &&
+        current !== record.storedContent &&
+        (await this.isCanonicalStoredWhiteboardDefault(current))
+      ) {
+        return [];
+      }
       throw error;
     }
 
     if (affected === 1) {
-      return;
+      return warnings;
     }
     const current = await this.readStoredDefaultContent(record.id);
     if (current === canonical) {
-      return;
+      return warnings;
     }
     const cleanupFailures = await this.cleanupCreatedArtifacts(
       record.id,
@@ -1222,7 +1297,7 @@ export class CollaborationMigrationService {
       current !== record.storedContent &&
       (await this.isCanonicalStoredWhiteboardDefault(current))
     ) {
-      return;
+      return [];
     }
     throw new Error(
       'Contribution default did not converge after migration CAS'
@@ -1342,11 +1417,14 @@ export class CollaborationMigrationService {
     record: LegacyContentRecord,
     planning: boolean,
     createdArtifacts?: CreatedMigrationArtifacts
-  ): Promise<Buffer> {
+  ): Promise<EncodedSnapshot> {
     if (record.contentType === CollaborationContentType.MEMO) {
-      return record.content
-        ? Buffer.from(record.content, 'base64')
-        : Buffer.from(markdownToYjsV2State(''));
+      return {
+        bytes: record.content
+          ? Buffer.from(record.content, 'base64')
+          : Buffer.from(markdownToYjsV2State('')),
+        warnings: [],
+      };
     }
     // Whiteboard: resolve the legacy embedded-media references to opaque locator
     // strings (url-backed → its document id; dataURL-only → bytes up-homed into this
@@ -1358,63 +1436,134 @@ export class CollaborationMigrationService {
     // the SAME `undefined` the encoder maps to the canonical EMPTY doc, which would SILENTLY
     // discard real content. Fail the record instead. A genuinely empty / whitespace legacy
     // value is canonical-empty and passes (it is never parsed as a scene).
-    if (
-      sceneJSON.trim() !== '' &&
-      parseLegacyWhiteboardScene(sceneJSON) === undefined
-    ) {
+    const scene = parseLegacyWhiteboardScene(sceneJSON);
+    if (sceneJSON.trim() !== '' && scene === undefined) {
       throw new Error(
         'whiteboard legacy content is nonempty but not a parseable Excalidraw scene (malformed JSON or missing/non-array elements); refusing to migrate it as empty'
       );
     }
-    // `planning` (dry-run) resolves media to REPRESENTABLE synthetic/structural locators with
-    // ZERO writes; the real path performs the Alkemio-doc lookups + dataURL up-home. The
-    // shared cold-load image→locator invariant is enforced by the CALLER's `verifyContent` on
-    // the resulting snapshot (one owner) BEFORE any upload/CAS — a live image that resolved to
-    // no locator fails the record there.
+    // `planning` (dry-run) performs the same read-only document + byte checks as the real path
+    // and uses synthetic locators only for valid inline bytes. Both paths remove the same
+    // proven-unrecoverable live images before the shared cold-load verifier runs; the real path
+    // alone up-homes inline bytes and persists the snapshot.
     const assetLocators = await this.resolveWhiteboardAssetLocators(
-      sceneJSON,
+      scene,
       record,
       planning,
       createdArtifacts
     );
-    return Buffer.from(
-      await whiteboardSceneToYjsV2State(sceneJSON, assetLocators)
+    const salvage = scene
+      ? this.removeUnrecoverableLiveImages(scene, assetLocators)
+      : { sceneJSON, warnings: [] };
+    return {
+      bytes: Buffer.from(
+        await whiteboardSceneToYjsV2State(salvage.sceneJSON, assetLocators)
+      ),
+      warnings: salvage.warnings,
+    };
+  }
+
+  private removeUnrecoverableLiveImages(
+    scene: LegacyWhiteboardScene,
+    assetLocators: Record<string, string>
+  ): { sceneJSON: string; warnings: string[] } {
+    const missing = new Map<string, string[]>();
+    for (const element of scene.elements) {
+      if (element.type !== 'image' || element.isDeleted) {
+        continue;
+      }
+      const fileId = element.fileId;
+      if (
+        typeof fileId !== 'string' ||
+        fileId.length === 0 ||
+        assetLocators[fileId]
+      ) {
+        continue;
+      }
+      const ids = missing.get(fileId) ?? [];
+      ids.push(typeof element.id === 'string' ? element.id : '<unknown>');
+      missing.set(fileId, ids);
+    }
+    if (missing.size === 0) {
+      return { sceneJSON: JSON.stringify(scene), warnings: [] };
+    }
+
+    const elements = scene.elements.filter(element => {
+      const fileId = element.fileId;
+      return !(
+        element.type === 'image' &&
+        !element.isDeleted &&
+        typeof fileId === 'string' &&
+        missing.has(fileId)
+      );
+    });
+    const files = scene.files
+      ? Object.fromEntries(
+          Object.entries(scene.files).filter(([fileId]) =>
+            Boolean(assetLocators[fileId])
+          )
+        )
+      : undefined;
+    const warnings = [...missing.entries()].map(
+      ([fileId, elementIds]) =>
+        `migrated with visual loss: removed live image elements [${elementIds.join(', ')}] because fileId '${fileId}' has no recoverable file-service content or inline bytes`
     );
+    return {
+      sceneJSON: JSON.stringify({ ...scene, elements, files }),
+      warnings,
+    };
   }
 
   /**
    * Resolves a legacy whiteboard scene's embedded-media map
    * (`fileId -> BinaryFileData`) to the unified `fileId -> file-service locator
-   * string` map the fork writes into the snapshot's `FILES` `Y.Map`. Iterates the
-   * scene's own `files`; each entry that resolves to a locator is kept. A genuinely
+   * string` map the fork writes into the snapshot's `FILES` `Y.Map`. Resolves only
+   * descriptors referenced by live image elements; deleted/unreferenced descriptors
+   * issue no metadata/content requests and are pruned. Each live entry that resolves
+   * to a locator is kept. A genuinely
    * unrecoverable entry (malformed/undecodable, no usable url or bytes) is dropped here
-   * (never a crash) — but if a LIVE image element references it, `migrateRecord`'s
-   * `verifyContent` then FAILS the record at the shared image→locator boundary
-   * (`enumerateLiveImageRefs`), so a broken live image never migrates; only an UNREFERENCED
-   * (or deleted-only) dropped entry passes. `planning` selects representability-only
-   * resolution (zero writes) vs the real Alkemio-doc lookups + dataURL up-home.
+   * (never a crash). Before encoding, every LIVE image sharing that missing fileId is removed
+   * while unrelated content remains, and the migrated row is explicitly flagged with the
+   * affected element ids + fileId. Deleted/unreferenced entries need no loss warning.
+   * `planning` performs the same read-only locator lookup and predicts the same removal, while
+   * replacing valid inline bytes with a synthetic locator so it still writes nothing.
    * A transient upload/read failure THROWS and fails the record (re-runnable) rather than
    * silently dropping media. Returns an empty map for an empty/undecodable scene or one
    * with no media.
    */
   private async resolveWhiteboardAssetLocators(
-    sceneJSON: string,
+    scene: LegacyWhiteboardScene | undefined,
     record: LegacyContentRecord,
     planning: boolean,
     createdArtifacts?: CreatedMigrationArtifacts
   ): Promise<Record<string, string>> {
-    const files = parseLegacyWhiteboardScene(sceneJSON)?.files;
+    const files = scene?.files;
     if (!files) {
       return {};
     }
+    const liveFileIds = new Set(
+      scene.elements.flatMap(element =>
+        element.type === 'image' &&
+        !element.isDeleted &&
+        typeof element.fileId === 'string' &&
+        element.fileId.length > 0
+          ? [element.fileId]
+          : []
+      )
+    );
     const locators: Record<string, string> = {};
+    const locatorContentCache = new Map<string, Promise<boolean>>();
     for (const [fileId, file] of Object.entries(files)) {
+      if (!liveFileIds.has(fileId)) {
+        continue;
+      }
       const locator = await this.resolveLegacyFileLocator(
         fileId,
         file,
         record,
         planning,
-        createdArtifacts
+        createdArtifacts,
+        locatorContentCache
       );
       if (locator) {
         locators[fileId] = locator;
@@ -1435,9 +1584,8 @@ export class CollaborationMigrationService {
    *  2. `url` is a valid Alkemio doc URL whose row is gone, BUT decodable `dataURL`
    *     bytes are present → up-home the bytes (pre-006 rendered them) — a recoverable
    *     image must not degrade into an unresolvable dead-doc locator.
-   *  3. valid Alkemio doc URL, missing row, NO usable bytes → preserve the embedded
-   *     (dangling) id, so the asset points where it did pre-006 (a later restore
-   *     resolves it; no regression).
+   *  3. valid Alkemio doc URL, missing row, NO usable bytes → no locator; the caller
+   *     removes only live images sharing that fileId and records explicit visual loss.
    *  4. no usable Alkemio url (external url, or none): up-home the `dataURL` bytes if
    *     present; otherwise (external-only, no bytes) skip + surface.
    */
@@ -1446,64 +1594,32 @@ export class CollaborationMigrationService {
     file: LegacyBinaryFileData,
     record: LegacyContentRecord,
     planning: boolean,
-    createdArtifacts?: CreatedMigrationArtifacts
+    createdArtifacts: CreatedMigrationArtifacts | undefined,
+    locatorContentCache: Map<string, Promise<boolean>>
   ): Promise<string | undefined> {
     const url = typeof file?.url === 'string' ? file.url.trim() : '';
-    const isAlkemioUrl =
-      url !== '' && this.documentService.isAlkemioDocumentURL(url);
+    const embeddedDocumentId =
+      url !== '' ? this.extractLegacyDocumentId(url) : undefined;
+
+    // Current-host and historical-host document URLs share the same local-only
+    // lookup. Only the exact configured route with one UUID suffix reaches this
+    // branch; no network request is ever made to a URL host.
+    if (embeddedDocumentId) {
+      const hasContent = await this.legacyDocumentHasContent(
+        embeddedDocumentId,
+        locatorContentCache
+      );
+      if (hasContent) {
+        return embeddedDocumentId;
+      }
+    }
 
     if (planning) {
-      // PLANNING (dry-run): prove the descriptor is REPRESENTABLE with ZERO writes, no auth,
-      // and no DB — never the real locator. An Alkemio doc URL is representable by its embedded
-      // structural id; a decodable inline dataURL is representable by a deterministic synthetic
-      // locator; everything else (external-only url with no bytes, undecodable dataURL) is
-      // UNREPRESENTABLE → undefined, so a LIVE image referencing it FAILS the planning
-      // snapshot's verifyContent before any real work. Post-migrate `--verify` remains the
-      // definitive file-service-resolution gate for the CURRENT locators.
-      if (isAlkemioUrl) {
-        const base = this.documentService.getDocumentsBaseUrlPath();
-        const id = url.substring(base.length + 1);
-        if (id) {
-          return id;
-        }
-      }
       return this.planDataUrlLocator(fileId, file);
     }
 
-    // 1–3. Alkemio file-service document URL.
-    if (isAlkemioUrl) {
-      const document = await this.documentService.getDocumentFromURL(url, {
-        loadEagerRelations: false,
-      });
-      if (document) {
-        return document.id; // 1. live row → its document id.
-      }
-      // 2. Row gone, but inline bytes are still there (recoverable) → up-home them.
-      const uphomed = await this.uphomeDataUrlAsset(
-        fileId,
-        file,
-        record,
-        createdArtifacts
-      );
-      if (uphomed) {
-        return uphomed;
-      }
-      // 3. No usable bytes → preserve the dangling id (no regression).
-      const base = this.documentService.getDocumentsBaseUrlPath();
-      const id = url.substring(base.length + 1);
-      this.logger.warn?.(
-        {
-          message:
-            'Migration: whiteboard asset url did not resolve to a live document and has no inline bytes; preserving the reference id',
-          id: record.id,
-          fileId,
-        },
-        LogContext.COLLABORATION_INTEGRATION
-      );
-      return id || undefined;
-    }
-
-    // 4. No usable Alkemio url → up-home inline bytes if present, else skip + surface.
+    // Missing/invalid URL → up-home inline bytes if present, else let the
+    // caller remove only affected live image elements and flag the migration.
     const uphomed = await this.uphomeDataUrlAsset(
       fileId,
       file,
@@ -1516,13 +1632,115 @@ export class CollaborationMigrationService {
     this.logger.warn?.(
       {
         message:
-          'Migration: whiteboard asset has no Alkemio url and no inline bytes; skipping asset',
+          'Migration: whiteboard asset has no live file row and no inline bytes; skipping asset',
         id: record.id,
         fileId,
       },
       LogContext.COLLABORATION_INTEGRATION
     );
     return undefined;
+  }
+
+  private async legacyDocumentHasContent(
+    documentId: string,
+    cache: Map<string, Promise<boolean>>
+  ): Promise<boolean> {
+    const existing = cache.get(documentId);
+    if (existing) {
+      return existing;
+    }
+    const pending = this.loadLegacyDocumentContentState(documentId);
+    cache.set(documentId, pending);
+    return pending;
+  }
+
+  private async loadLegacyDocumentContentState(
+    documentId: string
+  ): Promise<boolean> {
+    let document;
+    try {
+      document = await this.documentService.getDocumentOrFail(documentId, {
+        loadEagerRelations: false,
+      });
+    } catch (error) {
+      if (error instanceof EntityNotFoundException) {
+        return false;
+      }
+      throw error;
+    }
+    if (document.id !== documentId) {
+      throw new Error(
+        `legacy media metadata lookup returned a different id (requested '${documentId}', got '${document.id}')`
+      );
+    }
+
+    const response = await this.fileServiceAdapter.getContentBatch([
+      documentId,
+    ]);
+    if (response.length !== 1 || !response[0]) {
+      throw new Error(
+        `legacy media locator '${documentId}' returned a malformed content response`
+      );
+    }
+    const result = response[0];
+    if (result.id !== documentId) {
+      throw new Error(
+        `legacy media locator '${documentId}' returned content for a different id '${result.id}'`
+      );
+    }
+    if (!result.found) {
+      if (
+        typeof result.error === 'string' &&
+        PROVEN_MISSING_CONTENT_REASONS.has(result.error)
+      ) {
+        return false;
+      }
+      throw new Error(
+        `legacy media content lookup was inconclusive: ${result.error ?? 'file-service returned no miss reason'}`
+      );
+    }
+    if (
+      typeof result.contentBase64 !== 'string' ||
+      result.contentBase64.trim() === ''
+    ) {
+      return false;
+    }
+    if (!decodeStrictBase64(result.contentBase64)) {
+      throw new Error(
+        `legacy media locator '${documentId}' returned malformed base64 content`
+      );
+    }
+    return true;
+  }
+
+  /**
+   * Extracts the opaque document UUID from the configured Alkemio document
+   * route while deliberately ignoring the URL host. Legacy database copies
+   * and environment renames leave otherwise-valid document URLs pointing at
+   * an historical host. Matching the exact route plus a UUID is safe because
+   * this method performs no network request; arbitrary external paths and
+   * non-UUID suffixes are never trusted as locators; affected live visuals are
+   * removed with an explicit migration warning when no inline bytes exist.
+   */
+  private extractLegacyDocumentId(url: string): string | undefined {
+    try {
+      const candidate = new URL(url);
+      if (candidate.protocol !== 'https:' && candidate.protocol !== 'http:') {
+        return undefined;
+      }
+      const configured = new URL(
+        this.documentService.getDocumentsBaseUrlPath()
+      );
+      const route = configured.pathname.replace(/\/+$/, '');
+      const prefix = `${route}/`;
+      if (!candidate.pathname.startsWith(prefix)) {
+        return undefined;
+      }
+      const id = candidate.pathname.slice(prefix.length);
+      return !id.includes('/') && isUUID(id) ? id : undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   /**
@@ -1558,7 +1776,7 @@ export class CollaborationMigrationService {
    * policy internally (its own `saveAll`; it returns no rules for the caller to save), and
    * it is awaited BEFORE the locator is returned — hence before the snapshot write and the
    * `contentPointer` CAS in `migrateRecord`. Returns `undefined` (letting the caller
-   * decide the fallback — preserve a dangling id, or skip) when there is nothing to
+   * remove only affected live images and flag the row) when there is nothing to
    * up-home: NO `dataURL` (silently), an undecodable `data:` URI (surfaced), or a missing
    * bucket (surfaced; a bucketless record already fails in `migrateRecord`). A real
    * upload OR authorization failure THROWS → the record fails (unmigrated + re-runnable),
@@ -1572,7 +1790,7 @@ export class CollaborationMigrationService {
   ): Promise<string | undefined> {
     const dataURL = typeof file?.dataURL === 'string' ? file.dataURL : '';
     if (!dataURL) {
-      return undefined; // no inline bytes — caller falls back (dangling id / skip).
+      return undefined; // no inline bytes — caller performs explicit lossy salvage.
     }
     const decoded = parseDataUrl(dataURL);
     if (!decoded) {
