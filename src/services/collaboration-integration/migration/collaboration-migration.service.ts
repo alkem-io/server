@@ -1221,23 +1221,27 @@ export class CollaborationMigrationService {
         .execute();
       affected = result.affected;
     } catch (error) {
-      const current = await this.readStoredDefaultContent(record.id).catch(
-        () => undefined
-      );
-      if (current === canonical) {
-        return warnings;
-      }
-      if (current === undefined) {
+      let current: string | undefined;
+      try {
+        current = await this.readStoredDefaultContent(record.id);
+      } catch (reconciliationError) {
+        // As with document rows, an unavailable reconciliation read leaves the
+        // publication outcome unknown. Preserve possible canonical media rather
+        // than deleting assets that the ambiguous UPDATE may have published.
         this.logger.warn?.(
           {
             message:
               'Migration: contribution-default publication outcome is unknown; preserving up-homed media',
             id: record.id,
             error: String(error),
+            reconciliationError: String(reconciliationError),
           },
           LogContext.COLLABORATION_INTEGRATION
         );
         throw error;
+      }
+      if (current === canonical) {
+        return warnings;
       }
       const cleanupFailures = await this.cleanupCreatedArtifacts(
         record.id,
@@ -1247,6 +1251,16 @@ export class CollaborationMigrationService {
         throw new Error(
           `Contribution-default publication failed and media compensation was incomplete: ${String(error)}`
         );
+      }
+      // A different canonical writer owns both the published content and any
+      // visual-loss warning. Once this attempt's artifacts are compensated,
+      // converge successfully without attributing its discarded warnings.
+      if (
+        current &&
+        current !== record.storedContent &&
+        (await this.isCanonicalStoredWhiteboardDefault(current))
+      ) {
+        return [];
       }
       throw error;
     }

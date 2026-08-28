@@ -1471,6 +1471,127 @@ describe('CollaborationMigrationService', () => {
       expect(summary.flaggedDocuments).toEqual([]);
     });
 
+    it("reconciles an ambiguous default CAS to a different canonical winner without attributing this attempt's warning", async () => {
+      const missingLocator = '11111111-2222-4333-8444-555555555555';
+      const storedContent = await compressText(
+        legacyMediaScene({
+          fileId: 'file-default',
+          file: {
+            id: 'file-default',
+            url: `https://acc.alkem.io/api/private/rest/storage/document/${missingLocator}`,
+          },
+        })
+      );
+      const winnerBytes = await whiteboardSceneToYjsV2State(
+        JSON.stringify({
+          type: 'excalidraw',
+          version: 2,
+          elements: [
+            {
+              id: 'winner-rect',
+              type: 'rectangle',
+              x: 0,
+              y: 0,
+              width: 10,
+              height: 10,
+              index: 'a0',
+            },
+          ],
+          appState: {},
+          files: {},
+        }),
+        {}
+      );
+      const winnerStored = await compressText(
+        Buffer.from(winnerBytes).toString('base64')
+      );
+      const update = updateQB();
+      update.execute.mockRejectedValue(new Error('commit outcome unknown'));
+      documentService.getDocumentOrFail.mockRejectedValue(
+        missingDocument(missingLocator)
+      );
+      whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+      contributionDefaults.query
+        .mockResolvedValueOnce([
+          {
+            id: 'default-ambiguous-winner',
+            storedContent,
+            storageBucketId: 'callout-bucket-cas',
+          },
+        ])
+        .mockResolvedValueOnce([{ whiteboardContent: winnerStored }]);
+      contributionDefaults.createQueryBuilder.mockReturnValue(update.qb);
+
+      const summary = await svc.migrateWhiteboards();
+
+      expect(summary).toMatchObject({ migrated: 1, flagged: 0, failed: 0 });
+      expect(summary.flaggedDocuments).toEqual([]);
+    });
+
+    it('compensates up-homed media when an ambiguous default CAS is reconciled to no published content', async () => {
+      const storedContent = await compressText(
+        legacyMediaScene({
+          fileId: 'file-default',
+          file: {
+            id: 'file-default',
+            mimeType: 'image/png',
+            dataURL: VALID_PNG_DATA_URL,
+          },
+        })
+      );
+      const update = updateQB();
+      update.execute.mockRejectedValue(new Error('commit outcome unknown'));
+      whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+      contributionDefaults.query
+        .mockResolvedValueOnce([
+          {
+            id: 'default-ambiguous-unpublished',
+            storedContent,
+            storageBucketId: 'callout-bucket-cas',
+          },
+        ])
+        .mockResolvedValueOnce([]);
+      contributionDefaults.createQueryBuilder.mockReturnValue(update.qb);
+
+      const summary = await svc.migrateWhiteboards();
+
+      expect(summary).toMatchObject({ migrated: 0, flagged: 0, failed: 1 });
+      expect(documentService.deleteDocument).toHaveBeenCalledWith({
+        ID: 'uphomed-doc-1',
+      });
+    });
+
+    it('preserves up-homed media when both the default CAS outcome and reconciliation read are unavailable', async () => {
+      const storedContent = await compressText(
+        legacyMediaScene({
+          fileId: 'file-default',
+          file: {
+            id: 'file-default',
+            mimeType: 'image/png',
+            dataURL: VALID_PNG_DATA_URL,
+          },
+        })
+      );
+      const update = updateQB();
+      update.execute.mockRejectedValue(new Error('commit outcome unknown'));
+      whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+      contributionDefaults.query
+        .mockResolvedValueOnce([
+          {
+            id: 'default-ambiguous-unreadable',
+            storedContent,
+            storageBucketId: 'callout-bucket-cas',
+          },
+        ])
+        .mockRejectedValueOnce(new Error('database unavailable'));
+      contributionDefaults.createQueryBuilder.mockReturnValue(update.qb);
+
+      const summary = await svc.migrateWhiteboards();
+
+      expect(summary).toMatchObject({ migrated: 0, flagged: 0, failed: 1 });
+      expect(documentService.deleteDocument).not.toHaveBeenCalled();
+    });
+
     it('CRITICAL: migrates a legacy media whiteboard — FILES holds byte-proven locator STRINGS, never BinaryFileData objects', async () => {
       const locator = '11111111-2222-4333-8444-555555555555';
       const url = `https://alkem.io/api/private/rest/storage/document/${locator}`;
