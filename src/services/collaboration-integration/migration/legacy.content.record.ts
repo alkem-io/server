@@ -15,8 +15,9 @@ import { CollaborationContentType } from '@common/enums/collaboration.content.ty
  *   (`Memo.content.toString('base64')`); `undefined` for a never-edited memo
  *   (the job seeds an empty Y.Doc — not a failure).
  * - whiteboard: `content` is the decompressed Excalidraw JSON string;
- *   `flagged = true` marks a decompression failure surfaced for manual review
- *   (not silently dropped).
+ *   record-level `flagged = true` marks a source decompression failure and is
+ *   not migrated. This is distinct from a MigrationSummary flag emitted after
+ *   an otherwise-usable board migrates with explicit visual loss.
  */
 export interface LegacyContentRecord {
   id: string;
