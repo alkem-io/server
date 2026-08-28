@@ -128,14 +128,27 @@ export class RegistrationResolverMutations {
     const branch: AccountDeletionInitiatorBranch = isSelf ? 'self' : 'admin';
 
     if (isSelf) {
-      // The freshness gate: refuse before any deletion work when the
-      // calling session was not issued within the privileged window.
-      // Fail CLOSED on a missing/zero/unparseable issuedAt — never treat an
-      // undeterminable freshness as fresh. Not applied on admin-on-other.
+      // The session-age gate: refuse before any deletion work when the calling
+      // session was not established within the privileged window.
+      //
+      // NOTE this is a session-AGE gate, not re-authentication: it proves the
+      // session is young, not that a credential was presented. See
+      // alkem-io/server#6417.
+      //
+      // Fail CLOSED on a missing, zero or unparseable issuedAt — never treat an
+      // undeterminable age as fresh. The age is also required to be
+      // non-negative: a future-dated issuedAt (clock skew between the BFF and
+      // this node) yields a negative age, which would otherwise slip past the
+      // upper bound and satisfy the gate. Not applied on admin-on-other.
       const issuedAt = actorContext.issuedAt;
-      if (!issuedAt || Date.now() - issuedAt > PRIVILEGED_SESSION_WINDOW_MS) {
+      const sessionAgeMs = issuedAt ? Date.now() - issuedAt : undefined;
+      if (
+        sessionAgeMs === undefined ||
+        sessionAgeMs < 0 ||
+        sessionAgeMs > PRIVILEGED_SESSION_WINDOW_MS
+      ) {
         throw new SessionRefreshRequiredException(
-          'Deleting your own account requires a recently re-authenticated session',
+          'Deleting your own account requires a recently established session',
           LogContext.AUTH
         );
       }

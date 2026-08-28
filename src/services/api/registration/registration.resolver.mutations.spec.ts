@@ -246,6 +246,18 @@ describe('RegistrationResolverMutations', () => {
         ).rejects.toThrow(SessionRefreshRequiredException);
       });
 
+      // A future-dated issuedAt makes `now - issuedAt` negative, which is not
+      // greater than the window — so an upper-bound-only check would let it
+      // through. Clock skew between the BFF and this node is enough to produce
+      // one, so the gate requires a non-negative age as well.
+      it('fails closed — refuses a future-dated issuedAt rather than reading it as fresh', async () => {
+        await expect(
+          resolver.deleteUser(selfActorContext(Date.now() + 60_000), {
+            ID: 'user-1',
+          })
+        ).rejects.toThrow(SessionRefreshRequiredException);
+      });
+
       it('proceeds, pins deleteIdentity, and passes branch self when the session is fresh', async () => {
         const freshIssuedAt = Date.now() - 60_000;
         const user = {
