@@ -1,5 +1,7 @@
 import { createRequire } from 'node:module';
 import { CollaborationContentType } from '@common/enums/collaboration.content.type';
+import { LogContext } from '@common/enums/logging.context';
+import { EntityNotFoundException } from '@common/exceptions';
 import { compressText, decompressText } from '@common/utils/compression.util';
 import { CalloutContributionDefaults } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.entity';
 import { markdownToYjsV2State } from '@domain/common/memo/conversion';
@@ -29,10 +31,9 @@ import { LegacyContentRecord } from './legacy.content.record';
 const Y = createRequire(__filename)('yjs') as typeof import('yjs');
 
 /**
- * A minimal `DocumentService` stub. `getDocumentFromURL` resolves a legacy
- * `BinaryFileData.url` to its file-service document (whose `.id` is the locator);
- * the URL helpers mirror the real base-path id extraction the dangling-ref
- * fallback uses.
+ * A minimal `DocumentService` stub. Migration extracts only an exact-route UUID
+ * from a legacy `BinaryFileData.url`, resolves it locally through
+ * `getDocumentOrFail`, and separately proves its file-service bytes exist.
  */
 const documentServiceMock = () => ({
   getDocumentFromURL: vi.fn(),
@@ -102,6 +103,13 @@ const documentAuthorizationServiceMock = () => ({
 const VALID_PNG_B64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC';
 const VALID_PNG_DATA_URL = `data:image/png;base64,${VALID_PNG_B64}`;
+
+const missingDocument = (documentID: string) =>
+  new EntityNotFoundException(
+    'Not able to locate document with the specified ID',
+    LogContext.STORAGE_BUCKET,
+    { documentID }
+  );
 
 /**
  * Full cold-load chain resolver: decode the STORED fork snapshot → find the LIVE
@@ -557,7 +565,9 @@ describe('CollaborationMigrationService', () => {
       fileService = {
         createSnapshotInBucket: vi.fn(),
         deleteDocument: vi.fn().mockResolvedValue(undefined),
-        getContentBatch: vi.fn(),
+        getContentBatch: vi.fn(async (ids: string[]) =>
+          ids.map(id => ({ id, found: true, contentBase64: 'AQ==' }))
+        ),
       };
       documentService = documentServiceMock();
       storageBucketService = storageBucketServiceMock();
@@ -1049,11 +1059,77 @@ describe('CollaborationMigrationService', () => {
         files: { [opts.fileId]: opts.file },
       });
 
+    // Minimized from another_row.txt. The failed row has two live image
+    // elements sharing one fileId/URL and a third image using another fileId.
+    // Add one ordinary element so lossy salvage proves usable board content is
+    // retained, not merely that an empty snapshot can be published.
+    const sharedMissingMediaScene = (): string =>
+      JSON.stringify({
+        type: 'excalidraw',
+        version: 2,
+        elements: [
+          {
+            id: 'rect-survives',
+            type: 'rectangle',
+            x: 0,
+            y: 0,
+            width: 10,
+            height: 10,
+            index: 'a0',
+          },
+          {
+            id: 'Ll_d9HPJ561cHPIcoS_ml',
+            type: 'image',
+            fileId: 'fd57ee7c7f9fc5d9f5e52616d5b761a5ba893828',
+            x: 20,
+            y: 20,
+            width: 10,
+            height: 10,
+            index: 'a1',
+          },
+          {
+            id: 'NNXO5EEpo0XfbW-Nzgpa5',
+            type: 'image',
+            fileId: 'fd57ee7c7f9fc5d9f5e52616d5b761a5ba893828',
+            x: 40,
+            y: 20,
+            width: 10,
+            height: 10,
+            index: 'a2',
+          },
+          {
+            id: 'kkawEszJx29MZHsNZsZJc',
+            type: 'image',
+            fileId: 'f69966b9685a5624f7d9d0e7dfc2236a741302d1',
+            x: 60,
+            y: 20,
+            width: 10,
+            height: 10,
+            index: 'a3',
+          },
+        ],
+        appState: {},
+        files: {
+          fd57ee7c7f9fc5d9f5e52616d5b761a5ba893828: {
+            id: 'fd57ee7c7f9fc5d9f5e52616d5b761a5ba893828',
+            url: 'https://acc.alkem.io/api/private/rest/storage/document/23a19cd1-f2d5-4d4c-b4a1-87c4fc4fd5d7',
+            dataURL: '',
+            mimeType: 'image/jpeg',
+          },
+          f69966b9685a5624f7d9d0e7dfc2236a741302d1: {
+            id: 'f69966b9685a5624f7d9d0e7dfc2236a741302d1',
+            url: 'https://acc.alkem.io/api/private/rest/storage/document/7d18aec9-c330-49c4-8818-50ff8d5f76e8',
+            dataURL: '',
+            mimeType: 'image/png',
+          },
+        },
+      });
+
     // Wire a single legacy whiteboard through migrateAll and capture the snapshot
     // buffer handed to file-service. Returns the captured buffer.
     const migrateOneWhiteboard = async (
       sceneJSON: string,
-      options: { snapshotError?: Error } = {}
+      options: { snapshotError?: Error; dryRun?: boolean } = {}
     ) => {
       const compressed = await compressText(sceneJSON);
       const update = updateQB();
@@ -1078,7 +1154,7 @@ describe('CollaborationMigrationService', () => {
           }
         );
       }
-      const summary = await svc.migrateAll();
+      const summary = await svc.migrateAll({ dryRun: options.dryRun });
       return { summary, captured, update };
     };
 
@@ -1218,6 +1294,55 @@ describe('CollaborationMigrationService', () => {
       });
     });
 
+    it('salvages a legacy Whiteboard contribution default with genuinely missing visual bytes and flags the migrated default', async () => {
+      const locator = '11111111-2222-4333-8444-555555555555';
+      const storedContent = await compressText(
+        legacyMediaScene({
+          fileId: 'file-default',
+          file: {
+            id: 'file-default',
+            url: `https://acc.alkem.io/api/private/rest/storage/document/${locator}`,
+          },
+        })
+      );
+      const update = updateQB();
+      documentService.getDocumentOrFail.mockRejectedValue(
+        missingDocument(locator)
+      );
+      whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+      contributionDefaults.query.mockResolvedValueOnce([
+        {
+          id: 'default-missing-media',
+          storedContent,
+          storageBucketId: 'callout-bucket-media',
+        },
+      ]);
+      contributionDefaults.createQueryBuilder.mockReturnValue(update.qb);
+
+      const summary = await svc.migrateWhiteboards();
+
+      expect(summary).toMatchObject({ migrated: 1, flagged: 1, failed: 0 });
+      expect(summary.flaggedDocuments).toEqual([
+        {
+          id: 'default-missing-media',
+          reason: expect.stringMatching(/img-1.*file-default/),
+        },
+      ]);
+      const canonical = await decompressText(
+        (
+          update.set.mock.calls as unknown as Array<
+            [{ whiteboardContent: string }]
+          >
+        )[0][0].whiteboardContent
+      );
+      expect(
+        await readStoredElementIds(Buffer.from(canonical, 'base64'))
+      ).toEqual(['rect-1']);
+      expect(
+        await readStoredAssetLocators(Buffer.from(canonical, 'base64'))
+      ).toEqual({});
+    });
+
     it('does not partially publish a default when media authorization fails and compensates the up-homed file', async () => {
       const storedContent = await compressText(
         legacyMediaScene({
@@ -1290,11 +1415,66 @@ describe('CollaborationMigrationService', () => {
       ]);
     });
 
-    it('CRITICAL: migrates a legacy media whiteboard — FILES holds locator STRINGS (resolved via getDocumentFromURL), never BinaryFileData objects', async () => {
-      const url = 'https://alkem.io/api/private/rest/storage/document/DOC-XYZ';
-      documentService.getDocumentFromURL.mockResolvedValue({
-        id: 'DOC-XYZ',
-      } as any);
+    it("does not report this attempt's visual-loss warning when a different canonical default wins the CAS", async () => {
+      const missingLocator = '11111111-2222-4333-8444-555555555555';
+      const storedContent = await compressText(
+        legacyMediaScene({
+          fileId: 'file-default',
+          file: {
+            id: 'file-default',
+            url: `https://acc.alkem.io/api/private/rest/storage/document/${missingLocator}`,
+          },
+        })
+      );
+      const winnerBytes = await whiteboardSceneToYjsV2State(
+        JSON.stringify({
+          type: 'excalidraw',
+          version: 2,
+          elements: [
+            {
+              id: 'winner-rect',
+              type: 'rectangle',
+              x: 0,
+              y: 0,
+              width: 10,
+              height: 10,
+              index: 'a0',
+            },
+          ],
+          appState: {},
+          files: {},
+        }),
+        {}
+      );
+      const winnerStored = await compressText(
+        Buffer.from(winnerBytes).toString('base64')
+      );
+      const update = updateQB(0);
+      documentService.getDocumentOrFail.mockRejectedValue(
+        missingDocument(missingLocator)
+      );
+      whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+      contributionDefaults.query
+        .mockResolvedValueOnce([
+          {
+            id: 'default-cas-lossy-loser',
+            storedContent,
+            storageBucketId: 'callout-bucket-cas',
+          },
+        ])
+        .mockResolvedValueOnce([{ whiteboardContent: winnerStored }]);
+      contributionDefaults.createQueryBuilder.mockReturnValue(update.qb);
+
+      const summary = await svc.migrateWhiteboards();
+
+      expect(summary).toMatchObject({ migrated: 1, flagged: 0, failed: 0 });
+      expect(summary.flaggedDocuments).toEqual([]);
+    });
+
+    it('CRITICAL: migrates a legacy media whiteboard — FILES holds byte-proven locator STRINGS, never BinaryFileData objects', async () => {
+      const locator = '11111111-2222-4333-8444-555555555555';
+      const url = `https://alkem.io/api/private/rest/storage/document/${locator}`;
+      documentService.getDocumentOrFail.mockResolvedValue({ id: locator });
 
       const { summary, captured, update } = await migrateOneWhiteboard(
         legacyMediaScene({
@@ -1307,16 +1487,15 @@ describe('CollaborationMigrationService', () => {
       expect(summary.failed).toBe(0);
       expect(summary.flagged).toBe(0);
       // Resolved the legacy media url to its file-service document id (the locator).
-      expect(documentService.getDocumentFromURL).toHaveBeenCalledWith(
-        url,
-        expect.anything()
-      );
+      expect(documentService.getDocumentOrFail).toHaveBeenCalledWith(locator, {
+        loadEagerRelations: false,
+      });
       // The stored FILES map holds a locator STRING, read losslessly through the
       // REAL fork — NO loud throw, the exact shape the unified read path expects.
       // (readAssetLocators would THROW here if the map held a BinaryFileData object,
       // which is precisely the pre-fix bug.)
       expect(await readStoredAssetLocators(captured.buffer!)).toEqual({
-        'file-abc': 'DOC-XYZ',
+        'file-abc': locator,
       });
       // Discriminating: the raw FILES value is a primitive string, not an object.
       const doc = new Y.Doc();
@@ -1373,7 +1552,7 @@ describe('CollaborationMigrationService', () => {
       });
     });
 
-    it('fails closed for a cross-host URL on the document route whose suffix is not a UUID', async () => {
+    it('never trusts a cross-host document-route suffix that is not a UUID; it salvages the board and flags the removed image', async () => {
       const { summary, captured } = await migrateOneWhiteboard(
         legacyMediaScene({
           fileId: 'file-1',
@@ -1384,8 +1563,8 @@ describe('CollaborationMigrationService', () => {
         })
       );
 
-      expect(summary).toMatchObject({ migrated: 0, failed: 1 });
-      expect(captured.buffer).toBeUndefined();
+      expect(summary).toMatchObject({ migrated: 1, flagged: 1, failed: 0 });
+      expect(await readStoredElementIds(captured.buffer!)).toEqual(['rect-1']);
       expect(documentService.getDocumentOrFail).not.toHaveBeenCalled();
       expect(documentService.getDocumentFromURL).not.toHaveBeenCalled();
     });
@@ -1393,7 +1572,7 @@ describe('CollaborationMigrationService', () => {
     it('up-homes retained inline bytes when an historical URL locator no longer exists', async () => {
       const deadLocator = '11111111-2222-4333-8444-555555555555';
       documentService.getDocumentOrFail.mockRejectedValue(
-        new Error('missing current row')
+        missingDocument(deadLocator)
       );
 
       const { summary, captured } = await migrateOneWhiteboard(
@@ -1416,30 +1595,328 @@ describe('CollaborationMigrationService', () => {
       expect(uphomedId).not.toBe(deadLocator);
     });
 
-    it('preserves the embedded document id for a dangling media ref — valid Alkemio URL, no live row, and NO inline bytes (case 3)', async () => {
-      // Explicitly NO dataURL, so this exercises the dangling-id fallback (case 3),
-      // not a masked dataURL up-home (case 2).
-      documentService.getDocumentFromURL.mockResolvedValue(undefined);
+    it('salvages the exact shared-reference shape: removes every image using the missing fileId, keeps unrelated content and a recoverable image, and flags the row', async () => {
+      const missingLocator = '23a19cd1-f2d5-4d4c-b4a1-87c4fc4fd5d7';
+      const recoverableLocator = '7d18aec9-c330-49c4-8818-50ff8d5f76e8';
+      documentService.getDocumentOrFail.mockImplementation(
+        async (documentId: string) => {
+          if (documentId === recoverableLocator) {
+            return { id: recoverableLocator } as any;
+          }
+          throw missingDocument(documentId);
+        }
+      );
+
+      const { summary, captured } = await migrateOneWhiteboard(
+        sharedMissingMediaScene()
+      );
+
+      expect(summary).toMatchObject({ migrated: 1, flagged: 1, failed: 0 });
+      expect(summary.flaggedDocuments).toHaveLength(1);
+      expect(summary.flaggedDocuments[0]).toMatchObject({ id: 'w1' });
+      expect(summary.flaggedDocuments[0].reason).toContain(
+        'Ll_d9HPJ561cHPIcoS_ml'
+      );
+      expect(summary.flaggedDocuments[0].reason).toContain(
+        'NNXO5EEpo0XfbW-Nzgpa5'
+      );
+      expect(summary.flaggedDocuments[0].reason).toContain(
+        'fd57ee7c7f9fc5d9f5e52616d5b761a5ba893828'
+      );
+      expect((await readStoredElementIds(captured.buffer!)).sort()).toEqual([
+        'kkawEszJx29MZHsNZsZJc',
+        'rect-survives',
+      ]);
+      expect(await readStoredAssetLocators(captured.buffer!)).toEqual({
+        f69966b9685a5624f7d9d0e7dfc2236a741302d1: recoverableLocator,
+      });
+      // One descriptor lookup per phase, not one lookup per image element.
+      expect(
+        documentService.getDocumentOrFail.mock.calls.filter(
+          ([id]) => id === missingLocator
+        )
+      ).toHaveLength(2);
+      expect(
+        documentService.getDocumentOrFail.mock.calls.filter(
+          ([id]) => id === recoverableLocator
+        )
+      ).toHaveLength(2);
+      expect(fileService.getContentBatch).toHaveBeenCalledTimes(2);
+    });
+
+    it('dry-run predicts the same shared-reference visual loss without uploads, authorization, snapshot writes, or pointer mutation', async () => {
+      const recoverableLocator = '7d18aec9-c330-49c4-8818-50ff8d5f76e8';
+      documentService.getDocumentOrFail.mockImplementation(
+        async (documentId: string) => {
+          if (documentId === recoverableLocator) {
+            return { id: recoverableLocator } as any;
+          }
+          throw missingDocument(documentId);
+        }
+      );
+
+      const { summary, captured, update } = await migrateOneWhiteboard(
+        sharedMissingMediaScene(),
+        { dryRun: true }
+      );
+
+      expect(summary).toMatchObject({
+        migrated: 1,
+        flagged: 1,
+        failed: 0,
+        dryRun: true,
+      });
+      expect(summary.flaggedDocuments[0].reason).toMatch(
+        /Ll_d9HPJ561cHPIcoS_ml, NNXO5EEpo0XfbW-Nzgpa5.*fd57ee7c7f9fc5d9f5e52616d5b761a5ba893828/
+      );
+      expect(captured.buffer).toBeUndefined();
+      expect(fileService.createSnapshotInBucket).not.toHaveBeenCalled();
+      expect(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).not.toHaveBeenCalled();
+      expect(
+        documentAuthorizationService.applyAuthorizationPolicy
+      ).not.toHaveBeenCalled();
+      expect(update.set).not.toHaveBeenCalled();
+      expect(fileService.getContentBatch).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not report this attempt's visual-loss warning when a different canonical snapshot wins the row CAS", async () => {
+      const recoverableLocator = '7d18aec9-c330-49c4-8818-50ff8d5f76e8';
+      documentService.getDocumentOrFail.mockImplementation(
+        async (documentId: string) => {
+          if (documentId === recoverableLocator) {
+            return { id: recoverableLocator } as any;
+          }
+          throw missingDocument(documentId);
+        }
+      );
+      const compressed = await compressText(sharedMissingMediaScene());
+      const update = updateQB(0);
+      whiteboard.createQueryBuilder
+        .mockReturnValueOnce(
+          queryBuilderMock([
+            [{ id: 'w1', content: compressed, storageBucketId: 'sb-w1' }],
+          ])
+        )
+        .mockReturnValueOnce(update.qb)
+        .mockReturnValueOnce(
+          convergenceQB({
+            migrated: true,
+            contentPointer: 'winner-snapshot',
+          })
+        );
+      memo.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+      fileService.createSnapshotInBucket.mockResolvedValue({
+        id: 'loser-snapshot',
+        reused: false,
+      });
+
+      const summary = await svc.migrateAll();
+
+      expect(summary).toMatchObject({ migrated: 1, flagged: 0, failed: 0 });
+      expect(summary.flaggedDocuments).toEqual([]);
+      expect(fileService.deleteDocument).toHaveBeenCalledWith('loser-snapshot');
+    });
+
+    it('falls back to retained dataURL bytes when metadata exists but file-service reports the locator content missing', async () => {
+      const locator = '11111111-2222-4333-8444-555555555555';
+      documentService.getDocumentOrFail.mockResolvedValue({ id: locator });
+      fileService.getContentBatch.mockResolvedValue([
+        { id: locator, found: false },
+      ]);
 
       const { summary, captured } = await migrateOneWhiteboard(
         legacyMediaScene({
           fileId: 'file-1',
           file: {
             id: 'file-1',
-            url: 'https://alkem.io/api/private/rest/storage/document/DEAD-DOC',
-            // no dataURL
+            mimeType: 'image/png',
+            url: `https://acc.alkem.io/api/private/rest/storage/document/${locator}`,
+            dataURL: VALID_PNG_DATA_URL,
           },
         })
       );
 
-      expect(summary.migrated).toBe(1);
-      expect(summary.failed).toBe(0);
-      // The reference is preserved by extracting the id embedded in the url, so the
-      // asset points exactly where it did pre-006 — never a new crash.
+      expect(summary).toMatchObject({ migrated: 1, flagged: 0, failed: 0 });
+      const [uphomedId] = [...storageBucketService.store.keys()];
       expect(await readStoredAssetLocators(captured.buffer!)).toEqual({
-        'file-1': 'DEAD-DOC',
+        'file-1': uphomedId,
       });
-      // No inline bytes → no up-home occurred (this is genuinely case 3, not a masked case 2).
+      expect(uphomedId).not.toBe(locator);
+    });
+
+    it('treats an existing metadata row with empty file-service content as proven visual loss, never as a usable locator', async () => {
+      const locator = '11111111-2222-4333-8444-555555555555';
+      documentService.getDocumentOrFail.mockResolvedValue({ id: locator });
+      fileService.getContentBatch.mockResolvedValue([
+        { id: locator, found: true, contentBase64: '' },
+      ]);
+
+      const { summary, captured } = await migrateOneWhiteboard(
+        legacyMediaScene({
+          fileId: 'file-1',
+          file: {
+            id: 'file-1',
+            url: `https://alkem.io/api/private/rest/storage/document/${locator}`,
+          },
+        })
+      );
+
+      expect(summary).toMatchObject({ migrated: 1, flagged: 1, failed: 0 });
+      expect(await readStoredElementIds(captured.buffer!)).toEqual(['rect-1']);
+      expect(await readStoredAssetLocators(captured.buffer!)).toEqual({});
+    });
+
+    it('fails re-runnably instead of deleting a visual when locator byte validation is malformed or throws', async () => {
+      const locator = '11111111-2222-4333-8444-555555555555';
+      documentService.getDocumentOrFail.mockResolvedValue({ id: locator });
+      fileService.getContentBatch.mockResolvedValue([
+        { id: locator, found: true, contentBase64: 'not-base64!!!' },
+      ]);
+
+      const malformed = await migrateOneWhiteboard(
+        legacyMediaScene({
+          fileId: 'file-1',
+          file: {
+            id: 'file-1',
+            url: `https://alkem.io/api/private/rest/storage/document/${locator}`,
+          },
+        })
+      );
+
+      expect(malformed.summary).toMatchObject({
+        migrated: 0,
+        flagged: 0,
+        failed: 1,
+      });
+      expect(malformed.captured.buffer).toBeUndefined();
+    });
+
+    it('fails re-runnably when locator byte validation returns a different file id', async () => {
+      const locator = '11111111-2222-4333-8444-555555555555';
+      documentService.getDocumentOrFail.mockResolvedValue({ id: locator });
+      fileService.getContentBatch.mockResolvedValue([
+        {
+          id: '66666666-7777-4888-8999-000000000000',
+          found: true,
+          contentBase64: VALID_PNG_B64,
+        },
+      ]);
+
+      const { summary, captured } = await migrateOneWhiteboard(
+        legacyMediaScene({
+          fileId: 'file-1',
+          file: {
+            id: 'file-1',
+            url: `https://alkem.io/api/private/rest/storage/document/${locator}`,
+          },
+        })
+      );
+
+      expect(summary).toMatchObject({ migrated: 0, flagged: 0, failed: 1 });
+      expect(summary.failedDocuments[0].reason).toMatch(/different id/);
+      expect(captured.buffer).toBeUndefined();
+      expect(fileService.createSnapshotInBucket).not.toHaveBeenCalled();
+    });
+
+    it('fails re-runnably on a transient locator-content lookup error instead of deleting the visual', async () => {
+      const locator = '11111111-2222-4333-8444-555555555555';
+      documentService.getDocumentOrFail.mockResolvedValue({ id: locator });
+      fileService.getContentBatch.mockRejectedValue(
+        new Error('file-service temporarily unavailable')
+      );
+
+      const { summary, captured } = await migrateOneWhiteboard(
+        legacyMediaScene({
+          fileId: 'file-1',
+          file: {
+            id: 'file-1',
+            url: `https://alkem.io/api/private/rest/storage/document/${locator}`,
+          },
+        })
+      );
+
+      expect(summary).toMatchObject({ migrated: 0, flagged: 0, failed: 1 });
+      expect(captured.buffer).toBeUndefined();
+      expect(fileService.createSnapshotInBucket).not.toHaveBeenCalled();
+    });
+
+    it('deduplicates byte checks when different legacy fileIds carry the same locator', async () => {
+      const locator = '11111111-2222-4333-8444-555555555555';
+      documentService.getDocumentOrFail.mockResolvedValue({ id: locator });
+      const scene = JSON.stringify({
+        type: 'excalidraw',
+        version: 2,
+        elements: [
+          {
+            id: 'img-a',
+            type: 'image',
+            fileId: 'file-a',
+            x: 0,
+            y: 0,
+            width: 10,
+            height: 10,
+            index: 'a0',
+          },
+          {
+            id: 'img-b',
+            type: 'image',
+            fileId: 'file-b',
+            x: 20,
+            y: 0,
+            width: 10,
+            height: 10,
+            index: 'a1',
+          },
+        ],
+        files: {
+          'file-a': {
+            url: `https://alkem.io/api/private/rest/storage/document/${locator}`,
+          },
+          'file-b': {
+            url: `https://acc.alkem.io/api/private/rest/storage/document/${locator}`,
+          },
+        },
+      });
+
+      const { summary, captured } = await migrateOneWhiteboard(scene);
+
+      expect(summary.failedDocuments).toEqual([]);
+      expect(summary).toMatchObject({ migrated: 1, flagged: 0, failed: 0 });
+      expect(await readStoredAssetLocators(captured.buffer!)).toEqual({
+        'file-a': locator,
+        'file-b': locator,
+      });
+      // Once in planning and once in the real pass, never once per fileId.
+      expect(fileService.getContentBatch).toHaveBeenCalledTimes(2);
+    });
+
+    it('migrates a current-host missing-row board with explicit visual-loss warning instead of a dangling locator', async () => {
+      const deadLocator = '11111111-2222-4333-8444-555555555555';
+      documentService.getDocumentOrFail.mockRejectedValue(
+        missingDocument(deadLocator)
+      );
+
+      const { summary, captured } = await migrateOneWhiteboard(
+        legacyMediaScene({
+          fileId: 'file-1',
+          file: {
+            id: 'file-1',
+            url: `https://alkem.io/api/private/rest/storage/document/${deadLocator}`,
+          },
+        })
+      );
+
+      expect(summary).toMatchObject({ migrated: 1, flagged: 1, failed: 0 });
+      expect(summary.flaggedDocuments).toEqual([
+        {
+          id: 'w1',
+          reason: expect.stringMatching(/img-1.*file-1/),
+        },
+      ]);
+      expect(await readStoredElementIds(captured.buffer!)).toEqual(['rect-1']);
+      expect(await readStoredAssetLocators(captured.buffer!)).toEqual({});
       expect(
         storageBucketService.uploadFileAsDocumentFromBuffer
       ).not.toHaveBeenCalled();
@@ -1450,7 +1927,10 @@ describe('CollaborationMigrationService', () => {
       // dataURL on the uploaded descriptor). If the Alkemio row is gone at migration time but
       // the inline bytes are valid, pre-006 rendered from the bytes — a RECOVERABLE image.
       // Returning the dead-doc id would turn it into an unresolvable locator = data loss.
-      documentService.getDocumentFromURL.mockResolvedValue(undefined);
+      const deadLocator = '11111111-2222-4333-8444-555555555555';
+      documentService.getDocumentOrFail.mockRejectedValue(
+        missingDocument(deadLocator)
+      );
       const expectedBytes = Buffer.from(VALID_PNG_B64, 'base64');
 
       const { summary, captured } = await migrateOneWhiteboard(
@@ -1459,7 +1939,7 @@ describe('CollaborationMigrationService', () => {
           file: {
             id: 'file-1',
             mimeType: 'image/png',
-            url: 'https://alkem.io/api/private/rest/storage/document/DEAD-DOC',
+            url: `https://alkem.io/api/private/rest/storage/document/${deadLocator}`,
             dataURL: VALID_PNG_DATA_URL,
           },
         })
@@ -1482,7 +1962,7 @@ describe('CollaborationMigrationService', () => {
       const [uphomedId] = [...storageBucketService.store.keys()];
       const locators = await readStoredAssetLocators(captured.buffer!);
       expect(locators).toEqual({ 'file-1': uphomedId });
-      expect(locators['file-1']).not.toBe('DEAD-DOC');
+      expect(locators['file-1']).not.toBe(deadLocator);
 
       // Full cold-load chain: image element → FILES locator → bucket resolves to the exact bytes.
       const resolved = await resolveImageFromStore(
@@ -1494,7 +1974,7 @@ describe('CollaborationMigrationService', () => {
       expect(resolved.bytes.equals(expectedBytes)).toBe(true);
     });
 
-    it('FAILS the record when a LIVE image references a non-Alkemio external url that cannot become a locator (no broken migration; pointer stays NULL/rerunnable; no snapshot/CAS)', async () => {
+    it('migrates remaining content and flags visual loss when a live external-only image has no recoverable bytes', async () => {
       const { summary, captured, update } = await migrateOneWhiteboard(
         legacyMediaScene({
           fileId: 'file-1',
@@ -1502,14 +1982,13 @@ describe('CollaborationMigrationService', () => {
         })
       );
 
-      // An external-only url can never become a locator, and a LIVE image references it —
-      // migrating would ship a permanently-broken image. Fail instead: pointer stays NULL
-      // (the pending-only worker retries after the operator remediates), no snapshot, no CAS.
-      expect(summary.migrated).toBe(0);
-      expect(summary.failed).toBe(1);
-      expect(fileService.createSnapshotInBucket).not.toHaveBeenCalled();
-      expect(captured.buffer).toBeUndefined();
-      expect(update.set).not.toHaveBeenCalled();
+      expect(summary).toMatchObject({ migrated: 1, flagged: 1, failed: 0 });
+      expect(summary.flaggedDocuments[0]).toMatchObject({
+        id: 'w1',
+        reason: expect.stringMatching(/img-1.*file-1/),
+      });
+      expect(await readStoredElementIds(captured.buffer!)).toEqual(['rect-1']);
+      expect(update.set).toHaveBeenCalled();
       // Never fetched or stored the external url (SSRF / no-external-locator).
       expect(documentService.getDocumentFromURL).not.toHaveBeenCalled();
     });
@@ -1527,6 +2006,55 @@ describe('CollaborationMigrationService', () => {
       expect(summary.migrated).toBe(1);
       expect(summary.failed).toBe(0);
       expect(await readStoredAssetLocators(captured.buffer!)).toEqual({});
+    });
+
+    it('issues zero legacy-media lookups for deleted images and unreferenced descriptors', async () => {
+      const deletedLocator = '11111111-2222-4333-8444-555555555555';
+      const unreferencedLocator = '66666666-7777-4888-8999-000000000000';
+      const scene = JSON.stringify({
+        type: 'excalidraw',
+        version: 2,
+        elements: [
+          {
+            id: 'rect-1',
+            type: 'rectangle',
+            x: 0,
+            y: 0,
+            width: 10,
+            height: 10,
+            index: 'a0',
+          },
+          {
+            id: 'deleted-image',
+            type: 'image',
+            fileId: 'deleted-file',
+            isDeleted: true,
+            updated: 1,
+            x: 20,
+            y: 0,
+            width: 10,
+            height: 10,
+            index: 'a1',
+          },
+        ],
+        appState: {},
+        files: {
+          'deleted-file': {
+            url: `https://alkem.io/api/private/rest/storage/document/${deletedLocator}`,
+          },
+          'unreferenced-file': {
+            url: `https://alkem.io/api/private/rest/storage/document/${unreferencedLocator}`,
+          },
+        },
+      });
+
+      const { summary, captured } = await migrateOneWhiteboard(scene);
+
+      expect(summary.failedDocuments).toEqual([]);
+      expect(summary).toMatchObject({ migrated: 1, flagged: 0, failed: 0 });
+      expect(await readStoredAssetLocators(captured.buffer!)).toEqual({});
+      expect(documentService.getDocumentOrFail).not.toHaveBeenCalled();
+      expect(fileService.getContentBatch).not.toHaveBeenCalled();
     });
 
     it('CRITICAL (dataURL up-home): the image survives cold-load — element→FILES→bucket resolves to the exact decoded bytes', async () => {
@@ -1917,7 +2445,7 @@ describe('CollaborationMigrationService', () => {
       });
     });
 
-    it('FAILS the record when a LIVE image references a descriptor with no usable url and no inline bytes (unrepresentable live media blocks the row, not a broken migration)', async () => {
+    it('salvages and flags a board when a LIVE image descriptor has neither a usable url nor inline bytes', async () => {
       const { summary, captured, update } = await migrateOneWhiteboard(
         legacyMediaScene({
           fileId: 'file-1',
@@ -1925,17 +2453,13 @@ describe('CollaborationMigrationService', () => {
         })
       );
 
-      // The image bytes are unrecoverable (no url, no dataURL) and a LIVE image references
-      // it → fail the row (blocks cleanup until remediated) rather than migrate a broken
-      // image. No up-home, no snapshot, no CAS; pointer stays NULL/rerunnable.
-      expect(summary.migrated).toBe(0);
-      expect(summary.failed).toBe(1);
+      expect(summary).toMatchObject({ migrated: 1, flagged: 1, failed: 0 });
       expect(
         storageBucketService.uploadFileAsDocumentFromBuffer
       ).not.toHaveBeenCalled();
-      expect(fileService.createSnapshotInBucket).not.toHaveBeenCalled();
-      expect(captured.buffer).toBeUndefined();
-      expect(update.set).not.toHaveBeenCalled();
+      expect(fileService.createSnapshotInBucket).toHaveBeenCalled();
+      expect(await readStoredElementIds(captured.buffer!)).toEqual(['rect-1']);
+      expect(update.set).toHaveBeenCalled();
     });
 
     it('an UNREFERENCED descriptor with no usable url and no bytes (no live image) is skipped, still migrating', async () => {
@@ -1977,10 +2501,10 @@ describe('CollaborationMigrationService', () => {
       expect(summary.migrated).toBe(0);
     });
 
-    // --- Release-A migration WRITE-PATH guards: planning builds a REPRESENTABLE snapshot with
-    // ZERO writes, then verifyContent rejects a malformed scene, an unrepresentable live image,
-    // a malformed-base64 dataURL, an unknown element type, or a corrupt memo BEFORE any upload
-    // or pointer CAS (pointer stays NULL / re-runnable). ---
+    // --- Release-A migration WRITE-PATH guards: planning performs read-only resolution and
+    // builds the exact structurally-salvaged snapshot with ZERO writes. Malformed scene/schema,
+    // transient locator lookup failures, or a corrupt memo still fail before any upload/CAS;
+    // proven unusable visual bytes are removed + explicitly flagged instead. ---
 
     // Wire one legacy whiteboard row for a DRY-RUN (no second update QB — dry-run never writes
     // a pointer), then run migrateAll in preview mode.
@@ -1996,8 +2520,8 @@ describe('CollaborationMigrationService', () => {
     };
 
     // Assert the migration touched NO side-effect surface: no snapshot upload, no dataURL
-    // up-home, no up-home authorization, and no Alkemio-document DB lookup. (The pointer CAS is
-    // asserted per-test via its own update QB where one is wired.)
+    // up-home, and no up-home authorization. Read-only document/content lookup is permitted so
+    // dry-run predicts the same salvage as the real migration.
     const expectNoMigrationWrites = () => {
       expect(fileService.createSnapshotInBucket).not.toHaveBeenCalled();
       expect(
@@ -2009,7 +2533,7 @@ describe('CollaborationMigrationService', () => {
       expect(documentService.getDocumentFromURL).not.toHaveBeenCalled();
     };
 
-    it('dry-run: a LIVE image referencing an external-only url (no inline bytes) is UNREPRESENTABLE → failed in planning, ZERO writes', async () => {
+    it('dry-run: an external-only image with no bytes predicts migrated + flagged salvage, with ZERO writes', async () => {
       const summary = await dryRunOneWhiteboard(
         legacyMediaScene({
           fileId: 'file-x',
@@ -2021,8 +2545,7 @@ describe('CollaborationMigrationService', () => {
         })
       );
       expect(summary.dryRun).toBe(true);
-      expect(summary.failed).toBe(1);
-      expect(summary.migrated).toBe(0);
+      expect(summary).toMatchObject({ migrated: 1, flagged: 1, failed: 0 });
       expectNoMigrationWrites();
     });
 
@@ -2043,7 +2566,7 @@ describe('CollaborationMigrationService', () => {
       expectNoMigrationWrites();
     });
 
-    it('dry-run: a LIVE image dataURL with MALFORMED base64 padding (TQ=) → unrepresentable → failed, ZERO writes (strict base64)', async () => {
+    it('dry-run: malformed inline base64 is proven unusable and predicts flagged visual removal with ZERO writes', async () => {
       const summary = await dryRunOneWhiteboard(
         legacyMediaScene({
           fileId: 'file-x',
@@ -2054,8 +2577,7 @@ describe('CollaborationMigrationService', () => {
           },
         })
       );
-      expect(summary.failed).toBe(1);
-      expect(summary.migrated).toBe(0);
+      expect(summary).toMatchObject({ migrated: 1, flagged: 1, failed: 0 });
       expectNoMigrationWrites();
     });
 
@@ -2075,7 +2597,7 @@ describe('CollaborationMigrationService', () => {
       expectNoMigrationWrites();
     });
 
-    it('dry-run: a LIVE image dataURL whose base64 marker is a MALFORMED token (;base64junk) → unrepresentable → failed, ZERO writes', async () => {
+    it('dry-run: a malformed base64 marker predicts flagged visual removal with ZERO writes', async () => {
       const summary = await dryRunOneWhiteboard(
         legacyMediaScene({
           fileId: 'file-x',
@@ -2088,8 +2610,7 @@ describe('CollaborationMigrationService', () => {
           },
         })
       );
-      expect(summary.failed).toBe(1);
-      expect(summary.migrated).toBe(0);
+      expect(summary).toMatchObject({ migrated: 1, flagged: 1, failed: 0 });
       expectNoMigrationWrites();
     });
 
@@ -2109,7 +2630,7 @@ describe('CollaborationMigrationService', () => {
       expectNoMigrationWrites();
     });
 
-    it('migrate (real): a LIVE image dataURL with MALFORMED base64 → failed, pointer stays NULL, ZERO upload/authz/snapshot/CAS', async () => {
+    it('migrate (real): malformed inline base64 removes only the image, flags the row, and publishes the usable remainder', async () => {
       const compressed = await compressText(
         legacyMediaScene({
           fileId: 'file-x',
@@ -2129,15 +2650,22 @@ describe('CollaborationMigrationService', () => {
         )
         .mockReturnValueOnce(update.qb);
       memo.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+      fileService.createSnapshotInBucket.mockResolvedValue({
+        id: 'snap-w1',
+        reused: false,
+      });
 
       const summary = await svc.migrateAll();
 
-      expect(summary.failed).toBe(1);
-      expect(summary.migrated).toBe(0);
-      // Rejected in PLANNING → no up-home upload, no up-home authz, no snapshot, and the
-      // pointer CAS never runs (stays NULL / re-runnable).
-      expectNoMigrationWrites();
-      expect(update.set).not.toHaveBeenCalled();
+      expect(summary).toMatchObject({ migrated: 1, flagged: 1, failed: 0 });
+      expect(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).not.toHaveBeenCalled();
+      expect(
+        documentAuthorizationService.applyAuthorizationPolicy
+      ).not.toHaveBeenCalled();
+      expect(fileService.createSnapshotInBucket).toHaveBeenCalled();
+      expect(update.set).toHaveBeenCalled();
     });
 
     it('migrate: a MALFORMED nonempty scene (unparseable JSON) → failed, ZERO writes (never silently emptied)', async () => {
