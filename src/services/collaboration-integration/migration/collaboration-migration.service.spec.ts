@@ -1844,7 +1844,7 @@ describe('CollaborationMigrationService', () => {
       const locator = '11111111-2222-4333-8444-555555555555';
       documentService.getDocumentOrFail.mockResolvedValue({ id: locator });
       fileService.getContentBatch.mockResolvedValue([
-        { id: locator, found: false },
+        { id: locator, found: false, error: 'document not found' },
       ]);
 
       const { summary, captured } = await migrateOneWhiteboard(
@@ -1865,6 +1865,88 @@ describe('CollaborationMigrationService', () => {
         'file-1': uphomedId,
       });
       expect(uphomedId).not.toBe(locator);
+    });
+
+    it.each([
+      ['content unavailable', false],
+      ['backend unavailable', false],
+      ['batch content limit exceeded', true],
+      [undefined, true],
+    ])('fails re-runnably when file-service returns an inconclusive miss (%s, dryRun=%s)', async (error, dryRun) => {
+      const locator = '11111111-2222-4333-8444-555555555555';
+      documentService.getDocumentOrFail.mockResolvedValue({ id: locator });
+      fileService.getContentBatch.mockResolvedValue([
+        { id: locator, found: false, error },
+      ]);
+
+      const { summary, captured } = await migrateOneWhiteboard(
+        legacyMediaScene({
+          fileId: 'file-1',
+          file: {
+            id: 'file-1',
+            mimeType: 'image/png',
+            url: `https://alkem.io/api/private/rest/storage/document/${locator}`,
+            dataURL: VALID_PNG_DATA_URL,
+          },
+        }),
+        { dryRun }
+      );
+
+      expect(summary).toMatchObject({
+        migrated: 0,
+        flagged: 0,
+        failed: 1,
+        dryRun,
+      });
+      expect(summary.failedDocuments[0].reason).toContain('inconclusive');
+      expect(captured.buffer).toBeUndefined();
+      expect(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).not.toHaveBeenCalled();
+      expect(fileService.createSnapshotInBucket).not.toHaveBeenCalled();
+    });
+
+    it('applies the same inconclusive-miss retry boundary to contribution defaults', async () => {
+      const locator = '11111111-2222-4333-8444-555555555555';
+      const storedContent = await compressText(
+        legacyMediaScene({
+          fileId: 'file-default',
+          file: {
+            id: 'file-default',
+            mimeType: 'image/png',
+            url: `https://alkem.io/api/private/rest/storage/document/${locator}`,
+            dataURL: VALID_PNG_DATA_URL,
+          },
+        })
+      );
+      documentService.getDocumentOrFail.mockResolvedValue({ id: locator });
+      fileService.getContentBatch.mockResolvedValue([
+        { id: locator, found: false, error: 'content unavailable' },
+      ]);
+      whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+      contributionDefaults.query.mockResolvedValueOnce([
+        {
+          id: 'default-inconclusive-content',
+          storedContent,
+          storageBucketId: 'callout-bucket-1',
+        },
+      ]);
+
+      const summary = await svc.migrateWhiteboards();
+
+      expect(summary).toMatchObject({
+        migrated: 0,
+        flagged: 0,
+        failed: 1,
+      });
+      expect(summary.failedDocuments[0]).toMatchObject({
+        id: 'default-inconclusive-content',
+        reason: expect.stringContaining('inconclusive'),
+      });
+      expect(contributionDefaults.createQueryBuilder).not.toHaveBeenCalled();
+      expect(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).not.toHaveBeenCalled();
     });
 
     it('treats an existing metadata row with empty file-service content as proven visual loss, never as a usable locator', async () => {

@@ -53,6 +53,17 @@ const DEFAULT_BATCH_SIZE = 200;
 const MEMO_ROOT = 'default';
 
 /**
+ * `content-batch` reports both definitive misses and per-item read failures as
+ * `found: false`. Only these stable endpoint reasons prove that no usable
+ * document/content exists; every other reason is inconclusive and must leave
+ * the source row pending for a retry.
+ */
+const PROVEN_MISSING_CONTENT_REASONS = new Set([
+  'document not found',
+  'content not found',
+]);
+
+/**
  * Strictly decode a valid STANDARD base64 string to bytes, or `undefined` if it is NOT valid
  * standard base64 OR decodes to zero bytes. Node's `Buffer.from(x, 'base64')` is LENIENT — it
  * silently drops any non-alphabet byte and decodes whatever remains ('not-base64!!!' → 7 junk
@@ -1678,7 +1689,15 @@ export class CollaborationMigrationService {
       );
     }
     if (!result.found) {
-      return false;
+      if (
+        typeof result.error === 'string' &&
+        PROVEN_MISSING_CONTENT_REASONS.has(result.error)
+      ) {
+        return false;
+      }
+      throw new Error(
+        `legacy media content lookup was inconclusive: ${result.error ?? 'file-service returned no miss reason'}`
+      );
     }
     if (
       typeof result.contentBase64 !== 'string' ||
