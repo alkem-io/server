@@ -22,6 +22,15 @@ const DEFAULT_CONVERSATION_MESSAGE_CHANNELS = Object.freeze({
   push: true,
 });
 
+// 041-callout-reaction-notifications (FR-007, R-7): the mandated default for
+// the callout-reaction notification row. email OFF, inApp ON, push ON.
+// Same defensive pattern as DEFAULT_CONVERSATION_MESSAGE_CHANNELS above.
+const DEFAULT_CALLOUT_REACTION_CHANNELS = Object.freeze({
+  email: false,
+  inApp: true,
+  push: true,
+});
+
 @Entity()
 export class UserSettings extends AuthorizableEntity implements IUserSettings {
   @Column('jsonb', { nullable: false })
@@ -85,6 +94,25 @@ export class UserSettings extends AuthorizableEntity implements IUserSettings {
     if (!this.notification.user.conversationMessageGroup) {
       this.notification.user.conversationMessageGroup = {
         ...DEFAULT_CONVERSATION_MESSAGE_CHANNELS,
+      };
+    }
+  }
+
+  /**
+   * Defend on read for the callout-reaction notification preference. A
+   * `user_settings` row that predates the backfill migration or was inserted
+   * by an old pod during a rolling deploy lacks this key. Without this hook
+   * the non-null GraphQL field would surface a null and crash the recipients
+   * batch. Runs for every entity load regardless of query path.
+   */
+  @AfterLoad()
+  applyCalloutReactionNotificationDefaults() {
+    if (!this.notification?.space) {
+      return;
+    }
+    if (!this.notification.space.collaborationCalloutReaction) {
+      this.notification.space.collaborationCalloutReaction = {
+        ...DEFAULT_CALLOUT_REACTION_CHANNELS,
       };
     }
   }

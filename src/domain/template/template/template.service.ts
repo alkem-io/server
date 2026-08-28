@@ -10,19 +10,26 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { CalloutContributionDefaultSourceService } from '@domain/collaboration/callout/callout.contribution.default.source.service';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto';
+import { CreateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto/callout.contribution.defaults.dto.create';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { ICollaboration } from '@domain/collaboration/collaboration';
 import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import {
+  deriveClassificationValueIds,
+  deriveClassificationValueIdsForEdit,
+} from '@domain/common/classification-value/slugify.value.id';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
 import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.create';
+import { ClassificationEntryValidator } from '@domain/space/classification.entry/classification.entry.validator';
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -52,6 +59,7 @@ export class TemplateService {
     private inputCreatorService: InputCreatorService,
     private innovationFlowService: InnovationFlowService,
     private calloutService: CalloutService,
+    private contributionDefaultSourceService: CalloutContributionDefaultSourceService,
     private whiteboardService: WhiteboardService,
     private templateContentSpaceService: TemplateContentSpaceService,
     private calloutsSetService: CalloutsSetService,
@@ -63,6 +71,18 @@ export class TemplateService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
+
+  /**
+   * Resolves the public source selector for a Callout template's Whiteboard
+   * contribution default into the canonical, server-internal content + owning
+   * bucket pair consumed by the ordinary template creation path.
+   */
+  public async prepareContributionDefaultSource(
+    defaults: CreateCalloutContributionDefaultsInput | undefined,
+    actorContext: ActorContext
+  ): Promise<void> {
+    await this.contributionDefaultSourceService.prepare(defaults, actorContext);
+  }
 
   /**
    * Self-contained: builds the template (with any nested entity for the
@@ -77,7 +97,8 @@ export class TemplateService {
    */
   async createTemplate(
     templateData: CreateTemplateInput,
-    storageAggregator: IStorageAggregator
+    storageAggregator: IStorageAggregator,
+    actorContext: ActorContext
   ): Promise<ITemplate> {
     // Phase 1: build entity tree in memory (no file-service-go calls).
     const template: ITemplate = Template.create(templateData);
@@ -94,6 +115,22 @@ export class TemplateService {
       name: TagsetReservedName.DEFAULT,
       tags: templateData.tags,
     });
+
+    // I-9 (data-model.md §4): classificationData for any type OTHER than
+    // CLASSIFICATION is rejected — the two columns are nullable by necessity
+    // (one table, six types), so nothing else stops a mismatched payload
+    // from being silently ignored.
+    if (
+      templateData.classificationData &&
+      template.type !== TemplateType.CLASSIFICATION
+    ) {
+      throw new ValidationException(
+        'classificationData may only be supplied for a Classification Template',
+        LogContext.TEMPLATES,
+        { templateType: template.type }
+      );
+    }
+
     switch (template.type) {
       case TemplateType.POST: {
         if (!templateData.postDefaultDescription) {
@@ -168,7 +205,8 @@ export class TemplateService {
         template.contentSpace =
           await this.templateContentSpaceService.createTemplateContentSpace(
             spaceData!,
-            storageAggregator
+            storageAggregator,
+            actorContext
           );
 
         break;
@@ -188,9 +226,16 @@ export class TemplateService {
             },
             nameID: randomUUID().slice(0, 8),
             content: templateData.whiteboard.content,
+            // Seed the template's whiteboard from the source whiteboard's stored snapshot
+            // (duplicate / import-from-library). `content` and `sourceWhiteboardID` are now
+            // mutually exclusive; createWhiteboard authorizes READ on the dereferenced source
+            // (and per-document-authorizes any re-homed media) under this actorContext, so the
+            // authorization is centralized in the service, not left to each resolver.
+            sourceWhiteboardID: templateData.whiteboard.sourceWhiteboardID,
             previewSettings: templateData.whiteboard.previewSettings,
           },
-          storageAggregator
+          storageAggregator,
+          actorContext
         );
         break;
       }
@@ -207,8 +252,28 @@ export class TemplateService {
         template.callout = await this.calloutService.createCallout(
           templateData.calloutData!,
           [],
-          storageAggregator
+          storageAggregator,
+          actorContext
         );
+        break;
+      }
+      case TemplateType.CLASSIFICATION: {
+        if (!templateData.classificationData) {
+          throw new ValidationException(
+            'Classification Template requires classification data input',
+            LogContext.TEMPLATES,
+            { templateType: template.type, missing: 'classificationData' }
+          );
+        }
+        // I-9: 1-50 values, unique ids — same bound the entry side enforces
+        // (FR-002a), so a template can never reach the picker half-built.
+        const derivedValues = deriveClassificationValueIds(
+          templateData.classificationData.values
+        );
+        ClassificationEntryValidator.validateValueSet(derivedValues);
+        template.classificationCardinality =
+          templateData.classificationData.cardinality;
+        template.classificationValueSet = derivedValues;
         break;
       }
       default:
@@ -385,7 +450,8 @@ export class TemplateService {
   // be done directly using the updateXXX mutation.
   async updateTemplate(
     templateInput: ITemplate,
-    templateData: UpdateTemplateInput
+    templateData: UpdateTemplateInput,
+    actorContext: ActorContext
   ): Promise<ITemplate> {
     const template = await this.getTemplateOrFail(templateInput.id, {
       relations: {
@@ -397,6 +463,10 @@ export class TemplateService {
         type: true,
         nameID: true,
         postDefaultDescription: templateInput.type === TemplateType.POST,
+        classificationCardinality:
+          templateInput.type === TemplateType.CLASSIFICATION,
+        classificationValueSet:
+          templateInput.type === TemplateType.CLASSIFICATION,
         whiteboard:
           templateInput.type === TemplateType.WHITEBOARD
             ? {
@@ -405,6 +475,19 @@ export class TemplateService {
             : undefined,
       },
     });
+
+    // I-9: classificationData for any type OTHER than CLASSIFICATION is
+    // rejected, same rule as on create.
+    if (
+      templateData.classificationData &&
+      template.type !== TemplateType.CLASSIFICATION
+    ) {
+      throw new ValidationException(
+        'classificationData may only be supplied for a Classification Template',
+        LogContext.TEMPLATES,
+        { templateType: template.type }
+      );
+    }
 
     if (templateData.profile) {
       template.profile = await this.profileService.updateProfile(
@@ -421,10 +504,46 @@ export class TemplateService {
     if (
       template.type === TemplateType.WHITEBOARD &&
       template.whiteboard &&
-      templateData.whiteboardContent
+      (templateData.sourceWhiteboardID || templateData.whiteboardContent)
     ) {
-      // If we don't update the content here, the whiteboard will is overwritten with the old content
-      template.whiteboard.content = templateData.whiteboardContent;
+      // Whiteboard content is stored as a Yjs-V2 snapshot in the whiteboard's
+      // bucket, not an inline column (006-collab-content-unification): route the
+      // new scene through the snapshot-write path so the stored snapshot (and the
+      // first-open seed) reflect the template update.
+      if (templateData.sourceWhiteboardID) {
+        await this.whiteboardService.replaceContentFromSource(
+          template.whiteboard.id,
+          templateData.sourceWhiteboardID,
+          actorContext
+        );
+      } else if (templateData.whiteboardContent) {
+        await this.whiteboardService.updateWhiteboardContent(
+          template.whiteboard.id,
+          templateData.whiteboardContent,
+          actorContext
+        );
+      }
+    }
+    if (
+      template.type === TemplateType.CLASSIFICATION &&
+      templateData.classificationData
+    ) {
+      // Derive-once: an id supplied by the caller (e.g. an existing value
+      // being relabeled) is kept verbatim, never re-derived. An id-LESS
+      // incoming value is matched positionally against the
+      // template's CURRENT classificationValueSet and carries that id
+      // forward too — a relabel must not change the stable id merely
+      // because the caller omitted it rather than echoing it back; only a
+      // value beyond the previous length is genuinely new and gets a fresh
+      // slug.
+      const derivedValues = deriveClassificationValueIdsForEdit(
+        template.classificationValueSet ?? [],
+        templateData.classificationData.values
+      );
+      ClassificationEntryValidator.validateValueSet(derivedValues);
+      template.classificationCardinality =
+        templateData.classificationData.cardinality;
+      template.classificationValueSet = derivedValues;
     }
 
     return await this.templateRepository.save(template);
@@ -512,6 +631,7 @@ export class TemplateService {
       sourceSpace,
       templateInput.contentSpace,
       true,
+      actorContext,
       actorContext.actorID
     );
 
@@ -564,6 +684,7 @@ export class TemplateService {
     space: ISpace,
     templateContentSpace: ITemplateContentSpace,
     addCallouts: boolean,
+    actorContext: ActorContext,
     userID: string
   ): Promise<ITemplateContentSpace> {
     if (
@@ -604,6 +725,7 @@ export class TemplateService {
         templateContentSpace.collaboration.calloutsSet,
         calloutsFromSourceCollaboration,
         storageAggregator,
+        actorContext,
         userID
       );
       templateContentSpace.collaboration.calloutsSet.callouts?.push(
@@ -678,6 +800,7 @@ export class TemplateService {
         callout: true,
         whiteboard: true,
         contentSpace: true,
+        templatesSet: true,
       },
     });
 
@@ -734,6 +857,10 @@ export class TemplateService {
       }
       case TemplateType.POST: {
         // Nothing to do
+        break;
+      }
+      case TemplateType.CLASSIFICATION: {
+        // Cardinality and value set live as columns on the Template row itself, so there is nothing extra to cascade-delete.
         break;
       }
       default: {

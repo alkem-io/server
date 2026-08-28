@@ -94,6 +94,11 @@ export const userSettingsData: { userSettings: IUserSettings } = {
           inApp: true,
           push: false,
         },
+        collaborationCalloutReaction: {
+          email: false,
+          inApp: true,
+          push: true,
+        },
       },
       platform: {
         admin: {

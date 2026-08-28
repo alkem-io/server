@@ -41,7 +41,7 @@ describe('LookupMyPrivilegesResolverFields', () => {
   let spaceService: { getSpace: Mock };
   let accountService: { getAccountOrFail: Mock };
   let roleSetService: { getRoleSetOrFail: Mock };
-  let documentService: { getDocumentOrFail: Mock };
+  let documentService: { getUserFacingDocumentOrFail: Mock };
   let virtualContributorService: {
     getVirtualContributorByIdOrFail: Mock;
   };
@@ -172,11 +172,17 @@ describe('LookupMyPrivilegesResolverFields', () => {
   describe('document', () => {
     it('should return privileges for document', async () => {
       const doc = createEntityWithAuth('doc-1');
-      documentService.getDocumentOrFail.mockResolvedValue(doc);
+      documentService.getUserFacingDocumentOrFail.mockResolvedValue(doc);
       setupPrivilegesReturn();
 
       const result = await resolver.document(actorContext, 'doc-1');
       expect(result).toEqual(mockPrivileges);
+      expect(documentService.getUserFacingDocumentOrFail).toHaveBeenCalledWith(
+        'doc-1',
+        {
+          relations: { authorization: true },
+        }
+      );
     });
   });
 

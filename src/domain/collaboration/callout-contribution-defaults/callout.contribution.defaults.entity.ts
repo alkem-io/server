@@ -25,6 +25,8 @@ export class CalloutContributionDefaults
   @Column('text', { nullable: true })
   whiteboardContent?: string;
 
+  whiteboardContentAvailable!: boolean;
+
   @BeforeInsert()
   @BeforeUpdate()
   async compressContent() {

@@ -1,13 +1,20 @@
-import type { SceneElement } from './whiteboard-element.factory';
-
 /**
  * Auto-placement for `edit_whiteboard_elements`. New elements are placed in EMPTY
  * SPACE below the existing content's bounding box, laid out left-to-right with row
- * wrap — so additions never overlap existing content (the "hideous" overlap the
- * full-scene-replace approach produced). Mirrors the bbox math in
- * `whiteboard-analyze.tool.ts`, but filters `isDeleted` so phantom (deleted)
- * elements never reserve space.
+ * wrap — so additions never overlap existing content. Filters `isDeleted` so phantom
+ * (deleted) elements never reserve space. Operates on the layout-relevant fields
+ * only, so it is agnostic to the fork's full element type.
  */
+export interface SceneElement {
+  id?: string;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  isDeleted?: boolean;
+  // Placement only reads the geometry fields above; a full element carries more.
+  [key: string]: unknown;
+}
 
 const GAP = 100; // vertical gap below existing content
 const COL_GAP = 40; // horizontal gap between new elements

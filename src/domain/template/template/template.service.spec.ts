@@ -4,6 +4,7 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { CalloutContributionDefaultSourceService } from '@domain/collaboration/callout/callout.contribution.default.source.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
@@ -11,6 +12,7 @@ import { WhiteboardService } from '@domain/common/whiteboard';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken, getRepositoryToken } from '@nestjs/typeorm';
+import { actorContextData } from '@test/data/actorContext.mock';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -32,6 +34,7 @@ describe('TemplateService', () => {
   let whiteboardService: Mocked<WhiteboardService>;
   let templateContentSpaceService: Mocked<TemplateContentSpaceService>;
   let calloutService: Mocked<CalloutService>;
+  let contributionDefaultSourceService: Mocked<CalloutContributionDefaultSourceService>;
   let calloutsSetService: Mocked<CalloutsSetService>;
 
   const mockEntityManager = {
@@ -82,9 +85,28 @@ describe('TemplateService', () => {
       TemplateContentSpaceService
     ) as Mocked<TemplateContentSpaceService>;
     calloutService = module.get(CalloutService) as Mocked<CalloutService>;
+    contributionDefaultSourceService = module.get(
+      CalloutContributionDefaultSourceService
+    ) as Mocked<CalloutContributionDefaultSourceService>;
     calloutsSetService = module.get(
       CalloutsSetService
     ) as Mocked<CalloutsSetService>;
+  });
+
+  describe('prepareContributionDefaultSource', () => {
+    it('delegates source resolution to the shared authorization boundary', async () => {
+      const defaults = { sourceCalloutID: 'callout-1' };
+
+      await service.prepareContributionDefaultSource(
+        defaults,
+        actorContextData.actorContext
+      );
+
+      expect(contributionDefaultSourceService.prepare).toHaveBeenCalledWith(
+        defaults,
+        actorContextData.actorContext
+      );
+    });
   });
 
   describe('getTemplateOrFail', () => {
@@ -166,7 +188,8 @@ describe('TemplateService', () => {
       await expect(
         service.createTemplate(
           baseInput(TemplateType.POST) as any,
-          storageAggregator
+          storageAggregator,
+          actorContextData.actorContext
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -178,7 +201,8 @@ describe('TemplateService', () => {
 
       const result = await service.createTemplate(
         input as any,
-        storageAggregator
+        storageAggregator,
+        actorContextData.actorContext
       );
 
       expect(result.postDefaultDescription).toBe('Default post desc');
@@ -188,7 +212,8 @@ describe('TemplateService', () => {
       await expect(
         service.createTemplate(
           baseInput(TemplateType.COMMUNITY_GUIDELINES) as any,
-          storageAggregator
+          storageAggregator,
+          actorContextData.actorContext
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -205,7 +230,8 @@ describe('TemplateService', () => {
 
       const result = await service.createTemplate(
         input as any,
-        storageAggregator
+        storageAggregator,
+        actorContextData.actorContext
       );
 
       expect(result.communityGuidelines).toEqual({ id: 'cg-1' });
@@ -218,7 +244,8 @@ describe('TemplateService', () => {
       await expect(
         service.createTemplate(
           baseInput(TemplateType.SPACE) as any,
-          storageAggregator
+          storageAggregator,
+          actorContextData.actorContext
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -241,7 +268,8 @@ describe('TemplateService', () => {
 
       const result = await service.createTemplate(
         input as any,
-        storageAggregator
+        storageAggregator,
+        actorContextData.actorContext
       );
 
       expect(result.contentSpace).toEqual({ id: 'tcs-1' });
@@ -254,7 +282,8 @@ describe('TemplateService', () => {
       await expect(
         service.createTemplate(
           baseInput(TemplateType.WHITEBOARD) as any,
-          storageAggregator
+          storageAggregator,
+          actorContextData.actorContext
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -270,7 +299,8 @@ describe('TemplateService', () => {
 
       const result = await service.createTemplate(
         input as any,
-        storageAggregator
+        storageAggregator,
+        actorContextData.actorContext
       );
 
       expect(result.whiteboard).toEqual({ id: 'wb-1' });
@@ -280,7 +310,8 @@ describe('TemplateService', () => {
       await expect(
         service.createTemplate(
           baseInput(TemplateType.CALLOUT) as any,
-          storageAggregator
+          storageAggregator,
+          actorContextData.actorContext
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -295,7 +326,11 @@ describe('TemplateService', () => {
       };
       const input = baseInput(TemplateType.CALLOUT, { calloutData });
 
-      await service.createTemplate(input as any, storageAggregator);
+      await service.createTemplate(
+        input as any,
+        storageAggregator,
+        actorContextData.actorContext
+      );
 
       // The calloutData should have been mutated to set isTemplate=true
       expect(calloutData.isTemplate).toBe(true);
@@ -307,7 +342,11 @@ describe('TemplateService', () => {
       const calloutData = { nameID: 'cb', isTemplate: false, sortOrder: 0 };
       const input = baseInput(TemplateType.CALLOUT, { calloutData });
 
-      await service.createTemplate(input as any, storageAggregator);
+      await service.createTemplate(
+        input as any,
+        storageAggregator,
+        actorContextData.actorContext
+      );
 
       expect(calloutService.materializeCalloutContent).toHaveBeenCalledWith(
         expect.objectContaining({ id: 'co-1' }),
@@ -331,7 +370,11 @@ describe('TemplateService', () => {
       };
       const input = baseInput(TemplateType.SPACE, { contentSpaceData });
 
-      await service.createTemplate(input as any, storageAggregator);
+      await service.createTemplate(
+        input as any,
+        storageAggregator,
+        actorContextData.actorContext
+      );
 
       expect(
         templateContentSpaceService.materializeTemplateContentSpaceContent
@@ -361,7 +404,11 @@ describe('TemplateService', () => {
       const input = baseInput(TemplateType.CALLOUT, { calloutData });
 
       await expect(
-        service.createTemplate(input as any, storageAggregator)
+        service.createTemplate(
+          input as any,
+          storageAggregator,
+          actorContextData.actorContext
+        )
       ).rejects.toThrow('framing materialize failed');
       expect(deleteSpy).toHaveBeenCalled();
     });
@@ -392,7 +439,11 @@ describe('TemplateService', () => {
       });
 
       await expect(
-        service.createTemplate(input as any, storageAggregator)
+        service.createTemplate(
+          input as any,
+          storageAggregator,
+          actorContextData.actorContext
+        )
       ).rejects.toThrow('contentSpace materialize failed');
       expect(deleteSpy).toHaveBeenCalled();
     });
@@ -401,7 +452,8 @@ describe('TemplateService', () => {
       await expect(
         service.createTemplate(
           baseInput('unknown' as TemplateType) as any,
-          storageAggregator
+          storageAggregator,
+          actorContextData.actorContext
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -424,7 +476,8 @@ describe('TemplateService', () => {
 
       const _result = await service.updateTemplate(
         { id: 'tpl-1', type: TemplateType.POST } as ITemplate,
-        { ID: 'tpl-1', profile: { displayName: 'Updated' } } as any
+        { ID: 'tpl-1', profile: { displayName: 'Updated' } } as any,
+        actorContextData.actorContext
       );
 
       expect(profileService.updateProfile).toHaveBeenCalledWith(
@@ -446,7 +499,8 @@ describe('TemplateService', () => {
 
       const result = await service.updateTemplate(
         { id: 'tpl-1', type: TemplateType.POST } as ITemplate,
-        { ID: 'tpl-1', postDefaultDescription: 'new desc' } as any
+        { ID: 'tpl-1', postDefaultDescription: 'new desc' } as any,
+        actorContextData.actorContext
       );
 
       expect(result.postDefaultDescription).toBe('new desc');
@@ -457,18 +511,51 @@ describe('TemplateService', () => {
         id: 'tpl-1',
         type: TemplateType.WHITEBOARD,
         profile: { id: 'p-1' },
-        whiteboard: { id: 'wb-1', content: 'old content' },
+        whiteboard: { id: 'wb-1' },
       } as unknown as Template;
 
       templateRepository.find.mockResolvedValue([template]);
       templateRepository.save.mockImplementation(async (entity: any) => entity);
+      whiteboardService.updateWhiteboardContent.mockResolvedValue({} as any);
 
-      const result = await service.updateTemplate(
+      await service.updateTemplate(
         { id: 'tpl-1', type: TemplateType.WHITEBOARD } as ITemplate,
-        { ID: 'tpl-1', whiteboardContent: 'new content' } as any
+        { ID: 'tpl-1', whiteboardContent: 'new content' } as any,
+        actorContextData.actorContext
       );
 
-      expect(result.whiteboard?.content).toBe('new content');
+      // Whiteboard content is no longer an inline column: the new scene is routed
+      // through the snapshot-write path (006-collab-content-unification).
+      expect(whiteboardService.updateWhiteboardContent).toHaveBeenCalledWith(
+        'wb-1',
+        'new content',
+        actorContextData.actorContext
+      );
+    });
+
+    it('replaces a WHITEBOARD template from an ID-only source through the live room', async () => {
+      const template = {
+        id: 'tpl-1',
+        type: TemplateType.WHITEBOARD,
+        profile: { id: 'p-1' },
+        whiteboard: { id: 'target-wb' },
+      } as unknown as Template;
+      templateRepository.find.mockResolvedValue([template]);
+      templateRepository.save.mockImplementation(async (entity: any) => entity);
+      whiteboardService.replaceContentFromSource.mockResolvedValue({} as any);
+
+      await service.updateTemplate(
+        { id: 'tpl-1', type: TemplateType.WHITEBOARD } as ITemplate,
+        { ID: 'tpl-1', sourceWhiteboardID: 'source-wb' } as any,
+        actorContextData.actorContext
+      );
+
+      expect(whiteboardService.replaceContentFromSource).toHaveBeenCalledWith(
+        'target-wb',
+        'source-wb',
+        actorContextData.actorContext
+      );
+      expect(whiteboardService.updateWhiteboardContent).not.toHaveBeenCalled();
     });
 
     it('should not update postDefaultDescription when template type is not POST', async () => {
@@ -484,7 +571,8 @@ describe('TemplateService', () => {
 
       const result = await service.updateTemplate(
         { id: 'tpl-1', type: TemplateType.WHITEBOARD } as ITemplate,
-        { ID: 'tpl-1', postDefaultDescription: 'should be ignored' } as any
+        { ID: 'tpl-1', postDefaultDescription: 'should be ignored' } as any,
+        actorContextData.actorContext
       );
 
       expect(result.postDefaultDescription).toBeUndefined();
@@ -630,6 +718,23 @@ describe('TemplateService', () => {
 
     it('should not delete any related entity for POST template type', async () => {
       const template = makeTemplate(TemplateType.POST);
+      templateRepository.find.mockResolvedValue([template]);
+
+      await service.delete({ id: 'tpl-1' } as ITemplate);
+
+      expect(
+        communityGuidelinesService.deleteCommunityGuidelines
+      ).not.toHaveBeenCalled();
+      expect(calloutService.deleteCallout).not.toHaveBeenCalled();
+      expect(whiteboardService.deleteWhiteboard).not.toHaveBeenCalled();
+      expect(
+        templateContentSpaceService.deleteTemplateContentSpaceOrFail
+      ).not.toHaveBeenCalled();
+      expect(profileService.deleteProfile).toHaveBeenCalledWith('p-1');
+    });
+
+    it('should not delete any related entity for CLASSIFICATION template type', async () => {
+      const template = makeTemplate(TemplateType.CLASSIFICATION);
       templateRepository.find.mockResolvedValue([template]);
 
       await service.delete({ id: 'tpl-1' } as ITemplate);

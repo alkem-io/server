@@ -16,6 +16,7 @@ import { CreateInnovationFlowStateInput } from './dto/innovation.flow.state.dto.
 import { UpdateInnovationFlowStateInput } from './dto/innovation.flow.state.dto.update';
 import { InnovationFlowState } from './innovation.flow.state.entity';
 import { IInnovationFlowState } from './innovation.flow.state.interface';
+import { SIDEBAR_DEFAULT_GENERIC } from './innovation.flow.state.sidebar.defaults';
 import { normalizeStateSettings } from './normalize.state.settings';
 
 @Injectable()
@@ -49,6 +50,13 @@ export class InnovationFlowStateService {
         CalloutDescriptionDisplayMode.EXPANDED,
       // FR-002/021: showPublishDetails defaults to true; honor explicit create-time value.
       showPublishDetails: stateData.settings?.showPublishDetails ?? true,
+      // Honors an explicit create-time sidebar list verbatim (the leg that carries template
+      // save/apply through unchanged); defaults to the generic composition otherwise. This is
+      // the one funnel every state-creation path goes through, so it also covers the create
+      // paths that never send `settings` at all.
+      sidebar: stateData.settings?.sidebar
+        ? [...stateData.settings.sidebar]
+        : [...SIDEBAR_DEFAULT_GENERIC],
     };
     innovationFlowState.sortOrder = stateData.sortOrder ?? 0;
     innovationFlowState.authorization = new AuthorizationPolicy(
@@ -117,6 +125,12 @@ export class InnovationFlowStateService {
         innovationFlowState.settings.showPublishDetails =
           updateData.settings.showPublishDetails;
       }
+      // Partial update for sidebar — omission/null preserves the stored list; an explicit
+      // array (including `[]`) replaces it wholesale. Validated (enum, no duplicates, size
+      // bound) upstream by the DTO before it reaches this service.
+      if (updateData.settings.sidebar != null) {
+        innovationFlowState.settings.sidebar = [...updateData.settings.sidebar];
+      }
     }
 
     return await this.save(innovationFlowState);
@@ -134,6 +148,23 @@ export class InnovationFlowStateService {
     innovationFlowStateID: string,
     options?: FindOneOptions<InnovationFlowState>
   ): Promise<IInnovationFlowState | never> {
+    return normalizeStateSettings(
+      await this.getRawInnovationFlowStateOrFail(innovationFlowStateID, options)
+    );
+  }
+
+  /**
+   * Loads the state WITHOUT read-path normalization. Write paths that
+   * repository.save() the loaded entity for an unrelated change MUST use this
+   * loader: normalization strips out-of-vocabulary sidebar values for the API
+   * response only, and saving a normalized entity would persist that filtering
+   * (rolling-deploy hazard — an older node whose enum lacks a newly added
+   * widget would silently delete it from the DB for everyone).
+   */
+  private async getRawInnovationFlowStateOrFail(
+    innovationFlowStateID: string,
+    options?: FindOneOptions<InnovationFlowState>
+  ): Promise<InnovationFlowState | never> {
     const innovationFlowState =
       await this.innovationFlowStateRepository.findOne({
         where: { id: innovationFlowStateID },
@@ -145,7 +176,23 @@ export class InnovationFlowStateService {
         `Unable to find InnovationFlowState with ID: ${innovationFlowStateID}`,
         LogContext.INNOVATION_FLOW
       );
-    return normalizeStateSettings(innovationFlowState);
+    return innovationFlowState;
+  }
+
+  /**
+   * Normalizes a DETACHED copy of the state for the API response, leaving the
+   * raw entity (and its settings object) untouched — so nothing that later
+   * saves the raw entity can persist the read-path filtering.
+   */
+  private toNormalizedApiState(
+    state: InnovationFlowState
+  ): IInnovationFlowState {
+    return normalizeStateSettings({
+      ...state,
+      settings: state.settings
+        ? structuredClone(state.settings)
+        : state.settings,
+    });
   }
 
   public getStateNames(states: IInnovationFlowState[]): string[] {
@@ -167,7 +214,9 @@ export class InnovationFlowStateService {
     flowStateID: string,
     templateID: string
   ): Promise<IInnovationFlowState> {
-    const flowState = await this.getInnovationFlowStateOrFail(flowStateID);
+    // Raw load, NOT getInnovationFlowStateOrFail: this path saves the entity, and it
+    // must persist the stored settings verbatim (see getRawInnovationFlowStateOrFail).
+    const flowState = await this.getRawInnovationFlowStateOrFail(flowStateID);
 
     // Fetch template directly to avoid circular dependency with TemplateService
     const templates = await this.templateRepository.find({
@@ -197,34 +246,32 @@ export class InnovationFlowStateService {
       );
     }
 
-    (flowState as InnovationFlowState).defaultCalloutTemplate = template;
-    await this.innovationFlowStateRepository.save(
-      flowState as InnovationFlowState
-    );
+    flowState.defaultCalloutTemplate = template;
+    await this.innovationFlowStateRepository.save(flowState);
 
     this.logger.verbose?.(
       `Set default callout template on flow state: ${flowStateID}`,
       LogContext.COLLABORATION
     );
 
-    return flowState;
+    return this.toNormalizedApiState(flowState);
   }
 
   async removeDefaultCalloutTemplate(
     flowStateID: string
   ): Promise<IInnovationFlowState> {
-    const flowState = await this.getInnovationFlowStateOrFail(flowStateID);
+    // Raw load, NOT getInnovationFlowStateOrFail: this path saves the entity, and it
+    // must persist the stored settings verbatim (see getRawInnovationFlowStateOrFail).
+    const flowState = await this.getRawInnovationFlowStateOrFail(flowStateID);
 
-    (flowState as InnovationFlowState).defaultCalloutTemplate = null;
-    await this.innovationFlowStateRepository.save(
-      flowState as InnovationFlowState
-    );
+    flowState.defaultCalloutTemplate = null;
+    await this.innovationFlowStateRepository.save(flowState);
 
     this.logger.verbose?.(
       `Removed default callout template from flow state: ${flowStateID}`,
       LogContext.COLLABORATION
     );
 
-    return flowState;
+    return this.toNormalizedApiState(flowState);
   }
 }

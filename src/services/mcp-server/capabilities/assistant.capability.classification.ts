@@ -27,7 +27,6 @@ export const ASSISTANT_CAPABILITY_CLASSIFICATION: Readonly<
 > = Object.freeze({
   create_whiteboard: AssistantCapabilityKind.WRITE_ADDITIVE,
   create_whiteboard_in_space: AssistantCapabilityKind.WRITE_ADDITIVE,
-  update_whiteboard_content: AssistantCapabilityKind.WRITE_DESTRUCTIVE,
   edit_whiteboard_elements: AssistantCapabilityKind.WRITE_ADDITIVE,
   // every other current tool is READ:
   search_content: AssistantCapabilityKind.READ,

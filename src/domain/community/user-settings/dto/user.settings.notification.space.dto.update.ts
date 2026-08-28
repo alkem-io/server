@@ -97,4 +97,13 @@ export class UpdateUserSettingsNotificationSpaceInput {
   @ValidateNested()
   @Type(() => NotificationSettingInput)
   collaborationPollVoteAffectedByOptionChange?: NotificationSettingInput;
+
+  @Field(() => NotificationSettingInput, {
+    nullable: true,
+    description:
+      'Receive a notification when someone reacts to a callout you published',
+  })
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  collaborationCalloutReaction?: NotificationSettingInput;
 }

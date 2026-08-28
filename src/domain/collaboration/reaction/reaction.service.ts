@@ -61,7 +61,7 @@ export class ReactionService {
     entityID: string,
     userID: string,
     emoji: string
-  ): Promise<IReaction> {
+  ): Promise<{ reaction: IReaction; created: boolean }> {
     await this.reactionRepository
       .createQueryBuilder()
       .insert()
@@ -75,7 +75,15 @@ export class ReactionService {
     const saved = await this.reactionRepository.findOneOrFail({
       where: { type, entityID, createdBy: userID },
     });
-    return saved;
+
+    // A row where createdDate and updatedDate are equal (within 1ms rounding)
+    // was just inserted; a row where they differ was an ON CONFLICT update
+    // (the swap path). This is the most portable signal available given the
+    // TypeORM fork in use — it does not require RETURNING clauses.
+    const created =
+      Math.abs(saved.createdDate.getTime() - saved.updatedDate.getTime()) <= 1;
+
+    return { reaction: saved, created };
   }
 
   /**
