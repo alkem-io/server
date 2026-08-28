@@ -801,16 +801,24 @@ services:
       - aliasgroup1=http://traefik
       - username=admin
       - password=admin
-      - extra_params=--o:ssl.enable=false --o:net.proto=IPv4 --o:security.seccomp=false --o:quarantine_files[@enable]=true
+      - extra_params=--o:ssl.enable=false --o:net.proto=IPv4 --o:quarantine_files[@enable]=true
       - DONT_GEN_SSL_CERT=1
     cap_add:
-      - MKNOD
-      # Collabora needs SYS_ADMIN to build its per-document chroot jails.
-      # Without it we had to pass --o:security.capabilities=false, and running
-      # unjailed makes Collabora resolve a jail-relative temp path
+      # Collabora needs SYS_ADMIN to build its per-document chroot jails. Without
+      # it, coolforkit aborts with "Capability cap_sys_chroot is not set" and no
+      # kit starts at all, so this grant and the removal of
+      # --o:security.capabilities=false above are a single indivisible change.
+      #
+      # Unjailed, Collabora resolves a jail-relative temp path
       # (/tmp/user/docs/<id>) as a literal container path that nothing creates.
       # The mkdir fails with ENOENT and takes the Kit process down mid-export,
-      # ending the editing session for everyone in the document.
+      # ending the editing session for everyone in the document (alkem-io/server#6381).
+      #
+      # SYS_ADMIN is held only while the jail is constructed: the kit that
+      # actually parses the untrusted document logs
+      # "Initialized jail nodes, dropped caps. Final caps are: =".
+      # MKNOD is NOT required — verified that SYS_ADMIN alone builds the jails
+      # (coolforkit-ns --namespace, adms_bindmounted=ok, adms_contained=ok).
       - SYS_ADMIN
     tmpfs:
       # World-writable (mode=1777) so the non-root 'cool' user can create
