@@ -147,11 +147,9 @@ describe('CollaborationDocumentSession — admission and typed session end', () 
 
     feedControl(session, { kind: 'admission', mode: 'viewer' });
 
-    await synced.catch(error => {
-      expect(error).toMatchObject({
-        message: 'Invalid collaboration admission',
-        details: { documentId: 'wb-1', mode: 'viewer' },
-      });
+    await expect(synced).rejects.toMatchObject({
+      message: 'Invalid collaboration admission',
+      details: { documentId: 'wb-1', mode: 'viewer' },
     });
     expect(wsSend).not.toHaveBeenCalled();
     expect(close).toHaveBeenCalledOnce();
