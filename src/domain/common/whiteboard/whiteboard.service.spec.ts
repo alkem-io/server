@@ -602,6 +602,21 @@ describe('WhiteboardService', () => {
       expect(licenseService.isEntitlementEnabled).not.toHaveBeenCalled();
     });
 
+    it('propagates a missing entitlement from an attached license', async () => {
+      vi.mocked(
+        communityResolverService.getCollaborationLicenseFromWhiteboardOrFail
+      ).mockResolvedValue({ id: 'license-1' } as ILicense);
+      const failure = new EntityNotFoundException(
+        'Entitlement not found',
+        LogContext.LICENSE
+      );
+      vi.mocked(licenseService.isEntitlementEnabled).mockImplementation(() => {
+        throw failure;
+      });
+
+      await expect(service.isMultiUser('wb-1')).rejects.toBe(failure);
+    });
+
     it('propagates unexpected entitlement lookup failures', async () => {
       const failure = new Error('database unavailable');
       vi.mocked(
