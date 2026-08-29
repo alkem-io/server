@@ -9514,6 +9514,10 @@ input UpdateCalloutContributionDefaultsInput {
   clearWhiteboardContent: Boolean
   """The default title to use for new contributions."""
   defaultDisplayName: String
+  """
+  Replace the default from a server-owned live Whiteboard contribution-default draft. Mutually exclusive with either source field and clearWhiteboardContent.
+  """
+  draftWhiteboardID: UUID
   """The default description to use for new Post contributions."""
   postDescription: Markdown
   """

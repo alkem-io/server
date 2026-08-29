@@ -6,6 +6,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { ClassificationModule } from '@domain/common/classification/classification.module';
 import { TagsetTemplateModule } from '@domain/common/tagset-template/tagset.template.module';
 import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
+import { WhiteboardDraftModule } from '@domain/common/whiteboard-draft';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { Module } from '@nestjs/common';
@@ -49,6 +50,7 @@ import { TaskBoardResolverMutations } from './task-board/task.board.resolver.mut
     UserLookupModule,
     NamingModule,
     WhiteboardModule,
+    WhiteboardDraftModule,
     CalloutFramingModule,
     CalloutContributionModule,
     CalloutContributionDefaultsModule,
