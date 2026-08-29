@@ -80,15 +80,15 @@ export class ReadOnlyRoomError extends Error {
  * ephemeral MCP caller — resending identical rejected bytes is futile; a genuine fresh
  * generation (new session / resync) is the only recovery.
  */
-export class UpdateRejectedError extends Error {
+export class UpdateRejectedError extends BaseExceptionInternal {
   constructor(
     documentId: string,
     public readonly reason?: string
   ) {
-    super(
-      `Document ${documentId} update rejected by the server${reason ? ` (${reason})` : ''}`
-    );
-    this.name = 'UpdateRejectedError';
+    super('Collaboration update rejected', LogContext.COLLABORATION, {
+      documentId,
+      reason,
+    });
   }
 }
 

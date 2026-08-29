@@ -368,6 +368,12 @@ describe('CollaborationDocumentSession.requestDurability — correlated persist 
       disposition: 'manual',
     });
     await expect(p).rejects.toBeInstanceOf(UpdateRejectedError);
+    await p.catch(error => {
+      expect(error).toMatchObject({
+        message: 'Collaboration update rejected',
+        details: { documentId: 'wb-1', reason: undefined },
+      });
+    });
     // A later persisted with the ORIGINAL reqId finds no barrier — inert, cannot resolve.
     feedControl(session, { kind: 'persisted', requestId: reqId });
     // The sticky poison makes a fresh request reject IMMEDIATELY, without sending.
