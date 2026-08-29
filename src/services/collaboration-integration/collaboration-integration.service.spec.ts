@@ -191,6 +191,37 @@ describe('CollaborationIntegrationService', () => {
       expect(whiteboardService.isMultiUser).toHaveBeenCalledWith('wb-1');
     });
 
+    it('fetches a standalone whiteboard with conservative single-user entitlement', async () => {
+      memoService.getCollaborationMetadata.mockRejectedValue(notFound());
+      whiteboardService.getCollaborationMetadata.mockResolvedValue(
+        whiteboardMeta
+      );
+      whiteboardService.isMultiUser.mockResolvedValue(false);
+
+      const result = await service.fetch({ id: 'standalone-wb' });
+
+      expect(result).toEqual({
+        found: true,
+        contentType: CollaborationContentType.WHITEBOARD,
+        version: 7,
+        contentPointer: 'wb-1',
+        migrated: true,
+        authorizationPolicyId: 'policy-wb',
+        storageBucketId: 'bucket-wb',
+        isMultiUser: false,
+      });
+    });
+
+    it('returns a structured error when entitlement resolution fails', async () => {
+      memoService.getCollaborationMetadata.mockResolvedValue(memoMeta);
+      memoService.isMultiUser.mockRejectedValue(new Error('database down'));
+
+      const result = await service.fetch({ id: 'memo-1' });
+
+      expect(result.found).toBe(false);
+      expect(result.error).toBe(CollaborationErrorCode.INTERNAL_ERROR);
+    });
+
     it('returns a structured not-found for an absent id (FR-004)', async () => {
       memoService.getCollaborationMetadata.mockRejectedValue(notFound());
       whiteboardService.getCollaborationMetadata.mockRejectedValue(notFound());

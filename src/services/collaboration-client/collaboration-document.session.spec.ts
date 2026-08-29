@@ -4,6 +4,7 @@ import { vi } from 'vitest';
 import * as Y from 'yjs';
 import {
   CollaborationDocumentSession,
+  CollaborationSessionEndError,
   UpdateRejectedError,
 } from './collaboration-document.session';
 
@@ -73,6 +74,150 @@ describe('CollaborationDocumentSession.sendMutation — no frame on mutator thro
 
     expect(bytes).toBeNull();
     expect(wsSend).not.toHaveBeenCalled();
+  });
+});
+
+describe('CollaborationDocumentSession — admission and typed session end', () => {
+  const WIRE_SYNC = 0;
+  const WIRE_CONTROL = 3;
+
+  const buildSession = () => {
+    const session = new CollaborationDocumentSession(
+      'ws://collab/room',
+      {},
+      'wb-1'
+    );
+    const wsSend = vi.fn();
+    (session as unknown as { ws: { send: (b: Uint8Array) => void } }).ws = {
+      send: wsSend,
+    };
+    return { session, wsSend };
+  };
+
+  const feedControl = (
+    session: CollaborationDocumentSession,
+    msg: Record<string, unknown>
+  ): void => {
+    const enc = encoding.createEncoder();
+    encoding.writeVarUint(enc, WIRE_CONTROL);
+    encoding.writeUint8Array(
+      enc,
+      new TextEncoder().encode(JSON.stringify(msg))
+    );
+    const bytes = encoding.toUint8Array(enc);
+    (session as unknown as { onMessage: (d: ArrayBuffer) => void }).onMessage(
+      bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
+    );
+  };
+
+  it('waits for admission, records read access, then starts SyncStep1', () => {
+    const { session, wsSend } = buildSession();
+
+    feedControl(session, {
+      kind: 'admission',
+      mode: 'read',
+      reason: 'no-update-access',
+    });
+
+    expect(session.isReadOnly()).toBe(true);
+    expect(session.readOnlyError().reason).toBe('no-update-access');
+    expect(wsSend).toHaveBeenCalledTimes(1);
+    const dec = decoding.createDecoder(wsSend.mock.calls[0][0] as Uint8Array);
+    expect(decoding.readVarUint(dec)).toBe(WIRE_SYNC);
+  });
+
+  it('write admission starts sync without carrying a read-only reason', () => {
+    const { session, wsSend } = buildSession();
+    feedControl(session, { kind: 'admission', mode: 'write' });
+    expect(session.isReadOnly()).toBe(false);
+    expect(wsSend).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails closed without publishing Yjs state for an invalid admission mode', async () => {
+    const { session, wsSend } = buildSession();
+    const close = vi.fn();
+    const synced = (session as unknown as { syncedPromise: Promise<void> })
+      .syncedPromise;
+    (
+      session as unknown as { ws: { send: typeof wsSend; close: typeof close } }
+    ).ws = {
+      send: wsSend,
+      close,
+    };
+
+    feedControl(session, { kind: 'admission', mode: 'viewer' });
+
+    await expect(synced).rejects.toMatchObject({
+      message: 'Invalid collaboration admission',
+      details: { documentId: 'wb-1', mode: 'viewer' },
+    });
+    expect(wsSend).not.toHaveBeenCalled();
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it('ignores unknown control kinds, including the temporary legacy rejection', async () => {
+    const { session, wsSend } = buildSession();
+    // A durability request is reachable only after connect() resolved. This
+    // focused control test bypasses connect(), so model that precondition.
+    (session as unknown as { synced: boolean }).synced = true;
+    const barrier = session.requestDurability(1000);
+    feedControl(session, {
+      kind: 'update-rejected',
+      error: 'legacy compatibility frame',
+    });
+    feedControl(session, { kind: 'future-control', value: 1 });
+
+    let settled = false;
+    barrier.then(
+      () => {
+        settled = true;
+      },
+      () => {
+        settled = true;
+      }
+    );
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    feedControl(session, {
+      kind: 'session-end',
+      code: 'content-refused',
+      scope: 'member',
+      disposition: 'manual',
+    });
+    await expect(barrier).rejects.toBeInstanceOf(UpdateRejectedError);
+    wsSend.mockClear();
+    await expect(session.requestDurability(1000)).rejects.toBeInstanceOf(
+      UpdateRejectedError
+    );
+    expect(wsSend).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when a typed session end has a missing or unknown disposition', async () => {
+    for (const disposition of [undefined, 'future-disposition']) {
+      const { session } = buildSession();
+      (session as unknown as { synced: boolean }).synced = true;
+      const barrier = session.requestDurability(1000);
+      feedControl(session, {
+        kind: 'session-end',
+        code: 'future-ending',
+        disposition,
+      });
+      await barrier.catch(error => {
+        expect(error).toBeInstanceOf(CollaborationSessionEndError);
+        expect((error as CollaborationSessionEndError).disposition).toBe(
+          'terminal'
+        );
+        expect(error).toMatchObject({
+          message: 'Collaboration session ended',
+          details: {
+            documentId: 'wb-1',
+            code: 'future-ending',
+            disposition: 'terminal',
+          },
+        });
+      });
+    }
   });
 });
 
@@ -209,16 +354,24 @@ describe('CollaborationDocumentSession.requestDurability — correlated persist 
     await expect(p).rejects.toThrow('store unavailable');
   });
 
-  it('update-rejected (uncorrelated, NO requestId) rejects the barrier, sticky-poisons the session, and a later matching persisted cannot flip it to success', async () => {
+  it('content-refused session-end rejects the barrier, sticky-poisons the session, and a later matching persisted cannot flip it to success', async () => {
     const { session, wsSend } = buildSession();
+    (session as unknown as { synced: boolean }).synced = true;
     const p = session.requestDurability(1000);
     const reqId = sentRequestId(wsSend.mock.calls[0][0] as Uint8Array);
-    // The real Go frame carries NO requestId (it answers the preceding update).
     feedControl(session, {
-      kind: 'update-rejected',
-      error: 'file locators must be references, not inline data',
+      kind: 'session-end',
+      code: 'content-refused',
+      scope: 'member',
+      disposition: 'manual',
     });
     await expect(p).rejects.toBeInstanceOf(UpdateRejectedError);
+    await p.catch(error => {
+      expect(error).toMatchObject({
+        message: 'Collaboration update rejected',
+        details: { documentId: 'wb-1', reason: undefined },
+      });
+    });
     // A later persisted with the ORIGINAL reqId finds no barrier — inert, cannot resolve.
     feedControl(session, { kind: 'persisted', requestId: reqId });
     // The sticky poison makes a fresh request reject IMMEDIATELY, without sending.
