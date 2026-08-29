@@ -147,7 +147,12 @@ describe('CollaborationDocumentSession — admission and typed session end', () 
 
     feedControl(session, { kind: 'admission', mode: 'viewer' });
 
-    await expect(synced).rejects.toThrow('Invalid collaboration admission');
+    await synced.catch(error => {
+      expect(error).toMatchObject({
+        message: 'Invalid collaboration admission',
+        details: { documentId: 'wb-1', mode: 'viewer' },
+      });
+    });
     expect(wsSend).not.toHaveBeenCalled();
     expect(close).toHaveBeenCalledOnce();
   });
@@ -205,6 +210,14 @@ describe('CollaborationDocumentSession — admission and typed session end', () 
         expect((error as CollaborationSessionEndError).disposition).toBe(
           'terminal'
         );
+        expect(error).toMatchObject({
+          message: 'Collaboration session ended',
+          details: {
+            documentId: 'wb-1',
+            code: 'future-ending',
+            disposition: 'terminal',
+          },
+        });
       });
     }
   });

@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { LogContext } from '@common/enums';
+import { BaseExceptionInternal } from '@common/exceptions/internal/base.exception.internal';
 import * as decoding from 'lib0/decoding';
 import * as encoding from 'lib0/encoding';
 import { WebSocket } from 'ws';
@@ -96,18 +98,17 @@ export type CollaborationSessionEndDisposition =
   | 'terminal';
 
 /** A typed room ending whose disposition controls the caller's retry decision. */
-export class CollaborationSessionEndError extends Error {
+export class CollaborationSessionEndError extends BaseExceptionInternal {
   constructor(
     documentId: string,
     public readonly disposition: CollaborationSessionEndDisposition,
     code?: string
   ) {
-    super(
-      `Collaboration session ended for ${documentId}` +
-        `${code ? ` (${code})` : ''}` +
-        ` [${disposition}]`
-    );
-    this.name = 'CollaborationSessionEndError';
+    super('Collaboration session ended', LogContext.COLLABORATION, {
+      documentId,
+      code,
+      disposition,
+    });
   }
 }
 
@@ -409,8 +410,10 @@ export class CollaborationDocumentSession {
         // authoritative capability for this one-shot session; the legacy
         // read-only-state below remains a rolling-deployment compatibility input.
         if (msg.mode !== 'read' && msg.mode !== 'write') {
-          const err = new Error(
-            `Invalid collaboration admission for ${this.documentId}`
+          const err = new BaseExceptionInternal(
+            'Invalid collaboration admission',
+            LogContext.COLLABORATION,
+            { documentId: this.documentId, mode: msg.mode }
           );
           this.closeError = err;
           this.failPending(err);
