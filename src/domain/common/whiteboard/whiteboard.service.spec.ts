@@ -1,5 +1,5 @@
 import { createRequire } from 'node:module';
-import { ProfileType } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
@@ -586,6 +586,29 @@ describe('WhiteboardService', () => {
       const result = await service.isMultiUser('wb-1');
 
       expect(result).toBe(false);
+    });
+
+    it('returns false when the whiteboard has no parent collaboration', async () => {
+      vi.mocked(
+        communityResolverService.getCollaborationLicenseFromWhiteboardOrFail
+      ).mockRejectedValue(
+        new EntityNotFoundException(
+          'Unable to find Collaboration with License for whiteboard',
+          LogContext.COLLABORATION
+        )
+      );
+
+      await expect(service.isMultiUser('standalone-wb')).resolves.toBe(false);
+      expect(licenseService.isEntitlementEnabled).not.toHaveBeenCalled();
+    });
+
+    it('propagates unexpected entitlement lookup failures', async () => {
+      const failure = new Error('database unavailable');
+      vi.mocked(
+        communityResolverService.getCollaborationLicenseFromWhiteboardOrFail
+      ).mockRejectedValue(failure);
+
+      await expect(service.isMultiUser('wb-1')).rejects.toBe(failure);
     });
   });
 

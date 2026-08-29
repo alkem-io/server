@@ -959,15 +959,22 @@ export class WhiteboardService {
   }
 
   public async isMultiUser(whiteboardId: string): Promise<boolean> {
-    const license =
-      await this.communityResolverService.getCollaborationLicenseFromWhiteboardOrFail(
-        whiteboardId
-      );
+    try {
+      const license =
+        await this.communityResolverService.getCollaborationLicenseFromWhiteboardOrFail(
+          whiteboardId
+        );
 
-    return this.licenseService.isEntitlementEnabled(
-      license,
-      LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER
-    );
+      return this.licenseService.isEntitlementEnabled(
+        license,
+        LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER
+      );
+    } catch (error) {
+      // Standalone whiteboards (templates and pre-bind drafts) deliberately
+      // have no parent Collaboration and therefore no inherited entitlement.
+      if (error instanceof EntityNotFoundException) return false;
+      throw error;
+    }
   }
 
   public async getProfile(

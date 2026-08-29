@@ -476,15 +476,22 @@ export class MemoService {
   }
 
   public async isMultiUser(memoId: string): Promise<boolean> {
-    const license =
-      await this.communityResolverService.getCollaborationLicenseFromMemoOrFail(
-        memoId
-      );
+    try {
+      const license =
+        await this.communityResolverService.getCollaborationLicenseFromMemoOrFail(
+          memoId
+        );
 
-    return this.licenseService.isEntitlementEnabled(
-      license,
-      LicenseEntitlementType.SPACE_FLAG_MEMO_MULTI_USER
-    );
+      return this.licenseService.isEntitlementEnabled(
+        license,
+        LicenseEntitlementType.SPACE_FLAG_MEMO_MULTI_USER
+      );
+    } catch (error) {
+      // Standalone memos (templates and pre-bind drafts) deliberately have no
+      // parent Collaboration and therefore no inherited entitlement.
+      if (error instanceof EntityNotFoundException) return false;
+      throw error;
+    }
   }
 
   public async getProfile(

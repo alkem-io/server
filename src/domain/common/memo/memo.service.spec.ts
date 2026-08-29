@@ -1,15 +1,19 @@
+import { LogContext } from '@common/enums';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { CollaborationLifecycleService } from '@domain/common/collaboration-metadata';
+import { ILicense } from '@domain/common/license/license.interface';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { CollaborationDocumentService } from '@services/collaboration-client/collaboration-document.service';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -18,6 +22,7 @@ import { repositoryProviderMockFactory } from '@test/utils/repository.provider.m
 import { Repository } from 'typeorm';
 import { type Mock } from 'vitest';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { LicenseService } from '../license/license.service';
 import { ProfileService } from '../profile/profile.service';
 import { Memo } from './memo.entity';
 import { IMemo } from './memo.interface';
@@ -32,6 +37,8 @@ describe('MemoService', () => {
   let fileServiceAdapter: FileServiceAdapter;
   let collaborationLifecycleService: CollaborationLifecycleService;
   let collaborationDocumentService: CollaborationDocumentService;
+  let communityResolverService: CommunityResolverService;
+  let licenseService: LicenseService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -62,6 +69,8 @@ describe('MemoService', () => {
     fileServiceAdapter = module.get(FileServiceAdapter);
     collaborationLifecycleService = module.get(CollaborationLifecycleService);
     collaborationDocumentService = module.get(CollaborationDocumentService);
+    communityResolverService = module.get(CommunityResolverService);
+    licenseService = module.get(LicenseService);
   });
 
   describe('getMemoOrFail', () => {
@@ -252,6 +261,54 @@ describe('MemoService', () => {
         expect.any(Function)
       );
       expect(fileServiceAdapter.createSnapshotInBucket).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('isMultiUser', () => {
+    it('returns the attached collaboration entitlement', async () => {
+      const license = { id: 'license-1' } as ILicense;
+      vi.mocked(
+        communityResolverService.getCollaborationLicenseFromMemoOrFail
+      ).mockResolvedValue(license);
+      vi.mocked(licenseService.isEntitlementEnabled).mockReturnValue(true);
+
+      await expect(service.isMultiUser('memo-1')).resolves.toBe(true);
+      expect(licenseService.isEntitlementEnabled).toHaveBeenCalledWith(
+        license,
+        LicenseEntitlementType.SPACE_FLAG_MEMO_MULTI_USER
+      );
+    });
+
+    it('returns false when the attached entitlement is disabled', async () => {
+      vi.mocked(
+        communityResolverService.getCollaborationLicenseFromMemoOrFail
+      ).mockResolvedValue({ id: 'license-1' } as ILicense);
+      vi.mocked(licenseService.isEntitlementEnabled).mockReturnValue(false);
+
+      await expect(service.isMultiUser('memo-1')).resolves.toBe(false);
+    });
+
+    it('returns false when the memo has no parent collaboration', async () => {
+      vi.mocked(
+        communityResolverService.getCollaborationLicenseFromMemoOrFail
+      ).mockRejectedValue(
+        new EntityNotFoundException(
+          'Unable to find Collaboration with License for memo',
+          LogContext.COLLABORATION
+        )
+      );
+
+      await expect(service.isMultiUser('standalone-memo')).resolves.toBe(false);
+      expect(licenseService.isEntitlementEnabled).not.toHaveBeenCalled();
+    });
+
+    it('propagates unexpected entitlement lookup failures', async () => {
+      const failure = new Error('database unavailable');
+      vi.mocked(
+        communityResolverService.getCollaborationLicenseFromMemoOrFail
+      ).mockRejectedValue(failure);
+
+      await expect(service.isMultiUser('memo-1')).rejects.toBe(failure);
     });
   });
 
