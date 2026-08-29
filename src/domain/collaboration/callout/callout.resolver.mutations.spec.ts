@@ -20,6 +20,7 @@ import { CollaboraDocumentEventsService } from '@domain/collaboration/collabora-
 import { ReactionService } from '@domain/collaboration/reaction/reaction.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
+import { WhiteboardDraftService } from '@domain/common/whiteboard-draft';
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -53,6 +54,7 @@ describe('CalloutResolverMutations', () => {
   let _calloutContributionService: CalloutContributionService;
   let collaboraDocumentEventsService: CollaboraDocumentEventsService;
   let whiteboardService: WhiteboardService;
+  let whiteboardDraftService: WhiteboardDraftService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -102,6 +104,15 @@ describe('CalloutResolverMutations', () => {
     _calloutContributionService = module.get(CalloutContributionService);
     collaboraDocumentEventsService = module.get(CollaboraDocumentEventsService);
     whiteboardService = module.get(WhiteboardService);
+    whiteboardDraftService = module.get(WhiteboardDraftService);
+    const releaseDraftLock = vi.fn();
+    vi.mocked(whiteboardDraftService.acquireForConsumption).mockResolvedValue({
+      drafts: new Map(),
+      markConsumed: vi.fn(),
+      complete: vi.fn(),
+      release: releaseDraftLock,
+      [Symbol.asyncDispose]: releaseDraftLock,
+    });
   });
 
   it('should be defined', () => {
@@ -215,6 +226,147 @@ describe('CalloutResolverMutations', () => {
         whiteboardContent: 'canonical-internal',
         sourceStorageBucketID: 'source-bucket',
       });
+    });
+
+    it('atomically claims a Whiteboard draft before updating contribution defaults', async () => {
+      const target = {
+        id: 'target-callout',
+        authorization: { id: 'target-auth' },
+      } as any;
+      const updated = {
+        id: target.id,
+        authorization: target.authorization,
+      } as any;
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(target);
+      vi.mocked(calloutService.updateCallout).mockResolvedValue(updated);
+      const roomResolverService = (resolver as any).roomResolverService;
+      vi.mocked(
+        roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout
+      ).mockResolvedValue({
+        roleSet: { id: 'rs-1' },
+        platformRolesAccess: { roles: [] },
+      });
+      vi.mocked(
+        calloutAuthorizationService.applyAuthorizationPolicy
+      ).mockResolvedValue([{ id: 'updated-auth' }] as any);
+
+      const markConsumed = vi.fn();
+      const complete = vi.fn();
+      const release = vi.fn();
+      vi.mocked(whiteboardDraftService.acquireForConsumption).mockResolvedValue(
+        {
+          drafts: new Map([
+            ['draft-whiteboard', { id: 'draft-whiteboard' } as any],
+          ]),
+          markConsumed,
+          complete,
+          release,
+          [Symbol.asyncDispose]: release,
+        }
+      );
+      const actorContext = { actorID: 'user-1' } as any;
+      const input = {
+        ID: target.id,
+        contributionDefaults: { draftWhiteboardID: 'draft-whiteboard' },
+      } as any;
+
+      await resolver.updateCallout(actorContext, input);
+
+      expect(whiteboardDraftService.acquireForConsumption).toHaveBeenCalledWith(
+        ['draft-whiteboard'],
+        actorContext
+      );
+      expect(contributionDefaultSourceService.prepare).toHaveBeenCalledWith(
+        {
+          draftWhiteboardID: undefined,
+          sourceWhiteboardID: 'draft-whiteboard',
+        },
+        actorContext
+      );
+      expect(calloutService.updateCallout).toHaveBeenCalledWith(
+        target,
+        input,
+        actorContext,
+        actorContext.actorID
+      );
+      expect(markConsumed).toHaveBeenCalledOnce();
+      expect(complete).toHaveBeenCalledOnce();
+      expect(release).toHaveBeenCalledOnce();
+    });
+
+    it('rejects a draft combined with another contribution-default source', async () => {
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue({
+        id: 'target-callout',
+        authorization: { id: 'target-auth' },
+      } as any);
+      const release = vi.fn();
+      vi.mocked(whiteboardDraftService.acquireForConsumption).mockResolvedValue(
+        {
+          drafts: new Map([
+            ['draft-whiteboard', { id: 'draft-whiteboard' } as any],
+          ]),
+          markConsumed: vi.fn(),
+          complete: vi.fn(),
+          release,
+          [Symbol.asyncDispose]: release,
+        }
+      );
+
+      await expect(
+        resolver.updateCallout(
+          { actorID: 'user-1' } as any,
+          {
+            ID: 'target-callout',
+            contributionDefaults: {
+              draftWhiteboardID: 'draft-whiteboard',
+              clearWhiteboardContent: true,
+            },
+          } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(contributionDefaultSourceService.prepare).not.toHaveBeenCalled();
+      expect(calloutService.updateCallout).not.toHaveBeenCalled();
+      expect(release).toHaveBeenCalledOnce();
+    });
+
+    it('does not consume the draft when the Callout update fails', async () => {
+      const target = {
+        id: 'target-callout',
+        authorization: { id: 'target-auth' },
+      } as any;
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(target);
+      vi.mocked(calloutService.updateCallout).mockRejectedValue(
+        new Error('update failed')
+      );
+      const markConsumed = vi.fn();
+      const complete = vi.fn();
+      const release = vi.fn();
+      vi.mocked(whiteboardDraftService.acquireForConsumption).mockResolvedValue(
+        {
+          drafts: new Map([
+            ['draft-whiteboard', { id: 'draft-whiteboard' } as any],
+          ]),
+          markConsumed,
+          complete,
+          release,
+          [Symbol.asyncDispose]: release,
+        }
+      );
+
+      await expect(
+        resolver.updateCallout(
+          { actorID: 'user-1' } as any,
+          {
+            ID: target.id,
+            contributionDefaults: { draftWhiteboardID: 'draft-whiteboard' },
+          } as any
+        )
+      ).rejects.toThrow('update failed');
+
+      expect(markConsumed).not.toHaveBeenCalled();
+      expect(complete).not.toHaveBeenCalled();
+      expect(release).toHaveBeenCalledOnce();
     });
 
     it('rejects clear plus any source selection before updating', async () => {
