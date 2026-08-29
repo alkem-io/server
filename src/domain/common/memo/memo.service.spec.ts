@@ -265,6 +265,10 @@ describe('MemoService', () => {
   });
 
   describe('isMultiUser', () => {
+    beforeEach(() => {
+      memoRepository.findOne!.mockResolvedValue({ id: 'memo-1' } as Memo);
+    });
+
     it('returns the attached collaboration entitlement', async () => {
       const license = { id: 'license-1' } as ILicense;
       vi.mocked(
@@ -300,6 +304,17 @@ describe('MemoService', () => {
 
       await expect(service.isMultiUser('standalone-memo')).resolves.toBe(false);
       expect(licenseService.isEntitlementEnabled).not.toHaveBeenCalled();
+    });
+
+    it('propagates not found for an unknown memo', async () => {
+      memoRepository.findOne!.mockResolvedValue(null);
+
+      await expect(service.isMultiUser('missing-memo')).rejects.toThrow(
+        EntityNotFoundException
+      );
+      expect(
+        communityResolverService.getCollaborationLicenseFromMemoOrFail
+      ).not.toHaveBeenCalled();
     });
 
     it('propagates a missing entitlement from an attached license', async () => {

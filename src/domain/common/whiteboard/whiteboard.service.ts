@@ -960,6 +960,8 @@ export class WhiteboardService {
   }
 
   public async isMultiUser(whiteboardId: string): Promise<boolean> {
+    await this.getWhiteboardOrFail(whiteboardId);
+
     let license: ILicense;
     try {
       license =

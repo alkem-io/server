@@ -553,6 +553,12 @@ describe('WhiteboardService', () => {
   });
 
   describe('isMultiUser', () => {
+    beforeEach(() => {
+      whiteboardRepository.findOne!.mockResolvedValue({
+        id: 'wb-1',
+      } as Whiteboard);
+    });
+
     it('should return true when multi-user entitlement is enabled', async () => {
       const mockLicense = { id: 'license-1' } as ILicense;
       vi.mocked(
@@ -600,6 +606,17 @@ describe('WhiteboardService', () => {
 
       await expect(service.isMultiUser('standalone-wb')).resolves.toBe(false);
       expect(licenseService.isEntitlementEnabled).not.toHaveBeenCalled();
+    });
+
+    it('propagates not found for an unknown whiteboard', async () => {
+      whiteboardRepository.findOne!.mockResolvedValue(null);
+
+      await expect(service.isMultiUser('missing-wb')).rejects.toThrow(
+        EntityNotFoundException
+      );
+      expect(
+        communityResolverService.getCollaborationLicenseFromWhiteboardOrFail
+      ).not.toHaveBeenCalled();
     });
 
     it('propagates a missing entitlement from an attached license', async () => {

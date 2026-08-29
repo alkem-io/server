@@ -477,6 +477,8 @@ export class MemoService {
   }
 
   public async isMultiUser(memoId: string): Promise<boolean> {
+    await this.getMemoOrFail(memoId);
+
     let license: ILicense;
     try {
       license =
