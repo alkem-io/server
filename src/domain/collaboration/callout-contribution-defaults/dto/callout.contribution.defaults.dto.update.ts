@@ -43,6 +43,14 @@ export class UpdateCalloutContributionDefaultsInput {
   @IsOptional()
   sourceCalloutID?: string;
 
+  @Field(() => UUID, {
+    nullable: true,
+    description:
+      'Replace the default from a server-owned live Whiteboard contribution-default draft. Mutually exclusive with either source field and clearWhiteboardContent.',
+  })
+  @IsOptional()
+  draftWhiteboardID?: string;
+
   @Field(() => Boolean, {
     nullable: true,
     description:

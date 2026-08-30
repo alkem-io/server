@@ -24,12 +24,17 @@ export class CollaborationMigrationResult {
   })
   unattached!: number;
 
+  /**
+   * Rows requiring operator review. This can overlap with `migrated` when an
+   * otherwise-usable Whiteboard was salvaged after irrecoverable visuals were removed.
+   */
   @Field(() => Int)
   flagged!: number;
 
   @Field(() => Int)
   failed!: number;
 
+  /** Source-decode failures and explicit migrated-with-visual-loss warnings. */
   @Field(() => [CollaborationMigrationIssue])
   flaggedDocuments!: CollaborationMigrationIssue[];
 

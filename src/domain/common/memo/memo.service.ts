@@ -14,6 +14,7 @@ import {
   CollaborationMetadata,
   CollaborationMetadataUpdate,
 } from '@domain/common/collaboration-metadata';
+import type { ILicense } from '@domain/common/license/license.interface';
 import { IProfile } from '@domain/common/profile';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -476,10 +477,20 @@ export class MemoService {
   }
 
   public async isMultiUser(memoId: string): Promise<boolean> {
-    const license =
-      await this.communityResolverService.getCollaborationLicenseFromMemoOrFail(
-        memoId
-      );
+    await this.getMemoOrFail(memoId);
+
+    let license: ILicense;
+    try {
+      license =
+        await this.communityResolverService.getCollaborationLicenseFromMemoOrFail(
+          memoId
+        );
+    } catch (error) {
+      // Standalone memos (templates and pre-bind drafts) deliberately have no
+      // parent Collaboration and therefore no inherited entitlement.
+      if (error instanceof EntityNotFoundException) return false;
+      throw error;
+    }
 
     return this.licenseService.isEntitlementEnabled(
       license,

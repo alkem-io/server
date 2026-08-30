@@ -529,7 +529,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_collaboration
     hostname: collaboration
-    image: alkemio/collaboration-service:v0.0.1
+    image: alkemio/collaboration-service:v0.0.3
     depends_on:
       rabbitmq:
         condition: service_healthy
