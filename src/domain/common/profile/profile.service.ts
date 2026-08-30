@@ -229,6 +229,10 @@ export class ProfileService {
     profileOrig: IProfile,
     profileData: UpdateProfileInput
   ): Promise<IProfile> {
+    // The returned profile intentionally omits storageBucket. That relation
+    // cascades, so loading it here would make every profile update traverse
+    // owned storage rows. Callers that need its id after this update must
+    // preserve the id before calling this method.
     const profile = await this.getProfileOrFail(profileOrig.id, {
       relations: {
         references: true,
