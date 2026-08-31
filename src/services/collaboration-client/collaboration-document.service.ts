@@ -6,6 +6,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import * as Y from 'yjs';
 import {
   CollaborationDocumentSession,
+  CollaborationSessionEndError,
   DocumentPurgingError,
   ReadOnlyRoomError,
   UpdateRejectedError,
@@ -120,6 +121,8 @@ export class CollaborationDocumentService {
           err instanceof DocumentPurgingError ||
           err instanceof ReadOnlyRoomError ||
           err instanceof UpdateRejectedError ||
+          (err instanceof CollaborationSessionEndError &&
+            err.disposition !== 'transient') ||
           update === null ||
           attempt === this.maxResendRetries
         ) {
