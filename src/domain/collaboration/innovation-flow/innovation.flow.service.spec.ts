@@ -477,6 +477,7 @@ describe('InnovationFlowService', () => {
         'intent',
         'createPost',
         'applicationButton',
+        'search',
         'index',
       ]);
     });
