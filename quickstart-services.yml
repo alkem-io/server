@@ -801,15 +801,39 @@ services:
       - aliasgroup1=http://traefik
       - username=admin
       - password=admin
-      - extra_params=--o:ssl.enable=false --o:net.proto=IPv4 --o:security.seccomp=false --o:security.capabilities=false --o:quarantine_files[@enable]=true
+      - extra_params=--o:ssl.enable=false --o:net.proto=IPv4 --o:quarantine_files[@enable]=true
       - DONT_GEN_SSL_CERT=1
+    # Explicit least-privilege baseline. `cap_add` alone is additive on top of
+    # Docker's default set, so without `cap_drop: ALL` the container would
+    # silently keep MKNOD, SETUID, CHOWN, NET_RAW and the rest. Drop everything,
+    # then add back only what Collabora provably needs.
+    cap_drop:
+      - ALL
     cap_add:
-      - MKNOD
+      # Collabora needs both of these to build its per-document chroot jails,
+      # and it needs them together — verified against 26.04.2.4.1 with a
+      # drop-ALL baseline:
+      #   drop ALL + SYS_ADMIN              -> chroot() fails EPERM, kit crash-loop
+      #   drop ALL + SYS_ADMIN + SYS_CHROOT -> jails build, export works
+      #   ... + MKNOD                       -> no change, so MKNOD is NOT needed
+      #
+      # These grants and the removal of --o:security.capabilities=false above are
+      # a single indivisible change: without the capabilities, coolforkit cannot
+      # enter a jail and no kit starts at all.
+      #
+      # Unjailed, Collabora resolves a jail-relative temp path
+      # (/tmp/user/docs/<id>) as a literal container path that nothing creates.
+      # The mkdir fails with ENOENT and takes the Kit process down mid-export,
+      # ending the editing session for everyone in the document (alkem-io/server#6381).
+      #
+      # Both are held only while the jail is constructed: the kit that actually
+      # parses the untrusted document logs
+      # "Initialized jail nodes, dropped caps. Final caps are: =".
+      - SYS_ADMIN
+      - SYS_CHROOT
     tmpfs:
       # World-writable (mode=1777) so the non-root 'cool' user can create
-      # per-session jails here without CAP_SYS_ADMIN (we run with
-      # --o:security.capabilities=false for K8s compatibility, which disables
-      # coolmount's bind-mount path).
+      # per-session jails here.
       - /opt/cool/child-roots:exec,mode=1777,size=512m
     restart: unless-stopped
     networks:
