@@ -156,6 +156,49 @@ describe('DocumentService', () => {
     });
   });
 
+  describe('deleteDocumentDbOnly', () => {
+    it('cleans up server-owned entities via the passed EntityManager and never calls the file-service', async () => {
+      const document = {
+        id: 'doc-1',
+        externalID: 'ext-1',
+        authorization: { id: 'auth-1' },
+        tagset: { id: 'tagset-1' },
+      };
+      (documentRepository.findOne as Mock).mockResolvedValue(document);
+      (authorizationPolicyService.deleteById as Mock).mockResolvedValue(
+        undefined
+      );
+      (tagsetService.removeTagset as Mock).mockResolvedValue(undefined);
+      const em = {} as any;
+
+      const result = await service.deleteDocumentDbOnly({ ID: 'doc-1' }, em);
+
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+      expect(authorizationPolicyService.deleteById).toHaveBeenCalledWith(
+        'auth-1',
+        em
+      );
+      expect(tagsetService.removeTagset).toHaveBeenCalledWith('tagset-1', em);
+      expect(result.documentID).toBe('doc-1');
+    });
+
+    it('skips authorization/tagset cleanup when the document has neither', async () => {
+      const document = {
+        id: 'doc-2',
+        externalID: 'ext-2',
+        authorization: undefined,
+        tagset: undefined,
+      };
+      (documentRepository.findOne as Mock).mockResolvedValue(document);
+      const em = {} as any;
+
+      await service.deleteDocumentDbOnly({ ID: 'doc-2' }, em);
+
+      expect(authorizationPolicyService.deleteById).not.toHaveBeenCalled();
+      expect(tagsetService.removeTagset).not.toHaveBeenCalled();
+    });
+  });
+
   // ── getDocumentOrFail ───────────────────────────────────────────
 
   describe('getDocumentOrFail', () => {
