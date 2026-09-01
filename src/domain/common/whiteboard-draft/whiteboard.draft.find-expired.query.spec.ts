@@ -7,7 +7,7 @@ import {
   OneToOne,
   PrimaryColumn,
 } from 'typeorm';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 /**
  * Regression coverage for the whiteboard-draft sweep crash — Postgres 42703
@@ -55,10 +55,16 @@ describe('findExpired sweep query (real TypeORM SQL generation)', () => {
     entities: [DraftProbeAuthorization, DraftProbeWhiteboard],
     synchronize: false,
   });
-  // Build entity metadata without opening a connection (initialize() would try
-  // to connect, and neither CI nor this test has a database). buildMetadatas is
-  // `protected`, but it is all we need to generate SQL offline via getSql().
-  (dataSource as unknown as { buildMetadatas(): void }).buildMetadatas();
+  beforeAll(async () => {
+    // Build entity metadata without opening a connection (initialize() would
+    // try to connect, and neither CI nor this test has a database). It is all
+    // we need to generate SQL offline via getSql(). buildMetadatas is
+    // `protected` and async — await it so entityMetadatas is populated before
+    // any createQueryBuilder()/getMetadata() call runs.
+    await (
+      dataSource as unknown as { buildMetadatas(): Promise<void> }
+    ).buildMetadatas();
+  });
 
   it('the OLD find-options shape leaves the ORDER BY column out of the projection', () => {
     // Exactly what `repository.find({ select: { id: true },
