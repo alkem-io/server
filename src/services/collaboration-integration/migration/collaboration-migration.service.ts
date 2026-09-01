@@ -49,6 +49,25 @@ const Y = nodeRequire('yjs') as typeof import('yjs');
 
 const DEFAULT_BATCH_SIZE = 200;
 
+/** Stable operator-facing reason, including structured errors with empty prose. */
+const migrationErrorReason = (error: unknown): string => {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+  if (error && typeof error === 'object') {
+    const code = Reflect.get(error, 'code');
+    if (typeof code === 'string' && code.trim()) {
+      return code;
+    }
+    const name = Reflect.get(error, 'name');
+    if (typeof name === 'string' && name.trim()) {
+      return name;
+    }
+  }
+  const fallback = String(error).trim();
+  return fallback || 'Unknown migration error';
+};
+
 /** The one canonical top-level Y root of a memo doc — a `Y.XmlFragment` named this. */
 const MEMO_ROOT = 'default';
 
@@ -407,7 +426,7 @@ export class CollaborationMigrationService {
         summary.failed++;
         summary.failedDocuments.push({
           id: record.id,
-          reason: error instanceof Error ? error.message : String(error),
+          reason: migrationErrorReason(error),
         });
         this.logger.error?.(
           {
@@ -472,7 +491,7 @@ export class CollaborationMigrationService {
         summary.failed++;
         summary.failedDocuments.push({
           id: record.id,
-          reason: error instanceof Error ? error.message : String(error),
+          reason: migrationErrorReason(error),
         });
         this.logger.error?.(
           {
