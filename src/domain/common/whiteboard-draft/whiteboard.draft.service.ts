@@ -200,7 +200,9 @@ export class WhiteboardDraftService {
     const rows = await this.repository
       .createQueryBuilder('whiteboard')
       .select('whiteboard.id', 'id')
-      .where('whiteboard.draftExpiresAt <= :now', { now: new Date() })
+      // Same expiry boundary as cleanupExpired's locked re-read, expressed the
+      // same way, so the two never drift.
+      .where({ draftExpiresAt: LessThanOrEqual(new Date()) })
       .orderBy('whiteboard.draftExpiresAt', 'ASC')
       .limit(limit)
       .getRawMany<{ id: string }>();

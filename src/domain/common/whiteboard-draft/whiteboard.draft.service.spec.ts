@@ -8,6 +8,7 @@ import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteb
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import {
   DataSource,
+  FindOperator,
   QueryRunner,
   Repository,
   SelectQueryBuilder,
@@ -501,10 +502,15 @@ describe('WhiteboardDraftService', () => {
       'whiteboard.id',
       'id'
     );
-    expect(expiredQueryBuilder.where).toHaveBeenCalledWith(
-      'whiteboard.draftExpiresAt <= :now',
-      expect.objectContaining({ now: expect.any(Date) })
-    );
+    // Expiry predicate: draftExpiresAt <= now, the same LessThanOrEqual operator
+    // cleanupExpired's locked re-read uses.
+    const whereArg = vi.mocked(expiredQueryBuilder.where).mock
+      .calls[0]?.[0] as {
+      draftExpiresAt: FindOperator<Date>;
+    };
+    expect(whereArg.draftExpiresAt).toBeInstanceOf(FindOperator);
+    expect(whereArg.draftExpiresAt.type).toBe('lessThanOrEqual');
+    expect(whereArg.draftExpiresAt.value).toBeInstanceOf(Date);
     expect(expiredQueryBuilder.orderBy).toHaveBeenCalledWith(
       'whiteboard.draftExpiresAt',
       'ASC'
