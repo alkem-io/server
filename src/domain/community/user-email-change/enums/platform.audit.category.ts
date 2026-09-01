@@ -18,4 +18,9 @@ export enum PlatformAuditCategory {
   // FAIL-CLOSED `McpApiKeyAuditService` — unlike PLATFORM_OPERATIONS, a
   // failed audit write here rolls back the key mutation itself.
   MCP_API_KEY = 'mcp_api_key',
+  // Account deletion (self-service or platform-admin): one primary row per
+  // completed deletion, written atomically with the primary-store deletion,
+  // plus one appended row per post-commit external leg (identity removal,
+  // stored-file cleanup, session revocation).
+  ACCOUNT_DELETION = 'account_deletion',
 }

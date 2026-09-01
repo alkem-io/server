@@ -18,6 +18,10 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { IVisual } from '@domain/common/visual/visual.interface';
+import {
+  DELETED_USER_SENTINEL_ID,
+  DELETED_USER_SENTINEL_STORAGE_BUCKET,
+} from '@domain/community/user/account-deletion/deleted.user.sentinel';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator';
@@ -40,6 +44,14 @@ export class ProfileResolverFields {
     @Loader(VisualLoaderCreator, { parentClassRef: Profile })
     loader: ILoader<IVisual[]>
   ): Promise<IVisual | undefined> {
+    // The deleted-user sentinel's profile id (see `UserResolverFields.profile`)
+    // is never a real `profile` row, so every loader below is keyed on an
+    // id that will never resolve. Short-circuit before any of them run,
+    // rather than let a nullable loader resolve to `null` and crash the
+    // array lookup below, or a non-null one reject the whole field.
+    if (profile.id === DELETED_USER_SENTINEL_ID) {
+      return undefined;
+    }
     const visuals = await loader.load(profile.id);
     return visuals.find(v => v.name === type);
   }
@@ -53,6 +65,9 @@ export class ProfileResolverFields {
     @Loader(VisualLoaderCreator, { parentClassRef: Profile })
     loader: ILoader<IVisual[]>
   ): Promise<IVisual[]> {
+    if (profile.id === DELETED_USER_SENTINEL_ID) {
+      return [];
+    }
     return loader.load(profile.id);
   }
 
@@ -64,6 +79,9 @@ export class ProfileResolverFields {
     @Parent() profile: IProfile,
     @Loader(ProfileReferencesLoaderCreator) loader: ILoader<IReference[]>
   ): Promise<IReference[]> {
+    if (profile.id === DELETED_USER_SENTINEL_ID) {
+      return [];
+    }
     return loader.load(profile.id);
   }
 
@@ -80,7 +98,10 @@ export class ProfileResolverFields {
     tagsetName: TagsetReservedName,
     @Loader(ProfileTagsetsLoaderCreator)
     loader: ILoader<ITagset[]>
-  ): Promise<ITagset> {
+  ): Promise<ITagset | undefined> {
+    if (profile.id === DELETED_USER_SENTINEL_ID) {
+      return undefined;
+    }
     const tagsets = await loader.load(profile.id);
     if (!tagsetName) {
       const defaultTagset = tagsets.find(
@@ -116,6 +137,9 @@ export class ProfileResolverFields {
     @Parent() profile: IProfile,
     @Loader(ProfileTagsetsLoaderCreator) loader: ILoader<ITagset[]>
   ): Promise<ITagset[]> {
+    if (profile.id === DELETED_USER_SENTINEL_ID) {
+      return [];
+    }
     return loader.load(profile.id);
   }
 
@@ -126,7 +150,10 @@ export class ProfileResolverFields {
   async location(
     @Parent() profile: IProfile,
     @Loader(ProfileLocationLoaderCreator) loader: ILoader<ILocation>
-  ): Promise<ILocation> {
+  ): Promise<ILocation | undefined> {
+    if (profile.id === DELETED_USER_SENTINEL_ID) {
+      return undefined;
+    }
     return loader.load(profile.id);
   }
 
@@ -138,6 +165,9 @@ export class ProfileResolverFields {
     @Parent() profile: IProfile,
     @Loader(ProfileStorageBucketLoaderCreator) loader: ILoader<IStorageBucket>
   ): Promise<IStorageBucket> {
+    if (profile.id === DELETED_USER_SENTINEL_ID) {
+      return DELETED_USER_SENTINEL_STORAGE_BUCKET;
+    }
     return loader.load(profile.id);
   }
 
@@ -146,6 +176,14 @@ export class ProfileResolverFields {
     description: 'The URL at which this profile can be viewed.',
   })
   async url(@Parent() profile: IProfile): Promise<string> {
+    // The sentinel's profile is never actually viewable — it stands in for
+    // an account that no longer exists — so there is no real URL to
+    // generate; `generateUrlForProfileNotCached` would otherwise fall
+    // through its `ProfileType` switch and throw for the sentinel's
+    // unset `type`.
+    if (profile.id === DELETED_USER_SENTINEL_ID) {
+      return '';
+    }
     return await this.urlGeneratorService.generateUrlForProfile(profile);
   }
 }
