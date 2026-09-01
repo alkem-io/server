@@ -10,7 +10,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LicenseEntitlementUsageService } from '@services/infrastructure/license-entitlement-usage/license.entitlement.usage.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { ILicense } from '../license/license.interface';
 import { CreateLicenseEntitlementInput } from './dto/license.entitlement.dto.create';
 import { LicenseEntitlement } from './license.entitlement.entity';
@@ -55,14 +55,17 @@ export class LicenseEntitlementService {
   }
 
   async deleteEntitlementOrFail(
-    entitlementID: string
+    entitlementID: string,
+    em?: EntityManager
   ): Promise<ILicenseEntitlement | never> {
     const entitlement = await this.getEntitlementOrFail(entitlementID);
 
     const { id } = entitlement;
-    const result = await this.entitlementRepository.remove(
-      entitlement as LicenseEntitlement
-    );
+    const result = em
+      ? await em.remove(entitlement as LicenseEntitlement)
+      : await this.entitlementRepository.remove(
+          entitlement as LicenseEntitlement
+        );
     return {
       ...result,
       id,

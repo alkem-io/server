@@ -801,15 +801,51 @@ services:
       - aliasgroup1=http://traefik
       - username=admin
       - password=admin
-      - extra_params=--o:ssl.enable=false --o:net.proto=IPv4 --o:security.seccomp=false --o:security.capabilities=false --o:quarantine_files[@enable]=true
+      - extra_params=--o:ssl.enable=false --o:net.proto=IPv4 --o:quarantine_files[@enable]=true
       - DONT_GEN_SSL_CERT=1
+    # Explicit least-privilege baseline. `cap_add` alone is additive on top of
+    # Docker's default set, so without `cap_drop: ALL` the container would
+    # silently keep MKNOD, SETUID, CHOWN, NET_RAW and the rest. Drop everything,
+    # then add back only what Collabora provably needs.
+    cap_drop:
+      - ALL
     cap_add:
-      - MKNOD
+      # Collabora picks its forkit at RUNTIME depending on whether it can create
+      # a user namespace, and the two modes need different capabilities. This
+      # set is the union, so the same list works on every runtime:
+      #
+      #   userns available -> coolforkit-ns   (bind-mounted jails)
+      #   userns blocked   -> coolforkit-caps (additionally needs CHOWN, FOWNER)
+      #
+      # Both export the same document to a byte-identical 57,375-byte PDF.
+      #
+      # SYS_ADMIN + SYS_CHROOT alone is enough HERE (Docker Desktop always has
+      # user namespaces) but NOT on a host that blocks them: coolwsd falls back
+      # to coolforkit-caps and dies with "Failed to spawn coolforkit" /
+      # "waitpid failed (ECHILD)" / exit 70. That is what broke the k3s dev
+      # cluster (alkem-io/dev-orchestration#82). Keeping the full union here
+      # means local dev matches the deployed manifests instead of quietly
+      # depending on Docker Desktop's more permissive runtime.
+      #
+      # These grants and the removal of --o:security.capabilities=false above are
+      # a single indivisible change: without the capabilities, coolforkit cannot
+      # enter a jail and no kit starts at all.
+      #
+      # Unjailed, Collabora resolves a jail-relative temp path
+      # (/tmp/user/docs/<id>) as a literal container path that nothing creates.
+      # The mkdir fails with ENOENT and takes the Kit process down mid-export,
+      # ending the editing session for everyone in the document (alkem-io/server#6381).
+      #
+      # Both are held only while the jail is constructed: the kit that actually
+      # parses the untrusted document logs
+      # "Initialized jail nodes, dropped caps. Final caps are: =".
+      - SYS_ADMIN
+      - SYS_CHROOT
+      - CHOWN
+      - FOWNER
     tmpfs:
       # World-writable (mode=1777) so the non-root 'cool' user can create
-      # per-session jails here without CAP_SYS_ADMIN (we run with
-      # --o:security.capabilities=false for K8s compatibility, which disables
-      # coolmount's bind-mount path).
+      # per-session jails here.
       - /opt/cool/child-roots:exec,mode=1777,size=512m
     restart: unless-stopped
     networks:
