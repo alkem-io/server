@@ -52,6 +52,7 @@ describe('Whiteboard GraphQL content boundary', () => {
       expect.objectContaining({
         sourceWhiteboardID: expect.anything(),
         sourceCalloutID: expect.anything(),
+        draftWhiteboardID: expect.anything(),
         clearWhiteboardContent: expect.anything(),
       })
     );

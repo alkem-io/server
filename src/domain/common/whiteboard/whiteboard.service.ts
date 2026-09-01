@@ -21,6 +21,7 @@ import {
   CollaborationMetadata,
   CollaborationMetadataUpdate,
 } from '@domain/common/collaboration-metadata';
+import type { ILicense } from '@domain/common/license/license.interface';
 import { IProfile } from '@domain/common/profile';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -959,10 +960,20 @@ export class WhiteboardService {
   }
 
   public async isMultiUser(whiteboardId: string): Promise<boolean> {
-    const license =
-      await this.communityResolverService.getCollaborationLicenseFromWhiteboardOrFail(
-        whiteboardId
-      );
+    await this.getWhiteboardOrFail(whiteboardId);
+
+    let license: ILicense;
+    try {
+      license =
+        await this.communityResolverService.getCollaborationLicenseFromWhiteboardOrFail(
+          whiteboardId
+        );
+    } catch (error) {
+      // Standalone whiteboards (templates and pre-bind drafts) deliberately
+      // have no parent Collaboration and therefore no inherited entitlement.
+      if (error instanceof EntityNotFoundException) return false;
+      throw error;
+    }
 
     return this.licenseService.isEntitlementEnabled(
       license,

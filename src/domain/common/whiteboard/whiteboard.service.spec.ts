@@ -1,5 +1,5 @@
 import { createRequire } from 'node:module';
-import { ProfileType } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
@@ -553,6 +553,12 @@ describe('WhiteboardService', () => {
   });
 
   describe('isMultiUser', () => {
+    beforeEach(() => {
+      whiteboardRepository.findOne!.mockResolvedValue({
+        id: 'wb-1',
+      } as Whiteboard);
+    });
+
     it('should return true when multi-user entitlement is enabled', async () => {
       const mockLicense = { id: 'license-1' } as ILicense;
       vi.mocked(
@@ -586,6 +592,55 @@ describe('WhiteboardService', () => {
       const result = await service.isMultiUser('wb-1');
 
       expect(result).toBe(false);
+    });
+
+    it('returns false when the whiteboard has no parent collaboration', async () => {
+      vi.mocked(
+        communityResolverService.getCollaborationLicenseFromWhiteboardOrFail
+      ).mockRejectedValue(
+        new EntityNotFoundException(
+          'Unable to find Collaboration with License for whiteboard',
+          LogContext.COLLABORATION
+        )
+      );
+
+      await expect(service.isMultiUser('standalone-wb')).resolves.toBe(false);
+      expect(licenseService.isEntitlementEnabled).not.toHaveBeenCalled();
+    });
+
+    it('propagates not found for an unknown whiteboard', async () => {
+      whiteboardRepository.findOne!.mockResolvedValue(null);
+
+      await expect(service.isMultiUser('missing-wb')).rejects.toThrow(
+        EntityNotFoundException
+      );
+      expect(
+        communityResolverService.getCollaborationLicenseFromWhiteboardOrFail
+      ).not.toHaveBeenCalled();
+    });
+
+    it('propagates a missing entitlement from an attached license', async () => {
+      vi.mocked(
+        communityResolverService.getCollaborationLicenseFromWhiteboardOrFail
+      ).mockResolvedValue({ id: 'license-1' } as ILicense);
+      const failure = new EntityNotFoundException(
+        'Entitlement not found',
+        LogContext.LICENSE
+      );
+      vi.mocked(licenseService.isEntitlementEnabled).mockImplementation(() => {
+        throw failure;
+      });
+
+      await expect(service.isMultiUser('wb-1')).rejects.toBe(failure);
+    });
+
+    it('propagates unexpected entitlement lookup failures', async () => {
+      const failure = new Error('database unavailable');
+      vi.mocked(
+        communityResolverService.getCollaborationLicenseFromWhiteboardOrFail
+      ).mockRejectedValue(failure);
+
+      await expect(service.isMultiUser('wb-1')).rejects.toBe(failure);
     });
   });
 
