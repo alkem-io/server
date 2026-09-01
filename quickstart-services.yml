@@ -810,12 +810,22 @@ services:
     cap_drop:
       - ALL
     cap_add:
-      # Collabora needs both of these to build its per-document chroot jails,
-      # and it needs them together — verified against 26.04.2.4.1 with a
-      # drop-ALL baseline:
-      #   drop ALL + SYS_ADMIN              -> chroot() fails EPERM, kit crash-loop
-      #   drop ALL + SYS_ADMIN + SYS_CHROOT -> jails build, export works
-      #   ... + MKNOD                       -> no change, so MKNOD is NOT needed
+      # Collabora picks its forkit at RUNTIME depending on whether it can create
+      # a user namespace, and the two modes need different capabilities. This
+      # set is the union, so the same list works on every runtime:
+      #
+      #   userns available -> coolforkit-ns   (bind-mounted jails)
+      #   userns blocked   -> coolforkit-caps (additionally needs CHOWN, FOWNER)
+      #
+      # Both export the same document to a byte-identical 57,375-byte PDF.
+      #
+      # SYS_ADMIN + SYS_CHROOT alone is enough HERE (Docker Desktop always has
+      # user namespaces) but NOT on a host that blocks them: coolwsd falls back
+      # to coolforkit-caps and dies with "Failed to spawn coolforkit" /
+      # "waitpid failed (ECHILD)" / exit 70. That is what broke the k3s dev
+      # cluster (alkem-io/dev-orchestration#82). Keeping the full union here
+      # means local dev matches the deployed manifests instead of quietly
+      # depending on Docker Desktop's more permissive runtime.
       #
       # These grants and the removal of --o:security.capabilities=false above are
       # a single indivisible change: without the capabilities, coolforkit cannot
@@ -831,6 +841,8 @@ services:
       # "Initialized jail nodes, dropped caps. Final caps are: =".
       - SYS_ADMIN
       - SYS_CHROOT
+      - CHOWN
+      - FOWNER
     tmpfs:
       # World-writable (mode=1777) so the non-root 'cool' user can create
       # per-session jails here.
