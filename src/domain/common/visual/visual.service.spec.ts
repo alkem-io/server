@@ -181,7 +181,8 @@ describe('VisualService', () => {
       const result = await service.deleteVisual({ ID: 'v-1' });
 
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
-        visual.authorization
+        visual.authorization,
+        undefined
       );
       expect(result.id).toBe('v-1');
     });

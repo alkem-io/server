@@ -4,7 +4,7 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import {
   CreateReferenceInput,
@@ -107,17 +107,20 @@ export class ReferenceService {
     return reference;
   }
 
-  async deleteReference(deleteData: DeleteReferenceInput): Promise<IReference> {
+  async deleteReference(
+    deleteData: DeleteReferenceInput,
+    em?: EntityManager
+  ): Promise<IReference> {
     const referenceID = deleteData.ID;
     const reference = await this.getReferenceOrFail(referenceID);
 
     if (reference.authorization)
-      await this.authorizationPolicyService.delete(reference.authorization);
+      await this.authorizationPolicyService.delete(reference.authorization, em);
 
     const { id } = reference;
-    const result = await this.referenceRepository.remove(
-      reference as Reference
-    );
+    const result = em
+      ? await em.remove(reference as Reference)
+      : await this.referenceRepository.remove(reference as Reference);
     return {
       ...result,
       id,

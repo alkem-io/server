@@ -6,7 +6,6 @@ export * from './organization/in.app.notification.payload.organization.message.r
 export * from './platform/in.app.notification.payload.platform.forum.discussion.resolver.fields';
 export * from './platform/in.app.notification.payload.platform.global.role.change.resolver.fields';
 // Platform Payload Field Resolvers
-export * from './platform/in.app.notification.payload.platform.user.profile.removed.resolver.fields';
 export * from './space/in.app.notification.payload.space.collaboration.callout.comment.resolver.fields';
 export * from './space/in.app.notification.payload.space.collaboration.callout.post.comment.resolver.fields';
 export * from './space/in.app.notification.payload.space.collaboration.callout.reaction.resolver.fields';
