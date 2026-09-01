@@ -38,4 +38,15 @@ export enum PlatformAuditOutcome {
   // MCP API key lifecycle (workspace#038).
   KEY_MINTED = 'key_minted',
   KEY_REVOKED = 'key_revoked',
+  // Account deletion — primary outcome (written inside the deletion
+  // transaction) and the outcomes of the post-commit external legs it
+  // fans out to. A leg failure is recorded here and never fails the
+  // deletion itself; `session_invalidation_failed` (above) is reused for a
+  // failed session-revocation leg rather than adding a synonym.
+  ACCOUNT_DELETED = 'account_deleted',
+  IDENTITY_DELETION_COMPLETED = 'identity_deletion_completed',
+  IDENTITY_DELETION_FAILED = 'identity_deletion_failed',
+  FILE_BYTES_CLEANUP_COMPLETED = 'file_bytes_cleanup_completed',
+  FILE_BYTES_CLEANUP_FAILED = 'file_bytes_cleanup_failed',
+  SESSION_REVOCATION_COMPLETED = 'session_revocation_completed',
 }

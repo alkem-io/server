@@ -430,6 +430,59 @@ describe('NotificationExternalAdapter', () => {
       expect(result.user.displayName).toBe('Removed User');
       expect(result.user.email).toBe('removed@test.com');
     });
+
+    it('skips the triggeredBy lookup when a pre-resolved payload is supplied (self-deletion)', async () => {
+      vi.mocked(configService.get).mockReturnValue('https://platform.test');
+      vi.mocked(urlGeneratorService.createUrlForUserNameID).mockReturnValue(
+        '/user/1'
+      );
+      const preResolved = {
+        id: 'self-1',
+        firstName: 'Self',
+        lastName: 'Deleter',
+        email: 'self@test.com',
+        profile: { displayName: 'Self Deleter', url: '/user/self-1' },
+        type: 'USER',
+      } as any;
+
+      const result = await adapter.buildPlatformUserRemovedNotificationPayload(
+        NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED,
+        'self-1',
+        [],
+        {
+          profile: { displayName: 'Self Deleter' },
+          email: 'self@test.com',
+        } as any,
+        preResolved
+      );
+
+      expect(userLookupService.getUserByIdOrFail).not.toHaveBeenCalled();
+      expect(result.triggeredBy).toEqual(preResolved);
+    });
+  });
+
+  describe('createUserPayloadFromUser', () => {
+    it('builds a UserPayload from an already-loaded IUser with no DB lookup', () => {
+      vi.mocked(urlGeneratorService.createUrlForUserNameID).mockReturnValue(
+        '/user/self-1'
+      );
+
+      const result = adapter.createUserPayloadFromUser({
+        id: 'self-1',
+        firstName: 'Self',
+        lastName: 'Deleter',
+        email: 'self@test.com',
+        nameID: 'self-1',
+        profile: { displayName: 'Self Deleter' },
+      } as any);
+
+      expect(userLookupService.getUserByIdOrFail).not.toHaveBeenCalled();
+      expect(result).toMatchObject({
+        id: 'self-1',
+        email: 'self@test.com',
+        profile: { displayName: 'Self Deleter', url: '/user/self-1' },
+      });
+    });
   });
 
   // A user row with a null profile used to make these payload builders throw a
