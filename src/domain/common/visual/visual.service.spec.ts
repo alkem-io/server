@@ -327,10 +327,10 @@ describe('VisualService', () => {
       const result = service.createVisualBanner();
 
       expect(result.name).toBe(VisualType.BANNER);
-      expect(result.minWidth).toBe(1536);
+      expect(result.minWidth).toBe(1200);
       expect(result.maxWidth).toBe(3840);
       // Height bounds span the whole 6-10 aspect-ratio range, not just 6:1.
-      expect(result.minHeight).toBe(154);
+      expect(result.minHeight).toBe(120);
       expect(result.maxHeight).toBe(640);
       expect(result.aspectRatio).toBe(6);
     });
