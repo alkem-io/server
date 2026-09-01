@@ -224,4 +224,92 @@ describe('AccountLookupService', () => {
       expect(result).toBe(false);
     });
   });
+
+  describe('getAccountResourceBlockers', () => {
+    it('itemizes every resource kind with its display name', async () => {
+      const mockAccount = {
+        id: 'account-1',
+        spaces: [
+          {
+            id: 'space-1',
+            nameID: 'space-one',
+            profile: { displayName: 'Space One' },
+          },
+        ],
+        virtualContributors: [
+          { id: 'vc-1', nameID: 'vc-one', profile: { displayName: 'VC One' } },
+        ],
+        innovationPacks: [],
+        innovationHubs: [],
+      } as unknown as IAccount;
+      vi.spyOn(entityManager, 'findOne').mockResolvedValue(mockAccount);
+
+      const result = await service.getAccountResourceBlockers('account-1', {
+        cap: 25,
+      });
+
+      expect(result.truncated).toBe(false);
+      expect(result.blockers).toEqual([
+        {
+          kind: 'ACCOUNT_SPACE',
+          resourceID: 'space-1',
+          displayName: 'Space One',
+        },
+        {
+          kind: 'ACCOUNT_VIRTUAL_CONTRIBUTOR',
+          resourceID: 'vc-1',
+          displayName: 'VC One',
+        },
+      ]);
+      expect(result.totals).toEqual([
+        { kind: 'ACCOUNT_SPACE', total: 1 },
+        { kind: 'ACCOUNT_VIRTUAL_CONTRIBUTOR', total: 1 },
+        { kind: 'ACCOUNT_INNOVATION_PACK', total: 0 },
+        { kind: 'ACCOUNT_INNOVATION_HUB', total: 0 },
+      ]);
+    });
+
+    it('caps the blocker list but keeps totals accurate and flags truncation', async () => {
+      const manySpaces = Array.from({ length: 30 }, (_, i) => ({
+        id: `space-${i}`,
+        nameID: `space-${i}`,
+        profile: { displayName: `Space ${i}` },
+      }));
+      const mockAccount = {
+        id: 'account-1',
+        spaces: manySpaces,
+        virtualContributors: [],
+        innovationPacks: [],
+        innovationHubs: [],
+      } as unknown as IAccount;
+      vi.spyOn(entityManager, 'findOne').mockResolvedValue(mockAccount);
+
+      const result = await service.getAccountResourceBlockers('account-1', {
+        cap: 25,
+      });
+
+      expect(result.truncated).toBe(true);
+      expect(result.blockers).toHaveLength(25);
+      expect(result.totals).toEqual(
+        expect.arrayContaining([{ kind: 'ACCOUNT_SPACE', total: 30 }])
+      );
+    });
+
+    it('falls back to nameID when the profile is not loaded', async () => {
+      const mockAccount = {
+        id: 'account-1',
+        spaces: [{ id: 'space-1', nameID: 'space-one' }],
+        virtualContributors: [],
+        innovationPacks: [],
+        innovationHubs: [],
+      } as unknown as IAccount;
+      vi.spyOn(entityManager, 'findOne').mockResolvedValue(mockAccount);
+
+      const result = await service.getAccountResourceBlockers('account-1', {
+        cap: 25,
+      });
+
+      expect(result.blockers[0].displayName).toBe('space-one');
+    });
+  });
 });
