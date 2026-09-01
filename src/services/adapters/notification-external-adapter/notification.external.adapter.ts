@@ -966,12 +966,14 @@ export class NotificationExternalAdapter {
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],
-    user: IUser
+    user: IUser,
+    triggeredByPayload?: UserPayload
   ): Promise<NotificationEventPayloadPlatformUserRemoved> {
     const basePayload = await this.buildBaseEventPayload(
       eventType,
       triggeredBy,
-      recipients
+      recipients,
+      triggeredByPayload
     );
     const result: NotificationEventPayloadPlatformUserRemoved = {
       user: {
@@ -1319,9 +1321,11 @@ export class NotificationExternalAdapter {
   private async buildBaseEventPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
-    recipients: IUser[]
+    recipients: IUser[],
+    triggeredByPayload?: UserPayload
   ): Promise<BaseEventPayload> {
-    const contributor = await this.getUserPayloadOrFail(triggeredBy);
+    const contributor =
+      triggeredByPayload ?? (await this.getUserPayloadOrFail(triggeredBy));
     const result: BaseEventPayload = {
       eventType,
       triggeredBy: contributor,
@@ -1428,7 +1432,14 @@ export class NotificationExternalAdapter {
     return result;
   }
 
-  private createUserPayloadFromUser(user: IUser): UserPayload {
+  /**
+   * Builds a `UserPayload` straight from an already-loaded `IUser`, with no
+   * DB lookup. Exposed for callers that must resolve a notification's
+   * initiator payload BEFORE an action that removes the initiator's own row
+   * — e.g. self-account deletion, where the initiator IS the departed user
+   * and a post-deletion lookup by id would fail.
+   */
+  public createUserPayloadFromUser(user: IUser): UserPayload {
     return {
       id: user.id,
       firstName: user.firstName,

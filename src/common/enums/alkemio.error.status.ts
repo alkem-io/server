@@ -76,4 +76,14 @@ export enum AlkemioErrorStatus {
   STORAGE_SERVICE_UNAVAILABLE = 'STORAGE_SERVICE_UNAVAILABLE',
   SESSION_STORE_UNAVAILABLE = 'SESSION_STORE_UNAVAILABLE',
   URL_RESOLVER_ERROR = 'URL_RESOLVER_ERROR',
+  // Self-account deletion: the calling session is older than the privileged
+  // window (or its issue time is missing/unparseable — fail closed). Distinct
+  // from SESSION_EXPIRED so the client can route specifically to the
+  // re-authentication round trip rather than a generic sign-in prompt.
+  SESSION_REFRESH_REQUIRED = 'SESSION_REFRESH_REQUIRED',
+  // Self-account deletion: the account still holds a blocking resource (or is
+  // the sole owner of an organization). The client re-runs the pre-flight
+  // read on this code and renders the itemized blocked dialog from the fresh
+  // answer.
+  ACCOUNT_DELETION_BLOCKED = 'ACCOUNT_DELETION_BLOCKED',
 }

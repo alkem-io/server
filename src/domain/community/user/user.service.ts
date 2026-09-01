@@ -5,6 +5,7 @@ import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import {
+  AccountDeletionBlockedException,
   EntityNotFoundException,
   ForbiddenException,
   RelationshipNotFoundException,
@@ -42,6 +43,10 @@ import {
   DeleteUserInput,
   UpdateUserInput,
 } from '@domain/community/user';
+import {
+  AccountDeletionBlockerService,
+  AccountDeletionInitiatorBranch,
+} from '@domain/community/user/account-deletion/account.deletion.blocker.service';
 import { IAccount } from '@domain/space/account/account.interface';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
@@ -55,7 +60,12 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { getReadOnlyDefaultCapabilityToggles } from '@services/mcp-server/capabilities/assistant.capability.classification';
 import { InstrumentService } from '@src/apm/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, QueryFailedError, Repository } from 'typeorm';
+import {
+  EntityManager,
+  FindOneOptions,
+  QueryFailedError,
+  Repository,
+} from 'typeorm';
 import { RoleSetRoleSelectionCredentials } from '../../access/role-set/dto/role.set.dto.role.selection.credentials';
 import { RoleSetRoleWithParentCredentials } from '../../access/role-set/dto/role.set.dto.role.with.parent.credentials';
 import { UserLookupService } from '../user-lookup/user.lookup.service';
@@ -68,6 +78,24 @@ import { UsersQueryArgs } from './dto/users.query.args';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
 
+/**
+ * Outcomes of `UserService.revokeUserSessionsAndIdentity`'s two post-commit
+ * legs, so a caller can record each distinctly rather than only knowing
+ * that "something" failed.
+ */
+export interface UserPostDeletionLegOutcomes {
+  /** False if EITHER the OIDC session revocation or the Kratos SSO session
+   * invalidation call failed. Both share one outcome value on the audit
+   * trail (`session_revocation_completed` / the existing
+   * `session_invalidation_failed`). */
+  sessionRevocationSucceeded: boolean;
+  /** True iff Kratos identity deletion was attempted (gated on
+   * `deleteData.deleteIdentity`). */
+  identityDeletionAttempted: boolean;
+  /** Meaningful only when `identityDeletionAttempted` is true. */
+  identityDeletionSucceeded: boolean;
+}
+
 @InstrumentService()
 @Injectable()
 export class UserService {
@@ -79,6 +107,7 @@ export class UserService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private storageAggregatorService: StorageAggregatorService,
     private accountLookupService: AccountLookupService,
+    private accountDeletionBlockerService: AccountDeletionBlockerService,
     private userLookupService: UserLookupService,
     private actorLookupService: ActorLookupService,
     private actorService: ActorService,
@@ -530,8 +559,22 @@ export class UserService {
       );
   }
 
-  async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
-    const userID = deleteData.ID;
+  /**
+   * Loads the user with its child entities, validates them, refuses when
+   * the account still holds a resource, and invalidates the actor-context
+   * cache — the preamble shared by every deletion entry point (`deleteUser`
+   * and the transactional `deleteUserDbOnly`).
+   */
+  /**
+   * Loads the user with its child entities, validates them, and invalidates
+   * the actor-context cache — the load/validate preamble shared by every
+   * deletion entry point. Deliberately does NOT check for blocking
+   * resources: each caller applies its own predicate (`deleteUser` the
+   * original boolean check; `deleteUserDbOnly` the itemized,
+   * initiator-branch-aware one), because they throw different exception
+   * shapes and — on the self branch — check a wider blocker set.
+   */
+  private async loadUserForDeletion(userID: string): Promise<IUser> {
     const user = await this.getUserByIdOrFail(userID, {
       relations: {
         profile: true,
@@ -552,6 +595,14 @@ export class UserService {
       );
     }
 
+    await this.invalidateActorContextCache(user);
+
+    return user;
+  }
+
+  private async loadAndValidateUserForDeletion(userID: string): Promise<IUser> {
+    const user = await this.loadUserForDeletion(userID);
+
     const accountHasResources =
       await this.accountLookupService.areResourcesInAccount(user.accountID);
     if (accountHasResources) {
@@ -560,9 +611,203 @@ export class UserService {
         LogContext.SPACES
       );
     }
+
+    return user;
+  }
+
+  /**
+   * DB-only deletion mode for the account-deletion saga: every primary-store
+   * write joins the caller's transactional EntityManager, and stored-file
+   * bytes are never deleted inline (their external ids are collected and
+   * returned so the caller can delete the actual bytes after commit). The
+   * post-commit external legs (session revocation, Kratos identity) are
+   * deliberately NOT run here — see `revokeUserSessionsAndIdentity` — since
+   * they must run once, after the OUTER transaction (which also deletes the
+   * account) has committed, not after this user-only slice of it.
+   */
+  async deleteUserDbOnly(
+    deleteData: DeleteUserInput,
+    em: EntityManager,
+    branch: AccountDeletionInitiatorBranch
+  ): Promise<{
+    user: IUser;
+    documentIDs: string[];
+    storageBucketIDs: string[];
+  }> {
+    const userID = deleteData.ID;
+    const user = await this.loadUserForDeletion(userID);
+
+    // FR-006: the same predicate that answers the pre-flight read also
+    // authoritatively refuses the mutation, so the two can never drift. The
+    // exception shape differs by branch: the self branch gets the distinct,
+    // client-recognizable ACCOUNT_DELETION_BLOCKED code (so the client
+    // re-runs the pre-flight and renders the itemized dialog); the admin
+    // branch keeps the pre-existing ForbiddenException, unchanged.
+    // Reads `em` so the blocker check observes the same in-flight
+    // transactional snapshot as the deletion writes below it, rather than a
+    // separately-read view that a concurrent resource creation could race.
+    const blockers = await this.accountDeletionBlockerService.getBlockers(
+      userID,
+      user.accountID,
+      branch,
+      em
+    );
+    if (!blockers.canDelete) {
+      if (branch === 'self') {
+        throw new AccountDeletionBlockedException(
+          'Unable to delete User: account is blocked from deletion',
+          LogContext.SPACES,
+          { blockers: blockers.blockers.map(b => b.kind) }
+        );
+      }
+      throw new ForbiddenException(
+        'Unable to delete User: account contains one or more resources',
+        LogContext.SPACES
+      );
+    }
+
     const { id } = user;
 
-    await this.invalidateActorContextCache(user);
+    const profileResult =
+      await this.profileService.deleteProfileForAccountDeletion(
+        user.profile.id,
+        em
+      );
+
+    // Note: Credentials are on Actor (which User extends), will be deleted via cascade
+    await this.authorizationPolicyService.delete(user.authorization!, em);
+
+    const aggregatorResult =
+      await this.storageAggregatorService.deleteForAccountDeletion(
+        user.storageAggregator!.id,
+        em
+      );
+
+    await this.userSettingsService.deleteUserSettings(user.settings!.id, em);
+
+    // Delete actor — cascades to delete the user row via FK (user.id → actor.id ON DELETE CASCADE).
+    // Also cascades to delete credentials (credential.actorID → actor.id ON DELETE CASCADE).
+    await this.actorService.deleteActorById(id, em);
+
+    user.id = id;
+    return {
+      user,
+      documentIDs: [
+        ...profileResult.documentIDs,
+        ...aggregatorResult.documentIDs,
+      ],
+      storageBucketIDs: [
+        ...profileResult.storageBucketIDs,
+        ...aggregatorResult.storageBucketIDs,
+      ],
+    };
+  }
+
+  /**
+   * The post-commit external legs previously inlined at the tail of
+   * `deleteUser` (server#6315), extracted so the account-deletion saga can
+   * call them once, after its own outer transaction commits, and record
+   * their outcomes. Behavior is unchanged: revocation is unconditional and
+   * best-effort; Kratos identity deletion is gated on
+   * `deleteData.deleteIdentity`.
+   */
+  async revokeUserSessionsAndIdentity(
+    user: IUser,
+    deleteData: DeleteUserInput
+  ): Promise<UserPostDeletionLegOutcomes> {
+    const id = user.id;
+    const outcomes: UserPostDeletionLegOutcomes = {
+      sessionRevocationSucceeded: true,
+      identityDeletionAttempted: false,
+      identityDeletionSucceeded: false,
+    };
+
+    if (!user.authenticationID) {
+      return outcomes;
+    }
+
+    try {
+      await this.oidcSessionRevocationService.revokeAllForSub(
+        user.authenticationID,
+        'account_deleted'
+      );
+    } catch (error: any) {
+      outcomes.sessionRevocationSucceeded = false;
+      this.logger.error?.(
+        {
+          message:
+            'Failed to revoke OIDC sessions during user deletion; the deletion still stands',
+          userID: id,
+          authenticationID: user.authenticationID,
+          error: redactError(error),
+        },
+        redactStack(error),
+        LogContext.AUTH
+      );
+    }
+
+    try {
+      await this.kratosService.invalidateAllIdentitySessions(
+        user.authenticationID
+      );
+    } catch (error: any) {
+      outcomes.sessionRevocationSucceeded = false;
+      this.logger.error?.(
+        {
+          message:
+            'Failed to invalidate Kratos identity sessions during user deletion; the deletion still stands',
+          userID: id,
+          authenticationID: user.authenticationID,
+          error: redactError(error),
+        },
+        redactStack(error),
+        LogContext.AUTH
+      );
+    }
+
+    try {
+      await this.kratosService.clearIdentityActorMetadata(
+        user.authenticationID
+      );
+    } catch (error: any) {
+      this.logger.error?.(
+        {
+          message: 'Failed to clear actor metadata from Kratos identity',
+          userID: id,
+          authenticationID: user.authenticationID,
+          error: redactError(error),
+        },
+        redactStack(error),
+        LogContext.AUTH
+      );
+    }
+
+    if (deleteData.deleteIdentity) {
+      outcomes.identityDeletionAttempted = true;
+      try {
+        await this.kratosService.deleteIdentityById(user.authenticationID);
+        outcomes.identityDeletionSucceeded = true;
+      } catch (error: any) {
+        this.logger.error?.(
+          {
+            message: 'Failed to delete Kratos identity during user deletion',
+            userID: id,
+            authenticationID: user.authenticationID,
+            error: redactError(error),
+          },
+          redactStack(error),
+          LogContext.AUTH
+        );
+      }
+    }
+
+    return outcomes;
+  }
+
+  async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
+    const userID = deleteData.ID;
+    const user = await this.loadAndValidateUserForDeletion(userID);
+    const { id } = user;
 
     // All DB deletions in a single transaction so a partial failure
     // does not leave the user in an inconsistent state.
@@ -584,120 +829,13 @@ export class UserService {
     // Note: Conversations belong to the platform Messaging.
     // User's conversation memberships are cleaned up via cascade.
 
-    // server#6315 — session revocation cascade.
-    //
-    // Deleting a user used to leave their BFF/OIDC session alive in Redis, so
-    // the browser kept authenticating against an account that no longer existed
-    // for up to the 30-day absolute ceiling — an access-control failure
-    // (ISO 27001 A.5.18, SOC 2 CC6.2) and an incomplete erasure, since the
-    // session payload caches display name and email (GDPR Art. 17).
-    //
-    // Four properties of this block are deliberate and each has a test:
-    //
-    // - **After the commit, outside the transaction.** A rolled-back deletion
-    //   must not sign anybody out. The transaction closed above.
-    // - **Unconditional.** NOT gated on `deleteData.deleteIdentity` (unlike the
-    //   identity deletion below): a surviving Kratos identity with live
-    //   sessions is exactly the orphan state being fixed.
-    // - **Best-effort.** Neither leg may fail the delete mutation. User
-    //   deletion has broken against Kratos repeatedly (#5350, #5678, #4762,
-    //   #2137), and a security improvement must not become an availability
-    //   regression. Failures are audited by the revocation service and logged
-    //   here; the deletion result is unchanged.
-    // - **Revocation before the Kratos calls.** The BFF session is what
-    //   actually gates the API (Kratos SSO has not since #6288), so if the
-    //   process dies partway through this block, the leg that ran is the one
-    //   that mattered.
-    if (user.authenticationID) {
-      try {
-        await this.oidcSessionRevocationService.revokeAllForSub(
-          user.authenticationID,
-          'account_deleted'
-        );
-      } catch (error: any) {
-        this.logger.error?.(
-          {
-            message:
-              'Failed to revoke OIDC sessions during user deletion; the deletion still stands',
-            userID: id,
-            authenticationID: user.authenticationID,
-            error: redactError(error),
-          },
-          // Scrubbed, not raw: a stack begins with the error's own message, so
-          // logging it unredacted defeats a redacted `message` entirely. The
-          // revocation service exports the guarded pair precisely for this.
-          //
-          // One policy for the whole deletion path — every catch below uses
-          // the same pair. The remaining calls hit the same Kratos client, so
-          // they can surface the same material in an error message.
-          redactStack(error),
-          LogContext.AUTH
-        );
-      }
-
-      // Kills the Kratos SSO session. This method already existed
-      // (`kratos.service.ts`) and was simply never called from here.
-      try {
-        await this.kratosService.invalidateAllIdentitySessions(
-          user.authenticationID
-        );
-      } catch (error: any) {
-        this.logger.error?.(
-          {
-            message:
-              'Failed to invalidate Kratos identity sessions during user deletion; the deletion still stands',
-            userID: id,
-            authenticationID: user.authenticationID,
-            error: redactError(error),
-          },
-          redactStack(error),
-          LogContext.AUTH
-        );
-      }
-    }
-
-    // Kratos identity deletion — outside the DB transaction since it's
-    // an external system call. Uses authenticationID (the Kratos identity
-    // UUID) which is more reliable than email lookup. If authenticationID
-    // is absent the user was never linked to Kratos — skip silently.
-    if (user.authenticationID) {
-      // Intentionally clear actor metadata even when deleteIdentity is false:
-      // the actor no longer exists in the DB, so any surviving Kratos identity
-      // must not carry a stale alkemio_actor_id that would break re-registration.
-      try {
-        await this.kratosService.clearIdentityActorMetadata(
-          user.authenticationID
-        );
-      } catch (error: any) {
-        this.logger.error?.(
-          {
-            message: 'Failed to clear actor metadata from Kratos identity',
-            userID: id,
-            authenticationID: user.authenticationID,
-            error: redactError(error),
-          },
-          redactStack(error),
-          LogContext.AUTH
-        );
-      }
-
-      if (deleteData.deleteIdentity) {
-        try {
-          await this.kratosService.deleteIdentityById(user.authenticationID);
-        } catch (error: any) {
-          this.logger.error?.(
-            {
-              message: 'Failed to delete Kratos identity during user deletion',
-              userID: id,
-              authenticationID: user.authenticationID,
-              error: redactError(error),
-            },
-            redactStack(error),
-            LogContext.AUTH
-          );
-        }
-      }
-    }
+    // server#6315 — session revocation cascade, extracted to
+    // `revokeUserSessionsAndIdentity` so the account-deletion saga can run
+    // it once after ITS OWN outer transaction commits. Same properties as
+    // before: after the commit (the transaction closed above), unconditional
+    // session revocation, best-effort, Kratos identity deletion gated on
+    // `deleteData.deleteIdentity`.
+    await this.revokeUserSessionsAndIdentity(user, deleteData);
 
     // Restore id so callers get the deleted entity's id
     user.id = id;

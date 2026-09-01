@@ -22,6 +22,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
+  EntityManager,
   FindManyOptions,
   FindOneOptions,
   FindOptionsWhere,
@@ -63,7 +64,8 @@ export class InvitationService {
   }
 
   async deleteInvitation(
-    deleteData: DeleteInvitationInput
+    deleteData: DeleteInvitationInput,
+    em?: EntityManager
   ): Promise<IInvitation> {
     const invitationID = deleteData.ID;
     const invitation = await this.getInvitationOrFail(invitationID, {
@@ -71,14 +73,17 @@ export class InvitationService {
         roleSet: true,
       },
     });
-    await this.lifecycleService.deleteLifecycle(invitation.lifecycle.id);
+    await this.lifecycleService.deleteLifecycle(invitation.lifecycle.id, em);
 
     if (invitation.authorization)
-      await this.authorizationPolicyService.delete(invitation.authorization);
+      await this.authorizationPolicyService.delete(
+        invitation.authorization,
+        em
+      );
 
-    const result = await this.invitationRepository.remove(
-      invitation as Invitation
-    );
+    const result = em
+      ? await em.remove(invitation as Invitation)
+      : await this.invitationRepository.remove(invitation as Invitation);
     result.id = invitationID;
 
     if (invitation.invitedActorID && invitation.roleSet) {

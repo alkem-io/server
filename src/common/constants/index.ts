@@ -6,3 +6,4 @@ export * from './forum.constants';
 export * from './innovation.hub.inject.token';
 export * from './providers';
 export * from './rabbitmq.constants';
+export * from './session.constants';
