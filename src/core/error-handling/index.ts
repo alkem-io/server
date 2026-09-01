@@ -1,3 +1,4 @@
+export * from './graphql.error.sanitizer';
 export * from './graphql.exception.filter';
 export * from './http.exception.filter';
 export * from './unhandled.exception.filter';

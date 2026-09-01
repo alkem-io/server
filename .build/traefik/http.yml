@@ -70,40 +70,14 @@ http:
         servers:
           - url: 'http://synapse-admin:80/'
 
-    whiteboard-collaboration:
-      failover:
-        service: whiteboard-collaboration-local
-        fallback: whiteboard-collaboration-compose
-
-    whiteboard-collaboration-compose:
+    # Unified real-time collaboration service (epic 003-unify-collab-yjs).
+    # Replaces the legacy whiteboard-collaboration (4002) + collaborative-document
+    # (4004) backends. Serves both whiteboards and memos over raw WebSocket at
+    # /collab/{documentId}.
+    collaboration:
       loadBalancer:
         servers:
-          - url: 'http://whiteboard-collaboration:4002/'
-        healthCheck:
-          path: /health
-          port: 4005
-          interval: 10s
-          timeout: 3s
-          scheme: http
-
-    # Fallback: host loopback for `npm run dev` local-whiteboard workflow.
-    # Receives traffic only when the primary is unhealthy. Same /health
-    # contract.
-    whiteboard-collaboration-local:
-      loadBalancer:
-        servers:
-          - url: 'http://host.docker.internal:4002/'
-        healthCheck:
-          path: /health
-          port: 4005
-          interval: 10s
-          timeout: 3s
-          scheme: http
-
-    collaborative-document:
-      loadBalancer:
-        servers:
-          - url: 'http://collaborative-document:4004/'
+          - url: 'http://collaboration:4006/'
 
     authorization-evaluation:
       loadBalancer:
@@ -379,30 +353,28 @@ http:
       entryPoints:
         - 'web'
 
-    whiteboard-collaboration:
-      rule: 'PathPrefix(`/api/private/ws`)'
-      service: 'whiteboard-collaboration'
+    # Unified collaboration WebSocket (epic 003-unify-collab-yjs).
+    # The client's UnifiedCollabProvider (y-websocket) opens
+    #   ws://localhost:3000/collab/<documentId>?type=memo|whiteboard
+    # so the path reaches the service VERBATIM (no strip) at /collab/{documentId}.
+    # alkemio-resolve performs forwardAuth and injects the resolved identity into
+    # the `X-Alkemio-Actor-Id` header, which the collaboration-service consumes as
+    # the actor id at the handshake (AUTH_TOKEN_HEADER=X-Alkemio-Actor-Id). The
+    # preceding strip-client-alkemio-headers prevents a client spoofing that header
+    # before the gateway resolves it — same identity-at-gateway pattern as the
+    # file-service router. (The legacy oathkeeper-auth-socket-io middleware was
+    # removed by the develop OIDC cutover.)
+    # Replaces the legacy `whiteboard-collaboration` (/api/private/ws) and
+    # `collaborative-document` (/api/private/hocuspocus) routers.
+    collaboration:
+      rule: 'PathPrefix(`/collab`)'
+      service: 'collaboration'
       middlewares:
-        - strip-api-private-prefix-socket-io
         - strip-client-alkemio-headers
         - alkemio-resolve
       entryPoints:
         - 'web'
-
-    # Direct to hocuspocus. Identity established at the gateway via
-    # `alkemio-resolve` forwardAuth (cookie or Hydra bearer → X-Alkemio-Actor-Id).
-    # Hocuspocus reads that header — no in-service token validation.
-    # `strip-client-alkemio-headers` MUST run first to prevent client-supplied
-    # spoofing of the trusted header.
-    collaborative-document:
-      rule: 'PathPrefix(`/api/private/hocuspocus`)'
-      service: 'collaborative-document'
-      middlewares:
-        - strip-api-private-prefix
-        - strip-client-alkemio-headers
-        - alkemio-resolve
-      entryPoints:
-        - 'web'
+      priority: 150
 
     # 004-web-ai-assistant: browser /api/private/rest/assistant/* → strip full
     # prefix → assistant-service on the host. Identity-at-gateway (OIDC):

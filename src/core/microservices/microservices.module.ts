@@ -1,6 +1,8 @@
 import { APP_ID_PROVIDER } from '@common/app.id.provider';
 import {
   AUTH_RESET_SERVICE,
+  COLLABORATION_LIFECYCLE_SERVICE,
+  COLLABORATION_SERVICE,
   IS_SCHEMA_BOOTSTRAP,
   MATRIX_ADAPTER_SERVICE,
   NOTIFICATIONS_SERVICE,
@@ -9,7 +11,6 @@ import {
   SUBSCRIPTION_ROOM_EVENT,
   SUBSCRIPTION_SUBSPACE_CREATED,
   SUBSCRIPTION_VIRTUAL_UPDATED,
-  WHITEBOARD_COLLABORATION_SERVICE,
 } from '@common/constants/providers';
 import { MessagingQueue } from '@common/enums/messaging.queue';
 import {
@@ -93,8 +94,33 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
-      provide: WHITEBOARD_COLLABORATION_SERVICE,
-      useFactory: clientProxyFactory(MessagingQueue.WHITEBOARD_COLLABORATION),
+      provide: COLLABORATION_SERVICE,
+      useFactory: clientProxyFactory(MessagingQueue.COLLABORATION_SERVICE),
+      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
+    },
+    {
+      provide: COLLABORATION_LIFECYCLE_SERVICE,
+      // Durable QUORUM queue + persistent messages, on a dedicated queue — never
+      // COLLABORATION_SERVICE (the server's own responder).
+      //
+      // FROZEN CONTRACT: the producer declares ONLY this queue, and its arguments must
+      // equal collab-service's main-queue declaration exactly — any difference fails
+      // PRECONDITION_FAILED and the declaring party does not start. x-delivery-limit -1
+      // keeps redelivery unlimited (RabbitMQ 4.0+ otherwise caps a quorum queue at 20
+      // and drops a requeued event). The dead-letter route ('' exchange + '<queue>.dlq'
+      // routing key) diverts a poison Nack(requeue=false) to the DIAGNOSTIC DLQ so a
+      // producer/consumer mismatch shows as queue depth; the producer neither declares
+      // nor consumes that DLQ.
+      useFactory: clientProxyFactory(MessagingQueue.COLLABORATION_LIFECYCLE, {
+        durable: true,
+        persistent: true,
+        queueArguments: {
+          'x-queue-type': 'quorum',
+          'x-delivery-limit': { '!': 'int32', value: -1 },
+          'x-dead-letter-exchange': '',
+          'x-dead-letter-routing-key': `${MessagingQueue.COLLABORATION_LIFECYCLE}.dlq`,
+        },
+      }),
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
@@ -108,7 +134,8 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
     NOTIFICATIONS_SERVICE,
     MATRIX_ADAPTER_SERVICE,
     AUTH_RESET_SERVICE,
-    WHITEBOARD_COLLABORATION_SERVICE,
+    COLLABORATION_SERVICE,
+    COLLABORATION_LIFECYCLE_SERVICE,
     IS_SCHEMA_BOOTSTRAP,
   ],
 })

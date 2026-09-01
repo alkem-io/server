@@ -198,6 +198,31 @@ describe('DocumentService', () => {
     });
   });
 
+  describe('getUserFacingDocumentOrFail', () => {
+    it('returns an authorized user-facing document', async () => {
+      const document = {
+        id: 'public-doc',
+        authorization: { id: 'auth-public' },
+      };
+      (documentRepository.findOne as Mock).mockResolvedValue(document);
+
+      const result = await service.getUserFacingDocumentOrFail('public-doc');
+
+      expect(result).toBe(document);
+    });
+
+    it('hides a policy-less internal file as not found', async () => {
+      (documentRepository.findOne as Mock).mockResolvedValue({
+        id: 'internal-snapshot',
+        authorization: undefined,
+      });
+
+      await expect(
+        service.getUserFacingDocumentOrFail('internal-snapshot')
+      ).rejects.toThrow(EntityNotFoundException);
+    });
+  });
+
   // ── updateDocument ──────────────────────────────────────────────
 
   describe('updateDocument', () => {

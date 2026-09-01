@@ -1,4 +1,6 @@
 import { LogContext } from '@common/enums';
+import type { MaterializedWhiteboardContent } from '@domain/common/whiteboard/whiteboard.service';
+import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -18,6 +20,7 @@ export class CalloutContributionDefaultsService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private profileDocumentsService: ProfileDocumentsService,
+    private whiteboardService: WhiteboardService,
     @InjectRepository(CalloutContributionDefaults)
     private calloutContributionDefaultsRepository: Repository<CalloutContributionDefaults>
   ) {}
@@ -63,22 +66,43 @@ export class CalloutContributionDefaultsService {
   public async materializeCalloutContributionDefaultsContent(
     defaults: ICalloutContributionDefaults,
     storageBucket: IStorageBucket,
-    rollback: () => Promise<unknown>
+    rollback: () => Promise<unknown>,
+    sourceData?: CreateCalloutContributionDefaultsInput
   ): Promise<void> {
-    if (!defaults.postDescription) return;
+    let createdDocumentIDs: string[] = [];
     try {
-      const reuploaded =
-        await this.profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket(
-          defaults.postDescription,
-          storageBucket
-        );
-      if (reuploaded !== defaults.postDescription) {
-        defaults.postDescription = reuploaded;
+      let changed = false;
+      if (defaults.postDescription) {
+        const reuploaded =
+          await this.profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket(
+            defaults.postDescription,
+            storageBucket
+          );
+        if (reuploaded !== defaults.postDescription) {
+          defaults.postDescription = reuploaded;
+          changed = true;
+        }
+      }
+      if (sourceData?.whiteboardContent !== undefined) {
+        const materialized =
+          await this.whiteboardService.materializeContentIntoBucket(
+            sourceData.whiteboardContent,
+            storageBucket.id,
+            sourceData.sourceStorageBucketID
+          );
+        defaults.whiteboardContent = materialized.content;
+        createdDocumentIDs = materialized.createdDocumentIDs;
+        changed = true;
+      }
+      if (changed) {
         await this.calloutContributionDefaultsRepository.save(
           defaults as CalloutContributionDefaults
         );
       }
     } catch (error) {
+      await this.whiteboardService.deleteMaterializedContentDocuments(
+        createdDocumentIDs
+      );
       await rollback().catch(rollbackError => {
         const stack =
           rollbackError instanceof Error ? (rollbackError.stack ?? '') : '';
@@ -97,6 +121,34 @@ export class CalloutContributionDefaultsService {
     }
   }
 
+  public async materializeWhiteboardDefault(
+    sourceData: CreateCalloutContributionDefaultsInput,
+    targetStorageBucketID: string
+  ): Promise<MaterializedWhiteboardContent | undefined> {
+    if (sourceData.whiteboardContent === undefined) {
+      return undefined;
+    }
+    return this.whiteboardService.materializeContentIntoBucket(
+      sourceData.whiteboardContent,
+      targetStorageBucketID,
+      sourceData.sourceStorageBucketID
+    );
+  }
+
+  public async deleteMaterializedWhiteboardDocuments(
+    documentIDs: string[]
+  ): Promise<void> {
+    await this.whiteboardService.deleteMaterializedContentDocuments(
+      documentIDs
+    );
+  }
+
+  public async hasVisibleWhiteboardContent(
+    defaults: ICalloutContributionDefaults
+  ): Promise<boolean> {
+    return this.whiteboardService.hasVisibleContent(defaults.whiteboardContent);
+  }
+
   public updateCalloutContributionDefaults(
     calloutContributionDefaults: ICalloutContributionDefaults,
     calloutContributionDefaultsData: UpdateCalloutContributionDefaultsInput
@@ -111,9 +163,8 @@ export class CalloutContributionDefaultsService {
         calloutContributionDefaultsData.postDescription;
     }
 
-    if (calloutContributionDefaultsData.whiteboardContent) {
-      calloutContributionDefaults.whiteboardContent =
-        calloutContributionDefaultsData.whiteboardContent;
+    if (calloutContributionDefaultsData.clearWhiteboardContent) {
+      calloutContributionDefaults.whiteboardContent = undefined;
     }
 
     return calloutContributionDefaults;

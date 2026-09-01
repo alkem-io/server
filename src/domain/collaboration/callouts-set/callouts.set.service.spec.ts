@@ -13,6 +13,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { actorContextData } from '@test/data/actorContext.mock';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -226,6 +227,7 @@ describe('CalloutsSetService', () => {
         calloutsSet,
         calloutsData,
         storageAggregator,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -244,7 +246,13 @@ describe('CalloutsSetService', () => {
       } as any;
 
       await expect(
-        service.addCallouts(calloutsSet, [], {} as any, 'user-1')
+        service.addCallouts(
+          calloutsSet,
+          [],
+          {} as any,
+          actorContextData.actorContext,
+          'user-1'
+        )
       ).rejects.toThrow(EntityNotInitializedException);
     });
   });
@@ -509,7 +517,11 @@ describe('CalloutsSetService', () => {
       );
       vi.mocked(calloutService.save).mockResolvedValue(savedCallout as any);
 
-      const result = await service.createCallout(calloutsSet, calloutInput);
+      const result = await service.createCallout(
+        calloutsSet,
+        calloutInput,
+        actorContextData.actorContext
+      );
 
       expect(result).toBe(savedCallout);
       expect(calloutService.save).toHaveBeenCalledWith(savedCallout);
@@ -538,7 +550,11 @@ describe('CalloutsSetService', () => {
         id: 'c-1',
       } as any);
 
-      const result = await service.createCallout(calloutsSet, calloutInput);
+      const result = await service.createCallout(
+        calloutsSet,
+        calloutInput,
+        actorContextData.actorContext
+      );
 
       expect(calloutInput.nameID).toBe('generated-name');
       expect(result).toBeDefined();
@@ -853,6 +869,7 @@ describe('CalloutsSetService', () => {
 
       const _result = await service.createCalloutOnCalloutsSet(
         calloutData,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -879,7 +896,11 @@ describe('CalloutsSetService', () => {
       } as any;
 
       await expect(
-        service.createCalloutOnCalloutsSet(calloutData, 'user-1')
+        service.createCalloutOnCalloutsSet(
+          calloutData,
+          actorContextData.actorContext,
+          'user-1'
+        )
       ).rejects.toThrow(ValidationException);
     });
   });

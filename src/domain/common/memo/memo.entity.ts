@@ -1,4 +1,4 @@
-import { ENUM_LENGTH } from '@common/constants';
+import { ENUM_LENGTH, MID_TEXT_LENGTH } from '@common/constants';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
@@ -8,8 +8,38 @@ import { IMemo } from './memo.interface';
 
 @Entity()
 export class Memo extends NameableEntity implements IMemo {
-  @Column('bytea', { nullable: true })
-  content?: Buffer;
+  // The inline `content` column (Yjs-V2 snapshot, `bytea`) is UNMAPPED
+  // (006-collab-content-unification, R2/FR-005), mirroring the Whiteboard entity:
+  // memo content is stored ONLY as a Yjs-V2 snapshot in the document's own storage
+  // bucket, located by `contentPointer`. In Release A the DB column is RETAINED for
+  // the progressive back-fill (migration-only) and dropped only in cleanup after the
+  // back-fill is verified. Mapping it here would make TypeORM SELECT the retained
+  // legacy column on every load.
+
+  /**
+   * The file-service id of this memo's stored Yjs-V2 snapshot — file-service is the
+   * single storage backend for the Alkemio stack. Part of the unified
+   * metadata/index (FR-001).
+   */
+  @Column('varchar', { length: MID_TEXT_LENGTH, nullable: true })
+  contentPointer?: string;
+
+  /** Temporary progressive-rollout marker; removed after the legacy back-fill. */
+  @Column('boolean', { nullable: false, default: true })
+  migrated!: boolean;
+
+  /**
+   * The collaboration content version owned by the collaboration-service room
+   * (the contract `version`). The room bumps it per persisted snapshot, sends
+   * it on `collaboration-save`, and adopts the stored value back on
+   * `collaboration-fetch` when it rehydrates (FR-004, data-model.md §metadata).
+   *
+   * Distinct from the inherited TypeORM `@VersionColumn` (`version`), which is a
+   * server-internal optimistic-locking counter and MUST NOT be conflated with
+   * this contract value.
+   */
+  @Column('int', { nullable: true })
+  contentVersion?: number;
 
   @Column('uuid', { nullable: true })
   createdBy?: string;

@@ -31,9 +31,6 @@ scalar Upload
 """A uuid identifier. Length 36 characters."""
 scalar UUID
 
-"""Content of a Whiteboard, as JSON."""
-scalar WhiteboardContent
-
 enum AccountType {
   ORGANIZATION
   USER
@@ -224,6 +221,7 @@ enum AuthorizationPrivilege {
   LICENSE_RESET
   MOVE_CONTRIBUTION
   MOVE_POST
+  MOVE_TASK
   PLATFORM_ADMIN
   PLATFORM_OPERATIONS_ADMIN
   PLATFORM_SETTINGS_ADMIN
@@ -309,6 +307,11 @@ enum CalloutsSetType {
 enum CalloutVisibility {
   DRAFT
   PUBLISHED
+}
+
+enum ClassificationCardinality {
+  MULTI_SELECT
+  SINGLE_SELECT
 }
 
 enum CollaboraDocumentType {
@@ -573,6 +576,7 @@ enum NotificationEvent {
   SPACE_COLLABORATION_CALLOUT_CONTRIBUTION
   SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT
   SPACE_COLLABORATION_CALLOUT_PUBLISHED
+  SPACE_COLLABORATION_CALLOUT_REACTION
   SPACE_COLLABORATION_POLL_MODIFIED_ON_POLL_I_VOTED_ON
   SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE
   SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL
@@ -625,6 +629,7 @@ enum NotificationEventPayload {
   SPACE_COLLABORATION_CALLOUT
   SPACE_COLLABORATION_CALLOUT_COMMENT
   SPACE_COLLABORATION_CALLOUT_POST_COMMENT
+  SPACE_COLLABORATION_CALLOUT_REACTION
   SPACE_COLLABORATION_POLL
   SPACE_COMMUNICATION_MESSAGE_DIRECT
   SPACE_COMMUNICATION_UPDATE
@@ -836,6 +841,25 @@ enum SearchVisibility {
   PUBLIC
 }
 
+"""
+The widgets available for the Space sidepanel, per InnovationFlow state (tab).
+"""
+enum SidebarWidget {
+  ABOUT
+  ADD_USER
+  APPLICATION_BUTTON
+  CONTACT_LEADS
+  CREATE_POST
+  CREATE_SUBSPACE
+  EVENTS
+  GUIDELINES
+  INDEX
+  INTENT
+  SUBSPACE_LINKS
+  UPDATES
+  VIRTUAL_CONTRIBUTORS
+}
+
 enum SpaceLevel {
   L0
   L1
@@ -873,6 +897,7 @@ enum TagsetReservedName {
   FLOW_STATE
   KEYWORDS
   SKILLS
+  TASK
 }
 
 enum TagsetType {
@@ -898,6 +923,7 @@ enum TemplateDefaultType {
 
 enum TemplateType {
   CALLOUT
+  CLASSIFICATION
   COMMUNITY_GUIDELINES
   POST
   SPACE
@@ -1845,6 +1871,10 @@ type Callout {
   settings: CalloutSettings!
   """The sorting order for this Callout."""
   sortOrder: Float!
+  """
+  Per-column task counts for a Tasks board callout, in the board-defined column order and zero-filled; null when the callout is not a Tasks board.
+  """
+  taskColumnCounts: [TaskColumnCount!]
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
 }
@@ -1852,6 +1882,10 @@ type Callout {
 type CalloutContribution {
   """The authorization rules for the entity"""
   authorization: Authorization
+  """
+  The Classification of this Contribution, present only for a task on a Tasks board (carries the task column).
+  """
+  classification: Classification
   """The CollaboraDocument that was contributed."""
   collaboraDocument: CollaboraDocument
   """The user that created this Document"""
@@ -1885,8 +1919,10 @@ type CalloutContributionDefaults {
   postDescription: Markdown
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
-  """The default whiteboard content for whiteboard responses."""
-  whiteboardContent: WhiteboardContent
+  """
+  Whether this Callout has a non-empty default for Whiteboard contributions.
+  """
+  whiteboardContentAvailable: Boolean!
 }
 
 type CalloutContributionsCountOutput {
@@ -2124,6 +2160,52 @@ type Classification {
   updatedDate: DateTime!
 }
 
+"""One vocabulary group on a host entity — the spec's 'a Classification'."""
+type ClassificationEntry {
+  """Whether one or several values may be selected."""
+  cardinality: ClassificationCardinality!
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """
+  Render-only: false means 'not shown on the Space page'. NOT an access control.
+  """
+  display: Boolean!
+  """
+  Per-instance display label; defaults to the source template's, overridable to resolve a conflict.
+  """
+  displayLabel: String!
+  """The ID of the entity"""
+  id: UUID!
+  """Ids of the currently selected values."""
+  selectedValueIDs: [String!]!
+  """The selected values resolved against `values`, in authored order."""
+  selectedValues: [ClassificationValue!]!
+  """Render order on the host entity — order of addition, oldest first."""
+  sortOrder: Float!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+  """The snapshot vocabulary, in authored order. Never re-sorted."""
+  values: [ClassificationValue!]!
+}
+
+"""
+Cardinality + value set of a Classification Template. Null unless type == CLASSIFICATION.
+"""
+type ClassificationTemplateContent {
+  cardinality: ClassificationCardinality!
+  values: [ClassificationValue!]!
+}
+
+"""One selectable option in a classification's vocabulary."""
+type ClassificationValue {
+  """
+  Stable identifier — aggregation key. Copied verbatim into every snapshot; never re-derived on rename.
+  """
+  id: String!
+  """Human-readable, single-language label."""
+  label: String!
+}
+
 type CollaboraDocument {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -2169,6 +2251,24 @@ type Collaboration {
   timeline: Timeline!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+}
+
+type CollaborationMigrationIssue {
+  id: String!
+  reason: String!
+}
+
+type CollaborationMigrationResult {
+  failed: Int!
+  failedDocuments: [CollaborationMigrationIssue!]!
+  flagged: Int!
+  flaggedDocuments: [CollaborationMigrationIssue!]!
+  migrated: Int!
+  total: Int!
+  """
+  Legacy Whiteboard contribution defaults without a complete owning Callout path.
+  """
+  unattached: Int!
 }
 
 type Communication {
@@ -2511,6 +2611,10 @@ type CreateCalloutContributionData {
   post: CreatePostData
   """The sort order to assign to this Contribution."""
   sortOrder: Float
+  """
+  The Tasks board column this task starts in. Only valid when the parent Callout is a Tasks board; defaults to the first column.
+  """
+  taskColumn: String
   type: CalloutContributionType!
   whiteboard: CreateWhiteboardData
 }
@@ -2518,9 +2622,20 @@ type CreateCalloutContributionData {
 type CreateCalloutContributionDefaultsData {
   """The default title to use for new contributions."""
   defaultDisplayName: String
+  """
+  Use a server-owned live Whiteboard contribution-default draft. Mutually exclusive with either source field.
+  """
+  draftWhiteboardID: UUID
   """The default description to use for new Post contributions."""
   postDescription: Markdown
-  whiteboardContent: WhiteboardContent
+  """
+  Copy the internal Whiteboard contribution default from this source Callout. Mutually exclusive with sourceWhiteboardID.
+  """
+  sourceCalloutID: UUID
+  """
+  Seed the default from an existing Whiteboard. The server copies its content and media into the owning Callout bucket; the source id is not persisted.
+  """
+  sourceWhiteboardID: UUID
 }
 
 type CreateCalloutContributorsMapViewData {
@@ -2566,6 +2681,10 @@ type CreateCalloutData {
   settings: CreateCalloutSettingsData
   """The sort order to assign to this Callout."""
   sortOrder: Float
+  """
+  When present, creates this Callout as a Tasks board. Requires a POST-only contribution type.
+  """
+  taskBoard: CreateCalloutTaskBoardData
 }
 
 type CreateCalloutFramingData {
@@ -2633,6 +2752,13 @@ type CreateCalloutsSetData {
   calloutsData: [CreateCalloutData!]
 }
 
+type CreateCalloutTaskBoardData {
+  """
+  The ordered columns of the Tasks board. The first is the default column. Omit to seed the default set.
+  """
+  columns: [String!]
+}
+
 type CreateClassificationData {
   tagsets: [CreateTagsetData!]!
 }
@@ -2687,6 +2813,10 @@ type CreateInnovationFlowStateSettingsData {
   Optional. Whether Posts in this State show publish details in the feed. Defaults to true when omitted.
   """
   showPublishDetails: Boolean
+  """
+  Optional. Ordered sidebar widgets; defaults to [INTENT, CREATE_POST, APPLICATION_BUTTON, INDEX] when omitted.
+  """
+  sidebar: [SidebarWidget!]
   """
   Optional. Whether the phase is shown in member-facing navigation. Defaults to true when omitted.
   """
@@ -2767,12 +2897,19 @@ type CreateVisualOnProfileData {
 }
 
 type CreateWhiteboardData {
-  content: WhiteboardContent
+  """
+  Use a server-owned live Whiteboard draft as the trusted source for final materialization. Mutually exclusive with sourceWhiteboardID.
+  """
+  draftWhiteboardID: UUID
   """A readable identifier, unique within the containing scope."""
   nameID: NameID
   """The preview settings for the whiteboard."""
   previewSettings: CreateWhiteboardPreviewSettingsData
   profile: CreateProfileData
+  """
+  Seed the new Whiteboard from the stored content of an existing Whiteboard through a server-side authorized copy. Omission creates an empty Whiteboard.
+  """
+  sourceWhiteboardID: UUID
 }
 
 type CreateWhiteboardPreviewSettingsData {
@@ -3097,6 +3234,19 @@ type InAppNotificationPayloadSpaceCollaborationCalloutPostComment implements InA
   type: NotificationEventPayload!
 }
 
+type InAppNotificationPayloadSpaceCollaborationCalloutReaction implements InAppNotificationPayload {
+  """The Callout that was reacted to."""
+  callout: Callout!
+  """
+  The emoji slug from the platform allow-list. Clients own slug-to-glyph rendering.
+  """
+  emoji: String!
+  """The Space where the reaction was made."""
+  space: Space!
+  """The payload type."""
+  type: NotificationEventPayload!
+}
+
 type InAppNotificationPayloadSpaceCollaborationPoll implements InAppNotificationPayload {
   """The Callout that contains the poll."""
   callout: Callout!
@@ -3257,6 +3407,10 @@ type InnovationFlowStateSettings {
   Whether Posts in this State show publish details (publisher, publish date, avatar) in the feed. Presentation only — does not restrict access to publisher data. Default true.
   """
   showPublishDetails: Boolean!
+  """
+  Ordered widgets shown in the Space sidepanel for this State. May be empty.
+  """
+  sidebar: [SidebarWidget!]!
   """
   Whether this State/phase is shown in the member-facing navigation. Default true. UI-affordance only: it does NOT gate access to the phase content.
   """
@@ -3880,10 +4034,6 @@ type MediaGallery {
 type Memo {
   """The authorization rules for the entity"""
   authorization: Authorization
-  """
-  The last saved binary stateV2 of the Yjs document, used to collaborate on the Memo, represented in base64.
-  """
-  content: String
   """The policy governing who can update the Memo content."""
   contentUpdatePolicy: ContentUpdatePolicy!
   """The user that created this Memo"""
@@ -4061,6 +4211,10 @@ type ModelCardSpaceUsageResult {
 }
 
 type Mutation {
+  """
+  Adds a Classification to a Space by copying a Classification Template (Step A).
+  """
+  addClassificationEntryFromTemplate(classificationData: AddClassificationEntryFromTemplateInput!): ClassificationEntry!
   """Adds an Iframe Allowed URL to the Platform Settings"""
   addIframeAllowedURL(whitelistedURL: String!): [String!]!
   """Adds a full email address to the platform notification blacklist"""
@@ -4199,6 +4353,10 @@ type Mutation {
   Create a new Callout on the CalloutsSet. When `file` is supplied alongside a COLLABORA_DOCUMENT framing, the new callout is framed with a Collabora document populated from the uploaded bytes (file-service-go sniffs MIME, validates format and size, and derives the document type; any documentType in the input is ignored on the upload path; displayName defaults from the filename when absent). When `file` is omitted, the existing blank-create behaviour applies and framing.collaboraDocument must specify both displayName and documentType.
   """
   createCalloutOnCalloutsSet(calloutData: CreateCalloutOnCalloutsSetInput!, file: Upload): Callout!
+  """
+  Creates a Classification on a Space ad hoc, without a Template (API-only).
+  """
+  createClassificationEntry(classificationData: CreateClassificationEntryInput!): ClassificationEntry!
   """Create a new Contribution on the Callout."""
   createContributionOnCallout(contributionData: CreateContributionOnCalloutInput!): CalloutContribution!
   """
@@ -4231,6 +4389,8 @@ type Mutation {
   createSubspace(subspaceData: CreateSubspaceInput!): Space!
   """Creates a new Tagset on the specified Profile"""
   createTagsetOnProfile(tagsetData: CreateTagsetOnProfileInput!): Tagset!
+  """Add a column to a Tasks board Callout."""
+  createTaskColumnOnCallout(columnData: CreateTaskColumnOnCalloutInput!): Callout!
   """Creates a new Template on the specified TemplatesSet."""
   createTemplate(templateData: CreateTemplateOnTemplatesSetInput!): Template!
   """
@@ -4245,6 +4405,14 @@ type Mutation {
   createUser(userData: CreateUserInput!): User!
   """Creates a new VirtualContributor on an Account."""
   createVirtualContributor(virtualContributorData: CreateVirtualContributorOnAccountInput!): VirtualContributor!
+  """
+  Materializes a server-owned live Whiteboard draft for a Callout form. Content remains on the collaboration transport; GraphQL returns identifiers only.
+  """
+  createWhiteboardDraftOnCalloutsSet(draftData: CreateWhiteboardDraftOnCalloutsSetInput!): UUID!
+  """
+  Materializes a server-owned live Whiteboard draft for a Template form. GraphQL returns identifiers only.
+  """
+  createWhiteboardDraftOnTemplatesSet(draftData: CreateWhiteboardDraftOnTemplatesSetInput!): UUID!
   """Creates an account in Wingback"""
   createWingbackAccount(accountID: UUID!): String!
   """Removes the specified Application."""
@@ -4253,6 +4421,10 @@ type Mutation {
   deleteCalendarEvent(deleteData: DeleteCalendarEventInput!): CalendarEvent!
   """Delete a Callout."""
   deleteCallout(deleteData: DeleteCalloutInput!): Callout!
+  """
+  Permanently removes a Classification from a Space. No template and no other Space is affected.
+  """
+  deleteClassificationEntry(classificationData: DeleteClassificationEntryInput!): ClassificationEntry!
   """Deletes the specified CollaboraDocument."""
   deleteCollaboraDocument(deleteData: DeleteCollaboraDocumentInput!): CollaboraDocument!
   """Deletes a contribution."""
@@ -4291,6 +4463,8 @@ type Mutation {
   deleteStateOnInnovationFlow(stateData: DeleteStateOnInnovationFlowInput!): InnovationFlowState!
   """Deletes a Storage Bucket"""
   deleteStorageBucket(deleteData: DeleteStorageBuckeetInput!): StorageBucket!
+  """Remove a column from a Tasks board Callout."""
+  deleteTaskColumnOnCallout(columnData: DeleteTaskColumnOnCalloutInput!): Callout!
   """Deletes the specified Template."""
   deleteTemplate(deleteData: DeleteTemplateInput!): Template!
   """Deletes the specified User."""
@@ -4303,6 +4477,10 @@ type Mutation {
   deleteVisualFromMediaGallery(deleteData: DeleteVisualFromMediaGalleryInput!): Visual!
   """Deletes the specified Whiteboard."""
   deleteWhiteboard(whiteboardData: DeleteWhiteboardInput!): Whiteboard!
+  """
+  Idempotently discards a server-owned live Whiteboard draft through the canonical Whiteboard deletion path.
+  """
+  deleteWhiteboardDraft(whiteboardID: UUID!): UUID!
   """
   Re-enable a previously disabled push notification subscription for the current user.
   """
@@ -4348,6 +4526,14 @@ type Mutation {
   """
   markNotificationsAsUnread(filter: NotificationEventsFilterInput): Boolean!
   """
+  Migrates all pending legacy memo content. Idempotent: repeated calls process only rows whose migrated marker is false.
+  """
+  migrateLegacyMemoContent: CollaborationMigrationResult!
+  """
+  Migrates pending legacy Whiteboard documents and independently normalizes every legacy Whiteboard contribution default, including defaults stored by Callout templates. Idempotent: repeated calls process only unmigrated documents and non-canonical defaults.
+  """
+  migrateLegacyWhiteboardContent: CollaborationMigrationResult!
+  """
   Mint a new MCP API key for the current user. Returns the plaintext exactly once.
   """
   mintMcpApiKey(mintData: MintMcpApiKeyInput!): McpApiKeyMintResult!
@@ -4365,6 +4551,10 @@ type Mutation {
   Move an L2 sub-subspace to become an L2 subspace under a target L1 in a different L0 space.       The subspace stays at level 2 but changes both its parent L1 and its top-level L0.       All community roles (including admins) are cleared and pending invitations dropped.       Platform access rules are recomputed from the new parent hierarchy.       Requires platform admin privileges.
   """
   moveSpaceL2ToSpaceL1(moveData: MoveSpaceL2ToSpaceL1Input!): Space!
+  """
+  Moves a task to another column on its Tasks board. Authorized as MOVE_TASK on the parent Callout, so a board member can move any task.
+  """
+  moveTaskToColumn(moveData: MoveTaskToColumnInput!): CalloutContribution!
   """Refresh the Bodies of Knowledge on All VCs"""
   refreshAllBodiesOfKnowledge: Boolean!
   """
@@ -4396,7 +4586,7 @@ type Mutation {
   """
   removePollVote(voteData: RemovePollVoteInput!): Poll!
   """
-  Removes the requesting user's reaction from a Callout. Idempotent — no error when no reaction exists. Self-scoped; requires only authentication (not CONTRIBUTE), so a person who left the space can still retract their own reaction.
+  Removes the requesting user's reaction from a Callout. Idempotent — no error when no reaction exists. Self-scoped; requires only authentication (not CONTRIBUTE). Returns the Callout only when the caller retains READ access on it.
   """
   removeReactionFromCallout(reactionData: RemoveReactionFromCalloutInput!): Callout!
   """Remove a reaction on a message from the specified Room."""
@@ -4421,6 +4611,10 @@ type Mutation {
   Replace the backing file of an existing CollaboraDocument in place, preserving its identity. Requires UPDATE on the document. The replacement must be an allowed OfficeDocs format, within the size cap, and the SAME document type as the current file. Refused while the document is being edited.
   """
   replaceCollaboraDocument(file: Upload!, replaceData: ReplaceCollaboraDocumentInput!): CollaboraDocument!
+  """
+  Replace a Whiteboard from another Whiteboard through the live collaboration room. Content and media are copied server-side; snapshot bytes never pass through GraphQL.
+  """
+  replaceWhiteboardContentFromSource(input: ReplaceWhiteboardContentFromSourceInput!): Whiteboard!
   """Resets the interaction with the VC by recreating the room."""
   resetConversationVc(input: ConversationVcResetInput!): Conversation!
   """Reset all license plans on Accounts"""
@@ -4499,6 +4693,16 @@ type Mutation {
   updateCalloutsSortOrder(sortOrderData: UpdateCalloutsSortOrderInput!): [Callout!]!
   """Update the visibility of the specified Callout."""
   updateCalloutVisibility(calloutData: UpdateCalloutVisibilityInput!): Callout!
+  """
+  Updates a Classification's definition — label, cardinality and/or value set (API-only).
+  """
+  updateClassificationEntry(classificationData: UpdateClassificationEntryInput!): ClassificationEntry!
+  """
+  Toggles a Classification's shown/hidden state on the Space's About page.
+  """
+  updateClassificationEntryDisplay(classificationData: UpdateClassificationEntryDisplayInput!): ClassificationEntry!
+  """Replaces the selected values of a Classification (Step B)."""
+  updateClassificationEntrySelection(classificationData: UpdateClassificationEntrySelectionInput!): ClassificationEntry!
   """Updates a Tagset on a Classification."""
   updateClassificationTagset(updateData: UpdateClassificationSelectTagsetValueInput!): Tagset!
   """Updates the specified CollaboraDocument."""
@@ -4579,6 +4783,10 @@ type Mutation {
   updateSubspacesSortOrder(sortOrderData: UpdateSubspacesSortOrderInput!): [Space!]!
   """Updates the specified Tagset."""
   updateTagset(updateData: UpdateTagsetInput!): Tagset!
+  """Rename a column on a Tasks board Callout."""
+  updateTaskColumnOnCallout(columnData: UpdateTaskColumnOnCalloutInput!): Callout!
+  """Reorder the columns of a Tasks board Callout."""
+  updateTaskColumnsSortOrderOnCallout(sortOrderData: UpdateTaskColumnsSortOrderOnCalloutInput!): Callout!
   """Updates the specified Template."""
   updateTemplate(updateData: UpdateTemplateInput!): Template!
   """Updates the TemplateContentSpace."""
@@ -6241,6 +6449,10 @@ type Space implements ActorFull {
 type SpaceAbout {
   """The authorization rules for the entity"""
   authorization: Authorization
+  """
+  The classification entries on this About, in sortOrder. Empty array when none exist — never null, never an error.
+  """
+  classifications: [ClassificationEntry!]!
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The guidelines for members of this Community."""
@@ -6571,11 +6783,22 @@ type Task {
   type: String
 }
 
+type TaskColumnCount {
+  """The Tasks board column, in the board-defined order."""
+  column: String!
+  """The number of tasks currently in this column."""
+  count: Int!
+}
+
 type Template {
   """The authorization rules for the entity"""
   authorization: Authorization
   """The Callout for this Template."""
   callout: Callout
+  """
+  The classification vocabulary; null unless this Template is of type CLASSIFICATION — and never null when it is.
+  """
+  classification: ClassificationTemplateContent
   """The Community Guidelines for this Template."""
   communityGuidelines: CommunityGuidelines
   """The Space for this Template."""
@@ -6667,6 +6890,10 @@ type TemplatesSet {
   calloutTemplates: [Template!]!
   """The total number of CalloutTemplates in this TemplatesSet."""
   calloutTemplatesCount: Float!
+  """The Classification Templates in this TemplatesSet."""
+  classificationTemplates: [Template!]!
+  """The total number of Classification Templates in this TemplatesSet."""
+  classificationTemplatesCount: Float!
   """The CommunityGuidelines in this TemplatesSet."""
   communityGuidelinesTemplates: [Template!]!
   """The total number of CommunityGuidelinesTemplates in this TemplatesSet."""
@@ -7074,6 +7301,8 @@ type UserSettingsNotificationSpace {
   collaborationCalloutPostContributionComment: UserSettingsNotificationChannels!
   """Receive a notification when a callout is published"""
   collaborationCalloutPublished: UserSettingsNotificationChannels!
+  """Receive a notification when someone reacts to a callout you published"""
+  collaborationCalloutReaction: UserSettingsNotificationChannels!
   """Receive a notification when a poll you voted on is modified"""
   collaborationPollModifiedOnPollIVotedOn: UserSettingsNotificationChannels!
   """
@@ -7351,8 +7580,6 @@ type VisualConstraints {
 type Whiteboard {
   """The authorization rules for the entity"""
   authorization: Authorization
-  """The visual content of the Whiteboard."""
-  content: WhiteboardContent!
   """The policy governing who can update the Whiteboard content."""
   contentUpdatePolicy: ContentUpdatePolicy!
   """The user that created this Whiteboard"""
@@ -7479,6 +7706,17 @@ input ActivityLogInput {
 input ActorFilterInput {
   """Return actors with credentials in the provided list"""
   credentials: [AuthorizationCredential!]
+}
+
+input AddClassificationEntryFromTemplateInput {
+  """
+  Override for the entry's display label. Defaults to the source template's display name.
+  """
+  displayLabel: String
+  """The Space to add the Classification to."""
+  spaceID: UUID!
+  """The Classification Template to copy the vocabulary from."""
+  templateID: UUID!
 }
 
 input AddPollOptionInput {
@@ -7717,9 +7955,20 @@ input CreateCalendarEventOnCalendarInput {
 input CreateCalloutContributionDefaultsInput {
   """The default title to use for new contributions."""
   defaultDisplayName: String
+  """
+  Use a server-owned live Whiteboard contribution-default draft. Mutually exclusive with either source field.
+  """
+  draftWhiteboardID: UUID
   """The default description to use for new Post contributions."""
   postDescription: Markdown
-  whiteboardContent: WhiteboardContent
+  """
+  Copy the internal Whiteboard contribution default from this source Callout. Mutually exclusive with sourceWhiteboardID.
+  """
+  sourceCalloutID: UUID
+  """
+  Seed the default from an existing Whiteboard. The server copies its content and media into the owning Callout bucket; the source id is not persisted.
+  """
+  sourceWhiteboardID: UUID
 }
 
 input CreateCalloutContributionInput {
@@ -7729,6 +7978,10 @@ input CreateCalloutContributionInput {
   post: CreatePostInput
   """The sort order to assign to this Contribution."""
   sortOrder: Float
+  """
+  The Tasks board column this task starts in. Only valid when the parent Callout is a Tasks board; defaults to the first column.
+  """
+  taskColumn: String
   type: CalloutContributionType!
   whiteboard: CreateWhiteboardInput
 }
@@ -7794,6 +8047,10 @@ input CreateCalloutInput {
   settings: CreateCalloutSettingsInput
   """The sort order to assign to this Callout."""
   sortOrder: Float
+  """
+  When present, creates this Callout as a Tasks board. Requires a POST-only contribution type.
+  """
+  taskBoard: CreateCalloutTaskBoardInput
 }
 
 input CreateCalloutOnCalloutsSetInput {
@@ -7812,6 +8069,10 @@ input CreateCalloutOnCalloutsSetInput {
   settings: CreateCalloutSettingsInput
   """The sort order to assign to this Callout."""
   sortOrder: Float
+  """
+  When present, creates this Callout as a Tasks board. Requires a POST-only contribution type.
+  """
+  taskBoard: CreateCalloutTaskBoardInput
 }
 
 input CreateCalloutSelectionSettingsInput {
@@ -7861,8 +8122,40 @@ input CreateCalloutsSetInput {
   calloutsData: [CreateCalloutInput!]
 }
 
+input CreateCalloutTaskBoardInput {
+  """
+  The ordered columns of the Tasks board. The first is the default column. Omit to seed the default set.
+  """
+  columns: [String!]
+}
+
+input CreateClassificationEntryInput {
+  cardinality: ClassificationCardinality!
+  displayLabel: String!
+  """
+  Optional selection to apply in the same write. Omitted -> selectedValueIDs: [].
+  """
+  selectedValueIDs: [String!]
+  """The Space to add the Classification to."""
+  spaceID: UUID!
+  values: [CreateClassificationValueInput!]!
+}
+
 input CreateClassificationInput {
   tagsets: [CreateTagsetInput!]!
+}
+
+input CreateClassificationTemplateContentInput {
+  cardinality: ClassificationCardinality!
+  values: [CreateClassificationValueInput!]!
+}
+
+input CreateClassificationValueInput {
+  """
+  Optional explicit stable id. Omitted -> slugified from `label` once, at authoring time.
+  """
+  id: String
+  label: String!
 }
 
 input CreateCollaboraDocumentInput {
@@ -7906,6 +8199,10 @@ input CreateContributionOnCalloutInput {
   post: CreatePostInput
   """The sort order to assign to this Contribution."""
   sortOrder: Float
+  """
+  The Tasks board column this task starts in. Only valid when the parent Callout is a Tasks board; defaults to the first column.
+  """
+  taskColumn: String
   type: CalloutContributionType!
   whiteboard: CreateWhiteboardInput
 }
@@ -7957,6 +8254,10 @@ input CreateInnovationFlowStateSettingsInput {
   Optional. Whether Posts in this State show publish details in the feed. Defaults to true when omitted.
   """
   showPublishDetails: Boolean
+  """
+  Optional. Ordered sidebar widgets; defaults to [INTENT, CREATE_POST, APPLICATION_BUTTON, INDEX] when omitted.
+  """
+  sidebar: [SidebarWidget!]
   """
   Optional. Whether the phase is shown in member-facing navigation. Defaults to true when omitted.
   """
@@ -8241,6 +8542,13 @@ input CreateTagsetOnProfileInput {
   type: TagsetType
 }
 
+input CreateTaskColumnOnCalloutInput {
+  """The Tasks board Callout to add a column to."""
+  calloutID: UUID!
+  """The name of the new column. Appended after the last column."""
+  name: String!
+}
+
 input CreateTemplateContentSpaceInput {
   about: CreateSpaceAboutInput!
   collaborationData: CreateCollaborationInput!
@@ -8275,6 +8583,8 @@ input CreateTemplateFromSpaceOnTemplatesSetInput {
 input CreateTemplateOnTemplatesSetInput {
   """The Callout to associate with this template."""
   calloutData: CreateCalloutInput
+  """The cardinality and value set for a Classification Template."""
+  classificationData: CreateClassificationTemplateContentInput
   """The Community guidelines to associate with this template."""
   communityGuidelinesData: CreateCommunityGuidelinesInput
   """The Template Content for a Space to associate with this template."""
@@ -8335,13 +8645,32 @@ input CreateVisualOnProfileInput {
   uri: String!
 }
 
+input CreateWhiteboardDraftOnCalloutsSetInput {
+  calloutsSetID: UUID!
+  sourceCalloutID: UUID
+  sourceWhiteboardID: UUID
+}
+
+input CreateWhiteboardDraftOnTemplatesSetInput {
+  sourceCalloutID: UUID
+  sourceWhiteboardID: UUID
+  templatesSetID: UUID!
+}
+
 input CreateWhiteboardInput {
-  content: WhiteboardContent
+  """
+  Use a server-owned live Whiteboard draft as the trusted source for final materialization. Mutually exclusive with sourceWhiteboardID.
+  """
+  draftWhiteboardID: UUID
   """A readable identifier, unique within the containing scope."""
   nameID: NameID
   """The preview settings for the whiteboard."""
   previewSettings: CreateWhiteboardPreviewSettingsInput
   profile: CreateProfileInput
+  """
+  Seed the new Whiteboard from the stored content of an existing Whiteboard through a server-side authorized copy. Omission creates an empty Whiteboard.
+  """
+  sourceWhiteboardID: UUID
 }
 
 input CreateWhiteboardPreviewSettingsInput {
@@ -8364,6 +8693,10 @@ input DeleteCalendarEventInput {
 }
 
 input DeleteCalloutInput {
+  ID: UUID!
+}
+
+input DeleteClassificationEntryInput {
   ID: UUID!
 }
 
@@ -8443,6 +8776,15 @@ input DeleteStateOnInnovationFlowInput {
 
 input DeleteStorageBuckeetInput {
   ID: UUID!
+}
+
+input DeleteTaskColumnOnCalloutInput {
+  """The Tasks board Callout to remove a column from."""
+  calloutID: UUID!
+  """
+  The column to remove. Matched case-insensitively. The first (default) column cannot be removed; removing any other column reflows its tasks onto the first column.
+  """
+  name: String!
 }
 
 input DeleteTemplateInput {
@@ -8687,6 +9029,15 @@ input MoveSpaceL2ToSpaceL1Input {
   targetSpaceL1ID: UUID!
 }
 
+input MoveTaskToColumnInput {
+  """
+  The destination column on the Tasks board. Matched case-insensitively to an existing column.
+  """
+  column: String!
+  """The task (Callout Contribution) to move."""
+  contributionID: UUID!
+}
+
 input NotificationEmailAddressInput {
   """Full email address to add/remove; lowercase enforced by server"""
   email: String!
@@ -8859,6 +9210,13 @@ input ReplaceCollaboraDocumentInput {
   displayName: String
   """The ID of the CollaboraDocument whose backing file is being replaced."""
   ID: UUID!
+}
+
+input ReplaceWhiteboardContentFromSourceInput {
+  """The Whiteboard whose content and media are copied into the target."""
+  sourceWhiteboardID: UUID!
+  """The Whiteboard whose content is replaced."""
+  targetWhiteboardID: UUID!
 }
 
 input RevokeAuthorizationCredentialInput {
@@ -9150,12 +9508,26 @@ input UpdateCalendarEventInput {
 }
 
 input UpdateCalloutContributionDefaultsInput {
+  """
+  Remove the stored Whiteboard contribution default. Mutually exclusive with sourceWhiteboardID and sourceCalloutID.
+  """
+  clearWhiteboardContent: Boolean
   """The default title to use for new contributions."""
   defaultDisplayName: String
+  """
+  Replace the default from a server-owned live Whiteboard contribution-default draft. Mutually exclusive with either source field and clearWhiteboardContent.
+  """
+  draftWhiteboardID: UUID
   """The default description to use for new Post contributions."""
   postDescription: Markdown
-  """The default description to use for new Whiteboard contributions."""
-  whiteboardContent: WhiteboardContent
+  """
+  Copy the internal Whiteboard contribution default from this source Callout. Mutually exclusive with sourceWhiteboardID and clearWhiteboardContent.
+  """
+  sourceCalloutID: UUID
+  """
+  Replace the default from an existing Whiteboard. The server copies its content and media into the owning Callout bucket; the source id is not persisted.
+  """
+  sourceWhiteboardID: UUID
 }
 
 input UpdateCalloutContributorsSettingsInput {
@@ -9205,10 +9577,12 @@ input UpdateCalloutFramingInput {
   poll: UpdatePollInput
   """The Profile of the Template."""
   profile: UpdateProfileInput
+  """
+  Replace the framing Whiteboard from another Whiteboard through a server-side authorized copy.
+  """
+  sourceWhiteboardID: UUID
   """The type of additional content attached to the framing of the callout."""
   type: CalloutFramingType
-  """The new content to be used."""
-  whiteboardContent: WhiteboardContent
   """The new preview settings for the Whiteboard."""
   whiteboardPreviewSettings: UpdateWhiteboardPreviewSettingsInput
 }
@@ -9277,6 +9651,26 @@ input UpdateCalloutVisibilityInput {
   sendNotification: Boolean = true
   """Visibility of the Callout."""
   visibility: CalloutVisibility!
+}
+
+input UpdateClassificationEntryDisplayInput {
+  classificationEntryID: UUID!
+  display: Boolean!
+}
+
+input UpdateClassificationEntryInput {
+  cardinality: ClassificationCardinality
+  classificationEntryID: UUID!
+  displayLabel: String
+  values: [CreateClassificationValueInput!]
+}
+
+input UpdateClassificationEntrySelectionInput {
+  classificationEntryID: UUID!
+  """
+  The complete set of selected value ids. An empty list clears the selection.
+  """
+  selectedValueIDs: [String!]!
 }
 
 input UpdateClassificationInput {
@@ -9419,6 +9813,10 @@ input UpdateInnovationFlowStateSettingsInput {
   Optional. Sets whether Posts in this State show publish details (publisher, publish date, avatar) in the feed; omission leaves the stored value unchanged.
   """
   showPublishDetails: Boolean
+  """
+  Optional. Ordered sidebar widgets for this State; omission leaves the stored value unchanged. Duplicates rejected; max 20 entries.
+  """
+  sidebar: [SidebarWidget!]
   """
   Optional. Sets whether the phase is shown in member-facing navigation; omission leaves the stored value unchanged.
   """
@@ -9775,6 +10173,26 @@ input UpdateTagsetInput {
   tags: [String!]!
 }
 
+input UpdateTaskColumnOnCalloutInput {
+  """The Tasks board Callout whose column is being renamed."""
+  calloutID: UUID!
+  """
+  The current column name. Matched case-insensitively to an existing column.
+  """
+  currentName: String!
+  """The new column name. Tasks in the column follow the rename."""
+  newName: String!
+}
+
+input UpdateTaskColumnsSortOrderOnCalloutInput {
+  """The Tasks board Callout whose columns are being reordered."""
+  calloutID: UUID!
+  """
+  Every existing column exactly once, in the new left-to-right order. Matched case-insensitively.
+  """
+  columnNames: [String!]!
+}
+
 input UpdateTemplateContentSpaceInput {
   """Update the TemplateContentSpace About information."""
   about: UpdateSpaceAboutInput
@@ -9800,6 +10218,8 @@ input UpdateTemplateFromSpaceInput {
 }
 
 input UpdateTemplateInput {
+  """The cardinality and value set for a Classification Template."""
+  classificationData: CreateClassificationTemplateContentInput
   ID: UUID!
   """
   The default description to be pre-filled when users create Posts based on this template.
@@ -9807,8 +10227,10 @@ input UpdateTemplateInput {
   postDefaultDescription: Markdown
   """The Profile of the Template."""
   profile: UpdateProfileInput
-  """The new content to be used."""
-  whiteboardContent: WhiteboardContent
+  """
+  Replace this Whiteboard Template from an existing Whiteboard through a server-side authorized copy.
+  """
+  sourceWhiteboardID: UUID
 }
 
 input UpdateUserGroupInput {
@@ -9995,6 +10417,8 @@ input UpdateUserSettingsNotificationSpaceInput {
   collaborationCalloutPostContributionComment: NotificationSettingInput
   """Receive a notification when a callout is published"""
   collaborationCalloutPublished: NotificationSettingInput
+  """Receive a notification when someone reacts to a callout you published"""
+  collaborationCalloutReaction: NotificationSettingInput
   """Receive a notification when a poll you voted on is modified"""
   collaborationPollModifiedOnPollIVotedOn: NotificationSettingInput
   """

@@ -1,5 +1,7 @@
+import { ClassificationCardinality } from '@common/enums/classification.cardinality';
 import { TemplateType } from '@common/enums/template.type';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
+import { IClassificationValue } from '@domain/common/classification-value/classification.value.interface';
 import { INameable } from '@domain/common/entity/nameable-entity';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
@@ -32,4 +34,9 @@ export abstract class ITemplate extends INameable {
   callout?: ICallout;
   whiteboard?: IWhiteboard;
   contentSpace?: ITemplateContentSpace;
+
+  // Classification Template storage; not exposed directly via GraphQL — see
+  // the resolved `classification` field on TemplateResolverFields.
+  classificationCardinality?: ClassificationCardinality;
+  classificationValueSet?: IClassificationValue[];
 }

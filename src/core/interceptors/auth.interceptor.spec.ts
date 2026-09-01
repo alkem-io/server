@@ -350,6 +350,22 @@ describe('AuthInterceptor', () => {
       expect(actorContextService.createGuest).not.toHaveBeenCalled();
       expect(mockReq.user).toEqual({ isAnonymous: true, credentials: [] });
     });
+
+    it('preserves the original raw ASCII guest-header contract', async () => {
+      const mockReq = guestHeaderRequest('John Visitor');
+      noAuthenticatedUser();
+
+      await interceptor.intercept(httpContext(mockReq), mockNext);
+
+      expect(actorContextService.createGuest).toHaveBeenCalledWith(
+        'John Visitor'
+      );
+      expect(mockReq.user).toEqual({
+        isAnonymous: false,
+        guestName: 'John Visitor',
+        credentials: [{ type: 'global-guest', resourceID: '' }],
+      });
+    });
   });
 
   // server#6315. This interceptor is global, so a rejected cookie session 401s

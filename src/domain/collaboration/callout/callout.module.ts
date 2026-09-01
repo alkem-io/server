@@ -4,6 +4,9 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ClassificationModule } from '@domain/common/classification/classification.module';
+import { TagsetTemplateModule } from '@domain/common/tagset-template/tagset.template.module';
+import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
+import { WhiteboardDraftModule } from '@domain/common/whiteboard-draft';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { Module } from '@nestjs/common';
@@ -22,12 +25,17 @@ import { CollaboraDocumentModule } from '../collabora-document/collabora.documen
 import { CollaborationLicenseModule } from '../collaboration/collaboration.license.module';
 import { PostModule } from '../post/post.module';
 import { ReactionModule } from '../reaction/reaction.module';
+import { CalloutContributionDefaultSourceService } from './callout.contribution.default.source.service';
 import { Callout } from './callout.entity';
 import { CalloutResolverFields } from './callout.resolver.fields';
 import { CalloutResolverMutations } from './callout.resolver.mutations';
 import { CalloutResolverSubscriptions } from './callout.resolver.subscriptions';
 import { CalloutService } from './callout.service';
 import { CalloutAuthorizationService } from './callout.service.authorization';
+import { TaskBoardColumnService } from './task-board/task.board.column.service';
+import { TaskBoardModule } from './task-board/task.board.module';
+import { TaskBoardMoveService } from './task-board/task.board.move.service';
+import { TaskBoardResolverMutations } from './task-board/task.board.resolver.mutations';
 
 @Module({
   imports: [
@@ -41,6 +49,8 @@ import { CalloutAuthorizationService } from './callout.service.authorization';
     EntityResolverModule,
     UserLookupModule,
     NamingModule,
+    WhiteboardModule,
+    WhiteboardDraftModule,
     CalloutFramingModule,
     CalloutContributionModule,
     CalloutContributionDefaultsModule,
@@ -53,18 +63,25 @@ import { CalloutAuthorizationService } from './callout.service.authorization';
     RoleSetModule,
     ReactionModule,
     ActorLookupModule,
+    TaskBoardModule,
+    TagsetTemplateModule,
     TypeOrmModule.forFeature([Callout]),
   ],
   providers: [
     CalloutResolverMutations,
+    CalloutContributionDefaultSourceService,
     CalloutService,
     CalloutAuthorizationService,
     CalloutResolverFields,
     CalloutResolverSubscriptions,
     CalloutMyReactionLoaderCreator,
+    TaskBoardMoveService,
+    TaskBoardColumnService,
+    TaskBoardResolverMutations,
   ],
   exports: [
     CalloutService,
+    CalloutContributionDefaultSourceService,
     CalloutAuthorizationService,
     CalloutResolverMutations,
   ],

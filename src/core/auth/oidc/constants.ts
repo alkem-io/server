@@ -11,3 +11,9 @@ value for un-credentialed traffic keeps the contract uniform while letting
 auth-eval still resolve GLOBAL_ANONYMOUS for public-read privileges.
  */
 export const ANONYMOUS_ACTOR_ID = NIL_UUID;
+
+/**
+ * Non-persisted transport identity for a named guest. Only ForwardAuth emits
+ * this value; authorization-evaluation-service maps it to global-guest.
+ */
+export const GUEST_ACTOR_ID = '00000000-0000-0000-0000-000000000001';

@@ -524,6 +524,145 @@ describe('NotificationRecipientsService', () => {
       });
     });
 
+    describe('callout-reaction notification event (T007/T013)', () => {
+      it('uses USER_SELF_MANAGEMENT credential for the callout publisher (not space-audience fanout)', async () => {
+        await service.getRecipients({
+          eventType: NotificationEvent.SPACE_COLLABORATION_CALLOUT_REACTION,
+          userID: 'publisher-id',
+        });
+
+        expect(userLookupService.usersWithCredentials).toHaveBeenCalledWith(
+          [
+            {
+              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+              resourceID: 'publisher-id',
+            },
+          ],
+          undefined,
+          expect.any(Object)
+        );
+      });
+
+      it('throws ValidationException when userID is missing for callout-reaction event', async () => {
+        await expect(
+          service.getRecipients({
+            eventType: NotificationEvent.SPACE_COLLABORATION_CALLOUT_REACTION,
+            // no userID
+          })
+        ).rejects.toThrow(ValidationException);
+      });
+
+      it('inApp channel gating: inApp:false → inAppRecipients empty while mutation succeeds (US2-AS2)', async () => {
+        const publisher = {
+          id: 'publisher-1',
+          email: 'pub@example.com',
+          settings: {
+            notification: {
+              space: {
+                collaborationCalloutReaction: {
+                  email: false,
+                  inApp: false,
+                  push: false,
+                },
+              },
+            },
+          },
+          credentials: [],
+        } as unknown as IUser;
+
+        vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+          publisher,
+        ]);
+        // Return publisher only when ids array is non-empty; otherwise return []
+        vi.mocked(userLookupService.getUsersByIds).mockImplementation(
+          async (ids: string[]) => (ids.length > 0 ? [publisher] : [])
+        );
+
+        const result = await service.getRecipients({
+          eventType: NotificationEvent.SPACE_COLLABORATION_CALLOUT_REACTION,
+          userID: 'publisher-1',
+        });
+
+        expect(result.emailRecipients).toHaveLength(0);
+        expect(result.inAppRecipients).toHaveLength(0);
+        expect(result.pushRecipients).toHaveLength(0);
+      });
+
+      it('push channel: push:true, email:false, inApp:false → only pushRecipients populated (US2 channel matrix)', async () => {
+        const publisher = {
+          id: 'publisher-1',
+          email: 'pub@example.com',
+          settings: {
+            notification: {
+              space: {
+                collaborationCalloutReaction: {
+                  email: false,
+                  inApp: false,
+                  push: true,
+                },
+              },
+            },
+          },
+          credentials: [],
+        } as unknown as IUser;
+
+        vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+          publisher,
+        ]);
+        vi.mocked(userLookupService.getUsersByIds).mockImplementation(
+          async (ids: string[]) => (ids.length > 0 ? [publisher] : [])
+        );
+
+        const result = await service.getRecipients({
+          eventType: NotificationEvent.SPACE_COLLABORATION_CALLOUT_REACTION,
+          userID: 'publisher-1',
+        });
+
+        expect(result.emailRecipients).toHaveLength(0);
+        expect(result.inAppRecipients).toHaveLength(0);
+        expect(result.pushRecipients).toHaveLength(1);
+      });
+
+      it('defend-on-read: a row without the collaborationCalloutReaction key resolves defaults without throwing (US2-AS4, R-7)', async () => {
+        const legacyPublisher = {
+          id: 'publisher-legacy',
+          email: 'legacy@example.com',
+          settings: {
+            notification: {
+              space: {
+                // collaborationCalloutReaction key absent (pre-backfill row)
+                collaborationCalloutPublished: {
+                  email: true,
+                  inApp: true,
+                  push: true,
+                },
+              },
+            },
+          },
+          credentials: [],
+        } as unknown as IUser;
+
+        vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+          legacyPublisher,
+        ]);
+        vi.mocked(userLookupService.getUsersByIds).mockImplementation(
+          async (ids: string[]) => (ids.length > 0 ? [legacyPublisher] : [])
+        );
+
+        // Should not throw even when the collaborationCalloutReaction key is absent.
+        // The service falls back to DEFAULT_CALLOUT_REACTION_CHANNELS = { email: false, inApp: true, push: true }.
+        const result = await service.getRecipients({
+          eventType: NotificationEvent.SPACE_COLLABORATION_CALLOUT_REACTION,
+          userID: 'publisher-legacy',
+        });
+
+        // Default is { email: false, inApp: true, push: true }
+        expect(result.emailRecipients).toHaveLength(0);
+        expect(result.inAppRecipients).toHaveLength(1);
+        expect(result.pushRecipients).toHaveLength(1);
+      });
+    });
+
     describe('poll notification events (T065)', () => {
       it('(a) POLL_VOTE_CAST_ON_OWN_POLL uses USER_SELF_MANAGEMENT credential for the poll creator', async () => {
         await service.getRecipients({

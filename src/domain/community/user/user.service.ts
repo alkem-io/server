@@ -371,6 +371,11 @@ export class UserService {
             inApp: true,
             push: false,
           },
+          collaborationCalloutReaction: {
+            email: false,
+            inApp: true,
+            push: true,
+          },
         },
         user: {
           mentioned: { email: true, inApp: true, push: true },

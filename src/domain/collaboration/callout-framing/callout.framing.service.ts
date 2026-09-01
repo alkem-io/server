@@ -17,6 +17,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { ICollaboraDocument } from '@domain/collaboration/collabora-document/collabora.document.interface';
 import { CollaboraDocumentService } from '@domain/collaboration/collabora-document/collabora.document.service';
@@ -79,6 +80,7 @@ export class CalloutFramingService {
   public async createCalloutFraming(
     calloutFramingData: CreateCalloutFramingInput,
     storageAggregator: IStorageAggregator,
+    actorContext: ActorContext,
     userID?: string
   ): Promise<ICalloutFraming> {
     const calloutFraming: ICalloutFraming = CalloutFraming.create(
@@ -118,7 +120,7 @@ export class CalloutFramingService {
           calloutFraming,
           calloutFramingData.whiteboard,
           storageAggregator,
-          userID
+          actorContext
         );
       } else {
         throw new ValidationException(
@@ -261,7 +263,7 @@ export class CalloutFramingService {
     calloutFraming: ICalloutFraming,
     whiteboardData: CreateWhiteboardInput,
     storageAggregator: IStorageAggregator,
-    userID?: string
+    actorContext: ActorContext
   ) {
     const reservedNameIDs: string[] = []; // no reserved nameIDs for framing
     whiteboardData.nameID =
@@ -269,10 +271,12 @@ export class CalloutFramingService {
         `${whiteboardData.profile?.displayName ?? 'whiteboard'}`,
         reservedNameIDs
       );
+    // createWhiteboard authorizes the source it dereferences + the per-document media
+    // re-home under this actor, so it needs the real ActorContext, not just an id.
     calloutFraming.whiteboard = await this.whiteboardService.createWhiteboard(
       whiteboardData,
       storageAggregator,
-      userID
+      actorContext
     );
   }
 
@@ -428,6 +432,7 @@ export class CalloutFramingService {
     calloutFramingData: UpdateCalloutFramingInput,
     storageAggregator: IStorageAggregator,
     isParentCalloutTemplate: boolean,
+    actorContext: ActorContext,
     userID?: string
   ): Promise<ICalloutFraming> {
     if (calloutFramingData.profile) {
@@ -468,17 +473,32 @@ export class CalloutFramingService {
     await this.deleteInconsistentFramingContent(calloutFraming);
     switch (calloutFraming.type) {
       case CalloutFramingType.WHITEBOARD: {
-        // if there is no content coming with the mutation, we do nothing with the whiteboard
-        if (!calloutFramingData.whiteboardContent) {
-          return calloutFraming;
-        }
-        // if there is content and a whiteboard, we update it
         if (calloutFraming.whiteboard) {
-          calloutFraming.whiteboard =
-            await this.whiteboardService.updateWhiteboardContent(
-              calloutFraming.whiteboard.id,
-              calloutFramingData.whiteboardContent
-            );
+          // Direct whiteboard-content replacement is TEMPLATE-ONLY, mirroring the memo
+          // branch below (and the client's `mapFormToCalloutUpdateInput`, T048/T048a, which
+          // never sends whiteboardContent on a live-callout update). A template stores its
+          // whiteboard content statically; a live (non-template) callout's whiteboard is
+          // edited through its collaborative room, so an out-of-band snapshot write here
+          // would be clobbered by the room's next save. For a non-template callout the
+          // content is ignored (the room is authoritative); preview settings still apply.
+          if (calloutFramingData.sourceWhiteboardID) {
+            calloutFraming.whiteboard =
+              await this.whiteboardService.replaceContentFromSource(
+                calloutFraming.whiteboard.id,
+                calloutFramingData.sourceWhiteboardID,
+                actorContext
+              );
+          } else if (
+            isParentCalloutTemplate &&
+            calloutFramingData.whiteboardContent
+          ) {
+            calloutFraming.whiteboard =
+              await this.whiteboardService.updateWhiteboardContent(
+                calloutFraming.whiteboard.id,
+                calloutFramingData.whiteboardContent,
+                actorContext
+              );
+          }
           if (calloutFramingData.whiteboardPreviewSettings) {
             await this.whiteboardService.updateWhiteboard(
               calloutFraming.whiteboard,
@@ -488,7 +508,10 @@ export class CalloutFramingService {
             );
           }
         } else {
-          // if there is content and no whiteboard, we create a new one
+          // A WHITEBOARD framing always owns a whiteboard. This also covers a live
+          // Callout changing type without supplying replacement content: the ordinary
+          // empty-whiteboard path establishes the invariant instead of persisting an
+          // unusable WHITEBOARD framing with a null relation.
           await this.createNewWhiteboardInCalloutFraming(
             calloutFraming,
             {
@@ -496,10 +519,11 @@ export class CalloutFramingService {
                 displayName: 'Callout Framing Whiteboard',
               },
               content: calloutFramingData.whiteboardContent,
+              sourceWhiteboardID: calloutFramingData.sourceWhiteboardID,
               previewSettings: calloutFramingData.whiteboardPreviewSettings,
             },
             storageAggregator,
-            userID
+            actorContext
           );
         }
         break;
@@ -510,14 +534,18 @@ export class CalloutFramingService {
           return calloutFraming;
         }
 
-        // if there is content and a Memo AND the parent Callout is template, we update it
+        // if there is content and a Memo AND the parent Callout is template, we update it.
+        // The update is applied THROUGH the memo's live collaboration room (the single
+        // authority over the snapshot) as the initiating actor — never a direct snapshot
+        // write, which a live room's next SAVE would clobber (006 write-path fix).
         if (
           calloutFraming.memo &&
           calloutFramingData.memoContent &&
           isParentCalloutTemplate
         ) {
-          calloutFraming.memo = await this.memoService.updateMemoContent(
+          calloutFraming.memo = await this.memoService.replaceMemoContent(
             calloutFraming.memo.id,
+            userID ?? '',
             calloutFramingData.memoContent
           );
         } else {
