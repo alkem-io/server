@@ -1,5 +1,6 @@
 import { AuthorizationPrivilege } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
+import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
 import { GraphqlGuard } from '@core/authorization';
 import { ContributorFilterInput } from '@core/filtering/input-types';
 import { IActorFull } from '@domain/actor/actor/actor.interface';
@@ -84,6 +85,25 @@ export class ForumResolverFields {
       types,
       filter,
       limit
+    );
+  }
+
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('discussionCategories', () => [ForumDiscussionCategory], {
+    nullable: false,
+    description: 'The active discussion categories for this Forum.',
+  })
+  discussionCategories(@Parent() forum: IForum): ForumDiscussionCategory[] {
+    // Rollback/mixed-fleet guard (spec 060 FR-007): a stored value this
+    // running build does not recognise (rolled-back server, migration
+    // ahead of code, or hand-edited data) is dropped here, not thrown — the
+    // non-null enum chain `[ForumDiscussionCategory!]!` would otherwise
+    // null the entire platform query for every client on any drift.
+    const knownCategories = new Set(Object.values(ForumDiscussionCategory));
+    return forum.discussionCategories.filter(
+      (category): category is ForumDiscussionCategory =>
+        knownCategories.has(category as ForumDiscussionCategory)
     );
   }
 }

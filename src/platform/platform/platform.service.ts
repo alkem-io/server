@@ -124,7 +124,58 @@ export class PlatformService {
       await this.savePlatform(platform);
       return platform.forum;
     }
+
+    // Read-only drift observability (spec 060 D-05/FR-008). Never writes,
+    // never locks, never changes this method's create-only-when-absent
+    // behaviour (operator ruling D-02) — it only makes drift between the
+    // stored active list and the current vocabulary visible at boot.
+    this.logForumCategoryDrift(forum);
+
     return forum;
+  }
+
+  /**
+   * Logs — never repairs — drift between the Forum's stored active category
+   * list and the current `ForumDiscussionCategory` vocabulary.
+   *
+   * - `warn`: a stored value the running build does not recognise. Also
+   *   caught by the read-side filter (FR-007); this line is what makes the
+   *   condition observable at boot instead of only inferable from a diff.
+   * - `verbose`: a vocabulary member absent from the stored list. Expected
+   *   post-retirement; before this release's migration has run, it is the
+   *   signal that the manually-triggered migration job is still pending.
+   */
+  private logForumCategoryDrift(forum: IForum): void {
+    const knownCategories = new Set(Object.values(ForumDiscussionCategory));
+    const storedCategories = forum.discussionCategories ?? [];
+
+    const unknownStoredValues = storedCategories.filter(
+      value => !knownCategories.has(value as ForumDiscussionCategory)
+    );
+    if (unknownStoredValues.length > 0) {
+      this.logger.warn?.(
+        {
+          message:
+            'Forum active category list contains unknown value(s) — being filtered from API responses',
+          unknownStoredValues,
+        },
+        LogContext.PLATFORM
+      );
+    }
+
+    const missingMembers = Object.values(ForumDiscussionCategory).filter(
+      category => !storedCategories.includes(category)
+    );
+    if (missingMembers.length > 0) {
+      this.logger.verbose?.(
+        {
+          message:
+            'Forum vocabulary member(s) absent from the active category list — expected post-retirement; before the first 060 migration run this flags it as still pending',
+          missingMembers,
+        },
+        LogContext.PLATFORM
+      );
+    }
   }
 
   async ensureMessagingCreated(): Promise<IMessaging> {
