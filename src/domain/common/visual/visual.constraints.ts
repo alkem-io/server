@@ -31,7 +31,7 @@ export const MEDIA_GALLERY_VIDEO_ALLOWED_TYPES = [
 //
 // IMPORTANT — because the ratio is adjustable, BANNER's height bounds have to
 // span the WHOLE ratio range rather than matching a single shape:
-//   minHeight = ceil(minWidth / maxAspectRatio) = ceil(1536 / 10) = 154
+//   minHeight = ceil(minWidth / maxAspectRatio) = ceil(1200 / 10) = 120
 //   maxHeight =      maxWidth / minAspectRatio  =      3840 / 6   = 640
 // Narrowing them to one ratio would reject legitimate uploads at another.
 export const DEFAULT_VISUAL_CONSTRAINTS = {
@@ -46,9 +46,9 @@ export const DEFAULT_VISUAL_CONSTRAINTS = {
     allowedTypes: VISUAL_ALLOWED_TYPES,
   },
   [VisualType.BANNER]: {
-    minWidth: 1536,
+    minWidth: 1200,
     maxWidth: 3840,
-    minHeight: 154,
+    minHeight: 120,
     maxHeight: 640,
     aspectRatio: 6,
     minAspectRatio: 6,

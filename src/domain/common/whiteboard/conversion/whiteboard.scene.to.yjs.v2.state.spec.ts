@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import type * as Yjs from 'yjs';
 import { EMPTY_WHITEBOARD_CONTENT } from '../empty.whiteboard.content';
+import { loadWhiteboardFork } from '../whiteboard.fork';
 import {
   parseLegacyWhiteboardScene,
   whiteboardSceneToYjsV2State,
@@ -160,6 +161,138 @@ describe('whiteboardSceneToYjsV2State (fork-based encoder)', () => {
     expect(typeof decoded.element('b')?.get('index')).toBe('string');
   });
 
+  it('moves legacy bound text after its container before seeding indices', async () => {
+    const scene = JSON.stringify({
+      type: 'excalidraw',
+      version: 2,
+      source: '',
+      elements: [
+        {
+          id: 'label',
+          type: 'text',
+          containerId: 'container',
+          text: 'Label',
+          originalText: 'Label',
+          x: 10,
+          y: 10,
+          index: 'a0',
+        },
+        {
+          id: 'container',
+          type: 'rectangle',
+          boundElements: [{ id: 'label', type: 'text' }],
+          x: 0,
+          y: 0,
+          width: 100,
+          height: 50,
+          index: 'a1',
+        },
+      ],
+      appState: {},
+      files: {},
+    });
+
+    const fork = await loadWhiteboardFork();
+    const snapshot = fork.decodeSnapshot(
+      await whiteboardSceneToYjsV2State(scene)
+    );
+
+    expect(snapshot.elements.map(element => element.id)).toEqual([
+      'container',
+      'label',
+    ]);
+    expect(() =>
+      fork.validateFractionalIndices(snapshot.elements as never, {
+        shouldThrow: true,
+        includeBoundTextValidation: true,
+        ignoreLogs: true,
+      })
+    ).not.toThrow();
+  });
+
+  it('drops only stale text bindings that contradict the child container id', async () => {
+    const scene = JSON.stringify({
+      type: 'excalidraw',
+      version: 2,
+      source: '',
+      elements: [
+        {
+          id: 'owner',
+          type: 'rectangle',
+          boundElements: [{ id: 'label', type: 'text' }],
+          x: 0,
+          y: 0,
+          width: 100,
+          height: 50,
+          index: 'a0',
+        },
+        {
+          id: 'label',
+          type: 'text',
+          containerId: 'owner',
+          text: 'Label',
+          originalText: 'Label',
+          x: 10,
+          y: 10,
+          index: 'a1',
+        },
+        {
+          id: 'stale-parent',
+          type: 'rectangle',
+          boundElements: [
+            { id: 'label', type: 'text' },
+            { id: 'arrow', type: 'arrow' },
+          ],
+          x: 200,
+          y: 0,
+          width: 100,
+          height: 50,
+          index: 'a2',
+        },
+        {
+          id: 'arrow',
+          type: 'arrow',
+          x: 0,
+          y: 0,
+          width: 10,
+          height: 10,
+          points: [
+            [0, 0],
+            [10, 10],
+          ],
+          index: 'a3',
+        },
+      ],
+      appState: {},
+      files: {},
+    });
+
+    const fork = await loadWhiteboardFork();
+    const snapshot = fork.decodeSnapshot(
+      await whiteboardSceneToYjsV2State(scene)
+    );
+    const staleParent = snapshot.elements.find(
+      element => element.id === 'stale-parent'
+    );
+
+    expect(staleParent?.boundElements).toEqual([
+      { id: 'arrow', type: 'arrow' },
+    ]);
+    expect(snapshot.elements.map(element => element.id).sort()).toEqual([
+      'arrow',
+      'label',
+      'owner',
+      'stale-parent',
+    ]);
+    expect(() =>
+      fork.validateFractionalIndices(snapshot.elements as never, {
+        shouldThrow: true,
+        includeBoundTextValidation: true,
+        ignoreLogs: true,
+      })
+    ).not.toThrow();
+  });
+
   it('does NOT store the immutable input scene (no mutation of the caller records)', async () => {
     const elements = [{ id: 'a', type: 'rectangle', x: 0, y: 0 }] as const;
     const scene = JSON.stringify({
@@ -274,6 +407,10 @@ describe('parseLegacyWhiteboardScene', () => {
     expect(parsed?.elements).toHaveLength(1);
     expect(parsed?.files?.f1?.url).toBe('http://x/y.png');
     expect(parsed?.appState?.viewBackgroundColor).toBe('#fff');
+  });
+
+  it('recognizes the historical empty-object sentinel as an empty scene', () => {
+    expect(parseLegacyWhiteboardScene(' {} ')).toEqual({ elements: [] });
   });
 
   it('returns undefined for empty / non-JSON / structurally-invalid content', () => {
