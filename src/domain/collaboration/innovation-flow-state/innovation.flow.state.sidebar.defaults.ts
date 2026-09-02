@@ -16,6 +16,42 @@ import { SidebarWidget } from '@common/enums/sidebar.widget';
  * Frozen so callers never mutate a shared array by reference — always spread
  * (`[...SIDEBAR_DEFAULT_GENERIC]`) before assigning to a state's settings.
  */
+/**
+ * The placement rule for `search`, as executable code: returns a copy of `list` with `search`
+ * inserted (a) immediately before the first `index`, else (b) immediately after the last
+ * `createSubspace`/`createPost`, else (c) appended. A list already containing `search` is
+ * returned unchanged (idempotent). This is the single definition the four default literals
+ * below are checked against, and the reference the migration's SQL is meant to reproduce
+ * (the migration additionally skips `[]` — a policy on top of the rule, not part of it).
+ */
+export const insertSearchWidget = (
+  list: readonly SidebarWidget[]
+): SidebarWidget[] => {
+  if (list.includes(SidebarWidget.SEARCH)) {
+    return [...list];
+  }
+  const firstIndex = list.indexOf(SidebarWidget.INDEX);
+  if (firstIndex >= 0) {
+    return [
+      ...list.slice(0, firstIndex),
+      SidebarWidget.SEARCH,
+      ...list.slice(firstIndex),
+    ];
+  }
+  const lastCreateButton = Math.max(
+    list.lastIndexOf(SidebarWidget.CREATE_SUBSPACE),
+    list.lastIndexOf(SidebarWidget.CREATE_POST)
+  );
+  if (lastCreateButton >= 0) {
+    return [
+      ...list.slice(0, lastCreateButton + 1),
+      SidebarWidget.SEARCH,
+      ...list.slice(lastCreateButton + 1),
+    ];
+  }
+  return [...list, SidebarWidget.SEARCH];
+};
+
 export const SIDEBAR_DEFAULT_L0_TAB_1: readonly SidebarWidget[] = Object.freeze(
   [
     SidebarWidget.INTENT,
