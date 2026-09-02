@@ -42,7 +42,7 @@ export class CreateInnovationFlowStateSettingsInput {
   @Field(() => [SidebarWidget], {
     nullable: true,
     description:
-      'Optional. Ordered sidebar widgets; defaults to [INTENT, CREATE_POST, APPLICATION_BUTTON, INDEX] when omitted.',
+      'Optional. Ordered sidebar widgets; defaults to [INTENT, CREATE_POST, APPLICATION_BUTTON, SEARCH, INDEX] when omitted.',
   })
   @IsOptional()
   @IsArray()

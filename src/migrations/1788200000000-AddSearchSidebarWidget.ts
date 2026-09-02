@@ -1,9 +1,15 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 /**
- * Inserts the `search` widget into every stored per-tab sidebar list that predates it, so
- * upgrading a Space (or template, or orphaned state) does not silently lose search once the
- * in-content search row is removed from the product.
+ * Inserts the `search` widget into every stored NON-EMPTY per-tab sidebar list that predates
+ * it, so upgrading a Space (or template, or orphaned state) keeps search once the in-content
+ * search row is removed from the product.
+ *
+ * Known, deliberate exception: a tab whose sidebar an admin emptied (`[]`) is left empty, and
+ * since the in-content search row is gone, that tab has no search field anywhere after the
+ * upgrade until an admin adds the Search widget under Settings > Layout. This is the ruled
+ * behaviour (spec 055 US2-AS3: `[]` is explicit admin configuration) — call it out in the
+ * release notes; it is not an oversight of this migration.
  *
  * Placement follows one content-based rule, applied to every row identically regardless of
  * owner (top-level Space, subspace at any level, space/flow template, orphan) and regardless
@@ -51,8 +57,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * pre-feature code ignores, and admins may edit the list again after this migration runs —
  * stripping it on rollback would silently delete those later edits.
  */
-export class AddSearchSidebarWidget1788100000000 implements MigrationInterface {
-  name = 'AddSearchSidebarWidget1788100000000';
+export class AddSearchSidebarWidget1788200000000 implements MigrationInterface {
+  name = 'AddSearchSidebarWidget1788200000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     const [{ count: before }] = await queryRunner.query(`
