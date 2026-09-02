@@ -333,7 +333,8 @@ describe('VisualService', () => {
       // Height bounds span the whole 6-10 aspect-ratio range, not just 6:1.
       expect(result.minHeight).toBe(120);
       expect(result.maxHeight).toBe(640);
-      expect(result.aspectRatio).toBe(6);
+      // The default shape is the 10:1 slim strip; 6-10 stays the admin range.
+      expect(result.aspectRatio).toBe(10);
     });
   });
 
