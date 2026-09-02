@@ -3,6 +3,7 @@ import { ForumDiscussionCategoryException } from '@common/exceptions/forum.discu
 import {
   ADMIN_ONLY_FORUM_CATEGORIES,
   assertForumCategoryAllowed,
+  isKnownForumCategory,
 } from './forum.category.allowed';
 
 describe('assertForumCategoryAllowed', () => {
@@ -51,5 +52,17 @@ describe('ADMIN_ONLY_FORUM_CATEGORIES', () => {
     for (const category of others) {
       expect(ADMIN_ONLY_FORUM_CATEGORIES.has(category)).toBe(false);
     }
+  });
+});
+
+describe('isKnownForumCategory', () => {
+  it('is true for every current vocabulary member', () => {
+    for (const category of Object.values(ForumDiscussionCategory)) {
+      expect(isKnownForumCategory(category)).toBe(true);
+    }
+  });
+
+  it('is false for a value this build does not recognise', () => {
+    expect(isKnownForumCategory('legacy-x')).toBe(false);
   });
 });

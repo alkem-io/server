@@ -14,6 +14,7 @@ import {
 } from '@src/common/decorators';
 import { IDiscussion } from '../forum-discussion/discussion.interface';
 import { DiscussionsInput } from './dto/forum.dto.discussions.input';
+import { isKnownForumCategory } from './forum.category.allowed';
 import { IForum } from './forum.interface';
 import { ForumService } from './forum.service';
 
@@ -100,10 +101,9 @@ export class ForumResolverFields {
     // ahead of code, or hand-edited data) is dropped here, not thrown — the
     // non-null enum chain `[ForumDiscussionCategory!]!` would otherwise
     // null the entire platform query for every client on any drift.
-    const knownCategories = new Set(Object.values(ForumDiscussionCategory));
     return forum.discussionCategories.filter(
       (category): category is ForumDiscussionCategory =>
-        knownCategories.has(category as ForumDiscussionCategory)
+        isKnownForumCategory(category)
     );
   }
 }

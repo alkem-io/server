@@ -31,6 +31,29 @@ export function isAdminOnlyForumCategory(category: string): boolean {
 }
 
 /**
+ * The full set of vocabulary members this running build recognises, shared
+ * by every read-side drift guard (`Forum.discussionCategories`,
+ * `Discussion.category`) so both boundaries stay in lockstep as the
+ * vocabulary grows.
+ */
+const KNOWN_FORUM_CATEGORIES: ReadonlySet<string> = new Set(
+  Object.values(ForumDiscussionCategory)
+);
+
+/**
+ * True when `category` is a member of this build's `ForumDiscussionCategory`
+ * vocabulary. A stored or otherwise-sourced value can fail this check when
+ * the running build is behind the data (rolled-back server after a
+ * migration-first deploy) or ahead of it (hand-edited data) — callers use it
+ * to substitute a safe fallback member before the value reaches non-null
+ * enum serialization, rather than letting GraphQL throw and null out an
+ * unrelated ancestor field.
+ */
+export function isKnownForumCategory(category: string): boolean {
+  return KNOWN_FORUM_CATEGORIES.has(category);
+}
+
+/**
  * Shared allowed-set guard applied to both creating a Discussion and
  * changing one's category. This is a data-integrity check, not a security
  * boundary: every path that reaches it is already
