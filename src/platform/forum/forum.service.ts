@@ -8,7 +8,7 @@ import {
   EntityNotFoundException,
   EntityNotInitializedException,
 } from '@common/exceptions';
-import { ForumDiscussionCategoryException } from '@common/exceptions/forum.discussion.category.exception';
+import { ForumDiscussionCategoryNotEmptyException } from '@common/exceptions/forum.discussion.category.not.empty.exception';
 import { FORUM_CATEGORY_NAMESPACE } from '@constants/forum.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IUser } from '@domain/community/user/user.interface';
@@ -24,6 +24,7 @@ import { Discussion } from '../forum-discussion/discussion.entity';
 import { IDiscussion } from '../forum-discussion/discussion.interface';
 import { DiscussionService } from '../forum-discussion/discussion.service';
 import { ForumCreateDiscussionInput } from './dto/forum.dto.create.discussion';
+import { assertForumCategoryAllowed } from './forum.category.allowed';
 import { Forum } from './forum.entity';
 import { IForum } from './forum.interface';
 
@@ -123,12 +124,10 @@ export class ForumService {
       relations: {},
     });
 
-    if (!forum.discussionCategories.includes(discussionData.category)) {
-      throw new ForumDiscussionCategoryException(
-        `Invalid discussion category supplied ('${discussionData.category}'), allowed categories: ${forum.discussionCategories}`,
-        LogContext.PLATFORM_FORUM
-      );
-    }
+    assertForumCategoryAllowed(
+      forum.discussionCategories,
+      discussionData.category
+    );
 
     const storageAggregator =
       await this.storageAggregatorResolverService.getStorageAggregatorForForum();
@@ -308,6 +307,55 @@ export class ForumService {
         LogContext.PLATFORM_FORUM
       );
     return forum;
+  }
+
+  /**
+   * Loads the platform's singleton Forum row directly, bypassing
+   * `PlatformService` (which itself depends on `ForumService` — injecting
+   * it here would create a module cycle). The platform bootstrap always
+   * seeds exactly one Forum, so absence here means the platform itself was
+   * never bootstrapped.
+   */
+  async getPlatformForumOrFail(): Promise<IForum> {
+    const forum = await this.forumRepository.findOne({ where: {} });
+    if (!forum)
+      throw new EntityNotFoundException(
+        'No platform Forum found!',
+        LogContext.PLATFORM_FORUM
+      );
+    return forum;
+  }
+
+  /**
+   * Removes exactly one category from the forum's active list (spec 060
+   * FR-012). Never touches the `ForumDiscussionCategory` vocabulary — the
+   * category remains a valid tombstone value forever; only the forum's data
+   * row shrinks. Refuses while any Discussion still carries the category
+   * (server-enforced emptiness) and is idempotent for a category already
+   * absent from the list.
+   */
+  async removeDiscussionCategory(
+    forum: IForum,
+    category: ForumDiscussionCategory
+  ): Promise<{ forum: IForum; removed: boolean }> {
+    if (!forum.discussionCategories.includes(category)) {
+      return { forum, removed: false };
+    }
+
+    const remainingPostCount =
+      await this.discussionService.countInForumByCategory(forum.id, category);
+    if (remainingPostCount > 0) {
+      throw new ForumDiscussionCategoryNotEmptyException(
+        category,
+        remainingPostCount
+      );
+    }
+
+    forum.discussionCategories = forum.discussionCategories.filter(
+      existing => existing !== category
+    );
+    const updatedForum = await this.save(forum);
+    return { forum: updatedForum, removed: true };
   }
 
   async removeForum(forumID: string): Promise<boolean> {

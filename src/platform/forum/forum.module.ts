@@ -10,6 +10,7 @@ import { NotificationAdapterModule } from '@services/adapters/notification-adapt
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
+import { PlatformOperationsAuditModule } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.module';
 import { DiscussionModule } from '../forum-discussion/discussion.module';
 import { Forum } from './forum.entity';
 import { ForumResolverFields } from './forum.resolver.fields';
@@ -30,6 +31,7 @@ import { ForumAuthorizationService } from './forum.service.authorization';
     PlatformAuthorizationPolicyModule,
     StorageAggregatorResolverModule,
     CommunicationAdapterModule,
+    PlatformOperationsAuditModule,
     RoomModule,
     TypeOrmModule.forFeature([Forum]),
   ],

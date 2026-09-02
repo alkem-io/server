@@ -1,9 +1,11 @@
 import { DiscussionsOrderBy } from '@common/enums/discussions.orderBy';
+import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { ForumDiscussionCategoryException } from '@common/exceptions/forum.discussion.category.exception';
+import { ForumDiscussionCategoryNotEmptyException } from '@common/exceptions/forum.discussion.category.not.empty.exception';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
@@ -256,6 +258,106 @@ describe('ForumService', () => {
       await expect(
         service.createDiscussion(discussionData, 'user-1', 'forum-user-1')
       ).rejects.toThrow(ForumDiscussionCategoryException);
+    });
+  });
+
+  describe('getPlatformForumOrFail', () => {
+    it('should return the singleton forum row when found', async () => {
+      const forum = { id: 'platform-forum-1' } as any;
+      repo.findOne!.mockResolvedValue(forum);
+
+      const result = await service.getPlatformForumOrFail();
+
+      expect(result).toBe(forum);
+      expect(repo.findOne).toHaveBeenCalledWith({ where: {} });
+    });
+
+    it('should throw EntityNotFoundException when no forum exists', async () => {
+      repo.findOne!.mockResolvedValue(null);
+
+      await expect(service.getPlatformForumOrFail()).rejects.toThrow(
+        EntityNotFoundException
+      );
+    });
+  });
+
+  describe('removeDiscussionCategory', () => {
+    it('should return removed: false (idempotent no-op) when the category is already absent', async () => {
+      const forum = {
+        id: 'f1',
+        discussionCategories: [ForumDiscussionCategory.OTHER],
+      } as any;
+
+      const result = await service.removeDiscussionCategory(
+        forum,
+        ForumDiscussionCategory.RELEASES
+      );
+
+      expect(result).toEqual({ forum, removed: false });
+      expect(
+        discussionService.countInForumByCategory as Mock
+      ).not.toHaveBeenCalled();
+      expect(repo.save).not.toHaveBeenCalled();
+    });
+
+    it('should throw ForumDiscussionCategoryNotEmptyException naming the live count when posts remain', async () => {
+      const forum = {
+        id: 'f1',
+        discussionCategories: [ForumDiscussionCategory.OTHER],
+      } as any;
+      (discussionService.countInForumByCategory as Mock).mockResolvedValue(3);
+
+      await expect(
+        service.removeDiscussionCategory(forum, ForumDiscussionCategory.OTHER)
+      ).rejects.toThrow(ForumDiscussionCategoryNotEmptyException);
+      expect(repo.save).not.toHaveBeenCalled();
+    });
+
+    it('should remove the category and save when the count is zero', async () => {
+      const forum = {
+        id: 'f1',
+        discussionCategories: [
+          ForumDiscussionCategory.OTHER,
+          ForumDiscussionCategory.HELP,
+        ],
+      } as any;
+      (discussionService.countInForumByCategory as Mock).mockResolvedValue(0);
+      const savedForum = {
+        ...forum,
+        discussionCategories: [ForumDiscussionCategory.HELP],
+      };
+      repo.save!.mockResolvedValue(savedForum);
+
+      const result = await service.removeDiscussionCategory(
+        forum,
+        ForumDiscussionCategory.OTHER
+      );
+
+      expect(result).toEqual({ forum: savedForum, removed: true });
+      expect(repo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          discussionCategories: [ForumDiscussionCategory.HELP],
+        })
+      );
+    });
+
+    it('should never touch the enum — only the forum row is mutated', async () => {
+      const enumSnapshotBefore = Object.values(ForumDiscussionCategory);
+      const forum = {
+        id: 'f1',
+        discussionCategories: [ForumDiscussionCategory.OTHER],
+      } as any;
+      (discussionService.countInForumByCategory as Mock).mockResolvedValue(0);
+      repo.save!.mockImplementation(async (f: any) => f);
+
+      await service.removeDiscussionCategory(
+        forum,
+        ForumDiscussionCategory.OTHER
+      );
+
+      expect(Object.values(ForumDiscussionCategory)).toEqual(
+        enumSnapshotBefore
+      );
     });
   });
 
