@@ -198,7 +198,7 @@ describe('ForumResolverMutations', () => {
       );
     });
 
-    it('rejects and records an audit failure row when the actor lacks PLATFORM_ADMIN — no success row', async () => {
+    it('rejects when the actor lacks PLATFORM_ADMIN and writes no audit row at all', async () => {
       const authError = new Error('not authorized');
       authorizationService.grantAccessOrFail.mockImplementation(() => {
         throw authError;
@@ -208,15 +208,14 @@ describe('ForumResolverMutations', () => {
         resolver.adminForumRemoveDiscussionCategory(actorContext, removeData)
       ).rejects.toThrow(authError);
 
+      // Authorization is checked before the audited block, so a denial must
+      // never reach the audit sink or the domain work it gates — an
+      // unauthenticated or unauthorized caller gets no DB write and no
+      // audit-triggered error log attributable to them.
       expect(forumService.getPlatformForumOrFail).not.toHaveBeenCalled();
       expect(
         platformOperationsAuditService.recordOperation
-      ).toHaveBeenCalledTimes(1);
-      expect(
-        platformOperationsAuditService.recordOperation
-      ).toHaveBeenCalledWith(
-        expect.objectContaining({ outcome: 'failure', error: authError })
-      );
+      ).not.toHaveBeenCalled();
     });
 
     it('rejects with the not-empty exception and records an audit failure row', async () => {

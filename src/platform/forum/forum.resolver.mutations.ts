@@ -136,20 +136,22 @@ export class ForumResolverMutations {
     @CurrentActor() actorContext: ActorContext,
     @Args('removeData') removeData: ForumRemoveDiscussionCategoryInput
   ): Promise<IForum> {
-    // Authorization is inside the try/catch deliberately: the contract for
-    // this mutation requires an audited failure row for an authorization
-    // denial, not only for the empty-category refusal — every invocation
-    // of this mutation is auditable.
-    try {
-      const platformAuthorization =
-        await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
-      await this.authorizationService.grantAccessOrFail(
-        actorContext,
-        platformAuthorization,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
-        `remove forum discussion category: ${removeData.category}`
-      );
+    // Authorization runs before the audited block, not inside it: an
+    // unauthorized caller must be rejected without triggering a write to the
+    // compliance audit table or an error log entry attributable to them.
+    // Only work that happens once the caller is confirmed a platform admin
+    // is covered by the try/catch below, so genuine post-authorization
+    // failures still get their audited failure row.
+    const platformAuthorization =
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
+    await this.authorizationService.grantAccessOrFail(
+      actorContext,
+      platformAuthorization,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `remove forum discussion category: ${removeData.category}`
+    );
 
+    try {
       const forum = await this.forumService.getPlatformForumOrFail();
       const { forum: updatedForum, removed } =
         await this.forumService.removeDiscussionCategory(
