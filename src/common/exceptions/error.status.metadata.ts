@@ -170,6 +170,11 @@ const STATUS_METADATA: Record<AlkemioErrorStatus, ErrorMetadata> = {
     specificCode: 116,
     userMessage: 'userMessages.authorization.loginFlowInit',
   },
+  [AlkemioErrorStatus.SESSION_REFRESH_REQUIRED]: {
+    category: ErrorCategory.AUTHORIZATION,
+    specificCode: 117,
+    userMessage: 'userMessages.authorization.sessionRefreshRequired',
+  },
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 12xxx - VALIDATION: Input/state validation errors
@@ -327,6 +332,11 @@ const STATUS_METADATA: Record<AlkemioErrorStatus, ErrorMetadata> = {
     category: ErrorCategory.OPERATIONS,
     specificCode: 113,
     userMessage: 'userMessages.operations.userIdentityDeletionFailed',
+  },
+  [AlkemioErrorStatus.ACCOUNT_DELETION_BLOCKED]: {
+    category: ErrorCategory.OPERATIONS,
+    specificCode: 117,
+    userMessage: 'userMessages.operations.accountDeletionBlocked',
   },
 
   // ═══════════════════════════════════════════════════════════════════════════

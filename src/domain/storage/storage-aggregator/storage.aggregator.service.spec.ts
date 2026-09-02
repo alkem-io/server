@@ -209,6 +209,59 @@ describe('StorageAggregatorService', () => {
     });
   });
 
+  describe('deleteForAccountDeletion', () => {
+    it('joins the passed EntityManager throughout, surfaces the collected external ids and bucket id, and detaches directStorage before removing itself', async () => {
+      const aggregator = {
+        id: 'agg-1',
+        authorization: { id: 'auth-1' },
+        directStorage: { id: 'bucket-1' },
+      };
+      (storageAggregatorRepository.findOneOrFail as Mock).mockResolvedValue(
+        aggregator
+      );
+      (authorizationPolicyService.delete as Mock).mockResolvedValue(undefined);
+      (
+        storageBucketService.deleteStorageBucketForAccountDeletion as Mock
+      ).mockResolvedValue({
+        storageBucketID: 'bucket-1',
+        documentIDs: ['ext-1', 'ext-2'],
+      });
+      const em = {
+        remove: vi.fn().mockResolvedValue({ ...aggregator, id: '' }),
+      } as any;
+
+      const result = await service.deleteForAccountDeletion('agg-1', em);
+
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        aggregator.authorization,
+        em
+      );
+      expect(
+        storageBucketService.deleteStorageBucketForAccountDeletion
+      ).toHaveBeenCalledWith('bucket-1', em);
+      expect(aggregator.directStorage).toBeUndefined();
+      expect(em.remove).toHaveBeenCalledWith(aggregator);
+      expect(result.documentIDs).toEqual(['ext-1', 'ext-2']);
+      expect(result.storageBucketIDs).toEqual(['bucket-1']);
+      expect(result.storageAggregator.id).toBe('agg-1');
+    });
+
+    it('throws when direct storage is missing', async () => {
+      const aggregator = {
+        id: 'agg-2',
+        authorization: { id: 'auth-2' },
+        directStorage: undefined,
+      };
+      (storageAggregatorRepository.findOneOrFail as Mock).mockResolvedValue(
+        aggregator
+      );
+
+      await expect(
+        service.deleteForAccountDeletion('agg-2', {} as any)
+      ).rejects.toThrow(EntityNotInitializedException);
+    });
+  });
+
   // ── getStorageAggregatorOrFail ──────────────────────────────────
 
   describe('getStorageAggregatorOrFail', () => {

@@ -12,7 +12,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy/authori
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { NotificationSettingInput } from './dto/notification.setting.input';
 import { CreateUserSettingsInput } from './dto/user.settings.dto.create';
 import { UpdateUserSettingsEntityInput } from './dto/user.settings.dto.update';
@@ -390,9 +390,16 @@ export class UserSettingsService {
     return settings;
   }
 
-  async deleteUserSettings(userSettingsID: string): Promise<IUserSettings> {
+  async deleteUserSettings(
+    userSettingsID: string,
+    em?: EntityManager
+  ): Promise<IUserSettings> {
     const userSettings = await this.getUserSettingsOrFail(userSettingsID);
-    await this.userSettingsRepository.remove(userSettings as UserSettings);
+    if (em) {
+      await em.remove(userSettings as UserSettings);
+    } else {
+      await this.userSettingsRepository.remove(userSettings as UserSettings);
+    }
     return userSettings;
   }
 

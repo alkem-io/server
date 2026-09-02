@@ -43,7 +43,6 @@ import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.in
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import {
-  L0_FIXED_INNOVATION_FLOW_STATES,
   L0_MAX_INNOVATION_FLOW_STATES,
   L0_MIN_INNOVATION_FLOW_STATES,
   SUBSPACE_MAX_INNOVATION_FLOW_STATES,
@@ -1439,19 +1438,19 @@ export class SpaceService {
     }
     if (
       templateContentSpace.collaboration.innovationFlow.states.length <
-      L0_FIXED_INNOVATION_FLOW_STATES
+      L0_MIN_INNOVATION_FLOW_STATES
     ) {
       throw new ValidationException(
         'Template content space innovation flow states must satisfy the required minimum',
         LogContext.SPACES,
         {
           templateContentSpaceID,
-          minimumRequiredStates: L0_FIXED_INNOVATION_FLOW_STATES,
+          minimumRequiredStates: L0_MIN_INNOVATION_FLOW_STATES,
         }
       );
     }
-    // Story #6177: keep the L0 minimum at the fixed-phase count, but raise the
-    // maximum to the subspace allowance so admins can add tabs beyond the fixed 4.
+    // client-web#9528: L0 spaces share the subspace 1..8 allowance, so any
+    // template (including a subspace-shaped one) can seed an L0 space.
     templateContentSpace.collaboration.innovationFlow.settings.minimumNumberOfStates =
       L0_MIN_INNOVATION_FLOW_STATES;
     templateContentSpace.collaboration.innovationFlow.settings.maximumNumberOfStates =
