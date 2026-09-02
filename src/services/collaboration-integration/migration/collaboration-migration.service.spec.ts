@@ -970,6 +970,24 @@ describe('CollaborationMigrationService', () => {
       expect(memo.createQueryBuilder).toHaveBeenCalledTimes(1);
     });
 
+    it('reports a structured error code when an Error has an empty message', async () => {
+      memo.createQueryBuilder.mockReturnValueOnce(
+        queryBuilderMock([
+          [{ id: 'm1', content: null, storageBucketId: 'sb1' }],
+        ])
+      );
+      whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+      fileService.createSnapshotInBucket.mockRejectedValue(
+        Object.assign(new Error(), { code: 'SNAPSHOT_WRITE_FAILED' })
+      );
+
+      const summary = await svc.migrateAll();
+
+      expect(summary.failedDocuments).toEqual([
+        { id: 'm1', reason: 'SNAPSHOT_WRITE_FAILED' },
+      ]);
+    });
+
     it('publishes a reused snapshot id without treating it as an attempt-owned row', async () => {
       const update = updateQB(1);
       memo.createQueryBuilder
@@ -1200,6 +1218,38 @@ describe('CollaborationMigrationService', () => {
       const second = await svc.migrateWhiteboards();
       expect(second).toMatchObject({ total: 0, migrated: 0, failed: 0 });
       expect(contributionDefaults.createQueryBuilder).toHaveBeenCalledTimes(1);
+    });
+
+    it('migrates the historical empty-object contribution default as a canonical empty snapshot', async () => {
+      const storedContent = await compressText('{}');
+      const update = updateQB();
+      whiteboard.createQueryBuilder.mockReturnValue(queryBuilderMock([[]]));
+      contributionDefaults.query.mockResolvedValueOnce([
+        {
+          id: 'empty-default',
+          storedContent,
+          storageBucketId: 'callout-bucket-1',
+        },
+      ]);
+      contributionDefaults.createQueryBuilder.mockReturnValue(update.qb);
+
+      const summary = await svc.migrateWhiteboards();
+
+      expect(summary).toMatchObject({
+        total: 1,
+        migrated: 1,
+        flagged: 0,
+        failed: 0,
+      });
+      const canonicalStored = (
+        update.set.mock.calls as unknown as Array<
+          [{ whiteboardContent: string }]
+        >
+      )[0][0].whiteboardContent;
+      const canonical = await decompressText(canonicalStored);
+      expect(
+        await readStoredElementIds(Buffer.from(canonical, 'base64'))
+      ).toEqual([]);
     });
 
     it('counts and reports a legacy contribution default with no complete owning Callout path', async () => {
@@ -2889,6 +2939,18 @@ describe('CollaborationMigrationService', () => {
       expect(summary.migrated).toBe(0);
       expect(fileService.createSnapshotInBucket).not.toHaveBeenCalled();
       expect(update.set).not.toHaveBeenCalled();
+    });
+
+    it('migrate: the historical empty-object sentinel becomes a canonical empty snapshot', async () => {
+      const { summary, captured, update } = await migrateOneWhiteboard('{}');
+
+      expect(summary).toMatchObject({
+        migrated: 1,
+        flagged: 0,
+        failed: 0,
+      });
+      expect(await readStoredElementIds(captured.buffer!)).toEqual([]);
+      expect(update.set).toHaveBeenCalled();
     });
 
     it('migrate: a valid-JSON scene whose elements is NOT an array → failed, ZERO writes', async () => {
