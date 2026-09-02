@@ -136,10 +136,10 @@ export class ForumResolverMutations {
     @CurrentActor() actorContext: ActorContext,
     @Args('removeData') removeData: ForumRemoveDiscussionCategoryInput
   ): Promise<IForum> {
-    // Authorization is inside the try/catch deliberately: the C2 contract
-    // (contracts/graphql-forum-categories.md) requires an audited failure
-    // row for an authorization denial, not only for the empty-category
-    // refusal — every invocation of this mutation is auditable.
+    // Authorization is inside the try/catch deliberately: the contract for
+    // this mutation requires an audited failure row for an authorization
+    // denial, not only for the empty-category refusal — every invocation
+    // of this mutation is auditable.
     try {
       const platformAuthorization =
         await this.platformAuthorizationService.getPlatformAuthorizationPolicy();

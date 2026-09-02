@@ -4,8 +4,8 @@ import { ForumDiscussionCategoryException } from '@common/exceptions/forum.discu
 
 /**
  * Categories only a platform admin may create a Discussion in, or move one
- * into (spec 060 D-04). Releases speaks in the platform's own editorial
- * voice; Newsletter is the same outbound channel. Enforced on both create
+ * into. Releases speaks in the platform's own editorial voice; Newsletter
+ * is the same outbound channel. Enforced on both create
  * and update — replaces the single hardcoded `RELEASES` comparison this
  * delivery removes.
  *
@@ -32,8 +32,8 @@ export function isAdminOnlyForumCategory(category: string): boolean {
 
 /**
  * Shared allowed-set guard applied to both creating a Discussion and
- * changing one's category (spec 060 FR-005). This is a data-integrity
- * check, not a security boundary: every path that reaches it is already
+ * changing one's category. This is a data-integrity check, not a security
+ * boundary: every path that reaches it is already
  * gated by CREATE_DISCUSSION/UPDATE authorization (and, for the admin-only
  * categories above, PLATFORM_ADMIN) — the guard exists so that "empty" can
  * be held as a server-enforced invariant for the category-retirement

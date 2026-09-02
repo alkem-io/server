@@ -2,8 +2,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 
 /**
  * Appends the two new forum discussion categories — `newsletter` and
- * `tips-and-tricks` (spec 060 FR-001..003) — to the single `forum` row's
- * `discussionCategories` column (`simple-array`, comma-joined text).
+ * `tips-and-tricks` — to the single `forum` row's `discussionCategories`
+ * column (`simple-array`, comma-joined text).
  *
  * There is exactly one Forum row (the platform singleton), so this migration
  * is a plain read-modify-write inside its own transaction: no
@@ -11,13 +11,13 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * per value keeps the migration idempotent on re-run (house convention).
  *
  * Deliberately data-only: the two `ForumDiscussionCategory` enum members
- * already exist as of this release's code (append-only vocabulary, spec
- * A-02) — this migration only widens what the *active* list currently
- * offers. Running the migration before the code deploys is a no-op-adjacent
- * risk (the column would carry values a not-yet-deployed server doesn't
+ * already exist as of this release's code (the vocabulary is append-only) —
+ * this migration only widens what the *active* list currently offers.
+ * Running the migration before the code deploys is a no-op-adjacent risk
+ * (the column would carry values a not-yet-deployed server doesn't
  * recognise); the rollout runbook (plan.md) mandates code-first ordering,
- * and the read-side known-member filter (FR-007) makes any misordering or
- * rollback inert rather than fatal.
+ * and the read-side known-member filter makes any misordering or rollback
+ * inert rather than fatal.
  *
  * Rollback note: `down()` removes exactly the two values this migration
  * added, and only if still present — it does not touch any other stored

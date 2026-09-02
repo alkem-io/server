@@ -327,8 +327,8 @@ export class ForumService {
   }
 
   /**
-   * Removes exactly one category from the forum's active list (spec 060
-   * FR-012). Never touches the `ForumDiscussionCategory` vocabulary — the
+   * Removes exactly one category from the forum's active list. Never
+   * touches the `ForumDiscussionCategory` vocabulary — the
    * category remains a valid tombstone value forever; only the forum's data
    * row shrinks. Refuses while any Discussion still carries the category
    * (server-enforced emptiness) and is idempotent for a category already

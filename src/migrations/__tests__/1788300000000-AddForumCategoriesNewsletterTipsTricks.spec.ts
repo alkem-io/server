@@ -6,7 +6,7 @@ import { AddForumCategoriesNewsletterTipsTricks1788300000000 } from '../17883000
  * forum` and, per drifted row, a parameterized `UPDATE forum SET
  * "discussionCategories" = $1 WHERE id = $2`, so a tiny row-store fake
  * exercises the real up()/down() logic (append-if-missing / remove-if-
- * present) without a live PostgreSQL container (spec 060 T005).
+ * present) without a live PostgreSQL container.
  */
 class FakeForumTable {
   private rows = new Map<string, string | null>();

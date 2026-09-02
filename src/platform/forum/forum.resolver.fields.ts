@@ -95,7 +95,7 @@ export class ForumResolverFields {
     description: 'The active discussion categories for this Forum.',
   })
   discussionCategories(@Parent() forum: IForum): ForumDiscussionCategory[] {
-    // Rollback/mixed-fleet guard (spec 060 FR-007): a stored value this
+    // Rollback/mixed-fleet guard: a stored value this
     // running build does not recognise (rolled-back server, migration
     // ahead of code, or hand-edited data) is dropped here, not thrown — the
     // non-null enum chain `[ForumDiscussionCategory!]!` would otherwise

@@ -18,9 +18,9 @@ import { registerEnumType } from '@nestjs/graphql';
  * One sanctioned exception to that invariant, at the **label** layer only:
  * HELP displays as "Q&A" in the client (all 6 locales), while its stored
  * value, member name, and `/forum/help` URL stay `help` — an operator
- * ruling (spec 060 D-01) accepting that Help posts become Q&A posts without
- * per-post review. Do not "fix" this by renaming the value or adding a
- * separate Q&A member.
+ * ruling accepting that Help posts become Q&A posts without per-post
+ * review. Do not "fix" this by renaming the value or adding a separate
+ * Q&A member.
  */
 export enum ForumDiscussionCategory {
   RELEASES = 'releases',

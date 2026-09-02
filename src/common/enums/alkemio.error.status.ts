@@ -61,8 +61,8 @@ export enum AlkemioErrorStatus {
   FORUM_DISCUSSION_CATEGORY = 'FORUM_DISCUSSION_CATEGORY',
   // Distinct from FORUM_DISCUSSION_CATEGORY (which flags a value not on the
   // allowed list): this flags an allowed category that still holds posts,
-  // so `adminForumRemoveDiscussionCategory` refused to remove it (spec 060
-  // D-07 — ops tooling needs to tell the two apart).
+  // so `adminForumRemoveDiscussionCategory` refused to remove it — ops
+  // tooling needs to tell the two apart.
   FORUM_DISCUSSION_CATEGORY_NOT_EMPTY = 'FORUM_DISCUSSION_CATEGORY_NOT_EMPTY',
   OPERATION_NOT_ALLOWED = 'OPERATION_NOT_ALLOWED',
   NOT_FOUND = 'NOT_FOUND',

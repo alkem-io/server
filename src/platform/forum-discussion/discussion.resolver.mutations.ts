@@ -68,9 +68,9 @@ export class DiscussionResolverMutations {
 
     const previousCategory = discussion.category;
 
-    // Data-integrity, not a security fix (spec 060 A-03): every actor who
-    // can reach this UPDATE gate is already a strict subset of the
-    // PLATFORM_ADMIN holders the create path requires for these same
+    // Data-integrity, not a security fix: every actor who can reach this
+    // UPDATE gate is already a strict subset of the PLATFORM_ADMIN holders
+    // the create path requires for these same
     // categories — this makes "the active list defines what's allowed"
     // an invariant the server enforces on category-change too, not only
     // on create.

@@ -1,17 +1,17 @@
 import { ForumDiscussionCategory } from './forum.discussion.category';
 
 /**
- * Proves the shape invariant documented at the enum declaration (spec 060
- * FR-004 / C4): every member's stored value equals kebab-case of the member
- * name, and contains no comma (the active list is a comma-joined
- * `simple-array` column). HELP's label divergence (D-01) is a display-layer
- * exception only — its stored value still satisfies this invariant.
+ * Proves the shape invariant documented at the enum declaration: every
+ * member's stored value equals kebab-case of the member name, and contains
+ * no comma (the active list is a comma-joined `simple-array` column).
+ * HELP's label divergence is a display-layer exception only — its stored
+ * value still satisfies this invariant.
  */
 describe('ForumDiscussionCategory shape invariant', () => {
   const kebabCase = (memberName: string) =>
     memberName.toLowerCase().replace(/_/g, '-');
 
-  it('has exactly 8 members after the 060 additions', () => {
+  it('has exactly 8 members after the newsletter/tips-and-tricks additions', () => {
     expect(Object.values(ForumDiscussionCategory)).toHaveLength(8);
   });
 
@@ -27,7 +27,7 @@ describe('ForumDiscussionCategory shape invariant', () => {
     expect(value).not.toContain(',');
   });
 
-  it('keeps the 6 pre-060 members byte-identical', () => {
+  it('keeps the 6 pre-existing members byte-identical', () => {
     expect(ForumDiscussionCategory.RELEASES).toBe('releases');
     expect(ForumDiscussionCategory.PLATFORM_FUNCTIONALITIES).toBe(
       'platform-functionalities'
@@ -40,7 +40,7 @@ describe('ForumDiscussionCategory shape invariant', () => {
     expect(ForumDiscussionCategory.OTHER).toBe('other');
   });
 
-  it('adds exactly the two new 060 members', () => {
+  it('adds exactly the two new members', () => {
     expect(ForumDiscussionCategory.NEWSLETTER).toBe('newsletter');
     expect(ForumDiscussionCategory.TIPS_AND_TRICKS).toBe('tips-and-tricks');
   });

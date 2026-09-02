@@ -125,10 +125,10 @@ export class PlatformService {
       return platform.forum;
     }
 
-    // Read-only drift observability (spec 060 D-05/FR-008). Never writes,
-    // never locks, never changes this method's create-only-when-absent
-    // behaviour (operator ruling D-02) — it only makes drift between the
-    // stored active list and the current vocabulary visible at boot.
+    // Read-only drift observability. Never writes, never locks, never
+    // changes this method's create-only-when-absent behaviour (an operator
+    // ruling) — it only makes drift between the stored active list and the
+    // current vocabulary visible at boot.
     this.logForumCategoryDrift(forum);
 
     return forum;
@@ -139,7 +139,7 @@ export class PlatformService {
    * list and the current `ForumDiscussionCategory` vocabulary.
    *
    * - `warn`: a stored value the running build does not recognise. Also
-   *   caught by the read-side filter (FR-007); this line is what makes the
+   *   caught by the read-side filter; this line is what makes the
    *   condition observable at boot instead of only inferable from a diff.
    * - `verbose`: a vocabulary member absent from the stored list. Expected
    *   post-retirement; before this release's migration has run, it is the
@@ -170,7 +170,7 @@ export class PlatformService {
       this.logger.verbose?.(
         {
           message:
-            'Forum vocabulary member(s) absent from the active category list — expected post-retirement; before the first 060 migration run this flags it as still pending',
+            'Forum vocabulary member(s) absent from the active category list — expected post-retirement; before the category-seeding migration has run it flags that migration as still pending',
           missingMembers,
         },
         LogContext.PLATFORM

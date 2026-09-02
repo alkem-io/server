@@ -223,7 +223,7 @@ export class DiscussionService {
   /**
    * Live count of Discussions in the given Forum still carrying the given
    * category. The server-side check behind `adminForumRemoveDiscussionCategory`
-   * (spec 060 FR-012) — "empty" is enforced from this count, not assumed.
+   * — "empty" is enforced from this count, not assumed.
    */
   async countInForumByCategory(
     forumID: string,

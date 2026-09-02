@@ -18,9 +18,9 @@ describe('assertForumCategoryAllowed', () => {
   it('throws ForumDiscussionCategoryException when the category is not on the allowed list', () => {
     // The fixture forum below omits NEWSLETTER even though it is a real
     // vocabulary member — every real forum row carries all 8 members in
-    // this delivery (A-01), so this fixture is the only place the
-    // allowed-set rejection is exercisable end to end (see
-    // tasks/test-suites.md — it cannot be reproduced over the wire today).
+    // this delivery, so this fixture is the only place the allowed-set
+    // rejection is exercisable end to end (it cannot be reproduced over
+    // the wire today).
     expect(() =>
       assertForumCategoryAllowed(
         [ForumDiscussionCategory.OTHER],
