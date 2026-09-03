@@ -1,5 +1,5 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsBoolean } from 'class-validator';
+import { IsBoolean, IsOptional } from 'class-validator';
 
 @InputType()
 export class UpdateOrganizationSettingsMembershipInput {
@@ -10,4 +10,12 @@ export class UpdateOrganizationSettingsMembershipInput {
   })
   @IsBoolean()
   allowUsersMatchingDomainToJoin!: boolean;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description: 'Allow Spaces to invite this Organization to join them.',
+  })
+  @IsBoolean()
+  @IsOptional()
+  allowSpaceInvitations?: boolean;
 }
