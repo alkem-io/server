@@ -37,6 +37,7 @@ import { LogContext } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { NotificationEvent } from '@common/enums/notification.event';
+import { RoleName } from '@common/enums/role.name';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
@@ -86,6 +87,20 @@ interface CalloutContributionPayload {
   createdBy: ContributorPayload;
   type: CalloutContributionType;
   url: string;
+}
+
+/**
+ * Temporary bridge until `@alkemio/notifications-lib` publishes this
+ * interface (merge gate — see the contract's rollout ordering). Mirrors
+ * the lib shape exactly so the swap to the published import is a pure
+ * type-only change.
+ */
+interface NotificationEventPayloadSpaceCommunityInvitationOrganization
+  extends NotificationEventPayloadSpaceCommunityInvitation {
+  organizationInvitationsUrl: string;
+  extraRoles: string[];
+  spacesToJoin: { displayName: string; url: string }[];
+  recipientEmail?: string;
 }
 
 @Injectable()
@@ -275,6 +290,87 @@ export class NotificationExternalAdapter {
         invitee: virtualContributorPayload,
         ...spacePayload,
       };
+    return result;
+  }
+
+  async buildOrganizationSpaceCommunityInvitationPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    organizationID: string,
+    space: ISpace,
+    spacesToJoin: ISpace[],
+    extraRoles: RoleName[],
+    welcomeMessage?: string,
+    recipientEmail?: string
+  ): Promise<NotificationEventPayloadSpaceCommunityInvitationOrganization> {
+    const spacePayload = await this.buildSpacePayload(
+      eventType,
+      triggeredBy,
+      recipients,
+      space
+    );
+    const organization =
+      await this.actorLookupService.getFullActorByIdOrFail(organizationID);
+    if (!organization.profile) {
+      throw new EntityNotFoundException(
+        'Unable to find Organization profile',
+        LogContext.COMMUNITY,
+        { organizationID }
+      );
+    }
+    const organizationPayload: ContributorPayload = {
+      id: organization.id,
+      profile: {
+        displayName: organization.profile.displayName,
+        url: this.urlGeneratorService.createUrlForContributor(organization),
+      },
+      type: getActorType(organization),
+    };
+    const spacesToJoinPayload = await Promise.all(
+      spacesToJoin.map(async spaceToJoin => ({
+        displayName: spaceToJoin.about.profile.displayName,
+        url: await this.urlGeneratorService.generateUrlForProfile(
+          spaceToJoin.about.profile
+        ),
+      }))
+    );
+
+    const result: NotificationEventPayloadSpaceCommunityInvitationOrganization =
+      {
+        invitee: organizationPayload,
+        welcomeMessage,
+        organizationInvitationsUrl:
+          this.urlGeneratorService.createUrlForOrganizationSettingsInvitations(
+            organization.nameID
+          ),
+        extraRoles: extraRoles.map(role => role.toString()),
+        spacesToJoin: spacesToJoinPayload,
+        ...(recipientEmail ? { recipientEmail } : {}),
+        ...spacePayload,
+      };
+    return result;
+  }
+
+  async buildOrganizationSpaceCommunityInvitationOutcomePayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    organizationID: string,
+    space: ISpace
+  ): Promise<NotificationEventPayloadSpaceCommunityInvitation> {
+    const spacePayload = await this.buildSpacePayload(
+      eventType,
+      triggeredBy,
+      recipients,
+      space
+    );
+    const organizationPayload =
+      await this.getContributorPayloadOrFail(organizationID);
+    const result: NotificationEventPayloadSpaceCommunityInvitation = {
+      invitee: organizationPayload,
+      ...spacePayload,
+    };
     return result;
   }
 
