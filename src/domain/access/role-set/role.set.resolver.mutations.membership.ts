@@ -39,6 +39,7 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { NotificationInputOrganizationSpaceCommunityInvitation } from '@services/adapters/notification-adapter/dto/organization/notification.dto.input.organization.space.community.invitation';
 import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.application';
 import { NotificationInputCommunityInvitation } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation';
+import { NotificationInputSpaceCommunityInvitationOrganizationOutcome } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation.organization.outcome';
 import { NotificationInputPlatformInvitation } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation.platform';
 import { NotificationInputCommunityInvitationVirtualContributor } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation.vc';
 import { NotificationInputVirtualContributorSpaceCommunityInvitationDeclined } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation.vc.declined';
@@ -717,10 +718,71 @@ export class RoleSetResolverMutationsMembership {
             ),
             'spaceAdminVirtualContributorInvitationDeclined'
           );
+        } else if (invitedActorType === ActorType.ORGANIZATION) {
+          if (!invitation.createdBy) {
+            this.logger.verbose?.(
+              `Skipping organization-declined outcome notification for invitation ${invitation.id}: the inviter no longer exists`,
+              LogContext.NOTIFICATIONS
+            );
+          } else {
+            const space =
+              await this.communityResolverService.getSpaceForRoleSetOrFail(
+                invitation.roleSet.id
+              );
+            const notificationInput: NotificationInputSpaceCommunityInvitationOrganizationOutcome =
+              {
+                triggeredBy: actorContext.actorID, // Who declined the invitation
+                invitationCreatedBy: invitation.createdBy, // Who sent the invitation
+                organizationID: invitedActorID,
+                spaceID: space.id,
+              };
+
+            this.dispatchNotification(
+              this.notificationAdapterSpace.spaceAdminOrganizationInvitationDeclined(
+                notificationInput,
+                space
+              ),
+              'spaceAdminOrganizationInvitationDeclined'
+            );
+          }
         }
       }
 
       const isMember = invitationState === InvitationLifecycleState.ACCEPTED;
+
+      // Send notification if the invitation was accepted for an Organization —
+      // the generic "new member joined" notification to all Space admins keeps
+      // firing separately (untouched, below); this is the dedicated outcome
+      // notification for the admin who sent the invitation.
+      if (isMember && invitedActorType === ActorType.ORGANIZATION) {
+        if (!invitation.createdBy) {
+          this.logger.verbose?.(
+            `Skipping organization-accepted outcome notification for invitation ${invitation.id}: the inviter no longer exists`,
+            LogContext.NOTIFICATIONS
+          );
+        } else {
+          const space =
+            await this.communityResolverService.getSpaceForRoleSetOrFail(
+              invitation.roleSet.id
+            );
+          const notificationInput: NotificationInputSpaceCommunityInvitationOrganizationOutcome =
+            {
+              triggeredBy: actorContext.actorID, // Who accepted the invitation
+              invitationCreatedBy: invitation.createdBy, // Who sent the invitation
+              organizationID: invitedActorID,
+              spaceID: space.id,
+            };
+
+          this.dispatchNotification(
+            this.notificationAdapterSpace.spaceAdminOrganizationInvitationAccepted(
+              notificationInput,
+              space
+            ),
+            'spaceAdminOrganizationInvitationAccepted'
+          );
+        }
+      }
+
       await this.roleSetCacheService.deleteOpenInvitationFromCache(
         invitedActorID,
         invitation.roleSet.id
