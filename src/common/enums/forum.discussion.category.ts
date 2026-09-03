@@ -21,16 +21,23 @@ import { registerEnumType } from '@nestjs/graphql';
  * ruling accepting that Help posts become Q&A posts without per-post
  * review. Do not "fix" this by renaming the value or adding a separate
  * Q&A member.
+ *
+ * Declaration order is the platform's canonical display order: both a
+ * freshly bootstrapped forum's active list and the existing-forum migration
+ * that promoted the newer categories derive their order from this sequence.
+ * Do not "tidy" these back into alphabetical or historical-addition order —
+ * reordering members is safe (only deleting or renaming one is forbidden),
+ * but doing so changes the navigation every forum renders.
  */
 export enum ForumDiscussionCategory {
   RELEASES = 'releases',
+  NEWSLETTER = 'newsletter',
+  TIPS_AND_TRICKS = 'tips-and-tricks',
+  HELP = 'help',
   PLATFORM_FUNCTIONALITIES = 'platform-functionalities',
   COMMUNITY_BUILDING = 'community-building',
   CHALLENGE_CENTRIC = 'challenge-centric',
-  HELP = 'help',
   OTHER = 'other',
-  NEWSLETTER = 'newsletter',
-  TIPS_AND_TRICKS = 'tips-and-tricks',
 }
 
 registerEnumType(ForumDiscussionCategory, {

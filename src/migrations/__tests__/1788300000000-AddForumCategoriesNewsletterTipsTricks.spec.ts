@@ -5,8 +5,8 @@ import { AddForumCategoriesNewsletterTipsTricks1788300000000 } from '../17883000
  * migration only ever issues a `SELECT id, "discussionCategories" FROM
  * forum` and, per drifted row, a parameterized `UPDATE forum SET
  * "discussionCategories" = $1 WHERE id = $2`, so a tiny row-store fake
- * exercises the real up()/down() logic (append-if-missing / remove-if-
- * present) without a live PostgreSQL container.
+ * exercises the real up()/down() logic (reorder-to-canonical-and-add /
+ * remove-if-present) without a live PostgreSQL container.
  */
 class FakeForumTable {
   private rows = new Map<string, string | null>();
@@ -50,7 +50,10 @@ describe('AddForumCategoriesNewsletterTipsTricks migration (1788300000000)', () 
     expect(typeof migration.down).toBe('function');
   });
 
-  it('up() appends both new categories, in order, to a legacy 6-value row', async () => {
+  const canonicalFull =
+    'releases,newsletter,tips-and-tricks,help,platform-functionalities,community-building,challenge-centric,other';
+
+  it('up() adds both new categories and reorders a legacy 6-value row into canonical order', async () => {
     const table = new FakeForumTable({
       'forum-1':
         'releases,platform-functionalities,community-building,challenge-centric,help,other',
@@ -58,27 +61,23 @@ describe('AddForumCategoriesNewsletterTipsTricks migration (1788300000000)', () 
 
     await migration.up(table.asQueryRunner());
 
-    expect(table.get('forum-1')).toBe(
-      'releases,platform-functionalities,community-building,challenge-centric,help,other,newsletter,tips-and-tricks'
-    );
+    expect(table.get('forum-1')).toBe(canonicalFull);
   });
 
-  it('up() is idempotent — running it twice yields the same 8 values', async () => {
+  it('up() is idempotent — running it twice yields the same canonical-order 8 values', async () => {
     const table = new FakeForumTable({
       'forum-1':
         'releases,platform-functionalities,community-building,challenge-centric,help,other',
     });
-    const expected =
-      'releases,platform-functionalities,community-building,challenge-centric,help,other,newsletter,tips-and-tricks';
 
     await migration.up(table.asQueryRunner());
     await migration.up(table.asQueryRunner());
 
-    expect(table.get('forum-1')).toBe(expected);
+    expect(table.get('forum-1')).toBe(canonicalFull);
     expect(table.get('forum-1')!.split(',')).toHaveLength(8);
   });
 
-  it('up() keeps an unknown hand-edited value untouched and still appends the two new ones', async () => {
+  it('up() appends an unknown hand-edited value after the known ones, and still adds the two new categories', async () => {
     const table = new FakeForumTable({
       'forum-1': 'releases,legacy-unknown-category',
     });
@@ -86,26 +85,39 @@ describe('AddForumCategoriesNewsletterTipsTricks migration (1788300000000)', () 
     await migration.up(table.asQueryRunner());
 
     expect(table.get('forum-1')).toBe(
-      'releases,legacy-unknown-category,newsletter,tips-and-tricks'
+      'releases,newsletter,tips-and-tricks,legacy-unknown-category'
     );
   });
 
-  it('up() skips a row that already carries both new values', async () => {
-    const full =
-      'releases,platform-functionalities,community-building,challenge-centric,help,other,newsletter,tips-and-tricks';
-    const table = new FakeForumTable({ 'forum-1': full });
+  it('up() skips a row that already carries both new values in canonical order', async () => {
+    const table = new FakeForumTable({ 'forum-1': canonicalFull });
 
     await migration.up(table.asQueryRunner());
 
-    expect(table.get('forum-1')).toBe(full);
+    expect(table.get('forum-1')).toBe(canonicalFull);
   });
 
-  it('up() treats a null column as an empty list and appends both values', async () => {
+  it('up() treats a null column as an empty list and adds both values with nothing else to reorder', async () => {
     const table = new FakeForumTable({ 'forum-1': null });
 
     await migration.up(table.asQueryRunner());
 
     expect(table.get('forum-1')).toBe('newsletter,tips-and-tricks');
+  });
+
+  it('up() is retirement-safe — a column missing a retired category does not regain it', async () => {
+    const table = new FakeForumTable({
+      // "help" was retired via adminForumRemoveDiscussionCategory before this
+      // migration ran.
+      'forum-1': 'releases,platform-functionalities,community-building,challenge-centric,other',
+    });
+
+    await migration.up(table.asQueryRunner());
+
+    expect(table.get('forum-1')).toBe(
+      'releases,newsletter,tips-and-tricks,platform-functionalities,community-building,challenge-centric,other'
+    );
+    expect(table.get('forum-1')).not.toContain('help');
   });
 
   it('down() removes exactly the two added values and leaves everything else untouched', async () => {

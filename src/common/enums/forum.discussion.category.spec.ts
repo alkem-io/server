@@ -44,4 +44,17 @@ describe('ForumDiscussionCategory shape invariant', () => {
     expect(ForumDiscussionCategory.NEWSLETTER).toBe('newsletter');
     expect(ForumDiscussionCategory.TIPS_AND_TRICKS).toBe('tips-and-tricks');
   });
+
+  it('declares members in the platform canonical display order', () => {
+    expect(Object.values(ForumDiscussionCategory)).toEqual([
+      'releases',
+      'newsletter',
+      'tips-and-tricks',
+      'help',
+      'platform-functionalities',
+      'community-building',
+      'challenge-centric',
+      'other',
+    ]);
+  });
 });
