@@ -3,12 +3,14 @@ import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock } from 'vitest';
+import { RoleSetService } from '../role-set/role.set.service';
 import { InvitationResolverFields } from './invitation.resolver.fields';
 import { InvitationService } from './invitation.service';
 
 describe('InvitationResolverFields', () => {
   let resolver: InvitationResolverFields;
   let invitationService: InvitationService;
+  let roleSetService: RoleSetService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -25,6 +27,7 @@ describe('InvitationResolverFields', () => {
 
     resolver = module.get<InvitationResolverFields>(InvitationResolverFields);
     invitationService = module.get<InvitationService>(InvitationService);
+    roleSetService = module.get<RoleSetService>(RoleSetService);
   });
 
   it('should be defined', () => {
@@ -68,6 +71,65 @@ describe('InvitationResolverFields', () => {
       const result = await resolver.createdBy(mockInvitation);
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('spacesToJoinOnAccept', () => {
+    it('resolves via the roleSet already loaded on the invitation, target last', async () => {
+      const mockRoleSet = { id: 'rs-1' } as any;
+      const mockInvitation = {
+        id: 'inv-1',
+        invitedActorID: 'org-1',
+        invitedToParent: true,
+        roleSet: mockRoleSet,
+      } as any;
+      const rootAbout = { id: 'about-root' };
+      const targetAbout = { id: 'about-target' };
+      (roleSetService.getSpacesToJoinOnAccept as Mock).mockResolvedValue([
+        { about: rootAbout },
+        { about: targetAbout },
+      ]);
+
+      const result = await resolver.spacesToJoinOnAccept(mockInvitation);
+
+      expect(roleSetService.getSpacesToJoinOnAccept).toHaveBeenCalledWith(
+        mockRoleSet,
+        'org-1',
+        true
+      );
+      expect(invitationService.getInvitationOrFail).not.toHaveBeenCalled();
+      expect(result).toEqual([rootAbout, targetAbout]);
+    });
+
+    it('reloads the invitation with its roleSet relation when absent on the parent', async () => {
+      const mockRoleSet = { id: 'rs-1' } as any;
+      const mockInvitation = {
+        id: 'inv-1',
+        invitedActorID: 'org-1',
+        invitedToParent: false,
+        // roleSet absent
+      } as any;
+      (invitationService.getInvitationOrFail as Mock).mockResolvedValue({
+        ...mockInvitation,
+        roleSet: mockRoleSet,
+      });
+      const targetAbout = { id: 'about-target' };
+      (roleSetService.getSpacesToJoinOnAccept as Mock).mockResolvedValue([
+        { about: targetAbout },
+      ]);
+
+      const result = await resolver.spacesToJoinOnAccept(mockInvitation);
+
+      expect(invitationService.getInvitationOrFail).toHaveBeenCalledWith(
+        'inv-1',
+        { relations: { roleSet: true } }
+      );
+      expect(roleSetService.getSpacesToJoinOnAccept).toHaveBeenCalledWith(
+        mockRoleSet,
+        'org-1',
+        false
+      );
+      expect(result).toEqual([targetAbout]);
     });
   });
 });

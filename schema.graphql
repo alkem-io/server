@@ -570,6 +570,7 @@ enum MutationType {
 enum NotificationEvent {
   ORGANIZATION_ADMIN_MENTIONED
   ORGANIZATION_ADMIN_MESSAGE
+  ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION
   ORGANIZATION_MESSAGE_SENDER
   PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED
   PLATFORM_ADMIN_SPACE_CREATED
@@ -580,6 +581,8 @@ enum NotificationEvent {
   SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION
   SPACE_ADMIN_COMMUNITY_APPLICATION
   SPACE_ADMIN_COMMUNITY_NEW_MEMBER
+  SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED
+  SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED
   SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED
   SPACE_COLLABORATION_CALLOUT_COMMENT
   SPACE_COLLABORATION_CALLOUT_CONTRIBUTION
@@ -787,6 +790,10 @@ enum RoleName {
   REGISTERED
 }
 
+enum RoleSetInvitationResultNotice {
+  ORGANIZATION_HAS_NO_ADMINISTRATORS
+}
+
 enum RoleSetInvitationResultType {
   ALREADY_HAS_OPEN_APPLICATION
   ALREADY_INVITED_TO_PLATFORM_AND_ROLE_SET
@@ -795,6 +802,8 @@ enum RoleSetInvitationResultType {
   INVITATION_TO_PARENT_NOT_AUTHORIZED
   INVITED_TO_PLATFORM_AND_ROLE_SET
   INVITED_TO_ROLE_SET
+  ORGANIZATION_LEAD_ROLE_LIMIT_REACHED
+  ORGANIZATION_NOT_ACCEPTING_INVITATIONS
 }
 
 enum RoleSetRoleImplicit {
@@ -3546,6 +3555,10 @@ type Invitation {
   lifecycle: Lifecycle!
   """The next events of this Lifecycle."""
   nextEvents: [String!]!
+  """
+  The Spaces that will be joined if this invitation is accepted, root Space first.
+  """
+  spacesToJoinOnAccept: [SpaceAbout!]!
   """The current state of this Lifecycle."""
   state: String!
   """
@@ -4973,6 +4986,8 @@ type OrganizationSettings {
 }
 
 type OrganizationSettingsMembership {
+  """Allow Spaces to invite this Organization to join them."""
+  allowSpaceInvitations: Boolean!
   """
   Allow Users with email addresses matching the domain of this Organization to join.
   """
@@ -6105,6 +6120,10 @@ type RoleSetInvitationResult {
   """
   application: Application
   invitation: Invitation
+  """
+  An informational addendum to the result, set only alongside a successful invite outcome.
+  """
+  notice: RoleSetInvitationResultNotice
   platformInvitation: PlatformInvitation
   type: RoleSetInvitationResultType!
 }
@@ -7308,6 +7327,10 @@ type UserSettingsNotificationOrganization {
   Receive notification when the organization you are admin of is messaged
   """
   adminMessageReceived: UserSettingsNotificationChannels!
+  """
+  Receive a notification when an organization you administer is invited to a Space
+  """
+  adminSpaceCommunityInvitation: UserSettingsNotificationChannels!
 }
 
 type UserSettingsNotificationPlatform {
@@ -10034,6 +10057,8 @@ input UpdateOrganizationSettingsInput {
 }
 
 input UpdateOrganizationSettingsMembershipInput {
+  """Allow Spaces to invite this Organization to join them."""
+  allowSpaceInvitations: Boolean
   """
   Allow Users with email addresses matching the domain of this Organization to join.
   """
@@ -10407,6 +10432,10 @@ input UpdateUserSettingsNotificationOrganizationInput {
   Receive notification when the organization you are admin of is messaged
   """
   adminMessageReceived: NotificationSettingInput
+  """
+  Receive a notification when an organization you administer is invited to a Space
+  """
+  adminSpaceCommunityInvitation: NotificationSettingInput
 }
 
 input UpdateUserSettingsNotificationPlatformAdminInput {

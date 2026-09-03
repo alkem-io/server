@@ -15,7 +15,7 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
 import { VirtualActorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { InAppNotificationModule } from '@platform/in-app-notification/in.app.notification.module';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
@@ -54,7 +54,7 @@ import { RoleSetServiceLifecycleInvitation } from './role.set.service.lifecycle.
     VirtualActorLookupModule,
     ActorLookupModule,
     RoleModule,
-    InvitationModule,
+    forwardRef(() => InvitationModule),
     EntityResolverModule,
     ApplicationModule,
     PlatformInvitationModule,

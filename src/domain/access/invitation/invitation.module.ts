@@ -8,8 +8,9 @@ import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { VirtualActorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { RoleSetModule } from '../role-set/role.set.module';
 import { RoleSetCacheModule } from '../role-set/role.set.service.cache.module';
 import { InvitationResolverFields } from './invitation.resolver.fields';
 import { InvitationLifecycleResolverFields } from './invitation.resolver.fields.lifecycle';
@@ -29,6 +30,7 @@ import { InvitationLifecycleService } from './invitation.service.lifecycle';
     AccountLookupModule,
     TypeOrmModule.forFeature([Invitation]),
     RoleSetCacheModule,
+    forwardRef(() => RoleSetModule),
   ],
   providers: [
     InvitationService,

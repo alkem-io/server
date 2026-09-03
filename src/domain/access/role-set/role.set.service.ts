@@ -48,6 +48,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -2137,6 +2138,61 @@ export class RoleSetService {
       current = parent;
     }
     return chain.reverse();
+  }
+
+  /**
+   * The RoleSets a pending invitation would join on acceptance, root first
+   * — target always last. Read-only: mirrors, without executing, exactly
+   * the rule {@link ensureMemberOfRoleSetAndAncestors} applies for an
+   * invitation (`invitedToParent` gates ancestor granting; missing-only —
+   * an ancestor the actor already belongs to is skipped). Used to power
+   * the informed-consent artifacts (email, in-app, Invitations tab) so
+   * they enumerate exactly what acceptance will do.
+   */
+  public async getRoleSetsToJoinOnAccept(
+    roleSet: IRoleSet,
+    actorID: string,
+    invitedToParent: boolean
+  ): Promise<IRoleSet[]> {
+    if (!invitedToParent) {
+      return [roleSet];
+    }
+    const chain = await this.getRoleSetAncestorChain(roleSet);
+    const toJoin: IRoleSet[] = [];
+    for (const roleSetInChain of chain) {
+      const alreadyMember = await this.isMember(actorID, roleSetInChain);
+      if (!alreadyMember) {
+        toJoin.push(roleSetInChain);
+      }
+    }
+    return toJoin;
+  }
+
+  /**
+   * Space-mapping wrapper over {@link getRoleSetsToJoinOnAccept} — the
+   * single source both the `spacesToJoinOnAccept` resolver field and the
+   * org-invited notification adapter call, so no second mapping exists
+   * anywhere in the codebase.
+   */
+  public async getSpacesToJoinOnAccept(
+    roleSet: IRoleSet,
+    actorID: string,
+    invitedToParent: boolean
+  ): Promise<ISpace[]> {
+    const roleSetsToJoin = await this.getRoleSetsToJoinOnAccept(
+      roleSet,
+      actorID,
+      invitedToParent
+    );
+    const spaces: ISpace[] = [];
+    for (const roleSetToJoin of roleSetsToJoin) {
+      spaces.push(
+        await this.communityResolverService.getSpaceForRoleSetOrFail(
+          roleSetToJoin.id
+        )
+      );
+    }
+    return spaces;
   }
 
   /**

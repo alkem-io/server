@@ -3043,6 +3043,94 @@ describe('RoleSetService', () => {
     });
   });
 
+  describe('getRoleSetsToJoinOnAccept', () => {
+    const spaceRoleSet = (id: string): IRoleSet =>
+      ({ id, type: RoleSetType.SPACE }) as unknown as IRoleSet;
+
+    it('returns only the target when invitedToParent is false', async () => {
+      const target = spaceRoleSet('target');
+      const chainSpy = vi.spyOn(service, 'getRoleSetAncestorChain');
+
+      const result = await service.getRoleSetsToJoinOnAccept(
+        target,
+        'actor-1',
+        false
+      );
+
+      expect(result).toEqual([target]);
+      expect(chainSpy).not.toHaveBeenCalled();
+    });
+
+    it('returns the missing-only ancestor chain, root first, target last, when invitedToParent is true', async () => {
+      const root = spaceRoleSet('root');
+      const mid = spaceRoleSet('mid');
+      const target = spaceRoleSet('target');
+      vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+        root,
+        mid,
+        target,
+      ]);
+      // Already a member of root; missing mid and target.
+      vi.spyOn(service, 'isMember').mockImplementation(
+        async (_actorID: string, rs: IRoleSet) => rs.id === 'root'
+      );
+
+      const result = await service.getRoleSetsToJoinOnAccept(
+        target,
+        'actor-1',
+        true
+      );
+
+      expect(result).toEqual([mid, target]);
+    });
+
+    it('always includes the target — the invitee is never already a member of it', async () => {
+      const root = spaceRoleSet('root');
+      const target = spaceRoleSet('target');
+      vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+        root,
+        target,
+      ]);
+      vi.spyOn(service, 'isMember').mockResolvedValue(false);
+
+      const result = await service.getRoleSetsToJoinOnAccept(
+        target,
+        'actor-1',
+        true
+      );
+
+      expect(result).toEqual([root, target]);
+    });
+  });
+
+  describe('getSpacesToJoinOnAccept', () => {
+    it('maps the RoleSets to join, in order, to their Spaces via one shared computation', async () => {
+      const target = { id: 'target', type: RoleSetType.SPACE } as IRoleSet;
+      const roleSetsSpy = vi
+        .spyOn(service, 'getRoleSetsToJoinOnAccept')
+        .mockResolvedValue([
+          { id: 'root' } as IRoleSet,
+          { id: 'target' } as IRoleSet,
+        ]);
+      const communityResolverService = (service as any)
+        .communityResolverService;
+      (
+        communityResolverService.getSpaceForRoleSetOrFail as Mock
+      ).mockImplementation(async (roleSetID: string) => ({
+        id: `space-${roleSetID}`,
+      }));
+
+      const result = await service.getSpacesToJoinOnAccept(
+        target,
+        'actor-1',
+        true
+      );
+
+      expect(roleSetsSpy).toHaveBeenCalledWith(target, 'actor-1', true);
+      expect(result).toEqual([{ id: 'space-root' }, { id: 'space-target' }]);
+    });
+  });
+
   // Feature 017 — the combined-flow authorisation predicate. Drives BOTH the
   // client-facing APPLY privilege exposure (T009) and the approval-time gate
   // (T013), so the setting (US2/FR-003/FR-014) and privacy (US3) govern both.
