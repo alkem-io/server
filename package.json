@@ -55,7 +55,7 @@
     "prepare": "husky || true"
   },
   "dependencies": {
-    "@alkemio/matrix-adapter-lib": "0.8.16",
+    "@alkemio/matrix-adapter-lib": "file:.forge-vendor/alkemio-matrix-adapter-lib-0.0.0-develop.tgz",
     "@alkemio/notifications-lib": "0.20.0",
     "@apollo/server": "^4.13.0",
     "@elastic/elasticsearch": "^8.12.2",
