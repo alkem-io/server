@@ -1,4 +1,6 @@
+import { ActorType } from '@common/enums/actor.type';
 import { LogContext } from '@common/enums/logging.context';
+import { RoleName } from '@common/enums/role.name';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
@@ -529,6 +531,88 @@ describe('InvitationService', () => {
       const result = await service.canInvitationBeAccepted('inv-1');
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('countOpenInvitationsForRoleSet', () => {
+    const leadOrgInvitation = (id: string, actorID: string) =>
+      ({
+        id,
+        invitedActorID: actorID,
+        extraRoles: [RoleName.LEAD],
+        lifecycle: { id: `lifecycle-${id}` },
+      }) as any;
+
+    it('counts only open invitations carrying the role and matching the actor type', async () => {
+      const invitations = [
+        leadOrgInvitation('inv-1', 'org-1'),
+        leadOrgInvitation('inv-2', 'org-2'),
+        { ...leadOrgInvitation('inv-3', 'user-1') },
+        {
+          id: 'inv-4',
+          invitedActorID: 'org-4',
+          extraRoles: [RoleName.MEMBER],
+          lifecycle: { id: 'lifecycle-inv-4' },
+        },
+      ];
+      vi.spyOn(invitationRepository, 'find').mockResolvedValue(invitations);
+      (invitationLifecycleService.isFinalState as Mock).mockReturnValue(false);
+      (actorLookupService.validateActorsAndGetTypes as Mock).mockResolvedValue(
+        new Map([
+          ['org-1', ActorType.ORGANIZATION],
+          ['org-2', ActorType.ORGANIZATION],
+          ['user-1', ActorType.USER],
+        ])
+      );
+
+      const result = await service.countOpenInvitationsForRoleSet('rs-1', {
+        extraRole: RoleName.LEAD,
+        actorType: ActorType.ORGANIZATION,
+      });
+
+      expect(result).toBe(2);
+    });
+
+    it('excludes finalized invitations', async () => {
+      const invitations = [
+        leadOrgInvitation('inv-1', 'org-1'),
+        leadOrgInvitation('inv-2', 'org-2'),
+      ];
+      vi.spyOn(invitationRepository, 'find').mockResolvedValue(invitations);
+      (invitationLifecycleService.isFinalState as Mock).mockImplementation(
+        (lifecycle: any) => lifecycle.id === 'lifecycle-inv-2'
+      );
+      (actorLookupService.validateActorsAndGetTypes as Mock).mockResolvedValue(
+        new Map([['org-1', ActorType.ORGANIZATION]])
+      );
+
+      const result = await service.countOpenInvitationsForRoleSet('rs-1', {
+        extraRole: RoleName.LEAD,
+        actorType: ActorType.ORGANIZATION,
+      });
+
+      expect(result).toBe(1);
+    });
+
+    it('returns 0 without an actor-type lookup when nothing carries the role', async () => {
+      vi.spyOn(invitationRepository, 'find').mockResolvedValue([
+        {
+          id: 'inv-1',
+          invitedActorID: 'org-1',
+          extraRoles: [RoleName.MEMBER],
+          lifecycle: { id: 'lifecycle-inv-1' },
+        } as any,
+      ]);
+
+      const result = await service.countOpenInvitationsForRoleSet('rs-1', {
+        extraRole: RoleName.LEAD,
+        actorType: ActorType.ORGANIZATION,
+      });
+
+      expect(result).toBe(0);
+      expect(
+        actorLookupService.validateActorsAndGetTypes
+      ).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,5 +1,7 @@
+import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { LogContext } from '@common/enums/logging.context';
+import { RoleName } from '@common/enums/role.name';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
@@ -259,5 +261,40 @@ export class InvitationService {
     return this.invitationLifecycleService
       .getNextEvents(invitation.lifecycle)
       .includes('ACCEPT');
+  }
+
+  /**
+   * Counts the still-open (non-finalized) invitations on a RoleSet that
+   * carry a given extra role and target a given actor type. Used by the
+   * advisory Lead-slot check: a stale, never-accepted invitation still
+   * holds its slot until it is revoked or acted on.
+   */
+  async countOpenInvitationsForRoleSet(
+    roleSetID: string,
+    filter: { extraRole: RoleName; actorType: ActorType }
+  ): Promise<number> {
+    const invitations = await this.invitationRepository.find({
+      where: { roleSet: { id: roleSetID } },
+      relations: { lifecycle: true },
+    });
+
+    const openWithRole = invitations.filter(
+      invitation =>
+        invitation.extraRoles?.includes(filter.extraRole) &&
+        !this.isInvitationFinalized(invitation)
+    );
+
+    if (openWithRole.length === 0) {
+      return 0;
+    }
+
+    const actorTypes = await this.actorLookupService.validateActorsAndGetTypes(
+      openWithRole.map(invitation => invitation.invitedActorID)
+    );
+
+    return openWithRole.filter(
+      invitation =>
+        actorTypes.get(invitation.invitedActorID) === filter.actorType
+    ).length;
   }
 }
