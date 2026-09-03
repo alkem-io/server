@@ -1,9 +1,11 @@
+import { ORGANIZATION_MANAGER_CREDENTIAL_TYPES } from '@common/constants/authorization';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { isContributorActorType } from '@common/enums/contributor.actor.types';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { RoleName } from '@common/enums/role.name';
+import { RoleSetInvitationResultNotice } from '@common/enums/role.set.invitation.result.notice';
 import { RoleSetInvitationResultType } from '@common/enums/role.set.invitation.result.type';
 import { RoleSetType } from '@common/enums/role.set.type';
 import {
@@ -34,12 +36,14 @@ import { VirtualContributorLookupService } from '@domain/community/virtual-contr
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { NotificationInputOrganizationSpaceCommunityInvitation } from '@services/adapters/notification-adapter/dto/organization/notification.dto.input.organization.space.community.invitation';
 import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.application';
 import { NotificationInputCommunityInvitation } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation';
 import { NotificationInputPlatformInvitation } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation.platform';
 import { NotificationInputCommunityInvitationVirtualContributor } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation.vc';
 import { NotificationInputVirtualContributorSpaceCommunityInvitationDeclined } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation.vc.declined';
 import { NotificationInputUserSpaceCommunityApplicationDeclined } from '@services/adapters/notification-adapter/dto/user/notification.dto.input.user.space.community.application.declined';
+import { NotificationOrganizationAdapter } from '@services/adapters/notification-adapter/notification.organization.adapter';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { NotificationUserAdapter } from '@services/adapters/notification-adapter/notification.user.adapter';
@@ -83,6 +87,7 @@ export class RoleSetResolverMutationsMembership {
     private notificationUserAdapter: NotificationUserAdapter,
     private notificationAdapterSpace: NotificationSpaceAdapter,
     private notificationVirtualContributorAdapter: NotificationVirtualContributorAdapter,
+    private notificationOrganizationAdapter: NotificationOrganizationAdapter,
     private notificationPlatformAdapter: NotificationPlatformAdapter,
     private userLookupService: UserLookupService,
     private organizationLookupService: OrganizationLookupService,
@@ -960,6 +965,18 @@ export class RoleSetResolverMutationsMembership {
         type: RoleSetInvitationResultType.INVITED_TO_ROLE_SET,
         invitation,
       };
+      if (actorTypes.get(actorID) === ActorType.ORGANIZATION) {
+        const managers = await this.userLookupService.usersWithCredentials(
+          ORGANIZATION_MANAGER_CREDENTIAL_TYPES.map(type => ({
+            type,
+            resourceID: actorID,
+          }))
+        );
+        if (managers.length === 0) {
+          invitationResult.notice =
+            RoleSetInvitationResultNotice.ORGANIZATION_HAS_NO_ADMINISTRATORS;
+        }
+      }
       invitationResults.push(invitationResult);
     }
     return invitationResults;
@@ -1096,7 +1113,26 @@ export class RoleSetResolverMutationsMembership {
               break;
             }
             case ActorType.ORGANIZATION: {
-              // No notifications supported at the moment
+              const notificationInput: NotificationInputOrganizationSpaceCommunityInvitation =
+                {
+                  triggeredBy: actorContext.actorID,
+                  community,
+                  invitationID: invitation.id,
+                  invitedContributorID: invitation.invitedActorID,
+                  welcomeMessage: invitation.welcomeMessage,
+                  extraRoles: invitation.extraRoles,
+                  invitedToParent: invitation.invitedToParent,
+                  organizationHasNoAdministrators:
+                    invitationResult.notice ===
+                    RoleSetInvitationResultNotice.ORGANIZATION_HAS_NO_ADMINISTRATORS,
+                };
+
+              this.dispatchNotification(
+                this.notificationOrganizationAdapter.organizationSpaceCommunityInvitationCreated(
+                  notificationInput
+                ),
+                'organizationSpaceCommunityInvitationCreated'
+              );
               break;
             }
           }
@@ -1104,9 +1140,23 @@ export class RoleSetResolverMutationsMembership {
         }
         case RoleSetInvitationResultType.ALREADY_INVITED_TO_PLATFORM_AND_ROLE_SET:
         case RoleSetInvitationResultType.ALREADY_INVITED_TO_ROLE_SET:
-        case RoleSetInvitationResultType.INVITATION_TO_PARENT_NOT_AUTHORIZED: {
+        case RoleSetInvitationResultType.INVITATION_TO_PARENT_NOT_AUTHORIZED:
+        case RoleSetInvitationResultType.ALREADY_HAS_OPEN_APPLICATION:
+        case RoleSetInvitationResultType.ALREADY_MEMBER_OF_ROLE_SET:
+        case RoleSetInvitationResultType.ORGANIZATION_NOT_ACCEPTING_INVITATIONS:
+        case RoleSetInvitationResultType.ORGANIZATION_LEAD_ROLE_LIMIT_REACHED: {
           // No notifications to be triggered
           break;
+        }
+        default: {
+          // Compile-time exhaustiveness guard: a new RoleSetInvitationResultType
+          // value that reaches this branch fails to build rather than silently
+          // dropping every invitation's notification.
+          const _exhaustiveCheck: never = invitationResult.type;
+          this.logger.warn?.(
+            `Unhandled RoleSetInvitationResultType in notification dispatch: ${_exhaustiveCheck}`,
+            LogContext.NOTIFICATIONS
+          );
         }
       }
     }

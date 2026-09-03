@@ -14,6 +14,7 @@ import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { NotificationOrganizationAdapter } from '@services/adapters/notification-adapter/notification.organization.adapter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -40,6 +41,7 @@ describe('RoleSetResolverMutationsMembership', () => {
   let communityResolverService: CommunityResolverService;
   let authorizationPolicyService: AuthorizationPolicyService;
   let eligibleLanguageGuard: RoleSetEligibleLanguageGuard;
+  let notificationOrganizationAdapter: NotificationOrganizationAdapter;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -72,6 +74,10 @@ describe('RoleSetResolverMutationsMembership', () => {
     organizationLookupService = module.get<OrganizationLookupService>(
       OrganizationLookupService
     );
+    notificationOrganizationAdapter =
+      module.get<NotificationOrganizationAdapter>(
+        NotificationOrganizationAdapter
+      );
     communityResolverService = module.get<CommunityResolverService>(
       CommunityResolverService
     );
@@ -929,6 +935,150 @@ describe('RoleSetResolverMutationsMembership', () => {
     function actorContext() {
       return { actorID: 'user-1' } as any;
     }
+  });
+
+  describe('inviteForEntryRoleOnRoleSet - organization zero-admin notice and notification dispatch (T009)', () => {
+    const mockRoleSet = {
+      id: 'rs-1',
+      type: RoleSetType.SPACE,
+      authorization: { id: 'auth-1' },
+      parentRoleSet: undefined,
+    } as any;
+    const mockInvitation = {
+      id: 'inv-1',
+      invitedActorID: 'org-1',
+      extraRoles: [],
+      invitedToParent: false,
+      welcomeMessage: undefined,
+    } as any;
+
+    const setUp = () => {
+      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(mockRoleSet);
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+      (actorLookupService.validateActorsAndGetTypes as Mock).mockResolvedValue(
+        new Map([['org-1', 'organization']])
+      );
+      (
+        organizationLookupService.getOrganizationByIdOrFail as Mock
+      ).mockResolvedValue({
+        settings: { membership: { allowSpaceInvitations: true } },
+      });
+      (roleSetService.findOpenInvitation as Mock).mockResolvedValue(undefined);
+      (roleSetService.findOpenApplication as Mock).mockResolvedValue(undefined);
+      (roleSetService.isMember as Mock).mockResolvedValue(false);
+      (roleSetService.createInvitationExistingActor as Mock).mockResolvedValue(
+        mockInvitation
+      );
+      (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([
+        mockInvitation,
+      ]);
+      (
+        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
+      ).mockResolvedValue([]);
+      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
+      (
+        communityResolverService.getCommunityForRoleSet as Mock
+      ).mockResolvedValue({ id: 'comm-1' });
+      (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+        'organization'
+      );
+    };
+
+    it('sets the zero-admin notice and passes organizationHasNoAdministrators: true to the dispatch', async () => {
+      setUp();
+      (userLookupService.usersWithCredentials as Mock).mockResolvedValue([]);
+
+      const result = await resolver.inviteForEntryRoleOnRoleSet(
+        { actorID: 'user-1' } as any,
+        {
+          roleSetID: 'rs-1',
+          invitedActorIDs: ['org-1'],
+          invitedUserEmails: [],
+          extraRoles: [],
+        } as any
+      );
+
+      expect(result[0].type).toBe(
+        RoleSetInvitationResultType.INVITED_TO_ROLE_SET
+      );
+      expect(result[0].notice).toBe('organization-has-no-administrators');
+      expect(
+        notificationOrganizationAdapter.organizationSpaceCommunityInvitationCreated
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ organizationHasNoAdministrators: true })
+      );
+    });
+
+    it('leaves the notice unset when the organization has at least one owner/admin', async () => {
+      setUp();
+      (userLookupService.usersWithCredentials as Mock).mockResolvedValue([
+        { id: 'owner-1' },
+      ]);
+
+      const result = await resolver.inviteForEntryRoleOnRoleSet(
+        { actorID: 'user-1' } as any,
+        {
+          roleSetID: 'rs-1',
+          invitedActorIDs: ['org-1'],
+          invitedUserEmails: [],
+          extraRoles: [],
+        } as any
+      );
+
+      expect(result[0].notice).toBeUndefined();
+      expect(
+        notificationOrganizationAdapter.organizationSpaceCommunityInvitationCreated
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ organizationHasNoAdministrators: false })
+      );
+    });
+
+    it('never dispatches the organization adapter for a non-organization invitee', async () => {
+      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(mockRoleSet);
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+      (actorLookupService.validateActorsAndGetTypes as Mock).mockResolvedValue(
+        new Map([['user-1', 'user']])
+      );
+      (roleSetService.findOpenInvitation as Mock).mockResolvedValue(undefined);
+      (roleSetService.findOpenApplication as Mock).mockResolvedValue(undefined);
+      (roleSetService.isMember as Mock).mockResolvedValue(false);
+      (roleSetService.createInvitationExistingActor as Mock).mockResolvedValue({
+        id: 'inv-2',
+        invitedActorID: 'user-1',
+      });
+      (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([
+        { id: 'inv-2', invitedActorID: 'user-1' },
+      ]);
+      (
+        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
+      ).mockResolvedValue([]);
+      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
+      (
+        communityResolverService.getCommunityForRoleSet as Mock
+      ).mockResolvedValue({ id: 'comm-1' });
+      (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+        'user'
+      );
+
+      await resolver.inviteForEntryRoleOnRoleSet(
+        { actorID: 'user-1' } as any,
+        {
+          roleSetID: 'rs-1',
+          invitedActorIDs: ['user-2'],
+          invitedUserEmails: [],
+          extraRoles: [],
+        } as any
+      );
+
+      expect(
+        notificationOrganizationAdapter.organizationSpaceCommunityInvitationCreated
+      ).not.toHaveBeenCalled();
+      expect(userLookupService.usersWithCredentials).not.toHaveBeenCalled();
+    });
   });
 
   describe('inviteForEntryRoleOnRoleSet - new email users', () => {
