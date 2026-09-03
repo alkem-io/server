@@ -3355,6 +3355,14 @@ type InAppNotificationPayloadSpaceCommunityCalendarEventComment implements InApp
 }
 
 type InAppNotificationPayloadSpaceCommunityInvitation implements InAppNotificationPayload {
+  """
+  The underlying invitation — role(s) offered, whether the parent Space is also joined, and the Spaces that will be joined on acceptance.
+  """
+  invitation: Invitation
+  """
+  The organization the invitation is for, when the invitee is an organization.
+  """
+  organization: Organization
   """The Space that the invitation is for."""
   space: Space!
   """The payload type."""

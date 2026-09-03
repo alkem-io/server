@@ -445,6 +445,15 @@ export class InAppNotificationService {
         ).organizationID;
         break;
 
+      case NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION: {
+        const typedPayload =
+          payload as InAppNotificationPayloadSpaceCommunityInvitation;
+        result.spaceID = typedPayload.spaceID;
+        result.invitationID = typedPayload.invitationID;
+        result.organizationID = typedPayload.organizationID;
+        break;
+      }
+
       // ========================================
       // SPACE NOTIFICATIONS
       // ========================================
@@ -483,6 +492,15 @@ export class InAppNotificationService {
           payload as InAppNotificationPayloadSpaceCommunityActor
         ).actorID;
         break;
+
+      case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED:
+      case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED: {
+        const typedPayload =
+          payload as InAppNotificationPayloadSpaceCommunityActor;
+        result.spaceID = typedPayload.spaceID;
+        result.organizationID = typedPayload.actorID;
+        break;
+      }
 
       case NotificationEvent.SPACE_LEAD_COMMUNICATION_MESSAGE:
         result.spaceID = (
