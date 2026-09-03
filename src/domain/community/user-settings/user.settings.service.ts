@@ -161,6 +161,10 @@ export class UserSettingsService {
         settings.notification.organization.adminMessageReceived,
         notificationOrganizationData.adminMessageReceived
       );
+      this.updateNotificationSetting(
+        settings.notification.organization.adminSpaceCommunityInvitation,
+        notificationOrganizationData.adminSpaceCommunityInvitation
+      );
     }
 
     const notificationSpaceData = updateData.notification?.space;

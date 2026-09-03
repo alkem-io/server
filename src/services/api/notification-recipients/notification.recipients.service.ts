@@ -44,6 +44,16 @@ const DEFAULT_CALLOUT_REACTION_CHANNELS: IUserSettingsNotificationChannels =
     push: true,
   });
 
+// Defend on read — a `user_settings` row that predates the backfill
+// migration lacks this key. Same mandated defaults as the migration and
+// `UserSettings.applyOrganizationSpaceInvitationDefaults` (`@AfterLoad`).
+export const DEFAULT_ORGANIZATION_SPACE_INVITATION_CHANNELS: IUserSettingsNotificationChannels =
+  Object.freeze({
+    email: true,
+    inApp: true,
+    push: true,
+  });
+
 @Injectable()
 export class NotificationRecipientsService {
   constructor(

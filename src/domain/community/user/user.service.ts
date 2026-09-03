@@ -326,6 +326,11 @@ export class UserService {
         organization: {
           adminMessageReceived: { email: true, inApp: true, push: true },
           adminMentioned: { email: true, inApp: true, push: true },
+          adminSpaceCommunityInvitation: {
+            email: true,
+            inApp: true,
+            push: true,
+          },
         },
         platform: {
           forumDiscussionCreated: { email: true, inApp: false, push: false },

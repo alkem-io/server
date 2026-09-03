@@ -31,6 +31,15 @@ const DEFAULT_CALLOUT_REACTION_CHANNELS = Object.freeze({
   push: true,
 });
 
+// The mandated default for the "an organization you administer is invited to
+// a Space" notification row — all three channels on. Same defensive pattern
+// as the other DEFAULT_* constants above.
+const DEFAULT_ORGANIZATION_SPACE_INVITATION_CHANNELS = Object.freeze({
+  email: true,
+  inApp: true,
+  push: true,
+});
+
 @Entity()
 export class UserSettings extends AuthorizableEntity implements IUserSettings {
   @Column('jsonb', { nullable: false })
@@ -113,6 +122,26 @@ export class UserSettings extends AuthorizableEntity implements IUserSettings {
     if (!this.notification.space.collaborationCalloutReaction) {
       this.notification.space.collaborationCalloutReaction = {
         ...DEFAULT_CALLOUT_REACTION_CHANNELS,
+      };
+    }
+  }
+
+  /**
+   * Defend on read for the "organization you administer is invited to a
+   * Space" notification preference. A `user_settings` row that predates the
+   * backfill migration or was inserted by an old pod during a rolling
+   * deploy lacks this key. Without this hook the non-null GraphQL field
+   * would surface a null and crash the recipients batch. Runs for every
+   * entity load regardless of query path.
+   */
+  @AfterLoad()
+  applyOrganizationSpaceInvitationDefaults() {
+    if (!this.notification?.organization) {
+      return;
+    }
+    if (!this.notification.organization.adminSpaceCommunityInvitation) {
+      this.notification.organization.adminSpaceCommunityInvitation = {
+        ...DEFAULT_ORGANIZATION_SPACE_INVITATION_CHANNELS,
       };
     }
   }
