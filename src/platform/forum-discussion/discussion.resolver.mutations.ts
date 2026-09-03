@@ -74,25 +74,39 @@ export class DiscussionResolverMutations {
     // categories — this makes "the active list defines what's allowed"
     // an invariant the server enforces on category-change too, not only
     // on create.
-    if (updateData.category) {
+    //
+    // Scoped to an actual *change*, not to the field merely being present:
+    // the edit dialog always echoes the post's current category back on
+    // save, and the picker deliberately offers the active list plus the
+    // post's own current category so a post stranded in a retired category
+    // can be moved out of it. Guarding on presence would refuse a pure
+    // title edit of exactly such a post. Same condition as the audit row
+    // below, for the same reason.
+    const newCategory =
+      updateData.category && updateData.category !== previousCategory
+        ? updateData.category
+        : undefined;
+
+    if (newCategory) {
       if (!discussion.forum) {
         throw new EntityNotFoundException(
-          `Unable to load Forum for Discussion with ID: ${discussion.id}`,
-          LogContext.PLATFORM_FORUM
+          'Unable to load Forum for Discussion',
+          LogContext.PLATFORM_FORUM,
+          { discussionID: discussion.id }
         );
       }
       assertForumCategoryAllowed(
         discussion.forum.discussionCategories,
-        updateData.category
+        newCategory
       );
-      if (isAdminOnlyForumCategory(updateData.category)) {
+      if (isAdminOnlyForumCategory(newCategory)) {
         const platformAuthorization =
           await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
         await this.authorizationService.grantAccessOrFail(
           actorContext,
           platformAuthorization,
           AuthorizationPrivilege.PLATFORM_ADMIN,
-          `User not authorized to move discussion into ${updateData.category} category.`
+          `User not authorized to move discussion into ${newCategory} category.`
         );
       }
     }
@@ -106,7 +120,7 @@ export class DiscussionResolverMutations {
     // edit — `PlatformOperationsAuditService` already swallows its own
     // errors, and the explicit `.catch()` here is defence in depth so this
     // resolver's own contract does not silently depend on that detail.
-    if (updateData.category && updateData.category !== previousCategory) {
+    if (newCategory) {
       await this.platformOperationsAuditService
         .recordOperation({
           actorID: actorContext.actorID,
@@ -116,7 +130,7 @@ export class DiscussionResolverMutations {
             discussionID: discussion.id,
             nameID: discussion.nameID,
             from: previousCategory,
-            to: updateData.category,
+            to: newCategory,
           },
         })
         .catch(() => undefined);

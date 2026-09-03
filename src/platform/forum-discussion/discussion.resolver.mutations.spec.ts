@@ -237,6 +237,84 @@ describe('DiscussionResolverMutations', () => {
       ).not.toHaveBeenCalled();
     });
 
+    describe('a post stranded in a retired category', () => {
+      // The forum's active list no longer offers OTHER (it was retired via
+      // adminForumRemoveDiscussionCategory), but the post still carries it.
+      // The edit dialog offers the active list PLUS the post's own current
+      // category and always echoes the current category back on save, so a
+      // plain title edit arrives with category === previousCategory.
+      const strandedDiscussion = {
+        ...baseDiscussion,
+        category: ForumDiscussionCategory.OTHER,
+        forum: {
+          id: 'forum-1',
+          discussionCategories: [
+            ForumDiscussionCategory.HELP,
+            ForumDiscussionCategory.NEWSLETTER,
+          ],
+        },
+      } as any;
+
+      beforeEach(() => {
+        discussionService.getDiscussionOrFail.mockResolvedValue({
+          ...strandedDiscussion,
+        });
+      });
+
+      it("allows an edit that echoes the post's own retired category back unchanged, and audits nothing", async () => {
+        const updated = { ...strandedDiscussion };
+        discussionService.updateDiscussion.mockResolvedValue(updated);
+
+        const result = await resolver.updateDiscussion(actorContext, {
+          ID: 'disc-1',
+          profileData: { displayName: 'Retitled, same category' },
+          category: ForumDiscussionCategory.OTHER,
+        } as any);
+
+        expect(result).toBe(updated);
+        expect(discussionService.updateDiscussion).toHaveBeenCalled();
+        expect(
+          platformOperationsAuditService.recordOperation
+        ).not.toHaveBeenCalled();
+      });
+
+      it('still rejects a move into a different non-active category', async () => {
+        await expect(
+          resolver.updateDiscussion(actorContext, {
+            ID: 'disc-1',
+            category: ForumDiscussionCategory.PLATFORM_FUNCTIONALITIES,
+          } as any)
+        ).rejects.toThrow(ForumDiscussionCategoryException);
+
+        expect(discussionService.updateDiscussion).not.toHaveBeenCalled();
+      });
+
+      it('allows the move OUT of the retired category into an active one', async () => {
+        const updated = {
+          ...strandedDiscussion,
+          category: ForumDiscussionCategory.HELP,
+        };
+        discussionService.updateDiscussion.mockResolvedValue(updated);
+
+        const result = await resolver.updateDiscussion(actorContext, {
+          ID: 'disc-1',
+          category: ForumDiscussionCategory.HELP,
+        } as any);
+
+        expect(result).toBe(updated);
+        expect(
+          platformOperationsAuditService.recordOperation
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({
+            target: expect.objectContaining({
+              from: ForumDiscussionCategory.OTHER,
+              to: ForumDiscussionCategory.HELP,
+            }),
+          })
+        );
+      });
+    });
+
     it('still succeeds when the audit service rejects (fail-open)', async () => {
       const updated = {
         ...baseDiscussion,
