@@ -1,3 +1,4 @@
+import { ORGANIZATION_MANAGER_CREDENTIAL_TYPES } from '@common/constants/authorization';
 import { AuthorizationCredential } from '@common/enums';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { ValidationException } from '@common/exceptions';
@@ -458,6 +459,60 @@ describe('NotificationRecipientsService', () => {
       ).rejects.toThrow(ValidationException);
     });
 
+    it('should use manager (owner + admin) credentials for ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION, never the associate criterion', async () => {
+      await service.getRecipients({
+        eventType:
+          NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION,
+        organizationID: 'org-1',
+      });
+
+      expect(userLookupService.usersWithCredentials).toHaveBeenCalledWith(
+        [...ORGANIZATION_MANAGER_CREDENTIAL_TYPES].map(type => ({
+          type,
+          resourceID: 'org-1',
+        })),
+        undefined,
+        expect.any(Object)
+      );
+      const [criteria] = vi.mocked(userLookupService.usersWithCredentials).mock
+        .calls[0];
+      expect(criteria).not.toContainEqual(
+        expect.objectContaining({
+          type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
+        })
+      );
+    });
+
+    it('should throw ValidationException for ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION without organizationID', async () => {
+      await expect(
+        service.getRecipients({
+          eventType:
+            NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION,
+        })
+      ).rejects.toThrow(ValidationException);
+    });
+
+    it.each([
+      NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED,
+      NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED,
+    ])('should resolve only the inviter (self criteria) for %s', async eventType => {
+      await service.getRecipients({
+        eventType,
+        userID: 'inviter-1',
+      });
+
+      expect(userLookupService.usersWithCredentials).toHaveBeenCalledWith(
+        [
+          {
+            type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+            resourceID: 'inviter-1',
+          },
+        ],
+        undefined,
+        expect.any(Object)
+      );
+    });
+
     it('should throw NotificationEventException for unknown event type', async () => {
       await expect(
         service.getRecipients({
@@ -658,6 +713,111 @@ describe('NotificationRecipientsService', () => {
 
         // Default is { email: false, inApp: true, push: true }
         expect(result.emailRecipients).toHaveLength(0);
+        expect(result.inAppRecipients).toHaveLength(1);
+        expect(result.pushRecipients).toHaveLength(1);
+      });
+    });
+
+    describe('organization space-invitation notification (ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION)', () => {
+      it('an admin with all channels on is an email + in-app + push recipient', async () => {
+        const admin = {
+          id: 'admin-1',
+          email: 'admin@example.com',
+          settings: {
+            notification: {
+              organization: {
+                adminSpaceCommunityInvitation: {
+                  email: true,
+                  inApp: true,
+                  push: true,
+                },
+              },
+            },
+          },
+          credentials: [],
+        } as unknown as IUser;
+
+        vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+          admin,
+        ]);
+        vi.mocked(userLookupService.getUsersByIds).mockImplementation(
+          async (ids: string[]) => (ids.length > 0 ? [admin] : [])
+        );
+
+        const result = await service.getRecipients({
+          eventType:
+            NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION,
+          organizationID: 'org-1',
+        });
+
+        expect(result.emailRecipients).toHaveLength(1);
+        expect(result.inAppRecipients).toHaveLength(1);
+        expect(result.pushRecipients).toHaveLength(1);
+      });
+
+      it('an admin who muted every channel receives nothing', async () => {
+        const mutedAdmin = {
+          id: 'admin-muted',
+          email: 'muted@example.com',
+          settings: {
+            notification: {
+              organization: {
+                adminSpaceCommunityInvitation: {
+                  email: false,
+                  inApp: false,
+                  push: false,
+                },
+              },
+            },
+          },
+          credentials: [],
+        } as unknown as IUser;
+
+        vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+          mutedAdmin,
+        ]);
+        vi.mocked(userLookupService.getUsersByIds).mockResolvedValue([]);
+
+        const result = await service.getRecipients({
+          eventType:
+            NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION,
+          organizationID: 'org-1',
+        });
+
+        expect(result.emailRecipients).toHaveLength(0);
+        expect(result.inAppRecipients).toHaveLength(0);
+        expect(result.pushRecipients).toHaveLength(0);
+      });
+
+      it('defend-on-read: a row without the adminSpaceCommunityInvitation key resolves the default (all-on) without throwing', async () => {
+        const legacyAdmin = {
+          id: 'admin-legacy',
+          email: 'legacy-admin@example.com',
+          settings: {
+            notification: {
+              organization: {
+                // adminSpaceCommunityInvitation key absent (pre-backfill row)
+                adminMentioned: { email: true, inApp: true, push: true },
+              },
+            },
+          },
+          credentials: [],
+        } as unknown as IUser;
+
+        vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+          legacyAdmin,
+        ]);
+        vi.mocked(userLookupService.getUsersByIds).mockImplementation(
+          async (ids: string[]) => (ids.length > 0 ? [legacyAdmin] : [])
+        );
+
+        const result = await service.getRecipients({
+          eventType:
+            NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION,
+          organizationID: 'org-1',
+        });
+
+        expect(result.emailRecipients).toHaveLength(1);
         expect(result.inAppRecipients).toHaveLength(1);
         expect(result.pushRecipients).toHaveLength(1);
       });
