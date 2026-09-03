@@ -9,7 +9,7 @@ import {
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { ForumDiscussionCategoryException } from '@common/exceptions/forum.discussion.category.exception';
-import { FORUM_CATEGORY_NAMESPACE } from '@constants/forum.constants';
+import { getForumCategoryContextId } from '@constants/forum.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IUser } from '@domain/community/user/user.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -19,7 +19,6 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { v5 as uuidv5 } from 'uuid';
 import { Discussion } from '../forum-discussion/discussion.entity';
 import { IDiscussion } from '../forum-discussion/discussion.interface';
 import { DiscussionService } from '../forum-discussion/discussion.service';
@@ -197,10 +196,7 @@ export class ForumService {
    * Generate a deterministic UUID v5 context ID for a forum category.
    */
   private getCategoryContextId(forumId: string, categoryName: string): string {
-    return uuidv5(
-      `${forumId}:category:${categoryName}`,
-      FORUM_CATEGORY_NAMESPACE
-    );
+    return getForumCategoryContextId(forumId, categoryName);
   }
 
   /**
