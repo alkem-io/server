@@ -73,7 +73,7 @@ export class ForumService {
         undefined,
         undefined,
         JoinRulePublic,
-        true,
+        false,
         INVISIBLE_STATE
       );
 
@@ -85,7 +85,7 @@ export class ForumService {
           forum.id,
           undefined,
           JoinRulePublic,
-          true,
+          false,
           INVISIBLE_STATE
         );
       }
@@ -222,7 +222,7 @@ export class ForumService {
         undefined, // no parent — platform-level
         undefined,
         JoinRulePublic,
-        true,
+        false,
         INVISIBLE_STATE
       );
     }
@@ -237,7 +237,7 @@ export class ForumService {
         forumId,
         undefined,
         JoinRulePublic,
-        true,
+        false,
         INVISIBLE_STATE
       );
     }

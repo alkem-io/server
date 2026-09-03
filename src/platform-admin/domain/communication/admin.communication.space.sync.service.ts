@@ -211,7 +211,7 @@ export class AdminCommunicationSpaceSyncService {
             undefined,
             undefined,
             JoinRulePublic,
-            true,
+            false,
             INVISIBLE_STATE
           );
           this.logger.verbose?.(
@@ -219,14 +219,16 @@ export class AdminCommunicationSpaceSyncService {
             LogContext.COMMUNICATION
           );
         } else {
-          // Ensure existing forum space has correct visibility
+          // Re-assert that the forum space is kept out of the public room
+          // directory. This is also the retraction path for spaces that were
+          // published to the directory by an earlier version of this sync.
           await this.communicationAdapter.updateSpace(
             forum.id,
             undefined,
             undefined,
             undefined,
             JoinRulePublic,
-            true
+            false
           );
         }
 
@@ -254,7 +256,7 @@ export class AdminCommunicationSpaceSyncService {
               forum.id,
               undefined,
               JoinRulePublic,
-              true,
+              false,
               INVISIBLE_STATE
             );
             this.logger.verbose?.(
@@ -262,14 +264,16 @@ export class AdminCommunicationSpaceSyncService {
               LogContext.COMMUNICATION
             );
           } else {
-            // Ensure existing category space has correct visibility
+            // Re-assert that the category space is kept out of the public
+            // room directory (also the retraction path for a space an
+            // earlier version of this sync already published).
             await this.communicationAdapter.updateSpace(
               categoryContextId,
               undefined,
               undefined,
               undefined,
               JoinRulePublic,
-              true
+              false
             );
             this.logger.verbose?.(
               `Updated visibility for forum category: ${category} (${categoryContextId})`,
