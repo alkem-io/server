@@ -1,3 +1,4 @@
+import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
 import { EntityNotFoundException } from '@common/exceptions';
 import { MessagingService } from '@domain/communication/messaging/messaging.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -7,6 +8,7 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { MockType } from '@test/utils/mock.type';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { type Mock } from 'vitest';
 import { Platform } from './platform.entity';
@@ -17,6 +19,7 @@ describe('PlatformService', () => {
   let repo: MockType<Repository<Platform>>;
   let forumService: ForumService;
   let messagingService: MessagingService;
+  let logger: { warn: Mock; verbose: Mock };
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -35,6 +38,7 @@ describe('PlatformService', () => {
     repo = module.get(getRepositoryToken(Platform));
     forumService = module.get(ForumService);
     messagingService = module.get(MessagingService);
+    logger = module.get(WINSTON_MODULE_NEST_PROVIDER);
   });
 
   describe('getPlatformOrFail', () => {
@@ -171,7 +175,10 @@ describe('PlatformService', () => {
 
   describe('ensureForumCreated', () => {
     it('should return existing forum if already created', async () => {
-      const forum = { id: 'forum-1' } as any;
+      const forum = {
+        id: 'forum-1',
+        discussionCategories: Object.values(ForumDiscussionCategory),
+      } as any;
       const platform = { id: 'p1', forum, settings: {} } as any;
       repo.findOne!.mockResolvedValue(platform);
 
@@ -179,6 +186,72 @@ describe('PlatformService', () => {
 
       expect(result).toBe(forum);
       expect(forumService.createForum as Mock).not.toHaveBeenCalled();
+      expect(repo.save).not.toHaveBeenCalled();
+    });
+
+    it('should warn-log unknown stored values without throwing or writing', async () => {
+      const forum = {
+        id: 'forum-1',
+        discussionCategories: [
+          ...Object.values(ForumDiscussionCategory),
+          'legacy-x',
+        ],
+      } as any;
+      const platform = { id: 'p1', forum, settings: {} } as any;
+      repo.findOne!.mockResolvedValue(platform);
+
+      await service.ensureForumCreated();
+
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          unknownStoredValues: ['legacy-x'],
+        }),
+        expect.anything()
+      );
+      expect(repo.save).not.toHaveBeenCalled();
+    });
+
+    it('should verbose-log vocabulary members absent from the stored list (pre-migration drift)', async () => {
+      const forum = {
+        id: 'forum-1',
+        discussionCategories: [
+          ForumDiscussionCategory.RELEASES,
+          ForumDiscussionCategory.PLATFORM_FUNCTIONALITIES,
+          ForumDiscussionCategory.COMMUNITY_BUILDING,
+          ForumDiscussionCategory.CHALLENGE_CENTRIC,
+          ForumDiscussionCategory.HELP,
+          ForumDiscussionCategory.OTHER,
+        ],
+      } as any;
+      const platform = { id: 'p1', forum, settings: {} } as any;
+      repo.findOne!.mockResolvedValue(platform);
+
+      await service.ensureForumCreated();
+
+      expect(logger.verbose).toHaveBeenCalledWith(
+        expect.objectContaining({
+          missingMembers: [
+            ForumDiscussionCategory.NEWSLETTER,
+            ForumDiscussionCategory.TIPS_AND_TRICKS,
+          ],
+        }),
+        expect.anything()
+      );
+      expect(repo.save).not.toHaveBeenCalled();
+    });
+
+    it('should log neither direction when the stored list already matches the vocabulary', async () => {
+      const forum = {
+        id: 'forum-1',
+        discussionCategories: Object.values(ForumDiscussionCategory),
+      } as any;
+      const platform = { id: 'p1', forum, settings: {} } as any;
+      repo.findOne!.mockResolvedValue(platform);
+
+      await service.ensureForumCreated();
+
+      expect(logger.warn).not.toHaveBeenCalled();
+      expect(logger.verbose).not.toHaveBeenCalled();
     });
 
     it('should create a new forum when not present', async () => {

@@ -7,6 +7,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
+import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mocked } from 'vitest';
@@ -25,6 +26,7 @@ describe('ForumResolverMutations', () => {
   let authorizationPolicyService: Mocked<AuthorizationPolicyService>;
   let notificationPlatformAdapter: Mocked<NotificationPlatformAdapter>;
   let platformAuthorizationService: Mocked<PlatformAuthorizationPolicyService>;
+  let platformOperationsAuditService: Mocked<PlatformOperationsAuditService>;
   let subscriptionPubSub: any;
 
   beforeEach(async () => {
@@ -66,6 +68,9 @@ describe('ForumResolverMutations', () => {
     platformAuthorizationService = module.get(
       PlatformAuthorizationPolicyService
     ) as Mocked<PlatformAuthorizationPolicyService>;
+    platformOperationsAuditService = module.get(
+      PlatformOperationsAuditService
+    ) as Mocked<PlatformOperationsAuditService>;
   });
 
   it('should be defined', () => {
@@ -157,6 +162,150 @@ describe('ForumResolverMutations', () => {
       await expect(
         resolver.createDiscussion(actorContext, createData)
       ).rejects.toThrow(ValidationException);
+    });
+
+    it('should check PLATFORM_ADMIN privilege for NEWSLETTER category', async () => {
+      const newsletterCreateData = {
+        ...createData,
+        category: ForumDiscussionCategory.NEWSLETTER,
+      };
+      const platformAuth = { id: 'plat-auth' } as any;
+      platformAuthorizationService.getPlatformAuthorizationPolicy.mockResolvedValue(
+        platformAuth
+      );
+
+      await resolver.createDiscussion(actorContext, newsletterCreateData);
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('adminForumRemoveDiscussionCategory', () => {
+    const actorContext = { actorID: 'admin-1' } as any;
+    const removeData = {
+      category: ForumDiscussionCategory.OTHER,
+    } as any;
+    const platformAuth = { id: 'plat-auth' } as any;
+    const forum = { id: 'forum-1' } as any;
+
+    beforeEach(() => {
+      platformAuthorizationService.getPlatformAuthorizationPolicy.mockResolvedValue(
+        platformAuth
+      );
+      forumService.getPlatformForumOrFail.mockResolvedValue(forum);
+      platformOperationsAuditService.recordOperation.mockResolvedValue(
+        undefined as any
+      );
+    });
+
+    it('rejects when the actor lacks PLATFORM_ADMIN and writes no audit row at all', async () => {
+      const authError = new Error('not authorized');
+      authorizationService.grantAccessOrFail.mockImplementation(() => {
+        throw authError;
+      });
+
+      await expect(
+        resolver.adminForumRemoveDiscussionCategory(actorContext, removeData)
+      ).rejects.toThrow(authError);
+
+      // Authorization is checked before the audited block, so a denial must
+      // never reach the audit sink or the domain work it gates — an
+      // unauthenticated or unauthorized caller gets no DB write and no
+      // audit-triggered error log attributable to them.
+      expect(forumService.getPlatformForumOrFail).not.toHaveBeenCalled();
+      expect(
+        platformOperationsAuditService.recordOperation
+      ).not.toHaveBeenCalled();
+    });
+
+    it('rejects with the not-empty exception and records an audit failure row', async () => {
+      authorizationService.grantAccessOrFail.mockResolvedValue(
+        undefined as any
+      );
+      const notEmptyError = new Error('not empty');
+      forumService.removeDiscussionCategory.mockRejectedValue(notEmptyError);
+
+      await expect(
+        resolver.adminForumRemoveDiscussionCategory(actorContext, removeData)
+      ).rejects.toThrow(notEmptyError);
+
+      expect(
+        platformOperationsAuditService.recordOperation
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ outcome: 'failure', error: notEmptyError })
+      );
+    });
+
+    it('succeeds, returns the updated Forum, and records an audit success row with the removed flag', async () => {
+      authorizationService.grantAccessOrFail.mockResolvedValue(
+        undefined as any
+      );
+      const updatedForum = { id: 'forum-1', discussionCategories: [] } as any;
+      forumService.removeDiscussionCategory.mockResolvedValue({
+        forum: updatedForum,
+        removed: true,
+      });
+
+      const result = await resolver.adminForumRemoveDiscussionCategory(
+        actorContext,
+        removeData
+      );
+
+      expect(result).toBe(updatedForum);
+      expect(
+        platformOperationsAuditService.recordOperation
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          outcome: 'success',
+          target: expect.objectContaining({ removed: true }),
+        })
+      );
+    });
+
+    it('succeeds idempotently (removed: false) for an already-absent category, still audited as success', async () => {
+      authorizationService.grantAccessOrFail.mockResolvedValue(
+        undefined as any
+      );
+      forumService.removeDiscussionCategory.mockResolvedValue({
+        forum,
+        removed: false,
+      });
+
+      const result = await resolver.adminForumRemoveDiscussionCategory(
+        actorContext,
+        removeData
+      );
+
+      expect(result).toBe(forum);
+      expect(
+        platformOperationsAuditService.recordOperation
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          outcome: 'success',
+          target: expect.objectContaining({ removed: false }),
+        })
+      );
+    });
+
+    it('does not let an audit-recording failure break the mutation (fail-open)', async () => {
+      authorizationService.grantAccessOrFail.mockResolvedValue(
+        undefined as any
+      );
+      const updatedForum = { id: 'forum-1' } as any;
+      forumService.removeDiscussionCategory.mockResolvedValue({
+        forum: updatedForum,
+        removed: true,
+      });
+      platformOperationsAuditService.recordOperation.mockRejectedValue(
+        new Error('audit sink unavailable')
+      );
+
+      const result = await resolver.adminForumRemoveDiscussionCategory(
+        actorContext,
+        removeData
+      );
+
+      expect(result).toBe(updatedForum);
     });
   });
 });
