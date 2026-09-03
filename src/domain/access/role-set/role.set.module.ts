@@ -60,7 +60,7 @@ import { RoleSetServiceLifecycleInvitation } from './role.set.service.lifecycle.
     PlatformInvitationModule,
     AccountLookupModule,
     AiServerAdapterModule,
-    NotificationAdapterModule,
+    forwardRef(() => NotificationAdapterModule),
     ContributionReporterModule,
     ActivityAdapterModule,
     LifecycleModule,
