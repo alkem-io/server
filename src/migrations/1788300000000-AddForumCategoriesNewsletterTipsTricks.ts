@@ -11,6 +11,16 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * is a plain read-modify-write inside its own transaction: no
  * `@VersionColumn` contention to reason about, no batching.
  *
+ * The row is read `FOR UPDATE` so that read-modify-write is serialized
+ * against the only other writer of this column, the category-retirement
+ * mutation. That mutation is live in the running server before this
+ * migration is triggered (the rollout is deliberately code-first, and the
+ * migration job is manual), so a retirement committing between this
+ * SELECT and the UPDATE below would otherwise be silently overwritten by
+ * the full-list write and resurrect a category an operator had just
+ * retired. The lock costs one row for the length of the migration
+ * transaction; the retirement mutation simply waits.
+ *
  * The output for each row is derived, never hardcoded, as: canonical order
  * filtered down to "already present, or one of the two values this
  * migration adds" — followed by any value the column carries that isn't in
@@ -76,7 +86,7 @@ export class AddForumCategoriesNewsletterTipsTricks1788300000000
   public async up(queryRunner: QueryRunner): Promise<void> {
     const rows: { id: string; discussionCategories: string | null }[] =
       await queryRunner.query(
-        `SELECT id, "discussionCategories" FROM forum`
+        `SELECT id, "discussionCategories" FROM forum FOR UPDATE`
       );
 
     for (const row of rows) {
@@ -114,7 +124,7 @@ export class AddForumCategoriesNewsletterTipsTricks1788300000000
   public async down(queryRunner: QueryRunner): Promise<void> {
     const rows: { id: string; discussionCategories: string | null }[] =
       await queryRunner.query(
-        `SELECT id, "discussionCategories" FROM forum`
+        `SELECT id, "discussionCategories" FROM forum FOR UPDATE`
       );
 
     for (const row of rows) {

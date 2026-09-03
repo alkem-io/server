@@ -10,6 +10,7 @@ import { AddForumCategoriesNewsletterTipsTricks1788300000000 } from '../17883000
  */
 class FakeForumTable {
   private rows = new Map<string, string | null>();
+  readonly statements: string[] = [];
 
   constructor(seed: Record<string, string | null>) {
     for (const [id, value] of Object.entries(seed)) {
@@ -21,10 +22,15 @@ class FakeForumTable {
     return this.rows.get(id) ?? null;
   }
 
+  selects(): string[] {
+    return this.statements.filter(statement => statement.startsWith('SELECT'));
+  }
+
   asQueryRunner() {
     return {
       query: async (sql: string, params?: unknown[]) => {
         const statement = sql.trim();
+        this.statements.push(statement);
         if (statement.startsWith('SELECT')) {
           return Array.from(this.rows.entries()).map(
             ([id, discussionCategories]) => ({ id, discussionCategories })
@@ -141,6 +147,30 @@ describe('AddForumCategoriesNewsletterTipsTricks migration (1788300000000)', () 
     await migration.down(table.asQueryRunner());
 
     expect(table.get('forum-1')).toBe('releases,legacy-unknown-category');
+  });
+
+  it('up() takes a row lock on the Forum row it is about to rewrite', async () => {
+    // The retirement mutation is live in the running server before this
+    // manually-triggered migration runs, and writes the same column. Without
+    // FOR UPDATE, a retirement committing between the read and the full-list
+    // write would be silently overwritten and the category resurrected.
+    const table = new FakeForumTable({ 'forum-1': 'releases,other' });
+
+    await migration.up(table.asQueryRunner());
+
+    expect(table.selects()).toHaveLength(1);
+    expect(table.selects()[0]).toContain('FOR UPDATE');
+  });
+
+  it('down() takes the same row lock', async () => {
+    const table = new FakeForumTable({
+      'forum-1': 'releases,newsletter,tips-and-tricks',
+    });
+
+    await migration.down(table.asQueryRunner());
+
+    expect(table.selects()).toHaveLength(1);
+    expect(table.selects()[0]).toContain('FOR UPDATE');
   });
 
   it('down() is a no-op for a row that never carried the two values', async () => {
