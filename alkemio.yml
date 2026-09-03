@@ -530,6 +530,12 @@ notifications:
     enabled: ${CALLOUT_REACTION_NOTIFICATIONS_ENABLED}:true
     email_suppression_window_seconds: ${CALLOUT_REACTION_EMAIL_SUPPRESSION_WINDOW_SECONDS}:300
 
+  # Organization space-invitation notifications. NOT declared on any
+  # deployment manifest this release — the in-code default below governs
+  # everywhere; changing the support escalation address requires a deploy.
+  organization_invitations:
+    support_email: ${NOTIFICATIONS_ORGANIZATION_INVITATION_SUPPORT_EMAIL}:support@alkem.io
+
   # Chat/conversation message notifications (034-messaging-notifications).
   # NOT declared on any deployment manifest this release (Operator Ruling 3b) —
   # the in-code defaults below govern everywhere; flipping `enabled` in
