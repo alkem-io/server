@@ -752,5 +752,69 @@ describe('CommunicationAdapter', () => {
       expect(result).toBe('');
       expect(mockAmqpConnection.request).not.toHaveBeenCalled();
     });
+
+    it('should return the { disabled: true } sentinel for setChildren when disabled — NEVER a fabricated success', async () => {
+      const result = await disabledAdapter.setChildren({
+        parent_context_id: 'category-1',
+        desired_child_context_ids: ['room-1'],
+        children_are_spaces: false,
+        apply_removals: true,
+        prune_unknown: false,
+        sync_child_parent: false,
+        dry_run: true,
+      });
+
+      expect(result).toEqual({ disabled: true });
+      expect(result).not.toBe(true);
+      expect(mockAmqpConnection.request).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('setChildren', () => {
+    const request = {
+      parent_context_id: 'category-1',
+      desired_child_context_ids: ['room-1', 'room-2'],
+      children_are_spaces: false,
+      apply_removals: true,
+      prune_unknown: false,
+      sync_child_parent: false,
+      dry_run: false,
+    };
+
+    it('should send the request on the hierarchy set_children topic and pass through a typed response', async () => {
+      const response = createSuccessResponse({
+        added: ['room-1'],
+        removed: [],
+        pruned_unknown: [],
+        unknown_kept: [],
+        unresolved: [],
+        parent_pointers_repaired: [],
+        parent_pointers_deferred: [],
+        changed: true,
+        dry_run: false,
+      });
+      mockAmqpConnection.request.mockResolvedValue(response);
+
+      const result = await adapter.setChildren(request);
+
+      expect(mockAmqpConnection.request).toHaveBeenCalledWith({
+        exchange: '',
+        routingKey: MatrixAdapterEventType.COMMUNICATION_HIERARCHY_SET_CHILDREN,
+        payload: request,
+        timeout: expect.any(Number),
+      });
+      expect(result).toEqual(response);
+    });
+
+    it('should swallow a transport error to undefined rather than throw', async () => {
+      mockAmqpConnection.request.mockRejectedValue(
+        new Error('Connection refused')
+      );
+
+      const result = await adapter.setChildren(request);
+
+      expect(result).toBeUndefined();
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
   });
 });
