@@ -4,6 +4,10 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileResolverFields } from '@domain/common/profile/profile.resolver.fields';
 import { ProfileService } from '@domain/common/profile/profile.service';
+import {
+  DELETED_USER_SENTINEL,
+  DELETED_USER_SENTINEL_ID,
+} from '@domain/community/user/account-deletion/deleted.user.sentinel';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator';
 import { type Mocked, vi } from 'vitest';
 
@@ -213,6 +217,109 @@ describe('ProfileResolverFields', () => {
         profile
       );
       expect(result).toBe('https://example.com/profile/1');
+    });
+  });
+
+  describe('the deleted-user sentinel profile', () => {
+    // The sentinel's profile id is never a real `profile` row (see
+    // `UserResolverFields.profile`). Every field below must resolve
+    // without ever consulting its loader, matching the exact selection
+    // set client-web sends for `triggeredBy.profile` on an activity-feed
+    // entry (`activityLogOnCollaboration.graphql`): id, displayName,
+    // avatar: visual(type: AVATAR) { id uri }.
+    const sentinelProfile =
+      DELETED_USER_SENTINEL.profile as unknown as IProfile;
+
+    it('resolves visual to undefined without touching the loader', async () => {
+      const { resolver } = createResolver();
+      const loader = makeLoader([{ name: 'avatar', uri: 'avatar.png' }]);
+
+      const result = await resolver.visual(
+        sentinelProfile,
+        'avatar' as any,
+        loader as any
+      );
+
+      expect(result).toBeUndefined();
+      expect(loader.load).not.toHaveBeenCalled();
+    });
+
+    it('resolves visuals to an empty array without touching the loader', async () => {
+      const { resolver } = createResolver();
+      const loader = makeLoader([{ name: 'avatar' }]);
+
+      const result = await resolver.visuals(sentinelProfile, loader as any);
+
+      expect(result).toEqual([]);
+      expect(loader.load).not.toHaveBeenCalled();
+    });
+
+    it('resolves references to an empty array without touching the loader', async () => {
+      const { resolver } = createResolver();
+      const loader = makeLoader([{ id: 'ref-1' }]);
+
+      const result = await resolver.references(sentinelProfile, loader as any);
+
+      expect(result).toEqual([]);
+      expect(loader.load).not.toHaveBeenCalled();
+    });
+
+    it('resolves tagset to undefined without touching the loader', async () => {
+      const { resolver } = createResolver();
+      const loader = makeLoader([]);
+
+      const result = await resolver.tagset(
+        sentinelProfile,
+        undefined as any,
+        loader as any
+      );
+
+      expect(result).toBeUndefined();
+      expect(loader.load).not.toHaveBeenCalled();
+    });
+
+    it('resolves tagsets to an empty array without touching the loader', async () => {
+      const { resolver } = createResolver();
+      const loader = makeLoader([{ name: 'default' }]);
+
+      const result = await resolver.tagsets(sentinelProfile, loader as any);
+
+      expect(result).toEqual([]);
+      expect(loader.load).not.toHaveBeenCalled();
+    });
+
+    it('resolves location to undefined without touching the loader', async () => {
+      const { resolver } = createResolver();
+      const loader = makeLoader({ city: 'Amsterdam' });
+
+      const result = await resolver.location(sentinelProfile, loader as any);
+
+      expect(result).toBeUndefined();
+      expect(loader.load).not.toHaveBeenCalled();
+    });
+
+    it('resolves storageBucket to the sentinel bucket without touching the loader', async () => {
+      const { resolver } = createResolver();
+      const loader = makeLoader({ id: 'sb-1' });
+
+      const result = await resolver.storageBucket(
+        sentinelProfile,
+        loader as any
+      );
+
+      expect(result).toEqual(
+        expect.objectContaining({ id: DELETED_USER_SENTINEL_ID, documents: [] })
+      );
+      expect(loader.load).not.toHaveBeenCalled();
+    });
+
+    it('resolves url to an empty string without calling urlGeneratorService', async () => {
+      const { resolver, urlGeneratorService } = createResolver();
+
+      const result = await resolver.url(sentinelProfile);
+
+      expect(result).toBe('');
+      expect(urlGeneratorService.generateUrlForProfile).not.toHaveBeenCalled();
     });
   });
 });

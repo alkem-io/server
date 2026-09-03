@@ -273,6 +273,66 @@ describe('StorageBucketService', () => {
     });
   });
 
+  // ── deleteStorageBucketForAccountDeletion ────────────────────────
+
+  describe('deleteStorageBucketForAccountDeletion', () => {
+    it('joins the passed EntityManager, never calls the file-service delete, collects external ids, and never removes the bucket or file rows', async () => {
+      const doc1 = { id: 'doc-1' };
+      const doc2 = { id: 'doc-2' };
+      const bucket = {
+        id: 'bucket-1',
+        authorization: { id: 'auth-1' },
+        documents: [doc1, doc2],
+      };
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.delete as Mock).mockResolvedValue(undefined);
+      (documentService.deleteDocumentDbOnly as Mock)
+        .mockResolvedValueOnce({ document: doc1, documentID: 'doc-1' })
+        .mockResolvedValueOnce({ document: doc2, documentID: 'doc-2' });
+      const em = {
+        // The bucket is now READ through the deletion transaction too, so the
+        // document list is the one that transaction sees.
+        findOneOrFail: vi.fn().mockResolvedValue(bucket),
+        remove: vi.fn().mockResolvedValue({ ...bucket, id: '' }),
+      } as any;
+
+      const result = await service.deleteStorageBucketForAccountDeletion(
+        'bucket-1',
+        em
+      );
+
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        bucket.authorization,
+        em
+      );
+      expect(documentService.deleteDocumentDbOnly).toHaveBeenCalledTimes(2);
+      expect(documentService.deleteDocumentDbOnly).toHaveBeenCalledWith(
+        { ID: 'doc-1' },
+        em
+      );
+      expect(documentService.deleteDocument).not.toHaveBeenCalled();
+      // The bucket row (and any `file` row it would cascade) is
+      // deliberately left in place — only the post-commit leg (see
+      // `removeStorageBucketRowForAccountDeletion`) removes it, once every
+      // document has actually gone through the file-service.
+      expect(em.remove).not.toHaveBeenCalled();
+      expect(result.documentIDs).toEqual(['doc-1', 'doc-2']);
+      expect(result.storageBucketID).toBe('bucket-1');
+    });
+  });
+
+  describe('removeStorageBucketRowForAccountDeletion', () => {
+    it('deletes the bucket row directly by id, outside any EntityManager', async () => {
+      (storageBucketRepository.delete as Mock).mockResolvedValue({
+        affected: 1,
+      });
+
+      await service.removeStorageBucketRowForAccountDeletion('bucket-1');
+
+      expect(storageBucketRepository.delete).toHaveBeenCalledWith('bucket-1');
+    });
+  });
+
   // ── getStorageBucketOrFail ──────────────────────────────────────
 
   describe('getStorageBucketOrFail', () => {

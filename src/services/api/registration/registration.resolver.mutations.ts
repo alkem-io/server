@@ -1,5 +1,12 @@
+import { PRIVILEGED_SESSION_WINDOW_MS } from '@common/constants';
 import { AuthorizationPrivilege } from '@common/enums';
+import { LogContext } from '@common/enums/logging.context';
+import { SessionRefreshRequiredException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
+import {
+  redactError,
+  redactStack,
+} from '@core/auth/oidc/revocation/oidc-session-revocation.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CreateOrganizationInput } from '@domain/community/organization/dto/organization.dto.create';
@@ -7,6 +14,7 @@ import { DeleteOrganizationInput } from '@domain/community/organization/dto/orga
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
+import { AccountDeletionInitiatorBranch } from '@domain/community/user/account-deletion/account.deletion.blocker.service';
 import { CreateUserInput } from '@domain/community/user/dto/user.dto.create';
 import { DeleteUserInput } from '@domain/community/user/dto/user.dto.delete';
 import { IUser } from '@domain/community/user/user.interface';
@@ -17,6 +25,7 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { NotificationInputPlatformUserRemoved } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.user.removed';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
+import { NotificationExternalAdapter } from '@services/adapters/notification-external-adapter/notification.external.adapter';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor, Profiling } from '@src/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -27,6 +36,7 @@ import { RegistrationService } from './registration.service';
 export class RegistrationResolverMutations {
   constructor(
     private notificationPlatformAdapter: NotificationPlatformAdapter,
+    private notificationExternalAdapter: NotificationExternalAdapter,
     private registrationService: RegistrationService,
     private userService: UserService,
     private organizationService: OrganizationService,
@@ -111,6 +121,39 @@ export class RegistrationResolverMutations {
     @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteUserInput
   ): Promise<IUser> {
+    // Self-ness is derived server-side (actor == target), never trusted from
+    // the caller — the same derivation the shared blocker predicate and the
+    // freshness gate below both key off.
+    const isSelf = actorContext.actorID === deleteData.ID;
+    const branch: AccountDeletionInitiatorBranch = isSelf ? 'self' : 'admin';
+
+    if (isSelf) {
+      // The session-age gate: refuse before any deletion work when the calling
+      // session was not established within the privileged window.
+      //
+      // NOTE this is a session-AGE gate, not re-authentication: it proves the
+      // session is young, not that a credential was presented. See
+      // alkem-io/server#6417.
+      //
+      // Fail CLOSED on a missing, zero or unparseable issuedAt — never treat an
+      // undeterminable age as fresh. The age is also required to be
+      // non-negative: a future-dated issuedAt (clock skew between the BFF and
+      // this node) yields a negative age, which would otherwise slip past the
+      // upper bound and satisfy the gate. Not applied on admin-on-other.
+      const issuedAt = actorContext.issuedAt;
+      const sessionAgeMs = issuedAt ? Date.now() - issuedAt : undefined;
+      if (
+        sessionAgeMs === undefined ||
+        sessionAgeMs < 0 ||
+        sessionAgeMs > PRIVILEGED_SESSION_WINDOW_MS
+      ) {
+        throw new SessionRefreshRequiredException(
+          'Deleting your own account requires a recently established session',
+          LogContext.AUTH
+        );
+      }
+    }
+
     const user = await this.userService.getUserByIdOrFail(deleteData.ID, {
       relations: { profile: true },
     });
@@ -120,18 +163,55 @@ export class RegistrationResolverMutations {
       AuthorizationPrivilege.DELETE,
       `user delete: ${user.id}`
     );
+
+    // On the self branch the sign-in identity is always removed, overriding
+    // any caller-supplied value: a surviving identity would otherwise mint a
+    // fresh, empty account at the departed user's next sign-in.
+    const effectiveDeleteData: DeleteUserInput = isSelf
+      ? { ...deleteData, deleteIdentity: true }
+      : deleteData;
+
+    // On the self branch the initiator IS `user`, whose row is gone from
+    // the primary store by the time the notification below runs — resolve
+    // its payload now, from the still-loaded pre-deletion entity, so the
+    // notification never has to look the (about to be) deleted initiator
+    // up by id after the fact.
+    const triggeredByPayload = isSelf
+      ? this.notificationExternalAdapter.createUserPayloadFromUser(user)
+      : undefined;
+
     const userDeleted =
       await this.registrationService.deleteUserWithPendingMemberships(
-        deleteData
+        effectiveDeleteData,
+        branch,
+        actorContext.actorID
       );
-    // Send the notification
+
+    // Best-effort: the mutation must resolve successfully regardless of
+    // whether this notification can be sent (it previously wasn't — the
+    // self path's post-deletion lookup of the now-gone initiator threw
+    // AFTER the account was already irreversibly deleted).
     const notificationInput: NotificationInputPlatformUserRemoved = {
       triggeredBy: actorContext.actorID,
       user,
+      triggeredByPayload,
     };
-    await this.notificationPlatformAdapter.platformUserRemoved(
-      notificationInput
-    );
+    try {
+      await this.notificationPlatformAdapter.platformUserRemoved(
+        notificationInput
+      );
+    } catch (error: any) {
+      this.logger.error?.(
+        {
+          message:
+            'Failed to send the platform user-removed notification; the deletion still stands',
+          userID: deleteData.ID,
+          error: redactError(error),
+        },
+        redactStack(error),
+        LogContext.COMMUNITY
+      );
+    }
     return userDeleted;
   }
 

@@ -115,7 +115,8 @@ describe('TagsetService', () => {
       const result = await service.removeTagset('ts-1');
 
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
-        tagset.authorization
+        tagset.authorization,
+        undefined
       );
       expect(result.id).toBe('ts-1');
     });
