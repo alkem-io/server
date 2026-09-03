@@ -14,6 +14,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IUser } from '@domain/community/user/user.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Platform } from '@platform/platform/platform.entity';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
@@ -40,6 +41,8 @@ export class ForumService {
     private namingService: NamingService,
     @InjectRepository(Forum)
     private forumRepository: Repository<Forum>,
+    @InjectRepository(Platform)
+    private platformRepository: Repository<Platform>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -310,20 +313,29 @@ export class ForumService {
   }
 
   /**
-   * Loads the platform's singleton Forum row directly, bypassing
-   * `PlatformService` (which itself depends on `ForumService` — injecting
-   * it here would create a module cycle). The platform bootstrap always
-   * seeds exactly one Forum, so absence here means the platform itself was
-   * never bootstrapped.
+   * Loads the Forum the Platform actually points at, by traversing the
+   * `Platform.forum` relation rather than picking an arbitrary row out of
+   * the `forum` table. The relation — not row count — is what makes a Forum
+   * "the platform's": a stray or orphaned Forum row (a partially rolled-back
+   * bootstrap, a restored dump, a future non-platform Forum) would otherwise
+   * be a candidate for an unordered `findOne`, and the category-retirement
+   * mutation would then shrink the wrong row's active list.
+   *
+   * Resolved through the `Platform` repository rather than `PlatformService`
+   * because that service depends on `ForumService`; injecting it back here
+   * would create a module cycle. A repository carries no such cycle.
    */
   async getPlatformForumOrFail(): Promise<IForum> {
-    const forum = await this.forumRepository.findOne({ where: {} });
-    if (!forum)
+    const platform = await this.platformRepository.findOne({
+      where: {},
+      relations: { forum: true },
+    });
+    if (!platform?.forum)
       throw new EntityNotFoundException(
         'No platform Forum found!',
         LogContext.PLATFORM_FORUM
       );
-    return forum;
+    return platform.forum;
   }
 
   /**

@@ -8,6 +8,7 @@ import { ForumDiscussionCategoryException } from '@common/exceptions/forum.discu
 import { ForumDiscussionCategoryNotEmptyException } from '@common/exceptions/forum.discussion.category.not.empty.exception';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { Platform } from '@platform/platform/platform.entity';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
@@ -24,6 +25,7 @@ import { ForumService } from './forum.service';
 describe('ForumService', () => {
   let service: ForumService;
   let repo: MockType<Repository<Forum>>;
+  let platformRepo: MockType<Repository<Platform>>;
   let discussionService: DiscussionService;
   let communicationAdapter: CommunicationAdapter;
   let namingService: NamingService;
@@ -36,6 +38,7 @@ describe('ForumService', () => {
       providers: [
         ForumService,
         repositoryProviderMockFactory(Forum),
+        repositoryProviderMockFactory(Platform),
         MockWinstonProvider,
       ],
     })
@@ -44,6 +47,7 @@ describe('ForumService', () => {
 
     service = module.get(ForumService);
     repo = module.get(getRepositoryToken(Forum));
+    platformRepo = module.get(getRepositoryToken(Platform));
     discussionService = module.get(DiscussionService);
     communicationAdapter = module.get(CommunicationAdapter);
     namingService = module.get(NamingService);
@@ -262,18 +266,32 @@ describe('ForumService', () => {
   });
 
   describe('getPlatformForumOrFail', () => {
-    it('should return the singleton forum row when found', async () => {
+    it('should resolve the Forum through the Platform relation, not an unfiltered forum row', async () => {
       const forum = { id: 'platform-forum-1' } as any;
-      repo.findOne!.mockResolvedValue(forum);
+      platformRepo.findOne!.mockResolvedValue({ id: 'platform-1', forum });
 
       const result = await service.getPlatformForumOrFail();
 
       expect(result).toBe(forum);
-      expect(repo.findOne).toHaveBeenCalledWith({ where: {} });
+      expect(platformRepo.findOne).toHaveBeenCalledWith({
+        where: {},
+        relations: { forum: true },
+      });
+      // The stray-row hazard this guards against: never pick a Forum by
+      // scanning the forum table.
+      expect(repo.findOne).not.toHaveBeenCalled();
     });
 
-    it('should throw EntityNotFoundException when no forum exists', async () => {
-      repo.findOne!.mockResolvedValue(null);
+    it('should throw EntityNotFoundException when no platform exists', async () => {
+      platformRepo.findOne!.mockResolvedValue(null);
+
+      await expect(service.getPlatformForumOrFail()).rejects.toThrow(
+        EntityNotFoundException
+      );
+    });
+
+    it('should throw EntityNotFoundException when the platform carries no forum', async () => {
+      platformRepo.findOne!.mockResolvedValue({ id: 'platform-1' });
 
       await expect(service.getPlatformForumOrFail()).rejects.toThrow(
         EntityNotFoundException

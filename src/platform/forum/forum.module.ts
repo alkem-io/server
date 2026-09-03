@@ -5,6 +5,7 @@ import { RoomModule } from '@domain/communication/room/room.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
+import { Platform } from '@platform/platform/platform.entity';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
@@ -33,7 +34,7 @@ import { ForumAuthorizationService } from './forum.service.authorization';
     CommunicationAdapterModule,
     PlatformOperationsAuditModule,
     RoomModule,
-    TypeOrmModule.forFeature([Forum]),
+    TypeOrmModule.forFeature([Forum, Platform]),
   ],
   providers: [
     ForumService,
