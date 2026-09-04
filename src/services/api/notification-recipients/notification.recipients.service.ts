@@ -1,3 +1,4 @@
+import { ORGANIZATION_MANAGER_CREDENTIAL_TYPES } from '@common/constants/authorization';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
@@ -40,6 +41,16 @@ const DEFAULT_CONVERSATION_MESSAGE_CHANNELS: IUserSettingsNotificationChannels =
 const DEFAULT_CALLOUT_REACTION_CHANNELS: IUserSettingsNotificationChannels =
   Object.freeze({
     email: false,
+    inApp: true,
+    push: true,
+  });
+
+// Defend on read — a `user_settings` row that predates the backfill
+// migration lacks this key. Same mandated defaults as the migration and
+// `UserSettings.applyOrganizationSpaceInvitationDefaults` (`@AfterLoad`).
+export const DEFAULT_ORGANIZATION_SPACE_INVITATION_CHANNELS: IUserSettingsNotificationChannels =
+  Object.freeze({
+    email: true,
     inApp: true,
     push: true,
   });
@@ -368,6 +379,19 @@ export class NotificationRecipientsService {
       case NotificationEvent.VIRTUAL_ADMIN_SPACE_COMMUNITY_INVITATION:
         return notificationSettings.virtualContributor
           .adminSpaceCommunityInvitation;
+      case NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION:
+        // Defend on read against a row that predates the backfill migration
+        // or was inserted by an old pod during a rolling deploy.
+        // `UserSettings.applyOrganizationSpaceInvitationDefaults`
+        // (@AfterLoad) already heals entity-loaded rows; this covers other
+        // load paths.
+        return (
+          notificationSettings.organization?.adminSpaceCommunityInvitation ??
+          DEFAULT_ORGANIZATION_SPACE_INVITATION_CHANNELS
+        );
+      case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED:
+      case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED:
+        return notificationSettings.space.admin.communityNewMember;
 
       // Fixed values
       case NotificationEvent.USER_SIGN_UP_WELCOME:
@@ -512,6 +536,22 @@ export class NotificationRecipientsService {
           await this.getVirtualContributorCriteria(virtualContributorID);
         break;
       }
+      case NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION: {
+        // Resolved by admin/owner standing, not the associate sweep the two
+        // shipped organization events use — an admin who is not an
+        // associate is still notified.
+        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
+        credentialCriteria =
+          this.getOrganizationManagerCredentialCriteria(organizationID);
+        break;
+      }
+      case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED:
+      case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED: {
+        // Notify only the Space admin who sent the invitation.
+        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
+        credentialCriteria = this.getUserSelfCriteria(userID);
+        break;
+      }
       case NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT:
       case NotificationEvent.USER_CONVERSATION_MESSAGE_GROUP: {
         // 034-messaging-notifications (FR-005/FR-020, D-13): recipients are
@@ -548,7 +588,8 @@ export class NotificationRecipientsService {
         return await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
       }
       case NotificationEvent.ORGANIZATION_ADMIN_MESSAGE:
-      case NotificationEvent.ORGANIZATION_ADMIN_MENTIONED: {
+      case NotificationEvent.ORGANIZATION_ADMIN_MENTIONED:
+      case NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION: {
         // get the organization authorization policy
         if (!organizationID) {
           throw new ValidationException(
@@ -574,6 +615,8 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER:
       case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION:
       case NotificationEvent.SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED:
+      case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED:
+      case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_COMMENT:
@@ -680,6 +723,27 @@ export class NotificationRecipientsService {
         resourceID: organizationID,
       },
     ];
+  }
+
+  /**
+   * The organization's owners and admins — resolved by manager standing
+   * (same constant `getActorsManagedByUser` uses), not by associate
+   * membership. One criterion per credential type; the recipients query
+   * OR-combines them.
+   */
+  private getOrganizationManagerCredentialCriteria(
+    organizationID: string | undefined
+  ): CredentialsSearchInput[] {
+    if (!organizationID) {
+      throw new ValidationException(
+        'Organization ID is required for notification recipients',
+        LogContext.NOTIFICATIONS
+      );
+    }
+    return ORGANIZATION_MANAGER_CREDENTIAL_TYPES.map(type => ({
+      type,
+      resourceID: organizationID,
+    }));
   }
 
   private getSpaceCredentialCriteria(

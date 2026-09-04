@@ -151,6 +151,11 @@ export const userSettingsData: { userSettings: IUserSettings } = {
           inApp: true,
           push: true,
         },
+        adminSpaceCommunityInvitation: {
+          email: true,
+          inApp: true,
+          push: true,
+        },
       },
       virtualContributor: {
         adminSpaceCommunityInvitation: {

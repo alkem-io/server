@@ -30,7 +30,10 @@ describe('OrganizationSettingsService', () => {
   ): IOrganizationSettings => {
     return {
       privacy: { contributionRolesPubliclyVisible: false },
-      membership: { allowUsersMatchingDomainToJoin: false },
+      membership: {
+        allowUsersMatchingDomainToJoin: false,
+        allowSpaceInvitations: true,
+      },
       ...overrides,
     } as IOrganizationSettings;
   };
@@ -55,6 +58,37 @@ describe('OrganizationSettingsService', () => {
 
       const result = service.updateSettings(settings, updateData);
 
+      expect(result.membership.allowUsersMatchingDomainToJoin).toBe(true);
+    });
+
+    it('should update membership.allowSpaceInvitations when provided', () => {
+      const settings = buildSettings();
+      const updateData: UpdateOrganizationSettingsEntityInput = {
+        membership: {
+          allowUsersMatchingDomainToJoin: false,
+          allowSpaceInvitations: false,
+        },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.membership.allowSpaceInvitations).toBe(false);
+    });
+
+    it('should leave membership.allowSpaceInvitations unchanged when undefined', () => {
+      const settings = buildSettings({
+        membership: {
+          allowUsersMatchingDomainToJoin: false,
+          allowSpaceInvitations: false,
+        },
+      } as any);
+      const updateData: UpdateOrganizationSettingsEntityInput = {
+        membership: { allowUsersMatchingDomainToJoin: true },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.membership.allowSpaceInvitations).toBe(false);
       expect(result.membership.allowUsersMatchingDomainToJoin).toBe(true);
     });
 

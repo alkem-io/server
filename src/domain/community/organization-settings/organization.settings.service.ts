@@ -24,6 +24,10 @@ export class OrganizationSettingsService {
         settings.membership.allowUsersMatchingDomainToJoin =
           updateData.membership.allowUsersMatchingDomainToJoin;
       }
+      if (updateData.membership.allowSpaceInvitations !== undefined) {
+        settings.membership.allowSpaceInvitations =
+          updateData.membership.allowSpaceInvitations;
+      }
     }
     return settings;
   }

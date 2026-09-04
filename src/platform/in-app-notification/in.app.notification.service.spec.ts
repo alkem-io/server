@@ -258,6 +258,48 @@ describe('InAppNotificationService', () => {
       expect(result.contributorActorId).toBe('vc-actor');
     });
 
+    it('should extract spaceID, invitationID and organizationID for ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION', () => {
+      const payload = {
+        spaceID: 'space-1',
+        invitationID: 'inv-1',
+        organizationID: 'org-1',
+      };
+      notificationRepo.create!.mockImplementation((input: any) => input);
+
+      const result = service.createInAppNotification({
+        type: NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION,
+        category: 'organization' as any,
+        triggeredByID: 'user-1',
+        triggeredAt: new Date(),
+        receiverID: 'user-2',
+        payload: payload as any,
+      });
+
+      expect(result.spaceID).toBe('space-1');
+      expect(result.invitationID).toBe('inv-1');
+      expect(result.organizationID).toBe('org-1');
+    });
+
+    it.each([
+      NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED,
+      NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED,
+    ])('should extract spaceID and organizationID (= actorID) for %s', type => {
+      const payload = { spaceID: 'space-1', actorID: 'org-1' };
+      notificationRepo.create!.mockImplementation((input: any) => input);
+
+      const result = service.createInAppNotification({
+        type,
+        category: 'admin' as any,
+        triggeredByID: 'user-1',
+        triggeredAt: new Date(),
+        receiverID: 'user-2',
+        payload: payload as any,
+      });
+
+      expect(result.spaceID).toBe('space-1');
+      expect(result.organizationID).toBe('org-1');
+    });
+
     it('should extract spaceID for SPACE_LEAD_COMMUNICATION_MESSAGE', () => {
       const payload = { spaceID: 'space-1' };
       notificationRepo.create!.mockImplementation((input: any) => input);

@@ -5,10 +5,12 @@ import { NotificationEventCategory } from '@common/enums/notification.event.cate
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
 import { UrlPathElementSpace } from '@common/enums/url.path.element.space';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CalloutLookupService } from '@domain/collaboration/callout/callout.lookup/callout.lookup.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -50,6 +52,7 @@ import { NotificationInputUpdateSent } from './dto/space/notification.dto.input.
 import { NotificationInputCommunityApplication } from './dto/space/notification.dto.input.space.community.application';
 import { NotificationInputCommunityCalendarEventComment } from './dto/space/notification.dto.input.space.community.calendar.event.comment';
 import { NotificationInputCommunityCalendarEventCreated } from './dto/space/notification.dto.input.space.community.calendar.event.created';
+import { NotificationInputSpaceCommunityInvitationOrganizationOutcome } from './dto/space/notification.dto.input.space.community.invitation.organization.outcome';
 import { NotificationInputPlatformInvitation } from './dto/space/notification.dto.input.space.community.invitation.platform';
 import { NotificationInputVirtualContributorSpaceCommunityInvitationDeclined } from './dto/space/notification.dto.input.space.community.invitation.vc.declined';
 import { NotificationInputCommunityNewMember } from './dto/space/notification.dto.input.space.community.new.member';
@@ -89,7 +92,8 @@ export class NotificationSpaceAdapter {
     private userLookupService: UserLookupService,
     private calloutLookupService: CalloutLookupService,
     private calloutReactionEmailSuppressionService: CalloutReactionEmailSuppressionService,
-    private configService: ConfigService<AlkemioConfig, true>
+    private configService: ConfigService<AlkemioConfig, true>,
+    private actorLookupService: ActorLookupService
   ) {}
 
   private async getTriggeredByDisplayName(
@@ -105,6 +109,20 @@ export class NotificationSpaceAdapter {
       return user?.profile?.displayName ?? 'Someone';
     } catch {
       return 'Someone';
+    }
+  }
+
+  private async getOrganizationDisplayName(
+    organizationID: string
+  ): Promise<string> {
+    try {
+      const organization = await this.actorLookupService.getFullActorByIdOrFail(
+        organizationID,
+        { relations: { profile: true } }
+      );
+      return organization?.profile?.displayName ?? 'The organization';
+    } catch {
+      return 'The organization';
     }
   }
 
@@ -914,6 +932,150 @@ export class NotificationSpaceAdapter {
           title: 'Invitation declined',
           body: `A virtual contributor invitation was declined in ${spaceName}`,
           url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
+        }
+      );
+    }
+  }
+
+  public async spaceAdminOrganizationInvitationAccepted(
+    eventData: NotificationInputSpaceCommunityInvitationOrganizationOutcome,
+    space: ISpace
+  ): Promise<void> {
+    const event =
+      NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED;
+
+    const recipients = await this.getNotificationRecipientsSpace(
+      event,
+      eventData,
+      space.id,
+      eventData.invitationCreatedBy
+    );
+
+    if (recipients.emailRecipients.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildOrganizationSpaceCommunityInvitationOutcomePayload(
+          event,
+          eventData.triggeredBy,
+          recipients.emailRecipients,
+          eventData.organizationID,
+          space
+        );
+
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
+    }
+
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadSpaceCommunityActor = {
+        type: NotificationEventPayload.SPACE_COMMUNITY_ACTOR,
+        spaceID: space.id,
+        actorID: eventData.organizationID,
+        actorType: ActorType.ORGANIZATION,
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        event,
+        NotificationEventCategory.SPACE_ADMIN,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
+    }
+
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      const spaceName = space.about?.profile?.displayName ?? 'your Space';
+      const organizationName = await this.getOrganizationDisplayName(
+        eventData.organizationID
+      );
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'Invitation accepted',
+          body: `${organizationName} accepted your invitation to join ${spaceName}`,
+          url: await this.urlGeneratorService.createSpaceAdminCommunityURL(
+            space.id
+          ),
+        }
+      );
+    }
+  }
+
+  public async spaceAdminOrganizationInvitationDeclined(
+    eventData: NotificationInputSpaceCommunityInvitationOrganizationOutcome,
+    space: ISpace
+  ): Promise<void> {
+    const event =
+      NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED;
+
+    const recipients = await this.getNotificationRecipientsSpace(
+      event,
+      eventData,
+      space.id,
+      eventData.invitationCreatedBy
+    );
+
+    if (recipients.emailRecipients.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildOrganizationSpaceCommunityInvitationOutcomePayload(
+          event,
+          eventData.triggeredBy,
+          recipients.emailRecipients,
+          eventData.organizationID,
+          space
+        );
+
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
+    }
+
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadSpaceCommunityActor = {
+        type: NotificationEventPayload.SPACE_COMMUNITY_ACTOR,
+        spaceID: space.id,
+        actorID: eventData.organizationID,
+        actorType: ActorType.ORGANIZATION,
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        event,
+        NotificationEventCategory.SPACE_ADMIN,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
+    }
+
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      const spaceName = space.about?.profile?.displayName ?? 'your Space';
+      const organizationName = await this.getOrganizationDisplayName(
+        eventData.organizationID
+      );
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'Invitation declined',
+          body: `${organizationName} declined your invitation to join ${spaceName}`,
+          url: await this.urlGeneratorService.createSpaceAdminCommunityURL(
+            space.id
+          ),
         }
       );
     }

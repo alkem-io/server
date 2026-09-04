@@ -1,3 +1,4 @@
+import { ORGANIZATION_MANAGER_CREDENTIAL_TYPES } from '@common/constants/authorization';
 import { ActorType } from '@common/enums/actor.type';
 import {
   EntityNotFoundException,
@@ -616,6 +617,22 @@ describe('ActorLookupService', () => {
 
       const result = await service.getActorsManagedByUser(VALID_UUID);
       expect(result).toEqual([user]);
+    });
+
+    it('filters the organization credential lookup by exactly ORGANIZATION_MANAGER_CREDENTIAL_TYPES', async () => {
+      const user = { id: VALID_UUID, accountID: 'account-1' };
+
+      entityManager.findOne.mockResolvedValue(user);
+      entityManager.find
+        .mockResolvedValueOnce([]) // org credentials
+        .mockResolvedValueOnce([]); // VCs for user's account
+
+      await service.getActorsManagedByUser(VALID_UUID);
+
+      const [, credentialFindOptions] = entityManager.find.mock.calls[0];
+      expect(credentialFindOptions.where.type.value).toEqual([
+        ...ORGANIZATION_MANAGER_CREDENTIAL_TYPES,
+      ]);
     });
   });
 

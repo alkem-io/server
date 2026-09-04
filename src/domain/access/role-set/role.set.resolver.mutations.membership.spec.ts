@@ -1,8 +1,9 @@
-import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { RoleSetInvitationResultType } from '@common/enums/role.set.invitation.result.type';
 import { RoleSetType } from '@common/enums/role.set.type';
 import { ValidationException } from '@common/exceptions';
+import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { RoleSetInvitationException } from '@common/exceptions/role.set.invitation.exception';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -11,8 +12,11 @@ import { InvitationService } from '@domain/access/invitation/invitation.service'
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { NotificationOrganizationAdapter } from '@services/adapters/notification-adapter/notification.organization.adapter';
+import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -35,9 +39,12 @@ describe('RoleSetResolverMutationsMembership', () => {
   let roleSetAuthorizationService: RoleSetAuthorizationService;
   let actorLookupService: ActorLookupService;
   let userLookupService: UserLookupService;
+  let organizationLookupService: OrganizationLookupService;
   let communityResolverService: CommunityResolverService;
   let authorizationPolicyService: AuthorizationPolicyService;
   let eligibleLanguageGuard: RoleSetEligibleLanguageGuard;
+  let notificationOrganizationAdapter: NotificationOrganizationAdapter;
+  let notificationAdapterSpace: NotificationSpaceAdapter;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -56,6 +63,18 @@ describe('RoleSetResolverMutationsMembership', () => {
       RoleSetResolverMutationsMembership
     );
     roleSetService = module.get<RoleSetService>(RoleSetService);
+    // validateInviteesAndRolesOrFail loads the requested definitions in one
+    // call; derive them from the per-role mock so existing cases keep driving
+    // policy through getRoleDefinition.
+    (roleSetService.getRoleDefinitions as Mock).mockImplementation(
+      async (roleSet: any, roles: any[] = []) =>
+        Promise.all(
+          roles.map(async name => ({
+            ...(await roleSetService.getRoleDefinition(roleSet, name)),
+            name,
+          }))
+        )
+    );
     authorizationService =
       module.get<AuthorizationService>(AuthorizationService);
     applicationService = module.get<ApplicationService>(ApplicationService);
@@ -67,6 +86,16 @@ describe('RoleSetResolverMutationsMembership', () => {
     );
     actorLookupService = module.get<ActorLookupService>(ActorLookupService);
     userLookupService = module.get<UserLookupService>(UserLookupService);
+    organizationLookupService = module.get<OrganizationLookupService>(
+      OrganizationLookupService
+    );
+    notificationOrganizationAdapter =
+      module.get<NotificationOrganizationAdapter>(
+        NotificationOrganizationAdapter
+      );
+    notificationAdapterSpace = module.get<NotificationSpaceAdapter>(
+      NotificationSpaceAdapter
+    );
     communityResolverService = module.get<CommunityResolverService>(
       CommunityResolverService
     );
@@ -513,6 +542,572 @@ describe('RoleSetResolverMutationsMembership', () => {
     });
   });
 
+  describe('inviteForEntryRoleOnRoleSet - invitee/role validation', () => {
+    const baseRoleSet = {
+      id: 'rs-1',
+      type: RoleSetType.SPACE,
+      authorization: { id: 'auth-1' },
+      parentRoleSet: undefined,
+    } as any;
+
+    beforeEach(() => {
+      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(baseRoleSet);
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+    });
+
+    it('rejects an invitee actor type that is not a contributor (e.g. a Space)', async () => {
+      (actorLookupService.validateActorsAndGetTypes as Mock).mockResolvedValue(
+        new Map([['space-1', 'space']])
+      );
+
+      await expect(
+        resolver.inviteForEntryRoleOnRoleSet(actorContext(), {
+          roleSetID: 'rs-1',
+          invitedActorIDs: ['space-1'],
+          invitedUserEmails: [],
+          extraRoles: [],
+        } as any)
+      ).rejects.toThrow(ValidationException);
+
+      expect(
+        roleSetService.createInvitationExistingActor
+      ).not.toHaveBeenCalled();
+    });
+
+    it('rejects an organization invited with the ADMIN role (server#4602)', async () => {
+      (actorLookupService.validateActorsAndGetTypes as Mock).mockResolvedValue(
+        new Map([['org-1', 'organization']])
+      );
+      (roleSetService.getRoleDefinition as Mock).mockResolvedValue({
+        organizationPolicy: { minimum: 0, maximum: 0 },
+      });
+
+      await expect(
+        resolver.inviteForEntryRoleOnRoleSet(actorContext(), {
+          roleSetID: 'rs-1',
+          invitedActorIDs: ['org-1'],
+          invitedUserEmails: [],
+          extraRoles: ['admin'],
+        } as any)
+      ).rejects.toThrow(ValidationException);
+
+      expect(
+        roleSetService.createInvitationExistingActor
+      ).not.toHaveBeenCalled();
+    });
+
+    it('allows an organization invited with the LEAD role', async () => {
+      const mockInvitation = { id: 'inv-1', invitedActorID: 'org-1' } as any;
+      (actorLookupService.validateActorsAndGetTypes as Mock).mockResolvedValue(
+        new Map([['org-1', 'organization']])
+      );
+      (roleSetService.getRoleDefinition as Mock).mockResolvedValue({
+        organizationPolicy: { minimum: 0, maximum: 2 },
+      });
+      (
+        organizationLookupService.getOrganizationByIdOrFail as Mock
+      ).mockResolvedValue({
+        settings: { membership: { allowSpaceInvitations: true } },
+      });
+      (roleSetService.countActorsWithRole as Mock).mockResolvedValue(0);
+      (
+        invitationService.countOpenInvitationsForRoleSet as Mock
+      ).mockResolvedValue(0);
+      (roleSetService.findOpenInvitation as Mock).mockResolvedValue(undefined);
+      (roleSetService.findOpenApplication as Mock).mockResolvedValue(undefined);
+      (roleSetService.isMember as Mock).mockResolvedValue(false);
+      (roleSetService.createInvitationExistingActor as Mock).mockResolvedValue(
+        mockInvitation
+      );
+      (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([
+        mockInvitation,
+      ]);
+      (
+        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
+      ).mockResolvedValue([]);
+      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
+      (
+        communityResolverService.getCommunityForRoleSet as Mock
+      ).mockResolvedValue({ id: 'comm-1' });
+
+      const result = await resolver.inviteForEntryRoleOnRoleSet(
+        actorContext(),
+        {
+          roleSetID: 'rs-1',
+          invitedActorIDs: ['org-1'],
+          invitedUserEmails: [],
+          extraRoles: ['lead'],
+        } as any
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe(
+        RoleSetInvitationResultType.INVITED_TO_ROLE_SET
+      );
+    });
+
+    it('allows a user invited with the ADMIN role (unchanged)', async () => {
+      const mockInvitation = { id: 'inv-1', invitedActorID: 'user-1' } as any;
+      (actorLookupService.validateActorsAndGetTypes as Mock).mockResolvedValue(
+        new Map([['user-1', 'user']])
+      );
+      (roleSetService.findOpenInvitation as Mock).mockResolvedValue(undefined);
+      (roleSetService.findOpenApplication as Mock).mockResolvedValue(undefined);
+      (roleSetService.isMember as Mock).mockResolvedValue(false);
+      (roleSetService.createInvitationExistingActor as Mock).mockResolvedValue(
+        mockInvitation
+      );
+      (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([
+        mockInvitation,
+      ]);
+      (
+        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
+      ).mockResolvedValue([]);
+      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
+      (
+        communityResolverService.getCommunityForRoleSet as Mock
+      ).mockResolvedValue({ id: 'comm-1' });
+
+      const result = await resolver.inviteForEntryRoleOnRoleSet(
+        actorContext(),
+        {
+          roleSetID: 'rs-1',
+          invitedActorIDs: ['user-1'],
+          invitedUserEmails: [],
+          extraRoles: ['admin'],
+        } as any
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe(
+        RoleSetInvitationResultType.INVITED_TO_ROLE_SET
+      );
+      // A user invitee never triggers the organization role-policy lookup.
+      expect(roleSetService.getRoleDefinition).not.toHaveBeenCalled();
+    });
+
+    it('returns ORGANIZATION_NOT_ACCEPTING_INVITATIONS and creates nothing when the organization opted out', async () => {
+      (actorLookupService.validateActorsAndGetTypes as Mock).mockResolvedValue(
+        new Map([['org-1', 'organization']])
+      );
+      (
+        organizationLookupService.getOrganizationByIdOrFail as Mock
+      ).mockResolvedValue({
+        settings: { membership: { allowSpaceInvitations: false } },
+      });
+      (roleSetService.findOpenInvitation as Mock).mockResolvedValue(undefined);
+      (roleSetService.findOpenApplication as Mock).mockResolvedValue(undefined);
+      (roleSetService.isMember as Mock).mockResolvedValue(false);
+      (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([]);
+      (
+        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
+      ).mockResolvedValue([]);
+      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
+      (
+        communityResolverService.getCommunityForRoleSet as Mock
+      ).mockResolvedValue({ id: 'comm-1' });
+
+      const result = await resolver.inviteForEntryRoleOnRoleSet(
+        actorContext(),
+        {
+          roleSetID: 'rs-1',
+          invitedActorIDs: ['org-1'],
+          invitedUserEmails: [],
+          extraRoles: [],
+        } as any
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe(
+        RoleSetInvitationResultType.ORGANIZATION_NOT_ACCEPTING_INVITATIONS
+      );
+      expect(
+        roleSetService.createInvitationExistingActor
+      ).not.toHaveBeenCalled();
+      // A Lead-limit check that never runs must never be reached.
+      expect(roleSetService.countActorsWithRole).not.toHaveBeenCalled();
+    });
+
+    describe('Lead-slot capacity (granted + pending, advisory)', () => {
+      const setUpOrganizationLeadInvite = () => {
+        (
+          actorLookupService.validateActorsAndGetTypes as Mock
+        ).mockResolvedValue(new Map([['org-1', 'organization']]));
+        (
+          organizationLookupService.getOrganizationByIdOrFail as Mock
+        ).mockResolvedValue({
+          settings: { membership: { allowSpaceInvitations: true } },
+        });
+        (roleSetService.findOpenInvitation as Mock).mockResolvedValue(
+          undefined
+        );
+        (roleSetService.findOpenApplication as Mock).mockResolvedValue(
+          undefined
+        );
+        (roleSetService.isMember as Mock).mockResolvedValue(false);
+        (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([]);
+        (
+          roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
+        ).mockResolvedValue([]);
+        (authorizationPolicyService.saveAll as Mock).mockResolvedValue(
+          undefined
+        );
+        (
+          communityResolverService.getCommunityForRoleSet as Mock
+        ).mockResolvedValue({ id: 'comm-1' });
+      };
+
+      it('returns ORGANIZATION_LEAD_ROLE_LIMIT_REACHED when granted Leads already fill the two slots', async () => {
+        setUpOrganizationLeadInvite();
+        (roleSetService.getRoleDefinition as Mock).mockResolvedValue({
+          organizationPolicy: { minimum: 0, maximum: 2 },
+        });
+        (roleSetService.countActorsWithRole as Mock).mockResolvedValue(2);
+        (
+          invitationService.countOpenInvitationsForRoleSet as Mock
+        ).mockResolvedValue(0);
+
+        const result = await resolver.inviteForEntryRoleOnRoleSet(
+          actorContext(),
+          {
+            roleSetID: 'rs-1',
+            invitedActorIDs: ['org-1'],
+            invitedUserEmails: [],
+            extraRoles: ['lead'],
+          } as any
+        );
+
+        expect(result[0].type).toBe(
+          RoleSetInvitationResultType.ORGANIZATION_LEAD_ROLE_LIMIT_REACHED
+        );
+        expect(
+          roleSetService.createInvitationExistingActor
+        ).not.toHaveBeenCalled();
+      });
+
+      it('returns ORGANIZATION_LEAD_ROLE_LIMIT_REACHED when granted + pending fill the two slots', async () => {
+        setUpOrganizationLeadInvite();
+        (roleSetService.getRoleDefinition as Mock).mockResolvedValue({
+          organizationPolicy: { minimum: 0, maximum: 2 },
+        });
+        (roleSetService.countActorsWithRole as Mock).mockResolvedValue(1);
+        (
+          invitationService.countOpenInvitationsForRoleSet as Mock
+        ).mockResolvedValue(1);
+
+        const result = await resolver.inviteForEntryRoleOnRoleSet(
+          actorContext(),
+          {
+            roleSetID: 'rs-1',
+            invitedActorIDs: ['org-1'],
+            invitedUserEmails: [],
+            extraRoles: ['lead'],
+          } as any
+        );
+
+        expect(result[0].type).toBe(
+          RoleSetInvitationResultType.ORGANIZATION_LEAD_ROLE_LIMIT_REACHED
+        );
+      });
+
+      it('never triggers the limit when the role policy maximum is unlimited (-1)', async () => {
+        setUpOrganizationLeadInvite();
+        (roleSetService.getRoleDefinition as Mock).mockResolvedValue({
+          organizationPolicy: { minimum: 0, maximum: -1 },
+        });
+        (roleSetService.countActorsWithRole as Mock).mockResolvedValue(50);
+        (
+          invitationService.countOpenInvitationsForRoleSet as Mock
+        ).mockResolvedValue(50);
+        const mockInvitation = {
+          id: 'inv-1',
+          invitedActorID: 'org-1',
+        } as any;
+        (
+          roleSetService.createInvitationExistingActor as Mock
+        ).mockResolvedValue(mockInvitation);
+        (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([
+          mockInvitation,
+        ]);
+
+        const result = await resolver.inviteForEntryRoleOnRoleSet(
+          actorContext(),
+          {
+            roleSetID: 'rs-1',
+            invitedActorIDs: ['org-1'],
+            invitedUserEmails: [],
+            extraRoles: ['lead'],
+          } as any
+        );
+
+        expect(result[0].type).toBe(
+          RoleSetInvitationResultType.INVITED_TO_ROLE_SET
+        );
+      });
+
+      it('ignores the Lead limit for a Member-only invite (no extraRoles)', async () => {
+        setUpOrganizationLeadInvite();
+        const mockInvitation = {
+          id: 'inv-1',
+          invitedActorID: 'org-1',
+        } as any;
+        (
+          roleSetService.createInvitationExistingActor as Mock
+        ).mockResolvedValue(mockInvitation);
+        (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([
+          mockInvitation,
+        ]);
+
+        const result = await resolver.inviteForEntryRoleOnRoleSet(
+          actorContext(),
+          {
+            roleSetID: 'rs-1',
+            invitedActorIDs: ['org-1'],
+            invitedUserEmails: [],
+            extraRoles: [],
+          } as any
+        );
+
+        expect(result[0].type).toBe(
+          RoleSetInvitationResultType.INVITED_TO_ROLE_SET
+        );
+        expect(roleSetService.getRoleDefinition).not.toHaveBeenCalled();
+        expect(roleSetService.countActorsWithRole).not.toHaveBeenCalled();
+      });
+
+      it('one Lead slot free for two Lead invitees in one call: first sent, second Lead-limit-reached, in submission order', async () => {
+        (
+          actorLookupService.validateActorsAndGetTypes as Mock
+        ).mockResolvedValue(
+          new Map([
+            ['org-1', 'organization'],
+            ['org-2', 'organization'],
+          ])
+        );
+        (
+          organizationLookupService.getOrganizationByIdOrFail as Mock
+        ).mockResolvedValue({
+          settings: { membership: { allowSpaceInvitations: true } },
+        });
+        (roleSetService.findOpenInvitation as Mock).mockResolvedValue(
+          undefined
+        );
+        (roleSetService.findOpenApplication as Mock).mockResolvedValue(
+          undefined
+        );
+        (roleSetService.isMember as Mock).mockResolvedValue(false);
+        (
+          roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
+        ).mockResolvedValue([]);
+        (authorizationPolicyService.saveAll as Mock).mockResolvedValue(
+          undefined
+        );
+        (
+          communityResolverService.getCommunityForRoleSet as Mock
+        ).mockResolvedValue({ id: 'comm-1' });
+        (roleSetService.getRoleDefinition as Mock).mockResolvedValue({
+          organizationPolicy: { minimum: 0, maximum: 2 },
+        });
+        // One Lead slot granted already; the request reads the pending
+        // count once (0) and tracks it locally, bumping it to 1 once the
+        // first invitee's invitation is created — so a second queued value
+        // is unnecessary but harmless if a caller still provides one.
+        (roleSetService.countActorsWithRole as Mock).mockResolvedValue(1);
+        (
+          invitationService.countOpenInvitationsForRoleSet as Mock
+        ).mockResolvedValue(0);
+        const mockInvitation1 = {
+          id: 'inv-org-1',
+          invitedActorID: 'org-1',
+        } as any;
+        (
+          roleSetService.createInvitationExistingActor as Mock
+        ).mockResolvedValue(mockInvitation1);
+        (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([
+          mockInvitation1,
+        ]);
+
+        const result = await resolver.inviteForEntryRoleOnRoleSet(
+          actorContext(),
+          {
+            roleSetID: 'rs-1',
+            invitedActorIDs: ['org-1', 'org-2'],
+            invitedUserEmails: [],
+            extraRoles: ['lead'],
+          } as any
+        );
+
+        expect(result).toHaveLength(2);
+        expect(result[0].type).toBe(
+          RoleSetInvitationResultType.INVITED_TO_ROLE_SET
+        );
+        expect(result[1].type).toBe(
+          RoleSetInvitationResultType.ORGANIZATION_LEAD_ROLE_LIMIT_REACHED
+        );
+        expect(
+          roleSetService.createInvitationExistingActor
+        ).toHaveBeenCalledTimes(1);
+        // The pending-count read is invariant for the whole request and is
+        // hoisted out of the per-invitee loop: one query regardless of how
+        // many organization Lead invitees are in the batch.
+        expect(
+          invitationService.countOpenInvitationsForRoleSet
+        ).toHaveBeenCalledTimes(1);
+        expect(roleSetService.countActorsWithRole).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    function actorContext() {
+      return { actorID: 'user-1' } as any;
+    }
+  });
+
+  describe('inviteForEntryRoleOnRoleSet - organization zero-admin notice and notification dispatch (T009)', () => {
+    const mockRoleSet = {
+      id: 'rs-1',
+      type: RoleSetType.SPACE,
+      authorization: { id: 'auth-1' },
+      parentRoleSet: undefined,
+    } as any;
+    const mockInvitation = {
+      id: 'inv-1',
+      invitedActorID: 'org-1',
+      extraRoles: [],
+      invitedToParent: false,
+      welcomeMessage: undefined,
+    } as any;
+
+    const setUp = () => {
+      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(mockRoleSet);
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+      (actorLookupService.validateActorsAndGetTypes as Mock).mockResolvedValue(
+        new Map([['org-1', 'organization']])
+      );
+      (
+        organizationLookupService.getOrganizationByIdOrFail as Mock
+      ).mockResolvedValue({
+        settings: { membership: { allowSpaceInvitations: true } },
+      });
+      (roleSetService.findOpenInvitation as Mock).mockResolvedValue(undefined);
+      (roleSetService.findOpenApplication as Mock).mockResolvedValue(undefined);
+      (roleSetService.isMember as Mock).mockResolvedValue(false);
+      (roleSetService.createInvitationExistingActor as Mock).mockResolvedValue(
+        mockInvitation
+      );
+      (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([
+        mockInvitation,
+      ]);
+      (
+        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
+      ).mockResolvedValue([]);
+      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
+      (
+        communityResolverService.getCommunityForRoleSet as Mock
+      ).mockResolvedValue({ id: 'comm-1' });
+      (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+        'organization'
+      );
+    };
+
+    it('sets the zero-admin notice and passes organizationHasNoAdministrators: true to the dispatch', async () => {
+      setUp();
+      (userLookupService.usersWithCredentials as Mock).mockResolvedValue([]);
+
+      const result = await resolver.inviteForEntryRoleOnRoleSet(
+        { actorID: 'user-1' } as any,
+        {
+          roleSetID: 'rs-1',
+          invitedActorIDs: ['org-1'],
+          invitedUserEmails: [],
+          extraRoles: [],
+        } as any
+      );
+
+      expect(result[0].type).toBe(
+        RoleSetInvitationResultType.INVITED_TO_ROLE_SET
+      );
+      expect(result[0].notice).toBe('organization-has-no-administrators');
+      expect(
+        notificationOrganizationAdapter.organizationSpaceCommunityInvitationCreated
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ organizationHasNoAdministrators: true })
+      );
+    });
+
+    it('leaves the notice unset when the organization has at least one owner/admin', async () => {
+      setUp();
+      (userLookupService.usersWithCredentials as Mock).mockResolvedValue([
+        { id: 'owner-1' },
+      ]);
+
+      const result = await resolver.inviteForEntryRoleOnRoleSet(
+        { actorID: 'user-1' } as any,
+        {
+          roleSetID: 'rs-1',
+          invitedActorIDs: ['org-1'],
+          invitedUserEmails: [],
+          extraRoles: [],
+        } as any
+      );
+
+      expect(result[0].notice).toBeUndefined();
+      expect(
+        notificationOrganizationAdapter.organizationSpaceCommunityInvitationCreated
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ organizationHasNoAdministrators: false })
+      );
+    });
+
+    it('never dispatches the organization adapter for a non-organization invitee', async () => {
+      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(mockRoleSet);
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+      (actorLookupService.validateActorsAndGetTypes as Mock).mockResolvedValue(
+        new Map([['user-1', 'user']])
+      );
+      (roleSetService.findOpenInvitation as Mock).mockResolvedValue(undefined);
+      (roleSetService.findOpenApplication as Mock).mockResolvedValue(undefined);
+      (roleSetService.isMember as Mock).mockResolvedValue(false);
+      (roleSetService.createInvitationExistingActor as Mock).mockResolvedValue({
+        id: 'inv-2',
+        invitedActorID: 'user-1',
+      });
+      (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([
+        { id: 'inv-2', invitedActorID: 'user-1' },
+      ]);
+      (
+        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
+      ).mockResolvedValue([]);
+      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
+      (
+        communityResolverService.getCommunityForRoleSet as Mock
+      ).mockResolvedValue({ id: 'comm-1' });
+      (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+        'user'
+      );
+
+      await resolver.inviteForEntryRoleOnRoleSet(
+        { actorID: 'user-1' } as any,
+        {
+          roleSetID: 'rs-1',
+          invitedActorIDs: ['user-2'],
+          invitedUserEmails: [],
+          extraRoles: [],
+        } as any
+      );
+
+      expect(
+        notificationOrganizationAdapter.organizationSpaceCommunityInvitationCreated
+      ).not.toHaveBeenCalled();
+      expect(userLookupService.usersWithCredentials).not.toHaveBeenCalled();
+    });
+  });
+
   describe('inviteForEntryRoleOnRoleSet - new email users', () => {
     it('should create platform invitations for new email users', async () => {
       const actorContext = { actorID: 'user-1' } as any;
@@ -744,6 +1339,297 @@ describe('RoleSetResolverMutationsMembership', () => {
       );
 
       expect(result).toBe(mockInvitation);
+    });
+
+    it('requires the ACCEPT-specific privilege (not just UPDATE) for an ACCEPT event, so a generic UPDATE holder cannot accept on the invited actor behalf', async () => {
+      const actorContext = { actorID: 'global-admin-1' } as any;
+      const mockInvitation = {
+        id: 'inv-1',
+        authorization: { id: 'auth-1' },
+        lifecycle: { id: 'lc-1' },
+        invitedActorID: 'org-1',
+        roleSet: { id: 'rs-1' },
+      } as any;
+
+      (invitationService.getInvitationOrFail as Mock).mockResolvedValue(
+        mockInvitation
+      );
+      // Generic UPDATE is granted (e.g. inherited global admin authorization),
+      // but the ACCEPT-specific privilege is not.
+      (authorizationService.grantAccessOrFail as Mock).mockImplementation(
+        (_actorContext, _authorization, privilege) => {
+          if (
+            privilege ===
+            AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE_ACCEPT
+          ) {
+            throw new ForbiddenAuthorizationPolicyException(
+              'not permitted to accept',
+              privilege,
+              'auth-1',
+              'global-admin-1'
+            );
+          }
+          return undefined;
+        }
+      );
+
+      await expect(
+        resolver.eventOnInvitation(
+          { invitationID: 'inv-1', eventName: 'ACCEPT' } as any,
+          actorContext
+        )
+      ).rejects.toThrow(ForbiddenAuthorizationPolicyException);
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        mockInvitation.authorization,
+        AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE_ACCEPT,
+        expect.any(String)
+      );
+      // The event must never reach the lifecycle machine once the
+      // ACCEPT-specific check has failed.
+      expect(lifecycleService.event).not.toHaveBeenCalled();
+    });
+
+    it('does not require the ACCEPT-specific privilege for a REJECT event', async () => {
+      const actorContext = { actorID: 'user-1' } as any;
+      const mockInvitation = {
+        id: 'inv-1',
+        authorization: { id: 'auth-1' },
+        lifecycle: { id: 'lc-1' },
+        invitedActorID: 'actor-1',
+        roleSet: { id: 'rs-1' },
+      } as any;
+
+      (invitationService.getInvitationOrFail as Mock).mockResolvedValue(
+        mockInvitation
+      );
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+      (lifecycleService.event as Mock).mockResolvedValue(undefined);
+      (invitationService.getLifecycleState as Mock).mockResolvedValue(
+        'invited'
+      );
+      (lifecycleService.getState as Mock).mockReturnValue('rejected');
+      (
+        roleSetCacheService.deleteOpenInvitationFromCache as Mock
+      ).mockResolvedValue(undefined);
+      (
+        roleSetCacheService.deleteMembershipStatusCache as Mock
+      ).mockResolvedValue(undefined);
+      (roleSetCacheService.setActorIsMemberCache as Mock).mockResolvedValue(
+        undefined
+      );
+
+      const actorLookupService = (resolver as any).actorLookupService;
+      (actorLookupService.getActorTypeById as Mock).mockResolvedValue('user');
+
+      await resolver.eventOnInvitation(
+        { invitationID: 'inv-1', eventName: 'REJECT' } as any,
+        actorContext
+      );
+
+      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalledWith(
+        actorContext,
+        mockInvitation.authorization,
+        AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE_ACCEPT,
+        expect.any(String)
+      );
+    });
+
+    describe('organization accept/decline outcome dispatch (T016)', () => {
+      const setUp = (createdBy: string | undefined) => {
+        const mockInvitation = {
+          id: 'inv-1',
+          authorization: { id: 'auth-1' },
+          lifecycle: { id: 'lc-1' },
+          invitedActorID: 'org-1',
+          roleSet: { id: 'rs-1' },
+          createdBy,
+        } as any;
+
+        (invitationService.getInvitationOrFail as Mock).mockResolvedValue(
+          mockInvitation
+        );
+        (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+          undefined
+        );
+        (lifecycleService.event as Mock).mockResolvedValue(undefined);
+        (
+          roleSetCacheService.deleteOpenInvitationFromCache as Mock
+        ).mockResolvedValue(undefined);
+        (
+          roleSetCacheService.deleteMembershipStatusCache as Mock
+        ).mockResolvedValue(undefined);
+        (roleSetCacheService.setActorIsMemberCache as Mock).mockResolvedValue(
+          undefined
+        );
+        (
+          communityResolverService.getSpaceForRoleSetOrFail as Mock
+        ).mockResolvedValue({ id: 'space-1' });
+
+        const actorLookupService = (resolver as any).actorLookupService;
+        (actorLookupService.getActorTypeById as Mock).mockResolvedValue(
+          'organization'
+        );
+
+        return mockInvitation;
+      };
+
+      it('dispatches spaceAdminOrganizationInvitationAccepted when the invitation is accepted', async () => {
+        setUp('inviter-1');
+        (invitationService.getLifecycleState as Mock).mockResolvedValue(
+          'accepting'
+        );
+        (roleSetService.acceptInvitationToRoleSet as Mock).mockResolvedValue(
+          undefined
+        );
+        (lifecycleService.getState as Mock).mockReturnValue('accepted');
+
+        await resolver.eventOnInvitation(
+          { invitationID: 'inv-1', eventName: 'ACCEPT' } as any,
+          { actorID: 'org-admin-1' } as any
+        );
+
+        expect(
+          notificationAdapterSpace.spaceAdminOrganizationInvitationAccepted
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({
+            triggeredBy: 'org-admin-1',
+            invitationCreatedBy: 'inviter-1',
+            organizationID: 'org-1',
+            spaceID: 'space-1',
+          }),
+          expect.objectContaining({ id: 'space-1' })
+        );
+        expect(
+          notificationAdapterSpace.spaceAdminOrganizationInvitationDeclined
+        ).not.toHaveBeenCalled();
+      });
+
+      it('skips the accepted dispatch when the inviter no longer exists (createdBy null)', async () => {
+        setUp(undefined);
+        (invitationService.getLifecycleState as Mock).mockResolvedValue(
+          'accepting'
+        );
+        (roleSetService.acceptInvitationToRoleSet as Mock).mockResolvedValue(
+          undefined
+        );
+        (lifecycleService.getState as Mock).mockReturnValue('accepted');
+
+        const result = await resolver.eventOnInvitation(
+          { invitationID: 'inv-1', eventName: 'ACCEPT' } as any,
+          { actorID: 'org-admin-1' } as any
+        );
+
+        expect(result).toBeDefined();
+        expect(
+          notificationAdapterSpace.spaceAdminOrganizationInvitationAccepted
+        ).not.toHaveBeenCalled();
+      });
+
+      it('dispatches spaceAdminOrganizationInvitationDeclined when the invitation is rejected', async () => {
+        setUp('inviter-1');
+        (invitationService.getLifecycleState as Mock).mockResolvedValue(
+          'invited'
+        );
+        (lifecycleService.getState as Mock).mockReturnValue('rejected');
+
+        await resolver.eventOnInvitation(
+          { invitationID: 'inv-1', eventName: 'REJECT' } as any,
+          { actorID: 'org-admin-1' } as any
+        );
+
+        expect(
+          notificationAdapterSpace.spaceAdminOrganizationInvitationDeclined
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({
+            triggeredBy: 'org-admin-1',
+            invitationCreatedBy: 'inviter-1',
+            organizationID: 'org-1',
+            spaceID: 'space-1',
+          }),
+          expect.objectContaining({ id: 'space-1' })
+        );
+        expect(
+          notificationAdapterSpace.spaceAdminOrganizationInvitationAccepted
+        ).not.toHaveBeenCalled();
+      });
+
+      it('skips the declined dispatch when the inviter no longer exists (createdBy null)', async () => {
+        setUp(undefined);
+        (invitationService.getLifecycleState as Mock).mockResolvedValue(
+          'invited'
+        );
+        (lifecycleService.getState as Mock).mockReturnValue('rejected');
+
+        const result = await resolver.eventOnInvitation(
+          { invitationID: 'inv-1', eventName: 'REJECT' } as any,
+          { actorID: 'org-admin-1' } as any
+        );
+
+        expect(result).toBeDefined();
+        expect(
+          notificationAdapterSpace.spaceAdminOrganizationInvitationDeclined
+        ).not.toHaveBeenCalled();
+      });
+
+      it('never dispatches the organization outcome adapters for a Virtual Contributor invitee (unchanged VC path)', async () => {
+        const mockInvitation = {
+          id: 'inv-1',
+          authorization: { id: 'auth-1' },
+          lifecycle: { id: 'lc-1' },
+          invitedActorID: 'vc-1',
+          roleSet: { id: 'rs-1' },
+          createdBy: 'inviter-1',
+        } as any;
+        (invitationService.getInvitationOrFail as Mock).mockResolvedValue(
+          mockInvitation
+        );
+        (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+          undefined
+        );
+        (lifecycleService.event as Mock).mockResolvedValue(undefined);
+        (invitationService.getLifecycleState as Mock).mockResolvedValue(
+          'invited'
+        );
+        (lifecycleService.getState as Mock).mockReturnValue('rejected');
+        (
+          roleSetCacheService.deleteOpenInvitationFromCache as Mock
+        ).mockResolvedValue(undefined);
+        (
+          roleSetCacheService.deleteMembershipStatusCache as Mock
+        ).mockResolvedValue(undefined);
+        (roleSetCacheService.setActorIsMemberCache as Mock).mockResolvedValue(
+          undefined
+        );
+        (
+          communityResolverService.getCommunityForRoleSet as Mock
+        ).mockResolvedValue({ id: 'comm-1' });
+        (
+          communityResolverService.getSpaceForCommunityOrFail as Mock
+        ).mockResolvedValue({ id: 'space-1' });
+        const actorLookupService = (resolver as any).actorLookupService;
+        (actorLookupService.getActorTypeById as Mock).mockResolvedValue(
+          'virtual-contributor'
+        );
+
+        await resolver.eventOnInvitation(
+          { invitationID: 'inv-1', eventName: 'REJECT' } as any,
+          { actorID: 'org-admin-1' } as any
+        );
+
+        expect(
+          notificationAdapterSpace.spaceAdminVirtualContributorInvitationDeclined
+        ).toHaveBeenCalled();
+        expect(
+          notificationAdapterSpace.spaceAdminOrganizationInvitationDeclined
+        ).not.toHaveBeenCalled();
+        expect(
+          notificationAdapterSpace.spaceAdminOrganizationInvitationAccepted
+        ).not.toHaveBeenCalled();
+      });
     });
   });
 

@@ -5,6 +5,7 @@ import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import {
+  AfterLoad,
   ChildEntity,
   Column,
   Generated,
@@ -82,4 +83,19 @@ export class Organization extends Actor implements IOrganization, IGroupable {
   })
   @JoinColumn()
   roleSet!: RoleSet;
+
+  /**
+   * Defend on read for the "allow Spaces to invite this organization"
+   * setting. A `settings.membership` object that predates the backfill
+   * migration, or was inserted by an old pod during a rolling deploy, lacks
+   * this key — without this hook the non-null GraphQL field would surface a
+   * null. Runs for every entity load regardless of query path.
+   */
+  @AfterLoad()
+  applyMembershipSettingsDefaults() {
+    if (!this.settings?.membership) {
+      return;
+    }
+    this.settings.membership.allowSpaceInvitations ??= true;
+  }
 }

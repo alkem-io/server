@@ -1,5 +1,6 @@
 import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { CalloutLookupService } from '@domain/collaboration/callout/callout.lookup/callout.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
@@ -28,6 +29,7 @@ describe('NotificationSpaceAdapter', () => {
   let calloutReactionEmailSuppressionService: CalloutReactionEmailSuppressionService;
   let configService: ConfigService;
   let userLookupService: UserLookupService;
+  let actorLookupService: ActorLookupService;
 
   const mockRecipients = (
     emailRecipients: any[] = [],
@@ -84,6 +86,7 @@ describe('NotificationSpaceAdapter', () => {
       );
     configService = module.get<ConfigService>(ConfigService);
     userLookupService = module.get<UserLookupService>(UserLookupService);
+    actorLookupService = module.get<ActorLookupService>(ActorLookupService);
 
     // Default: kill switch enabled
     vi.mocked(configService.get).mockReturnValue(true as any);
@@ -817,6 +820,142 @@ describe('NotificationSpaceAdapter', () => {
         ['publisher-C'],
         expect.any(Object)
       );
+    });
+  });
+
+  describe('spaceAdminOrganizationInvitationAccepted', () => {
+    const eventData = {
+      triggeredBy: 'org-admin-1',
+      organizationID: 'org-1',
+      invitationCreatedBy: 'inviter-1',
+    } as any;
+    const space = {
+      id: 'space-1',
+      about: { profile: { displayName: 'My Space' } },
+    } as any;
+
+    it('sends email, in-app and push to the inviter', async () => {
+      mockRecipients([{ id: 'inviter-1' }], [{ id: 'inviter-1' }], undefined);
+      vi.mocked(
+        notificationAdapter.getNotificationRecipients
+      ).mockResolvedValue({
+        emailRecipients: [{ id: 'inviter-1' }],
+        inAppRecipients: [{ id: 'inviter-1' }],
+        pushRecipients: [{ id: 'inviter-1' }],
+      } as any);
+      vi.mocked(
+        externalAdapter.buildOrganizationSpaceCommunityInvitationOutcomePayload
+      ).mockResolvedValue({} as any);
+      vi.mocked(actorLookupService.getFullActorByIdOrFail).mockResolvedValue({
+        id: 'org-1',
+        profile: { displayName: 'Acme' },
+      } as any);
+
+      await adapter.spaceAdminOrganizationInvitationAccepted(eventData, space);
+
+      expect(
+        notificationAdapter.getNotificationRecipients
+      ).toHaveBeenCalledWith(
+        expect.any(String),
+        eventData,
+        'space-1',
+        'inviter-1'
+      );
+      expect(externalAdapter.sendExternalNotifications).toHaveBeenCalled();
+      expect(inAppAdapter.sendInAppNotifications).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(String),
+        'org-admin-1',
+        ['inviter-1'],
+        expect.objectContaining({ spaceID: 'space-1', actorID: 'org-1' })
+      );
+      expect(
+        (adapter as any).notificationPushAdapter.sendPushNotifications
+      ).toHaveBeenCalledWith(
+        [{ id: 'inviter-1' }],
+        expect.any(String),
+        expect.objectContaining({ title: 'Invitation accepted' })
+      );
+    });
+
+    it('skips email when there are no email recipients', async () => {
+      vi.mocked(
+        notificationAdapter.getNotificationRecipients
+      ).mockResolvedValue({
+        emailRecipients: [],
+        inAppRecipients: [],
+        pushRecipients: [],
+      } as any);
+
+      await adapter.spaceAdminOrganizationInvitationAccepted(eventData, space);
+
+      expect(
+        externalAdapter.buildOrganizationSpaceCommunityInvitationOutcomePayload
+      ).not.toHaveBeenCalled();
+      expect(externalAdapter.sendExternalNotifications).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('spaceAdminOrganizationInvitationDeclined', () => {
+    const eventData = {
+      triggeredBy: 'org-admin-1',
+      organizationID: 'org-1',
+      invitationCreatedBy: 'inviter-1',
+    } as any;
+    const space = {
+      id: 'space-1',
+      about: { profile: { displayName: 'My Space' } },
+    } as any;
+
+    it('sends email, in-app and push to the inviter', async () => {
+      vi.mocked(
+        notificationAdapter.getNotificationRecipients
+      ).mockResolvedValue({
+        emailRecipients: [{ id: 'inviter-1' }],
+        inAppRecipients: [{ id: 'inviter-1' }],
+        pushRecipients: [{ id: 'inviter-1' }],
+      } as any);
+      vi.mocked(
+        externalAdapter.buildOrganizationSpaceCommunityInvitationOutcomePayload
+      ).mockResolvedValue({} as any);
+      vi.mocked(actorLookupService.getFullActorByIdOrFail).mockResolvedValue({
+        id: 'org-1',
+        profile: { displayName: 'Acme' },
+      } as any);
+
+      await adapter.spaceAdminOrganizationInvitationDeclined(eventData, space);
+
+      expect(externalAdapter.sendExternalNotifications).toHaveBeenCalled();
+      expect(inAppAdapter.sendInAppNotifications).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(String),
+        'org-admin-1',
+        ['inviter-1'],
+        expect.objectContaining({ spaceID: 'space-1', actorID: 'org-1' })
+      );
+      expect(
+        (adapter as any).notificationPushAdapter.sendPushNotifications
+      ).toHaveBeenCalledWith(
+        [{ id: 'inviter-1' }],
+        expect.any(String),
+        expect.objectContaining({ title: 'Invitation declined' })
+      );
+    });
+
+    it('skips email when there are no email recipients', async () => {
+      vi.mocked(
+        notificationAdapter.getNotificationRecipients
+      ).mockResolvedValue({
+        emailRecipients: [],
+        inAppRecipients: [],
+        pushRecipients: [],
+      } as any);
+
+      await adapter.spaceAdminOrganizationInvitationDeclined(eventData, space);
+
+      expect(
+        externalAdapter.buildOrganizationSpaceCommunityInvitationOutcomePayload
+      ).not.toHaveBeenCalled();
     });
   });
 });
