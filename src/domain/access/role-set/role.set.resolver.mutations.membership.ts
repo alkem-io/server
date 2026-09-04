@@ -887,17 +887,24 @@ export class RoleSetResolverMutationsMembership {
    * Advisory, organization-only guards run just before an invitation row is
    * created: an organization that opted out of Space invitations, and a
    * Lead invitation that would exceed the Space's Lead-organization
-   * capacity (granted Leads plus every still-open Lead invitation on the
+   * capacity (granted Leads plus every still-pending Lead invitation on the
    * Space, including ones this same request already created). Returns a
    * typed, no-op result to record instead of creating anything, or
    * `undefined` when the invitee may proceed. Never throws — both checks
    * are advisory, not authorization.
+   *
+   * The granted/pending Lead counts are invariant for the whole request
+   * (creating an invitation never grants the role), so the caller computes
+   * them once and passes the running pending count in rather than this
+   * method re-querying the RoleSet's entire invitation history once per
+   * invitee.
    */
   private async guardOrganizationInvitation(
     roleSet: IRoleSet,
     actorID: string,
     actorType: ActorType | undefined,
-    extraRoles: RoleName[]
+    extraRoles: RoleName[],
+    leadSlots?: { granted: number; pending: number; maximum: number }
   ): Promise<RoleSetInvitationResult | undefined> {
     if (actorType !== ActorType.ORGANIZATION) {
       return undefined;
@@ -913,25 +920,12 @@ export class RoleSetResolverMutationsMembership {
       };
     }
 
-    if (!extraRoles.includes(RoleName.LEAD)) {
+    if (!extraRoles.includes(RoleName.LEAD) || !leadSlots) {
       return undefined;
     }
 
-    const granted = await this.roleSetService.countActorsWithRole(
-      roleSet,
-      RoleName.LEAD,
-      [ActorType.ORGANIZATION]
-    );
-    const pending = await this.invitationService.countOpenInvitationsForRoleSet(
-      roleSet.id,
-      { extraRole: RoleName.LEAD, actorType: ActorType.ORGANIZATION }
-    );
-    const leadRoleDefinition = await this.roleSetService.getRoleDefinition(
-      roleSet,
-      RoleName.LEAD
-    );
-    const max = leadRoleDefinition.organizationPolicy.maximum;
-    if (max >= 0 && granted + pending >= max) {
+    const { granted, pending, maximum } = leadSlots;
+    if (maximum >= 0 && granted + pending >= maximum) {
       return {
         type: RoleSetInvitationResultType.ORGANIZATION_LEAD_ROLE_LIMIT_REACHED,
       };
@@ -951,6 +945,34 @@ export class RoleSetResolverMutationsMembership {
     actorTypes: Map<string, ActorType> = new Map()
   ): Promise<RoleSetInvitationResult[]> {
     const invitationResults: RoleSetInvitationResult[] = [];
+
+    // The Lead-organization slot counts are invariant for the whole
+    // request (creating an invitation never grants the role), so they are
+    // read once here rather than once per organization invitee below. The
+    // pending count is then tracked locally and bumped after each org Lead
+    // invitation this same request creates, so a batch of invitees still
+    // can't jointly exceed the Space's Lead-organization capacity.
+    let leadSlots:
+      | { granted: number; pending: number; maximum: number }
+      | undefined;
+    if (extraRoles.includes(RoleName.LEAD)) {
+      const [granted, pending, leadRoleDefinition] = await Promise.all([
+        this.roleSetService.countActorsWithRole(roleSet, RoleName.LEAD, [
+          ActorType.ORGANIZATION,
+        ]),
+        this.invitationService.countOpenInvitationsForRoleSet(roleSet.id, {
+          extraRole: RoleName.LEAD,
+          actorType: ActorType.ORGANIZATION,
+        }),
+        this.roleSetService.getRoleDefinition(roleSet, RoleName.LEAD),
+      ]);
+      leadSlots = {
+        granted,
+        pending,
+        maximum: leadRoleDefinition.organizationPolicy.maximum,
+      };
+    }
+
     for (const actorID of actorIDs) {
       let invitedToParent = false;
       // Logic is that the ability to invite to a subspace requires the ability to invite to the
@@ -1023,11 +1045,13 @@ export class RoleSetResolverMutationsMembership {
         continue;
       }
 
+      const invitedActorType = actorTypes.get(actorID);
       const organizationGuardResult = await this.guardOrganizationInvitation(
         roleSet,
         actorID,
-        actorTypes.get(actorID),
-        extraRoles
+        invitedActorType,
+        extraRoles,
+        leadSlots
       );
       if (organizationGuardResult) {
         invitationResults.push(organizationGuardResult);
@@ -1037,11 +1061,15 @@ export class RoleSetResolverMutationsMembership {
       const invitation =
         await this.roleSetService.createInvitationExistingActor(input);
 
+      if (invitedActorType === ActorType.ORGANIZATION && leadSlots) {
+        leadSlots.pending += 1;
+      }
+
       const invitationResult: RoleSetInvitationResult = {
         type: RoleSetInvitationResultType.INVITED_TO_ROLE_SET,
         invitation,
       };
-      if (actorTypes.get(actorID) === ActorType.ORGANIZATION) {
+      if (invitedActorType === ActorType.ORGANIZATION) {
         const managers = await this.userLookupService.usersWithCredentials(
           ORGANIZATION_MANAGER_CREDENTIAL_TYPES.map(type => ({
             type,

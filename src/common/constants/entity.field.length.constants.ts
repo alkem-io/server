@@ -16,6 +16,9 @@ export const NAMEID_MAX_LENGTH = 25;
 export const NAMEID_MIN_LENGTH = 5;
 // polls
 export const POLL_OPTIONS_MAX_COUNT = 10;
+// role set invitations: caps a single bulk-invite mutation's fan-out so it
+// cannot force an unbounded number of per-invitee guard checks
+export const ROLE_SET_INVITE_BATCH_MAX = 100;
 // others
 export const ENUM_LENGTH = 128;
 // https://www.rfc-editor.org/rfc/rfc1034#section-3.1

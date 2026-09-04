@@ -1,13 +1,20 @@
 import {
   LONGER_TEXT_LENGTH,
   MID_TEXT_LENGTH,
+  ROLE_SET_INVITE_BATCH_MAX,
   UUID_LENGTH,
 } from '@common/constants';
 import { SUPPORTED_INTERFACE_LANGUAGES } from '@common/constants/supported.languages';
 import { RoleName } from '@common/enums/role.name';
 import { UUID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
-import { IsEmail, IsIn, IsOptional, MaxLength } from 'class-validator';
+import {
+  ArrayMaxSize,
+  IsEmail,
+  IsIn,
+  IsOptional,
+  MaxLength,
+} from 'class-validator';
 
 @InputType()
 export class InviteForEntryRoleOnRoleSetInput {
@@ -19,11 +26,13 @@ export class InviteForEntryRoleOnRoleSetInput {
     nullable: false,
     description: 'The identifiers for the actors being invited.',
   })
+  @ArrayMaxSize(ROLE_SET_INVITE_BATCH_MAX)
   invitedActorIDs!: string[];
 
   @Field(() => [String], {
     nullable: false,
   })
+  @ArrayMaxSize(ROLE_SET_INVITE_BATCH_MAX)
   @IsEmail({}, { each: true })
   @MaxLength(MID_TEXT_LENGTH, { each: true })
   invitedUserEmails!: string[];

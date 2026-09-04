@@ -898,12 +898,14 @@ describe('RoleSetResolverMutationsMembership', () => {
         (roleSetService.getRoleDefinition as Mock).mockResolvedValue({
           organizationPolicy: { minimum: 0, maximum: 2 },
         });
-        // One Lead slot granted already; the still-open pending count rises
-        // from 0 to 1 once the first invitee's row is persisted.
+        // One Lead slot granted already; the request reads the pending
+        // count once (0) and tracks it locally, bumping it to 1 once the
+        // first invitee's invitation is created — so a second queued value
+        // is unnecessary but harmless if a caller still provides one.
         (roleSetService.countActorsWithRole as Mock).mockResolvedValue(1);
-        (invitationService.countOpenInvitationsForRoleSet as Mock)
-          .mockResolvedValueOnce(0)
-          .mockResolvedValueOnce(1);
+        (
+          invitationService.countOpenInvitationsForRoleSet as Mock
+        ).mockResolvedValue(0);
         const mockInvitation1 = {
           id: 'inv-org-1',
           invitedActorID: 'org-1',
@@ -935,6 +937,13 @@ describe('RoleSetResolverMutationsMembership', () => {
         expect(
           roleSetService.createInvitationExistingActor
         ).toHaveBeenCalledTimes(1);
+        // The pending-count read is invariant for the whole request and is
+        // hoisted out of the per-invitee loop: one query regardless of how
+        // many organization Lead invitees are in the batch.
+        expect(
+          invitationService.countOpenInvitationsForRoleSet
+        ).toHaveBeenCalledTimes(1);
+        expect(roleSetService.countActorsWithRole).toHaveBeenCalledTimes(1);
       });
     });
 
