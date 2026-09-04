@@ -2158,14 +2158,10 @@ export class RoleSetService {
       return [roleSet];
     }
     const chain = await this.getRoleSetAncestorChain(roleSet);
-    const toJoin: IRoleSet[] = [];
-    for (const roleSetInChain of chain) {
-      const alreadyMember = await this.isMember(actorID, roleSetInChain);
-      if (!alreadyMember) {
-        toJoin.push(roleSetInChain);
-      }
-    }
-    return toJoin;
+    const alreadyMemberFlags = await Promise.all(
+      chain.map(roleSetInChain => this.isMember(actorID, roleSetInChain))
+    );
+    return chain.filter((_roleSetInChain, index) => !alreadyMemberFlags[index]);
   }
 
   /**
@@ -2184,15 +2180,11 @@ export class RoleSetService {
       actorID,
       invitedToParent
     );
-    const spaces: ISpace[] = [];
-    for (const roleSetToJoin of roleSetsToJoin) {
-      spaces.push(
-        await this.communityResolverService.getSpaceForRoleSetOrFail(
-          roleSetToJoin.id
-        )
-      );
-    }
-    return spaces;
+    return await Promise.all(
+      roleSetsToJoin.map(roleSetToJoin =>
+        this.communityResolverService.getSpaceForRoleSetOrFail(roleSetToJoin.id)
+      )
+    );
   }
 
   /**

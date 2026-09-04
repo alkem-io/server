@@ -28,6 +28,12 @@ export class InvitationLoaderCreator implements DataLoaderCreator<IInvitation> {
   private invitationInBatch = (
     keys: ReadonlyArray<string>
   ): Promise<Invitation[]> => {
-    return this.manager.findBy(Invitation, { id: In(keys) });
+    // Loads the roleSet relation eagerly so downstream field resolvers
+    // (e.g. spacesToJoinOnAccept) never pay a per-row reload just to
+    // discover the roleSet the dataloader could have batched already.
+    return this.manager.find(Invitation, {
+      where: { id: In(keys) },
+      relations: { roleSet: true },
+    });
   };
 }
