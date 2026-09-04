@@ -1,5 +1,7 @@
 import { AuthorizationPrivilege } from '@common/enums';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { GraphqlGuard } from '@core/authorization';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IInvitation } from '@domain/access/invitation';
 import { IActor } from '@domain/actor/actor/actor.interface';
 import { IUser } from '@domain/community/user/user.interface';
@@ -8,6 +10,7 @@ import { forwardRef, Inject, UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
   AuthorizationActorHasPrivilege,
+  CurrentActor,
   Profiling,
 } from '@src/common/decorators';
 import { RoleSetService } from '../role-set/role.set.service';
@@ -17,6 +20,7 @@ import { InvitationService } from './invitation.service';
 export class InvitationResolverFields {
   constructor(
     private invitationService: InvitationService,
+    private authorizationService: AuthorizationService,
     @Inject(forwardRef(() => RoleSetService))
     private roleSetService: RoleSetService
   ) {}
@@ -47,7 +51,16 @@ export class InvitationResolverFields {
     }
   }
 
-  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
+  // Gated on ROLESET_ENTRY_ROLE_INVITE_ACCEPT rather than the broader READ:
+  // that privilege is granted only to account admins of the invited actor
+  // (invitation.service.authorization.ts), the intended informed-consent
+  // audience for previewing what accepting joins. Every other actor with
+  // READ on the invitation (e.g. an inviter with visibility limited to an
+  // immediate subspace) is excluded from this field, even though it can
+  // read other invitation fields.
+  @AuthorizationActorHasPrivilege(
+    AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE_ACCEPT
+  )
   @UseGuards(GraphqlGuard)
   @ResolveField('spacesToJoinOnAccept', () => [ISpaceAbout], {
     nullable: false,
@@ -56,7 +69,8 @@ export class InvitationResolverFields {
   })
   @Profiling.api
   async spacesToJoinOnAccept(
-    @Parent() invitation: IInvitation
+    @Parent() invitation: IInvitation,
+    @CurrentActor() actorContext: ActorContext
   ): Promise<ISpaceAbout[]> {
     const roleSet =
       invitation.roleSet ??
@@ -73,6 +87,18 @@ export class InvitationResolverFields {
       invitation.invitedActorID,
       invitation.invitedToParent
     );
-    return spaces.map(space => space.about);
+    // Defence in depth beyond the field-level gate above: an ancestor
+    // Space's About carries the same private content a direct `Space.about`
+    // read would refuse, so it is only included here when the current
+    // actor actually holds READ_ABOUT on that specific Space.
+    return spaces
+      .filter(space =>
+        this.authorizationService.isAccessGranted(
+          actorContext,
+          space.authorization,
+          AuthorizationPrivilege.READ_ABOUT
+        )
+      )
+      .map(space => space.about);
   }
 }
