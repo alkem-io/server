@@ -310,8 +310,14 @@ export class NotificationExternalAdapter {
       recipients,
       space
     );
-    const organization =
-      await this.actorLookupService.getFullActorByIdOrFail(organizationID);
+    const organization = await this.actorLookupService.getFullActorByIdOrFail(
+      organizationID,
+      {
+        relations: {
+          profile: true,
+        },
+      }
+    );
     if (!organization.profile) {
       throw new EntityNotFoundException(
         'Unable to find Organization profile',

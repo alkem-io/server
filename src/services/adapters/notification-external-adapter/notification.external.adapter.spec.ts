@@ -1277,6 +1277,25 @@ describe('NotificationExternalAdapter', () => {
         'Sensitive welcome text'
       );
     });
+
+    it('loads the organization profile relation, so a real (non-mocked) lookup does not throw "Unable to find Organization profile"', async () => {
+      setUpCommonMocks();
+
+      await adapter.buildOrganizationSpaceCommunityInvitationPayload(
+        NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION,
+        'inviter-1',
+        [],
+        'org-1',
+        targetSpace,
+        [targetSpace],
+        []
+      );
+
+      expect(actorLookupService.getFullActorByIdOrFail).toHaveBeenCalledWith(
+        'org-1',
+        { relations: { profile: true } }
+      );
+    });
   });
 
   describe('buildOrganizationSpaceCommunityInvitationOutcomePayload', () => {
