@@ -1,4 +1,7 @@
-import { ROLE_SET_INVITE_BATCH_MAX } from '@common/constants';
+import {
+  ROLE_SET_INVITE_BATCH_MAX,
+  ROLE_SET_INVITE_EXTRA_ROLES_MAX,
+} from '@common/constants';
 import { validate } from 'class-validator';
 import { InviteForEntryRoleOnRoleSetInput } from './role.set.dto.entry.role.invite';
 
@@ -79,6 +82,31 @@ describe('InviteForEntryRoleOnRoleSetInput', () => {
             !!error.constraints?.arrayMaxSize
         )
       ).toBe(true);
+    });
+  });
+  describe(`extraRoles @ArrayMaxSize(${ROLE_SET_INVITE_EXTRA_ROLES_MAX})`, () => {
+    it(`accepts exactly ${ROLE_SET_INVITE_EXTRA_ROLES_MAX} entries`, async () => {
+      const input = validInput();
+      input.extraRoles = Array.from(
+        { length: ROLE_SET_INVITE_EXTRA_ROLES_MAX },
+        () => 'lead' as any
+      );
+
+      const errors = await validate(input);
+
+      expect(errors.some(error => error.property === 'extraRoles')).toBe(false);
+    });
+
+    it(`rejects ${ROLE_SET_INVITE_EXTRA_ROLES_MAX + 1} entries`, async () => {
+      const input = validInput();
+      input.extraRoles = Array.from(
+        { length: ROLE_SET_INVITE_EXTRA_ROLES_MAX + 1 },
+        () => 'lead' as any
+      );
+
+      const errors = await validate(input);
+
+      expect(errors.some(error => error.property === 'extraRoles')).toBe(true);
     });
   });
 });

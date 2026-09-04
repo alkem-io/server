@@ -63,6 +63,18 @@ describe('RoleSetResolverMutationsMembership', () => {
       RoleSetResolverMutationsMembership
     );
     roleSetService = module.get<RoleSetService>(RoleSetService);
+    // validateInviteesAndRolesOrFail loads the requested definitions in one
+    // call; derive them from the per-role mock so existing cases keep driving
+    // policy through getRoleDefinition.
+    (roleSetService.getRoleDefinitions as Mock).mockImplementation(
+      async (roleSet: any, roles: any[] = []) =>
+        Promise.all(
+          roles.map(async name => ({
+            ...(await roleSetService.getRoleDefinition(roleSet, name)),
+            name,
+          }))
+        )
+    );
     authorizationService =
       module.get<AuthorizationService>(AuthorizationService);
     applicationService = module.get<ApplicationService>(ApplicationService);

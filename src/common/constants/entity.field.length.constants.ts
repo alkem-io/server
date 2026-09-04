@@ -19,6 +19,9 @@ export const POLL_OPTIONS_MAX_COUNT = 10;
 // role set invitations: caps a single bulk-invite mutation's fan-out so it
 // cannot force an unbounded number of per-invitee guard checks
 export const ROLE_SET_INVITE_BATCH_MAX = 100;
+// Upper bound on extraRoles per invite request: there are only a handful of
+// RoleName values, so anything larger is a malformed or hostile payload.
+export const ROLE_SET_INVITE_EXTRA_ROLES_MAX = 10;
 // others
 export const ENUM_LENGTH = 128;
 // https://www.rfc-editor.org/rfc/rfc1034#section-3.1

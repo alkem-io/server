@@ -2,6 +2,7 @@ import {
   LONGER_TEXT_LENGTH,
   MID_TEXT_LENGTH,
   ROLE_SET_INVITE_BATCH_MAX,
+  ROLE_SET_INVITE_EXTRA_ROLES_MAX,
   UUID_LENGTH,
 } from '@common/constants';
 import { SUPPORTED_INTERFACE_LANGUAGES } from '@common/constants/supported.languages';
@@ -46,6 +47,7 @@ export class InviteForEntryRoleOnRoleSetInput {
     nullable: false,
     description: 'Additional roles to assign in addition to the entry Role.',
   })
+  @ArrayMaxSize(ROLE_SET_INVITE_EXTRA_ROLES_MAX)
   extraRoles!: RoleName[];
 
   @Field(() => String, {

@@ -868,12 +868,21 @@ export class RoleSetResolverMutationsMembership {
     if (!hasOrganizationInvitee) {
       return;
     }
-    for (const role of extraRoles) {
-      const roleDefinition = await this.roleSetService.getRoleDefinition(
-        roleSet,
-        role
+    // One RoleSet+roles load for the whole (de-duplicated) list: the DTO caps
+    // extraRoles, but a per-element round trip would still scale with input.
+    const requestedRoles = [...new Set(extraRoles)];
+    if (requestedRoles.length === 0) {
+      return;
+    }
+    const roleDefinitions = await this.roleSetService.getRoleDefinitions(
+      roleSet,
+      requestedRoles
+    );
+    for (const role of requestedRoles) {
+      const roleDefinition = roleDefinitions.find(
+        definition => definition.name === role
       );
-      if (roleDefinition.organizationPolicy.maximum === 0) {
+      if (roleDefinition?.organizationPolicy.maximum === 0) {
         throw new ValidationException(
           'An organization cannot be invited with a role its policy forbids',
           LogContext.COMMUNITY,
