@@ -32,7 +32,10 @@ import {
   Repository,
 } from 'typeorm';
 import { RoleSetCacheService } from '../role-set/role.set.service.cache';
-import { InvitationLifecycleService } from './invitation.service.lifecycle';
+import {
+  InvitationLifecycleService,
+  InvitationLifecycleState,
+} from './invitation.service.lifecycle';
 
 @Injectable()
 export class InvitationService {
@@ -264,37 +267,49 @@ export class InvitationService {
   }
 
   /**
-   * Counts the still-open (non-finalized) invitations on a RoleSet that
-   * carry a given extra role and target a given actor type. Used by the
-   * advisory Lead-slot check: a stale, never-accepted invitation still
-   * holds its slot until it is revoked or acted on.
+   * Counts the still-pending (invited or accepting) invitations on a
+   * RoleSet that carry a given extra role and target a given actor type.
+   * Used by the advisory Lead-slot check: a still-pending, never-acted-on
+   * invitation holds its slot until it is accepted, revoked, or
+   * rejected/archived — a rejected or archived invitation is finalized and
+   * must not keep counting against the slot.
+   *
+   * The actor-type filter is applied as a SQL join and only the columns the
+   * predicate needs are selected, so neither the invitation's authorization
+   * policy (eager on the entity) nor unrelated invitations for other actor
+   * types are ever loaded into memory.
    */
   async countOpenInvitationsForRoleSet(
     roleSetID: string,
     filter: { extraRole: RoleName; actorType: ActorType }
   ): Promise<number> {
-    const invitations = await this.invitationRepository.find({
-      where: { roleSet: { id: roleSetID } },
-      relations: { lifecycle: true },
-    });
+    const invitations = await this.invitationRepository
+      .createQueryBuilder('invitation')
+      .innerJoin('invitation.lifecycle', 'lifecycle')
+      .innerJoin('invitation.invitedActor', 'invitedActor')
+      .where('invitation.roleSetId = :roleSetID', { roleSetID })
+      .andWhere('invitedActor.type = :actorType', {
+        actorType: filter.actorType,
+      })
+      .select([
+        'invitation.id',
+        'invitation.extraRoles',
+        'lifecycle.id',
+        'lifecycle.machineState',
+      ])
+      .getMany();
 
-    const openWithRole = invitations.filter(
-      invitation =>
-        invitation.extraRoles?.includes(filter.extraRole) &&
-        !this.isInvitationFinalized(invitation)
-    );
-
-    if (openWithRole.length === 0) {
-      return 0;
-    }
-
-    const actorTypes = await this.actorLookupService.validateActorsAndGetTypes(
-      openWithRole.map(invitation => invitation.invitedActorID)
-    );
-
-    return openWithRole.filter(
-      invitation =>
-        actorTypes.get(invitation.invitedActorID) === filter.actorType
-    ).length;
+    return invitations.filter(invitation => {
+      if (!invitation.extraRoles?.includes(filter.extraRole)) {
+        return false;
+      }
+      const state = this.invitationLifecycleService.getState(
+        invitation.lifecycle
+      );
+      return (
+        state === InvitationLifecycleState.INVITED ||
+        state === InvitationLifecycleState.ACCEPTING
+      );
+    }).length;
   }
 }

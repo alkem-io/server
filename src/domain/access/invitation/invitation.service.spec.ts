@@ -535,34 +535,57 @@ describe('InvitationService', () => {
   });
 
   describe('countOpenInvitationsForRoleSet', () => {
-    const leadOrgInvitation = (id: string, actorID: string) =>
+    const invitationRow = (
+      id: string,
+      extraRoles: RoleName[],
+      machineState: string
+    ) =>
       ({
         id,
-        invitedActorID: actorID,
-        extraRoles: [RoleName.LEAD],
-        lifecycle: { id: `lifecycle-${id}` },
+        extraRoles,
+        lifecycle: { id: `lifecycle-${id}`, machineState },
       }) as any;
 
-    it('counts only open invitations carrying the role and matching the actor type', async () => {
-      const invitations = [
-        leadOrgInvitation('inv-1', 'org-1'),
-        leadOrgInvitation('inv-2', 'org-2'),
-        { ...leadOrgInvitation('inv-3', 'user-1') },
+    const mockQueryBuilder = (rows: any[]) => {
+      const qb: any = {
+        innerJoin: vi.fn(() => qb),
+        where: vi.fn(() => qb),
+        andWhere: vi.fn(() => qb),
+        select: vi.fn(() => qb),
+        getMany: vi.fn().mockResolvedValue(rows),
+      };
+      vi.spyOn(invitationRepository, 'createQueryBuilder').mockReturnValue(qb);
+      return qb;
+    };
+
+    it('joins on the invited actor and filters to the requested actor type at the SQL level', async () => {
+      const qb = mockQueryBuilder([]);
+
+      await service.countOpenInvitationsForRoleSet('rs-1', {
+        extraRole: RoleName.LEAD,
+        actorType: ActorType.ORGANIZATION,
+      });
+
+      expect(qb.where).toHaveBeenCalledWith(
+        'invitation.roleSetId = :roleSetID',
         {
-          id: 'inv-4',
-          invitedActorID: 'org-4',
-          extraRoles: [RoleName.MEMBER],
-          lifecycle: { id: 'lifecycle-inv-4' },
-        },
-      ];
-      vi.spyOn(invitationRepository, 'find').mockResolvedValue(invitations);
-      (invitationLifecycleService.isFinalState as Mock).mockReturnValue(false);
-      (actorLookupService.validateActorsAndGetTypes as Mock).mockResolvedValue(
-        new Map([
-          ['org-1', ActorType.ORGANIZATION],
-          ['org-2', ActorType.ORGANIZATION],
-          ['user-1', ActorType.USER],
-        ])
+          roleSetID: 'rs-1',
+        }
+      );
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'invitedActor.type = :actorType',
+        { actorType: ActorType.ORGANIZATION }
+      );
+    });
+
+    it('counts only pending (invited/accepting) invitations carrying the role', async () => {
+      mockQueryBuilder([
+        invitationRow('inv-1', [RoleName.LEAD], 'invited'),
+        invitationRow('inv-2', [RoleName.LEAD], 'accepting'),
+        invitationRow('inv-3', [RoleName.MEMBER], 'invited'),
+      ]);
+      (invitationLifecycleService.getState as Mock).mockImplementation(
+        (lifecycle: any) => lifecycle.machineState
       );
 
       const result = await service.countOpenInvitationsForRoleSet('rs-1', {
@@ -573,17 +596,34 @@ describe('InvitationService', () => {
       expect(result).toBe(2);
     });
 
-    it('excludes finalized invitations', async () => {
-      const invitations = [
-        leadOrgInvitation('inv-1', 'org-1'),
-        leadOrgInvitation('inv-2', 'org-2'),
-      ];
-      vi.spyOn(invitationRepository, 'find').mockResolvedValue(invitations);
-      (invitationLifecycleService.isFinalState as Mock).mockImplementation(
-        (lifecycle: any) => lifecycle.id === 'lifecycle-inv-2'
+    it('excludes accepted and archived (finalized) invitations', async () => {
+      mockQueryBuilder([
+        invitationRow('inv-1', [RoleName.LEAD], 'accepted'),
+        invitationRow('inv-2', [RoleName.LEAD], 'archived'),
+      ]);
+      (invitationLifecycleService.getState as Mock).mockImplementation(
+        (lifecycle: any) => lifecycle.machineState
       );
-      (actorLookupService.validateActorsAndGetTypes as Mock).mockResolvedValue(
-        new Map([['org-1', ActorType.ORGANIZATION]])
+
+      const result = await service.countOpenInvitationsForRoleSet('rs-1', {
+        extraRole: RoleName.LEAD,
+        actorType: ActorType.ORGANIZATION,
+      });
+
+      expect(result).toBe(0);
+    });
+
+    it('excludes a rejected (declined) invitation, even though its row is never deleted or archived', async () => {
+      // Regression: a declined Lead invitation must not keep consuming the
+      // Space's Lead-organization slot forever. 'rejected' is an active,
+      // non-final xstate state (it has REINVITE/ARCHIVE transitions), so it
+      // must be excluded explicitly rather than via "not final".
+      mockQueryBuilder([
+        invitationRow('inv-1', [RoleName.LEAD], 'invited'),
+        invitationRow('inv-2', [RoleName.LEAD], 'rejected'),
+      ]);
+      (invitationLifecycleService.getState as Mock).mockImplementation(
+        (lifecycle: any) => lifecycle.machineState
       );
 
       const result = await service.countOpenInvitationsForRoleSet('rs-1', {
@@ -594,14 +634,48 @@ describe('InvitationService', () => {
       expect(result).toBe(1);
     });
 
-    it('returns 0 without an actor-type lookup when nothing carries the role', async () => {
-      vi.spyOn(invitationRepository, 'find').mockResolvedValue([
-        {
-          id: 'inv-1',
-          invitedActorID: 'org-1',
-          extraRoles: [RoleName.MEMBER],
-          lifecycle: { id: 'lifecycle-inv-1' },
-        } as any,
+    it('excludes a rejected invitation against the real persisted xstate snapshot', async () => {
+      // Exercises the actual xstate machine end to end (real LifecycleService
+      // + real InvitationLifecycleService) against the snapshot shape
+      // actor.getPersistedSnapshot() produces after a REJECT event, rather
+      // than a stubbed getState/isFinalState — a stub previously masked
+      // this defect (a rejected row read back as "not final" == "open").
+      const realLifecycleService = new LifecycleService(
+        {} as any,
+        MockWinstonProvider.useValue as any
+      );
+      const realInvitationLifecycleService = new InvitationLifecycleService(
+        realLifecycleService
+      );
+      (service as any).invitationLifecycleService =
+        realInvitationLifecycleService;
+
+      // Real actor.getPersistedSnapshot() shapes for the 'invited' initial
+      // state and after a REJECT event, captured from this machine's own
+      // xstate build (createActor(...).start() / .send({type:'REJECT'})).
+      mockQueryBuilder([
+        invitationRow(
+          'inv-1',
+          [RoleName.LEAD],
+          JSON.stringify({
+            status: 'active',
+            value: 'invited',
+            historyValue: {},
+            context: {},
+            children: {},
+          })
+        ),
+        invitationRow(
+          'inv-2',
+          [RoleName.LEAD],
+          JSON.stringify({
+            status: 'active',
+            value: 'rejected',
+            historyValue: {},
+            context: {},
+            children: {},
+          })
+        ),
       ]);
 
       const result = await service.countOpenInvitationsForRoleSet('rs-1', {
@@ -609,10 +683,18 @@ describe('InvitationService', () => {
         actorType: ActorType.ORGANIZATION,
       });
 
+      expect(result).toBe(1);
+    });
+
+    it('returns 0 when nothing carries the role', async () => {
+      mockQueryBuilder([invitationRow('inv-1', [RoleName.MEMBER], 'invited')]);
+
+      const result = await service.countOpenInvitationsForRoleSet('rs-1', {
+        extraRole: RoleName.LEAD,
+        actorType: ActorType.ORGANIZATION,
+      });
+
       expect(result).toBe(0);
-      expect(
-        actorLookupService.validateActorsAndGetTypes
-      ).not.toHaveBeenCalled();
     });
   });
 });
