@@ -1,3 +1,4 @@
+export * from './account.deletion.blocker.kind';
 export * from './actor.type';
 export * from './alkemio.error.status';
 export * from './authentication.provider';

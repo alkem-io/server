@@ -200,10 +200,12 @@ describe('InvitationService', () => {
       const result = await service.deleteInvitation({ ID: 'inv-1' });
 
       expect(lifecycleService.deleteLifecycle).toHaveBeenCalledWith(
-        'lifecycle-1'
+        'lifecycle-1',
+        undefined
       );
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
-        mockInvitation.authorization
+        mockInvitation.authorization,
+        undefined
       );
       expect(
         roleSetCacheService.deleteOpenInvitationFromCache

@@ -1,19 +1,18 @@
 import { LogContext } from '@common/enums/logging.context';
 import { RoleName } from '@common/enums/role.name';
 import { SpaceLevel } from '@common/enums/space.level';
-import { TemplateDefaultType } from '@common/enums/template.default.type';
 import {
   EntityNotInitializedException,
-  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
-import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
-import { CreateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-state/dto';
-import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-state/innovation.flow.state.interface';
+import {
+  L0_MAX_INNOVATION_FLOW_STATES,
+  L0_MIN_INNOVATION_FLOW_STATES,
+} from '@domain/collaboration/innovation-flow/innovation.flow.constants';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ClassificationService } from '@domain/common/classification/classification.service';
 import { SpaceMoveRoomsService } from '@domain/communication/space-move-rooms/space.move.rooms.service';
@@ -26,18 +25,14 @@ import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceService } from '@domain/space/space/space.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { TemplateService } from '@domain/template/template/template.service';
-import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
 import { Inject, LoggerService } from '@nestjs/common';
 import { ActivityService } from '@platform/activity/activity.service';
-import { PlatformService } from '@platform/platform/platform.service';
 import { NotificationInputCommunityInvitation } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation';
 import { NotificationUserAdapter } from '@services/adapters/notification-adapter/notification.user.adapter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager, In } from 'typeorm';
-import { InputCreatorService } from '../input-creator/input.creator.service';
 import { ConvertSpaceL1ToSpaceL0Input } from './dto/convert.dto.space.l1.to.space.l0.input';
 import { ConvertSpaceL1ToSpaceL2Input } from './dto/convert.dto.space.l1.to.space.l2.input';
 import { ConvertSpaceL2ToSpaceL1Input } from './dto/convert.dto.space.l2.to.space.l1.input';
@@ -50,11 +45,6 @@ export class ConversionService {
     private spaceService: SpaceService,
     private namingService: NamingService,
     private roleSetService: RoleSetService,
-    private platformService: PlatformService,
-    private templateService: TemplateService,
-    private templatesManagerService: TemplatesManagerService,
-    private inputCreatorService: InputCreatorService,
-    private innovationFlowService: InnovationFlowService,
     private accountHostService: AccountHostService,
     private spaceLookupService: SpaceLookupService,
     private classificationService: ClassificationService,
@@ -192,17 +182,15 @@ export class ConversionService {
     spaceL1.templatesManager =
       await this.spaceService.createTemplatesManagerForSpaceL0();
 
-    // reset to default Space L0 innovation flow
-    const resetInnovationFlowStates = await this.getInnovationFlowForSpaceL0();
-    const newStatesInput: CreateInnovationFlowStateInput[] =
-      this.inputCreatorService.buildCreateInnovationFlowStateInputFromInnovationFlowState(
-        resetInnovationFlowStates
-      );
-    spaceL1.collaboration.innovationFlow =
-      await this.innovationFlowService.updateInnovationFlowStates(
-        spaceL1.collaboration.innovationFlow,
-        newStatesInput
-      );
+    // Keep the L1 innovation flow states verbatim (names, descriptions, order,
+    // sidebar and other per-state settings) — client-web#9528. Only the flow's
+    // state-count bounds are re-stamped to the L0 allowance, which the
+    // subspace-creation path never wrote.
+    spaceL1.collaboration.innovationFlow.settings = {
+      ...spaceL1.collaboration.innovationFlow.settings,
+      minimumNumberOfStates: L0_MIN_INNOVATION_FLOW_STATES,
+      maximumNumberOfStates: L0_MAX_INNOVATION_FLOW_STATES,
+    };
 
     spaceL1 = await this.spaceService.save(spaceL1);
 
@@ -295,40 +283,6 @@ export class ConversionService {
         roleSetL0
       );
     return await this.spaceService.save(spaceL2);
-  }
-
-  private async getInnovationFlowForSpaceL0(): Promise<IInnovationFlowState[]> {
-    const platformTemplatesManager =
-      await this.platformService.getTemplatesManagerOrFail();
-    const levelZeroTemplate =
-      await this.templatesManagerService.getTemplateFromTemplateDefault(
-        platformTemplatesManager.id,
-        TemplateDefaultType.PLATFORM_SPACE
-      );
-    const templateWithInnovationFlow =
-      await this.templateService.getTemplateOrFail(levelZeroTemplate.id, {
-        relations: {
-          contentSpace: {
-            collaboration: {
-              innovationFlow: {
-                states: true,
-              },
-            },
-          },
-        },
-      });
-
-    if (
-      !templateWithInnovationFlow.contentSpace?.collaboration ||
-      !templateWithInnovationFlow.contentSpace.collaboration.innovationFlow
-    ) {
-      throw new RelationshipNotFoundException(
-        `Unable to retrieve Space L0 innovation flow template: ${levelZeroTemplate.id} is missing a relation`,
-        LogContext.CONVERSION
-      );
-    }
-    return templateWithInnovationFlow.contentSpace.collaboration.innovationFlow
-      .states;
   }
 
   async convertSpaceL2ToSpaceL1OrFail(

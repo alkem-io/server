@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Not, Repository } from 'typeorm';
+import { EntityManager, Not, Repository } from 'typeorm';
 import { PlatformAuditCategory } from './enums/platform.audit.category';
 import { PlatformAuditInitiatorRole } from './enums/platform.audit.initiator.role';
 import { PlatformAuditOutcome } from './enums/platform.audit.outcome';
@@ -49,6 +49,17 @@ export interface AppendPasswordChangeEntryInput {
   details?: PlatformAuditDetails;
 }
 
+const ACCOUNT_DELETION_CATEGORY = PlatformAuditCategory.ACCOUNT_DELETION;
+
+export interface AppendAccountDeletionEntryInput {
+  subjectUserId: string;
+  initiatorUserId?: string;
+  initiatorRole: PlatformAuditInitiatorRole;
+  outcome: PlatformAuditOutcome;
+  failureReason?: string;
+  details?: PlatformAuditDetails;
+}
+
 @Injectable()
 export class PlatformAuditEntryRepository {
   constructor(
@@ -70,6 +81,30 @@ export class PlatformAuditEntryRepository {
       details: input.details,
     });
     return this.repo.save(entry);
+  }
+
+  /**
+   * Writes an account-deletion audit row. `em`, when supplied, is the
+   * caller's transactional EntityManager: the primary record is written
+   * INSIDE the deletion transaction so it is atomic with the deletion
+   * itself (a rolled-back deletion writes no record). Post-commit leg
+   * records call this without `em` — best-effort, outside any transaction.
+   */
+  public async appendAccountDeletionEntry(
+    input: AppendAccountDeletionEntryInput,
+    em?: EntityManager
+  ): Promise<IPlatformAuditEntry> {
+    const repo = em ? em.getRepository(PlatformAuditEntry) : this.repo;
+    const entry = repo.create({
+      category: ACCOUNT_DELETION_CATEGORY,
+      subjectUserId: input.subjectUserId,
+      initiatorUserId: input.initiatorUserId,
+      initiatorRole: input.initiatorRole,
+      outcome: input.outcome,
+      failureReason: input.failureReason,
+      details: input.details,
+    });
+    return repo.save(entry);
   }
 
   public async appendPasswordChangeEntry(

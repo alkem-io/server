@@ -337,13 +337,16 @@ describe('LicenseService', () => {
         2
       );
       expect(entitlementService.deleteEntitlementOrFail).toHaveBeenCalledWith(
-        'ent-1'
+        'ent-1',
+        undefined
       );
       expect(entitlementService.deleteEntitlementOrFail).toHaveBeenCalledWith(
-        'ent-2'
+        'ent-2',
+        undefined
       );
       expect(_authorizationPolicyService.delete).toHaveBeenCalledWith(
-        license.authorization
+        license.authorization,
+        undefined
       );
       expect(result.id).toBe('lic-1');
     });
