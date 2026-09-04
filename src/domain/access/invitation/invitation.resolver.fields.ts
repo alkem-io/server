@@ -1,7 +1,5 @@
 import { AuthorizationPrivilege } from '@common/enums';
-import { ActorContext } from '@core/actor-context/actor.context';
 import { GraphqlGuard } from '@core/authorization';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IInvitation } from '@domain/access/invitation';
 import { IActor } from '@domain/actor/actor/actor.interface';
 import { IUser } from '@domain/community/user/user.interface';
@@ -10,7 +8,6 @@ import { forwardRef, Inject, UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
   AuthorizationActorHasPrivilege,
-  CurrentActor,
   Profiling,
 } from '@src/common/decorators';
 import { RoleSetService } from '../role-set/role.set.service';
@@ -20,7 +17,6 @@ import { InvitationService } from './invitation.service';
 export class InvitationResolverFields {
   constructor(
     private invitationService: InvitationService,
-    private authorizationService: AuthorizationService,
     @Inject(forwardRef(() => RoleSetService))
     private roleSetService: RoleSetService
   ) {}
@@ -69,8 +65,7 @@ export class InvitationResolverFields {
   })
   @Profiling.api
   async spacesToJoinOnAccept(
-    @Parent() invitation: IInvitation,
-    @CurrentActor() actorContext: ActorContext
+    @Parent() invitation: IInvitation
   ): Promise<ISpaceAbout[]> {
     const roleSet =
       invitation.roleSet ??
@@ -87,18 +82,17 @@ export class InvitationResolverFields {
       invitation.invitedActorID,
       invitation.invitedToParent
     );
-    // Defence in depth beyond the field-level gate above: an ancestor
-    // Space's About carries the same private content a direct `Space.about`
-    // read would refuse, so it is only included here when the current
-    // actor actually holds READ_ABOUT on that specific Space.
-    return spaces
-      .filter(space =>
-        this.authorizationService.isAccessGranted(
-          actorContext,
-          space.authorization,
-          AuthorizationPrivilege.READ_ABOUT
-        )
-      )
-      .map(space => space.about);
+    // No per-Space READ_ABOUT filter here: the field-level gate above
+    // already confines this resolver to the invited actor's own account
+    // admins, and every Space returned by getSpacesToJoinOnAccept is one
+    // that accepting this invitation actually joins. Filtering by the
+    // current human admin's own READ_ABOUT would silently drop Spaces the
+    // consenting organization is about to join whenever an ancestor is
+    // private (the organization holds the membership, not the admin
+    // reviewing on its behalf), producing exactly the empty-list /
+    // cross-artifact mismatch this field exists to prevent — the same
+    // audience already receives the identical Space list unfiltered via
+    // email and `me.communityInvitations`.
+    return spaces.map(space => space.about);
   }
 }

@@ -1,4 +1,3 @@
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -12,8 +11,6 @@ describe('InvitationResolverFields', () => {
   let resolver: InvitationResolverFields;
   let invitationService: InvitationService;
   let roleSetService: RoleSetService;
-  let authorizationService: AuthorizationService;
-  const mockActorContext = { actorID: 'actor-1' } as any;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -31,9 +28,6 @@ describe('InvitationResolverFields', () => {
     resolver = module.get<InvitationResolverFields>(InvitationResolverFields);
     invitationService = module.get<InvitationService>(InvitationService);
     roleSetService = module.get<RoleSetService>(RoleSetService);
-    authorizationService =
-      module.get<AuthorizationService>(AuthorizationService);
-    (authorizationService.isAccessGranted as Mock).mockReturnValue(true);
   });
 
   it('should be defined', () => {
@@ -96,10 +90,7 @@ describe('InvitationResolverFields', () => {
         { authorization: { id: 'auth-target' }, about: targetAbout },
       ]);
 
-      const result = await resolver.spacesToJoinOnAccept(
-        mockInvitation,
-        mockActorContext
-      );
+      const result = await resolver.spacesToJoinOnAccept(mockInvitation);
 
       expect(roleSetService.getSpacesToJoinOnAccept).toHaveBeenCalledWith(
         mockRoleSet,
@@ -127,10 +118,7 @@ describe('InvitationResolverFields', () => {
         { authorization: { id: 'auth-target' }, about: targetAbout },
       ]);
 
-      const result = await resolver.spacesToJoinOnAccept(
-        mockInvitation,
-        mockActorContext
-      );
+      const result = await resolver.spacesToJoinOnAccept(mockInvitation);
 
       expect(invitationService.getInvitationOrFail).toHaveBeenCalledWith(
         'inv-1',
@@ -144,7 +132,12 @@ describe('InvitationResolverFields', () => {
       expect(result).toEqual([targetAbout]);
     });
 
-    it('excludes an ancestor Space the current actor holds no READ_ABOUT privilege on', async () => {
+    it('enumerates every Space getSpacesToJoinOnAccept returns, including a private ancestor the reviewing admin holds no personal READ_ABOUT on', async () => {
+      // The field gate already confines this resolver to the invited
+      // actor's own account admins, who are consenting on the
+      // organization's behalf rather than their own — so the list must
+      // never shrink based on the reviewing admin's personal Space
+      // credentials.
       const mockRoleSet = { id: 'rs-1' } as any;
       const mockInvitation = {
         id: 'inv-1',
@@ -154,22 +147,14 @@ describe('InvitationResolverFields', () => {
       } as any;
       const privateRootAbout = { id: 'about-root-private' };
       const targetAbout = { id: 'about-target' };
-      const privateRootAuthorization = { id: 'auth-root' };
-      const targetAuthorization = { id: 'auth-target' };
       (roleSetService.getSpacesToJoinOnAccept as Mock).mockResolvedValue([
-        { authorization: privateRootAuthorization, about: privateRootAbout },
-        { authorization: targetAuthorization, about: targetAbout },
+        { authorization: { id: 'auth-root' }, about: privateRootAbout },
+        { authorization: { id: 'auth-target' }, about: targetAbout },
       ]);
-      (authorizationService.isAccessGranted as Mock).mockImplementation(
-        (_actorContext, authorization) => authorization === targetAuthorization
-      );
 
-      const result = await resolver.spacesToJoinOnAccept(
-        mockInvitation,
-        mockActorContext
-      );
+      const result = await resolver.spacesToJoinOnAccept(mockInvitation);
 
-      expect(result).toEqual([targetAbout]);
+      expect(result).toEqual([privateRootAbout, targetAbout]);
     });
   });
 });
