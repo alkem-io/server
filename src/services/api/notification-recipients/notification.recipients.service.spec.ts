@@ -776,7 +776,9 @@ describe('NotificationRecipientsService', () => {
         vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
           mutedAdmin,
         ]);
-        vi.mocked(userLookupService.getUsersByIds).mockResolvedValue([]);
+        vi.mocked(userLookupService.getUsersByIds).mockImplementation(
+          async (ids: string[]) => (ids.length > 0 ? [mutedAdmin] : [])
+        );
 
         const result = await service.getRecipients({
           eventType:
@@ -787,6 +789,42 @@ describe('NotificationRecipientsService', () => {
         expect(result.emailRecipients).toHaveLength(0);
         expect(result.inAppRecipients).toHaveLength(0);
         expect(result.pushRecipients).toHaveLength(0);
+      });
+
+      it('an admin who muted only email is filtered per channel: no email, still in-app + push', async () => {
+        const partiallyMutedAdmin = {
+          id: 'admin-partial-mute',
+          email: 'partial-mute@example.com',
+          settings: {
+            notification: {
+              organization: {
+                adminSpaceCommunityInvitation: {
+                  email: false,
+                  inApp: true,
+                  push: true,
+                },
+              },
+            },
+          },
+          credentials: [],
+        } as unknown as IUser;
+
+        vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+          partiallyMutedAdmin,
+        ]);
+        vi.mocked(userLookupService.getUsersByIds).mockImplementation(
+          async (ids: string[]) => (ids.length > 0 ? [partiallyMutedAdmin] : [])
+        );
+
+        const result = await service.getRecipients({
+          eventType:
+            NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION,
+          organizationID: 'org-1',
+        });
+
+        expect(result.emailRecipients).toHaveLength(0);
+        expect(result.inAppRecipients).toHaveLength(1);
+        expect(result.pushRecipients).toHaveLength(1);
       });
 
       it('defend-on-read: a row without the adminSpaceCommunityInvitation key resolves the default (all-on) without throwing', async () => {
