@@ -1,8 +1,9 @@
-import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { RoleSetInvitationResultType } from '@common/enums/role.set.invitation.result.type';
 import { RoleSetType } from '@common/enums/role.set.type';
 import { ValidationException } from '@common/exceptions';
+import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { RoleSetInvitationException } from '@common/exceptions/role.set.invitation.exception';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -1317,6 +1318,103 @@ describe('RoleSetResolverMutationsMembership', () => {
       );
 
       expect(result).toBe(mockInvitation);
+    });
+
+    it('requires the ACCEPT-specific privilege (not just UPDATE) for an ACCEPT event, so a generic UPDATE holder cannot accept on the invited actor behalf', async () => {
+      const actorContext = { actorID: 'global-admin-1' } as any;
+      const mockInvitation = {
+        id: 'inv-1',
+        authorization: { id: 'auth-1' },
+        lifecycle: { id: 'lc-1' },
+        invitedActorID: 'org-1',
+        roleSet: { id: 'rs-1' },
+      } as any;
+
+      (invitationService.getInvitationOrFail as Mock).mockResolvedValue(
+        mockInvitation
+      );
+      // Generic UPDATE is granted (e.g. inherited global admin authorization),
+      // but the ACCEPT-specific privilege is not.
+      (authorizationService.grantAccessOrFail as Mock).mockImplementation(
+        (_actorContext, _authorization, privilege) => {
+          if (
+            privilege ===
+            AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE_ACCEPT
+          ) {
+            throw new ForbiddenAuthorizationPolicyException(
+              'not permitted to accept',
+              privilege,
+              'auth-1',
+              'global-admin-1'
+            );
+          }
+          return undefined;
+        }
+      );
+
+      await expect(
+        resolver.eventOnInvitation(
+          { invitationID: 'inv-1', eventName: 'ACCEPT' } as any,
+          actorContext
+        )
+      ).rejects.toThrow(ForbiddenAuthorizationPolicyException);
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        mockInvitation.authorization,
+        AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE_ACCEPT,
+        expect.any(String)
+      );
+      // The event must never reach the lifecycle machine once the
+      // ACCEPT-specific check has failed.
+      expect(lifecycleService.event).not.toHaveBeenCalled();
+    });
+
+    it('does not require the ACCEPT-specific privilege for a REJECT event', async () => {
+      const actorContext = { actorID: 'user-1' } as any;
+      const mockInvitation = {
+        id: 'inv-1',
+        authorization: { id: 'auth-1' },
+        lifecycle: { id: 'lc-1' },
+        invitedActorID: 'actor-1',
+        roleSet: { id: 'rs-1' },
+      } as any;
+
+      (invitationService.getInvitationOrFail as Mock).mockResolvedValue(
+        mockInvitation
+      );
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+      (lifecycleService.event as Mock).mockResolvedValue(undefined);
+      (invitationService.getLifecycleState as Mock).mockResolvedValue(
+        'invited'
+      );
+      (lifecycleService.getState as Mock).mockReturnValue('rejected');
+      (
+        roleSetCacheService.deleteOpenInvitationFromCache as Mock
+      ).mockResolvedValue(undefined);
+      (
+        roleSetCacheService.deleteMembershipStatusCache as Mock
+      ).mockResolvedValue(undefined);
+      (roleSetCacheService.setActorIsMemberCache as Mock).mockResolvedValue(
+        undefined
+      );
+
+      const actorLookupService = (resolver as any).actorLookupService;
+      (actorLookupService.getActorTypeById as Mock).mockResolvedValue('user');
+
+      await resolver.eventOnInvitation(
+        { invitationID: 'inv-1', eventName: 'REJECT' } as any,
+        actorContext
+      );
+
+      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalledWith(
+        actorContext,
+        mockInvitation.authorization,
+        AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE_ACCEPT,
+        expect.any(String)
+      );
     });
 
     describe('organization accept/decline outcome dispatch (T016)', () => {

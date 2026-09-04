@@ -627,6 +627,20 @@ export class RoleSetResolverMutationsMembership {
       AuthorizationPrivilege.UPDATE,
       `event on invitation: ${invitation.id}`
     );
+    // ACCEPT is scoped tighter than the generic UPDATE privilege above:
+    // only the invited actor's own account admin (or, for a user actor,
+    // the user themself) may accept on the actor's behalf. A generic
+    // UPDATE holder — e.g. a global admin via inherited parent
+    // authorization — can still revoke or reject the invitation, but must
+    // not be able to accept it for the invited actor.
+    if (eventData.eventName === 'ACCEPT') {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        invitation.authorization,
+        AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE_ACCEPT,
+        `accept event on invitation: ${invitation.id}`
+      );
+    }
 
     // Send the event, translated if needed
     this.logger.verbose?.(
