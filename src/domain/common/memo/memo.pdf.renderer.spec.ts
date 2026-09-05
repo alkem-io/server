@@ -9,6 +9,13 @@ const htmlToPdfMake = require('html-to-pdfmake') as (
   html: string,
   options: { window: unknown }
 ) => unknown;
+const pdfMake = require('pdfmake') as {
+  localAccessPolicy(path: string): boolean;
+  urlAccessPolicy(url: string): boolean;
+};
+const fonts = require('pdfmake/fonts/Roboto') as {
+  Roboto: Record<string, string>;
+};
 
 const extractText = async (pdf: Buffer): Promise<string> => {
   const document = await parseOffice(pdf, { fileType: 'pdf', ocr: false });
@@ -85,6 +92,14 @@ describe('MemoPdfRenderer', () => {
     expect(JSON.stringify(content)).toContain('const preserved =  2;');
   });
 
+  it('allows only the registered embedded fonts through the local access policy', () => {
+    expect(pdfMake.urlAccessPolicy('https://example.com/font.ttf')).toBe(false);
+    expect(pdfMake.localAccessPolicy(Object.values(fonts.Roboto)[0])).toBe(
+      true
+    );
+    expect(pdfMake.localAccessPolicy('/tmp/unregistered-font.ttf')).toBe(false);
+  });
+
   it('renders current-projection highlight markers without exposing the markers', async () => {
     const text = await extractText(
       await renderer.render('Before ==highlighted== after', 'bucket-1', actor)
@@ -133,7 +148,9 @@ describe('MemoPdfRenderer', () => {
     const pdf = await renderer.render(
       [
         '![diagram](https://example.com/diagram.svg)',
+        '<img src="https://example.com/no-alt.png">',
         '<iframe src="https://example.com/embed"></iframe>',
+        '<iframe src="%"></iframe>',
       ].join('\n'),
       'bucket-1',
       actor
@@ -141,7 +158,9 @@ describe('MemoPdfRenderer', () => {
 
     const text = await extractText(pdf);
     expect(text).toContain('Image: diagram');
+    expect(text).toContain('Image: https://example.com/no-alt.png');
     expect(text).toContain('Embedded content: https://example.com/embed');
+    expect(text).toContain('Embedded content: %');
     expect(documentService.getDocumentFromURL).not.toHaveBeenCalled();
     expect(fileServiceAdapter.getDocumentContent).not.toHaveBeenCalled();
   });
@@ -235,13 +254,14 @@ describe('MemoPdfRenderer', () => {
 
   it('removes authored scripts and converter overrides', async () => {
     const pdf = await renderer.render(
-      '<script>SECRET_SCRIPT_TEXT</script><p data-pdfmake="{bad:true}" onclick="bad()">Visible</p>',
+      '<script>SECRET_SCRIPT_TEXT</script><p data-pdfmake="{bad:true}" onclick="bad()">Visible</p><a href="file:///etc/passwd">Local link</a>',
       'bucket-1',
       actor
     );
 
     const text = await extractText(pdf);
     expect(text).toContain('Visible');
+    expect(text).toContain('Local link');
     expect(text).not.toContain('SECRET_SCRIPT_TEXT');
   });
 });
