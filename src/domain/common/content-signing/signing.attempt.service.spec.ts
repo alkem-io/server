@@ -3,7 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockType } from '@test/utils/mock.type';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { IsNull, Repository } from 'typeorm';
+import { IsNull, MoreThan, Not, Repository } from 'typeorm';
 import { type Mock } from 'vitest';
 import { SigningAttempt } from './signing.attempt.entity';
 import { SigningAttemptService } from './signing.attempt.service';
@@ -80,6 +80,65 @@ describe('SigningAttemptService', () => {
     await expect(
       service.finalizePrepared('attempt-1', 'snapshot-1', 'ab'.repeat(32))
     ).resolves.toBe(false);
+  });
+
+  it('claims one ready unexpired actor-owned attempt before gateway start', async () => {
+    repository.update!.mockResolvedValue({ affected: 1 } as any);
+    const now = new Date('2026-09-05T16:00:00Z');
+    const clientStateHash = 'cd'.repeat(32);
+
+    await expect(
+      service.claimStart('attempt-1', 'actor-1', clientStateHash, now)
+    ).resolves.toBe(true);
+    expect(repository.update).toHaveBeenCalledWith(
+      {
+        id: 'attempt-1',
+        actorId: 'actor-1',
+        status: SigningAttemptStatus.PENDING,
+        snapshotDocumentId: Not(IsNull()),
+        contentSha256: Not(IsNull()),
+        clientStateHash: IsNull(),
+        correlationId: IsNull(),
+        expiresAt: IsNull(),
+        createdDate: MoreThan(new Date('2026-09-05T15:00:00Z')),
+      },
+      { clientStateHash }
+    );
+  });
+
+  it('loses a concurrent start claim and rejects a non-canonical state hash', async () => {
+    repository.update!.mockResolvedValue({ affected: 0 } as any);
+
+    await expect(
+      service.claimStart('attempt-1', 'actor-1', 'cd'.repeat(32))
+    ).resolves.toBe(false);
+    await expect(
+      service.claimStart('attempt-1', 'actor-1', 'CD'.repeat(32))
+    ).rejects.toThrow(ValidationException);
+  });
+
+  it('persists gateway correlation and authoritative expiry only for its claim', async () => {
+    repository.update!.mockResolvedValue({ affected: 1 } as any);
+    const expiresAt = new Date('2026-09-05T16:30:00Z');
+
+    await expect(
+      service.recordGatewayStart(
+        'attempt-1',
+        'cd'.repeat(32),
+        'correlation-1',
+        expiresAt
+      )
+    ).resolves.toBe(true);
+    expect(repository.update).toHaveBeenCalledWith(
+      {
+        id: 'attempt-1',
+        status: SigningAttemptStatus.PENDING,
+        clientStateHash: 'cd'.repeat(32),
+        correlationId: IsNull(),
+        expiresAt: IsNull(),
+      },
+      { correlationId: 'correlation-1', expiresAt }
+    );
   });
 
   it('deletes every attempt owned by a memo', async () => {

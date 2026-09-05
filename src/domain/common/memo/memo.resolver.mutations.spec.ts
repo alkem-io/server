@@ -32,6 +32,7 @@ const createResolver = () => {
 
   const memoSigningService = {
     prepareMemoSigning: vi.fn(),
+    continueMemoSigning: vi.fn(),
   } as unknown as Mocked<MemoSigningService>;
 
   const entityManager = {
@@ -84,6 +85,23 @@ describe('MemoResolverMutations', () => {
       actorContext
     );
     expect(resolver.prepareMemoSigning).toHaveLength(2);
+  });
+
+  it('delegates continuation by attempt ID without accepting state or PDF', async () => {
+    const { resolver, memoSigningService } = createResolver();
+    const result = {
+      authorizeUrl: 'https://connect.acc.cleverbase.com/authorize',
+    };
+    memoSigningService.continueMemoSigning.mockResolvedValue(result);
+
+    await expect(
+      resolver.continueMemoSigning(actorContext, 'attempt-1')
+    ).resolves.toBe(result);
+    expect(memoSigningService.continueMemoSigning).toHaveBeenCalledWith(
+      'attempt-1',
+      actorContext
+    );
+    expect(resolver.continueMemoSigning).toHaveLength(2);
   });
 
   describe('updateMemo', () => {

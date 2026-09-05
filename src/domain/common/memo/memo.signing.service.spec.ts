@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { SigningAttemptStatus } from '@domain/common/content-signing/signing.attempt.status';
 import { prosemirrorJSONToYDoc } from '@tiptap/y-tiptap';
 import { markdownSchema } from './conversion/markdown.schema';
 import { MemoSigningService } from './memo.signing.service';
@@ -39,6 +40,8 @@ describe('MemoSigningService', () => {
       return true;
     }),
     getForActorOrFail: vi.fn(),
+    claimStart: vi.fn(),
+    recordGatewayStart: vi.fn(),
   };
   const kratosService = {
     getCleverbaseSubject: vi.fn<() => Promise<string | undefined>>(async () => {
@@ -79,6 +82,7 @@ describe('MemoSigningService', () => {
     deleteDocument: vi.fn(),
     getDocumentContent: vi.fn(),
   };
+  const trustGatewayClient = { start: vi.fn() };
   const configService = {
     get: vi.fn(() => ({ path_api_private_rest: '/api/private/rest' })),
   };
@@ -90,6 +94,7 @@ describe('MemoSigningService', () => {
     collaborationDocumentService as any,
     renderer as any,
     fileServiceAdapter as any,
+    trustGatewayClient as any,
     configService as any
   );
 
@@ -122,6 +127,13 @@ describe('MemoSigningService', () => {
     attemptService.finalizePrepared.mockImplementation(async () => {
       calls.push('finalize');
       return true;
+    });
+    attemptService.claimStart.mockResolvedValue(true);
+    attemptService.recordGatewayStart.mockResolvedValue(true);
+    trustGatewayClient.start.mockResolvedValue({
+      redirectUrl: 'https://connect.acc.cleverbase.com/authorize',
+      correlationId: 'correlation-1',
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000),
     });
   });
 
@@ -376,5 +388,149 @@ describe('MemoSigningService', () => {
     );
     expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
     expect(fileServiceAdapter.getDocumentContent).not.toHaveBeenCalled();
+  });
+
+  it('continues the exact ready snapshot once and exposes only the authorize URL', async () => {
+    const snapshot = Buffer.from('%PDF-exact-preview');
+    attemptService.getForActorOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      snapshotDocumentId: 'snapshot-1',
+      contentSha256: createHash('sha256').update(snapshot).digest('hex'),
+      createdDate: new Date(),
+    });
+    fileServiceAdapter.getDocumentContent.mockResolvedValue(snapshot);
+
+    const result = await service.continueMemoSigning('attempt-1', actor);
+
+    expect(result).toEqual({
+      authorizeUrl: 'https://connect.acc.cleverbase.com/authorize',
+    });
+    expect(Object.keys(result)).toEqual(['authorizeUrl']);
+    expect(trustGatewayClient.start).toHaveBeenCalledWith(
+      snapshot,
+      'linked-subject',
+      expect.any(String)
+    );
+    const rawState = trustGatewayClient.start.mock.calls[0][2];
+    expect(rawState).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(attemptService.claimStart).toHaveBeenCalledWith(
+      'attempt-1',
+      actor.actorID,
+      createHash('sha256').update(rawState).digest('hex'),
+      expect.any(Date)
+    );
+    expect(attemptService.recordGatewayStart).toHaveBeenCalledWith(
+      'attempt-1',
+      createHash('sha256').update(rawState).digest('hex'),
+      'correlation-1',
+      expect.any(Date)
+    );
+  });
+
+  it.each([
+    [
+      'unready',
+      { snapshotDocumentId: undefined, contentSha256: undefined },
+      /not ready/i,
+    ],
+    [
+      'expired',
+      {
+        snapshotDocumentId: 'snapshot-1',
+        contentSha256: 'ab'.repeat(32),
+        createdDate: new Date(Date.now() - 60 * 60 * 1000 - 1),
+      },
+      /expired/i,
+    ],
+  ])('rejects an %s attempt before reading bytes or starting', async (_name, fields, message) => {
+    attemptService.getForActorOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      createdDate: new Date(),
+      ...fields,
+    });
+
+    await expect(
+      service.continueMemoSigning('attempt-1', actor)
+    ).rejects.toThrow(message);
+    expect(fileServiceAdapter.getDocumentContent).not.toHaveBeenCalled();
+    expect(trustGatewayClient.start).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when the initiating actor or linked identity is unavailable', async () => {
+    attemptService.getForActorOrFail.mockRejectedValueOnce(
+      new Error('not this actor')
+    );
+    await expect(
+      service.continueMemoSigning('attempt-1', actor)
+    ).rejects.toThrow('not this actor');
+    expect(memoService.getMemoOrFail).not.toHaveBeenCalled();
+
+    attemptService.getForActorOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      snapshotDocumentId: 'snapshot-1',
+      contentSha256: 'ab'.repeat(32),
+      createdDate: new Date(),
+    });
+    kratosService.getCleverbaseSubject.mockResolvedValue(undefined);
+    await expect(
+      service.continueMemoSigning('attempt-1', actor)
+    ).rejects.toThrow(/link a Cleverbase identity/i);
+    expect(fileServiceAdapter.getDocumentContent).not.toHaveBeenCalled();
+  });
+
+  it('rejects changed snapshot bytes before claiming or starting', async () => {
+    attemptService.getForActorOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      snapshotDocumentId: 'snapshot-1',
+      contentSha256: 'ab'.repeat(32),
+      createdDate: new Date(),
+    });
+    fileServiceAdapter.getDocumentContent.mockResolvedValue(
+      Buffer.from('%PDF-different')
+    );
+
+    await expect(
+      service.continueMemoSigning('attempt-1', actor)
+    ).rejects.toThrow(/changed/i);
+    expect(attemptService.claimStart).not.toHaveBeenCalled();
+    expect(trustGatewayClient.start).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'lost gateway response',
+    'failed start persistence',
+  ])('%s consumes the claim and a retry never starts again', async failure => {
+    const snapshot = Buffer.from('%PDF-exact-preview');
+    attemptService.getForActorOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      snapshotDocumentId: 'snapshot-1',
+      contentSha256: createHash('sha256').update(snapshot).digest('hex'),
+      createdDate: new Date(),
+    });
+    fileServiceAdapter.getDocumentContent.mockResolvedValue(snapshot);
+    attemptService.claimStart
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false);
+    if (failure === 'lost gateway response')
+      trustGatewayClient.start.mockRejectedValueOnce(new Error('timeout'));
+    else attemptService.recordGatewayStart.mockResolvedValueOnce(false);
+
+    await expect(
+      service.continueMemoSigning('attempt-1', actor)
+    ).rejects.toThrow(/fresh signing attempt/i);
+    await expect(
+      service.continueMemoSigning('attempt-1', actor)
+    ).rejects.toThrow(/fresh signing attempt/i);
+    expect(trustGatewayClient.start).toHaveBeenCalledTimes(1);
   });
 });
