@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto';
 import { ActorContext } from '@core/actor-context/actor.context';
 import sharp from 'sharp';
 import { MemoPdfRenderer } from './memo.pdf.renderer';
@@ -7,11 +6,27 @@ describe('MemoPdfRenderer normalized image budget', () => {
   it('rejects more than 16 MiB before PDF layout', async () => {
     const internalUrl =
       'https://alkem.io/api/private/rest/storage/document/11111111-1111-4111-8111-111111111111';
-    const source = await sharp(randomBytes(1200 * 1200 * 3), {
+    const pixels = Buffer.alloc(1200 * 1200 * 3);
+    let state = 0x12345678;
+    for (let index = 0; index < pixels.length; index++) {
+      state ^= state << 13;
+      state ^= state >>> 17;
+      state ^= state << 5;
+      pixels[index] = state;
+    }
+    const source = await sharp(pixels, {
       raw: { width: 1200, height: 1200, channels: 3 },
     })
       .png({ compressionLevel: 1 })
       .toBuffer();
+    const normalized = await sharp(source, { limitInputPixels: 16_777_216 })
+      .rotate()
+      .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
+      .flatten({ background: '#ffffff' })
+      .toColourspace('srgb')
+      .jpeg({ quality: 80 })
+      .toBuffer();
+    expect(normalized.length * 20).toBeGreaterThan(16 * 1024 * 1024);
     const renderer = new MemoPdfRenderer(
       {
         isAlkemioDocumentURL: () => true,

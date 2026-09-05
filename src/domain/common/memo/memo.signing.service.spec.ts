@@ -865,6 +865,35 @@ describe('MemoSigningService', () => {
     expect(attemptService.finish).not.toHaveBeenCalled();
   });
 
+  it('leaves a malformed status response pending with its snapshot intact', async () => {
+    attemptService.getForReturnOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      snapshotDocumentId: 'snapshot-1',
+      correlationId: 'correlation-1',
+    });
+    trustGatewayClient.getStatus.mockRejectedValue(
+      new ValidationException('Invalid gateway response', LogContext.MEMOS)
+    );
+
+    await expect(
+      service.completeMemoSigning('correlation-1', 'state', actor)
+    ).rejects.toThrow(/retry this page/i);
+    expect(attemptService.finish).not.toHaveBeenCalled();
+    expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+    expect(documentService.deleteDocument).not.toHaveBeenCalled();
+    expect(logger.error).toHaveBeenCalledWith(
+      {
+        message: 'Memo signing gateway response was malformed',
+        attemptId: 'attempt-1',
+        status: AlkemioErrorStatus.BAD_USER_INPUT,
+      },
+      undefined,
+      LogContext.MEMOS
+    );
+  });
+
   it('leaves a result transport failure pending and retryable', async () => {
     attemptService.getForReturnOrFail.mockResolvedValue({
       id: 'attempt-1',
@@ -963,7 +992,7 @@ describe('MemoSigningService', () => {
     expect(attemptService.finish).not.toHaveBeenCalled();
     expect(logger.error).toHaveBeenCalledWith(
       {
-        message: 'Memo signing result response was malformed',
+        message: 'Memo signing gateway response was malformed',
         attemptId: 'attempt-1',
         status: AlkemioErrorStatus.BAD_USER_INPUT,
       },

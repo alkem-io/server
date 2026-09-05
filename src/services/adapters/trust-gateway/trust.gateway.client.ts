@@ -27,8 +27,8 @@ export class TrustGatewayClient {
     private readonly httpService: HttpService
   ) {
     this.baseUrl = configService
-      .get('trustGateway', { infer: true })
-      .url.replace(/\/$/, '');
+      .getOrThrow('trustGateway.url', { infer: true })
+      .replace(/\/$/, '');
   }
 
   async start(document: Buffer, subject: string, clientState: string) {
@@ -77,7 +77,16 @@ export class TrustGatewayClient {
           timeout: 30_000,
         })
       );
-      return response.data as GatewayStatus;
+      const data = response.data;
+      if (!data || Array.isArray(data) || typeof data !== 'object')
+        throw this.invalidResponse();
+      const { status, reason } = data as Record<string, unknown>;
+      if (
+        typeof status !== 'string' ||
+        (reason !== undefined && typeof reason !== 'string')
+      )
+        throw this.invalidResponse();
+      return data as GatewayStatus;
     } catch (error) {
       if (
         (error as { response?: { status?: number } }).response?.status === 404

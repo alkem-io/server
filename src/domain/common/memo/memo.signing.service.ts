@@ -219,24 +219,18 @@ export class MemoSigningService {
       return outcome(attempt.status);
 
     let gatewayStatus;
+    let result;
     try {
       gatewayStatus = attempt.correlationId
         ? await this.trustGatewayClient.getStatus(correlationId)
         : undefined;
-    } catch {
-      throw this.returnPending();
-    }
-    const terminal = this.terminalFor(gatewayStatus);
-    if (terminal) return finish(terminal);
-
-    let result;
-    try {
-      result = await this.trustGatewayClient.getResult(correlationId);
+      if (gatewayStatus?.status === 'completed')
+        result = await this.trustGatewayClient.getResult(correlationId);
     } catch (error) {
       if (error instanceof ValidationException) {
         this.logger.error?.(
           {
-            message: 'Memo signing result response was malformed',
+            message: 'Memo signing gateway response was malformed',
             attemptId: attempt.id,
             status: error.code,
           },
@@ -246,6 +240,8 @@ export class MemoSigningService {
       }
       throw this.returnPending();
     }
+    const terminal = this.terminalFor(gatewayStatus);
+    if (terminal) return finish(terminal);
     if (result === null) throw this.returnPending();
     if (!result) return finish(SigningAttemptStatus.EXPIRED);
     const bucket = this.requireBucket(memo);

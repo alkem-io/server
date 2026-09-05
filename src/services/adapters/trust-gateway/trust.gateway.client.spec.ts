@@ -37,8 +37,9 @@ describe('TrustGatewayClient', () => {
   beforeAll(async () => {
     await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
     const { port } = server.address() as AddressInfo;
+    const url = `http://127.0.0.1:${port}`;
     client = new TrustGatewayClient(
-      { get: () => ({ url: `http://127.0.0.1:${port}` }) } as any,
+      { get: () => ({ url }), getOrThrow: () => url } as any,
       new HttpService(axios.create())
     );
   });
@@ -153,6 +154,20 @@ describe('TrustGatewayClient', () => {
     await expect(client.getStatus('evicted')).resolves.toBeUndefined();
   });
 
+  it.each([
+    null,
+    [],
+    {},
+    { status: 1 },
+    { status: 'failed', reason: 1 },
+  ])('rejects malformed status response %#', async body => {
+    responses.push({ body });
+
+    await expect(client.getStatus('correlation-1')).rejects.toThrow(
+      /invalid gateway response/i
+    );
+  });
+
   it('propagates a status transport failure', async () => {
     responses.push({ status: 500, body: { error: 'unavailable' } });
 
@@ -223,5 +238,22 @@ describe('TrustGatewayClient', () => {
     ).rejects.toThrow();
     expect(requests).toHaveLength(1);
     expect(requests[0].request.method).toBe('POST');
+  });
+
+  it('requires the gateway URL when constructed', () => {
+    const missing = new Error('Missing trustGateway.url');
+
+    expect(
+      () =>
+        new TrustGatewayClient(
+          {
+            get: () => ({ url: 'http://fallback.invalid' }),
+            getOrThrow: () => {
+              throw missing;
+            },
+          } as any,
+          new HttpService(axios.create())
+        )
+    ).toThrow(missing);
   });
 });
