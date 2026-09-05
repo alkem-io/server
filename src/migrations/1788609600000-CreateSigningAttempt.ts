@@ -37,6 +37,8 @@ export class CreateSigningAttempt1788609600000 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    // Destructive rollback: dropping this table permanently deletes every
+    // signing-attempt record; referenced file rows themselves are unaffected.
     await queryRunner.query('DROP TABLE "signing_attempt"; DROP TYPE "signing_attempt_status_enum"');
   }
 }

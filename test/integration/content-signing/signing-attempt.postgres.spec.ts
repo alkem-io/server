@@ -154,7 +154,12 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
     )`);
 
     migration = new CreateSigningAttempt1788609600000();
-    await migration.up(dataSource.createQueryRunner());
+    const queryRunner = dataSource.createQueryRunner();
+    try {
+      await migration.up(queryRunner);
+    } finally {
+      await queryRunner.release();
+    }
     attemptService = new SigningAttemptService(
       dataSource.getRepository(SigningAttempt)
     );
@@ -268,7 +273,12 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
   });
 
   it('reverts the table, indexes, and enum cleanly', async () => {
-    await migration.down(dataSource.createQueryRunner());
+    const queryRunner = dataSource.createQueryRunner();
+    try {
+      await migration.down(queryRunner);
+    } finally {
+      await queryRunner.release();
+    }
 
     const [{ table_exists: tableExists }] = await dataSource.query(
       `SELECT to_regclass('public.signing_attempt') IS NOT NULL AS table_exists`
@@ -352,6 +362,87 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       authorizationId: '77777777-7777-4777-8777-777777777777',
     });
     await expect(fileAdapter.getDocumentContent(document.id)).rejects.toThrow();
+  });
+
+  it('runs the actual account-deletion bucket path: preflight retains DB and bytes, then release and retry complete', async () => {
+    await seedDeletionGraph();
+    const services = createActualDeletionServices(dataSource, attemptService);
+    const content = Buffer.from('account-owned signed copy');
+    const document = await services.fileAdapter.createDocument(content, {
+      displayName: 'account-copy.txt',
+      mimeType: 'text/plain',
+      storageBucketId: UUIDS.bucket,
+      authorizationId: UUIDS.authorization,
+      allowedMimeTypes: 'text/plain',
+      maxFileSize: 1_024,
+      skipDedup: true,
+    });
+    services.bucketEntity.authorization = { id: UUIDS.authorization };
+    services.bucketEntity.documents = [{ id: document.id }];
+    vi.spyOn(services.bucket, 'getStorageBucketOrFail').mockResolvedValue(
+      services.bucketEntity as any
+    );
+    vi.mocked(services.authorization.delete).mockImplementation(async () => {
+      await dataSource.manager.delete(AuthorizationFixture, {
+        id: UUIDS.authorization,
+      });
+      return { id: UUIDS.authorization } as any;
+    });
+    const attempt = await attemptService.createUnready(UUIDS.memo, UUIDS.actor);
+    await attemptService.finalizePrepared(
+      attempt.id,
+      document.id,
+      'cd'.repeat(32)
+    );
+
+    await expect(
+      services.bucket.deleteStorageBucketForAccountDeletion(
+        UUIDS.bucket,
+        dataSource.manager
+      )
+    ).rejects.toThrow(ValidationException);
+
+    expect(services.authorization.delete).not.toHaveBeenCalled();
+    await expect(
+      rowExists('authorization_policy', UUIDS.authorization)
+    ).resolves.toBe(true);
+    await expect(rowExists('storage_bucket', UUIDS.bucket)).resolves.toBe(true);
+    await expect(rowExists('file', document.id)).resolves.toBe(true);
+    await expect(
+      services.fileAdapter.getDocumentContent(document.id)
+    ).resolves.toEqual(content);
+
+    await attemptService.deleteForMemo(UUIDS.memo);
+    await expect(
+      services.bucket.deleteStorageBucketForAccountDeletion(
+        UUIDS.bucket,
+        dataSource.manager
+      )
+    ).resolves.toEqual({
+      storageBucketID: UUIDS.bucket,
+      documentIDs: [document.id],
+    });
+
+    await expect(
+      rowExists('authorization_policy', UUIDS.authorization)
+    ).resolves.toBe(false);
+    await expect(rowExists('storage_bucket', UUIDS.bucket)).resolves.toBe(true);
+    await expect(rowExists('file', document.id)).resolves.toBe(true);
+    await expect(
+      services.fileAdapter.getDocumentContent(document.id)
+    ).resolves.toEqual(content);
+
+    await services.fileAdapter.deleteDocument(document.id);
+    await services.bucket.removeStorageBucketRowForAccountDeletion(
+      UUIDS.bucket
+    );
+    await expect(rowExists('file', document.id)).resolves.toBe(false);
+    await expect(rowExists('storage_bucket', UUIDS.bucket)).resolves.toBe(
+      false
+    );
+    await expect(
+      services.fileAdapter.getDocumentContent(document.id)
+    ).rejects.toThrow();
   });
 
   it('runs the actual concurrent prepare/delete path: the bucket preflight fails without side effects, then MemoService retry releases the attempt before file cleanup', async () => {
@@ -536,10 +627,14 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       unused,
       signingAttempts
     );
-    const bucketEntity = {
+    const bucketEntity: {
+      id: string;
+      authorization?: { id: string };
+      documents: any[];
+    } = {
       id: UUIDS.bucket,
       authorization: undefined,
-      documents: [] as any[],
+      documents: [],
     };
     const profileEntity = {
       id: UUIDS.profile,
