@@ -794,7 +794,10 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       'The memo live document is unavailable',
       LogContext.MEMOS
     );
-    const read = vi.fn().mockRejectedValue(liveReadFailure);
+    const read = vi.fn(async () => {
+      if (!(await rowExists('memo', UUIDS.memo))) throw liveReadFailure;
+      return '# memo still available';
+    });
     const upload = vi.spyOn(
       services.fileAdapter,
       'createInternalDocumentInBucket'
@@ -805,7 +808,9 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       attemptService,
       { getCleverbaseSubject: vi.fn().mockResolvedValue('subject') } as any,
       { read } as any,
-      { render: vi.fn() } as any,
+      {
+        render: vi.fn().mockResolvedValue(Buffer.from('%PDF-live-read')),
+      } as any,
       services.fileAdapter,
       {
         getMemoSigningSnapshotRestUrl: vi
