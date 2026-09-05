@@ -1,3 +1,5 @@
+import { registerEnumType } from '@nestjs/graphql';
+
 export enum SigningAttemptStatus {
   PENDING = 'pending',
   SIGNED = 'signed',
@@ -5,3 +7,5 @@ export enum SigningAttemptStatus {
   FAILED = 'failed',
   EXPIRED = 'expired',
 }
+
+registerEnumType(SigningAttemptStatus, { name: 'SigningAttemptStatus' });

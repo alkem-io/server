@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -10,6 +10,7 @@ import { yjsStateToMarkdown } from '@domain/common/memo/conversion/yjs.state.to.
 import { MemoPdfRenderer } from '@domain/common/memo/memo.pdf.renderer';
 import { MemoService } from '@domain/common/memo/memo.service';
 import { MemoSigningService } from '@domain/common/memo/memo.signing.service';
+import { MemoSigningSweepService } from '@domain/common/memo/memo.signing.sweep.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
@@ -690,6 +691,9 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
           .fn()
           .mockReturnValue('https://alkem.io/private/signing/preview'),
       } as any,
+      {} as any,
+      {} as any,
+      {} as any,
       { error: vi.fn() } as any
     );
     const actor = Object.assign(new ActorContext(), {
@@ -771,6 +775,9 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
           .fn()
           .mockReturnValue('https://alkem.io/private/signing/preview'),
       } as any,
+      {} as any,
+      {} as any,
+      {} as any,
       { error: vi.fn() } as any
     );
     const actor = Object.assign(new ActorContext(), {
@@ -858,6 +865,9 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
           .fn()
           .mockReturnValue('https://alkem.io/private/signing/preview'),
       } as any,
+      {} as any,
+      {} as any,
+      {} as any,
       { error: vi.fn() } as any
     );
     const actor = Object.assign(new ActorContext(), {
@@ -942,6 +952,9 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
           .fn()
           .mockReturnValue('https://alkem.io/private/signing/preview'),
       } as any,
+      {} as any,
+      {} as any,
+      {} as any,
       { error: vi.fn() } as any
     );
     const actor = Object.assign(new ActorContext(), {
@@ -1013,6 +1026,9 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       services.fileAdapter,
       gateway as any,
       {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
       { error: vi.fn() } as any
     );
     const actor = Object.assign(new ActorContext(), {
@@ -1041,6 +1057,160 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       correlationId: 'correlation-winner',
       expiresAt,
     });
+  });
+
+  it('lets one of two concurrent returns attach its signed copy and removes the losing upload', async () => {
+    const signedPdf = Buffer.from('%PDF-concurrent-return');
+    const gateway = completedGateway(signedPdf);
+    const fixture = await createActualReturnFixture(gateway);
+    const uploaded: string[] = [];
+    const upload = fixture.services.bucket.uploadFileAsDocumentFromBuffer.bind(
+      fixture.services.bucket
+    );
+    vi.spyOn(
+      fixture.services.bucket,
+      'uploadFileAsDocumentFromBuffer'
+    ).mockImplementation(async (...args) => {
+      const document = await upload(...args);
+      uploaded.push(document.id);
+      return document;
+    });
+    const finishEntered = createBarrier();
+    const finishRelease = createBarrier();
+    const finish = attemptService.finish.bind(attemptService);
+    let finishCount = 0;
+    vi.spyOn(attemptService, 'finish').mockImplementation(async (...args) => {
+      finishCount += 1;
+      if (finishCount === 2) finishEntered.release();
+      await finishRelease.waiting;
+      return finish(...args);
+    });
+
+    const returns = [
+      fixture.signing.completeMemoSigning(
+        fixture.correlationId,
+        fixture.clientState,
+        fixture.actor
+      ),
+      fixture.signing.completeMemoSigning(
+        fixture.correlationId,
+        fixture.clientState,
+        fixture.actor
+      ),
+    ];
+    await finishEntered.waiting;
+    expect(uploaded).toHaveLength(2);
+    expect(uploaded[0]).not.toBe(uploaded[1]);
+    finishRelease.release();
+
+    await expect(Promise.all(returns)).resolves.toEqual([
+      expect.objectContaining({ status: SigningAttemptStatus.SIGNED }),
+      expect.objectContaining({ status: SigningAttemptStatus.SIGNED }),
+    ]);
+    expect(gateway.getStatus).toHaveBeenCalledTimes(2);
+    expect(gateway.getResult).toHaveBeenCalledTimes(2);
+    const saved = await dataSource
+      .getRepository(SigningAttempt)
+      .findOneByOrFail({ id: fixture.attempt.id });
+    expect(saved).toMatchObject({
+      status: SigningAttemptStatus.SIGNED,
+      snapshotDocumentId: null,
+    });
+    expect(uploaded).toContain(saved.signedDocumentId);
+    await expect(
+      fixture.services.fileAdapter.getDocumentContent(saved.signedDocumentId!)
+    ).resolves.toEqual(signedPdf);
+    await expect(
+      fixture.services.fileAdapter.getDocumentContent(fixture.snapshot.id)
+    ).rejects.toThrow();
+    await expect(
+      dataSource.getRepository(DocumentFixture).count()
+    ).resolves.toBe(1);
+  });
+
+  it('lets the expiry sweep win against a concurrent completed return and removes both owned files', async () => {
+    const gateway = completedGateway(Buffer.from('%PDF-return-sweep'));
+    const fixture = await createActualReturnFixture(
+      gateway,
+      new Date(Date.now() - 2 * 60 * 1000)
+    );
+    const finishEntered = createBarrier();
+    const finishRelease = createBarrier();
+    const finish = attemptService.finish.bind(attemptService);
+    vi.spyOn(attemptService, 'finish').mockImplementation(async (...args) => {
+      finishEntered.release();
+      await finishRelease.waiting;
+      return finish(...args);
+    });
+    const sweep = new MemoSigningSweepService(
+      attemptService,
+      fixture.services.fileAdapter,
+      logger
+    );
+
+    const completion = fixture.signing.completeMemoSigning(
+      fixture.correlationId,
+      fixture.clientState,
+      fixture.actor
+    );
+    await finishEntered.waiting;
+    await sweep.sweep();
+    finishRelease.release();
+
+    await expect(completion).resolves.toMatchObject({
+      status: SigningAttemptStatus.EXPIRED,
+    });
+    await expect(
+      dataSource
+        .getRepository(SigningAttempt)
+        .findOneByOrFail({ id: fixture.attempt.id })
+    ).resolves.toMatchObject({
+      status: SigningAttemptStatus.EXPIRED,
+      snapshotDocumentId: null,
+      signedDocumentId: null,
+    });
+    await expect(
+      dataSource.getRepository(DocumentFixture).count()
+    ).resolves.toBe(0);
+  });
+
+  it('lets MemoService deletion win against a concurrent completed return without attaching its upload', async () => {
+    const gateway = completedGateway(Buffer.from('%PDF-return-delete'));
+    const fixture = await createActualReturnFixture(gateway);
+    const finishEntered = createBarrier();
+    const finishRelease = createBarrier();
+    const finish = attemptService.finish.bind(attemptService);
+    vi.spyOn(attemptService, 'finish').mockImplementation(async (...args) => {
+      finishEntered.release();
+      await finishRelease.waiting;
+      return finish(...args);
+    });
+
+    const completion = fixture.signing.completeMemoSigning(
+      fixture.correlationId,
+      fixture.clientState,
+      fixture.actor
+    );
+    await finishEntered.waiting;
+    await expect(
+      fixture.services.memo.deleteMemo(UUIDS.memo)
+    ).resolves.toMatchObject({ id: UUIDS.memo });
+    finishRelease.release();
+
+    await expect(completion).resolves.toMatchObject({
+      status: SigningAttemptStatus.EXPIRED,
+    });
+    await expect(
+      dataSource.getRepository(SigningAttempt).count()
+    ).resolves.toBe(0);
+    await expect(
+      dataSource.getRepository(DocumentFixture).count()
+    ).resolves.toBe(0);
+    await expect(rowExists('memo', UUIDS.memo)).resolves.toBe(false);
+    await expect(rowExists('profile', UUIDS.profile)).resolves.toBe(false);
+    await expect(rowExists('storage_bucket', UUIDS.bucket)).resolves.toBe(
+      false
+    );
   });
 
   it('stores and previews the exact image-containing PDF produced from the current projection', async () => {
@@ -1118,6 +1288,9 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       services.fileAdapter,
       { start: vi.fn() } as any,
       urlGenerator as any,
+      {} as any,
+      {} as any,
+      {} as any,
       { error: vi.fn() } as any
     );
     const actor = Object.assign(new ActorContext(), {
@@ -1165,6 +1338,140 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
     );
   }
 
+  function completedGateway(pdf: Buffer) {
+    return {
+      getStatus: vi.fn().mockResolvedValue({ status: 'completed' }),
+      getResult: vi.fn().mockResolvedValue({
+        pdf,
+        evidence: { profile: 'B-T' },
+      }),
+    };
+  }
+
+  async function createActualReturnFixture(
+    gateway: ReturnType<typeof completedGateway>,
+    expiresAt = new Date(Date.now() + 10 * 60 * 1000)
+  ) {
+    await seedDeletionGraph();
+    const services = createActualDeletionServices(dataSource, attemptService);
+    services.bucketEntity.authorization = {
+      id: UUIDS.authorization,
+      credentialRules: [],
+      privilegeRules: [],
+    };
+    services.bucketEntity.allowedMimeTypes = ['application/pdf'];
+    services.bucketEntity.maxFileSize = 15 * 1024 * 1024;
+    services.memoEntity.nameID = 'memo';
+    vi.spyOn(services.memo, 'getMemoOrFail').mockResolvedValue(
+      services.memoEntity as any
+    );
+    vi.spyOn(services.profile, 'getProfileOrFail').mockResolvedValue(
+      services.profileEntity as any
+    );
+    vi.spyOn(services.authorization, 'save').mockImplementation(
+      async policy => {
+        policy.id = randomUUID();
+        await dataSource.query(
+          'INSERT INTO authorization_policy (id) VALUES ($1)',
+          [policy.id]
+        );
+        return policy;
+      }
+    );
+    const documents = dataSource.getRepository(DocumentFixture);
+    const loadDocument = async (id: string) => {
+      const row = await documents.findOneByOrFail({ id });
+      return {
+        ...row,
+        authorization: row.authorizationId
+          ? {
+              id: row.authorizationId,
+              credentialRules: [],
+              privilegeRules: [],
+            }
+          : undefined,
+        tagset: row.tagsetId
+          ? {
+              id: row.tagsetId,
+              authorization: {
+                id: randomUUID(),
+                credentialRules: [],
+                privilegeRules: [],
+              },
+            }
+          : undefined,
+        storageBucket: services.bucketEntity,
+      } as any;
+    };
+    vi.spyOn(services.document, 'getDocumentOrFail').mockImplementation(
+      loadDocument
+    );
+    vi.spyOn(services.bucket, 'getStorageBucketOrFail').mockImplementation(
+      async () => ({
+        ...services.bucketEntity,
+        documents: await Promise.all(
+          (await documents.find()).map(document =>
+            loadDocument(document.id as string)
+          )
+        ),
+      })
+    );
+    const clientState = 'return-state';
+    const correlationId = 'correlation-return';
+    const snapshotPdf = Buffer.from('%PDF-return-snapshot');
+    const snapshot = await services.fileAdapter.createInternalDocumentInBucket(
+      snapshotPdf,
+      UUIDS.bucket,
+      'memo-signing-preview.pdf',
+      'application/pdf',
+      { skipDedup: true }
+    );
+    const attempt = await attemptService.createUnready(UUIDS.memo, UUIDS.actor);
+    await attemptService.finalizePrepared(
+      attempt.id,
+      snapshot.id,
+      createHash('sha256').update(snapshotPdf).digest('hex')
+    );
+    const clientStateHash = createHash('sha256')
+      .update(clientState)
+      .digest('hex');
+    await attemptService.claimStart(attempt.id, clientStateHash);
+    await attemptService.recordGatewayStart(
+      attempt.id,
+      clientStateHash,
+      correlationId,
+      expiresAt
+    );
+    const actor = Object.assign(new ActorContext(), {
+      actorID: UUIDS.actor,
+      authenticationID: 'kratos-1',
+    });
+    const signing = new MemoSigningService(
+      { grantAccessOrFail: vi.fn() } as any,
+      services.memo,
+      attemptService,
+      {} as any,
+      {} as any,
+      {} as any,
+      services.fileAdapter,
+      gateway as any,
+      { getMemoUrlPath: vi.fn().mockResolvedValue('/memo') } as any,
+      services.bucket,
+      services.documentAuthorization,
+      services.document,
+      logger
+    );
+    return {
+      actor,
+      attempt,
+      clientState,
+      correlationId,
+      services,
+      signing,
+      snapshot,
+    };
+  }
+
   function createActualDeletionServices(
     source: DataSource,
     signingAttempts: SigningAttemptService
@@ -1192,7 +1499,14 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       config
     );
     vi.spyOn(authorization, 'delete');
-    const tagsets = { removeTagset: vi.fn() } as any;
+    const tagsets = {
+      createTagset: vi.fn(() => ({ id: randomUUID() })),
+      save: vi.fn(async tagset => tagset),
+      removeTagset: vi.fn(),
+    } as any;
+    const documentAuthorization = {
+      applyAuthorizationPolicy: vi.fn().mockResolvedValue([]),
+    } as any;
     const document = new DocumentService(
       config,
       authorization,
@@ -1204,7 +1518,7 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
     const unused = {} as any;
     const bucket = new StorageBucketService(
       document,
-      unused,
+      documentAuthorization,
       unused,
       authorization,
       unused,
@@ -1245,11 +1559,7 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       unused,
       signingAttempts
     );
-    const bucketEntity: {
-      id: string;
-      authorization?: { id: string };
-      documents: any[];
-    } = {
+    const bucketEntity: any = {
       id: UUIDS.bucket,
       authorization: undefined,
       documents: [],
@@ -1265,6 +1575,7 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
     };
     const memoEntity = {
       id: UUIDS.memo,
+      nameID: 'memo',
       authorization: { id: UUIDS.authorization },
       profile: profileEntity,
     };
@@ -1273,11 +1584,13 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       bucket,
       bucketEntity,
       document,
+      documentAuthorization,
       fileAdapter,
       memo,
       memoEntity,
       profile,
       profileEntity,
+      tagsets,
     };
   }
 

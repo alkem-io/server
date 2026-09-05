@@ -4,8 +4,12 @@ import { LogContext } from '@common/enums/logging.context';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { SigningAttempt } from '@domain/common/content-signing/signing.attempt.entity';
 import { SigningAttemptService } from '@domain/common/content-signing/signing.attempt.service';
 import { SigningAttemptStatus } from '@domain/common/content-signing/signing.attempt.status';
+import { DocumentService } from '@domain/storage/document/document.service';
+import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { TrustGatewayClient } from '@services/adapters/trust-gateway/trust.gateway.client';
@@ -31,18 +35,16 @@ export class MemoSigningService {
     private readonly fileServiceAdapter: FileServiceAdapter,
     private readonly trustGatewayClient: TrustGatewayClient,
     private readonly urlGeneratorService: UrlGeneratorService,
+    private readonly storageBucketService: StorageBucketService,
+    private readonly documentAuthorizationService: DocumentAuthorizationService,
+    private readonly documentService: DocumentService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async prepareMemoSigning(memoId: string, actor: ActorContext) {
     const memo = await this.getAuthorizedMemo(memoId, actor);
     await this.requireCleverbaseSubject(actor);
-    const storageBucketId = memo.profile?.storageBucket?.id;
-    if (!storageBucketId)
-      throw new ValidationException(
-        'Memo storage is unavailable',
-        LogContext.MEMOS
-      );
+    const storageBucketId = this.requireBucket(memo).id;
 
     const attempt = await this.attemptService.createUnready(
       memoId,
@@ -76,9 +78,7 @@ export class MemoSigningService {
           LogContext.MEMOS
         );
     } catch (error) {
-      await this.fileServiceAdapter
-        .deleteDocument(snapshot.id)
-        .catch(() => undefined);
+      await this.deleteSnapshot(attempt.id, snapshot.id);
       throw error;
     }
     return {
@@ -187,6 +187,83 @@ export class MemoSigningService {
     }
   }
 
+  async completeMemoSigning(
+    correlationId: string,
+    clientState: string,
+    actor: ActorContext
+  ) {
+    const attempt = await this.attemptService.getForReturnOrFail(
+      correlationId,
+      actor.actorID,
+      createHash('sha256').update(clientState).digest('hex')
+    );
+    const memo = await this.getAuthorizedMemo(attempt.memoId, actor);
+    const memoUrl = await this.urlGeneratorService.getMemoUrlPath(
+      memo.id,
+      memo.nameID
+    );
+    const outcome = (status: SigningAttemptStatus) => ({
+      memoUrl,
+      attemptId: attempt.id,
+      status,
+    });
+    const finish = async (
+      status: Exclude<SigningAttemptStatus, SigningAttemptStatus.PENDING>,
+      signedDocumentId?: string,
+      evidence?: Record<string, unknown>
+    ) =>
+      outcome(await this.finish(attempt, status, signedDocumentId, evidence));
+    if (attempt.status !== SigningAttemptStatus.PENDING)
+      return outcome(attempt.status);
+
+    let gatewayStatus;
+    try {
+      gatewayStatus = attempt.correlationId
+        ? await this.trustGatewayClient.getStatus(correlationId)
+        : undefined;
+    } catch {
+      throw this.returnPending();
+    }
+    const terminal = this.terminalFor(gatewayStatus);
+    if (terminal) return finish(terminal);
+
+    let result;
+    try {
+      result = await this.trustGatewayClient.getResult(correlationId);
+    } catch (error) {
+      if (error instanceof ValidationException)
+        return finish(SigningAttemptStatus.FAILED);
+      throw this.returnPending();
+    }
+    if (result === null) throw this.returnPending();
+    if (!result) return finish(SigningAttemptStatus.EXPIRED);
+    const bucket = this.requireBucket(memo);
+    const signed =
+      await this.storageBucketService.uploadFileAsDocumentFromBuffer(
+        bucket.id,
+        result.pdf,
+        'memo-signed.pdf',
+        'application/pdf',
+        undefined,
+        false,
+        true
+      );
+    try {
+      await this.documentAuthorizationService.applyAuthorizationPolicy(
+        signed,
+        bucket.authorization
+      );
+      return await finish(
+        SigningAttemptStatus.SIGNED,
+        signed.id,
+        result.evidence
+      );
+    } catch (error) {
+      await this.deleteSignedDocument(attempt.id, signed.id);
+      throw error;
+    }
+  }
+
   private async getAuthorizedMemo(
     memoId: string,
     actor: ActorContext
@@ -206,6 +283,100 @@ export class MemoSigningService {
   private freshAttemptRequired(): ValidationException {
     return new ValidationException(
       'Signing was already started; prepare a fresh signing attempt',
+      LogContext.MEMOS
+    );
+  }
+
+  private async finish(
+    attempt: SigningAttempt,
+    status: Exclude<SigningAttemptStatus, SigningAttemptStatus.PENDING>,
+    signedDocumentId?: string,
+    evidence?: Record<string, unknown>
+  ): Promise<SigningAttemptStatus> {
+    const saved = signedDocumentId
+      ? await this.attemptService.finish(
+          attempt.id,
+          status,
+          signedDocumentId,
+          evidence
+        )
+      : await this.attemptService.finish(attempt.id, status);
+    if (saved) {
+      await this.deleteSnapshot(attempt.id, attempt.snapshotDocumentId);
+      return status;
+    }
+    if (signedDocumentId)
+      await this.deleteSignedDocument(attempt.id, signedDocumentId);
+    try {
+      return (
+        await this.attemptService.getForActorOrFail(attempt.id, attempt.actorId)
+      ).status;
+    } catch (error) {
+      if (error instanceof ValidationException)
+        return SigningAttemptStatus.EXPIRED;
+      throw error;
+    }
+  }
+
+  private async deleteSnapshot(
+    attemptId: string,
+    documentId?: string | null
+  ): Promise<void> {
+    if (documentId)
+      await this.fileServiceAdapter
+        .deleteDocument(documentId)
+        .catch(() => this.logCleanupFailure(attemptId, documentId));
+  }
+
+  private async deleteSignedDocument(
+    attemptId: string,
+    documentId: string
+  ): Promise<void> {
+    await this.documentService
+      .deleteDocument({ ID: documentId })
+      .catch(() => this.logCleanupFailure(attemptId, documentId));
+  }
+
+  private logCleanupFailure(attemptId: string, documentId: string): void {
+    this.logger.error?.(
+      {
+        message: 'Memo signing document cleanup failed',
+        attemptId,
+        documentId,
+      },
+      undefined,
+      LogContext.MEMOS
+    );
+  }
+
+  private requireBucket(memo: IMemo) {
+    const bucket = memo.profile?.storageBucket;
+    if (bucket) return bucket;
+    throw new ValidationException(
+      'Memo storage is unavailable',
+      LogContext.MEMOS
+    );
+  }
+
+  private terminalFor(gateway?: {
+    status: string;
+    reason?: string;
+  }): Exclude<SigningAttemptStatus, SigningAttemptStatus.PENDING> | undefined {
+    if (!gateway) return SigningAttemptStatus.EXPIRED;
+    if (gateway.status === 'completed') return undefined;
+    if (gateway.status === 'declined') return SigningAttemptStatus.CANCELLED;
+    if (gateway.status === 'failed')
+      return ['authorization_expired', 'session_expired'].includes(
+        gateway.reason ?? ''
+      )
+        ? SigningAttemptStatus.EXPIRED
+        : SigningAttemptStatus.FAILED;
+    throw this.returnPending();
+  }
+
+  private returnPending(): ValidationException {
+    return new ValidationException(
+      'Signing is still in progress; retry this page',
       LogContext.MEMOS
     );
   }

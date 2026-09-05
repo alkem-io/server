@@ -131,7 +131,12 @@ describe('TrustGatewayClient', () => {
       { status: 'failed', reason: 'authorization_expired' },
       { status: 'failed', reason: 'authorization_expired' },
     ],
-  ])('reads and validates gateway status %# without authorization', async (body, expected) => {
+    [
+      { status: 'failed', reason: 'future_failure_reason' },
+      { status: 'failed', reason: 'future_failure_reason' },
+    ],
+    [{ status: 'future_nonterminal' }, { status: 'future_nonterminal' }],
+  ])('reads gateway status %# without authorization', async (body, expected) => {
     responses.push({ body });
 
     await expect(client.getStatus('correlation-1')).resolves.toEqual(expected);
@@ -148,18 +153,10 @@ describe('TrustGatewayClient', () => {
     await expect(client.getStatus('evicted')).resolves.toBeUndefined();
   });
 
-  it.each([
-    {},
-    { status: 'signed' },
-    { status: 'failed' },
-    { status: 'completed', reason: 'unknown' },
-    { status: 'failed', reason: 'not-a-contract-reason' },
-  ])('rejects malformed status payload %#', async body => {
-    responses.push({ body });
+  it('propagates a status transport failure', async () => {
+    responses.push({ status: 500, body: { error: 'unavailable' } });
 
-    await expect(client.getStatus('correlation-1')).rejects.toThrow(
-      /invalid gateway response/i
-    );
+    await expect(client.getStatus('correlation-1')).rejects.toThrow();
   });
 
   it('returns exact completed PDF bytes and decoded JSON evidence', async () => {
@@ -183,6 +180,21 @@ describe('TrustGatewayClient', () => {
       '/v1/sign/result?correlationId=correlation-1'
     );
     expect(requests[0].request.headers.authorization).toBeUndefined();
+  });
+
+  it.each([
+    [409, null],
+    [404, undefined],
+  ])('distinguishes result HTTP %s', async (status, expected) => {
+    responses.push({ status, body: { error: 'not_available' } });
+
+    await expect(client.getResult('correlation-1')).resolves.toBe(expected);
+  });
+
+  it('propagates a result transport failure', async () => {
+    responses.push({ status: 500, body: { error: 'unavailable' } });
+
+    await expect(client.getResult('correlation-1')).rejects.toThrow();
   });
 
   it.each([

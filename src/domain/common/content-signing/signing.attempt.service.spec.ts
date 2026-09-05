@@ -1,4 +1,4 @@
-import { ValidationException } from '@common/exceptions';
+import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockType } from '@test/utils/mock.type';
@@ -183,22 +183,39 @@ describe('SigningAttemptService', () => {
     });
   });
 
-  it('matches a browser return only by correlation, initiating actor and client-state hash', async () => {
-    const attempt = { id: 'attempt-1' } as SigningAttempt;
+  it('matches a browser return by initiating actor and client-state hash before checking correlation', async () => {
+    const attempt = {
+      id: 'attempt-1',
+      correlationId: 'correlation-1',
+    } as SigningAttempt;
     repository.findOneBy!.mockResolvedValue(attempt);
 
     await expect(
       service.getForReturnOrFail('correlation-1', 'actor-1', 'ef'.repeat(32))
     ).resolves.toBe(attempt);
     expect(repository.findOneBy).toHaveBeenCalledWith({
-      correlationId: 'correlation-1',
       actorId: 'actor-1',
       clientStateHash: 'ef'.repeat(32),
     });
   });
 
+  it('returns a claimed attempt whose gateway correlation was never persisted', async () => {
+    const attempt = {
+      id: 'attempt-1',
+      correlationId: null,
+    } as unknown as SigningAttempt;
+    repository.findOneBy!.mockResolvedValue(attempt);
+
+    await expect(
+      service.getForReturnOrFail('correlation-1', 'actor-1', 'ef'.repeat(32))
+    ).resolves.toBe(attempt);
+  });
+
   it('fails closed for a wrong actor, state or correlation', async () => {
-    repository.findOneBy!.mockResolvedValue(null);
+    repository.findOneBy!.mockResolvedValue({
+      id: 'attempt-1',
+      correlationId: 'other-correlation',
+    } as SigningAttempt);
 
     await expect(
       service.getForReturnOrFail(
@@ -206,7 +223,7 @@ describe('SigningAttemptService', () => {
         'other-actor',
         'ef'.repeat(32)
       )
-    ).rejects.toThrow(ValidationException);
+    ).rejects.toThrow(ForbiddenException);
   });
 
   it('conditionally attaches one signed document and releases the snapshot FK', async () => {
@@ -232,7 +249,7 @@ describe('SigningAttemptService', () => {
     );
   });
 
-  it.each([
+  it.each<Exclude<SigningAttemptStatus, SigningAttemptStatus.PENDING>>([
     SigningAttemptStatus.CANCELLED,
     SigningAttemptStatus.FAILED,
     SigningAttemptStatus.EXPIRED,
