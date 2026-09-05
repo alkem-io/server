@@ -13,10 +13,10 @@ import { SigningAttemptStatus } from './signing.attempt.status';
   unique: true,
 })
 export class SigningAttempt extends BaseAlkemioEntity {
-  @Column('uuid')
+  @Column('uuid', { nullable: false })
   memoId!: string;
 
-  @Column('uuid')
+  @Column('uuid', { nullable: false })
   actorId!: string;
 
   @Column('varchar', { length: 64, nullable: true })
@@ -37,6 +37,7 @@ export class SigningAttempt extends BaseAlkemioEntity {
   @Column({
     type: 'enum',
     enum: SigningAttemptStatus,
+    nullable: false,
     default: SigningAttemptStatus.PENDING,
   })
   status!: SigningAttemptStatus;
