@@ -68,6 +68,7 @@ import { RolesModule } from '@services/api/roles/roles.module';
 import { SearchModule } from '@services/api/search/search.module';
 import { UrlResolverModule } from '@services/api/url-resolver/url.resolver.module';
 import { CalendarEventIcsModule } from '@services/api-rest/calendar-event-ics/calendar-event-ics.module';
+import { ContentSigningRestModule } from '@services/api-rest/content-signing/content.signing.module';
 import { IdentityResolveModule } from '@services/api-rest/identity-resolve/identity-resolve.module';
 import { InternalAdminModule } from '@services/api-rest/internal-admin/internal-admin.module';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
@@ -306,6 +307,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     ContributionReporterModule,
     InnovationHubModule,
     CalendarEventIcsModule,
+    ContentSigningRestModule,
     IdentityResolveModule,
     InternalAdminModule,
     McpServerModule,

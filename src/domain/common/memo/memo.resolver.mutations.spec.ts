@@ -6,6 +6,7 @@ import { IMemo } from '@domain/common/memo/memo.interface';
 import { MemoResolverMutations } from '@domain/common/memo/memo.resolver.mutations';
 import { MemoService } from '@domain/common/memo/memo.service';
 import { MemoAuthorizationService } from '@domain/common/memo/memo.service.authorization';
+import { MemoSigningService } from '@domain/common/memo/memo.signing.service';
 import { LoggerService } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { type Mocked, vi } from 'vitest';
@@ -29,6 +30,10 @@ const createResolver = () => {
     applyAuthorizationPolicy: vi.fn(),
   } as unknown as Mocked<MemoAuthorizationService>;
 
+  const memoSigningService = {
+    prepareMemoSigning: vi.fn(),
+  } as unknown as Mocked<MemoSigningService>;
+
   const entityManager = {
     findOne: vi.fn(),
   } as unknown as Mocked<EntityManager>;
@@ -43,6 +48,7 @@ const createResolver = () => {
     authorizationPolicyService,
     memoService,
     memoAuthService,
+    memoSigningService,
     entityManager,
     logger
   );
@@ -52,6 +58,7 @@ const createResolver = () => {
     authorizationService,
     memoService,
     memoAuthService,
+    memoSigningService,
     authorizationPolicyService,
     entityManager,
   };
@@ -60,6 +67,24 @@ const createResolver = () => {
 describe('MemoResolverMutations', () => {
   const actorContext = new ActorContext();
   actorContext.actorID = 'user-1';
+
+  it('delegates server-owned signing preparation without accepting PDF input', async () => {
+    const { resolver, memoSigningService } = createResolver();
+    const result = {
+      attemptId: 'attempt-1',
+      previewUrl: '/api/private/rest/content-signing/attempt-1/snapshot',
+    };
+    memoSigningService.prepareMemoSigning.mockResolvedValue(result);
+
+    await expect(
+      resolver.prepareMemoSigning(actorContext, 'memo-1')
+    ).resolves.toBe(result);
+    expect(memoSigningService.prepareMemoSigning).toHaveBeenCalledWith(
+      'memo-1',
+      actorContext
+    );
+    expect(resolver.prepareMemoSigning).toHaveLength(2);
+  });
 
   describe('updateMemo', () => {
     it('authorizes and updates memo without re-applying auth when policy unchanged', async () => {

@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres@sha256:aadf2c0696f5ef357aa7a68da995137f0cf17bad0bf6e1f17de06ae5c769b302
+    environment:
+      POSTGRES_DB: content_signing
+      POSTGRES_USER: content_signing
+      POSTGRES_PASSWORD: content_signing
+    ports:
+      - "127.0.0.1:${CONTENT_SIGNING_DB_PORT:-55426}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U content_signing -d content_signing"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+
+  file-service:
+    image: ${CONTENT_SIGNING_FILE_SERVICE_IMAGE:?build the accepted file-service source and set CONTENT_SIGNING_FILE_SERVICE_IMAGE}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AUTH_SERVICE_URL: http://127.0.0.1:9
+      ALKEMIO_DATABASE_HOST: postgres
+      ALKEMIO_DATABASE_PORT: 5432
+      ALKEMIO_DATABASE_USERNAME: content_signing
+      ALKEMIO_DATABASE_PASSWORD: content_signing
+      ALKEMIO_DATABASE_NAME: content_signing
+      PORT: 4003
+      STORAGE_TYPE: local
+      LOCAL_STORAGE_PATH: /storage
+      FILE_BACKUP_OUTBOX_ENABLED: "false"
+    ports:
+      - "127.0.0.1:${CONTENT_SIGNING_FILE_SERVICE_PORT:-44003}:4003"
+    volumes:
+      - content_signing_storage:/storage
+
+volumes:
+  content_signing_storage:

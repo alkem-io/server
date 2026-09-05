@@ -14,6 +14,7 @@ import {
   CollaborationMetadata,
   CollaborationMetadataUpdate,
 } from '@domain/common/collaboration-metadata';
+import { SigningAttemptService } from '@domain/common/content-signing/signing.attempt.service';
 import type { ILicense } from '@domain/common/license/license.interface';
 import { IProfile } from '@domain/common/profile';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
@@ -54,7 +55,8 @@ export class MemoService {
     private licenseService: LicenseService,
     private collaborationLifecycleService: CollaborationLifecycleService,
     private fileServiceAdapter: FileServiceAdapter,
-    private collaborationDocumentService: CollaborationDocumentService
+    private collaborationDocumentService: CollaborationDocumentService,
+    private signingAttemptService: SigningAttemptService
   ) {}
 
   async createMemo(
@@ -252,6 +254,7 @@ export class MemoService {
     // that remains in the DB, but the tombstone expires and a retry is idempotent.
     await this.collaborationLifecycleService.publishDocumentDeleted(memoID);
 
+    await this.signingAttemptService.deleteForMemo(memoID);
     await this.profileService.deleteProfile(memo.profile.id);
     await this.authorizationPolicyService.delete(memo.authorization);
     const deletedMemo = await this.memoRepository.remove(memo as Memo);
