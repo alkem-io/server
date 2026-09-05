@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { LogContext } from '@common/enums/logging.context';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
@@ -603,10 +604,10 @@ describe('MemoSigningService', () => {
   });
 
   it.each([
-    ['lost gateway response', 'gateway-start'],
-    ['failed start persistence', 'gateway-start-persistence'],
-    ['lost conditional persistence', 'gateway-start-persistence'],
-  ])('%s consumes the claim and a retry never starts again', async (failure, stage) => {
+    ['lost gateway response', 'gateway-start', 503],
+    ['failed start persistence', 'gateway-start-persistence', undefined],
+    ['lost conditional persistence', 'gateway-start-persistence', undefined],
+  ])('%s consumes the claim and a retry never starts again', async (failure, stage, status) => {
     const snapshot = Buffer.from('%PDF-exact-preview');
     attemptService.getForActorOrFail.mockResolvedValue({
       id: 'attempt-1',
@@ -641,17 +642,16 @@ describe('MemoSigningService', () => {
       service.continueMemoSigning('attempt-1', actor)
     ).rejects.toThrow(/fresh signing attempt/i);
     expect(trustGatewayClient.start).toHaveBeenCalledTimes(1);
+    expect(logger.error).toHaveBeenCalledTimes(1);
     expect(logger.error).toHaveBeenCalledWith(
-      expect.objectContaining({
+      {
         message: 'Memo signing start failed after the attempt was claimed',
         attemptId: 'attempt-1',
         stage,
-      }),
+        status,
+      },
       undefined,
-      expect.any(String)
-    );
-    expect(JSON.stringify(logger.error.mock.calls)).not.toMatch(
-      /secret|%PDF|raw-client-state|linked-subject/
+      LogContext.MEMOS
     );
   });
 });
