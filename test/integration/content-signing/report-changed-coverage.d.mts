@@ -11,3 +11,15 @@ export function changedCoverage(
   changed: ChangedLines,
   root?: string
 ): Record<'lines' | 'statements' | 'functions' | 'branches', CoverageMetric>;
+export function runReport(
+  args: string[],
+  dependencies: {
+    exec: (
+      file: string,
+      args: string[],
+      options: { encoding: string }
+    ) => string;
+    read: (path: string, encoding: string) => string;
+    root: string;
+  }
+): { output: string; passed: boolean };
