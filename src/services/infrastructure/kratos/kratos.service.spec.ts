@@ -508,6 +508,65 @@ describe('KratosService', () => {
     });
   });
 
+  describe('getCleverbaseSubject', () => {
+    it('reads OIDC credentials and returns only the provider subject', async () => {
+      const getIdentity = vi
+        .spyOn(service.kratosIdentityClient, 'getIdentity')
+        .mockResolvedValue({
+          data: {
+            credentials: {
+              oidc: {
+                identifiers: [
+                  'linkedin:elsewhere',
+                  'cleverbase:subject-from-provider',
+                ],
+              },
+            },
+            traits: { serialNumber: 'NOT-THE-SUBJECT' },
+          },
+        } as any);
+
+      await expect(
+        service.getCleverbaseSubject('kratos-identity')
+      ).resolves.toBe('subject-from-provider');
+      expect(getIdentity).toHaveBeenCalledWith({
+        id: 'kratos-identity',
+        includeCredential: ['oidc'],
+      });
+    });
+
+    it.each([
+      ['missing credentials', {}],
+      ['missing OIDC credentials', { credentials: { password: {} } }],
+      [
+        'another provider',
+        { credentials: { oidc: { identifiers: ['github:subject'] } } },
+      ],
+      [
+        'an empty provider subject',
+        { credentials: { oidc: { identifiers: ['cleverbase:'] } } },
+      ],
+    ])('returns undefined for %s', async (_label, identity) => {
+      vi.spyOn(service.kratosIdentityClient, 'getIdentity').mockResolvedValue({
+        data: identity,
+      } as any);
+
+      await expect(
+        service.getCleverbaseSubject('kratos-identity')
+      ).resolves.toBeUndefined();
+    });
+
+    it('returns undefined when the Kratos identity no longer exists', async () => {
+      vi.spyOn(service.kratosIdentityClient, 'getIdentity').mockRejectedValue({
+        response: { status: 404 },
+      });
+
+      await expect(
+        service.getCleverbaseSubject('missing-identity')
+      ).resolves.toBeUndefined();
+    });
+  });
+
   describe('getAuthenticatedAt', () => {
     it('should return undefined when sessions is null', async () => {
       vi.spyOn(
