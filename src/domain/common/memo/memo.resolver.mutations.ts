@@ -33,7 +33,10 @@ export class MemoResolverMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  @Mutation(() => MemoSigningPrepareResult)
+  @Mutation(() => MemoSigningPrepareResult, {
+    description:
+      'Prepares an exact PDF preview for signing the specified Memo.',
+  })
   prepareMemoSigning(
     @CurrentActor() actor: ActorContext,
     @Args('memoID', { type: () => UUID }) memoId: string

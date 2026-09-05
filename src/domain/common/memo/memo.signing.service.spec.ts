@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { ValidationException } from '@common/exceptions';
+import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { SigningAttemptStatus } from '@domain/common/content-signing/signing.attempt.status';
 import { prosemirrorJSONToYDoc } from '@tiptap/y-tiptap';
@@ -83,8 +83,11 @@ describe('MemoSigningService', () => {
     getDocumentContent: vi.fn(),
   };
   const trustGatewayClient = { start: vi.fn() };
-  const configService = {
-    get: vi.fn(() => ({ path_api_private_rest: '/api/private/rest' })),
+  const urlGeneratorService = {
+    getMemoSigningSnapshotRestUrl: vi.fn(
+      () =>
+        'https://alkem.io/api/private/rest/content-signing/attempt-1/snapshot'
+    ),
   };
   const service = new MemoSigningService(
     authorizationService as any,
@@ -95,7 +98,7 @@ describe('MemoSigningService', () => {
     renderer as any,
     fileServiceAdapter as any,
     trustGatewayClient as any,
-    configService as any
+    urlGeneratorService as any
   );
 
   beforeEach(() => {
@@ -135,6 +138,10 @@ describe('MemoSigningService', () => {
       correlationId: 'correlation-1',
       expiresAt: new Date(Date.now() + 15 * 60 * 1000),
     });
+    fileServiceAdapter.deleteDocument.mockResolvedValue(undefined);
+    urlGeneratorService.getMemoSigningSnapshotRestUrl.mockReturnValue(
+      'https://alkem.io/api/private/rest/content-signing/attempt-1/snapshot'
+    );
   });
 
   it('checks access and linked identity before row-first live rendering', async () => {
@@ -182,7 +189,8 @@ describe('MemoSigningService', () => {
     );
     expect(result).toEqual({
       attemptId: 'attempt-1',
-      previewUrl: '/api/private/rest/content-signing/attempt-1/snapshot',
+      previewUrl:
+        'https://alkem.io/api/private/rest/content-signing/attempt-1/snapshot',
     });
   });
 
@@ -331,6 +339,17 @@ describe('MemoSigningService', () => {
     );
   });
 
+  it('does not let compensation failure mask a lost preparation', async () => {
+    attemptService.finalizePrepared.mockResolvedValue(false);
+    fileServiceAdapter.deleteDocument.mockRejectedValue(
+      new Error('cleanup failed')
+    );
+
+    await expect(service.prepareMemoSigning(memo.id, actor)).rejects.toThrow(
+      /memo was deleted/i
+    );
+  });
+
   it('leaves an unready row for the bounded sweep when rendering fails', async () => {
     renderer.render.mockRejectedValue(new Error('renderer failed'));
 
@@ -367,14 +386,25 @@ describe('MemoSigningService', () => {
 
   it('rejects an unrelated actor before reading the memo or snapshot', async () => {
     attemptService.getForActorOrFail.mockRejectedValue(
-      new Error('not this actor')
+      new ValidationException('not this actor', undefined as any)
     );
 
     await expect(service.getSnapshot('attempt-1', actor)).rejects.toThrow(
-      'not this actor'
+      ForbiddenException
     );
     expect(memoService.getMemoOrFail).not.toHaveBeenCalled();
     expect(fileServiceAdapter.getDocumentContent).not.toHaveBeenCalled();
+  });
+
+  it('preserves an attempt lookup failure', async () => {
+    attemptService.getForActorOrFail.mockRejectedValue(
+      new Error('attempt storage unavailable')
+    );
+
+    await expect(service.getSnapshot('attempt-1', actor)).rejects.toThrow(
+      'attempt storage unavailable'
+    );
+    expect(memoService.getMemoOrFail).not.toHaveBeenCalled();
   });
 
   it('rejects an unready preview after checking current memo access', async () => {

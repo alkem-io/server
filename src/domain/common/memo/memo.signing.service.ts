@@ -1,16 +1,15 @@
 import { createHash } from 'node:crypto';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
-import { ValidationException } from '@common/exceptions';
+import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { SigningAttemptService } from '@domain/common/content-signing/signing.attempt.service';
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { CollaborationDocumentService } from '@services/collaboration-client/collaboration-document.service';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
-import { AlkemioConfig } from '@src/types';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator';
 import * as Y from 'yjs';
 import { yjsStateToMarkdown } from './conversion';
 import { IMemo } from './memo.interface';
@@ -27,7 +26,7 @@ export class MemoSigningService {
     private readonly collaborationDocumentService: CollaborationDocumentService,
     private readonly renderer: MemoPdfRenderer,
     private readonly fileServiceAdapter: FileServiceAdapter,
-    private readonly configService: ConfigService<AlkemioConfig, true>
+    private readonly urlGeneratorService: UrlGeneratorService
   ) {}
 
   async prepareMemoSigning(memoId: string, actor: ActorContext) {
@@ -79,23 +78,30 @@ export class MemoSigningService {
           LogContext.MEMOS
         );
     } catch (error) {
-      await this.fileServiceAdapter.deleteDocument(snapshot.id);
+      await this.fileServiceAdapter
+        .deleteDocument(snapshot.id)
+        .catch(() => undefined);
       throw error;
     }
-    const { path_api_private_rest } = this.configService.get('hosting', {
-      infer: true,
-    });
     return {
       attemptId: attempt.id,
-      previewUrl: `${path_api_private_rest}/content-signing/${attempt.id}/snapshot`,
+      previewUrl: this.urlGeneratorService.getMemoSigningSnapshotRestUrl(
+        attempt.id
+      ),
     };
   }
 
   async getSnapshot(attemptId: string, actor: ActorContext): Promise<Buffer> {
-    const attempt = await this.attemptService.getForActorOrFail(
-      attemptId,
-      actor.actorID
-    );
+    const attempt = await this.attemptService
+      .getForActorOrFail(attemptId, actor.actorID)
+      .catch(error => {
+        if (error instanceof ValidationException)
+          throw new ForbiddenException(
+            'Signing preview belongs to another actor',
+            LogContext.MEMOS
+          );
+        throw error;
+      });
     await this.getAuthorizedMemo(attempt.memoId, actor);
     if (!attempt.snapshotDocumentId)
       throw new ValidationException(

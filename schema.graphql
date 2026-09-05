@@ -4615,6 +4615,7 @@ type Mutation {
   Moves a task to another column on its Tasks board. Authorized as MOVE_TASK on the parent Callout, so a board member can move any task.
   """
   moveTaskToColumn(moveData: MoveTaskToColumnInput!): CalloutContribution!
+  """Prepares an exact PDF preview for signing the specified Memo."""
   prepareMemoSigning(memoID: UUID!): MemoSigningPrepareResult!
   """Refresh the Bodies of Knowledge on All VCs"""
   refreshAllBodiesOfKnowledge: Boolean!

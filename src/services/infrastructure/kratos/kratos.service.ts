@@ -11,6 +11,7 @@ import { ConfigService } from '@nestjs/config';
 import {
   Configuration,
   FrontendApi,
+  type GetIdentityIncludeCredentialEnum,
   Identity,
   IdentityApi,
 } from '@ory/kratos-client';
@@ -384,11 +385,13 @@ export class KratosService {
   }
 
   public async getIdentityById(
-    identityId: string
+    identityId: string,
+    includeCredential?: GetIdentityIncludeCredentialEnum[]
   ): Promise<Identity | undefined> {
     try {
       const { data: identity } = await this.kratosIdentityClient.getIdentity({
         id: identityId,
+        includeCredential,
       });
       return identity;
     } catch (error) {
@@ -413,22 +416,12 @@ export class KratosService {
   public async getCleverbaseSubject(
     identityId: string
   ): Promise<string | undefined> {
-    try {
-      const { data } = await this.kratosIdentityClient.getIdentity({
-        id: identityId,
-        includeCredential: ['oidc'],
-      });
-      const identifier = data.credentials?.oidc?.identifiers?.find(value =>
-        value.startsWith('cleverbase:')
-      );
-      return identifier?.slice('cleverbase:'.length) || undefined;
-    } catch (error) {
-      if (
-        (error as { response?: { status?: number } }).response?.status === 404
-      )
-        return undefined;
-      throw error;
-    }
+    const identity = await this.getIdentityById(identityId, ['oidc']);
+    const prefix = `${AuthenticationType.CLEVERBASE}:`;
+    const identifier = identity?.credentials?.oidc?.identifiers?.find(value =>
+      value.startsWith(prefix)
+    );
+    return identifier?.slice(prefix.length) || undefined;
   }
 
   /**
