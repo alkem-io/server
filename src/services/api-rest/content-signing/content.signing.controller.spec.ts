@@ -1,6 +1,8 @@
 import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { RestEndpoint } from '@common/enums/rest.endpoint';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
+import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { RestGuard } from '@core/authorization/rest.guard';
 import { GUARDS_METADATA, PATH_METADATA } from '@nestjs/common/constants';
@@ -43,6 +45,15 @@ describe('ContentSigningController', () => {
 
   it.each([
     [new ForbiddenException('denied', LogContext.MEMOS), 403],
+    [
+      new ForbiddenAuthorizationPolicyException(
+        'memo access denied',
+        AuthorizationPrivilege.CONTRIBUTE,
+        'memo-auth',
+        'actor-1'
+      ),
+      403,
+    ],
     [new ValidationException('not ready', LogContext.MEMOS), 409],
   ])('maps an authenticated domain failure to HTTP %s', async (error, status) => {
     const signingService = { getSnapshot: vi.fn().mockRejectedValue(error) };

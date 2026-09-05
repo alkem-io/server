@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -741,6 +742,161 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
     await expect(
       services.fileAdapter.getDocumentContent(uploaded[0].id)
     ).rejects.toThrow();
+    await expect(
+      dataSource.getRepository(SigningAttempt).count()
+    ).resolves.toBe(0);
+    await expect(
+      dataSource.getRepository(DocumentFixture).count()
+    ).resolves.toBe(0);
+    await expect(rowExists('memo', UUIDS.memo)).resolves.toBe(false);
+  });
+
+  it('compensates an owned upload when MemoService deletion wins before finalize', async () => {
+    await seedDeletionGraph();
+    const services = createActualDeletionServices(dataSource, attemptService);
+    vi.spyOn(services.memo, 'getMemoOrFail').mockResolvedValue(
+      services.memoEntity as any
+    );
+    vi.spyOn(services.profile, 'getProfileOrFail').mockResolvedValue(
+      services.profileEntity as any
+    );
+    vi.spyOn(services.bucket, 'getStorageBucketOrFail').mockResolvedValue(
+      services.bucketEntity as any
+    );
+    const uploaded: Array<{ id: string }> = [];
+    const upload = services.fileAdapter.createInternalDocumentInBucket.bind(
+      services.fileAdapter
+    );
+    vi.spyOn(
+      services.fileAdapter,
+      'createInternalDocumentInBucket'
+    ).mockImplementation(async (...args) => {
+      const document = await upload(...args);
+      uploaded.push(document);
+      return document;
+    });
+    const finalizeEntered = createBarrier();
+    const finalizeRelease = createBarrier();
+    const finalize = attemptService.finalizePrepared.bind(attemptService);
+    vi.spyOn(attemptService, 'finalizePrepared').mockImplementation(
+      async (...args) => {
+        finalizeEntered.release();
+        await finalizeRelease.waiting;
+        return finalize(...args);
+      }
+    );
+    const pdf = Buffer.from('%PDF-delete-before-finalize');
+    const signing = new MemoSigningService(
+      { grantAccessOrFail: vi.fn() } as any,
+      services.memo,
+      attemptService,
+      { getCleverbaseSubject: vi.fn().mockResolvedValue('subject') } as any,
+      { read: vi.fn().mockResolvedValue('# memo') } as any,
+      { render: vi.fn().mockResolvedValue(pdf) } as any,
+      services.fileAdapter,
+      {
+        getMemoSigningSnapshotRestUrl: vi
+          .fn()
+          .mockReturnValue('https://alkem.io/private/signing/preview'),
+      } as any
+    );
+    const actor = Object.assign(new ActorContext(), {
+      actorID: UUIDS.actor,
+      authenticationID: 'kratos-1',
+    });
+
+    const preparation = signing.prepareMemoSigning(UUIDS.memo, actor);
+    await finalizeEntered.waiting;
+    expect(uploaded).toHaveLength(1);
+    await expect(
+      services.fileAdapter.getDocumentContent(uploaded[0].id)
+    ).resolves.toEqual(pdf);
+
+    await expect(services.memo.deleteMemo(UUIDS.memo)).resolves.toMatchObject({
+      id: UUIDS.memo,
+    });
+    await expect(
+      dataSource.getRepository(SigningAttempt).count()
+    ).resolves.toBe(0);
+    finalizeRelease.release();
+
+    await expect(preparation).rejects.toThrow(
+      'The memo was deleted while preparing the signing copy'
+    );
+    await expect(
+      services.fileAdapter.getDocumentContent(uploaded[0].id)
+    ).rejects.toThrow();
+    await expect(
+      dataSource.getRepository(DocumentFixture).count()
+    ).resolves.toBe(0);
+    await expect(rowExists('memo', UUIDS.memo)).resolves.toBe(false);
+  });
+
+  it('fails before upload when MemoService deletion wins after attempt insert and before live read', async () => {
+    await seedDeletionGraph();
+    const services = createActualDeletionServices(dataSource, attemptService);
+    vi.spyOn(services.memo, 'getMemoOrFail').mockResolvedValue(
+      services.memoEntity as any
+    );
+    vi.spyOn(services.profile, 'getProfileOrFail').mockResolvedValue(
+      services.profileEntity as any
+    );
+    vi.spyOn(services.bucket, 'getStorageBucketOrFail').mockResolvedValue(
+      services.bucketEntity as any
+    );
+    const attemptInserted = createBarrier();
+    const returnAttempt = createBarrier();
+    const createUnready = attemptService.createUnready.bind(attemptService);
+    vi.spyOn(attemptService, 'createUnready').mockImplementation(
+      async (...args) => {
+        const attempt = await createUnready(...args);
+        attemptInserted.release();
+        await returnAttempt.waiting;
+        return attempt;
+      }
+    );
+    const liveReadFailure = new ValidationException(
+      'The memo live document is unavailable',
+      LogContext.MEMOS
+    );
+    const read = vi.fn().mockRejectedValue(liveReadFailure);
+    const upload = vi.spyOn(
+      services.fileAdapter,
+      'createInternalDocumentInBucket'
+    );
+    const signing = new MemoSigningService(
+      { grantAccessOrFail: vi.fn() } as any,
+      services.memo,
+      attemptService,
+      { getCleverbaseSubject: vi.fn().mockResolvedValue('subject') } as any,
+      { read } as any,
+      { render: vi.fn() } as any,
+      services.fileAdapter,
+      {
+        getMemoSigningSnapshotRestUrl: vi
+          .fn()
+          .mockReturnValue('https://alkem.io/private/signing/preview'),
+      } as any
+    );
+    const actor = Object.assign(new ActorContext(), {
+      actorID: UUIDS.actor,
+      authenticationID: 'kratos-1',
+    });
+
+    const preparation = signing.prepareMemoSigning(UUIDS.memo, actor);
+    await attemptInserted.waiting;
+    await expect(
+      dataSource.getRepository(SigningAttempt).count()
+    ).resolves.toBe(1);
+
+    await expect(services.memo.deleteMemo(UUIDS.memo)).resolves.toMatchObject({
+      id: UUIDS.memo,
+    });
+    returnAttempt.release();
+
+    await expect(preparation).rejects.toBe(liveReadFailure);
+    expect(read).toHaveBeenCalledOnce();
+    expect(upload).not.toHaveBeenCalled();
     await expect(
       dataSource.getRepository(SigningAttempt).count()
     ).resolves.toBe(0);

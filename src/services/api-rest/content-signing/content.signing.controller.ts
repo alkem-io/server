@@ -36,7 +36,9 @@ export class ContentSigningController {
       });
       return response.send(pdf);
     } catch (error) {
-      if (error instanceof ForbiddenException) return response.sendStatus(403);
+      const code = (error as { code?: string }).code;
+      if (error instanceof ForbiddenException || code === 'FORBIDDEN_POLICY')
+        return response.sendStatus(403);
       if (error instanceof ValidationException) return response.sendStatus(409);
       throw error;
     }
