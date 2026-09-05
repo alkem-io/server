@@ -1,5 +1,6 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { CollaborationMetadataModule } from '@domain/common/collaboration-metadata';
+import { ContentSigningModule } from '@domain/common/content-signing/content.signing.module';
 import { VisualModule } from '@domain/common/visual/visual.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { ProfileDocumentsModule } from '@domain/profile-documents/profile.documents.module';
@@ -31,6 +32,7 @@ import { MemoAuthorizationService } from './memo.service.authorization';
     TypeOrmModule.forFeature([Memo]),
     ProfileDocumentsModule,
     CollaborationMetadataModule,
+    ContentSigningModule,
     FileServiceAdapterModule,
     CollaborationClientModule,
   ],

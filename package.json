@@ -37,6 +37,8 @@
     "test:debug": "vitest --inspect-brk",
     "test:ci": "vitest run --coverage && cat ./coverage-ci/lcov.info",
     "test:ci:no:coverage": "vitest run",
+    "test:content-signing:real-services": ".scripts/content-signing/test-real-services.sh",
+    "test:content-signing:coverage": ".scripts/content-signing/test-real-services.sh src/domain/common/content-signing/signing.attempt.service.spec.ts src/domain/common/memo/memo.service.spec.ts src/domain/storage/storage-bucket/storage.bucket.service.spec.ts --config=test/integration/content-signing/vitest.coverage.config.ts --coverage",
     "test:flake-verify": ".scripts/test/flake-verify.sh",
     "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --dataSource src/config/migration.create.config.ts",
     "typeorm-no-entities": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --dataSource src/config/migration.config.ts",
