@@ -5,6 +5,11 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import { MemoPdfRenderer } from '@domain/common/memo/memo.pdf.renderer';
 import sharp from 'sharp';
 
+const describeRealServices =
+  process.env.CONTENT_SIGNING_REAL_SERVICES === 'true'
+    ? describe
+    : describe.skip;
+
 const imageUrl = (index: number) =>
   `https://alkem.io/api/private/rest/storage/document/11111111-1111-4111-8111-${index.toString().padStart(12, '0')}`;
 const realisticSources = [
@@ -98,7 +103,7 @@ const renderAndAssert = async (
   expect(elapsed).toBeLessThan(10_000);
 };
 
-describe('MemoPdfRenderer bounded fixture performance', () => {
+describeRealServices('MemoPdfRenderer bounded fixture performance', () => {
   it('renders a representative structured memo with five repository images', async () => {
     const sources = await Promise.all(
       realisticSources.map(path => readFile(resolve(process.cwd(), path)))
