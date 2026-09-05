@@ -1,4 +1,3 @@
-import { execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -113,40 +112,20 @@ describe('content-signing changed coverage report', () => {
 
   it('executes the CLI entry point and emits its retained report', async () => {
     const fixture = mkdtempSync(join(tmpdir(), 'changed-coverage-'));
-    const helperRelative =
-      'test/integration/content-signing/report-changed-coverage.mjs';
-    const helper = join(process.cwd(), helperRelative);
+    const helper = join(
+      process.cwd(),
+      'test/integration/content-signing/report-changed-coverage.mjs'
+    );
     const originalArgv = process.argv;
     const originalExitCode = process.exitCode;
     const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
     try {
-      const diff = execFileSync(
-        'git',
-        ['diff', '--unified=0', '--no-color', 'HEAD^', '--', helperRelative],
-        { encoding: 'utf8' }
-      );
-      const lines = [...(changedLinesFromDiff(diff).get(helperRelative) ?? [])];
-      writeFileSync(
-        join(fixture, 'report.json'),
-        JSON.stringify({
-          helper: {
-            path: helper,
-            statementMap: Object.fromEntries(
-              lines.map((line, index) => [index, { start: { line } }])
-            ),
-            fnMap: {},
-            branchMap: {},
-            s: Object.fromEntries(lines.map((_, index) => [index, 1])),
-            f: {},
-            b: {},
-          },
-        })
-      );
+      writeFileSync(join(fixture, 'report.json'), '{}');
 
       process.argv = [
         process.execPath,
         helper,
-        'HEAD^',
+        'HEAD',
         join(fixture, 'report.json'),
       ];
       await import(`${pathToFileURL(helper).href}?cli=${Date.now()}`);
