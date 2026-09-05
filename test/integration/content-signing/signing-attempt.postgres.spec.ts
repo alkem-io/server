@@ -26,6 +26,7 @@ const UUIDS = {
   memo: '11111111-1111-4111-8111-111111111111',
   actor: '22222222-2222-4222-8222-222222222222',
   snapshot: '33333333-3333-4333-8333-333333333333',
+  snapshot2: '33333333-3333-4333-8333-333333333334',
   bucket: '44444444-4444-4444-8444-444444444444',
   profile: '55555555-5555-4555-8555-555555555555',
   authorization: '66666666-6666-4666-8666-666666666666',
@@ -168,6 +169,12 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
   });
 
   it('creates the one table with the exact enum, columns, indexes, unique keys, and FK deletion rules', async () => {
+    const rerun = dataSource.createQueryRunner();
+    try {
+      await expect(migration.up(rerun)).resolves.toBeUndefined();
+    } finally {
+      await rerun.release();
+    }
     const columns: Array<{
       column_name: string;
       is_nullable: string;
@@ -278,6 +285,7 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
     const queryRunner = dataSource.createQueryRunner();
     try {
       await migration.down(queryRunner);
+      await expect(migration.down(queryRunner)).resolves.toBeUndefined();
     } finally {
       await queryRunner.release();
     }
@@ -321,6 +329,65 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
     await expect(
       repository.update(second.id, { clientStateHash: 'cd'.repeat(32) })
     ).rejects.toThrow();
+  });
+
+  it('returns false after release and on double-finalize without recreating or overwriting a row', async () => {
+    await dataSource.query('INSERT INTO memo (id) VALUES ($1)', [UUIDS.memo]);
+    await dataSource.query('INSERT INTO storage_bucket (id) VALUES ($1)', [
+      UUIDS.bucket,
+    ]);
+    for (const id of [UUIDS.snapshot, UUIDS.snapshot2]) {
+      await dataSource.query(
+        `INSERT INTO "file" (
+          id, "externalID", "mimeType", size, "displayName", "temporaryLocation",
+          "storageBucketId", "createdDate", "updatedDate", version, content_metadata
+        ) VALUES ($1, $2, 'application/pdf', 1, 'snapshot.pdf', false, $3, now(), now(), 1, '{}')`,
+        [id, id, UUIDS.bucket]
+      );
+    }
+
+    const released = await attemptService.createUnready(
+      UUIDS.memo,
+      UUIDS.actor
+    );
+    await attemptService.deleteForMemo(UUIDS.memo);
+    await expect(
+      attemptService.finalizePrepared(
+        released.id,
+        UUIDS.snapshot,
+        'ab'.repeat(32)
+      )
+    ).resolves.toBe(false);
+    await expect(
+      dataSource.getRepository(SigningAttempt).count()
+    ).resolves.toBe(0);
+
+    const finalized = await attemptService.createUnready(
+      UUIDS.memo,
+      UUIDS.actor
+    );
+    await expect(
+      attemptService.finalizePrepared(
+        finalized.id,
+        UUIDS.snapshot,
+        'ab'.repeat(32)
+      )
+    ).resolves.toBe(true);
+    await expect(
+      attemptService.finalizePrepared(
+        finalized.id,
+        UUIDS.snapshot2,
+        'cd'.repeat(32)
+      )
+    ).resolves.toBe(false);
+    await expect(
+      dataSource.getRepository(SigningAttempt).findOneByOrFail({
+        id: finalized.id,
+      })
+    ).resolves.toMatchObject({
+      snapshotDocumentId: UUIDS.snapshot,
+      contentSha256: 'ab'.repeat(32),
+    });
   });
 
   it.each([
