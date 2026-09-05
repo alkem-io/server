@@ -46,20 +46,23 @@ describe('content-signing local quickstart', () => {
   it('uses the credential-free B-T fixture contract without an API key', () => {
     const environment: string[] = compose.services['trust-gateway'].environment;
 
-    expect(environment).toEqual(
-      expect.arrayContaining([
-        'TRUST_GATEWAY_MODE=fixtures',
-        'TRUST_GATEWAY_ENV=acceptance',
-        'TRUST_GATEWAY_CSC_API=v1_rsa',
-        'TRUST_GATEWAY_REDIRECT_URI=http://localhost:3000/oauth/cleverbase/callback',
-        'TRUST_GATEWAY_RETURN_URL=http://localhost:3000/api/public/rest/content-signing/complete',
-        'TRUST_GATEWAY_AUTH_DISABLED=true',
-        'TRUST_GATEWAY_DEFAULT_CONFORMANCE=B-B',
-        'TRUST_GATEWAY_BASE_URL=http://cleverbase-refmock:9000',
-        'TRUST_GATEWAY_PUBLIC_BASE_URL=http://localhost:9000',
-        'TRUST_GATEWAY_TSA_URL=http://cleverbase-refmock:9000/tsr',
-      ])
-    );
+    expect(environment).toEqual([
+      'TRUST_GATEWAY_MODE=fixtures',
+      'TRUST_GATEWAY_ENV=acceptance',
+      'TRUST_GATEWAY_CSC_API=v1_rsa',
+      'TRUST_GATEWAY_CLIENT_ID=trust-gateway-fixtures',
+      'TRUST_GATEWAY_CLIENT_SECRET=fixtures',
+      'TRUST_GATEWAY_REDIRECT_URI=http://localhost:3000/oauth/cleverbase/callback',
+      'TRUST_GATEWAY_RETURN_URL=http://localhost:3000/api/public/rest/content-signing/complete',
+      'TRUST_GATEWAY_AUTH_DISABLED=true',
+      'TRUST_GATEWAY_DEFAULT_CONFORMANCE=B-B',
+      'TRUST_GATEWAY_SESSION_TTL=15m',
+      'TRUST_GATEWAY_LISTEN=:8080',
+      'TRUST_GATEWAY_BASE_URL=http://cleverbase-refmock:9000',
+      'TRUST_GATEWAY_PUBLIC_BASE_URL=http://localhost:9000',
+      'TRUST_GATEWAY_TSA_URL=http://cleverbase-refmock:9000/tsr',
+    ]);
+    expect(environment).toContain('TRUST_GATEWAY_LISTEN=:8080');
     expect(environment.some(value => value.includes('API_KEY'))).toBe(false);
   });
 

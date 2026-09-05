@@ -66,7 +66,8 @@ services:
     networks:
       - alkemio_dev_net
     ports:
-      # The server runs on the host; loopback keeps private /v1 routes off the LAN.
+      # Host-run server: loopback keeps this off the LAN, but sibling containers on the
+      # trusted dev network can reach it. Kubernetes NetworkPolicy isolates deployments.
       - '127.0.0.1:8080:8080'
 
   cleverbase-refmock:
@@ -75,6 +76,7 @@ services:
     networks:
       - alkemio_dev_net
     ports:
+      # Loopback keeps the mock off the LAN, not from sibling containers in the trusted dev stack.
       - '127.0.0.1:9000:9000'
 
   kratos-migrate:

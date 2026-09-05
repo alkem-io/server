@@ -8,12 +8,23 @@ publish only on loopback, but sibling containers share `alkemio_dev_net`.
 ## Start the fixture
 
 The Compose file pins trust-gateway v0.1.0 and the Cleverbase reference mock by digest. Start the
-normal quickstart with fresh storage, then run the server and client on their usual host ports:
+normal quickstart with fresh storage, then run the server and client on their usual host ports.
+Docker, pnpm and `jq` are prerequisites. `COMPOSE_PROJECT_NAME` names only this task-owned fresh
+stack; never run the volume-removal command against a default or developer project.
 
 ```bash
+export COMPOSE_PROJECT_NAME=aiai-2025-content-signing
+docker compose -p "$COMPOSE_PROJECT_NAME" -f quickstart-services.yml \
+  --env-file .env.docker down -v --remove-orphans
 pnpm start:services
 pnpm migration:run
 pnpm start:dev
+```
+
+In a second terminal, from the client-web feature checkout, start the host client on port 3001:
+
+```bash
+pnpm start
 ```
 
 The host-run server uses `http://localhost:8080`; Traefik routes only exact GET requests for
@@ -49,9 +60,10 @@ curl -fsS "$KRATOS_ADMIN/identities/$identity_id?include_credential=oidc" |
     (.credentials.oidc.identifiers | index("cleverbase:PNONL-123") != null)'
 ```
 
-`PNONL-123` is the provider subject and certificate subject `serialNumber` RDN for mock signer Jane
-Doe. It is intentionally different from the certificate serial
-`07FB0DA8384404C33517B852CFE79F04C5006AC1`.
+`PNONL-123` is the provider subject from the
+[SDK mock-signer contract](https://github.com/alkem-io/cleverbase-sdk/blob/develop/examples/reference-integration/mock-upstream/README.md),
+not the X.509 certificate serial. The complete environment recipe is owned by the
+[gateway v0.1.0 local-stack documentation](https://github.com/alkem-io/trust-gateway/blob/v0.1.0/README.md#local-alkemio-stack-mock-and-public-stub).
 
 ## Verify the journey
 
@@ -69,10 +81,36 @@ Record these checks:
 4. Sign the memo again: a second copy is appended and the first is unchanged.
 5. For login restoration, log out before following the terminal gateway return, then log in again;
    the original REST return URL completes and redirects to the memo.
-6. For decline, take the `state` from the first mock authorization URL and visit the public callback
-   with `error=access_denied`; the attempt becomes cancelled without a signed document.
-7. For eviction, restart only `trust-gateway` while an attempt is awaiting authorization and reopen
-   its return URL; the attempt expires without attaching a result.
+6. For decline, copy the first mock authorization URL from the browser before following it, then
+   run the commands below. The attempt becomes cancelled without a signed document.
+7. For eviction, create another attempt, copy its ID, restart only the task-owned gateway with the
+   command below, and reopen its saved return URL. The attempt expires without attaching a result.
+
+Read either terminal state through the actor-bound GraphQL query. Copy the session cookie request
+header from the browser devtools into the local shell without committing or printing it:
+
+```bash
+export SIGNING_ATTEMPT_ID='<attempt UUID from the memo return URL or prepare response>'
+export ALKEMIO_SESSION_COOKIE='<browser Cookie request header>'
+read_attempt() {
+  jq -nc --arg id "$SIGNING_ATTEMPT_ID" \
+    '{query:"query($id: UUID!) { signingAttempt(ID: $id) { id status } }",variables:{id:$id}}' |
+    curl -fsS http://localhost:3000/graphql -H 'Content-Type: application/json' \
+      -H "Cookie: $ALKEMIO_SESSION_COOKIE" --data-binary @- |
+    jq -e '.data.signingAttempt | {id,status}'
+}
+
+authorize_url='<first mock authorization URL copied from the browser>'
+state=$(jq -nr --arg url "$authorize_url" '$url | capture("[?&]state=(?<value>[^&]+)").value')
+curl -fsS -o /dev/null -D - \
+  "http://localhost:3000/oauth/cleverbase/callback?state=$state&error=access_denied"
+read_attempt
+
+docker compose -p "$COMPOSE_PROJECT_NAME" -f quickstart-services.yml \
+  --env-file .env.docker restart trust-gateway
+# Reopen the saved return URL, then:
+read_attempt
+```
 
 Live Cleverbase needs the real client/TSA credentials and a confirmed subject mapping supplied out
 of band. It uses no mock container and must not place credentials in this repository.
