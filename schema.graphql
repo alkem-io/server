@@ -4105,6 +4105,11 @@ type Memo {
   updatedDate: DateTime!
 }
 
+type MemoSigningPrepareResult {
+  attemptId: UUID!
+  previewUrl: String!
+}
+
 type MeQueryResults {
   """
   Self-scoped pre-flight read for account deletion: whether the calling user can delete their own account right now, and if not, exactly what blocks them.
@@ -4610,6 +4615,7 @@ type Mutation {
   Moves a task to another column on its Tasks board. Authorized as MOVE_TASK on the parent Callout, so a board member can move any task.
   """
   moveTaskToColumn(moveData: MoveTaskToColumnInput!): CalloutContribution!
+  prepareMemoSigning(memoID: UUID!): MemoSigningPrepareResult!
   """Refresh the Bodies of Knowledge on All VCs"""
   refreshAllBodiesOfKnowledge: Boolean!
   """
