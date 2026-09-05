@@ -1,9 +1,11 @@
 import { ValidationException } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { SigningAttempt } from '@domain/common/content-signing/signing.attempt.entity';
 import { SigningAttemptService } from '@domain/common/content-signing/signing.attempt.service';
 import { SigningAttemptStatus } from '@domain/common/content-signing/signing.attempt.status';
 import { MemoService } from '@domain/common/memo/memo.service';
+import { MemoSigningService } from '@domain/common/memo/memo.signing.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
@@ -531,6 +533,157 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
     ).rejects.toThrow();
     await expect(rowExists('file', snapshot.id)).resolves.toBe(false);
     await expect(rowExists('memo', UUIDS.memo)).resolves.toBe(false);
+  });
+
+  it('runs actual prepare row-first while MemoService deletion wins, leaving no attempt or uploaded file', async () => {
+    await seedDeletionGraph();
+    const services = createActualDeletionServices(dataSource, attemptService);
+    vi.spyOn(services.memo, 'getMemoOrFail').mockResolvedValue(
+      services.memoEntity as any
+    );
+    vi.spyOn(services.profile, 'getProfileOrFail').mockResolvedValue(
+      services.profileEntity as any
+    );
+    vi.spyOn(services.bucket, 'getStorageBucketOrFail').mockResolvedValue(
+      services.bucketEntity as any
+    );
+    const renderEntered = createBarrier();
+    const renderRelease = createBarrier();
+    const uploaded: Array<{ id: string }> = [];
+    const upload = services.fileAdapter.createInternalDocumentInBucket.bind(
+      services.fileAdapter
+    );
+    vi.spyOn(
+      services.fileAdapter,
+      'createInternalDocumentInBucket'
+    ).mockImplementation(async (...args) => {
+      const document = await upload(...args);
+      uploaded.push(document);
+      return document;
+    });
+    const signing = new MemoSigningService(
+      { grantAccessOrFail: vi.fn() } as any,
+      services.memo,
+      attemptService,
+      { getCleverbaseSubject: vi.fn().mockResolvedValue('subject') } as any,
+      { read: vi.fn().mockResolvedValue('# memo') } as any,
+      {
+        render: vi.fn(async () => {
+          renderEntered.release();
+          await renderRelease.waiting;
+          return Buffer.from('%PDF-delete-wins');
+        }),
+      } as any,
+      services.fileAdapter,
+      {
+        get: vi.fn().mockReturnValue({ path_api_private_rest: '/private' }),
+      } as any
+    );
+    const actor = Object.assign(new ActorContext(), {
+      actorID: UUIDS.actor,
+      authenticationID: 'kratos-1',
+    });
+
+    const preparation = signing.prepareMemoSigning(UUIDS.memo, actor);
+    await renderEntered.waiting;
+    await expect(
+      dataSource.getRepository(SigningAttempt).count()
+    ).resolves.toBe(1);
+
+    await expect(services.memo.deleteMemo(UUIDS.memo)).resolves.toMatchObject({
+      id: UUIDS.memo,
+    });
+    renderRelease.release();
+
+    await expect(preparation).rejects.toThrow();
+    expect(uploaded).toHaveLength(1);
+    await expect(
+      services.fileAdapter.getDocumentContent(uploaded[0].id)
+    ).rejects.toThrow();
+    await expect(
+      dataSource.getRepository(SigningAttempt).count()
+    ).resolves.toBe(0);
+    await expect(
+      dataSource.getRepository(DocumentFixture).count()
+    ).resolves.toBe(0);
+    await expect(rowExists('memo', UUIDS.memo)).resolves.toBe(false);
+  });
+
+  it('gives same-byte concurrent preparations independent file IDs so losing cleanup preserves the winner', async () => {
+    await seedDeletionGraph();
+    const services = createActualDeletionServices(dataSource, attemptService);
+    vi.spyOn(services.memo, 'getMemoOrFail').mockResolvedValue(
+      services.memoEntity as any
+    );
+    const created: SigningAttempt[] = [];
+    const uploaded: Array<{ id: string }> = [];
+    const createUnready = attemptService.createUnready.bind(attemptService);
+    vi.spyOn(attemptService, 'createUnready').mockImplementation(
+      async (...args) => {
+        const attempt = await createUnready(...args);
+        created.push(attempt);
+        return attempt;
+      }
+    );
+    const upload = services.fileAdapter.createInternalDocumentInBucket.bind(
+      services.fileAdapter
+    );
+    vi.spyOn(
+      services.fileAdapter,
+      'createInternalDocumentInBucket'
+    ).mockImplementation(async (...args) => {
+      const document = await upload(...args);
+      uploaded.push(document);
+      return document;
+    });
+    const finalize = attemptService.finalizePrepared.bind(attemptService);
+    const entered = [createBarrier(), createBarrier()];
+    const release = [createBarrier(), createBarrier()];
+    let finalization = 0;
+    vi.spyOn(attemptService, 'finalizePrepared').mockImplementation(
+      async (...args) => {
+        const index = finalization++;
+        entered[index].release();
+        await release[index].waiting;
+        return finalize(...args);
+      }
+    );
+    const pdf = Buffer.from('%PDF-identical-preparations');
+    const signing = new MemoSigningService(
+      { grantAccessOrFail: vi.fn() } as any,
+      services.memo,
+      attemptService,
+      { getCleverbaseSubject: vi.fn().mockResolvedValue('subject') } as any,
+      { read: vi.fn().mockResolvedValue('# memo') } as any,
+      { render: vi.fn().mockResolvedValue(pdf) } as any,
+      services.fileAdapter,
+      {
+        get: vi.fn().mockReturnValue({ path_api_private_rest: '/private' }),
+      } as any
+    );
+    const actor = Object.assign(new ActorContext(), {
+      actorID: UUIDS.actor,
+      authenticationID: 'kratos-1',
+    });
+
+    const winner = signing.prepareMemoSigning(UUIDS.memo, actor);
+    await entered[0].waiting;
+    const loser = signing.prepareMemoSigning(UUIDS.memo, actor);
+    await entered[1].waiting;
+    expect.soft(uploaded[0].id).not.toBe(uploaded[1].id);
+
+    await dataSource.getRepository(SigningAttempt).delete(created[1].id);
+    release[1].release();
+    await expect(loser).rejects.toThrow(/deleted while preparing/i);
+    release[0].release();
+    await expect(winner).resolves.toMatchObject({ attemptId: created[0].id });
+
+    await expect(
+      services.fileAdapter.getDocumentContent(uploaded[0].id)
+    ).resolves.toEqual(pdf);
+    await expect(
+      services.fileAdapter.getDocumentContent(uploaded[1].id)
+    ).rejects.toThrow();
   });
 
   async function seedDeletionGraph(): Promise<void> {

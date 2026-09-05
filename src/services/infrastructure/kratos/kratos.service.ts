@@ -410,6 +410,27 @@ export class KratosService {
     }
   }
 
+  public async getCleverbaseSubject(
+    identityId: string
+  ): Promise<string | undefined> {
+    try {
+      const { data } = await this.kratosIdentityClient.getIdentity({
+        id: identityId,
+        includeCredential: ['oidc'],
+      });
+      const identifier = data.credentials?.oidc?.identifiers?.find(value =>
+        value.startsWith('cleverbase:')
+      );
+      return identifier?.slice('cleverbase:'.length) || undefined;
+    } catch (error) {
+      if (
+        (error as { response?: { status?: number } }).response?.status === 404
+      )
+        return undefined;
+      throw error;
+    }
+  }
+
   /**
    * Deletes an identity by email.
    *

@@ -3,6 +3,7 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
+import { UUID } from '@domain/common/scalars';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InjectEntityManager } from '@nestjs/typeorm';
@@ -12,9 +13,11 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager } from 'typeorm';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { DeleteMemoInput } from './dto/memo.dto.delete';
+import { MemoSigningPrepareResult } from './dto/memo.signing.prepare.result';
 import { IMemo } from './memo.interface';
 import { MemoService } from './memo.service';
 import { MemoAuthorizationService } from './memo.service.authorization';
+import { MemoSigningService } from './memo.signing.service';
 import { UpdateMemoEntityInput } from './types';
 
 @InstrumentResolver()
@@ -25,9 +28,18 @@ export class MemoResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private memoService: MemoService,
     private memoAuthService: MemoAuthorizationService,
+    private memoSigningService: MemoSigningService,
     @InjectEntityManager() private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
+
+  @Mutation(() => MemoSigningPrepareResult)
+  prepareMemoSigning(
+    @CurrentActor() actor: ActorContext,
+    @Args('memoID', { type: () => UUID }) memoId: string
+  ): Promise<MemoSigningPrepareResult> {
+    return this.memoSigningService.prepareMemoSigning(memoId, actor);
+  }
 
   @Mutation(() => IMemo, {
     description: 'Updates the specified Memo.',

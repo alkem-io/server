@@ -54,6 +54,19 @@ export class SigningAttemptService {
     await this.repository.delete({ memoId });
   }
 
+  async getForActorOrFail(
+    attemptId: string,
+    actorId: string
+  ): Promise<SigningAttempt> {
+    const attempt = await this.repository.findOneBy({ id: attemptId, actorId });
+    if (!attempt)
+      throw new ValidationException(
+        'Signing attempt is not available for this actor',
+        LogContext.MEMOS
+      );
+    return attempt;
+  }
+
   async existsForDocumentIDs(documentIds: string[]): Promise<boolean> {
     if (documentIds.length === 0) return false;
     return this.repository.exist({

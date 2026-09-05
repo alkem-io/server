@@ -1,26 +1,18 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
-import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
+import { JSDOM } from 'jsdom';
+import MarkdownIt from 'markdown-it';
+import { parseOffice } from 'officeparser';
 import { MemoPdfRenderer } from './memo.pdf.renderer';
 
+const htmlToPdfMake = require('html-to-pdfmake') as (
+  html: string,
+  options: { window: unknown }
+) => unknown;
+
 const extractText = async (pdf: Buffer): Promise<string> => {
-  const document = await getDocument({
-    data: new Uint8Array(pdf),
-    disableWorker: true,
-  }).promise;
-  const pages: string[] = [];
-  for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber++) {
-    const page = await document.getPage(pageNumber);
-    const content = await page.getTextContent();
-    pages.push(
-      content.items
-        .map(item => ('str' in item ? item.str : ''))
-        .filter(Boolean)
-        .join(' ')
-    );
-  }
-  await document.destroy();
-  return pages.join('\n');
+  const document = await parseOffice(pdf, { fileType: 'pdf', ocr: false });
+  return document.toText();
 };
 
 describe('MemoPdfRenderer', () => {
@@ -39,7 +31,12 @@ describe('MemoPdfRenderer', () => {
     fileServiceAdapter as any
   );
 
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    documentService.getDocumentFromURL.mockReset();
+    authorizationService.grantAccessOrFail.mockReset();
+    fileServiceAdapter.getDocumentContent.mockReset();
+  });
 
   it('renders the current projection into a real PDF with representative structure', async () => {
     const pdf = await renderer.render(
@@ -71,10 +68,30 @@ describe('MemoPdfRenderer', () => {
     const text = await extractText(pdf);
     expect(text).toContain('Capture heading');
     expect(text).toContain('Nested child');
-    expect(text).toContain('const preserved =  2;');
+    expect(text).toContain('const preserved = 2;');
     expect(text).toContain('A');
     expect(text).toContain('quoted');
     expect(text).toContain('Γειά σου');
+  });
+
+  it('preserves code whitespace in the converter structure before text extraction normalizes it', () => {
+    const dom = new JSDOM(
+      `<body>${new MarkdownIt().render('```ts\nconst preserved =  2;\n```')}</body>`
+    );
+    const content = htmlToPdfMake(dom.window.document.body.innerHTML, {
+      window: dom.window,
+    });
+
+    expect(JSON.stringify(content)).toContain('const preserved =  2;');
+  });
+
+  it('renders current-projection highlight markers without exposing the markers', async () => {
+    const text = await extractText(
+      await renderer.render('Before ==highlighted== after', 'bucket-1', actor)
+    );
+
+    expect(text).toContain('Before highlighted after');
+    expect(text).not.toContain('==');
   });
 
   it('loads only an authorized image from the memo bucket', async () => {
@@ -129,6 +146,23 @@ describe('MemoPdfRenderer', () => {
     expect(fileServiceAdapter.getDocumentContent).not.toHaveBeenCalled();
   });
 
+  it('never fetches authored local, data, or unsupported-scheme image URLs', async () => {
+    const pdf = await renderer.render(
+      [
+        '![local](file:///etc/passwd)',
+        '![inline](data:text/plain,SECRET_DATA_TEXT)',
+        '![ftp](ftp://example.com/image.png)',
+      ].join('\n'),
+      'bucket-1',
+      actor
+    );
+
+    const text = await extractText(pdf);
+    expect(text).toContain('Image: ftp');
+    expect(documentService.getDocumentFromURL).not.toHaveBeenCalled();
+    expect(fileServiceAdapter.getDocumentContent).not.toHaveBeenCalled();
+  });
+
   it('fails instead of turning an unauthorized private image into a link', async () => {
     documentService.getDocumentFromURL.mockResolvedValue({
       id: 'image-1',
@@ -156,6 +190,47 @@ describe('MemoPdfRenderer', () => {
       renderer.render(`![private](${internalUrl})`, 'bucket-1', actor)
     ).rejects.toThrow(/memo bucket/i);
     expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+  });
+
+  it('rejects a missing private image without turning it into a link', async () => {
+    documentService.getDocumentFromURL.mockResolvedValue(undefined);
+
+    await expect(
+      renderer.render(`![private](${internalUrl})`, 'bucket-1', actor)
+    ).rejects.toThrow(/memo bucket/i);
+    expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+    expect(fileServiceAdapter.getDocumentContent).not.toHaveBeenCalled();
+  });
+
+  it('uses a labelled link for an authorized but unsupported private image', async () => {
+    documentService.getDocumentFromURL.mockResolvedValue({
+      id: 'image-1',
+      authorization: { id: 'image-auth' },
+      storageBucket: { id: 'bucket-1' },
+    });
+    fileServiceAdapter.getDocumentContent.mockResolvedValue(
+      Buffer.from('unsupported image bytes')
+    );
+
+    const pdf = await renderer.render(`![](${internalUrl})`, 'bucket-1', actor);
+
+    expect(await extractText(pdf)).toContain(`Image: ${internalUrl}`);
+    expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
+  });
+
+  it('propagates an unreadable private image instead of using fallback', async () => {
+    documentService.getDocumentFromURL.mockResolvedValue({
+      id: 'image-1',
+      authorization: { id: 'image-auth' },
+      storageBucket: { id: 'bucket-1' },
+    });
+    fileServiceAdapter.getDocumentContent.mockRejectedValue(
+      new Error('private read failed')
+    );
+
+    await expect(
+      renderer.render(`![private](${internalUrl})`, 'bucket-1', actor)
+    ).rejects.toThrow('private read failed');
   });
 
   it('removes authored scripts and converter overrides', async () => {

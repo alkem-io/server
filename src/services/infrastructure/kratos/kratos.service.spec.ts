@@ -565,6 +565,17 @@ describe('KratosService', () => {
         service.getCleverbaseSubject('missing-identity')
       ).resolves.toBeUndefined();
     });
+
+    it('propagates Kratos failures other than a missing identity', async () => {
+      const unavailable = { response: { status: 503 } };
+      vi.spyOn(service.kratosIdentityClient, 'getIdentity').mockRejectedValue(
+        unavailable
+      );
+
+      await expect(
+        service.getCleverbaseSubject('kratos-identity')
+      ).rejects.toBe(unavailable);
+    });
   });
 
   describe('getAuthenticatedAt', () => {

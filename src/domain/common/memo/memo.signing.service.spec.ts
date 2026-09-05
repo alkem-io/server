@@ -1,14 +1,22 @@
+import { createHash } from 'node:crypto';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { prosemirrorJSONToYDoc } from '@tiptap/y-tiptap';
+import { markdownSchema } from './conversion/markdown.schema';
 import { MemoSigningService } from './memo.signing.service';
 
 describe('MemoSigningService', () => {
+  type MemoFixture = {
+    id: string;
+    authorization: { id: string };
+    profile?: { storageBucket: { id: string } };
+  };
   const actor = Object.assign(new ActorContext(), {
     actorID: '11111111-1111-4111-8111-111111111111',
     authenticationID: 'kratos-1',
   });
-  const memo = {
+  const memo: MemoFixture = {
     id: '22222222-2222-4222-8222-222222222222',
     authorization: { id: 'memo-auth' },
     profile: { storageBucket: { id: 'bucket-1' } },
@@ -19,7 +27,7 @@ describe('MemoSigningService', () => {
     grantAccessOrFail: vi.fn(() => calls.push('authorize')),
   };
   const memoService = {
-    getMemoOrFail: vi.fn(async () => memo),
+    getMemoOrFail: vi.fn<() => Promise<MemoFixture>>(async () => memo),
   };
   const attemptService = {
     createUnready: vi.fn(async () => {
@@ -33,19 +41,32 @@ describe('MemoSigningService', () => {
     getForActorOrFail: vi.fn(),
   };
   const kratosService = {
-    getCleverbaseSubject: vi.fn(async () => {
+    getCleverbaseSubject: vi.fn<() => Promise<string | undefined>>(async () => {
       calls.push('identity');
       return 'linked-subject';
     }),
   };
   const collaborationDocumentService = {
-    read: vi.fn(async () => {
+    read: vi.fn<
+      (
+        id: string,
+        type: string,
+        actorId: string,
+        project: (document: ReturnType<typeof prosemirrorJSONToYDoc>) => string
+      ) => Promise<string>
+    >(async () => {
       calls.push('live-read');
       return '# Current content';
     }),
   };
   const renderer = {
-    render: vi.fn(async () => {
+    render: vi.fn<
+      (
+        markdown: string,
+        storageBucketId: string,
+        actor: ActorContext
+      ) => Promise<Buffer>
+    >(async () => {
       calls.push('render');
       return pdf;
     }),
@@ -139,17 +160,104 @@ describe('MemoSigningService', () => {
       pdf,
       'bucket-1',
       'memo-signing-preview.pdf',
-      'application/pdf'
+      'application/pdf',
+      { skipDedup: true }
     );
     expect(attemptService.finalizePrepared).toHaveBeenCalledWith(
       'attempt-1',
       'snapshot-1',
-      expect.stringMatching(/^[0-9a-f]{64}$/)
+      createHash('sha256').update(pdf).digest('hex')
     );
     expect(result).toEqual({
       attemptId: 'attempt-1',
       previewUrl: '/api/private/rest/content-signing/attempt-1/snapshot',
     });
+  });
+
+  it('renders the current projection with its known table span and non-paragraph losses', async () => {
+    const liveDocument = prosemirrorJSONToYDoc(
+      markdownSchema,
+      {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [
+              {
+                type: 'text',
+                marks: [{ type: 'highlight' }],
+                text: 'Projected highlight text',
+              },
+            ],
+          },
+          {
+            type: 'orderedList',
+            attrs: { start: 4 },
+            content: [
+              {
+                type: 'listItem',
+                content: [
+                  {
+                    type: 'paragraph',
+                    content: [{ type: 'text', text: 'Projected list item' }],
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            type: 'table',
+            content: [
+              {
+                type: 'tableRow',
+                content: [
+                  {
+                    type: 'tableHeader',
+                    attrs: { colspan: 2, rowspan: 1, colwidth: [120, 120] },
+                    content: [
+                      {
+                        type: 'paragraph',
+                        content: [{ type: 'text', text: 'Projected header' }],
+                      },
+                      {
+                        type: 'blockquote',
+                        content: [
+                          {
+                            type: 'paragraph',
+                            content: [
+                              { type: 'text', text: 'Omitted rich block' },
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      'default'
+    );
+    collaborationDocumentService.read.mockImplementation(
+      async (_id, _type, _actor, project) => project(liveDocument)
+    );
+
+    try {
+      await service.prepareMemoSigning(memo.id, actor);
+    } finally {
+      liveDocument.destroy();
+    }
+
+    const projection = renderer.render.mock.calls[0][0];
+    expect(projection).toContain('==Projected highlight text==');
+    expect(projection).toContain('1. Projected list item');
+    expect(projection).not.toContain('4. Projected list item');
+    expect(projection).toContain('| Projected header |');
+    expect(projection).not.toContain('Omitted rich block');
+    expect(projection).not.toContain('colspan');
+    expect(projection).not.toContain('120');
   });
 
   it('fails an unlinked identity before inserting or rendering', async () => {
@@ -158,6 +266,19 @@ describe('MemoSigningService', () => {
     await expect(service.prepareMemoSigning(memo.id, actor)).rejects.toThrow(
       ValidationException
     );
+    expect(attemptService.createUnready).not.toHaveBeenCalled();
+    expect(renderer.render).not.toHaveBeenCalled();
+  });
+
+  it('fails memo authorization before checking identity or rendering', async () => {
+    authorizationService.grantAccessOrFail.mockImplementationOnce(() => {
+      throw new Error('denied');
+    });
+
+    await expect(service.prepareMemoSigning(memo.id, actor)).rejects.toThrow(
+      'denied'
+    );
+    expect(kratosService.getCleverbaseSubject).not.toHaveBeenCalled();
     expect(attemptService.createUnready).not.toHaveBeenCalled();
     expect(renderer.render).not.toHaveBeenCalled();
   });
@@ -171,6 +292,19 @@ describe('MemoSigningService', () => {
       service.prepareMemoSigning(memo.id, unlinkedActor)
     ).rejects.toThrow(ValidationException);
     expect(kratosService.getCleverbaseSubject).not.toHaveBeenCalled();
+    expect(renderer.render).not.toHaveBeenCalled();
+  });
+
+  it('fails a memo without a storage bucket before inserting or rendering', async () => {
+    memoService.getMemoOrFail.mockResolvedValue({
+      ...memo,
+      profile: undefined,
+    });
+
+    await expect(service.prepareMemoSigning(memo.id, actor)).rejects.toThrow(
+      /storage/i
+    );
+    expect(attemptService.createUnready).not.toHaveBeenCalled();
     expect(renderer.render).not.toHaveBeenCalled();
   });
 
@@ -217,5 +351,30 @@ describe('MemoSigningService', () => {
     expect(fileServiceAdapter.getDocumentContent).toHaveBeenCalledWith(
       'snapshot-1'
     );
+  });
+
+  it('rejects an unrelated actor before reading the memo or snapshot', async () => {
+    attemptService.getForActorOrFail.mockRejectedValue(
+      new Error('not this actor')
+    );
+
+    await expect(service.getSnapshot('attempt-1', actor)).rejects.toThrow(
+      'not this actor'
+    );
+    expect(memoService.getMemoOrFail).not.toHaveBeenCalled();
+    expect(fileServiceAdapter.getDocumentContent).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unready preview after checking current memo access', async () => {
+    attemptService.getForActorOrFail.mockResolvedValue({
+      memoId: memo.id,
+      snapshotDocumentId: undefined,
+    });
+
+    await expect(service.getSnapshot('attempt-1', actor)).rejects.toThrow(
+      /not ready/i
+    );
+    expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
+    expect(fileServiceAdapter.getDocumentContent).not.toHaveBeenCalled();
   });
 });

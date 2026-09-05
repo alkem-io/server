@@ -354,7 +354,8 @@ describe('FileServiceAdapter', () => {
         Buffer.from('%PDF-content'),
         'bucket-1',
         'memo-signing-preview.pdf',
-        'application/pdf'
+        'application/pdf',
+        { skipDedup: true }
       );
 
       const callArgs = (httpService.request as Mock).mock.calls[0][0];
@@ -367,6 +368,7 @@ describe('FileServiceAdapter', () => {
       expect(serialized).not.toContain('name="authorizationId"');
       expect(serialized).not.toContain('name="tagsetId"');
       expect(serialized).not.toContain('name="externalID"');
+      expect(serialized).toMatch(/name="skipDedup"\r\n\r\ntrue/);
     });
   });
 
