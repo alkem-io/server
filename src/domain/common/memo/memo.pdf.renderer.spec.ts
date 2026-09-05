@@ -1,3 +1,5 @@
+import { createRequire } from 'node:module';
+import { pathToFileURL } from 'node:url';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { JSDOM } from 'jsdom';
@@ -20,6 +22,32 @@ const fonts = require('pdfmake/fonts/Roboto') as {
 const extractText = async (pdf: Buffer): Promise<string> => {
   const document = await parseOffice(pdf, { fileType: 'pdf', ocr: false });
   return document.toText();
+};
+
+const countRenderedInk = async (pdf: Buffer): Promise<number> => {
+  const officeRequire = createRequire(require.resolve('officeparser'));
+  const pdfJsPath = officeRequire.resolve('pdfjs-dist/legacy/build/pdf.mjs');
+  const pdfJsRequire = createRequire(pdfJsPath);
+  const { createCanvas } = pdfJsRequire(
+    '@napi-rs/canvas'
+  ) as typeof import('@napi-rs/canvas');
+  const pdfJs = await import(pathToFileURL(pdfJsPath).href);
+  const document = await pdfJs.getDocument({ data: new Uint8Array(pdf) })
+    .promise;
+  const page = await document.getPage(1);
+  const viewport = page.getViewport({ scale: 1 });
+  const canvas = createCanvas(viewport.width, viewport.height);
+  const context = canvas.getContext('2d');
+  await page.render({ canvas, canvasContext: context, viewport }).promise;
+  const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+  await document.destroy();
+  return pixels.reduce(
+    (count, channel, index) =>
+      index % 4 === 3 && channel > 0 && pixels[index - 3] < 240
+        ? count + 1
+        : count,
+    0
+  );
 };
 
 describe('MemoPdfRenderer', () => {
@@ -79,6 +107,31 @@ describe('MemoPdfRenderer', () => {
     expect(text).toContain('A');
     expect(text).toContain('quoted');
     expect(text).toContain('Γειά σου');
+  });
+
+  it('renders European platform languages and a visible box for an unsupported symbol', async () => {
+    const supported = [
+      'Nederlands: officiële beëindiging',
+      'Español: acción e información',
+      'Български: подписан документ',
+      'Deutsch: Größe und äußere',
+      'Français: été, cœur où',
+    ];
+    const pdf = await renderer.render(
+      supported.join('\n\n'),
+      'bucket-1',
+      actor
+    );
+
+    const text = await extractText(pdf);
+    for (const sample of supported) expect(text).toContain(sample);
+    expect(pdf.toString('latin1')).toContain('Roboto-Regular');
+
+    // Roboto has no U+2713. Rendering that character alone must still put
+    // visible replacement ink on the actual PDF page rather than omit it.
+    expect(
+      await countRenderedInk(await renderer.render('✓', 'bucket-1', actor))
+    ).toBeGreaterThan(0);
   });
 
   it('preserves code whitespace in the converter structure before text extraction normalizes it', () => {
