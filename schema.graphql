@@ -4109,15 +4109,18 @@ type Memo {
   nameID: NameID!
   """The Profile for this Memo."""
   profile: Profile!
+  """Signed copies of this Memo visible to readers of the Memo."""
   signatures: [MemoSignature!]!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
 }
 
 type MemoSignature {
+  """The Alkemio user who initiated this signed copy."""
   actor: User
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """The immutable PDF produced for this signed copy."""
   document: Document
   """The ID of the entity"""
   id: UUID!

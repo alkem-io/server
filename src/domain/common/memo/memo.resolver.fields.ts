@@ -49,13 +49,15 @@ export class MemoResolverFields {
     );
   }
 
-  @ResolveField('signatures', () => [IMemoSignature])
+  @ResolveField('signatures', () => [IMemoSignature], {
+    description: 'Signed copies of this Memo visible to readers of the Memo.',
+  })
   async signatures(@Parent() memo: IMemo, @CurrentActor() actor: ActorContext) {
     this.authorizationService.grantAccessOrFail(
       actor,
       memo.authorization,
       AuthorizationPrivilege.READ,
-      `read memo signatures: ${memo.id}`
+      'read memo signatures'
     );
     return this.signingAttemptService.findSignedForMemo(memo.id);
   }

@@ -1142,11 +1142,7 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       await finishRelease.waiting;
       return finish(...args);
     });
-    const sweep = new MemoSigningSweepService(
-      attemptService,
-      fixture.services.fileAdapter,
-      logger
-    );
+    const sweep = new MemoSigningSweepService(attemptService, fixture.signing);
 
     const completion = fixture.signing.completeMemoSigning(
       fixture.correlationId,

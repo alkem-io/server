@@ -49,8 +49,8 @@ export class ContentSigningController {
   @UseGuards(RestGuard)
   @UseFilters(ContentSigningReturnFilter)
   async complete(
-    @Query('correlationId') correlationId: string,
-    @Query('clientState') clientState: string,
+    @Query('correlationId') correlationId: unknown,
+    @Query('clientState') clientState: unknown,
     @CurrentActor() actor: ActorContext,
     @Res() response: Response
   ): Promise<Response | void> {
@@ -64,6 +64,14 @@ export class ContentSigningController {
       'Referrer-Policy': 'no-referrer',
     });
     try {
+      if (
+        !this.isSingleNonEmptyString(correlationId) ||
+        !this.isSingleNonEmptyString(clientState)
+      )
+        throw new ValidationException(
+          'Signing return parameters are invalid',
+          LogContext.MEMOS
+        );
       const result = await this.memoSigningService.completeMemoSigning(
         correlationId,
         clientState,
@@ -76,6 +84,10 @@ export class ContentSigningController {
     } catch (error) {
       return this.sendKnownError(error, response);
     }
+  }
+
+  private isSingleNonEmptyString(value: unknown): value is string {
+    return typeof value === 'string' && value.length > 0;
   }
 
   private sendKnownError(error: unknown, response: Response): Response {

@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { AlkemioErrorStatus } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
@@ -388,7 +389,7 @@ describe('MemoSigningService', () => {
     );
     expect(logger.error).toHaveBeenCalledWith(
       {
-        message: 'Memo signing snapshot cleanup failed',
+        message: 'Memo signing document cleanup failed',
         attemptId: 'attempt-1',
         documentId: 'snapshot-1',
       },
@@ -795,6 +796,33 @@ describe('MemoSigningService', () => {
     );
   });
 
+  it('reports a snapshot cleanup failure without changing the terminal outcome', async () => {
+    attemptService.getForReturnOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      snapshotDocumentId: 'snapshot-1',
+      correlationId: 'correlation-1',
+    });
+    trustGatewayClient.getStatus.mockResolvedValue({ status: 'declined' });
+    fileServiceAdapter.deleteDocument.mockRejectedValue(
+      new Error('secret file response')
+    );
+
+    await expect(
+      service.completeMemoSigning('correlation-1', 'state', actor)
+    ).resolves.toMatchObject({ status: SigningAttemptStatus.CANCELLED });
+    expect(logger.error).toHaveBeenCalledWith(
+      {
+        message: 'Memo signing document cleanup failed',
+        attemptId: 'attempt-1',
+        documentId: 'snapshot-1',
+      },
+      undefined,
+      LogContext.MEMOS
+    );
+  });
+
   it.each([
     { status: 'pending' },
     { status: 'authorizing' },
@@ -844,6 +872,34 @@ describe('MemoSigningService', () => {
     expect(attemptService.finish).not.toHaveBeenCalled();
   });
 
+  it('stops a return after revoked memo CONTRIBUTE without gateway or file effects', async () => {
+    const denied = new ForbiddenAuthorizationPolicyException(
+      'memo access denied',
+      AuthorizationPrivilege.CONTRIBUTE,
+      'memo-auth',
+      actor.actorID
+    );
+    attemptService.getForReturnOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      correlationId: 'correlation-1',
+    });
+    authorizationService.grantAccessOrFail.mockImplementationOnce(() => {
+      throw denied;
+    });
+
+    await expect(
+      service.completeMemoSigning('correlation-1', 'state', actor)
+    ).rejects.toBe(denied);
+    expect(trustGatewayClient.getStatus).not.toHaveBeenCalled();
+    expect(trustGatewayClient.getResult).not.toHaveBeenCalled();
+    expect(
+      storageBucketService.uploadFileAsDocumentFromBuffer
+    ).not.toHaveBeenCalled();
+    expect(attemptService.finish).not.toHaveBeenCalled();
+  });
+
   it('leaves a completed journey pending while its result returns 409', async () => {
     attemptService.getForReturnOrFail.mockResolvedValue({
       id: 'attempt-1',
@@ -880,7 +936,7 @@ describe('MemoSigningService', () => {
     );
   });
 
-  it('records malformed completed evidence as failed without attaching bytes', async () => {
+  it('leaves malformed completed evidence pending and logs only a safe status', async () => {
     attemptService.getForReturnOrFail.mockResolvedValue({
       id: 'attempt-1',
       memoId: memo.id,
@@ -894,10 +950,16 @@ describe('MemoSigningService', () => {
 
     await expect(
       service.completeMemoSigning('correlation-1', 'state', actor)
-    ).resolves.toMatchObject({ status: SigningAttemptStatus.FAILED });
-    expect(attemptService.finish).toHaveBeenCalledWith(
-      'attempt-1',
-      SigningAttemptStatus.FAILED
+    ).rejects.toThrow(/retry this page/i);
+    expect(attemptService.finish).not.toHaveBeenCalled();
+    expect(logger.error).toHaveBeenCalledWith(
+      {
+        message: 'Memo signing result response was malformed',
+        attemptId: 'attempt-1',
+        status: AlkemioErrorStatus.BAD_USER_INPUT,
+      },
+      undefined,
+      LogContext.MEMOS
     );
     expect(
       storageBucketService.uploadFileAsDocumentFromBuffer

@@ -29,6 +29,7 @@ export default defineConfig({
         'src/services/api-rest/content-signing/*.ts',
         'src/domain/common/memo/memo.signing.service.ts',
         'src/domain/common/memo/memo.signing.sweep.service.ts',
+        'src/common/enums/rest.endpoint.ts',
         'src/domain/common/memo/memo.service.ts',
         'src/domain/storage/storage-bucket/storage.bucket.module.ts',
         'src/domain/storage/storage-bucket/storage.bucket.service.ts',

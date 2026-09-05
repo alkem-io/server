@@ -5,11 +5,18 @@ import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { RestGuard } from '@core/authorization/rest.guard';
-import { GUARDS_METADATA, PATH_METADATA } from '@nestjs/common/constants';
+import {
+  EXCEPTION_FILTERS_METADATA,
+  GUARDS_METADATA,
+  PATH_METADATA,
+} from '@nestjs/common/constants';
 import { ContentSigningController } from './content.signing.controller';
 import { ContentSigningReturnFilter } from './content.signing.return.filter';
 
 describe('ContentSigningController', () => {
+  // trust-gateway 4f0691a produces an opaque hex correlation ID, not a UUID.
+  const correlationId = '0123456789abcdef0123456789abcdef';
+
   it('streams the actor-bound preview as a private inline PDF', async () => {
     const pdf = Buffer.from('%PDF-preview');
     const actor = Object.assign(new ActorContext(), { actorID: 'actor-1' });
@@ -109,14 +116,14 @@ describe('ContentSigningController', () => {
     const controller = new ContentSigningController(signingService as any);
 
     await controller.complete(
-      'correlation-1',
+      correlationId,
       'raw-client-state',
       actor,
       response as any
     );
 
     expect(signingService.completeMemoSigning).toHaveBeenCalledWith(
-      'correlation-1',
+      correlationId,
       'raw-client-state',
       actor
     );
@@ -150,7 +157,7 @@ describe('ContentSigningController', () => {
     const controller = new ContentSigningController(signingService as any);
 
     await controller.complete(
-      'correlation-1',
+      correlationId,
       'state',
       Object.assign(new ActorContext(), { actorID: 'actor-1' }),
       response as any
@@ -165,7 +172,7 @@ describe('ContentSigningController', () => {
 
     await expect(
       controller.complete(
-        'correlation-1',
+        correlationId,
         'state',
         undefined as unknown as ActorContext,
         {} as any
@@ -188,6 +195,34 @@ describe('ContentSigningController', () => {
         ContentSigningController.prototype.complete
       )
     ).toContain(RestGuard);
-    expect(ContentSigningReturnFilter).toBeDefined();
+    expect(
+      Reflect.getMetadata(
+        EXCEPTION_FILTERS_METADATA,
+        ContentSigningController.prototype.complete
+      )
+    ).toContain(ContentSigningReturnFilter);
+  });
+
+  it.each([
+    ['missing correlation ID', undefined, 'state'],
+    ['duplicated correlation ID', [correlationId, correlationId], 'state'],
+    ['empty correlation ID', '', 'state'],
+    ['missing client state', correlationId, undefined],
+    ['duplicated client state', correlationId, ['state', 'state']],
+    ['empty client state', correlationId, ''],
+  ])('rejects %s before calling the signing service', async (_, correlation, state) => {
+    const signingService = { completeMemoSigning: vi.fn() };
+    const response = { set: vi.fn(), sendStatus: vi.fn() };
+    const controller = new ContentSigningController(signingService as any);
+
+    await controller.complete(
+      correlation as unknown as string,
+      state as unknown as string,
+      Object.assign(new ActorContext(), { actorID: 'actor-1' }),
+      response as any
+    );
+
+    expect(response.sendStatus).toHaveBeenCalledWith(409);
+    expect(signingService.completeMemoSigning).not.toHaveBeenCalled();
   });
 });

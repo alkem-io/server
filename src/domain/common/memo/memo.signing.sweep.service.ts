@@ -1,9 +1,7 @@
-import { LogContext } from '@common/enums';
 import { SigningAttemptService } from '@domain/common/content-signing/signing.attempt.service';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { MemoSigningService } from './memo.signing.service';
 
 const SWEEP_BATCH_SIZE = 25;
 
@@ -11,8 +9,7 @@ const SWEEP_BATCH_SIZE = 25;
 export class MemoSigningSweepService {
   constructor(
     private readonly attemptService: SigningAttemptService,
-    private readonly fileServiceAdapter: FileServiceAdapter,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    private readonly memoSigningService: MemoSigningService
   ) {}
 
   @Cron(CronExpression.EVERY_HOUR)
@@ -21,20 +18,7 @@ export class MemoSigningSweepService {
       SWEEP_BATCH_SIZE
     )) {
       if (!(await this.attemptService.expire(attempt))) continue;
-      if (!attempt.snapshotDocumentId) continue;
-      await this.fileServiceAdapter
-        .deleteDocument(attempt.snapshotDocumentId)
-        .catch(() =>
-          this.logger.error?.(
-            {
-              message: 'Expired memo signing snapshot cleanup failed',
-              attemptId: attempt.id,
-              documentId: attempt.snapshotDocumentId,
-            },
-            undefined,
-            LogContext.MEMOS
-          )
-        );
+      await this.memoSigningService.releaseExpiredAttemptFiles(attempt);
     }
   }
 }

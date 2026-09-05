@@ -1,6 +1,10 @@
 import { AuthorizationPrivilege } from '@common/enums';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { UserLoaderCreator } from '@core/dataloader/creators';
+import { DATA_LOADER_CTX_INJECT_TOKEN } from '@core/dataloader/data.loader.inject.token';
 import { SigningAttemptStatus } from '@domain/common/content-signing/signing.attempt.status';
+import { DELETED_USER_SENTINEL } from '@domain/community/user/account-deletion/deleted.user.sentinel';
+import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants';
 import { MemoResolverFields } from './memo.resolver.fields';
 import { MemoSignatureResolverFields } from './memo.signature.resolver.fields';
 
@@ -53,17 +57,17 @@ describe('memo signing GraphQL reads', () => {
         actor
       )
     ).resolves.toEqual([attempt]);
-    expect(memoService).not.toHaveProperty('getMemoOrFail');
+    expect(memoService.isMultiUser).not.toHaveBeenCalled();
     expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
       actor,
       { id: 'memo-auth' },
       AuthorizationPrivilege.READ,
-      'read memo signatures: memo-1'
+      'read memo signatures'
     );
     expect(attemptService.findSignedForMemo).toHaveBeenCalledWith('memo-1');
   });
 
-  it('resolves the stored signed document and preserves deleted-user null handling', async () => {
+  it('resolves the stored signed document and attributes a missing actor to the deleted-user sentinel', async () => {
     const document = { id: 'document-1' };
     const documentService = {
       getDocumentOrFail: vi.fn().mockResolvedValue(document),
@@ -74,11 +78,42 @@ describe('memo signing GraphQL reads', () => {
     await expect(resolver.document(attempt as any)).resolves.toBe(document);
     await expect(
       resolver.actor(attempt as any, userLoader as any)
-    ).resolves.toBeNull();
+    ).resolves.toBe(DELETED_USER_SENTINEL);
     expect(documentService.getDocumentOrFail).toHaveBeenCalledWith(
       'document-1'
     );
     expect(userLoader.load).toHaveBeenCalledWith('deleted-user');
+
+    const metadata = Reflect.getMetadata(
+      ROUTE_ARGS_METADATA,
+      MemoSignatureResolverFields,
+      'actor'
+    ) as Record<
+      string,
+      {
+        index: number;
+        factory: (data: unknown, context: unknown) => unknown;
+        data: unknown;
+      }
+    >;
+    const loaderParameter = Object.values(metadata).find(
+      parameter => parameter.index === 1
+    );
+    const get = vi.fn().mockReturnValue(userLoader);
+    loaderParameter?.factory(loaderParameter.data, {
+      getType: () => 'graphql',
+      getArgs: () => [
+        attempt,
+        {},
+        { [DATA_LOADER_CTX_INJECT_TOKEN]: { get } },
+        undefined,
+      ],
+      getClass: () => MemoSignatureResolverFields,
+      getHandler: () => MemoSignatureResolverFields.prototype.actor,
+    });
+    expect(get).toHaveBeenCalledWith(UserLoaderCreator, {
+      resolveToNull: true,
+    });
 
     expect(
       resolver.document({

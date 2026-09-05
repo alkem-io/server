@@ -1,4 +1,3 @@
-import { LogContext } from '@common/enums';
 import { MemoSigningSweepService } from './memo.signing.sweep.service';
 
 describe('MemoSigningSweepService', () => {
@@ -10,19 +9,17 @@ describe('MemoSigningSweepService', () => {
     findExpired: vi.fn(),
     expire: vi.fn(),
   };
-  const fileServiceAdapter = { deleteDocument: vi.fn() };
-  const logger = { error: vi.fn() };
+  const memoSigningService = { releaseExpiredAttemptFiles: vi.fn() };
   const service = new MemoSigningSweepService(
     attemptService as any,
-    fileServiceAdapter as any,
-    logger as any
+    memoSigningService as any
   );
 
   beforeEach(() => {
     vi.clearAllMocks();
     attemptService.findExpired.mockResolvedValue([expired]);
     attemptService.expire.mockResolvedValue(true);
-    fileServiceAdapter.deleteDocument.mockResolvedValue(undefined);
+    memoSigningService.releaseExpiredAttemptFiles.mockResolvedValue(undefined);
   });
 
   it('expires one bounded batch and releases only a winning snapshot', async () => {
@@ -30,36 +27,27 @@ describe('MemoSigningSweepService', () => {
 
     expect(attemptService.findExpired).toHaveBeenCalledWith(25);
     expect(attemptService.expire).toHaveBeenCalledWith(expired);
-    expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith(
-      'snapshot-1'
+    expect(memoSigningService.releaseExpiredAttemptFiles).toHaveBeenCalledWith(
+      expired
     );
 
     attemptService.expire.mockResolvedValue(false);
     await service.sweep();
-    expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledTimes(1);
+    expect(memoSigningService.releaseExpiredAttemptFiles).toHaveBeenCalledTimes(
+      1
+    );
   });
 
-  it('continues the batch and logs no raw cleanup cause', async () => {
+  it('continues the batch when an expired attempt release completes', async () => {
     attemptService.findExpired.mockResolvedValue([
       expired,
       { id: 'attempt-2', snapshotDocumentId: 'snapshot-2' },
     ]);
     attemptService.expire.mockResolvedValue(true);
-    fileServiceAdapter.deleteDocument
-      .mockRejectedValueOnce(new Error('secret file response'))
-      .mockResolvedValueOnce(undefined);
-
     await service.sweep();
 
-    expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledTimes(2);
-    expect(logger.error).toHaveBeenCalledWith(
-      {
-        message: 'Expired memo signing snapshot cleanup failed',
-        attemptId: 'attempt-1',
-        documentId: 'snapshot-1',
-      },
-      undefined,
-      LogContext.MEMOS
+    expect(memoSigningService.releaseExpiredAttemptFiles).toHaveBeenCalledTimes(
+      2
     );
   });
 
@@ -70,6 +58,8 @@ describe('MemoSigningSweepService', () => {
     await service.sweep();
 
     expect(attemptService.expire).toHaveBeenCalledWith(unprepared);
-    expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+    expect(memoSigningService.releaseExpiredAttemptFiles).toHaveBeenCalledWith(
+      unprepared
+    );
   });
 });

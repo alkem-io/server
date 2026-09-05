@@ -78,17 +78,9 @@ export class MemoSigningService {
           LogContext.MEMOS
         );
     } catch (error) {
-      await this.fileServiceAdapter.deleteDocument(snapshot.id).catch(() =>
-        this.logger.error?.(
-          {
-            message: 'Memo signing snapshot cleanup failed',
-            attemptId: attempt.id,
-            documentId: snapshot.id,
-          },
-          undefined,
-          LogContext.MEMOS
-        )
-      );
+      await this.fileServiceAdapter
+        .deleteDocument(snapshot.id)
+        .catch(() => this.logCleanupFailure(attempt.id, snapshot.id));
       throw error;
     }
     return {
@@ -241,8 +233,17 @@ export class MemoSigningService {
     try {
       result = await this.trustGatewayClient.getResult(correlationId);
     } catch (error) {
-      if (error instanceof ValidationException)
-        return finish(SigningAttemptStatus.FAILED);
+      if (error instanceof ValidationException) {
+        this.logger.error?.(
+          {
+            message: 'Memo signing result response was malformed',
+            attemptId: attempt.id,
+            status: error.code,
+          },
+          undefined,
+          LogContext.MEMOS
+        );
+      }
       throw this.returnPending();
     }
     if (result === null) throw this.returnPending();
@@ -254,6 +255,7 @@ export class MemoSigningService {
         result.pdf,
         'memo-signed.pdf',
         'application/pdf',
+        // A createdBy value adds creator privileges; attribution stays on attempt.actorId.
         undefined,
         false,
         true
@@ -345,6 +347,10 @@ export class MemoSigningService {
     await this.documentService
       .deleteDocument({ ID: documentId })
       .catch(() => this.logCleanupFailure(attemptId, documentId));
+  }
+
+  async releaseExpiredAttemptFiles(attempt: SigningAttempt): Promise<void> {
+    await this.deleteSnapshot(attempt.id, attempt.snapshotDocumentId);
   }
 
   private logCleanupFailure(attemptId: string, documentId: string): void {
