@@ -996,6 +996,79 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
     ).rejects.toThrow();
   });
 
+  it('lets one actual continuation claim start the gateway and persist its returned correlation and expiry', async () => {
+    await seedDeletionGraph();
+    const services = createActualDeletionServices(dataSource, attemptService);
+    vi.spyOn(services.memo, 'getMemoOrFail').mockResolvedValue(
+      services.memoEntity as any
+    );
+    const pdf = Buffer.from('%PDF-concurrent-continue');
+    const snapshot = await services.fileAdapter.createInternalDocumentInBucket(
+      pdf,
+      UUIDS.bucket,
+      'memo-signing-preview.pdf',
+      'application/pdf',
+      { skipDedup: true }
+    );
+    const attempt = await attemptService.createUnready(UUIDS.memo, UUIDS.actor);
+    await attemptService.finalizePrepared(
+      attempt.id,
+      snapshot.id,
+      createHash('sha256').update(pdf).digest('hex')
+    );
+    const gatewayEntered = createBarrier();
+    const gatewayRelease = createBarrier();
+    const expiresAt = new Date('2026-09-05T21:00:00Z');
+    const gateway = {
+      start: vi.fn(async () => {
+        gatewayEntered.release();
+        await gatewayRelease.waiting;
+        return {
+          redirectUrl: 'https://connect.acc.cleverbase.com/authorize',
+          correlationId: 'correlation-winner',
+          expiresAt,
+        };
+      }),
+    };
+    const signing = new MemoSigningService(
+      { grantAccessOrFail: vi.fn() } as any,
+      services.memo,
+      attemptService,
+      { getCleverbaseSubject: vi.fn().mockResolvedValue('PNONL-123') } as any,
+      {} as any,
+      {} as any,
+      services.fileAdapter,
+      gateway as any,
+      {} as any
+    );
+    const actor = Object.assign(new ActorContext(), {
+      actorID: UUIDS.actor,
+      authenticationID: 'kratos-1',
+    });
+
+    const first = signing.continueMemoSigning(attempt.id, actor);
+    await gatewayEntered.waiting;
+    const second = signing.continueMemoSigning(attempt.id, actor);
+    gatewayRelease.release();
+    const settled = await Promise.allSettled([first, second]);
+
+    expect(
+      settled.filter(result => result.status === 'fulfilled')
+    ).toHaveLength(1);
+    expect(settled.filter(result => result.status === 'rejected')).toHaveLength(
+      1
+    );
+    expect(gateway.start).toHaveBeenCalledOnce();
+    await expect(
+      dataSource
+        .getRepository(SigningAttempt)
+        .findOneByOrFail({ id: attempt.id })
+    ).resolves.toMatchObject({
+      correlationId: 'correlation-winner',
+      expiresAt,
+    });
+  });
+
   it('stores and previews the exact image-containing PDF produced from the current projection', async () => {
     await seedDeletionGraph();
     const services = createActualDeletionServices(dataSource, attemptService);

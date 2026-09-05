@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
+import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { SigningAttemptStatus } from '@domain/common/content-signing/signing.attempt.status';
 import { prosemirrorJSONToYDoc } from '@tiptap/y-tiptap';
@@ -530,6 +531,32 @@ describe('MemoSigningService', () => {
     await expect(
       service.continueMemoSigning('attempt-1', actor)
     ).rejects.toThrow(/changed/i);
+    expect(attemptService.claimStart).not.toHaveBeenCalled();
+    expect(trustGatewayClient.start).not.toHaveBeenCalled();
+  });
+
+  it('rejects revoked memo contribution before reading or claiming the prepared snapshot', async () => {
+    attemptService.getForActorOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      snapshotDocumentId: 'snapshot-1',
+      contentSha256: 'ab'.repeat(32),
+      createdDate: new Date(),
+    });
+    authorizationService.grantAccessOrFail.mockImplementationOnce(() => {
+      throw new ForbiddenAuthorizationPolicyException(
+        'memo contribution revoked',
+        AuthorizationPrivilege.CONTRIBUTE,
+        memo.authorization.id,
+        actor.actorID
+      );
+    });
+
+    await expect(
+      service.continueMemoSigning('attempt-1', actor)
+    ).rejects.toBeInstanceOf(ForbiddenAuthorizationPolicyException);
+    expect(fileServiceAdapter.getDocumentContent).not.toHaveBeenCalled();
     expect(attemptService.claimStart).not.toHaveBeenCalled();
     expect(trustGatewayClient.start).not.toHaveBeenCalled();
   });

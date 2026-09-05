@@ -13,8 +13,10 @@ const readJson = async (request: IncomingMessage): Promise<unknown> => {
 describe('TrustGatewayClient', () => {
   const responses: unknown[] = [];
   const requests: { request: IncomingMessage; body: unknown }[] = [];
+  let responseStatus = 200;
   const server = createServer(async (request, response) => {
     requests.push({ request, body: await readJson(request) });
+    response.statusCode = responseStatus;
     response.setHeader('Content-Type', 'application/json');
     response.end(JSON.stringify(responses.shift()));
   });
@@ -32,6 +34,7 @@ describe('TrustGatewayClient', () => {
   beforeEach(() => {
     responses.length = 0;
     requests.length = 0;
+    responseStatus = 200;
   });
 
   afterAll(async () => {
@@ -107,5 +110,16 @@ describe('TrustGatewayClient', () => {
     await expect(
       client.start(Buffer.from('%PDF'), 'PNONL-123', 'raw-state')
     ).rejects.toThrow(/invalid gateway response/i);
+  });
+
+  it('does not retry a failed gateway start request', async () => {
+    responseStatus = 500;
+    responses.push({ error: 'begin_failed' });
+
+    await expect(
+      client.start(Buffer.from('%PDF'), 'PNONL-123', 'raw-state')
+    ).rejects.toThrow();
+    expect(requests).toHaveLength(1);
+    expect(requests[0].request.method).toBe('POST');
   });
 });

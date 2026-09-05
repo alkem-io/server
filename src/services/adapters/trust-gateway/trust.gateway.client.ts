@@ -60,6 +60,7 @@ export class TrustGatewayClient {
     } catch {
       throw this.invalidResponse();
     }
+    // Gateway formats a real time.Time with time.RFC3339; Date parsing guards transport corruption.
     const expiry = new Date(expiresAt);
     if (Number.isNaN(expiry.getTime())) throw this.invalidResponse();
     return { redirectUrl, correlationId, expiresAt: expiry };
