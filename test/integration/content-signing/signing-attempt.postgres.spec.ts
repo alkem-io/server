@@ -767,7 +767,7 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
     await expect(rowExists('memo', UUIDS.memo)).resolves.toBe(false);
   });
 
-  it('fails before upload when MemoService deletion wins after attempt insert and before live read', async () => {
+  it('models the collaboration read failure when deletion wins after attempt insert', async () => {
     await seedDeletionGraph();
     const services = createActualDeletionServices(dataSource, attemptService);
     vi.spyOn(services.memo, 'getMemoOrFail').mockResolvedValue(
@@ -794,6 +794,10 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       'The memo live document is unavailable',
       LogContext.MEMOS
     );
+    // Modelled collaboration boundary: the real document.deleted path purges the
+    // room and CollaborationDocumentSession reports DocumentPurgingError. This
+    // PG/file-service harness has no collaboration service or RabbitMQ; checkpoint
+    // 6 verifies that live path through quickstart.
     const read = vi.fn(async () => {
       if (!(await rowExists('memo', UUIDS.memo))) throw liveReadFailure;
       return '# memo still available';
