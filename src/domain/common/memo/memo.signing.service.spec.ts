@@ -823,6 +823,15 @@ describe('MemoSigningService', () => {
     );
   });
 
+  it('does not call file-service cleanup for an expired attempt without a snapshot', async () => {
+    await service.releaseExpiredAttemptFiles({
+      id: 'attempt-unprepared',
+      snapshotDocumentId: null,
+    } as any);
+
+    expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+  });
+
   it.each([
     { status: 'pending' },
     { status: 'authorizing' },

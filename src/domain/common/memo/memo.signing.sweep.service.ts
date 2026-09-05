@@ -18,7 +18,9 @@ export class MemoSigningSweepService {
       SWEEP_BATCH_SIZE
     )) {
       if (!(await this.attemptService.expire(attempt))) continue;
-      await this.memoSigningService.releaseExpiredAttemptFiles(attempt);
+      await this.memoSigningService
+        .releaseExpiredAttemptFiles(attempt)
+        .catch(() => undefined);
     }
   }
 }

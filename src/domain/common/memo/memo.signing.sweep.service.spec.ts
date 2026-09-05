@@ -38,28 +38,19 @@ describe('MemoSigningSweepService', () => {
     );
   });
 
-  it('continues the batch when an expired attempt release completes', async () => {
+  it('continues the batch when an expired attempt release fails', async () => {
     attemptService.findExpired.mockResolvedValue([
       expired,
       { id: 'attempt-2', snapshotDocumentId: 'snapshot-2' },
     ]);
     attemptService.expire.mockResolvedValue(true);
+    memoSigningService.releaseExpiredAttemptFiles.mockRejectedValueOnce(
+      new Error('cleanup failed')
+    );
     await service.sweep();
 
     expect(memoSigningService.releaseExpiredAttemptFiles).toHaveBeenCalledTimes(
       2
-    );
-  });
-
-  it('expires an unprepared row without attempting file cleanup', async () => {
-    const unprepared = { id: 'attempt-unprepared', snapshotDocumentId: null };
-    attemptService.findExpired.mockResolvedValue([unprepared]);
-
-    await service.sweep();
-
-    expect(attemptService.expire).toHaveBeenCalledWith(unprepared);
-    expect(memoSigningService.releaseExpiredAttemptFiles).toHaveBeenCalledWith(
-      unprepared
     );
   });
 });

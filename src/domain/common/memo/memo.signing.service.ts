@@ -255,7 +255,8 @@ export class MemoSigningService {
         result.pdf,
         'memo-signed.pdf',
         'application/pdf',
-        // A createdBy value adds creator privileges; attribution stays on attempt.actorId.
+        // DocumentAuthorizationService adds USER_SELF_MANAGEMENT for createdBy;
+        // attribution stays on attempt.actorId without granting document privileges.
         undefined,
         false,
         true

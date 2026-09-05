@@ -99,8 +99,8 @@ describe('ContentSigningController', () => {
       Reflect.getMetadata(
         GUARDS_METADATA,
         ContentSigningController.prototype.getSnapshot
-      )
-    ).toContain(RestGuard);
+      ) ?? []
+    ).toEqual([RestGuard]);
   });
 
   it('completes a browser return with no-store/no-referrer and only the attempt ID', async () => {
@@ -193,14 +193,14 @@ describe('ContentSigningController', () => {
       Reflect.getMetadata(
         GUARDS_METADATA,
         ContentSigningController.prototype.complete
-      )
-    ).toContain(RestGuard);
+      ) ?? []
+    ).toEqual([RestGuard]);
     expect(
       Reflect.getMetadata(
         EXCEPTION_FILTERS_METADATA,
         ContentSigningController.prototype.complete
-      )
-    ).toContain(ContentSigningReturnFilter);
+      ) ?? []
+    ).toEqual([ContentSigningReturnFilter]);
   });
 
   it.each([
