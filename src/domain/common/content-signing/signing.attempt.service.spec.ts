@@ -90,6 +90,27 @@ describe('SigningAttemptService', () => {
     expect(repository.delete).toHaveBeenCalledWith({ memoId: 'memo-1' });
   });
 
+  it('loads an attempt only for its initiating actor', async () => {
+    const attempt = { id: 'attempt-1' } as SigningAttempt;
+    repository.findOneBy!.mockResolvedValue(attempt);
+
+    await expect(
+      service.getForActorOrFail('attempt-1', 'actor-1')
+    ).resolves.toBe(attempt);
+    expect(repository.findOneBy).toHaveBeenCalledWith({
+      id: 'attempt-1',
+      actorId: 'actor-1',
+    });
+  });
+
+  it('fails closed when an attempt is not owned by the actor', async () => {
+    repository.findOneBy!.mockResolvedValue(null);
+
+    await expect(
+      service.getForActorOrFail('attempt-1', 'other-actor')
+    ).rejects.toThrow(ValidationException);
+  });
+
   it('does not query the database for an empty document set', async () => {
     await expect(service.existsForDocumentIDs([])).resolves.toBe(false);
     expect(repository.exist).not.toHaveBeenCalled();
