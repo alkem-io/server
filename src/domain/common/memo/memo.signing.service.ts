@@ -6,12 +6,13 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { SigningAttemptService } from '@domain/common/content-signing/signing.attempt.service';
 import { SigningAttemptStatus } from '@domain/common/content-signing/signing.attempt.status';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { TrustGatewayClient } from '@services/adapters/trust-gateway/trust.gateway.client';
 import { CollaborationDocumentService } from '@services/collaboration-client/collaboration-document.service';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import * as Y from 'yjs';
 import { yjsStateToMarkdown } from './conversion';
 import { IMemo } from './memo.interface';
@@ -29,19 +30,13 @@ export class MemoSigningService {
     private readonly renderer: MemoPdfRenderer,
     private readonly fileServiceAdapter: FileServiceAdapter,
     private readonly trustGatewayClient: TrustGatewayClient,
-    private readonly urlGeneratorService: UrlGeneratorService
+    private readonly urlGeneratorService: UrlGeneratorService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async prepareMemoSigning(memoId: string, actor: ActorContext) {
     const memo = await this.getAuthorizedMemo(memoId, actor);
-    if (
-      !actor.authenticationID ||
-      !(await this.kratosService.getCleverbaseSubject(actor.authenticationID))
-    )
-      throw new ValidationException(
-        'Link a Cleverbase identity before signing this memo',
-        LogContext.MEMOS
-      );
+    await this.requireCleverbaseSubject(actor);
     const storageBucketId = memo.profile?.storageBucket?.id;
     if (!storageBucketId)
       throw new ValidationException(
@@ -129,25 +124,17 @@ export class MemoSigningService {
         'Signing preview is not ready',
         LogContext.MEMOS
       );
-    const now = new Date();
     if (
       attempt.status !== SigningAttemptStatus.PENDING ||
       attempt.createdDate.getTime() <=
-        now.getTime() - SigningAttemptService.PREPARATION_WINDOW_MS
+        Date.now() - SigningAttemptService.PREPARATION_WINDOW_MS
     )
       throw new ValidationException(
         'Signing preview has expired',
         LogContext.MEMOS
       );
     await this.getAuthorizedMemo(attempt.memoId, actor);
-    const subject = actor.authenticationID
-      ? await this.kratosService.getCleverbaseSubject(actor.authenticationID)
-      : undefined;
-    if (!subject)
-      throw new ValidationException(
-        'Link a Cleverbase identity before signing this memo',
-        LogContext.MEMOS
-      );
+    const subject = await this.requireCleverbaseSubject(actor);
     const snapshot = await this.fileServiceAdapter.getDocumentContent(
       attempt.snapshotDocumentId
     );
@@ -163,21 +150,16 @@ export class MemoSigningService {
     const clientStateHash = createHash('sha256')
       .update(clientState)
       .digest('hex');
-    if (
-      !(await this.attemptService.claimStart(
-        attemptId,
-        actor.actorID,
-        clientStateHash,
-        now
-      ))
-    )
+    if (!(await this.attemptService.claimStart(attemptId, clientStateHash)))
       throw this.freshAttemptRequired();
+    let stage: 'gateway-start' | 'gateway-start-persistence' = 'gateway-start';
     try {
       const start = await this.trustGatewayClient.start(
         snapshot,
         subject,
         clientState
       );
+      stage = 'gateway-start-persistence';
       if (
         !(await this.attemptService.recordGatewayStart(
           attemptId,
@@ -188,7 +170,19 @@ export class MemoSigningService {
       )
         throw this.freshAttemptRequired();
       return { authorizeUrl: start.redirectUrl };
-    } catch {
+    } catch (error) {
+      const status = (error as { response?: { status?: unknown } })?.response
+        ?.status;
+      this.logger.error?.(
+        {
+          message: 'Memo signing start failed after the attempt was claimed',
+          attemptId,
+          stage,
+          status: typeof status === 'number' ? status : undefined,
+        },
+        undefined,
+        LogContext.MEMOS
+      );
       throw this.freshAttemptRequired();
     }
   }
@@ -212,6 +206,17 @@ export class MemoSigningService {
   private freshAttemptRequired(): ValidationException {
     return new ValidationException(
       'Signing was already started; prepare a fresh signing attempt',
+      LogContext.MEMOS
+    );
+  }
+
+  private async requireCleverbaseSubject(actor: ActorContext): Promise<string> {
+    const subject = await (actor.authenticationID
+      ? this.kratosService.getCleverbaseSubject(actor.authenticationID)
+      : undefined);
+    if (subject) return subject;
+    throw new ValidationException(
+      'Link a Cleverbase identity before signing this memo',
       LogContext.MEMOS
     );
   }

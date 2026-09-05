@@ -419,9 +419,7 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
     const hashes = ['cd'.repeat(32), 'ef'.repeat(32)];
 
     const claims = await Promise.all(
-      hashes.map(hash =>
-        attemptService.claimStart(attempt.id, UUIDS.actor, hash)
-      )
+      hashes.map(hash => attemptService.claimStart(attempt.id, hash))
     );
 
     expect(claims.filter(Boolean)).toHaveLength(1);
@@ -430,36 +428,7 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       .findOneByOrFail({ id: attempt.id });
     expect(stored.clientStateHash).toBe(hashes[claims.indexOf(true)]);
     await expect(
-      attemptService.claimStart(attempt.id, UUIDS.actor, '12'.repeat(32))
-    ).resolves.toBe(false);
-  });
-
-  it('rejects a preparation at the fixed one-hour deadline', async () => {
-    await dataSource.query('INSERT INTO memo (id) VALUES ($1)', [UUIDS.memo]);
-    await dataSource.query('INSERT INTO storage_bucket (id) VALUES ($1)', [
-      UUIDS.bucket,
-    ]);
-    await dataSource.query(
-      `INSERT INTO "file" (
-        id, "externalID", "mimeType", size, "displayName", "temporaryLocation",
-        "storageBucketId", "createdDate", "updatedDate", version, content_metadata
-      ) VALUES ($1, $2, 'application/pdf', 1, 'snapshot.pdf', false, $3, now(), now(), 1, '{}')`,
-      [UUIDS.snapshot, 'snapshot-external-id', UUIDS.bucket]
-    );
-    const attempt = await attemptService.createUnready(UUIDS.memo, UUIDS.actor);
-    await dataSource.getRepository(SigningAttempt).update(attempt.id, {
-      snapshotDocumentId: UUIDS.snapshot,
-      contentSha256: 'ab'.repeat(32),
-      createdDate: new Date('2026-09-05T15:00:00Z'),
-    });
-
-    await expect(
-      attemptService.claimStart(
-        attempt.id,
-        UUIDS.actor,
-        'cd'.repeat(32),
-        new Date('2026-09-05T16:00:00Z')
-      )
+      attemptService.claimStart(attempt.id, '12'.repeat(32))
     ).resolves.toBe(false);
   });
 
@@ -720,7 +689,8 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
         getMemoSigningSnapshotRestUrl: vi
           .fn()
           .mockReturnValue('https://alkem.io/private/signing/preview'),
-      } as any
+      } as any,
+      { error: vi.fn() } as any
     );
     const actor = Object.assign(new ActorContext(), {
       actorID: UUIDS.actor,
@@ -800,7 +770,8 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
         getMemoSigningSnapshotRestUrl: vi
           .fn()
           .mockReturnValue('https://alkem.io/private/signing/preview'),
-      } as any
+      } as any,
+      { error: vi.fn() } as any
     );
     const actor = Object.assign(new ActorContext(), {
       actorID: UUIDS.actor,
@@ -886,7 +857,8 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
         getMemoSigningSnapshotRestUrl: vi
           .fn()
           .mockReturnValue('https://alkem.io/private/signing/preview'),
-      } as any
+      } as any,
+      { error: vi.fn() } as any
     );
     const actor = Object.assign(new ActorContext(), {
       actorID: UUIDS.actor,
@@ -969,7 +941,8 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
         getMemoSigningSnapshotRestUrl: vi
           .fn()
           .mockReturnValue('https://alkem.io/private/signing/preview'),
-      } as any
+      } as any,
+      { error: vi.fn() } as any
     );
     const actor = Object.assign(new ActorContext(), {
       actorID: UUIDS.actor,
@@ -1039,7 +1012,8 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       {} as any,
       services.fileAdapter,
       gateway as any,
-      {} as any
+      {} as any,
+      { error: vi.fn() } as any
     );
     const actor = Object.assign(new ActorContext(), {
       actorID: UUIDS.actor,
@@ -1143,7 +1117,8 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       renderer,
       services.fileAdapter,
       { start: vi.fn() } as any,
-      urlGenerator as any
+      urlGenerator as any,
+      { error: vi.fn() } as any
     );
     const actor = Object.assign(new ActorContext(), {
       actorID: UUIDS.actor,

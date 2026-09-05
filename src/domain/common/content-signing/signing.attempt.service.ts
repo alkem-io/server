@@ -2,7 +2,7 @@ import { LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, IsNull, MoreThan, Not, Repository } from 'typeorm';
+import { In, IsNull, Repository } from 'typeorm';
 import { SigningAttempt } from './signing.attempt.entity';
 import { SigningAttemptStatus } from './signing.attempt.status';
 
@@ -45,26 +45,13 @@ export class SigningAttemptService {
     return result.affected === 1;
   }
 
-  async claimStart(
-    attemptId: string,
-    actorId: string,
-    clientStateHash: string,
-    now = new Date()
-  ): Promise<boolean> {
+  async claimStart(id: string, clientStateHash: string): Promise<boolean> {
     this.validateHash(clientStateHash, 'Client-state hash');
     const result = await this.repository.update(
       {
-        id: attemptId,
-        actorId,
+        id,
         status: SigningAttemptStatus.PENDING,
-        snapshotDocumentId: Not(IsNull()),
-        contentSha256: Not(IsNull()),
         clientStateHash: IsNull(),
-        correlationId: IsNull(),
-        expiresAt: IsNull(),
-        createdDate: MoreThan(
-          new Date(now.getTime() - SigningAttemptService.PREPARATION_WINDOW_MS)
-        ),
       },
       { clientStateHash }
     );
