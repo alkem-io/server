@@ -407,8 +407,8 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       `INSERT INTO "file" (
         id, "externalID", "mimeType", size, "displayName", "temporaryLocation",
         "storageBucketId", "createdDate", "updatedDate", version, content_metadata
-      ) VALUES ($1, $1, 'application/pdf', 1, 'snapshot.pdf', false, $2, now(), now(), 1, '{}')`,
-      [UUIDS.snapshot, UUIDS.bucket]
+      ) VALUES ($1, $2, 'application/pdf', 1, 'snapshot.pdf', false, $3, now(), now(), 1, '{}')`,
+      [UUIDS.snapshot, 'snapshot-external-id', UUIDS.bucket]
     );
     const attempt = await attemptService.createUnready(UUIDS.memo, UUIDS.actor);
     await attemptService.finalizePrepared(
@@ -443,8 +443,8 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       `INSERT INTO "file" (
         id, "externalID", "mimeType", size, "displayName", "temporaryLocation",
         "storageBucketId", "createdDate", "updatedDate", version, content_metadata
-      ) VALUES ($1, $1, 'application/pdf', 1, 'snapshot.pdf', false, $2, now(), now(), 1, '{}')`,
-      [UUIDS.snapshot, UUIDS.bucket]
+      ) VALUES ($1, $2, 'application/pdf', 1, 'snapshot.pdf', false, $3, now(), now(), 1, '{}')`,
+      [UUIDS.snapshot, 'snapshot-external-id', UUIDS.bucket]
     );
     const attempt = await attemptService.createUnready(UUIDS.memo, UUIDS.actor);
     await dataSource.getRepository(SigningAttempt).update(attempt.id, {
@@ -715,6 +715,7 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
         }),
       } as any,
       services.fileAdapter,
+      { start: vi.fn() } as any,
       {
         getMemoSigningSnapshotRestUrl: vi
           .fn()
@@ -794,6 +795,7 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       { read: vi.fn().mockResolvedValue('# memo') } as any,
       { render: vi.fn().mockResolvedValue(pdf) } as any,
       services.fileAdapter,
+      { start: vi.fn() } as any,
       {
         getMemoSigningSnapshotRestUrl: vi
           .fn()
@@ -879,6 +881,7 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
         render: vi.fn().mockResolvedValue(Buffer.from('%PDF-live-read')),
       } as any,
       services.fileAdapter,
+      { start: vi.fn() } as any,
       {
         getMemoSigningSnapshotRestUrl: vi
           .fn()
@@ -961,6 +964,7 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       { read: vi.fn().mockResolvedValue('# memo') } as any,
       { render: vi.fn().mockResolvedValue(pdf) } as any,
       services.fileAdapter,
+      { start: vi.fn() } as any,
       {
         getMemoSigningSnapshotRestUrl: vi
           .fn()
@@ -1065,6 +1069,7 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       } as any,
       renderer,
       services.fileAdapter,
+      { start: vi.fn() } as any,
       urlGenerator as any
     );
     const actor = Object.assign(new ActorContext(), {

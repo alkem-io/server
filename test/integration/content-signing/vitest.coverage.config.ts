@@ -16,6 +16,7 @@ export default defineConfig({
         'src/domain/common/content-signing/signing.attempt.entity.ts',
         'src/domain/common/content-signing/signing.attempt.service.ts',
         'src/domain/common/content-signing/signing.attempt.status.ts',
+        'src/domain/common/memo/dto/memo.signing.continue.result.ts',
         'src/domain/common/memo/dto/memo.signing.prepare.result.ts',
         'src/domain/common/memo/memo.module.ts',
         'src/domain/common/memo/memo.pdf.renderer.ts',
@@ -27,6 +28,7 @@ export default defineConfig({
         'src/domain/storage/storage-bucket/storage.bucket.service.ts',
         'src/migrations/1788609600000-CreateSigningAttempt.ts',
         'src/services/adapters/file-service-adapter/file.service.adapter.ts',
+        'src/services/adapters/trust-gateway/trust.gateway.client.ts',
         'src/services/infrastructure/{kratos,url-generator}/*.service.ts',
       ],
       reporter: ['text', 'json'],
@@ -56,6 +58,12 @@ export default defineConfig({
           branches: 95,
         },
         'src/domain/common/memo/memo.signing.service.ts': {
+          lines: 95,
+          statements: 95,
+          functions: 95,
+          branches: 95,
+        },
+        'src/services/adapters/trust-gateway/trust.gateway.client.ts': {
           lines: 95,
           statements: 95,
           functions: 95,

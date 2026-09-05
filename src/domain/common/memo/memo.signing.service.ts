@@ -1,12 +1,14 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { SigningAttemptService } from '@domain/common/content-signing/signing.attempt.service';
+import { SigningAttemptStatus } from '@domain/common/content-signing/signing.attempt.status';
 import { Injectable } from '@nestjs/common';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
+import { TrustGatewayClient } from '@services/adapters/trust-gateway/trust.gateway.client';
 import { CollaborationDocumentService } from '@services/collaboration-client/collaboration-document.service';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator';
@@ -26,6 +28,7 @@ export class MemoSigningService {
     private readonly collaborationDocumentService: CollaborationDocumentService,
     private readonly renderer: MemoPdfRenderer,
     private readonly fileServiceAdapter: FileServiceAdapter,
+    private readonly trustGatewayClient: TrustGatewayClient,
     private readonly urlGeneratorService: UrlGeneratorService
   ) {}
 
@@ -113,6 +116,83 @@ export class MemoSigningService {
     );
   }
 
+  async continueMemoSigning(
+    attemptId: string,
+    actor: ActorContext
+  ): Promise<{ authorizeUrl: string }> {
+    const attempt = await this.attemptService.getForActorOrFail(
+      attemptId,
+      actor.actorID
+    );
+    if (!attempt.snapshotDocumentId || !attempt.contentSha256)
+      throw new ValidationException(
+        'Signing preview is not ready',
+        LogContext.MEMOS
+      );
+    const now = new Date();
+    if (
+      attempt.status !== SigningAttemptStatus.PENDING ||
+      attempt.createdDate.getTime() <=
+        now.getTime() - SigningAttemptService.PREPARATION_WINDOW_MS
+    )
+      throw new ValidationException(
+        'Signing preview has expired',
+        LogContext.MEMOS
+      );
+    await this.getAuthorizedMemo(attempt.memoId, actor);
+    const subject = actor.authenticationID
+      ? await this.kratosService.getCleverbaseSubject(actor.authenticationID)
+      : undefined;
+    if (!subject)
+      throw new ValidationException(
+        'Link a Cleverbase identity before signing this memo',
+        LogContext.MEMOS
+      );
+    const snapshot = await this.fileServiceAdapter.getDocumentContent(
+      attempt.snapshotDocumentId
+    );
+    if (
+      createHash('sha256').update(snapshot).digest('hex') !==
+      attempt.contentSha256
+    )
+      throw new ValidationException(
+        'The signing preview bytes have changed',
+        LogContext.MEMOS
+      );
+    const clientState = randomBytes(32).toString('base64url');
+    const clientStateHash = createHash('sha256')
+      .update(clientState)
+      .digest('hex');
+    if (
+      !(await this.attemptService.claimStart(
+        attemptId,
+        actor.actorID,
+        clientStateHash,
+        now
+      ))
+    )
+      throw this.freshAttemptRequired();
+    try {
+      const start = await this.trustGatewayClient.start(
+        snapshot,
+        subject,
+        clientState
+      );
+      if (
+        !(await this.attemptService.recordGatewayStart(
+          attemptId,
+          clientStateHash,
+          start.correlationId,
+          start.expiresAt
+        ))
+      )
+        throw this.freshAttemptRequired();
+      return { authorizeUrl: start.redirectUrl };
+    } catch {
+      throw this.freshAttemptRequired();
+    }
+  }
+
   private async getAuthorizedMemo(
     memoId: string,
     actor: ActorContext
@@ -127,5 +207,12 @@ export class MemoSigningService {
       `sign memo: ${memoId}`
     );
     return memo;
+  }
+
+  private freshAttemptRequired(): ValidationException {
+    return new ValidationException(
+      'Signing was already started; prepare a fresh signing attempt',
+      LogContext.MEMOS
+    );
   }
 }

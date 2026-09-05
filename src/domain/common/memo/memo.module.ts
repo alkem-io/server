@@ -6,9 +6,11 @@ import { UserModule } from '@domain/community/user/user.module';
 import { ProfileDocumentsModule } from '@domain/profile-documents/profile.documents.module';
 import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
+import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { FileServiceAdapterModule } from '@services/adapters/file-service-adapter/file.service.adapter.module';
+import { TrustGatewayClient } from '@services/adapters/trust-gateway/trust.gateway.client';
 import { CollaborationClientModule } from '@services/collaboration-client/collaboration-client.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
@@ -39,6 +41,7 @@ import { MemoSigningService } from './memo.signing.service';
     CollaborationMetadataModule,
     ContentSigningModule,
     FileServiceAdapterModule,
+    HttpModule,
     CollaborationClientModule,
     DocumentModule,
     KratosModule,
@@ -51,6 +54,7 @@ import { MemoSigningService } from './memo.signing.service';
     MemoResolverFields,
     MemoPdfRenderer,
     MemoSigningService,
+    TrustGatewayClient,
   ],
   exports: [
     MemoService,

@@ -83,8 +83,23 @@ describe('TrustGatewayClient', () => {
     },
     {
       redirectUrl: 'https://connect.acc.cleverbase.com/authorize',
+      correlationId: '',
+      expiresAt: '2026-09-05T16:30:00Z',
+    },
+    {
+      redirectUrl: 'not a URL',
+      correlationId: 'correlation-1',
+      expiresAt: '2026-09-05T16:30:00Z',
+    },
+    {
+      redirectUrl: 'https://connect.acc.cleverbase.com/authorize',
       correlationId: 'correlation-1',
       expiresAt: 'not-a-date',
+    },
+    {
+      redirectUrl: 'https://connect.acc.cleverbase.com/authorize',
+      correlationId: 'correlation-1',
+      expiresAt: '2026-13-05T16:30:00Z',
     },
   ])('rejects malformed start response %# without exposing it', async response => {
     responses.push(response);

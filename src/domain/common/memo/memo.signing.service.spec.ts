@@ -534,6 +534,38 @@ describe('MemoSigningService', () => {
     expect(trustGatewayClient.start).not.toHaveBeenCalled();
   });
 
+  it('lets only the winning concurrent claim start the gateway', async () => {
+    const snapshot = Buffer.from('%PDF-exact-preview');
+    attemptService.getForActorOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      snapshotDocumentId: 'snapshot-1',
+      contentSha256: createHash('sha256').update(snapshot).digest('hex'),
+      createdDate: new Date(),
+    });
+    fileServiceAdapter.getDocumentContent.mockResolvedValue(snapshot);
+    let claimed = false;
+    attemptService.claimStart.mockImplementation(async () => {
+      if (claimed) return false;
+      claimed = true;
+      return true;
+    });
+
+    const results = await Promise.allSettled([
+      service.continueMemoSigning('attempt-1', actor),
+      service.continueMemoSigning('attempt-1', actor),
+    ]);
+
+    expect(
+      results.filter(result => result.status === 'fulfilled')
+    ).toHaveLength(1);
+    expect(results.filter(result => result.status === 'rejected')).toHaveLength(
+      1
+    );
+    expect(trustGatewayClient.start).toHaveBeenCalledOnce();
+  });
+
   it.each([
     'lost gateway response',
     'failed start persistence',

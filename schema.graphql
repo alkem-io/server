@@ -4105,6 +4105,10 @@ type Memo {
   updatedDate: DateTime!
 }
 
+type MemoSigningContinueResult {
+  authorizeUrl: String!
+}
+
 type MemoSigningPrepareResult {
   attemptId: UUID!
   previewUrl: String!
@@ -4397,6 +4401,8 @@ type Mutation {
   castPollVote(voteData: CastPollVoteInput!): Poll!
   """Deletes collections nameID-..."""
   cleanupCollections: MigrateEmbeddings!
+  """Starts signing the prepared Memo copy."""
+  continueMemoSigning(attemptID: UUID!): MemoSigningContinueResult!
   """Move an L1 Space up in the hierarchy, to be a L0 Space."""
   convertSpaceL1ToSpaceL0(convertData: ConvertSpaceL1ToSpaceL0Input!): Space!
   """

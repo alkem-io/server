@@ -13,6 +13,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager } from 'typeorm';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { DeleteMemoInput } from './dto/memo.dto.delete';
+import { MemoSigningContinueResult } from './dto/memo.signing.continue.result';
 import { MemoSigningPrepareResult } from './dto/memo.signing.prepare.result';
 import { IMemo } from './memo.interface';
 import { MemoService } from './memo.service';
@@ -42,6 +43,16 @@ export class MemoResolverMutations {
     @Args('memoID', { type: () => UUID }) memoId: string
   ): Promise<MemoSigningPrepareResult> {
     return this.memoSigningService.prepareMemoSigning(memoId, actor);
+  }
+
+  @Mutation(() => MemoSigningContinueResult, {
+    description: 'Starts signing the prepared Memo copy.',
+  })
+  continueMemoSigning(
+    @CurrentActor() actor: ActorContext,
+    @Args('attemptID', { type: () => UUID }) attemptId: string
+  ): Promise<MemoSigningContinueResult> {
+    return this.memoSigningService.continueMemoSigning(attemptId, actor);
   }
 
   @Mutation(() => IMemo, {
