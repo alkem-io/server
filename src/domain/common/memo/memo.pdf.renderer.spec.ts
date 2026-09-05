@@ -9,6 +9,7 @@ import MarkdownIt from 'markdown-it';
 import { parseOffice } from 'officeparser';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import sharp from 'sharp';
+import { markdownToYjsV2State, yjsStateToMarkdown } from './conversion';
 import { MemoPdfRenderer } from './memo.pdf.renderer';
 
 const pdfjsRequire = createRequire(require.resolve('pdfjs-dist/package.json'));
@@ -214,7 +215,7 @@ describe('MemoPdfRenderer', () => {
       actor,
       { id: 'image-auth' },
       AuthorizationPrivilege.READ,
-      expect.any(String)
+      'read signing image'
     );
     expect(fileServiceAdapter.getDocumentContent).toHaveBeenCalledWith(
       'image-1'
@@ -438,5 +439,20 @@ describe('MemoPdfRenderer', () => {
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
+  });
+
+  it('preserves authored text in unsupported wrappers without enabling embedded content', async () => {
+    const authoredMarkdown =
+      '<section><div>Agreed <span>payment terms</span></div></section><object>hidden object text</object>';
+    const projectedMarkdown = yjsStateToMarkdown(
+      Buffer.from(markdownToYjsV2State(authoredMarkdown))
+    );
+    expect(projectedMarkdown).toBe(authoredMarkdown);
+    const pdf = await renderer.render(projectedMarkdown, 'bucket-1', actor);
+
+    const text = await extractText(pdf);
+    expect(text).toContain('Agreed payment terms');
+    expect(text).toContain('Unsupported content: object');
+    expect(text).not.toContain('hidden object text');
   });
 });

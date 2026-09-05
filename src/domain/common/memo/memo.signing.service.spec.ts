@@ -164,7 +164,7 @@ describe('MemoSigningService', () => {
       actor,
       memo.authorization,
       AuthorizationPrivilege.CONTRIBUTE,
-      expect.any(String)
+      'sign memo'
     );
     expect(collaborationDocumentService.read).toHaveBeenCalledWith(
       memo.id,
@@ -351,6 +351,15 @@ describe('MemoSigningService', () => {
 
     await expect(service.prepareMemoSigning(memo.id, actor)).rejects.toThrow(
       /memo was deleted/i
+    );
+    expect(logger.error).toHaveBeenCalledWith(
+      {
+        message: 'Memo signing snapshot cleanup failed',
+        attemptId: 'attempt-1',
+        documentId: 'snapshot-1',
+      },
+      undefined,
+      LogContext.MEMOS
     );
   });
 

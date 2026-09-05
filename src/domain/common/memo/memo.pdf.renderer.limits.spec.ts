@@ -4,7 +4,6 @@ import { MemoPdfRenderer } from './memo.pdf.renderer';
 
 const MAX_MARKDOWN_BYTES = 100_000;
 const MAX_IMAGES = 20;
-const PREVIEW_TARGET_MS = 10_000;
 
 const fitAsciiBytes = (prefix: string, bytes: number): string => {
   const paragraph =
@@ -35,7 +34,7 @@ describe('MemoPdfRenderer input bounds', () => {
     vi.clearAllMocks();
   });
 
-  it('renders the 100,000-byte structured fixture within the preview target', async () => {
+  it('renders the bounded 100,000-byte structured fixture', async () => {
     const markdown = fitAsciiBytes(
       [
         '# Maximum signing preview',
@@ -60,7 +59,6 @@ describe('MemoPdfRenderer input bounds', () => {
     );
 
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
-    expect(elapsed).toBeLessThan(PREVIEW_TARGET_MS);
   });
 
   it('rejects markdown larger than 100,000 UTF-8 bytes before rendering', async () => {

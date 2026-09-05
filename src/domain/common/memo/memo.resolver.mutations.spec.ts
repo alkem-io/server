@@ -2,12 +2,15 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { MemoSigningContinueInput } from '@domain/common/memo/dto/memo.signing.continue.input';
+import { MemoSigningPrepareInput } from '@domain/common/memo/dto/memo.signing.prepare.input';
 import { IMemo } from '@domain/common/memo/memo.interface';
 import { MemoResolverMutations } from '@domain/common/memo/memo.resolver.mutations';
 import { MemoService } from '@domain/common/memo/memo.service';
 import { MemoAuthorizationService } from '@domain/common/memo/memo.service.authorization';
 import { MemoSigningService } from '@domain/common/memo/memo.signing.service';
 import { LoggerService } from '@nestjs/common';
+import { validate } from 'class-validator';
 import { EntityManager } from 'typeorm';
 import { type Mocked, vi } from 'vitest';
 
@@ -78,7 +81,7 @@ describe('MemoResolverMutations', () => {
     memoSigningService.prepareMemoSigning.mockResolvedValue(result);
 
     await expect(
-      resolver.prepareMemoSigning(actorContext, 'memo-1')
+      resolver.prepareMemoSigning(actorContext, { memoID: 'memo-1' })
     ).resolves.toBe(result);
     expect(memoSigningService.prepareMemoSigning).toHaveBeenCalledWith(
       'memo-1',
@@ -95,13 +98,24 @@ describe('MemoResolverMutations', () => {
     memoSigningService.continueMemoSigning.mockResolvedValue(result);
 
     await expect(
-      resolver.continueMemoSigning(actorContext, 'attempt-1')
+      resolver.continueMemoSigning(actorContext, { attemptID: 'attempt-1' })
     ).resolves.toBe(result);
     expect(memoSigningService.continueMemoSigning).toHaveBeenCalledWith(
       'attempt-1',
       actorContext
     );
     expect(resolver.continueMemoSigning).toHaveLength(2);
+  });
+
+  it.each([
+    [MemoSigningPrepareInput, 'memoID'],
+    [MemoSigningContinueInput, 'attemptID'],
+  ])('validates %s as a UUID input', async (Input, field) => {
+    const input = Object.assign(new Input(), { [field]: 'not-a-uuid' });
+
+    await expect(validate(input)).resolves.toEqual([
+      expect.objectContaining({ property: field }),
+    ]);
   });
 
   describe('updateMemo', () => {
