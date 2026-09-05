@@ -193,7 +193,7 @@ export class StorageBucketService {
     const documentIDs = documents?.map(document => document.id) ?? [];
     if (await this.signingAttemptService.existsForDocumentIDs(documentIDs)) {
       throw new ValidationException(
-        'Storage contains a document retained by an active signing attempt',
+        'Storage contains a document retained by a signing attempt',
         LogContext.STORAGE_BUCKET
       );
     }

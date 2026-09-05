@@ -3,7 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockType } from '@test/utils/mock.type';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { type Mock } from 'vitest';
 import { SigningAttempt } from './signing.attempt.entity';
 import { SigningAttemptService } from './signing.attempt.service';
@@ -27,17 +27,15 @@ describe('SigningAttemptService', () => {
 
   it('creates an unready pending attempt without document or gateway fields', async () => {
     const created = { id: 'attempt-1' } as SigningAttempt;
-    repository.create!.mockReturnValue(created);
     repository.save!.mockResolvedValue(created);
 
     const result = await service.createUnready('memo-1', 'actor-1');
 
-    expect(repository.create).toHaveBeenCalledWith({
+    expect(repository.save).toHaveBeenCalledWith({
       memoId: 'memo-1',
       actorId: 'actor-1',
       status: SigningAttemptStatus.PENDING,
     });
-    expect(repository.save).toHaveBeenCalledWith(created);
     expect(result).toBe(created);
   });
 
@@ -52,11 +50,11 @@ describe('SigningAttemptService', () => {
     );
 
     expect(repository.update).toHaveBeenCalledWith(
-      expect.objectContaining({
+      {
         id: 'attempt-1',
         status: SigningAttemptStatus.PENDING,
-        snapshotDocumentId: expect.anything(),
-      }),
+        snapshotDocumentId: IsNull(),
+      },
       {
         snapshotDocumentId: 'snapshot-1',
         contentSha256,

@@ -9,7 +9,7 @@ export default defineConfig({
     ...base.test,
     coverage: {
       provider: 'v8',
-      reportsDirectory: './coverage-ci',
+      reportsDirectory: './coverage-ci/content-signing',
       exclude: ['**/*.spec.ts'],
       include: [
         'src/domain/common/content-signing/content.signing.module.ts',
@@ -21,7 +21,6 @@ export default defineConfig({
         'src/domain/storage/storage-bucket/storage.bucket.module.ts',
         'src/domain/storage/storage-bucket/storage.bucket.service.ts',
         'src/migrations/1788609600000-CreateSigningAttempt.ts',
-        'test/integration/content-signing/report-changed-coverage.mjs',
       ],
       reporter: ['text', 'json'],
       thresholds: {
@@ -32,12 +31,6 @@ export default defineConfig({
           branches: 95,
         },
         'src/migrations/1788609600000-CreateSigningAttempt.ts': {
-          lines: 95,
-          statements: 95,
-          functions: 95,
-          branches: 95,
-        },
-        'test/integration/content-signing/report-changed-coverage.mjs': {
           lines: 95,
           statements: 95,
           functions: 95,

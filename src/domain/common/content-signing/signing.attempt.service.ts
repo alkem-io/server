@@ -19,13 +19,11 @@ export class SigningAttemptService {
     memoId: string,
     actorId: string
   ): Promise<SigningAttempt> {
-    return this.repository.save(
-      this.repository.create({
-        memoId,
-        actorId,
-        status: SigningAttemptStatus.PENDING,
-      })
-    );
+    return this.repository.save({
+      memoId,
+      actorId,
+      status: SigningAttemptStatus.PENDING,
+    });
   }
 
   async finalizePrepared(
