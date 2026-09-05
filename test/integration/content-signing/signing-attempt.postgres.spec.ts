@@ -1,5 +1,4 @@
 import { createHash } from 'node:crypto';
-import { LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -18,6 +17,7 @@ import { HttpService } from '@nestjs/axios';
 import { LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
+import { DocumentPurgingError } from '@services/collaboration-client/collaboration-document.session';
 import { CreateSigningAttempt1788609600000 } from '@src/migrations/1788609600000-CreateSigningAttempt';
 import { prosemirrorJSONToYDoc } from '@tiptap/y-tiptap';
 import sharp from 'sharp';
@@ -832,7 +832,7 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
     await expect(rowExists('memo', UUIDS.memo)).resolves.toBe(false);
   });
 
-  it('fails before upload when MemoService deletion wins after attempt insert and before live read', async () => {
+  it('models the collaboration read failure when deletion wins after attempt insert', async () => {
     await seedDeletionGraph();
     const services = createActualDeletionServices(dataSource, attemptService);
     vi.spyOn(services.memo, 'getMemoOrFail').mockResolvedValue(
@@ -855,11 +855,16 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
         return attempt;
       }
     );
-    const liveReadFailure = new ValidationException(
-      'The memo live document is unavailable',
-      LogContext.MEMOS
-    );
-    const read = vi.fn().mockRejectedValue(liveReadFailure);
+    const liveReadFailure = new DocumentPurgingError(UUIDS.memo);
+    // Modelled collaboration boundary: the real document.deleted path purges the
+    // room. collaboration-document.session.ts:186-189 and :499-501 translate
+    // WS close 1008 "document deleted" or session-end "document-deleted" into
+    // DocumentPurgingError. This PG/file-service harness has no collaboration
+    // service or RabbitMQ; checkpoint 6 verifies that live path through quickstart.
+    const read = vi.fn(async () => {
+      if (!(await rowExists('memo', UUIDS.memo))) throw liveReadFailure;
+      return '# memo still available';
+    });
     const upload = vi.spyOn(
       services.fileAdapter,
       'createInternalDocumentInBucket'
@@ -870,7 +875,9 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       attemptService,
       { getCleverbaseSubject: vi.fn().mockResolvedValue('subject') } as any,
       { read } as any,
-      { render: vi.fn() } as any,
+      {
+        render: vi.fn().mockResolvedValue(Buffer.from('%PDF-live-read')),
+      } as any,
       services.fileAdapter,
       {
         getMemoSigningSnapshotRestUrl: vi
