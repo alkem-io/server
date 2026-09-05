@@ -100,7 +100,7 @@ search:
   collabora_document_max_source_size: ${SEARCH_COLLABORA_DOCUMENT_MAX_SOURCE_SIZE}:15728640
 
 trustGateway:
-  url: ${TRUST_GATEWAY_URL}:http://trust-gateway:8080
+  url: ${TRUST_GATEWAY_URL}:http://localhost:8080
 
 licensing:
   wingback:

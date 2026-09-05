@@ -43,6 +43,40 @@ services:
         source: ./.build/traefik/
         target: /etc/traefik/
 
+  trust-gateway:
+    image: alkemio/trust-gateway@sha256:8dd4c44ed575fb7b3efabc9516f0df6f29ae4462ca859aa7978b05752759694b
+    depends_on:
+      - cleverbase-refmock
+    environment:
+      - TRUST_GATEWAY_MODE=fixtures
+      - TRUST_GATEWAY_ENV=acceptance
+      - TRUST_GATEWAY_CSC_API=v1_rsa
+      - TRUST_GATEWAY_CLIENT_ID=trust-gateway-fixtures
+      - TRUST_GATEWAY_CLIENT_SECRET=fixtures
+      - TRUST_GATEWAY_REDIRECT_URI=http://localhost:3000/oauth/cleverbase/callback
+      - TRUST_GATEWAY_RETURN_URL=http://localhost:3000/api/public/rest/content-signing/complete
+      - TRUST_GATEWAY_AUTH_DISABLED=true
+      - TRUST_GATEWAY_DEFAULT_CONFORMANCE=B-B
+      - TRUST_GATEWAY_SESSION_TTL=15m
+      - TRUST_GATEWAY_LISTEN=:8080
+      - TRUST_GATEWAY_BASE_URL=http://cleverbase-refmock:9000
+      - TRUST_GATEWAY_PUBLIC_BASE_URL=http://localhost:9000
+      - TRUST_GATEWAY_TSA_URL=http://cleverbase-refmock:9000/tsr
+    restart: unless-stopped
+    networks:
+      - alkemio_dev_net
+    ports:
+      # The server runs on the host; loopback keeps private /v1 routes off the LAN.
+      - '127.0.0.1:8080:8080'
+
+  cleverbase-refmock:
+    image: ghcr.io/alkem-io/cleverbase-refmock@sha256:271f70ee82e8114c0fc03f45788512d5d8f54a9a4fb3c3d7b33057781233fee2
+    restart: unless-stopped
+    networks:
+      - alkemio_dev_net
+    ports:
+      - '127.0.0.1:9000:9000'
+
   kratos-migrate:
     container_name: alkemio_dev_kratos_migrate
     image: oryd/kratos:v26.2.0
