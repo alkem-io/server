@@ -20,14 +20,14 @@ export default defineConfig({
         'src/domain/common/memo/memo.module.ts',
         'src/domain/common/memo/memo.pdf.renderer.ts',
         'src/domain/common/memo/memo.resolver.mutations.ts',
-        'src/domain/common/memo/memo.signing.controller.ts',
+        'src/services/api-rest/content-signing/*.ts',
         'src/domain/common/memo/memo.signing.service.ts',
         'src/domain/common/memo/memo.service.ts',
         'src/domain/storage/storage-bucket/storage.bucket.module.ts',
         'src/domain/storage/storage-bucket/storage.bucket.service.ts',
         'src/migrations/1788609600000-CreateSigningAttempt.ts',
         'src/services/adapters/file-service-adapter/file.service.adapter.ts',
-        'src/services/infrastructure/kratos/kratos.service.ts',
+        'src/services/infrastructure/{kratos,url-generator}/*.service.ts',
       ],
       reporter: ['text', 'json'],
       thresholds: {
@@ -49,7 +49,7 @@ export default defineConfig({
           functions: 95,
           branches: 95,
         },
-        'src/domain/common/memo/memo.signing.controller.ts': {
+        'src/services/api-rest/content-signing/content.signing.controller.ts': {
           lines: 95,
           statements: 95,
           functions: 95,

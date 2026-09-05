@@ -1,9 +1,13 @@
+import { createHash } from 'node:crypto';
 import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { SigningAttempt } from '@domain/common/content-signing/signing.attempt.entity';
 import { SigningAttemptService } from '@domain/common/content-signing/signing.attempt.service';
 import { SigningAttemptStatus } from '@domain/common/content-signing/signing.attempt.status';
+import { markdownSchema } from '@domain/common/memo/conversion/markdown.schema';
+import { yjsStateToMarkdown } from '@domain/common/memo/conversion/yjs.state.to.markdown';
+import { MemoPdfRenderer } from '@domain/common/memo/memo.pdf.renderer';
 import { MemoService } from '@domain/common/memo/memo.service';
 import { MemoSigningService } from '@domain/common/memo/memo.signing.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
@@ -14,8 +18,11 @@ import { LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { CreateSigningAttempt1788609600000 } from '@src/migrations/1788609600000-CreateSigningAttempt';
+import { prosemirrorJSONToYDoc } from '@tiptap/y-tiptap';
+import sharp from 'sharp';
 import { DataSource, EntitySchema, EntitySchemaOptions } from 'typeorm';
 import { vi } from 'vitest';
+import * as Y from 'yjs';
 
 const describeRealServices =
   process.env.CONTENT_SIGNING_REAL_SERVICES === 'true'
@@ -643,7 +650,9 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       } as any,
       services.fileAdapter,
       {
-        get: vi.fn().mockReturnValue({ path_api_private_rest: '/private' }),
+        getMemoSigningSnapshotRestUrl: vi
+          .fn()
+          .mockReturnValue('https://alkem.io/private/signing/preview'),
       } as any
     );
     const actor = Object.assign(new ActorContext(), {
@@ -725,7 +734,9 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       { render: vi.fn().mockResolvedValue(pdf) } as any,
       services.fileAdapter,
       {
-        get: vi.fn().mockReturnValue({ path_api_private_rest: '/private' }),
+        getMemoSigningSnapshotRestUrl: vi
+          .fn()
+          .mockReturnValue('https://alkem.io/private/signing/preview'),
       } as any
     );
     const actor = Object.assign(new ActorContext(), {
@@ -751,6 +762,112 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
     await expect(
       services.fileAdapter.getDocumentContent(uploaded[1].id)
     ).rejects.toThrow();
+  });
+
+  it('stores and previews the exact image-containing PDF produced from the current projection', async () => {
+    await seedDeletionGraph();
+    const services = createActualDeletionServices(dataSource, attemptService);
+    vi.spyOn(services.memo, 'getMemoOrFail').mockResolvedValue(
+      services.memoEntity as any
+    );
+    const sourceImage =
+      await services.fileAdapter.createInternalDocumentInBucket(
+        await sharp({
+          create: {
+            width: 12,
+            height: 12,
+            channels: 3,
+            background: { r: 220, g: 10, b: 10 },
+          },
+        })
+          .png()
+          .toBuffer(),
+        UUIDS.bucket,
+        'source.png',
+        'image/png',
+        { skipDedup: true }
+      );
+    const imageUrl = `https://alkem.io/api/private/rest/storage/document/${sourceImage.id}`;
+    const liveDocument = prosemirrorJSONToYDoc(
+      markdownSchema,
+      {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [
+              { type: 'text', text: 'Signed image witness ' },
+              {
+                type: 'image',
+                attrs: { src: imageUrl, alt: 'red fixture', title: null },
+              },
+            ],
+          },
+        ],
+      },
+      'default'
+    );
+    const authorization = { grantAccessOrFail: vi.fn() };
+    const renderer = new MemoPdfRenderer(
+      {
+        isAlkemioDocumentURL: vi.fn((url: string) => url === imageUrl),
+        getDocumentFromURL: vi.fn().mockResolvedValue({
+          id: sourceImage.id,
+          authorization: { id: 'image-authorization' },
+          storageBucket: { id: UUIDS.bucket },
+        }),
+      } as any,
+      authorization as any,
+      services.fileAdapter
+    );
+    const urlGenerator = {
+      getMemoSigningSnapshotRestUrl: vi
+        .fn()
+        .mockReturnValue('https://alkem.io/private/signing/preview'),
+    };
+    const signing = new MemoSigningService(
+      authorization as any,
+      services.memo,
+      attemptService,
+      { getCleverbaseSubject: vi.fn().mockResolvedValue('subject') } as any,
+      {
+        read: vi.fn(async (_id, _type, _actor, project) =>
+          project(liveDocument)
+        ),
+      } as any,
+      renderer,
+      services.fileAdapter,
+      urlGenerator as any
+    );
+    const actor = Object.assign(new ActorContext(), {
+      actorID: UUIDS.actor,
+      authenticationID: 'kratos-1',
+    });
+
+    try {
+      const result = await signing.prepareMemoSigning(UUIDS.memo, actor);
+      const attempt = await dataSource
+        .getRepository(SigningAttempt)
+        .findOneByOrFail({ id: result.attemptId });
+      const stored = await services.fileAdapter.getDocumentContent(
+        attempt.snapshotDocumentId!
+      );
+      const preview = await signing.getSnapshot(result.attemptId, actor);
+
+      expect(
+        yjsStateToMarkdown(Buffer.from(Y.encodeStateAsUpdateV2(liveDocument)))
+      ).toContain(`![red fixture](${imageUrl})`);
+      expect(stored.toString('latin1')).toContain('/Subtype /Image');
+      expect(preview).toEqual(stored);
+      expect(attempt.contentSha256).toBe(
+        createHash('sha256').update(stored).digest('hex')
+      );
+      expect(result.previewUrl).toBe(
+        'https://alkem.io/private/signing/preview'
+      );
+    } finally {
+      liveDocument.destroy();
+    }
   });
 
   async function seedDeletionGraph(): Promise<void> {

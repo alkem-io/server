@@ -12,6 +12,7 @@ import { FileServiceAdapterModule } from '@services/adapters/file-service-adapte
 import { CollaborationClientModule } from '@services/collaboration-client/collaboration-client.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
+import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
 import { AuthorizationPolicyModule } from '../authorization-policy/authorization.policy.module';
 import { LicenseModule } from '../license/license.module';
 import { ProfileModule } from '../profile/profile.module';
@@ -21,7 +22,6 @@ import { MemoResolverFields } from './memo.resolver.fields';
 import { MemoResolverMutations } from './memo.resolver.mutations';
 import { MemoService } from './memo.service';
 import { MemoAuthorizationService } from './memo.service.authorization';
-import { MemoSigningController } from './memo.signing.controller';
 import { MemoSigningService } from './memo.signing.service';
 
 @Module({
@@ -42,8 +42,8 @@ import { MemoSigningService } from './memo.signing.service';
     CollaborationClientModule,
     DocumentModule,
     KratosModule,
+    UrlGeneratorModule,
   ],
-  controllers: [MemoSigningController],
   providers: [
     MemoService,
     MemoAuthorizationService,
@@ -57,6 +57,7 @@ import { MemoSigningService } from './memo.signing.service';
     MemoAuthorizationService,
     MemoResolverMutations,
     MemoResolverFields,
+    MemoSigningService,
   ],
 })
 export class MemoModule {}

@@ -511,28 +511,23 @@ describe('KratosService', () => {
   describe('getCleverbaseSubject', () => {
     it('reads OIDC credentials and returns only the provider subject', async () => {
       const getIdentity = vi
-        .spyOn(service.kratosIdentityClient, 'getIdentity')
+        .spyOn(service, 'getIdentityById')
         .mockResolvedValue({
-          data: {
-            credentials: {
-              oidc: {
-                identifiers: [
-                  'linkedin:elsewhere',
-                  'cleverbase:subject-from-provider',
-                ],
-              },
+          credentials: {
+            oidc: {
+              identifiers: [
+                'linkedin:elsewhere',
+                'cleverbase:subject-from-provider',
+              ],
             },
-            traits: { serialNumber: 'NOT-THE-SUBJECT' },
           },
+          traits: { serialNumber: 'NOT-THE-SUBJECT' },
         } as any);
 
       await expect(
         service.getCleverbaseSubject('kratos-identity')
       ).resolves.toBe('subject-from-provider');
-      expect(getIdentity).toHaveBeenCalledWith({
-        id: 'kratos-identity',
-        includeCredential: ['oidc'],
-      });
+      expect(getIdentity).toHaveBeenCalledWith('kratos-identity', ['oidc']);
     });
 
     it.each([
@@ -547,9 +542,7 @@ describe('KratosService', () => {
         { credentials: { oidc: { identifiers: ['cleverbase:'] } } },
       ],
     ])('returns undefined for %s', async (_label, identity) => {
-      vi.spyOn(service.kratosIdentityClient, 'getIdentity').mockResolvedValue({
-        data: identity,
-      } as any);
+      vi.spyOn(service, 'getIdentityById').mockResolvedValue(identity as any);
 
       await expect(
         service.getCleverbaseSubject('kratos-identity')
@@ -557,9 +550,7 @@ describe('KratosService', () => {
     });
 
     it('returns undefined when the Kratos identity no longer exists', async () => {
-      vi.spyOn(service.kratosIdentityClient, 'getIdentity').mockRejectedValue({
-        response: { status: 404 },
-      });
+      vi.spyOn(service, 'getIdentityById').mockResolvedValue(undefined);
 
       await expect(
         service.getCleverbaseSubject('missing-identity')
@@ -567,10 +558,8 @@ describe('KratosService', () => {
     });
 
     it('propagates Kratos failures other than a missing identity', async () => {
-      const unavailable = { response: { status: 503 } };
-      vi.spyOn(service.kratosIdentityClient, 'getIdentity').mockRejectedValue(
-        unavailable
-      );
+      const unavailable = new Error('Kratos unavailable');
+      vi.spyOn(service, 'getIdentityById').mockRejectedValue(unavailable);
 
       await expect(
         service.getCleverbaseSubject('kratos-identity')

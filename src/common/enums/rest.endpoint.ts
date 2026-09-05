@@ -4,4 +4,5 @@ export enum RestEndpoint {
   COMPLETE_CREDENTIAL_OFFER_INTERACTION = 'completeCredentialOfferInteraction',
   GEO_LOCATION = 'geo',
   CALENDAR_EVENT_ICS = 'event/:id/ics',
+  CONTENT_SIGNING_SNAPSHOT = ':attemptId/snapshot',
 }
