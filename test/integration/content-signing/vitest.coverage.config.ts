@@ -9,6 +9,7 @@ export default defineConfig({
     ...base.test,
     coverage: {
       provider: 'v8',
+      reportsDirectory: './coverage-ci',
       exclude: ['**/*.spec.ts'],
       include: [
         'src/domain/common/content-signing/content.signing.module.ts',
