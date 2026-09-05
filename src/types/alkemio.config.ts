@@ -26,6 +26,9 @@ export type MessagingDigestTrackConfig = {
 };
 
 export type AlkemioConfig = {
+  trustGateway: {
+    url: string;
+  };
   authorization: {
     chunk: number;
   };

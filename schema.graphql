@@ -870,6 +870,14 @@ enum SidebarWidget {
   VIRTUAL_CONTRIBUTORS
 }
 
+enum SigningAttemptStatus {
+  CANCELLED
+  EXPIRED
+  FAILED
+  PENDING
+  SIGNED
+}
+
 enum SpaceLevel {
   L0
   L1
@@ -4101,8 +4109,34 @@ type Memo {
   nameID: NameID!
   """The Profile for this Memo."""
   profile: Profile!
+  """Signed copies of this Memo visible to readers of the Memo."""
+  signatures: [MemoSignature!]!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+}
+
+type MemoSignature {
+  """The Alkemio user who initiated this signed copy."""
+  actor: User
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The immutable PDF produced for this signed copy."""
+  document: Document
+  """The ID of the entity"""
+  id: UUID!
+  """The terminal outcome of this Memo signing attempt."""
+  status: SigningAttemptStatus!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
+
+type MemoSigningContinueResult {
+  authorizeUrl: String!
+}
+
+type MemoSigningPrepareResult {
+  attemptId: UUID!
+  previewUrl: String!
 }
 
 type MeQueryResults {
@@ -4392,6 +4426,8 @@ type Mutation {
   castPollVote(voteData: CastPollVoteInput!): Poll!
   """Deletes collections nameID-..."""
   cleanupCollections: MigrateEmbeddings!
+  """Starts signing the prepared Memo copy."""
+  continueMemoSigning(signingData: MemoSigningContinueInput!): MemoSigningContinueResult!
   """Move an L1 Space up in the hierarchy, to be a L0 Space."""
   convertSpaceL1ToSpaceL0(convertData: ConvertSpaceL1ToSpaceL0Input!): Space!
   """
@@ -4610,6 +4646,8 @@ type Mutation {
   Moves a task to another column on its Tasks board. Authorized as MOVE_TASK on the parent Callout, so a board member can move any task.
   """
   moveTaskToColumn(moveData: MoveTaskToColumnInput!): CalloutContribution!
+  """Prepares an exact PDF preview for signing the specified Memo."""
+  prepareMemoSigning(signingData: MemoSigningPrepareInput!): MemoSigningPrepareResult!
   """Refresh the Bodies of Knowledge on All VCs"""
   refreshAllBodiesOfKnowledge: Boolean!
   """
@@ -5735,6 +5773,8 @@ type Query {
   rolesVirtualContributor(rolesData: RolesActorInput!): ActorRoles!
   """Search the platform for terms supplied"""
   search(searchData: SearchInput!): ISearchResults!
+  """A Memo signing attempt belonging to the current actor."""
+  signingAttempt(ID: UUID!): MemoSignature!
   """
   The Spaces on this platform; If accessed through an Innovation Hub will return ONLY the Spaces defined in it.
   """
@@ -9021,6 +9061,16 @@ input LicensingGrantedEntitlementInput {
   limit: Float!
   """The entitlement that is granted."""
   type: LicenseEntitlementType!
+}
+
+input MemoSigningContinueInput {
+  """The prepared signing attempt to start."""
+  attemptID: UUID!
+}
+
+input MemoSigningPrepareInput {
+  """The Memo to prepare for signing."""
+  memoID: UUID!
 }
 
 input MintMcpApiKeyInput {

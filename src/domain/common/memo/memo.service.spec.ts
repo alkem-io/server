@@ -7,6 +7,7 @@ import {
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { CollaborationLifecycleService } from '@domain/common/collaboration-metadata';
+import { SigningAttemptService } from '@domain/common/content-signing/signing.attempt.service';
 import { ILicense } from '@domain/common/license/license.interface';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -39,6 +40,7 @@ describe('MemoService', () => {
   let collaborationDocumentService: CollaborationDocumentService;
   let communityResolverService: CommunityResolverService;
   let licenseService: LicenseService;
+  let signingAttemptService: SigningAttemptService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -71,6 +73,7 @@ describe('MemoService', () => {
     collaborationDocumentService = module.get(CollaborationDocumentService);
     communityResolverService = module.get(CommunityResolverService);
     licenseService = module.get(LicenseService);
+    signingAttemptService = module.get(SigningAttemptService);
   });
 
   describe('getMemoOrFail', () => {
@@ -93,7 +96,7 @@ describe('MemoService', () => {
   });
 
   describe('deleteMemo', () => {
-    it('should delete profile, authorization, and memo', async () => {
+    it('releases signing attempts after publish-confirm and before deleting the memo profile', async () => {
       const memo = {
         id: 'memo-1',
         profile: { id: 'profile-1' },
@@ -115,6 +118,18 @@ describe('MemoService', () => {
       expect(
         collaborationLifecycleService.publishDocumentDeleted
       ).toHaveBeenCalledWith('memo-1');
+      expect(signingAttemptService.deleteForMemo).toHaveBeenCalledWith(
+        'memo-1'
+      );
+      const published = (
+        collaborationLifecycleService.publishDocumentDeleted as Mock
+      ).mock.invocationCallOrder[0];
+      const attemptsReleased = (signingAttemptService.deleteForMemo as Mock)
+        .mock.invocationCallOrder[0];
+      const profileDeleted = (profileService.deleteProfile as Mock).mock
+        .invocationCallOrder[0];
+      expect(published).toBeLessThan(attemptsReleased);
+      expect(attemptsReleased).toBeLessThan(profileDeleted);
       expect(memoRepository.remove).toHaveBeenCalledWith(memo);
       expect(result.id).toBe('memo-1');
     });

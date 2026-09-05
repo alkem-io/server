@@ -25,6 +25,11 @@ http:
         servers:
           - url: 'http://host.docker.internal:3001/'
 
+    trust-gateway:
+      loadBalancer:
+        servers:
+          - url: 'http://trust-gateway:8080/'
+
     hydra:
       loadBalancer:
         servers:
@@ -234,6 +239,13 @@ http:
         trustForwardHeader: true
 
   routers:
+    trust-gateway-callback:
+      rule: 'Method(`GET`) && Path(`/oauth/cleverbase/callback`)'
+      service: 'trust-gateway'
+      entryPoints:
+        - 'web'
+      priority: 200
+
     oidc-public:
       rule: 'PathPrefix(`/oidc`)'
       service: 'oidc-service'

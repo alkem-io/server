@@ -99,6 +99,10 @@ search:
   # uploaded can always be parsed. Raising it above that has no effect.
   collabora_document_max_source_size: ${SEARCH_COLLABORA_DOCUMENT_MAX_SOURCE_SIZE}:15728640
 
+trustGateway:
+  # Local host-run default; deployments must set TRUST_GATEWAY_URL to the cluster Service.
+  url: ${TRUST_GATEWAY_URL}:http://localhost:8080
+
 licensing:
   wingback:
     enabled: ${LICENSING_WINGBACK_ENABLED}:false
