@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { AlkemioErrorStatus } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
@@ -12,8 +13,11 @@ import { MemoSigningService } from './memo.signing.service';
 describe('MemoSigningService', () => {
   type MemoFixture = {
     id: string;
+    nameID: string;
     authorization: { id: string };
-    profile?: { storageBucket: { id: string } };
+    profile?: {
+      storageBucket: { id: string; authorization: { id: string } };
+    };
   };
   const actor = Object.assign(new ActorContext(), {
     actorID: '11111111-1111-4111-8111-111111111111',
@@ -21,8 +25,11 @@ describe('MemoSigningService', () => {
   });
   const memo: MemoFixture = {
     id: '22222222-2222-4222-8222-222222222222',
+    nameID: 'signed-memo',
     authorization: { id: 'memo-auth' },
-    profile: { storageBucket: { id: 'bucket-1' } },
+    profile: {
+      storageBucket: { id: 'bucket-1', authorization: { id: 'bucket-auth' } },
+    },
   };
   const pdf = Buffer.from('%PDF-fixed-preview');
   const calls: string[] = [];
@@ -44,6 +51,9 @@ describe('MemoSigningService', () => {
     getForActorOrFail: vi.fn(),
     claimStart: vi.fn(),
     recordGatewayStart: vi.fn(),
+    getForReturnOrFail: vi.fn(),
+    finish: vi.fn(),
+    findSignedForMemo: vi.fn(),
   };
   const kratosService = {
     getCleverbaseSubject: vi.fn<() => Promise<string | undefined>>(async () => {
@@ -84,14 +94,29 @@ describe('MemoSigningService', () => {
     deleteDocument: vi.fn(),
     getDocumentContent: vi.fn(),
   };
-  const trustGatewayClient = { start: vi.fn() };
+  const trustGatewayClient = {
+    start: vi.fn(),
+    getStatus: vi.fn(),
+    getResult: vi.fn(),
+  };
   const urlGeneratorService = {
     getMemoSigningSnapshotRestUrl: vi.fn(
       () =>
         'https://alkem.io/api/private/rest/content-signing/attempt-1/snapshot'
     ),
+    getMemoUrlPath: vi.fn().mockResolvedValue('/space/demo/callout/memo'),
   };
   const logger = { error: vi.fn() };
+  const storageBucketService = {
+    uploadFileAsDocumentFromBuffer: vi.fn(),
+  };
+  const documentAuthorizationService = { applyAuthorizationPolicy: vi.fn() };
+  const documentService = {
+    deleteDocument: vi.fn(),
+    getPubliclyAccessibleURL: vi.fn(
+      (document: { id: string }) => `https://alkem.io/document/${document.id}`
+    ),
+  };
   const service = new MemoSigningService(
     authorizationService as any,
     memoService as any,
@@ -102,9 +127,11 @@ describe('MemoSigningService', () => {
     fileServiceAdapter as any,
     trustGatewayClient as any,
     urlGeneratorService as any,
+    storageBucketService as any,
+    documentAuthorizationService as any,
+    documentService as any,
     logger as any
   );
-
   beforeEach(() => {
     calls.length = 0;
     vi.clearAllMocks();
@@ -137,12 +164,20 @@ describe('MemoSigningService', () => {
     });
     attemptService.claimStart.mockResolvedValue(true);
     attemptService.recordGatewayStart.mockResolvedValue(true);
+    attemptService.finish.mockResolvedValue(true);
     trustGatewayClient.start.mockResolvedValue({
       redirectUrl: 'https://connect.acc.cleverbase.com/authorize',
       correlationId: 'correlation-1',
       expiresAt: new Date(Date.now() + 15 * 60 * 1000),
     });
     fileServiceAdapter.deleteDocument.mockResolvedValue(undefined);
+    storageBucketService.uploadFileAsDocumentFromBuffer.mockResolvedValue({
+      id: 'signed-document-1',
+    });
+    documentAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+      undefined
+    );
+    documentService.deleteDocument.mockResolvedValue(undefined);
     urlGeneratorService.getMemoSigningSnapshotRestUrl.mockReturnValue(
       'https://alkem.io/api/private/rest/content-signing/attempt-1/snapshot'
     );
@@ -354,7 +389,7 @@ describe('MemoSigningService', () => {
     );
     expect(logger.error).toHaveBeenCalledWith(
       {
-        message: 'Memo signing snapshot cleanup failed',
+        message: 'Memo signing document cleanup failed',
         attemptId: 'attempt-1',
         documentId: 'snapshot-1',
       },
@@ -662,5 +697,433 @@ describe('MemoSigningService', () => {
       undefined,
       LogContext.MEMOS
     );
+  });
+
+  it('attaches a fresh authorized signed copy and releases the preview after completed return', async () => {
+    const state = 'raw-client-state';
+    const attempt = {
+      id: 'attempt-1',
+      actorId: actor.actorID,
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      correlationId: 'correlation-1',
+      snapshotDocumentId: 'snapshot-1',
+    };
+    attemptService.getForReturnOrFail.mockResolvedValue(attempt);
+    trustGatewayClient.getStatus.mockResolvedValue({ status: 'completed' });
+    const signedPdf = Buffer.from('%PDF-signed');
+    const evidence = { signer: { serial_number: 'ABC' } };
+    trustGatewayClient.getResult.mockResolvedValue({
+      pdf: signedPdf,
+      evidence,
+    });
+
+    await expect(
+      service.completeMemoSigning('correlation-1', state, actor)
+    ).resolves.toEqual({
+      memoUrl: '/space/demo/callout/memo',
+      attemptId: 'attempt-1',
+      status: SigningAttemptStatus.SIGNED,
+    });
+    expect(attemptService.getForReturnOrFail).toHaveBeenCalledWith(
+      'correlation-1',
+      actor.actorID,
+      createHash('sha256').update(state).digest('hex')
+    );
+    expect(
+      storageBucketService.uploadFileAsDocumentFromBuffer
+    ).toHaveBeenCalledWith(
+      'bucket-1',
+      signedPdf,
+      'memo-signed.pdf',
+      'application/pdf',
+      undefined,
+      false,
+      true
+    );
+    expect(
+      documentAuthorizationService.applyAuthorizationPolicy
+    ).toHaveBeenCalledWith(
+      { id: 'signed-document-1' },
+      memo.profile?.storageBucket.authorization
+    );
+    expect(attemptService.finish).toHaveBeenCalledWith(
+      'attempt-1',
+      SigningAttemptStatus.SIGNED,
+      'signed-document-1',
+      evidence
+    );
+    expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith(
+      'snapshot-1'
+    );
+  });
+
+  it.each([
+    [{ status: 'declined' }, SigningAttemptStatus.CANCELLED],
+    [
+      { status: 'failed', reason: 'authorization_expired' },
+      SigningAttemptStatus.EXPIRED,
+    ],
+    [
+      { status: 'failed', reason: 'session_expired' },
+      SigningAttemptStatus.EXPIRED,
+    ],
+    [
+      { status: 'failed', reason: 'signature_invalid' },
+      SigningAttemptStatus.FAILED,
+    ],
+    [{ status: 'failed' }, SigningAttemptStatus.FAILED],
+    [undefined, SigningAttemptStatus.EXPIRED],
+  ])('records terminal gateway outcome %# without uploading', async (gatewayStatus, status) => {
+    attemptService.getForReturnOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      snapshotDocumentId: 'snapshot-1',
+      correlationId: 'correlation-1',
+    });
+    trustGatewayClient.getStatus.mockResolvedValue(gatewayStatus);
+
+    await expect(
+      service.completeMemoSigning('correlation-1', 'state', actor)
+    ).resolves.toMatchObject({ status });
+    expect(attemptService.finish).toHaveBeenCalledWith('attempt-1', status);
+    expect(
+      storageBucketService.uploadFileAsDocumentFromBuffer
+    ).not.toHaveBeenCalled();
+    expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith(
+      'snapshot-1'
+    );
+  });
+
+  it('reports a snapshot cleanup failure without changing the terminal outcome', async () => {
+    attemptService.getForReturnOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      snapshotDocumentId: 'snapshot-1',
+      correlationId: 'correlation-1',
+    });
+    trustGatewayClient.getStatus.mockResolvedValue({ status: 'declined' });
+    fileServiceAdapter.deleteDocument.mockRejectedValue(
+      new Error('secret file response')
+    );
+
+    await expect(
+      service.completeMemoSigning('correlation-1', 'state', actor)
+    ).resolves.toMatchObject({ status: SigningAttemptStatus.CANCELLED });
+    expect(logger.error).toHaveBeenCalledWith(
+      {
+        message: 'Memo signing document cleanup failed',
+        attemptId: 'attempt-1',
+        documentId: 'snapshot-1',
+      },
+      undefined,
+      LogContext.MEMOS
+    );
+  });
+
+  it('does not call file-service cleanup for an expired attempt without a snapshot', async () => {
+    await service.releaseExpiredAttemptFiles({
+      id: 'attempt-unprepared',
+      snapshotDocumentId: null,
+    } as any);
+
+    expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { status: 'pending' },
+    { status: 'authorizing' },
+  ])('leaves a valid nonterminal %s return pending and retryable', async gatewayStatus => {
+    attemptService.getForReturnOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      correlationId: 'correlation-1',
+    });
+    trustGatewayClient.getStatus.mockResolvedValue(gatewayStatus);
+
+    await expect(
+      service.completeMemoSigning('correlation-1', 'state', actor)
+    ).rejects.toThrow(/retry this page/i);
+    expect(attemptService.finish).not.toHaveBeenCalled();
+  });
+
+  it('leaves transport failure pending and retryable', async () => {
+    attemptService.getForReturnOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      correlationId: 'correlation-1',
+    });
+    trustGatewayClient.getStatus.mockRejectedValue(new Error('gateway down'));
+
+    await expect(
+      service.completeMemoSigning('correlation-1', 'state', actor)
+    ).rejects.toThrow(/retry this page/i);
+    expect(attemptService.finish).not.toHaveBeenCalled();
+  });
+
+  it('leaves a result transport failure pending and retryable', async () => {
+    attemptService.getForReturnOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      correlationId: 'correlation-1',
+    });
+    trustGatewayClient.getStatus.mockResolvedValue({ status: 'completed' });
+    trustGatewayClient.getResult.mockRejectedValue(new Error('gateway down'));
+
+    await expect(
+      service.completeMemoSigning('correlation-1', 'state', actor)
+    ).rejects.toThrow(/retry this page/i);
+    expect(attemptService.finish).not.toHaveBeenCalled();
+  });
+
+  it('stops a return after revoked memo CONTRIBUTE without gateway or file effects', async () => {
+    const denied = new ForbiddenAuthorizationPolicyException(
+      'memo access denied',
+      AuthorizationPrivilege.CONTRIBUTE,
+      'memo-auth',
+      actor.actorID
+    );
+    attemptService.getForReturnOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      correlationId: 'correlation-1',
+    });
+    authorizationService.grantAccessOrFail.mockImplementationOnce(() => {
+      throw denied;
+    });
+
+    await expect(
+      service.completeMemoSigning('correlation-1', 'state', actor)
+    ).rejects.toBe(denied);
+    expect(trustGatewayClient.getStatus).not.toHaveBeenCalled();
+    expect(trustGatewayClient.getResult).not.toHaveBeenCalled();
+    expect(
+      storageBucketService.uploadFileAsDocumentFromBuffer
+    ).not.toHaveBeenCalled();
+    expect(attemptService.finish).not.toHaveBeenCalled();
+  });
+
+  it('leaves a completed journey pending while its result returns 409', async () => {
+    attemptService.getForReturnOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      correlationId: 'correlation-1',
+    });
+    trustGatewayClient.getStatus.mockResolvedValue({ status: 'completed' });
+    trustGatewayClient.getResult.mockResolvedValue(null);
+
+    await expect(
+      service.completeMemoSigning('correlation-1', 'state', actor)
+    ).rejects.toThrow(/retry this page/i);
+    expect(attemptService.finish).not.toHaveBeenCalled();
+  });
+
+  it('expires a completed journey whose result has been evicted', async () => {
+    attemptService.getForReturnOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      snapshotDocumentId: 'snapshot-1',
+      correlationId: 'correlation-1',
+    });
+    trustGatewayClient.getStatus.mockResolvedValue({ status: 'completed' });
+    trustGatewayClient.getResult.mockResolvedValue(undefined);
+
+    await expect(
+      service.completeMemoSigning('correlation-1', 'state', actor)
+    ).resolves.toMatchObject({ status: SigningAttemptStatus.EXPIRED });
+    expect(attemptService.finish).toHaveBeenCalledWith(
+      'attempt-1',
+      SigningAttemptStatus.EXPIRED
+    );
+  });
+
+  it('leaves malformed completed evidence pending and logs only a safe status', async () => {
+    attemptService.getForReturnOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      correlationId: 'correlation-1',
+    });
+    trustGatewayClient.getStatus.mockResolvedValue({ status: 'completed' });
+    trustGatewayClient.getResult.mockRejectedValue(
+      new ValidationException('Invalid gateway response', undefined as any)
+    );
+
+    await expect(
+      service.completeMemoSigning('correlation-1', 'state', actor)
+    ).rejects.toThrow(/retry this page/i);
+    expect(attemptService.finish).not.toHaveBeenCalled();
+    expect(logger.error).toHaveBeenCalledWith(
+      {
+        message: 'Memo signing result response was malformed',
+        attemptId: 'attempt-1',
+        status: AlkemioErrorStatus.BAD_USER_INPUT,
+      },
+      undefined,
+      LogContext.MEMOS
+    );
+    expect(
+      storageBucketService.uploadFileAsDocumentFromBuffer
+    ).not.toHaveBeenCalled();
+  });
+
+  it('returns a terminal replay without a second gateway or file operation', async () => {
+    attemptService.getForReturnOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      memoId: memo.id,
+      status: SigningAttemptStatus.SIGNED,
+    });
+
+    await expect(
+      service.completeMemoSigning('correlation-1', 'state', actor)
+    ).resolves.toMatchObject({ status: SigningAttemptStatus.SIGNED });
+    expect(trustGatewayClient.getStatus).not.toHaveBeenCalled();
+    expect(
+      storageBucketService.uploadFileAsDocumentFromBuffer
+    ).not.toHaveBeenCalled();
+  });
+
+  it('expires a claimed attempt whose gateway start was never recorded', async () => {
+    attemptService.getForReturnOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      actorId: actor.actorID,
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      correlationId: null,
+      snapshotDocumentId: 'snapshot-1',
+    });
+
+    await expect(
+      service.completeMemoSigning('unrecorded-correlation', 'state', actor)
+    ).resolves.toMatchObject({ status: SigningAttemptStatus.EXPIRED });
+    expect(trustGatewayClient.getStatus).not.toHaveBeenCalled();
+    expect(attemptService.finish).toHaveBeenCalledWith(
+      'attempt-1',
+      SigningAttemptStatus.EXPIRED
+    );
+  });
+
+  it('deletes only its losing signed upload and returns the concurrent winner', async () => {
+    const pending = {
+      id: 'attempt-1',
+      actorId: actor.actorID,
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      correlationId: 'correlation-1',
+    };
+    attemptService.getForReturnOrFail.mockResolvedValue(pending);
+    attemptService.finish.mockResolvedValue(false);
+    attemptService.getForActorOrFail.mockResolvedValue({
+      ...pending,
+      status: SigningAttemptStatus.SIGNED,
+      signedDocumentId: 'winner-document',
+    });
+    trustGatewayClient.getStatus.mockResolvedValue({ status: 'completed' });
+    trustGatewayClient.getResult.mockResolvedValue({
+      pdf: Buffer.from('%PDF-signed'),
+      evidence: {},
+    });
+
+    await expect(
+      service.completeMemoSigning('correlation-1', 'state', actor)
+    ).resolves.toMatchObject({ status: SigningAttemptStatus.SIGNED });
+    expect(documentService.deleteDocument).toHaveBeenCalledWith({
+      ID: 'signed-document-1',
+    });
+  });
+
+  it('deletes its owned signed upload when authorization fails', async () => {
+    const authorizationFailure = new Error('policy write failed');
+    attemptService.getForReturnOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      actorId: actor.actorID,
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      correlationId: 'correlation-1',
+    });
+    trustGatewayClient.getStatus.mockResolvedValue({ status: 'completed' });
+    trustGatewayClient.getResult.mockResolvedValue({
+      pdf: Buffer.from('%PDF-signed'),
+      evidence: {},
+    });
+    documentAuthorizationService.applyAuthorizationPolicy.mockRejectedValue(
+      authorizationFailure
+    );
+
+    await expect(
+      service.completeMemoSigning('correlation-1', 'state', actor)
+    ).rejects.toBe(authorizationFailure);
+    expect(documentService.deleteDocument).toHaveBeenCalledWith({
+      ID: 'signed-document-1',
+    });
+    expect(attemptService.finish).not.toHaveBeenCalled();
+  });
+
+  it('returns expired for a vanished row and reports losing-upload cleanup failure safely', async () => {
+    attemptService.getForReturnOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      actorId: actor.actorID,
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      correlationId: 'correlation-1',
+    });
+    attemptService.finish.mockResolvedValue(false);
+    attemptService.getForActorOrFail.mockRejectedValue(
+      new ValidationException('attempt deleted', undefined as any)
+    );
+    trustGatewayClient.getStatus.mockResolvedValue({ status: 'completed' });
+    trustGatewayClient.getResult.mockResolvedValue({
+      pdf: Buffer.from('%PDF-signed'),
+      evidence: {},
+    });
+    documentService.deleteDocument.mockRejectedValue(
+      new Error('cleanup failed')
+    );
+
+    await expect(
+      service.completeMemoSigning('correlation-1', 'state', actor)
+    ).resolves.toMatchObject({ status: SigningAttemptStatus.EXPIRED });
+    expect(logger.error).toHaveBeenCalledWith(
+      {
+        message: 'Memo signing document cleanup failed',
+        attemptId: 'attempt-1',
+        documentId: 'signed-document-1',
+      },
+      undefined,
+      LogContext.MEMOS
+    );
+  });
+
+  it('propagates an unexpected winner read failure after deleting its losing upload', async () => {
+    const readFailure = new Error('database unavailable');
+    attemptService.getForReturnOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      actorId: actor.actorID,
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      correlationId: 'correlation-1',
+    });
+    attemptService.finish.mockResolvedValue(false);
+    attemptService.getForActorOrFail.mockRejectedValue(readFailure);
+    trustGatewayClient.getStatus.mockResolvedValue({ status: 'completed' });
+    trustGatewayClient.getResult.mockResolvedValue({
+      pdf: Buffer.from('%PDF-signed'),
+      evidence: {},
+    });
+
+    await expect(
+      service.completeMemoSigning('correlation-1', 'state', actor)
+    ).rejects.toBe(readFailure);
+    expect(documentService.deleteDocument).toHaveBeenCalledWith({
+      ID: 'signed-document-1',
+    });
   });
 });

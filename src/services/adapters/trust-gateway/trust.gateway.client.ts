@@ -4,6 +4,7 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types';
+import type { AxiosResponse } from 'axios';
 import { firstValueFrom } from 'rxjs';
 
 type StartResponse = {
@@ -11,6 +12,8 @@ type StartResponse = {
   correlationId?: unknown;
   expiresAt?: unknown;
 };
+
+type GatewayStatus = { status: string; reason?: string };
 
 const RFC3339 =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
@@ -64,6 +67,61 @@ export class TrustGatewayClient {
     const expiry = new Date(expiresAt);
     if (Number.isNaN(expiry.getTime())) throw this.invalidResponse();
     return { redirectUrl, correlationId, expiresAt: expiry };
+  }
+
+  async getStatus(correlationId: string): Promise<GatewayStatus | undefined> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get<unknown>(`${this.baseUrl}/v1/sign/status`, {
+          params: { correlationId },
+          timeout: 30_000,
+        })
+      );
+      return response.data as GatewayStatus;
+    } catch (error) {
+      if (
+        (error as { response?: { status?: number } }).response?.status === 404
+      )
+        return undefined;
+      throw error;
+    }
+  }
+
+  async getResult(correlationId: string) {
+    let response: AxiosResponse<ArrayBuffer>;
+    try {
+      response = await firstValueFrom(
+        this.httpService.get<ArrayBuffer>(`${this.baseUrl}/v1/sign/result`, {
+          params: { correlationId },
+          responseType: 'arraybuffer',
+          timeout: 30_000,
+        })
+      );
+    } catch (error) {
+      const status = (error as { response?: { status?: number } }).response
+        ?.status;
+      if (status === 409) return null;
+      if (status === 404) return undefined;
+      throw error;
+    }
+    const pdf = Buffer.from(response.data);
+    const encodedEvidence = response.headers['x-signature-evidence'];
+    if (
+      !pdf.subarray(0, 5).equals(Buffer.from('%PDF-')) ||
+      typeof encodedEvidence !== 'string'
+    )
+      throw this.invalidResponse();
+    let evidence: unknown;
+    try {
+      evidence = JSON.parse(
+        Buffer.from(encodedEvidence, 'base64').toString('utf8')
+      );
+    } catch {
+      throw this.invalidResponse();
+    }
+    if (!evidence || Array.isArray(evidence) || typeof evidence !== 'object')
+      throw this.invalidResponse();
+    return { pdf, evidence: evidence as Record<string, unknown> };
   }
 
   private invalidResponse(): ValidationException {

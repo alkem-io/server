@@ -24,7 +24,9 @@ import { MemoResolverFields } from './memo.resolver.fields';
 import { MemoResolverMutations } from './memo.resolver.mutations';
 import { MemoService } from './memo.service';
 import { MemoAuthorizationService } from './memo.service.authorization';
+import { MemoSignatureResolverFields } from './memo.signature.resolver.fields';
 import { MemoSigningService } from './memo.signing.service';
+import { MemoSigningSweepService } from './memo.signing.sweep.service';
 
 @Module({
   imports: [
@@ -54,6 +56,8 @@ import { MemoSigningService } from './memo.signing.service';
     MemoResolverFields,
     MemoPdfRenderer,
     MemoSigningService,
+    MemoSignatureResolverFields,
+    MemoSigningSweepService,
     TrustGatewayClient,
   ],
   exports: [

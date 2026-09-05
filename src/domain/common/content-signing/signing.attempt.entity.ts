@@ -23,7 +23,7 @@ export class SigningAttempt extends BaseAlkemioEntity {
   contentSha256?: string;
 
   @Column('uuid', { nullable: true })
-  snapshotDocumentId?: string;
+  snapshotDocumentId?: string | null;
 
   @Column('text', { nullable: true })
   correlationId?: string;
@@ -46,5 +46,5 @@ export class SigningAttempt extends BaseAlkemioEntity {
   signedDocumentId?: string;
 
   @Column('jsonb', { nullable: true })
-  signerEvidence?: Record<string, unknown>;
+  signerEvidence?: object;
 }
