@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
+import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { SigningAttemptStatus } from '@domain/common/content-signing/signing.attempt.status';
 import { prosemirrorJSONToYDoc } from '@tiptap/y-tiptap';
@@ -103,6 +104,7 @@ describe('MemoSigningService', () => {
     ),
     getMemoUrlPath: vi.fn().mockResolvedValue('/space/demo/callout/memo'),
   };
+  const logger = { error: vi.fn() };
   const service = new MemoSigningService(
     authorizationService as any,
     memoService as any,
@@ -112,7 +114,8 @@ describe('MemoSigningService', () => {
     renderer as any,
     fileServiceAdapter as any,
     trustGatewayClient as any,
-    urlGeneratorService as any
+    urlGeneratorService as any,
+    logger as any
   );
   const storageBucketService = {
     uploadFileAsDocumentFromBuffer: vi.fn(),
@@ -484,9 +487,7 @@ describe('MemoSigningService', () => {
     expect(rawState).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(attemptService.claimStart).toHaveBeenCalledWith(
       'attempt-1',
-      actor.actorID,
-      createHash('sha256').update(rawState).digest('hex'),
-      expect.any(Date)
+      createHash('sha256').update(rawState).digest('hex')
     );
     expect(attemptService.recordGatewayStart).toHaveBeenCalledWith(
       'attempt-1',
@@ -508,6 +509,15 @@ describe('MemoSigningService', () => {
         snapshotDocumentId: 'snapshot-1',
         contentSha256: 'ab'.repeat(32),
         createdDate: new Date(Date.now() - 60 * 60 * 1000 - 1),
+      },
+      /expired/i,
+    ],
+    [
+      'already signed',
+      {
+        status: SigningAttemptStatus.SIGNED,
+        snapshotDocumentId: 'snapshot-1',
+        contentSha256: 'ab'.repeat(32),
       },
       /expired/i,
     ],
@@ -571,6 +581,32 @@ describe('MemoSigningService', () => {
     expect(trustGatewayClient.start).not.toHaveBeenCalled();
   });
 
+  it('rejects revoked memo contribution before reading or claiming the prepared snapshot', async () => {
+    attemptService.getForActorOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      snapshotDocumentId: 'snapshot-1',
+      contentSha256: 'ab'.repeat(32),
+      createdDate: new Date(),
+    });
+    authorizationService.grantAccessOrFail.mockImplementationOnce(() => {
+      throw new ForbiddenAuthorizationPolicyException(
+        'memo contribution revoked',
+        AuthorizationPrivilege.CONTRIBUTE,
+        memo.authorization.id,
+        actor.actorID
+      );
+    });
+
+    await expect(
+      service.continueMemoSigning('attempt-1', actor)
+    ).rejects.toBeInstanceOf(ForbiddenAuthorizationPolicyException);
+    expect(fileServiceAdapter.getDocumentContent).not.toHaveBeenCalled();
+    expect(attemptService.claimStart).not.toHaveBeenCalled();
+    expect(trustGatewayClient.start).not.toHaveBeenCalled();
+  });
+
   it('lets only the winning concurrent claim start the gateway', async () => {
     const snapshot = Buffer.from('%PDF-exact-preview');
     attemptService.getForActorOrFail.mockResolvedValue({
@@ -604,9 +640,10 @@ describe('MemoSigningService', () => {
   });
 
   it.each([
-    'lost gateway response',
-    'failed start persistence',
-  ])('%s consumes the claim and a retry never starts again', async failure => {
+    ['lost gateway response', 'gateway-start'],
+    ['failed start persistence', 'gateway-start-persistence'],
+    ['lost conditional persistence', 'gateway-start-persistence'],
+  ])('%s consumes the claim and a retry never starts again', async (failure, stage) => {
     const snapshot = Buffer.from('%PDF-exact-preview');
     attemptService.getForActorOrFail.mockResolvedValue({
       id: 'attempt-1',
@@ -621,7 +658,17 @@ describe('MemoSigningService', () => {
       .mockResolvedValueOnce(true)
       .mockResolvedValueOnce(false);
     if (failure === 'lost gateway response')
-      trustGatewayClient.start.mockRejectedValueOnce(new Error('timeout'));
+      trustGatewayClient.start.mockRejectedValueOnce(
+        Object.assign(new Error('secret transport detail'), {
+          code: 'ECONNRESET',
+          response: { status: 503 },
+          config: { data: '%PDF-secret raw-client-state linked-subject' },
+        })
+      );
+    else if (failure === 'failed start persistence')
+      attemptService.recordGatewayStart.mockRejectedValueOnce(
+        Object.assign(new Error('secret database detail'), { code: '40001' })
+      );
     else attemptService.recordGatewayStart.mockResolvedValueOnce(false);
 
     await expect(
@@ -631,6 +678,18 @@ describe('MemoSigningService', () => {
       service.continueMemoSigning('attempt-1', actor)
     ).rejects.toThrow(/fresh signing attempt/i);
     expect(trustGatewayClient.start).toHaveBeenCalledTimes(1);
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Memo signing start failed after the attempt was claimed',
+        attemptId: 'attempt-1',
+        stage,
+      }),
+      undefined,
+      expect.any(String)
+    );
+    expect(JSON.stringify(logger.error.mock.calls)).not.toMatch(
+      /secret|%PDF|raw-client-state|linked-subject/
+    );
   });
 
   it('attaches a fresh authorized signed copy and releases the preview after completed return', async () => {

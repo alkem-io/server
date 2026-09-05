@@ -202,4 +202,14 @@ describe('TrustGatewayClient', () => {
       /invalid gateway response/i
     );
   });
+
+  it('does not retry a failed gateway start request', async () => {
+    responses.push({ status: 500, body: { error: 'begin_failed' } });
+
+    await expect(
+      client.start(Buffer.from('%PDF'), 'PNONL-123', 'raw-state')
+    ).rejects.toThrow();
+    expect(requests).toHaveLength(1);
+    expect(requests[0].request.method).toBe('POST');
+  });
 });

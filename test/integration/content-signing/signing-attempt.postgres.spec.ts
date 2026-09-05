@@ -419,9 +419,7 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
     const hashes = ['cd'.repeat(32), 'ef'.repeat(32)];
 
     const claims = await Promise.all(
-      hashes.map(hash =>
-        attemptService.claimStart(attempt.id, UUIDS.actor, hash)
-      )
+      hashes.map(hash => attemptService.claimStart(attempt.id, hash))
     );
 
     expect(claims.filter(Boolean)).toHaveLength(1);
@@ -430,36 +428,7 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       .findOneByOrFail({ id: attempt.id });
     expect(stored.clientStateHash).toBe(hashes[claims.indexOf(true)]);
     await expect(
-      attemptService.claimStart(attempt.id, UUIDS.actor, '12'.repeat(32))
-    ).resolves.toBe(false);
-  });
-
-  it('rejects a preparation at the fixed one-hour deadline', async () => {
-    await dataSource.query('INSERT INTO memo (id) VALUES ($1)', [UUIDS.memo]);
-    await dataSource.query('INSERT INTO storage_bucket (id) VALUES ($1)', [
-      UUIDS.bucket,
-    ]);
-    await dataSource.query(
-      `INSERT INTO "file" (
-        id, "externalID", "mimeType", size, "displayName", "temporaryLocation",
-        "storageBucketId", "createdDate", "updatedDate", version, content_metadata
-      ) VALUES ($1, $2, 'application/pdf', 1, 'snapshot.pdf', false, $3, now(), now(), 1, '{}')`,
-      [UUIDS.snapshot, 'snapshot-external-id', UUIDS.bucket]
-    );
-    const attempt = await attemptService.createUnready(UUIDS.memo, UUIDS.actor);
-    await dataSource.getRepository(SigningAttempt).update(attempt.id, {
-      snapshotDocumentId: UUIDS.snapshot,
-      contentSha256: 'ab'.repeat(32),
-      createdDate: new Date('2026-09-05T15:00:00Z'),
-    });
-
-    await expect(
-      attemptService.claimStart(
-        attempt.id,
-        UUIDS.actor,
-        'cd'.repeat(32),
-        new Date('2026-09-05T16:00:00Z')
-      )
+      attemptService.claimStart(attempt.id, '12'.repeat(32))
     ).resolves.toBe(false);
   });
 
@@ -720,7 +689,8 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
         getMemoSigningSnapshotRestUrl: vi
           .fn()
           .mockReturnValue('https://alkem.io/private/signing/preview'),
-      } as any
+      } as any,
+      { error: vi.fn() } as any
     );
     const actor = Object.assign(new ActorContext(), {
       actorID: UUIDS.actor,
@@ -800,7 +770,8 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
         getMemoSigningSnapshotRestUrl: vi
           .fn()
           .mockReturnValue('https://alkem.io/private/signing/preview'),
-      } as any
+      } as any,
+      { error: vi.fn() } as any
     );
     const actor = Object.assign(new ActorContext(), {
       actorID: UUIDS.actor,
@@ -886,7 +857,8 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
         getMemoSigningSnapshotRestUrl: vi
           .fn()
           .mockReturnValue('https://alkem.io/private/signing/preview'),
-      } as any
+      } as any,
+      { error: vi.fn() } as any
     );
     const actor = Object.assign(new ActorContext(), {
       actorID: UUIDS.actor,
@@ -969,7 +941,8 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
         getMemoSigningSnapshotRestUrl: vi
           .fn()
           .mockReturnValue('https://alkem.io/private/signing/preview'),
-      } as any
+      } as any,
+      { error: vi.fn() } as any
     );
     const actor = Object.assign(new ActorContext(), {
       actorID: UUIDS.actor,
@@ -994,6 +967,80 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
     await expect(
       services.fileAdapter.getDocumentContent(uploaded[1].id)
     ).rejects.toThrow();
+  });
+
+  it('lets one actual continuation claim start the gateway and persist its returned correlation and expiry', async () => {
+    await seedDeletionGraph();
+    const services = createActualDeletionServices(dataSource, attemptService);
+    vi.spyOn(services.memo, 'getMemoOrFail').mockResolvedValue(
+      services.memoEntity as any
+    );
+    const pdf = Buffer.from('%PDF-concurrent-continue');
+    const snapshot = await services.fileAdapter.createInternalDocumentInBucket(
+      pdf,
+      UUIDS.bucket,
+      'memo-signing-preview.pdf',
+      'application/pdf',
+      { skipDedup: true }
+    );
+    const attempt = await attemptService.createUnready(UUIDS.memo, UUIDS.actor);
+    await attemptService.finalizePrepared(
+      attempt.id,
+      snapshot.id,
+      createHash('sha256').update(pdf).digest('hex')
+    );
+    const gatewayEntered = createBarrier();
+    const gatewayRelease = createBarrier();
+    const expiresAt = new Date('2026-09-05T21:00:00Z');
+    const gateway = {
+      start: vi.fn(async () => {
+        gatewayEntered.release();
+        await gatewayRelease.waiting;
+        return {
+          redirectUrl: 'https://connect.acc.cleverbase.com/authorize',
+          correlationId: 'correlation-winner',
+          expiresAt,
+        };
+      }),
+    };
+    const signing = new MemoSigningService(
+      { grantAccessOrFail: vi.fn() } as any,
+      services.memo,
+      attemptService,
+      { getCleverbaseSubject: vi.fn().mockResolvedValue('PNONL-123') } as any,
+      {} as any,
+      {} as any,
+      services.fileAdapter,
+      gateway as any,
+      {} as any,
+      { error: vi.fn() } as any
+    );
+    const actor = Object.assign(new ActorContext(), {
+      actorID: UUIDS.actor,
+      authenticationID: 'kratos-1',
+    });
+
+    const first = signing.continueMemoSigning(attempt.id, actor);
+    await gatewayEntered.waiting;
+    const second = signing.continueMemoSigning(attempt.id, actor);
+    gatewayRelease.release();
+    const settled = await Promise.allSettled([first, second]);
+
+    expect(
+      settled.filter(result => result.status === 'fulfilled')
+    ).toHaveLength(1);
+    expect(settled.filter(result => result.status === 'rejected')).toHaveLength(
+      1
+    );
+    expect(gateway.start).toHaveBeenCalledOnce();
+    await expect(
+      dataSource
+        .getRepository(SigningAttempt)
+        .findOneByOrFail({ id: attempt.id })
+    ).resolves.toMatchObject({
+      correlationId: 'correlation-winner',
+      expiresAt,
+    });
   });
 
   it('stores and previews the exact image-containing PDF produced from the current projection', async () => {
@@ -1070,7 +1117,8 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       renderer,
       services.fileAdapter,
       { start: vi.fn() } as any,
-      urlGenerator as any
+      urlGenerator as any,
+      { error: vi.fn() } as any
     );
     const actor = Object.assign(new ActorContext(), {
       actorID: UUIDS.actor,
