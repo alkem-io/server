@@ -1,5 +1,4 @@
 import { createHash } from 'node:crypto';
-import { LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -18,6 +17,7 @@ import { HttpService } from '@nestjs/axios';
 import { LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
+import { DocumentPurgingError } from '@services/collaboration-client/collaboration-document.session';
 import { CreateSigningAttempt1788609600000 } from '@src/migrations/1788609600000-CreateSigningAttempt';
 import { prosemirrorJSONToYDoc } from '@tiptap/y-tiptap';
 import sharp from 'sharp';
@@ -790,14 +790,12 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
         return attempt;
       }
     );
-    const liveReadFailure = new ValidationException(
-      'The memo live document is unavailable',
-      LogContext.MEMOS
-    );
+    const liveReadFailure = new DocumentPurgingError(UUIDS.memo);
     // Modelled collaboration boundary: the real document.deleted path purges the
-    // room and CollaborationDocumentSession reports DocumentPurgingError. This
-    // PG/file-service harness has no collaboration service or RabbitMQ; checkpoint
-    // 6 verifies that live path through quickstart.
+    // room. collaboration-document.session.ts:186-189 and :499-501 translate
+    // WS close 1008 "document deleted" or session-end "document-deleted" into
+    // DocumentPurgingError. This PG/file-service harness has no collaboration
+    // service or RabbitMQ; checkpoint 6 verifies that live path through quickstart.
     const read = vi.fn(async () => {
       if (!(await rowExists('memo', UUIDS.memo))) throw liveReadFailure;
       return '# memo still available';
