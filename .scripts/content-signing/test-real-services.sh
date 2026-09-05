@@ -12,7 +12,10 @@ export CONTENT_SIGNING_FILE_SERVICE_IMAGE="${CONTENT_SIGNING_FILE_SERVICE_IMAGE:
 expected_file_service_revision="0a3995b235ef427c9d7cfd1092e7945e5244c137"
 
 image_revision="$(docker image inspect "${CONTENT_SIGNING_FILE_SERVICE_IMAGE}" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')"
-test "${image_revision}" = "${expected_file_service_revision}"
+if [[ "${image_revision}" != "${expected_file_service_revision}" ]]; then
+  echo "file-service image revision mismatch: expected ${expected_file_service_revision}, got ${image_revision:-<none>}" >&2
+  exit 1
+fi
 cleanup() {
   docker compose --project-name "${project_name}" --file "${compose_file}" down --volumes --remove-orphans
 }

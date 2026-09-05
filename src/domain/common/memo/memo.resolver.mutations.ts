@@ -3,7 +3,6 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
-import { UUID } from '@domain/common/scalars';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InjectEntityManager } from '@nestjs/typeorm';
@@ -13,7 +12,9 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager } from 'typeorm';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { DeleteMemoInput } from './dto/memo.dto.delete';
+import { MemoSigningContinueInput } from './dto/memo.signing.continue.input';
 import { MemoSigningContinueResult } from './dto/memo.signing.continue.result';
+import { MemoSigningPrepareInput } from './dto/memo.signing.prepare.input';
 import { MemoSigningPrepareResult } from './dto/memo.signing.prepare.result';
 import { IMemo } from './memo.interface';
 import { MemoService } from './memo.service';
@@ -40,9 +41,9 @@ export class MemoResolverMutations {
   })
   prepareMemoSigning(
     @CurrentActor() actor: ActorContext,
-    @Args('memoID', { type: () => UUID }) memoId: string
+    @Args('signingData') { memoID }: MemoSigningPrepareInput
   ): Promise<MemoSigningPrepareResult> {
-    return this.memoSigningService.prepareMemoSigning(memoId, actor);
+    return this.memoSigningService.prepareMemoSigning(memoID, actor);
   }
 
   @Mutation(() => MemoSigningContinueResult, {
@@ -50,9 +51,9 @@ export class MemoResolverMutations {
   })
   continueMemoSigning(
     @CurrentActor() actor: ActorContext,
-    @Args('attemptID', { type: () => UUID }) attemptId: string
+    @Args('signingData') { attemptID }: MemoSigningContinueInput
   ): Promise<MemoSigningContinueResult> {
-    return this.memoSigningService.continueMemoSigning(attemptId, actor);
+    return this.memoSigningService.continueMemoSigning(attemptID, actor);
   }
 
   @Mutation(() => IMemo, {

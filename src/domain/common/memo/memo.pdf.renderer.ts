@@ -36,6 +36,8 @@ const MAX_SOURCE_IMAGE_PIXELS = 16_777_216;
 const MAX_RENDERED_IMAGE_EDGE = 1200;
 const supportedElement =
   /^(a|blockquote|br|code|em|h[1-6]|hr|img|li|mark|ol|p|pre|s|strong|table|tbody|td|th|thead|tr|ul)$/;
+const embeddedElement =
+  /^(audio|button|canvas|embed|form|input|link|math|meta|object|select|svg|template|textarea|video)$/;
 
 const isSafeUrl = (value: string) => {
   try {
@@ -80,8 +82,10 @@ export class MemoPdfRenderer {
     document.querySelectorAll('script,style').forEach(node => node.remove());
     document.body.querySelectorAll('*').forEach(node => {
       const tag = node.tagName.toLowerCase();
-      if (!supportedElement.test(tag) && tag !== 'iframe')
+      if (supportedElement.test(tag) || tag === 'iframe') return;
+      if (embeddedElement.test(tag))
         replaceWithLink(node, `Unsupported content: ${tag}`, '');
+      else node.replaceWith(...Array.from(node.childNodes));
     });
     document.querySelectorAll<HTMLElement>('*').forEach(node => {
       for (const name of node.getAttributeNames())
@@ -144,7 +148,7 @@ export class MemoPdfRenderer {
         actor,
         stored!.authorization,
         AuthorizationPrivilege.READ,
-        `read signing image: ${stored!.id}`
+        'read signing image'
       );
       const bytes = await this.fileServiceAdapter.getDocumentContent(
         stored!.id
@@ -165,9 +169,10 @@ export class MemoPdfRenderer {
         normalizedImageBytes += jpeg.length;
         if (normalizedImageBytes > 16 * 1024 * 1024)
           invalid('Signing images exceed the 16 MiB normalized size limit');
-        image.src = `memo-signing-image-${index}`;
+        const placeholder = `memo-signing-image-${index}`;
+        image.setAttribute('src', placeholder);
         imageData.set(
-          image.src,
+          placeholder,
           `data:image/jpeg;base64,${jpeg.toString('base64')}`
         );
       } catch (error) {

@@ -4424,7 +4424,7 @@ type Mutation {
   """Deletes collections nameID-..."""
   cleanupCollections: MigrateEmbeddings!
   """Starts signing the prepared Memo copy."""
-  continueMemoSigning(attemptID: UUID!): MemoSigningContinueResult!
+  continueMemoSigning(signingData: MemoSigningContinueInput!): MemoSigningContinueResult!
   """Move an L1 Space up in the hierarchy, to be a L0 Space."""
   convertSpaceL1ToSpaceL0(convertData: ConvertSpaceL1ToSpaceL0Input!): Space!
   """
@@ -4644,7 +4644,7 @@ type Mutation {
   """
   moveTaskToColumn(moveData: MoveTaskToColumnInput!): CalloutContribution!
   """Prepares an exact PDF preview for signing the specified Memo."""
-  prepareMemoSigning(memoID: UUID!): MemoSigningPrepareResult!
+  prepareMemoSigning(signingData: MemoSigningPrepareInput!): MemoSigningPrepareResult!
   """Refresh the Bodies of Knowledge on All VCs"""
   refreshAllBodiesOfKnowledge: Boolean!
   """
@@ -9058,6 +9058,16 @@ input LicensingGrantedEntitlementInput {
   limit: Float!
   """The entitlement that is granted."""
   type: LicenseEntitlementType!
+}
+
+input MemoSigningContinueInput {
+  """The prepared signing attempt to start."""
+  attemptID: UUID!
+}
+
+input MemoSigningPrepareInput {
+  """The Memo to prepare for signing."""
+  memoID: UUID!
 }
 
 input MintMcpApiKeyInput {

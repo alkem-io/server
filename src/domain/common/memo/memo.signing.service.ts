@@ -78,7 +78,17 @@ export class MemoSigningService {
           LogContext.MEMOS
         );
     } catch (error) {
-      await this.deleteSnapshot(attempt.id, snapshot.id);
+      await this.fileServiceAdapter.deleteDocument(snapshot.id).catch(() =>
+        this.logger.error?.(
+          {
+            message: 'Memo signing snapshot cleanup failed',
+            attemptId: attempt.id,
+            documentId: snapshot.id,
+          },
+          undefined,
+          LogContext.MEMOS
+        )
+      );
       throw error;
     }
     return {
@@ -275,7 +285,7 @@ export class MemoSigningService {
       actor,
       memo.authorization,
       AuthorizationPrivilege.CONTRIBUTE,
-      `sign memo: ${memoId}`
+      'sign memo'
     );
     return memo;
   }
