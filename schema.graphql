@@ -432,9 +432,11 @@ enum ForumDiscussionCategory {
   CHALLENGE_CENTRIC
   COMMUNITY_BUILDING
   HELP
+  NEWSLETTER
   OTHER
   PLATFORM_FUNCTIONALITIES
   RELEASES
+  TIPS_AND_TRICKS
 }
 
 enum ForumDiscussionPrivacy {
@@ -4300,6 +4302,10 @@ type Mutation {
   adminCommunicationSyncSpaceHierarchy: Boolean!
   """Allow updating the state flags of a particular rule."""
   adminCommunicationUpdateRoomState(roomStateData: CommunicationAdminUpdateRoomStateInput!): Boolean!
+  """
+  Removes one category from the platform Forum's active discussionCategories list. Refuses while any Discussion still carries the category. Idempotent for an already-absent category. The enum member is never removed. Requires PLATFORM_ADMIN. Audited (PLATFORM_OPERATIONS).
+  """
+  adminForumRemoveDiscussionCategory(removeData: ForumRemoveDiscussionCategoryInput!): Forum!
   """Delete a Kratos identity by ID."""
   adminIdentityDeleteKratosIdentity(kratosIdentityId: UUID!): Boolean!
   """
@@ -8917,6 +8923,11 @@ input ForumCreateDiscussionInput {
   forumID: UUID!
   profile: CreateProfileInput!
   tags: [String!]
+}
+
+input ForumRemoveDiscussionCategoryInput {
+  """The category to remove from the platform Forum active category list."""
+  category: ForumDiscussionCategory!
 }
 
 input GrantAssistantActorCapabilitiesInput {

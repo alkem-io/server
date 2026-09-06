@@ -5,11 +5,13 @@ import { RoomModule } from '@domain/communication/room/room.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
+import { Platform } from '@platform/platform/platform.entity';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
+import { PlatformOperationsAuditModule } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.module';
 import { DiscussionModule } from '../forum-discussion/discussion.module';
 import { Forum } from './forum.entity';
 import { ForumResolverFields } from './forum.resolver.fields';
@@ -30,8 +32,9 @@ import { ForumAuthorizationService } from './forum.service.authorization';
     PlatformAuthorizationPolicyModule,
     StorageAggregatorResolverModule,
     CommunicationAdapterModule,
+    PlatformOperationsAuditModule,
     RoomModule,
-    TypeOrmModule.forFeature([Forum]),
+    TypeOrmModule.forFeature([Forum, Platform]),
   ],
   providers: [
     ForumService,
