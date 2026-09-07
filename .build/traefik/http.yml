@@ -461,6 +461,15 @@ http:
         - 'web'
       priority: 150
 
+    content-signing-snapshot:
+      rule: 'Method(`GET`) && PathPrefix(`/api/private/rest/content-signing/`)'
+      service: 'alkemio-server'
+      middlewares:
+        - strip-api-private-prefix
+      entryPoints:
+        - 'web'
+      priority: 150
+
     kratos-public:
       rule: 'PathPrefix(`/ory/kratos/public`)'
       service: 'kratos-public'

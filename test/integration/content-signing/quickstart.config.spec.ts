@@ -1,5 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
+import { vi } from 'vitest';
 import { parse } from 'yaml';
 
 const root = process.cwd();
@@ -89,5 +91,34 @@ describe('content-signing local quickstart', () => {
       .join(' ');
     expect(publicRules).not.toContain('/v1/sign');
     expect(publicRules).not.toContain('/v1/verify');
+  });
+
+  it('routes the generated signing preview to the server private REST endpoint', () => {
+    const urlGenerator = new UrlGeneratorService(
+      {
+        get: vi.fn((key: string) =>
+          key === 'hosting.endpoint_cluster'
+            ? 'http://localhost:3000'
+            : { path_api_private_rest: '/api/private/rest' }
+        ),
+      } as any,
+      {} as any,
+      {} as any,
+      {} as any
+    );
+    const previewPath = new URL(
+      urlGenerator.getMemoSigningSnapshotRestUrl('attempt-1')
+    ).pathname;
+
+    expect(previewPath).toBe(
+      '/api/private/rest/content-signing/attempt-1/snapshot'
+    );
+    expect(traefik.http.routers['content-signing-snapshot']).toEqual({
+      rule: 'Method(`GET`) && PathPrefix(`/api/private/rest/content-signing/`)',
+      service: 'alkemio-server',
+      middlewares: ['strip-api-private-prefix'],
+      entryPoints: ['web'],
+      priority: 150,
+    });
   });
 });
