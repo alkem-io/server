@@ -145,10 +145,14 @@ describe('AuthenticationService', () => {
     });
 
     it('should create and cache a fully populated context when not cached', async () => {
-      actorContextCacheService.getByActorID.mockResolvedValue(undefined);
-      actorContextCacheService.setByActorID.mockImplementation(ctx =>
-        Promise.resolve(ctx)
+      let cachedContext: ActorContext | undefined;
+      actorContextCacheService.getByActorID.mockImplementation(async () =>
+        Promise.resolve(cachedContext)
       );
+      actorContextCacheService.setByActorID.mockImplementation(async ctx => {
+        cachedContext = ctx;
+        return ctx;
+      });
       const actorLookupService = {
         getActorCredentialsOrFail: vi.fn().mockResolvedValue([]),
       } as unknown as ActorLookupService;
@@ -170,18 +174,23 @@ describe('AuthenticationService', () => {
       );
 
       const result = await realService.createActorContext('user-id');
+      const cachedResult = await realService.createActorContext('user-id');
 
-      expect(actorContextCacheService.getByActorID).toHaveBeenCalledWith(
-        'user-id'
-      );
+      expect(actorContextCacheService.getByActorID).toHaveBeenCalledTimes(2);
       expect(actorLookupService.getActorCredentialsOrFail).toHaveBeenCalledWith(
         'user-id'
       );
+      expect(
+        actorLookupService.getActorCredentialsOrFail
+      ).toHaveBeenCalledTimes(1);
+      expect(entityManager.findOne).toHaveBeenCalledTimes(1);
       expect(actorContextCacheService.setByActorID).toHaveBeenCalledWith(
         result
       );
+      expect(actorContextCacheService.setByActorID).toHaveBeenCalledTimes(1);
       expect(result.isAnonymous).toBe(false);
       expect(result.authenticationID).toBe('kratos-id-1');
+      expect(cachedResult).toBe(result);
     });
 
     it('should fall back to anonymous when the actor is not found in the DB', async () => {
