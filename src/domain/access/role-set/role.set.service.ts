@@ -2,6 +2,7 @@ import { ActorType } from '@common/enums/actor.type';
 import { AlkemioErrorStatus } from '@common/enums/alkemio.error.status';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CommunityMembershipOrigin } from '@common/enums/community.membership.origin';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
@@ -721,7 +722,8 @@ export class RoleSetService {
     roleType: RoleName,
     actorID: string,
     actorContext?: ActorContext,
-    triggerNewMemberEvents = false
+    triggerNewMemberEvents = false,
+    membershipOrigin: CommunityMembershipOrigin = CommunityMembershipOrigin.DIRECT
   ): Promise<string> {
     // 1. Get actor type without loading full entity
     const actorType =
@@ -800,7 +802,8 @@ export class RoleSetService {
       actorID,
       actorType,
       actorContext,
-      triggerNewMemberEvents
+      triggerNewMemberEvents,
+      membershipOrigin
     );
 
     return actorID;
@@ -919,7 +922,8 @@ export class RoleSetService {
     roleSet: IRoleSet,
     role: RoleName,
     actorContext?: ActorContext,
-    triggerNewMemberEvents = false
+    triggerNewMemberEvents = false,
+    membershipOrigin: CommunityMembershipOrigin = CommunityMembershipOrigin.DIRECT
   ) {
     await this.roleSetCacheService.appendActorRoleCache(
       actorID,
@@ -960,7 +964,8 @@ export class RoleSetService {
                 roleSet,
                 actorContext,
                 actorID,
-                actorType
+                actorType,
+                membershipOrigin
               );
             }
           }
@@ -1975,6 +1980,18 @@ export class RoleSetService {
     const actorType =
       await this.actorLookupService.getActorTypeByIdOrFail(actorID);
 
+    // Which flow produced this membership. The Space-admin "a new member
+    // joined" notification is suppressed for invitation and application:
+    // the inviter already gets an accept/decline outcome notification, and
+    // the approving admin performed the approval themselves. A direct join
+    // has no such step, so it keeps the notification.
+    const membershipOrigin =
+      opts.source === 'invitation'
+        ? CommunityMembershipOrigin.INVITATION
+        : opts.source === 'application'
+          ? CommunityMembershipOrigin.APPLICATION
+          : CommunityMembershipOrigin.DIRECT;
+
     // Application and direct-join share the same combined-flow authorisation:
     // grant the ancestor chain iff every ancestor the actor would be granted
     // into is public + opted in (actor-relative). For application this is the
@@ -2033,7 +2050,8 @@ export class RoleSetService {
               actorID,
               actorType,
               actorContext,
-              true
+              true,
+              membershipOrigin
             );
           } catch (e: any) {
             this.logger.error(
@@ -2071,7 +2089,8 @@ export class RoleSetService {
         RoleName.MEMBER,
         actorID,
         actorContext,
-        true
+        true,
+        membershipOrigin
       );
     }
 
@@ -2338,7 +2357,8 @@ export class RoleSetService {
     actorID: string,
     actorType: ActorType,
     actorContext: ActorContext | undefined,
-    triggerNewMemberEvents: boolean
+    triggerNewMemberEvents: boolean,
+    membershipOrigin: CommunityMembershipOrigin = CommunityMembershipOrigin.DIRECT
   ): Promise<void> {
     await this.roleSetCacheService.deleteOpenApplicationFromCache(
       actorID,
@@ -2355,7 +2375,8 @@ export class RoleSetService {
       roleSet,
       roleType,
       actorContext,
-      triggerNewMemberEvents
+      triggerNewMemberEvents,
+      membershipOrigin
     );
 
     if (

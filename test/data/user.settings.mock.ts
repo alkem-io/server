@@ -26,6 +26,11 @@ export const userSettingsData: { userSettings: IUserSettings } = {
             inApp: true,
             push: true,
           },
+          communityInvitationResponse: {
+            email: true,
+            inApp: true,
+            push: true,
+          },
           communicationMessageReceived: {
             email: true,
             inApp: true,

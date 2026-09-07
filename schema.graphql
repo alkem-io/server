@@ -571,6 +571,7 @@ enum NotificationEvent {
   ORGANIZATION_ADMIN_MENTIONED
   ORGANIZATION_ADMIN_MESSAGE
   ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION
+  ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED
   ORGANIZATION_MESSAGE_SENDER
   PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED
   PLATFORM_ADMIN_SPACE_CREATED
@@ -583,6 +584,8 @@ enum NotificationEvent {
   SPACE_ADMIN_COMMUNITY_NEW_MEMBER
   SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED
   SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED
+  SPACE_ADMIN_USER_COMMUNITY_INVITATION_ACCEPTED
+  SPACE_ADMIN_USER_COMMUNITY_INVITATION_DECLINED
   SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED
   SPACE_COLLABORATION_CALLOUT_COMMENT
   SPACE_COLLABORATION_CALLOUT_CONTRIBUTION
@@ -7414,6 +7417,10 @@ type UserSettingsNotificationSpaceAdmin {
   communicationMessageReceived: UserSettingsNotificationChannels!
   """Receive a notification when an application is received"""
   communityApplicationReceived: UserSettingsNotificationChannels!
+  """
+  Receive a notification when someone responds to an invitation you sent (admin)
+  """
+  communityInvitationResponse: UserSettingsNotificationChannels!
   """Receive a notification when a new member joins the community (admin)"""
   communityNewMember: UserSettingsNotificationChannels!
   """
@@ -10490,6 +10497,10 @@ input UpdateUserSettingsNotificationSpaceAdminInput {
   communicationMessageReceived: NotificationSettingInput
   """Receive a notification when an application is received"""
   communityApplicationReceived: NotificationSettingInput
+  """
+  Receive a notification when someone responds to an invitation you sent (admin)
+  """
+  communityInvitationResponse: NotificationSettingInput
   """Receive a notification when a new member joins the community (admin)"""
   communityNewMember: NotificationSettingInput
   """

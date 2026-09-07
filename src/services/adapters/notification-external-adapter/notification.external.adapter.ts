@@ -358,11 +358,16 @@ export class NotificationExternalAdapter {
     return result;
   }
 
-  async buildOrganizationSpaceCommunityInvitationOutcomePayload(
+  /**
+   * Invitation accept/decline outcome payload. Actor-agnostic — the
+   * `invitee` is resolved through the shared contributor lookup, so the
+   * same builder serves organization and user invitation responses.
+   */
+  async buildActorSpaceCommunityInvitationOutcomePayload(
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],
-    organizationID: string,
+    invitedActorID: string,
     space: ISpace
   ): Promise<NotificationEventPayloadSpaceCommunityInvitation> {
     const spacePayload = await this.buildSpacePayload(
@@ -371,10 +376,10 @@ export class NotificationExternalAdapter {
       recipients,
       space
     );
-    const organizationPayload =
-      await this.getContributorPayloadOrFail(organizationID);
+    const invitedActorPayload =
+      await this.getContributorPayloadOrFail(invitedActorID);
     const result: NotificationEventPayloadSpaceCommunityInvitation = {
-      invitee: organizationPayload,
+      invitee: invitedActorPayload,
       ...spacePayload,
     };
     return result;

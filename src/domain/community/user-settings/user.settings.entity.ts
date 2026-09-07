@@ -40,6 +40,15 @@ const DEFAULT_ORGANIZATION_SPACE_INVITATION_CHANNELS = Object.freeze({
   push: true,
 });
 
+// The mandated default for the "someone responded to an invitation you sent"
+// notification row — all three channels on. Same defensive pattern as the
+// other DEFAULT_* constants above.
+const DEFAULT_INVITATION_RESPONSE_CHANNELS = Object.freeze({
+  email: true,
+  inApp: true,
+  push: true,
+});
+
 @Entity()
 export class UserSettings extends AuthorizableEntity implements IUserSettings {
   @Column('jsonb', { nullable: false })
@@ -142,6 +151,26 @@ export class UserSettings extends AuthorizableEntity implements IUserSettings {
     if (!this.notification.organization.adminSpaceCommunityInvitation) {
       this.notification.organization.adminSpaceCommunityInvitation = {
         ...DEFAULT_ORGANIZATION_SPACE_INVITATION_CHANNELS,
+      };
+    }
+  }
+
+  /**
+   * Defend on read for the "someone responded to an invitation you sent"
+   * notification preference. A `user_settings` row that predates the
+   * backfill migration or was inserted by an old pod during a rolling
+   * deploy lacks this key; without this hook the non-null GraphQL field
+   * would surface a null and the recipients batch would drop the outcome
+   * notification. Runs for every entity load regardless of query path.
+   */
+  @AfterLoad()
+  applyInvitationResponseDefaults() {
+    if (!this.notification?.space?.admin) {
+      return;
+    }
+    if (!this.notification.space.admin.communityInvitationResponse) {
+      this.notification.space.admin.communityInvitationResponse = {
+        ...DEFAULT_INVITATION_RESPONSE_CHANNELS,
       };
     }
   }

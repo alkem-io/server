@@ -454,6 +454,14 @@ export class InAppNotificationService {
         break;
       }
 
+      case NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED: {
+        const typedPayload =
+          payload as InAppNotificationPayloadSpaceCommunityActor;
+        result.spaceID = typedPayload.spaceID;
+        result.organizationID = typedPayload.actorID;
+        break;
+      }
+
       // ========================================
       // SPACE NOTIFICATIONS
       // ========================================
@@ -499,6 +507,15 @@ export class InAppNotificationService {
           payload as InAppNotificationPayloadSpaceCommunityActor;
         result.spaceID = typedPayload.spaceID;
         result.organizationID = typedPayload.actorID;
+        break;
+      }
+
+      case NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_ACCEPTED:
+      case NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_DECLINED: {
+        const typedPayload =
+          payload as InAppNotificationPayloadSpaceCommunityActor;
+        result.spaceID = typedPayload.spaceID;
+        result.contributorActorId = typedPayload.actorID;
         break;
       }
 

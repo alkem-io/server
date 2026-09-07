@@ -1298,7 +1298,7 @@ describe('NotificationExternalAdapter', () => {
     });
   });
 
-  describe('buildOrganizationSpaceCommunityInvitationOutcomePayload', () => {
+  describe('buildActorSpaceCommunityInvitationOutcomePayload', () => {
     it('builds the invitee (organization) with no welcomeMessage field populated', async () => {
       vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue({
         id: 'inviter-1',
@@ -1323,7 +1323,7 @@ describe('NotificationExternalAdapter', () => {
       vi.mocked(configService.get).mockReturnValue('https://platform.test');
 
       const result =
-        await adapter.buildOrganizationSpaceCommunityInvitationOutcomePayload(
+        await adapter.buildActorSpaceCommunityInvitationOutcomePayload(
           NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED,
           'inviter-1',
           [],

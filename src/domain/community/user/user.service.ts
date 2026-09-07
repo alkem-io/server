@@ -351,6 +351,11 @@ export class UserService {
               push: true,
             },
             communityNewMember: { email: true, inApp: true, push: true },
+            communityInvitationResponse: {
+              email: true,
+              inApp: true,
+              push: true,
+            },
             communicationMessageReceived: {
               email: true,
               inApp: true,

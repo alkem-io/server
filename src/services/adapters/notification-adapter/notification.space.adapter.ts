@@ -1,4 +1,5 @@
 import { ActorType } from '@common/enums/actor.type';
+import { CommunityMembershipOrigin } from '@common/enums/community.membership.origin';
 import { LogContext } from '@common/enums/logging.context';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
@@ -52,7 +53,7 @@ import { NotificationInputUpdateSent } from './dto/space/notification.dto.input.
 import { NotificationInputCommunityApplication } from './dto/space/notification.dto.input.space.community.application';
 import { NotificationInputCommunityCalendarEventComment } from './dto/space/notification.dto.input.space.community.calendar.event.comment';
 import { NotificationInputCommunityCalendarEventCreated } from './dto/space/notification.dto.input.space.community.calendar.event.created';
-import { NotificationInputSpaceCommunityInvitationOrganizationOutcome } from './dto/space/notification.dto.input.space.community.invitation.organization.outcome';
+import { NotificationInputSpaceCommunityInvitationOutcome } from './dto/space/notification.dto.input.space.community.invitation.outcome';
 import { NotificationInputPlatformInvitation } from './dto/space/notification.dto.input.space.community.invitation.platform';
 import { NotificationInputVirtualContributorSpaceCommunityInvitationDeclined } from './dto/space/notification.dto.input.space.community.invitation.vc.declined';
 import { NotificationInputCommunityNewMember } from './dto/space/notification.dto.input.space.community.new.member';
@@ -112,17 +113,18 @@ export class NotificationSpaceAdapter {
     }
   }
 
-  private async getOrganizationDisplayName(
-    organizationID: string
+  private async getActorDisplayName(
+    actorID: string,
+    fallback: string
   ): Promise<string> {
     try {
-      const organization = await this.actorLookupService.getFullActorByIdOrFail(
-        organizationID,
+      const actor = await this.actorLookupService.getFullActorByIdOrFail(
+        actorID,
         { relations: { profile: true } }
       );
-      return organization?.profile?.displayName ?? 'The organization';
+      return actor?.profile?.displayName ?? fallback;
     } catch {
-      return 'The organization';
+      return fallback;
     }
   }
 
@@ -799,13 +801,29 @@ export class NotificationSpaceAdapter {
         eventData.community.id
       );
 
-    // Notify the user
+    // Notify the new member ("welcome to the Space"). Always fires, whatever
+    // produced the membership.
     await this.notificationUserAdapter.userSpaceCommunityJoined(
       eventData,
       space
     );
 
-    // Notify the admins
+    // Notify the admins — but ONLY when the membership was not the outcome of
+    // an invitation or an application. Those flows already tell the admin
+    // concerned: the inviter gets a dedicated "accepted / declined your
+    // invitation" notification, and the approving admin performed the
+    // approval themselves. Firing "a new member joined" as well would notify
+    // them twice for one event.
+    const membershipOrigin =
+      eventData.membershipOrigin ?? CommunityMembershipOrigin.DIRECT;
+    if (membershipOrigin !== CommunityMembershipOrigin.DIRECT) {
+      this.logger.verbose?.(
+        `Skipping admin new-member notification for actor ${eventData.actorID} in space ${space.id}: membership originated from ${membershipOrigin}`,
+        LogContext.NOTIFICATIONS
+      );
+      return;
+    }
+
     const adminRecipients = await this.getNotificationRecipientsSpace(
       adminEvent,
       eventData,
@@ -937,13 +955,22 @@ export class NotificationSpaceAdapter {
     }
   }
 
-  public async spaceAdminOrganizationInvitationAccepted(
-    eventData: NotificationInputSpaceCommunityInvitationOrganizationOutcome,
-    space: ISpace
+  /**
+   * "Someone responded to the invitation you sent" — accepted or declined,
+   * for any invited actor type. Goes only to `invitation.createdBy`, the
+   * Space admin who sent it, and is governed by that admin's
+   * `space.admin.communityInvitationResponse` setting. The generic "a new
+   * member joined" notification is deliberately suppressed for the same
+   * membership change so the inviter is not told twice (see
+   * `RoleSetEventsService.processCommunityNewMemberEvents`).
+   */
+  private async spaceAdminInvitationOutcome(
+    event: NotificationEvent,
+    eventData: NotificationInputSpaceCommunityInvitationOutcome,
+    space: ISpace,
+    actorType: ActorType,
+    push: { title: string; verb: string; fallbackName: string }
   ): Promise<void> {
-    const event =
-      NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED;
-
     const recipients = await this.getNotificationRecipientsSpace(
       event,
       eventData,
@@ -953,11 +980,11 @@ export class NotificationSpaceAdapter {
 
     if (recipients.emailRecipients.length > 0) {
       const payload =
-        await this.notificationExternalAdapter.buildOrganizationSpaceCommunityInvitationOutcomePayload(
+        await this.notificationExternalAdapter.buildActorSpaceCommunityInvitationOutcomePayload(
           event,
           eventData.triggeredBy,
           recipients.emailRecipients,
-          eventData.organizationID,
+          eventData.invitedActorID,
           space
         );
 
@@ -974,8 +1001,8 @@ export class NotificationSpaceAdapter {
       const inAppPayload: InAppNotificationPayloadSpaceCommunityActor = {
         type: NotificationEventPayload.SPACE_COMMUNITY_ACTOR,
         spaceID: space.id,
-        actorID: eventData.organizationID,
-        actorType: ActorType.ORGANIZATION,
+        actorID: eventData.invitedActorID,
+        actorType,
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
@@ -992,15 +1019,16 @@ export class NotificationSpaceAdapter {
     );
     if (pushRecipientsFiltered.length > 0) {
       const spaceName = space.about?.profile?.displayName ?? 'your Space';
-      const organizationName = await this.getOrganizationDisplayName(
-        eventData.organizationID
+      const actorName = await this.getActorDisplayName(
+        eventData.invitedActorID,
+        push.fallbackName
       );
       await this.notificationPushAdapter.sendPushNotifications(
         pushRecipientsFiltered,
         event,
         {
-          title: 'Invitation accepted',
-          body: `${organizationName} accepted your invitation to join ${spaceName}`,
+          title: push.title,
+          body: `${actorName} ${push.verb} your invitation to join ${spaceName}`,
           url: await this.urlGeneratorService.createSpaceAdminCommunityURL(
             space.id
           ),
@@ -1009,76 +1037,72 @@ export class NotificationSpaceAdapter {
     }
   }
 
-  public async spaceAdminOrganizationInvitationDeclined(
-    eventData: NotificationInputSpaceCommunityInvitationOrganizationOutcome,
+  public async spaceAdminOrganizationInvitationAccepted(
+    eventData: NotificationInputSpaceCommunityInvitationOutcome,
     space: ISpace
   ): Promise<void> {
-    const event =
-      NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED;
-
-    const recipients = await this.getNotificationRecipientsSpace(
-      event,
+    await this.spaceAdminInvitationOutcome(
+      NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED,
       eventData,
-      space.id,
-      eventData.invitationCreatedBy
+      space,
+      ActorType.ORGANIZATION,
+      {
+        title: 'Invitation accepted',
+        verb: 'accepted',
+        fallbackName: 'The organization',
+      }
     );
+  }
 
-    if (recipients.emailRecipients.length > 0) {
-      const payload =
-        await this.notificationExternalAdapter.buildOrganizationSpaceCommunityInvitationOutcomePayload(
-          event,
-          eventData.triggeredBy,
-          recipients.emailRecipients,
-          eventData.organizationID,
-          space
-        );
-
-      this.notificationExternalAdapter.sendExternalNotifications(
-        event,
-        payload
-      );
-    }
-
-    const inAppReceiverIDs = recipients.inAppRecipients.map(
-      recipient => recipient.id
+  public async spaceAdminOrganizationInvitationDeclined(
+    eventData: NotificationInputSpaceCommunityInvitationOutcome,
+    space: ISpace
+  ): Promise<void> {
+    await this.spaceAdminInvitationOutcome(
+      NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED,
+      eventData,
+      space,
+      ActorType.ORGANIZATION,
+      {
+        title: 'Invitation declined',
+        verb: 'declined',
+        fallbackName: 'The organization',
+      }
     );
-    if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPayloadSpaceCommunityActor = {
-        type: NotificationEventPayload.SPACE_COMMUNITY_ACTOR,
-        spaceID: space.id,
-        actorID: eventData.organizationID,
-        actorType: ActorType.ORGANIZATION,
-      };
+  }
 
-      await this.notificationInAppAdapter.sendInAppNotifications(
-        event,
-        NotificationEventCategory.SPACE_ADMIN,
-        eventData.triggeredBy,
-        inAppReceiverIDs,
-        inAppPayload
-      );
-    }
-
-    const pushRecipientsFiltered = recipients.pushRecipients.filter(
-      recipient => recipient.id !== eventData.triggeredBy
+  public async spaceAdminUserInvitationAccepted(
+    eventData: NotificationInputSpaceCommunityInvitationOutcome,
+    space: ISpace
+  ): Promise<void> {
+    await this.spaceAdminInvitationOutcome(
+      NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_ACCEPTED,
+      eventData,
+      space,
+      ActorType.USER,
+      {
+        title: 'Invitation accepted',
+        verb: 'accepted',
+        fallbackName: 'Someone',
+      }
     );
-    if (pushRecipientsFiltered.length > 0) {
-      const spaceName = space.about?.profile?.displayName ?? 'your Space';
-      const organizationName = await this.getOrganizationDisplayName(
-        eventData.organizationID
-      );
-      await this.notificationPushAdapter.sendPushNotifications(
-        pushRecipientsFiltered,
-        event,
-        {
-          title: 'Invitation declined',
-          body: `${organizationName} declined your invitation to join ${spaceName}`,
-          url: await this.urlGeneratorService.createSpaceAdminCommunityURL(
-            space.id
-          ),
-        }
-      );
-    }
+  }
+
+  public async spaceAdminUserInvitationDeclined(
+    eventData: NotificationInputSpaceCommunityInvitationOutcome,
+    space: ISpace
+  ): Promise<void> {
+    await this.spaceAdminInvitationOutcome(
+      NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_DECLINED,
+      eventData,
+      space,
+      ActorType.USER,
+      {
+        title: 'Invitation declined',
+        verb: 'declined',
+        fallbackName: 'Someone',
+      }
+    );
   }
 
   public async spaceCommunityApplicationCreated(

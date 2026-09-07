@@ -55,6 +55,17 @@ export const DEFAULT_ORGANIZATION_SPACE_INVITATION_CHANNELS: IUserSettingsNotifi
     push: true,
   });
 
+// Defend on read — a `user_settings` row that predates the backfill
+// migration lacks this key. Same mandated defaults as the migration
+// (1788600000000) and `UserSettings.applyInvitationResponseDefaults`
+// (`@AfterLoad`).
+export const DEFAULT_INVITATION_RESPONSE_CHANNELS: IUserSettingsNotificationChannels =
+  Object.freeze({
+    email: true,
+    inApp: true,
+    push: true,
+  });
+
 @Injectable()
 export class NotificationRecipientsService {
   constructor(
@@ -374,8 +385,6 @@ export class NotificationRecipientsService {
           notificationSettings.space?.collaborationCalloutReaction ??
           DEFAULT_CALLOUT_REACTION_CHANNELS
         );
-      case NotificationEvent.SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED:
-        return notificationSettings.space.admin.communityNewMember;
       case NotificationEvent.VIRTUAL_ADMIN_SPACE_COMMUNITY_INVITATION:
         return notificationSettings.virtualContributor
           .adminSpaceCommunityInvitation;
@@ -389,9 +398,31 @@ export class NotificationRecipientsService {
           notificationSettings.organization?.adminSpaceCommunityInvitation ??
           DEFAULT_ORGANIZATION_SPACE_INVITATION_CHANNELS
         );
+      case NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED:
+        // Same control as the invitation itself: the "your organization has
+        // joined" notice is the closing half of that lifecycle, so it is not
+        // given a separate settings row.
+        return (
+          notificationSettings.organization?.adminSpaceCommunityInvitation ??
+          DEFAULT_ORGANIZATION_SPACE_INVITATION_CHANNELS
+        );
+      // Every "someone responded to an invitation you sent" event shares one
+      // control, distinct from "a new member joined" — accepting an
+      // invitation is a response to the recipient's own action, not an
+      // unprompted join.
+      case NotificationEvent.SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED:
       case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED:
       case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED:
-        return notificationSettings.space.admin.communityNewMember;
+      case NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_ACCEPTED:
+      case NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_DECLINED:
+        // Defend on read against a row that predates the backfill migration
+        // (1788600000000) or was inserted by an old pod during a rolling
+        // deploy. `UserSettings.applyInvitationResponseDefaults` (@AfterLoad)
+        // already heals entity-loaded rows; this covers other load paths.
+        return (
+          notificationSettings.space?.admin?.communityInvitationResponse ??
+          DEFAULT_INVITATION_RESPONSE_CHANNELS
+        );
 
       // Fixed values
       case NotificationEvent.USER_SIGN_UP_WELCOME:
@@ -546,10 +577,22 @@ export class NotificationRecipientsService {
         break;
       }
       case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED:
-      case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED: {
+      case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED:
+      case NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_ACCEPTED:
+      case NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_DECLINED: {
         // Notify only the Space admin who sent the invitation.
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
         credentialCriteria = this.getUserSelfCriteria(userID);
+        break;
+      }
+      case NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED: {
+        // Every admin/owner of the organization that just joined — including
+        // whoever accepted, mirroring the user-side "welcome to the Space"
+        // notification. Resolved by manager standing, not associate
+        // membership, exactly as the invitation event is.
+        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
+        credentialCriteria =
+          this.getOrganizationManagerCredentialCriteria(organizationID);
         break;
       }
       case NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT:
@@ -589,7 +632,8 @@ export class NotificationRecipientsService {
       }
       case NotificationEvent.ORGANIZATION_ADMIN_MESSAGE:
       case NotificationEvent.ORGANIZATION_ADMIN_MENTIONED:
-      case NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION: {
+      case NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION:
+      case NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED: {
         // get the organization authorization policy
         if (!organizationID) {
           throw new ValidationException(
@@ -617,6 +661,8 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED:
       case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED:
       case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED:
+      case NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_ACCEPTED:
+      case NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_DECLINED:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_COMMENT:

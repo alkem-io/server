@@ -24,8 +24,11 @@ import { NotificationRecipientsService } from './notification.recipients.service
 describe('organization-invitation notification events — exhaustiveness (D14)', () => {
   const NEW_EVENTS = [
     NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION,
+    NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED,
     NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED,
     NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED,
+    NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_ACCEPTED,
+    NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_DECLINED,
   ];
 
   describe('recipients service mapping points', () => {
@@ -47,6 +50,7 @@ describe('organization-invitation notification events — exhaustiveness (D14)',
       space: {
         admin: {
           communityNewMember: { email: true, inApp: true, push: true },
+          communityInvitationResponse: { email: true, inApp: true, push: true },
         },
       },
     } as any;
@@ -89,19 +93,26 @@ describe('organization-invitation notification events — exhaustiveness (D14)',
     });
 
     it('getPrivilegeRequiredCredentialCriteria resolves every new event without throwing', async () => {
-      const orgInvited = await (
-        service as any
-      ).getPrivilegeRequiredCredentialCriteria(
+      for (const event of [
         NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION,
-        undefined,
-        undefined,
-        'org-1'
-      );
-      expect(orgInvited.credentialCriteria.length).toBeGreaterThan(0);
+        NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED,
+      ]) {
+        const orgScoped = await (
+          service as any
+        ).getPrivilegeRequiredCredentialCriteria(
+          event,
+          undefined,
+          undefined,
+          'org-1'
+        );
+        expect(orgScoped.credentialCriteria.length).toBeGreaterThan(0);
+      }
 
       for (const event of [
         NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED,
         NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED,
+        NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_ACCEPTED,
+        NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_DECLINED,
       ]) {
         const outcome = await (
           service as any
@@ -116,18 +127,25 @@ describe('organization-invitation notification events — exhaustiveness (D14)',
         authorization: { id: 'auth-space-1' },
       } as any);
 
-      await expect(
-        (service as any).getAuthorizationPolicy(
-          NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION,
-          undefined,
-          undefined,
-          'org-1'
-        )
-      ).resolves.toEqual({ id: 'auth-org-1' });
+      for (const event of [
+        NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION,
+        NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED,
+      ]) {
+        await expect(
+          (service as any).getAuthorizationPolicy(
+            event,
+            undefined,
+            undefined,
+            'org-1'
+          )
+        ).resolves.toEqual({ id: 'auth-org-1' });
+      }
 
       for (const event of [
         NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED,
         NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED,
+        NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_ACCEPTED,
+        NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_DECLINED,
       ]) {
         await expect(
           (service as any).getAuthorizationPolicy(event, 'space-1')
@@ -188,6 +206,7 @@ describe('organization-invitation notification events — exhaustiveness (D14)',
     it.each([
       NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED,
       NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED,
+      NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED,
     ])('populates spaceID and organizationID (= actorID) for %s', type => {
       const result = service.createInAppNotification({
         type,

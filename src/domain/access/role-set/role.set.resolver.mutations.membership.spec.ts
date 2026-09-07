@@ -1498,7 +1498,7 @@ describe('RoleSetResolverMutationsMembership', () => {
           expect.objectContaining({
             triggeredBy: 'org-admin-1',
             invitationCreatedBy: 'inviter-1',
-            organizationID: 'org-1',
+            invitedActorID: 'org-1',
             spaceID: 'space-1',
           }),
           expect.objectContaining({ id: 'space-1' })
@@ -1547,7 +1547,7 @@ describe('RoleSetResolverMutationsMembership', () => {
           expect.objectContaining({
             triggeredBy: 'org-admin-1',
             invitationCreatedBy: 'inviter-1',
-            organizationID: 'org-1',
+            invitedActorID: 'org-1',
             spaceID: 'space-1',
           }),
           expect.objectContaining({ id: 'space-1' })
@@ -1572,6 +1572,47 @@ describe('RoleSetResolverMutationsMembership', () => {
         expect(result).toBeDefined();
         expect(
           notificationAdapterSpace.spaceAdminOrganizationInvitationDeclined
+        ).not.toHaveBeenCalled();
+      });
+
+      it('dispatches the organization "joined" welcome to the org admins on accept', async () => {
+        setUp('inviter-1');
+        (invitationService.getLifecycleState as Mock).mockResolvedValue(
+          'accepting'
+        );
+        (roleSetService.acceptInvitationToRoleSet as Mock).mockResolvedValue(
+          undefined
+        );
+        (lifecycleService.getState as Mock).mockReturnValue('accepted');
+
+        await resolver.eventOnInvitation(
+          { invitationID: 'inv-1', eventName: 'ACCEPT' } as any,
+          { actorID: 'org-admin-1' } as any
+        );
+
+        expect(
+          notificationOrganizationAdapter.organizationSpaceCommunityJoined
+        ).toHaveBeenCalledWith({
+          triggeredBy: 'org-admin-1',
+          organizationID: 'org-1',
+          spaceID: 'space-1',
+        });
+      });
+
+      it('does not dispatch the organization "joined" welcome on decline', async () => {
+        setUp('inviter-1');
+        (invitationService.getLifecycleState as Mock).mockResolvedValue(
+          'invited'
+        );
+        (lifecycleService.getState as Mock).mockReturnValue('rejected');
+
+        await resolver.eventOnInvitation(
+          { invitationID: 'inv-1', eventName: 'REJECT' } as any,
+          { actorID: 'org-admin-1' } as any
+        );
+
+        expect(
+          notificationOrganizationAdapter.organizationSpaceCommunityJoined
         ).not.toHaveBeenCalled();
       });
 
@@ -1628,6 +1669,118 @@ describe('RoleSetResolverMutationsMembership', () => {
         ).not.toHaveBeenCalled();
         expect(
           notificationAdapterSpace.spaceAdminOrganizationInvitationAccepted
+        ).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('user accept/decline outcome dispatch', () => {
+      const setUpUser = (createdBy: string | undefined) => {
+        const mockInvitation = {
+          id: 'inv-1',
+          authorization: { id: 'auth-1' },
+          lifecycle: { id: 'lc-1' },
+          invitedActorID: 'user-9',
+          roleSet: { id: 'rs-1' },
+          createdBy,
+        } as any;
+
+        (invitationService.getInvitationOrFail as Mock).mockResolvedValue(
+          mockInvitation
+        );
+        (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+          undefined
+        );
+        (lifecycleService.event as Mock).mockResolvedValue(undefined);
+        (
+          roleSetCacheService.deleteOpenInvitationFromCache as Mock
+        ).mockResolvedValue(undefined);
+        (
+          roleSetCacheService.deleteMembershipStatusCache as Mock
+        ).mockResolvedValue(undefined);
+        (roleSetCacheService.setActorIsMemberCache as Mock).mockResolvedValue(
+          undefined
+        );
+        (
+          communityResolverService.getSpaceForRoleSetOrFail as Mock
+        ).mockResolvedValue({ id: 'space-1' });
+
+        const actorLookupService = (resolver as any).actorLookupService;
+        (actorLookupService.getActorTypeById as Mock).mockResolvedValue('user');
+
+        return mockInvitation;
+      };
+
+      it('dispatches spaceAdminUserInvitationAccepted to the inviter on accept', async () => {
+        setUpUser('inviter-1');
+        (invitationService.getLifecycleState as Mock).mockResolvedValue(
+          'accepting'
+        );
+        (roleSetService.acceptInvitationToRoleSet as Mock).mockResolvedValue(
+          undefined
+        );
+        (lifecycleService.getState as Mock).mockReturnValue('accepted');
+
+        await resolver.eventOnInvitation(
+          { invitationID: 'inv-1', eventName: 'ACCEPT' } as any,
+          { actorID: 'user-9' } as any
+        );
+
+        expect(
+          notificationAdapterSpace.spaceAdminUserInvitationAccepted
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({
+            triggeredBy: 'user-9',
+            invitationCreatedBy: 'inviter-1',
+            invitedActorID: 'user-9',
+            spaceID: 'space-1',
+          }),
+          expect.objectContaining({ id: 'space-1' })
+        );
+        expect(
+          notificationAdapterSpace.spaceAdminOrganizationInvitationAccepted
+        ).not.toHaveBeenCalled();
+        expect(
+          notificationOrganizationAdapter.organizationSpaceCommunityJoined
+        ).not.toHaveBeenCalled();
+      });
+
+      it('dispatches spaceAdminUserInvitationDeclined to the inviter on decline', async () => {
+        setUpUser('inviter-1');
+        (invitationService.getLifecycleState as Mock).mockResolvedValue(
+          'invited'
+        );
+        (lifecycleService.getState as Mock).mockReturnValue('rejected');
+
+        await resolver.eventOnInvitation(
+          { invitationID: 'inv-1', eventName: 'REJECT' } as any,
+          { actorID: 'user-9' } as any
+        );
+
+        expect(
+          notificationAdapterSpace.spaceAdminUserInvitationDeclined
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({
+            invitedActorID: 'user-9',
+            invitationCreatedBy: 'inviter-1',
+          }),
+          expect.objectContaining({ id: 'space-1' })
+        );
+      });
+
+      it('skips the user outcome dispatch when the inviter no longer exists', async () => {
+        setUpUser(undefined);
+        (invitationService.getLifecycleState as Mock).mockResolvedValue(
+          'invited'
+        );
+        (lifecycleService.getState as Mock).mockReturnValue('rejected');
+
+        await resolver.eventOnInvitation(
+          { invitationID: 'inv-1', eventName: 'REJECT' } as any,
+          { actorID: 'user-9' } as any
+        );
+
+        expect(
+          notificationAdapterSpace.spaceAdminUserInvitationDeclined
         ).not.toHaveBeenCalled();
       });
     });

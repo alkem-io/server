@@ -1,3 +1,4 @@
+import { ActorType } from '@common/enums/actor.type';
 import { LogContext } from '@common/enums/logging.context';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
@@ -6,10 +7,12 @@ import { IRoleSet } from '@domain/access/role-set';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { MessageDetailsService } from '@domain/communication/message.details/message.details.service';
+import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { forwardRef, Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist/config.service';
 import { InAppNotificationPayloadOrganizationMessageDirect } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.direct';
 import { InAppNotificationPayloadOrganizationMessageRoom } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.room';
+import { InAppNotificationPayloadSpaceCommunityActor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.actor';
 import { InAppNotificationPayloadSpaceCommunityInvitation } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.invitation';
 import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
@@ -22,6 +25,7 @@ import { NotificationPushAdapter } from '../notification-push-adapter/notificati
 import { NotificationInputBase } from './dto/notification.dto.input.base';
 import { NotificationInputOrganizationMention } from './dto/organization/notification.dto.input.organization.mention';
 import { NotificationInputOrganizationSpaceCommunityInvitation } from './dto/organization/notification.dto.input.organization.space.community.invitation';
+import { NotificationInputOrganizationSpaceCommunityJoined } from './dto/organization/notification.dto.input.organization.space.community.joined';
 import { NotificationInputOrganizationMessage } from './dto/organization/notification.input.organization.message';
 import { NotificationAdapter } from './notification.adapter';
 
@@ -38,6 +42,7 @@ export class NotificationOrganizationAdapter {
     private actorLookupService: ActorLookupService,
     private communityResolverService: CommunityResolverService,
     private urlGeneratorService: UrlGeneratorService,
+    private spaceLookupService: SpaceLookupService,
     private configService: ConfigService<AlkemioConfig, true>,
     @Inject(forwardRef(() => RoleSetService))
     private roleSetService: RoleSetService
@@ -367,6 +372,100 @@ export class NotificationOrganizationAdapter {
           ),
         }
       );
+    }
+  }
+
+  /**
+   * The organization has joined a Space after one of its admins accepted
+   * the invitation. Every admin/owner is notified — the point of this
+   * notification is that the *others* learn no action is needed, mirroring
+   * the "welcome to the Space" notification a user gets when they accept
+   * an invitation themselves. Shares the invitation's settings row: it is
+   * the closing half of the same lifecycle.
+   */
+  public async organizationSpaceCommunityJoined(
+    eventData: NotificationInputOrganizationSpaceCommunityJoined
+  ): Promise<void> {
+    const event = NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED;
+    const space = await this.spaceLookupService.getSpaceOrFail(
+      eventData.spaceID,
+      { relations: { about: { profile: true } } }
+    );
+
+    const recipients = await this.notificationAdapter.getNotificationRecipients(
+      event,
+      eventData,
+      undefined,
+      undefined,
+      eventData.organizationID
+    );
+
+    if (recipients.emailRecipients.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildActorSpaceCommunityInvitationOutcomePayload(
+          event,
+          eventData.triggeredBy,
+          recipients.emailRecipients,
+          eventData.organizationID,
+          space
+        );
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
+    }
+
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadSpaceCommunityActor = {
+        type: NotificationEventPayload.SPACE_COMMUNITY_ACTOR,
+        spaceID: space.id,
+        actorID: eventData.organizationID,
+        actorType: ActorType.ORGANIZATION,
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        event,
+        NotificationEventCategory.ORGANIZATION,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
+    }
+
+    // No triggeredBy filter: the admin who accepted is a legitimate
+    // recipient of the "welcome" notice, exactly as the user who accepts
+    // their own Space invitation is.
+    if (recipients.pushRecipients.length > 0) {
+      const organizationName = await this.getOrganizationDisplayName(
+        eventData.organizationID
+      );
+      const spaceName = space.about?.profile?.displayName ?? 'a Space';
+      await this.notificationPushAdapter.sendPushNotifications(
+        recipients.pushRecipients,
+        event,
+        {
+          title: `Welcome to ${spaceName}`,
+          body: `${organizationName} is now a member of ${spaceName}`,
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
+        }
+      );
+    }
+  }
+
+  private async getOrganizationDisplayName(
+    organizationID: string
+  ): Promise<string> {
+    try {
+      const organization = await this.actorLookupService.getFullActorByIdOrFail(
+        organizationID,
+        { relations: { profile: true } }
+      );
+      return organization?.profile?.displayName ?? 'Your organization';
+    } catch {
+      return 'Your organization';
     }
   }
 }

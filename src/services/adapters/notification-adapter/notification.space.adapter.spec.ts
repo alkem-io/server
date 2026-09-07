@@ -1,4 +1,5 @@
 import { LogContext } from '@common/enums';
+import { CommunityMembershipOrigin } from '@common/enums/community.membership.origin';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { CalloutLookupService } from '@domain/collaboration/callout/callout.lookup/callout.lookup.service';
@@ -234,7 +235,16 @@ describe('NotificationSpaceAdapter', () => {
   });
 
   describe('spaceCommunityNewMember', () => {
-    it('should notify user and admins', async () => {
+    const newMemberEvent = (membershipOrigin?: CommunityMembershipOrigin) =>
+      ({
+        triggeredBy: 'user-1',
+        community: { id: 'community-1' },
+        actorID: 'new-member',
+        actorType: 'USER',
+        ...(membershipOrigin ? { membershipOrigin } : {}),
+      }) as any;
+
+    beforeEach(() => {
       vi.mocked(
         communityResolverService.getSpaceForCommunityOrFail
       ).mockResolvedValue({ id: 'space-1' } as any);
@@ -242,18 +252,39 @@ describe('NotificationSpaceAdapter', () => {
       vi.mocked(
         externalAdapter.buildSpaceCommunityNewMemberPayload
       ).mockResolvedValue({} as any);
+    });
 
-      await adapter.spaceCommunityNewMember({
-        triggeredBy: 'user-1',
-        community: { id: 'community-1' },
-        actorID: 'new-member',
-        actorType: 'USER',
-      } as any);
+    it('should notify user and admins', async () => {
+      await adapter.spaceCommunityNewMember(newMemberEvent());
 
       expect(
         notificationUserAdapter.userSpaceCommunityJoined
       ).toHaveBeenCalled();
       expect(externalAdapter.sendExternalNotifications).toHaveBeenCalled();
+    });
+
+    it('treats a missing membershipOrigin as DIRECT and still notifies admins', async () => {
+      await adapter.spaceCommunityNewMember(
+        newMemberEvent(CommunityMembershipOrigin.DIRECT)
+      );
+
+      expect(externalAdapter.sendExternalNotifications).toHaveBeenCalled();
+    });
+
+    it.each([
+      CommunityMembershipOrigin.INVITATION,
+      CommunityMembershipOrigin.APPLICATION,
+    ])('keeps the member welcome but suppresses the admin new-member notification for %s', async membershipOrigin => {
+      await adapter.spaceCommunityNewMember(newMemberEvent(membershipOrigin));
+
+      // The welcome to the new member always fires ...
+      expect(
+        notificationUserAdapter.userSpaceCommunityJoined
+      ).toHaveBeenCalled();
+      // ... but the admin is not told twice: the invitation outcome
+      // notification (or their own approval) already covered it.
+      expect(externalAdapter.sendExternalNotifications).not.toHaveBeenCalled();
+      expect(inAppAdapter.sendInAppNotifications).not.toHaveBeenCalled();
     });
   });
 
@@ -826,7 +857,7 @@ describe('NotificationSpaceAdapter', () => {
   describe('spaceAdminOrganizationInvitationAccepted', () => {
     const eventData = {
       triggeredBy: 'org-admin-1',
-      organizationID: 'org-1',
+      invitedActorID: 'org-1',
       invitationCreatedBy: 'inviter-1',
     } as any;
     const space = {
@@ -844,7 +875,7 @@ describe('NotificationSpaceAdapter', () => {
         pushRecipients: [{ id: 'inviter-1' }],
       } as any);
       vi.mocked(
-        externalAdapter.buildOrganizationSpaceCommunityInvitationOutcomePayload
+        externalAdapter.buildActorSpaceCommunityInvitationOutcomePayload
       ).mockResolvedValue({} as any);
       vi.mocked(actorLookupService.getFullActorByIdOrFail).mockResolvedValue({
         id: 'org-1',
@@ -890,7 +921,7 @@ describe('NotificationSpaceAdapter', () => {
       await adapter.spaceAdminOrganizationInvitationAccepted(eventData, space);
 
       expect(
-        externalAdapter.buildOrganizationSpaceCommunityInvitationOutcomePayload
+        externalAdapter.buildActorSpaceCommunityInvitationOutcomePayload
       ).not.toHaveBeenCalled();
       expect(externalAdapter.sendExternalNotifications).not.toHaveBeenCalled();
     });
@@ -899,7 +930,7 @@ describe('NotificationSpaceAdapter', () => {
   describe('spaceAdminOrganizationInvitationDeclined', () => {
     const eventData = {
       triggeredBy: 'org-admin-1',
-      organizationID: 'org-1',
+      invitedActorID: 'org-1',
       invitationCreatedBy: 'inviter-1',
     } as any;
     const space = {
@@ -916,7 +947,7 @@ describe('NotificationSpaceAdapter', () => {
         pushRecipients: [{ id: 'inviter-1' }],
       } as any);
       vi.mocked(
-        externalAdapter.buildOrganizationSpaceCommunityInvitationOutcomePayload
+        externalAdapter.buildActorSpaceCommunityInvitationOutcomePayload
       ).mockResolvedValue({} as any);
       vi.mocked(actorLookupService.getFullActorByIdOrFail).mockResolvedValue({
         id: 'org-1',
@@ -954,7 +985,7 @@ describe('NotificationSpaceAdapter', () => {
       await adapter.spaceAdminOrganizationInvitationDeclined(eventData, space);
 
       expect(
-        externalAdapter.buildOrganizationSpaceCommunityInvitationOutcomePayload
+        externalAdapter.buildActorSpaceCommunityInvitationOutcomePayload
       ).not.toHaveBeenCalled();
     });
   });

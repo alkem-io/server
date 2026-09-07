@@ -182,6 +182,10 @@ export class UserSettingsService {
           adminData.communityNewMember
         );
         this.updateNotificationSetting(
+          settings.notification.space.admin.communityInvitationResponse,
+          adminData.communityInvitationResponse
+        );
+        this.updateNotificationSetting(
           settings.notification.space.admin.communicationMessageReceived,
           adminData.communicationMessageReceived
         );

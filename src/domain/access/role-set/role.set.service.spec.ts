@@ -1,5 +1,6 @@
 import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { CommunityMembershipOrigin } from '@common/enums/community.membership.origin';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { RoleName } from '@common/enums/role.name';
@@ -2663,7 +2664,8 @@ describe('RoleSetService', () => {
         RoleName.MEMBER,
         'user-1',
         expect.anything(),
-        true
+        true,
+        CommunityMembershipOrigin.APPLICATION
       );
     });
 
@@ -2958,7 +2960,8 @@ describe('RoleSetService', () => {
           RoleName.MEMBER,
           'user-1',
           expect.anything(),
-          true
+          true,
+          CommunityMembershipOrigin.DIRECT
         );
       });
 
