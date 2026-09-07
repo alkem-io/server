@@ -1980,15 +1980,31 @@ export class RoleSetService {
     const actorType =
       await this.actorLookupService.getActorTypeByIdOrFail(actorID);
 
-    // Which flow produced this membership. The Space-admin "a new member
-    // joined" notification is suppressed for invitation and application:
-    // the inviter already gets an accept/decline outcome notification, and
-    // the approving admin performed the approval themselves. A direct join
-    // has no such step, so it keeps the notification.
+    // Which flow produced this membership, for the TARGET role set only.
+    // The Space-admin "a new member joined" notification is suppressed for
+    // invitation and application because a replacement notification is
+    // dispatched for the same event: the Space admins get "X accepted /
+    // declined the invitation", and the approving admin performed the
+    // approval themselves. A direct join has no such step, so it keeps the
+    // notification.
+    //
+    // Two conditions bound the suppression, so it never silences a Space
+    // that gets no replacement:
+    //  - only USER and ORGANIZATION invitees have invitation-response
+    //    events (FR-020a/R28). A Virtual Contributor accepting produces no
+    //    replacement, so its membership stays DIRECT and the admins are
+    //    told the ordinary way;
+    //  - only the invited/applied-to role set is suppressed. Ancestor
+    //    Spaces joined on the way in were never invited to and never
+    //    applied to, and their admins receive no response notification, so
+    //    they keep the generic "a new member joined" (see the per-role-set
+    //    origin passed in the grant loop below).
+    const originHasReplacementNotification =
+      actorType === ActorType.USER || actorType === ActorType.ORGANIZATION;
     const membershipOrigin =
-      opts.source === 'invitation'
+      opts.source === 'invitation' && originHasReplacementNotification
         ? CommunityMembershipOrigin.INVITATION
-        : opts.source === 'application'
+        : opts.source === 'application' && originHasReplacementNotification
           ? CommunityMembershipOrigin.APPLICATION
           : CommunityMembershipOrigin.DIRECT;
 
@@ -2051,7 +2067,13 @@ export class RoleSetService {
               actorType,
               actorContext,
               true,
-              membershipOrigin
+              // Only the target Space saw the invitation / application, so
+              // only its admins get the replacement notification. Every
+              // ancestor joined on the way in is a plain new membership to
+              // that Space's admins.
+              grantedRoleSet.id === targetRoleSet.id
+                ? membershipOrigin
+                : CommunityMembershipOrigin.DIRECT
             );
           } catch (e: any) {
             this.logger.error(

@@ -628,18 +628,21 @@ export class RoleSetResolverMutationsMembership {
       AuthorizationPrivilege.UPDATE,
       `event on invitation: ${invitation.id}`
     );
-    // ACCEPT is scoped tighter than the generic UPDATE privilege above:
-    // only the invited actor's own account admin (or, for a user actor,
-    // the user themself) may accept on the actor's behalf. A generic
-    // UPDATE holder — e.g. a global admin via inherited parent
-    // authorization — can still revoke or reject the invitation, but must
-    // not be able to accept it for the invited actor.
-    if (eventData.eventName === 'ACCEPT') {
+    // ACCEPT and REJECT are scoped tighter than the generic UPDATE privilege
+    // above: both are the invited actor's own consent decision, so only that
+    // actor's account admin (or, for a user actor, the user themself) may
+    // make them on the actor's behalf (FR-010). A generic UPDATE holder —
+    // e.g. a global admin via inherited parent authorization — can still
+    // REVOKE the invitation (deletion), which is the Space-side action, but
+    // must not answer it for the invitee: declining on their behalf would
+    // additionally send the Space admins a "the organisation declined your
+    // invitation" notification asserting a decision the invitee never made.
+    if (eventData.eventName === 'ACCEPT' || eventData.eventName === 'REJECT') {
       this.authorizationService.grantAccessOrFail(
         actorContext,
         invitation.authorization,
         AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE_ACCEPT,
-        `accept event on invitation: ${invitation.id}`
+        `${eventData.eventName.toLowerCase()} event on invitation: ${invitation.id}`
       );
     }
 
@@ -709,35 +712,41 @@ export class RoleSetResolverMutationsMembership {
       // Send notification if invitation was declined/rejected for Virtual Contributor
       if (invitationState === InvitationLifecycleState.REJECTED) {
         if (invitedActorType === ActorType.VIRTUAL_CONTRIBUTOR) {
-          const community =
-            await this.communityResolverService.getCommunityForRoleSet(
-              invitation.roleSet.id
-            );
-          const space =
-            await this.communityResolverService.getSpaceForCommunityOrFail(
-              community.id
-            );
-
-          const notificationInput: NotificationInputVirtualContributorSpaceCommunityInvitationDeclined =
-            {
-              triggeredBy: actorContext.actorID, // Who declined the invitation
-              invitationCreatedBy: invitation.createdBy ?? '', // Who sent the invitation (may be null if creator was deleted)
-              virtualContributorID: invitedActorID,
-              spaceID: space.id,
-            };
-
+          // Notification-only lookups, so they live INSIDE the swallowing
+          // wrapper (see dispatchInvitationOutcomeNotification).
+          const roleSetID = invitation.roleSet.id;
+          const invitationCreatedBy = invitation.createdBy ?? '';
           this.dispatchNotification(
-            this.notificationAdapterSpace.spaceAdminVirtualContributorInvitationDeclined(
-              notificationInput,
-              space
-            ),
+            (async () => {
+              const community =
+                await this.communityResolverService.getCommunityForRoleSet(
+                  roleSetID
+                );
+              const space =
+                await this.communityResolverService.getSpaceForCommunityOrFail(
+                  community.id
+                );
+
+              const notificationInput: NotificationInputVirtualContributorSpaceCommunityInvitationDeclined =
+                {
+                  triggeredBy: actorContext.actorID, // Who declined the invitation
+                  invitationCreatedBy, // Who sent the invitation (may be '' if creator was deleted)
+                  virtualContributorID: invitedActorID,
+                  spaceID: space.id,
+                };
+
+              await this.notificationAdapterSpace.spaceAdminVirtualContributorInvitationDeclined(
+                notificationInput,
+                space
+              );
+            })(),
             'spaceAdminVirtualContributorInvitationDeclined'
           );
         } else if (
           invitedActorType === ActorType.ORGANIZATION ||
           invitedActorType === ActorType.USER
         ) {
-          await this.dispatchInvitationOutcomeNotification(
+          this.dispatchInvitationOutcomeNotification(
             invitation,
             invitedActorID,
             invitedActorType,
@@ -754,7 +763,7 @@ export class RoleSetResolverMutationsMembership {
         (invitedActorType === ActorType.ORGANIZATION ||
           invitedActorType === ActorType.USER)
       ) {
-        await this.dispatchInvitationOutcomeNotification(
+        this.dispatchInvitationOutcomeNotification(
           invitation,
           invitedActorID,
           invitedActorType,
@@ -768,20 +777,27 @@ export class RoleSetResolverMutationsMembership {
       // invitation. Its point is the multi-admin case: one admin accepts, and
       // the rest learn no action is needed.
       if (isMember && invitedActorType === ActorType.ORGANIZATION) {
-        const space =
-          await this.communityResolverService.getSpaceForRoleSetOrFail(
-            invitation.roleSet.id
-          );
-        const joinedInput: NotificationInputOrganizationSpaceCommunityJoined = {
-          triggeredBy: actorContext.actorID, // Who accepted the invitation
-          organizationID: invitedActorID,
-          spaceID: space.id,
-        };
-
+        // Notification-only lookup, so it lives INSIDE the swallowing
+        // wrapper: a failure here must not 500 a mutation whose membership
+        // change has already committed, nor skip the cache invalidations
+        // below it.
+        const roleSetID = invitation.roleSet.id;
         this.dispatchNotification(
-          this.notificationOrganizationAdapter.organizationSpaceCommunityJoined(
-            joinedInput
-          ),
+          (async () => {
+            const space =
+              await this.communityResolverService.getSpaceForRoleSetOrFail(
+                roleSetID
+              );
+            const joinedInput: NotificationInputOrganizationSpaceCommunityJoined =
+              {
+                triggeredBy: actorContext.actorID, // Who accepted the invitation
+                organizationID: invitedActorID,
+                spaceID: space.id,
+              };
+            await this.notificationOrganizationAdapter.organizationSpaceCommunityJoined(
+              joinedInput
+            );
+          })(),
           'organizationSpaceCommunityJoined'
         );
       }
@@ -830,83 +846,68 @@ export class RoleSetResolverMutationsMembership {
   }
 
   /**
-   * "Someone responded to the invitation you sent" — one dispatch for both
-   * accepted and declined, and for both organization and user invitees. Goes
-   * to `invitation.createdBy`, the Space admin who sent it; when that account
-   * no longer exists nothing is attempted. Because these fire, the generic
-   * "a new member joined" notification is suppressed for the same membership
-   * change (see `CommunityMembershipOrigin`), so the inviter is told once.
+   * "Someone responded to an invitation" — one dispatch for both accepted and
+   * declined, and for both organization and user invitees. It goes to EVERY
+   * admin of the Space (product email: "Space admin(s) gets notification that
+   * the organization has accepted or rejected their invitation"), not only
+   * `invitation.createdBy`: because it fires, the generic "a new member
+   * joined" notification is suppressed for the same membership change (see
+   * `CommunityMembershipOrigin`), so scoping it to the inviter would leave
+   * every co-admin uninformed — and inform nobody at all once the inviter is
+   * deleted or demoted.
+   *
+   * Whole body is best-effort: the notification-only Space lookup is inside
+   * the swallowing wrapper, so a failure here can never 500 a mutation whose
+   * membership change has already committed, nor skip the cache
+   * invalidations that follow it.
    */
-  private async dispatchInvitationOutcomeNotification(
+  private dispatchInvitationOutcomeNotification(
     invitation: IInvitation,
     invitedActorID: string,
     invitedActorType: ActorType,
     actorContext: ActorContext,
     outcome: 'accepted' | 'declined'
-  ): Promise<void> {
-    if (!invitation.createdBy) {
-      this.logger.verbose?.(
-        `Skipping invitation-${outcome} outcome notification for invitation ${invitation.id}: the inviter no longer exists`,
-        LogContext.NOTIFICATIONS
-      );
+  ): void {
+    const roleSetID = invitation.roleSet?.id;
+    if (!roleSetID) {
       return;
     }
-    if (!invitation.roleSet) {
-      return;
-    }
-
-    const space = await this.communityResolverService.getSpaceForRoleSetOrFail(
-      invitation.roleSet.id
-    );
-    const notificationInput: NotificationInputSpaceCommunityInvitationOutcome =
-      {
-        triggeredBy: actorContext.actorID, // Who answered the invitation
-        invitationCreatedBy: invitation.createdBy, // Who sent the invitation
-        invitedActorID,
-        spaceID: space.id,
-      };
-
     const isOrganization = invitedActorType === ActorType.ORGANIZATION;
-    if (outcome === 'accepted') {
-      this.dispatchNotification(
-        isOrganization
-          ? this.notificationAdapterSpace.spaceAdminOrganizationInvitationAccepted(
-              notificationInput,
-              space
-            )
-          : this.notificationAdapterSpace.spaceAdminUserInvitationAccepted(
-              notificationInput,
-              space
-            ),
-        isOrganization
-          ? 'spaceAdminOrganizationInvitationAccepted'
-          : 'spaceAdminUserInvitationAccepted'
-      );
-      return;
-    }
+    const handler = isOrganization
+      ? outcome === 'accepted'
+        ? 'spaceAdminOrganizationInvitationAccepted'
+        : 'spaceAdminOrganizationInvitationDeclined'
+      : outcome === 'accepted'
+        ? 'spaceAdminUserInvitationAccepted'
+        : 'spaceAdminUserInvitationDeclined';
 
     this.dispatchNotification(
-      isOrganization
-        ? this.notificationAdapterSpace.spaceAdminOrganizationInvitationDeclined(
-            notificationInput,
-            space
-          )
-        : this.notificationAdapterSpace.spaceAdminUserInvitationDeclined(
-            notificationInput,
-            space
-          ),
-      isOrganization
-        ? 'spaceAdminOrganizationInvitationDeclined'
-        : 'spaceAdminUserInvitationDeclined'
+      (async () => {
+        const space =
+          await this.communityResolverService.getSpaceForRoleSetOrFail(
+            roleSetID
+          );
+        const notificationInput: NotificationInputSpaceCommunityInvitationOutcome =
+          {
+            triggeredBy: actorContext.actorID, // Who answered the invitation
+            // Who sent the invitation; '' when that account is gone. Kept for
+            // the event payload only — it no longer scopes the recipients.
+            invitationCreatedBy: invitation.createdBy ?? '',
+            invitedActorID,
+            spaceID: space.id,
+          };
+        await this.notificationAdapterSpace[handler](notificationInput, space);
+      })(),
+      handler
     );
   }
 
   /**
    * Rejects an invite request before anything is created when either: an
    * invited actor is not a valid community-contributor type (user,
-   * organization or virtual contributor), or an organization is among the
-   * invitees and one of the requested extra roles is one its policy
-   * forbids (maximum 0) in this RoleSet.
+   * organization or virtual contributor), or a requested extra role is one
+   * this RoleSet does not define at all, or one that an invited actor
+   * type's policy forbids (maximum 0) in this RoleSet.
    */
   private async validateInviteesAndRolesOrFail(
     actorTypes: Map<string, ActorType>,
@@ -923,18 +924,13 @@ export class RoleSetResolverMutationsMembership {
       }
     }
 
-    const hasOrganizationInvitee = [...actorTypes.values()].some(
-      type => type === ActorType.ORGANIZATION
-    );
-    if (!hasOrganizationInvitee) {
-      return;
-    }
     // One RoleSet+roles load for the whole (de-duplicated) list: the DTO caps
     // extraRoles, but a per-element round trip would still scale with input.
     const requestedRoles = [...new Set(extraRoles)];
     if (requestedRoles.length === 0) {
       return;
     }
+    const invitedActorTypes = new Set(actorTypes.values());
     const roleDefinitions = await this.roleSetService.getRoleDefinitions(
       roleSet,
       requestedRoles
@@ -943,12 +939,37 @@ export class RoleSetResolverMutationsMembership {
       const roleDefinition = roleDefinitions.find(
         definition => definition.name === role
       );
-      if (roleDefinition?.organizationPolicy.maximum === 0) {
+      // `getRoleDefinitions` FILTERS to the roles this RoleSet declares
+      // rather than failing, so an undefined definition means the role does
+      // not exist here at all (RoleName is a 20-member enum while a Space
+      // RoleSet declares only MEMBER/LEAD/ADMIN). Accepting it would persist
+      // an invitation offering a role that can never be granted — the
+      // server#4602 shape.
+      if (!roleDefinition) {
         throw new ValidationException(
-          'An organization cannot be invited with a role its policy forbids',
+          'Invitees cannot be invited with a role this RoleSet does not define',
           LogContext.COMMUNITY,
           { role }
         );
+      }
+      // Per invited actor type, reject a role that type's policy forbids
+      // (maximum 0) in this RoleSet. Checked for every contributor type, not
+      // only organizations: a Virtual Contributor's ADMIN policy is 0 too
+      // (fixes server#4602 for both).
+      for (const actorType of invitedActorTypes) {
+        const policy =
+          actorType === ActorType.ORGANIZATION
+            ? roleDefinition.organizationPolicy
+            : actorType === ActorType.VIRTUAL_CONTRIBUTOR
+              ? roleDefinition.virtualContributorPolicy
+              : roleDefinition.userPolicy;
+        if (policy?.maximum === 0) {
+          throw new ValidationException(
+            'An invitee cannot be invited with a role its policy forbids',
+            LogContext.COMMUNITY,
+            { role, actorType }
+          );
+        }
       }
     }
   }

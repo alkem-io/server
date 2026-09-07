@@ -580,9 +580,16 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED:
       case NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_ACCEPTED:
       case NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_DECLINED: {
-        // Notify only the Space admin who sent the invitation.
+        // EVERY admin of the Space, not only the one who sent the invitation
+        // (product email: "Space admin(s) gets notification that the
+        // organization has accepted or rejected their invitation"). This
+        // event is the replacement for the generic "a new member joined"
+        // notification, which R26 suppresses for invitation-sourced
+        // memberships; sending it only to the inviter would leave every
+        // co-admin — and a Space whose inviter has since been deleted or
+        // demoted — with no notification at all.
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
-        credentialCriteria = this.getUserSelfCriteria(userID);
+        credentialCriteria = this.getSpaceAdminCredentialCriteria(spaceID);
         break;
       }
       case NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED: {

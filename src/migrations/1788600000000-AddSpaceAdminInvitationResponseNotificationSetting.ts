@@ -1,18 +1,26 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 /**
- * Backfills the new "someone responded to an invitation you sent"
- * notification row (`space.admin.communityInvitationResponse`) onto every
- * existing `user_settings` row, at the mandated defaults
- * `{ email: true, inApp: true, push: true }`.
+ * Backfills the new "someone responded to an invitation" notification row
+ * (`space.admin.communityInvitationResponse`) onto every existing
+ * `user_settings` row.
  *
- * Before this row existed, the organization accept/decline outcome
- * notifications were governed by `space.admin.communityNewMember` — which
- * also governs the generic "a new member joined" notification. Splitting
- * them gives invitation responses (organization and user, accept and
- * decline) their own control, as required by the product decision that a
+ * Before this row existed, the invitation-response notifications this row
+ * now governs (organization and user, accept and decline, plus the
+ * pre-existing Virtual-Contributor declined event) were governed by
+ * `space.admin.communityNewMember` — which also governs the generic
+ * "a new member joined" notification. Splitting them gives invitation
+ * responses their own control, as required by the product decision that a
  * response to an invitation is a distinct event from someone joining
  * unprompted.
+ *
+ * The seeded value is therefore the row's PREDECESSOR — the user's existing
+ * `space.admin.communityNewMember` value — falling back to the mandated
+ * defaults `{ email: true, inApp: true, push: true }` when that key is
+ * absent. Seeding a flat all-on would silently re-enable, on all three
+ * channels, an event that a Space admin who muted `communityNewMember` had
+ * deliberately switched off. A user who never changed the predecessor is
+ * already all-on, so they get the documented default either way.
  *
  * Same shape as `AddOrganizationSpaceInvitationNotificationSettings`:
  *
@@ -55,7 +63,10 @@ export class AddSpaceAdminInvitationResponseNotificationSetting1788600000000
           true
         ),
         '{space,admin,communityInvitationResponse}'::text[],
-        $1::jsonb,
+        COALESCE(
+          notification #> '{space,admin,communityNewMember}',
+          $1::jsonb
+        ),
         true
       )
       WHERE notification #> '{space,admin,communityInvitationResponse}' IS NULL

@@ -116,7 +116,7 @@ describe('organization-invitation notification events — exhaustiveness (D14)',
       ]) {
         const outcome = await (
           service as any
-        ).getPrivilegeRequiredCredentialCriteria(event, undefined, 'user-1');
+        ).getPrivilegeRequiredCredentialCriteria(event, 'space-1', 'user-1');
         expect(outcome.credentialCriteria.length).toBeGreaterThan(0);
       }
     });

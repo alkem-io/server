@@ -865,7 +865,7 @@ describe('NotificationSpaceAdapter', () => {
       about: { profile: { displayName: 'My Space' } },
     } as any;
 
-    it('sends email, in-app and push to the inviter', async () => {
+    it('sends email, in-app and push to the Space admins', async () => {
       mockRecipients([{ id: 'inviter-1' }], [{ id: 'inviter-1' }], undefined);
       vi.mocked(
         notificationAdapter.getNotificationRecipients
@@ -884,13 +884,15 @@ describe('NotificationSpaceAdapter', () => {
 
       await adapter.spaceAdminOrganizationInvitationAccepted(eventData, space);
 
+      // Space-scoped, NOT scoped to invitation.createdBy: the recipients
+      // service resolves every Space admin for this event.
       expect(
         notificationAdapter.getNotificationRecipients
       ).toHaveBeenCalledWith(
         expect.any(String),
         eventData,
         'space-1',
-        'inviter-1'
+        undefined
       );
       expect(externalAdapter.sendExternalNotifications).toHaveBeenCalled();
       expect(inAppAdapter.sendInAppNotifications).toHaveBeenCalledWith(
@@ -938,7 +940,7 @@ describe('NotificationSpaceAdapter', () => {
       about: { profile: { displayName: 'My Space' } },
     } as any;
 
-    it('sends email, in-app and push to the inviter', async () => {
+    it('sends email, in-app and push to the Space admins', async () => {
       vi.mocked(
         notificationAdapter.getNotificationRecipients
       ).mockResolvedValue({

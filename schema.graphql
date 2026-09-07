@@ -3567,9 +3567,9 @@ type Invitation {
   """The next events of this Lifecycle."""
   nextEvents: [String!]!
   """
-  The Spaces that will be joined if this invitation is accepted, root Space first.
+  The Spaces that will be joined if this invitation is accepted, root Space first; null when the caller may not answer this invitation on the invited Actor's behalf.
   """
-  spacesToJoinOnAccept: [SpaceAbout!]!
+  spacesToJoinOnAccept: [SpaceAbout!]
   """The current state of this Lifecycle."""
   state: String!
   """

@@ -971,11 +971,13 @@ export class NotificationSpaceAdapter {
     actorType: ActorType,
     push: { title: string; verb: string; fallbackName: string }
   ): Promise<void> {
+    // Recipients are every admin of the Space (see the recipients service):
+    // the inviter is one of them when they still hold the role, but the
+    // event is not addressed to them alone.
     const recipients = await this.getNotificationRecipientsSpace(
       event,
       eventData,
-      space.id,
-      eventData.invitationCreatedBy
+      space.id
     );
 
     if (recipients.emailRecipients.length > 0) {
@@ -1028,7 +1030,7 @@ export class NotificationSpaceAdapter {
         event,
         {
           title: push.title,
-          body: `${actorName} ${push.verb} your invitation to join ${spaceName}`,
+          body: `${actorName} ${push.verb} the invitation to join ${spaceName}`,
           url: await this.urlGeneratorService.createSpaceAdminCommunityURL(
             space.id
           ),

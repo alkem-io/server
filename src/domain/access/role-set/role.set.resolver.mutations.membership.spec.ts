@@ -653,6 +653,12 @@ describe('RoleSetResolverMutationsMembership', () => {
       (actorLookupService.validateActorsAndGetTypes as Mock).mockResolvedValue(
         new Map([['user-1', 'user']])
       );
+      // ADMIN is forbidden to organizations (maximum 0) but allowed to users.
+      (roleSetService.getRoleDefinition as Mock).mockResolvedValue({
+        userPolicy: { minimum: 0, maximum: -1 },
+        organizationPolicy: { minimum: 0, maximum: 0 },
+        virtualContributorPolicy: { minimum: 0, maximum: 0 },
+      });
       (roleSetService.findOpenInvitation as Mock).mockResolvedValue(undefined);
       (roleSetService.findOpenApplication as Mock).mockResolvedValue(undefined);
       (roleSetService.isMember as Mock).mockResolvedValue(false);
@@ -684,8 +690,13 @@ describe('RoleSetResolverMutationsMembership', () => {
       expect(result[0].type).toBe(
         RoleSetInvitationResultType.INVITED_TO_ROLE_SET
       );
-      // A user invitee never triggers the organization role-policy lookup.
-      expect(roleSetService.getRoleDefinition).not.toHaveBeenCalled();
+      // The role guard now runs for every invitee type — ADMIN is forbidden
+      // to organizations and Virtual Contributors (maximum 0) but allowed to
+      // users, so the definition IS loaded and the invitation still succeeds.
+      expect(roleSetService.getRoleDefinitions).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'rs-1' }),
+        ['admin']
+      );
     });
 
     it('returns ORGANIZATION_NOT_ACCEPTING_INVITATIONS and creates nothing when the organization opted out', async () => {
@@ -1391,7 +1402,7 @@ describe('RoleSetResolverMutationsMembership', () => {
       expect(lifecycleService.event).not.toHaveBeenCalled();
     });
 
-    it('does not require the ACCEPT-specific privilege for a REJECT event', async () => {
+    it('requires the invite-accept (consent) privilege for a REJECT event too', async () => {
       const actorContext = { actorID: 'user-1' } as any;
       const mockInvitation = {
         id: 'inv-1',
@@ -1430,7 +1441,11 @@ describe('RoleSetResolverMutationsMembership', () => {
         actorContext
       );
 
-      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalledWith(
+      // FR-010: declining is the invited actor's own consent decision. A
+      // generic UPDATE holder (e.g. a global admin) may REVOKE the
+      // invitation but must not answer it for the invitee — doing so would
+      // additionally tell the Space admins the invitee declined.
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         mockInvitation.authorization,
         AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE_ACCEPT,
@@ -1508,7 +1523,10 @@ describe('RoleSetResolverMutationsMembership', () => {
         ).not.toHaveBeenCalled();
       });
 
-      it('skips the accepted dispatch when the inviter no longer exists (createdBy null)', async () => {
+      it('still dispatches accepted when the inviter no longer exists (createdBy null)', async () => {
+        // The event goes to every Space admin, not only the inviter, so a
+        // deleted inviter must not silence it — with the generic "new member
+        // joined" suppressed, that would leave the Space told nothing.
         setUp(undefined);
         (invitationService.getLifecycleState as Mock).mockResolvedValue(
           'accepting'
@@ -1526,7 +1544,10 @@ describe('RoleSetResolverMutationsMembership', () => {
         expect(result).toBeDefined();
         expect(
           notificationAdapterSpace.spaceAdminOrganizationInvitationAccepted
-        ).not.toHaveBeenCalled();
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({ invitationCreatedBy: '' }),
+          expect.objectContaining({ id: 'space-1' })
+        );
       });
 
       it('dispatches spaceAdminOrganizationInvitationDeclined when the invitation is rejected', async () => {
@@ -1557,7 +1578,7 @@ describe('RoleSetResolverMutationsMembership', () => {
         ).not.toHaveBeenCalled();
       });
 
-      it('skips the declined dispatch when the inviter no longer exists (createdBy null)', async () => {
+      it('still dispatches declined when the inviter no longer exists (createdBy null)', async () => {
         setUp(undefined);
         (invitationService.getLifecycleState as Mock).mockResolvedValue(
           'invited'
@@ -1572,7 +1593,10 @@ describe('RoleSetResolverMutationsMembership', () => {
         expect(result).toBeDefined();
         expect(
           notificationAdapterSpace.spaceAdminOrganizationInvitationDeclined
-        ).not.toHaveBeenCalled();
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({ invitationCreatedBy: '' }),
+          expect.objectContaining({ id: 'space-1' })
+        );
       });
 
       it('dispatches the organization "joined" welcome to the org admins on accept', async () => {
@@ -1767,7 +1791,7 @@ describe('RoleSetResolverMutationsMembership', () => {
         );
       });
 
-      it('skips the user outcome dispatch when the inviter no longer exists', async () => {
+      it('still dispatches the user outcome when the inviter no longer exists', async () => {
         setUpUser(undefined);
         (invitationService.getLifecycleState as Mock).mockResolvedValue(
           'invited'
@@ -1781,7 +1805,10 @@ describe('RoleSetResolverMutationsMembership', () => {
 
         expect(
           notificationAdapterSpace.spaceAdminUserInvitationDeclined
-        ).not.toHaveBeenCalled();
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({ invitationCreatedBy: '' }),
+          expect.objectContaining({ id: 'space-1' })
+        );
       });
     });
   });

@@ -495,22 +495,39 @@ describe('NotificationRecipientsService', () => {
     it.each([
       NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED,
       NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED,
-    ])('should resolve only the inviter (self criteria) for %s', async eventType => {
+      NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_ACCEPTED,
+      NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_DECLINED,
+    ])('should resolve every Space admin — not only the inviter — for %s', async eventType => {
+      // Product email: "Space admin(s) gets notification that the
+      // organization has accepted or rejected their invitation". This event
+      // replaces the generic "new member joined" that R26 suppresses, so
+      // scoping it to invitation.createdBy would leave co-admins with
+      // nothing.
       await service.getRecipients({
         eventType,
+        spaceID: 'space-1',
         userID: 'inviter-1',
       });
 
       expect(userLookupService.usersWithCredentials).toHaveBeenCalledWith(
         [
           {
-            type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-            resourceID: 'inviter-1',
+            type: AuthorizationCredential.SPACE_ADMIN,
+            resourceID: 'space-1',
           },
         ],
         undefined,
         expect.any(Object)
       );
+    });
+
+    it.each([
+      NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED,
+      NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_DECLINED,
+    ])('should throw ValidationException without a spaceID for %s', async eventType => {
+      await expect(
+        service.getRecipients({ eventType, userID: 'inviter-1' })
+      ).rejects.toThrow(ValidationException);
     });
 
     it('should throw NotificationEventException for unknown event type', async () => {

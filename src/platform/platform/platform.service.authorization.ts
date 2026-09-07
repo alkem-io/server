@@ -344,11 +344,21 @@ export class PlatformAuthorizationService {
     platformAdminNotifications.cascade = false;
     credentialRules.push(platformAdminNotifications);
 
-    // Allow organization admins to access organization admin notification settings
+    // Allow organization admins AND owners to access organization admin
+    // notification settings. Both credentials receive the organization
+    // notifications (organization.service.authorization.ts grants
+    // RECEIVE_NOTIFICATIONS_ADMIN to admins and owners alike, and every
+    // organization event resolves recipients through
+    // ORGANIZATION_MANAGER_CREDENTIAL_TYPES), so gating the settings group
+    // on ORGANIZATION_ADMIN alone left owners receiving notifications they
+    // could not see, let alone switch off.
     const receiveNotificationsOrganizationAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ORGANIZATION_ADMIN],
-        [AuthorizationCredential.ORGANIZATION_ADMIN],
+        [
+          AuthorizationCredential.ORGANIZATION_ADMIN,
+          AuthorizationCredential.ORGANIZATION_OWNER,
+        ],
         'Receive notifications organization admin'
       );
     receiveNotificationsOrganizationAdmin.cascade = false;

@@ -3006,6 +3006,78 @@ describe('RoleSetService', () => {
         ]);
       });
 
+      it('(R26) suppresses the new-member notification ONLY on the invited role set — every ancestor stays DIRECT', async () => {
+        // The ancestors were never invited to and never applied to, so their
+        // admins receive no invitation-response notification. Marking them
+        // INVITATION too would leave them told nothing at all.
+        const root = spaceRoleSet('root');
+        const mid = spaceRoleSet('mid');
+        const target = spaceRoleSet('target');
+        vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+          root,
+          mid,
+          target,
+        ]);
+        vi.spyOn(service, 'isMember').mockResolvedValue(false);
+        vi.spyOn(service as any, 'grantRoleCredential').mockResolvedValue(
+          undefined
+        );
+        passthroughTransaction();
+        const sideEffects = vi
+          .spyOn(service as any, 'applyRoleGrantSideEffects')
+          .mockResolvedValue(undefined);
+
+        await service.ensureMemberOfRoleSetAndAncestors(
+          target,
+          'user-1',
+          { actorID: 'user-1' } as any,
+          { source: 'invitation', invitedToParent: true }
+        );
+
+        expect(
+          sideEffects.mock.calls.map((c: any[]) => ({
+            roleSetId: c[0].id,
+            origin: c[6],
+          }))
+        ).toEqual([
+          { roleSetId: 'root', origin: CommunityMembershipOrigin.DIRECT },
+          { roleSetId: 'mid', origin: CommunityMembershipOrigin.DIRECT },
+          {
+            roleSetId: 'target',
+            origin: CommunityMembershipOrigin.INVITATION,
+          },
+        ]);
+      });
+
+      it('(R26) does not suppress for a Virtual Contributor — that actor type has no invitation-response notification', async () => {
+        (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+          ActorType.VIRTUAL_CONTRIBUTOR
+        );
+        const target = spaceRoleSet('target');
+        vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+          target,
+        ]);
+        vi.spyOn(service, 'isMember').mockResolvedValue(false);
+        vi.spyOn(service as any, 'grantRoleCredential').mockResolvedValue(
+          undefined
+        );
+        passthroughTransaction();
+        const sideEffects = vi
+          .spyOn(service as any, 'applyRoleGrantSideEffects')
+          .mockResolvedValue(undefined);
+
+        await service.ensureMemberOfRoleSetAndAncestors(
+          target,
+          'vc-1',
+          { actorID: 'user-1' } as any,
+          { source: 'invitation', invitedToParent: true }
+        );
+
+        expect(sideEffects.mock.calls[0][6]).toBe(
+          CommunityMembershipOrigin.DIRECT
+        );
+      });
+
       it('does not touch open-application / open-invitation caches (a direct join has neither)', async () => {
         const target = spaceRoleSet('target');
         vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([

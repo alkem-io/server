@@ -1,5 +1,7 @@
 import { AuthorizationPrivilege } from '@common/enums';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { GraphqlGuard } from '@core/authorization';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IInvitation } from '@domain/access/invitation';
 import { IActor } from '@domain/actor/actor/actor.interface';
 import { IUser } from '@domain/community/user/user.interface';
@@ -8,6 +10,7 @@ import { forwardRef, Inject, UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
   AuthorizationActorHasPrivilege,
+  CurrentActor,
   Profiling,
 } from '@src/common/decorators';
 import { RoleSetService } from '../role-set/role.set.service';
@@ -17,6 +20,7 @@ import { InvitationService } from './invitation.service';
 export class InvitationResolverFields {
   constructor(
     private invitationService: InvitationService,
+    private authorizationService: AuthorizationService,
     @Inject(forwardRef(() => RoleSetService))
     private roleSetService: RoleSetService
   ) {}
@@ -54,19 +58,37 @@ export class InvitationResolverFields {
   // READ on the invitation (e.g. an inviter with visibility limited to an
   // immediate subspace) is excluded from this field, even though it can
   // read other invitation fields.
-  @AuthorizationActorHasPrivilege(
-    AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE_ACCEPT
-  )
+  //
+  // The check is made INLINE and the field is NULLABLE rather than using
+  // @AuthorizationActorHasPrivilege, which throws. This field is selected
+  // from the shared `InvitationData` fragment that the top-bar pending
+  // memberships dialog and the in-app notifications panel spread for every
+  // invitation, including ones the viewer may read but not answer (an org
+  // admin demoted to associate keeps the in-app row until it is cleaned
+  // up). Throwing there would attach a GraphQL error to every notifications
+  // fetch, and — under the non-null `CommunityInvitationResult.invitation`
+  // — null out the whole `me` query. Not being allowed to preview the list
+  // is an absence, not an error.
   @UseGuards(GraphqlGuard)
   @ResolveField('spacesToJoinOnAccept', () => [ISpaceAbout], {
-    nullable: false,
+    nullable: true,
     description:
-      'The Spaces that will be joined if this invitation is accepted, root Space first.',
+      "The Spaces that will be joined if this invitation is accepted, root Space first; null when the caller may not answer this invitation on the invited Actor's behalf.",
   })
   @Profiling.api
   async spacesToJoinOnAccept(
-    @Parent() invitation: IInvitation
-  ): Promise<ISpaceAbout[]> {
+    @Parent() invitation: IInvitation,
+    @CurrentActor() actorContext: ActorContext
+  ): Promise<ISpaceAbout[] | null> {
+    if (
+      !this.authorizationService.isAccessGranted(
+        actorContext,
+        invitation.authorization,
+        AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE_ACCEPT
+      )
+    ) {
+      return null;
+    }
     const roleSet =
       invitation.roleSet ??
       (
