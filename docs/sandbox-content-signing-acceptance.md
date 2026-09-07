@@ -1,23 +1,23 @@
 # SANDBOX memo-signing acceptance
 
 Run this after the trust-gateway overlay, the server feature and the client feature are deployed to
-SANDBOX. Use an enrolled Cleverbase acceptance signer. This is an acceptance-only B-T journey using
-the public, non-qualified `https://thameur.org/tsa`; it is not evidence of qualified status, chain
-trust or revocation.
+SANDBOX. An operator-configured, signing-compatible Cleverbase OIDC provider and a provider-confirmed
+OIDC-subject-to-certificate mapping are prerequisites; stop if either is unavailable. Do not infer
+that mapping from the Wallet Connection Suite's pairwise subject. Use an enrolled Cleverbase
+acceptance signer. This is an acceptance-only B-T journey using the public, non-qualified
+`https://thameur.org/tsa`; it is not evidence of qualified status, chain trust or revocation.
 
 ## Prepare private evidence
 
-Docker, `jq`, `kubectl`, `pdfsig` and a browser with developer tools are prerequisites. Keep the
-session cookie, authorize URL, client state, OIDC subject and certificate details out of Git, PRs,
-screenshots and terminal history.
+Docker, `jq`, `kubectl`, `pdfsig`, Bash and a browser with developer tools are prerequisites. Run the
+snippets in Bash. Keep the session cookie, authorize URL, client state, OIDC subject and certificate
+details out of Git, PRs, screenshots and terminal history.
 
 ```bash
 export SANDBOX_CONTEXT="$(kubectl config current-context)"
 test "$SANDBOX_CONTEXT" = k8s-hetzner-sandbox
 export EVIDENCE_DIR='/absolute/operator-owned/path/sandbox-signing-acceptance'
 install -d -m 0700 "$EVIDENCE_DIR"
-read -rsp 'Paste the authenticated browser Cookie request header: ' ALKEMIO_SESSION_COOKIE
-printf '\n'
 
 graphql() {
   curl -fsS https://sandbox-alkem.io/api/public/graphql \
@@ -43,17 +43,22 @@ read_attempt_row() {
 ## Link the real identity
 
 1. In a private browser window, open `https://sandbox-alkem.io/login`, select **Cleverbase**, and
-   finish the real OIDC flow. Do not use the local Kratos seed or the Wallet Connection Suite.
-2. After Alkemio opens, confirm that Kratos linked the provider through the server's normal mapping:
+   finish the real OIDC flow. Stop if Cleverbase is not offered. Do not use the local Kratos seed or
+   the Wallet Connection Suite.
+2. After Alkemio opens, copy that browser session's Cookie request header into the shell without
+   printing or storing it, then confirm the linked provider through the server's normal mapping:
 
    ```bash
+   read -rsp 'Paste the authenticated browser Cookie request header: ' ALKEMIO_SESSION_COOKIE
+   printf '\n'
    jq -nc '{query:"{ me { user { id authentication { methods } } } }"}' |
      graphql | tee "$EVIDENCE_DIR/authentication-methods.json" |
      jq -e '.data.me.user.authentication.methods | index("CLEVERBASE") != null'
    ```
 
 3. Capture a screenshot of the logged-in Alkemio profile without the browser address bar. The
-   evidence is the `CLEVERBASE` method, not the provider subject.
+   `CLEVERBASE` method proves only that the provider is linked; it does not prove the signing
+   identity mapping.
 
 ## Complete one signature
 
@@ -69,7 +74,7 @@ read_attempt_row() {
 
    Expect `PENDING`, a snapshot document, and null correlation, expiry and signed-document fields.
 3. Select **Continue** once. Record the `continueMemoSigning` response as a screenshot with the
-   authorize URL redacted, then complete the Cleverbase Wallet consent. While consent is open, run:
+   authorize URL redacted, then begin the Cleverbase Wallet consent. While consent is open, run:
 
    ```bash
    read_attempt continued
@@ -96,8 +101,8 @@ read_attempt_row() {
    pdfsig "$EVIDENCE_DIR/signed.pdf" | tee "$EVIDENCE_DIR/pdfsig.txt"
    ```
 
-6. Select **Verify** once in Alkemio. Save the integrity-only verdict screenshot and the matching
-   GraphQL result:
+6. Select **Verify** once in Alkemio and save the integrity-only verdict screenshot. Then run this
+   additional direct GraphQL check:
 
    ```bash
    jq -nc --arg id "$SIGNING_ATTEMPT_ID" \
