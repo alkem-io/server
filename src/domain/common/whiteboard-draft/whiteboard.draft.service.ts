@@ -186,13 +186,27 @@ export class WhiteboardDraftService {
   async findExpired(limit: number): Promise<string[]> {
     // This is the complete cleanup corpus. Ordinary Whiteboards have NULL and
     // cannot be selected by this query.
-    const drafts = await this.repository.find({
-      select: { id: true },
-      where: { draftExpiresAt: LessThanOrEqual(new Date()) },
-      order: { draftExpiresAt: 'ASC' },
-      take: limit,
-    });
-    return drafts.map(draft => draft.id);
+    //
+    // Built as an explicit, join-free query on purpose. A `repository.find`
+    // that selects only `id` while ordering by `draftExpiresAt` makes TypeORM
+    // take its distinct-alias pagination path — because Whiteboard has an eager
+    // `authorization` relation, the LIMIT is applied by wrapping everything in
+    // `SELECT DISTINCT ... FROM (<inner>) "distinctAlias"`. The order column is
+    // appended to the OUTER select/order, but `select: { id: true }` keeps it
+    // out of the INNER projection, so the outer query references
+    // `distinctAlias."..._draftExpiresAt"`, a column the subquery never emits
+    // (Postgres 42703). Selecting only the scalar `id` with no eager join keeps
+    // the query flat and avoids that path entirely.
+    const rows = await this.repository
+      .createQueryBuilder('whiteboard')
+      .select('whiteboard.id', 'id')
+      // Same expiry boundary as cleanupExpired's locked re-read, expressed the
+      // same way, so the two never drift.
+      .where({ draftExpiresAt: LessThanOrEqual(new Date()) })
+      .orderBy('whiteboard.draftExpiresAt', 'ASC')
+      .limit(limit)
+      .getRawMany<{ id: string }>();
+    return rows.map(row => row.id);
   }
 
   async cleanupExpired(whiteboardID: string): Promise<void> {
