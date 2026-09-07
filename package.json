@@ -141,7 +141,7 @@
     "replace-special-characters": "^1.2.7",
     "rxjs": "^7.8.1",
     "sharp": "^0.35.3",
-    "typeorm": "https://pkg.pr.new/antst/typeorm@2c8f380",
+    "typeorm": "https://pkg.pr.new/antst/typeorm@f0dc460",
     "uuid": "^13.0.0",
     "web-push": "^3.6.7",
     "winston": "^3.13.1",
