@@ -22,9 +22,12 @@ import { CurrentActor } from '@src/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IProfile } from '../profile/profile.interface';
 import { Markdown } from '../scalars/scalar.markdown';
+import { MemoSignatureVerifyInput } from './dto/memo.signature.verify.input';
 import { Memo } from './memo.entity';
 import { IMemo } from './memo.interface';
 import { MemoService } from './memo.service';
+import { MemoSignatureVerificationStatus } from './memo.signature.verification.status';
+import { MemoSigningService } from './memo.signing.service';
 
 @Resolver(() => IMemo)
 export class MemoResolverFields {
@@ -32,6 +35,7 @@ export class MemoResolverFields {
     private memoService: MemoService,
     private signingAttemptService: SigningAttemptService,
     private authorizationService: AuthorizationService,
+    private memoSigningService: MemoSigningService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -47,6 +51,16 @@ export class MemoResolverFields {
       attemptId,
       actor.actorID
     );
+  }
+
+  @Query(() => MemoSignatureVerificationStatus, {
+    description: 'Checks the stored integrity of a signed Memo copy.',
+  })
+  verifyMemoSignature(
+    @CurrentActor() actor: ActorContext,
+    @Args('verificationData') { attemptID }: MemoSignatureVerifyInput
+  ) {
+    return this.memoSigningService.verifyMemoSignature(attemptID, actor);
   }
 
   @ResolveField('signatures', () => [IMemoSignature], {

@@ -14,9 +14,11 @@ type StartResponse = {
 };
 
 type GatewayStatus = { status: string; reason?: string };
+type VerifyResponse = { integrity?: unknown; reasons?: unknown };
 
 const RFC3339 =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+const REQUEST_TIMEOUT_MS = 30_000;
 
 @Injectable()
 export class TrustGatewayClient {
@@ -44,7 +46,7 @@ export class TrustGatewayClient {
           },
           clientState,
         },
-        { timeout: 30_000 }
+        { timeout: REQUEST_TIMEOUT_MS }
       )
     );
     const { redirectUrl, correlationId, expiresAt } = response.data;
@@ -74,7 +76,7 @@ export class TrustGatewayClient {
       const response = await firstValueFrom(
         this.httpService.get<unknown>(`${this.baseUrl}/v1/sign/status`, {
           params: { correlationId },
-          timeout: 30_000,
+          timeout: REQUEST_TIMEOUT_MS,
         })
       );
       const data = response.data;
@@ -103,7 +105,7 @@ export class TrustGatewayClient {
         this.httpService.get<ArrayBuffer>(`${this.baseUrl}/v1/sign/result`, {
           params: { correlationId },
           responseType: 'arraybuffer',
-          timeout: 30_000,
+          timeout: REQUEST_TIMEOUT_MS,
         })
       );
     } catch (error) {
@@ -131,6 +133,27 @@ export class TrustGatewayClient {
     if (!evidence || Array.isArray(evidence) || typeof evidence !== 'object')
       throw this.invalidResponse();
     return { pdf, evidence: evidence as Record<string, unknown> };
+  }
+
+  async verify(document: Buffer) {
+    const response = await firstValueFrom(
+      this.httpService.post<VerifyResponse>(
+        `${this.baseUrl}/v1/verify`,
+        { document: document.toString('base64') },
+        { timeout: REQUEST_TIMEOUT_MS }
+      )
+    );
+    const data = response.data;
+    if (!data || Array.isArray(data) || typeof data !== 'object')
+      throw this.invalidResponse();
+    const { integrity, reasons } = data;
+    if (
+      typeof integrity !== 'boolean' ||
+      !Array.isArray(reasons) ||
+      !reasons.every(reason => typeof reason === 'string')
+    )
+      throw this.invalidResponse();
+    return { integrity, reasons };
   }
 
   private invalidResponse(): ValidationException {

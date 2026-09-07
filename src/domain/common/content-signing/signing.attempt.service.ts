@@ -141,6 +141,21 @@ export class SigningAttemptService {
     });
   }
 
+  async getSignedOrFail(
+    id: string
+  ): Promise<SigningAttempt & { signedDocumentId: string }> {
+    const attempt = await this.repository.findOneBy({
+      id,
+      status: SigningAttemptStatus.SIGNED,
+    });
+    if (attempt?.signedDocumentId)
+      return attempt as SigningAttempt & { signedDocumentId: string };
+    throw new ValidationException(
+      'Signed Memo copy is not available',
+      LogContext.MEMOS
+    );
+  }
+
   findExpired(limit: number, now = new Date()): Promise<SigningAttempt[]> {
     return this.repository.find({
       where: [

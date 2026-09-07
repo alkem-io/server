@@ -528,6 +528,12 @@ enum McpApiKeyStatus {
   REVOKED
 }
 
+enum MemoSignatureVerificationStatus {
+  INVALID
+  UNAVAILABLE
+  VERIFIED
+}
+
 enum MimeType {
   AVIF
   BMP
@@ -5837,6 +5843,8 @@ type Query {
   Returns the VAPID public key needed by clients to subscribe to push notifications. Returns null if push notifications are not enabled on this server.
   """
   vapidPublicKey: String
+  """Checks the stored integrity of a signed Memo copy."""
+  verifyMemoSignature(verificationData: MemoSignatureVerifyInput!): MemoSignatureVerificationStatus!
   """A particular VirtualContributor"""
   virtualContributor(ID: UUID!): VirtualContributor!
   """
@@ -9061,6 +9069,11 @@ input LicensingGrantedEntitlementInput {
   limit: Float!
   """The entitlement that is granted."""
   type: LicenseEntitlementType!
+}
+
+input MemoSignatureVerifyInput {
+  """The signed Memo attempt to verify."""
+  attemptID: UUID!
 }
 
 input MemoSigningContinueInput {

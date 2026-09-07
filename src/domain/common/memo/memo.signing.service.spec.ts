@@ -54,6 +54,7 @@ describe('MemoSigningService', () => {
     getForReturnOrFail: vi.fn(),
     finish: vi.fn(),
     findSignedForMemo: vi.fn(),
+    getSignedOrFail: vi.fn(),
   };
   const kratosService = {
     getCleverbaseSubject: vi.fn<() => Promise<string | undefined>>(async () => {
@@ -98,6 +99,7 @@ describe('MemoSigningService', () => {
     start: vi.fn(),
     getStatus: vi.fn(),
     getResult: vi.fn(),
+    verify: vi.fn(),
   };
   const urlGeneratorService = {
     getMemoSigningSnapshotRestUrl: vi.fn(
@@ -1154,5 +1156,142 @@ describe('MemoSigningService', () => {
     expect(documentService.deleteDocument).toHaveBeenCalledWith({
       ID: 'signed-document-1',
     });
+  });
+
+  it('verifies exact stored signed bytes for any actor with memo READ access', async () => {
+    const signedPdf = Buffer.from('%PDF-stored-signed-copy');
+    const reader = Object.assign(new ActorContext(), {
+      actorID: '33333333-3333-4333-8333-333333333333',
+    });
+    attemptService.getSignedOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      actorId: actor.actorID,
+      memoId: memo.id,
+      status: SigningAttemptStatus.SIGNED,
+      signedDocumentId: 'signed-document-1',
+    });
+    fileServiceAdapter.getDocumentContent.mockResolvedValue(signedPdf);
+    trustGatewayClient.verify.mockResolvedValue({
+      integrity: true,
+      reasons: [],
+    });
+
+    await expect(
+      service.verifyMemoSignature('attempt-1', reader)
+    ).resolves.toBe('VERIFIED');
+    expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+      reader,
+      memo.authorization,
+      AuthorizationPrivilege.READ,
+      'verify memo signature'
+    );
+    expect(fileServiceAdapter.getDocumentContent).toHaveBeenCalledWith(
+      'signed-document-1'
+    );
+    expect(trustGatewayClient.verify).toHaveBeenCalledWith(signedPdf);
+    expect(attemptService.finish).not.toHaveBeenCalled();
+  });
+
+  it('reports invalid integrity without exposing gateway reason codes', async () => {
+    attemptService.getSignedOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      memoId: memo.id,
+      status: SigningAttemptStatus.SIGNED,
+      signedDocumentId: 'signed-document-1',
+    });
+    fileServiceAdapter.getDocumentContent.mockResolvedValue(
+      Buffer.from('%PDF-stored-signed-copy')
+    );
+    trustGatewayClient.verify.mockResolvedValue({
+      integrity: false,
+      reasons: ['message_digest_mismatch'],
+    });
+
+    await expect(service.verifyMemoSignature('attempt-1', actor)).resolves.toBe(
+      'INVALID'
+    );
+    expect(logger.error).toHaveBeenCalledWith(
+      {
+        message: 'Memo signature integrity verification failed',
+        attemptId: 'attempt-1',
+        reasons: ['message_digest_mismatch'],
+      },
+      undefined,
+      LogContext.MEMOS
+    );
+  });
+
+  it.each([
+    [new Error('gateway unavailable'), undefined],
+    [{ response: { status: 503 } }, 503],
+    [
+      new ValidationException('Invalid gateway response', LogContext.MEMOS),
+      undefined,
+    ],
+  ])('reports gateway acquisition failure as unavailable without logging its cause', async (error, status) => {
+    attemptService.getSignedOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      memoId: memo.id,
+      status: SigningAttemptStatus.SIGNED,
+      signedDocumentId: 'signed-document-1',
+    });
+    fileServiceAdapter.getDocumentContent.mockResolvedValue(
+      Buffer.from('%PDF-stored-signed-copy')
+    );
+    trustGatewayClient.verify.mockRejectedValue(error);
+
+    await expect(service.verifyMemoSignature('attempt-1', actor)).resolves.toBe(
+      'UNAVAILABLE'
+    );
+    expect(logger.error).toHaveBeenCalledTimes(1);
+    expect(logger.error).toHaveBeenCalledWith(
+      {
+        message: 'Memo signature verification unavailable',
+        attemptId: 'attempt-1',
+        status,
+      },
+      undefined,
+      LogContext.MEMOS
+    );
+  });
+
+  it('fails revoked READ before file or gateway access', async () => {
+    const denied = new ForbiddenAuthorizationPolicyException(
+      'memo read denied',
+      AuthorizationPrivilege.READ,
+      memo.authorization.id,
+      actor.actorID
+    );
+    attemptService.getSignedOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      memoId: memo.id,
+      status: SigningAttemptStatus.SIGNED,
+      signedDocumentId: 'signed-document-1',
+    });
+    authorizationService.grantAccessOrFail.mockImplementationOnce(() => {
+      throw denied;
+    });
+
+    await expect(service.verifyMemoSignature('attempt-1', actor)).rejects.toBe(
+      denied
+    );
+    expect(fileServiceAdapter.getDocumentContent).not.toHaveBeenCalled();
+    expect(trustGatewayClient.verify).not.toHaveBeenCalled();
+  });
+
+  it('does not convert signed-file read failures into unavailable results', async () => {
+    const readFailure = new Error('file service unavailable');
+    attemptService.getSignedOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      memoId: memo.id,
+      status: SigningAttemptStatus.SIGNED,
+      signedDocumentId: 'signed-document-1',
+    });
+    fileServiceAdapter.getDocumentContent.mockRejectedValue(readFailure);
+
+    await expect(service.verifyMemoSignature('attempt-1', actor)).rejects.toBe(
+      readFailure
+    );
+    expect(trustGatewayClient.verify).not.toHaveBeenCalled();
   });
 });
