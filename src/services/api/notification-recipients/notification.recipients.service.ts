@@ -419,8 +419,16 @@ export class NotificationRecipientsService {
         // (1788600000000) or was inserted by an old pod during a rolling
         // deploy. `UserSettings.applyInvitationResponseDefaults` (@AfterLoad)
         // already heals entity-loaded rows; this covers other load paths.
+        //
+        // The fallback is the row's PREDECESSOR (`communityNewMember`) before
+        // the mandated default, mirroring the migration's `COALESCE`: an
+        // admin who deliberately muted "a new member joined" must not be
+        // silently re-enabled on all three channels for the event that was
+        // split out of it. Only a row with neither key gets the all-on
+        // default, and such a user was already all-on.
         return (
           notificationSettings.space?.admin?.communityInvitationResponse ??
+          notificationSettings.space?.admin?.communityNewMember ??
           DEFAULT_INVITATION_RESPONSE_CHANNELS
         );
 
@@ -779,10 +787,14 @@ export class NotificationRecipientsService {
   }
 
   /**
-   * The organization's owners and admins — resolved by manager standing
-   * (same constant `getActorsManagedByUser` uses), not by associate
-   * membership. One criterion per credential type; the recipients query
-   * OR-combines them.
+   * The organization's ADMINS — resolved by admin standing, not by associate
+   * membership and not by ownership. R17b: product ruled that these
+   * notifications go to admins only, so this deliberately uses
+   * `ORGANIZATION_NOTIFICATION_CREDENTIAL_TYPES` rather than the broader
+   * `ORGANIZATION_MANAGER_CREDENTIAL_TYPES` that `getActorsManagedByUser`
+   * uses. Do not add the owner credential back: an owner who is not an admin
+   * has no settings row governing these events and so could not mute them.
+   * One criterion per credential type; the recipients query OR-combines them.
    */
   private getOrganizationAdminCredentialCriteria(
     organizationID: string | undefined

@@ -128,3 +128,73 @@ describe('UserSettings entity — applyOrganizationSpaceInvitationDefaults (@Aft
     ).not.toThrow();
   });
 });
+
+/**
+ * 061-organization-space-invitations: `space.admin.communityInvitationResponse`
+ * was SPLIT OUT of `space.admin.communityNewMember`, so its `@AfterLoad`
+ * backstop must seed the PREDECESSOR's value — exactly as migration
+ * 1788600000000's `COALESCE(notification #> '{space,admin,communityNewMember}',
+ * default)` does — and not a flat all-on.
+ *
+ * This matters beyond one read: the hook mutates the loaded entity, so the
+ * value it stamps is persisted on the next save of that row. Once persisted,
+ * the migration's `WHERE ... IS NULL` guard can never correct it.
+ */
+describe('UserSettings entity — applyInvitationResponseDefaults (@AfterLoad)', () => {
+  it('seeds the predecessor value, so an admin who muted communityNewMember stays muted', () => {
+    const settings = new UserSettings();
+    settings.notification = {
+      space: {
+        admin: {
+          communityNewMember: { email: false, inApp: false, push: false },
+        },
+      },
+    } as any;
+
+    settings.applyInvitationResponseDefaults();
+
+    expect(
+      settings.notification.space.admin.communityInvitationResponse
+    ).toEqual({ email: false, inApp: false, push: false });
+  });
+
+  it('falls back to the mandated all-on default when the predecessor is absent too', () => {
+    const settings = new UserSettings();
+    settings.notification = { space: { admin: {} } } as any;
+
+    settings.applyInvitationResponseDefaults();
+
+    expect(
+      settings.notification.space.admin.communityInvitationResponse
+    ).toEqual({ email: true, inApp: true, push: true });
+  });
+
+  it('never overwrites an existing row', () => {
+    const settings = new UserSettings();
+    settings.notification = {
+      space: {
+        admin: {
+          communityNewMember: { email: false, inApp: false, push: false },
+          communityInvitationResponse: {
+            email: true,
+            inApp: false,
+            push: false,
+          },
+        },
+      },
+    } as any;
+
+    settings.applyInvitationResponseDefaults();
+
+    expect(
+      settings.notification.space.admin.communityInvitationResponse
+    ).toEqual({ email: true, inApp: false, push: false });
+  });
+
+  it('is a no-op (never throws) when notification.space.admin is absent', () => {
+    const settings = new UserSettings();
+    settings.notification = {} as any;
+
+    expect(() => settings.applyInvitationResponseDefaults()).not.toThrow();
+  });
+});

@@ -1003,8 +1003,14 @@ export class RoleSetResolverMutationsMembership {
 
     const organization =
       await this.organizationLookupService.getOrganizationByIdOrFail(actorID);
+    // `Organization.applyMembershipSettingsDefaults` (@AfterLoad) early-returns
+    // when the `settings` jsonb has no `membership` object at all, so the
+    // object — not just the key — can legitimately be absent on a row written
+    // before migration 1788400000000 ran, or by an old pod mid rolling-deploy.
+    // An unguarded deref would throw inside the invitee loop and abort the
+    // whole batch, including invitations already created for other invitees.
     const allowsSpaceInvitations =
-      organization.settings.membership.allowSpaceInvitations ?? true;
+      organization.settings?.membership?.allowSpaceInvitations ?? true;
     if (!allowsSpaceInvitations) {
       return {
         type: RoleSetInvitationResultType.ORGANIZATION_NOT_ACCEPTING_INVITATIONS,

@@ -957,12 +957,19 @@ export class NotificationSpaceAdapter {
 
   /**
    * "Someone responded to the invitation you sent" — accepted or declined,
-   * for any invited actor type. Goes only to `invitation.createdBy`, the
-   * Space admin who sent it, and is governed by that admin's
-   * `space.admin.communityInvitationResponse` setting. The generic "a new
-   * member joined" notification is deliberately suppressed for the same
-   * membership change so the inviter is not told twice (see
-   * `RoleSetEventsService.processCommunityNewMemberEvents`).
+   * for any invited actor type.
+   *
+   * Recipients are EVERY admin of the Space, not `invitation.createdBy`
+   * alone: the sending admin is one of them while they still hold the role,
+   * but co-admins must be told too, and the event must still land when the
+   * inviter has since been deleted or demoted. Each recipient's own
+   * `space.admin.communityInvitationResponse` setting governs delivery.
+   *
+   * Do not re-scope this to the inviter. The generic "a new member joined"
+   * notification is deliberately suppressed for the same membership change
+   * (FR-020a, see `RoleSetEventsService.processCommunityNewMemberEvents`),
+   * so this event is the ONLY notification co-admins receive about it —
+   * narrowing the recipients here would silently tell them nothing at all.
    */
   private async spaceAdminInvitationOutcome(
     event: NotificationEvent,

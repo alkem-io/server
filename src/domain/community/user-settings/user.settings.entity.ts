@@ -162,6 +162,14 @@ export class UserSettings extends AuthorizableEntity implements IUserSettings {
    * deploy lacks this key; without this hook the non-null GraphQL field
    * would surface a null and the recipients batch would drop the outcome
    * notification. Runs for every entity load regardless of query path.
+   *
+   * Seeds the row's PREDECESSOR (`communityNewMember`) before the mandated
+   * default, mirroring the `COALESCE` in migration 1788600000000. This row
+   * was split out of `communityNewMember`, so seeding a flat all-on here
+   * would silently re-enable, on all three channels, an event a Space admin
+   * had deliberately switched off — and because this hook's value is
+   * persisted on the next save of the entity, the migration's
+   * `WHERE ... IS NULL` guard could never correct it afterwards.
    */
   @AfterLoad()
   applyInvitationResponseDefaults() {
@@ -170,7 +178,8 @@ export class UserSettings extends AuthorizableEntity implements IUserSettings {
     }
     if (!this.notification.space.admin.communityInvitationResponse) {
       this.notification.space.admin.communityInvitationResponse = {
-        ...DEFAULT_INVITATION_RESPONSE_CHANNELS,
+        ...(this.notification.space.admin.communityNewMember ??
+          DEFAULT_INVITATION_RESPONSE_CHANNELS),
       };
     }
   }

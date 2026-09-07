@@ -741,6 +741,62 @@ describe('RoleSetResolverMutationsMembership', () => {
       expect(roleSetService.countActorsWithRole).not.toHaveBeenCalled();
     });
 
+    it.each([
+      ['settings.membership is absent entirely', { settings: {} }],
+      ['settings itself is absent', {}],
+    ])('treats an organization as accepting invitations, without throwing, when %s', async (_label, organization) => {
+      // `Organization.applyMembershipSettingsDefaults` (@AfterLoad)
+      // early-returns on `!this.settings?.membership`, and
+      // organization.entity.spec.ts asserts the key stays undefined in that
+      // case — so a row written before migration 1788400000000 ran, or by an
+      // old pod mid rolling-deploy, reaches this guard with no `membership`
+      // OBJECT. An unguarded deref throws inside the invitee loop and aborts
+      // the whole batch, including invitations already created for other
+      // invitees. The documented default is "accepting".
+      (actorLookupService.validateActorsAndGetTypes as Mock).mockResolvedValue(
+        new Map([['org-1', 'organization']])
+      );
+      (
+        organizationLookupService.getOrganizationByIdOrFail as Mock
+      ).mockResolvedValue(organization);
+      (roleSetService.findOpenInvitation as Mock).mockResolvedValue(undefined);
+      (roleSetService.findOpenApplication as Mock).mockResolvedValue(undefined);
+      (roleSetService.isMember as Mock).mockResolvedValue(false);
+      (roleSetService.createInvitationExistingActor as Mock).mockResolvedValue({
+        id: 'inv-1',
+        invitedActorID: 'org-1',
+      });
+      (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([
+        { id: 'inv-1', invitedActorID: 'org-1' },
+      ]);
+      (
+        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
+      ).mockResolvedValue([]);
+      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
+      (
+        communityResolverService.getCommunityForRoleSet as Mock
+      ).mockResolvedValue({ id: 'comm-1' });
+      (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+        'organization'
+      );
+
+      const result = await resolver.inviteForEntryRoleOnRoleSet(
+        actorContext(),
+        {
+          roleSetID: 'rs-1',
+          invitedActorIDs: ['org-1'],
+          invitedUserEmails: [],
+          extraRoles: [],
+        } as any
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].type).not.toBe(
+        RoleSetInvitationResultType.ORGANIZATION_NOT_ACCEPTING_INVITATIONS
+      );
+      expect(roleSetService.createInvitationExistingActor).toHaveBeenCalled();
+    });
+
     describe('Lead-slot capacity (granted + pending, advisory)', () => {
       const setUpOrganizationLeadInvite = () => {
         (
@@ -1078,18 +1134,23 @@ describe('RoleSetResolverMutationsMembership', () => {
       (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
         undefined
       );
+      // Keyed by the ID the mutation is actually called with below. Keying it
+      // by the *caller* (`user-1`) made `actorTypes.get('user-2')` resolve to
+      // `undefined`, so the organization guard was skipped for the trivial
+      // reason that the invitee had no type at all — the assertions then held
+      // even if the guard were wired wrongly.
       (actorLookupService.validateActorsAndGetTypes as Mock).mockResolvedValue(
-        new Map([['user-1', 'user']])
+        new Map([['user-2', 'user']])
       );
       (roleSetService.findOpenInvitation as Mock).mockResolvedValue(undefined);
       (roleSetService.findOpenApplication as Mock).mockResolvedValue(undefined);
       (roleSetService.isMember as Mock).mockResolvedValue(false);
       (roleSetService.createInvitationExistingActor as Mock).mockResolvedValue({
         id: 'inv-2',
-        invitedActorID: 'user-1',
+        invitedActorID: 'user-2',
       });
       (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([
-        { id: 'inv-2', invitedActorID: 'user-1' },
+        { id: 'inv-2', invitedActorID: 'user-2' },
       ]);
       (
         roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock

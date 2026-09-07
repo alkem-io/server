@@ -88,6 +88,9 @@ describe('InvitationResolverFields', () => {
         invitedActorID: 'org-1',
         invitedToParent: true,
         roleSet: mockRoleSet,
+        // Eager on the entity; the resolver returns null without it (see the
+        // missing-policy case below), so every fixture here must carry one.
+        authorization: { id: 'auth-inv-1' },
       } as any;
       const rootAbout = { id: 'about-root' };
       const targetAbout = { id: 'about-target' };
@@ -116,6 +119,7 @@ describe('InvitationResolverFields', () => {
         id: 'inv-1',
         invitedActorID: 'org-1',
         invitedToParent: false,
+        authorization: { id: 'auth-inv-1' },
         // roleSet absent
       } as any;
       (invitationService.getInvitationOrFail as Mock).mockResolvedValue({
@@ -156,6 +160,7 @@ describe('InvitationResolverFields', () => {
         invitedActorID: 'org-1',
         invitedToParent: true,
         roleSet: mockRoleSet,
+        authorization: { id: 'auth-inv-1' },
       } as any;
       const privateRootAbout = { id: 'about-root-private' };
       const targetAbout = { id: 'about-target' };
@@ -184,6 +189,7 @@ describe('InvitationResolverFields', () => {
         invitedActorID: 'org-1',
         invitedToParent: true,
         roleSet: { id: 'rs-1' },
+        authorization: { id: 'auth-inv-1' },
       } as any;
 
       const result = await resolver.spacesToJoinOnAccept(
@@ -192,6 +198,33 @@ describe('InvitationResolverFields', () => {
       );
 
       expect(result).toBeNull();
+      expect(roleSetService.getSpacesToJoinOnAccept).not.toHaveBeenCalled();
+    });
+
+    it('returns null — never throws — when the invitation has no authorization policy', async () => {
+      // `Invitation.authorization` is eager but `onDelete: 'SET NULL'`, so a
+      // policy row removed by orphan cleanup or a partially-projected parent
+      // leaves it undefined. `isAccessGranted` THROWS on an undefined policy
+      // rather than returning false, which would reintroduce exactly the
+      // whole-`me`-query failure this nullable field exists to prevent.
+      (authorizationService.isAccessGranted as Mock).mockImplementation(() => {
+        throw new Error('isAccessGranted must not be reached without a policy');
+      });
+      const mockInvitation = {
+        id: 'inv-1',
+        invitedActorID: 'org-1',
+        invitedToParent: true,
+        roleSet: { id: 'rs-1' },
+        // authorization absent
+      } as any;
+
+      const result = await resolver.spacesToJoinOnAccept(
+        mockInvitation,
+        actorContext
+      );
+
+      expect(result).toBeNull();
+      expect(authorizationService.isAccessGranted).not.toHaveBeenCalled();
       expect(roleSetService.getSpacesToJoinOnAccept).not.toHaveBeenCalled();
     });
   });

@@ -1168,6 +1168,80 @@ describe('NotificationRecipientsService', () => {
       expect(groupResult.emailRecipients).toHaveLength(0);
       expect(groupResult.pushRecipients).toHaveLength(1);
     });
+
+    it('061: falls back to the PREDECESSOR (communityNewMember) — not a flat all-on — for a row that predates communityInvitationResponse', async () => {
+      // `communityInvitationResponse` was split out of `communityNewMember`
+      // by migration 1788600000000, which seeds it from
+      // `COALESCE(notification #> '{space,admin,communityNewMember}', default)`
+      // precisely so a Space admin who muted "a new member joined" stays
+      // muted for the event carved out of it. The read path must agree with
+      // the migration, or a row it has not reached (rolling deploy, old-pod
+      // insert, pre-migration restore) is silently un-muted on all three
+      // channels.
+      const mutedAdmin = {
+        id: 'admin-muted',
+        email: 'muted@example.com',
+        settings: {
+          notification: {
+            space: {
+              admin: {
+                communityNewMember: {
+                  email: false,
+                  inApp: false,
+                  push: false,
+                },
+                // communityInvitationResponse absent
+              },
+            },
+          },
+        },
+        credentials: [],
+      } as unknown as IUser;
+
+      vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+        mutedAdmin,
+      ]);
+      vi.mocked(userLookupService.getUsersByIds).mockImplementation(
+        async (ids: string[]) => (ids.length > 0 ? [mutedAdmin] : [])
+      );
+
+      const result = await service.getRecipients({
+        eventType:
+          NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED,
+        spaceID: 'space-1',
+        userID: 'inviter-1',
+      });
+
+      expect(result.emailRecipients).toHaveLength(0);
+      expect(result.inAppRecipients).toHaveLength(0);
+      expect(result.pushRecipients).toHaveLength(0);
+    });
+
+    it('061: falls back to the mandated all-on default when neither communityInvitationResponse nor its predecessor is present', async () => {
+      const legacyAdmin = {
+        id: 'admin-legacy',
+        email: 'legacy-admin@example.com',
+        settings: { notification: { space: { admin: {} } } },
+        credentials: [],
+      } as unknown as IUser;
+
+      vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+        legacyAdmin,
+      ]);
+      vi.mocked(userLookupService.getUsersByIds).mockImplementation(
+        async (ids: string[]) => (ids.length > 0 ? [legacyAdmin] : [])
+      );
+
+      const result = await service.getRecipients({
+        eventType:
+          NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_DECLINED,
+        spaceID: 'space-1',
+        userID: 'inviter-1',
+      });
+
+      expect(result.emailRecipients).toHaveLength(1);
+      expect(result.pushRecipients).toHaveLength(1);
+    });
   });
 
   describe('getRecipients - authorization policy retrieval', () => {

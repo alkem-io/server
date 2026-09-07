@@ -80,6 +80,15 @@ export class InvitationResolverFields {
     @Parent() invitation: IInvitation,
     @CurrentActor() actorContext: ActorContext
   ): Promise<ISpaceAbout[] | null> {
+    // `isAccessGranted` delegates to `isAccessGratedForCredentials`, which
+    // THROWS `EntityNotInitializedException` on an undefined policy rather
+    // than returning false. The relation is eager but `onDelete: 'SET NULL'`,
+    // so an invitation whose policy row was removed would otherwise throw —
+    // reintroducing exactly the whole-`me`-query failure this nullable,
+    // never-throwing design exists to prevent. No policy means no grant.
+    if (!invitation.authorization) {
+      return null;
+    }
     if (
       !this.authorizationService.isAccessGranted(
         actorContext,
