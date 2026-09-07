@@ -2705,7 +2705,7 @@ type CreateInnovationFlowStateSettingsData {
   """
   showPublishDetails: Boolean
   """
-  Optional. Ordered sidebar widgets; defaults to [INTENT, CREATE_POST, APPLICATION_BUTTON, INDEX] when omitted.
+  Optional. Ordered sidebar widgets; defaults to [INTENT, CREATE_POST, APPLICATION_BUTTON, SEARCH, INDEX] when omitted.
   """
   sidebar: [SidebarWidget!]
   """
@@ -2726,7 +2726,7 @@ input CreateInnovationFlowStateSettingsInput {
   """
   showPublishDetails: Boolean
   """
-  Optional. Ordered sidebar widgets; defaults to [INTENT, CREATE_POST, APPLICATION_BUTTON, INDEX] when omitted.
+  Optional. Ordered sidebar widgets; defaults to [INTENT, CREATE_POST, APPLICATION_BUTTON, SEARCH, INDEX] when omitted.
   """
   sidebar: [SidebarWidget!]
   """
@@ -7942,6 +7942,7 @@ enum SidebarWidget {
   GUIDELINES
   INDEX
   INTENT
+  SEARCH
   SUBSPACE_LINKS
   UPDATES
   VIRTUAL_CONTRIBUTORS
