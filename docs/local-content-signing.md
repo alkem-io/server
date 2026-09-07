@@ -83,12 +83,11 @@ Record these checks:
    the original REST return URL completes and redirects to the memo.
 6. For decline, copy the first mock authorization URL from the browser before following it, then
    run the commands below. The attempt becomes cancelled without a signed document.
-7. For eviction, create and continue another attempt, copy its ID and authorization URL, then restart
-   only the task-owned gateway before completing authorization. Following that authorization now
-   reaches the gateway callback with `400 unknown_state` and does not return to Alkemio. Read the
-   gateway's authoritative `expiresAt` from the persisted attempt as shown below. After that instant,
-   the one-minute expiry margin and the next hourly sweep, the actor-bound query reports `EXPIRED`
-   without an attached result; this is not an immediate-expiry check.
+7. For natural expiry, create and continue another attempt, copy its ID, then leave it uncompleted:
+   do not follow its authorization URL or complete its callback. Read the gateway's authoritative
+   `expiresAt` from the persisted attempt as shown below. After that instant, the one-minute expiry
+   margin and the next hourly sweep, the actor-bound query reports `EXPIRED` without an attached
+   result; this is not an immediate-expiry check.
 
 Read either terminal state through the actor-bound GraphQL query. Copy the session cookie request
 header from the browser devtools into the local shell without committing or printing it:
@@ -110,9 +109,9 @@ curl -fsS -o /dev/null -D - \
   "http://localhost:3000/oauth/cleverbase/callback?state=$state&error=access_denied"
 read_attempt
 
-docker compose -p "$COMPOSE_PROJECT_NAME" -f quickstart-services.yml \
-  --env-file .env.docker restart trust-gateway
-# Complete the copied authorization URL and observe HTTP 400 with no Alkemio server return.
+# Prepare and continue a new attempt, do not visit its authorization URL, then set its ID here.
+export SIGNING_ATTEMPT_ID='<abandoned continued attempt UUID>'
+read_attempt
 expires_at=$(docker compose -p "$COMPOSE_PROJECT_NAME" -f quickstart-services.yml \
   --env-file .env.docker exec -T postgres psql -U synapse -d alkemio -Atc \
   "SELECT \"expiresAt\" FROM signing_attempt WHERE id = '$SIGNING_ATTEMPT_ID'")
