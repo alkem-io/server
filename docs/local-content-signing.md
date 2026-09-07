@@ -7,7 +7,7 @@ publish only on loopback, but sibling containers share `alkemio_dev_net`.
 
 ## Start the fixture
 
-The Compose file pins trust-gateway v0.1.0 and the Cleverbase reference mock by digest. Start the
+The Compose file pins trust-gateway v0.2.0 and the Cleverbase reference mock by digest. Start the
 normal quickstart with fresh storage, then run the server and client on their usual host ports.
 Docker, pnpm and `jq` are prerequisites. `COMPOSE_PROJECT_NAME` names only this task-owned fresh
 stack; never run the volume-removal command against a default or developer project.
@@ -63,7 +63,7 @@ curl -fsS "$KRATOS_ADMIN/identities/$identity_id?include_credential=oidc" |
 `PNONL-123` is the provider subject from the
 [SDK mock-signer contract](https://github.com/alkem-io/cleverbase-sdk/blob/develop/examples/reference-integration/mock-upstream/README.md),
 not the X.509 certificate serial. The complete environment recipe is owned by the
-[gateway v0.1.0 local-stack documentation](https://github.com/alkem-io/trust-gateway/blob/v0.1.0/README.md#local-alkemio-stack-mock-and-public-stub).
+[gateway v0.2.0 local-stack documentation](https://github.com/alkem-io/trust-gateway/blob/v0.2.0/README.md#local-alkemio-stack-mock-and-public-stub).
 
 ## Verify the journey
 
