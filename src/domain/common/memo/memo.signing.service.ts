@@ -361,18 +361,24 @@ export class MemoSigningService {
       AuthorizationPrivilege.READ,
       'verify memo signature'
     );
-    if (!attempt.signedDocumentId)
-      throw new ValidationException(
-        'Signed Memo copy is not available',
-        LogContext.MEMOS
-      );
     const pdf = await this.fileServiceAdapter.getDocumentContent(
       attempt.signedDocumentId
     );
     let verification;
     try {
       verification = await this.trustGatewayClient.verify(pdf);
-    } catch {
+    } catch (error) {
+      const status = (error as { response?: { status?: unknown } }).response
+        ?.status;
+      this.logger.error?.(
+        {
+          message: 'Memo signature verification unavailable',
+          attemptId,
+          status: typeof status === 'number' ? status : undefined,
+        },
+        undefined,
+        LogContext.MEMOS
+      );
       return MemoSignatureVerificationStatus.UNAVAILABLE;
     }
     if (!verification.integrity)

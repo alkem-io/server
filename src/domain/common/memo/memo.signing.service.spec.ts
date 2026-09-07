@@ -1222,9 +1222,13 @@ describe('MemoSigningService', () => {
   });
 
   it.each([
-    new Error('gateway unavailable'),
-    new ValidationException('Invalid gateway response', LogContext.MEMOS),
-  ])('reports gateway acquisition failure as unavailable', async error => {
+    [new Error('gateway unavailable'), undefined],
+    [{ response: { status: 503 } }, 503],
+    [
+      new ValidationException('Invalid gateway response', LogContext.MEMOS),
+      undefined,
+    ],
+  ])('reports gateway acquisition failure as unavailable without logging its cause', async (error, status) => {
     attemptService.getSignedOrFail.mockResolvedValue({
       id: 'attempt-1',
       memoId: memo.id,
@@ -1238,6 +1242,16 @@ describe('MemoSigningService', () => {
 
     await expect(service.verifyMemoSignature('attempt-1', actor)).resolves.toBe(
       'UNAVAILABLE'
+    );
+    expect(logger.error).toHaveBeenCalledTimes(1);
+    expect(logger.error).toHaveBeenCalledWith(
+      {
+        message: 'Memo signature verification unavailable',
+        attemptId: 'attempt-1',
+        status,
+      },
+      undefined,
+      LogContext.MEMOS
     );
   });
 

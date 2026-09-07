@@ -18,6 +18,7 @@ type VerifyResponse = { integrity?: unknown; reasons?: unknown };
 
 const RFC3339 =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+const REQUEST_TIMEOUT_MS = 30_000;
 
 @Injectable()
 export class TrustGatewayClient {
@@ -45,7 +46,7 @@ export class TrustGatewayClient {
           },
           clientState,
         },
-        { timeout: 30_000 }
+        { timeout: REQUEST_TIMEOUT_MS }
       )
     );
     const { redirectUrl, correlationId, expiresAt } = response.data;
@@ -75,7 +76,7 @@ export class TrustGatewayClient {
       const response = await firstValueFrom(
         this.httpService.get<unknown>(`${this.baseUrl}/v1/sign/status`, {
           params: { correlationId },
-          timeout: 30_000,
+          timeout: REQUEST_TIMEOUT_MS,
         })
       );
       const data = response.data;
@@ -104,7 +105,7 @@ export class TrustGatewayClient {
         this.httpService.get<ArrayBuffer>(`${this.baseUrl}/v1/sign/result`, {
           params: { correlationId },
           responseType: 'arraybuffer',
-          timeout: 30_000,
+          timeout: REQUEST_TIMEOUT_MS,
         })
       );
     } catch (error) {
@@ -139,7 +140,7 @@ export class TrustGatewayClient {
       this.httpService.post<VerifyResponse>(
         `${this.baseUrl}/v1/verify`,
         { document: document.toString('base64') },
-        { timeout: 30_000 }
+        { timeout: REQUEST_TIMEOUT_MS }
       )
     );
     const data = response.data;

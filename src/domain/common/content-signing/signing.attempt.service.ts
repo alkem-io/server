@@ -141,12 +141,15 @@ export class SigningAttemptService {
     });
   }
 
-  async getSignedOrFail(id: string): Promise<SigningAttempt> {
+  async getSignedOrFail(
+    id: string
+  ): Promise<SigningAttempt & { signedDocumentId: string }> {
     const attempt = await this.repository.findOneBy({
       id,
       status: SigningAttemptStatus.SIGNED,
     });
-    if (attempt) return attempt;
+    if (attempt?.signedDocumentId)
+      return attempt as SigningAttempt & { signedDocumentId: string };
     throw new ValidationException(
       'Signed Memo copy is not available',
       LogContext.MEMOS

@@ -278,6 +278,7 @@ describe('SigningAttemptService', () => {
     const attempt = {
       id: 'attempt-1',
       status: SigningAttemptStatus.SIGNED,
+      signedDocumentId: 'signed-document-1',
     } as SigningAttempt;
     repository.findOneBy!.mockResolvedValue(attempt);
 
@@ -290,6 +291,18 @@ describe('SigningAttemptService', () => {
 
   it('rejects an attempt that is not signed', async () => {
     repository.findOneBy!.mockResolvedValue(null);
+
+    await expect(service.getSignedOrFail('attempt-1')).rejects.toThrow(
+      ValidationException
+    );
+  });
+
+  it('rejects a signed attempt without its signed document', async () => {
+    repository.findOneBy!.mockResolvedValue({
+      id: 'attempt-1',
+      status: SigningAttemptStatus.SIGNED,
+      signedDocumentId: null,
+    } as unknown as SigningAttempt);
 
     await expect(service.getSignedOrFail('attempt-1')).rejects.toThrow(
       ValidationException
