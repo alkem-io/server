@@ -22,6 +22,7 @@ import { yjsStateToMarkdown } from './conversion';
 import { IMemo } from './memo.interface';
 import { MemoPdfRenderer } from './memo.pdf.renderer';
 import { MemoService } from './memo.service';
+import { MemoSignatureVerificationStatus } from './memo.signature.verification.status';
 
 @Injectable()
 export class MemoSigningService {
@@ -275,7 +276,9 @@ export class MemoSigningService {
 
   private async getAuthorizedMemo(
     memoId: string,
-    actor: ActorContext
+    actor: ActorContext,
+    privilege = AuthorizationPrivilege.CONTRIBUTE,
+    action = 'sign memo'
   ): Promise<IMemo> {
     const memo = await this.memoService.getMemoOrFail(memoId, {
       relations: { authorization: true, profile: { storageBucket: true } },
@@ -283,8 +286,8 @@ export class MemoSigningService {
     this.authorizationService.grantAccessOrFail(
       actor,
       memo.authorization,
-      AuthorizationPrivilege.CONTRIBUTE,
-      'sign memo'
+      privilege,
+      action
     );
     return memo;
   }
@@ -348,6 +351,43 @@ export class MemoSigningService {
 
   async releaseExpiredAttemptFiles(attempt: SigningAttempt): Promise<void> {
     await this.deleteSnapshot(attempt.id, attempt.snapshotDocumentId);
+  }
+
+  async verifyMemoSignature(attemptId: string, actor: ActorContext) {
+    const attempt = await this.attemptService.getSignedOrFail(attemptId);
+    await this.getAuthorizedMemo(
+      attempt.memoId,
+      actor,
+      AuthorizationPrivilege.READ,
+      'verify memo signature'
+    );
+    if (!attempt.signedDocumentId)
+      throw new ValidationException(
+        'Signed Memo copy is not available',
+        LogContext.MEMOS
+      );
+    const pdf = await this.fileServiceAdapter.getDocumentContent(
+      attempt.signedDocumentId
+    );
+    let verification;
+    try {
+      verification = await this.trustGatewayClient.verify(pdf);
+    } catch {
+      return MemoSignatureVerificationStatus.UNAVAILABLE;
+    }
+    if (!verification.integrity)
+      this.logger.error?.(
+        {
+          message: 'Memo signature integrity verification failed',
+          attemptId,
+          reasons: verification.reasons,
+        },
+        undefined,
+        LogContext.MEMOS
+      );
+    return verification.integrity
+      ? MemoSignatureVerificationStatus.VERIFIED
+      : MemoSignatureVerificationStatus.INVALID;
   }
 
   private logCleanupFailure(attemptId: string, documentId: string): void {

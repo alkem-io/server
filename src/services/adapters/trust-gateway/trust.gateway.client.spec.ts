@@ -240,6 +240,51 @@ describe('TrustGatewayClient', () => {
     expect(requests[0].request.method).toBe('POST');
   });
 
+  it('posts exact signed PDF bytes for integrity verification and returns only consumed fields', async () => {
+    responses.push({
+      body: {
+        integrity: true,
+        profile: 'B-T',
+        signer: { serial: 'private-serial', cn: 'Private Name' },
+        reasons: [],
+      },
+    });
+
+    await expect(client.verify(Buffer.from('%PDF-signed'))).resolves.toEqual({
+      integrity: true,
+      reasons: [],
+    });
+    expect(requests).toHaveLength(1);
+    expect(requests[0].request.method).toBe('POST');
+    expect(requests[0].request.url).toBe('/v1/verify');
+    expect(requests[0].request.headers.authorization).toBeUndefined();
+    expect(requests[0].body).toEqual({
+      document: Buffer.from('%PDF-signed').toString('base64'),
+    });
+  });
+
+  it.each([
+    null,
+    [],
+    {},
+    { integrity: 'true', reasons: [] },
+    { integrity: false, reasons: 'message_digest_mismatch' },
+    { integrity: false, reasons: [1] },
+  ])('rejects malformed verification response %#', async body => {
+    responses.push({ body });
+
+    await expect(client.verify(Buffer.from('%PDF-signed'))).rejects.toThrow(
+      /invalid gateway response/i
+    );
+  });
+
+  it('does not retry a failed verification request', async () => {
+    responses.push({ status: 500, body: { error: 'unavailable' } });
+
+    await expect(client.verify(Buffer.from('%PDF-signed'))).rejects.toThrow();
+    expect(requests).toHaveLength(1);
+  });
+
   it('requires the gateway URL when constructed', () => {
     const missing = new Error('Missing trustGateway.url');
 

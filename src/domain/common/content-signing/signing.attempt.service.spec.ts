@@ -274,6 +274,28 @@ describe('SigningAttemptService', () => {
     });
   });
 
+  it('loads only a signed attempt for verification without initiator binding', async () => {
+    const attempt = {
+      id: 'attempt-1',
+      status: SigningAttemptStatus.SIGNED,
+    } as SigningAttempt;
+    repository.findOneBy!.mockResolvedValue(attempt);
+
+    await expect(service.getSignedOrFail('attempt-1')).resolves.toBe(attempt);
+    expect(repository.findOneBy).toHaveBeenCalledWith({
+      id: 'attempt-1',
+      status: SigningAttemptStatus.SIGNED,
+    });
+  });
+
+  it('rejects an attempt that is not signed', async () => {
+    repository.findOneBy!.mockResolvedValue(null);
+
+    await expect(service.getSignedOrFail('attempt-1')).rejects.toThrow(
+      ValidationException
+    );
+  });
+
   it('selects a bounded union of gateway-expired and abandoned prepared attempts', async () => {
     repository.find!.mockResolvedValue([]);
     const now = new Date('2026-09-05T18:00:00Z');

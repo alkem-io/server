@@ -26,6 +26,7 @@ describe('memo signing GraphQL reads', () => {
       {} as any,
       attemptService as any,
       {} as any,
+      {} as any,
       {} as any
     );
 
@@ -48,6 +49,7 @@ describe('memo signing GraphQL reads', () => {
       memoService as any,
       attemptService as any,
       authorizationService as any,
+      {} as any,
       {} as any
     );
 
@@ -65,6 +67,27 @@ describe('memo signing GraphQL reads', () => {
       'read memo signatures'
     );
     expect(attemptService.findSignedForMemo).toHaveBeenCalledWith('memo-1');
+  });
+
+  it('forwards an explicit signature verification query with the current actor', async () => {
+    const memoSigningService = {
+      verifyMemoSignature: vi.fn().mockResolvedValue('VERIFIED'),
+    };
+    const resolver = new MemoResolverFields(
+      {} as any,
+      {} as any,
+      {} as any,
+      memoSigningService as any,
+      {} as any
+    );
+
+    await expect(
+      resolver.verifyMemoSignature(actor, { attemptID: 'attempt-1' })
+    ).resolves.toBe('VERIFIED');
+    expect(memoSigningService.verifyMemoSignature).toHaveBeenCalledWith(
+      'attempt-1',
+      actor
+    );
   });
 
   it('resolves the stored signed document and attributes a missing actor to the deleted-user sentinel', async () => {

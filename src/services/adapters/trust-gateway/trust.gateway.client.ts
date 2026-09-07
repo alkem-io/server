@@ -14,6 +14,7 @@ type StartResponse = {
 };
 
 type GatewayStatus = { status: string; reason?: string };
+type VerifyResponse = { integrity?: unknown; reasons?: unknown };
 
 const RFC3339 =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
@@ -131,6 +132,27 @@ export class TrustGatewayClient {
     if (!evidence || Array.isArray(evidence) || typeof evidence !== 'object')
       throw this.invalidResponse();
     return { pdf, evidence: evidence as Record<string, unknown> };
+  }
+
+  async verify(document: Buffer) {
+    const response = await firstValueFrom(
+      this.httpService.post<VerifyResponse>(
+        `${this.baseUrl}/v1/verify`,
+        { document: document.toString('base64') },
+        { timeout: 30_000 }
+      )
+    );
+    const data = response.data;
+    if (!data || Array.isArray(data) || typeof data !== 'object')
+      throw this.invalidResponse();
+    const { integrity, reasons } = data;
+    if (
+      typeof integrity !== 'boolean' ||
+      !Array.isArray(reasons) ||
+      !reasons.every(reason => typeof reason === 'string')
+    )
+      throw this.invalidResponse();
+    return { integrity, reasons };
   }
 
   private invalidResponse(): ValidationException {
