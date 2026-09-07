@@ -1,4 +1,4 @@
-import { ORGANIZATION_MANAGER_CREDENTIAL_TYPES } from '@common/constants/authorization';
+import { ORGANIZATION_NOTIFICATION_CREDENTIAL_TYPES } from '@common/constants/authorization';
 import { AuthorizationCredential } from '@common/enums';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { ValidationException } from '@common/exceptions';
@@ -459,15 +459,18 @@ describe('NotificationRecipientsService', () => {
       ).rejects.toThrow(ValidationException);
     });
 
-    it('should use manager (owner + admin) credentials for ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION, never the associate criterion', async () => {
-      await service.getRecipients({
-        eventType:
-          NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION,
-        organizationID: 'org-1',
-      });
+    it.each([
+      NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION,
+      NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED,
+    ])('should use ADMIN credentials only for %s — never the associate criterion, and never OWNER', async eventType => {
+      // Product asked for "all organization admins" (server#4100 AC,
+      // notifications#356 AC, and the product email thread — none of them
+      // mentions owners). An owner who is not also an admin can still
+      // accept on the organization's behalf; they are simply not notified.
+      await service.getRecipients({ eventType, organizationID: 'org-1' });
 
       expect(userLookupService.usersWithCredentials).toHaveBeenCalledWith(
-        [...ORGANIZATION_MANAGER_CREDENTIAL_TYPES].map(type => ({
+        [...ORGANIZATION_NOTIFICATION_CREDENTIAL_TYPES].map(type => ({
           type,
           resourceID: 'org-1',
         })),
@@ -476,11 +479,14 @@ describe('NotificationRecipientsService', () => {
       );
       const [criteria] = vi.mocked(userLookupService.usersWithCredentials).mock
         .calls[0];
-      expect(criteria).not.toContainEqual(
-        expect.objectContaining({
-          type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
-        })
-      );
+      for (const excluded of [
+        AuthorizationCredential.ORGANIZATION_ASSOCIATE,
+        AuthorizationCredential.ORGANIZATION_OWNER,
+      ]) {
+        expect(criteria).not.toContainEqual(
+          expect.objectContaining({ type: excluded })
+        );
+      }
     });
 
     it('should throw ValidationException for ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION without organizationID', async () => {

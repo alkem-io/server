@@ -249,10 +249,10 @@ export class NotificationOrganizationAdapter {
   }
 
   /**
-   * A Space invited an organization. Notifies every admin/owner of the
+   * A Space invited an organization. Notifies every ADMIN of the
    * organization (email, in-app, push) with the inviter, the offered
    * role(s), the message and every Space acceptance would join. When the
-   * organization has no administrators or owners, the invitation still
+   * organization has no administrators, the invitation still
    * exists — only the support escalation email fires, with no recipient
    * lookup and no in-app/push (the organization has nobody to notify).
    */
@@ -377,7 +377,7 @@ export class NotificationOrganizationAdapter {
 
   /**
    * The organization has joined a Space after one of its admins accepted
-   * the invitation. Every admin/owner is notified — the point of this
+   * the invitation. Every ADMIN is notified — the point of this
    * notification is that the *others* learn no action is needed, mirroring
    * the "welcome to the Space" notification a user gets when they accept
    * an invitation themselves. Shares the invitation's settings row: it is

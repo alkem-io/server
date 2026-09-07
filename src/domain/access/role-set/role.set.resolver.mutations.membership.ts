@@ -1,4 +1,4 @@
-import { ORGANIZATION_MANAGER_CREDENTIAL_TYPES } from '@common/constants/authorization';
+import { ORGANIZATION_NOTIFICATION_CREDENTIAL_TYPES } from '@common/constants/authorization';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
@@ -1161,13 +1161,18 @@ export class RoleSetResolverMutationsMembership {
         invitation,
       };
       if (invitedActorType === ActorType.ORGANIZATION) {
-        const managers = await this.userLookupService.usersWithCredentials(
-          ORGANIZATION_MANAGER_CREDENTIAL_TYPES.map(type => ({
+        // Counted on the ADMIN set — the same set the invitation notification
+        // is addressed to. An organization with owners but no admins therefore
+        // escalates to platform support rather than notifying nobody, which is
+        // exactly the story AC ("if there are no organization admins at all,
+        // invitation should be sent to support@alkem.io").
+        const admins = await this.userLookupService.usersWithCredentials(
+          ORGANIZATION_NOTIFICATION_CREDENTIAL_TYPES.map(type => ({
             type,
             resourceID: actorID,
           }))
         );
-        if (managers.length === 0) {
+        if (admins.length === 0) {
           invitationResult.notice =
             RoleSetInvitationResultNotice.ORGANIZATION_HAS_NO_ADMINISTRATORS;
         }

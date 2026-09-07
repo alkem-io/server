@@ -1,4 +1,4 @@
-import { ORGANIZATION_MANAGER_CREDENTIAL_TYPES } from '@common/constants/authorization';
+import { ORGANIZATION_NOTIFICATION_CREDENTIAL_TYPES } from '@common/constants/authorization';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
@@ -568,12 +568,12 @@ export class NotificationRecipientsService {
         break;
       }
       case NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION: {
-        // Resolved by admin/owner standing, not the associate sweep the two
+        // Resolved by ADMIN standing, not the associate sweep the two
         // shipped organization events use — an admin who is not an
         // associate is still notified.
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
         credentialCriteria =
-          this.getOrganizationManagerCredentialCriteria(organizationID);
+          this.getOrganizationAdminCredentialCriteria(organizationID);
         break;
       }
       case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED:
@@ -593,13 +593,13 @@ export class NotificationRecipientsService {
         break;
       }
       case NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED: {
-        // Every admin/owner of the organization that just joined — including
+        // Every ADMIN of the organization that just joined — including
         // whoever accepted, mirroring the user-side "welcome to the Space"
-        // notification. Resolved by manager standing, not associate
+        // notification. Resolved by ADMIN standing, not associate
         // membership, exactly as the invitation event is.
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
         credentialCriteria =
-          this.getOrganizationManagerCredentialCriteria(organizationID);
+          this.getOrganizationAdminCredentialCriteria(organizationID);
         break;
       }
       case NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT:
@@ -784,7 +784,7 @@ export class NotificationRecipientsService {
    * membership. One criterion per credential type; the recipients query
    * OR-combines them.
    */
-  private getOrganizationManagerCredentialCriteria(
+  private getOrganizationAdminCredentialCriteria(
     organizationID: string | undefined
   ): CredentialsSearchInput[] {
     if (!organizationID) {
@@ -793,7 +793,11 @@ export class NotificationRecipientsService {
         LogContext.NOTIFICATIONS
       );
     }
-    return ORGANIZATION_MANAGER_CREDENTIAL_TYPES.map(type => ({
+    // ADMIN only — not ORGANIZATION_MANAGER_CREDENTIAL_TYPES. Product asked
+    // for "all organization admins" (server#4100 / notifications#356 / the
+    // product email thread); an owner who is not also an admin can still
+    // accept on the organization's behalf but is not notified.
+    return ORGANIZATION_NOTIFICATION_CREDENTIAL_TYPES.map(type => ({
       type,
       resourceID: organizationID,
     }));
