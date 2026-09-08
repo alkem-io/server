@@ -1,7 +1,7 @@
 # Synapse Homeserver Configuration
 # For more information, see: https://element-hq.github.io/synapse/latest/usage/configuration/config_documentation.html
 
-server_name: "alkemio.matrix.host"
+server_name: "matrix-acc.alkem.io"
 # Public base URL - CRITICAL for SSO redirects
 # This tells Synapse what URL to use when generating redirect URLs
 public_baseurl: "http://localhost:8008"

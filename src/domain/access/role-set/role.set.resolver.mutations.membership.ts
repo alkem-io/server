@@ -345,13 +345,16 @@ export class RoleSetResolverMutationsMembership {
       }
     }
 
+    // Normalize ONCE, here, so validation, persistence and the eventual role
+    // grant all see the same list. Previously only the policy lookup inside
+    // `validateInviteesAndRolesOrFail` de-duplicated, so `[LEAD, LEAD]`
+    // validated as one role but was persisted on the invitation — and echoed
+    // back to the client — as two.
+    const extraRoles = [...new Set(invitationData.extraRoles)];
+
     // Reject an invalid invitee actor type or a role an organization's policy
     // forbids before anything is created.
-    await this.validateInviteesAndRolesOrFail(
-      actorTypes,
-      invitationData.extraRoles,
-      roleSet
-    );
+    await this.validateInviteesAndRolesOrFail(actorTypes, extraRoles, roleSet);
 
     // Collect actor IDs to invite
     const actorIDsToInvite: string[] = [...invitationData.invitedActorIDs];
@@ -373,7 +376,7 @@ export class RoleSetResolverMutationsMembership {
       actorIDsToInvite,
       actorContext,
       authorizedToInviteToParentRoleSet,
-      invitationData.extraRoles,
+      extraRoles,
       invitationData.welcomeMessage,
       invitationData.suggestedLanguage,
       actorTypes
@@ -385,7 +388,7 @@ export class RoleSetResolverMutationsMembership {
         newUserEmails,
         authorizedToInviteToParentRoleSet,
         invitationData.welcomeMessage,
-        invitationData.extraRoles,
+        extraRoles,
         actorContext,
         invitationData.suggestedLanguage
       );
@@ -924,9 +927,10 @@ export class RoleSetResolverMutationsMembership {
       }
     }
 
-    // One RoleSet+roles load for the whole (de-duplicated) list: the DTO caps
-    // extraRoles, but a per-element round trip would still scale with input.
-    const requestedRoles = [...new Set(extraRoles)];
+    // One RoleSet+roles load for the whole list: the DTO caps extraRoles, but
+    // a per-element round trip would still scale with input. The caller has
+    // already de-duplicated.
+    const requestedRoles = extraRoles;
     if (requestedRoles.length === 0) {
       return;
     }

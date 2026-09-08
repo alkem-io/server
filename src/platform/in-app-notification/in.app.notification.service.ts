@@ -506,7 +506,19 @@ export class InAppNotificationService {
         const typedPayload =
           payload as InAppNotificationPayloadSpaceCommunityActor;
         result.spaceID = typedPayload.spaceID;
-        result.organizationID = typedPayload.actorID;
+        // `contributorActorId`, NOT `organizationID` — matching the USER and
+        // Virtual-Contributor siblings below. These are SPACE-admin
+        // notifications about an organization; `organizationID` means "this
+        // notification belongs to that organization's own feed", and
+        // `removeActorFromRole` uses it to wipe a user's notifications when
+        // they stop being an ASSOCIATE of that organization
+        // (deleteAllForReceiverInOrganization). A Space admin who also happens
+        // to be an associate of the invited organization would then lose this
+        // Space-admin row the moment they left the organization — two
+        // unrelated memberships, one delete. The Actor FK still cascades when
+        // the organization itself is deleted, because an Organization IS an
+        // Actor.
+        result.contributorActorId = typedPayload.actorID;
         break;
       }
 

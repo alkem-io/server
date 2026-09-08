@@ -29,7 +29,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  *    — never touches an existing key, safely re-runnable. The nested
  *    `jsonb_set` calls materialize `notification.space` and
  *    `notification.space.admin` if either is absent.
- *  - `down`: removes the key via the `#-` operator.
+ *  - `down`: intentional no-op — see the note on the method.
  *
  * Belt-and-braces: `UserSettings.applyInvitationResponseDefaults`
  * (`@AfterLoad`) and the recipients-service
@@ -77,11 +77,16 @@ export class AddSpaceAdminInvitationResponseNotificationSetting1788600000000
     );
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`
-      UPDATE user_settings
-      SET notification = notification #- '{space,admin,communityInvitationResponse}'::text[]
-      WHERE notification #> '{space,admin,communityInvitationResponse}' IS NOT NULL
-    `);
+  // No automatic rollback, and this one is the sharpest of the three: `up`
+  // DERIVES the seeded value from `communityNewMember`. Stripping the key on
+  // `down` therefore discards whatever the admin has since chosen for
+  // invitation responses, and the next `up` re-derives it from a predecessor
+  // they may have set differently — silently overriding a recorded choice,
+  // which SC-007 forbids. The key is additive and inert to older code (the
+  // `@AfterLoad` backstop and DEFAULT_INVITATION_RESPONSE_CHANNELS handle its
+  // absence, never its presence), so leaving it costs nothing on a rollback.
+  // Operators who must truly revert should restore a pre-migration backup.
+  public async down(_queryRunner: QueryRunner): Promise<void> {
+    // Intentional no-op. See note above.
   }
 }

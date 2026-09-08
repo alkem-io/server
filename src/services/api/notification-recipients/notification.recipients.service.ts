@@ -564,7 +564,17 @@ export class NotificationRecipientsService {
         break;
       }
       case NotificationEvent.SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED: {
-        // Notify the space admin who sent the VC invitation
+        // Notify the space admin who sent the VC invitation.
+        //
+        // ASYMMETRY, deliberate and out of scope to change: this event now
+        // shares the `space.admin.communityInvitationResponse` setting with
+        // the four organization/user outcome events (R27), but keeps its
+        // pre-existing inviter-only audience, while those four fan out to
+        // every Space admin (R28/FR-020). One toggle, two audiences.
+        // Widening this one would change Virtual-Contributor behaviour that
+        // `server#4100` does not otherwise touch, and it is unchanged from
+        // `develop` — including that an inviter who has since been deleted
+        // resolves to nobody. Recorded rather than silently inherited.
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;

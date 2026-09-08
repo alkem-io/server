@@ -12,7 +12,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  *    — never touches an existing key, safely re-runnable. The inner
  *    `jsonb_set` additionally materializes `notification.organization`
  *    itself if absent.
- *  - `down`: removes the key via the `#-` operator.
+ *  - `down`: intentional no-op — see the note on the method.
  *
  * Belt-and-braces: `UserSettings.applyOrganizationSpaceInvitationDefaults`
  * (`@AfterLoad`) and the recipients-service
@@ -53,11 +53,14 @@ export class AddOrganizationSpaceInvitationNotificationSettings1788500000000
     );
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`
-      UPDATE user_settings
-      SET notification = notification #- '{organization,adminSpaceCommunityInvitation}'::text[]
-      WHERE notification #> '{organization,adminSpaceCommunityInvitation}' IS NOT NULL
-    `);
+  // No automatic rollback. Stripping the key is not the inverse of seeding it:
+  // `up` writes the all-on default wherever the key is absent, so a
+  // down-then-up cycle silently re-enables, on every channel, a notification
+  // that an organization admin had switched off — exactly the silent override
+  // of a recorded choice SC-007 forbids. The key is additive and inert to
+  // older code, so leaving it costs nothing on a rollback. Operators who must
+  // truly revert should restore a pre-migration backup.
+  public async down(_queryRunner: QueryRunner): Promise<void> {
+    // Intentional no-op. See note above.
   }
 }

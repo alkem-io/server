@@ -203,14 +203,13 @@ describe('organization-invitation notification events — exhaustiveness (D14)',
       expect(result.organizationID).toBe('org-1');
     });
 
-    it.each([
-      NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED,
-      NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED,
-      NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED,
-    ])('populates spaceID and organizationID (= actorID) for %s', type => {
+    it('populates spaceID and organizationID (= actorID) for the org-joined event', () => {
+      // This one IS an organization-feed notification: it goes to the
+      // organization's own admins, so losing it on leaving the organization is
+      // correct.
       const result = service.createInAppNotification({
-        type,
-        category: 'admin' as any,
+        type: NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED,
+        category: 'organization' as any,
         triggeredByID: 'user-1',
         triggeredAt: new Date(),
         receiverID: 'user-2',
@@ -219,6 +218,32 @@ describe('organization-invitation notification events — exhaustiveness (D14)',
 
       expect(result.spaceID).toBe('space-1');
       expect(result.organizationID).toBe('org-1');
+    });
+
+    it.each([
+      NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED,
+      NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED,
+      NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_ACCEPTED,
+      NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_DECLINED,
+      NotificationEvent.SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED,
+    ])('populates spaceID and contributorActorId — never organizationID — for %s', type => {
+      // Every Space-admin invitation-outcome event uses the Actor FK,
+      // whatever the invitee's type. `organizationID` is the organization's
+      // OWN feed and is what `deleteAllForReceiverInOrganization` wipes when
+      // a user stops being an associate; a Space-admin row keyed on it
+      // disappears on an unrelated membership change.
+      const result = service.createInAppNotification({
+        type,
+        category: 'admin' as any,
+        triggeredByID: 'user-1',
+        triggeredAt: new Date(),
+        receiverID: 'user-2',
+        payload: { spaceID: 'space-1', actorID: 'actor-1' } as any,
+      });
+
+      expect(result.spaceID).toBe('space-1');
+      expect(result.contributorActorId).toBe('actor-1');
+      expect(result.organizationID).toBeUndefined();
     });
   });
 
@@ -271,6 +296,89 @@ describe('organization-invitation notification events — exhaustiveness (D14)',
 
       const missing = [...declaredTypes].filter(t => !resolvedTypes.has(t));
       expect(missing).toEqual([]);
+    });
+  });
+
+  describe('extractCoreEntityIds covers EVERY notification event (static source scan)', () => {
+    // FR-021 promises that an unmapped event "MUST be caught by an automated
+    // exhaustiveness check rather than fail silently". The assertions above
+    // only ever asked about the six events this feature added, so a seventh
+    // would sail straight into `extractCoreEntityIds`'s default branch — which
+    // only `warn`s, then persists an in-app row with every core FK null, and
+    // no cascade ever reaps it.
+    //
+    // This partitions the WHOLE enum: an event is either handled by the
+    // switch, or listed below as one that provably never produces an in-app
+    // row. A new event that is neither fails here.
+    //
+    // Verified at the time of writing: none of the exemptions reaches
+    // `createInAppNotification`, so the current default branch is unreachable
+    // in production — nothing is broken today, and this keeps it that way.
+    const NEVER_IN_APP: Record<string, string> = {
+      // Enforced at the platform boundary by
+      // NotificationInAppAdapter.NOT_SUPPORTED_IN_APP_EVENTS (034-messaging,
+      // FR-003/D-2): in-app is permanently OFF regardless of user settings.
+      USER_CONVERSATION_MESSAGE_DIRECT: 'NOT_SUPPORTED_IN_APP_EVENTS',
+      USER_CONVERSATION_MESSAGE_GROUP: 'NOT_SUPPORTED_IN_APP_EVENTS',
+      // Email-only security signals — dispatched solely through
+      // notificationExternalAdapter.sendExternalNotifications; no producer
+      // calls sendInAppNotifications for them.
+      USER_EMAIL_CHANGE_SECURITY_SIGNAL: 'email-only (external adapter)',
+      USER_EMAIL_CHANGE_NEW_ADDRESS_NOTIFICATION:
+        'email-only (external adapter)',
+      USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION:
+        'email-only (notification.platform.adapter)',
+      USER_EMAIL_CHANGE_SPACE_ADMIN_NOTIFICATION:
+        'email-only (notification.space.adapter)',
+      USER_PASSWORD_CHANGE_SECURITY_SIGNAL: 'email-only (external adapter)',
+    };
+
+    it('every NotificationEvent is either handled by the switch or explicitly exempt', () => {
+      const source = readFileSync(
+        join(
+          __dirname,
+          '../../../platform/in-app-notification/in.app.notification.service.ts'
+        ),
+        'utf-8'
+      );
+      const handled = new Set(
+        [...source.matchAll(/case NotificationEvent\.([A-Z0-9_]+)/g)].map(
+          m => m[1]
+        )
+      );
+      // Sanity: guards against a refactor that makes this vacuously true.
+      expect(handled.size).toBeGreaterThan(30);
+
+      const allEvents = Object.keys(NotificationEvent);
+      expect(allEvents.length).toBeGreaterThan(handled.size);
+
+      const unaccounted = allEvents.filter(
+        event => !handled.has(event) && !(event in NEVER_IN_APP)
+      );
+      expect(unaccounted).toEqual([]);
+    });
+
+    it('no exemption is stale — every exempt event is genuinely absent from the switch', () => {
+      const source = readFileSync(
+        join(
+          __dirname,
+          '../../../platform/in-app-notification/in.app.notification.service.ts'
+        ),
+        'utf-8'
+      );
+      const handled = new Set(
+        [...source.matchAll(/case NotificationEvent\.([A-Z0-9_]+)/g)].map(
+          m => m[1]
+        )
+      );
+      const allEvents = new Set(Object.keys(NotificationEvent));
+
+      // An exemption that names a handled event, or an event that no longer
+      // exists, is dead weight that hides the next real gap.
+      expect(Object.keys(NEVER_IN_APP).filter(e => handled.has(e))).toEqual([]);
+      expect(Object.keys(NEVER_IN_APP).filter(e => !allEvents.has(e))).toEqual(
+        []
+      );
     });
   });
 

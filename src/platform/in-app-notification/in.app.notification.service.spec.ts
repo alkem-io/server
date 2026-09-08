@@ -283,7 +283,7 @@ describe('InAppNotificationService', () => {
     it.each([
       NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED,
       NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED,
-    ])('should extract spaceID and organizationID (= actorID) for %s', type => {
+    ])('should extract spaceID and contributorActorId — never organizationID — for %s', type => {
       const payload = { spaceID: 'space-1', actorID: 'org-1' };
       notificationRepo.create!.mockImplementation((input: any) => input);
 
@@ -297,7 +297,14 @@ describe('InAppNotificationService', () => {
       });
 
       expect(result.spaceID).toBe('space-1');
-      expect(result.organizationID).toBe('org-1');
+      // These are SPACE-admin rows about an organization, so they use the
+      // Actor FK like their USER/VC siblings. `organizationID` marks a row as
+      // belonging to that organization's OWN feed, and
+      // `deleteAllForReceiverInOrganization` wipes those when a user stops
+      // being an associate — which would take this unrelated Space-admin row
+      // with it.
+      expect(result.contributorActorId).toBe('org-1');
+      expect(result.organizationID).toBeUndefined();
     });
 
     it('should extract spaceID for SPACE_LEAD_COMMUNICATION_MESSAGE', () => {
