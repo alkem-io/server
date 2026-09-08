@@ -2,6 +2,7 @@ import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 import { ActorType } from '@common/enums/actor.type';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { NotificationEvent } from '@common/enums/notification.event';
+import { RoleName } from '@common/enums/role.name';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
@@ -1295,6 +1296,182 @@ describe('NotificationExternalAdapter', () => {
         'org-1',
         { relations: { profile: true } }
       );
+    });
+  });
+
+  describe('buildOrganizationAssociateInvitationPayload', () => {
+    const setUpMocks = () => {
+      vi.mocked(actorLookupService.getFullActorByIdOrFail).mockResolvedValue({
+        id: 'org-1',
+        nameID: 'acme',
+        type: ActorType.ORGANIZATION,
+        profile: { displayName: 'Acme' },
+      } as any);
+      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue({
+        id: 'inviter-1',
+        firstName: 'Test',
+        lastName: 'User',
+        email: 'test@test.com',
+        nameID: 'test-user',
+        profile: { displayName: 'Test User' },
+      } as any);
+      vi.mocked(urlGeneratorService.createUrlForContributor).mockReturnValue(
+        '/user/invitee'
+      );
+      vi.mocked(
+        urlGeneratorService.createUrlForOrganizationNameID
+      ).mockReturnValue('https://platform.test/organization/acme');
+      vi.mocked(configService.get).mockReturnValue('https://platform.test');
+    };
+
+    it('never puts the welcome message in any field other than welcomeMessage itself', async () => {
+      setUpMocks();
+
+      const result = await adapter.buildOrganizationAssociateInvitationPayload(
+        NotificationEvent.USER_ORGANIZATION_ASSOCIATE_INVITATION,
+        'inviter-1',
+        [],
+        'org-1',
+        'invitee-1',
+        [RoleName.ADMIN],
+        'Sensitive welcome text — never in a push body'
+      );
+
+      expect(result.welcomeMessage).toBe(
+        'Sensitive welcome text — never in a push body'
+      );
+      // every other string-bearing field is independent of welcomeMessage
+      expect(result.organizationUrl).not.toContain('Sensitive welcome text');
+      expect(result.invitee.profile.displayName).not.toContain(
+        'Sensitive welcome text'
+      );
+      expect(JSON.stringify(result.extraRoles)).not.toContain(
+        'Sensitive welcome text'
+      );
+    });
+
+    it('builds the invitee, extraRoles and organizationUrl', async () => {
+      setUpMocks();
+
+      const result = await adapter.buildOrganizationAssociateInvitationPayload(
+        NotificationEvent.USER_ORGANIZATION_ASSOCIATE_INVITATION,
+        'inviter-1',
+        [],
+        'org-1',
+        'invitee-1',
+        [RoleName.ADMIN]
+      );
+
+      expect(result.invitee).toBeDefined();
+      expect(result.extraRoles).toEqual(['admin']);
+      expect(result.organizationUrl).toBe(
+        'https://platform.test/organization/acme'
+      );
+      expect(result.welcomeMessage).toBeUndefined();
+    });
+  });
+
+  describe('buildOrganizationAssociateActorPayload', () => {
+    const setUpMocks = () => {
+      vi.mocked(actorLookupService.getFullActorByIdOrFail).mockResolvedValue({
+        id: 'org-1',
+        nameID: 'acme',
+        type: ActorType.ORGANIZATION,
+        profile: { displayName: 'Acme' },
+      } as any);
+      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue({
+        id: 'inviter-1',
+        firstName: 'Test',
+        lastName: 'User',
+        email: 'test@test.com',
+        nameID: 'test-user',
+        profile: { displayName: 'Test User' },
+      } as any);
+      vi.mocked(urlGeneratorService.createUrlForContributor).mockReturnValue(
+        '/user/actor'
+      );
+      vi.mocked(
+        urlGeneratorService.createUrlForOrganizationNameID
+      ).mockReturnValue('https://platform.test/organization/acme');
+      vi.mocked(
+        urlGeneratorService.createUrlForOrganizationSettingsAssociates
+      ).mockReturnValue(
+        'https://platform.test/organization/acme/settings/community'
+      );
+      vi.mocked(configService.get).mockReturnValue('https://platform.test');
+    };
+
+    it('never puts the application message in any field other than applicationMessage itself (push/email title-and-body-bound fields stay independent)', async () => {
+      setUpMocks();
+
+      const result = await adapter.buildOrganizationAssociateActorPayload(
+        NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_APPLICATION,
+        'applicant-1',
+        [],
+        'org-1',
+        'applicant-1',
+        {
+          applicationMessage:
+            'Sensitive application text — never in a push body',
+        }
+      );
+
+      expect(result.applicationMessage).toBe(
+        'Sensitive application text — never in a push body'
+      );
+      expect(result.organizationUrl).not.toContain('Sensitive application');
+      expect(result.organizationAssociatesUrl).not.toContain(
+        'Sensitive application'
+      );
+      expect(result.actor.profile.displayName).not.toContain(
+        'Sensitive application'
+      );
+      expect(JSON.stringify(result.extraRoles)).not.toContain(
+        'Sensitive application'
+      );
+      expect(JSON.stringify(result.extraRolesWithheld)).not.toContain(
+        'Sensitive application'
+      );
+    });
+
+    it('builds the actor, extraRoles/extraRolesWithheld and organizationAssociatesUrl with no applicationMessage when none is given', async () => {
+      setUpMocks();
+
+      const result = await adapter.buildOrganizationAssociateActorPayload(
+        NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_ACCEPTED,
+        'invitee-1',
+        [],
+        'org-1',
+        'invitee-1',
+        {
+          extraRoles: [RoleName.ADMIN],
+          extraRolesWithheld: [RoleName.OWNER],
+        }
+      );
+
+      expect(result.actor).toBeDefined();
+      expect(result.extraRoles).toEqual(['admin']);
+      expect(result.extraRolesWithheld).toEqual(['owner']);
+      expect(result.organizationAssociatesUrl).toBe(
+        'https://platform.test/organization/acme/settings/community'
+      );
+      expect((result as any).applicationMessage).toBeUndefined();
+      expect((result as any).recipientEmail).toBeUndefined();
+    });
+
+    it('carries recipientEmail only when explicitly given (zero-admin escalation)', async () => {
+      setUpMocks();
+
+      const result = await adapter.buildOrganizationAssociateActorPayload(
+        NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_APPLICATION,
+        'applicant-1',
+        [],
+        'org-1',
+        'applicant-1',
+        { recipientEmail: 'support@alkem.io' }
+      );
+
+      expect(result.recipientEmail).toBe('support@alkem.io');
     });
   });
 
