@@ -49,6 +49,16 @@ const DEFAULT_INVITATION_RESPONSE_CHANNELS = Object.freeze({
   push: true,
 });
 
+// The mandated default for all five organization-associate notification
+// rows (two user-side, three organisation-side) — all three channels on;
+// no row is seeded from a predecessor (no event moves rows). Same
+// defensive pattern as the other DEFAULT_* constants above.
+const DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS = Object.freeze({
+  email: true,
+  inApp: true,
+  push: true,
+});
+
 @Entity()
 export class UserSettings extends AuthorizableEntity implements IUserSettings {
   @Column('jsonb', { nullable: false })
@@ -181,6 +191,51 @@ export class UserSettings extends AuthorizableEntity implements IUserSettings {
         ...(this.notification.space.admin.communityNewMember ??
           DEFAULT_INVITATION_RESPONSE_CHANNELS),
       };
+    }
+  }
+
+  /**
+   * Defend on read for the five organization-associate notification
+   * preferences (two user-side, three organisation-side). A `user_settings`
+   * row that predates the backfill migrations or was inserted by an old pod
+   * during a rolling deploy lacks these keys; without this hook the
+   * non-null GraphQL fields would surface a null and crash the recipients
+   * batch. Runs for every entity load regardless of query path.
+   */
+  @AfterLoad()
+  applyOrganizationAssociateDefaults() {
+    if (this.notification?.user?.membership) {
+      if (
+        !this.notification.user.membership
+          .organizationAssociateInvitationReceived
+      ) {
+        this.notification.user.membership.organizationAssociateInvitationReceived =
+          { ...DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS };
+      }
+      if (
+        !this.notification.user.membership
+          .organizationAssociateApplicationDecided
+      ) {
+        this.notification.user.membership.organizationAssociateApplicationDecided =
+          { ...DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS };
+      }
+    }
+    if (this.notification?.organization) {
+      if (!this.notification.organization.adminAssociateInvitationResponse) {
+        this.notification.organization.adminAssociateInvitationResponse = {
+          ...DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS,
+        };
+      }
+      if (!this.notification.organization.adminAssociateApplicationReceived) {
+        this.notification.organization.adminAssociateApplicationReceived = {
+          ...DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS,
+        };
+      }
+      if (!this.notification.organization.adminAssociateJoined) {
+        this.notification.organization.adminAssociateJoined = {
+          ...DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS,
+        };
+      }
     }
   }
 }

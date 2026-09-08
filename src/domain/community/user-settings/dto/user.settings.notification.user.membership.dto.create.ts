@@ -1,6 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
-import { ValidateNested } from 'class-validator';
+import { IsOptional, ValidateNested } from 'class-validator';
 import { CreateUserSettingsNotificationChannelsInput } from './user.settings.notification.dto.channels.create';
 
 @InputType()
@@ -21,4 +21,24 @@ export class CreateUserSettingsNotificationUserMembershipInput {
   @ValidateNested()
   @Type(() => CreateUserSettingsNotificationChannelsInput)
   spaceCommunityJoined!: CreateUserSettingsNotificationChannelsInput;
+
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
+    nullable: true,
+    description:
+      'Receive a notification when I am invited to associate with an organisation',
+  })
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationChannelsInput)
+  @IsOptional()
+  organizationAssociateInvitationReceived?: CreateUserSettingsNotificationChannelsInput;
+
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
+    nullable: true,
+    description:
+      'Receive a notification when an organisation decides on my application to associate',
+  })
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationChannelsInput)
+  @IsOptional()
+  organizationAssociateApplicationDecided?: CreateUserSettingsNotificationChannelsInput;
 }

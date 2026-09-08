@@ -28,6 +28,10 @@ export class OrganizationSettingsService {
         settings.membership.allowSpaceInvitations =
           updateData.membership.allowSpaceInvitations;
       }
+      if (updateData.membership.allowApplications !== undefined) {
+        settings.membership.allowApplications =
+          updateData.membership.allowApplications;
+      }
     }
     return settings;
   }

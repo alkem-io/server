@@ -283,6 +283,16 @@ const STATUS_METADATA: Record<AlkemioErrorStatus, ErrorMetadata> = {
     specificCode: 116,
     userMessage: 'userMessages.operations.roleSetAlreadyMember',
   },
+  [AlkemioErrorStatus.ROLE_SET_APPLICATIONS_NOT_ACCEPTED]: {
+    category: ErrorCategory.OPERATIONS,
+    specificCode: 122,
+    userMessage: 'userMessages.operations.roleSetApplicationsNotAccepted',
+  },
+  [AlkemioErrorStatus.ROLE_SET_JOIN_NOT_ELIGIBLE]: {
+    category: ErrorCategory.OPERATIONS,
+    specificCode: 123,
+    userMessage: 'userMessages.operations.roleSetJoinNotEligible',
+  },
   [AlkemioErrorStatus.ROLE_SET_INVITATION]: {
     category: ErrorCategory.OPERATIONS,
     specificCode: 105,

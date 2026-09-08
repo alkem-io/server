@@ -10,6 +10,12 @@ export enum RoleSetInvitationResultType {
   ALREADY_MEMBER_OF_ROLE_SET = 'already-member-of-role-set',
   ORGANIZATION_NOT_ACCEPTING_INVITATIONS = 'organization-not-accepting-invitations',
   ORGANIZATION_LEAD_ROLE_LIMIT_REACHED = 'organization-lead-role-limit-reached',
+  // An invitation offering an extra role (ADMIN/OWNER) on an organization
+  // role set could not be created because that role's cap (counting granted
+  // holders plus other still-open invitations offering it) is already
+  // reached. Advisory only: nothing is created, the invitation batch is not
+  // failed.
+  EXTRA_ROLE_LIMIT_REACHED = 'extra-role-limit-reached',
 }
 
 registerEnumType(RoleSetInvitationResultType, {

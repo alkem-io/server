@@ -31,4 +31,31 @@ export class UpdateUserSettingsNotificationOrganizationInput {
   @ValidateNested()
   @Type(() => NotificationSettingInput)
   adminSpaceCommunityInvitation?: NotificationSettingInput;
+
+  @Field(() => NotificationSettingInput, {
+    nullable: true,
+    description:
+      'Receive a notification when someone responds to an invitation to associate with an organisation you administer',
+  })
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  adminAssociateInvitationResponse?: NotificationSettingInput;
+
+  @Field(() => NotificationSettingInput, {
+    nullable: true,
+    description:
+      'Receive a notification when someone applies to associate with an organisation you administer',
+  })
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  adminAssociateApplicationReceived?: NotificationSettingInput;
+
+  @Field(() => NotificationSettingInput, {
+    nullable: true,
+    description:
+      'Receive a notification when someone joins an organisation you administer as an associate',
+  })
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  adminAssociateJoined?: NotificationSettingInput;
 }

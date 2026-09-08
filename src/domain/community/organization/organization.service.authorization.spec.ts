@@ -356,4 +356,97 @@ describe('OrganizationAuthorizationService', () => {
       }
     });
   });
+
+  describe('organization role-set APPLY rule (R4)', () => {
+    const arrange = () => {
+      const authorization = { credentialRules: [] };
+      const org = {
+        id: 'org-1',
+        accountID: 'account-1',
+        authorization,
+        profile: { id: 'profile-1' },
+        storageAggregator: { id: 'sa-1' },
+        credentials: [],
+        groups: [],
+        verification: { id: 'ver-1' },
+        roleSet: { id: 'rs-1' },
+      };
+      organizationService.getOrganizationOrFail.mockResolvedValue(org);
+      authorizationPolicyService.reset.mockReturnValue(authorization);
+      platformAuthorizationService.inheritRootAuthorizationPolicy.mockReturnValue(
+        authorization
+      );
+      authorizationPolicyService.createCredentialRuleUsingTypesOnly.mockImplementation(
+        (privileges, types, name) => ({
+          grantedPrivileges: privileges,
+          criterias: types,
+          name,
+          cascade: true,
+        })
+      );
+      authorizationPolicyService.createCredentialRule.mockImplementation(
+        (privileges, criterias, name) => ({
+          grantedPrivileges: privileges,
+          criterias,
+          name,
+          cascade: true,
+        })
+      );
+      authorizationPolicyService.appendCredentialAuthorizationRules.mockReturnValue(
+        authorization
+      );
+      authorizationPolicyService.cloneAuthorizationPolicy.mockReturnValue(
+        authorization
+      );
+      authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess.mockReturnValue(
+        authorization
+      );
+      profileAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([
+        authorization,
+      ]);
+      storageAggregatorAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        [authorization]
+      );
+      roleSetAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([
+        authorization,
+      ]);
+      userGroupAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([
+        authorization,
+      ]);
+      organizationVerificationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        authorization
+      );
+    };
+
+    it('grants ROLESET_ENTRY_ROLE_APPLY to GLOBAL_REGISTERED on the role set, non-cascading, and adds no JOIN rule', async () => {
+      arrange();
+
+      await service.applyAuthorizationPolicy({ id: 'org-1' } as any);
+
+      const additionalRoleSetRules = roleSetAuthorizationService
+        .applyAuthorizationPolicy.mock.calls[0][2] as Array<{
+        grantedPrivileges: AuthorizationPrivilege[];
+        criterias: AuthorizationCredential[];
+        cascade: boolean;
+      }>;
+
+      const applyRule = additionalRoleSetRules.find(rule =>
+        rule.grantedPrivileges.includes(
+          AuthorizationPrivilege.ROLESET_ENTRY_ROLE_APPLY
+        )
+      );
+      expect(applyRule).toBeDefined();
+      expect(applyRule?.criterias).toEqual([
+        AuthorizationCredential.GLOBAL_REGISTERED,
+      ]);
+      expect(applyRule?.cascade).toBe(false);
+
+      const joinRule = additionalRoleSetRules.find(rule =>
+        rule.grantedPrivileges.includes(
+          AuthorizationPrivilege.ROLESET_ENTRY_ROLE_JOIN
+        )
+      );
+      expect(joinRule).toBeUndefined();
+    });
+  });
 });
