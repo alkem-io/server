@@ -141,7 +141,7 @@
     "replace-special-characters": "^1.2.7",
     "rxjs": "^7.8.1",
     "sharp": "^0.35.3",
-    "typeorm": "https://pkg.pr.new/antst/typeorm@2c8f380",
+    "typeorm": "npm:@alkemio/typeorm@0.3.13-cti.1",
     "uuid": "^13.0.0",
     "web-push": "^3.6.7",
     "winston": "^3.13.1",
@@ -252,7 +252,7 @@
       "@swc/core-linux-arm64-musl": "false"
     },
     "patchedDependencies": {
-      "typeorm@0.3.13": "patches/typeorm@0.3.13.patch"
+      "@alkemio/typeorm@0.3.13-cti.1": "patches/typeorm@0.3.13.patch"
     }
   },
   "volta": {
