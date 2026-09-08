@@ -271,20 +271,34 @@ describe('NotificationSpaceAdapter', () => {
       expect(externalAdapter.sendExternalNotifications).toHaveBeenCalled();
     });
 
-    it.each([
-      CommunityMembershipOrigin.INVITATION,
-      CommunityMembershipOrigin.APPLICATION,
-    ])('keeps the member welcome but suppresses the admin new-member notification for %s', async membershipOrigin => {
-      await adapter.spaceCommunityNewMember(newMemberEvent(membershipOrigin));
+    it('keeps the member welcome but suppresses the admin new-member notification for INVITATION', async () => {
+      await adapter.spaceCommunityNewMember(
+        newMemberEvent(CommunityMembershipOrigin.INVITATION)
+      );
 
       // The welcome to the new member always fires ...
       expect(
         notificationUserAdapter.userSpaceCommunityJoined
       ).toHaveBeenCalled();
-      // ... but the admin is not told twice: the invitation outcome
-      // notification (or their own approval) already covered it.
+      // ... but the admins are not told twice: the invitation outcome
+      // notification already covered it.
       expect(externalAdapter.sendExternalNotifications).not.toHaveBeenCalled();
       expect(inAppAdapter.sendInAppNotifications).not.toHaveBeenCalled();
+    });
+
+    it('still notifies the admins for an approved application — there is no application-approved event to replace it', async () => {
+      // The application flow reaches this adapter with the DIRECT origin on
+      // purpose: SPACE_ADMIN_COMMUNITY_APPLICATION fires at submission, not
+      // at approval, so suppressing here would leave the approving admin's
+      // co-admins with no notification at all.
+      await adapter.spaceCommunityNewMember(
+        newMemberEvent(CommunityMembershipOrigin.DIRECT)
+      );
+
+      expect(
+        notificationUserAdapter.userSpaceCommunityJoined
+      ).toHaveBeenCalled();
+      expect(externalAdapter.sendExternalNotifications).toHaveBeenCalled();
     });
   });
 

@@ -227,5 +227,55 @@ describe('InvitationResolverFields', () => {
       expect(authorizationService.isAccessGranted).not.toHaveBeenCalled();
       expect(roleSetService.getSpacesToJoinOnAccept).not.toHaveBeenCalled();
     });
+
+    it('returns null — never throws — when the invitation row disappears mid-flight', async () => {
+      // Live race: a Space admin clicks Revoke on this invitation while an
+      // organization admin's dashboard `me` query is resolving. The reload
+      // then throws EntityNotFound, and an uncaught throw here nulls out the
+      // whole `me` payload — the exact failure this nullable field exists to
+      // prevent, reintroduced one call later.
+      (authorizationService.isAccessGranted as Mock).mockReturnValue(true);
+      (invitationService.getInvitationOrFail as Mock).mockRejectedValue(
+        new Error('Invitation not found')
+      );
+      const mockInvitation = {
+        id: 'inv-1',
+        invitedActorID: 'org-1',
+        invitedToParent: true,
+        // roleSet absent -> forces the reload that now throws
+        authorization: { id: 'auth-inv-1' },
+      } as any;
+
+      const result = await resolver.spacesToJoinOnAccept(
+        mockInvitation,
+        actorContext
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it('returns null — never throws — when the ancestor walk fails', async () => {
+      // getSpacesToJoinOnAccept fans out to getParentRoleSet / isMember /
+      // getSpaceForRoleSetOrFail, all of which throw on a role set or Space
+      // removed underneath the caller.
+      (authorizationService.isAccessGranted as Mock).mockReturnValue(true);
+      (roleSetService.getSpacesToJoinOnAccept as Mock).mockRejectedValue(
+        new Error('RoleSet not found')
+      );
+      const mockInvitation = {
+        id: 'inv-1',
+        invitedActorID: 'org-1',
+        invitedToParent: true,
+        roleSet: { id: 'rs-1' },
+        authorization: { id: 'auth-inv-1' },
+      } as any;
+
+      const result = await resolver.spacesToJoinOnAccept(
+        mockInvitation,
+        actorContext
+      );
+
+      expect(result).toBeNull();
+    });
   });
 });

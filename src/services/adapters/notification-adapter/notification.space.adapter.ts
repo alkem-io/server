@@ -809,11 +809,13 @@ export class NotificationSpaceAdapter {
     );
 
     // Notify the admins — but ONLY when the membership was not the outcome of
-    // an invitation or an application. Those flows already tell the admin
-    // concerned: the inviter gets a dedicated "accepted / declined your
-    // invitation" notification, and the approving admin performed the
-    // approval themselves. Firing "a new member joined" as well would notify
-    // them twice for one event.
+    // accepting an invitation. That flow already tells every admin of the
+    // invited Space via the dedicated "X accepted / declined the invitation"
+    // outcome notification (FR-020); firing "a new member joined" as well
+    // would notify them twice for one event. An approved application arrives
+    // here as DIRECT on purpose — no application-approved event exists, so
+    // its admins would otherwise be told nothing at all (see
+    // CommunityMembershipOrigin).
     const membershipOrigin =
       eventData.membershipOrigin ?? CommunityMembershipOrigin.DIRECT;
     if (membershipOrigin !== CommunityMembershipOrigin.DIRECT) {

@@ -1982,31 +1982,37 @@ export class RoleSetService {
 
     // Which flow produced this membership, for the TARGET role set only.
     // The Space-admin "a new member joined" notification is suppressed for
-    // invitation and application because a replacement notification is
-    // dispatched for the same event: the Space admins get "X accepted /
-    // declined the invitation", and the approving admin performed the
-    // approval themselves. A direct join has no such step, so it keeps the
-    // notification.
+    // invitations because a replacement notification is dispatched for the
+    // same event: every admin of the invited Space receives "X accepted /
+    // declined the invitation" (FR-020). A direct join has no such step, so
+    // it keeps the notification.
     //
-    // Two conditions bound the suppression, so it never silences a Space
-    // that gets no replacement:
+    // APPLICATIONS ARE DELIBERATELY NOT SUPPRESSED. There is no
+    // application-approved notification event: SPACE_ADMIN_COMMUNITY_APPLICATION
+    // fires when the application is *submitted*, not when it is approved. The
+    // product instruction ("accepting an invite/application shouldn't trigger
+    // a *double* notification") presumes a replacement exists; for
+    // applications it does not, so suppressing here would leave every
+    // co-admin of the approving admin with nothing at all and silently
+    // regress a platform-wide flow this feature does not otherwise touch.
+    //
+    // Two further conditions bound the suppression, so it never silences a
+    // Space that gets no replacement:
     //  - only USER and ORGANIZATION invitees have invitation-response
     //    events (FR-020a/R28). A Virtual Contributor accepting produces no
     //    replacement, so its membership stays DIRECT and the admins are
     //    told the ordinary way;
-    //  - only the invited/applied-to role set is suppressed. Ancestor
-    //    Spaces joined on the way in were never invited to and never
-    //    applied to, and their admins receive no response notification, so
-    //    they keep the generic "a new member joined" (see the per-role-set
-    //    origin passed in the grant loop below).
+    //  - only the invited role set is suppressed. Ancestor Spaces joined on
+    //    the way in were never invited to, and their admins receive no
+    //    response notification, so they keep the generic "a new member
+    //    joined" (see the per-role-set origin passed in the grant loop
+    //    below).
     const originHasReplacementNotification =
       actorType === ActorType.USER || actorType === ActorType.ORGANIZATION;
     const membershipOrigin =
       opts.source === 'invitation' && originHasReplacementNotification
         ? CommunityMembershipOrigin.INVITATION
-        : opts.source === 'application' && originHasReplacementNotification
-          ? CommunityMembershipOrigin.APPLICATION
-          : CommunityMembershipOrigin.DIRECT;
+        : CommunityMembershipOrigin.DIRECT;
 
     // Application and direct-join share the same combined-flow authorisation:
     // grant the ancestor chain iff every ancestor the actor would be granted

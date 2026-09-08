@@ -98,21 +98,34 @@ export class InvitationResolverFields {
     ) {
       return null;
     }
-    const roleSet =
-      invitation.roleSet ??
-      (
-        await this.invitationService.getInvitationOrFail(invitation.id, {
-          relations: { roleSet: true },
-        })
-      ).roleSet;
-    if (!roleSet) {
-      return [];
+    // EVERYTHING below is best-effort. `getInvitationOrFail`,
+    // `getParentRoleSet`, `isMember` and `getSpaceForRoleSetOrFail` all throw
+    // on a row that has moved underneath the caller — a Space admin revoking
+    // this very invitation while an org admin's dashboard `me` query is in
+    // flight is a live race, and an uncaught throw here nulls out the whole
+    // `me` payload (see the comment above). A preview that cannot be computed
+    // is an absence, not an error, exactly as the authorization denial above
+    // is. This mirrors the `createdBy` resolver in this same file.
+    let spaces: Awaited<ReturnType<RoleSetService['getSpacesToJoinOnAccept']>>;
+    try {
+      const roleSet =
+        invitation.roleSet ??
+        (
+          await this.invitationService.getInvitationOrFail(invitation.id, {
+            relations: { roleSet: true },
+          })
+        ).roleSet;
+      if (!roleSet) {
+        return [];
+      }
+      spaces = await this.roleSetService.getSpacesToJoinOnAccept(
+        roleSet,
+        invitation.invitedActorID,
+        invitation.invitedToParent
+      );
+    } catch {
+      return null;
     }
-    const spaces = await this.roleSetService.getSpacesToJoinOnAccept(
-      roleSet,
-      invitation.invitedActorID,
-      invitation.invitedToParent
-    );
     // No per-Space READ_ABOUT filter here: the field-level gate above
     // already confines this resolver to the invited actor's own account
     // admins, and every Space returned by getSpacesToJoinOnAccept is one

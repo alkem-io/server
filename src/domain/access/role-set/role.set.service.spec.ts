@@ -2665,7 +2665,10 @@ describe('RoleSetService', () => {
         'user-1',
         expect.anything(),
         true,
-        CommunityMembershipOrigin.APPLICATION
+        // An approved application keeps the DIRECT origin: there is no
+        // application-approved notification event, so the generic
+        // "a new member joined" must still reach the Space admins.
+        CommunityMembershipOrigin.DIRECT
       );
     });
 
