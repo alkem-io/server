@@ -972,6 +972,16 @@ export class NotificationSpaceAdapter {
    * (FR-020a, see `RoleSetEventsService.processCommunityNewMemberEvents`),
    * so this event is the ONLY notification co-admins receive about it —
    * narrowing the recipients here would silently tell them nothing at all.
+   *
+   * The one recipient removed is whoever answered the invitation, on EVERY
+   * channel. They are reachable here: an invitation may carry ADMIN as an
+   * extra role and `acceptInvitationToRoleSet` grants it BEFORE this dispatch,
+   * so the acceptor is already on the Space-admin credential set by the time
+   * recipients are resolved. Leaving them in tells a Space admin "<their own
+   * name> accepted the invitation to join <Space>" about their own click. Same
+   * reasoning as the organization-side welcome (R33), and the filter is
+   * applied once to all three lists — doing it per channel is how push ended
+   * up filtered and email and in-app not.
    */
   private async spaceAdminInvitationOutcome(
     event: NotificationEvent,
@@ -989,12 +999,19 @@ export class NotificationSpaceAdapter {
       space.id
     );
 
-    if (recipients.emailRecipients.length > 0) {
+    // Applied once, to every channel — see the docblock.
+    const withoutAnswerer = <T extends { id: string }>(list: T[]): T[] =>
+      list.filter(recipient => recipient.id !== eventData.triggeredBy);
+    const emailRecipients = withoutAnswerer(recipients.emailRecipients);
+    const inAppRecipients = withoutAnswerer(recipients.inAppRecipients);
+    const pushRecipients = withoutAnswerer(recipients.pushRecipients);
+
+    if (emailRecipients.length > 0) {
       const payload =
         await this.notificationExternalAdapter.buildActorSpaceCommunityInvitationOutcomePayload(
           event,
           eventData.triggeredBy,
-          recipients.emailRecipients,
+          emailRecipients,
           eventData.invitedActorID,
           space
         );
@@ -1005,9 +1022,7 @@ export class NotificationSpaceAdapter {
       );
     }
 
-    const inAppReceiverIDs = recipients.inAppRecipients.map(
-      recipient => recipient.id
-    );
+    const inAppReceiverIDs = inAppRecipients.map(recipient => recipient.id);
     if (inAppReceiverIDs.length > 0) {
       const inAppPayload: InAppNotificationPayloadSpaceCommunityActor = {
         type: NotificationEventPayload.SPACE_COMMUNITY_ACTOR,
@@ -1025,17 +1040,14 @@ export class NotificationSpaceAdapter {
       );
     }
 
-    const pushRecipientsFiltered = recipients.pushRecipients.filter(
-      recipient => recipient.id !== eventData.triggeredBy
-    );
-    if (pushRecipientsFiltered.length > 0) {
+    if (pushRecipients.length > 0) {
       const spaceName = space.about?.profile?.displayName ?? 'your Space';
       const actorName = await this.getActorDisplayName(
         eventData.invitedActorID,
         push.fallbackName
       );
       await this.notificationPushAdapter.sendPushNotifications(
-        pushRecipientsFiltered,
+        pushRecipients,
         event,
         {
           title: push.title,

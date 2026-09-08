@@ -384,15 +384,16 @@ export class NotificationOrganizationAdapter {
    * invitation's settings row: it is the closing half of the same
    * lifecycle.
    *
-   * The acceptor is excluded on EVERY channel, not just push (R-DOUBLE).
-   * They just clicked Accept, so the welcome tells them nothing — and an
-   * admin of BOTH the organization and the Space is on both recipient
-   * sets, so leaving them in produced exactly the pair the product brief
-   * ruled out: "accepting an invite/application shouldn't trigger a double
+   * The acceptor is excluded on EVERY channel, not just push (R33). They just
+   * clicked Accept, so the welcome tells them nothing: the product email frames
+   * this notification as the one that "informs the OTHERS that no action is
+   * needed". An admin of BOTH the organization and the Space is on both
+   * recipient sets, so leaving them in produced exactly the pair the brief
+   * ruled out — "accepting an invite/application shouldn't trigger a double
    * notification (one for X accepted, immediately followed by X joined)".
-   * They still receive the Space-side
-   * SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED outcome in that
-   * case, which is the one addressed to them.
+   * The Space-side SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED
+   * outcome excludes them for the same reason, so a dual admin receives
+   * neither — which is correct, because they performed the action.
    */
   public async organizationSpaceCommunityJoined(
     eventData: NotificationInputOrganizationSpaceCommunityJoined
