@@ -508,7 +508,6 @@ describe('InvitationService', () => {
         mockInvitation
       );
       (invitationLifecycleService.getNextEvents as Mock).mockReturnValue([
-        'REINVITE',
         'ARCHIVE',
       ]);
 
@@ -616,7 +615,7 @@ describe('InvitationService', () => {
     it('excludes a rejected (declined) invitation, even though its row is never deleted or archived', async () => {
       // Regression: a declined Lead invitation must not keep consuming the
       // Space's Lead-organization slot forever. 'rejected' is an active,
-      // non-final xstate state (it has REINVITE/ARCHIVE transitions), so it
+      // non-final xstate state (it still has an ARCHIVE transition), so it
       // must be excluded explicitly rather than via "not final".
       mockQueryBuilder([
         invitationRow('inv-1', [RoleName.LEAD], 'invited'),

@@ -1,5 +1,6 @@
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -13,6 +14,7 @@ describe('InvitationResolverFields', () => {
   let invitationService: InvitationService;
   let roleSetService: RoleSetService;
   let authorizationService: AuthorizationService;
+  let urlGeneratorService: UrlGeneratorService;
   const actorContext = { actorID: 'user-1' } as any;
 
   beforeEach(async () => {
@@ -33,7 +35,14 @@ describe('InvitationResolverFields', () => {
     roleSetService = module.get<RoleSetService>(RoleSetService);
     authorizationService =
       module.get<AuthorizationService>(AuthorizationService);
+    urlGeneratorService = module.get<UrlGeneratorService>(UrlGeneratorService);
     (authorizationService.isAccessGranted as Mock).mockReturnValue(true);
+    // Derived from the profile it is handed, NOT a single constant: a
+    // constant would make passing the WRONG profile on every iteration
+    // indistinguishable from passing the right one.
+    (urlGeneratorService.generateUrlForProfile as Mock).mockImplementation(
+      async (profile: { id: string }) => `/space/${profile.id}`
+    );
   });
 
   it('should be defined', () => {
@@ -81,6 +90,34 @@ describe('InvitationResolverFields', () => {
   });
 
   describe('spacesToJoinOnAccept', () => {
+    // A Space as `getSpacesToJoinOnAccept` actually returns it: `about` is a
+    // full ISpaceAbout carrying the ungated private content the projection
+    // exists to withhold.
+    const mockSpace = (id: string, displayName: string) =>
+      ({
+        id,
+        authorization: { id: `auth-${id}` },
+        about: {
+          id: `about-${id}`,
+          why: `SECRET why for ${id}`,
+          who: `SECRET who for ${id}`,
+          guidelines: { id: `guidelines-${id}` },
+          profile: {
+            id: `profile-${id}`,
+            displayName,
+            description: `SECRET description for ${id}`,
+            references: [{ uri: 'https://secret.example' }],
+            tagsets: [{ tags: ['secret'] }],
+          },
+        },
+      }) as any;
+
+    const preview = (id: string, displayName: string) => ({
+      id,
+      displayName,
+      url: `/space/profile-${id}`,
+    });
+
     it('resolves via the roleSet already loaded on the invitation, target last', async () => {
       const mockRoleSet = { id: 'rs-1' } as any;
       const mockInvitation = {
@@ -92,11 +129,9 @@ describe('InvitationResolverFields', () => {
         // missing-policy case below), so every fixture here must carry one.
         authorization: { id: 'auth-inv-1' },
       } as any;
-      const rootAbout = { id: 'about-root' };
-      const targetAbout = { id: 'about-target' };
       (roleSetService.getSpacesToJoinOnAccept as Mock).mockResolvedValue([
-        { authorization: { id: 'auth-root' }, about: rootAbout },
-        { authorization: { id: 'auth-target' }, about: targetAbout },
+        mockSpace('root', 'Root Space'),
+        mockSpace('target', 'Target Space'),
       ]);
 
       const result = await resolver.spacesToJoinOnAccept(
@@ -110,7 +145,10 @@ describe('InvitationResolverFields', () => {
         true
       );
       expect(invitationService.getInvitationOrFail).not.toHaveBeenCalled();
-      expect(result).toEqual([rootAbout, targetAbout]);
+      expect(result).toEqual([
+        preview('root', 'Root Space'),
+        preview('target', 'Target Space'),
+      ]);
     });
 
     it('reloads the invitation with its roleSet relation when absent on the parent', async () => {
@@ -126,9 +164,8 @@ describe('InvitationResolverFields', () => {
         ...mockInvitation,
         roleSet: mockRoleSet,
       });
-      const targetAbout = { id: 'about-target' };
       (roleSetService.getSpacesToJoinOnAccept as Mock).mockResolvedValue([
-        { authorization: { id: 'auth-target' }, about: targetAbout },
+        mockSpace('target', 'Target Space'),
       ]);
 
       const result = await resolver.spacesToJoinOnAccept(
@@ -145,7 +182,7 @@ describe('InvitationResolverFields', () => {
         'org-1',
         false
       );
-      expect(result).toEqual([targetAbout]);
+      expect(result).toEqual([preview('target', 'Target Space')]);
     });
 
     it('enumerates every Space getSpacesToJoinOnAccept returns, including a private ancestor the reviewing admin holds no personal READ_ABOUT on', async () => {
@@ -162,11 +199,9 @@ describe('InvitationResolverFields', () => {
         roleSet: mockRoleSet,
         authorization: { id: 'auth-inv-1' },
       } as any;
-      const privateRootAbout = { id: 'about-root-private' };
-      const targetAbout = { id: 'about-target' };
       (roleSetService.getSpacesToJoinOnAccept as Mock).mockResolvedValue([
-        { authorization: { id: 'auth-root' }, about: privateRootAbout },
-        { authorization: { id: 'auth-target' }, about: targetAbout },
+        mockSpace('root-private', 'Private Root'),
+        mockSpace('target', 'Target Space'),
       ]);
 
       const result = await resolver.spacesToJoinOnAccept(
@@ -174,7 +209,49 @@ describe('InvitationResolverFields', () => {
         actorContext
       );
 
-      expect(result).toEqual([privateRootAbout, targetAbout]);
+      expect(result).toEqual([
+        preview('root-private', 'Private Root'),
+        preview('target', 'Target Space'),
+      ]);
+    });
+
+    it('discloses ONLY id/displayName/url — never the ancestor Space About content', async () => {
+      // The field gate is ROLESET_ENTRY_ROLE_INVITE_ACCEPT, granted to the
+      // INVITED actor's account admins, who by design hold no READ on the
+      // Spaces being previewed — and this resolver deliberately applies no
+      // per-Space filter. Returning ISpaceAbout therefore handed those
+      // admins `why`, `who`, `profile.description`, `references`, `tagsets`,
+      // `guidelines` and `classifications` of every private ancestor, none
+      // of which carry a field-level authorization decorator of their own.
+      // The projection is the entire boundary; this test is what holds it.
+      const mockInvitation = {
+        id: 'inv-1',
+        invitedActorID: 'org-1',
+        invitedToParent: true,
+        roleSet: { id: 'rs-1' },
+        authorization: { id: 'auth-inv-1' },
+      } as any;
+      (roleSetService.getSpacesToJoinOnAccept as Mock).mockResolvedValue([
+        mockSpace('root-private', 'Private Root'),
+      ]);
+
+      const result = await resolver.spacesToJoinOnAccept(
+        mockInvitation,
+        actorContext
+      );
+
+      expect(result).toHaveLength(1);
+      expect(Object.keys(result![0]).sort()).toEqual([
+        'displayName',
+        'id',
+        'url',
+      ]);
+      expect(JSON.stringify(result)).not.toContain('SECRET');
+      // The URL must be generated from THIS Space's own profile, not
+      // inherited from a sibling iteration.
+      expect(urlGeneratorService.generateUrlForProfile).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'profile-root-private' })
+      );
     });
 
     it('returns null — never throws — when the caller may not answer the invitation', async () => {

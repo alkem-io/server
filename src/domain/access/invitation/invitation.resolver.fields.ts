@@ -2,12 +2,12 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { IInvitation } from '@domain/access/invitation';
+import { IInvitation, ISpaceJoinPreview } from '@domain/access/invitation';
 import { IActor } from '@domain/actor/actor/actor.interface';
 import { IUser } from '@domain/community/user/user.interface';
-import { ISpaceAbout } from '@domain/space/space.about/space.about.interface';
 import { forwardRef, Inject, UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator';
 import {
   AuthorizationActorHasPrivilege,
   CurrentActor,
@@ -22,7 +22,8 @@ export class InvitationResolverFields {
     private invitationService: InvitationService,
     private authorizationService: AuthorizationService,
     @Inject(forwardRef(() => RoleSetService))
-    private roleSetService: RoleSetService
+    private roleSetService: RoleSetService,
+    private urlGeneratorService: UrlGeneratorService
   ) {}
 
   @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
@@ -70,7 +71,7 @@ export class InvitationResolverFields {
   // — null out the whole `me` query. Not being allowed to preview the list
   // is an absence, not an error.
   @UseGuards(GraphqlGuard)
-  @ResolveField('spacesToJoinOnAccept', () => [ISpaceAbout], {
+  @ResolveField('spacesToJoinOnAccept', () => [ISpaceJoinPreview], {
     nullable: true,
     description:
       "The Spaces that will be joined if this invitation is accepted, root Space first; null when the caller may not answer this invitation on the invited Actor's behalf.",
@@ -79,7 +80,7 @@ export class InvitationResolverFields {
   async spacesToJoinOnAccept(
     @Parent() invitation: IInvitation,
     @CurrentActor() actorContext: ActorContext
-  ): Promise<ISpaceAbout[] | null> {
+  ): Promise<ISpaceJoinPreview[] | null> {
     // `isAccessGranted` delegates to `isAccessGratedForCredentials`, which
     // THROWS `EntityNotInitializedException` on an undefined policy rather
     // than returning false. The relation is eager but `onDelete: 'SET NULL'`,
@@ -106,7 +107,6 @@ export class InvitationResolverFields {
     // `me` payload (see the comment above). A preview that cannot be computed
     // is an absence, not an error, exactly as the authorization denial above
     // is. This mirrors the `createdBy` resolver in this same file.
-    let spaces: Awaited<ReturnType<RoleSetService['getSpacesToJoinOnAccept']>>;
     try {
       const roleSet =
         invitation.roleSet ??
@@ -118,25 +118,42 @@ export class InvitationResolverFields {
       if (!roleSet) {
         return [];
       }
-      spaces = await this.roleSetService.getSpacesToJoinOnAccept(
+      const spaces = await this.roleSetService.getSpacesToJoinOnAccept(
         roleSet,
         invitation.invitedActorID,
         invitation.invitedToParent
       );
+      // No per-Space READ_ABOUT filter here: the field-level gate above
+      // already confines this resolver to the invited actor's own account
+      // admins, and every Space returned by getSpacesToJoinOnAccept is one
+      // that accepting this invitation actually joins. Filtering by the
+      // current human admin's own READ_ABOUT would silently drop Spaces the
+      // consenting organization is about to join whenever an ancestor is
+      // private (the organization holds the membership, not the admin
+      // reviewing on its behalf), producing exactly the empty-list /
+      // cross-artifact mismatch this field exists to prevent — the same
+      // audience already receives the identical Space list unfiltered via
+      // email and `me.communityInvitations`.
+      //
+      // Because that filter is deliberately absent, this projection is the
+      // disclosure boundary: display name and URL ONLY — byte for byte what
+      // the email path already sends (notification.external.adapter.ts
+      // `spacesToJoinPayload`) — instead of the whole `ISpaceAbout`, whose
+      // `why` / `who` / `profile` / `guidelines` / `classifications` carry
+      // no field-level gate of their own and would otherwise hand these
+      // admins the private About content of every ancestor Space. See
+      // ISpaceJoinPreview before adding a field here.
+      return await Promise.all(
+        spaces.map(async space => ({
+          id: space.id,
+          displayName: space.about.profile.displayName,
+          url: await this.urlGeneratorService.generateUrlForProfile(
+            space.about.profile
+          ),
+        }))
+      );
     } catch {
       return null;
     }
-    // No per-Space READ_ABOUT filter here: the field-level gate above
-    // already confines this resolver to the invited actor's own account
-    // admins, and every Space returned by getSpacesToJoinOnAccept is one
-    // that accepting this invitation actually joins. Filtering by the
-    // current human admin's own READ_ABOUT would silently drop Spaces the
-    // consenting organization is about to join whenever an ancestor is
-    // private (the organization holds the membership, not the admin
-    // reviewing on its behalf), producing exactly the empty-list /
-    // cross-artifact mismatch this field exists to prevent — the same
-    // audience already receives the identical Space list unfiltered via
-    // email and `me.communityInvitations`.
-    return spaces.map(space => space.about);
   }
 }

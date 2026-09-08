@@ -10,6 +10,7 @@ import { VirtualActorLookupModule } from '@domain/community/virtual-contributor-
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
 import { RoleSetModule } from '../role-set/role.set.module';
 import { RoleSetCacheModule } from '../role-set/role.set.service.cache.module';
 import { InvitationResolverFields } from './invitation.resolver.fields';
@@ -30,6 +31,7 @@ import { InvitationLifecycleService } from './invitation.service.lifecycle';
     AccountLookupModule,
     TypeOrmModule.forFeature([Invitation]),
     RoleSetCacheModule,
+    UrlGeneratorModule,
     forwardRef(() => RoleSetModule),
   ],
   providers: [

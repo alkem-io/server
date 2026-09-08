@@ -377,11 +377,22 @@ export class NotificationOrganizationAdapter {
 
   /**
    * The organization has joined a Space after one of its admins accepted
-   * the invitation. Every ADMIN is notified — the point of this
-   * notification is that the *others* learn no action is needed, mirroring
-   * the "welcome to the Space" notification a user gets when they accept
-   * an invitation themselves. Shares the invitation's settings row: it is
-   * the closing half of the same lifecycle.
+   * the invitation. Every ADMIN **except the one who accepted** is
+   * notified: the point of this notification is that the *others* learn no
+   * action is needed, mirroring the "welcome to the Space" notification a
+   * user gets when they accept an invitation themselves. Shares the
+   * invitation's settings row: it is the closing half of the same
+   * lifecycle.
+   *
+   * The acceptor is excluded on EVERY channel, not just push (R-DOUBLE).
+   * They just clicked Accept, so the welcome tells them nothing — and an
+   * admin of BOTH the organization and the Space is on both recipient
+   * sets, so leaving them in produced exactly the pair the product brief
+   * ruled out: "accepting an invite/application shouldn't trigger a double
+   * notification (one for X accepted, immediately followed by X joined)".
+   * They still receive the Space-side
+   * SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED outcome in that
+   * case, which is the one addressed to them.
    */
   public async organizationSpaceCommunityJoined(
     eventData: NotificationInputOrganizationSpaceCommunityJoined
@@ -400,12 +411,20 @@ export class NotificationOrganizationAdapter {
       eventData.organizationID
     );
 
-    if (recipients.emailRecipients.length > 0) {
+    // Applied once, to every channel — see the docblock. Doing it per
+    // channel is how push ended up filtered and email/in-app not.
+    const withoutAcceptor = <T extends { id: string }>(list: T[]): T[] =>
+      list.filter(recipient => recipient.id !== eventData.triggeredBy);
+    const emailRecipients = withoutAcceptor(recipients.emailRecipients);
+    const inAppRecipients = withoutAcceptor(recipients.inAppRecipients);
+    const pushRecipients = withoutAcceptor(recipients.pushRecipients);
+
+    if (emailRecipients.length > 0) {
       const payload =
         await this.notificationExternalAdapter.buildActorSpaceCommunityInvitationOutcomePayload(
           event,
           eventData.triggeredBy,
-          recipients.emailRecipients,
+          emailRecipients,
           eventData.organizationID,
           space
         );
@@ -415,9 +434,7 @@ export class NotificationOrganizationAdapter {
       );
     }
 
-    const inAppReceiverIDs = recipients.inAppRecipients.map(
-      recipient => recipient.id
-    );
+    const inAppReceiverIDs = inAppRecipients.map(recipient => recipient.id);
     if (inAppReceiverIDs.length > 0) {
       const inAppPayload: InAppNotificationPayloadSpaceCommunityActor = {
         type: NotificationEventPayload.SPACE_COMMUNITY_ACTOR,
@@ -435,16 +452,13 @@ export class NotificationOrganizationAdapter {
       );
     }
 
-    // No triggeredBy filter: the admin who accepted is a legitimate
-    // recipient of the "welcome" notice, exactly as the user who accepts
-    // their own Space invitation is.
-    if (recipients.pushRecipients.length > 0) {
+    if (pushRecipients.length > 0) {
       const organizationName = await this.getOrganizationDisplayName(
         eventData.organizationID
       );
       const spaceName = space.about?.profile?.displayName ?? 'a Space';
       await this.notificationPushAdapter.sendPushNotifications(
-        recipients.pushRecipients,
+        pushRecipients,
         event,
         {
           title: `Welcome to ${spaceName}`,

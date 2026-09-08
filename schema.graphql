@@ -3569,7 +3569,7 @@ type Invitation {
   """
   The Spaces that will be joined if this invitation is accepted, root Space first; null when the caller may not answer this invitation on the invited Actor's behalf.
   """
-  spacesToJoinOnAccept: [SpaceAbout!]
+  spacesToJoinOnAccept: [SpaceJoinPreview!]
   """The current state of this Lifecycle."""
   state: String!
   """
@@ -6579,6 +6579,15 @@ type SpaceAboutMembership {
   myPrivileges: [AuthorizationPrivilege!]
   """The identifier of the RoleSet within the Space."""
   roleSetID: UUID!
+}
+
+type SpaceJoinPreview {
+  """The display name of the Space that will be joined."""
+  displayName: String!
+  """The ID of the Space that will be joined."""
+  id: UUID!
+  """The URL of the Space that will be joined."""
+  url: String!
 }
 
 type SpacePendingMembershipInfo {
