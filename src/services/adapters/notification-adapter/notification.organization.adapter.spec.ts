@@ -1,3 +1,4 @@
+import { CommunityMembershipOrigin } from '@common/enums/community.membership.origin';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
@@ -434,6 +435,245 @@ describe('NotificationOrganizationAdapter', () => {
       expect(externalAdapter.sendExternalNotifications).not.toHaveBeenCalled();
       expect(inAppAdapter.sendInAppNotifications).not.toHaveBeenCalled();
       expect(pushAdapter.sendPushNotifications).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('organizationAdminAssociateInvitationAccepted / Declined', () => {
+    // The outcome DTO (data-model.md §5) carries no welcomeMessage field at
+    // all — there is nothing for the push builder to leak — so these specs
+    // guard the shape (invitee excluded, no message-shaped text in the
+    // title/body) rather than a message-text omission.
+    const baseEventData = {
+      triggeredBy: 'invitee-1',
+      organizationID: 'org-1',
+      invitationID: 'inv-1',
+      inviteeID: 'invitee-1',
+      extraRoles: [],
+      extraRolesWithheld: [],
+    } as any;
+
+    const setUpCommonMocks = () => {
+      vi.mocked(actorLookupService.getFullActorByIdOrFail).mockImplementation(
+        async (id: string) => {
+          if (id === 'invitee-1') {
+            return { id, profile: { displayName: 'Jamie' } } as any;
+          }
+          return {
+            id,
+            nameID: 'acme',
+            profile: { displayName: 'Acme' },
+          } as any;
+        }
+      );
+      vi.mocked(
+        urlGeneratorService.getOrganizationSettingsAssociatesUrlPath
+      ).mockReturnValue('/organization/acme/settings/community');
+      vi.mocked(
+        externalAdapter.buildOrganizationAssociateActorPayload
+      ).mockResolvedValue({} as any);
+    };
+
+    it.each([
+      ['organizationAdminAssociateInvitationAccepted' as const, 'accepted'],
+      ['organizationAdminAssociateInvitationDeclined' as const, 'declined'],
+    ])('%s: excludes the invitee and sends push to the other admins', async (method, outcome) => {
+      setUpCommonMocks();
+      vi.mocked(
+        notificationAdapter.getNotificationRecipients
+      ).mockResolvedValue({
+        emailRecipients: [{ id: 'invitee-1' }, { id: 'other-admin' }],
+        inAppRecipients: [{ id: 'invitee-1' }, { id: 'other-admin' }],
+        pushRecipients: [{ id: 'invitee-1' }, { id: 'other-admin' }],
+      } as any);
+
+      await adapter[method](baseEventData);
+
+      expect(pushAdapter.sendPushNotifications).toHaveBeenCalledWith(
+        [{ id: 'other-admin' }],
+        expect.any(String),
+        expect.objectContaining({
+          title: expect.stringContaining(outcome),
+        })
+      );
+    });
+
+    it('sends nothing when the invitee is the only admin', async () => {
+      setUpCommonMocks();
+      vi.mocked(
+        notificationAdapter.getNotificationRecipients
+      ).mockResolvedValue({
+        emailRecipients: [{ id: 'invitee-1' }],
+        inAppRecipients: [{ id: 'invitee-1' }],
+        pushRecipients: [{ id: 'invitee-1' }],
+      } as any);
+
+      await adapter.organizationAdminAssociateInvitationAccepted(baseEventData);
+
+      expect(pushAdapter.sendPushNotifications).not.toHaveBeenCalled();
+      expect(externalAdapter.sendExternalNotifications).not.toHaveBeenCalled();
+      expect(inAppAdapter.sendInAppNotifications).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('organizationAdminAssociateApplicationCreated', () => {
+    const eventData = {
+      triggeredBy: 'applicant-1',
+      organizationID: 'org-1',
+      applicationID: 'app-1',
+      applicantID: 'applicant-1',
+      applicationMessage: 'Please let me in — my confidential reason.',
+      organizationHasNoAdministrators: false,
+    } as any;
+
+    const setUpCommonMocks = () => {
+      vi.mocked(actorLookupService.getFullActorByIdOrFail).mockImplementation(
+        async (id: string) => {
+          if (id === 'applicant-1') {
+            return { id, profile: { displayName: 'Jordan' } } as any;
+          }
+          return {
+            id,
+            nameID: 'acme',
+            profile: { displayName: 'Acme' },
+          } as any;
+        }
+      );
+      vi.mocked(
+        urlGeneratorService.getOrganizationSettingsAssociatesUrlPath
+      ).mockReturnValue('/organization/acme/settings/community');
+      vi.mocked(
+        externalAdapter.buildOrganizationAssociateActorPayload
+      ).mockResolvedValue({} as any);
+    };
+
+    it('push title/body never carry the application message text', async () => {
+      setUpCommonMocks();
+      vi.mocked(
+        notificationAdapter.getNotificationRecipients
+      ).mockResolvedValue({
+        emailRecipients: [],
+        inAppRecipients: [],
+        pushRecipients: [{ id: 'admin-1' }],
+      } as any);
+
+      await adapter.organizationAdminAssociateApplicationCreated(eventData);
+
+      const pushCall = vi.mocked(pushAdapter.sendPushNotifications).mock
+        .calls[0];
+      expect(pushCall[2].title).not.toContain('confidential reason');
+      expect(pushCall[2].body).not.toContain('confidential reason');
+    });
+
+    it('excludes the applicant from push recipients', async () => {
+      setUpCommonMocks();
+      vi.mocked(
+        notificationAdapter.getNotificationRecipients
+      ).mockResolvedValue({
+        emailRecipients: [],
+        inAppRecipients: [],
+        pushRecipients: [{ id: 'applicant-1' }],
+      } as any);
+
+      await adapter.organizationAdminAssociateApplicationCreated(eventData);
+
+      expect(pushAdapter.sendPushNotifications).not.toHaveBeenCalled();
+    });
+
+    it('zero-admin escalation sends no push at all', async () => {
+      setUpCommonMocks();
+      vi.mocked(configService.get).mockReturnValue('support@alkem.io');
+      vi.mocked(
+        externalAdapter.buildOrganizationAssociateActorPayload
+      ).mockResolvedValue({ recipientEmail: 'support@alkem.io' } as any);
+
+      await adapter.organizationAdminAssociateApplicationCreated({
+        ...eventData,
+        organizationHasNoAdministrators: true,
+      });
+
+      expect(pushAdapter.sendPushNotifications).not.toHaveBeenCalled();
+      expect(inAppAdapter.sendInAppNotifications).not.toHaveBeenCalled();
+      expect(externalAdapter.sendExternalNotifications).toHaveBeenCalledTimes(
+        1
+      );
+    });
+  });
+
+  describe('organizationAdminAssociateJoined', () => {
+    // The joined DTO (data-model.md §5) carries no message field either —
+    // these specs guard the suppress-on-non-DIRECT rule and the
+    // triggeredBy+associateID exclusion that make the push safe to send.
+    const eventData = {
+      triggeredBy: 'admin-1',
+      organizationID: 'org-1',
+      associateID: 'associate-1',
+      membershipOrigin: CommunityMembershipOrigin.DIRECT,
+    } as any;
+
+    const setUpCommonMocks = () => {
+      vi.mocked(actorLookupService.getFullActorByIdOrFail).mockImplementation(
+        async (id: string) => {
+          if (id === 'associate-1') {
+            return { id, profile: { displayName: 'Riley' } } as any;
+          }
+          return {
+            id,
+            nameID: 'acme',
+            profile: { displayName: 'Acme' },
+          } as any;
+        }
+      );
+      vi.mocked(
+        urlGeneratorService.getOrganizationSettingsAssociatesUrlPath
+      ).mockReturnValue('/organization/acme/settings/community');
+      vi.mocked(
+        externalAdapter.buildOrganizationAssociateActorPayload
+      ).mockResolvedValue({} as any);
+    };
+
+    it('excludes both the triggering admin and the new associate from push', async () => {
+      setUpCommonMocks();
+      vi.mocked(
+        notificationAdapter.getNotificationRecipients
+      ).mockResolvedValue({
+        emailRecipients: [
+          { id: 'admin-1' },
+          { id: 'associate-1' },
+          { id: 'other-admin' },
+        ],
+        inAppRecipients: [
+          { id: 'admin-1' },
+          { id: 'associate-1' },
+          { id: 'other-admin' },
+        ],
+        pushRecipients: [
+          { id: 'admin-1' },
+          { id: 'associate-1' },
+          { id: 'other-admin' },
+        ],
+      } as any);
+
+      await adapter.organizationAdminAssociateJoined(eventData);
+
+      expect(pushAdapter.sendPushNotifications).toHaveBeenCalledWith(
+        [{ id: 'other-admin' }],
+        expect.any(String),
+        expect.anything()
+      );
+    });
+
+    it('is suppressed entirely when membershipOrigin is not DIRECT', async () => {
+      await adapter.organizationAdminAssociateJoined({
+        ...eventData,
+        membershipOrigin: CommunityMembershipOrigin.INVITATION,
+      });
+
+      expect(
+        notificationAdapter.getNotificationRecipients
+      ).not.toHaveBeenCalled();
+      expect(pushAdapter.sendPushNotifications).not.toHaveBeenCalled();
+      expect(externalAdapter.sendExternalNotifications).not.toHaveBeenCalled();
+      expect(inAppAdapter.sendInAppNotifications).not.toHaveBeenCalled();
     });
   });
 });
