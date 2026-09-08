@@ -282,6 +282,7 @@ describe('UserIdentityService', () => {
       userService.createUser.mockResolvedValue(newUser);
       organizationLookupService.getOrganizationByDomain.mockResolvedValue({
         id: 'org-1',
+        domain: 'orgdomain.com',
         settings: { membership: { allowUsersMatchingDomainToJoin: true } },
         verification: {
           status: OrganizationVerificationEnum.VERIFIED_MANUAL_ATTESTATION,
@@ -342,7 +343,10 @@ describe('UserIdentityService', () => {
       userService.createUser.mockResolvedValue(newUser);
       organizationLookupService.getOrganizationByDomain.mockResolvedValue({
         id: 'org-1',
+        domain: 'org.com',
         settings: { membership: { allowUsersMatchingDomainToJoin: false } },
+        verification: { status: 'unverified' },
+        roleSet: { id: 'rs-1' },
       });
 
       await service.resolveOrCreateUser(

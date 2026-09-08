@@ -813,7 +813,7 @@ export class RoleSetService {
   public async acceptInvitationToRoleSet(
     invitationID: string,
     actorContext: ActorContext
-  ): Promise<void> {
+  ): Promise<{ extraRolesWithheld: RoleName[] }> {
     try {
       const invitation = await this.invitationService.getInvitationOrFail(
         invitationID,
@@ -847,7 +847,7 @@ export class RoleSetService {
       // a superset of the previous single-hop — research R2), `extraRoles` and
       // the invitee-credential cleanup are carried through unchanged, and the two
       // XState lifecycle machines stay separate.
-      await this.ensureMemberOfRoleSetAndAncestors(
+      return await this.ensureMemberOfRoleSetAndAncestors(
         roleSet,
         actorID,
         actorContext,
@@ -1006,7 +1006,7 @@ export class RoleSetService {
   ): Promise<boolean> {
     const membershipCredential = await this.getCredentialDefinitionForRole(
       roleSet,
-      RoleName.MEMBER
+      roleSet.entryRoleName
     );
     return await this.actorService.hasValidCredential(actorID, {
       type: membershipCredential.type,
@@ -1155,9 +1155,10 @@ export class RoleSetService {
           await this.removeActorFromAccountAdminImplicitRole(roleSet, actorID);
         }
 
-        // Clean up notifications only when user is completely removed (MEMBER role)
-        // If only ADMIN or OWNER is removed, user still has access as MEMBER
-        if (roleType === RoleName.MEMBER) {
+        // Clean up notifications only when the actor is completely removed
+        // (the entry role, ASSOCIATE). If only ADMIN or OWNER is removed, the
+        // actor still has access as an associate.
+        if (roleType === roleSet.entryRoleName) {
           const adminCredential = await this.getCredentialDefinitionForRole(
             roleSet,
             RoleName.ADMIN
@@ -1405,7 +1406,7 @@ export class RoleSetService {
     }
     const membershipCredential = await this.getCredentialDefinitionForRole(
       roleSet,
-      RoleName.MEMBER
+      roleSet.entryRoleName
     );
 
     const validCredential = await this.actorService.hasValidCredential(
@@ -1706,7 +1707,7 @@ export class RoleSetService {
   async getMembersCount(roleSet: IRoleSet): Promise<number> {
     const membershipCredential = await this.getCredentialDefinitionForRole(
       roleSet,
-      RoleName.MEMBER
+      roleSet.entryRoleName
     );
 
     const credentialMatches =
@@ -1953,9 +1954,10 @@ export class RoleSetService {
    * ancestor-chain grant so there is no duplicated grant logic, SC-007/SC-013).
    *
    * When granting the ancestor chain: walks `parentRoleSet` from the target up
-   * to the L0 root, then grants `RoleName.MEMBER` on every role-set the actor is
-   * NOT already a member of, TOP-DOWN (root first) so the "must be member of the
-   * immediate parent" invariant holds at each step. All credential writes run in
+   * to the L0 root, then grants each role-set's own entry role on every
+   * role-set the actor is NOT already a member of, TOP-DOWN (root first) so
+   * the "must be member of the immediate parent" invariant holds at each
+   * step. All credential writes run in
    * a SINGLE transaction (FR-020, all-or-nothing); event/notification/Matrix and
    * cache side-effects are sequenced AFTER a successful commit (R6/R7).
    *
@@ -1976,7 +1978,8 @@ export class RoleSetService {
     actorID: string,
     actorContext: ActorContext,
     opts: EnsureMemberOfRoleSetAndAncestorsOptions
-  ): Promise<void> {
+  ): Promise<{ extraRolesWithheld: RoleName[] }> {
+    const extraRolesWithheld: RoleName[] = [];
     const actorType =
       await this.actorLookupService.getActorTypeByIdOrFail(actorID);
 
@@ -2048,7 +2051,7 @@ export class RoleSetService {
           for (const roleSetToGrant of toGrant) {
             await this.grantRoleCredential(
               roleSetToGrant,
-              RoleName.MEMBER,
+              roleSetToGrant.entryRoleName,
               actorID,
               actorType,
               manager
@@ -2068,7 +2071,7 @@ export class RoleSetService {
           try {
             await this.applyRoleGrantSideEffects(
               grantedRoleSet,
-              RoleName.MEMBER,
+              grantedRoleSet.entryRoleName,
               actorID,
               actorType,
               actorContext,
@@ -2114,7 +2117,7 @@ export class RoleSetService {
       // behaviour). For an application this is the FR-015 safe fallback.
       await this.assignActorToRole(
         targetRoleSet,
-        RoleName.MEMBER,
+        targetRoleSet.entryRoleName,
         actorID,
         actorContext,
         true,
@@ -2146,6 +2149,7 @@ export class RoleSetService {
           `Unable to add actor (${actorID}) to extra roles (${opts.extraRoles}) in community: ${e}`,
           LogContext.COMMUNITY
         );
+        extraRolesWithheld.push(extraRole);
       }
     }
 
@@ -2164,6 +2168,8 @@ export class RoleSetService {
         targetRoleSet.id
       );
     }
+
+    return { extraRolesWithheld };
   }
 
   /**
@@ -2448,7 +2454,7 @@ export class RoleSetService {
     for (const roleSet of roleSets) {
       const credential = this.getCredentialForRoleSync(
         roleSet,
-        RoleName.MEMBER
+        roleSet.entryRoleName
       );
       if (credential) {
         criteriaList.push({

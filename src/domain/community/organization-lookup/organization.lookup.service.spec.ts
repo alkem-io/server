@@ -165,6 +165,31 @@ describe('OrganizationLookupService', () => {
     });
   });
 
+  describe('getOrganizationForRoleSetOrFail', () => {
+    it('should return the organization owning the role set', async () => {
+      const mockOrg = { id: 'org-1', roleSet: { id: 'rs-1' } };
+      entityManager.findOne.mockResolvedValue(mockOrg);
+
+      const result = await service.getOrganizationForRoleSetOrFail('rs-1');
+
+      expect(result).toBe(mockOrg);
+      expect(entityManager.findOne).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          where: { roleSet: { id: 'rs-1' } },
+        })
+      );
+    });
+
+    it('should throw EntityNotFoundException when no organization owns the role set', async () => {
+      entityManager.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.getOrganizationForRoleSetOrFail('rs-999')
+      ).rejects.toThrow(EntityNotFoundException);
+    });
+  });
+
   describe('countOrganizationsWithCredentials', () => {
     it('should delegate to actorLookupService and return the count', async () => {
       // countOrganizationsWithCredentials delegates to actorLookupService.countActorsWithCredentials
