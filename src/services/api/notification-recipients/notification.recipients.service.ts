@@ -611,10 +611,13 @@ export class NotificationRecipientsService {
         break;
       }
       case NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED: {
-        // Every ADMIN of the organization that just joined — including
-        // whoever accepted, mirroring the user-side "welcome to the Space"
-        // notification. Resolved by ADMIN standing, not associate
-        // membership, exactly as the invitation event is.
+        // Every ADMIN of the organization that just joined. Resolved by ADMIN
+        // standing, not associate membership, exactly as the invitation event
+        // is. This resolves the raw ADMIN set; the admin who accepted is
+        // filtered out of it downstream, on all three channels, by
+        // `notification.organization.adapter.ts` (R33) — the welcome exists to
+        // tell the OTHER admins no action is needed, so if the acceptor is the
+        // only admin the event ends with no recipients and is not sent.
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
         credentialCriteria =
           this.getOrganizationAdminCredentialCriteria(organizationID);

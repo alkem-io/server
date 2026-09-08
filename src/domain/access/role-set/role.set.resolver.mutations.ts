@@ -121,21 +121,13 @@ export class RoleSetResolverMutations {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       roleData.roleSetID
     );
-    this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
 
-    // Check if has **both** grant + assign org privileges
-    this.authorizationService.grantAccessOrFail(
+    await this.authorizeAssignOrganization(
       actorContext,
-      roleSet.authorization,
-      AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION,
-      `assign organization RoleSet role: ${roleSet.id}`
+      roleSet,
+      roleData.actorID
     );
-    this.authorizationService.grantAccessOrFail(
-      actorContext,
-      roleSet.authorization,
-      AuthorizationPrivilege.GRANT,
-      `assign organization RoleSet role: ${roleSet.id}`
-    );
+
     await this.roleSetService.assignActorToRole(
       roleSet,
       roleData.role,
@@ -397,7 +389,11 @@ export class RoleSetResolverMutations {
         await this.authorizeAssignUser(actorContext, roleSet, roleData.role);
         break;
       case ActorType.ORGANIZATION:
-        await this.authorizeAssignOrganization(actorContext, roleSet);
+        await this.authorizeAssignOrganization(
+          actorContext,
+          roleSet,
+          roleData.actorID
+        );
         break;
       case ActorType.VIRTUAL_CONTRIBUTOR:
         await this.authorizeAssignVirtualContributor(
@@ -527,18 +523,45 @@ export class RoleSetResolverMutations {
     );
   }
 
+  /**
+   * Bringing a NEW organization into a Space requires
+   * `ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION` (GLOBAL_ADMIN / GLOBAL_SUPPORT /
+   * BETA_TESTER) plus GRANT. Changing the role of one that is ALREADY in the
+   * role set requires GRANT alone.
+   *
+   * The assign-organization privilege protects the organization's *consent*: a
+   * direct add puts an organization into a Space without ever asking it, which
+   * is why it stays global-only (R6). Consent is about entering the Space, not
+   * about which role the organization holds once it is in. Since
+   * workspace#061 an organization enters by accepting an invitation from a
+   * Space admin, and that admin must then be able to move it between Member and
+   * Lead and to remove it again — the same GRANT that
+   * `removeRoleFromOrganization` has always required, and the same authority
+   * they already hold over every user member. Without this split the invite
+   * flow ships a front door with no management surface behind it (R32).
+   */
   private async authorizeAssignOrganization(
     actorContext: ActorContext,
-    roleSet: IRoleSet
+    roleSet: IRoleSet,
+    actorID: string
   ): Promise<void> {
     this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
 
-    this.authorizationService.grantAccessOrFail(
-      actorContext,
-      roleSet.authorization,
-      AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION,
-      `assign organization RoleSet role: ${roleSet.id}`
+    const alreadyInRoleSet = await this.roleSetService.isInRole(
+      actorID,
+      roleSet,
+      roleSet.entryRoleName
     );
+
+    if (!alreadyInRoleSet) {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        roleSet.authorization,
+        AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION,
+        `assign organization RoleSet role: ${roleSet.id}`
+      );
+    }
+
     this.authorizationService.grantAccessOrFail(
       actorContext,
       roleSet.authorization,
