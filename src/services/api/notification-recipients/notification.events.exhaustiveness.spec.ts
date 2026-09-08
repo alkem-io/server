@@ -393,5 +393,246 @@ describe('organization-invitation notification events — exhaustiveness (D14)',
       );
       expect(source).toMatch(/default:\s*\{[^}]*:\s*never\s*=/s);
     });
+
+    it('EXTRA_ROLE_LIMIT_REACHED is explicitly handled (never falls through to the never-guard)', () => {
+      const source = readFileSync(
+        join(
+          __dirname,
+          '../../../domain/access/role-set/role.set.resolver.mutations.membership.ts'
+        ),
+        'utf-8'
+      );
+      expect(source).toMatch(
+        /RoleSetInvitationResultType\.EXTRA_ROLE_LIMIT_REACHED/
+      );
+    });
+  });
+});
+
+/**
+ * The seven organization-associates notification events (062) — the same
+ * exhaustiveness shape as the D14 block above, for the surfaces this
+ * feature's own mapping points touch.
+ */
+describe('organization-associate notification events — exhaustiveness (062)', () => {
+  const SEVEN_EVENTS = [
+    NotificationEvent.USER_ORGANIZATION_ASSOCIATE_INVITATION,
+    NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_APPROVED,
+    NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_DECLINED,
+    NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_ACCEPTED,
+    NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_DECLINED,
+    NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_APPLICATION,
+    NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_JOINED,
+  ];
+
+  describe('recipients service mapping points', () => {
+    let service: NotificationRecipientsService;
+    let organizationLookupService: OrganizationLookupService;
+    let userLookupService: UserLookupService;
+
+    const fullNotificationSettings = {
+      user: {
+        membership: {
+          organizationAssociateInvitationReceived: {
+            email: true,
+            inApp: true,
+            push: true,
+          },
+          organizationAssociateApplicationDecided: {
+            email: true,
+            inApp: true,
+            push: true,
+          },
+        },
+      },
+      organization: {
+        adminAssociateInvitationResponse: {
+          email: true,
+          inApp: true,
+          push: true,
+        },
+        adminAssociateApplicationReceived: {
+          email: true,
+          inApp: true,
+          push: true,
+        },
+        adminAssociateJoined: { email: true, inApp: true, push: true },
+      },
+    } as any;
+
+    beforeEach(async () => {
+      vi.restoreAllMocks();
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [NotificationRecipientsService],
+      })
+        .useMocker(defaultMockerFactory)
+        .compile();
+
+      service = module.get(NotificationRecipientsService);
+      organizationLookupService = module.get(OrganizationLookupService);
+      userLookupService = module.get(UserLookupService);
+
+      vi.mocked(
+        organizationLookupService.getOrganizationByIdOrFail
+      ).mockResolvedValue({
+        id: 'org-1',
+        authorization: { id: 'auth-org-1' },
+      } as any);
+      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue({
+        id: 'user-1',
+        authorization: { id: 'auth-user-1' },
+      } as any);
+    });
+
+    it('getChannelsSettingsForEvent resolves every one of the seven events without throwing', () => {
+      for (const event of SEVEN_EVENTS) {
+        expect(() =>
+          (service as any).getChannelsSettingsForEvent(
+            event,
+            fullNotificationSettings
+          )
+        ).not.toThrow();
+      }
+    });
+
+    it('getPrivilegeRequiredCredentialCriteria resolves every one of the seven events without throwing', async () => {
+      for (const event of [
+        NotificationEvent.USER_ORGANIZATION_ASSOCIATE_INVITATION,
+        NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_APPROVED,
+        NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_DECLINED,
+      ]) {
+        const userScoped = await (
+          service as any
+        ).getPrivilegeRequiredCredentialCriteria(event, undefined, 'user-1');
+        expect(userScoped.credentialCriteria.length).toBeGreaterThan(0);
+      }
+
+      for (const event of [
+        NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_ACCEPTED,
+        NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_DECLINED,
+        NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_APPLICATION,
+        NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_JOINED,
+      ]) {
+        const orgScoped = await (
+          service as any
+        ).getPrivilegeRequiredCredentialCriteria(
+          event,
+          undefined,
+          undefined,
+          'org-1'
+        );
+        expect(orgScoped.credentialCriteria.length).toBeGreaterThan(0);
+      }
+    });
+
+    it('the authorization-policy switch resolves every one of the seven events without throwing', async () => {
+      for (const event of [
+        NotificationEvent.USER_ORGANIZATION_ASSOCIATE_INVITATION,
+        NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_APPROVED,
+        NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_DECLINED,
+      ]) {
+        await expect(
+          (service as any).getAuthorizationPolicy(event, undefined, 'user-1')
+        ).resolves.toEqual({ id: 'auth-user-1' });
+      }
+
+      for (const event of [
+        NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_ACCEPTED,
+        NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_DECLINED,
+        NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_APPLICATION,
+        NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_JOINED,
+      ]) {
+        await expect(
+          (service as any).getAuthorizationPolicy(
+            event,
+            undefined,
+            undefined,
+            'org-1'
+          )
+        ).resolves.toEqual({ id: 'auth-org-1' });
+      }
+    });
+  });
+
+  it('none of the seven events is in NOT_SUPPORTED_IN_APP_EVENTS', () => {
+    const unsupported = (NotificationInAppAdapter as any)
+      .NOT_SUPPORTED_IN_APP_EVENTS as NotificationEvent[];
+    for (const event of SEVEN_EVENTS) {
+      expect(unsupported).not.toContain(event);
+    }
+  });
+
+  describe('FK extraction', () => {
+    let service: InAppNotificationService;
+    let notificationRepo: { create: ReturnType<typeof vi.fn> };
+
+    beforeEach(async () => {
+      vi.restoreAllMocks();
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          InAppNotificationService,
+          repositoryProviderMockFactory(InAppNotification),
+          MockWinstonProvider,
+        ],
+      })
+        .useMocker(defaultMockerFactory)
+        .compile();
+
+      service = module.get(InAppNotificationService);
+      notificationRepo = module.get(getRepositoryToken(InAppNotification));
+      notificationRepo.create.mockImplementation((input: any) => input);
+    });
+
+    it('populates organizationID and invitationID for the invited-to-associate event', () => {
+      const result = service.createInAppNotification({
+        type: NotificationEvent.USER_ORGANIZATION_ASSOCIATE_INVITATION,
+        category: 'user' as any,
+        triggeredByID: 'admin-1',
+        triggeredAt: new Date(),
+        receiverID: 'user-2',
+        payload: { organizationID: 'org-1', invitationID: 'inv-1' } as any,
+      });
+
+      expect(result.organizationID).toBe('org-1');
+      expect(result.invitationID).toBe('inv-1');
+    });
+
+    it.each([
+      NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_APPROVED,
+      NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_DECLINED,
+    ])('populates organizationID and applicationID for %s', type => {
+      const result = service.createInAppNotification({
+        type,
+        category: 'user' as any,
+        triggeredByID: 'admin-1',
+        triggeredAt: new Date(),
+        receiverID: 'user-2',
+        payload: { organizationID: 'org-1', applicationID: 'app-1' } as any,
+      });
+
+      expect(result.organizationID).toBe('org-1');
+      expect(result.applicationID).toBe('app-1');
+    });
+
+    it.each([
+      NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_ACCEPTED,
+      NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_DECLINED,
+      NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_APPLICATION,
+      NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_JOINED,
+    ])('populates organizationID and contributorActorId (the actor: invitee/applicant/new associate) for %s', type => {
+      const result = service.createInAppNotification({
+        type,
+        category: 'organization' as any,
+        triggeredByID: 'admin-1',
+        triggeredAt: new Date(),
+        receiverID: 'admin-2',
+        payload: { organizationID: 'org-1', actorID: 'actor-1' } as any,
+      });
+
+      expect(result.organizationID).toBe('org-1');
+      expect(result.contributorActorId).toBe('actor-1');
+    });
   });
 });

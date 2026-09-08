@@ -2,10 +2,13 @@ import { LogContext } from '@common/enums/logging.context';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { MessageDetailsService } from '@domain/communication/message.details/message.details.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { ISpace } from '@domain/space/space/space.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InAppNotificationPayloadOrganizationAssociateActor } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.associate.actor';
+import { InAppNotificationPayloadOrganizationAssociateInvitation } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.associate.invitation';
 import { InAppNotificationPayloadSpace } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space';
 import { InAppNotificationPayloadSpaceCommunityActor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.actor';
 import { InAppNotificationPayloadSpaceCommunityInvitation } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.invitation';
@@ -24,6 +27,8 @@ import { NotificationInputPlatformUserRegistered } from './dto/platform/notifica
 import { NotificationInputCommentReply } from './dto/space/notification.dto.input.space.communication.user.comment.reply';
 import { NotificationInputCommunityInvitation } from './dto/space/notification.dto.input.space.community.invitation';
 import { NotificationInputCommunityNewMember } from './dto/space/notification.dto.input.space.community.new.member';
+import { NotificationInputOrganizationAssociateApplicationDecided } from './dto/user/notification.dto.input.organization.associate.application.decided';
+import { NotificationInputOrganizationAssociateInvitation } from './dto/user/notification.dto.input.organization.associate.invitation';
 import { NotificationInputUserMention } from './dto/user/notification.dto.input.user.mention';
 import { NotificationInputUserMessage } from './dto/user/notification.dto.input.user.message';
 import { NotificationInputUserSpaceCommunityApplicationDeclined } from './dto/user/notification.dto.input.user.space.community.application.declined';
@@ -41,8 +46,23 @@ export class NotificationUserAdapter {
     private communityResolverService: CommunityResolverService,
     private messageDetailsService: MessageDetailsService,
     private urlGeneratorService: UrlGeneratorService,
-    private userLookupService: UserLookupService
+    private userLookupService: UserLookupService,
+    private actorLookupService: ActorLookupService
   ) {}
+
+  private async getOrganizationDisplayName(
+    organizationID: string
+  ): Promise<string> {
+    try {
+      const organization = await this.actorLookupService.getFullActorByIdOrFail(
+        organizationID,
+        { relations: { profile: true } }
+      );
+      return organization?.profile?.displayName ?? 'an organisation';
+    } catch {
+      return 'an organisation';
+    }
+  }
 
   private async getTriggeredByDisplayName(
     triggeredById: string
@@ -176,6 +196,179 @@ export class NotificationUserAdapter {
         }
       );
     }
+  }
+
+  /**
+   * A user was invited to associate with an organization. Message text
+   * never reaches the push body or an email subject — the template carries
+   * it in the body only.
+   */
+  public async userOrganizationAssociateInvitationCreated(
+    eventData: NotificationInputOrganizationAssociateInvitation
+  ): Promise<void> {
+    const event = NotificationEvent.USER_ORGANIZATION_ASSOCIATE_INVITATION;
+    const recipients = await this.getNotificationRecipientsUser(
+      event,
+      eventData,
+      eventData.inviteeID
+    );
+
+    if (recipients.emailRecipients.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildOrganizationAssociateInvitationPayload(
+          event,
+          eventData.triggeredBy,
+          recipients.emailRecipients,
+          eventData.organizationID,
+          eventData.inviteeID,
+          eventData.extraRoles,
+          eventData.welcomeMessage
+        );
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
+    }
+
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadOrganizationAssociateInvitation =
+        {
+          type: NotificationEventPayload.ORGANIZATION_ASSOCIATE_INVITATION,
+          organizationID: eventData.organizationID,
+          invitationID: eventData.invitationID,
+        };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        event,
+        NotificationEventCategory.USER,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
+    }
+
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      const organizationName = await this.getOrganizationDisplayName(
+        eventData.organizationID
+      );
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: `Invitation to associate with ${organizationName}`,
+          body: 'You have been invited to associate with an organisation',
+          url: this.urlGeneratorService.getOrganizationUrlPath(
+            (
+              await this.actorLookupService.getFullActorByIdOrFail(
+                eventData.organizationID
+              )
+            ).nameID
+          ),
+        }
+      );
+    }
+  }
+
+  /**
+   * An organization decided (approved / declined) on the applicant's own
+   * application to associate.
+   */
+  private async userOrganizationAssociateApplicationDecided(
+    event: NotificationEvent,
+    eventData: NotificationInputOrganizationAssociateApplicationDecided
+  ): Promise<void> {
+    const recipients = await this.getNotificationRecipientsUser(
+      event,
+      eventData,
+      eventData.applicantID
+    );
+
+    if (recipients.emailRecipients.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildOrganizationAssociateActorPayload(
+          event,
+          eventData.triggeredBy,
+          recipients.emailRecipients,
+          eventData.organizationID,
+          eventData.applicantID
+        );
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
+    }
+
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadOrganizationAssociateActor = {
+        type: NotificationEventPayload.ORGANIZATION_ASSOCIATE_ACTOR,
+        organizationID: eventData.organizationID,
+        actorID: eventData.applicantID,
+        applicationID: eventData.applicationID,
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        event,
+        NotificationEventCategory.USER,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
+    }
+
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      const organizationName = await this.getOrganizationDisplayName(
+        eventData.organizationID
+      );
+      const organization = await this.actorLookupService.getFullActorByIdOrFail(
+        eventData.organizationID
+      );
+      const decision =
+        event ===
+        NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_APPROVED
+          ? 'approved'
+          : 'declined';
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: `Your application to ${organizationName} was ${decision}`,
+          body: `Your application to associate with ${organizationName} was ${decision}`,
+          url: this.urlGeneratorService.getOrganizationUrlPath(
+            organization.nameID
+          ),
+        }
+      );
+    }
+  }
+
+  public async userOrganizationAssociateApplicationApproved(
+    eventData: NotificationInputOrganizationAssociateApplicationDecided
+  ): Promise<void> {
+    await this.userOrganizationAssociateApplicationDecided(
+      NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_APPROVED,
+      eventData
+    );
+  }
+
+  public async userOrganizationAssociateApplicationDeclined(
+    eventData: NotificationInputOrganizationAssociateApplicationDecided
+  ): Promise<void> {
+    await this.userOrganizationAssociateApplicationDecided(
+      NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_DECLINED,
+      eventData
+    );
   }
 
   public async userSpaceCommunityJoined(
