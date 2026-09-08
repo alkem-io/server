@@ -3,13 +3,18 @@
 // Uses Nest application bootstrap to build the executable schema and then
 // parses & reprints through the same sorting logic as `sort-sdl.ts` for stability.
 // NOTE: Requires that the GraphQL module is configured in AppModule.
+// Respects SCHEMA_BOOTSTRAP_LIGHT=1 (see README's schema-contract CLI table
+// and specs/002-schema-contract-diffing/spec.md FR-021): when set, bootstraps
+// the infra-free SchemaBootstrapModule instead of the full AppModule, so this
+// can run without a reachable RabbitMQ/Postgres/etc. Module imports are
+// deferred until after this file's own top-level setup so the flag is read
+// before either module graph is pulled in.
 
 import 'reflect-metadata';
 import { writeFileSync } from 'node:fs';
 import { NestFactory } from '@nestjs/core';
 import { GraphQLSchemaHost } from '@nestjs/graphql';
 import { DocumentNode, parse, print, printSchema } from 'graphql';
-import { AppModule } from '../../app.module';
 // Reuse sorting by invoking the logic in sort-sdl via an internal function copy to avoid circular import.
 
 // Minimal inline sorter (mirrors logic in sort-sdl.ts but scoped locally to avoid execution cost of re-reading file)
@@ -114,10 +119,19 @@ function forceExit() {
 
 async function main() {
   const outPath = process.argv[2] || 'schema.graphql';
-  const app = await NestFactory.createApplicationContext(AppModule, {
-    logger: false,
-  });
+  const useLight = process.env.SCHEMA_BOOTSTRAP_LIGHT === '1';
+  let app: Awaited<
+    ReturnType<typeof NestFactory.createApplicationContext>
+  > | undefined;
   try {
+    const { AppModule } = await import('../../app.module');
+    const { SchemaBootstrapModule } = await import(
+      '../../schema-bootstrap/module.schema-bootstrap'
+    );
+    const rootModule = useLight ? SchemaBootstrapModule : AppModule;
+    app = await NestFactory.createApplicationContext(rootModule, {
+      logger: false,
+    });
     const gqlHost = app.get(GraphQLSchemaHost, { strict: false });
     if (!gqlHost || !gqlHost.schema) {
       throw new Error('GraphQL schema not available from GraphQLSchemaHost');
@@ -137,7 +151,7 @@ async function main() {
     process.exitCode = 1;
   } finally {
     try {
-      await app.close();
+      await app?.close();
     } catch (closeErr) {
       process.stderr.write(
         `Schema generation warning: failed to close Nest app: ${(closeErr as Error).stack}\n`
