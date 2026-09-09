@@ -734,12 +734,20 @@ export class NotificationOrganizationAdapter {
   }
 
   /**
-   * A new associate joined the organization directly (application
-   * approval, domain join, or a direct assignment) — never for an
-   * invitation acceptance, whose response notification is the replacement
-   * (FR-010). Both the acting admin/joiner-triggering actor AND the new
-   * associate are excluded from every channel; an empty recipient list
-   * after exclusion sends nothing.
+   * A new associate joined the organization by a route with no invitation and
+   * no application step — a domain join or a direct assignment. Suppressed for
+   * an invitation acceptance (the response notification is its replacement) and
+   * for an approved application, per the product brief: "the 'joined'
+   * notification should only fire when there was no invitation or application
+   * step" (FR-010, 061 R35).
+   *
+   * The application case has no replacement event yet, so approving an
+   * application currently notifies the other admins through nothing at all —
+   * tracked as alkem-io/server#6476, not a defect of this dispatcher.
+   *
+   * Both the acting admin/joiner-triggering actor AND the new associate are
+   * excluded from every channel; an empty recipient list after exclusion sends
+   * nothing.
    */
   public async organizationAdminAssociateJoined(
     eventData: NotificationInputOrganizationAssociateJoined
