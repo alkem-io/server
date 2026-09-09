@@ -2869,10 +2869,11 @@ describe('RoleSetService', () => {
         'user-1',
         expect.anything(),
         true,
-        // An approved application keeps the DIRECT origin: there is no
-        // application-approved notification event, so the generic
-        // "a new member joined" must still reach the Space admins.
-        CommunityMembershipOrigin.DIRECT
+        // An approved application carries the APPLICATION origin, which
+        // suppresses the generic "a new member joined" for the Space admins:
+        // the brief scopes that notification to memberships with no
+        // invitation or application step.
+        CommunityMembershipOrigin.APPLICATION
       );
     });
 
@@ -3252,6 +3253,47 @@ describe('RoleSetService', () => {
           {
             roleSetId: 'target',
             origin: CommunityMembershipOrigin.INVITATION,
+          },
+        ]);
+      });
+
+      it('maps an approved application to the APPLICATION origin on the target role set only', async () => {
+        const root = spaceRoleSet('root');
+        const target = spaceRoleSet('target');
+        vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+          root,
+          target,
+        ]);
+        vi.spyOn(service, 'isMember').mockResolvedValue(false);
+        vi.spyOn(
+          service as any,
+          'isCombinedApplicationGrantAuthorised'
+        ).mockResolvedValue(true);
+        vi.spyOn(service as any, 'grantRoleCredential').mockResolvedValue(
+          undefined
+        );
+        passthroughTransaction();
+        const sideEffects = vi
+          .spyOn(service as any, 'applyRoleGrantSideEffects')
+          .mockResolvedValue(undefined);
+
+        await service.ensureMemberOfRoleSetAndAncestors(
+          target,
+          'user-1',
+          { actorID: 'user-1' } as any,
+          { source: 'application' }
+        );
+
+        expect(
+          sideEffects.mock.calls.map((c: any[]) => ({
+            roleSetId: c[0].id,
+            origin: c[6],
+          }))
+        ).toEqual([
+          { roleSetId: 'root', origin: CommunityMembershipOrigin.DIRECT },
+          {
+            roleSetId: 'target',
+            origin: CommunityMembershipOrigin.APPLICATION,
           },
         ]);
       });

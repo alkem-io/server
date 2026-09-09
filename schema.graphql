@@ -6241,6 +6241,14 @@ type RoleSetInvitationResult {
   application: Application
   invitation: Invitation
   """
+  The id of the invited actor this result belongs to, when the invitee was an actor or an email that resolved to an existing user.
+  """
+  invitedActorID: UUID
+  """
+  The email address this result belongs to, when the invitee was submitted as an email address.
+  """
+  invitedEmail: String
+  """
   An informational addendum to the result, set only alongside a successful invite outcome.
   """
   notice: RoleSetInvitationResultNotice
@@ -10217,7 +10225,7 @@ input UpdateOrganizationSettingsMembershipInput {
   """
   Allow Users with email addresses matching the domain of this Organization to join.
   """
-  allowUsersMatchingDomainToJoin: Boolean!
+  allowUsersMatchingDomainToJoin: Boolean
 }
 
 input UpdateOrganizationSettingsPrivacyInput {

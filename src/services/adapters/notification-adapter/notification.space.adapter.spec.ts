@@ -286,11 +286,22 @@ describe('NotificationSpaceAdapter', () => {
       expect(inAppAdapter.sendInAppNotifications).not.toHaveBeenCalled();
     });
 
-    it('still notifies the admins for an approved application — there is no application-approved event to replace it', async () => {
-      // The application flow reaches this adapter with the DIRECT origin on
-      // purpose: SPACE_ADMIN_COMMUNITY_APPLICATION fires at submission, not
-      // at approval, so suppressing here would leave the approving admin's
-      // co-admins with no notification at all.
+    it('suppresses the admin new-member notification for an approved application, per the brief', async () => {
+      // The brief scopes "a new member joined" to memberships with no
+      // invitation OR application step. The member-side welcome still fires;
+      // only the admin-side generic notification is suppressed.
+      await adapter.spaceCommunityNewMember(
+        newMemberEvent(CommunityMembershipOrigin.APPLICATION)
+      );
+
+      expect(
+        notificationUserAdapter.userSpaceCommunityJoined
+      ).toHaveBeenCalled();
+      expect(externalAdapter.sendExternalNotifications).not.toHaveBeenCalled();
+      expect(inAppAdapter.sendInAppNotifications).not.toHaveBeenCalled();
+    });
+
+    it('still notifies the admins for a direct join or admin assignment', async () => {
       await adapter.spaceCommunityNewMember(
         newMemberEvent(CommunityMembershipOrigin.DIRECT)
       );

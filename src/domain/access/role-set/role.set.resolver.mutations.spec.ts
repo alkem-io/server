@@ -232,6 +232,35 @@ describe('RoleSetResolverMutations', () => {
         RoleName.MEMBER
       );
     });
+
+    it('refuses a non-organization actor BEFORE granting any credential', async () => {
+      // R32 relaxed this mutation to GRANT alone for an actor already holding
+      // the entry role, which puts it in reach of every Space admin. Nothing
+      // on this path asserts the actor type — `assignActorToRole` derives it
+      // from the DB and applies THAT type's policy — so aiming the mutation at
+      // a Virtual Contributor already in the Space granted it a Space role
+      // while skipping the SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS entitlement
+      // that `assignRoleToVirtualContributor` enforces. The lookup used to run
+      // only AFTER the grant, so the credential persisted (there is no
+      // transaction) while the caller saw an error.
+      arrangeAssign(true);
+      (
+        organizationLookupService.getOrganizationByIdOrFail as Mock
+      ).mockRejectedValue(new Error('Organization not found'));
+
+      await expect(
+        resolver.assignRoleToOrganization(
+          { actorID: 'space-admin-1' } as any,
+          {
+            roleSetID: 'rs-1',
+            actorID: 'vc-1',
+            role: RoleName.LEAD,
+          } as any
+        )
+      ).rejects.toThrow('Organization not found');
+
+      expect(roleSetService.assignActorToRole).not.toHaveBeenCalled();
+    });
   });
 
   describe('assignRoleToVirtualContributor', () => {
