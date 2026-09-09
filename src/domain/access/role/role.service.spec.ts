@@ -143,6 +143,50 @@ describe('RoleService', () => {
 
       expect(result.virtualContributorPolicy).toEqual(vcPolicy);
     });
+
+    // Role definitions are module-level constants shared by every caller
+    // (organizationRoleDefinitions, spaceCommunityRoles, ...), and
+    // RoleSetService.updateRoleResourceID() mutates credential.resourceID in
+    // place after creation. If createRole aliased the input instead of copying
+    // it, two entities built from the same definition would share one
+    // credential object and the second resourceID would overwrite the first —
+    // which is exactly how concurrently created organizations ended up holding
+    // each other's organization-admin credential.
+    it('should not alias the input, so a shared definition cannot leak between roles', () => {
+      const sharedDefinition = buildCreateRoleInput();
+
+      const first = service.createRole(sharedDefinition);
+      const second = service.createRole(sharedDefinition);
+
+      expect(first.credential).not.toBe(second.credential);
+      expect(first.credential).not.toBe(sharedDefinition.credentialData);
+      expect(first.parentCredentials).not.toBe(second.parentCredentials);
+      expect(first.userPolicy).not.toBe(second.userPolicy);
+      expect(first.organizationPolicy).not.toBe(second.organizationPolicy);
+      expect(first.virtualContributorPolicy).not.toBe(
+        second.virtualContributorPolicy
+      );
+
+      // Simulate updateRoleResourceID on the second role only.
+      second.credential.resourceID = 'organization-B';
+
+      expect(first.credential.resourceID).toBe('resource-1');
+      expect(sharedDefinition.credentialData.resourceID).toBe('resource-1');
+    });
+
+    it('should not alias nested parent credentials', () => {
+      const sharedDefinition = buildCreateRoleInput();
+
+      const first = service.createRole(sharedDefinition);
+      const second = service.createRole(sharedDefinition);
+
+      second.parentCredentials[0].resourceID = 'organization-B';
+
+      expect(first.parentCredentials[0].resourceID).toBe('resource-1');
+      expect(sharedDefinition.parentCredentialsData[0].resourceID).toBe(
+        'resource-1'
+      );
+    });
   });
 
   describe('removeRole', () => {
