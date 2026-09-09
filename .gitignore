@@ -118,6 +118,3 @@ tmp/prev.schema.graphql
 **/__pycache__/
 
 coverage-tmp/
-
-# forge wave-2 dev-only local vendor tarball (pkg.pr.new unreachable without a pushed PR); T012 swaps to the real published version at merge
-.forge-vendor/
