@@ -30,6 +30,7 @@ import { RoleSet } from './role.set.entity';
 import { IRoleSet } from './role.set.interface';
 import { RoleSetService } from './role.set.service';
 import { RoleSetCacheService } from './role.set.service.cache';
+import { RoleSetEventsService } from './role.set.service.events';
 
 function makeRoleSet(
   id: string,
@@ -52,6 +53,7 @@ describe('RoleSetService', () => {
   let actorLookupService: ActorLookupService;
   let userLookupService: UserLookupService;
   let platformInvitationService: PlatformInvitationService;
+  let roleSetEventsService: RoleSetEventsService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -82,6 +84,8 @@ describe('RoleSetService', () => {
     platformInvitationService = module.get<PlatformInvitationService>(
       PlatformInvitationService
     );
+    roleSetEventsService =
+      module.get<RoleSetEventsService>(RoleSetEventsService);
   });
 
   it('should be defined', () => {
@@ -1755,6 +1759,86 @@ describe('RoleSetService', () => {
       );
 
       expect(result).toBe('actor-1');
+    });
+  });
+
+  // FR-026 / gql-live regression: joining an organization (any path —
+  // direct join, invitation accept, application approve — they all funnel
+  // through this single per-role-set post-grant dispatch) must refresh the
+  // membership-status cache the same way a Space join does, so
+  // roleSet.myMembershipStatus / Organization.myAssociateEligibility never
+  // keep serving a stale pre-join NOT_MEMBER read.
+  describe('actorAddedToRole — ORGANIZATION arm (FR-026)', () => {
+    const organizationRoleSet = {
+      id: 'org-rs-1',
+      type: RoleSetType.ORGANIZATION,
+    } as any;
+    const actorContext = { actorID: 'admin-1' } as any;
+
+    it('refreshes the membership-status cache to MEMBER and dispatches the new-associate event on an ASSOCIATE grant', async () => {
+      await (service as any).actorAddedToRole(
+        'actor-1',
+        ActorType.USER,
+        organizationRoleSet,
+        RoleName.ASSOCIATE,
+        actorContext,
+        true,
+        CommunityMembershipOrigin.DIRECT
+      );
+
+      expect(roleSetCacheService.setMembershipStatusCache).toHaveBeenCalledWith(
+        'actor-1',
+        organizationRoleSet.id,
+        CommunityMembershipStatus.MEMBER
+      );
+      expect(
+        roleSetEventsService.processOrganizationNewAssociateEvents
+      ).toHaveBeenCalledWith(
+        organizationRoleSet,
+        actorContext,
+        'actor-1',
+        CommunityMembershipOrigin.DIRECT
+      );
+    });
+
+    it('does nothing for a non-entry role grant (e.g. ADMIN) on an organization', async () => {
+      await (service as any).actorAddedToRole(
+        'actor-1',
+        ActorType.USER,
+        organizationRoleSet,
+        RoleName.ADMIN,
+        actorContext,
+        true,
+        CommunityMembershipOrigin.DIRECT
+      );
+
+      expect(
+        roleSetCacheService.setMembershipStatusCache
+      ).not.toHaveBeenCalled();
+      expect(
+        roleSetEventsService.processOrganizationNewAssociateEvents
+      ).not.toHaveBeenCalled();
+    });
+
+    it('still refreshes the cache but skips the event dispatch when triggerNewMemberEvents is false', async () => {
+      await (service as any).actorAddedToRole(
+        'actor-1',
+        ActorType.USER,
+        organizationRoleSet,
+        RoleName.ASSOCIATE,
+        actorContext,
+        false,
+        CommunityMembershipOrigin.DIRECT
+      );
+
+      expect(roleSetCacheService.setMembershipStatusCache).toHaveBeenCalledWith(
+        'actor-1',
+        organizationRoleSet.id,
+        CommunityMembershipStatus.MEMBER
+      );
+      expect(
+        roleSetEventsService.processOrganizationNewAssociateEvents
+      ).not.toHaveBeenCalled();
     });
   });
 

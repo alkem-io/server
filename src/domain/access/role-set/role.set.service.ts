@@ -972,6 +972,33 @@ export class RoleSetService {
         }
         break;
       }
+      case RoleSetType.ORGANIZATION: {
+        // Organizations have no room membership and no Space activity log
+        // (FR-026), so this arm is bounded to the two side effects that
+        // still apply: refresh the membership-status cache so every
+        // subsequent read (roleSet.myMembershipStatus,
+        // Organization.myAssociateEligibility) reflects the grant
+        // immediately, and dispatch the "someone joined" admin notification
+        // (acting user excluded, INVITATION origin suppressed downstream by
+        // the adapter since that flow gets its own response notification).
+        if (role === RoleName.ASSOCIATE) {
+          await this.roleSetCacheService.setMembershipStatusCache(
+            actorID,
+            roleSet.id,
+            CommunityMembershipStatus.MEMBER
+          );
+
+          if (actorContext && triggerNewMemberEvents) {
+            await this.roleSetEventsService.processOrganizationNewAssociateEvents(
+              roleSet,
+              actorContext,
+              actorID,
+              membershipOrigin
+            );
+          }
+        }
+        break;
+      }
     }
   }
 
