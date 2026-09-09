@@ -6,10 +6,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import type { Identity } from '@ory/kratos-client';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { KratosService } from './kratos.service';
+import {
+  CLEVERBASE_SIGNING_CERTIFICATE_CLAIM,
+  KratosService,
+} from './kratos.service';
 
-const CLEVERBASE_SIGNING_CERTIFICATE_CLAIM =
-  'com.cleverbase.signing_certificate';
 const SYNTHETIC_SIGNING_CERTIFICATE = `-----BEGIN CERTIFICATE-----
 MIIDWjCCAkICAwZ5MjANBgkqhkiG9w0BAQsFADByMQswCQYDVQQGEwJOTDEVMBMG
 A1UECgwMQWxrZW1pbyBUZXN0MR0wGwYDVQQFExRIQi1TWU5USEVUSUMtTUFQUElO
@@ -43,11 +44,13 @@ const createSyntheticIDToken = (claims: Record<string, unknown>): string =>
 describe('KratosService', () => {
   let service: KratosService;
   const warn = MockWinstonProvider.useValue.warn as ReturnType<typeof vi.fn>;
-  const expectRedactedSigningIdentityWarning = () =>
+  const expectRedactedSigningIdentityWarning = () => {
+    expect(warn).toHaveBeenCalledTimes(1);
     expect(warn).toHaveBeenCalledWith(
       'Stored Cleverbase signing identity is unavailable for identity kratos-identity.',
       LogContext.KRATOS
     );
+  };
 
   beforeEach(async () => {
     vi.restoreAllMocks();

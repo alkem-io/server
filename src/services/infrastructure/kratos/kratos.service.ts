@@ -18,8 +18,12 @@ import {
   type IdentityCredentialsOidc,
 } from '@ory/kratos-client';
 import { AlkemioConfig } from '@src/types';
+import { decodeJwt } from 'jose';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { OryDefaultIdentitySchema } from './types/ory.default.identity.schema';
+
+export const CLEVERBASE_SIGNING_CERTIFICATE_CLAIM =
+  'com.cleverbase.signing_certificate';
 
 /**
  * The `KratosService` class provides methods to interact with the Ory Kratos identity management system:
@@ -437,41 +441,49 @@ export class KratosService {
     if (initialIDToken === undefined) {
       return providerSubject;
     }
+    if (initialIDToken.trim().length === 0) {
+      this.warnUnavailableCleverbaseSigningIdentity(identityId);
+      return providerSubject;
+    }
+
+    let payload: ReturnType<typeof decodeJwt>;
+    try {
+      payload = decodeJwt(initialIDToken);
+    } catch {
+      this.warnUnavailableCleverbaseSigningIdentity(identityId);
+      return undefined;
+    }
+
+    const signingCertificate = payload[CLEVERBASE_SIGNING_CERTIFICATE_CLAIM];
+    if (signingCertificate === undefined) {
+      return providerSubject;
+    }
+    if (typeof signingCertificate !== 'string') {
+      this.warnUnavailableCleverbaseSigningIdentity(identityId);
+      return undefined;
+    }
 
     try {
-      const segments = initialIDToken.split('.');
-      const encodedPayload = segments[1];
-      if (
-        segments.length !== 3 ||
-        !encodedPayload ||
-        !/^[A-Za-z0-9_-]+$/.test(encodedPayload)
-      ) {
-        return undefined;
-      }
-      const payload = JSON.parse(
-        Buffer.from(encodedPayload, 'base64url').toString('utf8')
-      ) as unknown;
-      if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-        return undefined;
-      }
-      const signingCertificate = (payload as Record<string, unknown>)[
-        'com.cleverbase.signing_certificate'
-      ];
-      if (signingCertificate === undefined) {
-        return providerSubject;
-      }
-      if (typeof signingCertificate !== 'string') {
-        return undefined;
-      }
       const subject = new X509Certificate(signingCertificate).toLegacyObject()
         .subject as unknown as Record<string, unknown>;
       const serialNumber = subject.serialNumber;
-      return typeof serialNumber === 'string' && serialNumber.length > 0
-        ? serialNumber
-        : undefined;
+      if (typeof serialNumber === 'string' && serialNumber.length > 0) {
+        return serialNumber;
+      }
     } catch {
+      this.warnUnavailableCleverbaseSigningIdentity(identityId);
       return undefined;
     }
+
+    this.warnUnavailableCleverbaseSigningIdentity(identityId);
+    return undefined;
+  }
+
+  private warnUnavailableCleverbaseSigningIdentity(identityId: string): void {
+    this.logger.warn(
+      `Stored Cleverbase signing identity is unavailable for identity ${identityId}.`,
+      LogContext.KRATOS
+    );
   }
 
   /**
