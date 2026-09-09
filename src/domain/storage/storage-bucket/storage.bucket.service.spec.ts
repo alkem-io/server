@@ -11,6 +11,7 @@ import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exc
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { SigningAttemptService } from '@domain/common/content-signing/signing.attempt.service';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
@@ -93,6 +94,7 @@ describe('StorageBucketService', () => {
   let fileServiceAdapter: FileServiceAdapter;
   let tagsetService: TagsetService;
   let configService: ConfigService;
+  let signingAttemptService: SigningAttemptService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -156,6 +158,10 @@ describe('StorageBucketService', () => {
     fileServiceAdapter = module.get<FileServiceAdapter>(FileServiceAdapter);
     tagsetService = module.get<TagsetService>(TagsetService);
     configService = module.get<ConfigService>(ConfigService);
+    signingAttemptService = module.get(SigningAttemptService);
+    (signingAttemptService.existsForDocumentIDs as Mock).mockResolvedValue(
+      false
+    );
   });
 
   // ── createStorageBucket ─────────────────────────────────────────
@@ -205,6 +211,29 @@ describe('StorageBucketService', () => {
   // ── deleteStorageBucket ─────────────────────────────────────────
 
   describe('deleteStorageBucket', () => {
+    it('refuses before deleting authorization or documents when a signing attempt references a document', async () => {
+      const bucket = {
+        id: 'bucket-signing',
+        authorization: { id: 'auth-signing' },
+        documents: [{ id: 'doc-signing' }],
+      };
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (signingAttemptService.existsForDocumentIDs as Mock).mockResolvedValue(
+        true
+      );
+
+      await expect(
+        service.deleteStorageBucket('bucket-signing')
+      ).rejects.toThrow(ValidationException);
+
+      expect(signingAttemptService.existsForDocumentIDs).toHaveBeenCalledWith([
+        'doc-signing',
+      ]);
+      expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
+      expect(documentService.deleteDocument).not.toHaveBeenCalled();
+      expect(storageBucketRepository.remove).not.toHaveBeenCalled();
+    });
+
     it('should delete authorization, all documents, and remove bucket when bucket exists', async () => {
       const doc1 = { id: 'doc-1' };
       const doc2 = { id: 'doc-2' };
@@ -276,6 +305,30 @@ describe('StorageBucketService', () => {
   // ── deleteStorageBucketForAccountDeletion ────────────────────────
 
   describe('deleteStorageBucketForAccountDeletion', () => {
+    it('refuses before transactional authorization cleanup when a signing attempt references a document', async () => {
+      const bucket = {
+        id: 'bucket-signing',
+        authorization: { id: 'auth-signing' },
+        documents: [{ id: 'doc-signing' }],
+      };
+      const em = {
+        findOneOrFail: vi.fn().mockResolvedValue(bucket),
+      } as any;
+      (signingAttemptService.existsForDocumentIDs as Mock).mockResolvedValue(
+        true
+      );
+
+      await expect(
+        service.deleteStorageBucketForAccountDeletion('bucket-signing', em)
+      ).rejects.toThrow(ValidationException);
+
+      expect(signingAttemptService.existsForDocumentIDs).toHaveBeenCalledWith([
+        'doc-signing',
+      ]);
+      expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
+      expect(documentService.deleteDocumentDbOnly).not.toHaveBeenCalled();
+    });
+
     it('joins the passed EntityManager, never calls the file-service delete, collects external ids, and never removes the bucket or file rows', async () => {
       const doc1 = { id: 'doc-1' };
       const doc2 = { id: 'doc-2' };
