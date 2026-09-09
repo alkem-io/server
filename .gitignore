@@ -98,6 +98,7 @@ subscriptions.log
 !.scripts/lint/
 !.scripts/gql-request.sh
 !.scripts/gql-request-interactive.sh
+!.scripts/check-vendor-lib-pins.sh
 .scripts/overmind/.overmind.sock
 .scripts/**/*.psql
 .storage/
