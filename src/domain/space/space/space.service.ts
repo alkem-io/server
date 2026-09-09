@@ -474,6 +474,12 @@ export class SpaceService {
           limit: 0,
           enabled: true,
         },
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_MEMO_SIGNING,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
       ],
     });
   }
