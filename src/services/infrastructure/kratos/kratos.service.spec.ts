@@ -5,57 +5,39 @@ import { Test, TestingModule } from '@nestjs/testing';
 import type { Identity } from '@ory/kratos-client';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import {
-  CLEVERBASE_SIGNING_CERTIFICATE_METADATA_KEY,
-  KratosService,
-} from './kratos.service';
+import { KratosService } from './kratos.service';
 
-// Returned by Cleverbase's public Identification Driver Stub for the
-// com.cleverbase.signing_certificate scope on 2026-09-09.
-const CLEVERBASE_IDF_STUB_SIGNING_CERTIFICATE = `-----BEGIN CERTIFICATE-----
-MIIH1jCCBb6gAwIBAgIQaU/hFVNlOnLQ23XZ8IpjsjANBgkqhkiG9w0BAQsFADB7
-MQswCQYDVQQGEwJOTDEbMBkGA1UECgwSQ2xldmVyYmFzZSBJRCBCLlYuMRcwFQYD
-VQRhDA5OVFJOTC02NzQxOTkyNTE2MDQGA1UEAwwtVEVTVCBDbGV2ZXJiYXNlIElE
-IFBLSW92ZXJoZWlkIEJ1cmdlciBDQSAtIEczMB4XDTI2MDEyOTE1NDEyOVoXDTI4
-MDEyOTE2MDgzMlowgZUxEjAQBgNVBAQMCURFIEJSVUlKTjEaMBgGA1UEKgwRV0lM
-TEVLRSBMSVNFTE9UVEUxCzAJBgNVBAYTAk5MMSQwIgYDVQQDDBtXSUxMRUtFIExJ
-U0VMT1RURSBERSBCUlVJSk4xMDAuBgNVBAUTJ0hCLTVjNjk5ZWFiLTFjNjEtNDFj
-NS05MzE4LTI0NmE5MzZjNGVjNjCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoC
-ggEBALqGXpjiojBczv6p7i2lP0JUSw0P6nMFFFX0g0vhBNLaEDQciuWolqDo+Y/L
-cJ8OCClkpxeSS/xZvcRJ1o7Sf5kXY9irXa7gPlDtdYvmhXzhkplyIlFxewX76MLk
-pp01cbMcFYawu0ImagbIC5h8d8kY5WWCMbDgudkCFP1AJqE3OEsfK6Z2mGs+zez2
-C5Nwu/zVVlAeQ/XTT/olkbomwkbSrLaf4PTtC4cxDYQ2KRhifQKHHlICFUlTRK0z
-eYb5JxCsD30Diz4n6gk6ESVYUdOraoGdaX5UJv6SiRTqCn4DWSB4r/HXXRBeqAm+
-9bXxItFZ5ZZRsvMAnWtjkYVjVhsCAwEAAaOCAzkwggM1MB8GA1UdIwQYMBaAFOrh
-GtA3NsHo1ZT3j1te/5HtSkzxMB0GA1UdDgQWBBSZfNUAN+w5nu5fBkB2EWgDacoi
-vDAOBgNVHQ8BAf8EBAMCBkAwggESBgNVHSAEggEJMIIBBTCCAQEGCmCEEAGHawEC
-AwIwgfIwMwYIKwYBBQUHAgEWJ2h0dHBzOi8vcGtpLnRlc3QuY2xldmVyYmFzZS5j
-b20vY3BzLnBkZjCBugYIKwYBBQUHAgIwga0MgapSZWxpYW5jZSBvbiB0aGlzIGNl
-cnRpZmljYXRlIGJ5IGFueSBwYXJ0eSBhc3N1bWVzIGFjY2VwdGFuY2Ugb2YgdGhl
-IHJlbGV2YW50IENsZXZlcmJhc2UgQ2VydGlmaWNhdGlvbiBQcmFjdGljZSBTdGF0
-ZW1lbnQgYW5kIG90aGVyIGRvY3VtZW50cyBpbiB0aGUgQ2xldmVyYmFzZSByZXBv
-c2l0b3J5LjBcBgNVHREEVTBToFEGCisGAQQBgjcUAgOgQwxBSEItNWM2OTllYWIt
-MWM2MS00MWM1LTkzMTgtMjQ2YTkzNmM0ZWM2QDIuMTYuNTI4LjEuMTAwMy4xLjMu
-My40LjEwQAYDVR0fBDkwNzA1oDOgMYYvaHR0cDovL3BraS50ZXN0LmNsZXZlcmJh
-c2UuY29tL2NsZXZlcmJhc2UzYy5jcmwwHwYDVR0lBBgwFgYIKwYBBQUHAwQGCisG
-AQQBgjcKAwwwgYYGCCsGAQUFBwEBBHoweDAzBggrBgEFBQcwAYYnaHR0cHM6Ly9w
-a2kudGVzdC5jbGV2ZXJiYXNlLmNvbS9vY3NwLzNjMEEGCCsGAQUFBzAChjVodHRw
-Oi8vcGtpLnRlc3QuY2xldmVyYmFzZS5jb20vQ2xldmVyYmFzZUJ1cmdlckczLmNl
-cjCBggYIKwYBBQUHAQMEdjB0MAgGBgQAjkYBATAIBgYEAI5GAQQwSQYGBACORgEF
-MD8wPRY3aHR0cHM6Ly9wa2kuY2xldmVyYmFzZS5jb20vcGtpLWRpc2Nsb3N1cmUt
-c3RhdGVtZW50LnBkZhMCZW4wEwYGBACORgEGMAkGBwQAjkYBBgEwDQYJKoZIhvcN
-AQELBQADggIBAFnxIy/EsDL6hvL4ei574IL0+9zHAHh1pbqBWDdHFi5RoLGJGPbR
-Ukm1vmlcnap/ssqxdZs1RbNJlOtaGLvtm68CqxwZPQOQheDzp0jvcU0PcyM1M+kO
-mJ35fGtBOd4zCvAR3kLRrN0S1++dRz1H0rKQKdn0FZz0CxAkO6NQCab9OCL9U/GG
-MGeI5IMMw8saAd4uAt+iWHcUcX5pAaDO6NXToO3+3zEShKry/dtCKle10wHxs2Ix
-v+w69Ys1eVFpcvTy6uyVrCp2gbJTevOJqKQH2fcJUg4x8Iv1tUzMQibMKkeweCn2
-GlkH7UCDyf+hP/lp3u1bO3szzQXijHCojYlnRU5xFNgcz1+KHebOk2hNO3OUZtwa
-hXnKrOdysg+nI9LkCH/jOJZ9V9xapUEpJLItWNYOZmTH7dU8Cx09W9meH2BYLrBU
-Tot7OIdf8s1zHywdyWOMxDw56KUl2an7nvFGDhrUNygV+k+eXJFPd1uDUIzPgTAT
-VhorWzRQUOSJE4PrwaIXy2bs+5+6o1k441O50p/pU94nVl94ROxoj6MdbyBbb4U0
-EhWxV4Ep89BDzanjbdzyemjM3g6AKKMCCpiDW8xizVNgbdtkdwQ/iAfj+6mOStdX
-bb+kuJ+Td45tU7cjY5mJ0CntDQ+YtlJzFeDvgiEIWgn0GeoT7p/ftFK7
+const CLEVERBASE_SIGNING_CERTIFICATE_CLAIM =
+  'com.cleverbase.signing_certificate';
+const SYNTHETIC_SIGNING_CERTIFICATE = `-----BEGIN CERTIFICATE-----
+MIIDWjCCAkICAwZ5MjANBgkqhkiG9w0BAQsFADByMQswCQYDVQQGEwJOTDEVMBMG
+A1UECgwMQWxrZW1pbyBUZXN0MR0wGwYDVQQFExRIQi1TWU5USEVUSUMtTUFQUElO
+RzEtMCsGA1UEAwwkQ2xldmVyYmFzZSBTeW50aGV0aWMgU2lnbmluZyBGaXh0dXJl
+MB4XDTI2MDkwOTExMjgyN1oXDTM2MDkwNjExMjgyN1owcjELMAkGA1UEBhMCTkwx
+FTATBgNVBAoMDEFsa2VtaW8gVGVzdDEdMBsGA1UEBRMUSEItU1lOVEhFVElDLU1B
+UFBJTkcxLTArBgNVBAMMJENsZXZlcmJhc2UgU3ludGhldGljIFNpZ25pbmcgRml4
+dHVyZTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALNWCz0VvupVRssl
+Ie+gtx1JXPgYoOvjLLDiidfVBg4OmRlsmbUCreIU7I3f2V6aTMZMu+V7zsAiMfhk
+SDbQ1MlYdTOurozOsaDStKXc6U0hyHdmmfgLrHyS7AtUdf1C1X7NkVfx6WcOTxPN
+gJ6ETEAKCgVhI/AVUB2PodYohfgWMzg2Q6WlxlJuppY/BM4Yt4ak6kctWznOlgbY
+TpZ1cOEctwKkjzeHfSFOJ9W9jrXPbjeLNnrpUqqbnTGqdJrS1RFVOBkXKbPN4rec
+GDS5jswIi7sycR2VDuXz5Bc6QOMYUhSO6AJbekbls4894aawiK66PVePv7cLGk/a
+r19IvwECAwEAATANBgkqhkiG9w0BAQsFAAOCAQEAIwXspPD6MtwaRydrPNAm4ptp
+OT1JTPI6/gO93V+rINJw0pUNul7bdbrY0V0J3YQeEOdj/NaZmCMFPCoMy2zRJNWa
+jHAmckA8pRxGDLHSxG+r/YnToTCIL/U+23J1mA09+WziJ2gfyjcFgPO54IPxFd9p
+CWxwC+UrF0us1oSwr2bVeSEMVJuCDRVwrTkCxfVxcHH1FvIVYqJ5bIF3ZMDgbsYj
+qiYHn/rrKDOL6ZmZqsNHUXXa1pQMb5c5zdXfeSWhbVFKBljJDMi323tCPkn0i5VJ
+Fl690EDNrENZPXRU2sgWhVsc2L8Pjpu2+9NeTem+pdNrLRt+XGrLwBIjM++3hQ==
 -----END CERTIFICATE-----`;
+
+const createSyntheticIDToken = (claims: Record<string, unknown>): string =>
+  [
+    Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString(
+      'base64url'
+    ),
+    Buffer.from(JSON.stringify(claims)).toString('base64url'),
+    'synthetic-signature',
+  ].join('.');
 
 describe('KratosService', () => {
   let service: KratosService;
@@ -560,38 +542,65 @@ describe('KratosService', () => {
   });
 
   describe('getCleverbaseSubject', () => {
-    it('returns the signing certificate subject serialNumber instead of its certificate serial or provider subject', async () => {
-      const getIdentity = vi
-        .spyOn(service, 'getIdentityById')
-        .mockResolvedValue({
-          credentials: {
-            oidc: {
-              identifiers: [
-                'linkedin:elsewhere',
-                'cleverbase:subject-from-provider',
+    const createIdentity = (initialIDToken?: unknown) =>
+      ({
+        credentials: {
+          oidc: {
+            identifiers: [
+              'linkedin:elsewhere',
+              'cleverbase:subject-from-provider',
+            ],
+            config: {
+              providers: [
+                {
+                  provider: 'linkedin',
+                  subject: 'elsewhere',
+                  initial_id_token: createSyntheticIDToken({
+                    [CLEVERBASE_SIGNING_CERTIFICATE_CLAIM]:
+                      SYNTHETIC_SIGNING_CERTIFICATE,
+                  }),
+                },
+                {
+                  provider: 'cleverbase',
+                  subject: 'subject-from-provider',
+                  ...(initialIDToken === undefined
+                    ? {}
+                    : { initial_id_token: initialIDToken }),
+                },
               ],
             },
           },
-          metadata_admin: {
-            [CLEVERBASE_SIGNING_CERTIFICATE_METADATA_KEY]:
-              CLEVERBASE_IDF_STUB_SIGNING_CERTIFICATE,
-          },
-        } as any);
+        },
+      }) as any;
+
+    it('returns the signing certificate subject serialNumber instead of its certificate serial or provider subject', async () => {
+      const getIdentity = vi
+        .spyOn(service, 'getIdentityById')
+        .mockResolvedValue(
+          createIdentity(
+            createSyntheticIDToken({
+              [CLEVERBASE_SIGNING_CERTIFICATE_CLAIM]:
+                SYNTHETIC_SIGNING_CERTIFICATE,
+            })
+          )
+        );
 
       await expect(
         service.getCleverbaseSubject('kratos-identity')
-      ).resolves.toBe('HB-5c699eab-1c61-41c5-9318-246a936c4ec6');
+      ).resolves.toBe('HB-SYNTHETIC-MAPPING');
       expect(getIdentity).toHaveBeenCalledWith('kratos-identity', ['oidc']);
     });
 
-    it('falls back to the provider subject when the signing certificate claim is absent', async () => {
-      vi.spyOn(service, 'getIdentityById').mockResolvedValue({
-        credentials: {
-          oidc: {
-            identifiers: ['cleverbase:subject-from-provider'],
-          },
-        },
-      } as any);
+    it.each([
+      ['the Cleverbase provider has no initial ID token', undefined],
+      [
+        'the initial ID token has no signing certificate claim',
+        createSyntheticIDToken({ sub: 'subject-from-provider' }),
+      ],
+    ])('falls back to the provider subject when %s', async (_label, token) => {
+      vi.spyOn(service, 'getIdentityById').mockResolvedValue(
+        createIdentity(token)
+      );
 
       await expect(
         service.getCleverbaseSubject('kratos-identity')
@@ -599,19 +608,35 @@ describe('KratosService', () => {
     });
 
     it.each([
-      ['not a string', 123],
-      ['malformed', 'not-a-certificate'],
-    ])('does not fall back to the provider subject when the signing certificate claim is %s', async (_label, signingCertificate) => {
-      vi.spyOn(service, 'getIdentityById').mockResolvedValue({
-        credentials: {
-          oidc: {
-            identifiers: ['cleverbase:subject-from-provider'],
-          },
-        },
-        metadata_admin: {
-          [CLEVERBASE_SIGNING_CERTIFICATE_METADATA_KEY]: signingCertificate,
-        },
-      } as any);
+      ['is malformed', 'not-a-jwt'],
+      [
+        'has a malformed payload',
+        ['synthetic-header', 'not-base64url!', 'synthetic-signature'].join('.'),
+      ],
+      [
+        'has a non-JSON payload',
+        [
+          'synthetic-header',
+          Buffer.from('not-json').toString('base64url'),
+          'synthetic-signature',
+        ].join('.'),
+      ],
+      [
+        'has a non-string signing certificate claim',
+        createSyntheticIDToken({
+          [CLEVERBASE_SIGNING_CERTIFICATE_CLAIM]: 123,
+        }),
+      ],
+      [
+        'has a malformed signing certificate claim',
+        createSyntheticIDToken({
+          [CLEVERBASE_SIGNING_CERTIFICATE_CLAIM]: 'not-a-certificate',
+        }),
+      ],
+    ])('does not fall back when the initial ID token %s', async (_label, token) => {
+      vi.spyOn(service, 'getIdentityById').mockResolvedValue(
+        createIdentity(token)
+      );
 
       await expect(
         service.getCleverbaseSubject('kratos-identity')
@@ -620,35 +645,50 @@ describe('KratosService', () => {
 
     it('does not fall back when the signing certificate has no subject serialNumber', async () => {
       vi.spyOn(X509Certificate.prototype, 'toLegacyObject').mockReturnValue({
-        subject: { CN: 'Cleverbase fixture without subject serialNumber' },
+        subject: { CN: 'Synthetic fixture without subject serialNumber' },
       } as any);
-      vi.spyOn(service, 'getIdentityById').mockResolvedValue({
-        credentials: {
-          oidc: {
-            identifiers: ['cleverbase:subject-from-provider'],
-          },
-        },
-        metadata_admin: {
-          [CLEVERBASE_SIGNING_CERTIFICATE_METADATA_KEY]:
-            CLEVERBASE_IDF_STUB_SIGNING_CERTIFICATE,
-        },
-      } as any);
+      vi.spyOn(service, 'getIdentityById').mockResolvedValue(
+        createIdentity(
+          createSyntheticIDToken({
+            [CLEVERBASE_SIGNING_CERTIFICATE_CLAIM]:
+              SYNTHETIC_SIGNING_CERTIFICATE,
+          })
+        )
+      );
 
       await expect(
         service.getCleverbaseSubject('kratos-identity')
       ).resolves.toBeUndefined();
     });
 
-    it('requires the linked Cleverbase provider even when certificate metadata is present', async () => {
+    it('does not use a signing certificate from another OIDC provider', async () => {
+      vi.spyOn(service, 'getIdentityById').mockResolvedValue(
+        createIdentity(undefined)
+      );
+
+      await expect(
+        service.getCleverbaseSubject('kratos-identity')
+      ).resolves.toBe('subject-from-provider');
+    });
+
+    it('requires the linked Cleverbase provider even when an OIDC token contains the signing certificate', async () => {
       vi.spyOn(service, 'getIdentityById').mockResolvedValue({
         credentials: {
           oidc: {
             identifiers: ['github:subject'],
+            config: {
+              providers: [
+                {
+                  provider: 'github',
+                  subject: 'subject',
+                  initial_id_token: createSyntheticIDToken({
+                    [CLEVERBASE_SIGNING_CERTIFICATE_CLAIM]:
+                      SYNTHETIC_SIGNING_CERTIFICATE,
+                  }),
+                },
+              ],
+            },
           },
-        },
-        metadata_admin: {
-          [CLEVERBASE_SIGNING_CERTIFICATE_METADATA_KEY]:
-            CLEVERBASE_IDF_STUB_SIGNING_CERTIFICATE,
         },
       } as any);
 
@@ -693,7 +733,6 @@ describe('KratosService', () => {
       ).rejects.toBe(unavailable);
     });
   });
-
   describe('getAuthenticatedAt', () => {
     it('should return undefined when sessions is null', async () => {
       vi.spyOn(
