@@ -15,13 +15,11 @@ import {
   type GetIdentityIncludeCredentialEnum,
   Identity,
   IdentityApi,
+  type IdentityCredentialsOidc,
 } from '@ory/kratos-client';
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { OryDefaultIdentitySchema } from './types/ory.default.identity.schema';
-
-export const CLEVERBASE_SIGNING_CERTIFICATE_METADATA_KEY =
-  'com.cleverbase.signing_certificate';
 
 /**
  * The `KratosService` class provides methods to interact with the Ory Kratos identity management system:
@@ -430,19 +428,41 @@ export class KratosService {
       return undefined;
     }
 
-    const metadata = identity?.metadata_admin as
-      | Record<string, unknown>
+    const oidcConfig = identity?.credentials?.oidc?.config as
+      | IdentityCredentialsOidc
       | undefined;
-    const signingCertificate =
-      metadata?.[CLEVERBASE_SIGNING_CERTIFICATE_METADATA_KEY];
-    if (signingCertificate === undefined) {
+    const initialIDToken = oidcConfig?.providers?.find(
+      provider => provider.provider === AuthenticationType.CLEVERBASE
+    )?.initial_id_token;
+    if (initialIDToken === undefined) {
       return providerSubject;
-    }
-    if (typeof signingCertificate !== 'string') {
-      return undefined;
     }
 
     try {
+      const segments = initialIDToken.split('.');
+      const encodedPayload = segments[1];
+      if (
+        segments.length !== 3 ||
+        !encodedPayload ||
+        !/^[A-Za-z0-9_-]+$/.test(encodedPayload)
+      ) {
+        return undefined;
+      }
+      const payload = JSON.parse(
+        Buffer.from(encodedPayload, 'base64url').toString('utf8')
+      ) as unknown;
+      if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+        return undefined;
+      }
+      const signingCertificate = (payload as Record<string, unknown>)[
+        'com.cleverbase.signing_certificate'
+      ];
+      if (signingCertificate === undefined) {
+        return providerSubject;
+      }
+      if (typeof signingCertificate !== 'string') {
+        return undefined;
+      }
       const subject = new X509Certificate(signingCertificate).toLegacyObject()
         .subject as unknown as Record<string, unknown>;
       const serialNumber = subject.serialNumber;
