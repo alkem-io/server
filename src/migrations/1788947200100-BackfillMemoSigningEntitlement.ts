@@ -35,6 +35,8 @@ export class BackfillMemoSigningEntitlement1788947200100
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    // Removes every feature-owned entitlement row. Template-content-space
+    // licenses are transient, so they have no persisted rows to backfill.
     await queryRunner.query(
       `DELETE FROM license_entitlement WHERE type = $1`,
       [ENTITLEMENT_TYPE]

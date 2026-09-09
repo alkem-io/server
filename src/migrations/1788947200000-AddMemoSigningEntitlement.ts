@@ -93,6 +93,8 @@ export class AddMemoSigningEntitlement1788947200000
     }
   }
 
+  // Rollback removes the feature-owned plan and credential rules. Unrelated
+  // plans, rules, and credential rows are left untouched. Safe to run repeatedly.
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DELETE FROM license_plan WHERE name = $1`, [
       LICENSE_PLAN_NAME,
