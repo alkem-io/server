@@ -459,8 +459,18 @@ export class RoleSetResolverMutationsMembership {
     // forbids before anything is created.
     await this.validateInviteesAndRolesOrFail(actorTypes, extraRoles, roleSet);
 
-    // Collect actor IDs to invite
-    const actorIDsToInvite: string[] = [...invitationData.invitedActorIDs];
+    // Collect actor IDs to invite, de-duplicated for the same reason
+    // `extraRoles` is normalized above: one actor can arrive twice — listed
+    // twice in `invitedActorIDs`, or listed once there and typed again as the
+    // email address of that same registered user. Without this the second pass
+    // over the duplicate throws ALREADY_INVITED *after* the first invitation
+    // has been persisted, so the mutation 500s, the notification never goes
+    // out, and every retry hits the same wall. A person who appears as both a
+    // picked actor and a typed address is invited once, attributed to the
+    // actor they were picked as.
+    const actorIDsToInvite: string[] = [
+      ...new Set(invitationData.invitedActorIDs),
+    ];
 
     // Loop through the emails provided to see if are existing users or not
     const newUserEmails: string[] = [];
@@ -474,8 +484,10 @@ export class RoleSetResolverMutationsMembership {
       // If the user is already registered, then just create a normal invitation
       const existingUser = await this.userLookupService.getUserByEmail(email);
       if (existingUser) {
-        actorIDsToInvite.push(existingUser.id);
-        emailByActorID.set(existingUser.id, email);
+        if (!actorIDsToInvite.includes(existingUser.id)) {
+          actorIDsToInvite.push(existingUser.id);
+          emailByActorID.set(existingUser.id, email);
+        }
       } else {
         newUserEmails.push(email);
       }

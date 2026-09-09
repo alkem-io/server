@@ -2705,7 +2705,7 @@ type CreateInnovationFlowStateSettingsData {
   """
   showPublishDetails: Boolean
   """
-  Optional. Ordered sidebar widgets; defaults to [INTENT, CREATE_POST, APPLICATION_BUTTON, INDEX] when omitted.
+  Optional. Ordered sidebar widgets; defaults to [INTENT, CREATE_POST, APPLICATION_BUTTON, SEARCH, INDEX] when omitted.
   """
   sidebar: [SidebarWidget!]
   """
@@ -2726,7 +2726,7 @@ input CreateInnovationFlowStateSettingsInput {
   """
   showPublishDetails: Boolean
   """
-  Optional. Ordered sidebar widgets; defaults to [INTENT, CREATE_POST, APPLICATION_BUTTON, INDEX] when omitted.
+  Optional. Ordered sidebar widgets; defaults to [INTENT, CREATE_POST, APPLICATION_BUTTON, SEARCH, INDEX] when omitted.
   """
   sidebar: [SidebarWidget!]
   """
@@ -3290,6 +3290,7 @@ enum CredentialType {
   PLATFORM_OPERATIONS_ADMIN
   SPACE_ADMIN
   SPACE_FEATURE_MEMO_MULTI_USER
+  SPACE_FEATURE_MEMO_SIGNING
   SPACE_FEATURE_OFFICE_DOCUMENTS
   SPACE_FEATURE_SAVE_AS_TEMPLATE
   SPACE_FEATURE_VIRTUAL_CONTRIBUTORS
@@ -3670,15 +3671,22 @@ enum ForumDiscussionCategory {
   CHALLENGE_CENTRIC
   COMMUNITY_BUILDING
   HELP
+  NEWSLETTER
   OTHER
   PLATFORM_FUNCTIONALITIES
   RELEASES
+  TIPS_AND_TRICKS
 }
 
 enum ForumDiscussionPrivacy {
   AUTHENTICATED
   AUTHOR
   PUBLIC
+}
+
+input ForumRemoveDiscussionCategoryInput {
+  """The category to remove from the platform Forum active category list."""
+  category: ForumDiscussionCategory!
 }
 
 type Geo {
@@ -4422,6 +4430,7 @@ enum LicenseEntitlementType {
   ACCOUNT_SPACE_PREMIUM
   ACCOUNT_VIRTUAL_CONTRIBUTOR
   SPACE_FLAG_MEMO_MULTI_USER
+  SPACE_FLAG_MEMO_SIGNING
   SPACE_FLAG_OFFICE_DOCUMENTS
   SPACE_FLAG_SAVE_AS_TEMPLATE
   SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS
@@ -4504,6 +4513,7 @@ type Licensing {
 enum LicensingCredentialBasedCredentialType {
   ACCOUNT_LICENSE_PLUS
   SPACE_FEATURE_MEMO_MULTI_USER
+  SPACE_FEATURE_MEMO_SIGNING
   SPACE_FEATURE_OFFICE_DOCUMENTS
   SPACE_FEATURE_SAVE_AS_TEMPLATE
   SPACE_FEATURE_VIRTUAL_CONTRIBUTORS
@@ -4927,8 +4937,55 @@ type Memo {
   nameID: NameID!
   """The Profile for this Memo."""
   profile: Profile!
+  """Signed copies of this Memo visible to readers of the Memo."""
+  signatures: [MemoSignature!]!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+}
+
+type MemoSignature {
+  """The Alkemio user who initiated this signed copy."""
+  actor: User
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The immutable PDF produced for this signed copy."""
+  document: Document
+  """The ID of the entity"""
+  id: UUID!
+  """The terminal outcome of this Memo signing attempt."""
+  status: SigningAttemptStatus!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
+
+enum MemoSignatureVerificationStatus {
+  INVALID
+  UNAVAILABLE
+  VERIFIED
+}
+
+input MemoSignatureVerifyInput {
+  """The signed Memo attempt to verify."""
+  attemptID: UUID!
+}
+
+input MemoSigningContinueInput {
+  """The prepared signing attempt to start."""
+  attemptID: UUID!
+}
+
+type MemoSigningContinueResult {
+  authorizeUrl: String!
+}
+
+input MemoSigningPrepareInput {
+  """The Memo to prepare for signing."""
+  memoID: UUID!
+}
+
+type MemoSigningPrepareResult {
+  attemptId: UUID!
+  previewUrl: String!
 }
 
 """A message that was sent in a chat room"""
@@ -5168,6 +5225,10 @@ type Mutation {
   adminCommunicationSyncSpaceHierarchy: Boolean!
   """Allow updating the state flags of a particular rule."""
   adminCommunicationUpdateRoomState(roomStateData: CommunicationAdminUpdateRoomStateInput!): Boolean!
+  """
+  Removes one category from the platform Forum's active discussionCategories list. Refuses while any Discussion still carries the category. Idempotent for an already-absent category. The enum member is never removed. Requires PLATFORM_ADMIN. Audited (PLATFORM_OPERATIONS).
+  """
+  adminForumRemoveDiscussionCategory(removeData: ForumRemoveDiscussionCategoryInput!): Forum!
   """Delete a Kratos identity by ID."""
   adminIdentityDeleteKratosIdentity(kratosIdentityId: UUID!): Boolean!
   """
@@ -5260,6 +5321,8 @@ type Mutation {
   castPollVote(voteData: CastPollVoteInput!): Poll!
   """Deletes collections nameID-..."""
   cleanupCollections: MigrateEmbeddings!
+  """Starts signing the prepared Memo copy."""
+  continueMemoSigning(signingData: MemoSigningContinueInput!): MemoSigningContinueResult!
   """Move an L1 Space up in the hierarchy, to be a L0 Space."""
   convertSpaceL1ToSpaceL0(convertData: ConvertSpaceL1ToSpaceL0Input!): Space!
   """
@@ -5478,6 +5541,8 @@ type Mutation {
   Moves a task to another column on its Tasks board. Authorized as MOVE_TASK on the parent Callout, so a board member can move any task.
   """
   moveTaskToColumn(moveData: MoveTaskToColumnInput!): CalloutContribution!
+  """Prepares an exact PDF preview for signing the specified Memo."""
+  prepareMemoSigning(signingData: MemoSigningPrepareInput!): MemoSigningPrepareResult!
   """Refresh the Bodies of Knowledge on All VCs"""
   refreshAllBodiesOfKnowledge: Boolean!
   """
@@ -6920,6 +6985,8 @@ type Query {
   rolesVirtualContributor(rolesData: RolesActorInput!): ActorRoles!
   """Search the platform for terms supplied"""
   search(searchData: SearchInput!): ISearchResults!
+  """A Memo signing attempt belonging to the current actor."""
+  signingAttempt(ID: UUID!): MemoSignature!
   """
   The Spaces on this platform; If accessed through an Innovation Hub will return ONLY the Spaces defined in it.
   """
@@ -6982,6 +7049,8 @@ type Query {
   Returns the VAPID public key needed by clients to subscribe to push notifications. Returns null if push notifications are not enabled on this server.
   """
   vapidPublicKey: String
+  """Checks the stored integrity of a signed Memo copy."""
+  verifyMemoSignature(verificationData: MemoSignatureVerifyInput!): MemoSignatureVerificationStatus!
   """A particular VirtualContributor"""
   virtualContributor(ID: UUID!): VirtualContributor!
   """
@@ -7942,9 +8011,18 @@ enum SidebarWidget {
   GUIDELINES
   INDEX
   INTENT
+  SEARCH
   SUBSPACE_LINKS
   UPDATES
   VIRTUAL_CONTRIBUTORS
+}
+
+enum SigningAttemptStatus {
+  CANCELLED
+  EXPIRED
+  FAILED
+  PENDING
+  SIGNED
 }
 
 type Space implements ActorFull {

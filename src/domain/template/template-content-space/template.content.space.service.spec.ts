@@ -480,6 +480,11 @@ describe('TemplateContentSpaceService', () => {
               enabled: true,
               limit: 0,
             }),
+            expect.objectContaining({
+              type: 'space-flag-memo-signing',
+              enabled: false,
+              limit: 0,
+            }),
           ]),
         })
       );
