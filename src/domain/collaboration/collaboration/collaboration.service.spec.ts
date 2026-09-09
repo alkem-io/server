@@ -157,6 +157,17 @@ describe('CollaborationService', () => {
       expect(result.timeline).toBeDefined();
       expect(result.isTemplate).toBe(false);
       expect(timelineService.createTimeline).toHaveBeenCalled();
+      expect(licenseService.createLicense).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entitlements: expect.arrayContaining([
+            expect.objectContaining({
+              type: 'space-flag-memo-signing',
+              enabled: false,
+              limit: 0,
+            }),
+          ]),
+        })
+      );
     });
 
     it('should create a template collaboration without timeline', async () => {

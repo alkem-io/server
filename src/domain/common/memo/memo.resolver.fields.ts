@@ -1,4 +1,7 @@
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
   ProfileLoaderCreator,
   UserLoaderCreator,
@@ -9,23 +12,69 @@ import {
 } from '@core/dataloader/creators/loader.creators/memo/memo.content.loader.creator';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { IMemoSignature } from '@domain/common/content-signing/signing.attempt.interface';
+import { SigningAttemptService } from '@domain/common/content-signing/signing.attempt.service';
+import { UUID } from '@domain/common/scalars';
 import { IUser } from '@domain/community/user/user.interface';
 import { Inject, LoggerService } from '@nestjs/common';
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Args, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
+import { CurrentActor } from '@src/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IProfile } from '../profile/profile.interface';
 import { Markdown } from '../scalars/scalar.markdown';
+import { MemoSignatureVerifyInput } from './dto/memo.signature.verify.input';
 import { Memo } from './memo.entity';
 import { IMemo } from './memo.interface';
 import { MemoService } from './memo.service';
+import { MemoSignatureVerificationStatus } from './memo.signature.verification.status';
+import { MemoSigningService } from './memo.signing.service';
 
 @Resolver(() => IMemo)
 export class MemoResolverFields {
   constructor(
     private memoService: MemoService,
+    private signingAttemptService: SigningAttemptService,
+    private authorizationService: AuthorizationService,
+    private memoSigningService: MemoSigningService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
+
+  @Query(() => IMemoSignature, {
+    description: 'A Memo signing attempt belonging to the current actor.',
+  })
+  signingAttempt(
+    @CurrentActor() actor: ActorContext,
+    @Args('ID', { type: () => UUID }) attemptId: string
+  ) {
+    return this.signingAttemptService.getForActorOrFail(
+      attemptId,
+      actor.actorID
+    );
+  }
+
+  @Query(() => MemoSignatureVerificationStatus, {
+    description: 'Checks the stored integrity of a signed Memo copy.',
+  })
+  verifyMemoSignature(
+    @CurrentActor() actor: ActorContext,
+    @Args('verificationData') { attemptID }: MemoSignatureVerifyInput
+  ) {
+    return this.memoSigningService.verifyMemoSignature(attemptID, actor);
+  }
+
+  @ResolveField('signatures', () => [IMemoSignature], {
+    description: 'Signed copies of this Memo visible to readers of the Memo.',
+  })
+  async signatures(@Parent() memo: IMemo, @CurrentActor() actor: ActorContext) {
+    this.authorizationService.grantAccessOrFail(
+      actor,
+      memo.authorization,
+      AuthorizationPrivilege.READ,
+      'read memo signatures'
+    );
+    return this.signingAttemptService.findSignedForMemo(memo.id);
+  }
 
   @ResolveField(() => Markdown, {
     nullable: true,

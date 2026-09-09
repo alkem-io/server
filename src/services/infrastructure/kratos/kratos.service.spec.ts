@@ -508,6 +508,65 @@ describe('KratosService', () => {
     });
   });
 
+  describe('getCleverbaseSubject', () => {
+    it('reads OIDC credentials and returns only the provider subject', async () => {
+      const getIdentity = vi
+        .spyOn(service, 'getIdentityById')
+        .mockResolvedValue({
+          credentials: {
+            oidc: {
+              identifiers: [
+                'linkedin:elsewhere',
+                'cleverbase:subject-from-provider',
+              ],
+            },
+          },
+          traits: { serialNumber: 'NOT-THE-SUBJECT' },
+        } as any);
+
+      await expect(
+        service.getCleverbaseSubject('kratos-identity')
+      ).resolves.toBe('subject-from-provider');
+      expect(getIdentity).toHaveBeenCalledWith('kratos-identity', ['oidc']);
+    });
+
+    it.each([
+      ['missing credentials', {}],
+      ['missing OIDC credentials', { credentials: { password: {} } }],
+      [
+        'another provider',
+        { credentials: { oidc: { identifiers: ['github:subject'] } } },
+      ],
+      [
+        'an empty provider subject',
+        { credentials: { oidc: { identifiers: ['cleverbase:'] } } },
+      ],
+    ])('returns undefined for %s', async (_label, identity) => {
+      vi.spyOn(service, 'getIdentityById').mockResolvedValue(identity as any);
+
+      await expect(
+        service.getCleverbaseSubject('kratos-identity')
+      ).resolves.toBeUndefined();
+    });
+
+    it('returns undefined when the Kratos identity no longer exists', async () => {
+      vi.spyOn(service, 'getIdentityById').mockResolvedValue(undefined);
+
+      await expect(
+        service.getCleverbaseSubject('missing-identity')
+      ).resolves.toBeUndefined();
+    });
+
+    it('propagates Kratos failures other than a missing identity', async () => {
+      const unavailable = new Error('Kratos unavailable');
+      vi.spyOn(service, 'getIdentityById').mockRejectedValue(unavailable);
+
+      await expect(
+        service.getCleverbaseSubject('kratos-identity')
+      ).rejects.toBe(unavailable);
+    });
+  });
+
   describe('getAuthenticatedAt', () => {
     it('should return undefined when sessions is null', async () => {
       vi.spyOn(
