@@ -1,3 +1,4 @@
+import { X509Certificate } from 'node:crypto';
 import { LogContext } from '@common/enums';
 import { AuthenticationType } from '@common/enums/authentication.type';
 import {
@@ -18,6 +19,9 @@ import {
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { OryDefaultIdentitySchema } from './types/ory.default.identity.schema';
+
+export const CLEVERBASE_SIGNING_CERTIFICATE_METADATA_KEY =
+  'com.cleverbase.signing_certificate';
 
 /**
  * The `KratosService` class provides methods to interact with the Ory Kratos identity management system:
@@ -421,7 +425,33 @@ export class KratosService {
     const identifier = identity?.credentials?.oidc?.identifiers?.find(value =>
       value.startsWith(prefix)
     );
-    return identifier?.slice(prefix.length) || undefined;
+    const providerSubject = identifier?.slice(prefix.length) || undefined;
+    if (!providerSubject) {
+      return undefined;
+    }
+
+    const metadata = identity?.metadata_admin as
+      | Record<string, unknown>
+      | undefined;
+    const signingCertificate =
+      metadata?.[CLEVERBASE_SIGNING_CERTIFICATE_METADATA_KEY];
+    if (signingCertificate === undefined) {
+      return providerSubject;
+    }
+    if (typeof signingCertificate !== 'string') {
+      return undefined;
+    }
+
+    try {
+      const subject = new X509Certificate(signingCertificate).toLegacyObject()
+        .subject as unknown as Record<string, unknown>;
+      const serialNumber = subject.serialNumber;
+      return typeof serialNumber === 'string' && serialNumber.length > 0
+        ? serialNumber
+        : undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   /**

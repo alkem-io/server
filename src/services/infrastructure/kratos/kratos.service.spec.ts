@@ -5,10 +5,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import type { Identity } from '@ory/kratos-client';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { KratosService } from './kratos.service';
-
-const CLEVERBASE_SIGNING_CERTIFICATE_METADATA_KEY =
-  'com.cleverbase.signing_certificate';
+import {
+  CLEVERBASE_SIGNING_CERTIFICATE_METADATA_KEY,
+  KratosService,
+} from './kratos.service';
 
 // Returned by Cleverbase's public Identification Driver Stub for the
 // com.cleverbase.signing_certificate scope on 2026-09-09.
