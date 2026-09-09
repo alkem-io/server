@@ -98,6 +98,10 @@ describe('CollaborationLicenseService', () => {
             type: LicenseEntitlementType.SPACE_FLAG_OFFICE_DOCUMENTS,
             enabled: false,
           },
+          {
+            type: LicenseEntitlementType.SPACE_FLAG_MEMO_SIGNING,
+            enabled: false,
+          },
         ],
       } as any;
       const collaboration = {
@@ -127,7 +131,13 @@ describe('CollaborationLicenseService', () => {
 
       expect(licenseService.reset).toHaveBeenCalledWith(license);
       expect(licenseService.findAndCopyParentEntitlement).toHaveBeenCalledTimes(
-        4
+        5
+      );
+      expect(licenseService.findAndCopyParentEntitlement).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: LicenseEntitlementType.SPACE_FLAG_MEMO_SIGNING,
+        }),
+        parentLicense.entitlements
       );
       expect(result).toContain(license);
     });

@@ -694,7 +694,9 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       {} as any,
       {} as any,
       {} as any,
-      { error: vi.fn() } as any
+      { error: vi.fn() } as any,
+      services.communityResolver,
+      services.license
     );
     const actor = Object.assign(new ActorContext(), {
       actorID: UUIDS.actor,
@@ -778,7 +780,9 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       {} as any,
       {} as any,
       {} as any,
-      { error: vi.fn() } as any
+      { error: vi.fn() } as any,
+      services.communityResolver,
+      services.license
     );
     const actor = Object.assign(new ActorContext(), {
       actorID: UUIDS.actor,
@@ -868,7 +872,9 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       {} as any,
       {} as any,
       {} as any,
-      { error: vi.fn() } as any
+      { error: vi.fn() } as any,
+      services.communityResolver,
+      services.license
     );
     const actor = Object.assign(new ActorContext(), {
       actorID: UUIDS.actor,
@@ -955,7 +961,9 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       {} as any,
       {} as any,
       {} as any,
-      { error: vi.fn() } as any
+      { error: vi.fn() } as any,
+      services.communityResolver,
+      services.license
     );
     const actor = Object.assign(new ActorContext(), {
       actorID: UUIDS.actor,
@@ -1029,7 +1037,9 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       {} as any,
       {} as any,
       {} as any,
-      { error: vi.fn() } as any
+      { error: vi.fn() } as any,
+      services.communityResolver,
+      services.license
     );
     const actor = Object.assign(new ActorContext(), {
       actorID: UUIDS.actor,
@@ -1287,7 +1297,9 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       {} as any,
       {} as any,
       {} as any,
-      { error: vi.fn() } as any
+      { error: vi.fn() } as any,
+      services.communityResolver,
+      services.license
     );
     const actor = Object.assign(new ActorContext(), {
       actorID: UUIDS.actor,
@@ -1455,7 +1467,9 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       services.bucket,
       services.documentAuthorization,
       services.document,
-      logger
+      logger,
+      services.communityResolver,
+      services.license
     );
     return {
       actor,
@@ -1542,6 +1556,12 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
     const lifecycle = {
       publishDocumentDeleted: vi.fn().mockResolvedValue(undefined),
     };
+    const communityResolver = {
+      getCollaborationLicenseFromMemoOrFail: vi.fn().mockResolvedValue({}),
+    } as any;
+    const license = {
+      isEntitlementEnabledOrFail: vi.fn(),
+    } as any;
     const memo = new MemoService(
       logger,
       source.getRepository(MemoFixture) as any,
@@ -1579,9 +1599,11 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       authorization,
       bucket,
       bucketEntity,
+      communityResolver,
       document,
       documentAuthorization,
       fileAdapter,
+      license,
       memo,
       memoEntity,
       profile,
