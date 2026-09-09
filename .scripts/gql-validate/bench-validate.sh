@@ -20,6 +20,7 @@ ENV_FILE="$PIPELINE_DIR/.env"
 BENCH_DIR="$PIPELINE_DIR/benchmarks"
 
 source "$PROJECT_DIR/.scripts/lib/kratos.sh"
+source "$PROJECT_DIR/.scripts/lib/graphql.sh"
 
 # ─── Argument parsing ────────────────────────────────────────────────────────
 MODE="${1:-both}"
@@ -36,6 +37,9 @@ EXTRA_ARGS=("$@")
 [ -f "$ENV_FILE" ] || { echo "ERROR: .env not found at $ENV_FILE" >&2; exit 1; }
 source "$ENV_FILE"
 
+# GQL_ENDPOINT is also set (to the same default) by lib/graphql.sh above;
+# recompute it here now that ENV_FILE is loaded so a .env override of
+# GRAPHQL_NON_INTERACTIVE_ENDPOINT takes effect for gql_request too.
 GQL_ENDPOINT="${GRAPHQL_NON_INTERACTIVE_ENDPOINT:-http://localhost:3000/api/private/non-interactive/graphql}"
 
 # ─── Verify server is reachable ──────────────────────────────────────────────
@@ -50,16 +54,25 @@ fi
 echo "Server is reachable."
 
 # ─── Auth: check token, re-login if needed ───────────────────────────────────
+#
+# Post-Oathkeeper, the GraphQL endpoints accept only a Hydra-issued JWT, not
+# a raw Kratos session_token (see .scripts/non-interactive-login.sh). So a
+# cached token is validated against the real consumer — this endpoint,
+# via gql_request — rather than Kratos's own /sessions/whoami (which
+# understands a Kratos session, not this JWT, and would reject it every
+# time). A missing/invalid/expired token is re-minted with the same
+# OAuth2 Authorization Code + PKCE → Hydra exchange non-interactive-login.sh
+# uses (oidc_login_jwt), not the stale self-service kratos_login() flow.
 ensure_auth() {
   if [ -f "$TOKEN_FILE" ]; then
     SESSION_TOKEN=$(cat "$TOKEN_FILE")
     export SESSION_TOKEN
 
-    if kratos_verify_session 2>/dev/null; then
+    if gql_request 'query { me { user { id } } }' >/dev/null 2>&1; then
       echo "Existing session token is valid."
       return 0
     fi
-    echo "Session token expired, re-authenticating..."
+    echo "Session token expired or invalid, re-authenticating..."
   else
     echo "No session token found, authenticating..."
   fi
@@ -67,9 +80,12 @@ ensure_auth() {
   [ -z "${PIPELINE_USER:-}" ] && { echo "ERROR: PIPELINE_USER not set in $ENV_FILE" >&2; exit 1; }
   [ -z "${PIPELINE_PASSWORD:-}" ] && { echo "ERROR: PIPELINE_PASSWORD not set in $ENV_FILE" >&2; exit 1; }
 
-  kratos_login "$PIPELINE_USER" "$PIPELINE_PASSWORD"
-  kratos_verify_session
+  local cookie_jar="$PIPELINE_DIR/.kratos-cookies"
+  oidc_login_jwt "$PIPELINE_USER" "$PIPELINE_PASSWORD" "$cookie_jar"
+  rm -f "$cookie_jar"
 
+  SESSION_TOKEN="$ACCESS_TOKEN"
+  export SESSION_TOKEN
   echo "$SESSION_TOKEN" > "$TOKEN_FILE"
   chmod 600 "$TOKEN_FILE"
   echo "Authenticated as identity: $IDENTITY_ID"
