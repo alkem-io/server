@@ -119,3 +119,7 @@ tmp/prev.schema.graphql
 **/__pycache__/
 
 coverage-tmp/
+
+# Forge: locally vendored library builds used during cross-repo development.
+# Never committed — the dependency must resolve from a published artifact.
+.forge-vendor/
