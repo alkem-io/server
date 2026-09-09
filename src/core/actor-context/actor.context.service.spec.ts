@@ -75,7 +75,7 @@ describe('ActorContextService', () => {
   });
 
   describe('populateFromActorID', () => {
-    it('sets actorID and credentials on the context', async () => {
+    it('sets actorID, credentials and the persisted authenticationID for a user', async () => {
       const ctx = new ActorContext();
       const mockCredentials = [{ type: 'global-admin', resourceID: '' }];
 
@@ -83,11 +83,29 @@ describe('ActorContextService', () => {
       (actorLookupService.getActorCredentialsOrFail as any).mockResolvedValue(
         mockCredentials
       );
+      mockEntityManager.findOne.mockResolvedValue({
+        authenticationID: 'kratos-id-1',
+      });
 
       await service.populateFromActorID(ctx, 'actor-123');
 
       expect(ctx.actorID).toBe('actor-123');
       expect(ctx.credentials).toBe(mockCredentials);
+      expect(ctx.authenticationID).toBe('kratos-id-1');
+    });
+
+    it('keeps authenticationID unset for a non-user actor', async () => {
+      const ctx = new ActorContext();
+      const actorLookupService = module.get(ActorLookupService);
+      (actorLookupService.getActorCredentialsOrFail as any).mockResolvedValue(
+        []
+      );
+      mockEntityManager.findOne.mockResolvedValue(null);
+
+      await service.populateFromActorID(ctx, 'actor-123');
+
+      expect(ctx.actorID).toBe('actor-123');
+      expect(ctx.authenticationID).toBeUndefined();
     });
   });
 
