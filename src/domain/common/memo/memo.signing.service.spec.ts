@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { AlkemioErrorStatus } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LogContext } from '@common/enums/logging.context';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
@@ -32,6 +33,8 @@ describe('MemoSigningService', () => {
     },
   };
   const pdf = Buffer.from('%PDF-fixed-preview');
+  const memoLicense = { id: 'memo-license' };
+  const unrelatedLicense = { id: 'unrelated-license' };
   const calls: string[] = [];
   const authorizationService = {
     grantAccessOrFail: vi.fn(() => calls.push('authorize')),
@@ -119,6 +122,17 @@ describe('MemoSigningService', () => {
       (document: { id: string }) => `https://alkem.io/document/${document.id}`
     ),
   };
+  const communityResolverService = {
+    getCollaborationLicenseFromMemoOrFail: vi.fn(async (memoId: string) => {
+      calls.push('resolve-license');
+      return memoId === memo.id ? memoLicense : unrelatedLicense;
+    }),
+  };
+  const licenseService = {
+    isEntitlementEnabledOrFail: vi.fn((_license: unknown) => {
+      calls.push('check-entitlement');
+    }),
+  };
   const service = new MemoSigningService(
     authorizationService as any,
     memoService as any,
@@ -132,7 +146,9 @@ describe('MemoSigningService', () => {
     storageBucketService as any,
     documentAuthorizationService as any,
     documentService as any,
-    logger as any
+    logger as any,
+    communityResolverService as any,
+    licenseService as any
   );
   beforeEach(() => {
     calls.length = 0;
@@ -141,6 +157,15 @@ describe('MemoSigningService', () => {
     kratosService.getCleverbaseSubject.mockImplementation(async () => {
       calls.push('identity');
       return 'linked-subject';
+    });
+    communityResolverService.getCollaborationLicenseFromMemoOrFail.mockImplementation(
+      async memoId => {
+        calls.push('resolve-license');
+        return memoId === memo.id ? memoLicense : unrelatedLicense;
+      }
+    );
+    licenseService.isEntitlementEnabledOrFail.mockImplementation(() => {
+      calls.push('check-entitlement');
     });
     attemptService.createUnready.mockImplementation(async () => {
       calls.push('insert');
@@ -190,6 +215,8 @@ describe('MemoSigningService', () => {
 
     expect(calls).toEqual([
       'authorize',
+      'resolve-license',
+      'check-entitlement',
       'identity',
       'insert',
       'live-read',
@@ -202,6 +229,13 @@ describe('MemoSigningService', () => {
       memo.authorization,
       AuthorizationPrivilege.CONTRIBUTE,
       'sign memo'
+    );
+    expect(
+      communityResolverService.getCollaborationLicenseFromMemoOrFail
+    ).toHaveBeenCalledWith(memo.id);
+    expect(licenseService.isEntitlementEnabledOrFail).toHaveBeenCalledWith(
+      memoLicense,
+      LicenseEntitlementType.SPACE_FLAG_MEMO_SIGNING
     );
     expect(collaborationDocumentService.read).toHaveBeenCalledWith(
       memo.id,
@@ -342,6 +376,44 @@ describe('MemoSigningService', () => {
     expect(kratosService.getCleverbaseSubject).not.toHaveBeenCalled();
     expect(attemptService.createUnready).not.toHaveBeenCalled();
     expect(renderer.render).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'prepare',
+    'continue',
+  ] as const)('does not let an enabled unrelated space authorize %s', async operation => {
+    const snapshot = Buffer.from('%PDF-exact-preview');
+    attemptService.getForActorOrFail.mockResolvedValue({
+      id: 'attempt-1',
+      memoId: memo.id,
+      status: SigningAttemptStatus.PENDING,
+      snapshotDocumentId: 'snapshot-1',
+      contentSha256: createHash('sha256').update(snapshot).digest('hex'),
+      createdDate: new Date(),
+    });
+    fileServiceAdapter.getDocumentContent.mockResolvedValue(snapshot);
+    licenseService.isEntitlementEnabledOrFail.mockImplementation(license => {
+      if (license === memoLicense) throw new Error('memo signing disabled');
+    });
+
+    const result =
+      operation === 'prepare'
+        ? service.prepareMemoSigning(memo.id, actor)
+        : service.continueMemoSigning('attempt-1', actor);
+
+    await expect(result).rejects.toThrow('memo signing disabled');
+    expect(
+      communityResolverService.getCollaborationLicenseFromMemoOrFail
+    ).toHaveBeenCalledWith(memo.id);
+    expect(licenseService.isEntitlementEnabledOrFail).toHaveBeenCalledWith(
+      memoLicense,
+      LicenseEntitlementType.SPACE_FLAG_MEMO_SIGNING
+    );
+    expect(kratosService.getCleverbaseSubject).not.toHaveBeenCalled();
+    expect(attemptService.createUnready).not.toHaveBeenCalled();
+    expect(fileServiceAdapter.getDocumentContent).not.toHaveBeenCalled();
+    expect(attemptService.claimStart).not.toHaveBeenCalled();
+    expect(trustGatewayClient.start).not.toHaveBeenCalled();
   });
 
   it('fails a session without a Kratos identity before rendering', async () => {
@@ -488,6 +560,13 @@ describe('MemoSigningService', () => {
       authorizeUrl: 'https://connect.acc.cleverbase.com/authorize',
     });
     expect(Object.keys(result)).toEqual(['authorizeUrl']);
+    expect(
+      communityResolverService.getCollaborationLicenseFromMemoOrFail
+    ).toHaveBeenCalledWith(memo.id);
+    expect(licenseService.isEntitlementEnabledOrFail).toHaveBeenCalledWith(
+      memoLicense,
+      LicenseEntitlementType.SPACE_FLAG_MEMO_SIGNING
+    );
     expect(trustGatewayClient.start).toHaveBeenCalledWith(
       snapshot,
       'linked-subject',
