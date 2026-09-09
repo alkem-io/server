@@ -44,6 +44,27 @@ const isDisabledSentinel = (
 ): response is { disabled: true } =>
   response !== undefined && 'disabled' in response;
 
+/**
+ * Every error path on the wire (including the expected SPACE_NOT_FOUND
+ * skip) marshals the response array fields as JSON `null`, never `[]` — the
+ * Go side only empties them on the success branch. `CommunicationAdapter`
+ * already normalizes at the wire boundary, but this second, cheap
+ * normalization at the point of use means no accounting below can ever
+ * dereference a null array regardless of what the adapter wrapper returns.
+ */
+const normalizeArrays = (
+  response: SetChildrenResponse
+): SetChildrenResponse => ({
+  ...response,
+  added: response.added ?? [],
+  removed: response.removed ?? [],
+  pruned_unknown: response.pruned_unknown ?? [],
+  unknown_kept: response.unknown_kept ?? [],
+  unresolved: response.unresolved ?? [],
+  parent_pointers_repaired: response.parent_pointers_repaired ?? [],
+  parent_pointers_deferred: response.parent_pointers_deferred ?? [],
+});
+
 const emptySummary = (): ForumHierarchyReconcilePassSummary => ({
   scanned: 0,
   drifted: 0,
@@ -54,6 +75,17 @@ const emptySummary = (): ForumHierarchyReconcilePassSummary => ({
   parentPointersDeferred: 0,
   aborted: null,
   adapterDisabled: false,
+});
+
+/**
+ * Used only on the unexpected-throw path (see the top-level try/catch in
+ * `reconcile`). `failed: 1` is a deliberate sentinel — an audit row for a
+ * pass that never got to compute a real summary must never derive
+ * `outcome: 'success'` from an all-zero summary.
+ */
+const erroredSummary = (): ForumHierarchyReconcilePassSummary => ({
+  ...emptySummary(),
+  failed: 1,
 });
 
 /**
@@ -85,6 +117,48 @@ export class AdminCommunicationForumHierarchyReconcileService {
    * entire lifecycle from here (results, completion, the one audit row).
    */
   async reconcile(
+    taskId: string,
+    actorID: string,
+    input: AdminCommunicationReconcileForumHierarchyInput
+  ): Promise<void> {
+    try {
+      await this.runReconcilePass(taskId, actorID, input);
+    } catch (error) {
+      // Nothing above this line may ever throw out of the fire-and-forget
+      // call site in the resolver: an uncaught rejection here would leave
+      // the task IN_PROGRESS forever, write no audit row, and — with no
+      // process-level unhandledRejection handler registered — take the pod
+      // down. Every await below is individually guarded so a second
+      // failure (e.g. the task store itself being down) can never escape
+      // this catch either.
+      this.logger.error?.(
+        `Forum hierarchy reconcile pass threw: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        error instanceof Error ? error.stack : undefined,
+        LogContext.COMMUNICATION
+      );
+
+      await this.recordAudit(actorID, taskId, input, erroredSummary());
+
+      try {
+        await this.taskService.completeWithError(
+          taskId,
+          `Forum hierarchy reconcile pass failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      } catch (settleError) {
+        this.logger.error?.(
+          'Failed to settle task after a forum hierarchy reconcile pass threw',
+          settleError instanceof Error ? settleError.stack : undefined,
+          LogContext.COMMUNICATION
+        );
+      }
+    }
+  }
+
+  private async runReconcilePass(
     taskId: string,
     actorID: string,
     input: AdminCommunicationReconcileForumHierarchyInput
@@ -121,9 +195,21 @@ export class AdminCommunicationForumHierarchyReconcileService {
     let aborted: 'circuit-breaker' | 'budget-exhausted' | null = null;
     let adapterDisabled = false;
 
+    // Per-sweep call accounting (data-model.md: "failed = calls with
+    // success=false + calls never made after a breaker/budget abort").
+    // Reset at the start of every `runSweep` invocation and folded into
+    // `callBasedFailed` at the end of that same invocation, so a sweep that
+    // is entirely skipped (e.g. phase B never starts because phase A
+    // itself aborted) contributes nothing, while a sweep that starts and
+    // is cut short mid-way honestly counts every call it never got to make.
+    let sweepIssued = 0;
+    let sweepExplicitFailures = 0;
+    let callBasedFailed = 0;
+
     const isAborted = () => aborted !== null || adapterDisabled;
     const markFailed = (parentContextId: string) => {
       outcomes.set(parentContextId, { failed: true });
+      sweepExplicitFailures++;
     };
     const markAttempted = (parentContextId: string) => {
       if (!outcomes.has(parentContextId)) {
@@ -140,7 +226,8 @@ export class AdminCommunicationForumHierarchyReconcileService {
     ): Promise<SetChildrenResponse | undefined> => {
       if (isAborted()) return undefined;
 
-      const response = await this.communicationAdapter.setChildren({
+      sweepIssued++;
+      const rawResponse = await this.communicationAdapter.setChildren({
         parent_context_id: parentContextId,
         desired_child_context_ids: desired,
         children_are_spaces: childrenAreSpaces,
@@ -153,13 +240,13 @@ export class AdminCommunicationForumHierarchyReconcileService {
       // The disabled sentinel carries no `success` field at all — it is
       // deliberately not shaped like a BaseResponse, so it can never be
       // mistaken for one.
-      if (isDisabledSentinel(response)) {
+      if (isDisabledSentinel(rawResponse)) {
         adapterDisabled = true;
         markFailed(parentContextId);
         return undefined;
       }
 
-      if (response === undefined) {
+      if (rawResponse === undefined) {
         consecutiveTimeouts++;
         markFailed(parentContextId);
         if (consecutiveTimeouts >= 3) {
@@ -167,6 +254,8 @@ export class AdminCommunicationForumHierarchyReconcileService {
         }
         return undefined;
       }
+
+      const response = normalizeArrays(rawResponse);
 
       consecutiveTimeouts = 0;
       markAttempted(parentContextId);
@@ -211,9 +300,17 @@ export class AdminCommunicationForumHierarchyReconcileService {
       return response;
     };
 
-    const parentResolved = (response: SetChildrenResponse | undefined) =>
-      response !== undefined &&
+    // A category is excluded from the forum-level desired set only on a
+    // *definitive* SPACE_NOT_FOUND. Anything else — including `undefined`
+    // (transport timeout/channel error, i.e. "we don't know") — keeps the
+    // category in the desired set: at worst a no-op add, never a
+    // destructive removal of a still-live category driven by a transient
+    // RPC failure rather than by desired state (R-2 / FR-021).
+    const shouldIncludeInDesiredSet = (
+      response: SetChildrenResponse | undefined
+    ) =>
       !(
+        response !== undefined &&
         response.success === false &&
         response.error?.code === ErrCodeSpaceNotFound
       );
@@ -228,6 +325,9 @@ export class AdminCommunicationForumHierarchyReconcileService {
       applyRemovals: boolean,
       passDryRun: boolean
     ): Promise<void> => {
+      sweepIssued = 0;
+      sweepExplicitFailures = 0;
+
       const resolvedCategoryContextIds: string[] = [];
 
       for (const category of Object.values(ForumDiscussionCategory)) {
@@ -241,7 +341,7 @@ export class AdminCommunicationForumHierarchyReconcileService {
           applyRemovals,
           passDryRun
         );
-        if (parentResolved(response)) {
+        if (shouldIncludeInDesiredSet(response)) {
           resolvedCategoryContextIds.push(contextId);
         }
       }
@@ -255,6 +355,9 @@ export class AdminCommunicationForumHierarchyReconcileService {
           passDryRun
         );
       }
+
+      const neverIssuedThisSweep = totalIntendedParents - sweepIssued;
+      callBasedFailed += sweepExplicitFailures + neverIssuedThisSweep;
     };
 
     if (input.dryRun) {
@@ -269,11 +372,7 @@ export class AdminCommunicationForumHierarchyReconcileService {
     }
 
     const scanned = outcomes.size;
-    const explicitlyFailed = [...outcomes.values()].filter(
-      o => o.failed
-    ).length;
-    const neverAttempted = totalIntendedParents - scanned;
-    const failed = explicitlyFailed + (isAborted() ? neverAttempted : 0);
+    const failed = callBasedFailed;
 
     const summary: ForumHierarchyReconcilePassSummary = {
       scanned,

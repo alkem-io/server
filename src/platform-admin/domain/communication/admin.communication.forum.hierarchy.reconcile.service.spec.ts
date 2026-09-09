@@ -496,6 +496,150 @@ describe('AdminCommunicationForumHierarchyReconcileService', () => {
     });
   });
 
+  describe('unguarded throw (R-2/A1.2 — the pass must never reject)', () => {
+    it('resolves (never rejects), audits once with a failing outcome, and errors the task when a collaborator throws', async () => {
+      forumRepository.find = vi
+        .fn()
+        .mockRejectedValue(new Error('connection pool exhausted'));
+
+      await expect(
+        service.reconcile('task-1', 'actor-1', defaultInput)
+      ).resolves.toBeUndefined();
+
+      expect(
+        platformOperationsAuditService.recordOperation
+      ).toHaveBeenCalledTimes(1);
+      const [auditCall] =
+        platformOperationsAuditService.recordOperation.mock.calls[0];
+      expect(auditCall.outcome).toBe('failure');
+
+      expect(taskService.completeWithError).toHaveBeenCalledWith(
+        'task-1',
+        expect.stringContaining('connection pool exhausted')
+      );
+      expect(taskService.complete).not.toHaveBeenCalled();
+    });
+
+    it('still resolves even when the task store itself is unreachable on the settle call', async () => {
+      forumRepository.find = vi.fn().mockRejectedValue(new Error('db down'));
+      taskService.completeWithError.mockRejectedValueOnce(
+        new Error('redis down')
+      );
+
+      await expect(
+        service.reconcile('task-1', 'actor-1', defaultInput)
+      ).resolves.toBeUndefined();
+    });
+  });
+
+  describe('wire null arrays on an error response (R-1/correctness)', () => {
+    it('never throws on the real SPACE_NOT_FOUND wire shape — no array fields at all, not empty arrays', async () => {
+      // The Go adapter's error branch (including this expected skip) never
+      // populates the response arrays — `emptyIfNil` only runs on the
+      // success branch — so the real wire payload has no array fields at
+      // all, which is `null`/`undefined` on the TS side, not `[]`.
+      (communicationAdapter.setChildren as Mock).mockResolvedValue({
+        success: false,
+        error: { code: ErrCodeSpaceNotFound, message: 'space not found' },
+      } as unknown as SetChildrenResponse);
+
+      await expect(
+        service.reconcile('task-1', 'actor-1', defaultInput)
+      ).resolves.toBeUndefined();
+
+      // A pass where every category is a natural SPACE_NOT_FOUND skip is a
+      // clean pass, not a failure — this asserts the crash from corr-server-1
+      // is gone, not that the pass reports zero failures for some other reason.
+      expect(taskService.completeWithError).not.toHaveBeenCalled();
+      expect(taskService.complete).toHaveBeenCalledWith(
+        'task-1',
+        TaskStatus.COMPLETED
+      );
+      const [auditCall] =
+        platformOperationsAuditService.recordOperation.mock.calls[0];
+      expect(auditCall.target.failed).toBe(0);
+    });
+
+    it('never throws on a genuine (non-SPACE_NOT_FOUND) failure response with null arrays', async () => {
+      (communicationAdapter.setChildren as Mock).mockResolvedValue({
+        success: false,
+        error: { code: 'INTERNAL_ERROR', message: 'boom' },
+      } as unknown as SetChildrenResponse);
+
+      await expect(
+        service.reconcile('task-1', 'actor-1', defaultInput)
+      ).resolves.toBeUndefined();
+
+      const [auditCall] =
+        platformOperationsAuditService.recordOperation.mock.calls[0];
+      expect(auditCall.target.failed).toBe(ALL_CATEGORIES.length + 1);
+    });
+  });
+
+  describe('transient failure mid-sweep never narrows the forum-level desired set (R-2/FR-021)', () => {
+    it('keeps a category that timed out once in the forum-level desired set rather than removing its edge', async () => {
+      const flakyCategory = ALL_CATEGORIES[1];
+      const flakyContextId = getForumCategoryContextId(FORUM_ID, flakyCategory);
+      (communicationAdapter.setChildren as Mock).mockImplementation(
+        async (request: SetChildrenRequest) =>
+          request.parent_context_id === flakyContextId
+            ? undefined // one-off transport timeout, not 3 in a row
+            : cleanResponse()
+      );
+
+      await service.reconcile('task-1', 'actor-1', {
+        ...defaultInput,
+        dryRun: false,
+      });
+
+      const calls = (communicationAdapter.setChildren as Mock).mock.calls as [
+        SetChildrenRequest,
+      ][];
+      const forumLevelCalls = calls.filter(
+        ([request]) => request.parent_context_id === FORUM_ID
+      );
+      expect(forumLevelCalls.length).toBeGreaterThan(0);
+      for (const [request] of forumLevelCalls) {
+        expect(request.desired_child_context_ids).toContain(flakyContextId);
+      }
+    });
+  });
+
+  describe('budget exhaustion mid phase-B honestly reports a partial (spec-server-1)', () => {
+    it('reports failed > 0 and a non-success outcome when phase A completes but phase B is cut short', async () => {
+      let phaseBCalls = 0;
+      (communicationAdapter.setChildren as Mock).mockImplementation(
+        async (request: SetChildrenRequest) => {
+          if (!request.apply_removals) {
+            // Phase A: cheap, stays well under the budget.
+            return cleanResponse();
+          }
+          phaseBCalls++;
+          // Phase B: the very first converge call already reports enough
+          // writes to blow the budget, aborting the rest of phase B.
+          return cleanResponse({ added: ['a', 'b', 'c'] });
+        }
+      );
+
+      await service.reconcile('task-1', 'actor-1', {
+        ...defaultInput,
+        dryRun: false,
+        maxOperations: 2,
+      });
+
+      expect(phaseBCalls).toBe(1);
+      const [auditCall] =
+        platformOperationsAuditService.recordOperation.mock.calls[0];
+      expect(auditCall.target.aborted).toBe('budget-exhausted');
+      expect(auditCall.target.failed).toBeGreaterThan(0);
+      expect(auditCall.outcome).toBe('failure');
+      expect(taskService.completeWithError).toHaveBeenCalledWith(
+        'task-1',
+        expect.stringContaining('budget-exhausted')
+      );
+    });
+  });
+
   describe('no delete path (risk R-5, contract no-scheduler-no-delete)', () => {
     it('never calls any delete-shaped method on the communication adapter', async () => {
       await service.reconcile('task-1', 'actor-1', {

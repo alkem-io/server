@@ -816,5 +816,29 @@ describe('CommunicationAdapter', () => {
       expect(result).toBeUndefined();
       expect(mockLogger.error).toHaveBeenCalled();
     });
+
+    it('normalizes every array field to [] when the wire response carries null arrays (the real SPACE_NOT_FOUND shape)', async () => {
+      // The Go adapter's error branch (including the expected
+      // SPACE_NOT_FOUND skip) never populates these arrays — `emptyIfNil`
+      // only runs on the success branch — so the wire payload has no array
+      // fields at all, which JSON round-trips as `null` on the TS side.
+      mockAmqpConnection.request.mockResolvedValue(
+        createErrorResponse('SPACE_NOT_FOUND', 'space not found')
+      );
+
+      const result = await adapter.setChildren(request);
+
+      expect(result).toEqual({
+        success: false,
+        error: { code: 'SPACE_NOT_FOUND', message: 'space not found' },
+        added: [],
+        removed: [],
+        pruned_unknown: [],
+        unknown_kept: [],
+        unresolved: [],
+        parent_pointers_repaired: [],
+        parent_pointers_deferred: [],
+      });
+    });
   });
 });
