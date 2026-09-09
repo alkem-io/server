@@ -544,6 +544,23 @@ export class RoleSetService {
       actorID,
       roleSetID
     );
+    // On an ORGANIZATION role set a declined invitation does not block a fresh
+    // one (FR-005). `rejected` is deliberately NOT a final state — 061 keeps it
+    // as a waypoint to `archived` for the Space flow — so finality alone would
+    // leave a declined user permanently un-invitable, with the re-invite path
+    // only reachable by archiving the old row first.
+    //
+    // Scoped to organizations on purpose: 061 documented archive-then-invite as
+    // the Space route, and widening this would change that shipped behaviour.
+    // Safe because the concern that removed the REINVITE lifecycle transition —
+    // looping someone back to `invited` past the opt-out, the role caps and the
+    // notification — does not apply here. This path only reports whether an
+    // invitation is open; creating the new one still goes through
+    // `inviteForEntryRoleOnRoleSet`, where every guard and the notification run.
+    // Resolved lazily: only a rejected invitation needs the role-set type, and
+    // rejected rows are rare, so the common path costs nothing extra.
+    let roleSetIsOrganization: boolean | undefined;
+
     for (const invitation of invitations) {
       // skip any finalized invitations; only return pending invitations
       const isFinalized = await this.invitationService.isFinalizedInvitation(
@@ -551,6 +568,16 @@ export class RoleSetService {
       );
       if (isFinalized) {
         continue;
+      }
+      if (
+        this.invitationService.getInvitationState(invitation) === 'rejected'
+      ) {
+        roleSetIsOrganization ??=
+          (await this.getRoleSetOrFail(roleSetID)).type ===
+          RoleSetType.ORGANIZATION;
+        if (roleSetIsOrganization) {
+          continue;
+        }
       }
       await this.roleSetCacheService.setOpenInvitationCache(
         actorID,
@@ -1746,16 +1773,54 @@ export class RoleSetService {
     return credentialMatches;
   }
 
+  /**
+   * The implicit roles that can exist on a role set of this type.
+   *
+   * Each implicit role belongs to exactly one role-set type, and its credential
+   * resolver rejects the other type outright rather than returning nothing —
+   * `getCredentialSpaceImplicitRole` requires SPACE, and
+   * `getCredentialForOrganizationImplicitRole` requires ORGANIZATION. So asking
+   * about an inapplicable role is not a harmless empty answer, it throws.
+   */
+  private getImplicitRolesForRoleSetType(
+    roleSetType: RoleSetType
+  ): RoleSetRoleImplicit[] {
+    switch (roleSetType) {
+      case RoleSetType.SPACE:
+        return [RoleSetRoleImplicit.SUBSPACE_ADMIN];
+      case RoleSetType.ORGANIZATION:
+        return [RoleSetRoleImplicit.ACCOUNT_ADMIN];
+      default:
+        return [];
+    }
+  }
+
+  /**
+   * Evaluates only the implicit roles that apply to this role set's type.
+   *
+   * Previously this iterated every member of `RoleSetRoleImplicit` regardless of
+   * type, so `myRolesImplicit` threw "Invalid roleSet type" for BOTH types — a
+   * space role set asked about ACCOUNT_ADMIN and an organization role set asked
+   * about SUBSPACE_ADMIN, and each credential resolver rejected the mismatch.
+   * The field has been unusable on organization role sets since ACCOUNT_ADMIN
+   * joined the enum; 062 is simply the first feature to query it there.
+   */
   async getImplicitRoles(
     actorContext: ActorContext,
     roleSet: IRoleSet
   ): Promise<RoleSetRoleImplicit[]> {
+    // An anonymous caller has no actor to hold a credential, and `actorID` is
+    // the empty string rather than undefined — passing it through reaches the
+    // database as an invalid uuid literal. Degrade to "no implicit roles",
+    // matching how the `me` sub-resolvers treat an empty actorID.
+    if (!actorContext.actorID) {
+      return [];
+    }
+
     const result: RoleSetRoleImplicit[] = [];
     const actor = await this.actorService.getActorOrFail(actorContext.actorID);
 
-    const rolesImplicit: RoleSetRoleImplicit[] = Object.values(
-      RoleSetRoleImplicit
-    ) as RoleSetRoleImplicit[];
+    const rolesImplicit = this.getImplicitRolesForRoleSetType(roleSet.type);
     for (const role of rolesImplicit) {
       const hasActorRole = await this.isInRoleImplicit(actor.id, roleSet, role);
       if (hasActorRole) {
