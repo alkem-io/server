@@ -1,4 +1,5 @@
 import { X509Certificate } from 'node:crypto';
+import { LogContext } from '@common/enums';
 import { AuthenticationType } from '@common/enums/authentication.type';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -41,9 +42,16 @@ const createSyntheticIDToken = (claims: Record<string, unknown>): string =>
 
 describe('KratosService', () => {
   let service: KratosService;
+  const warn = MockWinstonProvider.useValue.warn as ReturnType<typeof vi.fn>;
+  const expectRedactedSigningIdentityWarning = () =>
+    expect(warn).toHaveBeenCalledWith(
+      'Stored Cleverbase signing identity is unavailable for identity kratos-identity.',
+      LogContext.KRATOS
+    );
 
   beforeEach(async () => {
     vi.restoreAllMocks();
+    warn.mockClear();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -608,6 +616,20 @@ describe('KratosService', () => {
     });
 
     it.each([
+      ['empty', ''],
+      ['whitespace-only', '   '],
+    ])('falls back and logs a redacted warning when the initial ID token is %s', async (_label, token) => {
+      vi.spyOn(service, 'getIdentityById').mockResolvedValue(
+        createIdentity(token)
+      );
+
+      await expect(
+        service.getCleverbaseSubject('kratos-identity')
+      ).resolves.toBe('subject-from-provider');
+      expectRedactedSigningIdentityWarning();
+    });
+
+    it.each([
       ['is malformed', 'not-a-jwt'],
       [
         'has a malformed payload',
@@ -641,6 +663,7 @@ describe('KratosService', () => {
       await expect(
         service.getCleverbaseSubject('kratos-identity')
       ).resolves.toBeUndefined();
+      expectRedactedSigningIdentityWarning();
     });
 
     it('does not fall back when the signing certificate has no subject serialNumber', async () => {
@@ -659,6 +682,7 @@ describe('KratosService', () => {
       await expect(
         service.getCleverbaseSubject('kratos-identity')
       ).resolves.toBeUndefined();
+      expectRedactedSigningIdentityWarning();
     });
 
     it('does not use a signing certificate from another OIDC provider', async () => {
@@ -733,6 +757,7 @@ describe('KratosService', () => {
       ).rejects.toBe(unavailable);
     });
   });
+
   describe('getAuthenticatedAt', () => {
     it('should return undefined when sessions is null', async () => {
       vi.spyOn(
