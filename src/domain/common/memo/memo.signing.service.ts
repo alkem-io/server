@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LogContext } from '@common/enums/logging.context';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
@@ -7,6 +8,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { SigningAttempt } from '@domain/common/content-signing/signing.attempt.entity';
 import { SigningAttemptService } from '@domain/common/content-signing/signing.attempt.service';
 import { SigningAttemptStatus } from '@domain/common/content-signing/signing.attempt.status';
+import { LicenseService } from '@domain/common/license/license.service';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
@@ -14,6 +16,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { TrustGatewayClient } from '@services/adapters/trust-gateway/trust.gateway.client';
 import { CollaborationDocumentService } from '@services/collaboration-client/collaboration-document.service';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -39,11 +42,15 @@ export class MemoSigningService {
     private readonly storageBucketService: StorageBucketService,
     private readonly documentAuthorizationService: DocumentAuthorizationService,
     private readonly documentService: DocumentService,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    private readonly communityResolverService: CommunityResolverService,
+    private readonly licenseService: LicenseService
   ) {}
 
   async prepareMemoSigning(memoId: string, actor: ActorContext) {
     const memo = await this.getAuthorizedMemo(memoId, actor);
+    await this.requireMemoSigningEntitlement(memoId);
     await this.requireCleverbaseSubject(actor);
     const storageBucketId = this.requireBucket(memo).id;
 
@@ -137,6 +144,7 @@ export class MemoSigningService {
         LogContext.MEMOS
       );
     await this.getAuthorizedMemo(attempt.memoId, actor);
+    await this.requireMemoSigningEntitlement(attempt.memoId);
     const subject = await this.requireCleverbaseSubject(actor);
     const snapshot = await this.fileServiceAdapter.getDocumentContent(
       attempt.snapshotDocumentId
@@ -296,6 +304,18 @@ export class MemoSigningService {
     return new ValidationException(
       'Signing was already started; prepare a fresh signing attempt',
       LogContext.MEMOS
+    );
+  }
+
+  private async requireMemoSigningEntitlement(memoId: string): Promise<void> {
+    // Standalone memos have no collaboration license and therefore fail closed.
+    const license =
+      await this.communityResolverService.getCollaborationLicenseFromMemoOrFail(
+        memoId
+      );
+    this.licenseService.isEntitlementEnabledOrFail(
+      license,
+      LicenseEntitlementType.SPACE_FLAG_MEMO_SIGNING
     );
   }
 
