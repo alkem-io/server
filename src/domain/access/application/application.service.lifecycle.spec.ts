@@ -104,5 +104,13 @@ describe('ApplicationLifecycleService', () => {
       );
       expect(approving.on.REJECT.guard).toBe('hasUpdatePrivilege');
     });
+
+    it('marks `rejected` as a final state, so a rejected applicant is immediately free to apply again', () => {
+      const rejected = (applicationLifecycleMachine.states as any)[
+        ApplicationLifecycleState.REJECTED
+      ];
+      expect(rejected.type).toBe('final');
+      expect(rejected.on).toBeUndefined();
+    });
   });
 });

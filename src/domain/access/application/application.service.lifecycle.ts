@@ -89,17 +89,15 @@ export const applicationLifecycleMachine: ILifecycleDefinition = {
     approved: {
       type: 'final',
     },
+    // An application's `rejected` state is terminal: nothing reopens or
+    // archives a rejected application (no resolver/mutation ever sends
+    // REOPEN or ARCHIVE for an application), so a rejected applicant is
+    // immediately free to submit a fresh application. This differs from the
+    // invitation lifecycle, where `rejected` intentionally stays a
+    // non-final waypoint on the way to `archived` for an unrelated
+    // Space-invites-organization loop-back flow.
     rejected: {
-      on: {
-        REOPEN: {
-          guard: 'hasUpdatePrivilege',
-          target: ApplicationLifecycleState.NEW,
-        },
-        ARCHIVE: {
-          guard: 'hasUpdatePrivilege',
-          target: ApplicationLifecycleState.ARCHIVED,
-        },
-      },
+      type: 'final',
     },
     archived: {
       type: 'final',
