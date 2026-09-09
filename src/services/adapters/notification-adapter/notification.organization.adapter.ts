@@ -100,15 +100,17 @@ export class NotificationOrganizationAdapter {
     }
 
     // Send push notifications
-    // NO per-channel recipient filtering here, deliberately. An invitation is
-    // a call to action, not an FYI: unlike the outcome/welcome notifications
-    // (R33), the actor must still be told there is something to accept, because
-    // a Space admin who is also the invited organization's ONLY admin is the
-    // one person who can answer it. Filtering them out of push alone was the
-    // exact per-channel split R33 exists to eliminate.
-    if (recipients.pushRecipients.length > 0) {
+    // The actor who caused the event is excluded: they just mentioned their own
+    // organization and do not need a push telling them so. Pre-existing
+    // behaviour, unrelated to feature 061 — R34 removed this filter from the
+    // *invitation* dispatch only, because an invitation is a call to action
+    // rather than an FYI. A mention IS an FYI, so the filter stays.
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
       await this.notificationPushAdapter.sendPushNotifications(
-        recipients.pushRecipients,
+        pushRecipientsFiltered,
         event,
         {
           title: 'Organization mentioned',
@@ -165,15 +167,18 @@ export class NotificationOrganizationAdapter {
     }
 
     // Send push notifications
-    // NO per-channel recipient filtering here, deliberately. An invitation is
-    // a call to action, not an FYI: unlike the outcome/welcome notifications
-    // (R33), the actor must still be told there is something to accept, because
-    // a Space admin who is also the invited organization's ONLY admin is the
-    // one person who can answer it. Filtering them out of push alone was the
-    // exact per-channel split R33 exists to eliminate.
-    if (recipients.pushRecipients.length > 0) {
+    // The sender is excluded: they receive the separate
+    // ORGANIZATION_MESSAGE_SENDER dispatch below, and would otherwise be pushed
+    // twice for one message. Pre-existing behaviour, unrelated to feature 061 —
+    // R34 removed this filter from the *invitation* dispatch only, because an
+    // invitation is a call to action rather than an FYI. A message IS an FYI,
+    // so the filter stays.
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
       await this.notificationPushAdapter.sendPushNotifications(
-        recipients.pushRecipients,
+        pushRecipientsFiltered,
         event,
         {
           title: 'New organization message',

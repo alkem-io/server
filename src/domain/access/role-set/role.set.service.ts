@@ -1987,14 +1987,18 @@ export class RoleSetService {
     // declined the invitation" (FR-020). A direct join has no such step, so
     // it keeps the notification.
     //
-    // APPLICATIONS ARE DELIBERATELY NOT SUPPRESSED. There is no
-    // application-approved notification event: SPACE_ADMIN_COMMUNITY_APPLICATION
-    // fires when the application is *submitted*, not when it is approved. The
-    // product instruction ("accepting an invite/application shouldn't trigger
-    // a *double* notification") presumes a replacement exists; for
-    // applications it does not, so suppressing here would leave every
-    // co-admin of the approving admin with nothing at all and silently
-    // regress a platform-wide flow this feature does not otherwise touch.
+    // APPLICATIONS ARE SUPPRESSED TOO (R35). The product email and the story
+    // AC on server#4100 both scope the notification to memberships with "no
+    // invitation OR APPLICATION step", so the literal instruction wins.
+    // R31 had briefly argued the opposite from this very spot — there is no
+    // application-approved event to replace the suppressed one
+    // (SPACE_ADMIN_COMMUNITY_APPLICATION fires at *submission*), so the
+    // approving admin's co-admins are told nothing at all. That consequence is
+    // real and ACCEPTED, not solved: it is tracked as alkem-io/server#6476,
+    // which adds the missing event. Do not "fix" it by reinstating the
+    // notification here — that reopens the double notification the brief rules
+    // out, and the it-spec application-approval-new-member.it-spec.ts asserts
+    // the suppression.
     //
     // Two further conditions bound the suppression, so it never silences a
     // Space that gets no replacement:
