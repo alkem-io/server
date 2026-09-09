@@ -392,8 +392,11 @@ describe('MemoSigningService', () => {
       createdDate: new Date(),
     });
     fileServiceAdapter.getDocumentContent.mockResolvedValue(snapshot);
+    const enabledLicenses = new Set([unrelatedLicense]);
     licenseService.isEntitlementEnabledOrFail.mockImplementation(license => {
-      if (license === memoLicense) throw new Error('memo signing disabled');
+      if (!enabledLicenses.has(license as { id: string })) {
+        throw new Error('memo signing disabled');
+      }
     });
 
     const result =
@@ -504,6 +507,7 @@ describe('MemoSigningService', () => {
     expect(fileServiceAdapter.getDocumentContent).toHaveBeenCalledWith(
       'snapshot-1'
     );
+    expect(licenseService.isEntitlementEnabledOrFail).not.toHaveBeenCalled();
   });
 
   it('rejects an unrelated actor before reading the memo or snapshot', async () => {
@@ -811,6 +815,7 @@ describe('MemoSigningService', () => {
       actor.actorID,
       createHash('sha256').update(state).digest('hex')
     );
+    expect(licenseService.isEntitlementEnabledOrFail).not.toHaveBeenCalled();
     expect(
       storageBucketService.uploadFileAsDocumentFromBuffer
     ).toHaveBeenCalledWith(
@@ -1269,6 +1274,7 @@ describe('MemoSigningService', () => {
     );
     expect(trustGatewayClient.verify).toHaveBeenCalledWith(signedPdf);
     expect(attemptService.finish).not.toHaveBeenCalled();
+    expect(licenseService.isEntitlementEnabledOrFail).not.toHaveBeenCalled();
   });
 
   it('reports invalid integrity without exposing gateway reason codes', async () => {

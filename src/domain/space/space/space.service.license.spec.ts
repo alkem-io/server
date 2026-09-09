@@ -378,6 +378,41 @@ describe('SpaceLicenseService', () => {
           )
         ).toMatchObject({ enabled: true, limit: 1 });
       });
+
+      it('remains disabled on a sub-space when only an intermediate non-L0 agent holds the credential', async () => {
+        const subspace = { id: 'subspace-1' };
+        const parentSpace = createMockSpace({ subspaces: [subspace] });
+        const subspaceMock = createMockSpace({
+          id: 'subspace-1',
+          subspaces: [],
+        });
+
+        (spaceService.getSpaceOrFail as any).mockImplementation(
+          async (id: string) =>
+            id === 'space-1' ? (parentSpace as any) : (subspaceMock as any)
+        );
+        (licenseService.reset as any).mockImplementation(
+          (license: any) => license as any
+        );
+        (licenseEngineService.isEntitlementGranted as any).mockImplementation(
+          async (type: LicenseEntitlementType, agent: { id?: string }) =>
+            type === LicenseEntitlementType.SPACE_FLAG_MEMO_SIGNING &&
+            agent?.id === 'subspace-1'
+        );
+        (roleSetLicenseService.applyLicensePolicy as any).mockResolvedValue([]);
+        (
+          collaborationLicenseService.applyLicensePolicy as any
+        ).mockResolvedValue([]);
+
+        await service.applyLicensePolicy('space-1');
+
+        expect(
+          subspaceMock.license.entitlements.find(
+            (entry: any) =>
+              entry.type === LicenseEntitlementType.SPACE_FLAG_MEMO_SIGNING
+          )
+        ).toMatchObject({ enabled: false, limit: 0 });
+      });
     });
   });
 });
