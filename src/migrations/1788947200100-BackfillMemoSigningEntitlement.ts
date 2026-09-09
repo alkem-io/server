@@ -5,6 +5,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 const ENTITLEMENT_TYPE = 'space-flag-memo-signing';
 const ENTITLEMENT_DATA_TYPE = 'flag';
 
+// Space and collaboration licenses persist entitlement rows. Template-content-
+// space licenses are transient and rebuilt from code, so there is no row to backfill.
 const BACKFILL_TARGETS: Array<{ licenseType: string; enabled: boolean }> = [
   { licenseType: 'space', enabled: false },
   { licenseType: 'collaboration', enabled: false },
@@ -35,8 +37,8 @@ export class BackfillMemoSigningEntitlement1788947200100
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // Removes every feature-owned entitlement row. Template-content-space
-    // licenses are transient, so they have no persisted rows to backfill.
+    // Removes every row of this newly introduced, feature-owned entitlement
+    // type. Transient template-content-space licenses have no persisted rows.
     await queryRunner.query(
       `DELETE FROM license_entitlement WHERE type = $1`,
       [ENTITLEMENT_TYPE]

@@ -22,6 +22,7 @@ export class AddMemoSigningEntitlement1788947200000
   implements MigrationInterface
 {
   public async up(queryRunner: QueryRunner): Promise<void> {
+    // Idempotent INSERT into license_plan.
     const existingPlan = await queryRunner.query(
       `SELECT id FROM license_plan WHERE name = $1`,
       [LICENSE_PLAN_NAME]
@@ -65,6 +66,7 @@ export class AddMemoSigningEntitlement1788947200000
       );
     }
 
+    // Idempotent append to license_policy.credentialRules.
     const policyRows = await queryRunner.query(
       `SELECT id, "credentialRules" FROM license_policy`
     );

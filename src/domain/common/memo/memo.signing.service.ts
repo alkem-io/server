@@ -308,6 +308,7 @@ export class MemoSigningService {
   }
 
   private async requireMemoSigningEntitlement(memoId: string): Promise<void> {
+    // Standalone memos have no collaboration license and therefore fail closed.
     const license =
       await this.communityResolverService.getCollaborationLicenseFromMemoOrFail(
         memoId
