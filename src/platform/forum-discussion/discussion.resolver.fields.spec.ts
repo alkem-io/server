@@ -1,3 +1,4 @@
+import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -83,6 +84,38 @@ describe('DiscussionResolverFields', () => {
 
       expect(result).toBe(room);
       expect(discussionService.getComments).toHaveBeenCalledWith('disc-1');
+    });
+  });
+
+  describe('category', () => {
+    it('returns the stored value unchanged when it is known', () => {
+      const discussion = {
+        id: 'disc-1',
+        category: ForumDiscussionCategory.HELP,
+      } as any;
+
+      const result = resolver.category(discussion);
+
+      expect(result).toBe(ForumDiscussionCategory.HELP);
+    });
+
+    it('falls back to OTHER for an unknown stored value instead of throwing (rollback/mixed-fleet guard)', () => {
+      const discussion = { id: 'disc-1', category: 'legacy-x' } as any;
+
+      const result = resolver.category(discussion);
+
+      expect(result).toBe(ForumDiscussionCategory.OTHER);
+    });
+
+    it('returns OTHER unchanged when the stored value already is OTHER', () => {
+      const discussion = {
+        id: 'disc-1',
+        category: ForumDiscussionCategory.OTHER,
+      } as any;
+
+      const result = resolver.category(discussion);
+
+      expect(result).toBe(ForumDiscussionCategory.OTHER);
     });
   });
 });

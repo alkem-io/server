@@ -338,6 +338,11 @@ const STATUS_METADATA: Record<AlkemioErrorStatus, ErrorMetadata> = {
     specificCode: 117,
     userMessage: 'userMessages.operations.accountDeletionBlocked',
   },
+  [AlkemioErrorStatus.FORUM_DISCUSSION_CATEGORY_NOT_EMPTY]: {
+    category: ErrorCategory.OPERATIONS,
+    specificCode: 118,
+    userMessage: 'userMessages.operations.forumDiscussionCategoryNotEmpty',
+  },
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 14xxx - SYSTEM: Infrastructure errors
