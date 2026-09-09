@@ -24,6 +24,12 @@ import {
 } from './dto';
 import { IExternalConfig } from './dto/external.config';
 
+// Engines whose plugin executes Input.promptGraph (engine-invocation contract).
+const PROMPT_GRAPH_ENGINES: AiPersonaEngine[] = [
+  AiPersonaEngine.EXPERT,
+  AiPersonaEngine.GENERIC_OPENAI,
+];
+
 @Injectable()
 export class AiPersonaService {
   constructor(
@@ -193,11 +199,11 @@ export class AiPersonaService {
     };
 
     if (
-      input.engine === AiPersonaEngine.EXPERT &&
+      PROMPT_GRAPH_ENGINES.includes(input.engine) &&
       !invocationInput.promptGraph
     ) {
       let invocationGraph = aiPersona.promptGraph;
-      if (!invocationGraph) {
+      if (!invocationGraph && input.engine === AiPersonaEngine.EXPERT) {
         // Deep-clone the imported graphJson so we don't mutate the module-level object
         const processedGraph = JSON.parse(JSON.stringify(graphJson));
         // For each node, if prompt is an array, concatenate it into a single string with new lines
