@@ -74,9 +74,18 @@ ensure_auth() {
   [ -z "${PIPELINE_USER:-}" ] && { echo "ERROR: PIPELINE_USER not set in $ENV_FILE" >&2; exit 1; }
   [ -z "${PIPELINE_PASSWORD:-}" ] && { echo "ERROR: PIPELINE_PASSWORD not set in $ENV_FILE" >&2; exit 1; }
 
+  # The jar holds a live `ory_kratos_session` cookie the moment
+  # kratos_login_browser succeeds, but every later step of oidc_login_jwt
+  # (authorize hops, state check, token exchange) aborts via `fail`, which
+  # `exit`s and would skip a trailing `rm`. Register the cleanup BEFORE the
+  # login so the credential is wiped on the failure paths too — same pattern
+  # as .scripts/non-interactive-login.sh. Cleared again on success so the
+  # trap does not outlive ensure_auth for the rest of the run.
   local cookie_jar="$PIPELINE_DIR/.kratos-cookies"
+  trap 'rm -f "$PIPELINE_DIR/.kratos-cookies"' EXIT
   oidc_login_jwt "$PIPELINE_USER" "$PIPELINE_PASSWORD" "$cookie_jar"
   rm -f "$cookie_jar"
+  trap - EXIT
 
   SESSION_TOKEN="$ACCESS_TOKEN"
   export SESSION_TOKEN
