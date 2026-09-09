@@ -361,11 +361,18 @@ export class RoleSetResolverMutationsMembership {
 
     // Loop through the emails provided to see if are existing users or not
     const newUserEmails: string[] = [];
+    // An email that belongs to an existing user is invited as an actor, not as
+    // a platform invitation. Its result therefore carries `invitation`, never
+    // `platformInvitation`, and the invitee moves out of the email group into
+    // the actor group — so the client can only match it back to the chip the
+    // user typed if the originating address travels with it.
+    const emailByActorID = new Map<string, string>();
     for (const email of invitationData.invitedUserEmails) {
       // If the user is already registered, then just create a normal invitation
       const existingUser = await this.userLookupService.getUserByEmail(email);
       if (existingUser) {
         actorIDsToInvite.push(existingUser.id);
+        emailByActorID.set(existingUser.id, email);
       } else {
         newUserEmails.push(email);
       }
@@ -379,7 +386,8 @@ export class RoleSetResolverMutationsMembership {
       extraRoles,
       invitationData.welcomeMessage,
       invitationData.suggestedLanguage,
-      actorTypes
+      actorTypes,
+      emailByActorID
     );
 
     const newUserInvitationResults =
@@ -441,6 +449,7 @@ export class RoleSetResolverMutationsMembership {
         const result: RoleSetInvitationResult = {
           type: RoleSetInvitationResultType.ALREADY_INVITED_TO_PLATFORM_AND_ROLE_SET,
           platformInvitation: existingPlatformInvitation,
+          invitedEmail: email,
         };
         invitationResults.push(result);
         continue;
@@ -453,6 +462,7 @@ export class RoleSetResolverMutationsMembership {
         if (!authorizedToInviteToParentRoleSet) {
           const result: RoleSetInvitationResult = {
             type: RoleSetInvitationResultType.INVITATION_TO_PARENT_NOT_AUTHORIZED,
+            invitedEmail: email,
           };
           invitationResults.push(result);
 
@@ -474,6 +484,7 @@ export class RoleSetResolverMutationsMembership {
       const result: RoleSetInvitationResult = {
         type: RoleSetInvitationResultType.INVITED_TO_PLATFORM_AND_ROLE_SET,
         platformInvitation: newPlatformInvitation,
+        invitedEmail: email,
       };
       invitationResults.push(result);
     }
@@ -1043,9 +1054,28 @@ export class RoleSetResolverMutationsMembership {
     extraRoles: RoleName[],
     welcomeMessage: string | undefined,
     suggestedLanguage?: string,
-    actorTypes: Map<string, ActorType> = new Map()
+    actorTypes: Map<string, ActorType> = new Map(),
+    emailByActorID: Map<string, string> = new Map()
   ): Promise<RoleSetInvitationResult[]> {
     const invitationResults: RoleSetInvitationResult[] = [];
+
+    // Every result produced in the loop below belongs to the invitee being
+    // processed, so the identity is stamped in one place rather than at each
+    // of the six `push` sites. `emailByActorID` carries the address the
+    // client actually submitted for an invitee that reached this loop as an
+    // email that resolved to an existing user — without it that result would
+    // be unmatchable against the chip the user typed.
+    const pushResultForActor = (
+      actorID: string,
+      result: RoleSetInvitationResult
+    ): void => {
+      const invitedEmail = emailByActorID.get(actorID);
+      invitationResults.push({
+        ...result,
+        invitedActorID: actorID,
+        ...(invitedEmail ? { invitedEmail } : {}),
+      });
+    };
 
     // The Lead-organization slot counts are invariant for the whole
     // request (creating an invitation never grants the role), so they are
@@ -1087,7 +1117,7 @@ export class RoleSetResolverMutationsMembership {
           const result: RoleSetInvitationResult = {
             type: RoleSetInvitationResultType.INVITATION_TO_PARENT_NOT_AUTHORIZED,
           };
-          invitationResults.push(result);
+          pushResultForActor(actorID, result);
           continue;
         }
         invitedToParent = true;
@@ -1112,7 +1142,7 @@ export class RoleSetResolverMutationsMembership {
           type: RoleSetInvitationResultType.ALREADY_INVITED_TO_ROLE_SET,
           invitation: openInvitation,
         };
-        invitationResults.push(result);
+        pushResultForActor(actorID, result);
         continue;
       }
 
@@ -1128,7 +1158,7 @@ export class RoleSetResolverMutationsMembership {
           type: RoleSetInvitationResultType.ALREADY_HAS_OPEN_APPLICATION,
           application: openApplication,
         };
-        invitationResults.push(result);
+        pushResultForActor(actorID, result);
         continue;
       }
 
@@ -1142,7 +1172,7 @@ export class RoleSetResolverMutationsMembership {
         const result: RoleSetInvitationResult = {
           type: RoleSetInvitationResultType.ALREADY_MEMBER_OF_ROLE_SET,
         };
-        invitationResults.push(result);
+        pushResultForActor(actorID, result);
         continue;
       }
 
@@ -1155,7 +1185,7 @@ export class RoleSetResolverMutationsMembership {
         leadSlots
       );
       if (organizationGuardResult) {
-        invitationResults.push(organizationGuardResult);
+        pushResultForActor(actorID, organizationGuardResult);
         continue;
       }
 
@@ -1187,7 +1217,7 @@ export class RoleSetResolverMutationsMembership {
             RoleSetInvitationResultNotice.ORGANIZATION_HAS_NO_ADMINISTRATORS;
         }
       }
-      invitationResults.push(invitationResult);
+      pushResultForActor(actorID, invitationResult);
     }
     return invitationResults;
   }

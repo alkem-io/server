@@ -128,14 +128,33 @@ export class RoleSetResolverMutations {
       roleData.actorID
     );
 
+    // Assert the actor really IS an organization BEFORE any write. This lookup
+    // used to run only after `assignActorToRole` had already granted the
+    // credential, and nothing else on this path checks the type:
+    // `assignActorToRole` derives the actor type from the DB and applies THAT
+    // type's policy, so a non-organization actorID was assigned first and
+    // rejected afterwards, leaving the credential granted while the caller saw
+    // an error (there is no transaction around the two).
+    //
+    // That mattered little while the mutation required
+    // ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION (global admin / support / beta
+    // tester) for every call. R32 relaxed it to GRANT alone for an actor
+    // already holding the entry role, so any Space admin can now reach this
+    // path — and aiming it at a Virtual Contributor already in the Space
+    // granted that VC a Space role while skipping the
+    // SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS entitlement that
+    // `assignRoleToVirtualContributor` enforces for exactly this operation.
+    const organization =
+      await this.organizationLookupService.getOrganizationByIdOrFail(
+        roleData.actorID
+      );
+
     await this.roleSetService.assignActorToRole(
       roleSet,
       roleData.role,
       roleData.actorID
     );
-    return await this.organizationLookupService.getOrganizationByIdOrFail(
-      roleData.actorID
-    );
+    return organization;
   }
 
   @Mutation(() => IVirtualContributor, {

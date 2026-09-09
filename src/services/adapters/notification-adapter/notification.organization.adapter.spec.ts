@@ -325,6 +325,48 @@ describe('NotificationOrganizationAdapter', () => {
       expect(pushCall[2].body).not.toContain('Welcome!');
     });
 
+    it('does NOT filter the inviting admin out of push — an invitation is a call to action', async () => {
+      // The Space admin who sent the invitation may also be the invited
+      // organization's ONLY admin, in which case they are the one person who
+      // can answer it. Filtering them from push alone was the exact
+      // per-channel split R33 exists to eliminate, and filtering them from
+      // all three would let the invitation rot unanswered.
+      setUpCommonMocks();
+      vi.mocked(
+        notificationAdapter.getNotificationRecipients
+      ).mockResolvedValue({
+        emailRecipients: [{ id: 'inviter-1' }],
+        inAppRecipients: [{ id: 'inviter-1' }],
+        pushRecipients: [{ id: 'inviter-1' }],
+      } as any);
+      vi.mocked(
+        externalAdapter.buildOrganizationSpaceCommunityInvitationPayload
+      ).mockResolvedValue({} as any);
+      vi.mocked(actorLookupService.getFullActorByIdOrFail).mockResolvedValue({
+        id: 'org-1',
+        nameID: 'acme',
+        profile: { displayName: 'Acme' },
+      } as any);
+
+      await adapter.organizationSpaceCommunityInvitationCreated(
+        baseEventData as any
+      );
+
+      expect(externalAdapter.sendExternalNotifications).toHaveBeenCalled();
+      expect(inAppAdapter.sendInAppNotifications).toHaveBeenCalledWith(
+        NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION,
+        expect.anything(),
+        'inviter-1',
+        ['inviter-1'],
+        expect.anything()
+      );
+      expect(pushAdapter.sendPushNotifications).toHaveBeenCalledWith(
+        [{ id: 'inviter-1' }],
+        NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION,
+        expect.anything()
+      );
+    });
+
     it('skips email when there are no email recipients', async () => {
       setUpCommonMocks();
       vi.mocked(
@@ -376,14 +418,67 @@ describe('NotificationOrganizationAdapter', () => {
       ).mockResolvedValue({} as any);
     });
 
-    it('excludes the admin who accepted from email, in-app AND push', async () => {
+    // The welcome resolves TWO recipient sets: its own (organization admins)
+    // and the Space-side outcome's (Space admins), which it subtracts.
+    const mockRecipients = (
+      orgAdmins: string[],
+      spaceAdmins: string[] = []
+    ) => {
       vi.mocked(
         notificationAdapter.getNotificationRecipients
-      ).mockResolvedValue({
-        emailRecipients: [{ id: 'acceptor-1' }, { id: 'other-admin' }],
-        inAppRecipients: [{ id: 'acceptor-1' }, { id: 'other-admin' }],
-        pushRecipients: [{ id: 'acceptor-1' }, { id: 'other-admin' }],
-      } as any);
+      ).mockImplementation(async (event: any) => {
+        const ids =
+          event ===
+          NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED
+            ? spaceAdmins
+            : orgAdmins;
+        const list = ids.map(id => ({ id }));
+        return {
+          emailRecipients: list,
+          inAppRecipients: list,
+          pushRecipients: list,
+        } as any;
+      });
+    };
+
+    it('excludes an admin of BOTH the Space and the organization — the Space-side outcome already tells them', async () => {
+      // Alice admins the Space and Acme; Bob (Acme's other admin) accepts.
+      // Bob is the acceptor. Alice is on BOTH sets, so without the second
+      // exclusion she receives "Bob accepted the invitation of Acme" AND
+      // "Acme is now a member... No further action is needed from you" for
+      // one click — verbatim the pair the product brief rules out.
+      mockRecipients(['acceptor-bob', 'alice', 'carol'], ['alice']);
+
+      await adapter.organizationSpaceCommunityJoined({
+        ...eventData,
+        triggeredBy: 'acceptor-bob',
+      });
+
+      expect(
+        externalAdapter.buildActorSpaceCommunityInvitationOutcomePayload
+      ).toHaveBeenCalledWith(
+        NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED,
+        'acceptor-bob',
+        [{ id: 'carol' }],
+        'org-1',
+        expect.objectContaining({ id: 'space-1' })
+      );
+      expect(inAppAdapter.sendInAppNotifications).toHaveBeenCalledWith(
+        NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED,
+        expect.anything(),
+        'acceptor-bob',
+        ['carol'],
+        expect.anything()
+      );
+      expect(pushAdapter.sendPushNotifications).toHaveBeenCalledWith(
+        [{ id: 'carol' }],
+        NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED,
+        expect.anything()
+      );
+    });
+
+    it('excludes the admin who accepted from email, in-app AND push', async () => {
+      mockRecipients(['acceptor-1', 'other-admin']);
 
       await adapter.organizationSpaceCommunityJoined(eventData);
 

@@ -2009,10 +2009,18 @@ export class RoleSetService {
     //    below).
     const originHasReplacementNotification =
       actorType === ActorType.USER || actorType === ActorType.ORGANIZATION;
-    const membershipOrigin =
-      opts.source === 'invitation' && originHasReplacementNotification
-        ? CommunityMembershipOrigin.INVITATION
-        : CommunityMembershipOrigin.DIRECT;
+    let membershipOrigin = CommunityMembershipOrigin.DIRECT;
+    if (opts.source === 'invitation' && originHasReplacementNotification) {
+      membershipOrigin = CommunityMembershipOrigin.INVITATION;
+    } else if (opts.source === 'application') {
+      // The brief scopes "a new member joined" to memberships with no
+      // invitation or application step, so an approved application suppresses
+      // it too — unconditionally, unlike INVITATION above. There is no
+      // application-approved replacement event to be actor-type-specific
+      // about, so the whitelist that guards the invitation case does not
+      // apply here.
+      membershipOrigin = CommunityMembershipOrigin.APPLICATION;
+    }
 
     // Application and direct-join share the same combined-flow authorisation:
     // grant the ancestor chain iff every ancestor the actor would be granted

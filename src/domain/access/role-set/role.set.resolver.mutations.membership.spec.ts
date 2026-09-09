@@ -1,4 +1,5 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { ActorType } from '@common/enums/actor.type';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { RoleSetInvitationResultType } from '@common/enums/role.set.invitation.result.type';
 import { RoleSetType } from '@common/enums/role.set.type';
@@ -1230,6 +1231,67 @@ describe('RoleSetResolverMutationsMembership', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].type).toBe('invited-to-platform-and-role-set');
+    });
+
+    it('stamps the submitted email on the result when the address is an existing user', async () => {
+      // The server routes an email that belongs to an existing user through
+      // the ACTOR path, so the result carries `invitation`, never
+      // `platformInvitation`. Without `invitedEmail` the client cannot match
+      // that result back to the email chip the user typed, and falls back to
+      // matching by position — which hands the chip another invitee's outcome.
+      const actorContext = { actorID: 'user-1' } as any;
+      const mockRoleSet = {
+        id: 'rs-1',
+        type: RoleSetType.SPACE,
+        authorization: { id: 'auth-1' },
+        parentRoleSet: undefined,
+      } as any;
+
+      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(mockRoleSet);
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+      (actorLookupService.validateActorsAndGetTypes as Mock).mockResolvedValue(
+        new Map([['user-existing', ActorType.USER]])
+      );
+      (userLookupService.getUserByEmail as Mock).mockResolvedValue({
+        id: 'user-existing',
+      });
+      (roleSetService.findOpenInvitation as Mock).mockResolvedValue(undefined);
+      (roleSetService.findOpenApplication as Mock).mockResolvedValue(undefined);
+      (roleSetService.isMember as Mock).mockResolvedValue(false);
+      const createdInvitation = {
+        id: 'inv-1',
+        invitedActorID: 'user-existing',
+      } as any;
+      (roleSetService.createInvitationExistingActor as Mock).mockResolvedValue(
+        createdInvitation
+      );
+      (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([
+        createdInvitation,
+      ]);
+      (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+        ActorType.USER
+      );
+      (
+        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
+      ).mockResolvedValue([]);
+      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
+      (
+        communityResolverService.getCommunityForRoleSet as Mock
+      ).mockResolvedValue({ id: 'comm-1' });
+
+      const result = await resolver.inviteForEntryRoleOnRoleSet(actorContext, {
+        roleSetID: 'rs-1',
+        invitedActorIDs: [],
+        invitedUserEmails: ['bob@existing.com'],
+        extraRoles: [],
+      } as any);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].platformInvitation).toBeUndefined();
+      expect(result[0].invitedActorID).toBe('user-existing');
+      expect(result[0].invitedEmail).toBe('bob@existing.com');
     });
 
     it('should handle already-invited platform email', async () => {

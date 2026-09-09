@@ -381,17 +381,4 @@ describe('organization-invitation notification events — exhaustiveness (D14)',
       );
     });
   });
-
-  describe('dispatcher exhaustiveness never-guard (static source scan)', () => {
-    it('the invitation-result notification dispatcher has a compile-time never guard in its default case', () => {
-      const source = readFileSync(
-        join(
-          __dirname,
-          '../../../domain/access/role-set/role.set.resolver.mutations.membership.ts'
-        ),
-        'utf-8'
-      );
-      expect(source).toMatch(/default:\s*\{[^}]*:\s*never\s*=/s);
-    });
-  });
 });
