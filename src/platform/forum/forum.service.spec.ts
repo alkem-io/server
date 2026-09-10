@@ -71,6 +71,20 @@ describe('ForumService', () => {
       expect(result.discussionCategories).toEqual(['RELEASES', 'GENERAL']);
       expect(result.authorization).toBeDefined();
     });
+
+    it('should create the forum and every category Matrix space out of the public room directory', async () => {
+      repo.save!.mockImplementation(async (f: any) => f);
+      (communicationAdapter.createSpace as Mock).mockResolvedValue(true);
+
+      await service.createForum(['RELEASES', 'GENERAL'] as any);
+
+      expect(communicationAdapter.createSpace).toHaveBeenCalledTimes(3);
+      for (const call of (communicationAdapter.createSpace as Mock).mock
+        .calls) {
+        // isPublic is the 6th positional argument on every createSpace call
+        expect(call[5]).toBe(false);
+      }
+    });
   });
 
   describe('save', () => {
@@ -235,6 +249,10 @@ describe('ForumService', () => {
       (communicationAdapter.batchAddMember as Mock).mockResolvedValue(
         undefined
       );
+      // Neither the forum nor the category Matrix space exists yet, so
+      // ensureForumMatrixHierarchy takes the create branch for both.
+      (communicationAdapter.getSpace as Mock).mockResolvedValue(undefined);
+      (communicationAdapter.createSpace as Mock).mockResolvedValue(true);
 
       const result = await service.createDiscussion(
         discussionData,
@@ -244,6 +262,14 @@ describe('ForumService', () => {
 
       expect(result).toBe(createdDiscussion);
       expect(discussionService.createDiscussion).toHaveBeenCalled();
+
+      // ensureForumMatrixHierarchy creates the forum + category spaces —
+      // both must stay out of the public room directory.
+      expect(communicationAdapter.createSpace).toHaveBeenCalledTimes(2);
+      for (const call of (communicationAdapter.createSpace as Mock).mock
+        .calls) {
+        expect(call[5]).toBe(false);
+      }
     });
 
     it('should throw ForumDiscussionCategoryException for invalid category', async () => {

@@ -17,6 +17,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Block non-registry dependency pins on protected branches
+        run: .scripts/check-vendor-lib-pins.sh
+
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
