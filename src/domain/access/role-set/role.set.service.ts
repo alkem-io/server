@@ -1987,21 +1987,21 @@ export class RoleSetService {
     // declined the invitation" (FR-020). A direct join has no such step, so
     // it keeps the notification.
     //
-    // APPLICATIONS ARE SUPPRESSED TOO (R35). The product email and the story
-    // AC on server#4100 both scope the notification to memberships with "no
-    // invitation OR APPLICATION step", so the literal instruction wins.
-    // R31 had briefly argued the opposite from this very spot — there is no
-    // application-approved event to replace the suppressed one
-    // (SPACE_ADMIN_COMMUNITY_APPLICATION fires at *submission*), so the
-    // approving admin's co-admins are told nothing at all. That consequence is
-    // real and ACCEPTED, not solved: it is tracked as alkem-io/server#6476,
-    // which adds the missing event. Do not "fix" it by reinstating the
-    // notification here — that reopens the double notification the brief rules
-    // out, and the it-spec application-approval-new-member.it-spec.ts asserts
-    // the suppression.
-    //
-    // Two further conditions bound the suppression, so it never silences a
-    // Space that gets no replacement:
+    // ONE RULE, APPLIED UNIFORMLY (R40, restoring R31): suppress only where a
+    // replacement notification actually exists. Three cases therefore keep the
+    // generic notification, and they are the same rule three times, not three
+    // exceptions:
+    //  - APPROVED APPLICATIONS. There is no application-approved event to
+    //    replace the suppressed one — SPACE_ADMIN_COMMUNITY_APPLICATION fires
+    //    at *submission* — so suppressing here tells the approving admin's
+    //    co-admins nothing at all, which is a silent regression of a flow
+    //    server#4100 does not otherwise touch. R35 had suppressed it on the
+    //    literal reading of "no invitation OR APPLICATION step"; that sentence
+    //    was the product email pruning a PROPOSED notification list for the
+    //    user -> organization associates flow, and organizations cannot apply
+    //    to a Space at all (FR-014/R9), so within this feature the clause has
+    //    nothing to attach to. Adding the missing event is alkem-io/server#6476
+    //    — until it lands, applications notify the ordinary way;
     //  - only USER and ORGANIZATION invitees have invitation-response
     //    events (FR-020a/R28). A Virtual Contributor accepting produces no
     //    replacement, so its membership stays DIRECT and the admins are
@@ -2016,14 +2016,6 @@ export class RoleSetService {
     let membershipOrigin = CommunityMembershipOrigin.DIRECT;
     if (opts.source === 'invitation' && originHasReplacementNotification) {
       membershipOrigin = CommunityMembershipOrigin.INVITATION;
-    } else if (opts.source === 'application') {
-      // The brief scopes "a new member joined" to memberships with no
-      // invitation or application step, so an approved application suppresses
-      // it too — unconditionally, unlike INVITATION above. There is no
-      // application-approved replacement event to be actor-type-specific
-      // about, so the whitelist that guards the invitation case does not
-      // apply here.
-      membershipOrigin = CommunityMembershipOrigin.APPLICATION;
     }
 
     // Application and direct-join share the same combined-flow authorisation:

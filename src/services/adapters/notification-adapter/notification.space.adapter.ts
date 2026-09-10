@@ -808,14 +808,14 @@ export class NotificationSpaceAdapter {
       space
     );
 
-    // Notify the admins — but ONLY when the membership had no invitation or
-    // application step, which is exactly how the product brief scopes this
-    // notification. An accepted invitation already tells every admin of the
-    // invited Space via the dedicated "X accepted / declined the invitation"
-    // outcome notification (FR-020); firing "a new member joined" as well
-    // would notify them twice for one event. An approved application is
-    // suppressed on the brief's instruction even though no replacement event
-    // exists yet (see CommunityMembershipOrigin).
+    // Notify the admins — but ONLY when this membership has no replacement
+    // notification telling them the same thing. An accepted invitation does:
+    // the dedicated "X accepted / declined the invitation" outcome reaches
+    // every admin of the invited Space (FR-020), so firing "a new member
+    // joined" as well would notify them twice for one event, which is what the
+    // product brief rules out. Every other origin — an approved application
+    // included — has no such replacement and keeps this notification
+    // (R40; see CommunityMembershipOrigin for why APPLICATION is not a member).
     const membershipOrigin =
       eventData.membershipOrigin ?? CommunityMembershipOrigin.DIRECT;
     if (membershipOrigin !== CommunityMembershipOrigin.DIRECT) {
