@@ -17,6 +17,10 @@ import { OrganizationLookupService } from '@domain/community/organization-lookup
 import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { IUserSettingsNotificationChannels } from '@domain/community/user-settings/user.settings.notification.channels.interface';
+import {
+  DEFAULT_INVITATION_RESPONSE_CHANNELS,
+  DEFAULT_ORGANIZATION_SPACE_INVITATION_CHANNELS,
+} from '@domain/community/user-settings/user.settings.notification.defaults.constants';
 import { IUserSettingsNotification } from '@domain/community/user-settings/user.settings.notification.interface';
 import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
@@ -41,27 +45,6 @@ const DEFAULT_CONVERSATION_MESSAGE_CHANNELS: IUserSettingsNotificationChannels =
 const DEFAULT_CALLOUT_REACTION_CHANNELS: IUserSettingsNotificationChannels =
   Object.freeze({
     email: false,
-    inApp: true,
-    push: true,
-  });
-
-// Defend on read — a `user_settings` row that predates the backfill
-// migration lacks this key. Same mandated defaults as the migration and
-// `UserSettings.applyOrganizationSpaceInvitationDefaults` (`@AfterLoad`).
-export const DEFAULT_ORGANIZATION_SPACE_INVITATION_CHANNELS: IUserSettingsNotificationChannels =
-  Object.freeze({
-    email: true,
-    inApp: true,
-    push: true,
-  });
-
-// Defend on read — a `user_settings` row that predates the backfill
-// migration lacks this key. Same mandated defaults as the migration
-// (1788600000000) and `UserSettings.applyInvitationResponseDefaults`
-// (`@AfterLoad`).
-export const DEFAULT_INVITATION_RESPONSE_CHANNELS: IUserSettingsNotificationChannels =
-  Object.freeze({
-    email: true,
     inApp: true,
     push: true,
   });
