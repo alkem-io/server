@@ -372,21 +372,29 @@ describe('RoomServiceEvents', () => {
       expect(contributionReporter.taskCommentCreated).not.toHaveBeenCalled();
     });
 
-    it('should skip activity and both reporter methods when actorID is empty, task or not', async () => {
+    // US3-AS3 / T012.1: the empty-actorID guard wraps BOTH arms, so it must be
+    // exercised for a task AND an ordinary post. Covering only the task arm let
+    // a mutation survive (moving the guard inside the isTask arm), under which an
+    // ordinary post comment from an unresolvable actor would start emitting
+    // calloutPostCommentCreated — a regression on the ordinary series (FR-006).
+    it.each([
+      ['a task', true, mockTaskContribution],
+      ['an ordinary post', false, mockOrdinaryContribution],
+    ])('should skip activity and both reporter methods when actorID is empty — %s', async (_label, isTask, contribution) => {
       communityResolverService.getCommunityFromPostRoomOrFail.mockResolvedValue(
         { id: 'community-1' } as any
       );
       communityResolverService.getLevelZeroSpaceIdForCommunity.mockResolvedValue(
         'space-1'
       );
-      taskBoardService.isTask.mockReturnValue(true);
+      taskBoardService.isTask.mockReturnValue(isTask);
 
       await service.processActivityPostComment(
         mockPost,
         mockRoom,
         mockMessage,
         actorContextEmpty,
-        mockTaskContribution
+        contribution
       );
 
       expect(activityAdapter.calloutPostComment).not.toHaveBeenCalled();
