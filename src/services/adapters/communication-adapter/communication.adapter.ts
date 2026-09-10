@@ -49,6 +49,8 @@ import {
   RoomTypeCommunity,
   RoomTypeDirect,
   SendMessageRequest,
+  SetChildrenRequest,
+  SetChildrenResponse,
   SetParentRequest,
   SetRoomStateRequest,
   SetSpaceStateRequest,
@@ -110,6 +112,26 @@ interface RpcOptions<T extends CommandTopic> {
    */
   ensureSuccess?: boolean;
 }
+
+/**
+ * The Go adapter's error responses (including the expected SPACE_NOT_FOUND
+ * skip) serialize every `SetChildrenResponse` array field as JSON `null` —
+ * `emptyIfNil` is only applied on the success branch. Default every array to
+ * `[]` so a caller's `.length` accounting never has to special-case a null
+ * from an error response.
+ */
+const normalizeSetChildrenResponse = (
+  response: SetChildrenResponse
+): SetChildrenResponse => ({
+  ...response,
+  added: response.added ?? [],
+  removed: response.removed ?? [],
+  pruned_unknown: response.pruned_unknown ?? [],
+  unknown_kept: response.unknown_kept ?? [],
+  unresolved: response.unresolved ?? [],
+  parent_pointers_repaired: response.parent_pointers_repaired ?? [],
+  parent_pointers_deferred: response.parent_pointers_deferred ?? [],
+});
 
 /**
  * CommunicationAdapter - Uses standard AMQP RPC for communication with Go Matrix Adapter
@@ -717,6 +739,42 @@ export class CommunicationAdapter {
     });
 
     return response?.success ?? false;
+  }
+
+  /**
+   * Declaratively converge one parent space's m.space.child edges toward a
+   * desired set — the only adapter operation that can remove an edge.
+   *
+   * Unlike every other wrapper on this adapter, a disabled adapter does NOT
+   * report success here: it returns a distinguishable `{ disabled: true }`
+   * sentinel, never `true`. A reconciliation pass whose entire purpose is
+   * reporting drift honestly must never mistake "we didn't ask" for
+   * "nothing was wrong". A transport failure (timeout, channel error) comes
+   * back as `undefined` — also never a fabricated success — so the caller's
+   * circuit breaker can tell "no drift" apart from "we don't know".
+   *
+   * Every error path on the wire (including the expected "space not found"
+   * skip) marshals the response array fields as JSON `null` rather than an
+   * empty array — the Go side only empties them on the success branch. Every
+   * array is defensively normalized to `[]` here so no caller ever has to
+   * guard a `.length` access against a null from an error response.
+   */
+  async setChildren(
+    request: SetChildrenRequest
+  ): Promise<SetChildrenResponse | { disabled: true } | undefined> {
+    if (!this.enabled) return { disabled: true };
+
+    const response = await this.sendCommand({
+      operation: 'setChildren',
+      topic: MatrixAdapterEventType.COMMUNICATION_HIERARCHY_SET_CHILDREN,
+      payload: request satisfies SetChildrenRequest,
+      errorContext: { parentContextId: request.parent_context_id },
+      onError: 'silent',
+    });
+
+    return response === undefined
+      ? undefined
+      : normalizeSetChildrenResponse(response);
   }
 
   // ============================================================================
