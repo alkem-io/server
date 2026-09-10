@@ -7,6 +7,11 @@ import { IUserSettingsDashboard } from './user.settings.dashboard.interface';
 import { DESIGN_VERSION_CURRENT_DEFAULT } from './user.settings.design.version.constants';
 import { IUserSettingsHomeSpace } from './user.settings.home.space.interface';
 import { IUserSettings } from './user.settings.interface';
+import {
+  DEFAULT_INVITATION_RESPONSE_CHANNELS,
+  DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS,
+  DEFAULT_ORGANIZATION_SPACE_INVITATION_CHANNELS,
+} from './user.settings.notification.defaults.constants';
 import { IUserSettingsNotification } from './user.settings.notification.interface';
 import { IUserSettingsPrivacy } from './user.settings.privacy.interface';
 
@@ -27,34 +32,6 @@ const DEFAULT_CONVERSATION_MESSAGE_CHANNELS = Object.freeze({
 // Same defensive pattern as DEFAULT_CONVERSATION_MESSAGE_CHANNELS above.
 const DEFAULT_CALLOUT_REACTION_CHANNELS = Object.freeze({
   email: false,
-  inApp: true,
-  push: true,
-});
-
-// The mandated default for the "an organization you administer is invited to
-// a Space" notification row — all three channels on. Same defensive pattern
-// as the other DEFAULT_* constants above.
-const DEFAULT_ORGANIZATION_SPACE_INVITATION_CHANNELS = Object.freeze({
-  email: true,
-  inApp: true,
-  push: true,
-});
-
-// The mandated default for the "someone responded to an invitation you sent"
-// notification row — all three channels on. Same defensive pattern as the
-// other DEFAULT_* constants above.
-const DEFAULT_INVITATION_RESPONSE_CHANNELS = Object.freeze({
-  email: true,
-  inApp: true,
-  push: true,
-});
-
-// The mandated default for all five organization-associate notification
-// rows (two user-side, three organisation-side) — all three channels on;
-// no row is seeded from a predecessor (no event moves rows). Same
-// defensive pattern as the other DEFAULT_* constants above.
-const DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS = Object.freeze({
-  email: true,
   inApp: true,
   push: true,
 });

@@ -2869,11 +2869,11 @@ describe('RoleSetService', () => {
         'user-1',
         expect.anything(),
         true,
-        // An approved application carries the APPLICATION origin, which
-        // suppresses the generic "a new member joined" for the Space admins:
-        // the brief scopes that notification to memberships with no
-        // invitation or application step.
-        CommunityMembershipOrigin.APPLICATION
+        // An approved application carries DIRECT, so the generic "a new
+        // member joined" still reaches the Space admins (R40): there is no
+        // application-approved event to replace it, and suppressing would
+        // leave the approving admin's co-admins told nothing at all.
+        CommunityMembershipOrigin.DIRECT
       );
     });
 
@@ -3257,7 +3257,7 @@ describe('RoleSetService', () => {
         ]);
       });
 
-      it('maps an approved application to the APPLICATION origin on the target role set only', async () => {
+      it('(R40) leaves an approved application on DIRECT for every role set — nothing replaces the generic notification', async () => {
         const root = spaceRoleSet('root');
         const target = spaceRoleSet('target');
         vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
@@ -3291,10 +3291,7 @@ describe('RoleSetService', () => {
           }))
         ).toEqual([
           { roleSetId: 'root', origin: CommunityMembershipOrigin.DIRECT },
-          {
-            roleSetId: 'target',
-            origin: CommunityMembershipOrigin.APPLICATION,
-          },
+          { roleSetId: 'target', origin: CommunityMembershipOrigin.DIRECT },
         ]);
       });
 

@@ -286,19 +286,21 @@ describe('NotificationSpaceAdapter', () => {
       expect(inAppAdapter.sendInAppNotifications).not.toHaveBeenCalled();
     });
 
-    it('suppresses the admin new-member notification for an approved application, per the brief', async () => {
-      // The brief scopes "a new member joined" to memberships with no
-      // invitation OR application step. The member-side welcome still fires;
-      // only the admin-side generic notification is suppressed.
+    it('still notifies the admins for an approved application — nothing replaces it (R40)', async () => {
+      // An approved application reaches this adapter as DIRECT: there is no
+      // application-approved event to take the suppressed notification's
+      // place, so suppressing would tell the approving admin's co-admins
+      // nothing at all. Pinned here because it is a live platform flow that
+      // server#4100 must not silently change; it flips only when
+      // alkem-io/server#6476 adds the replacement event.
       await adapter.spaceCommunityNewMember(
-        newMemberEvent(CommunityMembershipOrigin.APPLICATION)
+        newMemberEvent(CommunityMembershipOrigin.DIRECT)
       );
 
       expect(
         notificationUserAdapter.userSpaceCommunityJoined
       ).toHaveBeenCalled();
-      expect(externalAdapter.sendExternalNotifications).not.toHaveBeenCalled();
-      expect(inAppAdapter.sendInAppNotifications).not.toHaveBeenCalled();
+      expect(externalAdapter.sendExternalNotifications).toHaveBeenCalled();
     });
 
     it('still notifies the admins for a direct join or admin assignment', async () => {
