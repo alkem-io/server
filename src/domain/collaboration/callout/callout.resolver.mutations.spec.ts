@@ -7,6 +7,7 @@ import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { ReactionType } from '@common/enums/reaction.type';
+import { SubscriptionType } from '@common/enums/subscription.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import {
   ForbiddenException,
@@ -23,6 +24,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { WhiteboardDraftService } from '@domain/common/whiteboard-draft';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -51,6 +53,8 @@ describe('CalloutResolverMutations', () => {
   let actorLookupService: ActorLookupService;
   let taskBoardService: TaskBoardService;
   let notificationAdapterSpace: NotificationSpaceAdapter;
+  let activityAdapter: ActivityAdapter;
+  let postCreatedSubscription: { publish: ReturnType<typeof vi.fn> };
   let _contributionAuthorizationService: CalloutContributionAuthorizationService;
   let _calloutContributionService: CalloutContributionService;
   let collaboraDocumentEventsService: CollaboraDocumentEventsService;
@@ -99,6 +103,8 @@ describe('CalloutResolverMutations', () => {
     actorLookupService = module.get(ActorLookupService);
     taskBoardService = module.get(TaskBoardService);
     notificationAdapterSpace = module.get(NotificationSpaceAdapter);
+    activityAdapter = module.get(ActivityAdapter);
+    postCreatedSubscription = module.get(SUBSCRIPTION_CALLOUT_POST_CREATED);
     _contributionAuthorizationService = module.get(
       CalloutContributionAuthorizationService
     );
@@ -1034,6 +1040,19 @@ describe('CalloutResolverMutations', () => {
           actorContext
         );
         expect(contributionReporter.calloutPostCreated).not.toHaveBeenCalled();
+        // T008.5 / FR-009: the notification, activity-feed and subscription
+        // emissions are OUTSIDE the new task/post branch and must stay
+        // byte-identical for both arms. Without these assertions, moving any
+        // of them into one arm of `if (isTask)` ships green (mutation-verified
+        // during review: deleting the activityAdapter call left 54/54 passing).
+        expect(activityAdapter.calloutPostCreated).toHaveBeenCalledTimes(1);
+        expect(
+          notificationAdapterSpace.spaceCollaborationCalloutContributionCreated
+        ).toHaveBeenCalledTimes(1);
+        expect(postCreatedSubscription.publish).toHaveBeenCalledWith(
+          SubscriptionType.CALLOUT_POST_CREATED,
+          expect.anything()
+        );
       });
 
       it("reports calloutPostCreated (never taskCreated) for an ordinary post — today's exact payload, unchanged", async () => {
@@ -1067,6 +1086,20 @@ describe('CalloutResolverMutations', () => {
           actorContext
         );
         expect(contributionReporter.taskCreated).not.toHaveBeenCalled();
+
+        // T008.5 / FR-009: the notification, activity-feed and subscription
+        // emissions are OUTSIDE the new task/post branch and must stay
+        // byte-identical for both arms. Without these assertions, moving any
+        // of them into one arm of `if (isTask)` ships green (mutation-verified
+        // during review: deleting the activityAdapter call left 54/54 passing).
+        expect(activityAdapter.calloutPostCreated).toHaveBeenCalledTimes(1);
+        expect(
+          notificationAdapterSpace.spaceCollaborationCalloutContributionCreated
+        ).toHaveBeenCalledTimes(1);
+        expect(postCreatedSubscription.publish).toHaveBeenCalledWith(
+          SubscriptionType.CALLOUT_POST_CREATED,
+          expect.anything()
+        );
       });
 
       it('reports neither taskCreated nor calloutPostCreated (and skips notification/activity) for a DRAFT callout, task or not', async () => {
