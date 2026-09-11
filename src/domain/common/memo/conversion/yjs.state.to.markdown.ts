@@ -5,6 +5,7 @@ import { renderToMarkdown } from '@tiptap/static-renderer';
 import { yXmlFragmentToProseMirrorRootNode } from '@tiptap/y-tiptap';
 import { Node as ProseMirrorNode } from 'prosemirror-model';
 import * as Y from 'yjs';
+import { blankLineReplacement } from './const';
 import { Iframe } from './Iframe';
 import { ImageExtension } from './image.extension';
 
@@ -69,7 +70,7 @@ export const yjsStateToMarkdown = (state: Buffer) => {
             }).trim();
             blocks.push({
               nested: false,
-              value: paragraphMarkdown || '&nbsp;',
+              value: paragraphMarkdown || blankLineReplacement,
             });
           } else if (
             child.type.name === 'bulletList' ||
@@ -165,7 +166,7 @@ export const yjsStateToMarkdown = (state: Buffer) => {
       }
 
       case 'paragraph': {
-        if (node.content.size === 0) return '&nbsp;';
+        if (node.content.size === 0) return blankLineReplacement;
 
         // Check if paragraph only contains literal "<br>" text (empty line placeholder)
         const isLiteralBrPlaceholder =
@@ -174,7 +175,7 @@ export const yjsStateToMarkdown = (state: Buffer) => {
           node.content.firstChild?.text === '<br>';
 
         if (isLiteralBrPlaceholder) {
-          return '&nbsp;';
+          return blankLineReplacement;
         }
 
         // Use TipTap's default for regular paragraphs

@@ -213,6 +213,8 @@ describe('MemoPdfRenderer', () => {
         .soft(projectedMarkdown)
         .toContain('\n\n| Column 1 | Column 2 | Column 3 |');
       expect.soft(projectedMarkdown).toContain('\n\n## Heading after table');
+      expect.soft(projectedMarkdown).toContain('\n\n\u00a0\n\n');
+      expect.soft(projectedMarkdown).not.toContain('&nbsp;');
       expect.soft(converterHtml).toContain('<table>');
 
       const listItems = collectPdfMakeNodes(
