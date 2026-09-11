@@ -1,6 +1,10 @@
 import { CollaborationMigrationWorkerModule } from '@core/bootstrap/collaboration-migration.worker.module';
 import { NestFactory } from '@nestjs/core';
-import { CollaborationMigrationService } from '@services/collaboration-integration/migration';
+import {
+  CollaborationMigrationService,
+  MemoImageRepairService,
+} from '@services/collaboration-integration/migration';
+import { parseCollaborationMigrationCommand } from '@services/collaboration-integration/migration/collaboration-migration.cli';
 
 /**
  * One-shot operator entry for the 006 legacy-content back-fill + verification
@@ -9,26 +13,23 @@ import { CollaborationMigrationService } from '@services/collaboration-integrati
  *
  *   node dist/main.collaboration-migration --migrate [--dry-run]
  *   node dist/main.collaboration-migration --verify
+ *   node dist/main.collaboration-migration --repair-memo-images --actor-id <uuid> [--apply] [--memo-id <uuid>]...
  *
  * Prints one machine-readable JSON line and a human-readable summary (no
  * secrets), and exits non-zero on any non-clean outcome (migrate: source-flagged,
  * migrated-with-explicit-visual-loss, or failed rows;
  * verify: any NULL pointer, any pointer that does not resolve in file-service, or
- * any snapshot that fails decode / content-root-schema validation).
+ * any snapshot that fails decode / content-root-schema validation;
+ * memo image repair: any document whose inspection or repair failed).
  * Boots a minimal side-effect-free Nest application context (no scheduler / RMQ /
  * Redis / HTTP) — see `CollaborationMigrationWorkerModule`.
  */
 const USAGE =
-  'usage: main.collaboration-migration (--migrate [--dry-run] | --verify)';
+  'usage: main.collaboration-migration (--migrate [--dry-run] | --verify | --repair-memo-images --actor-id <uuid> [--apply] [--memo-id <uuid>]...)';
 
 const run = async (): Promise<number> => {
-  const args = process.argv.slice(2);
-  const migrate = args.includes('--migrate');
-  const verify = args.includes('--verify');
-  const dryRun = args.includes('--dry-run');
-
-  // Exactly one explicit mode is required — no default mutating action.
-  if (migrate === verify) {
+  const command = parseCollaborationMigrationCommand(process.argv.slice(2));
+  if (!command) {
     process.stderr.write(`${USAGE}\n`);
     return 2;
   }
@@ -38,9 +39,8 @@ const run = async (): Promise<number> => {
     { logger: ['error', 'warn', 'log'] }
   );
   try {
-    const service = app.get(CollaborationMigrationService);
-
-    if (verify) {
+    if (command.mode === 'verify') {
+      const service = app.get(CollaborationMigrationService);
       const summary = await service.verifyAll();
       process.stdout.write(
         `${JSON.stringify({ mode: 'verify', ...summary })}\n`
@@ -51,12 +51,29 @@ const run = async (): Promise<number> => {
       return summary.ok ? 0 : 1;
     }
 
-    const summary = await service.migrateAll({ dryRun });
+    if (command.mode === 'repair-memo-images') {
+      const service = app.get(MemoImageRepairService);
+      const summary = await service.repairMemoImages({
+        actorId: command.actorId,
+        apply: command.apply,
+        memoIds: command.memoIds,
+      });
+      process.stdout.write(
+        `${JSON.stringify({ mode: command.mode, ...summary })}\n`
+      );
+      process.stdout.write(
+        `repair-memo-images${summary.dryRun ? ' (dry-run)' : ''}: total=${summary.total} affected=${summary.affected} proposed=${summary.proposedRemovals} repaired=${summary.repaired} removed=${summary.removedReferences} failed=${summary.failed}\n`
+      );
+      return summary.failed === 0 ? 0 : 1;
+    }
+
+    const service = app.get(CollaborationMigrationService);
+    const summary = await service.migrateAll({ dryRun: command.dryRun });
     process.stdout.write(
       `${JSON.stringify({ mode: 'migrate', ...summary })}\n`
     );
     process.stdout.write(
-      `migrate${dryRun ? ' (dry-run)' : ''}: total=${summary.total} migrated=${summary.migrated} unattached=${summary.unattached} flagged=${summary.flagged} failed=${summary.failed}\n`
+      `migrate${command.dryRun ? ' (dry-run)' : ''}: total=${summary.total} migrated=${summary.migrated} unattached=${summary.unattached} flagged=${summary.flagged} failed=${summary.failed}\n`
     );
     return summary.failed === 0 && summary.flagged === 0 ? 0 : 1;
   } finally {
