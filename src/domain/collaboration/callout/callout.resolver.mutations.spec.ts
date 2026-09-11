@@ -7,6 +7,8 @@ import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { ReactionType } from '@common/enums/reaction.type';
+import { SubscriptionType } from '@common/enums/subscription.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import {
   ForbiddenException,
   RelationshipNotFoundException,
@@ -22,6 +24,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { WhiteboardDraftService } from '@domain/common/whiteboard-draft';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -50,6 +53,8 @@ describe('CalloutResolverMutations', () => {
   let actorLookupService: ActorLookupService;
   let taskBoardService: TaskBoardService;
   let notificationAdapterSpace: NotificationSpaceAdapter;
+  let activityAdapter: ActivityAdapter;
+  let postCreatedSubscription: { publish: ReturnType<typeof vi.fn> };
   let _contributionAuthorizationService: CalloutContributionAuthorizationService;
   let _calloutContributionService: CalloutContributionService;
   let collaboraDocumentEventsService: CollaboraDocumentEventsService;
@@ -98,6 +103,8 @@ describe('CalloutResolverMutations', () => {
     actorLookupService = module.get(ActorLookupService);
     taskBoardService = module.get(TaskBoardService);
     notificationAdapterSpace = module.get(NotificationSpaceAdapter);
+    activityAdapter = module.get(ActivityAdapter);
+    postCreatedSubscription = module.get(SUBSCRIPTION_CALLOUT_POST_CREATED);
     _contributionAuthorizationService = module.get(
       CalloutContributionAuthorizationService
     );
@@ -931,6 +938,253 @@ describe('CalloutResolverMutations', () => {
       expect(
         contributionReporter.calloutCollaboraDocumentCreated
       ).not.toHaveBeenCalled();
+    });
+
+    // Task vs. ordinary post: the branch fires exactly one of taskCreated /
+    // calloutPostCreated, never both, and never for a draft callout.
+    describe('task vs. ordinary post reporting', () => {
+      const setupPostCreateHappyPath = (
+        visibility: CalloutVisibility,
+        overrides: { contribution?: any; postSaveContribution?: any } = {}
+      ) => {
+        const callout = {
+          id: 'callout-1',
+          authorization: { id: 'auth-1' },
+          calloutsSet: { id: 'cs-1', type: CalloutsSetType.COLLABORATION },
+          settings: {
+            contribution: {
+              enabled: true,
+              canAddContributions: CalloutAllowedActors.MEMBERS,
+            },
+            visibility,
+          },
+        } as any;
+
+        const contribution = overrides.contribution ?? {
+          id: 'contrib-1',
+          sortOrder: 1,
+          post: {
+            id: 'post-1',
+            profile: { displayName: 'My Post', storageBucket: {} },
+          },
+        };
+
+        vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+        vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+        vi.mocked(calloutService.createContributionOnCallout).mockResolvedValue(
+          contribution
+        );
+
+        const roomResolverService = (resolver as any).roomResolverService;
+        vi.mocked(
+          roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout
+        ).mockResolvedValue({
+          roleSet: { id: 'rs-1' },
+          platformRolesAccess: { roles: [] },
+          spaceSettings: {},
+        });
+
+        vi.mocked(_calloutContributionService.save).mockResolvedValue(
+          overrides.postSaveContribution ?? contribution
+        );
+        vi.mocked(
+          _calloutContributionService.materializeCalloutContributionContent
+        ).mockResolvedValue(undefined as any);
+        vi.mocked(
+          _calloutContributionService.getStorageBucketForContribution
+        ).mockResolvedValue({ id: 'bucket-1' } as any);
+        vi.mocked(
+          _contributionAuthorizationService.applyAuthorizationPolicy
+        ).mockResolvedValue([]);
+
+        const communityResolverService = (resolver as any)
+          .communityResolverService;
+        vi.mocked(
+          communityResolverService.getLevelZeroSpaceIdForCalloutsSet
+        ).mockResolvedValue('space-root');
+
+        return { callout, contribution };
+      };
+
+      it('reports taskCreated (never calloutPostCreated) for a task-marked contribution', async () => {
+        const contribution = {
+          id: 'contrib-1',
+          sortOrder: 1,
+          post: {
+            id: 'post-1',
+            profile: { displayName: 'Fix the login bug', storageBucket: {} },
+          },
+          classification: {
+            tagsets: [{ name: TagsetReservedName.TASK, tags: ['Backlog'] }],
+          },
+        };
+        setupPostCreateHappyPath(CalloutVisibility.PUBLISHED, {
+          contribution,
+        });
+        vi.mocked(taskBoardService.isTask).mockReturnValue(true);
+        const contributionReporter = (resolver as any).contributionReporter;
+        const actorContext = { actorID: 'user-1' } as any;
+
+        await resolver.createContributionOnCallout(actorContext, {
+          calloutID: 'callout-1',
+          type: CalloutContributionType.POST,
+          post: {},
+        } as any);
+
+        expect(contributionReporter.taskCreated).toHaveBeenCalledWith(
+          {
+            id: 'post-1',
+            name: 'Fix the login bug',
+            space: 'space-root',
+          },
+          actorContext
+        );
+        expect(contributionReporter.calloutPostCreated).not.toHaveBeenCalled();
+        // T008.5 / FR-009: the notification, activity-feed and subscription
+        // emissions are OUTSIDE the new task/post branch and must stay
+        // byte-identical for both arms. Without these assertions, moving any
+        // of them into one arm of `if (isTask)` ships green (mutation-verified
+        // during review: deleting the activityAdapter call left 54/54 passing).
+        expect(activityAdapter.calloutPostCreated).toHaveBeenCalledTimes(1);
+        expect(
+          notificationAdapterSpace.spaceCollaborationCalloutContributionCreated
+        ).toHaveBeenCalledTimes(1);
+        expect(postCreatedSubscription.publish).toHaveBeenCalledWith(
+          SubscriptionType.CALLOUT_POST_CREATED,
+          expect.anything()
+        );
+      });
+
+      it("reports calloutPostCreated (never taskCreated) for an ordinary post — today's exact payload, unchanged", async () => {
+        const contribution = {
+          id: 'contrib-1',
+          sortOrder: 1,
+          post: {
+            id: 'post-1',
+            profile: { displayName: 'An ordinary post', storageBucket: {} },
+          },
+        };
+        setupPostCreateHappyPath(CalloutVisibility.PUBLISHED, {
+          contribution,
+        });
+        vi.mocked(taskBoardService.isTask).mockReturnValue(false);
+        const contributionReporter = (resolver as any).contributionReporter;
+        const actorContext = { actorID: 'user-1' } as any;
+
+        await resolver.createContributionOnCallout(actorContext, {
+          calloutID: 'callout-1',
+          type: CalloutContributionType.POST,
+          post: {},
+        } as any);
+
+        expect(contributionReporter.calloutPostCreated).toHaveBeenCalledWith(
+          {
+            id: 'post-1',
+            name: 'An ordinary post',
+            space: 'space-root',
+          },
+          actorContext
+        );
+        expect(contributionReporter.taskCreated).not.toHaveBeenCalled();
+
+        // T008.5 / FR-009: the notification, activity-feed and subscription
+        // emissions are OUTSIDE the new task/post branch and must stay
+        // byte-identical for both arms. Without these assertions, moving any
+        // of them into one arm of `if (isTask)` ships green (mutation-verified
+        // during review: deleting the activityAdapter call left 54/54 passing).
+        expect(activityAdapter.calloutPostCreated).toHaveBeenCalledTimes(1);
+        expect(
+          notificationAdapterSpace.spaceCollaborationCalloutContributionCreated
+        ).toHaveBeenCalledTimes(1);
+        expect(postCreatedSubscription.publish).toHaveBeenCalledWith(
+          SubscriptionType.CALLOUT_POST_CREATED,
+          expect.anything()
+        );
+      });
+
+      it('reports neither taskCreated nor calloutPostCreated (and skips notification/activity) for a DRAFT callout, task or not', async () => {
+        const contribution = {
+          id: 'contrib-1',
+          sortOrder: 1,
+          post: {
+            id: 'post-1',
+            profile: { displayName: 'Fix the login bug', storageBucket: {} },
+          },
+          classification: {
+            tagsets: [{ name: TagsetReservedName.TASK, tags: ['Backlog'] }],
+          },
+        };
+        setupPostCreateHappyPath(CalloutVisibility.DRAFT, { contribution });
+        vi.mocked(taskBoardService.isTask).mockReturnValue(true);
+        const contributionReporter = (resolver as any).contributionReporter;
+        const actorContext = { actorID: 'user-1' } as any;
+
+        await resolver.createContributionOnCallout(actorContext, {
+          calloutID: 'callout-1',
+          type: CalloutContributionType.POST,
+          post: {},
+        } as any);
+
+        expect(contributionReporter.taskCreated).not.toHaveBeenCalled();
+        expect(contributionReporter.calloutPostCreated).not.toHaveBeenCalled();
+        expect(
+          notificationAdapterSpace.spaceCollaborationCalloutContributionCreated
+        ).not.toHaveBeenCalled();
+      });
+
+      it('captures the task marker from the pre-save contribution — persistence-discriminator: taskCreated still fires when save() resolves a classification-stripped contribution', async () => {
+        const preSaveContribution = {
+          id: 'contrib-1',
+          sortOrder: 1,
+          post: {
+            id: 'post-1',
+            profile: { displayName: 'Fix the login bug', storageBucket: {} },
+          },
+          classification: {
+            tagsets: [{ name: TagsetReservedName.TASK, tags: ['Backlog'] }],
+          },
+        };
+        // A distinct instance simulating TypeORM's save() returning a
+        // contribution with the cascaded classification relation stripped —
+        // this MUST NOT be what the branch reads from.
+        const postSaveContribution = {
+          id: 'contrib-1',
+          sortOrder: 1,
+          post: preSaveContribution.post,
+        };
+        setupPostCreateHappyPath(CalloutVisibility.PUBLISHED, {
+          contribution: preSaveContribution,
+          postSaveContribution,
+        });
+        // isTask resolves true only for the pre-save instance; if the
+        // implementation regressed to reading the marker after save(), this
+        // mock would be invoked with postSaveContribution instead and return
+        // false, flipping the branch to calloutPostCreated.
+        vi.mocked(taskBoardService.isTask).mockImplementation(
+          (contribution: any) => contribution === preSaveContribution
+        );
+        const contributionReporter = (resolver as any).contributionReporter;
+        const actorContext = { actorID: 'user-1' } as any;
+
+        await resolver.createContributionOnCallout(actorContext, {
+          calloutID: 'callout-1',
+          type: CalloutContributionType.POST,
+          post: {},
+        } as any);
+
+        expect(taskBoardService.isTask).toHaveBeenCalledWith(
+          preSaveContribution
+        );
+        expect(contributionReporter.taskCreated).toHaveBeenCalledWith(
+          {
+            id: 'post-1',
+            name: 'Fix the login bug',
+            space: 'space-root',
+          },
+          actorContext
+        );
+        expect(contributionReporter.calloutPostCreated).not.toHaveBeenCalled();
+      });
     });
   });
 

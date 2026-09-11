@@ -551,6 +551,10 @@ export class CalloutResolverMutations {
       actorContext.actorID
     );
 
+    // Captured here, before the save below, so the analytics branch cannot
+    // be disturbed by any future change to what the save call returns.
+    const isTask = this.taskBoardService.isTask(contribution);
+
     const { roleSet, platformRolesAccess, spaceSettings } =
       await this.roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout(
         callout.id
@@ -627,7 +631,8 @@ export class CalloutResolverMutations {
             contribution,
             contribution.post,
             levelZeroSpaceID,
-            actorContext
+            actorContext,
+            isTask
           );
         }
       }
@@ -865,7 +870,8 @@ export class CalloutResolverMutations {
     contribution: ICalloutContribution,
     post: IPost,
     levelZeroSpaceID: string,
-    actorContext: ActorContext
+    actorContext: ActorContext,
+    isTask: boolean
   ) {
     const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
       {
@@ -885,14 +891,25 @@ export class CalloutResolverMutations {
     };
     this.activityAdapter.calloutPostCreated(activityLogInput);
 
-    this.contributionReporter.calloutPostCreated(
-      {
-        id: post.id,
-        name: post.profile.displayName,
-        space: levelZeroSpaceID,
-      },
-      actorContext
-    );
+    if (isTask) {
+      this.contributionReporter.taskCreated(
+        {
+          id: post.id,
+          name: post.profile.displayName,
+          space: levelZeroSpaceID,
+        },
+        actorContext
+      );
+    } else {
+      this.contributionReporter.calloutPostCreated(
+        {
+          id: post.id,
+          name: post.profile.displayName,
+          space: levelZeroSpaceID,
+        },
+        actorContext
+      );
+    }
   }
 
   private async processActivityMemoCreated(

@@ -18,9 +18,7 @@ describe('content-signing local quickstart', () => {
     const gateway = compose.services['trust-gateway'];
     const mock = compose.services['cleverbase-refmock'];
 
-    expect(gateway.image).toBe(
-      'alkemio/trust-gateway@sha256:68035416db3fdb89aeaf2cc2f9e93a8906415cca0093edaa5dacf5d910382a39'
-    );
+    expect(gateway.image).toBe('alkemio/trust-gateway:v0.2.2');
     expect(gateway.ports).toEqual(['127.0.0.1:8080:8080']);
     expect(mock.image).toBe(
       'ghcr.io/alkem-io/cleverbase-refmock@sha256:271f70ee82e8114c0fc03f45788512d5d8f54a9a4fb3c3d7b33057781233fee2'
