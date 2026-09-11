@@ -109,6 +109,47 @@ const structuredMemoState = (): Buffer => {
   }
 };
 
+const mixedNestedListsState = (): Buffer => {
+  const paragraph = (text: string) =>
+    markdownSchema.nodes.paragraph.create(null, markdownSchema.text(text));
+  const listItem = (...content: ProseMirrorNode[]) =>
+    markdownSchema.nodes.listItem.create(null, content);
+  const bulletList = (...items: ProseMirrorNode[]) =>
+    markdownSchema.nodes.bulletList.create(null, items);
+  const orderedList = (...items: ProseMirrorNode[]) =>
+    markdownSchema.nodes.orderedList.create(null, items);
+  const document = markdownSchema.nodes.doc.create(null, [
+    bulletList(
+      listItem(
+        paragraph('Bullet top'),
+        orderedList(
+          listItem(
+            paragraph('Ordered child'),
+            bulletList(listItem(paragraph('Bullet grandchild')))
+          )
+        )
+      )
+    ),
+    orderedList(
+      listItem(
+        paragraph('Ordered top'),
+        bulletList(
+          listItem(
+            paragraph('Bullet child'),
+            orderedList(listItem(paragraph('Ordered grandchild')))
+          )
+        )
+      )
+    ),
+  ]) as ProseMirrorNode;
+  const ydoc = prosemirrorToYDoc(document, 'default');
+  try {
+    return Buffer.from(Y.encodeStateAsUpdateV2(ydoc));
+  } finally {
+    ydoc.destroy();
+  }
+};
+
 const extractText = async (pdf: Buffer): Promise<string> => {
   const document = await parseOffice(pdf, { fileType: 'pdf', ocr: false });
   return document.toText();
@@ -274,6 +315,56 @@ describe('MemoPdfRenderer', () => {
           )
         )
         .toHaveLength(1);
+    } finally {
+      convertHtml.mockRestore();
+    }
+  });
+
+  it('preserves accumulated indentation through mixed nested list types', async () => {
+    const projectedMarkdown = yjsStateToMarkdown(mixedNestedListsState());
+    const convertHtml = vi.spyOn(renderer as any, 'convertHtml');
+
+    try {
+      await renderer.render(projectedMarkdown, 'bucket-1', actor);
+      const definition = convertHtml.mock.results[0].value as PdfMakeNode[];
+      const topLevelLists = definition.filter(
+        node => node.nodeName === 'UL' || node.nodeName === 'OL'
+      );
+      const [bulletRoot, orderedRoot] = topLevelLists;
+      const bulletTopItem = (bulletRoot?.ul as PdfMakeNode[] | undefined)?.[0];
+      const orderedChildList = (
+        bulletTopItem?.stack as PdfMakeNode[] | undefined
+      )?.find(node => node.nodeName === 'OL');
+      const orderedChildItem = (
+        orderedChildList?.ol as PdfMakeNode[] | undefined
+      )?.[0];
+      const bulletGrandchildList = (
+        orderedChildItem?.stack as PdfMakeNode[] | undefined
+      )?.find(node => node.nodeName === 'UL');
+      const orderedTopItem = (
+        orderedRoot?.ol as PdfMakeNode[] | undefined
+      )?.[0];
+      const bulletChildList = (
+        orderedTopItem?.stack as PdfMakeNode[] | undefined
+      )?.find(node => node.nodeName === 'UL');
+      const bulletChildItem = (
+        bulletChildList?.ul as PdfMakeNode[] | undefined
+      )?.[0];
+      const orderedGrandchildList = (
+        bulletChildItem?.stack as PdfMakeNode[] | undefined
+      )?.find(node => node.nodeName === 'OL');
+
+      expect.soft(topLevelLists).toHaveLength(2);
+      expect.soft(orderedChildList?.nodeName).toBe('OL');
+      expect.soft(bulletGrandchildList?.nodeName).toBe('UL');
+      expect
+        .soft((bulletGrandchildList?.ul as PdfMakeNode[] | undefined)?.[0])
+        .toMatchObject({ nodeName: 'LI', text: 'Bullet grandchild' });
+      expect.soft(bulletChildList?.nodeName).toBe('UL');
+      expect.soft(orderedGrandchildList?.nodeName).toBe('OL');
+      expect
+        .soft((orderedGrandchildList?.ol as PdfMakeNode[] | undefined)?.[0])
+        .toMatchObject({ nodeName: 'LI', text: 'Ordered grandchild' });
     } finally {
       convertHtml.mockRestore();
     }

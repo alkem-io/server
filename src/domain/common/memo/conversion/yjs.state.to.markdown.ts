@@ -42,24 +42,22 @@ export const yjsStateToMarkdown = (state: Buffer) => {
   // Manually serialize with proper indentation by traversing the tree
   const serializeNode = (
     node: ProseMirrorNode,
-    depth = 0,
+    indent = '',
     parentType = ''
   ): string => {
-    // Ordered lists need 4 spaces per level, bullet lists need 2
-    const indentSize = parentType === 'orderedList' ? 4 : 2;
-    const indent = ' '.repeat(depth * indentSize);
-
     switch (node.type.name) {
       case 'bulletList':
       case 'orderedList': {
         const items: string[] = [];
         node.content.forEach(child => {
-          items.push(serializeNode(child, depth, node.type.name));
+          items.push(serializeNode(child, indent, node.type.name));
         });
         return items.join('\n');
       }
 
       case 'listItem': {
+        const bullet = parentType === 'orderedList' ? '1.' : '-';
+        const continuationIndent = `${indent}${' '.repeat(bullet.length + 1)}`;
         const blocks: { nested: boolean; value: string }[] = [];
 
         node.content.forEach(child => {
@@ -78,7 +76,7 @@ export const yjsStateToMarkdown = (state: Buffer) => {
           ) {
             blocks.push({
               nested: true,
-              value: serializeNode(child, depth + 1, child.type.name),
+              value: serializeNode(child, continuationIndent, child.type.name),
             });
           } else {
             // Handle other node types (images, code blocks, etc.) using renderToMarkdown
@@ -90,8 +88,6 @@ export const yjsStateToMarkdown = (state: Buffer) => {
           }
         });
 
-        const bullet = parentType === 'orderedList' ? '1.' : '-';
-        const continuationIndent = `${indent}${' '.repeat(bullet.length + 1)}`;
         const indentContinuation = (value: string) =>
           value
             .split('\n')
