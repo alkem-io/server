@@ -581,6 +581,8 @@ enum MutationType {
 enum NotificationEvent {
   ORGANIZATION_ADMIN_MENTIONED
   ORGANIZATION_ADMIN_MESSAGE
+  ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION
+  ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED
   ORGANIZATION_MESSAGE_SENDER
   PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED
   PLATFORM_ADMIN_SPACE_CREATED
@@ -591,6 +593,10 @@ enum NotificationEvent {
   SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION
   SPACE_ADMIN_COMMUNITY_APPLICATION
   SPACE_ADMIN_COMMUNITY_NEW_MEMBER
+  SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED
+  SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED
+  SPACE_ADMIN_USER_COMMUNITY_INVITATION_ACCEPTED
+  SPACE_ADMIN_USER_COMMUNITY_INVITATION_DECLINED
   SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED
   SPACE_COLLABORATION_CALLOUT_COMMENT
   SPACE_COLLABORATION_CALLOUT_CONTRIBUTION
@@ -798,6 +804,10 @@ enum RoleName {
   REGISTERED
 }
 
+enum RoleSetInvitationResultNotice {
+  ORGANIZATION_HAS_NO_ADMINISTRATORS
+}
+
 enum RoleSetInvitationResultType {
   ALREADY_HAS_OPEN_APPLICATION
   ALREADY_INVITED_TO_PLATFORM_AND_ROLE_SET
@@ -806,6 +816,8 @@ enum RoleSetInvitationResultType {
   INVITATION_TO_PARENT_NOT_AUTHORIZED
   INVITED_TO_PLATFORM_AND_ROLE_SET
   INVITED_TO_ROLE_SET
+  ORGANIZATION_LEAD_ROLE_LIMIT_REACHED
+  ORGANIZATION_NOT_ACCEPTING_INVITATIONS
 }
 
 enum RoleSetRoleImplicit {
@@ -3365,6 +3377,14 @@ type InAppNotificationPayloadSpaceCommunityCalendarEventComment implements InApp
 }
 
 type InAppNotificationPayloadSpaceCommunityInvitation implements InAppNotificationPayload {
+  """
+  The underlying invitation — role(s) offered, whether the parent Space is also joined, and the Spaces that will be joined on acceptance.
+  """
+  invitation: Invitation
+  """
+  The organization the invitation is for, when the invitee is an organization.
+  """
+  organization: Organization
   """The Space that the invitation is for."""
   space: Space!
   """The payload type."""
@@ -3565,6 +3585,10 @@ type Invitation {
   lifecycle: Lifecycle!
   """The next events of this Lifecycle."""
   nextEvents: [String!]!
+  """
+  The Spaces that will be joined if this invitation is accepted, root Space first; null when the caller may not answer this invitation on the invited Actor's behalf.
+  """
+  spacesToJoinOnAccept: [SpaceJoinPreview!]
   """The current state of this Lifecycle."""
   state: String!
   """
@@ -5030,6 +5054,8 @@ type OrganizationSettings {
 }
 
 type OrganizationSettingsMembership {
+  """Allow Spaces to invite this Organization to join them."""
+  allowSpaceInvitations: Boolean!
   """
   Allow Users with email addresses matching the domain of this Organization to join.
   """
@@ -6166,6 +6192,18 @@ type RoleSetInvitationResult {
   """
   application: Application
   invitation: Invitation
+  """
+  The id of the invited actor this result belongs to, when the invitee was an actor or an email that resolved to an existing user.
+  """
+  invitedActorID: UUID
+  """
+  The email address this result belongs to, when the invitee was submitted as an email address.
+  """
+  invitedEmail: String
+  """
+  An informational addendum to the result, set only alongside a successful invite outcome.
+  """
+  notice: RoleSetInvitationResultNotice
   platformInvitation: PlatformInvitation
   type: RoleSetInvitationResultType!
 }
@@ -6610,6 +6648,15 @@ type SpaceAboutMembership {
   myPrivileges: [AuthorizationPrivilege!]
   """The identifier of the RoleSet within the Space."""
   roleSetID: UUID!
+}
+
+type SpaceJoinPreview {
+  """The display name of the Space that will be joined."""
+  displayName: String!
+  """The ID of the Space that will be joined."""
+  id: UUID!
+  """The URL of the Space that will be joined."""
+  url: String!
 }
 
 type SpacePendingMembershipInfo {
@@ -7369,6 +7416,10 @@ type UserSettingsNotificationOrganization {
   Receive notification when the organization you are admin of is messaged
   """
   adminMessageReceived: UserSettingsNotificationChannels!
+  """
+  Receive a notification when an organization you administer is invited to a Space
+  """
+  adminSpaceCommunityInvitation: UserSettingsNotificationChannels!
 }
 
 type UserSettingsNotificationPlatform {
@@ -7444,6 +7495,10 @@ type UserSettingsNotificationSpaceAdmin {
   communicationMessageReceived: UserSettingsNotificationChannels!
   """Receive a notification when an application is received"""
   communityApplicationReceived: UserSettingsNotificationChannels!
+  """
+  Receive a notification when someone responds to an invitation you sent (admin)
+  """
+  communityInvitationResponse: UserSettingsNotificationChannels!
   """Receive a notification when a new member joins the community (admin)"""
   communityNewMember: UserSettingsNotificationChannels!
   """
@@ -10134,10 +10189,12 @@ input UpdateOrganizationSettingsInput {
 }
 
 input UpdateOrganizationSettingsMembershipInput {
+  """Allow Spaces to invite this Organization to join them."""
+  allowSpaceInvitations: Boolean
   """
   Allow Users with email addresses matching the domain of this Organization to join.
   """
-  allowUsersMatchingDomainToJoin: Boolean!
+  allowUsersMatchingDomainToJoin: Boolean
 }
 
 input UpdateOrganizationSettingsPrivacyInput {
@@ -10507,6 +10564,10 @@ input UpdateUserSettingsNotificationOrganizationInput {
   Receive notification when the organization you are admin of is messaged
   """
   adminMessageReceived: NotificationSettingInput
+  """
+  Receive a notification when an organization you administer is invited to a Space
+  """
+  adminSpaceCommunityInvitation: NotificationSettingInput
 }
 
 input UpdateUserSettingsNotificationPlatformAdminInput {
@@ -10553,6 +10614,10 @@ input UpdateUserSettingsNotificationSpaceAdminInput {
   communicationMessageReceived: NotificationSettingInput
   """Receive a notification when an application is received"""
   communityApplicationReceived: NotificationSettingInput
+  """
+  Receive a notification when someone responds to an invitation you sent (admin)
+  """
+  communityInvitationResponse: NotificationSettingInput
   """Receive a notification when a new member joins the community (admin)"""
   communityNewMember: NotificationSettingInput
   """

@@ -2,6 +2,7 @@ import { ActorType } from '@common/enums/actor.type';
 import { AlkemioErrorStatus } from '@common/enums/alkemio.error.status';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CommunityMembershipOrigin } from '@common/enums/community.membership.origin';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
@@ -48,6 +49,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -720,7 +722,8 @@ export class RoleSetService {
     roleType: RoleName,
     actorID: string,
     actorContext?: ActorContext,
-    triggerNewMemberEvents = false
+    triggerNewMemberEvents = false,
+    membershipOrigin: CommunityMembershipOrigin = CommunityMembershipOrigin.DIRECT
   ): Promise<string> {
     // 1. Get actor type without loading full entity
     const actorType =
@@ -799,7 +802,8 @@ export class RoleSetService {
       actorID,
       actorType,
       actorContext,
-      triggerNewMemberEvents
+      triggerNewMemberEvents,
+      membershipOrigin
     );
 
     return actorID;
@@ -918,7 +922,8 @@ export class RoleSetService {
     roleSet: IRoleSet,
     role: RoleName,
     actorContext?: ActorContext,
-    triggerNewMemberEvents = false
+    triggerNewMemberEvents = false,
+    membershipOrigin: CommunityMembershipOrigin = CommunityMembershipOrigin.DIRECT
   ) {
     await this.roleSetCacheService.appendActorRoleCache(
       actorID,
@@ -959,7 +964,8 @@ export class RoleSetService {
                 roleSet,
                 actorContext,
                 actorID,
-                actorType
+                actorType,
+                membershipOrigin
               );
             }
           }
@@ -1974,6 +1980,44 @@ export class RoleSetService {
     const actorType =
       await this.actorLookupService.getActorTypeByIdOrFail(actorID);
 
+    // Which flow produced this membership, for the TARGET role set only.
+    // The Space-admin "a new member joined" notification is suppressed for
+    // invitations because a replacement notification is dispatched for the
+    // same event: every admin of the invited Space receives "X accepted /
+    // declined the invitation" (FR-020). A direct join has no such step, so
+    // it keeps the notification.
+    //
+    // ONE RULE, APPLIED UNIFORMLY (R40, restoring R31): suppress only where a
+    // replacement notification actually exists. Three cases therefore keep the
+    // generic notification, and they are the same rule three times, not three
+    // exceptions:
+    //  - APPROVED APPLICATIONS. There is no application-approved event to
+    //    replace the suppressed one — SPACE_ADMIN_COMMUNITY_APPLICATION fires
+    //    at *submission* — so suppressing here tells the approving admin's
+    //    co-admins nothing at all, which is a silent regression of a flow
+    //    server#4100 does not otherwise touch. R35 had suppressed it on the
+    //    literal reading of "no invitation OR APPLICATION step"; that sentence
+    //    was the product email pruning a PROPOSED notification list for the
+    //    user -> organization associates flow, and organizations cannot apply
+    //    to a Space at all (FR-014/R9), so within this feature the clause has
+    //    nothing to attach to. Adding the missing event is alkem-io/server#6476
+    //    — until it lands, applications notify the ordinary way;
+    //  - only USER and ORGANIZATION invitees have invitation-response
+    //    events (FR-020a/R28). A Virtual Contributor accepting produces no
+    //    replacement, so its membership stays DIRECT and the admins are
+    //    told the ordinary way;
+    //  - only the invited role set is suppressed. Ancestor Spaces joined on
+    //    the way in were never invited to, and their admins receive no
+    //    response notification, so they keep the generic "a new member
+    //    joined" (see the per-role-set origin passed in the grant loop
+    //    below).
+    const originHasReplacementNotification =
+      actorType === ActorType.USER || actorType === ActorType.ORGANIZATION;
+    let membershipOrigin = CommunityMembershipOrigin.DIRECT;
+    if (opts.source === 'invitation' && originHasReplacementNotification) {
+      membershipOrigin = CommunityMembershipOrigin.INVITATION;
+    }
+
     // Application and direct-join share the same combined-flow authorisation:
     // grant the ancestor chain iff every ancestor the actor would be granted
     // into is public + opted in (actor-relative). For application this is the
@@ -2032,7 +2076,14 @@ export class RoleSetService {
               actorID,
               actorType,
               actorContext,
-              true
+              true,
+              // Only the target Space saw the invitation / application, so
+              // only its admins get the replacement notification. Every
+              // ancestor joined on the way in is a plain new membership to
+              // that Space's admins.
+              grantedRoleSet.id === targetRoleSet.id
+                ? membershipOrigin
+                : CommunityMembershipOrigin.DIRECT
             );
           } catch (e: any) {
             this.logger.error(
@@ -2070,7 +2121,8 @@ export class RoleSetService {
         RoleName.MEMBER,
         actorID,
         actorContext,
-        true
+        true,
+        membershipOrigin
       );
     }
 
@@ -2137,6 +2189,53 @@ export class RoleSetService {
       current = parent;
     }
     return chain.reverse();
+  }
+
+  /**
+   * The RoleSets a pending invitation would join on acceptance, root first
+   * — target always last. Read-only: mirrors, without executing, exactly
+   * the rule {@link ensureMemberOfRoleSetAndAncestors} applies for an
+   * invitation (`invitedToParent` gates ancestor granting; missing-only —
+   * an ancestor the actor already belongs to is skipped). Used to power
+   * the informed-consent artifacts (email, in-app, Invitations tab) so
+   * they enumerate exactly what acceptance will do.
+   */
+  public async getRoleSetsToJoinOnAccept(
+    roleSet: IRoleSet,
+    actorID: string,
+    invitedToParent: boolean
+  ): Promise<IRoleSet[]> {
+    if (!invitedToParent) {
+      return [roleSet];
+    }
+    const chain = await this.getRoleSetAncestorChain(roleSet);
+    const alreadyMemberFlags = await Promise.all(
+      chain.map(roleSetInChain => this.isMember(actorID, roleSetInChain))
+    );
+    return chain.filter((_roleSetInChain, index) => !alreadyMemberFlags[index]);
+  }
+
+  /**
+   * Space-mapping wrapper over {@link getRoleSetsToJoinOnAccept} — the
+   * single source both the `spacesToJoinOnAccept` resolver field and the
+   * org-invited notification adapter call, so no second mapping exists
+   * anywhere in the codebase.
+   */
+  public async getSpacesToJoinOnAccept(
+    roleSet: IRoleSet,
+    actorID: string,
+    invitedToParent: boolean
+  ): Promise<ISpace[]> {
+    const roleSetsToJoin = await this.getRoleSetsToJoinOnAccept(
+      roleSet,
+      actorID,
+      invitedToParent
+    );
+    return await Promise.all(
+      roleSetsToJoin.map(roleSetToJoin =>
+        this.communityResolverService.getSpaceForRoleSetOrFail(roleSetToJoin.id)
+      )
+    );
   }
 
   /**
@@ -2290,7 +2389,8 @@ export class RoleSetService {
     actorID: string,
     actorType: ActorType,
     actorContext: ActorContext | undefined,
-    triggerNewMemberEvents: boolean
+    triggerNewMemberEvents: boolean,
+    membershipOrigin: CommunityMembershipOrigin = CommunityMembershipOrigin.DIRECT
   ): Promise<void> {
     await this.roleSetCacheService.deleteOpenApplicationFromCache(
       actorID,
@@ -2307,7 +2407,8 @@ export class RoleSetService {
       roleSet,
       roleType,
       actorContext,
-      triggerNewMemberEvents
+      triggerNewMemberEvents,
+      membershipOrigin
     );
 
     if (

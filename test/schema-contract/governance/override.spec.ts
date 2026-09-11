@@ -1,6 +1,6 @@
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { applyOverrides } from '../../../src/schema-contract/governance/apply-overrides';
 import {
   ChangeEntry,
