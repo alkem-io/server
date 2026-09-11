@@ -7,6 +7,10 @@ import { IUserSettingsDashboard } from './user.settings.dashboard.interface';
 import { DESIGN_VERSION_CURRENT_DEFAULT } from './user.settings.design.version.constants';
 import { IUserSettingsHomeSpace } from './user.settings.home.space.interface';
 import { IUserSettings } from './user.settings.interface';
+import {
+  DEFAULT_INVITATION_RESPONSE_CHANNELS,
+  DEFAULT_ORGANIZATION_SPACE_INVITATION_CHANNELS,
+} from './user.settings.notification.defaults.constants';
 import { IUserSettingsNotification } from './user.settings.notification.interface';
 import { IUserSettingsPrivacy } from './user.settings.privacy.interface';
 
@@ -113,6 +117,55 @@ export class UserSettings extends AuthorizableEntity implements IUserSettings {
     if (!this.notification.space.collaborationCalloutReaction) {
       this.notification.space.collaborationCalloutReaction = {
         ...DEFAULT_CALLOUT_REACTION_CHANNELS,
+      };
+    }
+  }
+
+  /**
+   * Defend on read for the "organization you administer is invited to a
+   * Space" notification preference. A `user_settings` row that predates the
+   * backfill migration or was inserted by an old pod during a rolling
+   * deploy lacks this key. Without this hook the non-null GraphQL field
+   * would surface a null and crash the recipients batch. Runs for every
+   * entity load regardless of query path.
+   */
+  @AfterLoad()
+  applyOrganizationSpaceInvitationDefaults() {
+    if (!this.notification?.organization) {
+      return;
+    }
+    if (!this.notification.organization.adminSpaceCommunityInvitation) {
+      this.notification.organization.adminSpaceCommunityInvitation = {
+        ...DEFAULT_ORGANIZATION_SPACE_INVITATION_CHANNELS,
+      };
+    }
+  }
+
+  /**
+   * Defend on read for the "someone responded to an invitation you sent"
+   * notification preference. A `user_settings` row that predates the
+   * backfill migration or was inserted by an old pod during a rolling
+   * deploy lacks this key; without this hook the non-null GraphQL field
+   * would surface a null and the recipients batch would drop the outcome
+   * notification. Runs for every entity load regardless of query path.
+   *
+   * Seeds the row's PREDECESSOR (`communityNewMember`) before the mandated
+   * default, mirroring the `COALESCE` in migration 1788600000000. This row
+   * was split out of `communityNewMember`, so seeding a flat all-on here
+   * would silently re-enable, on all three channels, an event a Space admin
+   * had deliberately switched off — and because this hook's value is
+   * persisted on the next save of the entity, the migration's
+   * `WHERE ... IS NULL` guard could never correct it afterwards.
+   */
+  @AfterLoad()
+  applyInvitationResponseDefaults() {
+    if (!this.notification?.space?.admin) {
+      return;
+    }
+    if (!this.notification.space.admin.communityInvitationResponse) {
+      this.notification.space.admin.communityInvitationResponse = {
+        ...(this.notification.space.admin.communityNewMember ??
+          DEFAULT_INVITATION_RESPONSE_CHANNELS),
       };
     }
   }
