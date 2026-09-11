@@ -4,6 +4,7 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { CollaboraDocumentType } from '@common/enums/collabora.document.type';
 import { LogContext } from '@common/enums/logging.context';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -572,6 +573,156 @@ describe('CalloutsSetResolverMutations', () => {
 
       const activityAdapter = (resolver as any).activityAdapter;
       expect(activityAdapter.calloutPublished).toHaveBeenCalled();
+    });
+
+    describe('taskBoardCreated reporting', () => {
+      const setupCollaborationCalloutHappyPath = (callout: any) => {
+        const calloutsSet = {
+          id: 'cs-1',
+          type: CalloutsSetType.COLLABORATION,
+          authorization: { id: 'auth-1' },
+        } as any;
+
+        vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
+          calloutsSet
+        );
+        vi.mocked(
+          calloutsSetService.createCalloutOnCalloutsSet
+        ).mockResolvedValue(callout);
+        vi.mocked(calloutService.save).mockResolvedValue(callout);
+        vi.mocked(calloutService.getStorageBucket).mockResolvedValue({
+          id: 'sb-1',
+        } as any);
+        vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+        vi.mocked(
+          calloutAuthorizationService.applyAuthorizationPolicy
+        ).mockResolvedValue([]);
+
+        const temporaryStorageService = (resolver as any)
+          .temporaryStorageService;
+        vi.mocked(
+          temporaryStorageService.moveTemporaryDocuments
+        ).mockResolvedValue(undefined);
+
+        const roomResolverService = (resolver as any).roomResolverService;
+        vi.mocked(
+          roomResolverService.getRoleSetAndSettingsForCollaborationCalloutsSet
+        ).mockResolvedValue({
+          roleSet: { id: 'rs-1' },
+          platformRolesAccess: { roles: [] },
+          spaceSettings: {},
+        });
+
+        const communityResolverService = (resolver as any)
+          .communityResolverService;
+        vi.mocked(
+          communityResolverService.getLevelZeroSpaceIdForCalloutsSet
+        ).mockResolvedValue('space-1');
+
+        return { calloutsSet };
+      };
+
+      it('reports taskBoardCreated in addition to calloutCreated for a Tasks-board callout', async () => {
+        const callout = {
+          id: 'callout-1',
+          nameID: 'sprint-board',
+          settings: { visibility: CalloutVisibility.PUBLISHED },
+          classification: {
+            tagsets: [{ name: TagsetReservedName.TASK, tags: ['Backlog'] }],
+          },
+        } as any;
+        setupCollaborationCalloutHappyPath(callout);
+        const taskBoardService = (resolver as any).taskBoardService;
+        vi.mocked(taskBoardService.isTaskBoard).mockReturnValue(true);
+        const contributionReporter = (resolver as any).contributionReporter;
+        const actorContext = { actorID: 'user-1' } as any;
+
+        await resolver.createCalloutOnCalloutsSet(actorContext, {
+          calloutsSetID: 'cs-1',
+        } as any);
+
+        expect(contributionReporter.calloutCreated).toHaveBeenCalledWith(
+          { id: 'callout-1', name: 'sprint-board', space: 'space-1' },
+          actorContext
+        );
+        expect(contributionReporter.taskBoardCreated).toHaveBeenCalledWith(
+          { id: 'callout-1', name: 'sprint-board', space: 'space-1' },
+          actorContext
+        );
+      });
+
+      it('reports calloutCreated only — zero taskBoardCreated — for an ordinary posts callout', async () => {
+        const callout = {
+          id: 'callout-1',
+          nameID: 'ordinary-posts',
+          settings: { visibility: CalloutVisibility.PUBLISHED },
+        } as any;
+        setupCollaborationCalloutHappyPath(callout);
+        const taskBoardService = (resolver as any).taskBoardService;
+        vi.mocked(taskBoardService.isTaskBoard).mockReturnValue(false);
+        const contributionReporter = (resolver as any).contributionReporter;
+        const actorContext = { actorID: 'user-1' } as any;
+
+        await resolver.createCalloutOnCalloutsSet(actorContext, {
+          calloutsSetID: 'cs-1',
+        } as any);
+
+        expect(contributionReporter.calloutCreated).toHaveBeenCalled();
+        expect(contributionReporter.taskBoardCreated).not.toHaveBeenCalled();
+      });
+
+      it('reports calloutCreated + calloutPollCreated exactly as today for a poll callout — zero taskBoardCreated (precedent non-interaction)', async () => {
+        const callout = {
+          id: 'callout-1',
+          nameID: 'poll-callout',
+          settings: { visibility: CalloutVisibility.PUBLISHED },
+          framing: {
+            type: CalloutFramingType.POLL,
+            poll: { title: 'Which day works?' },
+          },
+        } as any;
+        setupCollaborationCalloutHappyPath(callout);
+        const taskBoardService = (resolver as any).taskBoardService;
+        vi.mocked(taskBoardService.isTaskBoard).mockReturnValue(false);
+        const contributionReporter = (resolver as any).contributionReporter;
+        const actorContext = { actorID: 'user-1' } as any;
+
+        await resolver.createCalloutOnCalloutsSet(actorContext, {
+          calloutsSetID: 'cs-1',
+        } as any);
+
+        expect(contributionReporter.calloutCreated).toHaveBeenCalled();
+        expect(contributionReporter.calloutPollCreated).toHaveBeenCalledWith(
+          { id: 'callout-1', name: 'Which day works?', space: 'space-1' },
+          actorContext
+        );
+        expect(contributionReporter.taskBoardCreated).not.toHaveBeenCalled();
+      });
+
+      it('reports taskBoardCreated for a Tasks board created as DRAFT — not gated on visibility, parity with calloutCreated', async () => {
+        const callout = {
+          id: 'callout-1',
+          nameID: 'sprint-board',
+          settings: { visibility: CalloutVisibility.DRAFT },
+          classification: {
+            tagsets: [{ name: TagsetReservedName.TASK, tags: ['Backlog'] }],
+          },
+        } as any;
+        setupCollaborationCalloutHappyPath(callout);
+        const taskBoardService = (resolver as any).taskBoardService;
+        vi.mocked(taskBoardService.isTaskBoard).mockReturnValue(true);
+        const contributionReporter = (resolver as any).contributionReporter;
+        const actorContext = { actorID: 'user-1' } as any;
+
+        await resolver.createCalloutOnCalloutsSet(actorContext, {
+          calloutsSetID: 'cs-1',
+        } as any);
+
+        expect(contributionReporter.taskBoardCreated).toHaveBeenCalledWith(
+          { id: 'callout-1', name: 'sprint-board', space: 'space-1' },
+          actorContext
+        );
+      });
     });
 
     it('should buffer uploaded file and plumb it through framing.collaboraDocument.uploadedFile', async () => {

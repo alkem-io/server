@@ -1,5 +1,6 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
+import { TaskBoardModule } from '@domain/collaboration/callout/task-board/task.board.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { VirtualActorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
@@ -44,6 +45,7 @@ import { RoomServiceEvents } from './room.service.events';
     TypeOrmModule.forFeature([Room]),
     SubscriptionServiceModule,
     InAppNotificationModule,
+    TaskBoardModule,
   ],
   providers: [
     RoomService,
