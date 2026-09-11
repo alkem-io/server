@@ -225,10 +225,10 @@ export class InnovationFlowService {
     // Generate the new tagset template definition
     if (renamedState && innovationFlow.flowStatesTagsetTemplate) {
       const allowedValues = states.map(state => state.displayName);
-      const defaultSelectedValue =
-        states.find(state => state.id === currentStateID)?.displayName ??
-        states[0]?.displayName ??
-        '';
+      const defaultSelectedValue = this.resolveDefaultFlowStateName(
+        states,
+        currentStateID
+      );
 
       await this.tagsetTemplateService.updateTagsetTemplateDefinition(
         innovationFlow.flowStatesTagsetTemplate,
@@ -425,18 +425,45 @@ export class InnovationFlowService {
 
     innovationFlow = await this.save(innovationFlow);
 
-    const tagsetAllowedValues = [...newStates]
-      .sort(sortBySortOrder)
-      .map(state => state.displayName);
-
-    const tagsetDefaultSelectedValue = currentState.displayName;
     await this.updateFlowStatesTagsetTemplate(
       innovationFlow.id,
-      tagsetAllowedValues,
-      tagsetDefaultSelectedValue
+      this.orderedStateNames(innovationFlow.states),
+      this.resolveDefaultFlowStateName(
+        innovationFlow.states,
+        innovationFlow.currentStateID
+      )
     );
 
     return innovationFlow;
+  }
+
+  /**
+   * The flow-state tagset template is the vocabulary that callout creation and
+   * callout transfer validate against, so every operation that changes the set
+   * of states must rewrite it. These two helpers are the single definition of
+   * what that vocabulary looks like: the state names in flow order, and a
+   * default that follows the flow's current state while it exists and otherwise
+   * falls back to the first state.
+   */
+  private orderedStateNames(states: IInnovationFlowState[]): string[] {
+    return [...states].sort(sortBySortOrder).map(state => state.displayName);
+  }
+
+  private resolveDefaultFlowStateName(
+    states: IInnovationFlowState[],
+    currentStateID?: string
+  ): string {
+    const ordered = [...states].sort(sortBySortOrder);
+    if (ordered.length === 0) {
+      throw new ValidationException(
+        'Cannot resolve a default flow state without any states',
+        LogContext.INNOVATION_FLOW
+      );
+    }
+    return (
+      ordered.find(state => state.id === currentStateID)?.displayName ??
+      ordered[0].displayName
+    );
   }
 
   private async updateFlowStatesTagsetTemplate(
@@ -522,7 +549,18 @@ export class InnovationFlowService {
         stateData
       );
     state.innovationFlow = innovationFlow;
-    return await this.innovationFlowStateService.save(state);
+    const savedState = await this.innovationFlowStateService.save(state);
+
+    // Mirror the new state list into the flow-state vocabulary; otherwise a
+    // callout transferred in with this state's name would not be recognised.
+    const states = [...innovationFlow.states, savedState];
+    await this.updateFlowStatesTagsetTemplate(
+      innovationFlow.id,
+      this.orderedStateNames(states),
+      this.resolveDefaultFlowStateName(states, innovationFlow.currentStateID)
+    );
+
+    return savedState;
   }
 
   public async deleteStateOnInnovationFlow(
@@ -633,6 +671,21 @@ export class InnovationFlowService {
 
     const deletedInnovationFlowState =
       await this.innovationFlowStateService.delete(state);
+
+    // Drop the deleted name from the flow-state vocabulary; a callout carrying
+    // that name would otherwise be accepted on transfer and sit on no tab. The
+    // minimum-states guard above guarantees at least one state remains.
+    const remainingStates = innovationFlow.states.filter(
+      s => s.id !== stateData.ID
+    );
+    await this.updateFlowStatesTagsetTemplate(
+      innovationFlow.id,
+      this.orderedStateNames(remainingStates),
+      this.resolveDefaultFlowStateName(
+        remainingStates,
+        innovationFlow.currentStateID
+      )
+    );
 
     deletedInnovationFlowState.id = stateData.ID;
     return deletedInnovationFlowState;
