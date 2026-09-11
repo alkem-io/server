@@ -137,6 +137,18 @@ export class TemplateApplierService {
         newStatesInput
       );
 
+    // The collaboration graph was loaded before the flow states were replaced,
+    // so the callouts set still carries a stale copy of the flow-state tagset
+    // template (the vocabulary callout creation and transfer validate against).
+    // That copy sits on a cascading relation: saving the collaboration below
+    // would write the old allowed values back over the row the flow update just
+    // corrected. Re-read it so the cascade persists the current vocabulary and
+    // callouts added from the template are classified against it.
+    targetCollaboration.calloutsSet.tagsetTemplateSet =
+      await this.calloutsSetService.getTagsetTemplatesSet(
+        targetCollaboration.calloutsSet.id
+      );
+
     // Delete existing callouts if requested (only after the flow-state update
     // succeeds, so an overflow rejection above leaves callouts untouched).
     if (deleteExistingCallouts && targetCollaboration.calloutsSet?.callouts) {
