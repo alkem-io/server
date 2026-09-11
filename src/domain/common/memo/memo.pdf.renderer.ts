@@ -9,6 +9,7 @@ import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file
 import { JSDOM } from 'jsdom';
 import MarkdownIt from 'markdown-it';
 import sharp from 'sharp';
+import { blankLineReplacement } from './conversion/const';
 
 // pdfmake and html-to-pdfmake publish CommonJS without TypeScript declarations.
 const htmlToPdfMake = require('html-to-pdfmake') as (
@@ -184,6 +185,10 @@ export class MemoPdfRenderer {
         replaceWithLink(image, `Image: ${image.alt || source}`, source);
       }
     }
+
+    document.querySelectorAll('p:empty').forEach(paragraph => {
+      paragraph.textContent = blankLineReplacement;
+    });
 
     const content = this.convertHtml(document.body.innerHTML, {
       window: dom.window as unknown as Window,
