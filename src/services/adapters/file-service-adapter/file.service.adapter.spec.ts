@@ -337,6 +337,41 @@ describe('FileServiceAdapter', () => {
     });
   });
 
+  describe('createInternalDocumentInBucket', () => {
+    it('uploads the caller-chosen PDF metadata without user-facing policy fields', async () => {
+      (httpService.request as Mock).mockReturnValue(
+        of(
+          axiosResponse({
+            id: 'pdf-1',
+            externalID: 'hash-pdf',
+            mimeType: 'application/pdf',
+            size: 12,
+          })
+        )
+      );
+
+      await adapter.createInternalDocumentInBucket(
+        Buffer.from('%PDF-content'),
+        'bucket-1',
+        'memo-signing-preview.pdf',
+        'application/pdf',
+        { skipDedup: true }
+      );
+
+      const callArgs = (httpService.request as Mock).mock.calls[0][0];
+      const serialized = callArgs.data.getBuffer().toString('utf8');
+      expect(serialized).toContain('filename="memo-signing-preview.pdf"');
+      expect(serialized).toMatch(
+        /name="displayName"\r\n\r\nmemo-signing-preview\.pdf/
+      );
+      expect(serialized).toContain('Content-Type: application/pdf');
+      expect(serialized).not.toContain('name="authorizationId"');
+      expect(serialized).not.toContain('name="tagsetId"');
+      expect(serialized).not.toContain('name="externalID"');
+      expect(serialized).toMatch(/name="skipDedup"\r\n\r\ntrue/);
+    });
+  });
+
   describe('getContentBatch', () => {
     it('POSTs { ids } to /internal/file/content-batch and returns items in order', async () => {
       const items = [

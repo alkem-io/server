@@ -586,6 +586,20 @@ describe('UrlGeneratorService', () => {
     });
   });
 
+  describe('getMemoSigningSnapshotRestUrl', () => {
+    it('should generate the absolute private snapshot URL', () => {
+      (service as any).configService = {
+        get: vi.fn().mockReturnValue({
+          path_api_private_rest: '/api/private/rest',
+        }),
+      };
+
+      expect(service.getMemoSigningSnapshotRestUrl('attempt-123')).toBe(
+        `${ENDPOINT}/api/private/rest/content-signing/attempt-123/snapshot`
+      );
+    });
+  });
+
   describe('createSpaceAdminCommunityURL', () => {
     it('should generate the admin community URL for a space', async () => {
       cacheService.getUrlFromCache.mockResolvedValue(undefined);

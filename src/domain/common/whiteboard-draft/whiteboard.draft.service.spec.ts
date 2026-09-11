@@ -6,7 +6,13 @@ import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { DataSource, QueryRunner, Repository } from 'typeorm';
+import {
+  DataSource,
+  FindOperator,
+  QueryRunner,
+  Repository,
+  SelectQueryBuilder,
+} from 'typeorm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WhiteboardDraftService } from './whiteboard.draft.service';
 
@@ -47,7 +53,13 @@ describe('WhiteboardDraftService', () => {
   const parentAuthorization = { id: 'parent-auth' } as IAuthorizationPolicy;
   const draftID = 'draft-wb';
   let drafts: Map<string, Whiteboard>;
-  let repository: Pick<Repository<Whiteboard>, 'find'>;
+  let repository: Pick<Repository<Whiteboard>, 'find' | 'createQueryBuilder'>;
+  // Chainable stand-in for the query builder findExpired() now drives.
+  let expiredQueryBuilder: Record<
+    'select' | 'where' | 'orderBy' | 'limit' | 'getRawMany',
+    ReturnType<typeof vi.fn>
+  >;
+  let expiredRows: Array<{ id: string }>;
   let lockedRepository: Pick<Repository<Whiteboard>, 'findOne' | 'update'>;
   let whiteboardService: Pick<
     WhiteboardService,
@@ -70,7 +82,20 @@ describe('WhiteboardDraftService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     drafts = new Map();
-    repository = { find: vi.fn() };
+    expiredRows = [];
+    expiredQueryBuilder = {
+      select: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      getRawMany: vi.fn(async () => expiredRows),
+    };
+    repository = {
+      find: vi.fn(),
+      createQueryBuilder: vi.fn(
+        () => expiredQueryBuilder as unknown as SelectQueryBuilder<Whiteboard>
+      ),
+    };
     lockedRepository = {
       findOne: vi.fn(async options => {
         const where = options.where as {
@@ -399,9 +424,7 @@ describe('WhiteboardDraftService', () => {
       ...futureDraft(),
       draftExpiresAt: new Date(Date.now() - 60_000),
     } as Whiteboard);
-    vi.mocked(repository.find).mockResolvedValue([
-      { id: draftID } as Whiteboard,
-    ]);
+    expiredRows = [{ id: draftID }];
 
     await expect(service.findExpired(25)).resolves.toEqual([draftID]);
     drafts.get(draftID)!.draftExpiresAt =
@@ -463,18 +486,35 @@ describe('WhiteboardDraftService', () => {
     ).rejects.toThrow('Whiteboard draft has expired');
   });
 
-  it('periodic cleanup discovers only expired non-NULL draft expiries', async () => {
-    vi.mocked(repository.find).mockResolvedValue([
-      { id: 'expired-draft' } as Whiteboard,
-    ]);
+  it('periodic cleanup selects expired drafts via a flat, join-free id query', async () => {
+    expiredRows = [{ id: 'expired-draft' }];
 
     await expect(service.findExpired(25)).resolves.toEqual(['expired-draft']);
 
-    expect(repository.find).toHaveBeenCalledWith({
-      select: { id: true },
-      where: { draftExpiresAt: expect.anything() },
-      order: { draftExpiresAt: 'ASC' },
-      take: 25,
-    });
+    // Regression guard for the sweep crash (Postgres 42703
+    // `column distinctAlias.Whiteboard_draftExpiresAt does not exist`):
+    // findExpired must NOT use the eager-join `repository.find` path — that
+    // wraps the paginated read in a distinctAlias subquery whose inner
+    // projection omits the ORDER BY column. It must build a flat id-only query.
+    expect(repository.find).not.toHaveBeenCalled();
+    expect(repository.createQueryBuilder).toHaveBeenCalledWith('whiteboard');
+    expect(expiredQueryBuilder.select).toHaveBeenCalledWith(
+      'whiteboard.id',
+      'id'
+    );
+    // Expiry predicate: draftExpiresAt <= now, the same LessThanOrEqual operator
+    // cleanupExpired's locked re-read uses.
+    const whereArg = vi.mocked(expiredQueryBuilder.where).mock
+      .calls[0]?.[0] as {
+      draftExpiresAt: FindOperator<Date>;
+    };
+    expect(whereArg.draftExpiresAt).toBeInstanceOf(FindOperator);
+    expect(whereArg.draftExpiresAt.type).toBe('lessThanOrEqual');
+    expect(whereArg.draftExpiresAt.value).toBeInstanceOf(Date);
+    expect(expiredQueryBuilder.orderBy).toHaveBeenCalledWith(
+      'whiteboard.draftExpiresAt',
+      'ASC'
+    );
+    expect(expiredQueryBuilder.limit).toHaveBeenCalledWith(25);
   });
 });

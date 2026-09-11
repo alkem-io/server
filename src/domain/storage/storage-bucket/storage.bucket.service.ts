@@ -19,6 +19,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { SigningAttemptService } from '@domain/common/content-signing/signing.attempt.service';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
@@ -68,7 +69,8 @@ export class StorageBucketService {
     private profileRepository: Repository<Profile>,
     private configService: ConfigService,
     private fileServiceAdapter: FileServiceAdapter,
-    private tagsetService: TagsetService
+    private tagsetService: TagsetService,
+    private signingAttemptService: SigningAttemptService
   ) {}
 
   public createStorageBucket(
@@ -122,6 +124,8 @@ export class StorageBucketService {
       em
     );
 
+    await this.assertDocumentsAreNotSigning(storage.documents);
+
     if (storage.authorization) {
       await this.authorizationPolicyService.delete(storage.authorization, em);
     }
@@ -163,6 +167,8 @@ export class StorageBucketService {
       relations: { documents: true },
     });
 
+    await this.assertDocumentsAreNotSigning(storage.documents);
+
     if (storage.authorization)
       await this.authorizationPolicyService.delete(storage.authorization);
 
@@ -179,6 +185,18 @@ export class StorageBucketService {
     );
     result.id = storageID;
     return result;
+  }
+
+  private async assertDocumentsAreNotSigning(
+    documents?: Pick<IDocument, 'id'>[]
+  ): Promise<void> {
+    const documentIDs = documents?.map(document => document.id) ?? [];
+    if (await this.signingAttemptService.existsForDocumentIDs(documentIDs)) {
+      throw new ValidationException(
+        'Storage contains a document retained by a signing attempt',
+        LogContext.STORAGE_BUCKET
+      );
+    }
   }
 
   public async save(

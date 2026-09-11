@@ -1063,6 +1063,11 @@ describe('SpaceService', () => {
             expect.objectContaining({ type: 'space-free' }),
             expect.objectContaining({ type: 'space-plus' }),
             expect.objectContaining({ type: 'space-premium' }),
+            expect.objectContaining({
+              type: 'space-flag-memo-signing',
+              enabled: false,
+              limit: 0,
+            }),
           ]),
         })
       );
