@@ -3,9 +3,8 @@ import Highlight from '@tiptap/extension-highlight';
 import StarterKit from '@tiptap/starter-kit';
 import { renderToMarkdown } from '@tiptap/static-renderer';
 import { yXmlFragmentToProseMirrorRootNode } from '@tiptap/y-tiptap';
-import { Fragment, Node as ProseMirrorNode } from 'prosemirror-model';
+import { Node as ProseMirrorNode } from 'prosemirror-model';
 import * as Y from 'yjs';
-import { newLineReplacement } from './const';
 import { Iframe } from './Iframe';
 import { ImageExtension } from './image.extension';
 
@@ -32,30 +31,12 @@ export const yjsStateToMarkdown = (state: Buffer) => {
   } finally {
     doc.destroy();
   }
-  // Build a new array of child nodes, replacing empty paragraphs with paragraphs containing a non-breaking space
-  // This ensures that empty paragraphs are preserved in the markdown output
-  // (ProseMirror and TipTap tend to ignore completely empty paragraphs)
-  const newContent: ProseMirrorNode[] = [];
-  // use the built-in forEach method of the ProseMirror Fragment
-  pmDoc.content.forEach(child => {
-    // we only target paragraphs without content
-    if (child.type.name !== 'paragraph') {
-      newContent.push(child);
-      return;
-    }
-
-    if (child.content.size > 0) {
-      newContent.push(child);
-      return;
-    }
-    // Overwrite this paragraph with a new one, containing a non-breaking space
-    const newNode = markdownSchema.nodes.paragraph.create(
-      null,
-      markdownSchema.text(newLineReplacement)
-    );
-    newContent.push(newNode);
-  });
-  const newDoc = pmDoc.copy(Fragment.fromArray(newContent));
+  if (
+    pmDoc.childCount === 1 &&
+    pmDoc.firstChild?.type.name === 'paragraph' &&
+    pmDoc.firstChild.content.size === 0
+  )
+    return '';
 
   // Manually serialize with proper indentation by traversing the tree
   const serializeNode = (
@@ -70,16 +51,15 @@ export const yjsStateToMarkdown = (state: Buffer) => {
     switch (node.type.name) {
       case 'bulletList':
       case 'orderedList': {
-        let listOutput = '';
+        const items: string[] = [];
         node.content.forEach(child => {
-          listOutput += serializeNode(child, depth, node.type.name);
+          items.push(serializeNode(child, depth, node.type.name));
         });
-        return listOutput;
+        return items.join('\n');
       }
 
       case 'listItem': {
-        let itemText = '';
-        let nestedLists = '';
+        const blocks: { nested: boolean; value: string }[] = [];
 
         node.content.forEach(child => {
           if (child.type.name === 'paragraph') {
@@ -87,27 +67,44 @@ export const yjsStateToMarkdown = (state: Buffer) => {
               extensions: [StarterKit, ImageExtension, Highlight, Iframe],
               content: child,
             }).trim();
-            itemText += paragraphMarkdown;
+            blocks.push({
+              nested: false,
+              value: paragraphMarkdown || '&nbsp;',
+            });
           } else if (
             child.type.name === 'bulletList' ||
             child.type.name === 'orderedList'
           ) {
-            nestedLists += serializeNode(child, depth + 1, child.type.name);
+            blocks.push({
+              nested: true,
+              value: serializeNode(child, depth + 1, child.type.name),
+            });
           } else {
             // Handle other node types (images, code blocks, etc.) using renderToMarkdown
             const otherContent = renderToMarkdown({
               extensions: [StarterKit, ImageExtension, Highlight, Iframe],
               content: child,
             }).trim();
-            itemText += otherContent;
+            blocks.push({ nested: false, value: otherContent });
           }
         });
 
         const bullet = parentType === 'orderedList' ? '1.' : '-';
-        const mainLine = itemText
-          ? `${indent}${bullet} ${itemText}\n`
-          : `${indent}${bullet}\n`;
-        return mainLine + nestedLists;
+        const continuationIndent = `${indent}${' '.repeat(bullet.length + 1)}`;
+        const indentContinuation = (value: string) =>
+          value
+            .split('\n')
+            .map(line => `${continuationIndent}${line}`)
+            .join('\n');
+        const [firstBlock, ...remainingBlocks] = blocks;
+        let itemOutput = `${indent}${bullet}`;
+        if (firstBlock)
+          itemOutput += firstBlock.nested
+            ? `\n${firstBlock.value}`
+            : ` ${firstBlock.value.replaceAll('\n', `\n${continuationIndent}`)}`;
+        for (const block of remainingBlocks)
+          itemOutput += `\n\n${block.nested ? block.value : indentContinuation(block.value)}`;
+        return itemOutput;
       }
 
       case 'table': {
@@ -164,10 +161,12 @@ export const yjsStateToMarkdown = (state: Buffer) => {
           }
         });
 
-        return tableOutput + '\n';
+        return tableOutput.trimEnd();
       }
 
       case 'paragraph': {
+        if (node.content.size === 0) return '&nbsp;';
+
         // Check if paragraph only contains literal "<br>" text (empty line placeholder)
         const isLiteralBrPlaceholder =
           node.content.childCount === 1 &&
@@ -175,8 +174,7 @@ export const yjsStateToMarkdown = (state: Buffer) => {
           node.content.firstChild?.text === '<br>';
 
         if (isLiteralBrPlaceholder) {
-          // Convert to an empty line in markdown
-          return '\n';
+          return '&nbsp;';
         }
 
         // Use TipTap's default for regular paragraphs
@@ -195,10 +193,10 @@ export const yjsStateToMarkdown = (state: Buffer) => {
     }
   };
 
-  let result = '';
-  newDoc.content.forEach(child => {
-    result += serializeNode(child);
+  const blocks: string[] = [];
+  pmDoc.content.forEach(child => {
+    blocks.push(serializeNode(child));
   });
 
-  return result.trim();
+  return blocks.join('\n\n').trim();
 };
