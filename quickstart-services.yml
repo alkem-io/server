@@ -44,7 +44,7 @@ services:
         target: /etc/traefik/
 
   trust-gateway:
-    image: alkemio/trust-gateway@sha256:68035416db3fdb89aeaf2cc2f9e93a8906415cca0093edaa5dacf5d910382a39
+    image: alkemio/trust-gateway:v0.2.2
     depends_on:
       - cleverbase-refmock
     environment:
