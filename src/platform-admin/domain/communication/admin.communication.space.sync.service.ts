@@ -1,7 +1,7 @@
 import { JoinRuleInvite, JoinRulePublic } from '@alkemio/matrix-adapter-lib';
 import { LogContext } from '@common/enums';
 import { RoomType } from '@common/enums/room.type';
-import { FORUM_CATEGORY_NAMESPACE } from '@constants/forum.constants';
+import { getForumCategoryContextId } from '@constants/forum.constants';
 import { getActorDisplayName } from '@domain/actor/actor.display.name';
 import { Room } from '@domain/communication/room/room.entity';
 import { User } from '@domain/community/user/user.entity';
@@ -13,7 +13,6 @@ import { Forum } from '@platform/forum/forum.entity';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
-import { v5 as uuidv5 } from 'uuid';
 
 const INVISIBLE_STATE = { 'io.alkemio.visibility': { visible: false } };
 
@@ -211,7 +210,7 @@ export class AdminCommunicationSpaceSyncService {
             undefined,
             undefined,
             JoinRulePublic,
-            true,
+            false,
             INVISIBLE_STATE
           );
           this.logger.verbose?.(
@@ -219,14 +218,16 @@ export class AdminCommunicationSpaceSyncService {
             LogContext.COMMUNICATION
           );
         } else {
-          // Ensure existing forum space has correct visibility
+          // Re-assert that the forum space is kept out of the public room
+          // directory. This is also the retraction path for spaces that were
+          // published to the directory by an earlier version of this sync.
           await this.communicationAdapter.updateSpace(
             forum.id,
             undefined,
             undefined,
             undefined,
             JoinRulePublic,
-            true
+            false
           );
         }
 
@@ -240,9 +241,9 @@ export class AdminCommunicationSpaceSyncService {
         // Create category spaces for ALL defined categories on the forum
         const categories = forum.discussionCategories ?? [];
         for (const category of categories) {
-          const categoryContextId = uuidv5(
-            `${forum.id}:category:${category}`,
-            FORUM_CATEGORY_NAMESPACE
+          const categoryContextId = getForumCategoryContextId(
+            forum.id,
+            category
           );
           const existingCategory =
             await this.communicationAdapter.getSpace(categoryContextId);
@@ -254,7 +255,7 @@ export class AdminCommunicationSpaceSyncService {
               forum.id,
               undefined,
               JoinRulePublic,
-              true,
+              false,
               INVISIBLE_STATE
             );
             this.logger.verbose?.(
@@ -262,14 +263,16 @@ export class AdminCommunicationSpaceSyncService {
               LogContext.COMMUNICATION
             );
           } else {
-            // Ensure existing category space has correct visibility
+            // Re-assert that the category space is kept out of the public
+            // room directory (also the retraction path for a space an
+            // earlier version of this sync already published).
             await this.communicationAdapter.updateSpace(
               categoryContextId,
               undefined,
               undefined,
               undefined,
               JoinRulePublic,
-              true
+              false
             );
             this.logger.verbose?.(
               `Updated visibility for forum category: ${category} (${categoryContextId})`,
@@ -310,9 +313,9 @@ export class AdminCommunicationSpaceSyncService {
       if (!forum.discussions) continue;
       for (const discussion of forum.discussions) {
         if (!discussion.comments) continue;
-        const categoryContextId = uuidv5(
-          `${forum.id}:category:${discussion.category}`,
-          FORUM_CATEGORY_NAMESPACE
+        const categoryContextId = getForumCategoryContextId(
+          forum.id,
+          discussion.category
         );
         const entries = discussionsByCategory.get(categoryContextId) ?? [];
         entries.push({
@@ -596,9 +599,7 @@ export class AdminCommunicationSpaceSyncService {
     for (const forum of forums) {
       spaceContextIds.push(forum.id);
       for (const category of forum.discussionCategories ?? []) {
-        spaceContextIds.push(
-          uuidv5(`${forum.id}:category:${category}`, FORUM_CATEGORY_NAMESPACE)
-        );
+        spaceContextIds.push(getForumCategoryContextId(forum.id, category));
       }
     }
 

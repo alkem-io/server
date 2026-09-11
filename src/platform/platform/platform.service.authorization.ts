@@ -344,7 +344,11 @@ export class PlatformAuthorizationService {
     platformAdminNotifications.cascade = false;
     credentialRules.push(platformAdminNotifications);
 
-    // Allow organization admins to access organization admin notification settings
+    // Allow organization admins to access organization admin notification
+    // settings. ADMIN only, matching who actually receives the organization
+    // notifications (ORGANIZATION_NOTIFICATION_CREDENTIAL_TYPES) — an owner
+    // who is not also an admin receives none of them, so there is nothing for
+    // them to switch off here.
     const receiveNotificationsOrganizationAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ORGANIZATION_ADMIN],

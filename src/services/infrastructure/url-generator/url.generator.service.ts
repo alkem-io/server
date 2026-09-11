@@ -265,6 +265,24 @@ export class UrlGeneratorService {
     return `${this.endpoint_cluster}/${UrlPathBase.ORGANIZATION}/${organizationNameID}`;
   }
 
+  /**
+   * Relative deep-link path to an organization's Invitations settings tab —
+   * used for the push notification `url` (client-side navigation) and as
+   * the in-app override the client builds from `organization.profile.url`.
+   */
+  public getOrganizationSettingsInvitationsUrlPath(
+    organizationNameID: string
+  ): string {
+    return `/${UrlPathBase.ORGANIZATION}/${organizationNameID}/${UrlPathElementSpace.SETTINGS}/invitations`;
+  }
+
+  /** Absolute URL to an organization's Invitations settings tab — the email call-to-action. */
+  public createUrlForOrganizationSettingsInvitations(
+    organizationNameID: string
+  ): string {
+    return `${this.createUrlForOrganizationNameID(organizationNameID)}/${UrlPathElementSpace.SETTINGS}/invitations`;
+  }
+
   public createUrlForUserNameID(userNameID: string): string {
     return `${this.endpoint_cluster}/${UrlPathBase.USER}/${userNameID}`;
   }
