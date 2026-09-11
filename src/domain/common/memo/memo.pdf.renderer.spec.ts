@@ -4,12 +4,16 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { prosemirrorToYDoc } from '@tiptap/y-tiptap';
 import { JSDOM } from 'jsdom';
 import MarkdownIt from 'markdown-it';
 import { parseOffice } from 'officeparser';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
+import type { Node as ProseMirrorNode } from 'prosemirror-model';
 import sharp from 'sharp';
+import * as Y from 'yjs';
 import { markdownToYjsV2State, yjsStateToMarkdown } from './conversion';
+import { markdownSchema } from './conversion/markdown.schema';
 import { MemoPdfRenderer } from './memo.pdf.renderer';
 
 const pdfjsRequire = createRequire(require.resolve('pdfjs-dist/package.json'));
@@ -27,6 +31,82 @@ const pdfMake = require('pdfmake') as {
 };
 const fonts = require('pdfmake/fonts/Roboto') as {
   Roboto: Record<string, string>;
+};
+
+type PdfMakeNode = Record<string, unknown>;
+
+const collectPdfMakeNodes = (
+  value: unknown,
+  predicate: (node: PdfMakeNode) => boolean
+): PdfMakeNode[] => {
+  if (!value || typeof value !== 'object') return [];
+  const node = value as PdfMakeNode;
+  const matches = predicate(node) ? [node] : [];
+  return [
+    ...matches,
+    ...Object.values(node).flatMap(child =>
+      collectPdfMakeNodes(child, predicate)
+    ),
+  ];
+};
+
+const structuredMemoState = (): Buffer => {
+  const paragraph = (text = '') =>
+    markdownSchema.nodes.paragraph.create(
+      null,
+      text ? markdownSchema.text(text) : undefined
+    );
+  const listItem = markdownSchema.nodes.listItem.create(null, [
+    paragraph('First paragraph inside item.'),
+    paragraph('Second paragraph inside same item.'),
+    paragraph('Third paragraph inside same item.'),
+    markdownSchema.nodes.bulletList.create(null, [
+      markdownSchema.nodes.listItem.create(null, [
+        paragraph('Nested child'),
+        markdownSchema.nodes.bulletList.create(null, [
+          markdownSchema.nodes.listItem.create(null, [paragraph('Grandchild')]),
+        ]),
+      ]),
+    ]),
+  ]);
+  const tableRows = Array.from({ length: 8 }, (_, rowIndex) => {
+    const cellType =
+      rowIndex === 0
+        ? markdownSchema.nodes.tableHeader
+        : markdownSchema.nodes.tableCell;
+    return markdownSchema.nodes.tableRow.create(
+      null,
+      Array.from({ length: 3 }, (_, columnIndex) =>
+        cellType.create(
+          null,
+          paragraph(
+            rowIndex === 0
+              ? `Column ${columnIndex + 1}`
+              : `${rowIndex}${columnIndex + 1}`
+          )
+        )
+      )
+    );
+  });
+  const document = markdownSchema.nodes.doc.create(null, [
+    markdownSchema.nodes.heading.create(
+      { level: 1 },
+      paragraph('Structure probe').content
+    ),
+    paragraph(),
+    markdownSchema.nodes.bulletList.create(null, [listItem]),
+    markdownSchema.nodes.table.create(null, tableRows),
+    markdownSchema.nodes.heading.create(
+      { level: 2 },
+      paragraph('Heading after table').content
+    ),
+  ]) as ProseMirrorNode;
+  const ydoc = prosemirrorToYDoc(document, 'default');
+  try {
+    return Buffer.from(Y.encodeStateAsUpdateV2(ydoc));
+  } finally {
+    ydoc.destroy();
+  }
 };
 
 const extractText = async (pdf: Buffer): Promise<string> => {
@@ -113,6 +193,88 @@ describe('MemoPdfRenderer', () => {
     expect(text).toContain('A');
     expect(text).toContain('quoted');
     expect(text).toContain('Γειά σου');
+  });
+
+  it('preserves editor block structure through the current Yjs projection', async () => {
+    const projectedMarkdown = yjsStateToMarkdown(structuredMemoState());
+    const convertHtml = vi.spyOn(renderer as any, 'convertHtml');
+
+    try {
+      await renderer.render(projectedMarkdown, 'bucket-1', actor);
+      const converterHtml = convertHtml.mock.calls[0][0] as string;
+      const definition = convertHtml.mock.results[0].value;
+
+      expect
+        .soft(projectedMarkdown)
+        .toContain(
+          '- First paragraph inside item.\n\n  Second paragraph inside same item.\n\n  Third paragraph inside same item.'
+        );
+      expect
+        .soft(projectedMarkdown)
+        .toContain('\n\n| Column 1 | Column 2 | Column 3 |');
+      expect.soft(projectedMarkdown).toContain('\n\n## Heading after table');
+      expect.soft(converterHtml).toContain('<table>');
+
+      const listItems = collectPdfMakeNodes(
+        definition,
+        node => node.nodeName === 'LI'
+      );
+      const topListItem = listItems.find(node => {
+        const stack = node.stack;
+        return (
+          Array.isArray(stack) &&
+          stack.some(
+            child =>
+              typeof child === 'object' &&
+              child !== null &&
+              (child as PdfMakeNode).text === 'First paragraph inside item.'
+          )
+        );
+      });
+      expect.soft(topListItem).toBeDefined();
+      expect
+        .soft(
+          (topListItem?.stack as PdfMakeNode[] | undefined)
+            ?.filter(node => node.nodeName === 'P')
+            .map(node => node.text)
+        )
+        .toEqual([
+          'First paragraph inside item.',
+          'Second paragraph inside same item.',
+          'Third paragraph inside same item.',
+        ]);
+      expect
+        .soft(collectPdfMakeNodes(topListItem, node => node.nodeName === 'UL'))
+        .toHaveLength(2);
+
+      const tables = collectPdfMakeNodes(
+        definition,
+        node => node.nodeName === 'TABLE'
+      );
+      expect.soft(tables).toHaveLength(1);
+      const body = (tables[0]?.table as { body?: unknown[][] } | undefined)
+        ?.body;
+      expect.soft(body).toHaveLength(8);
+      expect.soft(body?.every(row => row.length === 3)).toBe(true);
+      expect
+        .soft(
+          collectPdfMakeNodes(
+            definition,
+            node => node.nodeName === 'H1' || node.nodeName === 'H2'
+          ).map(node => node.text)
+        )
+        .toEqual(['Structure probe', 'Heading after table']);
+      expect
+        .soft(
+          collectPdfMakeNodes(
+            definition,
+            node => node.nodeName === 'P' && node.text === '\u00a0'
+          )
+        )
+        .toHaveLength(1);
+    } finally {
+      convertHtml.mockRestore();
+    }
   });
 
   it('renders European platform languages and a visible box for an unsupported symbol', async () => {
