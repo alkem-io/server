@@ -1,4 +1,5 @@
-import { AuthorizationCredential, LogContext } from '@common/enums';
+import { ORGANIZATION_MANAGER_CREDENTIAL_TYPES } from '@common/constants/authorization';
+import { LogContext } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
 import {
   EntityNotFoundException,
@@ -635,10 +636,7 @@ export class ActorLookupService {
     const orgCredentials = await this.entityManager.find(Credential, {
       where: {
         actorID: userID,
-        type: In([
-          AuthorizationCredential.ORGANIZATION_OWNER,
-          AuthorizationCredential.ORGANIZATION_ADMIN,
-        ]),
+        type: In([...ORGANIZATION_MANAGER_CREDENTIAL_TYPES]),
       },
     });
 
