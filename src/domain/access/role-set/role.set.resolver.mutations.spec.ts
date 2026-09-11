@@ -163,16 +163,17 @@ describe('RoleSetResolverMutations', () => {
   });
 
   describe('assignRoleToOrganization', () => {
-    it('should assign role to organization on SPACE roleSet', async () => {
-      const actorContext = { actorID: 'admin-1' } as any;
-      const mockRoleSet = {
-        id: 'rs-1',
-        type: RoleSetType.SPACE,
-        authorization: { id: 'auth-1' },
-      } as any;
-      const mockOrg = { id: 'org-1' } as any;
+    const spaceRoleSet = {
+      id: 'rs-1',
+      type: RoleSetType.SPACE,
+      entryRoleName: RoleName.MEMBER,
+      authorization: { id: 'auth-1' },
+    } as any;
 
-      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(mockRoleSet);
+    const arrangeAssign = (alreadyInRoleSet: boolean) => {
+      const mockOrg = { id: 'org-1' } as any;
+      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(spaceRoleSet);
+      (roleSetService.isInRole as Mock).mockResolvedValue(alreadyInRoleSet);
       (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
         undefined
       );
@@ -180,16 +181,85 @@ describe('RoleSetResolverMutations', () => {
       (
         organizationLookupService.getOrganizationByIdOrFail as Mock
       ).mockResolvedValue(mockOrg);
+      return mockOrg;
+    };
 
-      const result = await resolver.assignRoleToOrganization(actorContext, {
-        roleSetID: 'rs-1',
-        actorID: 'org-1',
-        role: RoleName.MEMBER,
-      } as any);
+    const privilegesChecked = () =>
+      (authorizationService.grantAccessOrFail as Mock).mock.calls.map(
+        call => call[2]
+      );
+
+    it('requires the assign-organization privilege to bring in a NEW organization', async () => {
+      const mockOrg = arrangeAssign(false);
+
+      const result = await resolver.assignRoleToOrganization(
+        { actorID: 'admin-1' } as any,
+        {
+          roleSetID: 'rs-1',
+          actorID: 'org-1',
+          role: RoleName.MEMBER,
+        } as any
+      );
 
       expect(result).toBe(mockOrg);
-      // Should check both ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION and GRANT
-      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledTimes(2);
+      expect(privilegesChecked()).toEqual([
+        AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION,
+        AuthorizationPrivilege.GRANT,
+      ]);
+    });
+
+    it('requires GRANT alone to change the role of an organization already in the roleSet', async () => {
+      // R32: consent is about entering the Space, not about which role the
+      // organization holds once it is in. A Space admin holds GRANT but never
+      // holds ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION, so requiring both here
+      // left every organization that accepted an invitation unmanageable.
+      const mockOrg = arrangeAssign(true);
+
+      const result = await resolver.assignRoleToOrganization(
+        { actorID: 'space-admin-1' } as any,
+        {
+          roleSetID: 'rs-1',
+          actorID: 'org-1',
+          role: RoleName.LEAD,
+        } as any
+      );
+
+      expect(result).toBe(mockOrg);
+      expect(privilegesChecked()).toEqual([AuthorizationPrivilege.GRANT]);
+      expect(roleSetService.isInRole).toHaveBeenCalledWith(
+        'org-1',
+        spaceRoleSet,
+        RoleName.MEMBER
+      );
+    });
+
+    it('refuses a non-organization actor BEFORE granting any credential', async () => {
+      // R32 relaxed this mutation to GRANT alone for an actor already holding
+      // the entry role, which puts it in reach of every Space admin. Nothing
+      // on this path asserts the actor type — `assignActorToRole` derives it
+      // from the DB and applies THAT type's policy — so aiming the mutation at
+      // a Virtual Contributor already in the Space granted it a Space role
+      // while skipping the SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS entitlement
+      // that `assignRoleToVirtualContributor` enforces. The lookup used to run
+      // only AFTER the grant, so the credential persisted (there is no
+      // transaction) while the caller saw an error.
+      arrangeAssign(true);
+      (
+        organizationLookupService.getOrganizationByIdOrFail as Mock
+      ).mockRejectedValue(new Error('Organization not found'));
+
+      await expect(
+        resolver.assignRoleToOrganization(
+          { actorID: 'space-admin-1' } as any,
+          {
+            roleSetID: 'rs-1',
+            actorID: 'vc-1',
+            role: RoleName.LEAD,
+          } as any
+        )
+      ).rejects.toThrow('Organization not found');
+
+      expect(roleSetService.assignActorToRole).not.toHaveBeenCalled();
     });
   });
 
