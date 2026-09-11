@@ -862,6 +862,135 @@ describe('ContributionReporterService', () => {
     });
   });
 
+  describe('taskBoardCreated', () => {
+    it('should index a TASK_BOARD_CREATED document with no additional fields', async () => {
+      mockActorService.getActorOrNull.mockResolvedValue({
+        id: 'user-1',
+        type: ActorType.USER,
+      });
+      mockUserLookupService.getUserByIdOrFail.mockResolvedValue({
+        email: 'user@example.com',
+      });
+
+      service.taskBoardCreated(
+        { id: 'callout-1', name: 'sprint-board', space: 'space-root' },
+        { actorID: 'user-1' }
+      );
+
+      await vi.waitFor(() => {
+        expect(mockIndex).toHaveBeenCalledTimes(1);
+      });
+
+      const [[indexCall]] = mockIndex.mock.calls;
+      expect(indexCall.document).toEqual(
+        expect.objectContaining({
+          type: 'TASK_BOARD_CREATED',
+          id: 'callout-1',
+          name: 'sprint-board',
+          space: 'space-root',
+          author: 'user-1',
+        })
+      );
+      expect(Object.keys(indexCall.document)).toEqual(
+        expect.arrayContaining([
+          'type',
+          'id',
+          'name',
+          'space',
+          'author',
+          '@timestamp',
+          'environment',
+        ])
+      );
+    });
+  });
+
+  describe('taskCreated', () => {
+    it('should index a TASK_CREATED document with no additional fields', async () => {
+      mockActorService.getActorOrNull.mockResolvedValue({
+        id: 'user-1',
+        type: ActorType.USER,
+      });
+      mockUserLookupService.getUserByIdOrFail.mockResolvedValue({
+        email: 'user@example.com',
+      });
+
+      service.taskCreated(
+        { id: 'post-1', name: 'Fix the login bug', space: 'space-root' },
+        { actorID: 'user-1' }
+      );
+
+      await vi.waitFor(() => {
+        expect(mockIndex).toHaveBeenCalledTimes(1);
+      });
+
+      const [[indexCall]] = mockIndex.mock.calls;
+      expect(indexCall.document).toEqual(
+        expect.objectContaining({
+          type: 'TASK_CREATED',
+          id: 'post-1',
+          name: 'Fix the login bug',
+          space: 'space-root',
+          author: 'user-1',
+        })
+      );
+      expect(Object.keys(indexCall.document)).toEqual(
+        expect.arrayContaining([
+          'type',
+          'id',
+          'name',
+          'space',
+          'author',
+          '@timestamp',
+          'environment',
+        ])
+      );
+    });
+  });
+
+  describe('taskCommentCreated', () => {
+    it('should index a TASK_COMMENT_CREATED document with no additional fields', async () => {
+      mockActorService.getActorOrNull.mockResolvedValue({
+        id: 'user-1',
+        type: ActorType.USER,
+      });
+      mockUserLookupService.getUserByIdOrFail.mockResolvedValue({
+        email: 'user@example.com',
+      });
+
+      service.taskCommentCreated(
+        { id: 'post-1', name: 'Fix the login bug', space: 'space-root' },
+        { actorID: 'user-1' }
+      );
+
+      await vi.waitFor(() => {
+        expect(mockIndex).toHaveBeenCalledTimes(1);
+      });
+
+      const [[indexCall]] = mockIndex.mock.calls;
+      expect(indexCall.document).toEqual(
+        expect.objectContaining({
+          type: 'TASK_COMMENT_CREATED',
+          id: 'post-1',
+          name: 'Fix the login bug',
+          space: 'space-root',
+          author: 'user-1',
+        })
+      );
+      expect(Object.keys(indexCall.document)).toEqual(
+        expect.arrayContaining([
+          'type',
+          'id',
+          'name',
+          'space',
+          'author',
+          '@timestamp',
+          'environment',
+        ])
+      );
+    });
+  });
+
   describe('error handling', () => {
     it('should handle ElasticResponseError when index fails', async () => {
       mockActorService.getActorOrNull.mockResolvedValue(null);
