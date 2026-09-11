@@ -124,6 +124,7 @@ export class RoomResolverService {
           post: {
             profile: true,
           },
+          classification: { tagsets: true },
         },
       },
     });

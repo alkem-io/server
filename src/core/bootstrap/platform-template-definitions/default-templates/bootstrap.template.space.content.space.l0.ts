@@ -30,7 +30,7 @@ export const bootstrapTemplateSpaceContentSpaceL0: CreateTemplateContentSpaceInp
         },
         settings: {
           maximumNumberOfStates: 8,
-          minimumNumberOfStates: 4,
+          minimumNumberOfStates: 1,
         },
         states: [
           {

@@ -5,8 +5,10 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseService } from '@domain/common/license/license.service';
+import { ProfileService } from '@domain/common/profile/profile.service';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
@@ -39,6 +41,9 @@ describe('AccountService', () => {
   let innovationPackService: Mocked<InnovationPackService>;
   let innovationHubService: Mocked<InnovationHubService>;
   let licenseService: Mocked<LicenseService>;
+  let profileService: Mocked<ProfileService>;
+  let authorizationPolicyService: Mocked<AuthorizationPolicyService>;
+  let actorService: Mocked<ActorService>;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -75,6 +80,11 @@ describe('AccountService', () => {
       InnovationHubService
     ) as Mocked<InnovationHubService>;
     licenseService = module.get(LicenseService) as Mocked<LicenseService>;
+    profileService = module.get(ProfileService) as Mocked<ProfileService>;
+    authorizationPolicyService = module.get(
+      AuthorizationPolicyService
+    ) as Mocked<AuthorizationPolicyService>;
+    actorService = module.get(ActorService) as Mocked<ActorService>;
   });
 
   describe('getAccountOrFail', () => {
@@ -236,6 +246,92 @@ describe('AccountService', () => {
       expect(innovationHubService.delete).toHaveBeenCalledWith('hub-1');
       expect(spaceService.deleteSpaceOrFail).toHaveBeenCalledTimes(2);
       expect(result.id).toBe('account-1');
+    });
+  });
+
+  describe('deleteAccountOrFailForAccountDeletion', () => {
+    it('joins the passed EntityManager and combines document external ids from storage and profile', async () => {
+      const mockAccount = {
+        id: 'account-1',
+        spaces: [],
+        virtualContributors: [],
+        innovationPacks: [],
+        storageAggregator: { id: 'storage-1' },
+        innovationHubs: [],
+        license: { id: 'license-1' },
+        profile: { id: 'profile-1' },
+        authorization: { id: 'auth-1' },
+      } as unknown as Account;
+      const em = {
+        findOne: vi.fn().mockResolvedValue(mockAccount),
+      } as any;
+      storageAggregatorService.deleteForAccountDeletion.mockResolvedValue({
+        storageAggregator: {} as any,
+        documentIDs: ['ext-1'],
+        storageBucketIDs: ['sb-aggregator'],
+      });
+      licenseService.removeLicenseOrFail.mockResolvedValue(undefined!);
+      profileService.deleteProfileForAccountDeletion.mockResolvedValue({
+        profile: {} as any,
+        documentIDs: ['ext-2'],
+        storageBucketIDs: ['sb-profile'],
+      });
+      authorizationPolicyService.delete.mockResolvedValue(undefined!);
+      actorService.deleteActorById.mockResolvedValue(undefined!);
+
+      const result = await service.deleteAccountOrFailForAccountDeletion(
+        mockAccount,
+        em
+      );
+
+      // The account re-assertion reads through the passed-in transactional
+      // EntityManager, not the repository, so the check and the deletion
+      // writes below it observe the same snapshot.
+      expect(em.findOne).toHaveBeenCalled();
+      expect(
+        storageAggregatorService.deleteForAccountDeletion
+      ).toHaveBeenCalledWith('storage-1', em);
+      expect(licenseService.removeLicenseOrFail).toHaveBeenCalledWith(
+        'license-1',
+        em
+      );
+      expect(
+        profileService.deleteProfileForAccountDeletion
+      ).toHaveBeenCalledWith('profile-1', em);
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        mockAccount.authorization,
+        em
+      );
+      expect(actorService.deleteActorById).toHaveBeenCalledWith(
+        'account-1',
+        em
+      );
+      expect(result.documentIDs).toEqual(['ext-1', 'ext-2']);
+      expect(result.storageBucketIDs).toEqual(['sb-aggregator', 'sb-profile']);
+      expect(result.account.id).toBe('account-1');
+      expect(storageAggregatorService.delete).not.toHaveBeenCalled();
+      expect(spaceService.deleteSpaceOrFail).not.toHaveBeenCalled();
+    });
+
+    it('refuses loudly when the account still holds a resource (the invariant every caller relies on)', async () => {
+      const mockAccount = {
+        id: 'account-1',
+        spaces: [{ id: 'space-1' }],
+        virtualContributors: [],
+        innovationPacks: [],
+        storageAggregator: { id: 'storage-1' },
+        innovationHubs: [],
+        license: { id: 'license-1' },
+      } as unknown as Account;
+      vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
+      const em = { findOne: vi.fn().mockResolvedValue(mockAccount) } as any;
+
+      await expect(
+        service.deleteAccountOrFailForAccountDeletion(mockAccount, em)
+      ).rejects.toThrow(RelationshipNotFoundException);
+      expect(
+        storageAggregatorService.deleteForAccountDeletion
+      ).not.toHaveBeenCalled();
     });
   });
 

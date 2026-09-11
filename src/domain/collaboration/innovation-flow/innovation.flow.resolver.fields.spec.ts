@@ -107,7 +107,13 @@ describe('InnovationFlowResolverFields', () => {
         visible: true,
         descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
         showPublishDetails: true,
-        sidebar: ['intent', 'createPost', 'applicationButton', 'index'],
+        sidebar: [
+          'intent',
+          'createPost',
+          'applicationButton',
+          'search',
+          'index',
+        ],
       });
     });
   });

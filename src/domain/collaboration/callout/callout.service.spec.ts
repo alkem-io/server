@@ -976,6 +976,24 @@ describe('CalloutService', () => {
   });
 
   describe('updateCallout', () => {
+    const createUpdatableCallout = (profile: Record<string, unknown>) =>
+      ({
+        id: 'callout-1',
+        framing: {
+          id: 'framing-1',
+          type: CalloutFramingType.NONE,
+          profile,
+        },
+        contributionDefaults: { id: 'defaults-1' },
+        settings: {
+          contribution: { allowedTypes: [] },
+          framing: { commentsEnabled: false },
+        },
+        classification: { id: 'class-1', tagsets: [] },
+        calloutsSet: { id: 'cs-1' },
+        isTemplate: true,
+      }) as any;
+
     it('should update callout framing, settings, classification, and save', async () => {
       const callout = {
         id: 'callout-1',
@@ -1030,6 +1048,101 @@ describe('CalloutService', () => {
       expect(framingService.updateCalloutFraming).toHaveBeenCalled();
       expect(classificationService.updateClassification).toHaveBeenCalled();
       expect(result.sortOrder).toBe(5);
+    });
+
+    it('materializes a Whiteboard default into the bucket loaded before the framing profile is updated', async () => {
+      const callout = createUpdatableCallout({
+        storageBucket: { id: 'target-bucket' },
+      });
+      callout.contributionDefaults.whiteboardContent = 'previous-content';
+
+      vi.mocked(repository.findOne).mockResolvedValue(callout);
+      vi.mocked(repository.save).mockResolvedValue(callout);
+      vi.mocked(
+        _storageAggregatorResolverService.getStorageAggregatorForCallout
+      ).mockResolvedValue({ id: 'agg-1' } as any);
+      vi.mocked(framingService.updateCalloutFraming).mockResolvedValue({
+        id: 'framing-1-updated',
+        type: CalloutFramingType.NONE,
+        profile: { id: 'profile-1' },
+      } as any);
+      vi.mocked(
+        framingService.validateAndNormalizeContributorsSettings
+      ).mockImplementation((_type, settings) => settings as any);
+      vi.mocked(
+        framingService.validateAndNormalizeSelectionSettings
+      ).mockImplementation((_type, settings) => settings as any);
+      vi.mocked(
+        contributionDefaultsService.updateCalloutContributionDefaults
+      ).mockImplementation(defaults => defaults);
+      vi.mocked(
+        contributionDefaultsService.materializeWhiteboardDefault
+      ).mockResolvedValue({
+        content: 'target-owned-content',
+        createdDocumentIDs: ['document-1'],
+      });
+
+      const result = await service.updateCallout(
+        callout,
+        {
+          framing: { profile: { displayName: 'Updated' } },
+          contributionDefaults: {
+            whiteboardContent: 'source-content',
+            sourceStorageBucketID: 'source-bucket',
+          },
+        } as any,
+        actorContextData.actorContext,
+        'user-1'
+      );
+
+      expect(
+        contributionDefaultsService.materializeWhiteboardDefault
+      ).toHaveBeenCalledWith(
+        {
+          whiteboardContent: 'source-content',
+          sourceStorageBucketID: 'source-bucket',
+        },
+        'target-bucket'
+      );
+      expect(result.contributionDefaults?.whiteboardContent).toBe(
+        'target-owned-content'
+      );
+    });
+
+    it('rejects a Whiteboard default when the callout genuinely has no storage bucket', async () => {
+      const callout = createUpdatableCallout({ id: 'profile-1' });
+
+      vi.mocked(repository.findOne).mockResolvedValue(callout);
+      vi.mocked(
+        _storageAggregatorResolverService.getStorageAggregatorForCallout
+      ).mockResolvedValue({ id: 'agg-1' } as any);
+      vi.mocked(
+        framingService.validateAndNormalizeContributorsSettings
+      ).mockImplementation((_type, settings) => settings as any);
+      vi.mocked(
+        framingService.validateAndNormalizeSelectionSettings
+      ).mockImplementation((_type, settings) => settings as any);
+      vi.mocked(
+        contributionDefaultsService.updateCalloutContributionDefaults
+      ).mockImplementation(defaults => defaults);
+
+      await expect(
+        service.updateCallout(
+          callout,
+          {
+            contributionDefaults: {
+              whiteboardContent: 'source-content',
+              sourceStorageBucketID: 'source-bucket',
+            },
+          } as any,
+          actorContextData.actorContext
+        )
+      ).rejects.toThrow(
+        'Callout has no storage bucket for its Whiteboard default'
+      );
+      expect(
+        contributionDefaultsService.materializeWhiteboardDefault
+      ).not.toHaveBeenCalled();
     });
 
     it('should throw EntityNotInitializedException when contributionDefaults is missing', async () => {

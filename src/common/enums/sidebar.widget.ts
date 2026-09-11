@@ -16,6 +16,7 @@ export enum SidebarWidget {
   VIRTUAL_CONTRIBUTORS = 'virtualContributors',
   GUIDELINES = 'guidelines',
   INDEX = 'index',
+  SEARCH = 'search',
 }
 
 registerEnumType(SidebarWidget, {

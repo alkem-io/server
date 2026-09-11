@@ -19,6 +19,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { SigningAttemptService } from '@domain/common/content-signing/signing.attempt.service';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
@@ -68,7 +69,8 @@ export class StorageBucketService {
     private profileRepository: Repository<Profile>,
     private configService: ConfigService,
     private fileServiceAdapter: FileServiceAdapter,
-    private tagsetService: TagsetService
+    private tagsetService: TagsetService,
+    private signingAttemptService: SigningAttemptService
   ) {}
 
   public createStorageBucket(
@@ -88,10 +90,84 @@ export class StorageBucketService {
     return storage;
   }
 
+  /**
+   * DB-only deletion mode for the account-deletion saga: removes the
+   * bucket's own authorization policy (via the caller's transactional
+   * EntityManager) and cleans up each document's own server-owned entities
+   * — see `DocumentService.deleteDocumentDbOnly` — WITHOUT calling the Go
+   * file-service for any of them, and WITHOUT removing the bucket row or
+   * any `file` row.
+   *
+   * The bucket row is deliberately left in place: `Document.storageBucket`
+   * carries `onDelete: 'CASCADE'` at the database level, so removing the
+   * bucket here would let Postgres wipe every `file` row out from under
+   * the caller's feet — bypassing `DocumentWriteGuard` entirely, since a
+   * DB-level cascade is invisible to the TypeORM subscriber that forbids
+   * direct `file`-table writes. Deleting a `file` row is only ever valid
+   * through `FileServiceAdapter.deleteDocument()`, which is an HTTP call
+   * that cannot run inside this DB transaction. Collects every document's
+   * own `id` (the identifier `FileServiceAdapter.deleteDocument` actually
+   * addresses) so the caller can delete the actual bytes — and only then
+   * the now-empty bucket row, via
+   * `removeStorageBucketRowForAccountDeletion` — after the transaction
+   * commits.
+   */
+  public async deleteStorageBucketForAccountDeletion(
+    storageID: string,
+    em: EntityManager
+  ): Promise<{ storageBucketID: string; documentIDs: string[] }> {
+    // Enumerate through the deletion transaction, so the document list is the
+    // one this transaction sees rather than a second connection's snapshot.
+    const storage = await this.getStorageBucketOrFail(
+      storageID,
+      { relations: { documents: true } },
+      em
+    );
+
+    await this.assertDocumentsAreNotSigning(storage.documents);
+
+    if (storage.authorization) {
+      await this.authorizationPolicyService.delete(storage.authorization, em);
+    }
+
+    const documentIDs: string[] = [];
+    if (storage.documents) {
+      for (const document of storage.documents) {
+        const { documentID } = await this.documentService.deleteDocumentDbOnly(
+          { ID: document.id },
+          em
+        );
+        documentIDs.push(documentID);
+      }
+    }
+
+    return { storageBucketID: storageID, documentIDs };
+  }
+
+  /**
+   * Post-commit finalization for the account-deletion saga: removes the
+   * bucket row itself, once every one of its documents has already been
+   * deleted through the Go file-service (via
+   * `FileServiceAdapter.deleteDocument`, never through this ORM — see
+   * `deleteStorageBucketForAccountDeletion`). Safe to call even when a
+   * document's byte deletion failed: any `file` row that survives is still
+   * removed here (its byte-cleanup failure is already recorded in the
+   * audit trail by the caller), so a degraded file-service never leaves
+   * the bucket permanently un-removable. Best-effort: the caller logs and
+   * swallows any rejection, matching every other post-commit leg.
+   */
+  public async removeStorageBucketRowForAccountDeletion(
+    storageID: string
+  ): Promise<void> {
+    await this.storageBucketRepository.delete(storageID);
+  }
+
   async deleteStorageBucket(storageID: string): Promise<IStorageBucket> {
     const storage = await this.getStorageBucketOrFail(storageID, {
       relations: { documents: true },
     });
+
+    await this.assertDocumentsAreNotSigning(storage.documents);
 
     if (storage.authorization)
       await this.authorizationPolicyService.delete(storage.authorization);
@@ -111,6 +187,18 @@ export class StorageBucketService {
     return result;
   }
 
+  private async assertDocumentsAreNotSigning(
+    documents?: Pick<IDocument, 'id'>[]
+  ): Promise<void> {
+    const documentIDs = documents?.map(document => document.id) ?? [];
+    if (await this.signingAttemptService.existsForDocumentIDs(documentIDs)) {
+      throw new ValidationException(
+        'Storage contains a document retained by a signing attempt',
+        LogContext.STORAGE_BUCKET
+      );
+    }
+  }
+
   public async save(
     storage: IStorageBucket,
     mgr?: EntityManager
@@ -121,7 +209,8 @@ export class StorageBucketService {
 
   async getStorageBucketOrFail(
     storageBucketID: string,
-    options?: FindOneOptions<StorageBucket>
+    options?: FindOneOptions<StorageBucket>,
+    em?: EntityManager
   ): Promise<IStorageBucket> {
     if (!storageBucketID) {
       throw new EntityNotFoundException(
@@ -129,10 +218,15 @@ export class StorageBucketService {
         LogContext.STORAGE_BUCKET
       );
     }
-    const storageBucket = await this.storageBucketRepository.findOneOrFail({
-      where: { id: storageBucketID },
-      ...options,
-    });
+    const storageBucket = em
+      ? await em.findOneOrFail(StorageBucket, {
+          ...options,
+          where: { ...options?.where, id: storageBucketID },
+        })
+      : await this.storageBucketRepository.findOneOrFail({
+          where: { id: storageBucketID },
+          ...options,
+        });
     if (!storageBucket)
       throw new EntityNotFoundException(
         `StorageBucket not found: ${storageBucketID}`,
@@ -543,10 +637,14 @@ export class StorageBucketService {
         LogContext.STORAGE_BUCKET
       );
 
-    // First filter the documents the current user has READ privilege to
-    const readableDocuments = allDocuments.filter(document =>
-      this.hasAgentAccessToDocument(document, actorContext)
-    );
+    // Policy-less rows are internal collaboration snapshots. They are real
+    // file rows for quota and lifecycle purposes, but are not user-facing
+    // Documents and must never enter per-document authorization.
+    const readableDocuments = allDocuments
+      .filter(document => this.documentService.isUserFacingDocument(document))
+      .filter(document =>
+        this.hasAgentAccessToDocument(document, actorContext)
+      );
 
     // (a) by IDs, results in order specified by IDs
     if (args.IDs) {

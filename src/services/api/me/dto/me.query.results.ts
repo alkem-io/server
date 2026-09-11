@@ -3,6 +3,7 @@ import { IInvitation } from '@domain/access/invitation';
 import { IUser } from '@domain/community/user/user.interface';
 import { ObjectType } from '@nestjs/graphql';
 import { IMcpApiKey } from '@services/mcp-server/dto/mcp.api.key.dto';
+import { MeAccountDeletionStatus } from './me.account.deletion.status.dto';
 import { MeConversationsResult } from './me.conversations.result';
 import { CommunityMembershipResult } from './me.membership.result';
 
@@ -16,4 +17,5 @@ export class MeQueryResults {
   spaceMembershipsFlat!: CommunityMembershipResult[];
   conversations!: MeConversationsResult;
   mcpApiKeys!: IMcpApiKey[];
+  accountDeletion!: MeAccountDeletionStatus;
 }

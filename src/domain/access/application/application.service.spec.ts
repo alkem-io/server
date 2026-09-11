@@ -171,13 +171,15 @@ describe('ApplicationService', () => {
       const result = await service.deleteApplication({ ID: 'app-1' });
 
       expect(nvpService.removeNVP).toHaveBeenCalledTimes(2);
-      expect(nvpService.removeNVP).toHaveBeenCalledWith('q-1');
-      expect(nvpService.removeNVP).toHaveBeenCalledWith('q-2');
+      expect(nvpService.removeNVP).toHaveBeenCalledWith('q-1', undefined);
+      expect(nvpService.removeNVP).toHaveBeenCalledWith('q-2', undefined);
       expect(lifecycleService.deleteLifecycle).toHaveBeenCalledWith(
-        'lifecycle-1'
+        'lifecycle-1',
+        undefined
       );
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
-        mockApplication.authorization
+        mockApplication.authorization,
+        undefined
       );
       expect(result.id).toBe('app-1');
     });

@@ -548,6 +548,7 @@ export class CalloutService {
         LogContext.COLLABORATION
       );
     }
+    const targetStorageBucketID = callout.framing.profile?.storageBucket?.id;
 
     if (calloutUpdateData.framing) {
       callout.framing = await this.calloutFramingService.updateCalloutFraming(
@@ -651,7 +652,6 @@ export class CalloutService {
           calloutUpdateData.contributionDefaults
         );
 
-      const targetStorageBucketID = callout.framing.profile?.storageBucket?.id;
       if (
         calloutUpdateData.contributionDefaults.whiteboardContent !==
           undefined &&

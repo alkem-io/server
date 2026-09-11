@@ -430,6 +430,59 @@ describe('NotificationExternalAdapter', () => {
       expect(result.user.displayName).toBe('Removed User');
       expect(result.user.email).toBe('removed@test.com');
     });
+
+    it('skips the triggeredBy lookup when a pre-resolved payload is supplied (self-deletion)', async () => {
+      vi.mocked(configService.get).mockReturnValue('https://platform.test');
+      vi.mocked(urlGeneratorService.createUrlForUserNameID).mockReturnValue(
+        '/user/1'
+      );
+      const preResolved = {
+        id: 'self-1',
+        firstName: 'Self',
+        lastName: 'Deleter',
+        email: 'self@test.com',
+        profile: { displayName: 'Self Deleter', url: '/user/self-1' },
+        type: 'USER',
+      } as any;
+
+      const result = await adapter.buildPlatformUserRemovedNotificationPayload(
+        NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED,
+        'self-1',
+        [],
+        {
+          profile: { displayName: 'Self Deleter' },
+          email: 'self@test.com',
+        } as any,
+        preResolved
+      );
+
+      expect(userLookupService.getUserByIdOrFail).not.toHaveBeenCalled();
+      expect(result.triggeredBy).toEqual(preResolved);
+    });
+  });
+
+  describe('createUserPayloadFromUser', () => {
+    it('builds a UserPayload from an already-loaded IUser with no DB lookup', () => {
+      vi.mocked(urlGeneratorService.createUrlForUserNameID).mockReturnValue(
+        '/user/self-1'
+      );
+
+      const result = adapter.createUserPayloadFromUser({
+        id: 'self-1',
+        firstName: 'Self',
+        lastName: 'Deleter',
+        email: 'self@test.com',
+        nameID: 'self-1',
+        profile: { displayName: 'Self Deleter' },
+      } as any);
+
+      expect(userLookupService.getUserByIdOrFail).not.toHaveBeenCalled();
+      expect(result).toMatchObject({
+        id: 'self-1',
+        email: 'self@test.com',
+        profile: { displayName: 'Self Deleter', url: '/user/self-1' },
+      });
+    });
   });
 
   // A user row with a null profile used to make these payload builders throw a
@@ -1106,6 +1159,184 @@ describe('NotificationExternalAdapter', () => {
 
       expect(result.organization).toBeDefined();
       expect(result.message).toBe('Direct message');
+    });
+  });
+
+  describe('buildOrganizationSpaceCommunityInvitationPayload', () => {
+    const setUpCommonMocks = () => {
+      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue({
+        id: 'inviter-1',
+        firstName: 'Test',
+        lastName: 'User',
+        email: 'test@test.com',
+        nameID: 'test-user',
+        profile: { displayName: 'Test User' },
+      } as any);
+      vi.mocked(actorLookupService.getFullActorByIdOrFail).mockResolvedValue({
+        id: 'org-1',
+        nameID: 'acme',
+        type: ActorType.ORGANIZATION,
+        profile: { displayName: 'Acme' },
+      } as any);
+      vi.mocked(urlGeneratorService.generateUrlForProfile).mockResolvedValue(
+        '/space/root'
+      );
+      vi.mocked(
+        urlGeneratorService.createSpaceAdminCommunityURL
+      ).mockResolvedValue('/admin/target');
+      vi.mocked(urlGeneratorService.createUrlForContributor).mockReturnValue(
+        '/organization/acme'
+      );
+      vi.mocked(
+        urlGeneratorService.createUrlForOrganizationSettingsInvitations
+      ).mockReturnValue(
+        'https://platform.test/organization/acme/settings/invitations'
+      );
+      vi.mocked(configService.get).mockReturnValue('https://platform.test');
+    };
+
+    const targetSpace = {
+      id: 'space-target',
+      level: 2,
+      about: { profile: { displayName: 'Target Space' } },
+    } as any;
+    const rootSpace = {
+      id: 'space-root',
+      level: 0,
+      about: { profile: { displayName: 'Root Space' } },
+    } as any;
+
+    it('builds the invitee (organization), the deep link, extraRoles and spacesToJoin', async () => {
+      setUpCommonMocks();
+
+      const result =
+        await adapter.buildOrganizationSpaceCommunityInvitationPayload(
+          NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION,
+          'inviter-1',
+          [],
+          'org-1',
+          targetSpace,
+          [rootSpace, targetSpace],
+          ['lead' as any],
+          'Welcome!'
+        );
+
+      expect(result.invitee).toBeDefined();
+      expect(result.welcomeMessage).toBe('Welcome!');
+      expect(result.organizationInvitationsUrl).toBe(
+        'https://platform.test/organization/acme/settings/invitations'
+      );
+      expect(result.extraRoles).toEqual(['lead']);
+      expect(result.spacesToJoin).toEqual([
+        { displayName: 'Root Space', url: '/space/root' },
+        { displayName: 'Target Space', url: '/space/root' },
+      ]);
+      expect(result.recipientEmail).toBeUndefined();
+    });
+
+    it('carries recipientEmail only when explicitly given (zero-admin escalation)', async () => {
+      setUpCommonMocks();
+
+      const result =
+        await adapter.buildOrganizationSpaceCommunityInvitationPayload(
+          NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION,
+          'inviter-1',
+          [],
+          'org-1',
+          targetSpace,
+          [targetSpace],
+          [],
+          undefined,
+          'support@alkem.io'
+        );
+
+      expect(result.recipientEmail).toBe('support@alkem.io');
+    });
+
+    it('never puts the welcome message in the subject/title-bound fields (no email/title field carries it beyond welcomeMessage)', async () => {
+      setUpCommonMocks();
+
+      const result =
+        await adapter.buildOrganizationSpaceCommunityInvitationPayload(
+          NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION,
+          'inviter-1',
+          [],
+          'org-1',
+          targetSpace,
+          [targetSpace],
+          [],
+          'Sensitive welcome text'
+        );
+
+      // welcomeMessage is the ONLY field carrying the message; every other
+      // string field is independent of it.
+      expect(result.organizationInvitationsUrl).not.toContain(
+        'Sensitive welcome text'
+      );
+      expect(result.spacesToJoin[0].displayName).not.toContain(
+        'Sensitive welcome text'
+      );
+    });
+
+    it('loads the organization profile relation, so a real (non-mocked) lookup does not throw "Unable to find Organization profile"', async () => {
+      setUpCommonMocks();
+
+      await adapter.buildOrganizationSpaceCommunityInvitationPayload(
+        NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION,
+        'inviter-1',
+        [],
+        'org-1',
+        targetSpace,
+        [targetSpace],
+        []
+      );
+
+      expect(actorLookupService.getFullActorByIdOrFail).toHaveBeenCalledWith(
+        'org-1',
+        { relations: { profile: true } }
+      );
+    });
+  });
+
+  describe('buildActorSpaceCommunityInvitationOutcomePayload', () => {
+    it('builds the invitee (organization) with no welcomeMessage field populated', async () => {
+      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue({
+        id: 'inviter-1',
+        firstName: 'Test',
+        lastName: 'User',
+        email: 'test@test.com',
+        nameID: 'test-user',
+        profile: { displayName: 'Test User' },
+      } as any);
+      vi.mocked(actorLookupService.getFullActorByIdOrFail).mockResolvedValue({
+        id: 'org-1',
+        nameID: 'acme',
+        type: ActorType.ORGANIZATION,
+        profile: { displayName: 'Acme' },
+      } as any);
+      vi.mocked(
+        urlGeneratorService.createSpaceAdminCommunityURL
+      ).mockResolvedValue('/admin/target');
+      vi.mocked(urlGeneratorService.createUrlForContributor).mockReturnValue(
+        '/organization/acme'
+      );
+      vi.mocked(configService.get).mockReturnValue('https://platform.test');
+
+      const result =
+        await adapter.buildActorSpaceCommunityInvitationOutcomePayload(
+          NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED,
+          'inviter-1',
+          [],
+          'org-1',
+          {
+            id: 'space-target',
+            level: 2,
+            about: { profile: { displayName: 'Target Space' } },
+          } as any
+        );
+
+      expect(result.invitee).toBeDefined();
+      expect((result as any).welcomeMessage).toBeUndefined();
     });
   });
 });

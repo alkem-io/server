@@ -1,4 +1,4 @@
-import { LogContext } from '@common/enums';
+import { AccountDeletionBlockerKind, LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
 import { IActor } from '@domain/actor/actor/actor.interface';
 import { Organization } from '@domain/community/organization';
@@ -10,6 +10,23 @@ import { EntityManager, FindOneOptions } from 'typeorm';
 import { Account } from '../account/account.entity';
 import { IAccount } from '../account/account.interface';
 
+export interface AccountResourceBlocker {
+  kind: AccountDeletionBlockerKind;
+  resourceID: string;
+  displayName: string;
+}
+
+export interface AccountResourceBlockerTotal {
+  kind: AccountDeletionBlockerKind;
+  total: number;
+}
+
+export interface AccountResourceBlockersResult {
+  blockers: AccountResourceBlocker[];
+  totals: AccountResourceBlockerTotal[];
+  truncated: boolean;
+}
+
 @Injectable()
 export class AccountLookupService {
   constructor(
@@ -20,9 +37,10 @@ export class AccountLookupService {
 
   async getAccountOrFail(
     accountID: string,
-    options?: FindOneOptions<Account>
+    options?: FindOneOptions<Account>,
+    em?: EntityManager
   ): Promise<IAccount | never> {
-    const account = await this.getAccount(accountID, options);
+    const account = await this.getAccount(accountID, options, em);
     if (!account)
       throw new EntityNotFoundException(
         `Unable to find Account on Host with ID: ${accountID}`,
@@ -33,12 +51,20 @@ export class AccountLookupService {
 
   async getAccount(
     accountID: string,
-    options?: FindOneOptions<Account>
+    options?: FindOneOptions<Account>,
+    em?: EntityManager
   ): Promise<IAccount | null> {
-    const account: IAccount | null = await this.entityManager.findOne(Account, {
-      ...options,
-      where: { ...options?.where, id: accountID },
-    });
+    // Reads through the caller's transactional EntityManager when supplied,
+    // so a re-assertion made from inside a transaction observes that same
+    // transaction's snapshot rather than a separately-read view a
+    // concurrent write could race.
+    const account: IAccount | null = await (em ?? this.entityManager).findOne(
+      Account,
+      {
+        ...options,
+        where: { ...options?.where, id: accountID },
+      }
+    );
     return account;
   }
 
@@ -78,23 +104,90 @@ export class AccountLookupService {
   }
 
   public async areResourcesInAccount(accountID: string): Promise<boolean> {
-    const account = await this.getAccountOrFail(accountID, {
-      relations: {
-        spaces: true,
-        virtualContributors: true,
-        innovationPacks: true,
-        innovationHubs: true,
-      },
+    // Derived from the same itemization the deletion-blocker read uses, with
+    // a cap large enough that truncation never masks a real resource — the
+    // boolean only cares whether the total is non-zero.
+    const { totals } = await this.getAccountResourceBlockers(accountID, {
+      cap: Number.MAX_SAFE_INTEGER,
     });
-    if (
-      account.spaces.length > 0 ||
-      account.virtualContributors.length > 0 ||
-      account.innovationPacks.length > 0 ||
-      account.innovationHubs.length > 0
-    ) {
-      return true;
-    }
+    return totals.some(total => total.total > 0);
+  }
 
-    return false;
+  /**
+   * Itemized form of `areResourcesInAccount`: every account-resource
+   * (space, virtual contributor, innovation pack, innovation hub) that would
+   * block deleting the account, capped and with independent per-kind totals
+   * so a capped list never has to be mistaken for a complete one.
+   */
+  public async getAccountResourceBlockers(
+    accountID: string,
+    options: { cap: number },
+    em?: EntityManager
+  ): Promise<AccountResourceBlockersResult> {
+    const account = await this.getAccountOrFail(
+      accountID,
+      {
+        relations: {
+          spaces: { profile: true },
+          virtualContributors: { profile: true },
+          innovationPacks: { profile: true },
+          innovationHubs: { profile: true },
+        },
+      },
+      em
+    );
+
+    const groups: {
+      kind: AccountDeletionBlockerKind;
+      items: { id: string; displayName: string }[];
+    }[] = [
+      {
+        kind: AccountDeletionBlockerKind.ACCOUNT_SPACE,
+        items: account.spaces.map(space => ({
+          id: space.id,
+          displayName: space.profile?.displayName ?? space.nameID,
+        })),
+      },
+      {
+        kind: AccountDeletionBlockerKind.ACCOUNT_VIRTUAL_CONTRIBUTOR,
+        items: account.virtualContributors.map(vc => ({
+          id: vc.id,
+          displayName: vc.profile?.displayName ?? vc.nameID,
+        })),
+      },
+      {
+        kind: AccountDeletionBlockerKind.ACCOUNT_INNOVATION_PACK,
+        items: account.innovationPacks.map(pack => ({
+          id: pack.id,
+          displayName: pack.profile?.displayName ?? pack.nameID,
+        })),
+      },
+      {
+        kind: AccountDeletionBlockerKind.ACCOUNT_INNOVATION_HUB,
+        items: account.innovationHubs.map(hub => ({
+          id: hub.id,
+          displayName: hub.profile?.displayName ?? hub.nameID,
+        })),
+      },
+    ];
+
+    const totals: AccountResourceBlockerTotal[] = groups.map(group => ({
+      kind: group.kind,
+      total: group.items.length,
+    }));
+
+    const allItems = groups.flatMap(group =>
+      group.items.map(item => ({ kind: group.kind, ...item }))
+    );
+    const truncated = allItems.length > options.cap;
+    const blockers: AccountResourceBlocker[] = allItems
+      .slice(0, options.cap)
+      .map(item => ({
+        kind: item.kind,
+        resourceID: item.id,
+        displayName: item.displayName,
+      }));
+
+    return { blockers, totals, truncated };
   }
 }

@@ -14,6 +14,8 @@ export interface FetchOutputData {
   version?: number;
   contentPointer?: string;
   migrated?: boolean;
+  /** Whether this document's license allows more than one live editor. */
+  isMultiUser?: boolean;
   /** OPEN-1 / FR-005 — the entity's own AuthorizationPolicy.id. */
   authorizationPolicyId?: string;
   /**

@@ -37,6 +37,7 @@ import { LogContext } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { NotificationEvent } from '@common/enums/notification.event';
+import { RoleName } from '@common/enums/role.name';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
@@ -86,6 +87,20 @@ interface CalloutContributionPayload {
   createdBy: ContributorPayload;
   type: CalloutContributionType;
   url: string;
+}
+
+/**
+ * Temporary bridge until `@alkemio/notifications-lib` publishes this
+ * interface (merge gate — see the contract's rollout ordering). Mirrors
+ * the lib shape exactly so the swap to the published import is a pure
+ * type-only change.
+ */
+interface NotificationEventPayloadSpaceCommunityInvitationOrganization
+  extends NotificationEventPayloadSpaceCommunityInvitation {
+  organizationInvitationsUrl: string;
+  extraRoles: string[];
+  spacesToJoin: { displayName: string; url: string }[];
+  recipientEmail?: string;
 }
 
 @Injectable()
@@ -275,6 +290,98 @@ export class NotificationExternalAdapter {
         invitee: virtualContributorPayload,
         ...spacePayload,
       };
+    return result;
+  }
+
+  async buildOrganizationSpaceCommunityInvitationPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    organizationID: string,
+    space: ISpace,
+    spacesToJoin: ISpace[],
+    extraRoles: RoleName[],
+    welcomeMessage?: string,
+    recipientEmail?: string
+  ): Promise<NotificationEventPayloadSpaceCommunityInvitationOrganization> {
+    const spacePayload = await this.buildSpacePayload(
+      eventType,
+      triggeredBy,
+      recipients,
+      space
+    );
+    const organization = await this.actorLookupService.getFullActorByIdOrFail(
+      organizationID,
+      {
+        relations: {
+          profile: true,
+        },
+      }
+    );
+    if (!organization.profile) {
+      throw new EntityNotFoundException(
+        'Unable to find Organization profile',
+        LogContext.COMMUNITY,
+        { organizationID }
+      );
+    }
+    const organizationPayload: ContributorPayload = {
+      id: organization.id,
+      profile: {
+        displayName: organization.profile.displayName,
+        url: this.urlGeneratorService.createUrlForContributor(organization),
+      },
+      type: getActorType(organization),
+    };
+    const spacesToJoinPayload = await Promise.all(
+      spacesToJoin.map(async spaceToJoin => ({
+        displayName: spaceToJoin.about.profile.displayName,
+        url: await this.urlGeneratorService.generateUrlForProfile(
+          spaceToJoin.about.profile
+        ),
+      }))
+    );
+
+    const result: NotificationEventPayloadSpaceCommunityInvitationOrganization =
+      {
+        invitee: organizationPayload,
+        welcomeMessage,
+        organizationInvitationsUrl:
+          this.urlGeneratorService.createUrlForOrganizationSettingsInvitations(
+            organization.nameID
+          ),
+        extraRoles: extraRoles.map(role => role.toString()),
+        spacesToJoin: spacesToJoinPayload,
+        ...(recipientEmail ? { recipientEmail } : {}),
+        ...spacePayload,
+      };
+    return result;
+  }
+
+  /**
+   * Invitation accept/decline outcome payload. Actor-agnostic — the
+   * `invitee` is resolved through the shared contributor lookup, so the
+   * same builder serves organization and user invitation responses.
+   */
+  async buildActorSpaceCommunityInvitationOutcomePayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    invitedActorID: string,
+    space: ISpace
+  ): Promise<NotificationEventPayloadSpaceCommunityInvitation> {
+    const spacePayload = await this.buildSpacePayload(
+      eventType,
+      triggeredBy,
+      recipients,
+      space
+    );
+    const invitedActorPayload =
+      await this.getContributorPayloadOrFail(invitedActorID);
+    const result: NotificationEventPayloadSpaceCommunityInvitation = {
+      invitee: invitedActorPayload,
+      ...spacePayload,
+    };
     return result;
   }
 
@@ -966,12 +1073,14 @@ export class NotificationExternalAdapter {
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],
-    user: IUser
+    user: IUser,
+    triggeredByPayload?: UserPayload
   ): Promise<NotificationEventPayloadPlatformUserRemoved> {
     const basePayload = await this.buildBaseEventPayload(
       eventType,
       triggeredBy,
-      recipients
+      recipients,
+      triggeredByPayload
     );
     const result: NotificationEventPayloadPlatformUserRemoved = {
       user: {
@@ -1319,9 +1428,11 @@ export class NotificationExternalAdapter {
   private async buildBaseEventPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
-    recipients: IUser[]
+    recipients: IUser[],
+    triggeredByPayload?: UserPayload
   ): Promise<BaseEventPayload> {
-    const contributor = await this.getUserPayloadOrFail(triggeredBy);
+    const contributor =
+      triggeredByPayload ?? (await this.getUserPayloadOrFail(triggeredBy));
     const result: BaseEventPayload = {
       eventType,
       triggeredBy: contributor,
@@ -1428,7 +1539,14 @@ export class NotificationExternalAdapter {
     return result;
   }
 
-  private createUserPayloadFromUser(user: IUser): UserPayload {
+  /**
+   * Builds a `UserPayload` straight from an already-loaded `IUser`, with no
+   * DB lookup. Exposed for callers that must resolve a notification's
+   * initiator payload BEFORE an action that removes the initiator's own row
+   * — e.g. self-account deletion, where the initiator IS the departed user
+   * and a post-deletion lookup by id would fail.
+   */
+  public createUserPayloadFromUser(user: IUser): UserPayload {
     return {
       id: user.id,
       firstName: user.firstName,

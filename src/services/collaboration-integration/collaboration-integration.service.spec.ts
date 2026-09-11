@@ -32,11 +32,13 @@ describe('CollaborationIntegrationService', () => {
     getCollaborationMetadata: Mock;
     saveCollaborationMetadata: Mock;
     getProfile: Mock;
+    isMultiUser: Mock;
   };
   let whiteboardService: {
     getCollaborationMetadata: Mock;
     saveCollaborationMetadata: Mock;
     getProfile: Mock;
+    isMultiUser: Mock;
   };
   let contributionReporter: {
     memoContribution: Mock;
@@ -147,6 +149,7 @@ describe('CollaborationIntegrationService', () => {
   describe('fetch', () => {
     it('returns the memo index (pointer only, no seed bytes) incl. authorizationPolicyId + per-document storageBucketId (FR-005)', async () => {
       memoService.getCollaborationMetadata.mockResolvedValue(memoMeta);
+      memoService.isMultiUser.mockResolvedValue(false);
 
       const result = await service.fetch({ id: 'memo-1' });
 
@@ -164,7 +167,9 @@ describe('CollaborationIntegrationService', () => {
         // The memo's OWN bucket flows through the reply so the collab service
         // persists this doc's snapshot there, not into a flat platform bucket.
         storageBucketId: 'bucket-memo',
+        isMultiUser: false,
       });
+      expect(memoService.isMultiUser).toHaveBeenCalledWith('memo-1');
     });
 
     it('falls through to whiteboard when the id is not a memo (incl. its own storageBucketId)', async () => {
@@ -172,6 +177,7 @@ describe('CollaborationIntegrationService', () => {
       whiteboardService.getCollaborationMetadata.mockResolvedValue(
         whiteboardMeta
       );
+      whiteboardService.isMultiUser.mockResolvedValue(true);
 
       const result = await service.fetch({ id: 'wb-1' });
 
@@ -181,6 +187,39 @@ describe('CollaborationIntegrationService', () => {
       expect(result.authorizationPolicyId).toBe('policy-wb');
       // The whiteboard carries its OWN storage bucket, distinct from the memo's.
       expect(result.storageBucketId).toBe('bucket-wb');
+      expect(result.isMultiUser).toBe(true);
+      expect(whiteboardService.isMultiUser).toHaveBeenCalledWith('wb-1');
+    });
+
+    it('fetches a standalone whiteboard with conservative single-user entitlement', async () => {
+      memoService.getCollaborationMetadata.mockRejectedValue(notFound());
+      whiteboardService.getCollaborationMetadata.mockResolvedValue(
+        whiteboardMeta
+      );
+      whiteboardService.isMultiUser.mockResolvedValue(false);
+
+      const result = await service.fetch({ id: 'standalone-wb' });
+
+      expect(result).toEqual({
+        found: true,
+        contentType: CollaborationContentType.WHITEBOARD,
+        version: 7,
+        contentPointer: 'wb-1',
+        migrated: true,
+        authorizationPolicyId: 'policy-wb',
+        storageBucketId: 'bucket-wb',
+        isMultiUser: false,
+      });
+    });
+
+    it('returns a structured error when entitlement resolution fails', async () => {
+      memoService.getCollaborationMetadata.mockResolvedValue(memoMeta);
+      memoService.isMultiUser.mockRejectedValue(new Error('database down'));
+
+      const result = await service.fetch({ id: 'memo-1' });
+
+      expect(result.found).toBe(false);
+      expect(result.error).toBe(CollaborationErrorCode.INTERNAL_ERROR);
     });
 
     it('returns a structured not-found for an absent id (FR-004)', async () => {

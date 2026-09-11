@@ -26,12 +26,13 @@ export const MEDIA_GALLERY_VIDEO_ALLOWED_TYPES = [
 // `aspectRatio` is the DEFAULT shape for a newly created visual.
 // `minAspectRatio`/`maxAspectRatio` bound what an editor may later change it to
 // via `updateVisual`. For every type except BANNER they equal `aspectRatio`,
-// i.e. the shape is fixed. BANNER is the one adjustable visual: a space admin
-// can pick anything from 6 (the historic shape) to 10 (a slimmer strip).
+// i.e. the shape is fixed. BANNER is the one adjustable visual: its default is
+// 10 (the slim strip — the same design default client-web renders), and a
+// space admin can pick anything from 6 (the historic shape) to 10.
 //
 // IMPORTANT — because the ratio is adjustable, BANNER's height bounds have to
 // span the WHOLE ratio range rather than matching a single shape:
-//   minHeight = ceil(minWidth / maxAspectRatio) = ceil(1536 / 10) = 154
+//   minHeight = ceil(minWidth / maxAspectRatio) = ceil(1200 / 10) = 120
 //   maxHeight =      maxWidth / minAspectRatio  =      3840 / 6   = 640
 // Narrowing them to one ratio would reject legitimate uploads at another.
 export const DEFAULT_VISUAL_CONSTRAINTS = {
@@ -46,11 +47,11 @@ export const DEFAULT_VISUAL_CONSTRAINTS = {
     allowedTypes: VISUAL_ALLOWED_TYPES,
   },
   [VisualType.BANNER]: {
-    minWidth: 1536,
+    minWidth: 1200,
     maxWidth: 3840,
-    minHeight: 154,
+    minHeight: 120,
     maxHeight: 640,
-    aspectRatio: 6,
+    aspectRatio: 10,
     minAspectRatio: 6,
     maxAspectRatio: 10,
     allowedTypes: VISUAL_ALLOWED_TYPES,

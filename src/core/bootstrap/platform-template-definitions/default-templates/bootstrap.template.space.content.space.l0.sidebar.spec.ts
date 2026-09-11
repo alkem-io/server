@@ -20,6 +20,7 @@ describe('bootstrapTemplateSpaceContentSpaceL0 — sidebar defaults', () => {
       SidebarWidget.INTENT,
       SidebarWidget.ABOUT,
       SidebarWidget.CREATE_POST,
+      SidebarWidget.SEARCH,
       SidebarWidget.APPLICATION_BUTTON,
       SidebarWidget.SUBSPACE_LINKS,
       SidebarWidget.EVENTS,
@@ -31,6 +32,7 @@ describe('bootstrapTemplateSpaceContentSpaceL0 — sidebar defaults', () => {
     expect(findState(FlowState.COMMUNITY)?.settings?.sidebar).toEqual([
       SidebarWidget.INTENT,
       SidebarWidget.CREATE_POST,
+      SidebarWidget.SEARCH,
       SidebarWidget.APPLICATION_BUTTON,
       SidebarWidget.CONTACT_LEADS,
       SidebarWidget.ADD_USER,
@@ -44,6 +46,7 @@ describe('bootstrapTemplateSpaceContentSpaceL0 — sidebar defaults', () => {
       SidebarWidget.INTENT,
       SidebarWidget.CREATE_SUBSPACE,
       SidebarWidget.CREATE_POST,
+      SidebarWidget.SEARCH,
       SidebarWidget.APPLICATION_BUTTON,
     ]);
   });
@@ -53,6 +56,7 @@ describe('bootstrapTemplateSpaceContentSpaceL0 — sidebar defaults', () => {
       SidebarWidget.INTENT,
       SidebarWidget.CREATE_POST,
       SidebarWidget.APPLICATION_BUTTON,
+      SidebarWidget.SEARCH,
       SidebarWidget.INDEX,
     ]);
   });

@@ -21,7 +21,12 @@ import { UserService } from '@domain/community/user/user.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
+import {
+  EntityManager,
+  FindManyOptions,
+  FindOneOptions,
+  Repository,
+} from 'typeorm';
 import { RoleSetCacheService } from '../role-set/role.set.service.cache';
 import { ApplicationLifecycleService } from './application.service.lifecycle';
 
@@ -59,7 +64,8 @@ export class ApplicationService {
   }
 
   async deleteApplication(
-    deleteData: DeleteApplicationInput
+    deleteData: DeleteApplicationInput,
+    em?: EntityManager
   ): Promise<IApplication> {
     const applicationID = deleteData.ID;
     const application = await this.getApplicationOrFail(applicationID, {
@@ -67,17 +73,20 @@ export class ApplicationService {
     });
     if (application.questions) {
       for (const question of application.questions) {
-        await this.nvpService.removeNVP(question.id);
+        await this.nvpService.removeNVP(question.id, em);
       }
     }
 
-    await this.lifecycleService.deleteLifecycle(application.lifecycle.id);
+    await this.lifecycleService.deleteLifecycle(application.lifecycle.id, em);
     if (application.authorization)
-      await this.authorizationPolicyService.delete(application.authorization);
+      await this.authorizationPolicyService.delete(
+        application.authorization,
+        em
+      );
 
-    const result = await this.applicationRepository.remove(
-      application as Application
-    );
+    const result = em
+      ? await em.remove(application as Application)
+      : await this.applicationRepository.remove(application as Application);
     result.id = applicationID;
 
     if (application.user?.id && application.roleSet?.id) {

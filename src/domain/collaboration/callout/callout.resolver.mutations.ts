@@ -29,6 +29,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IMemo } from '@domain/common/memo/types';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
+import { WhiteboardDraftService } from '@domain/common/whiteboard-draft';
 import { Inject } from '@nestjs/common/decorators';
 import { ConfigService } from '@nestjs/config';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
@@ -99,6 +100,7 @@ export class CalloutResolverMutations {
     private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly collaborationLicenseService: CollaborationLicenseService,
     private readonly whiteboardService: WhiteboardService,
+    private readonly whiteboardDraftService: WhiteboardDraftService,
     private readonly reactionService: ReactionService,
     private readonly actorLookupService: ActorLookupService,
     private readonly taskBoardColumnService: TaskBoardColumnService,
@@ -168,10 +170,30 @@ export class CalloutResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `update callout: ${callout.id}`
     );
-    await this.contributionDefaultSourceService.prepare(
-      calloutData.contributionDefaults,
-      actorContext
-    );
+
+    const defaults = calloutData.contributionDefaults;
+    const defaultsDraftID = defaults?.draftWhiteboardID;
+    await using draftConsumption =
+      await this.whiteboardDraftService.acquireForConsumption(
+        defaultsDraftID ? [defaultsDraftID] : [],
+        actorContext
+      );
+    if (defaultsDraftID) {
+      if (
+        defaults.sourceWhiteboardID ||
+        defaults.sourceCalloutID ||
+        defaults.clearWhiteboardContent
+      ) {
+        throw new ValidationException(
+          'draftWhiteboardID, contribution-default source fields, and clearWhiteboardContent are mutually exclusive',
+          LogContext.WHITEBOARDS
+        );
+      }
+      const draft = draftConsumption.drafts.get(defaultsDraftID)!;
+      defaults.sourceWhiteboardID = draft.id;
+      defaults.draftWhiteboardID = undefined;
+    }
+    await this.contributionDefaultSourceService.prepare(defaults, actorContext);
 
     // CONTRIBUTORS framing is admin-only and collaboration-only for LIVE callouts
     // (FR-004a/FR-004f, R5). Mirror the create guard on the update path so the
@@ -232,6 +254,11 @@ export class CalloutResolverMutations {
       actorContext.actorID
     );
 
+    // The updated Callout now durably owns the draft content. Make the draft
+    // non-consumable before later authorization work can fail, so a retry
+    // cannot apply the same draft to a second update.
+    await draftConsumption.markConsumed();
+
     // Reset authorization policy for the callout and its child entities
     // This is needed because updateCallout might create new entities (like comments room)
     // that need proper authorization policies
@@ -249,6 +276,7 @@ export class CalloutResolverMutations {
       );
 
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+    await draftConsumption.complete();
     return updatedCallout;
   }
 
@@ -523,6 +551,10 @@ export class CalloutResolverMutations {
       actorContext.actorID
     );
 
+    // Captured here, before the save below, so the analytics branch cannot
+    // be disturbed by any future change to what the save call returns.
+    const isTask = this.taskBoardService.isTask(contribution);
+
     const { roleSet, platformRolesAccess, spaceSettings } =
       await this.roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout(
         callout.id
@@ -599,7 +631,8 @@ export class CalloutResolverMutations {
             contribution,
             contribution.post,
             levelZeroSpaceID,
-            actorContext
+            actorContext,
+            isTask
           );
         }
       }
@@ -837,7 +870,8 @@ export class CalloutResolverMutations {
     contribution: ICalloutContribution,
     post: IPost,
     levelZeroSpaceID: string,
-    actorContext: ActorContext
+    actorContext: ActorContext,
+    isTask: boolean
   ) {
     const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
       {
@@ -857,14 +891,25 @@ export class CalloutResolverMutations {
     };
     this.activityAdapter.calloutPostCreated(activityLogInput);
 
-    this.contributionReporter.calloutPostCreated(
-      {
-        id: post.id,
-        name: post.profile.displayName,
-        space: levelZeroSpaceID,
-      },
-      actorContext
-    );
+    if (isTask) {
+      this.contributionReporter.taskCreated(
+        {
+          id: post.id,
+          name: post.profile.displayName,
+          space: levelZeroSpaceID,
+        },
+        actorContext
+      );
+    } else {
+      this.contributionReporter.calloutPostCreated(
+        {
+          id: post.id,
+          name: post.profile.displayName,
+          space: levelZeroSpaceID,
+        },
+        actorContext
+      );
+    }
   }
 
   private async processActivityMemoCreated(

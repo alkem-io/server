@@ -133,6 +133,38 @@ describe('StorageBucketAuthorizationService', () => {
       ).not.toHaveBeenCalled();
     });
 
+    it('skips policy-less internal files during the authorization cascade', async () => {
+      const bucketAuth = { id: 'bucket-auth-internal' };
+      const internalSnapshot = {
+        id: 'snapshot-internal',
+        authorization: undefined,
+        tagset: undefined,
+      };
+      const storageBucket = {
+        id: 'bucket-internal',
+        authorization: bucketAuth,
+        documents: [internalSnapshot],
+      } as unknown as IStorageBucket;
+
+      (authorizationPolicyService.reset as Mock).mockReturnValue(bucketAuth);
+      (
+        authorizationPolicyService.inheritParentAuthorization as Mock
+      ).mockReturnValue(bucketAuth);
+      (
+        authorizationPolicyService.appendPrivilegeAuthorizationRules as Mock
+      ).mockReturnValue(bucketAuth);
+      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
+
+      await service.applyAuthorizationPolicy(storageBucket, undefined);
+
+      expect(
+        documentAuthorizationService.applyAuthorizationPolicy
+      ).not.toHaveBeenCalled();
+      expect(authorizationPolicyService.saveAll).toHaveBeenCalledWith([
+        bucketAuth,
+      ]);
+    });
+
     it('should throw RelationshipNotFoundException when documents is undefined', async () => {
       const storageBucket = {
         id: 'bucket-3',

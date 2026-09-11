@@ -273,6 +273,13 @@ export class InnovationFlowService {
    * flow's `maximumNumberOfStates`. If the combined unique set would exceed the
    * maximum the apply is rejected atomically (FR-009) before any mutation.
    *
+   * Since client-web#9528 {@link L0_FIXED_INNOVATION_FLOW_STATES} is 0, so the
+   * L0 branch degrades to a wholesale replacement (empty fixed set, all
+   * template states appended) — the same net behavior as subspaces, meaning
+   * any template (including a subspace-shaped one with fewer than 4 states)
+   * can be applied to an L0 space. The preservation mechanism is kept so
+   * restoring a fixed count > 0 re-enables it without code changes.
+   *
    * For subspaces (L1/L2) behavior is unchanged: a wholesale replacement via
    * {@link updateInnovationFlowStates} (FR-011).
    */

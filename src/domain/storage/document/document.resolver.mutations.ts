@@ -24,7 +24,7 @@ export class DocumentResolverMutations {
     @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteDocumentInput
   ): Promise<IDocument> {
-    const document = await this.documentService.getDocumentOrFail(
+    const document = await this.documentService.getUserFacingDocumentOrFail(
       deleteData.ID
     );
     await this.authorizationService.grantAccessOrFail(
@@ -44,7 +44,7 @@ export class DocumentResolverMutations {
     @CurrentActor() actorContext: ActorContext,
     @Args('documentData') documentData: UpdateDocumentInput
   ): Promise<IDocument> {
-    const document = await this.documentService.getDocumentOrFail(
+    const document = await this.documentService.getUserFacingDocumentOrFail(
       documentData.ID
     );
     await this.authorizationService.grantAccessOrFail(

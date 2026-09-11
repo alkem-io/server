@@ -11,7 +11,8 @@ import { CollaborationMigrationService } from '@services/collaboration-integrati
  *   node dist/main.collaboration-migration --verify
  *
  * Prints one machine-readable JSON line and a human-readable summary (no
- * secrets), and exits non-zero on any failure (migrate: flagged/failed rows;
+ * secrets), and exits non-zero on any non-clean outcome (migrate: source-flagged,
+ * migrated-with-explicit-visual-loss, or failed rows;
  * verify: any NULL pointer, any pointer that does not resolve in file-service, or
  * any snapshot that fails decode / content-root-schema validation).
  * Boots a minimal side-effect-free Nest application context (no scheduler / RMQ /

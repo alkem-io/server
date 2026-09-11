@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { LogContext } from '@common/enums';
+import { BaseExceptionInternal } from '@common/exceptions/internal/base.exception.internal';
 import * as decoding from 'lib0/decoding';
 import * as encoding from 'lib0/encoding';
 import { WebSocket } from 'ws';
@@ -27,22 +29,25 @@ const WIRE_DURABILITY_REQUEST = 4;
  */
 interface ControlMessage {
   kind:
+    | 'admission'
     | 'saved'
     | 'save-error'
     | 'read-only-state'
     | 'persisted'
     | 'persist-failed'
-    | 'update-rejected'
+    | 'session-end'
     | string;
   version?: number;
   error?: string;
   readOnly?: boolean;
   reason?: string;
+  mode?: 'read' | 'write';
+  code?: string;
+  scope?: 'member' | 'document';
+  disposition?: 'transient' | 'manual' | 'terminal';
   /**
    * Correlates a `persisted` / `persist-failed` reply to the durability request
-   * that asked. ABSENT on every other kind — in particular on `update-rejected`,
-   * which answers the preceding update (sent before the barrier request exists),
-   * so it is matched by nothing and settles the sole outstanding barrier uncorrelated.
+   * that asked. ABSENT on every other kind.
    */
   requestId?: string;
 }
@@ -69,21 +74,41 @@ export class ReadOnlyRoomError extends Error {
 }
 
 /**
- * Raised when the server REJECTED a local update on this session (an `update-rejected`
- * control): the connection's generation holds a struct the server refused, so nothing
+ * Raised when the server rejects local content on this session (a typed
+ * `content-refused` session end): the connection holds a struct the server refused, so nothing
  * it wrote is durable and no barrier may ever answer `persisted`. TERMINAL for the
  * ephemeral MCP caller — resending identical rejected bytes is futile; a genuine fresh
  * generation (new session / resync) is the only recovery.
  */
-export class UpdateRejectedError extends Error {
+export class UpdateRejectedError extends BaseExceptionInternal {
   constructor(
     documentId: string,
     public readonly reason?: string
   ) {
-    super(
-      `Document ${documentId} update rejected by the server${reason ? ` (${reason})` : ''}`
-    );
-    this.name = 'UpdateRejectedError';
+    super('Collaboration update rejected', LogContext.COLLABORATION, {
+      documentId,
+      reason,
+    });
+  }
+}
+
+export type CollaborationSessionEndDisposition =
+  | 'transient'
+  | 'manual'
+  | 'terminal';
+
+/** A typed room ending whose disposition controls the caller's retry decision. */
+export class CollaborationSessionEndError extends BaseExceptionInternal {
+  constructor(
+    documentId: string,
+    public readonly disposition: CollaborationSessionEndDisposition,
+    code?: string
+  ) {
+    super('Collaboration session ended', LogContext.COLLABORATION, {
+      documentId,
+      code,
+      disposition,
+    });
   }
 }
 
@@ -107,7 +132,7 @@ export class CollaborationDocumentSession {
   private syncedReject?: (err: Error) => void;
   private readonly syncedPromise: Promise<void>;
 
-  /** Set once a read-only-state frame with `readOnly: true` arrives. */
+  /** Set by admission before sync; the legacy read-only frame is compatibility only. */
   private readOnly = false;
   private readOnlyReason?: string;
   /** Terminal close cause distinguished by the 1008 close reason string. */
@@ -115,7 +140,7 @@ export class CollaborationDocumentSession {
   /**
    * The single OUTSTANDING durability barrier (at most one per connection). It owns
    * its own timer and is settled EXACTLY ONCE via {@link settleBarrier} — on the
-   * matching `persisted` (resolve) / `persist-failed` (reject), an `update-rejected`
+   * matching `persisted` (resolve) / `persist-failed` (reject), a content-refused end
    * or terminal close/ws error (reject), timeout, or session close — clearing both
    * the waiter and the timer so a later frame can never act on stale state.
    */
@@ -126,7 +151,7 @@ export class CollaborationDocumentSession {
     timer: ReturnType<typeof setTimeout>;
   };
   /**
-   * STICKY once the server rejects a local update on this connection (`update-rejected`):
+   * STICKY once the server rejects local content on this connection (`content-refused`):
    * that generation holds a struct the server refused, so no barrier may ever answer
    * `persisted`. Mirrors the server's per-member `durabilityPoisoned`; cleared only by a
    * fresh session.
@@ -150,14 +175,9 @@ export class CollaborationDocumentSession {
     ws.binaryType = 'arraybuffer';
     this.ws = ws;
 
-    ws.on('open', () => {
-      // SyncStep1: advertise our (empty) state vector so the room replies with its
-      // full state as SyncStep2.
-      const encoder = encoding.createEncoder();
-      encoding.writeVarUint(encoder, WIRE_SYNC);
-      syncProtocol.writeSyncStep1(encoder, this.doc);
-      this.send(encoding.toUint8Array(encoder));
-    });
+    // Admission is the first server frame. Sync starts only after the session's
+    // immutable read/write capability is known, so a read-admitted consumer can
+    // never publish local state before learning it is a viewer.
 
     ws.on('message', (data: ArrayBuffer | Buffer) => this.onMessage(data));
 
@@ -185,7 +205,7 @@ export class CollaborationDocumentSession {
     await this.withTimeout(this.syncedPromise, timeoutMs, 'sync');
   }
 
-  /** True once a read-only-state frame marked this actor a viewer. */
+  /** True when admission (or the temporary legacy frame) marks this actor read-only. */
   isReadOnly(): boolean {
     return this.readOnly;
   }
@@ -248,7 +268,7 @@ export class CollaborationDocumentSession {
    * is by the `requestId` this call mints. At most ONE barrier may be outstanding per
    * connection; a second concurrent call rejects WITHOUT sending anything. The waiter is
    * installed BEFORE the request frame is sent, so an immediate reply cannot race ahead
-   * of it. Rejects on `persist-failed`, an `update-rejected` (which sticky-poisons this
+   * of it. Rejects on `persist-failed`, a content-refused end (which sticky-poisons this
    * session), a terminal close/ws error, or timeout — every path clears the waiter+timer.
    */
   requestDurability(timeoutMs: number): Promise<void> {
@@ -385,18 +405,36 @@ export class CollaborationDocumentSession {
           )
         );
         break;
-      case 'update-rejected':
-        // The server refused a local update on THIS connection (it answers the
-        // preceding update and carries NO requestId). Poison the session permanently
-        // and reject the sole outstanding barrier UNCORRELATED — nothing this
-        // generation wrote is durable, and a later persisted/persist-failed after this
-        // finds no barrier, so it can never flip the outcome back to success.
-        this.durabilityPoisoned = true;
-        this.settleBarrier(
-          undefined,
-          new UpdateRejectedError(this.documentId, msg.error)
-        );
+      case 'admission':
+        // The service guarantees this is the first frame. Its mode is the
+        // authoritative capability for this one-shot session; the legacy
+        // read-only-state below remains a rolling-deployment compatibility input.
+        if (msg.mode !== 'read' && msg.mode !== 'write') {
+          const err = new BaseExceptionInternal(
+            'Invalid collaboration admission',
+            LogContext.COLLABORATION,
+            { documentId: this.documentId, mode: msg.mode }
+          );
+          this.closeError = err;
+          this.failPending(err);
+          this.ws?.close();
+          break;
+        }
+        this.readOnly = msg.mode === 'read';
+        this.readOnlyReason = this.readOnly ? msg.reason : undefined;
+        this.sendSyncStep1();
         break;
+      case 'session-end': {
+        const err = this.sessionEndError(msg);
+        if (msg.code === 'content-refused') {
+          // Sticky exactly like the service's per-member poison: no later
+          // persisted frame may convert refused content into success.
+          this.durabilityPoisoned = true;
+        }
+        this.closeError = err;
+        this.failPending(err);
+        break;
+      }
       case 'saved':
       case 'save-error':
         // Room-wide broadcasts — NOT correlated to any per-request barrier. The durable
@@ -422,7 +460,7 @@ export class CollaborationDocumentSession {
    * Settle the single outstanding barrier EXACTLY ONCE, clearing both the waiter and
    * its timer. When `requestId` is provided (a `persisted`/`persist-failed` reply) the
    * barrier is settled ONLY if it matches — a mismatched/stale reply is ignored. When
-   * `requestId` is undefined (close / ws error / `update-rejected`, and the barrier's own
+   * `requestId` is undefined (close / ws error / typed content refusal, and the barrier's own
    * timeout which passes its own id) it settles whatever barrier is outstanding. A
    * non-null `err` rejects; its absence resolves.
    */
@@ -451,6 +489,27 @@ export class CollaborationDocumentSession {
     this.settleBarrier(undefined, err);
   }
 
+  private sendSyncStep1(): void {
+    const encoder = encoding.createEncoder();
+    encoding.writeVarUint(encoder, WIRE_SYNC);
+    syncProtocol.writeSyncStep1(encoder, this.doc);
+    this.send(encoding.toUint8Array(encoder));
+  }
+
+  private sessionEndError(msg: ControlMessage): Error {
+    if (msg.code === 'document-deleted') {
+      return new DocumentPurgingError(this.documentId);
+    }
+    if (msg.code === 'content-refused') {
+      return new UpdateRejectedError(this.documentId, msg.reason ?? msg.error);
+    }
+    return new CollaborationSessionEndError(
+      this.documentId,
+      isSessionEndDisposition(msg.disposition) ? msg.disposition : 'terminal',
+      msg.code
+    );
+  }
+
   private send(bytes: Uint8Array): void {
     this.ws?.send(bytes);
   }
@@ -476,4 +535,10 @@ export class CollaborationDocumentSession {
       clearTimeout(timer)
     ) as Promise<T>;
   }
+}
+
+function isSessionEndDisposition(
+  value: string | undefined
+): value is CollaborationSessionEndDisposition {
+  return value === 'transient' || value === 'manual' || value === 'terminal';
 }

@@ -9,12 +9,16 @@ import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { AccountDeletionAuditService } from '@domain/community/user/account-deletion/account.deletion.audit.service';
 import { UserService } from '@domain/community/user/user.service';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { AccountService } from '@domain/space/account/account.service';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getEntityManagerToken } from '@nestjs/typeorm';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -29,8 +33,17 @@ describe('RegistrationService', () => {
     getUserByIdOrFail: Mock;
     getAccount: Mock;
     deleteUser: Mock;
+    deleteUserDbOnly: Mock;
+    revokeUserSessionsAndIdentity: Mock;
     updateUserSettings: Mock;
   };
+  let accountDeletionAuditService: {
+    writePrimary: Mock;
+    appendLegOutcome: Mock;
+  };
+  let fileServiceAdapter: { deleteDocument: Mock };
+  let storageBucketService: { removeStorageBucketRowForAccountDeletion: Mock };
+  let entityManager: { transaction: Mock };
   let userAuthorizationService: {
     grantCredentialsAllUsersReceive: Mock;
     applyAuthorizationPolicy: Mock;
@@ -59,7 +72,10 @@ describe('RegistrationService', () => {
     findApplicationsForUser: Mock;
     deleteApplication: Mock;
   };
-  let accountService: { deleteAccountOrFail: Mock };
+  let accountService: {
+    deleteAccountOrFail: Mock;
+    deleteAccountOrFailForAccountDeletion: Mock;
+  };
   let _organizationService: { getAccount: Mock; deleteOrganization: Mock };
   let notificationPlatformAdapter: { platformUserProfileCreated: Mock };
   let configService: { get: Mock };
@@ -68,13 +84,32 @@ describe('RegistrationService', () => {
     vi.restoreAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [RegistrationService, MockCacheManager, MockWinstonProvider],
+      providers: [
+        RegistrationService,
+        MockCacheManager,
+        MockWinstonProvider,
+        {
+          provide: getEntityManagerToken('default'),
+          useValue: {
+            transaction: vi.fn(async (cb: any) => cb({})),
+          },
+        },
+      ],
     })
       .useMocker(defaultMockerFactory)
       .compile();
 
     service = module.get(RegistrationService);
     userService = module.get(UserService) as any;
+    accountDeletionAuditService = module.get(
+      AccountDeletionAuditService
+    ) as any;
+    fileServiceAdapter = module.get(FileServiceAdapter) as any;
+    storageBucketService = module.get(StorageBucketService) as any;
+    storageBucketService.removeStorageBucketRowForAccountDeletion.mockResolvedValue(
+      undefined
+    );
+    entityManager = module.get(getEntityManagerToken('default')) as any;
     userAuthorizationService = module.get(UserAuthorizationService) as any;
     accountAuthorizationService = module.get(
       AccountAuthorizationService
@@ -547,7 +582,7 @@ describe('RegistrationService', () => {
   });
 
   describe('deleteUserWithPendingMemberships', () => {
-    it('should delete invitations, applications, user and account', async () => {
+    const setUpHappyPath = () => {
       const deleteData = { ID: 'user-1' };
       invitationService.findInvitationsForActor.mockResolvedValue([
         { id: 'inv-1' },
@@ -559,21 +594,270 @@ describe('RegistrationService', () => {
       ]);
       applicationService.deleteApplication.mockResolvedValue(undefined);
       const user = { id: 'user-1' };
-      const account = { id: 'account-1' };
+      const account = {
+        id: 'account-1',
+        externalSubscriptionID: 'wingback-1',
+      };
+      const deletedUser = { id: 'user-1' };
       userService.getUserByIdOrFail.mockResolvedValue(user);
       userService.getAccount.mockResolvedValue(account);
-      userService.deleteUser.mockResolvedValue(user);
-      accountService.deleteAccountOrFail.mockResolvedValue(undefined);
+      userService.deleteUserDbOnly.mockResolvedValue({
+        user: deletedUser,
+        documentIDs: ['doc-1'],
+        storageBucketIDs: ['sb-1'],
+      });
+      accountService.deleteAccountOrFailForAccountDeletion.mockResolvedValue({
+        account,
+        documentIDs: ['doc-2'],
+        storageBucketIDs: ['sb-2'],
+      });
+      accountDeletionAuditService.writePrimary.mockResolvedValue(undefined);
+      accountDeletionAuditService.appendLegOutcome.mockResolvedValue(undefined);
+      userService.revokeUserSessionsAndIdentity.mockResolvedValue({
+        sessionRevocationSucceeded: true,
+        identityDeletionAttempted: true,
+        identityDeletionSucceeded: true,
+      });
+      fileServiceAdapter.deleteDocument.mockResolvedValue(undefined);
+      return { deleteData, user, account, deletedUser };
+    };
+
+    it('deletes invitations, applications, the user, and the account inside one transaction', async () => {
+      const { deleteData, account, deletedUser } = setUpHappyPath();
 
       const result = await service.deleteUserWithPendingMemberships(
-        deleteData as any
+        deleteData as any,
+        'self'
       );
 
+      expect(entityManager.transaction).toHaveBeenCalledTimes(1);
       expect(invitationService.deleteInvitation).toHaveBeenCalledTimes(2);
       expect(applicationService.deleteApplication).toHaveBeenCalledTimes(1);
-      expect(userService.deleteUser).toHaveBeenCalledWith(deleteData);
-      expect(accountService.deleteAccountOrFail).toHaveBeenCalledWith(account);
-      expect(result).toBe(user);
+      expect(userService.deleteUserDbOnly).toHaveBeenCalledWith(
+        deleteData,
+        expect.anything(),
+        'self'
+      );
+      expect(
+        accountService.deleteAccountOrFailForAccountDeletion
+      ).toHaveBeenCalledWith(account, expect.anything());
+      expect(result).toBe(deletedUser);
+    });
+
+    it('writes the primary audit record inside the transaction, initiatorRole self, with the stored subscription linkage', async () => {
+      const { deleteData } = setUpHappyPath();
+
+      await service.deleteUserWithPendingMemberships(deleteData as any, 'self');
+
+      expect(accountDeletionAuditService.writePrimary).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          subjectUserId: 'user-1',
+          initiatorRole: 'self',
+          accountID: 'account-1',
+          externalSubscriptionID: 'wingback-1',
+          documentCount: 2,
+        })
+      );
+    });
+
+    it('records initiatorRole platform_admin on the admin branch', async () => {
+      const { deleteData } = setUpHappyPath();
+
+      await service.deleteUserWithPendingMemberships(
+        deleteData as any,
+        'admin'
+      );
+
+      expect(accountDeletionAuditService.writePrimary).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ initiatorRole: 'platform_admin' })
+      );
+    });
+
+    it('runs the post-commit legs after the transaction and appends their outcomes', async () => {
+      const { deleteData, deletedUser } = setUpHappyPath();
+
+      await service.deleteUserWithPendingMemberships(deleteData as any, 'self');
+
+      expect(userService.revokeUserSessionsAndIdentity).toHaveBeenCalledWith(
+        deletedUser,
+        deleteData
+      );
+      expect(accountDeletionAuditService.appendLegOutcome).toHaveBeenCalledWith(
+        'user-1',
+        'self',
+        'session_revocation_completed'
+      );
+      expect(accountDeletionAuditService.appendLegOutcome).toHaveBeenCalledWith(
+        'user-1',
+        'self',
+        'identity_deletion_completed'
+      );
+      expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith('doc-1');
+      expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith('doc-2');
+      expect(accountDeletionAuditService.appendLegOutcome).toHaveBeenCalledWith(
+        'user-1',
+        'self',
+        'file_bytes_cleanup_completed',
+        undefined
+      );
+      expect(
+        storageBucketService.removeStorageBucketRowForAccountDeletion
+      ).toHaveBeenCalledWith('sb-1');
+      expect(
+        storageBucketService.removeStorageBucketRowForAccountDeletion
+      ).toHaveBeenCalledWith('sb-2');
+    });
+
+    it('removes emptied storage bucket rows only after every document has gone through the file-service delete', async () => {
+      const { deleteData } = setUpHappyPath();
+      const callOrder: string[] = [];
+      fileServiceAdapter.deleteDocument.mockImplementation(
+        async (documentID: string) => {
+          callOrder.push(`file:${documentID}`);
+        }
+      );
+      storageBucketService.removeStorageBucketRowForAccountDeletion.mockImplementation(
+        async (storageBucketID: string) => {
+          callOrder.push(`bucket:${storageBucketID}`);
+        }
+      );
+
+      await service.deleteUserWithPendingMemberships(deleteData as any, 'self');
+
+      expect(callOrder.indexOf('file:doc-1')).toBeLessThan(
+        callOrder.indexOf('bucket:sb-1')
+      );
+      expect(callOrder.indexOf('file:doc-2')).toBeLessThan(
+        callOrder.indexOf('bucket:sb-2')
+      );
+    });
+
+    it('logs and swallows a storage-bucket-row removal failure without failing the mutation', async () => {
+      const { deleteData } = setUpHappyPath();
+      storageBucketService.removeStorageBucketRowForAccountDeletion.mockRejectedValue(
+        new Error('db unreachable')
+      );
+
+      const result = await service.deleteUserWithPendingMemberships(
+        deleteData as any,
+        'self'
+      );
+
+      expect(result).toBeDefined();
+    });
+
+    it('logs and swallows an unexpected post-commit failure (e.g. an audit write rejecting) without failing the mutation', async () => {
+      const { deleteData } = setUpHappyPath();
+      accountDeletionAuditService.appendLegOutcome.mockRejectedValueOnce(
+        new Error('audit db unreachable')
+      );
+
+      const result = await service.deleteUserWithPendingMemberships(
+        deleteData as any,
+        'self'
+      );
+
+      expect(result).toBeDefined();
+    });
+
+    it('appends failed leg outcomes when session revocation and identity deletion fail, without failing the mutation', async () => {
+      const { deleteData } = setUpHappyPath();
+      userService.revokeUserSessionsAndIdentity.mockResolvedValue({
+        sessionRevocationSucceeded: false,
+        identityDeletionAttempted: true,
+        identityDeletionSucceeded: false,
+      });
+
+      const result = await service.deleteUserWithPendingMemberships(
+        deleteData as any,
+        'self'
+      );
+
+      expect(result).toBeDefined();
+      expect(accountDeletionAuditService.appendLegOutcome).toHaveBeenCalledWith(
+        'user-1',
+        'self',
+        'session_invalidation_failed'
+      );
+      expect(accountDeletionAuditService.appendLegOutcome).toHaveBeenCalledWith(
+        'user-1',
+        'self',
+        'identity_deletion_failed'
+      );
+    });
+
+    it('appends a failed file-bytes-cleanup outcome without failing the mutation when the file-service is degraded', async () => {
+      const { deleteData } = setUpHappyPath();
+      fileServiceAdapter.deleteDocument.mockRejectedValue(
+        new Error('file-service unreachable')
+      );
+
+      const result = await service.deleteUserWithPendingMemberships(
+        deleteData as any,
+        'self'
+      );
+
+      expect(result).toBeDefined();
+      expect(accountDeletionAuditService.appendLegOutcome).toHaveBeenCalledWith(
+        'user-1',
+        'self',
+        'file_bytes_cleanup_failed',
+        expect.objectContaining({
+          error: expect.any(String),
+          fileExternalIDs: ['doc-1', 'doc-2'],
+        })
+      );
+    });
+
+    it('names only the documents that actually failed in fileExternalIDs, not the ones that succeeded', async () => {
+      const { deleteData } = setUpHappyPath();
+      fileServiceAdapter.deleteDocument.mockImplementation(
+        async (documentID: string) => {
+          if (documentID === 'doc-2') {
+            throw new Error('file-service unreachable');
+          }
+        }
+      );
+
+      await service.deleteUserWithPendingMemberships(deleteData as any, 'self');
+
+      expect(accountDeletionAuditService.appendLegOutcome).toHaveBeenCalledWith(
+        'user-1',
+        'self',
+        'file_bytes_cleanup_failed',
+        expect.objectContaining({ fileExternalIDs: ['doc-2'] })
+      );
+    });
+
+    it('skips the file-bytes-cleanup leg entirely when there are no documents', async () => {
+      const { deleteData } = setUpHappyPath();
+      userService.deleteUserDbOnly.mockResolvedValue({
+        user: { id: 'user-1' },
+        documentIDs: [],
+        storageBucketIDs: [],
+      });
+      accountService.deleteAccountOrFailForAccountDeletion.mockResolvedValue({
+        account: { id: 'account-1' },
+        documentIDs: [],
+        storageBucketIDs: [],
+      });
+
+      await service.deleteUserWithPendingMemberships(deleteData as any, 'self');
+
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+      expect(
+        storageBucketService.removeStorageBucketRowForAccountDeletion
+      ).not.toHaveBeenCalled();
+      expect(
+        accountDeletionAuditService.appendLegOutcome
+      ).not.toHaveBeenCalledWith(
+        'user-1',
+        'self',
+        'file_bytes_cleanup_completed',
+        undefined
+      );
     });
   });
 });

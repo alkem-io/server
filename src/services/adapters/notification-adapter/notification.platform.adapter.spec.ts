@@ -260,6 +260,54 @@ describe('NotificationPlatformAdapter', () => {
 
       expect(inAppAdapter.sendInAppNotifications).not.toHaveBeenCalled();
     });
+
+    it('never carries the departed user displayName/email in the in-app payload', async () => {
+      mockRecipients([{ id: 'admin-1' }], [{ id: 'admin-1' }]);
+      vi.mocked(
+        externalAdapter.buildPlatformUserRemovedNotificationPayload
+      ).mockResolvedValue({} as any);
+
+      await adapter.platformUserRemoved({
+        triggeredBy: 'admin-1',
+        user: {
+          profile: { displayName: 'Test User' },
+          email: 'test@example.com',
+        },
+      } as any);
+
+      const inAppPayload = vi.mocked(inAppAdapter.sendInAppNotifications).mock
+        .calls[0][4];
+      expect(inAppPayload).not.toHaveProperty('userDisplayName');
+      expect(inAppPayload).not.toHaveProperty('userEmail');
+    });
+
+    it('forwards a pre-resolved triggeredByPayload (self-deletion) to the external adapter', async () => {
+      mockRecipients([{ id: 'admin-1' }], [{ id: 'admin-1' }]);
+      vi.mocked(
+        externalAdapter.buildPlatformUserRemovedNotificationPayload
+      ).mockResolvedValue({} as any);
+      const triggeredByPayload = { id: 'self-1' } as any;
+
+      await adapter.platformUserRemoved({
+        triggeredBy: 'self-1',
+        user: {
+          id: 'self-1',
+          profile: { displayName: 'Departed User' },
+          email: 'departed@example.com',
+        },
+        triggeredByPayload,
+      } as any);
+
+      expect(
+        externalAdapter.buildPlatformUserRemovedNotificationPayload
+      ).toHaveBeenCalledWith(
+        expect.anything(),
+        'self-1',
+        expect.anything(),
+        expect.anything(),
+        triggeredByPayload
+      );
+    });
   });
 
   describe('platformForumDiscussionCreated', () => {

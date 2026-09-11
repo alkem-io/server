@@ -19,7 +19,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Readable } from 'stream';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { DeleteVisualInput } from './dto/visual.dto.delete';
 import {
@@ -82,15 +82,20 @@ export class VisualService {
     return await this.visualRepository.save(visual);
   }
 
-  async deleteVisual(deleteData: DeleteVisualInput): Promise<IVisual> {
+  async deleteVisual(
+    deleteData: DeleteVisualInput,
+    em?: EntityManager
+  ): Promise<IVisual> {
     const visualID = deleteData.ID;
     const visual = await this.getVisualOrFail(visualID);
 
     if (visual.authorization)
-      await this.authorizationPolicyService.delete(visual.authorization);
+      await this.authorizationPolicyService.delete(visual.authorization, em);
 
     const { id } = visual;
-    const result = await this.visualRepository.remove(visual as Visual);
+    const result = em
+      ? await em.remove(visual as Visual)
+      : await this.visualRepository.remove(visual as Visual);
     return {
       ...result,
       id,

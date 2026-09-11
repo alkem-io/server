@@ -119,12 +119,14 @@ export class CollaborationIntegrationService {
     try {
       const memo = await this.tryGetMemoMetadata(data.id);
       if (memo) {
+        const isMultiUser = await this.memoService.isMultiUser(data.id);
         return {
           found: true,
           contentType: CollaborationContentType.MEMO,
           version: memo.version,
           contentPointer: memo.contentPointer,
           migrated: memo.migrated,
+          isMultiUser,
           authorizationPolicyId: memo.authorizationPolicyId,
           // The memo's OWN storage bucket — collab persists this doc's snapshot
           // there, not into a single flat platform bucket.
@@ -134,12 +136,14 @@ export class CollaborationIntegrationService {
 
       const whiteboard = await this.tryGetWhiteboardMetadata(data.id);
       if (whiteboard) {
+        const isMultiUser = await this.whiteboardService.isMultiUser(data.id);
         return {
           found: true,
           contentType: CollaborationContentType.WHITEBOARD,
           version: whiteboard.version,
           contentPointer: whiteboard.contentPointer,
           migrated: whiteboard.migrated,
+          isMultiUser,
           authorizationPolicyId: whiteboard.authorizationPolicyId,
           // The whiteboard's OWN storage bucket (see memo note above).
           storageBucketId: whiteboard.storageBucketId,

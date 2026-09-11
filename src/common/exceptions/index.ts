@@ -1,3 +1,4 @@
+export * from './account.deletion.blocked.exception';
 export * from './account.exception';
 export * from './authentication.exception';
 export * from './entity.not.found.exception';
@@ -11,6 +12,7 @@ export * from './pagination';
 export * from './registration.exception';
 export * from './relationship.not.found.exception';
 export * from './role.set.policy.role.limits.exception';
+export * from './session.refresh.required.exception';
 export * from './session-store-unavailable.exception';
 export * from './subscription';
 export * from './user';

@@ -1,4 +1,6 @@
+import { AccountDeletionBlockerService } from '@domain/community/user/account-deletion/account.deletion.blocker.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { createMock } from '@golevelup/ts-vitest';
 import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
 import { McpApiKeyService } from '@services/mcp-server/auth/mcp-api-key.service';
@@ -16,6 +18,12 @@ describe('MeResolverFields', () => {
     typeof createMock<InAppNotificationService>
   >;
   let mcpApiKeyServiceMock: ReturnType<typeof createMock<McpApiKeyService>>;
+  let accountDeletionBlockerServiceMock: ReturnType<
+    typeof createMock<AccountDeletionBlockerService>
+  >;
+  let accountLookupServiceMock: ReturnType<
+    typeof createMock<AccountLookupService>
+  >;
   // A plain stub injected as the resolver's logger. Deliberately NOT a
   // `vi.spyOn(Logger.prototype, …)`: vitest runs with `isolate: false`, so a
   // prototype spy that is never restored leaks a no-op logger into every later
@@ -48,11 +56,27 @@ describe('MeResolverFields', () => {
     mcpApiKeyServiceMock = createMock<McpApiKeyService>();
     mcpApiKeyServiceMock.listUserKeysForProjection.mockResolvedValue([]);
 
+    accountDeletionBlockerServiceMock =
+      createMock<AccountDeletionBlockerService>();
+    accountDeletionBlockerServiceMock.getBlockers.mockResolvedValue({
+      canDelete: true,
+      blockers: [],
+      totals: [],
+      truncated: false,
+    });
+
+    accountLookupServiceMock = createMock<AccountLookupService>();
+    accountLookupServiceMock.getAccountOrFail.mockResolvedValue({
+      id: 'account-1',
+    } as any);
+
     resolver = new MeResolverFields(
       meService,
       userLookupService,
       inAppNotificationService,
       mcpApiKeyServiceMock,
+      accountDeletionBlockerServiceMock,
+      accountLookupServiceMock,
       logger as any
     );
   });
@@ -345,6 +369,107 @@ describe('MeResolverFields', () => {
       const result = await resolver.conversations(actorContext);
       expect(result).toBeDefined();
       expect(logger.verbose).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('accountDeletion', () => {
+    it('degrades to the empty status when unauthenticated, without calling the blocker service', async () => {
+      const result = await resolver.accountDeletion(anonymousActorContext);
+
+      expect(result).toEqual({
+        canDelete: false,
+        sessionFresh: false,
+        blockers: [],
+        truncated: false,
+        totals: [],
+        externalSubscriptionLinked: false,
+      });
+      expect(
+        accountDeletionBlockerServiceMock.getBlockers
+      ).not.toHaveBeenCalled();
+    });
+
+    it('calls the shared blocker predicate on the self branch (FR-006 same-predicate)', async () => {
+      const userWithAccount = { id: 'user-123', accountID: 'account-1' };
+      const userLookupService = createMock<UserLookupService>();
+      userLookupService.getUserByIdOrFail.mockResolvedValue(
+        userWithAccount as any
+      );
+      resolver = new MeResolverFields(
+        meService,
+        userLookupService,
+        inAppNotificationService,
+        mcpApiKeyServiceMock,
+        accountDeletionBlockerServiceMock,
+        accountLookupServiceMock,
+        logger as any
+      );
+
+      await resolver.accountDeletion(actorContext);
+
+      expect(
+        accountDeletionBlockerServiceMock.getBlockers
+      ).toHaveBeenCalledWith('user-123', 'account-1', 'self');
+    });
+
+    it('reports sessionFresh true within the privileged window and false when stale/missing', async () => {
+      const fresh = { ...actorContext, issuedAt: Date.now() - 60_000 };
+      const stale = {
+        ...actorContext,
+        issuedAt: Date.now() - 16 * 60 * 1000,
+      };
+      const missing = { ...actorContext, issuedAt: undefined };
+
+      expect((await resolver.accountDeletion(fresh)).sessionFresh).toBe(true);
+      expect((await resolver.accountDeletion(stale)).sessionFresh).toBe(false);
+      expect((await resolver.accountDeletion(missing)).sessionFresh).toBe(
+        false
+      );
+    });
+
+    it('maps the stored externalSubscriptionID to a boolean linkage flag', async () => {
+      accountLookupServiceMock.getAccountOrFail.mockResolvedValue({
+        id: 'account-1',
+        externalSubscriptionID: 'wingback-1',
+      } as any);
+
+      const result = await resolver.accountDeletion(actorContext);
+
+      expect(result.externalSubscriptionLinked).toBe(true);
+    });
+
+    it('reports externalSubscriptionLinked false when no subscription is stored', async () => {
+      accountLookupServiceMock.getAccountOrFail.mockResolvedValue({
+        id: 'account-1',
+        externalSubscriptionID: undefined,
+      } as any);
+
+      const result = await resolver.accountDeletion(actorContext);
+
+      expect(result.externalSubscriptionLinked).toBe(false);
+    });
+
+    it('passes through canDelete/blockers/truncated/totals from the blocker service verbatim', async () => {
+      accountDeletionBlockerServiceMock.getBlockers.mockResolvedValue({
+        canDelete: false,
+        blockers: [
+          {
+            kind: 'ACCOUNT_SPACE' as any,
+            resourceID: 'space-1',
+            displayName: 'My Space',
+            selfResolvable: true,
+          },
+        ],
+        totals: [{ kind: 'ACCOUNT_SPACE' as any, total: 1 }],
+        truncated: false,
+      });
+
+      const result = await resolver.accountDeletion(actorContext);
+
+      expect(result.canDelete).toBe(false);
+      expect(result.blockers).toHaveLength(1);
+      expect(result.blockers[0].displayName).toBe('My Space');
+      expect(result.totals).toEqual([{ kind: 'ACCOUNT_SPACE', total: 1 }]);
     });
   });
 });

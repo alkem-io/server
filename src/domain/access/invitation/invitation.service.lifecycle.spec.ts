@@ -4,7 +4,10 @@ import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock } from 'vitest';
-import { InvitationLifecycleService } from './invitation.service.lifecycle';
+import {
+  InvitationLifecycleService,
+  invitationLifecycleMachine,
+} from './invitation.service.lifecycle';
 
 describe('InvitationLifecycleService', () => {
   let service: InvitationLifecycleService;
@@ -59,6 +62,53 @@ describe('InvitationLifecycleService', () => {
       const result = service.getNextEvents(mockLifecycle);
 
       expect(result).toEqual(['ACCEPT', 'REJECT']);
+    });
+  });
+
+  describe('the real machine: a declined invitation cannot be resurrected', () => {
+    // Regression (FR-004/R2). `rejected` used to carry
+    // `REINVITE -> invited` guarded on `hasUpdatePrivilege` — a privilege the
+    // INVITING Space admin holds through the RoleSet's inherited
+    // authorization. `eventOnInvitation` re-runs neither
+    // `guardOrganizationInvitation` (the organization's
+    // `allowSpaceInvitations` opt-out and the Lead-slot limit) nor the
+    // invitation notification, so that transition let the very party the
+    // opt-out protects against loop a declining organization back to
+    // `invited`, silently and indefinitely. Re-inviting now goes through
+    // ARCHIVE (final) + a fresh `inviteForEntryRoleOnRoleSet`, where every
+    // one of those checks runs.
+    const realService = () =>
+      new InvitationLifecycleService(
+        new LifecycleService({} as any, MockWinstonProvider.useValue as any)
+      );
+
+    const rejectedLifecycle = {
+      id: 'lc-rejected',
+      machineState: JSON.stringify({
+        status: 'active',
+        value: 'rejected',
+        historyValue: {},
+        context: {},
+        children: {},
+      }),
+    } as any;
+
+    it('offers ARCHIVE and nothing else from `rejected`', () => {
+      expect(realService().getNextEvents(rejectedLifecycle)).toEqual([
+        'ARCHIVE',
+      ]);
+    });
+
+    it('declares no transition out of `rejected` that returns to `invited`', () => {
+      // Asserted on the definition as well as the runtime, because the
+      // states-only machine and the primary event-handling machine are kept
+      // in sync by hand (see the comment in the service).
+      const rejectedTransitions =
+        (invitationLifecycleMachine.states as any).rejected.on ?? {};
+      expect(Object.keys(rejectedTransitions)).toEqual(['ARCHIVE']);
+      expect(
+        Object.values(rejectedTransitions).map((t: any) => t.target)
+      ).not.toContain('invited');
     });
   });
 

@@ -12,7 +12,7 @@ const buildState = (
   }) as IInnovationFlowState;
 
 describe('normalizeStateSettings — sidebar', () => {
-  it('defaults sidebar to [INTENT, CREATE_POST, APPLICATION_BUTTON, INDEX] when the key is missing on an existing settings object', () => {
+  it('defaults sidebar to [INTENT, CREATE_POST, APPLICATION_BUTTON, SEARCH, INDEX] when the key is missing on an existing settings object', () => {
     const state = buildState({ allowNewCallouts: true });
 
     const result = normalizeStateSettings(state);
@@ -21,11 +21,12 @@ describe('normalizeStateSettings — sidebar', () => {
       SidebarWidget.INTENT,
       SidebarWidget.CREATE_POST,
       SidebarWidget.APPLICATION_BUTTON,
+      SidebarWidget.SEARCH,
       SidebarWidget.INDEX,
     ]);
   });
 
-  it('defaults sidebar to [INTENT, CREATE_POST, APPLICATION_BUTTON, INDEX] when settings is entirely absent', () => {
+  it('defaults sidebar to [INTENT, CREATE_POST, APPLICATION_BUTTON, SEARCH, INDEX] when settings is entirely absent', () => {
     const state = { id: 'state-1' } as IInnovationFlowState;
 
     const result = normalizeStateSettings(state);
@@ -34,6 +35,7 @@ describe('normalizeStateSettings — sidebar', () => {
       SidebarWidget.INTENT,
       SidebarWidget.CREATE_POST,
       SidebarWidget.APPLICATION_BUTTON,
+      SidebarWidget.SEARCH,
       SidebarWidget.INDEX,
     ]);
   });
@@ -85,6 +87,19 @@ describe('normalizeStateSettings — sidebar', () => {
       SidebarWidget.UPDATES,
       SidebarWidget.INTENT,
       SidebarWidget.ABOUT,
+    ];
+    const state = buildState({ sidebar: stored });
+
+    const result = normalizeStateSettings(state);
+
+    expect(result.settings.sidebar).toEqual(stored);
+  });
+
+  it('preserves a stored list containing search as a known value', () => {
+    const stored = [
+      SidebarWidget.INTENT,
+      SidebarWidget.SEARCH,
+      SidebarWidget.INDEX,
     ];
     const state = buildState({ sidebar: stored });
 

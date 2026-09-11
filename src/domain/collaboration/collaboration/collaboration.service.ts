@@ -120,6 +120,12 @@ export class CollaborationService {
           limit: 0,
           enabled: false,
         },
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_MEMO_SIGNING,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
       ],
     });
 

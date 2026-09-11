@@ -1,7 +1,10 @@
 import { vi } from 'vitest';
 import * as Y from 'yjs';
 import { CollaborationDocumentService } from './collaboration-document.service';
-import { UpdateRejectedError } from './collaboration-document.session';
+import {
+  CollaborationSessionEndError,
+  UpdateRejectedError,
+} from './collaboration-document.session';
 
 /**
  * The service `mutate()` retry loop, at the smallest possible seam: `newSession` is
@@ -101,5 +104,57 @@ describe('CollaborationDocumentService.mutate — correlated-barrier retry seman
     expect(newSession).toHaveBeenCalledTimes(1);
     expect(s0.resend).not.toHaveBeenCalled();
     expect(s0.close).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    'manual',
+    'terminal',
+  ] as const)('a %s session end is thrown without resending the same update', async disposition => {
+    const service = buildService();
+    const ended = new CollaborationSessionEndError(
+      'wb-1',
+      disposition,
+      'document-size-limit-exceeded'
+    );
+    const s0 = fakeSession({
+      mutationBytes: new Uint8Array([1]),
+      durability: () => Promise.reject(ended),
+    });
+    const newSession = vi
+      .spyOn(service as never as { newSession: () => unknown }, 'newSession')
+      .mockReturnValueOnce(s0 as never);
+
+    await expect(
+      service.mutate('wb-1', 'whiteboard', 'actor-1', () => undefined)
+    ).rejects.toBe(ended);
+    expect(newSession).toHaveBeenCalledOnce();
+    expect(s0.resend).not.toHaveBeenCalled();
+  });
+
+  it('a transient typed end follows the existing bounded resend path', async () => {
+    const service = buildService();
+    const bytes = new Uint8Array([5, 6]);
+    const s0 = fakeSession({
+      mutationBytes: bytes,
+      durability: () =>
+        Promise.reject(
+          new CollaborationSessionEndError(
+            'wb-1',
+            'transient',
+            'server-shutdown'
+          )
+        ),
+    });
+    const s1 = fakeSession({ durability: () => Promise.resolve() });
+    const newSession = vi
+      .spyOn(service as never as { newSession: () => unknown }, 'newSession')
+      .mockReturnValueOnce(s0 as never)
+      .mockReturnValueOnce(s1 as never);
+
+    await expect(
+      service.mutate('wb-1', 'whiteboard', 'actor-1', () => undefined)
+    ).resolves.toBeUndefined();
+    expect(newSession).toHaveBeenCalledTimes(2);
+    expect(s1.resend).toHaveBeenCalledWith(bytes);
   });
 });

@@ -6,7 +6,8 @@ import { loadWhiteboardFork } from '../whiteboard.fork';
  * z-index seeding, `files` asset map and V2 encoding are ALL owned by the
  * excalidraw-yjs headless fork (`@excalidraw-yjs/element/headless`): this adapter
  * does NOT reimplement any of them. It parses the legacy scene, seeds fractional
- * indices via the fork's canonical `syncInvalidIndices`, and hands
+ * legacy element order/bindings through the fork's canonical compatibility
+ * helpers, and hands
  * `{ elements, assets, appState }` to the fork's `encodeSnapshot`. The result is
  * therefore STRUCTURALLY identical to what an editor produces for the same scene
  * (FR-002 — one representation everywhere): same root types, per-property element
@@ -38,7 +39,8 @@ import { loadWhiteboardFork } from '../whiteboard.fork';
  * malformed NONEMPTY legacy scene BEFORE calling this (`parseLegacyWhiteboardScene`
  * returns `undefined` on a non-blank blob → the record FAILS and stays re-runnable, never
  * aborting the batch), rather than silently emptying it. Only a blank / whitespace legacy
- * value reaches here as canonical-empty.
+ * value, or the historical `{}` empty-scene sentinel, reaches here as
+ * canonical-empty.
  */
 export const whiteboardSceneToYjsV2State = async (
   sceneJSON: string,
@@ -47,9 +49,68 @@ export const whiteboardSceneToYjsV2State = async (
   const fork = await loadWhiteboardFork();
   const scene = parseLegacyWhiteboardScene(sceneJSON);
 
-  // Work on copies so `syncInvalidIndices` (which mutates elements in place to
-  // assign fractional indices) never touches the caller's records.
-  const elements = scene ? scene.elements.map(element => ({ ...element })) : [];
+  // Work on copies so the compatibility repair and `syncInvalidIndices` (which
+  // mutate element arrays/records) never touch the caller's scene.
+  const copiedElements: Record<string, unknown>[] = scene
+    ? scene.elements.map(
+        (element): Record<string, unknown> => ({
+          ...element,
+          // Old/minimal scenes can predate this required Excalidraw collection.
+          // The fork's order normalizer reads it unconditionally.
+          groupIds: Array.isArray(element.groupIds)
+            ? [...element.groupIds]
+            : [],
+          ...(Array.isArray(element.boundElements)
+            ? {
+                boundElements: element.boundElements.map(boundElement =>
+                  boundElement && typeof boundElement === 'object'
+                    ? { ...boundElement }
+                    : boundElement
+                ),
+              }
+            : {}),
+        })
+      )
+    : [];
+
+  // Some legacy scenes contain a stale text reference on one container while
+  // the text child points at another. The child's typed `containerId` is the
+  // canonical owner, so remove only the contradictory parent-side text ref.
+  // Non-text bindings (arrows, etc.) are deliberately preserved.
+  const elementsById = new Map(
+    copiedElements.flatMap(element =>
+      typeof element.id === 'string' ? [[element.id, element] as const] : []
+    )
+  );
+  const consistentElements = copiedElements.map(element => {
+    if (!Array.isArray(element.boundElements)) {
+      return element;
+    }
+    const boundElements = element.boundElements.filter(boundElement => {
+      if (
+        !boundElement ||
+        typeof boundElement !== 'object' ||
+        !('type' in boundElement) ||
+        boundElement.type !== 'text'
+      ) {
+        return true;
+      }
+      const boundId = 'id' in boundElement ? boundElement.id : undefined;
+      const child =
+        typeof boundId === 'string' ? elementsById.get(boundId) : undefined;
+      return (
+        child?.type === 'text' &&
+        typeof element.id === 'string' &&
+        child.containerId === element.id
+      );
+    });
+    return { ...element, boundElements };
+  });
+
+  // The fork owns the compatibility ordering rule. In particular, old scenes
+  // may place bound text before its container, which strict bound-text index
+  // validation rejects even though the scene is otherwise valid.
+  const elements = [...fork.normalizeElementOrder(consistentElements as never)];
   if (elements.length > 0) {
     // The fork's canonical fractional-index repair: seeds/repairs invalid indices
     // in the array's (z-)order, leaving already-valid indices untouched — the same
@@ -91,7 +152,9 @@ export type LegacyWhiteboardScene = {
 /**
  * Parses a stored legacy Excalidraw scene JSON into its structural parts. Returns
  * `undefined` for empty / non-JSON / structurally-absent (`elements` missing)
- * content so the caller seeds the canonical empty doc instead of throwing. Shared
+ * content so the caller seeds the canonical empty doc instead of throwing. The
+ * historical exact-empty-object sentinel (`{}`) is normalized to an empty scene.
+ * Shared
  * by the encoder (reads `elements` + `appState`) and the migration (reads `files`
  * to resolve asset locators), so both agree on what a valid scene is.
  */
@@ -107,11 +170,13 @@ export const parseLegacyWhiteboardScene = (
   } catch {
     return undefined;
   }
-  if (
-    !parsed ||
-    typeof parsed !== 'object' ||
-    !Array.isArray((parsed as { elements?: unknown }).elements)
-  ) {
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return undefined;
+  }
+  if (Object.keys(parsed).length === 0) {
+    return { elements: [] };
+  }
+  if (!Array.isArray((parsed as { elements?: unknown }).elements)) {
     return undefined;
   }
   return parsed as LegacyWhiteboardScene;

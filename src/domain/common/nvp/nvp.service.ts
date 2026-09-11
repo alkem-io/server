@@ -3,7 +3,7 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { NVP } from '@domain/common/nvp';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 
 @Injectable()
 export class NVPService {
@@ -24,8 +24,11 @@ export class NVPService {
     return NVP;
   }
 
-  async removeNVP(nvpID: string): Promise<NVP> {
+  async removeNVP(nvpID: string, em?: EntityManager): Promise<NVP> {
     const nvp = await this.getNvpOrFail(nvpID);
+    if (em) {
+      return await em.remove(nvp as NVP);
+    }
     return await this.nvpRepository.remove(nvp as NVP);
   }
 }
