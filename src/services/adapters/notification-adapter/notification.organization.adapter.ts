@@ -734,16 +734,19 @@ export class NotificationOrganizationAdapter {
   }
 
   /**
-   * A new associate joined the organization by a route with no invitation and
-   * no application step — a domain join or a direct assignment. Suppressed for
-   * an invitation acceptance (the response notification is its replacement) and
-   * for an approved application, per the product brief: "the 'joined'
-   * notification should only fire when there was no invitation or application
-   * step" (FR-010, 061 R35).
+   * A new associate joined the organization — an approved application, a domain
+   * join, or a direct assignment. Suppressed ONLY for an invitation acceptance,
+   * whose response notification ("X accepted the invitation") is its
+   * replacement.
    *
-   * The application case has no replacement event yet, so approving an
-   * application currently notifies the other admins through nothing at all —
-   * tracked as alkem-io/server#6476, not a defect of this dispatcher.
+   * The rule is "suppress only where a replacement exists" (061 R40, superseding
+   * R35). An approved application has no replacement: the application event
+   * fires at submission, and no application-approved event exists, so
+   * suppressing there would leave the approver's co-admins told nothing at all.
+   * `CommunityMembershipOrigin` therefore has no APPLICATION member and an
+   * approved application arrives here as DIRECT. If alkem-io/server#6476 adds an
+   * application-approved event, the member returns and suppression becomes
+   * correct at that point.
    *
    * Both the acting admin/joiner-triggering actor AND the new associate are
    * excluded from every channel; an empty recipient list after exclusion sends
