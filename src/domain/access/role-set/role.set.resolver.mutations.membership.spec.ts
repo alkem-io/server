@@ -840,6 +840,10 @@ describe('RoleSetResolverMutationsMembership', () => {
         expect(result[0].type).toBe(
           RoleSetInvitationResultType.EXTRA_ROLE_LIMIT_REACHED
         );
+        // The outcome has to name the invitee it belongs to. Without this the
+        // client falls back to matching results by position, which is what
+        // renders "role limit reached" against the wrong person in a batch.
+        expect(result[0].invitedActorID).toEqual('user-1');
         expect(
           roleSetService.createInvitationExistingActor
         ).not.toHaveBeenCalled();

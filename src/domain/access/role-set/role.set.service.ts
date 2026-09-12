@@ -27,6 +27,7 @@ import {
   IApplication,
 } from '@domain/access/application';
 import { ApplicationService } from '@domain/access/application/application.service';
+import { ApplicationLifecycleState } from '@domain/access/application/application.service.lifecycle';
 import { CreateInvitationInput, IInvitation } from '@domain/access/invitation';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
 import { CreatePlatformInvitationInput } from '@domain/access/invitation.platform/dto/platform.invitation.dto.create';
@@ -94,6 +95,17 @@ export interface EnsureMemberOfRoleSetAndAncestorsOptions {
   invitedToParent?: boolean;
   /** Invitation only: extra roles to (best-effort) grant on the target role-set. */
   extraRoles?: RoleName[];
+  /**
+   * Invitation only: the actor who offered those extra roles. An invitation is
+   * a durable, unexpiring grant, and the offerer's authority is checked only
+   * when it is created — so without re-checking here, an invitation planted by
+   * an administrator who has since been offboarded still confers ADMIN/OWNER
+   * (and with it account-admin standing over everything the organization hosts)
+   * whenever its recipient chooses to accept. Re-checked for ORGANIZATION role
+   * sets; a role whose offerer no longer has the standing to offer it is
+   * withheld, and withheld roles are already reported to both sides.
+   */
+  extraRolesOfferedBy?: string;
   /** Invitation only (SPACE target): remove the SPACE_MEMBER_INVITEE credential. */
   removeSpaceInviteeCredential?: boolean;
 }
@@ -452,12 +464,38 @@ export class RoleSetService {
       userID,
       roleSetID
     );
+    // On an ORGANIZATION role set a rejected application does not block a fresh
+    // one: an applicant the organization turned down may apply again later.
+    // `rejected` is not a final state — the Space flow keeps it as a waypoint to
+    // `archived`, and the settings tab archives from there — so finality alone
+    // would leave a rejected applicant permanently unable to re-apply.
+    //
+    // Scoped to organizations on purpose. Widening it would change shipped Space
+    // behaviour, where an admin archives the old row first. Safe here because
+    // this lookup only reports whether an application is open; creating the new
+    // one still runs every guard in the apply mutation.
+    //
+    // Resolved lazily: only a rejected application needs the role-set type, and
+    // those are rare, so the common path costs nothing extra.
+    let roleSetIsOrganization: boolean | undefined;
+
     for (const application of applications) {
       // skip any finalized applications; only want to return pending applications
       const isFinalized = await this.applicationService.isFinalizedApplication(
         application.id
       );
       if (isFinalized) continue;
+      if (
+        this.applicationService.getApplicationState(application) ===
+        ApplicationLifecycleState.REJECTED
+      ) {
+        roleSetIsOrganization ??=
+          (await this.getRoleSetOrFail(roleSetID)).type ===
+          RoleSetType.ORGANIZATION;
+        if (roleSetIsOrganization) {
+          continue;
+        }
+      }
       await this.roleSetCacheService.setOpenApplicationCache(
         userID,
         roleSetID,
@@ -882,6 +920,7 @@ export class RoleSetService {
           source: 'invitation',
           invitedToParent: invitation.invitedToParent,
           extraRoles: invitation.extraRoles,
+          extraRolesOfferedBy: invitation.createdBy,
           removeSpaceInviteeCredential: true,
         }
       );
@@ -2229,7 +2268,49 @@ export class RoleSetService {
     ) {
       await this.removeSpaceInviteeCredential(actorID, targetRoleSet);
     }
-    for (const extraRole of opts.extraRoles ?? []) {
+    // An invitation carrying ADMIN or OWNER is a durable grant with no expiry,
+    // and on an organization it also mints account-admin standing — cascading
+    // write and delete over every Space, Virtual Contributor and Innovation
+    // Pack the organization hosts. The offerer's authority was checked when the
+    // invitation was created and is not checked again by the accept path, which
+    // requires only that the invitee holds the accept privilege on their own
+    // invitation. So re-check it here: if whoever offered the role can no
+    // longer offer it, withhold the role rather than grant it.
+    //
+    // Scoped to organizations because that is where the elevated grant is
+    // implicit. Resolved once for the whole loop, and only when an extra role
+    // is actually on offer, so the ordinary path costs nothing.
+    const extraRoles = opts.extraRoles ?? [];
+    let offererMayStillOffer: boolean | undefined;
+    if (
+      extraRoles.length > 0 &&
+      targetRoleSet.type === RoleSetType.ORGANIZATION
+    ) {
+      offererMayStillOffer = opts.extraRolesOfferedBy
+        ? (await this.isInRole(
+            opts.extraRolesOfferedBy,
+            targetRoleSet,
+            RoleName.ADMIN
+          )) ||
+          (await this.isInRole(
+            opts.extraRolesOfferedBy,
+            targetRoleSet,
+            RoleName.OWNER
+          ))
+        : // A deleted account leaves `createdBy` empty; nobody vouches for the
+          // offer any more, so it is not honoured.
+          false;
+    }
+
+    for (const extraRole of extraRoles) {
+      if (offererMayStillOffer === false) {
+        this.logger.warn?.(
+          `Extra role (${extraRole}) withheld for actor (${actorID}): the actor who offered it no longer administers this organization`,
+          LogContext.COMMUNITY
+        );
+        extraRolesWithheld.push(extraRole);
+        continue;
+      }
       try {
         await this.assignActorToRole(
           targetRoleSet,

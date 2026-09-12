@@ -2664,6 +2664,142 @@ describe('RoleSetService', () => {
       expect(grantedIds).not.toContain('root');
     });
 
+    describe('extra roles offered by someone who has since lost their standing', () => {
+      const orgRoleSet = (id: string): IRoleSet =>
+        ({
+          id,
+          type: RoleSetType.ORGANIZATION,
+          entryRoleName: RoleName.ASSOCIATE,
+        }) as unknown as IRoleSet;
+
+      const acceptWithOfferer = async (offererStillAdmin: boolean) => {
+        const target = orgRoleSet('org-rs');
+        vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+          target,
+        ]);
+        vi.spyOn(service, 'isMember').mockResolvedValue(false);
+        vi.spyOn(service as any, 'grantRoleCredential').mockResolvedValue(
+          undefined
+        );
+        vi.spyOn(service as any, 'applyRoleGrantSideEffects').mockResolvedValue(
+          undefined
+        );
+        vi.spyOn(service, 'isInRole').mockResolvedValue(offererStillAdmin);
+        const assignSpy = vi
+          .spyOn(service, 'assignActorToRole')
+          .mockResolvedValue('user-1');
+        passthroughTransaction();
+
+        const result = await service.ensureMemberOfRoleSetAndAncestors(
+          target,
+          'user-1',
+          { actorID: 'user-1' } as any,
+          {
+            source: 'invitation',
+            extraRoles: [RoleName.OWNER],
+            extraRolesOfferedBy: 'offerer-1',
+          }
+        );
+        return { result, assignSpy };
+      };
+
+      it('withholds the offered role when the offerer no longer administers the organization', async () => {
+        // An invitation never expires and the accept path only checks the
+        // invitee's own privilege, so without this an administrator who has
+        // been offboarded still confers OWNER — and with it account-admin
+        // standing — whenever the recipient chooses to accept.
+        const { result, assignSpy } = await acceptWithOfferer(false);
+
+        expect(result.extraRolesWithheld).toEqual([RoleName.OWNER]);
+        // The entry role still goes through assignActorToRole; what must not
+        // happen is the elevated role being granted.
+        expect(assignSpy).not.toHaveBeenCalledWith(
+          expect.anything(),
+          RoleName.OWNER,
+          expect.anything(),
+          expect.anything(),
+          expect.anything()
+        );
+      });
+
+      it('grants the offered role while the offerer still administers the organization', async () => {
+        const { result, assignSpy } = await acceptWithOfferer(true);
+
+        expect(result.extraRolesWithheld).toEqual([]);
+        expect(assignSpy).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 'org-rs' }),
+          RoleName.OWNER,
+          'user-1',
+          expect.anything(),
+          false
+        );
+      });
+
+      it('withholds the offered role when the offerer is gone entirely', async () => {
+        const target = orgRoleSet('org-rs');
+        vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+          target,
+        ]);
+        vi.spyOn(service, 'isMember').mockResolvedValue(false);
+        vi.spyOn(service as any, 'grantRoleCredential').mockResolvedValue(
+          undefined
+        );
+        vi.spyOn(service as any, 'applyRoleGrantSideEffects').mockResolvedValue(
+          undefined
+        );
+        const assignSpy = vi
+          .spyOn(service, 'assignActorToRole')
+          .mockResolvedValue('user-1');
+        passthroughTransaction();
+
+        const result = await service.ensureMemberOfRoleSetAndAncestors(
+          target,
+          'user-1',
+          { actorID: 'user-1' } as any,
+          { source: 'invitation', extraRoles: [RoleName.ADMIN] }
+        );
+
+        expect(result.extraRolesWithheld).toEqual([RoleName.ADMIN]);
+        expect(assignSpy).not.toHaveBeenCalledWith(
+          expect.anything(),
+          RoleName.ADMIN,
+          expect.anything(),
+          expect.anything(),
+          expect.anything()
+        );
+      });
+
+      it('leaves a SPACE role set alone — the re-check is organization-scoped', async () => {
+        const target = spaceRoleSet('space-rs');
+        vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+          target,
+        ]);
+        vi.spyOn(service, 'isMember').mockResolvedValue(false);
+        vi.spyOn(service as any, 'grantRoleCredential').mockResolvedValue(
+          undefined
+        );
+        vi.spyOn(service as any, 'applyRoleGrantSideEffects').mockResolvedValue(
+          undefined
+        );
+        const isInRoleSpy = vi.spyOn(service, 'isInRole');
+        const assignSpy = vi
+          .spyOn(service, 'assignActorToRole')
+          .mockResolvedValue('user-1');
+        passthroughTransaction();
+
+        const result = await service.ensureMemberOfRoleSetAndAncestors(
+          target,
+          'user-1',
+          { actorID: 'user-1' } as any,
+          { source: 'invitation', extraRoles: [RoleName.LEAD] }
+        );
+
+        expect(isInRoleSpy).not.toHaveBeenCalled();
+        expect(assignSpy).toHaveBeenCalled();
+        expect(result.extraRolesWithheld).toEqual([]);
+      });
+    });
+
     it('(b) grants the chain TOP-DOWN (root first) so the parent invariant holds', async () => {
       const root = spaceRoleSet('root');
       const mid = spaceRoleSet('mid');
@@ -2800,11 +2936,19 @@ describe('RoleSetService', () => {
           return 'user-1';
         });
 
+      // The offerer still administers the organization, so the accept-time
+      // re-check passes and this exercises the cap path it is about.
+      vi.spyOn(service, 'isInRole').mockResolvedValue(true);
+
       const result = await service.ensureMemberOfRoleSetAndAncestors(
         target,
         'user-1',
         { actorID: 'user-1' } as any,
-        { source: 'invitation', extraRoles: [RoleName.OWNER] }
+        {
+          source: 'invitation',
+          extraRoles: [RoleName.OWNER],
+          extraRolesOfferedBy: 'offerer-1',
+        }
       );
 
       // Entry role still granted (first call), extra role attempted and

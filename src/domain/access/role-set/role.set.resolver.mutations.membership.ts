@@ -1462,7 +1462,11 @@ export class RoleSetResolverMutationsMembership {
           );
         });
         if (capReachedRole) {
-          invitationResults.push({
+          // Through pushResultForActor like every other outcome in this loop:
+          // a result with no invitedActorID forces the client back onto
+          // positional matching, which is exactly what mis-attributes an
+          // outcome to the wrong invitee.
+          pushResultForActor(actorID, {
             type: RoleSetInvitationResultType.EXTRA_ROLE_LIMIT_REACHED,
           });
           continue;

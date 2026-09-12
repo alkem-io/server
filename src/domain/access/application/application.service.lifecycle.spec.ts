@@ -105,12 +105,21 @@ describe('ApplicationLifecycleService', () => {
       expect(approving.on.REJECT.guard).toBe('hasUpdatePrivilege');
     });
 
-    it('marks `rejected` as a final state, so a rejected applicant is immediately free to apply again', () => {
+    it('keeps REOPEN and ARCHIVE reachable from `rejected`, so the Space settings tab can still clear a rejected row', () => {
+      // The Space community tab sends ARCHIVE on a rejected application (and
+      // REJECT-then-ARCHIVE on a new one) to remove it from the pending list.
+      // Making this state final strands that row and fails the action with
+      // "No next states for lifecycle currently in state".
       const rejected = (applicationLifecycleMachine.states as any)[
         ApplicationLifecycleState.REJECTED
       ];
-      expect(rejected.type).toBe('final');
-      expect(rejected.on).toBeUndefined();
+      expect(rejected.type).not.toBe('final');
+      expect(Object.keys(rejected.on ?? {})).toEqual(
+        expect.arrayContaining(['REOPEN', 'ARCHIVE'])
+      );
+      expect(rejected.on.ARCHIVE.target).toEqual(
+        ApplicationLifecycleState.ARCHIVED
+      );
     });
   });
 });
