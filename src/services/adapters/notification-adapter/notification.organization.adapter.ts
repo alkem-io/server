@@ -1,4 +1,5 @@
 import { ActorType } from '@common/enums/actor.type';
+import { CommunityMembershipOrigin } from '@common/enums/community.membership.origin';
 import { LogContext } from '@common/enums/logging.context';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
@@ -10,6 +11,7 @@ import { MessageDetailsService } from '@domain/communication/message.details/mes
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { forwardRef, Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist/config.service';
+import { InAppNotificationPayloadOrganizationAssociateActor } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.associate.actor';
 import { InAppNotificationPayloadOrganizationMessageDirect } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.direct';
 import { InAppNotificationPayloadOrganizationMessageRoom } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.room';
 import { InAppNotificationPayloadSpaceCommunityActor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.actor';
@@ -23,6 +25,9 @@ import { NotificationExternalAdapter } from '../notification-external-adapter/no
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
 import { NotificationPushAdapter } from '../notification-push-adapter/notification.push.adapter';
 import { NotificationInputBase } from './dto/notification.dto.input.base';
+import { NotificationInputOrganizationAssociateApplicationCreated } from './dto/organization/notification.dto.input.organization.associate.application.created';
+import { NotificationInputOrganizationAssociateInvitationOutcome } from './dto/organization/notification.dto.input.organization.associate.invitation.outcome';
+import { NotificationInputOrganizationAssociateJoined } from './dto/organization/notification.dto.input.organization.associate.joined';
 import { NotificationInputOrganizationMention } from './dto/organization/notification.dto.input.organization.mention';
 import { NotificationInputOrganizationSpaceCommunityInvitation } from './dto/organization/notification.dto.input.organization.space.community.invitation';
 import { NotificationInputOrganizationSpaceCommunityJoined } from './dto/organization/notification.dto.input.organization.space.community.joined';
@@ -509,6 +514,331 @@ export class NotificationOrganizationAdapter {
           title: `Welcome to ${spaceName}`,
           body: `${organizationName} is now a member of ${spaceName}`,
           url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
+        }
+      );
+    }
+  }
+
+  /**
+   * The invitee accepted or declined an invitation to associate. Every
+   * ADMIN other than the invitee (the acting user) is notified — the
+   * invitee is excluded on every channel (R33), and an empty recipient
+   * list after the exclusion sends nothing.
+   */
+  private async organizationAdminAssociateInvitationOutcome(
+    event: NotificationEvent,
+    eventData: NotificationInputOrganizationAssociateInvitationOutcome
+  ): Promise<void> {
+    const recipients = await this.getNotificationRecipientsOrganization(
+      event,
+      eventData,
+      eventData.organizationID
+    );
+    const withoutInvitee = <T extends { id: string }>(list: T[]): T[] =>
+      list.filter(recipient => recipient.id !== eventData.inviteeID);
+    const emailRecipients = withoutInvitee(recipients.emailRecipients);
+    const inAppRecipients = withoutInvitee(recipients.inAppRecipients);
+    const pushRecipients = withoutInvitee(recipients.pushRecipients);
+
+    if (emailRecipients.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildOrganizationAssociateActorPayload(
+          event,
+          eventData.triggeredBy,
+          emailRecipients,
+          eventData.organizationID,
+          eventData.inviteeID,
+          {
+            extraRoles: eventData.extraRoles,
+            extraRolesWithheld: eventData.extraRolesWithheld,
+          }
+        );
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
+    }
+
+    const inAppReceiverIDs = inAppRecipients.map(recipient => recipient.id);
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadOrganizationAssociateActor = {
+        type: NotificationEventPayload.ORGANIZATION_ASSOCIATE_ACTOR,
+        organizationID: eventData.organizationID,
+        actorID: eventData.inviteeID,
+        invitationID: eventData.invitationID,
+        extraRolesWithheld: eventData.extraRolesWithheld,
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        event,
+        NotificationEventCategory.ORGANIZATION,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
+    }
+
+    if (pushRecipients.length > 0) {
+      const invitee = await this.actorLookupService.getFullActorByIdOrFail(
+        eventData.inviteeID,
+        { relations: { profile: true } }
+      );
+      const inviteeName = invitee?.profile?.displayName ?? 'Someone';
+      const outcome =
+        event ===
+        NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_ACCEPTED
+          ? 'accepted'
+          : 'declined';
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipients,
+        event,
+        {
+          title: `${inviteeName} ${outcome} the invitation to associate`,
+          body: `${inviteeName} ${outcome} an invitation to associate with your organisation`,
+          url: this.urlGeneratorService.getOrganizationSettingsAssociatesUrlPath(
+            (
+              await this.actorLookupService.getFullActorByIdOrFail(
+                eventData.organizationID
+              )
+            ).nameID
+          ),
+        }
+      );
+    }
+  }
+
+  public async organizationAdminAssociateInvitationAccepted(
+    eventData: NotificationInputOrganizationAssociateInvitationOutcome
+  ): Promise<void> {
+    await this.organizationAdminAssociateInvitationOutcome(
+      NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_ACCEPTED,
+      eventData
+    );
+  }
+
+  public async organizationAdminAssociateInvitationDeclined(
+    eventData: NotificationInputOrganizationAssociateInvitationOutcome
+  ): Promise<void> {
+    await this.organizationAdminAssociateInvitationOutcome(
+      NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_DECLINED,
+      eventData
+    );
+  }
+
+  /**
+   * A user applied to associate with the organization. Every ADMIN is
+   * notified with the note in the body only. Zero admins: escalate a
+   * single email to platform support (no recipient lookup, no in-app/push
+   * — clone of the 061 zero-admin invitation escalation).
+   */
+  public async organizationAdminAssociateApplicationCreated(
+    eventData: NotificationInputOrganizationAssociateApplicationCreated
+  ): Promise<void> {
+    const event = NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_APPLICATION;
+
+    if (eventData.organizationHasNoAdministrators) {
+      const supportEmail = this.configService.get(
+        'notifications.organization_invitations.support_email',
+        { infer: true }
+      );
+      const payload =
+        await this.notificationExternalAdapter.buildOrganizationAssociateActorPayload(
+          event,
+          eventData.triggeredBy,
+          [],
+          eventData.organizationID,
+          eventData.applicantID,
+          {
+            applicationMessage: eventData.applicationMessage,
+            recipientEmail: supportEmail,
+          }
+        );
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
+      this.logger.verbose?.(
+        `Organization ${eventData.organizationID} has no administrators — associate application escalated to platform support`,
+        LogContext.NOTIFICATIONS
+      );
+      return;
+    }
+
+    const recipients = await this.getNotificationRecipientsOrganization(
+      event,
+      eventData,
+      eventData.organizationID
+    );
+
+    if (recipients.emailRecipients.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildOrganizationAssociateActorPayload(
+          event,
+          eventData.triggeredBy,
+          recipients.emailRecipients,
+          eventData.organizationID,
+          eventData.applicantID,
+          { applicationMessage: eventData.applicationMessage }
+        );
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
+    }
+
+    const inAppReceiverIDs = recipients.inAppRecipients.map(
+      recipient => recipient.id
+    );
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadOrganizationAssociateActor = {
+        type: NotificationEventPayload.ORGANIZATION_ASSOCIATE_ACTOR,
+        organizationID: eventData.organizationID,
+        actorID: eventData.applicantID,
+        applicationID: eventData.applicationID,
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        event,
+        NotificationEventCategory.ORGANIZATION,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
+    }
+
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      const applicant = await this.actorLookupService.getFullActorByIdOrFail(
+        eventData.applicantID,
+        { relations: { profile: true } }
+      );
+      const applicantName = applicant?.profile?.displayName ?? 'Someone';
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: `${applicantName} applied to associate`,
+          body: `${applicantName} applied to associate with your organisation`,
+          url: this.urlGeneratorService.getOrganizationSettingsAssociatesUrlPath(
+            (
+              await this.actorLookupService.getFullActorByIdOrFail(
+                eventData.organizationID
+              )
+            ).nameID
+          ),
+        }
+      );
+    }
+  }
+
+  /**
+   * A new associate joined the organization — an approved application, a domain
+   * join, or a direct assignment. Suppressed ONLY for an invitation acceptance,
+   * whose response notification ("X accepted the invitation") is its
+   * replacement.
+   *
+   * The rule is "suppress only where a replacement exists" (061 R40, superseding
+   * R35). An approved application has no replacement: the application event
+   * fires at submission, and no application-approved event exists, so
+   * suppressing there would leave the approver's co-admins told nothing at all.
+   * `CommunityMembershipOrigin` therefore has no APPLICATION member and an
+   * approved application arrives here as DIRECT. If alkem-io/server#6476 adds an
+   * application-approved event, the member returns and suppression becomes
+   * correct at that point.
+   *
+   * Both the acting admin/joiner-triggering actor AND the new associate are
+   * excluded from every channel; an empty recipient list after exclusion sends
+   * nothing.
+   */
+  public async organizationAdminAssociateJoined(
+    eventData: NotificationInputOrganizationAssociateJoined
+  ): Promise<void> {
+    if (eventData.membershipOrigin !== CommunityMembershipOrigin.DIRECT) {
+      this.logger.verbose?.(
+        `Associate-joined notification suppressed for organization ${eventData.organizationID}: membershipOrigin=${eventData.membershipOrigin} (invitation response is the replacement)`,
+        LogContext.NOTIFICATIONS
+      );
+      return;
+    }
+
+    const event = NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_JOINED;
+    const recipients = await this.getNotificationRecipientsOrganization(
+      event,
+      eventData,
+      eventData.organizationID
+    );
+    const excluded = new Set([eventData.triggeredBy, eventData.associateID]);
+    const withoutExcluded = <T extends { id: string }>(list: T[]): T[] =>
+      list.filter(recipient => !excluded.has(recipient.id));
+    const emailRecipients = withoutExcluded(recipients.emailRecipients);
+    const inAppRecipients = withoutExcluded(recipients.inAppRecipients);
+    const pushRecipients = withoutExcluded(recipients.pushRecipients);
+
+    if (
+      emailRecipients.length === 0 &&
+      inAppRecipients.length === 0 &&
+      pushRecipients.length === 0
+    ) {
+      this.logger.verbose?.(
+        `Associate-joined notification for organization ${eventData.organizationID}: no recipients remain after excluding the acting user and the new associate`,
+        LogContext.NOTIFICATIONS
+      );
+      return;
+    }
+
+    if (emailRecipients.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildOrganizationAssociateActorPayload(
+          event,
+          eventData.triggeredBy,
+          emailRecipients,
+          eventData.organizationID,
+          eventData.associateID
+        );
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
+    }
+
+    const inAppReceiverIDs = inAppRecipients.map(recipient => recipient.id);
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadOrganizationAssociateActor = {
+        type: NotificationEventPayload.ORGANIZATION_ASSOCIATE_ACTOR,
+        organizationID: eventData.organizationID,
+        actorID: eventData.associateID,
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        event,
+        NotificationEventCategory.ORGANIZATION,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
+    }
+
+    if (pushRecipients.length > 0) {
+      const associate = await this.actorLookupService.getFullActorByIdOrFail(
+        eventData.associateID,
+        { relations: { profile: true } }
+      );
+      const associateName = associate?.profile?.displayName ?? 'Someone';
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipients,
+        event,
+        {
+          title: `${associateName} joined the organisation`,
+          body: `${associateName} is now an associate of your organisation`,
+          url: this.urlGeneratorService.getOrganizationSettingsAssociatesUrlPath(
+            (
+              await this.actorLookupService.getFullActorByIdOrFail(
+                eventData.organizationID
+              )
+            ).nameID
+          ),
         }
       );
     }

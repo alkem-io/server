@@ -2,6 +2,7 @@ import { LogContext } from '@common/enums';
 import { SpaceLevel } from '@common/enums/space.level';
 import { EntityNotFoundException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { sortSpacesByActivity } from '@domain/space/space/sort.spaces.by.activity';
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceService } from '@domain/space/space/space.service';
@@ -15,6 +16,8 @@ import { RolesService } from '../roles/roles.service';
 import { CommunityApplicationResult } from './dto/me.application.result';
 import { CommunityInvitationResult } from './dto/me.invitation.result';
 import { CommunityMembershipResult } from './dto/me.membership.result';
+import { OrganizationApplicationResult } from './dto/me.organization.application.result';
+import { OrganizationInvitationResult } from './dto/me.organization.invitation.result';
 import { MySpaceResults } from './dto/my.journeys.results';
 import { SpaceMembershipCollaborationInfo } from './space.membership.type';
 
@@ -26,6 +29,7 @@ export class MeService {
     private activityLogService: ActivityLogService,
     private activityService: ActivityService,
     private communityResolverService: CommunityResolverService,
+    private organizationLookupService: OrganizationLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -114,6 +118,82 @@ export class MeService {
           about: space.about,
           communityGuidelines: space.about?.guidelines,
         },
+      });
+    }
+    return results;
+  }
+
+  /**
+   * The user's OWN pending organization invitations (R-1/FR-023) — the
+   * organization-shaped counterpart to {@link getCommunityInvitationsForUser}.
+   * Never widens the Space-shaped result: a separate field so client callers
+   * see two distinct, exhaustive lists.
+   */
+  public async getOrganizationInvitationsForUser(
+    userID: string,
+    states?: string[]
+  ): Promise<OrganizationInvitationResult[]> {
+    const invitations =
+      await this.rolesService.getOrganizationInvitationsForUser(userID, states);
+    const results: OrganizationInvitationResult[] = [];
+    for (const invitation of invitations) {
+      if (!invitation.roleSet) {
+        throw new EntityNotFoundException(
+          `RoleSet not found for organization invitation ${invitation.id}`,
+          LogContext.COMMUNITY
+        );
+      }
+      const organization =
+        await this.organizationLookupService.getOrganizationForRoleSetOrFail(
+          invitation.roleSet.id
+        );
+      results.push({
+        id: `${invitation.id}`,
+        invitation,
+        organization,
+      });
+    }
+    return results;
+  }
+
+  public async getOrganizationInvitationsCountForUser(
+    userID: string,
+    states?: string[]
+  ): Promise<number> {
+    const invitations =
+      await this.rolesService.getOrganizationInvitationsForUser(userID, states);
+    return invitations.length;
+  }
+
+  /**
+   * The user's OWN pending organization applications (R-1/FR-023) — the
+   * organization-shaped counterpart to {@link getCommunityApplicationsForUser}.
+   */
+  public async getOrganizationApplicationsForUser(
+    userID: string,
+    states?: string[]
+  ): Promise<OrganizationApplicationResult[]> {
+    const applications =
+      await this.rolesService.getOrganizationApplicationsForUser(
+        userID,
+        states
+      );
+    const results: OrganizationApplicationResult[] = [];
+    for (const application of applications) {
+      if (!application.roleSet) {
+        throw new EntityNotFoundException(
+          `RoleSet not found for organization application ${application.id}`,
+          LogContext.COMMUNITY
+        );
+      }
+      const organization =
+        await this.organizationLookupService.getOrganizationForRoleSetOrFail(
+          application.roleSet.id
+        );
+      results.push({
+        id: `${application.id}`,
+        application,
+        organization,
       });
     }
     return results;

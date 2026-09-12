@@ -498,4 +498,23 @@ describe('RoleSetResolverFields', () => {
       expect(mockLoader.load).toHaveBeenCalledWith('rs-1');
     });
   });
+
+  // R3 (pending-list confidentiality): reading a role set's pending
+  // applications/invitations must require the same authority as deciding
+  // them (GRANT), on both role-set types — never the parent role set's
+  // READ, which every registered user (organizations) or every registered
+  // user of a public Space holds.
+  describe('pending-list confidentiality (R3)', () => {
+    it.each([
+      'inivitations',
+      'platformInvitations',
+      'applications',
+    ])('%s is gated on GRANT, not READ', methodName => {
+      const privilege = Reflect.getMetadata(
+        'privilege',
+        (resolver as any)[methodName]
+      );
+      expect(privilege).toBe('grant');
+    });
+  });
 });

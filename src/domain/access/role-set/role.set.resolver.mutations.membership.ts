@@ -1,6 +1,7 @@
 import { ORGANIZATION_NOTIFICATION_CREDENTIAL_TYPES } from '@common/constants/authorization';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
+import { AlkemioErrorStatus } from '@common/enums/alkemio.error.status';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { isContributorActorType } from '@common/enums/contributor.actor.types';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
@@ -14,6 +15,7 @@ import {
 } from '@common/exceptions';
 import { RoleSetInvitationException } from '@common/exceptions/role.set.invitation.exception';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
+import { getEmailDomain } from '@common/utils';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
@@ -30,6 +32,8 @@ import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.serv
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseService } from '@domain/common/license/license.service';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
+import { IOrganization } from '@domain/community/organization';
+import { isDomainJoinEligible } from '@domain/community/organization/organization.domain.join.policy';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
@@ -149,7 +153,10 @@ export class RoleSetResolverMutationsMembership {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       joiningData.roleSetID
     );
-    this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
+    this.validateRoleSetTypeOrFail(roleSet, [
+      RoleSetType.SPACE,
+      RoleSetType.ORGANIZATION,
+    ]);
 
     const membershipStatus =
       await this.roleSetService.getMembershipStatusByActorContext(
@@ -163,12 +170,45 @@ export class RoleSetResolverMutationsMembership {
       );
     }
 
-    this.authorizationService.grantAccessOrFail(
-      actorContext,
-      roleSet.authorization,
-      AuthorizationPrivilege.ROLESET_ENTRY_ROLE_JOIN,
-      `join community: ${roleSet.id}`
-    );
+    if (roleSet.type === RoleSetType.ORGANIZATION) {
+      // The domain-join door is a per-viewer fact (email domain match), not
+      // a static privilege — READ is what every registered user already
+      // holds on an organization's role set (FR-016). The mutation never
+      // trusts the interface: eligibility is re-checked here regardless of
+      // what `myAssociateEligibility` showed.
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        roleSet.authorization,
+        AuthorizationPrivilege.READ,
+        `join organization: ${roleSet.id}`
+      );
+      const user = await this.userLookupService.getUserByIdOrFail(
+        actorContext.actorID
+      );
+      const organization =
+        await this.organizationLookupService.getOrganizationForRoleSetOrFail(
+          roleSet.id,
+          { relations: { verification: true } }
+        );
+      const eligibility = isDomainJoinEligible(
+        organization,
+        getEmailDomain(user.email)
+      );
+      if (!eligibility.eligible) {
+        throw new RoleSetMembershipException(
+          'Not eligible to join this organization directly',
+          LogContext.COMMUNITY,
+          AlkemioErrorStatus.ROLE_SET_JOIN_NOT_ELIGIBLE
+        );
+      }
+    } else {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        roleSet.authorization,
+        AuthorizationPrivilege.ROLESET_ENTRY_ROLE_JOIN,
+        `join community: ${roleSet.id}`
+      );
+    }
 
     // Feature 017 round 2 — combined Subspace direct join. Route through the
     // shared grant service so an eligible non-parent-member joining an open
@@ -204,7 +244,10 @@ export class RoleSetResolverMutationsMembership {
         },
       }
     );
-    this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
+    this.validateRoleSetTypeOrFail(roleSet, [
+      RoleSetType.SPACE,
+      RoleSetType.ORGANIZATION,
+    ]);
 
     this.authorizationService.grantAccessOrFail(
       actorContext,
@@ -212,6 +255,27 @@ export class RoleSetResolverMutationsMembership {
       AuthorizationPrivilege.ROLESET_ENTRY_ROLE_APPLY,
       `create application RoleSet: ${roleSet.id}`
     );
+
+    // Organizations: the allowApplications switch closes the door with a
+    // typed error before anything is created (US3-AS5). Organizations have
+    // no parentRoleSet, so the combined-Subspace-application block below
+    // never applies to them.
+    let organization: IOrganization | undefined;
+    if (roleSet.type === RoleSetType.ORGANIZATION) {
+      organization =
+        await this.organizationLookupService.getOrganizationForRoleSetOrFail(
+          roleSet.id
+        );
+      const allowApplications =
+        organization.settings?.membership?.allowApplications ?? true;
+      if (!allowApplications) {
+        throw new RoleSetMembershipException(
+          'Applications are not accepted by this organization',
+          LogContext.COMMUNITY,
+          AlkemioErrorStatus.ROLE_SET_APPLICATIONS_NOT_ACCEPTED
+        );
+      }
+    }
 
     if (roleSet.parentRoleSet) {
       // User IS an Actor - actorContext.actorID is the actorID
@@ -251,23 +315,45 @@ export class RoleSetResolverMutationsMembership {
 
     application = await this.applicationService.save(application);
 
-    const community =
-      await this.communityResolverService.getCommunityForRoleSet(roleSet.id);
-
     await this.resetAuthorizationsOnRoleSetApplicationsInvitations(roleSet.id);
 
-    // Send the notification
-    const notificationInput: NotificationInputCommunityApplication = {
-      triggeredBy: actorContext.actorID,
-      community,
-      application,
-    };
-    this.dispatchNotification(
-      this.notificationAdapterSpace.spaceCommunityApplicationCreated(
-        notificationInput
-      ),
-      'spaceCommunityApplicationCreated'
-    );
+    if (roleSet.type === RoleSetType.SPACE) {
+      const community =
+        await this.communityResolverService.getCommunityForRoleSet(roleSet.id);
+      const notificationInput: NotificationInputCommunityApplication = {
+        triggeredBy: actorContext.actorID,
+        community,
+        application,
+      };
+      this.dispatchNotification(
+        this.notificationAdapterSpace.spaceCommunityApplicationCreated(
+          notificationInput
+        ),
+        'spaceCommunityApplicationCreated'
+      );
+    } else if (organization) {
+      // Counted on the ADMIN set — the same set the notification is
+      // addressed to (061 zero-admin escalation pattern).
+      const admins = await this.userLookupService.usersWithCredentials(
+        ORGANIZATION_NOTIFICATION_CREDENTIAL_TYPES.map(type => ({
+          type,
+          resourceID: organization!.id,
+        }))
+      );
+      this.dispatchNotification(
+        this.notificationOrganizationAdapter.organizationAdminAssociateApplicationCreated(
+          {
+            triggeredBy: actorContext.actorID,
+            organizationID: organization.id,
+            applicationID: application.id,
+            applicantID: actorContext.actorID,
+            applicationMessage: application.questions?.[0]?.value,
+            organizationHasNoAdministrators: admins.length === 0,
+          }
+        ),
+        'organizationAdminAssociateApplicationCreated'
+      );
+    }
 
     return await this.applicationService.getApplicationOrFail(application.id);
   }
@@ -297,7 +383,10 @@ export class RoleSetResolverMutationsMembership {
         },
       }
     );
-    this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
+    this.validateRoleSetTypeOrFail(roleSet, [
+      RoleSetType.SPACE,
+      RoleSetType.ORGANIZATION,
+    ]);
 
     if (
       invitationData.invitedActorIDs.length === 0 &&
@@ -305,6 +394,20 @@ export class RoleSetResolverMutationsMembership {
     ) {
       throw new RoleSetInvitationException(
         `No contributors were provided to invite: ${roleSet.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    // Organizations only invite EXISTING Alkemio users (product email: "no
+    // onboarding via organization invitations, for now"). Rejected before
+    // anything is created — the mutation-wide validation error, not a
+    // per-invitee typed outcome.
+    if (
+      roleSet.type === RoleSetType.ORGANIZATION &&
+      invitationData.invitedUserEmails.length > 0
+    ) {
+      throw new ValidationException(
+        'Organizations can only invite existing Alkemio users to associate',
         LogContext.COMMUNITY
       );
     }
@@ -432,6 +535,11 @@ export class RoleSetResolverMutationsMembership {
     }
 
     await this.sendNotificationEventsForInvitationsOnSpaceRoleSet(
+      roleSet,
+      actorContext,
+      invitationResults
+    );
+    await this.sendNotificationEventsForInvitationsOnOrganizationRoleSet(
       roleSet,
       actorContext,
       invitationResults
@@ -584,7 +692,10 @@ export class RoleSetResolverMutationsMembership {
       );
 
       // Send notification if application was declined/rejected
-      if (applicationState === ApplicationLifecycleState.REJECTED) {
+      if (
+        applicationState === ApplicationLifecycleState.REJECTED &&
+        application.roleSet.type === RoleSetType.SPACE
+      ) {
         const community =
           await this.communityResolverService.getCommunityForRoleSet(
             application.roleSet.id
@@ -608,6 +719,41 @@ export class RoleSetResolverMutationsMembership {
           ),
           'userSpaceCommunityApplicationDeclined'
         );
+      }
+
+      if (application.roleSet.type === RoleSetType.ORGANIZATION) {
+        const organization =
+          await this.organizationLookupService.getOrganizationForRoleSetOrFail(
+            application.roleSet.id
+          );
+        if (applicationState === ApplicationLifecycleState.REJECTED) {
+          this.dispatchNotification(
+            this.notificationUserAdapter.userOrganizationAssociateApplicationDeclined(
+              {
+                triggeredBy: actorContext.actorID,
+                organizationID: organization.id,
+                applicationID: application.id,
+                applicantID: application.user.id,
+              }
+            ),
+            'userOrganizationAssociateApplicationDeclined'
+          );
+        } else if (applicationState === ApplicationLifecycleState.APPROVED) {
+          // "Someone joined" to the other admins is dispatched by the shared
+          // grant path (approveApplication -> ensureMemberOfRoleSetAndAncestors
+          // -> actorAddedToRole ORGANIZATION arm, origin DIRECT) — not here.
+          this.dispatchNotification(
+            this.notificationUserAdapter.userOrganizationAssociateApplicationApproved(
+              {
+                triggeredBy: actorContext.actorID,
+                organizationID: organization.id,
+                applicationID: application.id,
+                applicantID: application.user.id,
+              }
+            ),
+            'userOrganizationAssociateApplicationApproved'
+          );
+        }
       }
 
       // User IS an Actor - user.id is the actorID
@@ -699,11 +845,13 @@ export class RoleSetResolverMutationsMembership {
     let invitationState = await this.invitationService.getLifecycleState(
       invitation.id
     );
+    let extraRolesWithheld: RoleName[] = [];
     if (invitationState === InvitationLifecycleState.ACCEPTING) {
-      await this.roleSetService.acceptInvitationToRoleSet(
+      const acceptResult = await this.roleSetService.acceptInvitationToRoleSet(
         eventData.invitationID,
         actorContext
       );
+      extraRolesWithheld = acceptResult?.extraRolesWithheld ?? [];
       await this.lifecycleService.event({
         machine: this.roleSetServiceLifecycleInvitation.getInvitationMachine(),
         lifecycle: invitation.lifecycle,
@@ -734,6 +882,9 @@ export class RoleSetResolverMutationsMembership {
         invitation.lifecycle,
         this.roleSetServiceLifecycleInvitation.getInvitationMachine()
       );
+
+      const isOrganizationRoleSet =
+        invitation.roleSet.type === RoleSetType.ORGANIZATION;
 
       // Send notification if invitation was declined/rejected for Virtual Contributor
       if (invitationState === InvitationLifecycleState.REJECTED) {
@@ -769,8 +920,35 @@ export class RoleSetResolverMutationsMembership {
             'spaceAdminVirtualContributorInvitationDeclined'
           );
         } else if (
-          invitedActorType === ActorType.ORGANIZATION ||
+          isOrganizationRoleSet &&
           invitedActorType === ActorType.USER
+        ) {
+          // A user declined an invitation to associate with an organization
+          // (never a Space lookup — the invitee here is a USER, the ROLE SET
+          // is the organization's own).
+          const roleSetID = invitation.roleSet.id;
+          this.dispatchNotification(
+            (async () => {
+              const organization =
+                await this.organizationLookupService.getOrganizationForRoleSetOrFail(
+                  roleSetID
+                );
+              await this.notificationOrganizationAdapter.organizationAdminAssociateInvitationDeclined(
+                {
+                  triggeredBy: actorContext.actorID,
+                  organizationID: organization.id,
+                  invitationID: invitation.id,
+                  inviteeID: invitedActorID,
+                  extraRoles: invitation.extraRoles,
+                }
+              );
+            })(),
+            'organizationAdminAssociateInvitationDeclined'
+          );
+        } else if (
+          !isOrganizationRoleSet &&
+          (invitedActorType === ActorType.ORGANIZATION ||
+            invitedActorType === ActorType.USER)
         ) {
           this.dispatchInvitationOutcomeNotification(
             invitation,
@@ -786,6 +964,41 @@ export class RoleSetResolverMutationsMembership {
 
       if (
         isMember &&
+        isOrganizationRoleSet &&
+        invitedActorType === ActorType.USER
+      ) {
+        // The invitee's own notice of a withheld role (US2-AS5) — set on the
+        // object this mutation returns, transient, never persisted.
+        invitation.extraRolesWithheld = extraRolesWithheld;
+
+        const roleSetID = invitation.roleSet.id;
+        this.dispatchNotification(
+          (async () => {
+            const organization =
+              await this.organizationLookupService.getOrganizationForRoleSetOrFail(
+                roleSetID
+              );
+            await this.notificationOrganizationAdapter.organizationAdminAssociateInvitationAccepted(
+              {
+                triggeredBy: actorContext.actorID,
+                organizationID: organization.id,
+                invitationID: invitation.id,
+                inviteeID: invitedActorID,
+                extraRoles: invitation.extraRoles,
+                extraRolesWithheld,
+              }
+            );
+          })(),
+          'organizationAdminAssociateInvitationAccepted'
+        );
+        // "someone joined" for the organization is dispatched by the shared
+        // grant path (acceptInvitationToRoleSet -> ensureMemberOfRoleSetAndAncestors
+        // -> actorAddedToRole ORGANIZATION arm), which suppresses it for
+        // origin INVITATION (FR-010) — this response notification is its
+        // replacement, so nothing further is dispatched here.
+      } else if (
+        isMember &&
+        !isOrganizationRoleSet &&
         (invitedActorType === ActorType.ORGANIZATION ||
           invitedActorType === ActorType.USER)
       ) {
@@ -843,7 +1056,14 @@ export class RoleSetResolverMutationsMembership {
       );
     }
 
-    return await this.invitationService.getInvitationOrFail(invitation.id);
+    const reloadedInvitation = await this.invitationService.getInvitationOrFail(
+      invitation.id
+    );
+    // `extraRolesWithheld` is transient (no @Column) — the reload above
+    // never carries it, so it is copied across from the in-memory object
+    // this mutation already populated (organizations only, accept only).
+    reloadedInvitation.extraRolesWithheld = invitation.extraRolesWithheld;
+    return reloadedInvitation;
   }
 
   @Mutation(() => IRoleSet, {
@@ -1116,6 +1336,37 @@ export class RoleSetResolverMutationsMembership {
       };
     }
 
+    // Organization user-associates (R1/R2/FR-002): any admin or owner may
+    // OFFER any extra role — there is no inviter-role ceiling — but each
+    // offered role is validated at invite time against its cap (granted
+    // holders plus other still-open invitations offering it), counting the
+    // ADMIN/OWNER USER population. Computed once per requested role, then
+    // the pending count is bumped locally after each invitation this same
+    // request creates (061 Lead-slot precedent, generalized to any role).
+    const organizationExtraRoleSlots = new Map<
+      RoleName,
+      { granted: number; pending: number; maximum: number }
+    >();
+    if (roleSet.type === RoleSetType.ORGANIZATION) {
+      for (const role of extraRoles) {
+        const [granted, pending, roleDefinition] = await Promise.all([
+          this.roleSetService.countActorsWithRole(roleSet, role, [
+            ActorType.USER,
+          ]),
+          this.invitationService.countOpenInvitationsForRoleSet(roleSet.id, {
+            extraRole: role,
+            actorType: ActorType.USER,
+          }),
+          this.roleSetService.getRoleDefinition(roleSet, role),
+        ]);
+        organizationExtraRoleSlots.set(role, {
+          granted,
+          pending,
+          maximum: roleDefinition.userPolicy.maximum,
+        });
+      }
+    }
+
     for (const actorID of actorIDs) {
       let invitedToParent = false;
       // Logic is that the ability to invite to a subspace requires the ability to invite to the
@@ -1201,11 +1452,40 @@ export class RoleSetResolverMutationsMembership {
         continue;
       }
 
+      if (roleSet.type === RoleSetType.ORGANIZATION) {
+        const capReachedRole = extraRoles.find(role => {
+          const slot = organizationExtraRoleSlots.get(role);
+          return (
+            slot &&
+            slot.maximum >= 0 &&
+            slot.granted + slot.pending >= slot.maximum
+          );
+        });
+        if (capReachedRole) {
+          // Through pushResultForActor like every other outcome in this loop:
+          // a result with no invitedActorID forces the client back onto
+          // positional matching, which is exactly what mis-attributes an
+          // outcome to the wrong invitee.
+          pushResultForActor(actorID, {
+            type: RoleSetInvitationResultType.EXTRA_ROLE_LIMIT_REACHED,
+          });
+          continue;
+        }
+      }
+
       const invitation =
         await this.roleSetService.createInvitationExistingActor(input);
 
       if (invitedActorType === ActorType.ORGANIZATION && leadSlots) {
         leadSlots.pending += 1;
+      }
+      if (roleSet.type === RoleSetType.ORGANIZATION) {
+        for (const role of extraRoles) {
+          const slot = organizationExtraRoleSlots.get(role);
+          if (slot) {
+            slot.pending += 1;
+          }
+        }
       }
 
       const invitationResult: RoleSetInvitationResult = {
@@ -1396,14 +1676,91 @@ export class RoleSetResolverMutationsMembership {
         case RoleSetInvitationResultType.ALREADY_HAS_OPEN_APPLICATION:
         case RoleSetInvitationResultType.ALREADY_MEMBER_OF_ROLE_SET:
         case RoleSetInvitationResultType.ORGANIZATION_NOT_ACCEPTING_INVITATIONS:
-        case RoleSetInvitationResultType.ORGANIZATION_LEAD_ROLE_LIMIT_REACHED: {
-          // No notifications to be triggered
+        case RoleSetInvitationResultType.ORGANIZATION_LEAD_ROLE_LIMIT_REACHED:
+        case RoleSetInvitationResultType.EXTRA_ROLE_LIMIT_REACHED: {
+          // No notifications to be triggered — nothing was created.
           break;
         }
         default: {
           // Compile-time exhaustiveness guard: a new RoleSetInvitationResultType
           // value that reaches this branch fails to build rather than silently
           // dropping every invitation's notification.
+          const _exhaustiveCheck: never = invitationResult.type;
+          this.logger.warn?.(
+            `Unhandled RoleSetInvitationResultType in notification dispatch: ${_exhaustiveCheck}`,
+            LogContext.NOTIFICATIONS
+          );
+        }
+      }
+    }
+  }
+
+  /**
+   * Notifies each invitee of an organization invitation to associate.
+   * Every result type is handled exhaustively (never-guarded `default`):
+   * `EXTRA_ROLE_LIMIT_REACHED` and the other advisory outcomes create
+   * nothing and dispatch nothing.
+   */
+  private async sendNotificationEventsForInvitationsOnOrganizationRoleSet(
+    roleSet: IRoleSet,
+    actorContext: ActorContext,
+    invitationResults: RoleSetInvitationResult[]
+  ) {
+    if (roleSet.type !== RoleSetType.ORGANIZATION) {
+      return;
+    }
+    const organization =
+      await this.organizationLookupService.getOrganizationForRoleSetOrFail(
+        roleSet.id
+      );
+
+    for (const invitationResult of invitationResults) {
+      switch (invitationResult.type) {
+        case RoleSetInvitationResultType.INVITED_TO_ROLE_SET: {
+          const invitation = invitationResult.invitation;
+          if (!invitation) {
+            throw new RelationshipNotFoundException(
+              `Unable to load invitation for result: ${invitationResult.type}`,
+              LogContext.ROLES
+            );
+          }
+          const actorType =
+            await this.actorLookupService.getActorTypeByIdOrFail(
+              invitation.invitedActorID
+            );
+          // Organizations invite existing Alkemio users only (product email;
+          // enforced earlier as a validation error) — nothing else to notify.
+          if (actorType !== ActorType.USER) {
+            break;
+          }
+          this.dispatchNotification(
+            this.notificationUserAdapter.userOrganizationAssociateInvitationCreated(
+              {
+                triggeredBy: actorContext.actorID,
+                organizationID: organization.id,
+                invitationID: invitation.id,
+                inviteeID: invitation.invitedActorID,
+                extraRoles: invitation.extraRoles,
+                welcomeMessage: invitation.welcomeMessage,
+              }
+            ),
+            'userOrganizationAssociateInvitationCreated'
+          );
+          break;
+        }
+        case RoleSetInvitationResultType.INVITED_TO_PLATFORM_AND_ROLE_SET:
+        case RoleSetInvitationResultType.ALREADY_INVITED_TO_PLATFORM_AND_ROLE_SET:
+        case RoleSetInvitationResultType.ALREADY_INVITED_TO_ROLE_SET:
+        case RoleSetInvitationResultType.INVITATION_TO_PARENT_NOT_AUTHORIZED:
+        case RoleSetInvitationResultType.ALREADY_HAS_OPEN_APPLICATION:
+        case RoleSetInvitationResultType.ALREADY_MEMBER_OF_ROLE_SET:
+        case RoleSetInvitationResultType.ORGANIZATION_NOT_ACCEPTING_INVITATIONS:
+        case RoleSetInvitationResultType.ORGANIZATION_LEAD_ROLE_LIMIT_REACHED:
+        case RoleSetInvitationResultType.EXTRA_ROLE_LIMIT_REACHED: {
+          // No notifications to be triggered — nothing was created.
+          break;
+        }
+        default: {
           const _exhaustiveCheck: never = invitationResult.type;
           this.logger.warn?.(
             `Unhandled RoleSetInvitationResultType in notification dispatch: ${_exhaustiveCheck}`,

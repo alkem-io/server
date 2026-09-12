@@ -19,6 +19,7 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { IUserSettingsNotificationChannels } from '@domain/community/user-settings/user.settings.notification.channels.interface';
 import {
   DEFAULT_INVITATION_RESPONSE_CHANNELS,
+  DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS,
   DEFAULT_ORGANIZATION_SPACE_INVITATION_CHANNELS,
 } from '@domain/community/user-settings/user.settings.notification.defaults.constants';
 import { IUserSettingsNotification } from '@domain/community/user-settings/user.settings.notification.interface';
@@ -293,6 +294,41 @@ export class NotificationRecipientsService {
       case NotificationEvent.USER_SPACE_COMMUNITY_INVITATION:
         return notificationSettings.user.membership
           .spaceCommunityInvitationReceived;
+      case NotificationEvent.USER_ORGANIZATION_ASSOCIATE_INVITATION:
+        // Defend on read against a row that predates the backfill
+        // migration or was inserted by an old pod during a rolling
+        // deploy. `UserSettings.applyOrganizationAssociateDefaults`
+        // (@AfterLoad) already heals entity-loaded rows; this covers
+        // other load paths.
+        return (
+          notificationSettings.user?.membership
+            ?.organizationAssociateInvitationReceived ??
+          DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS
+        );
+      case NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_APPROVED:
+      case NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_DECLINED:
+        return (
+          notificationSettings.user?.membership
+            ?.organizationAssociateApplicationDecided ??
+          DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS
+        );
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_ACCEPTED:
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_DECLINED:
+        return (
+          notificationSettings.organization?.adminAssociateInvitationResponse ??
+          DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS
+        );
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_APPLICATION:
+        return (
+          notificationSettings.organization
+            ?.adminAssociateApplicationReceived ??
+          DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS
+        );
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_JOINED:
+        return (
+          notificationSettings.organization?.adminAssociateJoined ??
+          DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS
+        );
       case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
       case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION_DECLINED:
         return notificationSettings.user.membership.spaceCommunityJoined;
@@ -546,6 +582,24 @@ export class NotificationRecipientsService {
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;
       }
+      case NotificationEvent.USER_ORGANIZATION_ASSOCIATE_INVITATION:
+      case NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_APPROVED:
+      case NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_DECLINED: {
+        // Single recipient — the invitee / applicant themself.
+        credentialCriteria = this.getUserSelfCriteria(userID);
+        break;
+      }
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_ACCEPTED:
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_DECLINED:
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_APPLICATION:
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_JOINED: {
+        // ADMIN standing only (061 R17b) — owners who are not admins decide
+        // from the tab but are not notified.
+        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
+        credentialCriteria =
+          this.getOrganizationAdminCredentialCriteria(organizationID);
+        break;
+      }
       case NotificationEvent.SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED: {
         // Notify the space admin who sent the VC invitation.
         //
@@ -644,7 +698,11 @@ export class NotificationRecipientsService {
       case NotificationEvent.ORGANIZATION_ADMIN_MESSAGE:
       case NotificationEvent.ORGANIZATION_ADMIN_MENTIONED:
       case NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION:
-      case NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED: {
+      case NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED:
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_ACCEPTED:
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_DECLINED:
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_APPLICATION:
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_JOINED: {
         // get the organization authorization policy
         if (!organizationID) {
           throw new ValidationException(
@@ -710,7 +768,10 @@ export class NotificationRecipientsService {
       case NotificationEvent.USER_COMMENT_REPLY:
       case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
       case NotificationEvent.USER_SPACE_COMMUNITY_INVITATION:
-      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION_DECLINED: {
+      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION_DECLINED:
+      case NotificationEvent.USER_ORGANIZATION_ASSOCIATE_INVITATION:
+      case NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_APPROVED:
+      case NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_DECLINED: {
         // get the User authorization policy
         // Use userID if provided, otherwise fall back to entityID for backward compatibility
         const targetUserID = userID || entityID;

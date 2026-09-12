@@ -33,6 +33,7 @@ describe('OrganizationSettingsService', () => {
       membership: {
         allowUsersMatchingDomainToJoin: false,
         allowSpaceInvitations: true,
+        allowApplications: true,
       },
       ...overrides,
     } as IOrganizationSettings;
@@ -89,6 +90,38 @@ describe('OrganizationSettingsService', () => {
       const result = service.updateSettings(settings, updateData);
 
       expect(result.membership.allowSpaceInvitations).toBe(false);
+      expect(result.membership.allowUsersMatchingDomainToJoin).toBe(true);
+    });
+
+    it('should update membership.allowApplications when provided', () => {
+      const settings = buildSettings();
+      const updateData: UpdateOrganizationSettingsEntityInput = {
+        membership: {
+          allowUsersMatchingDomainToJoin: false,
+          allowApplications: false,
+        },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.membership.allowApplications).toBe(false);
+    });
+
+    it('should leave membership.allowApplications unchanged when undefined', () => {
+      const settings = buildSettings({
+        membership: {
+          allowUsersMatchingDomainToJoin: false,
+          allowSpaceInvitations: true,
+          allowApplications: false,
+        },
+      } as any);
+      const updateData: UpdateOrganizationSettingsEntityInput = {
+        membership: { allowUsersMatchingDomainToJoin: true },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.membership.allowApplications).toBe(false);
       expect(result.membership.allowUsersMatchingDomainToJoin).toBe(true);
     });
 

@@ -35,3 +35,19 @@ export const DEFAULT_INVITATION_RESPONSE_CHANNELS: IUserSettingsNotificationChan
     inApp: true,
     push: true,
   });
+
+// Defend on read — a `user_settings` row that predates the backfill
+// migrations lacks these keys. Same mandated default as the migrations and
+// `UserSettings.applyOrganizationAssociateDefaults` (`@AfterLoad`). Shared
+// by all five organization-associate rows (two user-side, three
+// organisation-side) — no row is seeded from a predecessor.
+// The mandated default for all five organization-associate notification
+// rows (two user-side, three organisation-side) — all three channels on;
+// no row is seeded from a predecessor (no event moves rows). Same
+// defensive pattern as the other DEFAULT_* constants above.
+export const DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS: IUserSettingsNotificationChannels =
+  Object.freeze({
+    email: true,
+    inApp: true,
+    push: true,
+  });

@@ -360,7 +360,12 @@ export class RoleSetResolverFields {
     );
   }
 
-  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
+  // R3: pending invitations require the same authority as deciding them
+  // (organization admins/owners; Space admins) — GRANT, not the parent
+  // role set's READ, which the child policy never influenced and which
+  // every registered/public-Space-registered user holds. Deliberate on
+  // BOTH role-set types (the identical leak exists on a public Space).
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.GRANT)
   @UseGuards(GraphqlGuard)
   @ResolveField('invitations', () => [IInvitation], {
     nullable: false,
@@ -370,7 +375,8 @@ export class RoleSetResolverFields {
     return await this.roleSetService.getInvitations(roleSet);
   }
 
-  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
+  // R3 (see `invitations` above).
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.GRANT)
   @UseGuards(GraphqlGuard)
   @ResolveField('platformInvitations', () => [IPlatformInvitation], {
     nullable: false,
@@ -383,7 +389,8 @@ export class RoleSetResolverFields {
     return await this.roleSetService.getPlatformInvitations(roleSet);
   }
 
-  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
+  // R3 (see `invitations` above).
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.GRANT)
   @UseGuards(GraphqlGuard)
   @ResolveField('applications', () => [IApplication], {
     nullable: false,

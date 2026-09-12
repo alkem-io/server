@@ -30,12 +30,17 @@ import { RoleSet } from './role.set.entity';
 import { IRoleSet } from './role.set.interface';
 import { RoleSetService } from './role.set.service';
 import { RoleSetCacheService } from './role.set.service.cache';
+import { RoleSetEventsService } from './role.set.service.events';
 
 function makeRoleSet(
   id: string,
-  roles?: { name: RoleName; credential: { type: string; resourceID: string } }[]
+  roles?: {
+    name: RoleName;
+    credential: { type: string; resourceID: string };
+  }[],
+  entryRoleName: RoleName = RoleName.MEMBER
 ): IRoleSet {
-  return { id, roles } as unknown as IRoleSet;
+  return { id, roles, entryRoleName } as unknown as IRoleSet;
 }
 
 describe('RoleSetService', () => {
@@ -48,6 +53,7 @@ describe('RoleSetService', () => {
   let actorLookupService: ActorLookupService;
   let userLookupService: UserLookupService;
   let platformInvitationService: PlatformInvitationService;
+  let roleSetEventsService: RoleSetEventsService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -78,6 +84,8 @@ describe('RoleSetService', () => {
     platformInvitationService = module.get<PlatformInvitationService>(
       PlatformInvitationService
     );
+    roleSetEventsService =
+      module.get<RoleSetEventsService>(RoleSetEventsService);
   });
 
   it('should be defined', () => {
@@ -375,6 +383,7 @@ describe('RoleSetService', () => {
     it('should return count of actors with MEMBER credential', async () => {
       const roleSet = {
         id: 'rs-1',
+        entryRoleName: RoleName.MEMBER,
         roles: [
           {
             name: RoleName.MEMBER,
@@ -589,6 +598,7 @@ describe('RoleSetService', () => {
     it('should check credential when no cache', async () => {
       const roleSet = {
         id: 'rs-1',
+        entryRoleName: RoleName.MEMBER,
         roles: [
           {
             name: RoleName.MEMBER,
@@ -1202,6 +1212,7 @@ describe('RoleSetService', () => {
       const mockRoleSet = {
         id: 'rs-1',
         parentRoleSet: undefined,
+        entryRoleName: RoleName.MEMBER,
         roles: [
           {
             name: RoleName.MEMBER,
@@ -1281,6 +1292,7 @@ describe('RoleSetService', () => {
       const mockRoleSet = {
         id: 'rs-1',
         type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
         roles: [
           {
             name: RoleName.MEMBER,
@@ -1432,6 +1444,7 @@ describe('RoleSetService', () => {
       const actorContext = { actorID: 'user-1' } as any;
       const roleSet = {
         id: 'rs-1',
+        entryRoleName: RoleName.MEMBER,
         roles: [
           {
             name: RoleName.MEMBER,
@@ -1472,6 +1485,7 @@ describe('RoleSetService', () => {
       const actorContext = { actorID: 'user-1' } as any;
       const roleSet = {
         id: 'rs-1',
+        entryRoleName: RoleName.MEMBER,
         roles: [
           {
             name: RoleName.MEMBER,
@@ -1522,6 +1536,7 @@ describe('RoleSetService', () => {
       const actorContext = { actorID: 'user-1' } as any;
       const roleSet = {
         id: 'rs-1',
+        entryRoleName: RoleName.MEMBER,
         roles: [
           {
             name: RoleName.MEMBER,
@@ -1643,6 +1658,7 @@ describe('RoleSetService', () => {
       const actorContext = { actorID: 'user-1' } as any;
       const roleSet = {
         id: 'rs-1',
+        entryRoleName: RoleName.MEMBER,
         roles: [
           {
             name: RoleName.MEMBER,
@@ -1746,15 +1762,101 @@ describe('RoleSetService', () => {
     });
   });
 
+  // FR-026 / gql-live regression: joining an organization (any path —
+  // direct join, invitation accept, application approve — they all funnel
+  // through this single per-role-set post-grant dispatch) must refresh the
+  // membership-status cache the same way a Space join does, so
+  // roleSet.myMembershipStatus / Organization.myAssociateEligibility never
+  // keep serving a stale pre-join NOT_MEMBER read.
+  describe('actorAddedToRole — ORGANIZATION arm (FR-026)', () => {
+    const organizationRoleSet = {
+      id: 'org-rs-1',
+      type: RoleSetType.ORGANIZATION,
+    } as any;
+    const actorContext = { actorID: 'admin-1' } as any;
+
+    it('refreshes the membership-status cache to MEMBER and dispatches the new-associate event on an ASSOCIATE grant', async () => {
+      await (service as any).actorAddedToRole(
+        'actor-1',
+        ActorType.USER,
+        organizationRoleSet,
+        RoleName.ASSOCIATE,
+        actorContext,
+        true,
+        CommunityMembershipOrigin.DIRECT
+      );
+
+      expect(roleSetCacheService.setMembershipStatusCache).toHaveBeenCalledWith(
+        'actor-1',
+        organizationRoleSet.id,
+        CommunityMembershipStatus.MEMBER
+      );
+      expect(
+        roleSetEventsService.processOrganizationNewAssociateEvents
+      ).toHaveBeenCalledWith(
+        organizationRoleSet,
+        actorContext,
+        'actor-1',
+        CommunityMembershipOrigin.DIRECT
+      );
+    });
+
+    it('does nothing for a non-entry role grant (e.g. ADMIN) on an organization', async () => {
+      await (service as any).actorAddedToRole(
+        'actor-1',
+        ActorType.USER,
+        organizationRoleSet,
+        RoleName.ADMIN,
+        actorContext,
+        true,
+        CommunityMembershipOrigin.DIRECT
+      );
+
+      expect(
+        roleSetCacheService.setMembershipStatusCache
+      ).not.toHaveBeenCalled();
+      expect(
+        roleSetEventsService.processOrganizationNewAssociateEvents
+      ).not.toHaveBeenCalled();
+    });
+
+    it('still refreshes the cache but skips the event dispatch when triggerNewMemberEvents is false', async () => {
+      await (service as any).actorAddedToRole(
+        'actor-1',
+        ActorType.USER,
+        organizationRoleSet,
+        RoleName.ASSOCIATE,
+        actorContext,
+        false,
+        CommunityMembershipOrigin.DIRECT
+      );
+
+      expect(roleSetCacheService.setMembershipStatusCache).toHaveBeenCalledWith(
+        'actor-1',
+        organizationRoleSet.id,
+        CommunityMembershipStatus.MEMBER
+      );
+      expect(
+        roleSetEventsService.processOrganizationNewAssociateEvents
+      ).not.toHaveBeenCalled();
+    });
+  });
+
   describe('removeActorFromRole', () => {
-    it('should remove actor from role and clean cache for ORGANIZATION', async () => {
-      const roleSet = {
+    // Entry-role generalization (D1): an ORGANIZATION role set's entry role
+    // is ASSOCIATE, not MEMBER — the in-app notification cleanup only fires
+    // when the actor is removed from their entry role (fully removed from
+    // the organization), never when only ADMIN/OWNER is removed while the
+    // actor stays an associate.
+    const organizationRoleSet = () =>
+      ({
         id: 'rs-1',
         type: RoleSetType.ORGANIZATION,
+        entryRoleName: RoleName.ASSOCIATE,
         roles: [
           {
-            name: RoleName.MEMBER,
-            credential: { type: 'org-member', resourceID: 'org-1' },
+            name: RoleName.ASSOCIATE,
+            credential: { type: 'org-associate', resourceID: 'org-1' },
             userPolicy: { minimum: -1, maximum: -1 },
             organizationPolicy: { minimum: -1, maximum: -1 },
             virtualContributorPolicy: { minimum: -1, maximum: -1 },
@@ -1766,8 +1868,18 @@ describe('RoleSetService', () => {
             organizationPolicy: { minimum: -1, maximum: -1 },
             virtualContributorPolicy: { minimum: -1, maximum: -1 },
           },
+          {
+            name: RoleName.OWNER,
+            credential: { type: 'org-owner', resourceID: 'org-1' },
+            userPolicy: { minimum: -1, maximum: -1 },
+            organizationPolicy: { minimum: -1, maximum: -1 },
+            virtualContributorPolicy: { minimum: -1, maximum: -1 },
+          },
         ],
-      } as any;
+      }) as any;
+
+    it('should remove actor from ASSOCIATE role, clean the in-app notifications and the cache for ORGANIZATION', async () => {
+      const roleSet = organizationRoleSet();
 
       (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
         'user'
@@ -1801,15 +1913,51 @@ describe('RoleSetService', () => {
 
       const result = await service.removeActorFromRole(
         roleSet,
-        RoleName.MEMBER,
+        RoleName.ASSOCIATE,
         'actor-1',
         false
       );
 
       expect(result).toBe('actor-1');
       expect(
+        inAppNotificationService.deleteAllForReceiverInOrganization
+      ).toHaveBeenCalledOnce();
+      expect(
         roleSetCacheService.cleanActorMembershipCache
       ).toHaveBeenCalledWith('actor-1', 'rs-1');
+    });
+
+    it('should NOT clean the in-app notifications when only ADMIN is removed (the actor stays an associate)', async () => {
+      const roleSet = organizationRoleSet();
+
+      (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+        'user'
+      );
+      (actorLookupService.countActorsWithCredentials as Mock).mockResolvedValue(
+        5
+      );
+      (actorService.revokeCredential as Mock).mockResolvedValue(undefined);
+
+      const inAppNotificationService = (service as any)
+        .inAppNotificationService;
+      (
+        inAppNotificationService.deleteAllForReceiverInOrganization as Mock
+      ).mockResolvedValue(undefined);
+      (roleSetCacheService.cleanActorMembershipCache as Mock).mockResolvedValue(
+        undefined
+      );
+
+      const result = await service.removeActorFromRole(
+        roleSet,
+        RoleName.ADMIN,
+        'actor-1',
+        false
+      );
+
+      expect(result).toBe('actor-1');
+      expect(
+        inAppNotificationService.deleteAllForReceiverInOrganization
+      ).not.toHaveBeenCalled();
     });
 
     it('should clean the membership cache of every descendant role-set when removing MEMBER from a SPACE (cascade)', async () => {
@@ -1991,14 +2139,15 @@ describe('RoleSetService', () => {
   });
 
   describe('removeCurrentActorFromRolesInRoleSet', () => {
-    it('should remove actor from all roles they have', async () => {
+    it('should remove actor from all roles they have (organization entry role is ASSOCIATE, not MEMBER)', async () => {
       const roleSet = {
         id: 'rs-1',
         type: RoleSetType.ORGANIZATION,
+        entryRoleName: RoleName.ASSOCIATE,
         roles: [
           {
-            name: RoleName.MEMBER,
-            credential: { type: 'org-member', resourceID: 'org-1' },
+            name: RoleName.ASSOCIATE,
+            credential: { type: 'org-associate', resourceID: 'org-1' },
             userPolicy: { minimum: -1, maximum: -1 },
             organizationPolicy: { minimum: -1, maximum: -1 },
             virtualContributorPolicy: { minimum: -1, maximum: -1 },
@@ -2021,9 +2170,9 @@ describe('RoleSetService', () => {
       } as any;
       const actorContext = { actorID: 'actor-1' } as any;
 
-      // getRolesForActorContext returns [MEMBER]
+      // getRolesForActorContext returns [ASSOCIATE]
       (roleSetCacheService.getActorRolesFromCache as Mock).mockResolvedValue([
-        RoleName.MEMBER,
+        RoleName.ASSOCIATE,
       ]);
       // removeActorFromRole mocks
       (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
@@ -2055,6 +2204,9 @@ describe('RoleSetService', () => {
       expect(actorLookupService.getActorTypeByIdOrFail).toHaveBeenCalledWith(
         'actor-1'
       );
+      expect(
+        inAppNotificationService.deleteAllForReceiverInOrganization
+      ).toHaveBeenCalledOnce();
     });
   });
 
@@ -2461,7 +2613,11 @@ describe('RoleSetService', () => {
   // notification/event parity (FR-021).
   describe('ensureMemberOfRoleSetAndAncestors (shared grant — feature 017)', () => {
     const spaceRoleSet = (id: string): IRoleSet =>
-      ({ id, type: RoleSetType.SPACE }) as unknown as IRoleSet;
+      ({
+        id,
+        type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
+      }) as unknown as IRoleSet;
 
     const passthroughTransaction = () => {
       const transaction = vi.fn(async (cb: any) => cb({} as any));
@@ -2506,6 +2662,142 @@ describe('RoleSetService', () => {
       const grantedIds = grantSpy.mock.calls.map((c: any[]) => c[0].id);
       expect(grantedIds).toEqual(['mid', 'target']);
       expect(grantedIds).not.toContain('root');
+    });
+
+    describe('extra roles offered by someone who has since lost their standing', () => {
+      const orgRoleSet = (id: string): IRoleSet =>
+        ({
+          id,
+          type: RoleSetType.ORGANIZATION,
+          entryRoleName: RoleName.ASSOCIATE,
+        }) as unknown as IRoleSet;
+
+      const acceptWithOfferer = async (offererStillAdmin: boolean) => {
+        const target = orgRoleSet('org-rs');
+        vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+          target,
+        ]);
+        vi.spyOn(service, 'isMember').mockResolvedValue(false);
+        vi.spyOn(service as any, 'grantRoleCredential').mockResolvedValue(
+          undefined
+        );
+        vi.spyOn(service as any, 'applyRoleGrantSideEffects').mockResolvedValue(
+          undefined
+        );
+        vi.spyOn(service, 'isInRole').mockResolvedValue(offererStillAdmin);
+        const assignSpy = vi
+          .spyOn(service, 'assignActorToRole')
+          .mockResolvedValue('user-1');
+        passthroughTransaction();
+
+        const result = await service.ensureMemberOfRoleSetAndAncestors(
+          target,
+          'user-1',
+          { actorID: 'user-1' } as any,
+          {
+            source: 'invitation',
+            extraRoles: [RoleName.OWNER],
+            extraRolesOfferedBy: 'offerer-1',
+          }
+        );
+        return { result, assignSpy };
+      };
+
+      it('withholds the offered role when the offerer no longer administers the organization', async () => {
+        // An invitation never expires and the accept path only checks the
+        // invitee's own privilege, so without this an administrator who has
+        // been offboarded still confers OWNER — and with it account-admin
+        // standing — whenever the recipient chooses to accept.
+        const { result, assignSpy } = await acceptWithOfferer(false);
+
+        expect(result.extraRolesWithheld).toEqual([RoleName.OWNER]);
+        // The entry role still goes through assignActorToRole; what must not
+        // happen is the elevated role being granted.
+        expect(assignSpy).not.toHaveBeenCalledWith(
+          expect.anything(),
+          RoleName.OWNER,
+          expect.anything(),
+          expect.anything(),
+          expect.anything()
+        );
+      });
+
+      it('grants the offered role while the offerer still administers the organization', async () => {
+        const { result, assignSpy } = await acceptWithOfferer(true);
+
+        expect(result.extraRolesWithheld).toEqual([]);
+        expect(assignSpy).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 'org-rs' }),
+          RoleName.OWNER,
+          'user-1',
+          expect.anything(),
+          false
+        );
+      });
+
+      it('withholds the offered role when the offerer is gone entirely', async () => {
+        const target = orgRoleSet('org-rs');
+        vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+          target,
+        ]);
+        vi.spyOn(service, 'isMember').mockResolvedValue(false);
+        vi.spyOn(service as any, 'grantRoleCredential').mockResolvedValue(
+          undefined
+        );
+        vi.spyOn(service as any, 'applyRoleGrantSideEffects').mockResolvedValue(
+          undefined
+        );
+        const assignSpy = vi
+          .spyOn(service, 'assignActorToRole')
+          .mockResolvedValue('user-1');
+        passthroughTransaction();
+
+        const result = await service.ensureMemberOfRoleSetAndAncestors(
+          target,
+          'user-1',
+          { actorID: 'user-1' } as any,
+          { source: 'invitation', extraRoles: [RoleName.ADMIN] }
+        );
+
+        expect(result.extraRolesWithheld).toEqual([RoleName.ADMIN]);
+        expect(assignSpy).not.toHaveBeenCalledWith(
+          expect.anything(),
+          RoleName.ADMIN,
+          expect.anything(),
+          expect.anything(),
+          expect.anything()
+        );
+      });
+
+      it('leaves a SPACE role set alone — the re-check is organization-scoped', async () => {
+        const target = spaceRoleSet('space-rs');
+        vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+          target,
+        ]);
+        vi.spyOn(service, 'isMember').mockResolvedValue(false);
+        vi.spyOn(service as any, 'grantRoleCredential').mockResolvedValue(
+          undefined
+        );
+        vi.spyOn(service as any, 'applyRoleGrantSideEffects').mockResolvedValue(
+          undefined
+        );
+        const isInRoleSpy = vi.spyOn(service, 'isInRole');
+        const assignSpy = vi
+          .spyOn(service, 'assignActorToRole')
+          .mockResolvedValue('user-1');
+        passthroughTransaction();
+
+        const result = await service.ensureMemberOfRoleSetAndAncestors(
+          target,
+          'user-1',
+          { actorID: 'user-1' } as any,
+          { source: 'invitation', extraRoles: [RoleName.LEAD] }
+        );
+
+        expect(isInRoleSpy).not.toHaveBeenCalled();
+        expect(assignSpy).toHaveBeenCalled();
+        expect(result.extraRolesWithheld).toEqual([]);
+      });
     });
 
     it('(b) grants the chain TOP-DOWN (root first) so the parent invariant holds', async () => {
@@ -2623,6 +2915,62 @@ describe('RoleSetService', () => {
       expect(sideEffectsSpy).not.toHaveBeenCalled();
     });
 
+    it('(organization invitation accept) collects a withheld extra role when its cap is consumed, without failing the entry-role grant', async () => {
+      const target = {
+        id: 'org-rs-1',
+        type: RoleSetType.ORGANIZATION,
+        entryRoleName: RoleName.ASSOCIATE,
+      } as unknown as IRoleSet;
+      // No ancestor chain for organizations (isCombinedApplicationGrantAuthorised
+      // is SPACE-only) — the fallback single-target path is taken.
+      vi.spyOn(
+        service,
+        'isCombinedApplicationGrantAuthorised'
+      ).mockResolvedValue(false);
+      const assignSpy = vi
+        .spyOn(service, 'assignActorToRole')
+        .mockImplementation(async (_rs, role) => {
+          if (role === RoleName.OWNER) {
+            throw new Error('owner cap consumed meanwhile');
+          }
+          return 'user-1';
+        });
+
+      // The offerer still administers the organization, so the accept-time
+      // re-check passes and this exercises the cap path it is about.
+      vi.spyOn(service, 'isInRole').mockResolvedValue(true);
+
+      const result = await service.ensureMemberOfRoleSetAndAncestors(
+        target,
+        'user-1',
+        { actorID: 'user-1' } as any,
+        {
+          source: 'invitation',
+          extraRoles: [RoleName.OWNER],
+          extraRolesOfferedBy: 'offerer-1',
+        }
+      );
+
+      // Entry role still granted (first call), extra role attempted and
+      // failed — never silently swallowed with no trace.
+      expect(assignSpy).toHaveBeenCalledWith(
+        target,
+        RoleName.ASSOCIATE,
+        'user-1',
+        expect.anything(),
+        true,
+        expect.anything()
+      );
+      expect(assignSpy).toHaveBeenCalledWith(
+        target,
+        RoleName.OWNER,
+        'user-1',
+        expect.anything(),
+        false
+      );
+      expect(result).toEqual({ extraRolesWithheld: [RoleName.OWNER] });
+    });
+
     it('(US3/FR-015) withholds ancestor grants and falls back to today’s single-target rule when authorisation was revoked at approval time', async () => {
       const target = spaceRoleSet('target');
       // Combined authorisation no longer holds at approval time.
@@ -2734,7 +3082,7 @@ describe('RoleSetService', () => {
           { actorID: 'user-1' } as any,
           { source: 'application' }
         )
-      ).resolves.toBeUndefined();
+      ).resolves.toEqual({ extraRolesWithheld: [] });
 
       // All three Spaces got their dispatch attempt, in chain order.
       expect(sideEffects).toHaveBeenCalledTimes(3);
@@ -3162,7 +3510,11 @@ describe('RoleSetService', () => {
 
   describe('getRoleSetsToJoinOnAccept', () => {
     const spaceRoleSet = (id: string): IRoleSet =>
-      ({ id, type: RoleSetType.SPACE }) as unknown as IRoleSet;
+      ({
+        id,
+        type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
+      }) as unknown as IRoleSet;
 
     it('returns only the target when invitedToParent is false', async () => {
       const target = spaceRoleSet('target');
@@ -3253,7 +3605,11 @@ describe('RoleSetService', () => {
   // (T013), so the setting (US2/FR-003/FR-014) and privacy (US3) govern both.
   describe('isCombinedApplicationGrantAuthorised (feature 017)', () => {
     const spaceRoleSet = (id: string): IRoleSet =>
-      ({ id, type: RoleSetType.SPACE }) as unknown as IRoleSet;
+      ({
+        id,
+        type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
+      }) as unknown as IRoleSet;
 
     const settings = (mode: SpacePrivacyMode, allow: boolean) =>
       ({
@@ -3448,7 +3804,11 @@ describe('RoleSetService', () => {
 
   describe('getCombinedApplicationEligibleCriteria (feature 017 — APPLY exposure)', () => {
     const spaceRoleSet = (id: string): IRoleSet =>
-      ({ id, type: RoleSetType.SPACE }) as unknown as IRoleSet;
+      ({
+        id,
+        type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
+      }) as unknown as IRoleSet;
 
     const settings = (mode: SpacePrivacyMode, allow: boolean) =>
       ({

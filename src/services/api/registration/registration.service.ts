@@ -1,6 +1,5 @@
 import { parseSupportedEligibleLanguages } from '@common/constants/supported.languages';
 import { LogContext } from '@common/enums/logging.context';
-import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 import { RoleName } from '@common/enums/role.name';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { UserNotVerifiedException } from '@common/exceptions/user/user.not.verified.exception';
@@ -20,6 +19,7 @@ import { PlatformInvitationService } from '@domain/access/invitation.platform/pl
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IOrganization } from '@domain/community/organization';
+import { isDomainJoinEligible } from '@domain/community/organization/organization.domain.join.policy';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { AccountDeletionAuditService } from '@domain/community/user/account-deletion/account.deletion.audit.service';
@@ -166,30 +166,17 @@ export class RegistrationService {
       return false;
     }
 
-    const orgSettings = org.settings;
-
-    const orgMatchDomain =
-      orgSettings.membership.allowUsersMatchingDomainToJoin;
-    if (!orgMatchDomain) {
-      this.logger.verbose?.(
-        `Organization '${org.id}' setting 'allowUsersMatchingDomainToJoin is disabled`,
-        LogContext.COMMUNITY
-      );
-      return false;
-    }
-
     if (!org.verification || !org.roleSet) {
       throw new RelationshipNotFoundException(
         `Unable to load roleSet of Verification for Organization for matching user domain ${org.id}`,
         LogContext.COMMUNITY
       );
     }
-    if (
-      org.verification.status !==
-      OrganizationVerificationEnum.VERIFIED_MANUAL_ATTESTATION
-    ) {
+
+    const eligibility = isDomainJoinEligible(org, userEmailDomain);
+    if (!eligibility.eligible) {
       this.logger.verbose?.(
-        `Organization '${org.id}' not verified`,
+        `Organization '${org.id}' domain-join not eligible for user ${user.id}: ${eligibility.reason}`,
         LogContext.COMMUNITY
       );
       return false;

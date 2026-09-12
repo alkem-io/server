@@ -97,5 +97,6 @@ export class Organization extends Actor implements IOrganization, IGroupable {
       return;
     }
     this.settings.membership.allowSpaceInvitations ??= true;
+    this.settings.membership.allowApplications ??= true;
   }
 }

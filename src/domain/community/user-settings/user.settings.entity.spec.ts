@@ -198,3 +198,79 @@ describe('UserSettings entity — applyInvitationResponseDefaults (@AfterLoad)',
     expect(() => settings.applyInvitationResponseDefaults()).not.toThrow();
   });
 });
+
+/**
+ * The five organization-associate notification rows (two user-side, three
+ * organisation-side) all share one mandated default — all three channels
+ * on — and no row is seeded from a predecessor (no event moves rows).
+ */
+describe('UserSettings entity — applyOrganizationAssociateDefaults (@AfterLoad)', () => {
+  const ALL_ON = { email: true, inApp: true, push: true };
+
+  it('fills in all five missing keys with the mandated default', () => {
+    const settings = new UserSettings();
+    settings.notification = {
+      user: {
+        membership: {
+          spaceCommunityInvitationReceived: ALL_ON,
+          spaceCommunityJoined: ALL_ON,
+        },
+      },
+      organization: {
+        adminMentioned: ALL_ON,
+      },
+    } as any;
+
+    settings.applyOrganizationAssociateDefaults();
+
+    expect(
+      settings.notification.user.membership
+        .organizationAssociateInvitationReceived
+    ).toEqual(ALL_ON);
+    expect(
+      settings.notification.user.membership
+        .organizationAssociateApplicationDecided
+    ).toEqual(ALL_ON);
+    expect(
+      settings.notification.organization.adminAssociateInvitationResponse
+    ).toEqual(ALL_ON);
+    expect(
+      settings.notification.organization.adminAssociateApplicationReceived
+    ).toEqual(ALL_ON);
+    expect(settings.notification.organization.adminAssociateJoined).toEqual(
+      ALL_ON
+    );
+  });
+
+  it('never overwrites an existing (muted) row', () => {
+    const settings = new UserSettings();
+    const muted = { email: false, inApp: false, push: false };
+    settings.notification = {
+      user: { membership: { organizationAssociateInvitationReceived: muted } },
+      organization: { adminAssociateJoined: muted },
+    } as any;
+
+    settings.applyOrganizationAssociateDefaults();
+
+    expect(
+      settings.notification.user.membership
+        .organizationAssociateInvitationReceived
+    ).toEqual(muted);
+    expect(settings.notification.organization.adminAssociateJoined).toEqual(
+      muted
+    );
+  });
+
+  it('is a no-op (never throws) when notification.user.membership and notification.organization are both absent', () => {
+    const settings = new UserSettings();
+    settings.notification = {} as any;
+
+    expect(() => settings.applyOrganizationAssociateDefaults()).not.toThrow();
+  });
+
+  it('is a no-op (never throws) when notification itself is absent', () => {
+    const settings = new UserSettings();
+
+    expect(() => settings.applyOrganizationAssociateDefaults()).not.toThrow();
+  });
+});

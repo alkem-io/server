@@ -3,6 +3,7 @@ import { ActorType } from '@common/enums/actor.type';
 import { CalloutDescriptionDisplayMode } from '@common/enums/callout.description.display.mode';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { ProfileType } from '@common/enums/profile.type';
+import { RoleSetType } from '@common/enums/role.set.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { SpaceSortMode } from '@common/enums/space.sort.mode';
@@ -235,6 +236,38 @@ describe('RolesService', () => {
     });
   });
 
+  describe('getCommunityApplicationsForUser / getOrganizationApplicationsForUser (R-1/US7-AS1)', () => {
+    it('getCommunityApplicationsForUser filters out ORGANIZATION-typed applications', async () => {
+      vi.spyOn(applicationService, 'findApplicationsForUser').mockResolvedValue(
+        [
+          { id: 'app-space', roleSet: { type: RoleSetType.SPACE } },
+          { id: 'app-org', roleSet: { type: RoleSetType.ORGANIZATION } },
+        ] as any[]
+      );
+
+      const result =
+        await rolesService.getCommunityApplicationsForUser('user-1');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('app-space');
+    });
+
+    it('getOrganizationApplicationsForUser returns only ORGANIZATION-typed applications', async () => {
+      vi.spyOn(applicationService, 'findApplicationsForUser').mockResolvedValue(
+        [
+          { id: 'app-space', roleSet: { type: RoleSetType.SPACE } },
+          { id: 'app-org', roleSet: { type: RoleSetType.ORGANIZATION } },
+        ] as any[]
+      );
+
+      const result =
+        await rolesService.getOrganizationApplicationsForUser('user-1');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('app-org');
+    });
+  });
+
   describe('convertApplicationsToRoleResults', () => {
     it('should return empty array for empty applications', async () => {
       const result = await rolesService.convertApplicationsToRoleResults([]);
@@ -302,13 +335,53 @@ describe('RolesService', () => {
 
       const invitationService = moduleRef.get(InvitationService);
       vi.spyOn(invitationService, 'findInvitationsForActor')
-        .mockResolvedValueOnce([{ id: 'inv-1' }] as any[])
-        .mockResolvedValueOnce([{ id: 'inv-2' }] as any[]);
+        .mockResolvedValueOnce([
+          { id: 'inv-1', roleSet: { type: RoleSetType.SPACE } },
+        ] as any[])
+        .mockResolvedValueOnce([
+          { id: 'inv-2', roleSet: { type: RoleSetType.SPACE } },
+        ] as any[]);
 
       const result =
         await rolesService.getCommunityInvitationsForUser('user-1');
 
       expect(result).toHaveLength(2);
+    });
+
+    it('filters out ORGANIZATION-typed invitations (R-1/US7-AS1)', async () => {
+      vi.spyOn(actorLookupService, 'getActorsManagedByUser').mockResolvedValue([
+        { id: 'contrib-1' },
+      ] as any[]);
+
+      const invitationService = moduleRef.get(InvitationService);
+      vi.spyOn(invitationService, 'findInvitationsForActor').mockResolvedValue([
+        { id: 'inv-space', roleSet: { type: RoleSetType.SPACE } },
+        { id: 'inv-org', roleSet: { type: RoleSetType.ORGANIZATION } },
+      ] as any[]);
+
+      const result =
+        await rolesService.getCommunityInvitationsForUser('user-1');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('inv-space');
+    });
+
+    it('getOrganizationInvitationsForUser returns only ORGANIZATION-typed invitations', async () => {
+      vi.spyOn(actorLookupService, 'getActorsManagedByUser').mockResolvedValue([
+        { id: 'contrib-1' },
+      ] as any[]);
+
+      const invitationService = moduleRef.get(InvitationService);
+      vi.spyOn(invitationService, 'findInvitationsForActor').mockResolvedValue([
+        { id: 'inv-space', roleSet: { type: RoleSetType.SPACE } },
+        { id: 'inv-org', roleSet: { type: RoleSetType.ORGANIZATION } },
+      ] as any[]);
+
+      const result =
+        await rolesService.getOrganizationInvitationsForUser('user-1');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('inv-org');
     });
 
     it('should return empty array when no managed contributors', async () => {

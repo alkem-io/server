@@ -5,7 +5,9 @@ export const organizationApplicationForm: CreateFormInput = {
   questions: [
     {
       question: 'What makes you want to join?',
-      required: true,
+      // Optional (062): the applicant sees this as a short optional
+      // message field, not a mandatory gate.
+      required: false,
       maxLength: 500,
       explanation: '',
       sortOrder: 1,
