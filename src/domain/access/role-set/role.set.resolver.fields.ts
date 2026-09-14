@@ -360,18 +360,18 @@ export class RoleSetResolverFields {
     );
   }
 
-  // R3: pending invitations require management authority — UPDATE, not the
-  // parent role set's READ, which the child policy never influenced and
-  // which every registered/public-Space-registered user holds. Deliberate on
+  // R3: pending invitations require the same authority as deciding them
+  // (organization admins/owners; Space admins) — GRANT, not the parent
+  // role set's READ, which the child policy never influenced and which
+  // every registered/public-Space-registered user holds. Deliberate on
   // BOTH role-set types (the identical leak exists on a public Space).
-  // UPDATE rather than GRANT because every surface that reads these lists
-  // (Space Settings > Community, the Space invite dialog, the organization
-  // Associates tab) is gated on UPDATE, and an account admin holds cascaded
-  // UPDATE without GRANT on every Space the account hosts
-  // (`account.service.authorization.ts`, CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE)
-  // — GRANT would have blanked those admins' pending lists. Members hold READ
-  // only, so the confidentiality narrowing is unchanged.
-  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.UPDATE)
+  // Verified live (R46): an account admin of the hosting organization holds
+  // neither UPDATE nor GRANT on a Space role set — the account CRUD cascade
+  // never reaches an L0 Space's policy (`account.service.authorization.ts`
+  // only invokes the Space's own policy builder, which gives account admins
+  // READ_ABOUT/READ_LICENSE) — so GRANT and UPDATE admit exactly the same
+  // holders here; GRANT is kept as the operator-ruled approve/reject guard.
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.GRANT)
   @UseGuards(GraphqlGuard)
   @ResolveField('invitations', () => [IInvitation], {
     nullable: false,
@@ -382,7 +382,7 @@ export class RoleSetResolverFields {
   }
 
   // R3 (see `invitations` above).
-  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.UPDATE)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.GRANT)
   @UseGuards(GraphqlGuard)
   @ResolveField('platformInvitations', () => [IPlatformInvitation], {
     nullable: false,
@@ -396,7 +396,7 @@ export class RoleSetResolverFields {
   }
 
   // R3 (see `invitations` above).
-  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.UPDATE)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.GRANT)
   @UseGuards(GraphqlGuard)
   @ResolveField('applications', () => [IApplication], {
     nullable: false,
