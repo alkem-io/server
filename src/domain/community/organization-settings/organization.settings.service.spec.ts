@@ -125,6 +125,27 @@ describe('OrganizationSettingsService', () => {
       expect(result.membership.allowUsersMatchingDomainToJoin).toBe(true);
     });
 
+    it('leaves membership.allowApplications unchanged when explicitly null', () => {
+      // `@IsOptional()` skips validation for null, so an explicit null reaches
+      // the service; writing it would persist null into the jsonb column and
+      // the @AfterLoad `??= true` would then silently re-open applications an
+      // organization had deliberately closed.
+      const settings = buildSettings({
+        membership: {
+          allowUsersMatchingDomainToJoin: false,
+          allowSpaceInvitations: true,
+          allowApplications: false,
+        },
+      } as any);
+      const updateData = {
+        membership: { allowApplications: null },
+      } as unknown as UpdateOrganizationSettingsEntityInput;
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.membership.allowApplications).toBe(false);
+    });
+
     it('leaves membership.allowUsersMatchingDomainToJoin unchanged when omitted', () => {
       // The field is nullable in the GraphQL input precisely so a client
       // editing only the OTHER switch does not have to echo this one back and

@@ -2685,6 +2685,8 @@ describe('RoleSetService', () => {
           undefined
         );
         vi.spyOn(service, 'isInRole').mockResolvedValue(offererStillAdmin);
+        // No platform-admin standing either (the other arm of the re-check).
+        (actorService.hasValidCredential as Mock).mockResolvedValue(false);
         const assignSpy = vi
           .spyOn(service, 'assignActorToRole')
           .mockResolvedValue('user-1');
@@ -2724,6 +2726,52 @@ describe('RoleSetService', () => {
 
       it('grants the offered role while the offerer still administers the organization', async () => {
         const { result, assignSpy } = await acceptWithOfferer(true);
+
+        expect(result.extraRolesWithheld).toEqual([]);
+        expect(assignSpy).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 'org-rs' }),
+          RoleName.OWNER,
+          'user-1',
+          expect.anything(),
+          false
+        );
+      });
+
+      it('grants the offered role when the offerer is a platform admin rather than an organization admin', async () => {
+        // GLOBAL_ADMIN / GLOBAL_SUPPORT hold ROLESET_ENTRY_ROLE_ASSIGN (and so
+        // INVITE) on every organization without any org-scoped credential;
+        // an invitation they issued must not lose its roles on accept.
+        const target = orgRoleSet('org-rs');
+        vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+          target,
+        ]);
+        vi.spyOn(service, 'isMember').mockResolvedValue(false);
+        vi.spyOn(service as any, 'grantRoleCredential').mockResolvedValue(
+          undefined
+        );
+        vi.spyOn(service as any, 'applyRoleGrantSideEffects').mockResolvedValue(
+          undefined
+        );
+        vi.spyOn(service, 'isInRole').mockResolvedValue(false);
+        (actorService.hasValidCredential as Mock).mockImplementation(
+          async (_actorID: string, criteria: { type: string }) =>
+            criteria.type === AuthorizationCredential.GLOBAL_SUPPORT
+        );
+        const assignSpy = vi
+          .spyOn(service, 'assignActorToRole')
+          .mockResolvedValue('user-1');
+        passthroughTransaction();
+
+        const result = await service.ensureMemberOfRoleSetAndAncestors(
+          target,
+          'user-1',
+          { actorID: 'user-1' } as any,
+          {
+            source: 'invitation',
+            extraRoles: [RoleName.OWNER],
+            extraRolesOfferedBy: 'support-1',
+          }
+        );
 
         expect(result.extraRolesWithheld).toEqual([]);
         expect(assignSpy).toHaveBeenCalledWith(

@@ -500,21 +500,23 @@ describe('RoleSetResolverFields', () => {
   });
 
   // R3 (pending-list confidentiality): reading a role set's pending
-  // applications/invitations must require the same authority as deciding
-  // them (GRANT), on both role-set types — never the parent role set's
-  // READ, which every registered user (organizations) or every registered
-  // user of a public Space holds.
+  // applications/invitations must require management authority (UPDATE),
+  // on both role-set types — never the parent role set's READ, which every
+  // registered user (organizations) or every registered user of a public
+  // Space holds. UPDATE, not GRANT: an account admin holds cascaded UPDATE
+  // without GRANT on the Spaces the account hosts and reads these lists from
+  // Space Settings > Community, which is itself gated on UPDATE.
   describe('pending-list confidentiality (R3)', () => {
     it.each([
       'inivitations',
       'platformInvitations',
       'applications',
-    ])('%s is gated on GRANT, not READ', methodName => {
+    ])('%s is gated on UPDATE, not READ', methodName => {
       const privilege = Reflect.getMetadata(
         'privilege',
         (resolver as any)[methodName]
       );
-      expect(privilege).toBe('grant');
+      expect(privilege).toBe('update');
     });
   });
 });

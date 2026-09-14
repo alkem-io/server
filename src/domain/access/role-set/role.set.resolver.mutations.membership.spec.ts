@@ -795,6 +795,30 @@ describe('RoleSetResolverMutationsMembership', () => {
         expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
       });
 
+      it('rejects a non-user invitee with a validation error before anything is created', async () => {
+        // Only users associate with an organization; an organization or VC
+        // invitee would otherwise persist as a pending row that nobody is
+        // notified about and that can never be accepted.
+        (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(
+          mockRoleSet
+        );
+        (
+          actorLookupService.validateActorsAndGetTypes as Mock
+        ).mockResolvedValue(new Map([['org-2', ActorType.ORGANIZATION]]));
+
+        await expect(
+          resolver.inviteForEntryRoleOnRoleSet(actorContext, {
+            roleSetID: 'org-rs-1',
+            invitedActorIDs: ['org-2'],
+            invitedUserEmails: [],
+            extraRoles: [],
+          } as any)
+        ).rejects.toThrow(ValidationException);
+        expect(
+          roleSetService.createInvitationExistingActor
+        ).not.toHaveBeenCalled();
+      });
+
       it('returns EXTRA_ROLE_LIMIT_REACHED and creates nothing when the offered role cap is already reached', async () => {
         (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(
           mockRoleSet

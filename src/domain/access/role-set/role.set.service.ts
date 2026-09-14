@@ -1518,6 +1518,32 @@ export class RoleSetService {
     return validCredential;
   }
 
+  /**
+   * Whether `actorID` currently holds standing to offer ADMIN / OWNER on an
+   * organization role set: organization ADMIN or OWNER, or a platform
+   * GLOBAL_ADMIN / GLOBAL_SUPPORT credential.
+   */
+  private async mayStillOfferOrganizationRoles(
+    actorID: string,
+    roleSet: IRoleSet
+  ): Promise<boolean> {
+    if (
+      (await this.isInRole(actorID, roleSet, RoleName.ADMIN)) ||
+      (await this.isInRole(actorID, roleSet, RoleName.OWNER))
+    ) {
+      return true;
+    }
+    for (const type of [
+      AuthorizationCredential.GLOBAL_ADMIN,
+      AuthorizationCredential.GLOBAL_SUPPORT,
+    ]) {
+      if (await this.actorService.hasValidCredential(actorID, { type })) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   public async isInRole(
     actorID: string,
     roleSet: IRoleSet,
@@ -2280,6 +2306,14 @@ export class RoleSetService {
     // Scoped to organizations because that is where the elevated grant is
     // implicit. Resolved once for the whole loop, and only when an extra role
     // is actually on offer, so the ordinary path costs nothing.
+    //
+    // "May still offer" means holding the standing that granted
+    // ROLESET_ENTRY_ROLE_INVITE on an organization role set: an organization
+    // ADMIN / OWNER, or a platform GLOBAL_ADMIN / GLOBAL_SUPPORT (who hold
+    // ROLESET_ENTRY_ROLE_ASSIGN on every organization —
+    // `organization.service.authorization.ts`). Without the platform arm an
+    // invitation legitimately issued by platform support would silently lose
+    // its offered roles on accept.
     const extraRoles = opts.extraRoles ?? [];
     let offererMayStillOffer: boolean | undefined;
     if (
@@ -2287,16 +2321,10 @@ export class RoleSetService {
       targetRoleSet.type === RoleSetType.ORGANIZATION
     ) {
       offererMayStillOffer = opts.extraRolesOfferedBy
-        ? (await this.isInRole(
+        ? await this.mayStillOfferOrganizationRoles(
             opts.extraRolesOfferedBy,
-            targetRoleSet,
-            RoleName.ADMIN
-          )) ||
-          (await this.isInRole(
-            opts.extraRolesOfferedBy,
-            targetRoleSet,
-            RoleName.OWNER
-          ))
+            targetRoleSet
+          )
         : // A deleted account leaves `createdBy` empty; nobody vouches for the
           // offer any more, so it is not honoured.
           false;
@@ -2305,7 +2333,7 @@ export class RoleSetService {
     for (const extraRole of extraRoles) {
       if (offererMayStillOffer === false) {
         this.logger.warn?.(
-          `Extra role (${extraRole}) withheld for actor (${actorID}): the actor who offered it no longer administers this organization`,
+          `Extra role (${extraRole}) withheld for actor (${actorID}): the actor who offered it no longer holds organization-admin or platform-admin standing`,
           LogContext.COMMUNITY
         );
         extraRolesWithheld.push(extraRole);

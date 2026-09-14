@@ -669,13 +669,21 @@ export class NotificationOrganizationAdapter {
       eventData,
       eventData.organizationID
     );
+    // The applicant is excluded on every channel (SC-002 / 061 R33), not only
+    // push: an ORGANIZATION_ADMIN who is not an associate can apply and would
+    // otherwise be told about their own application.
+    const withoutApplicant = <T extends { id: string }>(list: T[]) =>
+      list.filter(recipient => recipient.id !== eventData.triggeredBy);
+    const emailRecipients = withoutApplicant(recipients.emailRecipients);
+    const inAppRecipients = withoutApplicant(recipients.inAppRecipients);
+    const pushRecipientsFiltered = withoutApplicant(recipients.pushRecipients);
 
-    if (recipients.emailRecipients.length > 0) {
+    if (emailRecipients.length > 0) {
       const payload =
         await this.notificationExternalAdapter.buildOrganizationAssociateActorPayload(
           event,
           eventData.triggeredBy,
-          recipients.emailRecipients,
+          emailRecipients,
           eventData.organizationID,
           eventData.applicantID,
           { applicationMessage: eventData.applicationMessage }
@@ -686,9 +694,7 @@ export class NotificationOrganizationAdapter {
       );
     }
 
-    const inAppReceiverIDs = recipients.inAppRecipients.map(
-      recipient => recipient.id
-    );
+    const inAppReceiverIDs = inAppRecipients.map(recipient => recipient.id);
     if (inAppReceiverIDs.length > 0) {
       const inAppPayload: InAppNotificationPayloadOrganizationAssociateActor = {
         type: NotificationEventPayload.ORGANIZATION_ASSOCIATE_ACTOR,
@@ -706,9 +712,6 @@ export class NotificationOrganizationAdapter {
       );
     }
 
-    const pushRecipientsFiltered = recipients.pushRecipients.filter(
-      recipient => recipient.id !== eventData.triggeredBy
-    );
     if (pushRecipientsFiltered.length > 0) {
       const applicant = await this.actorLookupService.getFullActorByIdOrFail(
         eventData.applicantID,

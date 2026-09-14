@@ -360,12 +360,18 @@ export class RoleSetResolverFields {
     );
   }
 
-  // R3: pending invitations require the same authority as deciding them
-  // (organization admins/owners; Space admins) — GRANT, not the parent
-  // role set's READ, which the child policy never influenced and which
-  // every registered/public-Space-registered user holds. Deliberate on
+  // R3: pending invitations require management authority — UPDATE, not the
+  // parent role set's READ, which the child policy never influenced and
+  // which every registered/public-Space-registered user holds. Deliberate on
   // BOTH role-set types (the identical leak exists on a public Space).
-  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.GRANT)
+  // UPDATE rather than GRANT because every surface that reads these lists
+  // (Space Settings > Community, the Space invite dialog, the organization
+  // Associates tab) is gated on UPDATE, and an account admin holds cascaded
+  // UPDATE without GRANT on every Space the account hosts
+  // (`account.service.authorization.ts`, CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE)
+  // — GRANT would have blanked those admins' pending lists. Members hold READ
+  // only, so the confidentiality narrowing is unchanged.
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.UPDATE)
   @UseGuards(GraphqlGuard)
   @ResolveField('invitations', () => [IInvitation], {
     nullable: false,
@@ -376,7 +382,7 @@ export class RoleSetResolverFields {
   }
 
   // R3 (see `invitations` above).
-  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.GRANT)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.UPDATE)
   @UseGuards(GraphqlGuard)
   @ResolveField('platformInvitations', () => [IPlatformInvitation], {
     nullable: false,
@@ -390,7 +396,7 @@ export class RoleSetResolverFields {
   }
 
   // R3 (see `invitations` above).
-  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.GRANT)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.UPDATE)
   @UseGuards(GraphqlGuard)
   @ResolveField('applications', () => [IApplication], {
     nullable: false,

@@ -1168,6 +1168,22 @@ export class RoleSetResolverMutationsMembership {
           { actorID, actorType }
         );
       }
+      // Only users associate with an organization (ASSOCIATE's organization
+      // and virtual-contributor policies are maximum 0, but that policy is
+      // only consulted for `extraRoles`). Without this an organization or VC
+      // could be persisted as a pending invitee that nobody is notified
+      // about, that cannot accept, and that blocks every retry with
+      // ALREADY_INVITED_TO_ROLE_SET.
+      if (
+        roleSet.type === RoleSetType.ORGANIZATION &&
+        actorType !== ActorType.USER
+      ) {
+        throw new ValidationException(
+          'Organizations can only invite existing Alkemio users to associate',
+          LogContext.COMMUNITY,
+          { actorID, actorType }
+        );
+      }
     }
 
     // One RoleSet+roles load for the whole list: the DTO caps extraRoles, but
@@ -1729,7 +1745,8 @@ export class RoleSetResolverMutationsMembership {
               invitation.invitedActorID
             );
           // Organizations invite existing Alkemio users only (product email;
-          // enforced earlier as a validation error) — nothing else to notify.
+          // enforced by `validateInviteesAndRolesOrFail`) — nothing else to
+          // notify.
           if (actorType !== ActorType.USER) {
             break;
           }

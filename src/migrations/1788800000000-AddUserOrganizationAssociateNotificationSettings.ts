@@ -10,7 +10,9 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  *
  *  - `up`: two additive-only `jsonb_set`s, each independently guarded by
  *    `WHERE notification #> '{user,membership,<key>}' IS NULL` — never
- *    touches an existing key, safely re-runnable.
+ *    touches an existing key, safely re-runnable. The inner `jsonb_set`s
+ *    materialize `notification.user` and `notification.user.membership`
+ *    if absent (as 1788500000000 does for `notification.organization`).
  *  - `down`: intentional no-op — see the note on the method.
  *
  * Belt-and-braces: `UserSettings.applyOrganizationAssociateDefaults`
@@ -36,11 +38,26 @@ export class AddUserOrganizationAssociateNotificationSettings1788800000000
       'organizationAssociateInvitationReceived',
       'organizationAssociateApplicationDecided',
     ]) {
+      // `jsonb_set` is a no-op when an intermediate path element is missing,
+      // so `notification.user` and `notification.user.membership` are
+      // materialized first (an older healing migration can leave
+      // `notification.user = {}`); otherwise such rows would match the WHERE
+      // guard on every run and never receive the key.
       await queryRunner.query(
         `
         UPDATE user_settings
         SET notification = jsonb_set(
-          notification,
+          jsonb_set(
+            jsonb_set(
+              notification,
+              '{user}'::text[],
+              COALESCE(notification -> 'user', '{}'::jsonb),
+              true
+            ),
+            '{user,membership}'::text[],
+            COALESCE(notification #> '{user,membership}', '{}'::jsonb),
+            true
+          ),
           ('{user,membership,' || $2 || '}')::text[],
           $1::jsonb,
           true

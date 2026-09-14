@@ -726,18 +726,58 @@ describe('NotificationOrganizationAdapter', () => {
       expect(pushCall[2].body).not.toContain('confidential reason');
     });
 
-    it('excludes the applicant from push recipients', async () => {
+    it('excludes the applicant from every channel (SC-002)', async () => {
+      // An ORGANIZATION_ADMIN who is not an associate can apply; they must
+      // not be told about their own application on any channel.
       setUpCommonMocks();
       vi.mocked(
         notificationAdapter.getNotificationRecipients
       ).mockResolvedValue({
-        emailRecipients: [],
-        inAppRecipients: [],
+        emailRecipients: [{ id: 'applicant-1' }, { id: 'admin-1' }],
+        inAppRecipients: [{ id: 'applicant-1' }, { id: 'admin-1' }],
+        pushRecipients: [{ id: 'applicant-1' }, { id: 'admin-1' }],
+      } as any);
+
+      await adapter.organizationAdminAssociateApplicationCreated(eventData);
+
+      expect(
+        externalAdapter.buildOrganizationAssociateActorPayload
+      ).toHaveBeenCalledWith(
+        expect.anything(),
+        'applicant-1',
+        [{ id: 'admin-1' }],
+        'org-1',
+        'applicant-1',
+        expect.anything()
+      );
+      expect(inAppAdapter.sendInAppNotifications).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        'applicant-1',
+        ['admin-1'],
+        expect.anything()
+      );
+      expect(pushAdapter.sendPushNotifications).toHaveBeenCalledWith(
+        [{ id: 'admin-1' }],
+        expect.anything(),
+        expect.anything()
+      );
+    });
+
+    it('sends nothing when the applicant is the only recipient', async () => {
+      setUpCommonMocks();
+      vi.mocked(
+        notificationAdapter.getNotificationRecipients
+      ).mockResolvedValue({
+        emailRecipients: [{ id: 'applicant-1' }],
+        inAppRecipients: [{ id: 'applicant-1' }],
         pushRecipients: [{ id: 'applicant-1' }],
       } as any);
 
       await adapter.organizationAdminAssociateApplicationCreated(eventData);
 
+      expect(externalAdapter.sendExternalNotifications).not.toHaveBeenCalled();
+      expect(inAppAdapter.sendInAppNotifications).not.toHaveBeenCalled();
       expect(pushAdapter.sendPushNotifications).not.toHaveBeenCalled();
     });
 

@@ -35,7 +35,7 @@ export class OrganizationSettingsService {
         settings.membership.allowSpaceInvitations =
           updateData.membership.allowSpaceInvitations;
       }
-      if (updateData.membership.allowApplications !== undefined) {
+      if (updateData.membership.allowApplications != null) {
         settings.membership.allowApplications =
           updateData.membership.allowApplications;
       }
