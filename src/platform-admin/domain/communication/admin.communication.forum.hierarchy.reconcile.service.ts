@@ -30,6 +30,17 @@ export interface ForumHierarchyReconcilePassSummary {
   failed: number;
   unknownKept: number;
   parentPointersDeferred: number;
+  /**
+   * Pointer repairs no pass can ever complete under the adapter's current
+   * per-call budget, as opposed to the transient deferrals above. Reported
+   * separately because the response is to raise the budget, not to run again.
+   */
+  parentPointersUnprocessable: number;
+  /**
+   * Parents the final sweep did not report as converged. Zero is the real
+   * completion condition; `failed` only reports execution errors.
+   */
+  unconverged: number;
   aborted: 'circuit-breaker' | 'budget-exhausted' | null;
   adapterDisabled: boolean;
 }
@@ -63,6 +74,7 @@ const normalizeArrays = (
   unresolved: response.unresolved ?? [],
   parent_pointers_repaired: response.parent_pointers_repaired ?? [],
   parent_pointers_deferred: response.parent_pointers_deferred ?? [],
+  parent_pointers_unprocessable: response.parent_pointers_unprocessable ?? [],
 });
 
 const emptySummary = (): ForumHierarchyReconcilePassSummary => ({
@@ -73,6 +85,8 @@ const emptySummary = (): ForumHierarchyReconcilePassSummary => ({
   failed: 0,
   unknownKept: 0,
   parentPointersDeferred: 0,
+  parentPointersUnprocessable: 0,
+  unconverged: 0,
   aborted: null,
   adapterDisabled: false,
 });
@@ -112,6 +126,27 @@ export class AdminCommunicationForumHierarchyReconcileService {
   ) {}
 
   /**
+   * Guards against a second pass starting while one is still running in this
+   * process. Two overlapping passes work from different snapshots, so they
+   * duplicate every read, interleave their writes, and produce two audit rows
+   * an operator then has to reconcile against each other.
+   *
+   * Deliberately in-process only. It is not a distributed lock and does not
+   * serialize passes across API replicas — doing that properly needs a lock
+   * held outside Postgres, since a session-scoped advisory lock is unsafe on a
+   * pooled connection and a transaction-scoped one would mean holding a
+   * transaction open across Matrix RPCs.
+   *
+   * That is an acceptable limit here only because overlapping passes can no
+   * longer lose data: removal requires positive establishment elsewhere, so
+   * the worst two racing passes can do is leave a discussion under its
+   * previous category for one pass. The operation is operator-invoked, so the
+   * remaining protection is procedural — do not start a second pass while one
+   * is running.
+   */
+  private passInFlight = false;
+
+  /**
    * Run one reconcile pass and settle the given task. Intended to be kicked
    * off fire-and-forget from the resolver — this method owns the task's
    * entire lifecycle from here (results, completion, the one audit row).
@@ -121,6 +156,26 @@ export class AdminCommunicationForumHierarchyReconcileService {
     actorID: string,
     input: AdminCommunicationReconcileForumHierarchyInput
   ): Promise<void> {
+    if (this.passInFlight) {
+      this.logger.warn?.(
+        {
+          message:
+            'Forum hierarchy reconcile already in flight — refusing to start a second overlapping pass',
+          taskId,
+        },
+        LogContext.COMMUNICATION
+      );
+      await this.recordAudit(actorID, taskId, input, erroredSummary());
+      await this.taskService
+        .completeWithError(
+          taskId,
+          'A forum hierarchy reconcile pass is already running — wait for it to finish before starting another'
+        )
+        .catch(() => undefined);
+      return;
+    }
+    this.passInFlight = true;
+
     try {
       await this.runReconcilePass(taskId, actorID, input);
     } catch (error) {
@@ -155,6 +210,11 @@ export class AdminCommunicationForumHierarchyReconcileService {
           LogContext.COMMUNICATION
         );
       }
+    } finally {
+      // Released here rather than at the end of the try, so a pass that threw
+      // cannot leave the guard stuck and block every later invocation until
+      // the pod restarts.
+      this.passInFlight = false;
     }
   }
 
@@ -205,6 +265,51 @@ export class AdminCommunicationForumHierarchyReconcileService {
     let sweepIssued = 0;
     let sweepExplicitFailures = 0;
     let callBasedFailed = 0;
+    // Per-sweep count of parents the adapter did not report as converged.
+    // Only the final sweep's value is meaningful for completion: an add-only
+    // phase A is expected to leave extras attached, and a dry run is expected
+    // to report drift rather than fix it.
+    let sweepUnconverged = 0;
+    let lastSweepUnconverged = 0;
+    let unprocessablePointerCount = 0;
+
+    // established[categoryContextId] = the rooms this pass has positively
+    // confirmed are attached under that category. It is the sole source of
+    // removal authorization: a room may lose its edge to some other category
+    // only because it has been established under this one.
+    //
+    // A call that failed contributes nothing, even partially. The response
+    // reports which desired ids did not resolve, but not which individual
+    // writes were rejected, so after a failure the pass cannot tell an
+    // established room from one whose add was refused — and guessing in the
+    // permissive direction is what authorizes removing a room's last edge.
+    const established = new Map<string, Set<string>>();
+
+    // The same shape taken straight from the database snapshot, used only by
+    // the dry run — which performs no writes, so nothing it authorizes can be
+    // acted on.
+    const snapshotByCategory = new Map<string, Set<string>>(
+      [...desiredByCategory].map(([categoryId, rooms]) => [
+        categoryId,
+        new Set(rooms),
+      ])
+    );
+
+    const recordEstablished = (
+      categoryContextId: string,
+      desired: string[],
+      response: SetChildrenResponse | undefined
+    ): void => {
+      if (response === undefined || response.success !== true) {
+        established.set(categoryContextId, new Set());
+        return;
+      }
+      const unresolved = new Set(response.unresolved);
+      established.set(
+        categoryContextId,
+        new Set(desired.filter(id => !unresolved.has(id)))
+      );
+    };
 
     const isAborted = () => aborted !== null || adapterDisabled;
     const markFailed = (parentContextId: string) => {
@@ -222,7 +327,8 @@ export class AdminCommunicationForumHierarchyReconcileService {
       desired: string[],
       childrenAreSpaces: boolean,
       applyRemovals: boolean,
-      passDryRun: boolean
+      passDryRun: boolean,
+      removable: string[] = []
     ): Promise<SetChildrenResponse | undefined> => {
       if (isAborted()) return undefined;
 
@@ -232,9 +338,21 @@ export class AdminCommunicationForumHierarchyReconcileService {
         desired_child_context_ids: desired,
         children_are_spaces: childrenAreSpaces,
         apply_removals: applyRemovals,
+        // Removal is authorized, never inferred. `removable` names only the
+        // rooms a preceding add phase positively established under their
+        // current category, so a room whose destination could not be
+        // established keeps the edge it already has. Absence from `desired`
+        // authorizes nothing: a discussion created or recategorised after the
+        // snapshot above was read is missing from it while being entirely
+        // correct in Matrix.
+        removable_child_context_ids: removable,
         prune_unknown: input.pruneUnknown,
         sync_child_parent: input.repairRoomParentPointers,
         dry_run: passDryRun,
+        // Correlates the adapter's log lines with this pass's task and audit
+        // row. The request's expiry is stamped by CommunicationAdapter, which
+        // owns the RPC timeout that defines how long this caller waits.
+        operation_id: taskId,
       });
 
       // The disabled sentinel carries no `success` field at all — it is
@@ -266,9 +384,39 @@ export class AdminCommunicationForumHierarchyReconcileService {
 
       // A retired category legitimately resolves to no space every single
       // pass — that is a natural skip, not a failure, and must never block
-      // the "repeat until failed==0" termination protocol.
-      if (response.success === false && !spaceNotFound) {
+      // the termination protocol.
+      //
+      // But that only holds for a category with nothing in it. A category
+      // that still holds discussions and has no Matrix space is incomplete
+      // work, not an expected skip: its rooms have nowhere to be attached,
+      // so treating it as benign would let the pass report a clean result
+      // while those discussions sit outside the hierarchy entirely — and, in
+      // the two-phase sweep, would let their old edges be removed on the
+      // strength of a destination that does not exist. Space creation belongs
+      // to the provisioning/sync path, so this is reported rather than fixed
+      // here.
+      const emptyCategorySkip = spaceNotFound && desired.length === 0;
+      if (response.success === false && !emptyCategorySkip) {
         markFailed(parentContextId);
+      }
+      if (spaceNotFound && !emptyCategorySkip) {
+        this.logger.warn?.(
+          {
+            message:
+              'Forum category has discussions but no Matrix space — run the space sync before reconciling',
+            taskId,
+            parentContextId,
+            desiredCount: desired.length,
+          },
+          LogContext.COMMUNICATION
+        );
+      }
+
+      // Convergence is reported per call and is stricter than success: a call
+      // can execute without error and still leave a desired child unresolved,
+      // an extra edge attached, or a pointer repair outstanding.
+      if (!emptyCategorySkip && response.converged !== true) {
+        sweepUnconverged++;
       }
 
       drifted +=
@@ -285,6 +433,8 @@ export class AdminCommunicationForumHierarchyReconcileService {
       unresolvedCount += response.unresolved.length;
       unknownKeptCount += response.unknown_kept.length;
       parentPointersDeferredCount += response.parent_pointers_deferred.length;
+      unprocessablePointerCount +=
+        response.parent_pointers_unprocessable.length;
 
       if (!passDryRun) {
         cumulativeWrites +=
@@ -327,6 +477,7 @@ export class AdminCommunicationForumHierarchyReconcileService {
     ): Promise<void> => {
       sweepIssued = 0;
       sweepExplicitFailures = 0;
+      sweepUnconverged = 0;
 
       const resolvedCategoryContextIds: string[] = [];
 
@@ -339,22 +490,41 @@ export class AdminCommunicationForumHierarchyReconcileService {
           desired,
           false,
           applyRemovals,
-          passDryRun
+          passDryRun,
+          // A dry run writes nothing, so it authorizes from the snapshot and
+          // reports the drift in full — including the removals a real pass
+          // would only reach once it had established their destinations.
+          // Authorizing a dry run from `established` instead would make the
+          // preview depend on how far through the sweep each category sat,
+          // and under-report exactly the work the operator is previewing.
+          this.removableForCategory(
+            contextId,
+            passDryRun ? snapshotByCategory : established
+          )
         );
+        recordEstablished(contextId, desired, response);
         if (shouldIncludeInDesiredSet(response)) {
           resolvedCategoryContextIds.push(contextId);
         }
       }
 
       if (!isAborted()) {
+        // The forum-level call authorizes no removals. Its children are the
+        // category spaces themselves, and every category space that exists
+        // resolves and therefore stays desired — so the only edges a removal
+        // could reach here are children this pass knows nothing about, which
+        // is exactly the class that must be reported rather than deleted.
         await attempt(
           forum.id,
           resolvedCategoryContextIds,
           true,
           applyRemovals,
-          passDryRun
+          passDryRun,
+          []
         );
       }
+
+      lastSweepUnconverged = sweepUnconverged;
 
       const neverIssuedThisSweep = totalIntendedParents - sweepIssued;
       callBasedFailed += sweepExplicitFailures + neverIssuedThisSweep;
@@ -382,6 +552,8 @@ export class AdminCommunicationForumHierarchyReconcileService {
       failed,
       unknownKept: unknownKeptCount,
       parentPointersDeferred: parentPointersDeferredCount,
+      parentPointersUnprocessable: unprocessablePointerCount,
+      unconverged: lastSweepUnconverged,
       aborted,
       adapterDisabled,
     };
@@ -406,10 +578,52 @@ export class AdminCommunicationForumHierarchyReconcileService {
       `Reconcile pass complete: ${JSON.stringify(summary)}`,
       false
     );
+    // A pass is complete only when the hierarchy actually converged, not
+    // merely when nothing errored. Unresolved desired rooms, extra edges kept
+    // because nothing authorized removing them, and outstanding pointer
+    // repairs all leave `failed` at zero while leaving real work undone — so
+    // completing on `failed === 0` would tell an operator following a
+    // repeat-until-clean runbook to stop while the forum is still drifted.
+    //
+    // A dry run is exempt: reporting drift is its entire purpose, so
+    // unconverged parents are its expected result rather than a failure.
+    const converged = input.dryRun || lastSweepUnconverged === 0;
     await this.taskService.complete(
       taskId,
-      failed > 0 ? TaskStatus.ERRORED : TaskStatus.COMPLETED
+      failed > 0 || !converged ? TaskStatus.ERRORED : TaskStatus.COMPLETED
     );
+  }
+
+  /**
+   * The rooms this parent category is authorized to let go of: every room
+   * established under a *different* category by the preceding add phase.
+   *
+   * This is the whole safety property of the removal half. A room is
+   * removable from here only because it has been confirmed to be attached
+   * somewhere else, so the two failure modes that used to lose a discussion
+   * both become impossible rather than merely unlikely:
+   *
+   *   - a discussion created or recategorised after the desired snapshot was
+   *     read is in no category's established set, so nothing authorizes
+   *     removing it, and its correct edge survives;
+   *   - a discussion whose move failed — the destination space is missing, or
+   *     the add was rejected — is likewise unestablished, so its old edge is
+   *     kept rather than removed in favour of a destination that never
+   *     materialised.
+   *
+   * The worst residual is a discussion that stays under its previous category
+   * for one pass and converges on the next. It can never end up under none.
+   */
+  private removableForCategory(
+    categoryContextId: string,
+    established: Map<string, Set<string>>
+  ): string[] {
+    const removable: string[] = [];
+    for (const [otherCategoryId, rooms] of established) {
+      if (otherCategoryId === categoryContextId) continue;
+      removable.push(...rooms);
+    }
+    return removable;
   }
 
   private buildDesiredByCategory(forum: Forum): Map<string, string[]> {
