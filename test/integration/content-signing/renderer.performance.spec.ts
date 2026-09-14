@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { markdownToYjsV2State } from '@domain/common/memo/conversion';
 import { MemoPdfRenderer } from '@domain/common/memo/memo.pdf.renderer';
 import sharp from 'sharp';
 
@@ -88,14 +89,15 @@ const renderAndAssert = async (
   const actor = Object.assign(new ActorContext(), { actorID: 'actor-1' });
   const markdown = structuredMarkdown(sources.length, markdownBytes);
   const started = performance.now();
-  const pdf = await renderer.render(markdown, 'bucket-1', actor);
+  const state = Buffer.from(markdownToYjsV2State(markdown));
+  const pdf = await renderer.render(state, 'bucket-1', actor);
   const elapsed = performance.now() - started;
   const pdfText = pdf.toString('latin1');
   const imageObjects = pdfText.match(/\/Subtype \/Image/g)?.length ?? 0;
   const dctImages = pdfText.match(/\/DCTDecode/g)?.length ?? 0;
 
   process.stdout.write(
-    `memo-render-ci case=${label} samples=1 markdown=${Buffer.byteLength(markdown)} images=${sources.length} sourceBytes=${sources.reduce((sum, source) => sum + source.length, 0)} pdf=${pdf.length} imageObjects=${imageObjects} dct=${dctImages} ms=${elapsed.toFixed(1)} maxRssMiB=${(process.resourceUsage().maxRSS / 1024).toFixed(1)}\n`
+    `memo-render-ci case=${label} samples=1 editorState=${state.byteLength} sourceText=${Buffer.byteLength(markdown)} images=${sources.length} sourceBytes=${sources.reduce((sum, source) => sum + source.length, 0)} pdf=${pdf.length} imageObjects=${imageObjects} dct=${dctImages} ms=${elapsed.toFixed(1)} maxRssMiB=${(process.resourceUsage().maxRSS / 1024).toFixed(1)}\n`
   );
   expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
   expect(imageObjects).toBe(sources.length);
@@ -114,6 +116,6 @@ describeRealServices('MemoPdfRenderer bounded fixture performance', () => {
   it('renders the maximum text and image-count fixture inside the target', async () => {
     const sources: Buffer[] = [];
     for (let index = 0; index < 20; index++) sources.push(await noisyJpeg());
-    await renderAndAssert('maximum', sources, 100_000);
+    await renderAndAssert('maximum', sources, 205_000);
   }, 60_000);
 });

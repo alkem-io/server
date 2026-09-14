@@ -14,6 +14,7 @@ import sharp from 'sharp';
 import * as Y from 'yjs';
 import { markdownToYjsV2State, yjsStateToMarkdown } from './conversion';
 import { markdownSchema } from './conversion/markdown.schema';
+import { memoSchema } from './conversion/memo.extensions';
 import { MemoPdfRenderer } from './memo.pdf.renderer';
 
 const pdfjsRequire = createRequire(require.resolve('pdfjs-dist/package.json'));
@@ -37,15 +38,16 @@ type PdfMakeNode = Record<string, unknown>;
 
 const collectPdfMakeNodes = (
   value: unknown,
-  predicate: (node: PdfMakeNode) => boolean
+  predicate: (node: PdfMakeNode) => boolean,
+  seen = new WeakSet<object>()
 ): PdfMakeNode[] => {
-  if (!value || typeof value !== 'object') return [];
+  if (!value || typeof value !== 'object' || seen.has(value)) return [];
+  seen.add(value);
   const node = value as PdfMakeNode;
-  const matches = predicate(node) ? [node] : [];
   return [
-    ...matches,
+    ...(predicate(node) ? [node] : []),
     ...Object.values(node).flatMap(child =>
-      collectPdfMakeNodes(child, predicate)
+      collectPdfMakeNodes(child, predicate, seen)
     ),
   ];
 };
@@ -192,6 +194,37 @@ describe('MemoPdfRenderer', () => {
     authorizationService as any,
     fileServiceAdapter as any
   );
+  const renderMarkdown = (markdown: string, bucketId = 'bucket-1') =>
+    renderer.render(
+      Buffer.from(markdownToYjsV2State(markdown)),
+      bucketId,
+      actor
+    );
+  const renderDocument = (content: unknown[], bucketId = 'bucket-1') => {
+    const ydoc = prosemirrorToYDoc(
+      memoSchema.nodeFromJSON({ type: 'doc', content }),
+      'default'
+    );
+    try {
+      return renderer.render(
+        Buffer.from(Y.encodeStateAsUpdateV2(ydoc)),
+        bucketId,
+        actor
+      );
+    } finally {
+      ydoc.destroy();
+    }
+  };
+  const image = (alt: string) => ({
+    type: 'image',
+    attrs: {
+      src: internalUrl,
+      alt,
+      title: null,
+      width: null,
+      height: null,
+    },
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -201,7 +234,7 @@ describe('MemoPdfRenderer', () => {
   });
 
   it('renders the current projection into a real PDF with representative structure', async () => {
-    const pdf = await renderer.render(
+    const pdf = await renderMarkdown(
       [
         '# Capture heading',
         '',
@@ -222,8 +255,7 @@ describe('MemoPdfRenderer', () => {
         '',
         'Γειά σου',
       ].join('\n'),
-      'bucket-1',
-      actor
+      'bucket-1'
     );
 
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
@@ -241,7 +273,7 @@ describe('MemoPdfRenderer', () => {
     const convertHtml = vi.spyOn(renderer as any, 'convertHtml');
 
     try {
-      await renderer.render(projectedMarkdown, 'bucket-1', actor);
+      await renderer.render(structuredMemoState(), 'bucket-1', actor);
       const converterHtml = convertHtml.mock.calls[0][0] as string;
       const definition = convertHtml.mock.results[0].value;
 
@@ -258,28 +290,17 @@ describe('MemoPdfRenderer', () => {
       expect.soft(projectedMarkdown).not.toContain('&nbsp;');
       expect.soft(converterHtml).toContain('<table>');
 
-      const listItems = collectPdfMakeNodes(
-        definition,
-        node => node.nodeName === 'LI'
+      const [topList] = (definition as PdfMakeNode[]).filter(
+        node => node.nodeName === 'UL'
       );
-      const topListItem = listItems.find(node => {
-        const stack = node.stack;
-        return (
-          Array.isArray(stack) &&
-          stack.some(
-            child =>
-              typeof child === 'object' &&
-              child !== null &&
-              (child as PdfMakeNode).text === 'First paragraph inside item.'
-          )
-        );
-      });
+      const topListItem = (topList.ul as PdfMakeNode[])[0];
       expect.soft(topListItem).toBeDefined();
       expect
         .soft(
-          (topListItem?.stack as PdfMakeNode[] | undefined)
-            ?.filter(node => node.nodeName === 'P')
-            .map(node => node.text)
+          collectPdfMakeNodes(
+            (topListItem.stack as PdfMakeNode[])[0],
+            node => node.nodeName === 'P'
+          ).map(node => node.text)
         )
         .toEqual([
           'First paragraph inside item.',
@@ -321,11 +342,10 @@ describe('MemoPdfRenderer', () => {
   });
 
   it('preserves accumulated indentation through mixed nested list types', async () => {
-    const projectedMarkdown = yjsStateToMarkdown(mixedNestedListsState());
     const convertHtml = vi.spyOn(renderer as any, 'convertHtml');
 
     try {
-      await renderer.render(projectedMarkdown, 'bucket-1', actor);
+      await renderer.render(mixedNestedListsState(), 'bucket-1', actor);
       const definition = convertHtml.mock.results[0].value as PdfMakeNode[];
       const topLevelLists = definition.filter(
         node => node.nodeName === 'UL' || node.nodeName === 'OL'
@@ -358,13 +378,23 @@ describe('MemoPdfRenderer', () => {
       expect.soft(orderedChildList?.nodeName).toBe('OL');
       expect.soft(bulletGrandchildList?.nodeName).toBe('UL');
       expect
-        .soft((bulletGrandchildList?.ul as PdfMakeNode[] | undefined)?.[0])
-        .toMatchObject({ nodeName: 'LI', text: 'Bullet grandchild' });
+        .soft(
+          collectPdfMakeNodes(
+            (bulletGrandchildList?.ul as PdfMakeNode[] | undefined)?.[0],
+            node => node.nodeName === 'P'
+          ).map(node => node.text)
+        )
+        .toContain('Bullet grandchild');
       expect.soft(bulletChildList?.nodeName).toBe('UL');
       expect.soft(orderedGrandchildList?.nodeName).toBe('OL');
       expect
-        .soft((orderedGrandchildList?.ol as PdfMakeNode[] | undefined)?.[0])
-        .toMatchObject({ nodeName: 'LI', text: 'Ordered grandchild' });
+        .soft(
+          collectPdfMakeNodes(
+            (orderedGrandchildList?.ol as PdfMakeNode[] | undefined)?.[0],
+            node => node.nodeName === 'P'
+          ).map(node => node.text)
+        )
+        .toContain('Ordered grandchild');
     } finally {
       convertHtml.mockRestore();
     }
@@ -378,11 +408,7 @@ describe('MemoPdfRenderer', () => {
       'Deutsch: Größe und äußere',
       'Français: été, cœur où',
     ];
-    const pdf = await renderer.render(
-      supported.join('\n\n'),
-      'bucket-1',
-      actor
-    );
+    const pdf = await renderMarkdown(supported.join('\n\n'), 'bucket-1');
 
     const text = await extractText(pdf);
     for (const sample of supported) expect(text).toContain(sample);
@@ -390,12 +416,8 @@ describe('MemoPdfRenderer', () => {
 
     // Roboto has no U+2713. Rendering that character alone must still put
     // visible replacement ink on the actual PDF page rather than omit it.
-    const emptyInk = await countRenderedInk(
-      await renderer.render(' ', 'bucket-1', actor)
-    );
-    const replacementInk = await countRenderedInk(
-      await renderer.render('✓', 'bucket-1', actor)
-    );
+    const emptyInk = await countRenderedInk(await renderMarkdown(' '));
+    const replacementInk = await countRenderedInk(await renderMarkdown('✓'));
     expect(replacementInk).toBeGreaterThan(emptyInk);
   });
 
@@ -420,7 +442,7 @@ describe('MemoPdfRenderer', () => {
 
   it('renders current-projection highlight markers without exposing the markers', async () => {
     const text = await extractText(
-      await renderer.render('Before ==highlighted== after', 'bucket-1', actor)
+      await renderMarkdown('Before ==highlighted== after')
     );
 
     expect(text).toContain('Before highlighted after');
@@ -429,12 +451,11 @@ describe('MemoPdfRenderer', () => {
 
   it('does not rewrite highlight-like text inside inline or fenced code', async () => {
     const text = await extractText(
-      await renderer.render(
+      await renderMarkdown(
         ['`inline ==literal==`', '', '```ts', 'x ==literal== y', '```'].join(
           '\n'
         ),
-        'bucket-1',
-        actor
+        'bucket-1'
       )
     );
 
@@ -455,10 +476,9 @@ describe('MemoPdfRenderer', () => {
       )
     );
 
-    const pdf = await renderer.render(
+    const pdf = await renderMarkdown(
       `Before ![approved](${internalUrl}) after`,
-      'bucket-1',
-      actor
+      'bucket-1'
     );
 
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
@@ -497,17 +517,52 @@ describe('MemoPdfRenderer', () => {
         .toBuffer()
     );
 
-    const pdf = await renderer.render(
-      [
-        `- ![bounded list image](${internalUrl})`,
-        '',
-        '| Nested table image |',
-        '| --- |',
-        `| ![bounded table image](${internalUrl}) |`,
-      ].join('\n'),
-      'bucket-1',
-      actor
-    );
+    const pdf = await renderDocument([
+      {
+        type: 'bulletList',
+        content: [
+          {
+            type: 'listItem',
+            content: [
+              { type: 'paragraph', content: [image('bounded list image')] },
+            ],
+          },
+        ],
+      },
+      {
+        type: 'table',
+        content: [
+          {
+            type: 'tableRow',
+            content: [
+              {
+                type: 'tableHeader',
+                content: [
+                  {
+                    type: 'paragraph',
+                    content: [{ type: 'text', text: 'Nested table image' }],
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            type: 'tableRow',
+            content: [
+              {
+                type: 'tableCell',
+                content: [
+                  {
+                    type: 'paragraph',
+                    content: [image('bounded table image')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
     const imageObjects =
       pdf
         .toString('latin1')
@@ -530,35 +585,33 @@ describe('MemoPdfRenderer', () => {
   });
 
   it('uses labelled safe links for external images and embeds without fetching', async () => {
-    const pdf = await renderer.render(
+    const pdf = await renderMarkdown(
       [
         '![diagram](https://example.com/diagram.svg)',
         '<img src="https://example.com/no-alt.png">',
         '<iframe src="https://example.com/embed"></iframe>',
         '<iframe src="%"></iframe>',
       ].join('\n'),
-      'bucket-1',
-      actor
+      'bucket-1'
     );
 
     const text = await extractText(pdf);
     expect(text).toContain('Image: diagram');
     expect(text).toContain('Image: https://example.com/no-alt.png');
     expect(text).toContain('Embedded content: https://example.com/embed');
-    expect(text).toContain('Embedded content: %');
+    expect(text.replace(/\s+/g, ' ')).toContain('Embedded content: %');
     expect(documentService.getDocumentFromURL).not.toHaveBeenCalled();
     expect(fileServiceAdapter.getDocumentContent).not.toHaveBeenCalled();
   });
 
   it('never fetches authored local, data, or unsupported-scheme image URLs', async () => {
-    const pdf = await renderer.render(
+    const pdf = await renderMarkdown(
       [
         '![local](file:///etc/passwd)',
         '![inline](data:text/plain,SECRET_DATA_TEXT)',
         '![ftp](ftp://example.com/image.png)',
       ].join('\n'),
-      'bucket-1',
-      actor
+      'bucket-1'
     );
 
     const text = await extractText(pdf);
@@ -577,9 +630,9 @@ describe('MemoPdfRenderer', () => {
       throw new Error('denied');
     });
 
-    await expect(
-      renderer.render(`![private](${internalUrl})`, 'bucket-1', actor)
-    ).rejects.toThrow('denied');
+    await expect(renderMarkdown(`![private](${internalUrl})`)).rejects.toThrow(
+      'denied'
+    );
     expect(fileServiceAdapter.getDocumentContent).not.toHaveBeenCalled();
   });
 
@@ -590,18 +643,18 @@ describe('MemoPdfRenderer', () => {
       storageBucket: { id: 'other-bucket' },
     });
 
-    await expect(
-      renderer.render(`![private](${internalUrl})`, 'bucket-1', actor)
-    ).rejects.toThrow(/memo bucket/i);
+    await expect(renderMarkdown(`![private](${internalUrl})`)).rejects.toThrow(
+      /memo bucket/i
+    );
     expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
   });
 
   it('rejects a missing private image without turning it into a link', async () => {
     documentService.getDocumentFromURL.mockResolvedValue(undefined);
 
-    await expect(
-      renderer.render(`![private](${internalUrl})`, 'bucket-1', actor)
-    ).rejects.toThrow(/memo bucket/i);
+    await expect(renderMarkdown(`![private](${internalUrl})`)).rejects.toThrow(
+      /memo bucket/i
+    );
     expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
     expect(fileServiceAdapter.getDocumentContent).not.toHaveBeenCalled();
   });
@@ -616,7 +669,7 @@ describe('MemoPdfRenderer', () => {
       Buffer.from('unsupported image bytes')
     );
 
-    const pdf = await renderer.render(`![](${internalUrl})`, 'bucket-1', actor);
+    const pdf = await renderMarkdown(`![](${internalUrl})`);
 
     expect(await extractText(pdf)).toContain(`Image: ${internalUrl}`);
     expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
@@ -632,16 +685,15 @@ describe('MemoPdfRenderer', () => {
       new Error('private read failed')
     );
 
-    await expect(
-      renderer.render(`![private](${internalUrl})`, 'bucket-1', actor)
-    ).rejects.toThrow('private read failed');
+    await expect(renderMarkdown(`![private](${internalUrl})`)).rejects.toThrow(
+      'private read failed'
+    );
   });
 
   it('removes authored scripts and converter overrides', async () => {
-    const pdf = await renderer.render(
+    const pdf = await renderMarkdown(
       '<script>SECRET_SCRIPT_TEXT</script><p data-pdfmake="{bad:true}" onclick="bad()">Visible</p><a href="file:///etc/passwd">Local link</a>',
-      'bucket-1',
-      actor
+      'bucket-1'
     );
 
     const text = await extractText(pdf);
@@ -677,11 +729,11 @@ describe('MemoPdfRenderer', () => {
 
     try {
       await writeFile(localImage, firstImage);
-      const withFirstFile = await renderer.render(markup, 'bucket-1', actor);
+      const withFirstFile = await renderMarkdown(markup);
       await writeFile(localImage, secondImage);
-      const withSecondFile = await renderer.render(markup, 'bucket-1', actor);
+      const withSecondFile = await renderMarkdown(markup);
       await rm(localImage);
-      const withoutFile = await renderer.render(markup, 'bucket-1', actor);
+      const withoutFile = await renderMarkdown(markup);
 
       expect(await extractText(withFirstFile)).toContain('Unsupported content');
       const pdfs = [withFirstFile, withSecondFile, withoutFile];
@@ -703,7 +755,11 @@ describe('MemoPdfRenderer', () => {
       Buffer.from(markdownToYjsV2State(authoredMarkdown))
     );
     expect(projectedMarkdown).toBe(authoredMarkdown);
-    const pdf = await renderer.render(projectedMarkdown, 'bucket-1', actor);
+    const pdf = await (renderer as any).renderHtml(
+      authoredMarkdown,
+      'bucket-1',
+      actor
+    );
 
     const text = await extractText(pdf);
     expect(text).toContain('Agreed payment terms');

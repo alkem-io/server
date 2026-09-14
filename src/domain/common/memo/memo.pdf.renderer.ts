@@ -7,9 +7,9 @@ import { DocumentService } from '@domain/storage/document/document.service';
 import { Injectable } from '@nestjs/common';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { JSDOM } from 'jsdom';
-import MarkdownIt from 'markdown-it';
 import sharp from 'sharp';
 import { blankLineReplacement } from './conversion/const';
+import { yjsStateToTiptapHtml } from './conversion/yjs.state.to.tiptap.html';
 
 // pdfmake and html-to-pdfmake publish CommonJS without TypeScript declarations.
 const htmlToPdfMake = require('html-to-pdfmake') as (
@@ -31,12 +31,11 @@ pdfMake.setUrlAccessPolicy(() => false);
 pdfMake.setLocalAccessPolicy(path => allowedFonts.has(path));
 
 // PR #6469 renderer evidence bounds synchronous layout and source decoding.
-const MAX_MARKDOWN_BYTES = 100_000;
 const MAX_IMAGES = 20;
 const MAX_SOURCE_IMAGE_PIXELS = 16_777_216;
 const MAX_RENDERED_IMAGE_EDGE = 1200;
 const supportedElement =
-  /^(a|blockquote|br|code|em|h[1-6]|hr|img|li|mark|ol|p|pre|s|strong|table|tbody|td|th|thead|tr|ul)$/;
+  /^(a|blockquote|br|code|em|h[1-6]|hr|img|li|mark|ol|p|pre|s|strong|table|tbody|td|th|thead|tr|u|ul)$/;
 const embeddedElement =
   /^(audio|button|canvas|embed|form|input|link|math|meta|object|select|svg|template|textarea|video)$/;
 
@@ -54,7 +53,6 @@ const invalid = (message: string): never => {
 
 @Injectable()
 export class MemoPdfRenderer {
-  private readonly markdown = new MarkdownIt({ html: true, linkify: false });
   private readonly convertHtml = htmlToPdfMake;
 
   constructor(
@@ -63,12 +61,16 @@ export class MemoPdfRenderer {
     private readonly fileServiceAdapter: FileServiceAdapter
   ) {}
 
-  async render(markdown: string, bucketId: string, actor: ActorContext) {
-    if (Buffer.byteLength(markdown) > MAX_MARKDOWN_BYTES)
-      invalid(
-        `Signing preview supports at most ${MAX_MARKDOWN_BYTES.toLocaleString('en-US')} bytes of memo content`
-      );
-    const dom = new JSDOM(`<body>${this.markdown.render(markdown)}</body>`);
+  async render(state: Buffer, bucketId: string, actor: ActorContext) {
+    return this.renderHtml(yjsStateToTiptapHtml(state), bucketId, actor);
+  }
+
+  private async renderHtml(
+    html: string,
+    bucketId: string,
+    actor: ActorContext
+  ) {
+    const dom = new JSDOM(`<body>${html}</body>`);
     const { document } = dom.window;
     const replaceWithLink = (node: Element, label: string, target: string) => {
       const replacement = document.createElement(

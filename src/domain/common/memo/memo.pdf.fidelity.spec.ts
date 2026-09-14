@@ -5,8 +5,8 @@ import { parseOffice } from 'officeparser';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
 import sharp from 'sharp';
 import * as Y from 'yjs';
-import { yjsStateToMarkdown } from './conversion';
 import { markdownSchema } from './conversion/markdown.schema';
+import { memoSchema } from './conversion/memo.extensions';
 import { MemoPdfRenderer } from './memo.pdf.renderer';
 
 type PdfMakeNode = Record<string, unknown>;
@@ -168,13 +168,7 @@ describe('Memo PDF editor fidelity contract', () => {
         return result;
       });
     try {
-      // This mirrors the current production signing path. GREEN replaces this
-      // lossy projection with direct structural rendering.
-      const pdf = await renderer.render(
-        yjsStateToMarkdown(state),
-        'bucket-1',
-        actor
-      );
+      const pdf = await renderer.render(state, 'bucket-1', actor);
       return {
         html: convertHtml.mock.calls[0]?.[0] as string,
         definition,
@@ -187,6 +181,26 @@ describe('Memo PDF editor fidelity contract', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('matches the current client 3.11 memo schema contract', () => {
+    const signature = {
+      nodes: Object.entries(memoSchema.nodes).map(([name, type]) => ({
+        name,
+        attrs: Object.keys(type.spec.attrs ?? {}).sort(),
+        content: type.spec.content ?? null,
+        inline: type.spec.inline ?? false,
+        group: type.spec.group ?? null,
+      })),
+      marks: Object.entries(memoSchema.marks).map(([name, type]) => ({
+        name,
+        attrs: Object.keys(type.spec.attrs ?? {}).sort(),
+        excludes: type.spec.excludes ?? null,
+      })),
+    };
+    expect(
+      createHash('sha256').update(JSON.stringify(signature)).digest('hex')
+    ).toBe('45086477e85398998a71262ecc43684610a7049bc4b97f78ad71a6c53e78717b');
   });
 
   it('preserves paragraphs and nested lists inside an eight-row table cell', async () => {
@@ -284,6 +298,8 @@ describe('Memo PDF editor fidelity contract', () => {
 
     const result = await renderSigningState(clientState);
     expect(result.html).toContain('<u>Underlined from client 3.11</u>');
+    expect(result.html).toMatch(/width=(?:"320"|320)/);
+    expect(result.html).toMatch(/height=(?:"180"|180)/);
     const [image] = collectNodes(
       result.definition,
       node => typeof node.image === 'string'

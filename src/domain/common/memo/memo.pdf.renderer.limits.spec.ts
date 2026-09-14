@@ -1,8 +1,9 @@
 import { ActorContext } from '@core/actor-context/actor.context';
 import sharp from 'sharp';
+import { markdownToYjsV2State } from './conversion';
+import { MAX_MEMO_EDITOR_CONTENT_BYTES } from './conversion/yjs.state.to.tiptap.html';
 import { MemoPdfRenderer } from './memo.pdf.renderer';
 
-const MAX_MARKDOWN_BYTES = 100_000;
 const MAX_IMAGES = 20;
 
 const fitAsciiBytes = (prefix: string, bytes: number): string => {
@@ -34,7 +35,10 @@ describe('MemoPdfRenderer input bounds', () => {
     vi.clearAllMocks();
   });
 
-  it('renders the bounded 100,000-byte structured fixture', async () => {
+  const stateFor = (markdown: string) =>
+    Buffer.from(markdownToYjsV2State(markdown));
+
+  it('renders a representative near-limit editor fixture inside ten seconds', async () => {
     const markdown = fitAsciiBytes(
       [
         '# Maximum signing preview',
@@ -47,24 +51,30 @@ describe('MemoPdfRenderer input bounds', () => {
         '| value A | value B |',
         '',
       ].join('\n'),
-      MAX_MARKDOWN_BYTES
+      205_000
     );
-    expect(Buffer.byteLength(markdown)).toBe(MAX_MARKDOWN_BYTES);
+    const state = stateFor(markdown);
+    expect(state.byteLength).toBeLessThan(MAX_MEMO_EDITOR_CONTENT_BYTES);
 
     const started = performance.now();
-    const pdf = await renderer.render(markdown, 'bucket-1', actor);
+    const pdf = await renderer.render(state, 'bucket-1', actor);
     const elapsed = performance.now() - started;
     process.stdout.write(
-      `memo-signing-render max-text bytes=${MAX_MARKDOWN_BYTES} images=0 pixels=0 ms=${elapsed.toFixed(1)}\n`
+      `memo-signing-render editor-state=${state.byteLength} source-text=${Buffer.byteLength(markdown)} images=0 pixels=0 ms=${elapsed.toFixed(1)}\n`
     );
 
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
-  });
+    expect(elapsed).toBeLessThan(10_000);
+  }, 15_000);
 
-  it('rejects markdown larger than 100,000 UTF-8 bytes before rendering', async () => {
+  it('rejects encoded editor state larger than 1,000,000 bytes before decoding', async () => {
     await expect(
-      renderer.render('a'.repeat(MAX_MARKDOWN_BYTES + 1), 'bucket-1', actor)
-    ).rejects.toThrow(/100,000 bytes/i);
+      renderer.render(
+        Buffer.alloc(MAX_MEMO_EDITOR_CONTENT_BYTES + 1),
+        'bucket-1',
+        actor
+      )
+    ).rejects.toThrow(/1,000,000 bytes of memo editor content/i);
     expect(documentService.getDocumentFromURL).not.toHaveBeenCalled();
   });
 
@@ -74,9 +84,9 @@ describe('MemoPdfRenderer input bounds', () => {
       (_, index) => `![image ${index}](${internalUrl})`
     ).join('\n');
 
-    await expect(renderer.render(markdown, 'bucket-1', actor)).rejects.toThrow(
-      /20 images/i
-    );
+    await expect(
+      renderer.render(stateFor(markdown), 'bucket-1', actor)
+    ).rejects.toThrow(/20 images/i);
     expect(documentService.getDocumentFromURL).not.toHaveBeenCalled();
   });
 
@@ -100,7 +110,7 @@ describe('MemoPdfRenderer input bounds', () => {
     );
 
     const pdf = await renderer.render(
-      `![source-boundary](${internalUrl})`,
+      stateFor(`![source-boundary](${internalUrl})`),
       'bucket-1',
       actor
     );
@@ -129,7 +139,11 @@ describe('MemoPdfRenderer input bounds', () => {
     );
 
     await expect(
-      renderer.render(`![too-large](${internalUrl})`, 'bucket-1', actor)
+      renderer.render(
+        stateFor(`![too-large](${internalUrl})`),
+        'bucket-1',
+        actor
+      )
     ).rejects.toThrow(/16,777,216 source pixels/i);
   });
 });

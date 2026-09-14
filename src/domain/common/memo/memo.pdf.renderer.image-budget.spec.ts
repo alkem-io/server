@@ -1,5 +1,6 @@
 import { ActorContext } from '@core/actor-context/actor.context';
 import sharp from 'sharp';
+import { markdownToYjsV2State } from './conversion';
 import { MemoPdfRenderer } from './memo.pdf.renderer';
 
 describe('MemoPdfRenderer normalized image budget', () => {
@@ -44,10 +45,14 @@ describe('MemoPdfRenderer normalized image budget', () => {
     let failure: unknown;
     try {
       await renderer.render(
-        Array.from(
-          { length: 20 },
-          (_, index) => `![noise ${index}](${internalUrl})`
-        ).join('\n'),
+        Buffer.from(
+          markdownToYjsV2State(
+            Array.from(
+              { length: 20 },
+              (_, index) => `![noise ${index}](${internalUrl})`
+            ).join('\n')
+          )
+        ),
         'bucket-1',
         Object.assign(new ActorContext(), { actorID: 'actor-1' })
       );
