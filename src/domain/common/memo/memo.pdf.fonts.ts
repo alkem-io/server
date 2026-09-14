@@ -1,0 +1,103 @@
+import { join } from 'node:path';
+
+const fontkit = require('fontkit') as {
+  openSync(path: string): {
+    layout(text: string): { glyphs: Array<{ id: number }> };
+  };
+};
+
+export const memoFontFiles = {
+  NotoEmoji: join(__dirname, 'fonts', 'NotoEmoji', 'NotoEmoji-wght.ttf'),
+  NotoSansSymbols2: join(
+    __dirname,
+    'fonts',
+    'NotoSansSymbols2',
+    'NotoSansSymbols2-Regular.ttf'
+  ),
+} as const;
+
+export const memoPdfFonts = {
+  NotoEmoji: {
+    normal: memoFontFiles.NotoEmoji,
+    bold: memoFontFiles.NotoEmoji,
+    italics: memoFontFiles.NotoEmoji,
+    bolditalics: memoFontFiles.NotoEmoji,
+  },
+  NotoSansSymbols2: {
+    normal: memoFontFiles.NotoSansSymbols2,
+    bold: memoFontFiles.NotoSansSymbols2,
+    italics: memoFontFiles.NotoSansSymbols2,
+    bolditalics: memoFontFiles.NotoSansSymbols2,
+  },
+};
+
+export type MemoTextRun = {
+  text: string;
+  font?: keyof typeof memoPdfFonts;
+};
+
+const segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
+const extendedPictographic = /\p{Extended_Pictographic}/u;
+const regionalIndicator = /\p{Regional_Indicator}/u;
+const explicitSymbol = /[\u2600-\u27bf]/u;
+const emojiSequenceMarker = /[\ufe0f\u20e3]/u;
+const fallbackGlyph = '□';
+
+const emojiFont = fontkit.openSync(memoFontFiles.NotoEmoji);
+const symbolFont = fontkit.openSync(memoFontFiles.NotoSansSymbols2);
+
+const supports = (
+  font: ReturnType<(typeof fontkit)['openSync']>,
+  grapheme: string
+) => font.layout(grapheme).glyphs.every(glyph => glyph.id !== 0);
+
+const targetFont = (
+  grapheme: string
+): keyof typeof memoPdfFonts | undefined => {
+  if (
+    extendedPictographic.test(grapheme) ||
+    regionalIndicator.test(grapheme) ||
+    emojiSequenceMarker.test(grapheme)
+  )
+    return 'NotoEmoji';
+  if (explicitSymbol.test(grapheme)) return 'NotoSansSymbols2';
+  return undefined;
+};
+
+const appendRun = (runs: MemoTextRun[], run: MemoTextRun) => {
+  const previous = runs[runs.length - 1];
+  if (previous && previous.font === run.font) previous.text += run.text;
+  else runs.push(run);
+};
+
+export const splitMemoFontRuns = (text: string): MemoTextRun[] => {
+  const runs: MemoTextRun[] = [];
+  for (const { segment } of segmenter.segment(text)) {
+    const font = targetFont(segment);
+    if (!font) {
+      appendRun(runs, { text: segment });
+      continue;
+    }
+    const selectedFont = font === 'NotoEmoji' ? emojiFont : symbolFont;
+    appendRun(
+      runs,
+      supports(selectedFont, segment)
+        ? { text: segment, font }
+        : { text: fallbackGlyph, font: 'NotoSansSymbols2' }
+    );
+  }
+  return runs;
+};
+
+export const applyMemoFontRuns = (value: unknown): void => {
+  if (!value || typeof value !== 'object') return;
+  const node = value as Record<string, unknown>;
+  const text = node.text;
+  const textWasString = typeof text === 'string';
+  if (textWasString) {
+    const runs = splitMemoFontRuns(text);
+    if (runs.some(run => run.font)) node.text = runs;
+  }
+  for (const [key, child] of Object.entries(node))
+    if (key !== 'text' || !textWasString) applyMemoFontRuns(child);
+};
