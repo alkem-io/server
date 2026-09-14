@@ -34,6 +34,13 @@ pdfMake.setLocalAccessPolicy(path => allowedFonts.has(path));
 const MAX_IMAGES = 20;
 const MAX_SOURCE_IMAGE_PIXELS = 16_777_216;
 const MAX_RENDERED_IMAGE_EDGE = 1200;
+const A4_PAGE_WIDTH = 595.28;
+const A4_PAGE_HEIGHT = 841.89;
+const PAGE_MARGIN = 40;
+const PRINTABLE_WIDTH = A4_PAGE_WIDTH - PAGE_MARGIN * 2;
+const PRINTABLE_HEIGHT = A4_PAGE_HEIGHT - PAGE_MARGIN * 2;
+const LIST_INDENT = 20;
+const TABLE_CELL_CHROME = 10;
 const supportedElement =
   /^(a|blockquote|br|code|em|h[1-6]|hr|img|li|mark|ol|p|pre|s|strong|table|tbody|td|th|thead|tr|u|ul)$/;
 const embeddedElement =
@@ -127,13 +134,82 @@ export class MemoPdfRenderer {
     const images = [...document.querySelectorAll<HTMLImageElement>('img')];
     if (images.length > MAX_IMAGES)
       invalid(`Signing preview supports at most ${MAX_IMAGES} images`);
-    const imageData = new Map<string, string>();
-    const substituteImageData = (value: unknown): void => {
+    const imageData = new Map<
+      string,
+      { dataUrl: string; width: number; height: number }
+    >();
+    const substituteImageData = (
+      value: unknown,
+      availableWidth = PRINTABLE_WIDTH
+    ): void => {
       if (!value || typeof value !== 'object') return;
       const node = value as Record<string, unknown>;
-      if (typeof node.image === 'string' && imageData.has(node.image))
-        node.image = imageData.get(node.image);
-      Object.values(node).forEach(substituteImageData);
+      if (typeof node.image === 'string') {
+        const normalized = imageData.get(node.image);
+        if (normalized) {
+          const authoredWidth =
+            typeof node.width === 'number'
+              ? node.width
+              : Number.POSITIVE_INFINITY;
+          const authoredHeight =
+            typeof node.height === 'number'
+              ? node.height
+              : Number.POSITIVE_INFINITY;
+          node.image = normalized.dataUrl;
+          node.maxWidth = Math.min(
+            availableWidth,
+            normalized.width,
+            authoredWidth
+          );
+          node.maxHeight = Math.min(
+            PRINTABLE_HEIGHT,
+            normalized.height,
+            authoredHeight
+          );
+          delete node.width;
+          delete node.height;
+          delete node.fit;
+        }
+      }
+      if (node.table && typeof node.table === 'object') {
+        const body = (node.table as { body?: unknown[][] }).body;
+        if (Array.isArray(body))
+          for (const row of body) {
+            const columns = row.reduce<number>(
+              (total, cell) =>
+                total +
+                (typeof cell === 'object' &&
+                cell !== null &&
+                typeof (cell as Record<string, unknown>).colSpan === 'number'
+                  ? ((cell as Record<string, unknown>).colSpan as number)
+                  : 1),
+              0
+            );
+            for (const cell of row) {
+              const colSpan =
+                typeof cell === 'object' &&
+                cell !== null &&
+                typeof (cell as Record<string, unknown>).colSpan === 'number'
+                  ? ((cell as Record<string, unknown>).colSpan as number)
+                  : 1;
+              substituteImageData(
+                cell,
+                Math.max(
+                  1,
+                  (availableWidth * colSpan) / columns - TABLE_CELL_CHROME
+                )
+              );
+            }
+          }
+        return;
+      }
+      const childWidth =
+        node.nodeName === 'UL' || node.nodeName === 'OL'
+          ? Math.max(1, availableWidth - LIST_INDENT)
+          : availableWidth;
+      Object.values(node).forEach(child =>
+        substituteImageData(child, childWidth)
+      );
     };
     let normalizedImageBytes = 0;
     for (const [index, image] of images.entries()) {
@@ -168,16 +244,17 @@ export class MemoPdfRenderer {
           .flatten({ background: '#ffffff' })
           .toColourspace('srgb')
           .jpeg({ quality: 80 })
-          .toBuffer();
-        normalizedImageBytes += jpeg.length;
+          .toBuffer({ resolveWithObject: true });
+        normalizedImageBytes += jpeg.data.length;
         if (normalizedImageBytes > 16 * 1024 * 1024)
           invalid('Signing images exceed the 16 MiB normalized size limit');
         const placeholder = `memo-signing-image-${index}`;
         image.setAttribute('src', placeholder);
-        imageData.set(
-          placeholder,
-          `data:image/jpeg;base64,${jpeg.toString('base64')}`
-        );
+        imageData.set(placeholder, {
+          dataUrl: `data:image/jpeg;base64,${jpeg.data.toString('base64')}`,
+          width: jpeg.info.width,
+          height: jpeg.info.height,
+        });
       } catch (error) {
         if (error instanceof ValidationException) throw error;
         if (error instanceof Error && /pixel limit/i.test(error.message))
@@ -198,7 +275,12 @@ export class MemoPdfRenderer {
     });
     substituteImageData(content);
     return pdfMake
-      .createPdf({ content, defaultStyle: { font: 'Roboto', fontSize: 10 } })
+      .createPdf({
+        pageSize: 'A4',
+        pageMargins: [PAGE_MARGIN, PAGE_MARGIN, PAGE_MARGIN, PAGE_MARGIN],
+        content,
+        defaultStyle: { font: 'Roboto', fontSize: 10 },
+      })
       .getBuffer();
   }
 }
