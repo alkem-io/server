@@ -25,6 +25,7 @@ export default defineConfig({
         'src/domain/common/memo/memo.module.ts',
         'src/domain/common/memo/conversion/memo.extensions.ts',
         'src/domain/common/memo/conversion/yjs.state.to.tiptap.html.ts',
+        'src/domain/common/memo/memo.pdf.fonts.ts',
         'src/domain/common/memo/memo.pdf.renderer.ts',
         'src/domain/common/memo/memo.resolver.fields.ts',
         'src/domain/common/memo/memo.resolver.mutations.ts',
