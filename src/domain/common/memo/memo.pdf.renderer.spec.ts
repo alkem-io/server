@@ -5,8 +5,6 @@ import { join } from 'node:path';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { prosemirrorToYDoc } from '@tiptap/y-tiptap';
-import { JSDOM } from 'jsdom';
-import MarkdownIt from 'markdown-it';
 import { parseOffice } from 'officeparser';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
@@ -15,6 +13,7 @@ import * as Y from 'yjs';
 import { markdownToYjsV2State } from './conversion';
 import { markdownSchema } from './conversion/markdown.schema';
 import { memoSchema } from './conversion/memo.extensions';
+import { memoFontFiles } from './memo.pdf.fonts';
 import { MemoPdfRenderer } from './memo.pdf.renderer';
 
 const pdfjsRequire = createRequire(require.resolve('pdfjs-dist/package.json'));
@@ -22,10 +21,6 @@ const { createCanvas } = pdfjsRequire(
   '@napi-rs/canvas'
 ) as typeof import('@napi-rs/canvas');
 
-const htmlToPdfMake = require('html-to-pdfmake') as (
-  html: string,
-  options: { window: unknown }
-) => unknown;
 const pdfMake = require('pdfmake') as {
   localAccessPolicy(path: string): boolean;
   urlAccessPolicy(url: string): boolean;
@@ -224,10 +219,10 @@ describe('MemoPdfRenderer', () => {
       ydoc.destroy();
     }
   };
-  const image = (alt: string) => ({
+  const image = (alt: string, src = internalUrl) => ({
     type: 'image',
     attrs: {
-      src: internalUrl,
+      src,
       alt,
       title: null,
       width: null,
@@ -418,20 +413,14 @@ describe('MemoPdfRenderer', () => {
     expect(replacementInk).toBeGreaterThan(emptyInk);
   });
 
-  it('preserves code whitespace in the converter structure before text extraction normalizes it', () => {
-    const dom = new JSDOM(
-      `<body>${new MarkdownIt().render('```ts\nconst preserved =  2;\n```')}</body>`
-    );
-    const content = htmlToPdfMake(dom.window.document.body.innerHTML, {
-      window: dom.window,
-    });
-
-    expect(JSON.stringify(content)).toContain('const preserved =  2;');
-  });
-
   it('allows only the registered embedded fonts through the local access policy', () => {
     expect(pdfMake.urlAccessPolicy('https://example.com/font.ttf')).toBe(false);
     expect(pdfMake.localAccessPolicy(Object.values(fonts.Roboto)[0])).toBe(
+      true
+    );
+    expect(Object.values(memoFontFiles)).toHaveLength(2);
+    expect(pdfMake.localAccessPolicy(memoFontFiles.NotoEmoji)).toBe(true);
+    expect(pdfMake.localAccessPolicy(memoFontFiles.NotoSansSymbols2)).toBe(
       true
     );
     expect(pdfMake.localAccessPolicy('/tmp/unregistered-font.ttf')).toBe(false);
@@ -473,10 +462,16 @@ describe('MemoPdfRenderer', () => {
       )
     );
 
-    const pdf = await renderMarkdown(
-      `Before ![approved](${internalUrl}) after`,
-      'bucket-1'
-    );
+    const pdf = await renderDocument([
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', text: 'Before ' },
+          image('approved'),
+          { type: 'text', text: ' after' },
+        ],
+      },
+    ]);
 
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
     expect(documentService.getDocumentFromURL).toHaveBeenCalledWith(
@@ -582,34 +577,37 @@ describe('MemoPdfRenderer', () => {
   });
 
   it('uses labelled safe links for external images and embeds without fetching', async () => {
-    const pdf = await renderMarkdown(
-      [
-        '![diagram](https://example.com/diagram.svg)',
-        '<img src="https://example.com/no-alt.png">',
-        '<iframe src="https://example.com/embed"></iframe>',
-        '<iframe src="%"></iframe>',
-      ].join('\n'),
-      'bucket-1'
+    const pdf = await renderDocument([
+      image('diagram', 'https://example.com/diagram.svg'),
+      image('', 'https://example.com/no-alt.png'),
+      {
+        type: 'iframe',
+        attrs: { src: 'https://example.com/embed' },
+      },
+    ]);
+    const malformedEmbed = await renderer.renderSanitizerFixture(
+      '<iframe src="%"></iframe>',
+      'bucket-1',
+      actor
     );
 
     const text = await extractText(pdf);
     expect(text).toContain('Image: diagram');
     expect(text).toContain('Image: https://example.com/no-alt.png');
     expect(text).toContain('Embedded content: https://example.com/embed');
-    expect(text.replace(/\s+/g, ' ')).toContain('Embedded content: %');
+    expect((await extractText(malformedEmbed)).replace(/\s+/g, ' ')).toContain(
+      'Embedded content: %'
+    );
     expect(documentService.getDocumentFromURL).not.toHaveBeenCalled();
     expect(fileServiceAdapter.getDocumentContent).not.toHaveBeenCalled();
   });
 
   it('never fetches authored local, data, or unsupported-scheme image URLs', async () => {
-    const pdf = await renderMarkdown(
-      [
-        '![local](file:///etc/passwd)',
-        '![inline](data:text/plain,SECRET_DATA_TEXT)',
-        '![ftp](ftp://example.com/image.png)',
-      ].join('\n'),
-      'bucket-1'
-    );
+    const pdf = await renderDocument([
+      image('local', 'file:///etc/passwd'),
+      image('inline', 'data:text/plain,SECRET_DATA_TEXT'),
+      image('ftp', 'ftp://example.com/image.png'),
+    ]);
 
     const text = await extractText(pdf);
     expect(text).toContain('Image: ftp');
@@ -627,9 +625,7 @@ describe('MemoPdfRenderer', () => {
       throw new Error('denied');
     });
 
-    await expect(renderMarkdown(`![private](${internalUrl})`)).rejects.toThrow(
-      'denied'
-    );
+    await expect(renderDocument([image('private')])).rejects.toThrow('denied');
     expect(fileServiceAdapter.getDocumentContent).not.toHaveBeenCalled();
   });
 
@@ -640,7 +636,7 @@ describe('MemoPdfRenderer', () => {
       storageBucket: { id: 'other-bucket' },
     });
 
-    await expect(renderMarkdown(`![private](${internalUrl})`)).rejects.toThrow(
+    await expect(renderDocument([image('private')])).rejects.toThrow(
       /memo bucket/i
     );
     expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
@@ -649,7 +645,7 @@ describe('MemoPdfRenderer', () => {
   it('rejects a missing private image without turning it into a link', async () => {
     documentService.getDocumentFromURL.mockResolvedValue(undefined);
 
-    await expect(renderMarkdown(`![private](${internalUrl})`)).rejects.toThrow(
+    await expect(renderDocument([image('private')])).rejects.toThrow(
       /memo bucket/i
     );
     expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
@@ -666,7 +662,7 @@ describe('MemoPdfRenderer', () => {
       Buffer.from('unsupported image bytes')
     );
 
-    const pdf = await renderMarkdown(`![](${internalUrl})`);
+    const pdf = await renderDocument([image('')]);
 
     expect(await extractText(pdf)).toContain(`Image: ${internalUrl}`);
     expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
@@ -682,7 +678,7 @@ describe('MemoPdfRenderer', () => {
       new Error('private read failed')
     );
 
-    await expect(renderMarkdown(`![private](${internalUrl})`)).rejects.toThrow(
+    await expect(renderDocument([image('private')])).rejects.toThrow(
       'private read failed'
     );
   });

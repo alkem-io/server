@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { prosemirrorToYDoc } from '@tiptap/y-tiptap';
@@ -240,6 +242,26 @@ describe('Memo PDF emoji glyph coverage', () => {
       createPdf.mockRestore();
     }
   };
+
+  it('pins the two vendored font files to their documented hashes', async () => {
+    const fixtures = [
+      [
+        fontFixture('NotoEmoji'),
+        'de6c18832938afc99caf132b39d6a30a19bac7f2e812e28db2535b4608d27551',
+      ],
+      [
+        fontFixture('NotoSansSymbols2'),
+        '7d5fb73b7ca67a6798101741f5d280a3d016a56a197afcd4199dbb57b4b82a21',
+      ],
+    ] as const;
+
+    for (const [path, expected] of fixtures)
+      expect(
+        createHash('sha256')
+          .update(await readFile(path))
+          .digest('hex')
+      ).toBe(expected);
+  });
 
   it('renders and extracts emoji and symbol glyphs in memo block contexts', async () => {
     const pdf = await render([

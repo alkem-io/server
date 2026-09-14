@@ -55,6 +55,21 @@ const emptyParagraphState = (count: number): Buffer => {
   }
 };
 
+const editorState = (content: unknown[]): Buffer => {
+  const document = memoSchema.nodeFromJSON({ type: 'doc', content });
+  const ydoc = prosemirrorToYDoc(document, 'default');
+  try {
+    return Buffer.from(Y.encodeStateAsUpdateV2(ydoc));
+  } finally {
+    ydoc.destroy();
+  }
+};
+
+const image = (src: string, alt: string) => ({
+  type: 'image',
+  attrs: { src, alt, title: null, width: null, height: null },
+});
+
 describe('MemoPdfRenderer input bounds', () => {
   const actor = Object.assign(new ActorContext(), { actorID: 'actor-1' });
   const internalUrl =
@@ -138,13 +153,12 @@ describe('MemoPdfRenderer input bounds', () => {
   });
 
   it('rejects more than 20 images before resolving any image', async () => {
-    const markdown = Array.from(
-      { length: MAX_IMAGES + 1 },
-      (_, index) => `![image ${index}](${internalUrl})`
-    ).join('\n');
+    const images = Array.from({ length: MAX_IMAGES + 1 }, (_, index) =>
+      image(internalUrl, `image ${index}`)
+    );
 
     await expect(
-      renderer.render(stateFor(markdown), 'bucket-1', actor)
+      renderer.render(editorState(images), 'bucket-1', actor)
     ).rejects.toThrow(/20 images/i);
     expect(documentService.getDocumentFromURL).not.toHaveBeenCalled();
   });
@@ -169,7 +183,7 @@ describe('MemoPdfRenderer input bounds', () => {
     );
 
     const pdf = await renderer.render(
-      stateFor(`![source-boundary](${internalUrl})`),
+      editorState([image(internalUrl, 'source boundary')]),
       'bucket-1',
       actor
     );
@@ -199,7 +213,7 @@ describe('MemoPdfRenderer input bounds', () => {
 
     await expect(
       renderer.render(
-        stateFor(`![too-large](${internalUrl})`),
+        editorState([image(internalUrl, 'too large')]),
         'bucket-1',
         actor
       )

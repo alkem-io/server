@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { prosemirrorToYDoc } from '@tiptap/y-tiptap';
 import { parseOffice } from 'officeparser';
+import { PDFDict, PDFDocument, PDFName, PDFRawStream } from 'pdf-lib';
+import { getDocument, OPS, Util } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
 import sharp from 'sharp';
 import * as Y from 'yjs';
@@ -27,6 +29,59 @@ const collectNodes = (
     ];
   };
   return visit(value);
+};
+
+type Matrix = [number, number, number, number, number, number];
+
+const inspectPdfImages = async (pdf: Buffer) => {
+  const parsed = await PDFDocument.load(pdf);
+  let xObjects = 0;
+  for (const [, object] of parsed.context.enumerateIndirectObjects()) {
+    if (!(object instanceof PDFRawStream)) continue;
+    const dict = object.dict as PDFDict;
+    if (dict.get(PDFName.of('Subtype'))?.toString() === '/Image') xObjects++;
+  }
+  const pdfjs = await getDocument({ data: new Uint8Array(pdf) }).promise;
+  const paints: Array<{ width: number; height: number }> = [];
+  try {
+    for (let pageNumber = 1; pageNumber <= pdfjs.numPages; pageNumber++) {
+      const page = await pdfjs.getPage(pageNumber);
+      const operators = await page.getOperatorList();
+      const stack: Matrix[] = [];
+      let transform: Matrix = [1, 0, 0, 1, 0, 0];
+      for (const [index, operator] of operators.fnArray.entries()) {
+        if (operator === OPS.save) stack.push([...transform]);
+        else if (operator === OPS.restore)
+          transform = stack.pop() ?? [1, 0, 0, 1, 0, 0];
+        else if (operator === OPS.transform)
+          transform = Util.transform(
+            transform,
+            operators.argsArray[index] as Matrix
+          ) as Matrix;
+        else if (operator === OPS.paintImageXObject) {
+          const apply = (point: [number, number]) => {
+            Util.applyTransform(point, transform);
+            return point;
+          };
+          const corners = [
+            apply([0, 0]),
+            apply([1, 0]),
+            apply([0, 1]),
+            apply([1, 1]),
+          ];
+          const xs = corners.map(point => point[0]);
+          const ys = corners.map(point => point[1]);
+          paints.push({
+            width: Math.max(...xs) - Math.min(...xs),
+            height: Math.max(...ys) - Math.min(...ys),
+          });
+        }
+      }
+    }
+  } finally {
+    await pdfjs.destroy();
+  }
+  return { xObjects, paints };
 };
 
 const toState = (document: ProseMirrorNode): Buffer => {
@@ -405,8 +460,8 @@ describe('Memo PDF editor fidelity contract', () => {
     fileServiceAdapter.getDocumentContent.mockResolvedValue(
       await sharp({
         create: {
-          width: 320,
-          height: 180,
+          width: 1280,
+          height: 720,
           channels: 3,
           background: { r: 30, g: 80, b: 140 },
         },
@@ -416,6 +471,7 @@ describe('Memo PDF editor fidelity contract', () => {
     );
 
     const result = await renderSigningState(clientState);
+    const pdfImages = await inspectPdfImages(result.pdf);
     expect(result.html).toContain('<u>Underlined from client 3.11</u>');
     expect(result.html).toMatch(/width=(?:"320"|320)/);
     expect(result.html).toMatch(/height=(?:"180"|180)/);
@@ -434,10 +490,18 @@ describe('Memo PDF editor fidelity contract', () => {
     );
     expect(image.width).toEqual(expect.any(Number));
     expect(image.height).toEqual(expect.any(Number));
+    expect(Number(image.width)).toBeLessThanOrEqual(320);
+    expect(Number(image.height)).toBeLessThanOrEqual(180);
     expect(Number(image.width) / Number(image.height)).toBeCloseTo(
       320 / 180,
       1
     );
+    expect(pdfImages.paints).toHaveLength(1);
+    // html-to-pdfmake maps authored CSS pixels to 0.75 PDF points.
+    expect(pdfImages.paints[0].width).toBeGreaterThan(238);
+    expect(pdfImages.paints[0].width).toBeLessThan(242);
+    expect(pdfImages.paints[0].height).toBeGreaterThan(133);
+    expect(pdfImages.paints[0].height).toBeLessThan(137);
   });
 
   it('preserves the composed editor fidelity corpus in one actual PDF', async () => {
@@ -470,6 +534,7 @@ describe('Memo PDF editor fidelity contract', () => {
     )
       .toText()
       .replace(/\s+/g, ' ');
+    const pdfImages = await inspectPdfImages(result.pdf);
 
     expect(body).toHaveLength(8);
     expect(body.every(row => row.length === 3)).toBe(true);
@@ -510,5 +575,12 @@ describe('Memo PDF editor fidelity contract', () => {
       'marked 🎉 check ✓',
     ])
       expect(extracted).toContain(token);
+    expect(documentService.getDocumentFromURL).toHaveBeenCalledWith(
+      internalUrl,
+      { relations: { authorization: true, storageBucket: true } }
+    );
+    expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
+    expect(pdfImages.xObjects).toBe(1);
+    expect(pdfImages.paints).toHaveLength(1);
   });
 });
