@@ -91,13 +91,30 @@ export const splitMemoFontRuns = (text: string): MemoTextRun[] => {
 
 export const applyMemoFontRuns = (value: unknown): void => {
   if (!value || typeof value !== 'object') return;
-  const node = value as Record<string, unknown>;
-  const text = node.text;
-  const textWasString = typeof text === 'string';
-  if (textWasString) {
-    const runs = splitMemoFontRuns(text);
-    if (runs.some(run => run.font)) node.text = runs;
+
+  if (Array.isArray(value)) {
+    for (let index = 0; index < value.length; index++) {
+      const child = value[index];
+      if (child && typeof child === 'object' && !Array.isArray(child)) {
+        const node = child as Record<string, unknown>;
+        if (typeof node.text === 'string') {
+          const runs = splitMemoFontRuns(node.text);
+          if (runs.some(run => run.font)) {
+            const { text: _text, ...inlineAttributes } = node;
+            const inlineRuns = runs.map(run => ({
+              ...inlineAttributes,
+              ...run,
+            }));
+            value.splice(index, 1, ...inlineRuns);
+            index += inlineRuns.length - 1;
+            continue;
+          }
+        }
+      }
+      applyMemoFontRuns(child);
+    }
+    return;
   }
-  for (const [key, child] of Object.entries(node))
-    if (key !== 'text' || !textWasString) applyMemoFontRuns(child);
+
+  Object.values(value).forEach(applyMemoFontRuns);
 };

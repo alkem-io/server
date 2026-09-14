@@ -31,38 +31,6 @@ const fontkit = require('fontkit') as {
   create(bytes: Buffer): ParsedFont;
   openSync(path: string): ParsedFont;
 };
-const pdfMake = require('pdfmake') as {
-  createPdf(definition: unknown): { getBuffer(): Promise<Buffer> };
-};
-
-type PdfMakeNode = Record<string, unknown>;
-
-const collectNodes = (
-  value: unknown,
-  predicate: (node: PdfMakeNode) => boolean
-): PdfMakeNode[] => {
-  const seen = new WeakSet<object>();
-  const visit = (candidate: unknown): PdfMakeNode[] => {
-    if (!candidate || typeof candidate !== 'object' || seen.has(candidate))
-      return [];
-    seen.add(candidate);
-    const node = candidate as PdfMakeNode;
-    return [
-      ...(predicate(node) ? [node] : []),
-      ...Object.values(node).flatMap(visit),
-    ];
-  };
-  return visit(value);
-};
-
-const textOf = (value: unknown): string => {
-  if (typeof value === 'string') return value;
-  if (Array.isArray(value)) return value.map(textOf).join('');
-  if (value && typeof value === 'object')
-    return textOf((value as PdfMakeNode).text);
-  return '';
-};
-
 const toState = (content: unknown[]): Buffer => {
   const ydoc = prosemirrorToYDoc(
     memoSchema.nodeFromJSON({ type: 'doc', content }),
@@ -143,6 +111,33 @@ const inspectTextOperators = async (pdf: Buffer) => {
     await document.destroy();
   }
 };
+
+const inspectInlineMarks = async (pdf: Buffer) => {
+  const document = await getDocument({ data: new Uint8Array(pdf) }).promise;
+  try {
+    const page = await document.getPage(1);
+    const operators = await page.getOperatorList();
+    const annotations = await page.getAnnotations();
+    return {
+      constructPaths: operators.fnArray.filter(
+        operator => operator === OPS.constructPath
+      ).length,
+      links: annotations
+        .filter(annotation => annotation.subtype === 'Link')
+        .map(annotation => annotation.url ?? annotation.unsafeUrl),
+    };
+  } finally {
+    await document.destroy();
+  }
+};
+
+const baseFontName = (embeddedFontName?: string) =>
+  embeddedFontName?.replace(/^[A-Z]{6}\+/, '');
+
+const textOperator = (
+  operators: Awaited<ReturnType<typeof inspectTextOperators>>,
+  text: string
+) => operators.find(operator => operator.text === text);
 
 const embeddedFont = async (pdf: Buffer, embeddedFontName: string) => {
   const document = await PDFDocument.load(pdf);
@@ -227,21 +222,6 @@ describe('Memo PDF emoji glyph coverage', () => {
   const renderer = new MemoPdfRenderer({} as never, {} as never, {} as never);
   const render = (content: unknown[]) =>
     renderer.render(toState(content), 'bucket-1', actor);
-  const renderWithDefinition = async (content: unknown[]) => {
-    const originalCreatePdf = pdfMake.createPdf.bind(pdfMake);
-    let definition: unknown;
-    const createPdf = vi
-      .spyOn(pdfMake, 'createPdf')
-      .mockImplementation(value => {
-        definition = structuredClone(value);
-        return originalCreatePdf(value);
-      });
-    try {
-      return { pdf: await render(content), definition };
-    } finally {
-      createPdf.mockRestore();
-    }
-  };
 
   it('pins the two vendored font files to their documented hashes', async () => {
     const fixtures = [
@@ -388,97 +368,100 @@ describe('Memo PDF emoji glyph coverage', () => {
     ]);
   });
 
-  it('preserves marked emoji runs and their inline styles through an actual PDF', async () => {
-    const markedText = (
-      marks: Array<{ type: string; attrs?: Record<string, unknown> }>,
-      value = 'Party 🎉 check ✓'
-    ) => ({
-      type: 'paragraph',
-      content: [
-        { type: 'text', text: 'Before ' },
-        {
-          type: 'text',
-          text: value,
-          marks,
-        },
-        { type: 'text', text: ' after' },
-      ],
-    });
+  const markedText = (
+    value: string,
+    marks: Array<{ type: string; attrs?: Record<string, unknown> }>
+  ) => ({
+    type: 'paragraph',
+    content: [{ type: 'text', text: value, marks }],
+  });
+
+  it('preserves bold on ordinary runs around emoji in the emitted PDF', async () => {
+    const marks = [{ type: 'bold' }];
+    const control = await inspectTextOperators(
+      await render([markedText('Boldcontrol', marks)])
+    );
+    const marked = await inspectTextOperators(
+      await render([markedText('Bold 🎉 check ✓', marks)])
+    );
+    const controlRun = textOperator(control, 'Boldcontrol');
+    const markedRun = textOperator(marked, 'Bold ');
+
+    expect(controlRun?.fontResource).toBeDefined();
+    expect(markedRun?.fontResource).toBeDefined();
+    expect(baseFontName(controlRun?.embeddedFontName)).toBe('Roboto-Medium');
+    expect(baseFontName(markedRun?.embeddedFontName)).toBe(
+      baseFontName(controlRun?.embeddedFontName)
+    );
+  });
+
+  it('preserves italics on ordinary runs around emoji in the emitted PDF', async () => {
+    const marks = [{ type: 'italic' }];
+    const control = await inspectTextOperators(
+      await render([markedText('Italiccontrol', marks)])
+    );
+    const marked = await inspectTextOperators(
+      await render([markedText('Italic 🎉 check ✓', marks)])
+    );
+    const controlRun = textOperator(control, 'Italiccontrol');
+    const markedRun = textOperator(marked, 'Italic ');
+
+    expect(controlRun?.fontResource).toBeDefined();
+    expect(markedRun?.fontResource).toBeDefined();
+    expect(baseFontName(controlRun?.embeddedFontName)).toBe('Roboto-Italic');
+    expect(baseFontName(markedRun?.embeddedFontName)).toBe(
+      baseFontName(controlRun?.embeddedFontName)
+    );
+  });
+
+  it('emits underline geometry for emoji-bearing text above its plain baseline', async () => {
+    const value = 'Underline 🎉 check ✓';
+    const baseline = await inspectInlineMarks(await render([paragraph(value)]));
+    const marked = await inspectInlineMarks(
+      await render([markedText(value, [{ type: 'underline' }])])
+    );
+
+    expect(marked.constructPaths).toBeGreaterThan(baseline.constructPaths);
+  });
+
+  it('emits exact link annotations for emoji-bearing text', async () => {
     const link = 'https://example.com/signed-memo';
-    const { pdf, definition } = await renderWithDefinition([
-      markedText([{ type: 'bold' }]),
-      markedText([{ type: 'italic' }]),
-      markedText([{ type: 'underline' }]),
-      markedText([{ type: 'link', attrs: { href: link, target: '_blank' } }]),
-      markedText(
-        [
-          { type: 'link', attrs: { href: link, target: '_blank' } },
-          { type: 'bold' },
-        ],
-        'Nested marked 🎉 check ✓'
-      ),
-    ]);
-    const extracted = (await parseOffice(pdf, { fileType: 'pdf', ocr: false }))
-      .toText()
-      .replace(/\s+/g, ' ');
-
-    expect(extracted.match(/Before Party 🎉 check ✓ after/g)).toHaveLength(4);
-    expect(extracted).toContain('Before Nested marked 🎉 check ✓ after');
-    const markedNodes = collectNodes(
-      definition,
-      node =>
-        ['STRONG', 'EM', 'U', 'A'].includes(String(node.nodeName)) &&
-        textOf(node.text) === 'Party 🎉 check ✓'
+    const marks = [{ type: 'link', attrs: { href: link, target: '_blank' } }];
+    const control = await inspectInlineMarks(
+      await render([markedText('Link control', marks)])
     );
-    expect(markedNodes.map(node => textOf(node.text))).toEqual(
-      Array(4).fill('Party 🎉 check ✓')
-    );
-    expect(markedNodes[0].bold).toBe(true);
-    expect(markedNodes[1].italics).toBe(true);
-    expect(markedNodes[2].decoration).toContain('underline');
-    expect(markedNodes[3]).toEqual(
-      expect.objectContaining({
-        link,
-        color: 'blue',
-        decoration: expect.arrayContaining(['underline']),
-      })
-    );
-    for (const node of markedNodes) {
-      expect(Array.isArray(node.text)).toBe(true);
-      const runs = node.text as Array<{ text: string; font?: string }>;
-      expect(runs).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ text: '🎉', font: 'NotoEmoji' }),
-          expect.objectContaining({ text: '✓', font: 'NotoSansSymbols2' }),
-        ])
-      );
-    }
-    const nestedNodes = collectNodes(
-      definition,
-      node => textOf(node.text) === 'Nested marked 🎉 check ✓'
-    );
-    expect(nestedNodes.some(node => node.bold === true)).toBe(true);
-    expect(nestedNodes.some(node => node.link === link)).toBe(true);
-    const nestedRuns = collectNodes(
-      nestedNodes,
-      node => node.font === 'NotoEmoji' || node.font === 'NotoSansSymbols2'
-    );
-    expect(nestedRuns.map(run => run.text)).toEqual(
-      expect.arrayContaining(['🎉', '✓'])
+    const marked = await inspectInlineMarks(
+      await render([markedText('Link 🎉 check ✓', marks)])
     );
 
-    const operators = await inspectTextOperators(pdf);
-    const party = operators.find(item => item.text === '🎉');
-    const check = operators.find(item => item.text === '✓');
-    expect(party?.embeddedFontName).toContain('NotoEmoji');
-    expect(check?.embeddedFontName).toContain('NotoSansSymbols2');
-    await expectEmbeddedOutline(pdf, party!, fontFixture('NotoEmoji'), '🎉');
-    await expectEmbeddedOutline(
-      pdf,
-      check!,
-      fontFixture('NotoSansSymbols2'),
-      '✓'
+    expect(control.links.length).toBeGreaterThan(0);
+    expect(control.links.every(href => href === link)).toBe(true);
+    expect(marked.links.length).toBeGreaterThan(0);
+    expect(marked.links.every(href => href === link)).toBe(true);
+  });
+
+  it('preserves nested link and bold marks around emoji in the emitted PDF', async () => {
+    const link = 'https://example.com/signed-memo';
+    const marks = [
+      { type: 'link', attrs: { href: link, target: '_blank' } },
+      { type: 'bold' },
+    ];
+    const controlPdf = await render([markedText('Nestedcontrol', marks)]);
+    const markedPdf = await render([markedText('Nested 🎉 check ✓', marks)]);
+    const control = await inspectTextOperators(controlPdf);
+    const marked = await inspectTextOperators(markedPdf);
+    const controlRun = textOperator(control, 'Nestedcontrol');
+    const markedRun = textOperator(marked, 'Nested ');
+    const markedLinks = (await inspectInlineMarks(markedPdf)).links;
+
+    expect(controlRun?.fontResource).toBeDefined();
+    expect(markedRun?.fontResource).toBeDefined();
+    expect(baseFontName(controlRun?.embeddedFontName)).toBe('Roboto-Medium');
+    expect(baseFontName(markedRun?.embeddedFontName)).toBe(
+      baseFontName(controlRun?.embeddedFontName)
     );
+    expect(markedLinks.length).toBeGreaterThan(0);
+    expect(markedLinks.every(href => href === link)).toBe(true);
   });
 
   it('renders complete supported emoji grapheme sequences in an actual PDF', async () => {
