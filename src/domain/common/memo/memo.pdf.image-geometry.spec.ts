@@ -302,12 +302,33 @@ describe('Memo PDF image geometry', () => {
       'bucket-1',
       actor
     );
-    const { pageWidth, images } = await paintBounds(pdf);
+    const { pageWidth, images, verticalBorders } = await paintBounds(pdf);
     const [paint] = images.filter(node => node.sourceWidth === 1200);
 
     expect(paint).toBeDefined();
+    const enclosingBorders = verticalBorders
+      .filter(
+        border =>
+          border.top <= paint.top &&
+          border.bottom >= paint.bottom &&
+          (border.x <= paint.left || border.x >= paint.right)
+      )
+      .sort((left, right) => left.x - right.x);
+    const leftBorders = enclosingBorders.filter(
+      border => border.x <= paint.left
+    );
+    const leftBorder = leftBorders[leftBorders.length - 1];
+    const rightBorder = enclosingBorders.find(
+      border => border.x >= paint.right
+    );
+
+    expect(leftBorder).toBeDefined();
+    expect(rightBorder).toBeDefined();
+    expect(paint.left).toBeGreaterThan(leftBorder!.x);
+    expect(paint.right).toBeLessThan(rightBorder!.x);
     expect(paint.left).toBeGreaterThanOrEqual(40);
     expect(paint.right).toBeLessThanOrEqual(pageWidth - 40);
+    expect(paint.right - paint.left).toBeGreaterThan((pageWidth - 80) / 2);
     expect(paint.right - paint.left).toBeLessThanOrEqual(
       ((pageWidth - 80) * 2) / 3
     );

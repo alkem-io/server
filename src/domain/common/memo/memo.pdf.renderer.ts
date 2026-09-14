@@ -183,16 +183,7 @@ export class MemoPdfRenderer {
         const body = (node.table as { body?: unknown[][] }).body;
         if (Array.isArray(body))
           for (const row of body) {
-            const columns = row.reduce<number>(
-              (total, cell) =>
-                total +
-                (typeof cell === 'object' &&
-                cell !== null &&
-                typeof (cell as Record<string, unknown>).colSpan === 'number'
-                  ? ((cell as Record<string, unknown>).colSpan as number)
-                  : 1),
-              0
-            );
+            const columns = row.length;
             for (const cell of row) {
               const colSpan =
                 typeof cell === 'object' &&
