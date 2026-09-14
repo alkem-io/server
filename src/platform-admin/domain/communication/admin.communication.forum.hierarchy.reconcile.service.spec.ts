@@ -9,6 +9,7 @@ import { TaskStatus } from '@domain/task/dto';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Forum } from '@platform/forum/forum.entity';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { MESSAGING_REDIS_CLIENT } from '@services/infrastructure/redis-client/messaging-redis.provider';
 import { TaskService } from '@services/task';
 import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -80,6 +81,16 @@ describe('AdminCommunicationForumHierarchyReconcileService', () => {
       providers: [
         AdminCommunicationForumHierarchyReconcileService,
         repositoryProviderMockFactory(Forum),
+        {
+          // A real Redis-backed lease is exercised in the cross-pass spec;
+          // here ownership always succeeds so these tests stay about the
+          // reconcile behaviour rather than the lock.
+          provide: MESSAGING_REDIS_CLIENT,
+          useValue: {
+            set: vi.fn().mockResolvedValue('OK'),
+            eval: vi.fn().mockResolvedValue(1),
+          },
+        },
       ],
     })
       .useMocker(defaultMockerFactory)

@@ -10,11 +10,19 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Forum } from '@platform/forum/forum.entity';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { MESSAGING_REDIS_CLIENT } from '@services/infrastructure/redis-client/messaging-redis.provider';
 import { TaskService } from '@services/task';
 import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
+import type Redis from 'ioredis';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { AdminCommunicationReconcileForumHierarchyInput } from './dto/admin.communication.dto.reconcile.forum.hierarchy';
+import {
+  acquireReconcileLease,
+  ReconcileLease,
+  releaseReconcileLease,
+  renewReconcileLease,
+} from './forum.hierarchy.reconcile.lease';
 
 /** Per-parent bookkeeping for one reconcile invocation — keyed by context id so a
  * parent touched by both the add-only and the converge phase is counted once. */
@@ -41,7 +49,7 @@ export interface ForumHierarchyReconcilePassSummary {
    * completion condition; `failed` only reports execution errors.
    */
   unconverged: number;
-  aborted: 'circuit-breaker' | 'budget-exhausted' | null;
+  aborted: 'circuit-breaker' | 'budget-exhausted' | 'ownership-lost' | null;
   adapterDisabled: boolean;
 }
 
@@ -121,30 +129,11 @@ export class AdminCommunicationForumHierarchyReconcileService {
     private forumRepository: Repository<Forum>,
     private taskService: TaskService,
     private platformOperationsAuditService: PlatformOperationsAuditService,
+    @Inject(MESSAGING_REDIS_CLIENT)
+    private readonly redis: Redis,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
-
-  /**
-   * Guards against a second pass starting while one is still running in this
-   * process. Two overlapping passes work from different snapshots, so they
-   * duplicate every read, interleave their writes, and produce two audit rows
-   * an operator then has to reconcile against each other.
-   *
-   * Deliberately in-process only. It is not a distributed lock and does not
-   * serialize passes across API replicas — doing that properly needs a lock
-   * held outside Postgres, since a session-scoped advisory lock is unsafe on a
-   * pooled connection and a transaction-scoped one would mean holding a
-   * transaction open across Matrix RPCs.
-   *
-   * That is an acceptable limit here only because overlapping passes can no
-   * longer lose data: removal requires positive establishment elsewhere, so
-   * the worst two racing passes can do is leave a discussion under its
-   * previous category for one pass. The operation is operator-invoked, so the
-   * remaining protection is procedural — do not start a second pass while one
-   * is running.
-   */
-  private passInFlight = false;
 
   /**
    * Run one reconcile pass and settle the given task. Intended to be kicked
@@ -156,11 +145,35 @@ export class AdminCommunicationForumHierarchyReconcileService {
     actorID: string,
     input: AdminCommunicationReconcileForumHierarchyInput
   ): Promise<void> {
-    if (this.passInFlight) {
+    // Ownership is taken before anything else, including reading the forum: a
+    // second pass must be refused without first repeating the work the first
+    // pass is already doing.
+    let lease: ReconcileLease | null = null;
+    try {
+      lease = await acquireReconcileLease(this.redis);
+    } catch (error) {
+      this.logger.error?.(
+        `Could not reach Redis to take forum hierarchy reconcile ownership: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        error instanceof Error ? error.stack : undefined,
+        LogContext.COMMUNICATION
+      );
+      await this.recordAudit(actorID, taskId, input, erroredSummary());
+      await this.taskService
+        .completeWithError(
+          taskId,
+          'Could not take forum hierarchy reconcile ownership (Redis unreachable) — refusing to start, because an unowned pass cannot be prevented from racing another'
+        )
+        .catch(() => undefined);
+      return;
+    }
+
+    if (!lease) {
       this.logger.warn?.(
         {
           message:
-            'Forum hierarchy reconcile already in flight — refusing to start a second overlapping pass',
+            'Forum hierarchy reconcile already owned by another pass — refusing to start a second overlapping pass',
           taskId,
         },
         LogContext.COMMUNICATION
@@ -174,10 +187,9 @@ export class AdminCommunicationForumHierarchyReconcileService {
         .catch(() => undefined);
       return;
     }
-    this.passInFlight = true;
 
     try {
-      await this.runReconcilePass(taskId, actorID, input);
+      await this.runReconcilePass(taskId, actorID, input, lease);
     } catch (error) {
       // Nothing above this line may ever throw out of the fire-and-forget
       // call site in the resolver: an uncaught rejection here would leave
@@ -212,16 +224,33 @@ export class AdminCommunicationForumHierarchyReconcileService {
       }
     } finally {
       // Released here rather than at the end of the try, so a pass that threw
-      // cannot leave the guard stuck and block every later invocation until
-      // the pod restarts.
-      this.passInFlight = false;
+      // does not hold ownership until the lease expires. Compare-and-delete,
+      // so a pass whose lease already expired and was taken over cannot
+      // delete the new owner's lease on its way out. A release that fails is
+      // survivable — the lease expires on its own — so it must never mask the
+      // original error.
+      await releaseReconcileLease(this.redis, lease).catch(releaseError => {
+        this.logger.warn?.(
+          {
+            message:
+              'Failed to release forum hierarchy reconcile ownership; it will expire on its own',
+            taskId,
+            error:
+              releaseError instanceof Error
+                ? releaseError.message
+                : String(releaseError),
+          },
+          LogContext.COMMUNICATION
+        );
+      });
     }
   }
 
   private async runReconcilePass(
     taskId: string,
     actorID: string,
-    input: AdminCommunicationReconcileForumHierarchyInput
+    input: AdminCommunicationReconcileForumHierarchyInput,
+    lease: ReconcileLease
   ): Promise<void> {
     const forums = await this.forumRepository.find({
       relations: { discussions: { comments: true } },
@@ -252,7 +281,11 @@ export class AdminCommunicationForumHierarchyReconcileService {
     let parentPointersDeferredCount = 0;
     let consecutiveTimeouts = 0;
     let cumulativeWrites = 0;
-    let aborted: 'circuit-breaker' | 'budget-exhausted' | null = null;
+    let aborted:
+      | 'circuit-breaker'
+      | 'budget-exhausted'
+      | 'ownership-lost'
+      | null = null;
     let adapterDisabled = false;
 
     // Per-sweep call accounting (data-model.md: "failed = calls with
@@ -332,6 +365,36 @@ export class AdminCommunicationForumHierarchyReconcileService {
     ): Promise<SetChildrenResponse | undefined> => {
       if (isAborted()) return undefined;
 
+      // Ownership is re-confirmed immediately before any call that can
+      // remove an edge, and the call is abandoned if it has been lost.
+      //
+      // This is what makes the removal authorization safe across passes. The
+      // `established` confirmations this call's authorization list is built
+      // from are historical observations: another pass holding ownership
+      // could have moved the room since, and removing on the strength of a
+      // confirmation that is no longer true is how a room ends up attached to
+      // nothing while both passes report a clean result. Renewing here proves
+      // no other pass has owned the forum in the meantime, so every
+      // confirmation gathered under this lease is still the current truth.
+      //
+      // Read-only work does not need this: a dry run writes nothing, and an
+      // add-only phase can only ever create an edge the desired state asks
+      // for.
+      if (applyRemovals && !passDryRun) {
+        const stillOwned = await renewReconcileLease(this.redis, lease).catch(
+          () => false
+        );
+        if (!stillOwned) {
+          this.logger.error?.(
+            'Lost forum hierarchy reconcile ownership mid-pass — abandoning before any further removal',
+            undefined,
+            LogContext.COMMUNICATION
+          );
+          aborted = 'ownership-lost';
+          return undefined;
+        }
+      }
+
       sweepIssued++;
       const rawResponse = await this.communicationAdapter.setChildren({
         parent_context_id: parentContextId,
@@ -350,9 +413,15 @@ export class AdminCommunicationForumHierarchyReconcileService {
         sync_child_parent: input.repairRoomParentPointers,
         dry_run: passDryRun,
         // Correlates the adapter's log lines with this pass's task and audit
-        // row. The request's expiry is stamped by CommunicationAdapter, which
-        // owns the RPC timeout that defines how long this caller waits.
+        // row.
         operation_id: taskId,
+        // Expiry is the lease's own, which is what fences execution against a
+        // previous owner. A new owner can only acquire after the previous
+        // lease fully expired, so every request the previous owner issued has
+        // expired too — and the adapter rejects an expired request before
+        // performing any read or write. That removes the need for any
+        // hand-off protocol or waiting period between owners.
+        expires_at_unix_ms: lease.expiresAt,
       });
 
       // The disabled sentinel carries no `success` field at all — it is

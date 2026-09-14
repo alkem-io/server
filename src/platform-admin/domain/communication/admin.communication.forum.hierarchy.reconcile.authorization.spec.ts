@@ -9,6 +9,7 @@ import { TaskStatus } from '@domain/task/dto';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Forum } from '@platform/forum/forum.entity';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { MESSAGING_REDIS_CLIENT } from '@services/infrastructure/redis-client/messaging-redis.provider';
 import { TaskService } from '@services/task';
 import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -101,6 +102,16 @@ describe('AdminCommunicationForumHierarchyReconcileService — removal authoriza
       providers: [
         AdminCommunicationForumHierarchyReconcileService,
         repositoryProviderMockFactory(Forum),
+        {
+          // A real Redis-backed lease is exercised in the cross-pass spec;
+          // here ownership always succeeds so these tests stay about the
+          // reconcile behaviour rather than the lock.
+          provide: MESSAGING_REDIS_CLIENT,
+          useValue: {
+            set: vi.fn().mockResolvedValue('OK'),
+            eval: vi.fn().mockResolvedValue(1),
+          },
+        },
       ],
     })
       .useMocker(defaultMockerFactory)
@@ -346,52 +357,10 @@ describe('AdminCommunicationForumHierarchyReconcileService — removal authoriza
     });
   });
 
-  describe('reentrancy', () => {
-    it('refuses to start a second pass while one is still running', async () => {
-      setForum([{ category: CATEGORY_A, roomId: 'room-1' }]);
-
-      let releaseFirstPass: () => void = () => undefined;
-      const firstPassBlocked = new Promise<void>(resolve => {
-        releaseFirstPass = resolve;
-      });
-      (communicationAdapter.setChildren as Mock).mockImplementation(
-        async () => {
-          await firstPassBlocked;
-          return cleanResponse();
-        }
-      );
-
-      const firstPass = service.reconcile('task-1', 'actor-1', defaultInput);
-      // Let the first pass reach its first adapter call before racing it.
-      await Promise.resolve();
-      await Promise.resolve();
-
-      await service.reconcile('task-2', 'actor-1', defaultInput);
-
-      expect(taskService.completeWithError).toHaveBeenCalledWith(
-        'task-2',
-        expect.stringContaining('already running')
-      );
-
-      releaseFirstPass();
-      await firstPass;
-    });
-
-    it('releases the guard after a pass throws, so a later pass can still run', async () => {
-      setForum([{ category: CATEGORY_A, roomId: 'room-1' }]);
-      forumRepository.find = vi
-        .fn()
-        .mockRejectedValueOnce(new Error('db down'));
-
-      await service.reconcile('task-1', 'actor-1', defaultInput);
-
-      setForum([{ category: CATEGORY_A, roomId: 'room-1' }]);
-      await service.reconcile('task-2', 'actor-1', defaultInput);
-
-      expect(taskService.completeWithError).not.toHaveBeenCalledWith(
-        'task-2',
-        expect.stringContaining('already running')
-      );
-    });
-  });
+  // Reentrancy moved to
+  // admin.communication.forum.hierarchy.reconcile.cross.pass.spec.ts, which
+  // exercises the real Redis-backed ownership lease across two service
+  // instances. The tests that lived here covered the in-process flag that
+  // lease replaced, and could not have caught the cross-replica interleaving
+  // that flag failed to prevent.
 });
