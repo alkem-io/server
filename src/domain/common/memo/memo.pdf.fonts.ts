@@ -92,10 +92,12 @@ export const splitMemoFontRuns = (text: string): MemoTextRun[] => {
 export const applyMemoFontRuns = (value: unknown): void => {
   if (!value || typeof value !== 'object') return;
   const node = value as Record<string, unknown>;
-  if (typeof node.text === 'string') {
-    const runs = splitMemoFontRuns(node.text);
+  const text = node.text;
+  const textWasString = typeof text === 'string';
+  if (textWasString) {
+    const runs = splitMemoFontRuns(text);
     if (runs.some(run => run.font)) node.text = runs;
   }
   for (const [key, child] of Object.entries(node))
-    if (key !== 'text') applyMemoFontRuns(child);
+    if (key !== 'text' || !textWasString) applyMemoFontRuns(child);
 };
