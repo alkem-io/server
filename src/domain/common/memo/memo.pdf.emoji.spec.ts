@@ -1,10 +1,23 @@
 import { ActorContext } from '@core/actor-context/actor.context';
 import { prosemirrorToYDoc } from '@tiptap/y-tiptap';
 import { parseOffice } from 'officeparser';
+import {
+  decodePDFRawStream,
+  PDFDict,
+  PDFDocument,
+  PDFName,
+  PDFRawStream,
+} from 'pdf-lib';
 import { getDocument, OPS } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import * as Y from 'yjs';
 import { memoSchema } from './conversion/memo.extensions';
 import { MemoPdfRenderer } from './memo.pdf.renderer';
+
+const fontkit = require('fontkit') as {
+  create(bytes: Buffer): {
+    getGlyph(id: number): { path: { commands: unknown[] } };
+  };
+};
 
 const toState = (content: unknown[]): Buffer => {
   const ydoc = prosemirrorToYDoc(
@@ -44,18 +57,31 @@ const inspectTextOperators = async (pdf: Buffer) => {
   try {
     const page = await document.getPage(1);
     const operators = await page.getOperatorList();
-    const text: Array<{ text: string; fontName?: string }> = [];
+    const text: Array<{
+      text: string;
+      fontName?: string;
+      glyphIds: number[];
+    }> = [];
     let fontName: string | undefined;
     for (const [index, operator] of operators.fnArray.entries()) {
       if (operator === OPS.setFont)
         fontName = (operators.argsArray[index] as [string, number])[0];
       if (operator === OPS.showText) {
-        const glyphs = operators.argsArray[index][0] as Array<{
-          unicode?: string;
-        }>;
+        const glyphs = operators.argsArray[index][0] as Array<
+          | number
+          | {
+              originalCharCode: number;
+              unicode?: string;
+            }
+        >;
+        const drawnGlyphs = glyphs.filter(
+          (glyph): glyph is Exclude<(typeof glyphs)[number], number> =>
+            typeof glyph !== 'number'
+        );
         text.push({
-          text: glyphs.map(glyph => glyph.unicode ?? '').join(''),
+          text: drawnGlyphs.map(glyph => glyph.unicode ?? '').join(''),
           fontName,
+          glyphIds: drawnGlyphs.map(glyph => glyph.originalCharCode),
         });
       }
     }
@@ -63,6 +89,37 @@ const inspectTextOperators = async (pdf: Buffer) => {
   } finally {
     await document.destroy();
   }
+};
+
+const embeddedFontOutlines = async (pdf: Buffer) => {
+  const document = await PDFDocument.load(pdf);
+  const fonts = new Map<string, ReturnType<(typeof fontkit)['create']>>();
+  for (const [, object] of document.context.enumerateIndirectObjects()) {
+    if (!(object instanceof PDFDict)) continue;
+    const fontName = object.get(PDFName.of('FontName'));
+    const file =
+      object.get(PDFName.of('FontFile2')) ??
+      object.get(PDFName.of('FontFile3'));
+    if (!fontName || !file) continue;
+    const stream = document.context.lookup(file);
+    if (!(stream instanceof PDFRawStream)) continue;
+    const bytes = Buffer.from(decodePDFRawStream(stream).decode());
+    fonts.set(fontName.toString().replace(/^\//, ''), fontkit.create(bytes));
+  }
+  return fonts;
+};
+
+const expectEmbeddedOutline = async (
+  pdf: Buffer,
+  fontMarker: string,
+  glyphId: number
+) => {
+  const fonts = await embeddedFontOutlines(pdf);
+  const entry = [...fonts.entries()].find(([name]) =>
+    name.includes(fontMarker)
+  );
+  expect(entry, `embedded ${fontMarker} subset`).toBeDefined();
+  expect(entry![1].getGlyph(glyphId).path.commands.length).toBeGreaterThan(0);
 };
 
 describe('Memo PDF emoji glyph coverage', () => {
@@ -120,6 +177,12 @@ describe('Memo PDF emoji glyph coverage', () => {
     );
     expect(glyphOperators).toHaveLength(4);
     expect(glyphOperators.every(item => item.fontName)).toBe(true);
+    const party = glyphOperators.find(item => item.text === '🎉');
+    const check = glyphOperators.find(item => item.text === '✓');
+    expect(party?.glyphIds).toEqual([1]);
+    expect(check?.glyphIds).toEqual([1]);
+    await expectEmbeddedOutline(pdf, 'NotoEmoji', party!.glyphIds[0]);
+    await expectEmbeddedOutline(pdf, 'NotoSansSymbols2', check!.glyphIds[0]);
   });
 
   it('keeps ordinary text in Roboto and subsets emoji fonts below the size budget', async () => {
@@ -134,5 +197,19 @@ describe('Memo PDF emoji glyph coverage', () => {
     expect(ordinaryItem!.fontName).not.toBe(emojiItem!.fontName);
     expect(withEmoji.toString('latin1')).toContain('Roboto');
     expect(withEmoji.length - ordinary.length).toBeLessThan(200_000);
+  });
+
+  it('renders a visible replacement with an embedded outline for unsupported emoji', async () => {
+    const pdf = await render([paragraph('Unsupported 🫩 remains visible')]);
+    const text = (await parseOffice(pdf, { fileType: 'pdf', ocr: false }))
+      .toText()
+      .replace(/\s+/g, ' ');
+    const [fallback] = (await inspectTextOperators(pdf)).filter(item =>
+      item.text.includes('□')
+    );
+
+    expect(text).toContain('Unsupported □ remains visible');
+    expect(fallback?.glyphIds).toEqual([1]);
+    await expectEmbeddedOutline(pdf, 'NotoSansSymbols2', fallback!.glyphIds[0]);
   });
 });
