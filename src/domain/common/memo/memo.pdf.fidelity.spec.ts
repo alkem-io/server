@@ -43,6 +43,7 @@ const inspectPdfImages = async (pdf: Buffer) => {
   }
   const pdfjs = await getDocument({ data: new Uint8Array(pdf) }).promise;
   const paints: Array<{ width: number; height: number }> = [];
+  let constructPaths = 0;
   try {
     for (let pageNumber = 1; pageNumber <= pdfjs.numPages; pageNumber++) {
       const page = await pdfjs.getPage(pageNumber);
@@ -50,6 +51,7 @@ const inspectPdfImages = async (pdf: Buffer) => {
       const stack: Matrix[] = [];
       let transform: Matrix = [1, 0, 0, 1, 0, 0];
       for (const [index, operator] of operators.fnArray.entries()) {
+        if (operator === OPS.constructPath) constructPaths++;
         if (operator === OPS.save) stack.push([...transform]);
         else if (operator === OPS.restore)
           transform = stack.pop() ?? [1, 0, 0, 1, 0, 0];
@@ -81,7 +83,7 @@ const inspectPdfImages = async (pdf: Buffer) => {
   } finally {
     await pdfjs.destroy();
   }
-  return { xObjects, paints };
+  return { xObjects, paints, constructPaths };
 };
 
 const toState = (document: ProseMirrorNode): Buffer => {
@@ -196,7 +198,10 @@ const mixedListsState = (): Buffer =>
     ])
   );
 
-const composedEditorState = (imageUrl: string): Buffer => {
+const composedEditorState = (
+  imageUrl: string,
+  withMarkedUnderline = true
+): Buffer => {
   const tableRows = Array.from({ length: 8 }, (_, rowIndex) => ({
     type: 'tableRow',
     content: Array.from({ length: 3 }, (_, columnIndex) => ({
@@ -296,7 +301,9 @@ const composedEditorState = (imageUrl: string): Buffer => {
             {
               type: 'text',
               text: 'marked 🎉 check ✓',
-              marks: [{ type: 'underline' }],
+              ...(withMarkedUnderline
+                ? { marks: [{ type: 'underline' }] }
+                : {}),
             },
           ],
         },
@@ -535,6 +542,13 @@ describe('Memo PDF editor fidelity contract', () => {
       .toText()
       .replace(/\s+/g, ' ');
     const pdfImages = await inspectPdfImages(result.pdf);
+    const plainMarksPdf = await renderer.render(
+      composedEditorState(internalUrl, false),
+      'bucket-1',
+      actor
+    );
+    const plainMarkPaths = (await inspectPdfImages(plainMarksPdf))
+      .constructPaths;
 
     expect(body).toHaveLength(8);
     expect(body.every(row => row.length === 3)).toBe(true);
@@ -553,15 +567,7 @@ describe('Memo PDF editor fidelity contract', () => {
         node => node.nodeName === 'P' && node.text === '\u00a0'
       ).length
     ).toBeGreaterThanOrEqual(2);
-    expect(
-      collectNodes(
-        result.definition,
-        node =>
-          Array.isArray(node.decoration) &&
-          node.decoration.includes('underline') &&
-          String(node.text).includes('marked')
-      )
-    ).toHaveLength(1);
+    expect(pdfImages.constructPaths).toBeGreaterThan(plainMarkPaths);
     for (const token of [
       'Composed fidelity heading',
       'Composed first line',
