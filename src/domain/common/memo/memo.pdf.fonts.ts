@@ -36,6 +36,19 @@ export type MemoTextRun = {
   font?: keyof typeof memoPdfFonts;
 };
 
+const inlineAttributeNames = [
+  'bold',
+  'italics',
+  'decoration',
+  'decorationStyle',
+  'decorationColor',
+  'color',
+  'link',
+  'linkToDestination',
+  'fontSize',
+  'background',
+] as const;
+
 const segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
 const extendedPictographic = /\p{Extended_Pictographic}/u;
 const regionalIndicator = /\p{Regional_Indicator}/u;
@@ -89,32 +102,57 @@ export const splitMemoFontRuns = (text: string): MemoTextRun[] => {
   return runs;
 };
 
-export const applyMemoFontRuns = (value: unknown): void => {
+const inlineRunsFor = (node: Record<string, unknown>, runs: MemoTextRun[]) => {
+  const inlineAttributes = Object.fromEntries(
+    inlineAttributeNames.flatMap(name =>
+      name in node ? [[name, node[name]]] : []
+    )
+  );
+  return runs.map(run => ({ ...inlineAttributes, ...run }));
+};
+
+export const applyMemoFontRuns = (
+  value: unknown,
+  isTextArray = false
+): void => {
   if (!value || typeof value !== 'object') return;
 
   if (Array.isArray(value)) {
     for (let index = 0; index < value.length; index++) {
       const child = value[index];
-      if (child && typeof child === 'object' && !Array.isArray(child)) {
+      if (
+        isTextArray &&
+        child &&
+        typeof child === 'object' &&
+        !Array.isArray(child)
+      ) {
         const node = child as Record<string, unknown>;
         if (typeof node.text === 'string') {
           const runs = splitMemoFontRuns(node.text);
           if (runs.some(run => run.font)) {
-            const { text: _text, ...inlineAttributes } = node;
-            const inlineRuns = runs.map(run => ({
-              ...inlineAttributes,
-              ...run,
-            }));
+            const inlineRuns = inlineRunsFor(node, runs);
             value.splice(index, 1, ...inlineRuns);
             index += inlineRuns.length - 1;
             continue;
           }
         }
       }
-      applyMemoFontRuns(child);
+      applyMemoFontRuns(child, isTextArray);
     }
     return;
   }
 
-  Object.values(value).forEach(applyMemoFontRuns);
+  const node = value as Record<string, unknown>;
+  let routedStringText = false;
+  if (typeof node.text === 'string') {
+    const runs = splitMemoFontRuns(node.text);
+    if (runs.some(run => run.font)) {
+      node.text = inlineRunsFor(node, runs);
+      routedStringText = true;
+    }
+  }
+  Object.entries(node).forEach(([name, nested]) => {
+    if (routedStringText && name === 'text') return;
+    applyMemoFontRuns(nested, name === 'text' && Array.isArray(nested));
+  });
 };

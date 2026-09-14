@@ -15,7 +15,7 @@ import {
 import { getDocument, OPS } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import * as Y from 'yjs';
 import { memoSchema } from './conversion/memo.extensions';
-import { splitMemoFontRuns } from './memo.pdf.fonts';
+import { applyMemoFontRuns, splitMemoFontRuns } from './memo.pdf.fonts';
 import { MemoPdfRenderer } from './memo.pdf.renderer';
 
 type FontGlyph = {
@@ -57,7 +57,11 @@ const inspectText = async (pdf: Buffer) => {
     return {
       items: content.items
         .filter(item => 'str' in item)
-        .map(item => ({ text: item.str, fontName: item.fontName })),
+        .map(item => ({
+          text: item.str,
+          fontName: item.fontName,
+          transform: item.transform,
+        })),
     };
   } finally {
     await document.destroy();
@@ -305,6 +309,94 @@ describe('Memo PDF emoji glyph coverage', () => {
     );
   });
 
+  it('keeps the routed runs of a short paragraph on one line', async () => {
+    const { items } = await inspectText(
+      await render([paragraph('Before 🎉 after')])
+    );
+    const before = items.find(item => item.text.includes('Before'));
+    const after = items.find(item => item.text.includes('after'));
+
+    expect(before).toBeDefined();
+    expect(after).toBeDefined();
+    expect(after!.transform[5]).toBeCloseTo(before!.transform[5], 1);
+  });
+
+  it('preserves list items and table cells while routing their inline text', async () => {
+    const pdf = await render([
+      {
+        type: 'bulletList',
+        content: [
+          { type: 'listItem', content: [paragraph('List one 🎉 tail one')] },
+          { type: 'listItem', content: [paragraph('List two ✓ tail two')] },
+        ],
+      },
+      {
+        type: 'table',
+        content: [
+          {
+            type: 'tableRow',
+            content: [
+              {
+                type: 'tableCell',
+                content: [paragraph('Cell 11 🎉 end 11')],
+              },
+              {
+                type: 'tableCell',
+                content: [paragraph('Cell 12 ✓ end 12')],
+              },
+            ],
+          },
+          {
+            type: 'tableRow',
+            content: [
+              {
+                type: 'tableCell',
+                content: [paragraph('Cell 21 ✓ end 21')],
+              },
+              {
+                type: 'tableCell',
+                content: [paragraph('Cell 22 🎉 end 22')],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+    const { items } = await inspectText(pdf);
+
+    for (const [prefix, suffix] of [
+      ['List one', 'tail one'],
+      ['List two', 'tail two'],
+      ['Cell 11', 'end 11'],
+      ['Cell 12', 'end 12'],
+      ['Cell 21', 'end 21'],
+      ['Cell 22', 'end 22'],
+    ]) {
+      const before = items.find(item => item.text.includes(prefix));
+      const after = items.find(item => item.text.includes(suffix));
+      expect(before, prefix).toBeDefined();
+      expect(after, suffix).toBeDefined();
+      expect(after!.transform[5], suffix).toBeCloseTo(before!.transform[5], 1);
+    }
+
+    const listItems = items.filter(item => /^List (one|two)$/u.test(item.text));
+    expect(listItems).toHaveLength(2);
+    expect(new Set(listItems.map(item => item.transform[5])).size).toBe(2);
+
+    const tableCells = items.filter(item => /^Cell \d{2}$/u.test(item.text));
+    expect(tableCells).toHaveLength(4);
+    expect(new Set(tableCells.map(item => item.transform[4])).size).toBe(2);
+    expect(
+      Math.abs(tableCells[0].transform[5] - tableCells[1].transform[5])
+    ).toBeLessThan(2);
+    expect(
+      Math.abs(tableCells[2].transform[5] - tableCells[3].transform[5])
+    ).toBeLessThan(2);
+    expect(
+      Math.abs(tableCells[0].transform[5] - tableCells[2].transform[5])
+    ).toBeGreaterThan(20);
+  });
+
   it('keeps ordinary text in Roboto and subsets emoji fonts below the size budget', async () => {
     const ordinary = await render([paragraph('Ordinary memo text')]);
     const withEmoji = await render([paragraph('Ordinary memo text 🎉')]);
@@ -366,6 +458,86 @@ describe('Memo PDF emoji glyph coverage', () => {
       { text: 'Unsupported ' },
       { text: '□', font: 'NotoSansSymbols2' },
     ]);
+  });
+
+  it('does not splice block, list, row, or cell containers', () => {
+    const inlineAttributes = {
+      bold: true,
+      italics: true,
+      decoration: ['underline'],
+      decorationStyle: 'dashed',
+      decorationColor: 'red',
+      color: 'blue',
+      link: 'https://example.com',
+      linkToDestination: 'memo-target',
+      fontSize: 12,
+      background: '#fff59d',
+    };
+    const inlineWrapper = {
+      nodeName: 'P',
+      style: 'block-style',
+      text: [
+        {
+          nodeName: 'A',
+          margin: [1, 2, 3, 4],
+          style: 'do-not-copy',
+          text: 'Linked 🎉',
+          ...inlineAttributes,
+        },
+      ],
+    };
+    const value = [
+      { nodeName: 'P', text: 'Before 🎉 after' },
+      inlineWrapper,
+      {
+        nodeName: 'UL',
+        ul: [
+          { nodeName: 'LI', text: 'List 🎉 one' },
+          { nodeName: 'LI', text: 'List ✓ two' },
+        ],
+      },
+      {
+        nodeName: 'TABLE',
+        table: {
+          body: [
+            [
+              { nodeName: 'TD', text: 'Cell 🎉 11' },
+              { nodeName: 'TD', text: 'Cell ✓ 12' },
+            ],
+            [
+              { nodeName: 'TD', text: 'Cell ✓ 21' },
+              { nodeName: 'TD', text: 'Cell 🎉 22' },
+            ],
+          ],
+        },
+      },
+    ];
+
+    applyMemoFontRuns(value);
+    const list = value[2] as { ul: unknown[] };
+    const table = value[3] as { table: { body: unknown[][] } };
+
+    expect(value).toHaveLength(4);
+    expect(value.map(node => node.nodeName)).toEqual(['P', 'P', 'UL', 'TABLE']);
+    expect(list.ul).toHaveLength(2);
+    expect(table.table.body).toHaveLength(2);
+    expect(table.table.body.every(row => row.length === 2)).toBe(true);
+    expect(value[0].text).toEqual([
+      { text: 'Before ' },
+      { text: '🎉', font: 'NotoEmoji' },
+      { text: ' after' },
+    ]);
+    expect(inlineWrapper.text).toHaveLength(2);
+    for (const run of inlineWrapper.text) {
+      expect(run).toEqual(expect.objectContaining(inlineAttributes));
+      expect(run).not.toHaveProperty('nodeName');
+      expect(run).not.toHaveProperty('margin');
+      expect(run).not.toHaveProperty('style');
+    }
+    expect(inlineWrapper.style).toBe('block-style');
+    expect(inlineWrapper.text[1]).toEqual(
+      expect.objectContaining({ text: '🎉', font: 'NotoEmoji' })
+    );
   });
 
   const markedText = (
@@ -444,9 +616,9 @@ describe('Memo PDF emoji glyph coverage', () => {
     expect(control.links.every(href => href === link)).toBe(true);
     expect(marked.links.length).toBeGreaterThan(0);
     expect(marked.links.every(href => href === link)).toBe(true);
-    expect(emojiOnly.links.length).toBeGreaterThan(0);
+    expect(emojiOnly.links).toHaveLength(1);
     expect(emojiOnly.links.every(href => href === link)).toBe(true);
-    expect(symbolOnly.links.length).toBeGreaterThan(0);
+    expect(symbolOnly.links).toHaveLength(1);
     expect(symbolOnly.links.every(href => href === link)).toBe(true);
   });
 
@@ -462,7 +634,11 @@ describe('Memo PDF emoji glyph coverage', () => {
     const marked = await inspectTextOperators(markedPdf);
     const controlRun = textOperator(control, 'Nestedcontrol');
     const markedRun = textOperator(marked, 'Nested ');
+    const emojiRun = textOperator(marked, '🎉');
     const markedLinks = (await inspectInlineMarks(markedPdf)).links;
+    const markedLayout = (await inspectText(markedPdf)).items;
+    const before = markedLayout.find(item => item.text === 'Nested');
+    const after = markedLayout.find(item => item.text === 'check');
 
     expect(controlRun?.fontResource).toBeDefined();
     expect(markedRun?.fontResource).toBeDefined();
@@ -470,8 +646,18 @@ describe('Memo PDF emoji glyph coverage', () => {
     expect(baseFontName(markedRun?.embeddedFontName)).toBe(
       baseFontName(controlRun?.embeddedFontName)
     );
+    expect(emojiRun?.embeddedFontName).toContain('NotoEmoji');
+    await expectEmbeddedOutline(
+      markedPdf,
+      emojiRun!,
+      fontFixture('NotoEmoji'),
+      '🎉'
+    );
     expect(markedLinks.length).toBeGreaterThan(0);
     expect(markedLinks.every(href => href === link)).toBe(true);
+    expect(before).toBeDefined();
+    expect(after).toBeDefined();
+    expect(after!.transform[5]).toBeCloseTo(before!.transform[5], 1);
   });
 
   it('renders complete supported emoji grapheme sequences in an actual PDF', async () => {
