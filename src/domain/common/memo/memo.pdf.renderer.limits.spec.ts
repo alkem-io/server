@@ -1,10 +1,23 @@
 import { ActorContext } from '@core/actor-context/actor.context';
+import { renderToHTMLString } from '@tiptap/static-renderer';
+import {
+  prosemirrorToYDoc,
+  yXmlFragmentToProseMirrorRootNode,
+} from '@tiptap/y-tiptap';
 import sharp from 'sharp';
+import * as Y from 'yjs';
 import { markdownToYjsV2State } from './conversion';
+import { memoSchema } from './conversion/memo.extensions';
 import { MAX_MEMO_EDITOR_CONTENT_BYTES } from './conversion/yjs.state.to.tiptap.html';
 import { MemoPdfRenderer } from './memo.pdf.renderer';
 
 const MAX_IMAGES = 20;
+
+vi.mock('@tiptap/static-renderer', async importOriginal => {
+  const actual =
+    await importOriginal<typeof import('@tiptap/static-renderer')>();
+  return { ...actual, renderToHTMLString: vi.fn(actual.renderToHTMLString) };
+});
 
 const fitAsciiBytes = (prefix: string, bytes: number): string => {
   const paragraph =
@@ -13,6 +26,33 @@ const fitAsciiBytes = (prefix: string, bytes: number): string => {
     0,
     bytes
   );
+};
+
+const proseMirrorJsonBytes = (state: Buffer): number => {
+  const document = new Y.Doc();
+  try {
+    Y.applyUpdateV2(document, new Uint8Array(state));
+    const content = yXmlFragmentToProseMirrorRootNode(
+      document.getXmlFragment('default'),
+      memoSchema
+    );
+    return Buffer.byteLength(JSON.stringify(content.toJSON()));
+  } finally {
+    document.destroy();
+  }
+};
+
+const emptyParagraphState = (count: number): Buffer => {
+  const document = memoSchema.nodes.doc.create(
+    null,
+    Array.from({ length: count }, () => memoSchema.nodes.paragraph.create())
+  );
+  const ydoc = prosemirrorToYDoc(document, 'default');
+  try {
+    return Buffer.from(Y.encodeStateAsUpdateV2(ydoc));
+  } finally {
+    ydoc.destroy();
+  }
 };
 
 describe('MemoPdfRenderer input bounds', () => {
@@ -33,6 +73,7 @@ describe('MemoPdfRenderer input bounds', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(renderToHTMLString).mockClear();
   });
 
   const stateFor = (markdown: string) =>
@@ -54,13 +95,16 @@ describe('MemoPdfRenderer input bounds', () => {
       205_000
     );
     const state = stateFor(markdown);
+    const jsonBytes = proseMirrorJsonBytes(state);
     expect(state.byteLength).toBeLessThan(MAX_MEMO_EDITOR_CONTENT_BYTES);
+    expect(jsonBytes).toBeGreaterThan(950_000);
+    expect(jsonBytes).toBeLessThan(MAX_MEMO_EDITOR_CONTENT_BYTES);
 
     const started = performance.now();
     const pdf = await renderer.render(state, 'bucket-1', actor);
     const elapsed = performance.now() - started;
     process.stdout.write(
-      `memo-signing-render editor-state=${state.byteLength} source-text=${Buffer.byteLength(markdown)} images=0 pixels=0 ms=${elapsed.toFixed(1)}\n`
+      `memo-signing-render editor-state=${state.byteLength} prose-mirror-json=${jsonBytes} source-text=${Buffer.byteLength(markdown)} images=0 pixels=0 ms=${elapsed.toFixed(1)}\n`
     );
 
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
@@ -75,6 +119,21 @@ describe('MemoPdfRenderer input bounds', () => {
         actor
       )
     ).rejects.toThrow(/1,000,000 bytes of memo editor content/i);
+    expect(documentService.getDocumentFromURL).not.toHaveBeenCalled();
+  });
+
+  it('rejects compact editor state whose decoded structure exceeds the limit before static rendering', async () => {
+    const state = emptyParagraphState(48_000);
+    expect(state.byteLength).toBeLessThan(MAX_MEMO_EDITOR_CONTENT_BYTES);
+    expect(proseMirrorJsonBytes(state)).toBeGreaterThan(
+      MAX_MEMO_EDITOR_CONTENT_BYTES
+    );
+
+    await expect(renderer.render(state, 'bucket-1', actor)).rejects.toThrow(
+      /1,000,000 bytes of memo editor content/i
+    );
+
+    expect(renderToHTMLString).not.toHaveBeenCalled();
     expect(documentService.getDocumentFromURL).not.toHaveBeenCalled();
   });
 

@@ -300,6 +300,15 @@ describe('Memo PDF editor fidelity contract', () => {
     expect(result.html).toContain('<u>Underlined from client 3.11</u>');
     expect(result.html).toMatch(/width=(?:"320"|320)/);
     expect(result.html).toMatch(/height=(?:"180"|180)/);
+    expect(
+      collectNodes(
+        result.definition,
+        node =>
+          Array.isArray(node.decoration) &&
+          node.decoration.includes('underline') &&
+          node.text === 'Underlined from client 3.11'
+      )
+    ).toHaveLength(1);
     const [image] = collectNodes(
       result.definition,
       node => typeof node.image === 'string'

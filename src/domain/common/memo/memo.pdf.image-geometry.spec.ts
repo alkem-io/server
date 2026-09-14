@@ -32,6 +32,11 @@ const paintBounds = async (pdf: Buffer) => {
     const images: Array<
       Bounds & { sourceWidth: number; sourceHeight: number }
     > = [];
+    const verticalBorders: Array<{
+      x: number;
+      top: number;
+      bottom: number;
+    }> = [];
     let pageWidth = 0;
     for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber++) {
       const page = await document.getPage(pageNumber);
@@ -74,10 +79,37 @@ const paintBounds = async (pdf: Buffer) => {
             sourceWidth,
             sourceHeight,
           });
+        } else if (operator === OPS.constructPath) {
+          const pathSegments = operators.argsArray[index]?.[1] as
+            | Array<Float32Array | null>
+            | undefined;
+          for (const segment of pathSegments ?? []) {
+            if (
+              !(segment instanceof Float32Array) ||
+              segment.length !== 6 ||
+              segment[0] !== 0 ||
+              segment[3] !== 1
+            )
+              continue;
+            const apply = (point: [number, number]) => {
+              Util.applyTransform(point, transform);
+              return point;
+            };
+            const [start, end] = [
+              apply([segment[1], segment[2]]),
+              apply([segment[4], segment[5]]),
+            ];
+            if (Math.abs(start[0] - end[0]) > 0.01) continue;
+            verticalBorders.push({
+              x: start[0],
+              top: Math.min(start[1], end[1]),
+              bottom: Math.max(start[1], end[1]),
+            });
+          }
         }
       }
     }
-    return { pageWidth, images };
+    return { pageWidth, images, verticalBorders };
   } finally {
     await document.destroy();
   }
@@ -205,15 +237,79 @@ describe('Memo PDF image geometry', () => {
       'bucket-1',
       actor
     );
+    const { images, verticalBorders } = await paintBounds(pdf);
+    const [paint] = images.filter(node => node.sourceWidth === 1200);
+    expect(paint).toBeDefined();
+    const enclosingBorders = verticalBorders
+      .filter(
+        border =>
+          border.top <= paint.top &&
+          border.bottom >= paint.bottom &&
+          (border.x <= paint.left || border.x >= paint.right)
+      )
+      .sort((left, right) => left.x - right.x);
+    const leftBorders = enclosingBorders.filter(
+      border => border.x <= paint.left
+    );
+    const leftBorder = leftBorders[leftBorders.length - 1];
+    const rightBorder = enclosingBorders.find(
+      border => border.x >= paint.right
+    );
+
+    expect(leftBorder).toBeDefined();
+    expect(rightBorder).toBeDefined();
+    expect(paint.left).toBeGreaterThan(leftBorder!.x);
+    expect(paint.right).toBeLessThan(rightBorder!.x);
+    expect((paint.right - paint.left) / (paint.bottom - paint.top)).toBeCloseTo(
+      1.5,
+      1
+    );
+  });
+
+  it('fits an image within a table cell spanning two of three columns', async () => {
+    fileServiceAdapter.getDocumentContent.mockResolvedValue(
+      await sharp({
+        create: {
+          width: 2400,
+          height: 1200,
+          channels: 3,
+          background: { r: 60, g: 90, b: 130 },
+        },
+      })
+        .png()
+        .toBuffer()
+    );
+    const cell = (content: unknown[], colspan = 1) => ({
+      type: 'tableCell',
+      attrs: { colspan, rowspan: 1, colwidth: null, background: null },
+      content: [{ type: 'paragraph', content }],
+    });
+    const pdf = await renderer.render(
+      toState([
+        {
+          type: 'table',
+          content: [
+            {
+              type: 'tableRow',
+              content: [
+                cell([image(internalUrl)], 2),
+                cell([{ type: 'text', text: 'Third column' }]),
+              ],
+            },
+          ],
+        },
+      ]),
+      'bucket-1',
+      actor
+    );
     const { pageWidth, images } = await paintBounds(pdf);
     const [paint] = images.filter(node => node.sourceWidth === 1200);
 
     expect(paint).toBeDefined();
+    expect(paint.left).toBeGreaterThanOrEqual(40);
     expect(paint.right).toBeLessThanOrEqual(pageWidth - 40);
-    expect(paint.right - paint.left).toBeLessThanOrEqual((pageWidth - 80) / 3);
-    expect((paint.right - paint.left) / (paint.bottom - paint.top)).toBeCloseTo(
-      1.5,
-      1
+    expect(paint.right - paint.left).toBeLessThanOrEqual(
+      ((pageWidth - 80) * 2) / 3
     );
   });
 });

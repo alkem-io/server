@@ -166,6 +166,8 @@ const expectEmbeddedOutline = async (
   const actual = subset!.font.getGlyph(gid);
   const expected = fontkit.openSync(sourceFontPath).layout(sourceText)
     .glyphs[0];
+  expect(expected.id).not.toBe(0);
+  expect(expected.path.commands.length).toBeGreaterThan(0);
   expect(actual.path.commands.length).toBeGreaterThan(0);
   expect(actual.bbox).toEqual(expected.bbox);
   expect(actual.path.commands).toEqual(expected.path.commands);
@@ -256,10 +258,17 @@ describe('Memo PDF emoji glyph coverage', () => {
     const { items } = await inspectText(withEmoji);
     const ordinaryItem = items.find(item => item.text.includes('Ordinary'));
     const emojiItem = items.find(item => item.text.includes('🎉'));
+    const operators = await inspectTextOperators(withEmoji);
+    const ordinaryOperator = operators.find(item =>
+      item.text.includes('Ordinary')
+    );
+    const emojiOperator = operators.find(item => item.text.includes('🎉'));
 
     expect(ordinaryItem).toBeDefined();
     expect(emojiItem).toBeDefined();
     expect(ordinaryItem!.fontName).not.toBe(emojiItem!.fontName);
+    expect(ordinaryOperator?.embeddedFontName).toContain('Roboto');
+    expect(emojiOperator?.embeddedFontName).toContain('NotoEmoji');
     expect(withEmoji.toString('latin1')).toContain('Roboto');
     expect(withEmoji.length - ordinary.length).toBeLessThan(200_000);
   });

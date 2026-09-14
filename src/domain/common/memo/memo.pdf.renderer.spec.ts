@@ -12,7 +12,7 @@ import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
 import sharp from 'sharp';
 import * as Y from 'yjs';
-import { markdownToYjsV2State, yjsStateToMarkdown } from './conversion';
+import { markdownToYjsV2State } from './conversion';
 import { markdownSchema } from './conversion/markdown.schema';
 import { memoSchema } from './conversion/memo.extensions';
 import { MemoPdfRenderer } from './memo.pdf.renderer';
@@ -189,7 +189,16 @@ describe('MemoPdfRenderer', () => {
   };
   const authorizationService = { grantAccessOrFail: vi.fn() };
   const fileServiceAdapter = { getDocumentContent: vi.fn() };
-  const renderer = new MemoPdfRenderer(
+  class TestableMemoPdfRenderer extends MemoPdfRenderer {
+    renderSanitizerFixture(
+      html: string,
+      bucketId: string,
+      actorContext: ActorContext
+    ) {
+      return this.renderHtml(html, bucketId, actorContext);
+    }
+  }
+  const renderer = new TestableMemoPdfRenderer(
     documentService as any,
     authorizationService as any,
     fileServiceAdapter as any
@@ -233,7 +242,7 @@ describe('MemoPdfRenderer', () => {
     fileServiceAdapter.getDocumentContent.mockReset();
   });
 
-  it('renders the current projection into a real PDF with representative structure', async () => {
+  it('renders direct editor state into a real PDF with representative structure', async () => {
     const pdf = await renderMarkdown(
       [
         '# Capture heading',
@@ -268,8 +277,7 @@ describe('MemoPdfRenderer', () => {
     expect(text).toContain('Γειά σου');
   });
 
-  it('preserves editor block structure through the current Yjs projection', async () => {
-    const projectedMarkdown = yjsStateToMarkdown(structuredMemoState());
+  it('preserves editor block structure through direct editor HTML', async () => {
     const convertHtml = vi.spyOn(renderer as any, 'convertHtml');
 
     try {
@@ -277,17 +285,6 @@ describe('MemoPdfRenderer', () => {
       const converterHtml = convertHtml.mock.calls[0][0] as string;
       const definition = convertHtml.mock.results[0].value;
 
-      expect
-        .soft(projectedMarkdown)
-        .toContain(
-          '- First paragraph inside item.\n\n  Second paragraph inside same item.\n\n  Third paragraph inside same item.'
-        );
-      expect
-        .soft(projectedMarkdown)
-        .toContain('\n\n| Column 1 | Column 2 | Column 3 |');
-      expect.soft(projectedMarkdown).toContain('\n\n## Heading after table');
-      expect.soft(projectedMarkdown).toContain('\n\n\u00a0\n\n');
-      expect.soft(projectedMarkdown).not.toContain('&nbsp;');
       expect.soft(converterHtml).toContain('<table>');
 
       const [topList] = (definition as PdfMakeNode[]).filter(
@@ -751,11 +748,9 @@ describe('MemoPdfRenderer', () => {
   it('preserves authored text in unsupported wrappers without enabling embedded content', async () => {
     const authoredMarkdown =
       '<section><div>Agreed <span>payment terms</span></div></section><object>hidden object text</object>';
-    const projectedMarkdown = yjsStateToMarkdown(
-      Buffer.from(markdownToYjsV2State(authoredMarkdown))
-    );
-    expect(projectedMarkdown).toBe(authoredMarkdown);
-    const pdf = await (renderer as any).renderHtml(
+    // The editor schema cannot emit section/object nodes. This direct seam
+    // pins the renderer's defense-in-depth handling of unexpected HTML.
+    const pdf = await renderer.renderSanitizerFixture(
       authoredMarkdown,
       'bucket-1',
       actor

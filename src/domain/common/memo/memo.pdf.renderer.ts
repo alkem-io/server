@@ -80,7 +80,7 @@ export class MemoPdfRenderer {
     return this.renderHtml(yjsStateToTiptapHtml(state), bucketId, actor);
   }
 
-  private async renderHtml(
+  protected async renderHtml(
     html: string,
     bucketId: string,
     actor: ActorContext

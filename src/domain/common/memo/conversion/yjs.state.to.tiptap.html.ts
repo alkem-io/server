@@ -5,6 +5,9 @@ import { yXmlFragmentToProseMirrorRootNode } from '@tiptap/y-tiptap';
 import * as Y from 'yjs';
 import { memoExtensions, memoSchema } from './memo.extensions';
 
+// This is a new editor-content budget applied independently to the encoded
+// Yjs update and decoded ProseMirror JSON. It is deliberately not the former
+// 100 KB Markdown budget: direct HTML no longer materializes Markdown.
 export const MAX_MEMO_EDITOR_CONTENT_BYTES = 1_000_000;
 
 const assertWithinEditorContentLimit = (bytes: number) => {
