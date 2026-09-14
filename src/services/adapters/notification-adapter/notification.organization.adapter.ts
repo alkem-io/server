@@ -4,7 +4,6 @@ import { LogContext } from '@common/enums/logging.context';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
-import { IRoleSet } from '@domain/access/role-set';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { MessageDetailsService } from '@domain/communication/message.details/message.details.service';
@@ -284,9 +283,14 @@ export class NotificationOrganizationAdapter {
     const roleSetID = await this.communityResolverService.getRoleSetIdForSpace(
       space.id
     );
+    // A loaded RoleSet, never an `{ id }` stub: the ancestor walk starts from
+    // this object and `isMember` reads its `entryRoleName`, so a stub made
+    // every L1/L2 organization invitation's notification fail with
+    // "Unable to find Role with name 'undefined'" (062 regression, caught by
+    // the 061 it-spec "an invitation to L2 lists every ancestor Space").
     const spacesToJoin = roleSetID
       ? await this.roleSetService.getSpacesToJoinOnAccept(
-          { id: roleSetID } as IRoleSet,
+          await this.roleSetService.getRoleSetOrFail(roleSetID),
           eventData.invitedContributorID,
           eventData.invitedToParent
         )

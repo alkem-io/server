@@ -293,10 +293,40 @@ describe('NotificationOrganizationAdapter', () => {
       vi.mocked(
         communityResolverService.getRoleSetIdForSpace
       ).mockResolvedValue('rs-1');
+      vi.mocked(roleSetService.getRoleSetOrFail).mockResolvedValue({
+        id: 'rs-1',
+        entryRoleName: 'member',
+      } as any);
       vi.mocked(roleSetService.getSpacesToJoinOnAccept).mockResolvedValue([
         { id: 'space-1', about: { profile: { displayName: 'My Space' } } },
       ] as any);
     };
+
+    it('walks the ancestor chain from the LOADED role set, never an { id } stub (L1/L2 invitations)', async () => {
+      // `isMember` reads `roleSet.entryRoleName` on every chain element, the
+      // target included; a stub made every invitedToParent notification fail
+      // with "Unable to find Role with name 'undefined'".
+      setUpCommonMocks();
+      vi.mocked(
+        notificationAdapter.getNotificationRecipients
+      ).mockResolvedValue({
+        emailRecipients: [],
+        inAppRecipients: [],
+        pushRecipients: [],
+      } as any);
+
+      await adapter.organizationSpaceCommunityInvitationCreated({
+        ...baseEventData,
+        invitedToParent: true,
+      } as any);
+
+      expect(roleSetService.getRoleSetOrFail).toHaveBeenCalledWith('rs-1');
+      expect(roleSetService.getSpacesToJoinOnAccept).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'rs-1', entryRoleName: 'member' }),
+        'org-1',
+        true
+      );
+    });
 
     it('zero-admin escalation: sends exactly one external notification with recipientEmail and empty recipients, no in-app, no push', async () => {
       setUpCommonMocks();
