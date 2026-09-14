@@ -16,6 +16,7 @@ const describeRealServices =
   process.env.CONTENT_SIGNING_REAL_SERVICES === 'true'
     ? describe
     : describe.skip;
+const PERFORMANCE_LIMIT_MARGIN_BYTES = 10_000;
 
 const imageUrl = (index: number) =>
   `https://alkem.io/api/private/rest/storage/document/11111111-1111-4111-8111-${index.toString().padStart(12, '0')}`;
@@ -66,7 +67,7 @@ const plainRepresentativeParagraph = {
   ],
 };
 
-const editorState = (imageCount: number, textBytes: number): Buffer => {
+const editorDocument = (imageCount: number, paragraphCount: number) => {
   const content = [
     {
       type: 'heading',
@@ -103,21 +104,60 @@ const editorState = (imageCount: number, textBytes: number): Buffer => {
         height: null,
       },
     })),
-    ...Array.from(
-      { length: Math.ceil(textBytes / representativeTextBytes) },
-      (_, index) =>
-        structuredClone(
-          index % 5 < 3 ? representativeParagraph : plainRepresentativeParagraph
-        )
+    ...Array.from({ length: paragraphCount }, (_, index) =>
+      structuredClone(
+        index % 5 < 3 ? representativeParagraph : plainRepresentativeParagraph
+      )
     ),
   ];
-  const document = memoSchema.nodeFromJSON({ type: 'doc', content });
+  return memoSchema.nodeFromJSON({ type: 'doc', content });
+};
+
+const editorFixture = (imageCount: number, paragraphCount: number) => {
+  const document = editorDocument(imageCount, paragraphCount);
   const ydoc = prosemirrorToYDoc(document, 'default');
   try {
-    return Buffer.from(Y.encodeStateAsUpdateV2(ydoc));
+    const state = Buffer.from(Y.encodeStateAsUpdateV2(ydoc));
+    return {
+      state,
+      sourceTextBytes: paragraphCount * representativeTextBytes,
+      jsonBytes: proseMirrorJsonBytes(state),
+    };
   } finally {
     ydoc.destroy();
   }
+};
+
+const editorFixtureForTextBytes = (imageCount: number, textBytes: number) =>
+  editorFixture(imageCount, Math.ceil(textBytes / representativeTextBytes));
+
+const nearLimitEditorFixture = (imageCount: number) => {
+  const targetBytes =
+    MAX_MEMO_EDITOR_CONTENT_BYTES - PERFORMANCE_LIMIT_MARGIN_BYTES;
+  let low = 0;
+  let high = Math.floor(
+    MAX_MEMO_EDITOR_CONTENT_BYTES / representativeTextBytes
+  );
+  let selectedParagraphs = 0;
+  while (low <= high) {
+    const paragraphs = Math.floor((low + high) / 2);
+    const bytes = Buffer.byteLength(
+      JSON.stringify(editorDocument(imageCount, paragraphs).toJSON())
+    );
+    if (bytes <= targetBytes) {
+      selectedParagraphs = paragraphs;
+      low = paragraphs + 1;
+    } else high = paragraphs - 1;
+  }
+  return {
+    ...editorFixture(imageCount, selectedParagraphs),
+    nextJsonBytes: Buffer.byteLength(
+      JSON.stringify(
+        editorDocument(imageCount, selectedParagraphs + 1).toJSON()
+      )
+    ),
+    targetBytes,
+  };
 };
 
 const proseMirrorJsonBytes = (state: Buffer): number => {
@@ -164,29 +204,23 @@ const createRenderer = (sources: Buffer[]) => {
 const renderAndAssert = async (
   label: string,
   sources: Buffer[],
-  sourceTextBytes: number
+  fixture: ReturnType<typeof editorFixture>
 ) => {
   const renderer = createRenderer(sources);
   const actor = Object.assign(new ActorContext(), { actorID: 'actor-1' });
   const started = performance.now();
-  const state = editorState(sources.length, sourceTextBytes);
-  const jsonBytes = proseMirrorJsonBytes(state);
-  const pdf = await renderer.render(state, 'bucket-1', actor);
+  const pdf = await renderer.render(fixture.state, 'bucket-1', actor);
   const elapsed = performance.now() - started;
   const pdfText = pdf.toString('latin1');
   const imageObjects = pdfText.match(/\/Subtype \/Image/g)?.length ?? 0;
   const dctImages = pdfText.match(/\/DCTDecode/g)?.length ?? 0;
 
   process.stdout.write(
-    `memo-render-ci case=${label} samples=1 editorState=${state.byteLength} proseMirrorJson=${jsonBytes} sourceText=${sourceTextBytes} images=${sources.length} sourceBytes=${sources.reduce((sum, source) => sum + source.length, 0)} pdf=${pdf.length} imageObjects=${imageObjects} dct=${dctImages} ms=${elapsed.toFixed(1)} maxRssMiB=${(process.resourceUsage().maxRSS / 1024).toFixed(1)}\n`
+    `memo-render-ci case=${label} samples=1 editorState=${fixture.state.byteLength} proseMirrorJson=${fixture.jsonBytes} sourceText=${fixture.sourceTextBytes} images=${sources.length} sourceBytes=${sources.reduce((sum, source) => sum + source.length, 0)} pdf=${pdf.length} imageObjects=${imageObjects} dct=${dctImages} ms=${elapsed.toFixed(1)} maxRssMiB=${(process.resourceUsage().maxRSS / 1024).toFixed(1)}\n`
   );
   expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
   expect(imageObjects).toBe(sources.length);
   expect(dctImages).toBe(sources.length);
-  if (label === 'maximum') {
-    expect(jsonBytes).toBeGreaterThan(MAX_MEMO_EDITOR_CONTENT_BYTES - 10_000);
-    expect(jsonBytes).toBeLessThan(MAX_MEMO_EDITOR_CONTENT_BYTES);
-  }
   expect(elapsed).toBeLessThan(10_000);
 };
 
@@ -195,12 +229,19 @@ describeRealServices('MemoPdfRenderer bounded fixture performance', () => {
     const sources = await Promise.all(
       realisticSources.map(path => readFile(resolve(process.cwd(), path)))
     );
-    await renderAndAssert('representative', sources, 50_000);
+    await renderAndAssert(
+      'representative',
+      sources,
+      editorFixtureForTextBytes(sources.length, 50_000)
+    );
   }, 30_000);
 
   it('renders the maximum text and image-count fixture inside the target', async () => {
     const sources: Buffer[] = [];
     for (let index = 0; index < 20; index++) sources.push(await noisyJpeg());
-    await renderAndAssert('maximum', sources, 205_000);
+    const fixture = nearLimitEditorFixture(20);
+    expect(fixture.jsonBytes).toBeLessThanOrEqual(fixture.targetBytes);
+    expect(fixture.nextJsonBytes).toBeGreaterThan(fixture.targetBytes);
+    await renderAndAssert('maximum', sources, fixture);
   }, 60_000);
 });
