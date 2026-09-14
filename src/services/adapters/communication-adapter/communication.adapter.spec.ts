@@ -790,6 +790,8 @@ describe('CommunicationAdapter', () => {
         unresolved: [],
         parent_pointers_repaired: [],
         parent_pointers_deferred: [],
+        parent_pointers_unprocessable: [],
+        converged: true,
         changed: true,
         dry_run: false,
       });
@@ -800,7 +802,9 @@ describe('CommunicationAdapter', () => {
       expect(mockAmqpConnection.request).toHaveBeenCalledWith({
         exchange: '',
         routingKey: MatrixAdapterEventType.COMMUNICATION_HIERARCHY_SET_CHILDREN,
-        payload: request,
+        // The adapter stamps the caller's absolute expiry from the same RPC
+        // timeout that governs this call, so the two cannot drift apart.
+        payload: { ...request, expires_at_unix_ms: expect.any(Number) },
         timeout: expect.any(Number),
       });
       expect(result).toEqual(response);
@@ -838,7 +842,33 @@ describe('CommunicationAdapter', () => {
         unresolved: [],
         parent_pointers_repaired: [],
         parent_pointers_deferred: [],
+        parent_pointers_unprocessable: [],
+        // An adapter predating the field sends no `converged` at all.
+        // Defaulting it to false keeps the caller's termination condition
+        // conservative under version skew: an old adapter reports "not
+        // finished" rather than a convergence nothing verified.
+        converged: false,
       });
+    });
+
+    it('stamps an expiry derived from the RPC timeout, and never overwrites one the caller set', async () => {
+      mockAmqpConnection.request.mockResolvedValue(createSuccessResponse({}));
+
+      const before = Date.now();
+      await adapter.setChildren(request);
+      const stamped = mockAmqpConnection.request.mock.calls[0][0].payload
+        .expires_at_unix_ms as number;
+      // Derived from the RPC timeout rather than an independent constant, so
+      // the adapter can never be told to stop waiting at one deadline while
+      // the request it sent claims another.
+      expect(stamped).toBeGreaterThanOrEqual(before);
+
+      mockAmqpConnection.request.mockClear();
+      const explicit = Date.now() + 123456;
+      await adapter.setChildren({ ...request, expires_at_unix_ms: explicit });
+      expect(
+        mockAmqpConnection.request.mock.calls[0][0].payload.expires_at_unix_ms
+      ).toBe(explicit);
     });
   });
 });
