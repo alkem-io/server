@@ -63,6 +63,24 @@ export default defineConfig({
           functions: 95,
           branches: 95,
         },
+        'src/domain/common/memo/conversion/memo.extensions.ts': {
+          lines: 95,
+          statements: 95,
+          functions: 95,
+          branches: 95,
+        },
+        'src/domain/common/memo/conversion/yjs.state.to.tiptap.html.ts': {
+          lines: 95,
+          statements: 95,
+          functions: 95,
+          branches: 95,
+        },
+        'src/domain/common/memo/memo.pdf.fonts.ts': {
+          lines: 95,
+          statements: 95,
+          functions: 95,
+          branches: 95,
+        },
         'src/services/api-rest/content-signing/content.signing.controller.ts': {
           lines: 95,
           statements: 95,

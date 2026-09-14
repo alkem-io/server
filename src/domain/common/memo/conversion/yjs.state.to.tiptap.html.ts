@@ -7,7 +7,9 @@ import { memoExtensions, memoSchema } from './memo.extensions';
 
 // This is a new editor-content budget applied independently to the encoded
 // Yjs update and decoded ProseMirror JSON. It is deliberately not the former
-// 100 KB Markdown budget: direct HTML no longer materializes Markdown.
+// 100 KB Markdown budget: a representative 205,000-byte source becomes a
+// 531,177-byte Yjs update and 966,181-byte ProseMirror JSON document, which the
+// renderer completes inside its 10-second envelope without materializing Markdown.
 export const MAX_MEMO_EDITOR_CONTENT_BYTES = 1_000_000;
 
 const assertWithinEditorContentLimit = (bytes: number) => {
