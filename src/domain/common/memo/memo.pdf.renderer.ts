@@ -10,6 +10,11 @@ import { JSDOM } from 'jsdom';
 import sharp from 'sharp';
 import { blankLineReplacement } from './conversion/const';
 import { yjsStateToTiptapHtml } from './conversion/yjs.state.to.tiptap.html';
+import {
+  applyMemoFontRuns,
+  memoFontFiles,
+  memoPdfFonts,
+} from './memo.pdf.fonts';
 
 // pdfmake and html-to-pdfmake publish CommonJS without TypeScript declarations.
 const htmlToPdfMake = require('html-to-pdfmake') as (
@@ -25,8 +30,11 @@ const pdfMake = require('pdfmake') as {
 const fonts = require('pdfmake/fonts/Roboto') as {
   Roboto: Record<string, string>;
 };
-const allowedFonts = new Set(Object.values(fonts.Roboto));
-pdfMake.addFonts(fonts);
+const allowedFonts = new Set([
+  ...Object.values(fonts.Roboto),
+  ...Object.values(memoFontFiles),
+]);
+pdfMake.addFonts({ ...fonts, ...memoPdfFonts });
 pdfMake.setUrlAccessPolicy(() => false);
 pdfMake.setLocalAccessPolicy(path => allowedFonts.has(path));
 
@@ -274,6 +282,7 @@ export class MemoPdfRenderer {
       defaultStyles: { mark: { background: '#fff59d' } },
     });
     substituteImageData(content);
+    applyMemoFontRuns(content);
     return pdfMake
       .createPdf({
         pageSize: 'A4',

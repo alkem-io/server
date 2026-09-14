@@ -13,6 +13,7 @@ import {
 import { getDocument, OPS } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import * as Y from 'yjs';
 import { memoSchema } from './conversion/memo.extensions';
+import { splitMemoFontRuns } from './memo.pdf.fonts';
 import { MemoPdfRenderer } from './memo.pdf.renderer';
 
 type FontGlyph = {
@@ -280,5 +281,28 @@ describe('Memo PDF emoji glyph coverage', () => {
       fontFixture('NotoSansSymbols2'),
       '□'
     );
+  });
+
+  it('routes only emoji graphemes and explicit symbols away from Roboto', () => {
+    expect(splitMemoFontRuns('Plain 🎉 ✓ text')).toEqual([
+      { text: 'Plain ' },
+      { text: '🎉', font: 'NotoEmoji' },
+      { text: ' ' },
+      { text: '✓', font: 'NotoSansSymbols2' },
+      { text: ' text' },
+    ]);
+    expect(splitMemoFontRuns('👩🏽‍💻 🇳🇱 1️⃣ ©️')).toEqual([
+      { text: '👩🏽‍💻', font: 'NotoEmoji' },
+      { text: ' ' },
+      { text: '🇳🇱', font: 'NotoEmoji' },
+      { text: ' ' },
+      { text: '1️⃣', font: 'NotoEmoji' },
+      { text: ' ' },
+      { text: '©️', font: 'NotoEmoji' },
+    ]);
+    expect(splitMemoFontRuns('Unsupported 🫩')).toEqual([
+      { text: 'Unsupported ' },
+      { text: '□', font: 'NotoSansSymbols2' },
+    ]);
   });
 });
