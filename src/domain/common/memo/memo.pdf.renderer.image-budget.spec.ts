@@ -1,5 +1,8 @@
 import { ActorContext } from '@core/actor-context/actor.context';
+import { prosemirrorToYDoc } from '@tiptap/y-tiptap';
 import sharp from 'sharp';
+import * as Y from 'yjs';
+import { memoSchema } from './conversion/memo.extensions';
 import { MemoPdfRenderer } from './memo.pdf.renderer';
 
 describe('MemoPdfRenderer normalized image budget', () => {
@@ -42,17 +45,32 @@ describe('MemoPdfRenderer normalized image budget', () => {
     const convertHtml = vi.spyOn(renderer as any, 'convertHtml');
 
     let failure: unknown;
+    const ydoc = prosemirrorToYDoc(
+      memoSchema.nodeFromJSON({
+        type: 'doc',
+        content: Array.from({ length: 20 }, (_, index) => ({
+          type: 'image',
+          attrs: {
+            src: internalUrl,
+            alt: `noise ${index}`,
+            title: null,
+            width: null,
+            height: null,
+          },
+        })),
+      }),
+      'default'
+    );
     try {
       await renderer.render(
-        Array.from(
-          { length: 20 },
-          (_, index) => `![noise ${index}](${internalUrl})`
-        ).join('\n'),
+        Buffer.from(Y.encodeStateAsUpdateV2(ydoc)),
         'bucket-1',
         Object.assign(new ActorContext(), { actorID: 'actor-1' })
       );
     } catch (error) {
       failure = error;
+    } finally {
+      ydoc.destroy();
     }
     expect(failure).toBeInstanceOf(Error);
     expect((failure as Error).message).toMatch(/16 MiB normalized size limit/i);
