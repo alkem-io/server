@@ -141,6 +141,125 @@ const mixedListsState = (): Buffer =>
     ])
   );
 
+const composedEditorState = (imageUrl: string): Buffer => {
+  const tableRows = Array.from({ length: 8 }, (_, rowIndex) => ({
+    type: 'tableRow',
+    content: Array.from({ length: 3 }, (_, columnIndex) => ({
+      type: rowIndex === 0 ? 'tableHeader' : 'tableCell',
+      content:
+        rowIndex === 1 && columnIndex === 0
+          ? [
+              paragraph(text('Composed cell paragraph one')).toJSON(),
+              paragraph(text('Composed cell paragraph two')).toJSON(),
+              {
+                type: 'bulletList',
+                content: [
+                  {
+                    type: 'listItem',
+                    content: [paragraph(text('Composed cell bullet')).toJSON()],
+                  },
+                ],
+              },
+            ]
+          : [paragraph(text(`Composed ${rowIndex}-${columnIndex}`)).toJSON()],
+    })),
+  }));
+  return toState(
+    memoSchema.nodeFromJSON({
+      type: 'doc',
+      content: [
+        {
+          type: 'heading',
+          attrs: { level: 1 },
+          content: [{ type: 'text', text: 'Composed fidelity heading' }],
+        },
+        {
+          type: 'bulletList',
+          content: [
+            {
+              type: 'listItem',
+              content: [
+                {
+                  type: 'paragraph',
+                  content: [
+                    { type: 'text', text: 'Composed first line' },
+                    { type: 'hardBreak' },
+                    { type: 'text', text: 'Composed second line' },
+                  ],
+                },
+                { type: 'paragraph' },
+                {
+                  type: 'paragraph',
+                  content: [{ type: 'text', text: 'Composed third paragraph' }],
+                },
+                {
+                  type: 'orderedList',
+                  attrs: { start: 1 },
+                  content: [
+                    {
+                      type: 'listItem',
+                      content: [
+                        {
+                          type: 'paragraph',
+                          content: [
+                            { type: 'text', text: 'Composed ordered child' },
+                          ],
+                        },
+                        {
+                          type: 'bulletList',
+                          content: [
+                            {
+                              type: 'listItem',
+                              content: [
+                                {
+                                  type: 'paragraph',
+                                  content: [
+                                    {
+                                      type: 'text',
+                                      text: 'Composed bullet grandchild',
+                                    },
+                                  ],
+                                },
+                              ],
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        { type: 'paragraph' },
+        { type: 'table', content: tableRows },
+        {
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: 'Composed ' },
+            {
+              type: 'text',
+              text: 'marked 🎉 check ✓',
+              marks: [{ type: 'underline' }],
+            },
+          ],
+        },
+        {
+          type: 'image',
+          attrs: {
+            src: imageUrl,
+            alt: 'Composed image',
+            title: null,
+            width: 320,
+            height: 180,
+          },
+        },
+      ],
+    })
+  );
+};
+
 describe('Memo PDF editor fidelity contract', () => {
   const actor = Object.assign(new ActorContext(), { actorID: 'actor-1' });
   const internalUrl =
@@ -319,5 +438,77 @@ describe('Memo PDF editor fidelity contract', () => {
       320 / 180,
       1
     );
+  });
+
+  it('preserves the composed editor fidelity corpus in one actual PDF', async () => {
+    documentService.getDocumentFromURL.mockResolvedValue({
+      id: 'image-1',
+      authorization: { id: 'image-auth' },
+      storageBucket: { id: 'bucket-1' },
+    });
+    fileServiceAdapter.getDocumentContent.mockResolvedValue(
+      await sharp({
+        create: {
+          width: 320,
+          height: 180,
+          channels: 3,
+          background: { r: 30, g: 80, b: 140 },
+        },
+      })
+        .png()
+        .toBuffer()
+    );
+
+    const result = await renderSigningState(composedEditorState(internalUrl));
+    const topLevel = result.definition as PdfMakeNode[];
+    const [table] = topLevel.filter(node => node.nodeName === 'TABLE');
+    const [topList] = topLevel.filter(node => node.nodeName === 'UL');
+    const body = (table.table as { body: PdfMakeNode[][] }).body;
+    const listItem = (topList.ul as PdfMakeNode[])[0];
+    const extracted = (
+      await parseOffice(result.pdf, { fileType: 'pdf', ocr: false })
+    )
+      .toText()
+      .replace(/\s+/g, ' ');
+
+    expect(body).toHaveLength(8);
+    expect(body.every(row => row.length === 3)).toBe(true);
+    expect(
+      collectNodes(body[1][0], node => node.nodeName === 'UL')
+    ).toHaveLength(1);
+    expect(collectNodes(listItem, node => node.nodeName === 'OL')).toHaveLength(
+      1
+    );
+    expect(collectNodes(listItem, node => node.nodeName === 'BR')).toHaveLength(
+      1
+    );
+    expect(
+      collectNodes(
+        result.definition,
+        node => node.nodeName === 'P' && node.text === '\u00a0'
+      ).length
+    ).toBeGreaterThanOrEqual(2);
+    expect(
+      collectNodes(
+        result.definition,
+        node =>
+          Array.isArray(node.decoration) &&
+          node.decoration.includes('underline') &&
+          String(node.text).includes('marked')
+      )
+    ).toHaveLength(1);
+    for (const token of [
+      'Composed fidelity heading',
+      'Composed first line',
+      'Composed second line',
+      'Composed third paragraph',
+      'Composed cell paragraph one',
+      'Composed cell paragraph two',
+      'Composed cell bullet',
+      'Composed ordered child',
+      'Composed bullet grandchild',
+      'marked 🎉 check ✓',
+    ])
+      expect(extracted).toContain(token);
   });
 });

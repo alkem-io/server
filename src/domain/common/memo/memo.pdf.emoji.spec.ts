@@ -29,6 +29,37 @@ const fontkit = require('fontkit') as {
   create(bytes: Buffer): ParsedFont;
   openSync(path: string): ParsedFont;
 };
+const pdfMake = require('pdfmake') as {
+  createPdf(definition: unknown): { getBuffer(): Promise<Buffer> };
+};
+
+type PdfMakeNode = Record<string, unknown>;
+
+const collectNodes = (
+  value: unknown,
+  predicate: (node: PdfMakeNode) => boolean
+): PdfMakeNode[] => {
+  const seen = new WeakSet<object>();
+  const visit = (candidate: unknown): PdfMakeNode[] => {
+    if (!candidate || typeof candidate !== 'object' || seen.has(candidate))
+      return [];
+    seen.add(candidate);
+    const node = candidate as PdfMakeNode;
+    return [
+      ...(predicate(node) ? [node] : []),
+      ...Object.values(node).flatMap(visit),
+    ];
+  };
+  return visit(value);
+};
+
+const textOf = (value: unknown): string => {
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) return value.map(textOf).join('');
+  if (value && typeof value === 'object')
+    return textOf((value as PdfMakeNode).text);
+  return '';
+};
 
 const toState = (content: unknown[]): Buffer => {
   const ydoc = prosemirrorToYDoc(
@@ -158,19 +189,24 @@ const expectEmbeddedOutline = async (
   sourceText: string
 ) => {
   expect(drawn.embeddedFontName).toBeDefined();
-  expect(drawn.cids).toHaveLength(1);
+  expect(drawn.cids.length).toBeGreaterThan(0);
   const subset = await embeddedFont(pdf, drawn.embeddedFontName!);
   expect(subset, `embedded ${drawn.embeddedFontName} subset`).toBeDefined();
-  const gid = subset!.gidForCid(drawn.cids[0]);
-  expect(gid).not.toBe(0);
-  const actual = subset!.font.getGlyph(gid);
-  const expected = fontkit.openSync(sourceFontPath).layout(sourceText)
-    .glyphs[0];
-  expect(expected.id).not.toBe(0);
-  expect(expected.path.commands.length).toBeGreaterThan(0);
-  expect(actual.path.commands.length).toBeGreaterThan(0);
-  expect(actual.bbox).toEqual(expected.bbox);
-  expect(actual.path.commands).toEqual(expected.path.commands);
+  const expectedGlyphs = fontkit
+    .openSync(sourceFontPath)
+    .layout(sourceText).glyphs;
+  expect(drawn.cids).toHaveLength(expectedGlyphs.length);
+  for (const [index, cid] of drawn.cids.entries()) {
+    const gid = subset!.gidForCid(cid);
+    expect(gid).not.toBe(0);
+    const actual = subset!.font.getGlyph(gid);
+    const expected = expectedGlyphs[index];
+    expect(expected.id).not.toBe(0);
+    expect(expected.path.commands.length).toBeGreaterThan(0);
+    expect(actual.path.commands.length).toBeGreaterThan(0);
+    expect(actual.bbox).toEqual(expected.bbox);
+    expect(actual.path.commands).toEqual(expected.path.commands);
+  }
   return subset!.byteLength;
 };
 
@@ -189,6 +225,21 @@ describe('Memo PDF emoji glyph coverage', () => {
   const renderer = new MemoPdfRenderer({} as never, {} as never, {} as never);
   const render = (content: unknown[]) =>
     renderer.render(toState(content), 'bucket-1', actor);
+  const renderWithDefinition = async (content: unknown[]) => {
+    const originalCreatePdf = pdfMake.createPdf.bind(pdfMake);
+    let definition: unknown;
+    const createPdf = vi
+      .spyOn(pdfMake, 'createPdf')
+      .mockImplementation(value => {
+        definition = structuredClone(value);
+        return originalCreatePdf(value);
+      });
+    try {
+      return { pdf: await render(content), definition };
+    } finally {
+      createPdf.mockRestore();
+    }
+  };
 
   it('renders and extracts emoji and symbol glyphs in memo block contexts', async () => {
     const pdf = await render([
@@ -313,5 +364,119 @@ describe('Memo PDF emoji glyph coverage', () => {
       { text: 'Unsupported ' },
       { text: '□', font: 'NotoSansSymbols2' },
     ]);
+  });
+
+  it('preserves marked emoji runs and their inline styles through an actual PDF', async () => {
+    const markedText = (
+      marks: Array<{ type: string; attrs?: Record<string, unknown> }>,
+      value = 'Party 🎉 check ✓'
+    ) => ({
+      type: 'paragraph',
+      content: [
+        { type: 'text', text: 'Before ' },
+        {
+          type: 'text',
+          text: value,
+          marks,
+        },
+        { type: 'text', text: ' after' },
+      ],
+    });
+    const link = 'https://example.com/signed-memo';
+    const { pdf, definition } = await renderWithDefinition([
+      markedText([{ type: 'bold' }]),
+      markedText([{ type: 'italic' }]),
+      markedText([{ type: 'underline' }]),
+      markedText([{ type: 'link', attrs: { href: link, target: '_blank' } }]),
+      markedText(
+        [
+          { type: 'link', attrs: { href: link, target: '_blank' } },
+          { type: 'bold' },
+        ],
+        'Nested marked 🎉 check ✓'
+      ),
+    ]);
+    const extracted = (await parseOffice(pdf, { fileType: 'pdf', ocr: false }))
+      .toText()
+      .replace(/\s+/g, ' ');
+
+    expect(extracted.match(/Before Party 🎉 check ✓ after/g)).toHaveLength(4);
+    expect(extracted).toContain('Before Nested marked 🎉 check ✓ after');
+    const markedNodes = collectNodes(
+      definition,
+      node =>
+        ['STRONG', 'EM', 'U', 'A'].includes(String(node.nodeName)) &&
+        textOf(node.text) === 'Party 🎉 check ✓'
+    );
+    expect(markedNodes.map(node => textOf(node.text))).toEqual(
+      Array(4).fill('Party 🎉 check ✓')
+    );
+    expect(markedNodes[0].bold).toBe(true);
+    expect(markedNodes[1].italics).toBe(true);
+    expect(markedNodes[2].decoration).toContain('underline');
+    expect(markedNodes[3]).toEqual(
+      expect.objectContaining({
+        link,
+        color: 'blue',
+        decoration: expect.arrayContaining(['underline']),
+      })
+    );
+    for (const node of markedNodes) {
+      expect(Array.isArray(node.text)).toBe(true);
+      const runs = node.text as Array<{ text: string; font?: string }>;
+      expect(runs).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ text: '🎉', font: 'NotoEmoji' }),
+          expect.objectContaining({ text: '✓', font: 'NotoSansSymbols2' }),
+        ])
+      );
+    }
+    const nestedNodes = collectNodes(
+      definition,
+      node => textOf(node.text) === 'Nested marked 🎉 check ✓'
+    );
+    expect(nestedNodes.some(node => node.bold === true)).toBe(true);
+    expect(nestedNodes.some(node => node.link === link)).toBe(true);
+    const nestedRuns = collectNodes(
+      nestedNodes,
+      node => node.font === 'NotoEmoji' || node.font === 'NotoSansSymbols2'
+    );
+    expect(nestedRuns.map(run => run.text)).toEqual(
+      expect.arrayContaining(['🎉', '✓'])
+    );
+
+    const operators = await inspectTextOperators(pdf);
+    const party = operators.find(item => item.text === '🎉');
+    const check = operators.find(item => item.text === '✓');
+    expect(party?.embeddedFontName).toContain('NotoEmoji');
+    expect(check?.embeddedFontName).toContain('NotoSansSymbols2');
+    await expectEmbeddedOutline(pdf, party!, fontFixture('NotoEmoji'), '🎉');
+    await expectEmbeddedOutline(
+      pdf,
+      check!,
+      fontFixture('NotoSansSymbols2'),
+      '✓'
+    );
+  });
+
+  it('renders complete supported emoji grapheme sequences in an actual PDF', async () => {
+    const sequences = ['👩🏽‍💻', '🇳🇱', '1️⃣', '©️'];
+    const pdf = await render([paragraph(sequences.join(' '))]);
+    const extracted = (await parseOffice(pdf, { fileType: 'pdf', ocr: false }))
+      .toText()
+      .replace(/\s+/g, ' ');
+    const operators = await inspectTextOperators(pdf);
+
+    for (const sequence of sequences) {
+      expect(extracted).toContain(sequence);
+      const drawn = operators.find(item => item.text.includes(sequence));
+      expect(drawn?.embeddedFontName).toContain('NotoEmoji');
+      await expectEmbeddedOutline(
+        pdf,
+        drawn!,
+        fontFixture('NotoEmoji'),
+        sequence
+      );
+    }
   });
 });
