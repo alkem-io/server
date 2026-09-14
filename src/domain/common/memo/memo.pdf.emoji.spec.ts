@@ -433,11 +433,21 @@ describe('Memo PDF emoji glyph coverage', () => {
     const marked = await inspectInlineMarks(
       await render([markedText('Link 🎉 check ✓', marks)])
     );
+    const emojiOnly = await inspectInlineMarks(
+      await render([markedText('🎉', marks)])
+    );
+    const symbolOnly = await inspectInlineMarks(
+      await render([markedText('✓', marks)])
+    );
 
     expect(control.links.length).toBeGreaterThan(0);
     expect(control.links.every(href => href === link)).toBe(true);
     expect(marked.links.length).toBeGreaterThan(0);
     expect(marked.links.every(href => href === link)).toBe(true);
+    expect(emojiOnly.links.length).toBeGreaterThan(0);
+    expect(emojiOnly.links.every(href => href === link)).toBe(true);
+    expect(symbolOnly.links.length).toBeGreaterThan(0);
+    expect(symbolOnly.links.every(href => href === link)).toBe(true);
   });
 
   it('preserves nested link and bold marks around emoji in the emitted PDF', async () => {
