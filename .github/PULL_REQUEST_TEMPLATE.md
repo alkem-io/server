@@ -43,6 +43,13 @@ If BREAKING changes are intentional:
 
 <!-- Testing strategy, migration notes, docs follow-up, etc. -->
 
+### DCO sign-off
+
+> All commits must carry a `Signed-off-by` trailer matching your Git
+> identity ([DCO 1.1](https://developercertificate.org/)). Use
+> `git commit -s`; fix existing commits with
+> `git rebase --signoff HEAD~N` and push with `--force-with-lease`.
+
 ---
 
 Reference docs: `specs/002-schema-contract-diffing/quickstart.md` for full workflow and troubleshooting.
