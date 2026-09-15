@@ -12,12 +12,14 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CollaboraDocument } from './collabora.document.entity';
 import { ICollaboraDocument } from './collabora.document.interface';
+import { CollaboraDocumentService } from './collabora.document.service';
 
 @Resolver(() => ICollaboraDocument)
 export class CollaboraDocumentResolverFields {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
+    private readonly logger: LoggerService,
+    private collaboraDocumentService: CollaboraDocumentService
   ) {}
 
   @ResolveField('profile', () => IProfile, {
@@ -50,5 +52,16 @@ export class CollaboraDocumentResolverFields {
     }
 
     return loader.load(createdBy);
+  }
+
+  @ResolveField('previewUrl', () => String, {
+    nullable: true,
+    description:
+      'An authorized, same-origin preview image endpoint for the current saved document, or null when there is no backing file to preview. NOT a bearer URL: every request against it is independently authorized against the current document READ policy.',
+  })
+  async previewUrl(
+    @Parent() collaboraDocument: ICollaboraDocument
+  ): Promise<string | null> {
+    return this.collaboraDocumentService.getPreviewUrl(collaboraDocument.id);
   }
 }
