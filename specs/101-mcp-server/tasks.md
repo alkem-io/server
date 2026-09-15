@@ -45,7 +45,7 @@ All paths under `src/services/mcp-server/` unless noted.
 ## Phase 4: User Story 3 — write tools (P2)
 
 - [X] T030 [US3] `create_whiteboard` — create a whiteboard contribution on a callout (enforces CONTRIBUTE) — `tools/create-whiteboard.tool.ts`
-- [X] T031 [US3] `update_whiteboard_content` — replace a whiteboard's scene (enforces UPDATE_CONTENT; notes RT-collab overwrite caveat) — `tools/update-whiteboard-content.tool.ts`
+- [X] ~~T031 [US3] `update_whiteboard_content` — replace a whiteboard's scene (enforces UPDATE_CONTENT; notes RT-collab overwrite caveat) — `tools/update-whiteboard-content.tool.ts`~~ **RETIRED — superseded by `edit_whiteboard_elements` (applies element deltas via the live Yjs room, no whole-scene overwrite); the retired tool and its classification entry are removed.**
 
 ---
 

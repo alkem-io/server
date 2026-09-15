@@ -30,10 +30,12 @@ function harness({
   kratosForwardFails,
   kratosRevertFails,
   alkemioFails,
+  endpointClusterUrl = 'https://cluster.example.test',
 }: {
   kratosForwardFails?: boolean;
   kratosRevertFails?: boolean;
   alkemioFails?: boolean;
+  endpointClusterUrl?: string;
 } = {}) {
   const auditRows: any[] = [];
   const repository = {
@@ -117,7 +119,11 @@ function harness({
   } as unknown as UserEmailChangeSubjectFootprintResolver;
 
   const configService = {
-    get: vi.fn().mockReturnValue('http://localhost:3000'),
+    get: vi.fn((key: string) =>
+      key === 'hosting.endpoint_cluster'
+        ? endpointClusterUrl
+        : 'http://localhost:3000'
+    ),
   } as unknown as ConfigService<any, true>;
 
   const service = new UserEmailChangeService(
@@ -133,7 +139,7 @@ function harness({
     configService,
     createLogger()
   );
-  return { service, auditRows, repository, kratosService };
+  return { service, auditRows, repository, kratosService, notificationAdapter };
 }
 
 const TEST_REASON = 'support ticket #4821';
@@ -158,6 +164,27 @@ describe('UserEmailChangeService — three commit outcomes via fault injection',
     expect(
       auditRows.some(r => r.outcome === PlatformAuditOutcome.COMMITTED)
     ).toBe(true);
+  });
+
+  it('new-address notification login link uses the per-env cluster base, not localhost (client-web#10161)', async () => {
+    const { service, notificationAdapter } = harness({
+      endpointClusterUrl: 'https://acc.alkem.io',
+    });
+    await service.applyAdminEmailChange(
+      'admin-1',
+      'subject-1',
+      'new@example.com',
+      TEST_REASON,
+      TEST_APPROVER
+    );
+    // Regression guard for client-web#10161: loginUrl must come from
+    // hosting.endpoint_cluster (the per-env platform base), never the
+    // localhost-defaulting endpoints.client_web key.
+    expect(
+      notificationAdapter.publishEmailChangeNewAddressNotification
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({ loginUrl: 'https://acc.alkem.io' })
+    );
   });
 
   it('forward Kratos fails → ROLLED_BACK + EMAIL_CHANGE_KRATOS_WRITE_FAILED', async () => {

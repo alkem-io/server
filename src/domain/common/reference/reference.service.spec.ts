@@ -193,7 +193,8 @@ describe('ReferenceService', () => {
       const result = await service.deleteReference({ ID: 'ref-1' });
 
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
-        reference.authorization
+        reference.authorization,
+        undefined
       );
       expect(result.id).toBe('ref-1');
     });

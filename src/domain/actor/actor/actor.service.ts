@@ -118,8 +118,12 @@ export class ActorService {
    * Must be called AFTER the child entity (User, Org, etc.) has been removed,
    * because the child's FK (child.id → actor.id) must be gone first.
    */
-  async deleteActorById(actorID: string): Promise<void> {
-    await this.actorRepository.delete(actorID);
+  async deleteActorById(actorID: string, em?: EntityManager): Promise<void> {
+    if (em) {
+      await em.delete(Actor, actorID);
+    } else {
+      await this.actorRepository.delete(actorID);
+    }
     // Best-effort cache invalidation — DB delete already committed,
     // so a Redis failure should not break the caller's flow
     try {

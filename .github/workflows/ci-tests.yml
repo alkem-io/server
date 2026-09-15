@@ -17,6 +17,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Block non-registry dependency pins on protected branches
+        run: .scripts/check-vendor-lib-pins.sh
+
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -44,6 +47,49 @@ jobs:
         with:
           name: coverage
           path: coverage-ci/
+          retention-days: 1
+
+  content-signing-integration:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      NODE_OPTIONS: "--max-old-space-size=4096"
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22.22.0'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Checkout pinned file-service for content-signing integration
+        uses: actions/checkout@v7
+        with:
+          repository: alkem-io/file-service
+          ref: 0a3995b235ef427c9d7cfd1092e7945e5244c137
+          path: .content-signing-file-service
+
+      - name: Run content-signing real-service integration tests
+        run: |
+          docker build --label org.opencontainers.image.source=https://github.com/alkem-io/file-service --label org.opencontainers.image.revision=0a3995b235ef427c9d7cfd1092e7945e5244c137 --tag aiai2025-file-service-pr1:0a3995 .content-signing-file-service
+          CONTENT_SIGNING_FILE_SERVICE_IMAGE=aiai2025-file-service-pr1:0a3995 pnpm run test:content-signing:coverage
+
+      - name: Upload content-signing coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-content-signing
+          path: coverage-ci/content-signing/
           retention-days: 1
 
   sonarqube:

@@ -49,7 +49,9 @@ describe('DocumentResolverMutations', () => {
       const deleteData = { ID: 'doc-1' };
       const deletedDoc = { id: 'doc-1' };
 
-      (documentService.getDocumentOrFail as Mock).mockResolvedValue(document);
+      (documentService.getUserFacingDocumentOrFail as Mock).mockResolvedValue(
+        document
+      );
       (authorizationService.grantAccessOrFail as Mock).mockResolvedValue(
         undefined
       );
@@ -60,7 +62,9 @@ describe('DocumentResolverMutations', () => {
         deleteData as any
       );
 
-      expect(documentService.getDocumentOrFail).toHaveBeenCalledWith('doc-1');
+      expect(documentService.getUserFacingDocumentOrFail).toHaveBeenCalledWith(
+        'doc-1'
+      );
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         docAuth,
@@ -84,7 +88,9 @@ describe('DocumentResolverMutations', () => {
       const documentData = { ID: 'doc-2', displayName: 'updated.pdf' };
       const updatedDoc = { id: 'doc-2', displayName: 'updated.pdf' };
 
-      (documentService.getDocumentOrFail as Mock).mockResolvedValue(document);
+      (documentService.getUserFacingDocumentOrFail as Mock).mockResolvedValue(
+        document
+      );
       (authorizationService.grantAccessOrFail as Mock).mockResolvedValue(
         undefined
       );
@@ -95,7 +101,9 @@ describe('DocumentResolverMutations', () => {
         documentData as any
       );
 
-      expect(documentService.getDocumentOrFail).toHaveBeenCalledWith('doc-2');
+      expect(documentService.getUserFacingDocumentOrFail).toHaveBeenCalledWith(
+        'doc-2'
+      );
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         docAuth,

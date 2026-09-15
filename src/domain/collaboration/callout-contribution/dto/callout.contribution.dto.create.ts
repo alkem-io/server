@@ -42,4 +42,12 @@ export class CreateCalloutContributionInput {
     description: 'The sort order to assign to this Contribution.',
   })
   sortOrder?: number;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'The Tasks board column this task starts in. Only valid when the parent Callout is a Tasks board; defaults to the first column.',
+  })
+  @IsOptional()
+  taskColumn?: string;
 }

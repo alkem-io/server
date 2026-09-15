@@ -4,6 +4,7 @@ import { MutationType } from '@common/enums/subscriptions';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { ActorService } from '@domain/actor/actor/actor.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { IConversation } from '@domain/communication/conversation/conversation.interface';
 import { ConversationService } from '@domain/communication/conversation/conversation.service';
 import { ConversationAuthorizationService } from '@domain/communication/conversation/conversation.service.authorization';
 import { IMessage } from '@domain/communication/message/message.interface';
@@ -16,6 +17,7 @@ import { InAppNotificationService } from '@platform/in-app-notification/in.app.n
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { randomUUID } from 'crypto';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ConversationNotificationService } from './conversation.notification.service';
 import { MessageEditedEvent } from './message.edited.event';
 import { MessageNotificationService } from './message.notification.service';
 import { MessageReceivedEvent } from './message.received.event';
@@ -63,6 +65,7 @@ export class MessageInboxService {
     private readonly conversationAuthorizationService: ConversationAuthorizationService,
     private readonly authorizationPolicyService: AuthorizationPolicyService,
     private readonly actorService: ActorService,
+    private readonly conversationNotificationService: ConversationNotificationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -102,14 +105,50 @@ export class MessageInboxService {
       message
     );
 
-    // Publish conversation events for direct messaging rooms
-    // Note: conversationCreated is fired when conversation is created, not on first message
+    // Conversation rooms: hoist the conversation + member-actor-ID resolution
+    // ONCE per message (034-messaging-notifications D-13) so both the
+    // subscription publish and the new notification branch share the same
+    // lookup — classification then costs zero additional queries. The
+    // pre-existing notification guard below is BRANCHED, not removed
+    // (D-3): mentions/replies stay OFF inside chats; MessageNotificationService
+    // is untouched.
     if (isConversationRoom(room)) {
-      await this.publishMessageReceivedConversationEvent(room, message);
-    }
+      const conversation =
+        await this.conversationService.findConversationByRoomId(room.id);
 
-    // Process notifications (skip for conversation rooms)
-    if (!isConversationRoom(room)) {
+      if (!conversation) {
+        this.logger.warn(
+          `Could not find conversation for room ${room.id} - skipping message received event`,
+          LogContext.COMMUNICATION
+        );
+      } else {
+        const memberActorIds =
+          await this.conversationService.getConversationMemberActorIds(
+            conversation.id
+          );
+
+        // Publish conversation events for direct messaging rooms
+        // Note: conversationCreated is fired when conversation is created, not on first message
+        await this.publishMessageReceivedConversationEvent(
+          conversation,
+          memberActorIds,
+          room,
+          message
+        );
+
+        // 034-messaging-notifications: the new conversation-notification
+        // branch. Own try/catch inside the service (FR-014) — a failure here
+        // never affects the message/count/subscription work above.
+        await this.conversationNotificationService.notifyConversationMessage({
+          conversation,
+          room,
+          message,
+          memberActorIds,
+          senderActorID: payload.actorID,
+        });
+      }
+    } else {
+      // Process notifications (skip for conversation rooms)
       const actorContext = await this.actorContextService.buildForActor(
         payload.actorID
       );
@@ -577,27 +616,18 @@ export class MessageInboxService {
   /**
    * Publish a message received conversation event.
    * Note: conversationCreated events are fired from MessagingService.createConversation().
+   *
+   * 034-messaging-notifications (D-13): conversation + memberActorIds are now
+   * hoisted ONCE by the caller (`handleMessageReceived`) and shared with the
+   * new conversation-notification branch — this method no longer re-resolves
+   * them itself.
    */
   private async publishMessageReceivedConversationEvent(
+    conversation: IConversation,
+    memberActorIds: string[],
     room: IRoom,
     message: IMessage
   ): Promise<void> {
-    const conversation =
-      await this.conversationService.findConversationByRoomId(room.id);
-
-    if (!conversation) {
-      this.logger.warn(
-        `Could not find conversation for room ${room.id} - skipping message received event`,
-        LogContext.COMMUNICATION
-      );
-      return;
-    }
-
-    const memberActorIds =
-      await this.conversationService.getConversationMemberActorIds(
-        conversation.id
-      );
-
     await this.subscriptionPublishService.publishConversationEvent({
       eventID: `conversation-event-${randomUUID()}`,
       memberActorIds,

@@ -3,6 +3,7 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { CommunityGuidelinesModule } from '@domain/community/community-guidelines/community.guidelines.module';
+import { ClassificationEntryModule } from '@domain/space/classification.entry/classification.entry.module';
 import { TemplateContentSpaceLookupModule } from '@domain/template/template-content-space/template-content-space.lookup/template-content-space.lookup.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -18,6 +19,7 @@ import { SpaceAboutAuthorizationService } from './space.about.service.authorizat
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
+    ClassificationEntryModule,
     CommunityGuidelinesModule,
     ProfileModule,
     SpaceLookupModule,

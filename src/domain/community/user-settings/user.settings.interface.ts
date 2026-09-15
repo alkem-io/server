@@ -2,6 +2,7 @@ import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { Field, Int, ObjectType } from '@nestjs/graphql';
 import { IUserSettingsAssistant } from './user.settings.assistant.interface';
 import { IUserSettingsCommunication } from './user.settings.communications.interface';
+import { IUserSettingsDashboard } from './user.settings.dashboard.interface';
 import { IUserSettingsHomeSpace } from './user.settings.home.space.interface';
 import { IUserSettingsNotification } from './user.settings.notification.interface';
 import { IUserSettingsPrivacy } from './user.settings.privacy.interface';
@@ -38,6 +39,12 @@ export class IUserSettings extends IAuthorizable {
     description: 'The home space settings for this User.',
   })
   homeSpace!: IUserSettingsHomeSpace;
+
+  @Field(() => IUserSettingsDashboard, {
+    nullable: false,
+    description: 'The home-dashboard view settings for this User.',
+  })
+  dashboard!: IUserSettingsDashboard;
 
   @Field(() => Int, {
     nullable: false,

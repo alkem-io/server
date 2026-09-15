@@ -70,11 +70,14 @@ describe('UserSettingsService', () => {
         organization: {
           adminMentioned: defaultNotificationSetting(),
           adminMessageReceived: defaultNotificationSetting(),
+          adminSpaceCommunityInvitation: defaultNotificationSetting(),
         },
         user: {
           messageReceived: defaultNotificationSetting(),
           mentioned: defaultNotificationSetting(),
           commentReply: defaultNotificationSetting(),
+          conversationMessageDirect: defaultNotificationSetting(),
+          conversationMessageGroup: defaultNotificationSetting(),
           membership: {
             spaceCommunityInvitationReceived: defaultNotificationSetting(),
             spaceCommunityJoined: defaultNotificationSetting(),
@@ -127,6 +130,9 @@ describe('UserSettingsService', () => {
       homeSpace: {
         spaceID: null,
         autoRedirect: false,
+      },
+      dashboard: {
+        activityView: true,
       },
       designVersion: DESIGN_VERSION_CURRENT_DEFAULT,
       ...overrides,
@@ -381,6 +387,58 @@ describe('UserSettingsService', () => {
     });
   });
 
+  describe('updateSettings - dashboard', () => {
+    it('should update activityView when provided', () => {
+      const settings = buildSettings();
+      const updateData = {
+        dashboard: { activityView: false },
+      } as UpdateUserSettingsEntityInput;
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.dashboard.activityView).toBe(false);
+    });
+
+    it('should leave activityView untouched when dashboard update data is omitted', () => {
+      const settings = buildSettings({
+        dashboard: { activityView: false },
+      });
+      const updateData = {} as UpdateUserSettingsEntityInput;
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.dashboard.activityView).toBe(false);
+    });
+
+    it('should not change other setting groups when only dashboard is updated', () => {
+      const settings = buildSettings({
+        homeSpace: { spaceID: 'space-1', autoRedirect: true },
+      });
+      const updateData = {
+        dashboard: { activityView: false },
+      } as UpdateUserSettingsEntityInput;
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.dashboard.activityView).toBe(false);
+      expect(result.homeSpace.spaceID).toBe('space-1');
+      expect(result.homeSpace.autoRedirect).toBe(true);
+    });
+
+    it('should default a missing dashboard group to activityView=true before merging', () => {
+      const settings = buildSettings();
+      // Simulate a legacy row loaded before the backfill migration.
+      (settings as { dashboard?: unknown }).dashboard = undefined;
+      const updateData = {
+        dashboard: { activityView: false },
+      } as UpdateUserSettingsEntityInput;
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.dashboard.activityView).toBe(false);
+    });
+  });
+
   describe('updateSettings - language / languageOfferAnswered', () => {
     it('should set language and latch languageOfferAnswered when language is provided', () => {
       const settings = buildSettings({
@@ -586,6 +644,49 @@ describe('UserSettingsService', () => {
     });
   });
 
+  describe('updateSettings - notification.organization', () => {
+    it('should update adminSpaceCommunityInvitation notification', () => {
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = {
+        notification: {
+          organization: {
+            adminSpaceCommunityInvitation: { email: false, push: false },
+          },
+        },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(
+        result.notification.organization.adminSpaceCommunityInvitation.email
+      ).toBe(false);
+      expect(
+        result.notification.organization.adminSpaceCommunityInvitation.push
+      ).toBe(false);
+      expect(
+        result.notification.organization.adminSpaceCommunityInvitation.inApp
+      ).toBe(false);
+    });
+
+    it('should leave adminSpaceCommunityInvitation untouched when omitted', () => {
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = {
+        notification: {
+          organization: {
+            adminMentioned: { email: true },
+          },
+        },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(
+        result.notification.organization.adminSpaceCommunityInvitation
+      ).toEqual(defaultNotificationSetting());
+      expect(result.notification.organization.adminMentioned.email).toBe(true);
+    });
+  });
+
   describe('updateSettings - notification.space', () => {
     it('should update admin.communityApplicationReceived notification', () => {
       const settings = buildSettings();
@@ -706,6 +807,52 @@ describe('UserSettingsService', () => {
 
       expect(result.notification.user.messageReceived.email).toBe(true);
       expect(result.notification.user.messageReceived.inApp).toBe(true);
+    });
+
+    it('should update conversationMessageDirect notification and leave conversationMessageGroup untouched (FR-017)', () => {
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = {
+        notification: {
+          user: {
+            conversationMessageDirect: { email: true },
+          } as any,
+        },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.notification.user.conversationMessageDirect.email).toBe(
+        true
+      );
+      expect(result.notification.user.conversationMessageGroup.email).toBe(
+        false
+      );
+    });
+
+    it('should update conversationMessageGroup notification and leave messageReceived/conversationMessageDirect untouched (FR-017)', () => {
+      const settings = buildSettings();
+      // The fixture ships both siblings as `false`, which is also what an
+      // update that wrongly reset them would produce — flip them first so the
+      // preservation assertions can actually fail.
+      settings.notification.user.conversationMessageDirect.push = true;
+      settings.notification.user.messageReceived.push = true;
+      const updateData: UpdateUserSettingsEntityInput = {
+        notification: {
+          user: {
+            conversationMessageGroup: { push: false },
+          } as any,
+        },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.notification.user.conversationMessageGroup.push).toBe(
+        false
+      );
+      expect(result.notification.user.conversationMessageDirect.push).toBe(
+        true
+      );
+      expect(result.notification.user.messageReceived.push).toBe(true);
     });
 
     it('should update membership.spaceCommunityInvitationReceived notification', () => {

@@ -1,3 +1,4 @@
+import { X509Certificate } from 'node:crypto';
 import { LogContext } from '@common/enums';
 import { AuthenticationType } from '@common/enums/authentication.type';
 import {
@@ -11,12 +12,18 @@ import { ConfigService } from '@nestjs/config';
 import {
   Configuration,
   FrontendApi,
+  type GetIdentityIncludeCredentialEnum,
   Identity,
   IdentityApi,
+  type IdentityCredentialsOidc,
 } from '@ory/kratos-client';
 import { AlkemioConfig } from '@src/types';
+import { decodeJwt } from 'jose';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { OryDefaultIdentitySchema } from './types/ory.default.identity.schema';
+
+export const CLEVERBASE_SIGNING_CERTIFICATE_CLAIM =
+  'com.cleverbase.signing_certificate';
 
 /**
  * The `KratosService` class provides methods to interact with the Ory Kratos identity management system:
@@ -384,11 +391,13 @@ export class KratosService {
   }
 
   public async getIdentityById(
-    identityId: string
+    identityId: string,
+    includeCredential?: GetIdentityIncludeCredentialEnum[]
   ): Promise<Identity | undefined> {
     try {
       const { data: identity } = await this.kratosIdentityClient.getIdentity({
         id: identityId,
+        includeCredential,
       });
       return identity;
     } catch (error) {
@@ -408,6 +417,73 @@ export class KratosService {
       );
       throw error;
     }
+  }
+
+  public async getCleverbaseSubject(
+    identityId: string
+  ): Promise<string | undefined> {
+    const identity = await this.getIdentityById(identityId, ['oidc']);
+    const prefix = `${AuthenticationType.CLEVERBASE}:`;
+    const identifier = identity?.credentials?.oidc?.identifiers?.find(value =>
+      value.startsWith(prefix)
+    );
+    const providerSubject = identifier?.slice(prefix.length) || undefined;
+    if (!providerSubject) {
+      return undefined;
+    }
+
+    const oidcConfig = identity?.credentials?.oidc?.config as
+      | IdentityCredentialsOidc
+      | undefined;
+    const initialIDToken = oidcConfig?.providers?.find(
+      provider => provider.provider === AuthenticationType.CLEVERBASE
+    )?.initial_id_token;
+    if (initialIDToken === undefined) {
+      return providerSubject;
+    }
+    if (initialIDToken.trim().length === 0) {
+      this.warnUnavailableCleverbaseSigningIdentity(identityId);
+      return providerSubject;
+    }
+
+    let payload: ReturnType<typeof decodeJwt>;
+    try {
+      payload = decodeJwt(initialIDToken);
+    } catch {
+      this.warnUnavailableCleverbaseSigningIdentity(identityId);
+      return undefined;
+    }
+
+    const signingCertificate = payload[CLEVERBASE_SIGNING_CERTIFICATE_CLAIM];
+    if (signingCertificate === undefined) {
+      return providerSubject;
+    }
+    if (typeof signingCertificate !== 'string') {
+      this.warnUnavailableCleverbaseSigningIdentity(identityId);
+      return undefined;
+    }
+
+    try {
+      const subject = new X509Certificate(signingCertificate).toLegacyObject()
+        .subject as unknown as Record<string, unknown>;
+      const serialNumber = subject.serialNumber;
+      if (typeof serialNumber === 'string' && serialNumber.length > 0) {
+        return serialNumber;
+      }
+    } catch {
+      this.warnUnavailableCleverbaseSigningIdentity(identityId);
+      return undefined;
+    }
+
+    this.warnUnavailableCleverbaseSigningIdentity(identityId);
+    return undefined;
+  }
+
+  private warnUnavailableCleverbaseSigningIdentity(identityId: string): void {
+    this.logger.warn(
+      `Stored Cleverbase signing identity is unavailable for identity ${identityId}.`,
+      LogContext.KRATOS
+    );
   }
 
   /**

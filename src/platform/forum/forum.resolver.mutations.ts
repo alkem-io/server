@@ -14,6 +14,7 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
+import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IDiscussion } from '../forum-discussion/discussion.interface';
@@ -21,6 +22,9 @@ import { DiscussionService } from '../forum-discussion/discussion.service';
 import { DiscussionAuthorizationService } from '../forum-discussion/discussion.service.authorization';
 import { ForumCreateDiscussionInput } from './dto/forum.dto.create.discussion';
 import { ForumDiscussionUpdated } from './dto/forum.dto.event.discussion.updated';
+import { ForumRemoveDiscussionCategoryInput } from './dto/forum.dto.remove.discussion.category';
+import { isAdminOnlyForumCategory } from './forum.category.allowed';
+import { IForum } from './forum.interface';
 import { ForumService } from './forum.service';
 
 @InstrumentResolver()
@@ -35,6 +39,7 @@ export class ForumResolverMutations {
     private discussionAuthorizationService: DiscussionAuthorizationService,
     private discussionService: DiscussionService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
+    private platformOperationsAuditService: PlatformOperationsAuditService,
     @Inject(SUBSCRIPTION_DISCUSSION_UPDATED)
     private readonly subscriptionDiscussionMessage: PubSubEngine,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -55,14 +60,14 @@ export class ForumResolverMutations {
       `create discussion on forum: ${forum.id}`
     );
 
-    if (createData.category === ForumDiscussionCategory.RELEASES) {
+    if (isAdminOnlyForumCategory(createData.category)) {
       const platformAuthorization =
         await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
       await this.authorizationService.grantAccessOrFail(
         actorContext,
         platformAuthorization,
         AuthorizationPrivilege.PLATFORM_ADMIN,
-        `User not authorized to create discussion with ${ForumDiscussionCategory.RELEASES} category.`
+        `User not authorized to create discussion with ${createData.category} category.`
       );
     }
 
@@ -118,5 +123,80 @@ export class ForumResolverMutations {
     );
 
     return await this.discussionService.getDiscussionOrFail(discussion.id);
+  }
+
+  @Mutation(() => IForum, {
+    description:
+      "Removes one category from the platform Forum's active discussionCategories " +
+      'list. Refuses while any Discussion still carries the category. Idempotent ' +
+      'for an already-absent category. The enum member is never removed. ' +
+      'Requires PLATFORM_ADMIN. Audited (PLATFORM_OPERATIONS).',
+  })
+  async adminForumRemoveDiscussionCategory(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('removeData') removeData: ForumRemoveDiscussionCategoryInput
+  ): Promise<IForum> {
+    // Authorization runs before the audited block, not inside it: an
+    // unauthorized caller must be rejected without triggering a write to the
+    // compliance audit table or an error log entry attributable to them.
+    // Only work that happens once the caller is confirmed a platform admin
+    // is covered by the try/catch below, so genuine post-authorization
+    // failures still get their audited failure row.
+    const platformAuthorization =
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
+    await this.authorizationService.grantAccessOrFail(
+      actorContext,
+      platformAuthorization,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `remove forum discussion category: ${removeData.category}`
+    );
+
+    try {
+      const forum = await this.forumService.getPlatformForumOrFail();
+      const { forum: updatedForum, removed } =
+        await this.forumService.removeDiscussionCategory(
+          forum,
+          removeData.category
+        );
+      await this.recordCategoryRemovalAudit(
+        actorContext.actorID,
+        removeData.category,
+        'success',
+        { removed }
+      );
+      return updatedForum;
+    } catch (error) {
+      await this.recordCategoryRemovalAudit(
+        actorContext.actorID,
+        removeData.category,
+        'failure',
+        undefined,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Defence in depth beyond `PlatformOperationsAuditService`'s own
+   * fail-open contract: this mutation's result must never depend on the
+   * audit write succeeding, whatever the failure mode.
+   */
+  private async recordCategoryRemovalAudit(
+    actorID: string,
+    category: ForumDiscussionCategory,
+    outcome: 'success' | 'failure',
+    extraTarget?: Record<string, unknown>,
+    error?: unknown
+  ): Promise<void> {
+    await this.platformOperationsAuditService
+      .recordOperation({
+        actorID,
+        action: 'adminForumRemoveDiscussionCategory',
+        target: { category, ...extraTarget },
+        outcome,
+        error,
+      })
+      .catch(() => undefined);
   }
 }

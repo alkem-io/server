@@ -1,4 +1,6 @@
 import { vi } from 'vitest';
+import { McpTool } from '../dto/mcp.types';
+import { TOOL_PROVIDERS } from '../tools/tool.providers';
 import {
   ASSISTANT_CAPABILITY_CLASSIFICATION,
   classifyCapability,
@@ -17,7 +19,6 @@ import { AssistantCapabilityResolverQueries } from './assistant.capability.resol
 const CONTRACT_TABLE: Record<string, AssistantCapabilityKind> = {
   create_whiteboard: AssistantCapabilityKind.WRITE_ADDITIVE,
   create_whiteboard_in_space: AssistantCapabilityKind.WRITE_ADDITIVE,
-  update_whiteboard_content: AssistantCapabilityKind.WRITE_DESTRUCTIVE,
   edit_whiteboard_elements: AssistantCapabilityKind.WRITE_ADDITIVE,
   search_content: AssistantCapabilityKind.READ,
   list_whiteboards: AssistantCapabilityKind.READ,
@@ -39,12 +40,15 @@ describe('Assistant capability classification (T023a — parity guard)', () => {
     expect(ASSISTANT_CAPABILITY_CLASSIFICATION).toEqual(CONTRACT_TABLE);
   });
 
-  it('classifies the two explicit writes as WRITE_*', () => {
+  it('classifies the explicit whiteboard writes as WRITE_*', () => {
     expect(classifyCapability('create_whiteboard')).toBe(
       AssistantCapabilityKind.WRITE_ADDITIVE
     );
-    expect(classifyCapability('update_whiteboard_content')).toBe(
-      AssistantCapabilityKind.WRITE_DESTRUCTIVE
+    expect(classifyCapability('create_whiteboard_in_space')).toBe(
+      AssistantCapabilityKind.WRITE_ADDITIVE
+    );
+    expect(classifyCapability('edit_whiteboard_elements')).toBe(
+      AssistantCapabilityKind.WRITE_ADDITIVE
     );
   });
 
@@ -99,9 +103,9 @@ describe('Read-only default toggles (T023)', () => {
       const expectedEnabled = kind === AssistantCapabilityKind.READ;
       expect(byName.get(tool)).toBe(expectedEnabled);
     }
-    // The two writes are present and disabled.
+    // The explicit writes are present and disabled.
     expect(byName.get('create_whiteboard')).toBe(false);
-    expect(byName.get('update_whiteboard_content')).toBe(false);
+    expect(byName.get('edit_whiteboard_elements')).toBe(false);
   });
 
   it('a freshly-added WRITE_* capability defaults disabled for an existing user (absent ⇒ disabled)', () => {
@@ -113,5 +117,36 @@ describe('Read-only default toggles (T023)', () => {
     expect(classifyCapability('some_brand_new_tool')).not.toBe(
       AssistantCapabilityKind.READ
     );
+  });
+});
+
+describe('Classification map ⇄ registered tool surface parity (forcing function)', () => {
+  // The ACTUAL registered tool surface, read from the module's single source of
+  // truth (`TOOL_PROVIDERS`) via each tool's own `getDefinition()` — never a
+  // hand-maintained list. `getDefinition()` returns a static literal with no
+  // `this` dependency, so a bare instantiation is enough to read the published
+  // name. This is the forcing function that keeps the frozen classification map
+  // honest: it fails CI the moment a tool is registered without a classification
+  // entry, or a classification key names a tool that is no longer registered
+  // (e.g. the retired `update_whiteboard_content`).
+  const registeredToolNames = TOOL_PROVIDERS.map(
+    Provider =>
+      new (Provider as unknown as new () => McpTool)().getDefinition().name
+  );
+
+  it('every registered tool has a classification entry (no unclassified registered tool)', () => {
+    const classified = new Set(
+      Object.keys(ASSISTANT_CAPABILITY_CLASSIFICATION)
+    );
+    const missing = registeredToolNames.filter(name => !classified.has(name));
+    expect(missing).toEqual([]);
+  });
+
+  it('every classification key is a real registered tool (no phantom/retired classification)', () => {
+    const registered = new Set(registeredToolNames);
+    const phantom = Object.keys(ASSISTANT_CAPABILITY_CLASSIFICATION).filter(
+      name => !registered.has(name)
+    );
+    expect(phantom).toEqual([]);
   });
 });

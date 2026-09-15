@@ -1,11 +1,15 @@
 import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextCacheService } from '@core/actor-context/actor.context.cache.service';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
+import type { AlkemioSessionPayload } from '@core/auth/oidc/session-store.redis';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
+import { LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { EntityManager } from 'typeorm';
 import { type Mocked, vi } from 'vitest';
 import { AuthenticationService } from './authentication.service';
 
@@ -66,6 +70,57 @@ describe('AuthenticationService', () => {
     expect(service).toBeDefined();
   });
 
+  describe('getActorContextFromBffPayload', () => {
+    it('creates a guest only when a signed-out request carries a name', async () => {
+      const guestContext = {
+        ...mockActorContext,
+        actorID: '',
+        isGuest: true,
+        guestName: 'José',
+      };
+      actorContextService.createGuest.mockReturnValue(guestContext);
+
+      const result = await service.getActorContextFromBffPayload(
+        null,
+        ' José '
+      );
+
+      expect(actorContextService.createGuest).toHaveBeenCalledWith('José');
+      expect(result).toBe(guestContext);
+    });
+
+    it('keeps an authenticated session authoritative over guest metadata', async () => {
+      const session = {
+        alkemio_actor_id: 'actor-1',
+        absolute_expires_at: Math.floor(Date.now() / 1000) + 3600,
+      } as AlkemioSessionPayload;
+      const authenticatedContext = { ...mockActorContext, actorID: 'actor-1' };
+      vi.spyOn(service, 'createActorContext').mockResolvedValue(
+        authenticatedContext
+      );
+
+      const result = await service.getActorContextFromBffPayload(
+        session,
+        'Mallory'
+      );
+
+      expect(service.createActorContext).toHaveBeenCalledWith('actor-1');
+      expect(actorContextService.createGuest).not.toHaveBeenCalled();
+      expect(result).toBe(authenticatedContext);
+    });
+
+    it('keeps a signed-out request without a name anonymous', async () => {
+      const anonymousContext = { ...mockActorContext, isAnonymous: true };
+      actorContextService.createAnonymous.mockReturnValue(anonymousContext);
+
+      const result = await service.getActorContextFromBffPayload(null);
+
+      expect(actorContextService.createAnonymous).toHaveBeenCalled();
+      expect(actorContextService.createGuest).not.toHaveBeenCalled();
+      expect(result).toBe(anonymousContext);
+    });
+  });
+
   describe('createActorContext', () => {
     it('should return anonymous context when no actorID provided', async () => {
       const anonymousContext = { ...mockActorContext, isAnonymous: true };
@@ -89,21 +144,53 @@ describe('AuthenticationService', () => {
       expect(result).toEqual(cachedContext);
     });
 
-    it('should create new context when not in cache and load credentials', async () => {
-      actorContextCacheService.getByActorID.mockResolvedValue(undefined);
-      actorContextService.populateFromActorID.mockResolvedValue(undefined);
-      actorContextCacheService.setByActorID.mockImplementation(ctx =>
-        Promise.resolve(ctx)
+    it('should create and cache a fully populated context when not cached', async () => {
+      let cachedContext: ActorContext | undefined;
+      actorContextCacheService.getByActorID.mockImplementation(async () =>
+        Promise.resolve(cachedContext)
+      );
+      actorContextCacheService.setByActorID.mockImplementation(async ctx => {
+        cachedContext = ctx;
+        return ctx;
+      });
+      const actorLookupService = {
+        getActorCredentialsOrFail: vi.fn().mockResolvedValue([]),
+      } as unknown as ActorLookupService;
+      const entityManager = {
+        findOne: vi.fn().mockResolvedValue({
+          authenticationID: 'kratos-id-1',
+        }),
+      } as unknown as EntityManager;
+      const logger = { warn: vi.fn() } as unknown as LoggerService;
+      const realActorContextService = new ActorContextService(
+        entityManager,
+        logger,
+        actorLookupService
+      );
+      const realService = new AuthenticationService(
+        actorContextCacheService,
+        realActorContextService,
+        logger
       );
 
-      const result = await service.createActorContext('user-id');
+      const result = await realService.createActorContext('user-id');
+      const cachedResult = await realService.createActorContext('user-id');
 
-      expect(actorContextCacheService.getByActorID).toHaveBeenCalledWith(
+      expect(actorContextCacheService.getByActorID).toHaveBeenCalledTimes(2);
+      expect(actorLookupService.getActorCredentialsOrFail).toHaveBeenCalledWith(
         'user-id'
       );
-      expect(actorContextService.populateFromActorID).toHaveBeenCalled();
-      expect(actorContextCacheService.setByActorID).toHaveBeenCalled();
+      expect(
+        actorLookupService.getActorCredentialsOrFail
+      ).toHaveBeenCalledTimes(1);
+      expect(entityManager.findOne).toHaveBeenCalledTimes(1);
+      expect(actorContextCacheService.setByActorID).toHaveBeenCalledWith(
+        result
+      );
+      expect(actorContextCacheService.setByActorID).toHaveBeenCalledTimes(1);
       expect(result.isAnonymous).toBe(false);
+      expect(result.authenticationID).toBe('kratos-id-1');
+      expect(cachedResult).toBe(result);
     });
 
     it('should fall back to anonymous when the actor is not found in the DB', async () => {

@@ -229,7 +229,7 @@ export class LookupResolverFields {
     @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IDocument> {
-    const document = await this.documentService.getDocumentOrFail(id);
+    const document = await this.documentService.getUserFacingDocumentOrFail(id);
     this.authorizationService.grantAccessOrFail(
       actorContext,
       document.authorization,

@@ -1,5 +1,13 @@
 import { CalloutDescriptionDisplayMode } from '@common/enums/callout.description.display.mode';
+import { SidebarWidget } from '@common/enums/sidebar.widget';
 import { Field, InputType } from '@nestjs/graphql';
+import {
+  ArrayMaxSize,
+  ArrayUnique,
+  IsArray,
+  IsEnum,
+  IsOptional,
+} from 'class-validator';
 
 @InputType()
 export class UpdateInnovationFlowStateSettingsInput {
@@ -30,4 +38,16 @@ export class UpdateInnovationFlowStateSettingsInput {
       'Optional. Sets whether Posts in this State show publish details (publisher, publish date, avatar) in the feed; omission leaves the stored value unchanged.',
   })
   showPublishDetails?: boolean;
+
+  @Field(() => [SidebarWidget], {
+    nullable: true,
+    description:
+      'Optional. Ordered sidebar widgets for this State; omission leaves the stored value unchanged. Duplicates rejected; max 20 entries.',
+  })
+  @IsOptional()
+  @IsArray()
+  @IsEnum(SidebarWidget, { each: true })
+  @ArrayUnique()
+  @ArrayMaxSize(20)
+  sidebar?: SidebarWidget[];
 }

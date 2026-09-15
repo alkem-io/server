@@ -5,6 +5,7 @@ import {
   EntityNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -110,7 +111,8 @@ export class TemplatesSetService {
 
   async createTemplate(
     templatesSet: ITemplatesSet,
-    templateInput: CreateTemplateInput
+    templateInput: CreateTemplateInput,
+    actorContext: ActorContext
   ): Promise<ITemplate> {
     const reservedNameIDs =
       await this.namingService.getReservedNameIDsInTemplatesSet(
@@ -143,7 +145,8 @@ export class TemplatesSetService {
     // don't leak partially-attached templates.
     const template = await this.templateService.createTemplate(
       templateInput,
-      storageAggregator
+      storageAggregator,
+      actorContext
     );
     template.templatesSet = templatesSet;
     try {
@@ -171,7 +174,8 @@ export class TemplatesSetService {
 
   async createTemplateFromSpace(
     templatesSet: ITemplatesSet,
-    templateSpaceInput: CreateTemplateFromSpaceOnTemplatesSetInput
+    templateSpaceInput: CreateTemplateFromSpaceOnTemplatesSetInput,
+    actorContext: ActorContext
   ): Promise<ITemplate> {
     const createSpaceContentInput =
       await this.inputCreatorService.buildCreateTemplateContentSpaceInputFromSpace(
@@ -183,12 +187,13 @@ export class TemplatesSetService {
       type: TemplateType.SPACE,
       contentSpaceData: createSpaceContentInput,
     };
-    return await this.createTemplate(templatesSet, templateInput);
+    return await this.createTemplate(templatesSet, templateInput, actorContext);
   }
 
   async createTemplateFromContentSpace(
     templatesSet: ITemplatesSet,
-    templateSpaceInput: CreateTemplateFromContentSpaceOnTemplatesSetInput
+    templateSpaceInput: CreateTemplateFromContentSpaceOnTemplatesSetInput,
+    actorContext: ActorContext
   ): Promise<ITemplate> {
     const createContentSpaceInput =
       await this.inputCreatorService.buildCreateTemplateContentSpaceInputFromContentSpace(
@@ -200,7 +205,7 @@ export class TemplatesSetService {
       type: TemplateType.SPACE,
       contentSpaceData: createContentSpaceInput,
     };
-    return await this.createTemplate(templatesSet, templateInput);
+    return await this.createTemplate(templatesSet, templateInput, actorContext);
   }
 
   private async getStorageAggregator(

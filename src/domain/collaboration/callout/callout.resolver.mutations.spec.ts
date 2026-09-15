@@ -1,19 +1,32 @@
 import { SUBSCRIPTION_CALLOUT_POST_CREATED } from '@common/constants';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { CalloutAllowedActors } from '@common/enums/callout.allowed.contributors';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { ReactionType } from '@common/enums/reaction.type';
+import { SubscriptionType } from '@common/enums/subscription.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import {
+  ForbiddenException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
 import { streamToBuffer } from '@common/utils/file.util';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
+import { CollaboraDocumentEventsService } from '@domain/collaboration/collabora-document/events/collabora.document.events.service';
+import { ReactionService } from '@domain/collaboration/reaction/reaction.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
+import { WhiteboardDraftService } from '@domain/common/whiteboard-draft';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
+import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -21,9 +34,11 @@ import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { Readable } from 'stream';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
+import { CalloutContributionDefaultSourceService } from './callout.contribution.default.source.service';
 import { CalloutResolverMutations } from './callout.resolver.mutations';
 import { CalloutService } from './callout.service';
 import { CalloutAuthorizationService } from './callout.service.authorization';
+import { TaskBoardService } from './task-board/task.board.service';
 
 vi.mock('@common/utils/file.util', () => ({
   streamToBuffer: vi.fn().mockResolvedValue(Buffer.from('test')),
@@ -33,11 +48,21 @@ describe('CalloutResolverMutations', () => {
   let module: TestingModule;
   let resolver: CalloutResolverMutations;
   let calloutService: CalloutService;
+  let contributionDefaultSourceService: CalloutContributionDefaultSourceService;
   let authorizationService: AuthorizationService;
   let authorizationPolicyService: AuthorizationPolicyService;
   let calloutAuthorizationService: CalloutAuthorizationService;
+  let reactionService: ReactionService;
+  let actorLookupService: ActorLookupService;
+  let taskBoardService: TaskBoardService;
+  let notificationAdapterSpace: NotificationSpaceAdapter;
+  let activityAdapter: ActivityAdapter;
+  let postCreatedSubscription: { publish: ReturnType<typeof vi.fn> };
   let _contributionAuthorizationService: CalloutContributionAuthorizationService;
   let _calloutContributionService: CalloutContributionService;
+  let collaboraDocumentEventsService: CollaboraDocumentEventsService;
+  let whiteboardService: WhiteboardService;
+  let whiteboardDraftService: WhiteboardDraftService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -56,6 +81,14 @@ describe('CalloutResolverMutations', () => {
           provide: SUBSCRIPTION_CALLOUT_POST_CREATED,
           useValue: { publish: vi.fn() },
         },
+        {
+          provide: CollaboraDocumentEventsService,
+          useValue: {
+            publishOpened: vi.fn(),
+            publishReplaced: vi.fn(),
+            publishUploaded: vi.fn(),
+          },
+        },
       ],
     })
       .useMocker(defaultMockerFactory)
@@ -63,13 +96,33 @@ describe('CalloutResolverMutations', () => {
 
     resolver = module.get(CalloutResolverMutations);
     calloutService = module.get(CalloutService);
+    contributionDefaultSourceService = module.get(
+      CalloutContributionDefaultSourceService
+    );
     authorizationService = module.get(AuthorizationService);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
     calloutAuthorizationService = module.get(CalloutAuthorizationService);
+    reactionService = module.get(ReactionService);
+    actorLookupService = module.get(ActorLookupService);
+    taskBoardService = module.get(TaskBoardService);
+    notificationAdapterSpace = module.get(NotificationSpaceAdapter);
+    activityAdapter = module.get(ActivityAdapter);
+    postCreatedSubscription = module.get(SUBSCRIPTION_CALLOUT_POST_CREATED);
     _contributionAuthorizationService = module.get(
       CalloutContributionAuthorizationService
     );
     _calloutContributionService = module.get(CalloutContributionService);
+    collaboraDocumentEventsService = module.get(CollaboraDocumentEventsService);
+    whiteboardService = module.get(WhiteboardService);
+    whiteboardDraftService = module.get(WhiteboardDraftService);
+    const releaseDraftLock = vi.fn();
+    vi.mocked(whiteboardDraftService.acquireForConsumption).mockResolvedValue({
+      drafts: new Map(),
+      markConsumed: vi.fn(),
+      complete: vi.fn(),
+      release: releaseDraftLock,
+      [Symbol.asyncDispose]: releaseDraftLock,
+    });
   });
 
   it('should be defined', () => {
@@ -149,6 +202,209 @@ describe('CalloutResolverMutations', () => {
         calloutAuthorizationService.applyAuthorizationPolicy
       ).toHaveBeenCalled();
       expect(authorizationPolicyService.saveAll).toHaveBeenCalled();
+    });
+
+    it('resolves an ID-only source Callout into internal default content before update', async () => {
+      const target = {
+        id: 'target-callout',
+        authorization: { id: 'target-auth' },
+      } as any;
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(target);
+      const reachedUpdate = new Error('reached-update-sentinel');
+      vi.mocked(calloutService.updateCallout).mockRejectedValue(reachedUpdate);
+      const input = {
+        ID: target.id,
+        contributionDefaults: { sourceCalloutID: 'source-callout' },
+      } as any;
+      const actorContext = { actorID: 'user-1' } as any;
+      vi.mocked(contributionDefaultSourceService.prepare).mockImplementation(
+        async defaults => {
+          Object.assign(defaults ?? {}, {
+            whiteboardContent: 'canonical-internal',
+            sourceStorageBucketID: 'source-bucket',
+          });
+        }
+      );
+
+      await expect(resolver.updateCallout(actorContext, input)).rejects.toBe(
+        reachedUpdate
+      );
+
+      expect(contributionDefaultSourceService.prepare).toHaveBeenCalledWith(
+        input.contributionDefaults,
+        actorContext
+      );
+      expect(input.contributionDefaults).toMatchObject({
+        sourceCalloutID: 'source-callout',
+        whiteboardContent: 'canonical-internal',
+        sourceStorageBucketID: 'source-bucket',
+      });
+    });
+
+    it('atomically claims a Whiteboard draft before updating contribution defaults', async () => {
+      const target = {
+        id: 'target-callout',
+        authorization: { id: 'target-auth' },
+      } as any;
+      const updated = {
+        id: target.id,
+        authorization: target.authorization,
+      } as any;
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(target);
+      vi.mocked(calloutService.updateCallout).mockResolvedValue(updated);
+      const roomResolverService = (resolver as any).roomResolverService;
+      vi.mocked(
+        roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout
+      ).mockResolvedValue({
+        roleSet: { id: 'rs-1' },
+        platformRolesAccess: { roles: [] },
+      });
+      vi.mocked(
+        calloutAuthorizationService.applyAuthorizationPolicy
+      ).mockResolvedValue([{ id: 'updated-auth' }] as any);
+
+      const markConsumed = vi.fn();
+      const complete = vi.fn();
+      const release = vi.fn();
+      vi.mocked(whiteboardDraftService.acquireForConsumption).mockResolvedValue(
+        {
+          drafts: new Map([
+            ['draft-whiteboard', { id: 'draft-whiteboard' } as any],
+          ]),
+          markConsumed,
+          complete,
+          release,
+          [Symbol.asyncDispose]: release,
+        }
+      );
+      const actorContext = { actorID: 'user-1' } as any;
+      const input = {
+        ID: target.id,
+        contributionDefaults: { draftWhiteboardID: 'draft-whiteboard' },
+      } as any;
+
+      await resolver.updateCallout(actorContext, input);
+
+      expect(whiteboardDraftService.acquireForConsumption).toHaveBeenCalledWith(
+        ['draft-whiteboard'],
+        actorContext
+      );
+      expect(contributionDefaultSourceService.prepare).toHaveBeenCalledWith(
+        {
+          draftWhiteboardID: undefined,
+          sourceWhiteboardID: 'draft-whiteboard',
+        },
+        actorContext
+      );
+      expect(calloutService.updateCallout).toHaveBeenCalledWith(
+        target,
+        input,
+        actorContext,
+        actorContext.actorID
+      );
+      expect(markConsumed).toHaveBeenCalledOnce();
+      expect(complete).toHaveBeenCalledOnce();
+      expect(release).toHaveBeenCalledOnce();
+    });
+
+    it('rejects a draft combined with another contribution-default source', async () => {
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue({
+        id: 'target-callout',
+        authorization: { id: 'target-auth' },
+      } as any);
+      const release = vi.fn();
+      vi.mocked(whiteboardDraftService.acquireForConsumption).mockResolvedValue(
+        {
+          drafts: new Map([
+            ['draft-whiteboard', { id: 'draft-whiteboard' } as any],
+          ]),
+          markConsumed: vi.fn(),
+          complete: vi.fn(),
+          release,
+          [Symbol.asyncDispose]: release,
+        }
+      );
+
+      await expect(
+        resolver.updateCallout(
+          { actorID: 'user-1' } as any,
+          {
+            ID: 'target-callout',
+            contributionDefaults: {
+              draftWhiteboardID: 'draft-whiteboard',
+              clearWhiteboardContent: true,
+            },
+          } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(contributionDefaultSourceService.prepare).not.toHaveBeenCalled();
+      expect(calloutService.updateCallout).not.toHaveBeenCalled();
+      expect(release).toHaveBeenCalledOnce();
+    });
+
+    it('does not consume the draft when the Callout update fails', async () => {
+      const target = {
+        id: 'target-callout',
+        authorization: { id: 'target-auth' },
+      } as any;
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(target);
+      vi.mocked(calloutService.updateCallout).mockRejectedValue(
+        new Error('update failed')
+      );
+      const markConsumed = vi.fn();
+      const complete = vi.fn();
+      const release = vi.fn();
+      vi.mocked(whiteboardDraftService.acquireForConsumption).mockResolvedValue(
+        {
+          drafts: new Map([
+            ['draft-whiteboard', { id: 'draft-whiteboard' } as any],
+          ]),
+          markConsumed,
+          complete,
+          release,
+          [Symbol.asyncDispose]: release,
+        }
+      );
+
+      await expect(
+        resolver.updateCallout(
+          { actorID: 'user-1' } as any,
+          {
+            ID: target.id,
+            contributionDefaults: { draftWhiteboardID: 'draft-whiteboard' },
+          } as any
+        )
+      ).rejects.toThrow('update failed');
+
+      expect(markConsumed).not.toHaveBeenCalled();
+      expect(complete).not.toHaveBeenCalled();
+      expect(release).toHaveBeenCalledOnce();
+    });
+
+    it('rejects clear plus any source selection before updating', async () => {
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue({
+        id: 'target-callout',
+        authorization: { id: 'target-auth' },
+      } as any);
+      vi.mocked(contributionDefaultSourceService.prepare).mockRejectedValue(
+        new ValidationException('mutually exclusive', LogContext.WHITEBOARDS)
+      );
+
+      await expect(
+        resolver.updateCallout(
+          { actorID: 'user-1' } as any,
+          {
+            ID: 'target-callout',
+            contributionDefaults: {
+              sourceCalloutID: 'source-callout',
+              clearWhiteboardContent: true,
+            },
+          } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(calloutService.updateCallout).not.toHaveBeenCalled();
     });
 
     // The CONTRIBUTORS framing guard must hold on the UPDATE path too, not just
@@ -478,6 +734,118 @@ describe('CalloutResolverMutations', () => {
       ).rejects.toThrow(CalloutClosedException);
     });
 
+    // Contract: a clone (a WHITEBOARD contribution's whiteboard.sourceWhiteboardID)
+    // may read its source only after the actor is granted READ.
+    const sourceCloneCallout = () =>
+      ({
+        id: 'callout-1',
+        authorization: { id: 'auth-1' },
+        calloutsSet: { id: 'cs-1', type: CalloutsSetType.COLLABORATION },
+        settings: {
+          contribution: {
+            enabled: true,
+            canAddContributions: CalloutAllowedActors.MEMBERS,
+          },
+          visibility: CalloutVisibility.PUBLISHED,
+        },
+      }) as any;
+
+    it('refuses a whiteboard clone when the actor cannot READ the source, and never delegates', async () => {
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(
+        sourceCloneCallout()
+      );
+      vi.mocked(whiteboardService.getWhiteboardOrFail).mockResolvedValue({
+        id: 'src-1',
+        authorization: { id: 'auth-src' },
+      } as any);
+      const forbidden = new ForbiddenException('denied', LogContext.AUTH);
+      vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(
+        (_actor: any, _authz: any, privilege: any) => {
+          if (privilege === AuthorizationPrivilege.READ) throw forbidden;
+          return true;
+        }
+      );
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await expect(
+        resolver.createContributionOnCallout(actorContext, {
+          calloutID: 'callout-1',
+          type: CalloutContributionType.WHITEBOARD,
+          whiteboard: { sourceWhiteboardID: 'src-1' },
+        } as any)
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(whiteboardService.getWhiteboardOrFail).toHaveBeenCalledWith(
+        'src-1',
+        { relations: { authorization: true } }
+      );
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        { id: 'auth-src' },
+        AuthorizationPrivilege.READ,
+        expect.any(String)
+      );
+      expect(calloutService.createContributionOnCallout).not.toHaveBeenCalled();
+    });
+
+    it('allows a whiteboard clone when the actor CAN READ the source (reaches the delegate)', async () => {
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(
+        sourceCloneCallout()
+      );
+      vi.mocked(whiteboardService.getWhiteboardOrFail).mockResolvedValue({
+        id: 'src-1',
+        authorization: { id: 'auth-src' },
+      } as any);
+      vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(
+        undefined as any
+      );
+      const reachedDelegate = new Error('reached-delegate-sentinel');
+      vi.mocked(calloutService.createContributionOnCallout).mockRejectedValue(
+        reachedDelegate
+      );
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await expect(
+        resolver.createContributionOnCallout(actorContext, {
+          calloutID: 'callout-1',
+          type: CalloutContributionType.WHITEBOARD,
+          whiteboard: { sourceWhiteboardID: 'src-1' },
+        } as any)
+      ).rejects.toBe(reachedDelegate);
+
+      expect(whiteboardService.getWhiteboardOrFail).toHaveBeenCalledWith(
+        'src-1',
+        { relations: { authorization: true } }
+      );
+      expect(calloutService.createContributionOnCallout).toHaveBeenCalled();
+    });
+
+    it('does NOT load the source for a non-WHITEBOARD contribution carrying a stray sourceWhiteboardID', async () => {
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(
+        sourceCloneCallout()
+      );
+      vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(
+        undefined as any
+      );
+      const reachedDelegate = new Error('reached-delegate-sentinel');
+      vi.mocked(calloutService.createContributionOnCallout).mockRejectedValue(
+        reachedDelegate
+      );
+      const actorContext = { actorID: 'user-1' } as any;
+
+      // POST discriminant with a stray whiteboard.sourceWhiteboardID — the type must
+      // gate the check so it cannot probe source existence/auth.
+      await expect(
+        resolver.createContributionOnCallout(actorContext, {
+          calloutID: 'callout-1',
+          type: CalloutContributionType.POST,
+          whiteboard: { sourceWhiteboardID: 'src-1' },
+        } as any)
+      ).rejects.toBe(reachedDelegate);
+
+      expect(whiteboardService.getWhiteboardOrFail).not.toHaveBeenCalled();
+    });
+
     const setupCollaboraCreateHappyPath = (visibility: CalloutVisibility) => {
       const callout = {
         id: 'callout-1',
@@ -577,10 +945,257 @@ describe('CalloutResolverMutations', () => {
         contributionReporter.calloutCollaboraDocumentCreated
       ).not.toHaveBeenCalled();
     });
+
+    // Task vs. ordinary post: the branch fires exactly one of taskCreated /
+    // calloutPostCreated, never both, and never for a draft callout.
+    describe('task vs. ordinary post reporting', () => {
+      const setupPostCreateHappyPath = (
+        visibility: CalloutVisibility,
+        overrides: { contribution?: any; postSaveContribution?: any } = {}
+      ) => {
+        const callout = {
+          id: 'callout-1',
+          authorization: { id: 'auth-1' },
+          calloutsSet: { id: 'cs-1', type: CalloutsSetType.COLLABORATION },
+          settings: {
+            contribution: {
+              enabled: true,
+              canAddContributions: CalloutAllowedActors.MEMBERS,
+            },
+            visibility,
+          },
+        } as any;
+
+        const contribution = overrides.contribution ?? {
+          id: 'contrib-1',
+          sortOrder: 1,
+          post: {
+            id: 'post-1',
+            profile: { displayName: 'My Post', storageBucket: {} },
+          },
+        };
+
+        vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+        vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+        vi.mocked(calloutService.createContributionOnCallout).mockResolvedValue(
+          contribution
+        );
+
+        const roomResolverService = (resolver as any).roomResolverService;
+        vi.mocked(
+          roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout
+        ).mockResolvedValue({
+          roleSet: { id: 'rs-1' },
+          platformRolesAccess: { roles: [] },
+          spaceSettings: {},
+        });
+
+        vi.mocked(_calloutContributionService.save).mockResolvedValue(
+          overrides.postSaveContribution ?? contribution
+        );
+        vi.mocked(
+          _calloutContributionService.materializeCalloutContributionContent
+        ).mockResolvedValue(undefined as any);
+        vi.mocked(
+          _calloutContributionService.getStorageBucketForContribution
+        ).mockResolvedValue({ id: 'bucket-1' } as any);
+        vi.mocked(
+          _contributionAuthorizationService.applyAuthorizationPolicy
+        ).mockResolvedValue([]);
+
+        const communityResolverService = (resolver as any)
+          .communityResolverService;
+        vi.mocked(
+          communityResolverService.getLevelZeroSpaceIdForCalloutsSet
+        ).mockResolvedValue('space-root');
+
+        return { callout, contribution };
+      };
+
+      it('reports taskCreated (never calloutPostCreated) for a task-marked contribution', async () => {
+        const contribution = {
+          id: 'contrib-1',
+          sortOrder: 1,
+          post: {
+            id: 'post-1',
+            profile: { displayName: 'Fix the login bug', storageBucket: {} },
+          },
+          classification: {
+            tagsets: [{ name: TagsetReservedName.TASK, tags: ['Backlog'] }],
+          },
+        };
+        setupPostCreateHappyPath(CalloutVisibility.PUBLISHED, {
+          contribution,
+        });
+        vi.mocked(taskBoardService.isTask).mockReturnValue(true);
+        const contributionReporter = (resolver as any).contributionReporter;
+        const actorContext = { actorID: 'user-1' } as any;
+
+        await resolver.createContributionOnCallout(actorContext, {
+          calloutID: 'callout-1',
+          type: CalloutContributionType.POST,
+          post: {},
+        } as any);
+
+        expect(contributionReporter.taskCreated).toHaveBeenCalledWith(
+          {
+            id: 'post-1',
+            name: 'Fix the login bug',
+            space: 'space-root',
+          },
+          actorContext
+        );
+        expect(contributionReporter.calloutPostCreated).not.toHaveBeenCalled();
+        // T008.5 / FR-009: the notification, activity-feed and subscription
+        // emissions are OUTSIDE the new task/post branch and must stay
+        // byte-identical for both arms. Without these assertions, moving any
+        // of them into one arm of `if (isTask)` ships green (mutation-verified
+        // during review: deleting the activityAdapter call left 54/54 passing).
+        expect(activityAdapter.calloutPostCreated).toHaveBeenCalledTimes(1);
+        expect(
+          notificationAdapterSpace.spaceCollaborationCalloutContributionCreated
+        ).toHaveBeenCalledTimes(1);
+        expect(postCreatedSubscription.publish).toHaveBeenCalledWith(
+          SubscriptionType.CALLOUT_POST_CREATED,
+          expect.anything()
+        );
+      });
+
+      it("reports calloutPostCreated (never taskCreated) for an ordinary post — today's exact payload, unchanged", async () => {
+        const contribution = {
+          id: 'contrib-1',
+          sortOrder: 1,
+          post: {
+            id: 'post-1',
+            profile: { displayName: 'An ordinary post', storageBucket: {} },
+          },
+        };
+        setupPostCreateHappyPath(CalloutVisibility.PUBLISHED, {
+          contribution,
+        });
+        vi.mocked(taskBoardService.isTask).mockReturnValue(false);
+        const contributionReporter = (resolver as any).contributionReporter;
+        const actorContext = { actorID: 'user-1' } as any;
+
+        await resolver.createContributionOnCallout(actorContext, {
+          calloutID: 'callout-1',
+          type: CalloutContributionType.POST,
+          post: {},
+        } as any);
+
+        expect(contributionReporter.calloutPostCreated).toHaveBeenCalledWith(
+          {
+            id: 'post-1',
+            name: 'An ordinary post',
+            space: 'space-root',
+          },
+          actorContext
+        );
+        expect(contributionReporter.taskCreated).not.toHaveBeenCalled();
+
+        // T008.5 / FR-009: the notification, activity-feed and subscription
+        // emissions are OUTSIDE the new task/post branch and must stay
+        // byte-identical for both arms. Without these assertions, moving any
+        // of them into one arm of `if (isTask)` ships green (mutation-verified
+        // during review: deleting the activityAdapter call left 54/54 passing).
+        expect(activityAdapter.calloutPostCreated).toHaveBeenCalledTimes(1);
+        expect(
+          notificationAdapterSpace.spaceCollaborationCalloutContributionCreated
+        ).toHaveBeenCalledTimes(1);
+        expect(postCreatedSubscription.publish).toHaveBeenCalledWith(
+          SubscriptionType.CALLOUT_POST_CREATED,
+          expect.anything()
+        );
+      });
+
+      it('reports neither taskCreated nor calloutPostCreated (and skips notification/activity) for a DRAFT callout, task or not', async () => {
+        const contribution = {
+          id: 'contrib-1',
+          sortOrder: 1,
+          post: {
+            id: 'post-1',
+            profile: { displayName: 'Fix the login bug', storageBucket: {} },
+          },
+          classification: {
+            tagsets: [{ name: TagsetReservedName.TASK, tags: ['Backlog'] }],
+          },
+        };
+        setupPostCreateHappyPath(CalloutVisibility.DRAFT, { contribution });
+        vi.mocked(taskBoardService.isTask).mockReturnValue(true);
+        const contributionReporter = (resolver as any).contributionReporter;
+        const actorContext = { actorID: 'user-1' } as any;
+
+        await resolver.createContributionOnCallout(actorContext, {
+          calloutID: 'callout-1',
+          type: CalloutContributionType.POST,
+          post: {},
+        } as any);
+
+        expect(contributionReporter.taskCreated).not.toHaveBeenCalled();
+        expect(contributionReporter.calloutPostCreated).not.toHaveBeenCalled();
+        expect(
+          notificationAdapterSpace.spaceCollaborationCalloutContributionCreated
+        ).not.toHaveBeenCalled();
+      });
+
+      it('captures the task marker from the pre-save contribution — persistence-discriminator: taskCreated still fires when save() resolves a classification-stripped contribution', async () => {
+        const preSaveContribution = {
+          id: 'contrib-1',
+          sortOrder: 1,
+          post: {
+            id: 'post-1',
+            profile: { displayName: 'Fix the login bug', storageBucket: {} },
+          },
+          classification: {
+            tagsets: [{ name: TagsetReservedName.TASK, tags: ['Backlog'] }],
+          },
+        };
+        // A distinct instance simulating TypeORM's save() returning a
+        // contribution with the cascaded classification relation stripped —
+        // this MUST NOT be what the branch reads from.
+        const postSaveContribution = {
+          id: 'contrib-1',
+          sortOrder: 1,
+          post: preSaveContribution.post,
+        };
+        setupPostCreateHappyPath(CalloutVisibility.PUBLISHED, {
+          contribution: preSaveContribution,
+          postSaveContribution,
+        });
+        // isTask resolves true only for the pre-save instance; if the
+        // implementation regressed to reading the marker after save(), this
+        // mock would be invoked with postSaveContribution instead and return
+        // false, flipping the branch to calloutPostCreated.
+        vi.mocked(taskBoardService.isTask).mockImplementation(
+          (contribution: any) => contribution === preSaveContribution
+        );
+        const contributionReporter = (resolver as any).contributionReporter;
+        const actorContext = { actorID: 'user-1' } as any;
+
+        await resolver.createContributionOnCallout(actorContext, {
+          calloutID: 'callout-1',
+          type: CalloutContributionType.POST,
+          post: {},
+        } as any);
+
+        expect(taskBoardService.isTask).toHaveBeenCalledWith(
+          preSaveContribution
+        );
+        expect(contributionReporter.taskCreated).toHaveBeenCalledWith(
+          {
+            id: 'post-1',
+            name: 'Fix the login bug',
+            space: 'space-root',
+          },
+          actorContext
+        );
+        expect(contributionReporter.calloutPostCreated).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe('importCollaboraDocument', () => {
-    it('should report COLLABORA_DOCUMENT_UPLOADED for the uploading actor', async () => {
+    const setupImportHappyPath = () => {
       const callout = {
         id: 'callout-1',
         authorization: { id: 'auth-1' },
@@ -623,23 +1238,17 @@ describe('CalloutResolverMutations', () => {
       vi.mocked(
         _contributionAuthorizationService.applyAuthorizationPolicy
       ).mockResolvedValue([]);
+      vi.mocked(authorizationPolicyService.saveAll).mockResolvedValue(
+        [] as any
+      );
       vi.mocked(
         _calloutContributionService.getCalloutContributionOrFail
       ).mockResolvedValue(contribution);
+      return { callout, contribution };
+    };
 
-      const communityResolverService = (resolver as any)
-        .communityResolverService;
-      vi.mocked(
-        communityResolverService.getCommunityForCollaboraDocumentOrFail
-      ).mockResolvedValue({ id: 'community-1' } as any);
-      vi.mocked(
-        communityResolverService.getLevelZeroSpaceIdForCommunity
-      ).mockResolvedValue('space-root');
-
-      const contributionReporter = (resolver as any).contributionReporter;
-      const actorContext = { actorID: 'user-1' } as any;
-
-      await resolver.importCollaboraDocument(
+    const invokeImport = (actorContext = { actorID: 'user-1' } as any) =>
+      resolver.importCollaboraDocument(
         actorContext,
         { calloutID: 'callout-1' } as any,
         {
@@ -649,19 +1258,47 @@ describe('CalloutResolverMutations', () => {
         } as any
       );
 
+    it('publishes one uploaded event after all persistence completes', async () => {
+      setupImportHappyPath();
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await invokeImport(actorContext);
+
       expect(
-        contributionReporter.calloutCollaboraDocumentUploaded
-      ).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 'collab-doc-1',
-          name: 'Imported.docx',
-          space: 'space-root',
-        }),
-        actorContext
+        collaboraDocumentEventsService.publishUploaded
+      ).toHaveBeenCalledOnce();
+      expect(
+        collaboraDocumentEventsService.publishUploaded
+      ).toHaveBeenCalledWith('collab-doc-1', 'Imported.docx', actorContext);
+      expect(
+        vi.mocked(calloutService.importCollaboraDocumentToCallout).mock
+          .invocationCallOrder[0]
+      ).toBeLessThan(
+        vi.mocked(_calloutContributionService.save).mock.invocationCallOrder[0]
+      );
+      expect(
+        vi.mocked(_calloutContributionService.save).mock.invocationCallOrder[0]
+      ).toBeLessThan(
+        vi.mocked(_contributionAuthorizationService.applyAuthorizationPolicy)
+          .mock.invocationCallOrder[0]
+      );
+      expect(
+        vi.mocked(_contributionAuthorizationService.applyAuthorizationPolicy)
+          .mock.invocationCallOrder[0]
+      ).toBeLessThan(
+        vi.mocked(authorizationPolicyService.saveAll).mock
+          .invocationCallOrder[0]
+      );
+      expect(
+        vi.mocked(authorizationPolicyService.saveAll).mock
+          .invocationCallOrder[0]
+      ).toBeLessThan(
+        vi.mocked(collaboraDocumentEventsService.publishUploaded).mock
+          .invocationCallOrder[0]
       );
     });
 
-    it('should still return the persisted contribution when analytics reporting fails', async () => {
+    it('does not publish when authorization fails', async () => {
       const callout = {
         id: 'callout-1',
         authorization: { id: 'auth-1' },
@@ -672,73 +1309,62 @@ describe('CalloutResolverMutations', () => {
           },
         },
       } as any;
-      const contribution = {
-        id: 'contrib-1',
-        collaboraDocument: {
-          id: 'collab-doc-1',
-          profile: { displayName: 'Imported.docx' },
-        },
-      } as any;
-
       vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
-      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
-      vi.mocked(
-        calloutService.importCollaboraDocumentToCallout
-      ).mockResolvedValue(contribution);
-
-      const configService = (resolver as any).configService;
-      vi.mocked(configService.get).mockReturnValue(1000);
-
-      const roomResolverService = (resolver as any).roomResolverService;
-      vi.mocked(
-        roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout
-      ).mockResolvedValue({
-        roleSet: { id: 'rs-1' },
-        platformRolesAccess: { roles: [] },
-        spaceSettings: {},
-      });
-
-      vi.mocked(_calloutContributionService.save).mockResolvedValue(
-        contribution
-      );
-      vi.mocked(
-        _contributionAuthorizationService.applyAuthorizationPolicy
-      ).mockResolvedValue([]);
-      vi.mocked(
-        _calloutContributionService.getCalloutContributionOrFail
-      ).mockResolvedValue(contribution);
-
-      // analytics resolution blows up after the contribution is persisted
-      const communityResolverService = (resolver as any)
-        .communityResolverService;
-      vi.mocked(
-        communityResolverService.getCommunityForCollaboraDocumentOrFail
-      ).mockRejectedValue(new Error('community resolution failed'));
-
-      const actorContext = { actorID: 'user-1' } as any;
-
-      const result = await resolver.importCollaboraDocument(
-        actorContext,
-        { calloutID: 'callout-1' } as any,
-        {
-          createReadStream: () => Readable.from([Buffer.from('test')]),
-          filename: 'Imported.docx',
-          mimetype: 'application/octet-stream',
-        } as any
+      vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(
+        () => {
+          throw new Error('authorization denied');
+        }
       );
 
-      // the persisted contribution is returned; analytics failure is swallowed
-      expect(result).toBe(contribution);
+      await expect(invokeImport()).rejects.toThrow('authorization denied');
+
+      expect(
+        collaboraDocumentEventsService.publishUploaded
+      ).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      {
+        failure: 'import',
+        reject: () =>
+          vi
+            .mocked(calloutService.importCollaboraDocumentToCallout)
+            .mockRejectedValue(new Error('import failed')),
+      },
+      {
+        failure: 'contribution save',
+        reject: () =>
+          vi
+            .mocked(_calloutContributionService.save)
+            .mockRejectedValue(new Error('contribution save failed')),
+      },
+      {
+        failure: 'authorization policy save',
+        reject: () =>
+          vi
+            .mocked(authorizationPolicyService.saveAll)
+            .mockRejectedValue(new Error('authorization policy save failed')),
+      },
+    ])('does not publish when $failure fails', async ({ reject }) => {
+      setupImportHappyPath();
+      reject();
+
+      await expect(invokeImport()).rejects.toThrow();
+
+      expect(
+        collaboraDocumentEventsService.publishUploaded
+      ).not.toHaveBeenCalled();
     });
   });
 
   describe('updateContributionsSortOrder', () => {
-    it('should check authorization and delegate to service', async () => {
+    it('a plain (non-board) callout requires UPDATE and delegates to service', async () => {
       const callout = {
         id: 'callout-1',
         authorization: { id: 'auth-1' },
       } as any;
       vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(taskBoardService.isTaskBoard).mockReturnValue(false);
       vi.mocked(
         calloutService.updateContributionCalloutsSortOrder
       ).mockResolvedValue([{ id: 'c-1' }] as any);
@@ -757,6 +1383,439 @@ describe('CalloutResolverMutations', () => {
         expect.any(String)
       );
       expect(result).toHaveLength(1);
+    });
+
+    it('a Tasks board is authorized on MOVE_TASK (board members reorder without callout UPDATE)', async () => {
+      const callout = {
+        id: 'callout-1',
+        authorization: { id: 'auth-1' },
+      } as any;
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(taskBoardService.isTaskBoard).mockReturnValue(true);
+      vi.mocked(
+        calloutService.updateContributionCalloutsSortOrder
+      ).mockResolvedValue([{ id: 'c-1' }] as any);
+
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await resolver.updateContributionsSortOrder(actorContext, {
+        calloutID: 'callout-1',
+        contributionIDs: ['c-1', 'c-2'],
+      } as any);
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        callout.authorization,
+        AuthorizationPrivilege.MOVE_TASK,
+        expect.any(String)
+      );
+    });
+  });
+
+  describe('addReactionToCallout', () => {
+    function makePublishedCallout(overrides: Record<string, unknown> = {}) {
+      return {
+        id: 'callout-1',
+        authorization: { id: 'auth-1' },
+        isTemplate: false,
+        settings: { visibility: CalloutVisibility.PUBLISHED },
+        ...overrides,
+      } as any;
+    }
+
+    it('requires CONTRIBUTE — throws when authorization service denies access', async () => {
+      const callout = makePublishedCallout();
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(
+        () => {
+          throw new ValidationException('forbidden', 'test' as any);
+        }
+      );
+
+      await expect(
+        resolver.addReactionToCallout(
+          { actorID: 'user-1' } as any,
+          { calloutID: 'callout-1', emoji: 'heart' } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        expect.objectContaining({ actorID: 'user-1' }),
+        callout.authorization,
+        AuthorizationPrivilege.CONTRIBUTE,
+        expect.any(String)
+      );
+    });
+
+    it('rejects when the actor has no userID (VC or anonymous)', async () => {
+      const callout = makePublishedCallout();
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+
+      await expect(
+        resolver.addReactionToCallout(
+          { actorID: undefined } as any,
+          { calloutID: 'callout-1', emoji: 'heart' } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(reactionService.upsertReaction).not.toHaveBeenCalled();
+    });
+
+    it('rejects when the Callout is a DRAFT (not published)', async () => {
+      const callout = makePublishedCallout({
+        settings: { visibility: CalloutVisibility.DRAFT },
+      });
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+
+      await expect(
+        resolver.addReactionToCallout(
+          { actorID: 'user-1' } as any,
+          { calloutID: 'callout-1', emoji: 'heart' } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(reactionService.upsertReaction).not.toHaveBeenCalled();
+    });
+
+    it('rejects when the Callout is a template', async () => {
+      const callout = makePublishedCallout({ isTemplate: true });
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+
+      await expect(
+        resolver.addReactionToCallout(
+          { actorID: 'user-1' } as any,
+          { calloutID: 'callout-1', emoji: 'heart' } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(reactionService.upsertReaction).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      '1',
+      '#',
+      '*',
+    ])('rejects the emoji slug "%s" that is not on the allow-list', async (badSlug: string) => {
+      const callout = makePublishedCallout();
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      // Simulate the allow-list rejection that reactionService.validateAllowedEmojiOrFail
+      // raises when the emoji slug is not present.
+      vi.mocked(reactionService.validateAllowedEmojiOrFail).mockImplementation(
+        () => {
+          throw new ValidationException(
+            'emoji not on allow-list',
+            'test' as any
+          );
+        }
+      );
+
+      await expect(
+        resolver.addReactionToCallout(
+          { actorID: 'user-1' } as any,
+          { calloutID: 'callout-1', emoji: badSlug } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(reactionService.upsertReaction).not.toHaveBeenCalled();
+    });
+
+    it('rejects when the actor is a Virtual Contributor (non-user actor type)', async () => {
+      const callout = makePublishedCallout();
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(actorLookupService.getActorTypeByIdOrFail).mockResolvedValue(
+        ActorType.VIRTUAL_CONTRIBUTOR
+      );
+
+      await expect(
+        resolver.addReactionToCallout(
+          { actorID: 'vc-1' } as any,
+          { calloutID: 'callout-1', emoji: 'heart' } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(reactionService.upsertReaction).not.toHaveBeenCalled();
+    });
+
+    it('delegates to upsertReaction and returns the refreshed Callout on success', async () => {
+      const callout = makePublishedCallout();
+      const refreshedCallout = { ...callout, id: 'callout-1' } as any;
+      vi.mocked(calloutService.getCalloutOrFail)
+        .mockResolvedValueOnce(callout)
+        .mockResolvedValueOnce(refreshedCallout);
+      vi.mocked(actorLookupService.getActorTypeByIdOrFail).mockResolvedValue(
+        ActorType.USER
+      );
+      vi.mocked(reactionService.upsertReaction).mockResolvedValue({
+        reaction: {},
+        created: false,
+      } as any);
+
+      const result = await resolver.addReactionToCallout(
+        { actorID: 'user-1' } as any,
+        { calloutID: 'callout-1', emoji: 'heart' } as any
+      );
+
+      expect(reactionService.upsertReaction).toHaveBeenCalledWith(
+        ReactionType.POST,
+        'callout-1',
+        'user-1',
+        'heart'
+      );
+      expect(result).toBe(refreshedCallout);
+    });
+
+    it('emits exactly one notification dispatch when the reaction is genuine (created:true)', async () => {
+      const callout = makePublishedCallout();
+      const refreshedCallout = { ...callout } as any;
+      vi.mocked(calloutService.getCalloutOrFail)
+        .mockResolvedValueOnce(callout)
+        .mockResolvedValueOnce(refreshedCallout);
+      vi.mocked(actorLookupService.getActorTypeByIdOrFail).mockResolvedValue(
+        ActorType.USER
+      );
+      vi.mocked(reactionService.upsertReaction).mockResolvedValue({
+        reaction: {},
+        created: true,
+      } as any);
+      vi.mocked(
+        notificationAdapterSpace.spaceCollaborationCalloutReaction
+      ).mockResolvedValue(undefined);
+
+      await resolver.addReactionToCallout(
+        { actorID: 'user-1' } as any,
+        { calloutID: 'callout-1', emoji: 'heart' } as any
+      );
+
+      // Fire-and-forget is async; flush the microtask queue so the promise
+      // callback runs before we assert.
+      await Promise.resolve();
+
+      expect(
+        notificationAdapterSpace.spaceCollaborationCalloutReaction
+      ).toHaveBeenCalledExactlyOnceWith({
+        calloutID: 'callout-1',
+        triggeredBy: 'user-1',
+        emoji: 'heart',
+      });
+    });
+
+    it('emits zero notification dispatches when the reaction is a swap (created:false)', async () => {
+      const callout = makePublishedCallout();
+      const refreshedCallout = { ...callout } as any;
+      vi.mocked(calloutService.getCalloutOrFail)
+        .mockResolvedValueOnce(callout)
+        .mockResolvedValueOnce(refreshedCallout);
+      vi.mocked(actorLookupService.getActorTypeByIdOrFail).mockResolvedValue(
+        ActorType.USER
+      );
+      // Swap: same user re-reacts with a different emoji — service returns created:false.
+      vi.mocked(reactionService.upsertReaction).mockResolvedValue({
+        reaction: {},
+        created: false,
+      } as any);
+
+      await resolver.addReactionToCallout(
+        { actorID: 'user-1' } as any,
+        { calloutID: 'callout-1', emoji: 'thumbsup' } as any
+      );
+
+      await Promise.resolve();
+
+      expect(
+        notificationAdapterSpace.spaceCollaborationCalloutReaction
+      ).not.toHaveBeenCalled();
+    });
+
+    it('emits zero notification dispatches when an idempotent re-add is detected (created:false)', async () => {
+      const callout = makePublishedCallout();
+      const refreshedCallout = { ...callout } as any;
+      vi.mocked(calloutService.getCalloutOrFail)
+        .mockResolvedValueOnce(callout)
+        .mockResolvedValueOnce(refreshedCallout);
+      vi.mocked(actorLookupService.getActorTypeByIdOrFail).mockResolvedValue(
+        ActorType.USER
+      );
+      // Idempotent re-add: the ON CONFLICT upsert found an existing row, created:false.
+      vi.mocked(reactionService.upsertReaction).mockResolvedValue({
+        reaction: {},
+        created: false,
+      } as any);
+
+      await resolver.addReactionToCallout(
+        { actorID: 'user-1' } as any,
+        { calloutID: 'callout-1', emoji: 'heart' } as any
+      );
+
+      await Promise.resolve();
+
+      expect(
+        notificationAdapterSpace.spaceCollaborationCalloutReaction
+      ).not.toHaveBeenCalled();
+    });
+
+    it('does not fail the mutation when the notification adapter rejects (fire-and-forget)', async () => {
+      const callout = makePublishedCallout();
+      const refreshedCallout = { ...callout } as any;
+      vi.mocked(calloutService.getCalloutOrFail)
+        .mockResolvedValueOnce(callout)
+        .mockResolvedValueOnce(refreshedCallout);
+      vi.mocked(actorLookupService.getActorTypeByIdOrFail).mockResolvedValue(
+        ActorType.USER
+      );
+      vi.mocked(reactionService.upsertReaction).mockResolvedValue({
+        reaction: {},
+        created: true,
+      } as any);
+      vi.mocked(
+        notificationAdapterSpace.spaceCollaborationCalloutReaction
+      ).mockRejectedValue(new Error('adapter failure'));
+
+      // The mutation must resolve, not reject, even though the adapter rejects.
+      await expect(
+        resolver.addReactionToCallout(
+          { actorID: 'user-1' } as any,
+          { calloutID: 'callout-1', emoji: 'heart' } as any
+        )
+      ).resolves.toBeDefined();
+
+      // Allow the fire-and-forget rejection handler to run.
+      await Promise.resolve();
+    });
+  });
+
+  describe('removeReactionFromCallout — notification invariant', () => {
+    it('never dispatches a notification on remove', async () => {
+      const callout = {
+        id: 'callout-1',
+        authorization: { id: 'auth-1' },
+      } as any;
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(actorLookupService.getActorTypeByIdOrFail).mockResolvedValue(
+        ActorType.USER
+      );
+      vi.mocked(reactionService.removeReaction).mockResolvedValue(undefined);
+
+      await resolver.removeReactionFromCallout(
+        { actorID: 'user-1' } as any,
+        { calloutID: 'callout-1' } as any
+      );
+
+      await Promise.resolve();
+
+      expect(
+        notificationAdapterSpace.spaceCollaborationCalloutReaction
+      ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('removeReactionFromCallout', () => {
+    it('rejects when the actor has no userID (unauthenticated)', async () => {
+      await expect(
+        resolver.removeReactionFromCallout(
+          { actorID: undefined } as any,
+          { calloutID: 'callout-1' } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(reactionService.removeReaction).not.toHaveBeenCalled();
+    });
+
+    it('rejects when the actor is a Virtual Contributor (non-user actor type)', async () => {
+      const callout = {
+        id: 'callout-1',
+        authorization: { id: 'auth-1' },
+      } as any;
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(actorLookupService.getActorTypeByIdOrFail).mockResolvedValue(
+        ActorType.VIRTUAL_CONTRIBUTOR
+      );
+
+      await expect(
+        resolver.removeReactionFromCallout(
+          { actorID: 'vc-1' } as any,
+          { calloutID: 'callout-1' } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(reactionService.removeReaction).not.toHaveBeenCalled();
+    });
+
+    it('delegates to removeReaction (idempotent) and returns the Callout when the caller has READ', async () => {
+      const callout = {
+        id: 'callout-1',
+        authorization: { id: 'auth-1' },
+      } as any;
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(actorLookupService.getActorTypeByIdOrFail).mockResolvedValue(
+        ActorType.USER
+      );
+      vi.mocked(reactionService.removeReaction).mockResolvedValue(undefined);
+
+      const result = await resolver.removeReactionFromCallout(
+        { actorID: 'user-1' } as any,
+        { calloutID: 'callout-1' } as any
+      );
+
+      expect(reactionService.removeReaction).toHaveBeenCalled();
+      expect(result).toBe(callout);
+    });
+
+    it('requires READ on the Callout before disclosing metadata — throws when READ is denied', async () => {
+      const callout = {
+        id: 'callout-1',
+        authorization: { id: 'auth-1' },
+      } as any;
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(actorLookupService.getActorTypeByIdOrFail).mockResolvedValue(
+        ActorType.USER
+      );
+      vi.mocked(reactionService.removeReaction).mockResolvedValue(undefined);
+      vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(
+        () => {
+          throw new ValidationException('forbidden', 'test' as any);
+        }
+      );
+
+      await expect(
+        resolver.removeReactionFromCallout(
+          { actorID: 'user-1' } as any,
+          { calloutID: 'callout-1' } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      // The reaction is still removed (idempotent self-cleanup) even when READ is lost.
+      expect(reactionService.removeReaction).toHaveBeenCalled();
+    });
+
+    it('does NOT require CONTRIBUTE — only READ is checked on the remove path', async () => {
+      const callout = {
+        id: 'callout-1',
+        authorization: { id: 'auth-1' },
+      } as any;
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(actorLookupService.getActorTypeByIdOrFail).mockResolvedValue(
+        ActorType.USER
+      );
+      vi.mocked(reactionService.removeReaction).mockResolvedValue(undefined);
+
+      await resolver.removeReactionFromCallout(
+        { actorID: 'user-1' } as any,
+        { calloutID: 'callout-1' } as any
+      );
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        expect.objectContaining({ actorID: 'user-1' }),
+        callout.authorization,
+        AuthorizationPrivilege.READ,
+        expect.any(String)
+      );
+      // CONTRIBUTE must not be checked on the remove path.
+      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        AuthorizationPrivilege.CONTRIBUTE,
+        expect.any(String)
+      );
     });
   });
   // ===================================================================

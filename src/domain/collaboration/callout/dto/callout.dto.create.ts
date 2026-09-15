@@ -6,7 +6,8 @@ import { CreateClassificationInput } from '@domain/common/classification/dto/cla
 import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { Field, InputType, ObjectType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
-import { ValidateNested } from 'class-validator';
+import { IsOptional, ValidateNested } from 'class-validator';
+import { CreateCalloutTaskBoardInput } from '../task-board/dto/task.board.dto.create';
 
 @InputType()
 @ObjectType('CreateCalloutData')
@@ -25,6 +26,16 @@ export class CreateCalloutInput {
   @ValidateNested({ each: true })
   @Type(() => CreateClassificationInput)
   classification?: CreateClassificationInput;
+
+  @Field(() => CreateCalloutTaskBoardInput, {
+    nullable: true,
+    description:
+      'When present, creates this Callout as a Tasks board. Requires a POST-only contribution type.',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateCalloutTaskBoardInput)
+  taskBoard?: CreateCalloutTaskBoardInput;
 
   @Field(() => CreateCalloutContributionDefaultsInput, { nullable: true })
   @ValidateNested({ each: true })

@@ -20,6 +20,7 @@ import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { IncomingMessage, ServerResponse } from 'http';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { McpApiKeyService } from './auth/mcp-api-key.service';
 import { scopeViolation } from './auth/mcp-scope';
 import { AssistantCapabilityGateService } from './capabilities/assistant.capability.gate.service';
 import {
@@ -47,6 +48,14 @@ interface McpSession {
   server: McpServer;
   actorContext: ActorContext;
   scopes?: McpApiKeyScope[];
+  /**
+   * Id of the MCP API key that established/last refreshed this session's
+   * identity (workspace#038, FR-013). `undefined` means either "not
+   * key-authenticated" (a browser/JWT session, which the revalidation branch
+   * below must not touch) or "established before this feature shipped" — the
+   * latter fails closed rather than trusting a session forever (C-04).
+   */
+  apiKeyId?: string;
 }
 
 @Injectable()
@@ -61,7 +70,8 @@ export class McpServerService implements OnModuleInit {
     private readonly authorizationService: AuthorizationService,
     private readonly capabilityGateService: AssistantCapabilityGateService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
+    private readonly logger: LoggerService,
+    private readonly mcpApiKeyService: McpApiKeyService
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -229,7 +239,8 @@ export class McpServerService implements OnModuleInit {
     res: ServerResponse,
     sessionId?: string,
     actorContext?: ActorContext,
-    scopes?: McpApiKeyScope[]
+    scopes?: McpApiKeyScope[],
+    apiKeyId?: string
   ): Promise<void> {
     if (!this.isEnabled()) {
       res.statusCode = 503;
@@ -266,10 +277,60 @@ export class McpServerService implements OnModuleInit {
       if (actorContext && actorContext.actorID && !actorContext.isAnonymous) {
         session.actorContext = actorContext;
         session.scopes = scopes;
+        session.apiKeyId = apiKeyId;
         this.logger.verbose?.(
           `Updated actorContext for session ${sessionId}: userID=${actorContext.actorID}`,
           LogContext.MCP_SERVER
         );
+      } else if (
+        session.actorContext.actorID &&
+        !session.actorContext.isAnonymous
+      ) {
+        // No FRESH authentication on this request, but the session's identity
+        // IS authenticated — the sole branch key-bearing requests never take
+        // (those already re-validate inside McpApiKeyStrategy's own
+        // `findOne({keyHash, isActive:true})` + expiry check on EVERY request,
+        // so adding a second check there would be a pure-cost no-op — FR-014 /
+        // SC-007 / R-08. This is the ONLY place a revoked key's session can
+        // still be trusted, so it is the ONLY place that needs to ask again
+        // (workspace#038, FR-013 / R-038-3).
+        //
+        // `apiKeyId` absent here means the session was never key-authenticated
+        // in the first place OR was established before this feature shipped
+        // (C-04) — either way, FAIL CLOSED rather than silently trusting it
+        // forever. `isKeyUsable` re-reads by id (we only ever have the id at
+        // this layer, never the plaintext) and checks active + unexpired.
+        const stillValid = session.apiKeyId
+          ? await this.mcpApiKeyService.isKeyUsable(session.apiKeyId)
+          : false;
+
+        if (!stillValid) {
+          this.logger.warn?.(
+            {
+              message:
+                'MCP session revalidation failed: key revoked, expired, or session predates key-tracking. Closing session.',
+              sessionId,
+              apiKeyId: session.apiKeyId,
+            },
+            LogContext.MCP_SERVER
+          );
+          this.sessions.delete(sessionId);
+          await session.transport.close();
+          res.statusCode = 401;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(
+            JSON.stringify({
+              jsonrpc: '2.0',
+              error: {
+                code: -32001,
+                message:
+                  'Session credential is no longer valid. Please reauthenticate.',
+              },
+              id: null,
+            })
+          );
+          return;
+        }
       }
 
       await session.transport.handleRequest(req, res);
@@ -287,6 +348,7 @@ export class McpServerService implements OnModuleInit {
       transport,
       actorContext: actorContext ?? this.createAnonymousActorContext(),
       scopes,
+      apiKeyId,
     } as McpSession;
     session.server = this.createMcpServer(
       () => session.actorContext,

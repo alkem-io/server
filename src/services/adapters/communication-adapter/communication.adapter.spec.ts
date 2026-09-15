@@ -499,6 +499,147 @@ describe('CommunicationAdapter', () => {
     });
   });
 
+  describe('batchRemoveMember (US2-AS4 live-verification fix)', () => {
+    it('should return true when every room reports success', async () => {
+      const response = createSuccessResponse({
+        results: {
+          'room-1': { success: true },
+        },
+      });
+      mockAmqpConnection.request.mockResolvedValue(response);
+
+      const result = await adapter.batchRemoveMember('actor-123', ['room-1']);
+
+      expect(result).toBe(true);
+      expect(mockLogger.warn).not.toHaveBeenCalled();
+    });
+
+    it('should return false (without throwing) when the envelope reports success but a room kick was rejected, and log the failure', async () => {
+      // Reproduces the exact defect: BaseResponse.success:true at the top
+      // level while the per-room result is success:false (Matrix 403
+      // M_FORBIDDEN / insufficient power level).
+      const response = createSuccessResponse({
+        results: {
+          '!room-1:alkemio.matrix.host': {
+            success: false,
+            error: {
+              code: 'NOT_ALLOWED',
+              message: 'insufficient power level',
+            },
+          },
+        },
+      });
+      mockAmqpConnection.request.mockResolvedValue(response);
+
+      const result = await adapter.batchRemoveMember('actor-123', [
+        '!room-1:alkemio.matrix.host',
+      ]);
+
+      expect(result).toBe(false);
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('failed=1'),
+        expect.any(String)
+      );
+    });
+
+    it('should throw a CommunicationAdapterException carrying the per-room error when ensureAllSucceeded is true', async () => {
+      const response = createSuccessResponse({
+        results: {
+          '!room-1:alkemio.matrix.host': {
+            success: false,
+            error: {
+              code: 'NOT_ALLOWED',
+              message: 'insufficient power level',
+            },
+          },
+        },
+      });
+      mockAmqpConnection.request.mockResolvedValue(response);
+
+      await expect(
+        adapter.batchRemoveMember(
+          'actor-123',
+          ['!room-1:alkemio.matrix.host'],
+          undefined,
+          { ensureAllSucceeded: true }
+        )
+      ).rejects.toThrow(CommunicationAdapterException);
+    });
+
+    it('should not throw when ensureAllSucceeded is true but every room succeeded', async () => {
+      const response = createSuccessResponse({
+        results: { 'room-1': { success: true } },
+      });
+      mockAmqpConnection.request.mockResolvedValue(response);
+
+      await expect(
+        adapter.batchRemoveMember('actor-123', ['room-1'], undefined, {
+          ensureAllSucceeded: true,
+        })
+      ).resolves.toBe(true);
+    });
+
+    it('qual-server-1: should return false — never report false success — when the envelope itself is rejected with no per-room results (whole-batch failure, e.g. actor not found)', async () => {
+      // This is the shape the Go adapter produces when it rejects the WHOLE
+      // batch before doing any per-room work: success:false with no
+      // `results` map. Before the fix, processBatchResponse yields
+      // successCount=0, failureCount=0, and `failureCount === 0` alone
+      // reads as success — reintroducing the exact defect d7fe1a3 fixed.
+      const response = createErrorResponse(
+        'ACTOR_NOT_FOUND',
+        'actor not found'
+      );
+      mockAmqpConnection.request.mockResolvedValue(response);
+
+      const result = await adapter.batchRemoveMember('actor-123', ['room-1']);
+
+      expect(result).toBe(false);
+      expect(mockLogger.warn).toHaveBeenCalled();
+    });
+
+    it('qual-server-1: should throw (not silently succeed) when ensureAllSucceeded is true and the envelope is rejected with no per-room results', async () => {
+      const response = createErrorResponse(
+        'ACTOR_NOT_FOUND',
+        'actor not found'
+      );
+      mockAmqpConnection.request.mockResolvedValue(response);
+
+      await expect(
+        adapter.batchRemoveMember('actor-123', ['room-1'], undefined, {
+          ensureAllSucceeded: true,
+        })
+      ).rejects.toThrow(CommunicationAdapterException);
+    });
+
+    it('should return false when the successful results are keyed to rooms that were not requested', async () => {
+      // Right NUMBER of successes, WRONG rooms: the requested room-1 has no
+      // result of its own. A count-only check reads this as success even
+      // though room-1 was never removed.
+      const response = createSuccessResponse({
+        results: { 'room-2': { success: true } },
+      });
+      mockAmqpConnection.request.mockResolvedValue(response);
+
+      const result = await adapter.batchRemoveMember('actor-123', ['room-1']);
+
+      expect(result).toBe(false);
+      expect(mockLogger.warn).toHaveBeenCalled();
+    });
+
+    it('should throw when ensureAllSucceeded is true and the results are keyed to rooms that were not requested', async () => {
+      const response = createSuccessResponse({
+        results: { 'room-2': { success: true } },
+      });
+      mockAmqpConnection.request.mockResolvedValue(response);
+
+      await expect(
+        adapter.batchRemoveMember('actor-123', ['room-1'], undefined, {
+          ensureAllSucceeded: true,
+        })
+      ).rejects.toThrow(CommunicationAdapterException);
+    });
+  });
+
   describe('updateSpace and updateRoom', () => {
     it('should pass avatarUrl and joinRule for updateSpace', async () => {
       const response = createSuccessResponse({});
@@ -610,6 +751,94 @@ describe('CommunicationAdapter', () => {
 
       expect(result).toBe('');
       expect(mockAmqpConnection.request).not.toHaveBeenCalled();
+    });
+
+    it('should return the { disabled: true } sentinel for setChildren when disabled — NEVER a fabricated success', async () => {
+      const result = await disabledAdapter.setChildren({
+        parent_context_id: 'category-1',
+        desired_child_context_ids: ['room-1'],
+        children_are_spaces: false,
+        apply_removals: true,
+        prune_unknown: false,
+        sync_child_parent: false,
+        dry_run: true,
+      });
+
+      expect(result).toEqual({ disabled: true });
+      expect(result).not.toBe(true);
+      expect(mockAmqpConnection.request).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('setChildren', () => {
+    const request = {
+      parent_context_id: 'category-1',
+      desired_child_context_ids: ['room-1', 'room-2'],
+      children_are_spaces: false,
+      apply_removals: true,
+      prune_unknown: false,
+      sync_child_parent: false,
+      dry_run: false,
+    };
+
+    it('should send the request on the hierarchy set_children topic and pass through a typed response', async () => {
+      const response = createSuccessResponse({
+        added: ['room-1'],
+        removed: [],
+        pruned_unknown: [],
+        unknown_kept: [],
+        unresolved: [],
+        parent_pointers_repaired: [],
+        parent_pointers_deferred: [],
+        changed: true,
+        dry_run: false,
+      });
+      mockAmqpConnection.request.mockResolvedValue(response);
+
+      const result = await adapter.setChildren(request);
+
+      expect(mockAmqpConnection.request).toHaveBeenCalledWith({
+        exchange: '',
+        routingKey: MatrixAdapterEventType.COMMUNICATION_HIERARCHY_SET_CHILDREN,
+        payload: request,
+        timeout: expect.any(Number),
+      });
+      expect(result).toEqual(response);
+    });
+
+    it('should swallow a transport error to undefined rather than throw', async () => {
+      mockAmqpConnection.request.mockRejectedValue(
+        new Error('Connection refused')
+      );
+
+      const result = await adapter.setChildren(request);
+
+      expect(result).toBeUndefined();
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('normalizes every array field to [] when the wire response carries null arrays (the real SPACE_NOT_FOUND shape)', async () => {
+      // The Go adapter's error branch (including the expected
+      // SPACE_NOT_FOUND skip) never populates these arrays — `emptyIfNil`
+      // only runs on the success branch — so the wire payload has no array
+      // fields at all, which JSON round-trips as `null` on the TS side.
+      mockAmqpConnection.request.mockResolvedValue(
+        createErrorResponse('SPACE_NOT_FOUND', 'space not found')
+      );
+
+      const result = await adapter.setChildren(request);
+
+      expect(result).toEqual({
+        success: false,
+        error: { code: 'SPACE_NOT_FOUND', message: 'space not found' },
+        added: [],
+        removed: [],
+        pruned_unknown: [],
+        unknown_kept: [],
+        unresolved: [],
+        parent_pointers_repaired: [],
+        parent_pointers_deferred: [],
+      });
     });
   });
 });

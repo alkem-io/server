@@ -12,7 +12,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy/authori
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { NotificationSettingInput } from './dto/notification.setting.input';
 import { CreateUserSettingsInput } from './dto/user.settings.dto.create';
 import { UpdateUserSettingsEntityInput } from './dto/user.settings.dto.update';
@@ -37,6 +37,7 @@ export class UserSettingsService {
       privacy: settingsData.privacy,
       notification: settingsData.notification,
       homeSpace: settingsData.homeSpace,
+      dashboard: settingsData.dashboard ?? { activityView: true },
       assistant: {
         enabledCapabilities: settingsData.assistant?.enabledCapabilities ?? [],
       },
@@ -160,6 +161,10 @@ export class UserSettingsService {
         settings.notification.organization.adminMessageReceived,
         notificationOrganizationData.adminMessageReceived
       );
+      this.updateNotificationSetting(
+        settings.notification.organization.adminSpaceCommunityInvitation,
+        notificationOrganizationData.adminSpaceCommunityInvitation
+      );
     }
 
     const notificationSpaceData = updateData.notification?.space;
@@ -175,6 +180,10 @@ export class UserSettingsService {
         this.updateNotificationSetting(
           settings.notification.space.admin.communityNewMember,
           adminData.communityNewMember
+        );
+        this.updateNotificationSetting(
+          settings.notification.space.admin.communityInvitationResponse,
+          adminData.communityInvitationResponse
         );
         this.updateNotificationSetting(
           settings.notification.space.admin.communicationMessageReceived,
@@ -232,6 +241,10 @@ export class UserSettingsService {
         settings.notification.space.collaborationPollVoteAffectedByOptionChange,
         notificationSpaceData.collaborationPollVoteAffectedByOptionChange
       );
+      this.updateNotificationSetting(
+        settings.notification.space.collaborationCalloutReaction,
+        notificationSpaceData.collaborationCalloutReaction
+      );
     }
 
     const notificationUserData = updateData.notification?.user;
@@ -248,6 +261,18 @@ export class UserSettingsService {
       this.updateNotificationSetting(
         settings.notification.user.commentReply,
         notificationUserData.commentReply
+      );
+      // 034-messaging-notifications (FR-017): merged field-by-field like
+      // every other row — an update to one messaging row never resets the
+      // other, and the stored `inApp` value is retained for row-shape
+      // symmetry even though it is never honored (FR-003/D-2).
+      this.updateNotificationSetting(
+        settings.notification.user.conversationMessageDirect,
+        notificationUserData.conversationMessageDirect
+      );
+      this.updateNotificationSetting(
+        settings.notification.user.conversationMessageGroup,
+        notificationUserData.conversationMessageGroup
       );
 
       // Handle membership notifications
@@ -313,6 +338,18 @@ export class UserSettingsService {
       }
     }
 
+    if (updateData.dashboard) {
+      // Legacy rows are backfilled by migration, but guard defensively so a
+      // partial settings object can't throw on the nested assignment.
+      settings.dashboard = settings.dashboard ?? { activityView: true };
+      // `!= null` (not `!== undefined`): the input field is a nullable Boolean, so a
+      // client can send `null`; treat that as "no change" rather than persisting null
+      // into the NOT NULL `activityView`.
+      if (updateData.dashboard.activityView != null) {
+        settings.dashboard.activityView = updateData.dashboard.activityView;
+      }
+    }
+
     // Skip on both undefined (field omitted) and null (explicit clear is
     // unsupported — the column is NOT NULL with a default of 2).
     if (updateData.designVersion != null) {
@@ -361,9 +398,16 @@ export class UserSettingsService {
     return settings;
   }
 
-  async deleteUserSettings(userSettingsID: string): Promise<IUserSettings> {
+  async deleteUserSettings(
+    userSettingsID: string,
+    em?: EntityManager
+  ): Promise<IUserSettings> {
     const userSettings = await this.getUserSettingsOrFail(userSettingsID);
-    await this.userSettingsRepository.remove(userSettings as UserSettings);
+    if (em) {
+      await em.remove(userSettings as UserSettings);
+    } else {
+      await this.userSettingsRepository.remove(userSettings as UserSettings);
+    }
     return userSettings;
   }
 

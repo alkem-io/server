@@ -1,5 +1,8 @@
 import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { introducesCollaboraDocument } from '@domain/collaboration/callout/callout.collabora.gate.util';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
@@ -27,17 +30,19 @@ export class TemplateApplierService {
     private readonly storageAggregatorResolverService: StorageAggregatorResolverService,
     private readonly collaborationService: CollaborationService,
     private readonly collaborationLicenseService: CollaborationLicenseService,
+    private readonly authorizationService: AuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async updateCollaborationFromSpaceTemplate(
     updateData: UpdateCollaborationFromSpaceTemplateInput,
     targetCollaboration: ICollaboration,
-    userID: string
+    actorContext: ActorContext
   ): Promise<ICollaboration> {
     const templateWithContentSpace =
       await this.templateService.getTemplateOrFail(updateData.spaceTemplateID, {
         relations: {
+          authorization: true,
           contentSpace: {
             collaboration: {
               innovationFlow: {
@@ -50,6 +55,20 @@ export class TemplateApplierService {
           },
         },
       });
+    // Authorize READ on the SOURCE template BEFORE inspecting ANYTHING about it —
+    // including whether it has a Space associated (the resolver only authorizes UPDATE
+    // on the TARGET collaboration; a caller could otherwise name an arbitrary
+    // spaceTemplateID and exfiltrate its callouts / whiteboard snapshots, or use the
+    // distinct not-found / no-space / forbidden errors as an existence oracle). Mirrors
+    // updateTemplateFromSpace's source-Space READ. Grant sits first so no source detail
+    // leaks and no target mutation runs for an unreadable source.
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      templateWithContentSpace.authorization,
+      AuthorizationPrivilege.READ,
+      `apply space template — read source: ${updateData.spaceTemplateID}`
+    );
+
     if (!templateWithContentSpace.contentSpace?.collaboration) {
       throw new RelationshipNotFoundException(
         `Template with ID ${updateData.spaceTemplateID} does not have a Space associated.`,
@@ -78,7 +97,7 @@ export class TemplateApplierService {
       templateWithContentSpace.contentSpace,
       updateData.addCallouts,
       updateData.deleteExistingCallouts,
-      userID
+      actorContext
     );
   }
 
@@ -87,7 +106,7 @@ export class TemplateApplierService {
     templateContentSpace: ITemplateContentSpace,
     addCallouts: boolean,
     deleteExistingCallouts: boolean,
-    userID: string
+    actorContext: ActorContext
   ): Promise<ICollaboration> {
     const sourceCollaboration = templateContentSpace.collaboration;
     if (
@@ -153,7 +172,8 @@ export class TemplateApplierService {
         targetCollaboration.calloutsSet,
         calloutsFromSourceCollaboration,
         storageAggregator,
-        userID
+        actorContext,
+        actorContext.actorID
       );
       targetCollaboration.calloutsSet.callouts?.push(...newCallouts);
     }

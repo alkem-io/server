@@ -1,4 +1,5 @@
 import configuration from '@config/configuration';
+import { buildRuntimeDataSourceOptions } from '@config/runtime.datasource.options';
 import { WinstonConfigService } from '@config/winston.config';
 import { GraphqlGuardModule } from '@core/authorization/graphql.guard.module';
 import { redisCacheModule } from '@core/cache/redis.cache.module';
@@ -63,41 +64,11 @@ import { WorkerEventBusModule } from './worker.event-bus.module';
       name: 'default',
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: async (configService: ConfigService<AlkemioConfig, true>) => {
-        const dbOptions = configService.get('storage.database', {
-          infer: true,
-        });
-
-        const pgbouncerEnabled = dbOptions.pgbouncer?.enabled ?? false;
-        const statementTimeoutMs =
-          dbOptions.pgbouncer?.statement_timeout_ms ?? 60000;
-
-        return {
-          type: 'postgres' as const,
-          synchronize: false,
-          cache: true,
-          entities: [join(__dirname, '..', '..', '**', '*.entity.{ts,js}')],
-          subscribers: [
-            join(__dirname, '..', '..', '**', '*.write.guard.{ts,js}'),
-          ],
-          host: dbOptions.host,
-          port: dbOptions.port,
-          username: dbOptions.username,
-          password: dbOptions.password,
-          database: dbOptions.database,
-          logging: dbOptions.logging,
-          extra: {
-            max: dbOptions.pool?.max ?? 50,
-            idleTimeoutMillis: dbOptions.pool?.idle_timeout_ms ?? 30000,
-            connectionTimeoutMillis:
-              dbOptions.pool?.connection_timeout_ms ?? 10000,
-            ...(pgbouncerEnabled && {
-              statement_timeout: statementTimeoutMs,
-              idle_in_transaction_session_timeout: statementTimeoutMs * 2,
-            }),
-          },
-        };
-      },
+      useFactory: async (configService: ConfigService<AlkemioConfig, true>) =>
+        buildRuntimeDataSourceOptions(
+          configService,
+          join(__dirname, '..', '..')
+        ),
     }),
     WinstonModule.forRootAsync({
       useClass: WinstonConfigService,

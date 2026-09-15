@@ -486,7 +486,8 @@ export class NotificationPlatformAdapter {
         event,
         eventData.triggeredBy,
         recipients.emailRecipients,
-        eventData.user
+        eventData.user,
+        eventData.triggeredByPayload
       );
 
     this.notificationExternalAdapter.sendExternalNotifications(event, payload);
@@ -496,10 +497,11 @@ export class NotificationPlatformAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
+      // Carries no name/email of the departed user: an in-app notification
+      // record is itself a fresh personal-data write, created at the exact
+      // moment the platform is supposed to be erasing that person's data.
       const inAppPayload: InAppNotificationPayloadPlatformUserProfileRemoved = {
         type: NotificationEventPayload.PLATFORM_USER_PROFILE_REMOVED,
-        userDisplayName: eventData.user.profile.displayName,
-        userEmail: eventData.user.email,
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(

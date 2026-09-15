@@ -17,6 +17,7 @@ import {
   DeleteMessageRequest,
   DeleteRoomRequest,
   DeleteSpaceRequest,
+  ErrCodeInternalError,
   GetLastMessageRequest,
   GetMessageRequest,
   GetReactionRequest,
@@ -48,6 +49,8 @@ import {
   RoomTypeCommunity,
   RoomTypeDirect,
   SendMessageRequest,
+  SetChildrenRequest,
+  SetChildrenResponse,
   SetParentRequest,
   SetRoomStateRequest,
   SetSpaceStateRequest,
@@ -70,6 +73,11 @@ import { CommunicationRoomResult } from '@services/adapters/communication-adapte
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CommunicationAdapterException } from './communication.adapter.exception';
+import {
+  formatBatchResultForLog,
+  isBatchOperationSuccessful,
+  processBatchResponse,
+} from './communication.adapter.response';
 import { CommunicationAddReactionToMessageInput } from './dto/communication.dto.add.reaction';
 import { CommunicationDeleteMessageInput } from './dto/communication.dto.message.delete';
 import { CommunicationSendMessageInput } from './dto/communication.dto.message.send';
@@ -104,6 +112,26 @@ interface RpcOptions<T extends CommandTopic> {
    */
   ensureSuccess?: boolean;
 }
+
+/**
+ * The Go adapter's error responses (including the expected SPACE_NOT_FOUND
+ * skip) serialize every `SetChildrenResponse` array field as JSON `null` —
+ * `emptyIfNil` is only applied on the success branch. Default every array to
+ * `[]` so a caller's `.length` accounting never has to special-case a null
+ * from an error response.
+ */
+const normalizeSetChildrenResponse = (
+  response: SetChildrenResponse
+): SetChildrenResponse => ({
+  ...response,
+  added: response.added ?? [],
+  removed: response.removed ?? [],
+  pruned_unknown: response.pruned_unknown ?? [],
+  unknown_kept: response.unknown_kept ?? [],
+  unresolved: response.unresolved ?? [],
+  parent_pointers_repaired: response.parent_pointers_repaired ?? [],
+  parent_pointers_deferred: response.parent_pointers_deferred ?? [],
+});
 
 /**
  * CommunicationAdapter - Uses standard AMQP RPC for communication with Go Matrix Adapter
@@ -713,6 +741,42 @@ export class CommunicationAdapter {
     return response?.success ?? false;
   }
 
+  /**
+   * Declaratively converge one parent space's m.space.child edges toward a
+   * desired set — the only adapter operation that can remove an edge.
+   *
+   * Unlike every other wrapper on this adapter, a disabled adapter does NOT
+   * report success here: it returns a distinguishable `{ disabled: true }`
+   * sentinel, never `true`. A reconciliation pass whose entire purpose is
+   * reporting drift honestly must never mistake "we didn't ask" for
+   * "nothing was wrong". A transport failure (timeout, channel error) comes
+   * back as `undefined` — also never a fabricated success — so the caller's
+   * circuit breaker can tell "no drift" apart from "we don't know".
+   *
+   * Every error path on the wire (including the expected "space not found"
+   * skip) marshals the response array fields as JSON `null` rather than an
+   * empty array — the Go side only empties them on the success branch. Every
+   * array is defensively normalized to `[]` here so no caller ever has to
+   * guard a `.length` access against a null from an error response.
+   */
+  async setChildren(
+    request: SetChildrenRequest
+  ): Promise<SetChildrenResponse | { disabled: true } | undefined> {
+    if (!this.enabled) return { disabled: true };
+
+    const response = await this.sendCommand({
+      operation: 'setChildren',
+      topic: MatrixAdapterEventType.COMMUNICATION_HIERARCHY_SET_CHILDREN,
+      payload: request satisfies SetChildrenRequest,
+      errorContext: { parentContextId: request.parent_context_id },
+      onError: 'silent',
+    });
+
+    return response === undefined
+      ? undefined
+      : normalizeSetChildrenResponse(response);
+  }
+
   // ============================================================================
   // Membership Management (FR-005, FR-006)
   // ============================================================================
@@ -750,11 +814,26 @@ export class CommunicationAdapter {
 
   /**
    * Remove an actor from multiple rooms.
+   *
+   * The RPC envelope's top-level `success` flag only reflects whether the
+   * request was processed — it can be `true` even when an individual room's
+   * kick failed (e.g. Matrix rejects the kick with a 403/M_FORBIDDEN
+   * insufficient-power-level error). The authoritative per-room outcome
+   * lives in `response.results`, so it is always consulted here rather than
+   * trusting the envelope alone.
+   *
+   * @param options.ensureAllSucceeded - When true, throws a
+   * `CommunicationAdapterException` (carrying the first per-room adapter
+   * error, if any) instead of silently returning `false` when one or more
+   * rooms failed. Defaults to false to preserve the existing best-effort
+   * behavior of bulk/fire-and-forget callers (e.g. space moves, community
+   * cleanup) that intentionally tolerate partial failures.
    */
   async batchRemoveMember(
     actorID: AlkemioActorID,
     roomIds: AlkemioRoomID[],
-    reason?: string
+    reason?: string,
+    options?: { ensureAllSucceeded?: boolean }
   ): Promise<boolean> {
     if (!this.enabled || roomIds.length === 0) return true;
 
@@ -769,7 +848,54 @@ export class CommunicationAdapter {
       errorContext: { actorID, roomCount: roomIds.length },
     });
 
-    return response?.success ?? false;
+    if (!response) return false;
+
+    const batchResult = processBatchResponse(response);
+    // qual-server-1: `isBatchOperationSuccessful(_, 'all')` alone is
+    // `failureCount === 0`, which is vacuously true when the Go adapter
+    // rejects the WHOLE batch (envelope `success: false`, no per-room
+    // `results` at all — e.g. actor not found / invalid param / room
+    // mapping missing, i.e. it never got as far as per-room work): both
+    // successCount and failureCount are 0, so `failureCount === 0` holds and
+    // this used to report success. Require the envelope to have succeeded
+    // AND every requested room to be individually accounted for as a
+    // success — this is exactly the false-success class commit d7fe1a3 set
+    // out to fix, re-introduced by the batch-response rework.
+    //
+    // The count alone is still not enough: a response carrying the right
+    // NUMBER of successes for the WRONG rooms (adapter-side key mismatch)
+    // would satisfy it. Each requested room must be correlated with its own
+    // successful result.
+    const allSucceeded =
+      response.success &&
+      isBatchOperationSuccessful(batchResult, 'all') &&
+      batchResult.successCount === roomIds.length &&
+      roomIds.every(roomId => batchResult.itemResults.get(roomId) === true);
+
+    if (!allSucceeded) {
+      this.logger.warn?.(
+        `batchRemoveMember: one or more rooms failed to remove actor ${actorID} - ${formatBatchResultForLog(batchResult)}`,
+        LogContext.COMMUNICATION
+      );
+
+      if (options?.ensureAllSucceeded) {
+        // Prefer a per-room error; fall back to the envelope-level error
+        // (the no-results, whole-batch-rejected case above), then the
+        // generic default.
+        const firstError = batchResult.itemErrors.values().next().value;
+        throw CommunicationAdapterException.fromAdapterError(
+          'batchRemoveMember',
+          firstError ??
+            response.error ?? {
+              code: ErrCodeInternalError,
+              message: 'One or more room removals failed',
+            },
+          { actorID, roomCount: roomIds.length }
+        );
+      }
+    }
+
+    return allSucceeded;
   }
 
   // ============================================================================

@@ -1,6 +1,7 @@
 import {
   BaseEventPayload,
   ContributorPayload,
+  ConversationDigestEntry,
   NotificationEventPayloadOrganizationMessageDirect,
   NotificationEventPayloadOrganizationMessageRoom,
   NotificationEventPayloadPlatformForumDiscussion,
@@ -11,6 +12,7 @@ import {
   NotificationEventPayloadSpace,
   NotificationEventPayloadSpaceCalendarEvent,
   NotificationEventPayloadSpaceCollaborationCallout,
+  NotificationEventPayloadSpaceCollaborationCalloutReaction,
   NotificationEventPayloadSpaceCommunicationMessageDirect,
   NotificationEventPayloadSpaceCommunicationUpdate,
   NotificationEventPayloadSpaceCommunityApplication,
@@ -22,6 +24,8 @@ import {
   NotificationEventPayloadSpacePollVoteAffectedByOptionChange,
   NotificationEventPayloadSpacePollVoteCastOnOwnPoll,
   NotificationEventPayloadSpacePollVoteCastOnPollIVotedOn,
+  NotificationEventPayloadUserConversationMessageDirect,
+  NotificationEventPayloadUserConversationMessageGroup,
   NotificationEventPayloadUserMessageDirect,
   NotificationEventPayloadUserMessageRoom,
   NotificationEventPayloadUserMessageRoomReply,
@@ -33,10 +37,12 @@ import { LogContext } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { NotificationEvent } from '@common/enums/notification.event';
+import { RoleName } from '@common/enums/role.name';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { sanitizeNotificationCopyText } from '@common/utils/notification.copy.util';
 import { IActor } from '@domain/actor/actor/actor.interface';
 import { getActorType } from '@domain/actor/actor/actor.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
@@ -66,6 +72,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { AlkemioConfig } from '@src/types';
+import { defaultIfEmpty, lastValueFrom } from 'rxjs';
 import { NotificationInputUserEmailChangeGlobalAdmin } from '../notification-adapter/dto/platform/notification.dto.input.platform.user.email.change';
 import { NotificationInputCollaborationCalloutComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.comment';
 import { NotificationInputCollaborationCalloutContributionCreated } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.contribution.created';
@@ -80,6 +87,20 @@ interface CalloutContributionPayload {
   createdBy: ContributorPayload;
   type: CalloutContributionType;
   url: string;
+}
+
+/**
+ * Temporary bridge until `@alkemio/notifications-lib` publishes this
+ * interface (merge gate — see the contract's rollout ordering). Mirrors
+ * the lib shape exactly so the swap to the published import is a pure
+ * type-only change.
+ */
+interface NotificationEventPayloadSpaceCommunityInvitationOrganization
+  extends NotificationEventPayloadSpaceCommunityInvitation {
+  organizationInvitationsUrl: string;
+  extraRoles: string[];
+  spacesToJoin: { displayName: string; url: string }[];
+  recipientEmail?: string;
 }
 
 @Injectable()
@@ -97,6 +118,37 @@ export class NotificationExternalAdapter {
     payload: any
   ): Promise<void> {
     this.notificationsClient.emit<number>(event, payload);
+  }
+
+  /**
+   * Awaited publish: resolves only once the broker has accepted the event, and
+   * REJECTS if it has not.
+   *
+   * `sendExternalNotifications` above neither awaits nor subscribes to the
+   * observable `emit` returns, so a broker outage is invisible to its caller.
+   * That is tolerable for callers that emit and move on, but not for the
+   * 034 digest flush: it drains the recipient's pending-conversation set and
+   * the FR-011b cap anchor from Redis BEFORE dispatching, and reArms only when
+   * dispatch throws. With a dispatch that cannot throw, a broker blip during a
+   * sweep tick silently destroyed every email digest due in that window and
+   * the whole §5.4 retry design was dead code on the email channel.
+   *
+   * Subscribing is safe here even though `ClientProxy.emit` returns an
+   * already-`connect()`ed connectable: its source is a `defer(async ...)`, so
+   * nothing can be pushed before this synchronous subscription attaches.
+   * `defaultIfEmpty` guards the case where the transport completes without
+   * emitting, which would otherwise reject with rxjs's EmptyError and be
+   * misread as a publish failure.
+   */
+  public async sendExternalNotificationsAwaited(
+    event: NotificationEvent,
+    payload: any
+  ): Promise<void> {
+    await lastValueFrom(
+      this.notificationsClient
+        .emit<number>(event, payload)
+        .pipe(defaultIfEmpty(undefined as unknown as number))
+    );
   }
 
   /**
@@ -241,6 +293,98 @@ export class NotificationExternalAdapter {
     return result;
   }
 
+  async buildOrganizationSpaceCommunityInvitationPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    organizationID: string,
+    space: ISpace,
+    spacesToJoin: ISpace[],
+    extraRoles: RoleName[],
+    welcomeMessage?: string,
+    recipientEmail?: string
+  ): Promise<NotificationEventPayloadSpaceCommunityInvitationOrganization> {
+    const spacePayload = await this.buildSpacePayload(
+      eventType,
+      triggeredBy,
+      recipients,
+      space
+    );
+    const organization = await this.actorLookupService.getFullActorByIdOrFail(
+      organizationID,
+      {
+        relations: {
+          profile: true,
+        },
+      }
+    );
+    if (!organization.profile) {
+      throw new EntityNotFoundException(
+        'Unable to find Organization profile',
+        LogContext.COMMUNITY,
+        { organizationID }
+      );
+    }
+    const organizationPayload: ContributorPayload = {
+      id: organization.id,
+      profile: {
+        displayName: organization.profile.displayName,
+        url: this.urlGeneratorService.createUrlForContributor(organization),
+      },
+      type: getActorType(organization),
+    };
+    const spacesToJoinPayload = await Promise.all(
+      spacesToJoin.map(async spaceToJoin => ({
+        displayName: spaceToJoin.about.profile.displayName,
+        url: await this.urlGeneratorService.generateUrlForProfile(
+          spaceToJoin.about.profile
+        ),
+      }))
+    );
+
+    const result: NotificationEventPayloadSpaceCommunityInvitationOrganization =
+      {
+        invitee: organizationPayload,
+        welcomeMessage,
+        organizationInvitationsUrl:
+          this.urlGeneratorService.createUrlForOrganizationSettingsInvitations(
+            organization.nameID
+          ),
+        extraRoles: extraRoles.map(role => role.toString()),
+        spacesToJoin: spacesToJoinPayload,
+        ...(recipientEmail ? { recipientEmail } : {}),
+        ...spacePayload,
+      };
+    return result;
+  }
+
+  /**
+   * Invitation accept/decline outcome payload. Actor-agnostic — the
+   * `invitee` is resolved through the shared contributor lookup, so the
+   * same builder serves organization and user invitation responses.
+   */
+  async buildActorSpaceCommunityInvitationOutcomePayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    invitedActorID: string,
+    space: ISpace
+  ): Promise<NotificationEventPayloadSpaceCommunityInvitation> {
+    const spacePayload = await this.buildSpacePayload(
+      eventType,
+      triggeredBy,
+      recipients,
+      space
+    );
+    const invitedActorPayload =
+      await this.getContributorPayloadOrFail(invitedActorID);
+    const result: NotificationEventPayloadSpaceCommunityInvitation = {
+      invitee: invitedActorPayload,
+      ...spacePayload,
+    };
+    return result;
+  }
+
   async buildSpaceCommunityExternalInvitationCreatedNotificationPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
@@ -356,9 +500,25 @@ export class NotificationExternalAdapter {
           contribution.memo.nameID
         ),
       };
+    } else if (contribution.collaboraDocument) {
+      contributionPayload = {
+        id: contribution.collaboraDocument.id,
+        type: CalloutContributionType.COLLABORA_DOCUMENT,
+        createdBy: await this.getContributorPayloadOrFail(
+          contribution.createdBy ||
+            contribution.collaboraDocument.createdBy ||
+            ''
+        ),
+        displayName: contribution.collaboraDocument.profile?.displayName ?? '',
+        description: contribution.collaboraDocument.profile?.description ?? '',
+        // Collabora documents have no client deep-link route — the client opens
+        // them in a dialog from the callout page — so the canonical URL is the
+        // containing callout (mirrors UrlGeneratorService + the link branch).
+        url: calloutURL,
+      };
     } else {
       throw new RelationshipNotFoundException(
-        'No valid contribution type found (post, whiteboard, or link)',
+        'No valid contribution type found (post, whiteboard, link, memo, or collabora document)',
         LogContext.NOTIFICATIONS,
         {
           contribution: contribution.id,
@@ -729,6 +889,45 @@ export class NotificationExternalAdapter {
     };
   }
 
+  /**
+   * Builds the AMQP payload for a callout-reaction email notification.
+   * The shape is no-content-by-construction: framing.description is always
+   * empty so no callout body is ever transmitted.
+   */
+  async buildSpaceCollaborationCalloutReactionPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    space: ISpace,
+    calloutId: string,
+    calloutDisplayName: string,
+    emoji: string
+  ): Promise<NotificationEventPayloadSpaceCollaborationCalloutReaction> {
+    const spacePayload = await this.buildSpacePayload(
+      eventType,
+      triggeredBy,
+      recipients,
+      space
+    );
+    const calloutURL =
+      await this.urlGeneratorService.getCalloutUrlPath(calloutId);
+
+    return {
+      ...spacePayload,
+      callout: {
+        id: calloutId,
+        framing: {
+          id: '',
+          type: '',
+          displayName: calloutDisplayName,
+          description: '',
+          url: calloutURL,
+        },
+      },
+      reaction: { emoji },
+    };
+  }
+
   async buildPlatformSpaceCreatedPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
@@ -874,12 +1073,14 @@ export class NotificationExternalAdapter {
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],
-    user: IUser
+    user: IUser,
+    triggeredByPayload?: UserPayload
   ): Promise<NotificationEventPayloadPlatformUserRemoved> {
     const basePayload = await this.buildBaseEventPayload(
       eventType,
       triggeredBy,
-      recipients
+      recipients,
+      triggeredByPayload
     );
     const result: NotificationEventPayloadPlatformUserRemoved = {
       user: {
@@ -971,6 +1172,97 @@ export class NotificationExternalAdapter {
     };
 
     return payload;
+  }
+
+  /**
+   * 034-messaging-notifications (contract C-2, data-model.md §3, FR-008/FR-009).
+   * REVISED for Operator Ruling R4 / D-22 — a per-recipient DIGEST.
+   *
+   * Wire contract (`NotificationEventPayloadUserConversationMessageDirect` /
+   * `...Group`, both owned by `@alkemio/notifications-lib` >= 0.19.0 and
+   * asserted on both sides):
+   *  - NO message-content field exists (FR-008, by construction).
+   *  - `recipients` has EXACTLY ONE entry — the digest is per recipient.
+   *  - `senders` / `conversations` is NEVER empty: a track that finds nothing
+   *    unread emits nothing at all (FR-018).
+   *  - `totalCount === sum(entries[].count)` and is therefore `>= 1`.
+   *  - `triggeredBy.email === ''` — sender PII never rides the durable queue.
+   *
+   * Deliberately does NOT reuse `buildBaseEventPayload` — that helper's
+   * `triggeredBy` carries the sender's REAL email address, which is the
+   * exact leak this feature must not repeat (the unanimous council finding
+   * against reusing `USER_MESSAGE`/its template). `triggeredBy.email` is
+   * explicitly zeroed here; `recipients[].email` remains — it is the
+   * delivery address, and there is exactly ONE recipient on a digest.
+   *
+   * On `triggeredBy`: a digest has no single sender — it is assembled at fire
+   * time from the recipient's unread signal, and the arrival path stores only
+   * conversation ids (data-model §5), never a sender. `triggeredBy` is
+   * therefore filled with the RECIPIENT's own (email-zeroed) payload purely to
+   * satisfy `BaseEventPayload`'s non-optional field. It identifies nobody else
+   * and templates MUST NOT render it — the digest names counterparts via
+   * `senders[]`. See the deviation note in the feature report.
+   *
+   * sec-server-4: entry display names are user-controlled profile/room text,
+   * NOT trusted platform fields — the caller sanitizes them
+   * (`sanitizeNotificationCopyText` / `getGroupDisplayNameForNotificationCopy`)
+   * before they reach this builder, and they are re-sanitized here so the
+   * builder is safe on its own.
+   */
+  async buildConversationMessageDirectPayload(
+    eventType: NotificationEvent,
+    recipient: IUser,
+    entries: ConversationDigestEntry[]
+  ): Promise<NotificationEventPayloadUserConversationMessageDirect> {
+    const recipientPayload = this.createUserPayloadFromUser(recipient);
+    const senders = entries.map(entry => this.sanitizeDigestEntry(entry));
+
+    return {
+      eventType,
+      triggeredBy: { ...recipientPayload, email: '' },
+      recipients: [recipientPayload],
+      platform: { url: this.getPlatformURL() },
+      senders,
+      totalCount: senders.reduce((total, entry) => total + entry.count, 0),
+    };
+  }
+
+  /**
+   * 034-messaging-notifications — group digest variant. See
+   * `buildConversationMessageDirectPayload` for the `triggeredBy` and
+   * sanitization rationale.
+   *
+   * The group digest names CONVERSATIONS, not people: there is deliberately
+   * no sender-identity field anywhere on this payload (FR-018a).
+   */
+  async buildConversationMessageGroupPayload(
+    eventType: NotificationEvent,
+    recipient: IUser,
+    entries: ConversationDigestEntry[]
+  ): Promise<NotificationEventPayloadUserConversationMessageGroup> {
+    const recipientPayload = this.createUserPayloadFromUser(recipient);
+    const conversations = entries.map(entry => this.sanitizeDigestEntry(entry));
+
+    return {
+      eventType,
+      triggeredBy: { ...recipientPayload, email: '' },
+      recipients: [recipientPayload],
+      platform: { url: this.getPlatformURL() },
+      conversations,
+      totalCount: conversations.reduce(
+        (total, entry) => total + entry.count,
+        0
+      ),
+    };
+  }
+
+  private sanitizeDigestEntry(
+    entry: ConversationDigestEntry
+  ): ConversationDigestEntry {
+    return {
+      ...entry,
+      displayName: sanitizeNotificationCopyText(entry.displayName),
+    };
   }
 
   async buildOrganizationMentionNotificationPayload(
@@ -1136,9 +1428,11 @@ export class NotificationExternalAdapter {
   private async buildBaseEventPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
-    recipients: IUser[]
+    recipients: IUser[],
+    triggeredByPayload?: UserPayload
   ): Promise<BaseEventPayload> {
-    const contributor = await this.getUserPayloadOrFail(triggeredBy);
+    const contributor =
+      triggeredByPayload ?? (await this.getUserPayloadOrFail(triggeredBy));
     const result: BaseEventPayload = {
       eventType,
       triggeredBy: contributor,
@@ -1245,7 +1539,14 @@ export class NotificationExternalAdapter {
     return result;
   }
 
-  private createUserPayloadFromUser(user: IUser): UserPayload {
+  /**
+   * Builds a `UserPayload` straight from an already-loaded `IUser`, with no
+   * DB lookup. Exposed for callers that must resolve a notification's
+   * initiator payload BEFORE an action that removes the initiator's own row
+   * — e.g. self-account deletion, where the initiator IS the departed user
+   * and a post-deletion lookup by id would fail.
+   */
+  public createUserPayloadFromUser(user: IUser): UserPayload {
     return {
       id: user.id,
       firstName: user.firstName,

@@ -4,20 +4,19 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
+import {
+  L0_MAX_INNOVATION_FLOW_STATES,
+  L0_MIN_INNOVATION_FLOW_STATES,
+} from '@domain/collaboration/innovation-flow/innovation.flow.constants';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { SpaceService } from '@domain/space/space/space.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
-import { TemplateService } from '@domain/template/template/template.service';
-import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ActivityService } from '@platform/activity/activity.service';
-import { PlatformService } from '@platform/platform/platform.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock, vi } from 'vitest';
-import { InputCreatorService } from '../input-creator/input.creator.service';
 import { ConversionService } from './conversion.service';
 
 describe('ConversionService', () => {
@@ -27,11 +26,6 @@ describe('ConversionService', () => {
   let _namingService: Record<string, Mock>;
   let spaceLookupService: Record<string, Mock>;
   let accountHostService: Record<string, Mock>;
-  let platformService: Record<string, Mock>;
-  let templatesManagerService: Record<string, Mock>;
-  let templateService: Record<string, Mock>;
-  let inputCreatorService: Record<string, Mock>;
-  let innovationFlowService: Record<string, Mock>;
   let activityService: Record<string, Mock>;
 
   beforeEach(async () => {
@@ -61,24 +55,6 @@ describe('ConversionService', () => {
       string,
       Mock
     >;
-    platformService = module.get(PlatformService) as unknown as Record<
-      string,
-      Mock
-    >;
-    templatesManagerService = module.get(
-      TemplatesManagerService
-    ) as unknown as Record<string, Mock>;
-    templateService = module.get(TemplateService) as unknown as Record<
-      string,
-      Mock
-    >;
-    inputCreatorService = module.get(InputCreatorService) as unknown as Record<
-      string,
-      Mock
-    >;
-    innovationFlowService = module.get(
-      InnovationFlowService
-    ) as unknown as Record<string, Mock>;
     activityService = module.get(ActivityService) as unknown as Record<
       string,
       Mock
@@ -185,24 +161,6 @@ describe('ConversionService', () => {
       vi.mocked(
         _namingService.createNameIdAvoidingReservedNameIDs
       ).mockReturnValue('promoted-name');
-
-      vi.mocked(platformService.getTemplatesManagerOrFail).mockResolvedValue({
-        id: 'platform-tm',
-      } as never);
-      vi.mocked(
-        templatesManagerService.getTemplateFromTemplateDefault
-      ).mockResolvedValue({ id: 'template-l0' } as never);
-      vi.mocked(templateService.getTemplateOrFail).mockResolvedValue({
-        contentSpace: {
-          collaboration: { innovationFlow: { states: [] } },
-        },
-      } as never);
-      vi.mocked(
-        inputCreatorService.buildCreateInnovationFlowStateInputFromInnovationFlowState
-      ).mockReturnValue([]);
-      vi.mocked(
-        innovationFlowService.updateInnovationFlowStates
-      ).mockImplementation(async (flow: unknown) => flow as never);
 
       const result = await service.convertSpaceL1ToSpaceL0OrFail({
         spaceL1ID: 'space-l1',
@@ -498,23 +456,6 @@ describe('ConversionService', () => {
       vi.mocked(
         spaceService.createTemplatesManagerForSpaceL0
       ).mockResolvedValue({});
-      vi.mocked(platformService.getTemplatesManagerOrFail).mockResolvedValue({
-        id: 'platform-tm',
-      });
-      vi.mocked(
-        templatesManagerService.getTemplateFromTemplateDefault
-      ).mockResolvedValue({ id: 'template-id' });
-      vi.mocked(templateService.getTemplateOrFail).mockResolvedValue({
-        contentSpace: {
-          collaboration: { innovationFlow: { states: [] } },
-        },
-      });
-      vi.mocked(
-        inputCreatorService.buildCreateInnovationFlowStateInputFromInnovationFlowState
-      ).mockReturnValue([]);
-      vi.mocked(
-        innovationFlowService.updateInnovationFlowStates
-      ).mockResolvedValue({ id: 'flow-l1', states: [] });
       vi.mocked(
         _namingService.getReservedNameIDsLevelZeroSpaces
       ).mockResolvedValue([]);
@@ -530,6 +471,87 @@ describe('ConversionService', () => {
       expect(
         roleSetService.removePendingInvitationsAndApplications
       ).toHaveBeenCalledWith(['roleset-l1', 'roleset-l2-a']);
+    });
+  });
+
+  // ── client-web#9528: promotion keeps the L1 innovation flow states verbatim
+  // (names, descriptions, order, sidebar) instead of resetting to the platform
+  // default L0 flow; only the flow's state-count bounds are re-stamped.
+  describe('convertSpaceL1ToSpaceL0OrFail — innovation flow preserved', () => {
+    it('keeps the L1 flow states verbatim and re-stamps the state-count bounds', async () => {
+      const l1FlowStates = [
+        {
+          id: 'state-1',
+          displayName: 'Custom Phase',
+          description: 'the only phase',
+          settings: { allowNewCallouts: true, sidebar: ['INTENT'] },
+          sortOrder: 1,
+        },
+      ];
+      const innovationFlow = {
+        id: 'flow-l1',
+        states: l1FlowStates,
+        currentStateID: 'state-1',
+        settings: { minimumNumberOfStates: 1, maximumNumberOfStates: 8 },
+      };
+      const spaceL1 = {
+        id: 'space-l1',
+        nameID: 'l1-name',
+        levelZeroSpaceID: 'space-l0',
+        community: { roleSet: { id: 'roleset-l1' } },
+        collaboration: { innovationFlow },
+        storageAggregator: { id: 'sa-l1', parentStorageAggregator: undefined },
+        subspaces: [],
+        parentSpace: { id: 'space-l0' },
+      };
+      const spaceL0Orig = {
+        id: 'space-l0',
+        account: {
+          id: 'account-1',
+          accountType: AccountType.USER,
+          storageAggregator: { id: 'sa-account' },
+        },
+        subspaces: [{ id: 'space-l1' }],
+      };
+
+      vi.mocked(spaceService.getSpaceOrFail)
+        .mockResolvedValueOnce(spaceL1 as never)
+        .mockResolvedValueOnce(spaceL0Orig as never);
+      vi.mocked(spaceService.createLicenseForSpaceL0).mockReturnValue(
+        {} as never
+      );
+      vi.mocked(
+        spaceService.createTemplatesManagerForSpaceL0
+      ).mockResolvedValue({} as never);
+      vi.mocked(spaceService.save).mockImplementation(
+        async (s: unknown) => s as never
+      );
+      vi.mocked(spaceLookupService.getAllDescendantSpaceIDs).mockResolvedValue(
+        []
+      );
+      stubEmptyCommunityRoles();
+      vi.mocked(
+        _namingService.getReservedNameIDsLevelZeroSpaces
+      ).mockResolvedValue([]);
+      vi.mocked(
+        _namingService.createNameIdAvoidingReservedNameIDs
+      ).mockReturnValue('promoted-name');
+
+      const result = await service.convertSpaceL1ToSpaceL0OrFail({
+        spaceL1ID: 'space-l1',
+      });
+
+      // The state objects survive untouched — same references, no rebuild.
+      expect(result.collaboration?.innovationFlow?.states).toBe(l1FlowStates);
+      expect(result.collaboration?.innovationFlow?.states).toHaveLength(1);
+      expect(result.collaboration?.innovationFlow?.currentStateID).toBe(
+        'state-1'
+      );
+      // Bounds re-stamped to the L0 allowance (1..8 since client-web#9528).
+      expect(result.collaboration?.innovationFlow?.settings).toEqual({
+        minimumNumberOfStates: L0_MIN_INNOVATION_FLOW_STATES,
+        maximumNumberOfStates: L0_MAX_INNOVATION_FLOW_STATES,
+      });
     });
   });
 });

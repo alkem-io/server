@@ -1,6 +1,7 @@
 import { LogContext } from '@common/enums/logging.context';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
+import { TaskBoardService } from '@domain/collaboration/callout/task-board/task.board.service';
 import { ICalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.interface';
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { ICalendarEvent } from '@domain/timeline/event/event.interface';
@@ -89,6 +90,7 @@ export class RoomServiceEvents {
     private notificationUserAdapter: NotificationUserAdapter,
     private communityResolverService: CommunityResolverService,
     private timelineResolverService: TimelineResolverService,
+    private taskBoardService: TaskBoardService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -261,7 +263,8 @@ export class RoomServiceEvents {
     post: IPost,
     room: IRoom,
     message: IMessage,
-    actorContext: ActorContext
+    actorContext: ActorContext,
+    contribution: ICalloutContribution
   ) {
     // FIXME: Activity system only tracks User IDs - see file-level comment for details
     if (actorContext.actorID) {
@@ -289,14 +292,25 @@ export class RoomServiceEvents {
 
     // FIXME: Contribution reporter only tracks User IDs - see file-level comment
     if (actorContext.actorID) {
-      this.contributionReporter.calloutPostCommentCreated(
-        {
-          id: post.id,
-          name: post.profile.displayName,
-          space: levelZeroSpaceID,
-        },
-        actorContext
-      );
+      if (this.taskBoardService.isTask(contribution)) {
+        this.contributionReporter.taskCommentCreated(
+          {
+            id: post.id,
+            name: post.profile.displayName,
+            space: levelZeroSpaceID,
+          },
+          actorContext
+        );
+      } else {
+        this.contributionReporter.calloutPostCommentCreated(
+          {
+            id: post.id,
+            name: post.profile.displayName,
+            space: levelZeroSpaceID,
+          },
+          actorContext
+        );
+      }
     } else {
       this.logger.debug?.(
         `Skipping contribution reporting for post comment: actorContext.actorID is empty (agent: ${actorContext.actorID})`,

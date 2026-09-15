@@ -53,7 +53,7 @@ export class CollaborationService {
   async createCollaboration(
     collaborationData: CreateCollaborationInput,
     storageAggregator: IStorageAggregator,
-    actorContext?: ActorContext
+    actorContext: ActorContext
   ): Promise<ICollaboration> {
     if (
       !collaborationData.calloutsSetData ||
@@ -120,6 +120,12 @@ export class CollaborationService {
           limit: 0,
           enabled: false,
         },
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_MEMO_SIGNING,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
       ],
     });
 
@@ -152,7 +158,8 @@ export class CollaborationService {
           collaboration.calloutsSet,
           collaborationData.calloutsSetData.calloutsData,
           storageAggregator,
-          actorContext?.actorID,
+          actorContext,
+          actorContext.actorID,
           collaborationData.parentSpaceId
         );
     }

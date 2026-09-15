@@ -18,6 +18,7 @@ import {
   UpdateWhiteboardGuestAccessInput,
   UpdateWhiteboardGuestAccessResult,
 } from './dto/whiteboard.dto.guest-access.toggle';
+import { ReplaceWhiteboardContentFromSourceInput } from './dto/whiteboard.dto.replace.content.from.source';
 import { UpdateWhiteboardEntityInput } from './types';
 import { WhiteboardGuestAccessService } from './whiteboard.guest-access.service';
 import { IWhiteboard } from './whiteboard.interface';
@@ -175,5 +176,20 @@ export class WhiteboardResolverMutations {
     );
 
     return await this.whiteboardService.deleteWhiteboard(whiteboard.id);
+  }
+
+  @Mutation(() => IWhiteboard, {
+    description:
+      'Replace a Whiteboard from another Whiteboard through the live collaboration room. Content and media are copied server-side; snapshot bytes never pass through GraphQL.',
+  })
+  async replaceWhiteboardContentFromSource(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('input') input: ReplaceWhiteboardContentFromSourceInput
+  ): Promise<IWhiteboard> {
+    return this.whiteboardService.replaceContentFromSource(
+      input.targetWhiteboardID,
+      input.sourceWhiteboardID,
+      actorContext
+    );
   }
 }

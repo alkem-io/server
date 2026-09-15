@@ -20,9 +20,10 @@ export class OrganizationLookupService {
 
   async getOrganizationById(
     orgId: string,
-    options?: FindOneOptions<Organization>
+    options?: FindOneOptions<Organization>,
+    em?: EntityManager
   ): Promise<IOrganization | null> {
-    return this.entityManager.findOne(Organization, {
+    return (em ?? this.entityManager).findOne(Organization, {
       ...options,
       where: { ...options?.where, id: orgId },
     });

@@ -1,0 +1,281 @@
+import { CollaborationLifecycleService } from '@domain/common/collaboration-metadata';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { type Mock, vi } from 'vitest';
+import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { ProfileService } from '../profile/profile.service';
+import { Memo } from './memo.entity';
+import { MemoService } from './memo.service';
+
+// Mock the repository token directly so we control findOne + the query builder.
+const updateBuilder = () => {
+  const qb: any = {
+    update: vi.fn(() => qb),
+    set: vi.fn(() => qb),
+    where: vi.fn(() => qb),
+    execute: vi.fn().mockResolvedValue({ affected: 1 }),
+  };
+  return qb;
+};
+
+describe('MemoService — collaboration metadata + lifecycle', () => {
+  let service: MemoService;
+  let memoRepo: {
+    findOne: Mock;
+    remove: Mock;
+    createQueryBuilder: Mock;
+  };
+  let lifecycle: { publishDocumentDeleted: Mock };
+  let profileService: { deleteProfile: Mock };
+  let authorizationPolicyService: { delete: Mock };
+
+  beforeEach(async () => {
+    vi.restoreAllMocks();
+    memoRepo = {
+      findOne: vi.fn(),
+      remove: vi.fn(),
+      createQueryBuilder: vi.fn(),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        MemoService,
+        MockWinstonProvider,
+        { provide: getRepositoryToken(Memo), useValue: memoRepo },
+      ],
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
+
+    service = module.get(MemoService);
+    lifecycle = module.get(CollaborationLifecycleService) as any;
+    profileService = module.get(ProfileService) as any;
+    authorizationPolicyService = module.get(AuthorizationPolicyService) as any;
+  });
+
+  describe('getCollaborationMetadata', () => {
+    it("returns the persisted contract version (contentVersion) + the entity policy id + the doc's own storage bucket id (FR-004/FR-005)", async () => {
+      memoRepo.findOne.mockResolvedValue({
+        id: 'm1',
+        // The TypeORM @VersionColumn is unrelated to the contract version; it
+        // must NOT be returned here.
+        version: 9,
+        contentVersion: 42,
+        contentPointer: 'm1',
+        authorization: { id: 'policy-1' },
+        // The memo's OWN bucket via its profile — where this doc's snapshots go.
+        profile: { id: 'profile-1', storageBucket: { id: 'bucket-1' } },
+      });
+
+      const meta = await service.getCollaborationMetadata('m1');
+
+      expect(meta).toEqual({
+        version: 42,
+        contentPointer: 'm1',
+        authorizationPolicyId: 'policy-1',
+        storageBucketId: 'bucket-1',
+      });
+    });
+
+    it('leaves storageBucketId undefined when the memo has no profile storage bucket', async () => {
+      memoRepo.findOne.mockResolvedValue({
+        id: 'm1',
+        version: 9,
+        contentVersion: 42,
+        contentPointer: 'm1',
+        authorization: { id: 'policy-1' },
+        profile: { id: 'profile-1', storageBucket: undefined },
+      });
+
+      const meta = await service.getCollaborationMetadata('m1');
+
+      expect(meta.storageBucketId).toBeUndefined();
+    });
+
+    it('reads 0 when no contract version has been persisted yet (NULL contentVersion)', async () => {
+      memoRepo.findOne.mockResolvedValue({
+        id: 'm1',
+        version: 5,
+        contentVersion: null,
+        contentPointer: 'm1',
+        authorization: { id: 'policy-1' },
+      });
+
+      const meta = await service.getCollaborationMetadata('m1');
+
+      expect(meta.version).toBe(0);
+    });
+  });
+
+  describe('saveCollaborationMetadata', () => {
+    it('persists the room-owned contract version verbatim into contentVersion, never touching @VersionColumn (FR-004)', async () => {
+      const qb = updateBuilder();
+      memoRepo.createQueryBuilder.mockReturnValue(qb);
+      memoRepo.findOne
+        .mockResolvedValueOnce({ id: 'm1' }) // existence check
+        .mockResolvedValueOnce({
+          id: 'm1',
+          contentVersion: 7,
+          contentPointer: 'ptr',
+          authorization: { id: 'p' },
+        });
+
+      await service.saveCollaborationMetadata('m1', {
+        version: 7,
+        contentPointer: 'ptr',
+      });
+
+      expect(qb.set).toHaveBeenCalledWith({
+        contentVersion: 7,
+        contentPointer: 'ptr',
+      });
+      // The contract version is NOT routed to the optimistic-locking column.
+      const setArg = qb.set.mock.calls[0][0];
+      expect(setArg).not.toHaveProperty('version');
+      expect(qb.execute).toHaveBeenCalledTimes(1);
+    });
+
+    it('round-trips a saved version on the subsequent fetch (save N → fetch N)', async () => {
+      const qb = updateBuilder();
+      memoRepo.createQueryBuilder.mockReturnValue(qb);
+      // existence check, then the post-save re-read reflects the persisted value
+      memoRepo.findOne
+        .mockResolvedValueOnce({ id: 'm1' })
+        .mockResolvedValueOnce({
+          id: 'm1',
+          contentVersion: 11,
+          contentPointer: 'm1',
+          authorization: { id: 'policy-1' },
+        });
+
+      await service.saveCollaborationMetadata('m1', {
+        version: 11,
+        contentPointer: 'm1',
+      });
+
+      // Simulate the later fetch reading back the persisted row.
+      memoRepo.findOne.mockResolvedValueOnce({
+        id: 'm1',
+        version: 99, // @VersionColumn churned by unrelated writes — ignored
+        contentVersion: 11,
+        contentPointer: 'm1',
+        authorization: { id: 'policy-1' },
+      });
+
+      const meta = await service.getCollaborationMetadata('m1');
+      expect(meta.version).toBe(11);
+    });
+
+    it('persists the latest of two increasing saves', async () => {
+      const qb = updateBuilder();
+      memoRepo.createQueryBuilder.mockReturnValue(qb);
+      memoRepo.findOne.mockResolvedValue({
+        id: 'm1',
+        contentVersion: 0,
+        contentPointer: 'm1',
+        authorization: { id: 'policy-1' },
+      });
+
+      await service.saveCollaborationMetadata('m1', {
+        version: 3,
+        contentPointer: 'm1',
+      });
+      await service.saveCollaborationMetadata('m1', {
+        version: 4,
+        contentPointer: 'm1',
+      });
+
+      const versions = qb.set.mock.calls.map((c: any[]) => c[0].contentVersion);
+      expect(versions).toEqual([3, 4]);
+      expect(versions[versions.length - 1]).toBe(4);
+    });
+
+    it('preserves the stored contentPointer when the save omits it (blank = unchanged; single-writer contract)', async () => {
+      const qb = updateBuilder();
+      memoRepo.createQueryBuilder.mockReturnValue(qb);
+      memoRepo.findOne
+        .mockResolvedValueOnce({ id: 'm1' }) // existence check
+        .mockResolvedValueOnce({
+          id: 'm1',
+          contentVersion: 9,
+          contentPointer: 'existing-ptr',
+          authorization: { id: 'p' },
+        });
+
+      // contentPointer is produced only by the checkpoint store's metapointer
+      // Record; PreRegister/Room.persist omit it. A save with no contentPointer
+      // must NOT overwrite the stored pointer with blank (which would orphan the
+      // content), so the query omits the column entirely.
+      await service.saveCollaborationMetadata('m1', { version: 9 });
+
+      const setArg = qb.set.mock.calls[0][0];
+      expect(setArg).toEqual({ contentVersion: 9 });
+      expect(setArg).not.toHaveProperty('contentPointer');
+    });
+  });
+
+  describe('deleteMemo publishes document.deleted (SC-004)', () => {
+    it('confirms the publish before changing owner state', async () => {
+      const memo = {
+        id: 'm1',
+        profile: { id: 'p1' },
+        authorization: { id: 'a1' },
+      };
+      memoRepo.findOne.mockResolvedValue(memo);
+      memoRepo.remove.mockResolvedValue({ ...memo });
+      profileService.deleteProfile.mockResolvedValue({});
+      authorizationPolicyService.delete.mockResolvedValue({});
+
+      await service.deleteMemo('m1');
+
+      expect(lifecycle.publishDocumentDeleted).toHaveBeenCalledWith('m1');
+      expect(memoRepo.remove).toHaveBeenCalledTimes(1);
+      const publishOrder =
+        lifecycle.publishDocumentDeleted.mock.invocationCallOrder[0];
+      const firstMutation = Math.min(
+        profileService.deleteProfile.mock.invocationCallOrder[0],
+        authorizationPolicyService.delete.mock.invocationCallOrder[0]
+      );
+      expect(publishOrder).toBeLessThan(firstMutation);
+      expect(publishOrder).toBeLessThan(
+        memoRepo.remove.mock.invocationCallOrder[0]
+      );
+    });
+
+    it('changes nothing when RabbitMQ does not confirm the eviction', async () => {
+      const memo = {
+        id: 'm1',
+        profile: { id: 'p1' },
+        authorization: { id: 'a1' },
+      };
+      memoRepo.findOne.mockResolvedValue(memo);
+      memoRepo.remove.mockResolvedValue({ ...memo });
+      profileService.deleteProfile.mockResolvedValue({});
+      authorizationPolicyService.delete.mockResolvedValue({});
+      lifecycle.publishDocumentDeleted.mockRejectedValue(
+        new Error('broker unavailable')
+      );
+
+      await expect(service.deleteMemo('m1')).rejects.toThrow(
+        'broker unavailable'
+      );
+      expect(profileService.deleteProfile).not.toHaveBeenCalled();
+      expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
+      expect(memoRepo.remove).not.toHaveBeenCalled();
+    });
+
+    it('does not publish when validation fails before deletion', async () => {
+      memoRepo.findOne.mockResolvedValue({
+        id: 'm1',
+        profile: undefined,
+        authorization: { id: 'a1' },
+      });
+
+      await expect(service.deleteMemo('m1')).rejects.toThrow();
+
+      expect(lifecycle.publishDocumentDeleted).not.toHaveBeenCalled();
+    });
+  });
+});

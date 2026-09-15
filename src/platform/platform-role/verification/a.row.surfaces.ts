@@ -945,7 +945,8 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
   ),
 
   // ===== A11 — operational machinery (032, pre-existing) =====
-  // Contract's "~10" corrected to 13 by grepping the tree.
+  // Contract's "~10" corrected to 14 by grepping the tree (the two
+  // collaboration-migration mutations replaced the retired whiteboard one).
   A11: (
     [
       [
@@ -978,9 +979,18 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
         'adminSearchIngestFromScratch',
         'platform',
       ],
+      // Landed on develop by 003/006 (collaboration persistence) in place of
+      // the deleted `adminUploadFilesFromContentToStorageBucket`; gated on
+      // PLATFORM_OPERATIONS_ADMIN at the platform policy exactly like the
+      // rest of this family.
       [
-        'src/platform-admin/domain/whiteboard/admin.whiteboard.resolver.mutations.ts',
-        'adminUploadFilesFromContentToStorageBucket',
+        'src/services/collaboration-integration/migration/collaboration-migration.resolver.mutations.ts',
+        'migrateLegacyMemoContent',
+        'platform',
+      ],
+      [
+        'src/services/collaboration-integration/migration/collaboration-migration.resolver.mutations.ts',
+        'migrateLegacyWhiteboardContent',
         'platform',
       ],
       [

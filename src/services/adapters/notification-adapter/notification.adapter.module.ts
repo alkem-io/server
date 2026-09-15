@@ -1,16 +1,19 @@
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { CalloutLookupModule } from '@domain/collaboration/callout/callout.lookup/callout.lookup.module';
 import { MessageDetailsModule } from '@domain/communication/message.details/message.details.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { NotificationRecipientsModule } from '@services/api/notification-recipients/notification.recipients.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
+import { MessagingRedisModule } from '@services/infrastructure/redis-client/messaging-redis.module';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator/url.generator.module';
 import { ActivityModule } from '@src/platform/activity/activity.module';
 import { NotificationExternalAdapterModule } from '../notification-external-adapter/notification.external.adapter.module';
 import { NotificationInAppAdapterModule } from '../notification-in-app-adapter/notification.in.app.adapter.module';
 import { NotificationPushAdapterModule } from '../notification-push-adapter/notification.push.adapter.module';
+import { CalloutReactionEmailSuppressionService } from './callout.reaction.email.suppression.service';
 import { NotificationAdapter } from './notification.adapter';
 import { NotificationOrganizationAdapter } from './notification.organization.adapter';
 import { NotificationPlatformAdapter } from './notification.platform.adapter';
@@ -25,6 +28,7 @@ import { NotificationVirtualContributorAdapter } from './notification.virtual.co
     ActorLookupModule,
     EntityResolverModule,
     MessageDetailsModule,
+    MessagingRedisModule,
     NotificationRecipientsModule,
     NotificationExternalAdapterModule,
     NotificationInAppAdapterModule,
@@ -32,6 +36,7 @@ import { NotificationVirtualContributorAdapter } from './notification.virtual.co
     SpaceLookupModule,
     UserLookupModule,
     CalloutLookupModule,
+    forwardRef(() => RoleSetModule),
   ],
   providers: [
     NotificationAdapter,
@@ -40,6 +45,7 @@ import { NotificationVirtualContributorAdapter } from './notification.virtual.co
     NotificationUserAdapter,
     NotificationOrganizationAdapter,
     NotificationVirtualContributorAdapter,
+    CalloutReactionEmailSuppressionService,
   ],
   exports: [
     NotificationAdapter,
@@ -48,6 +54,7 @@ import { NotificationVirtualContributorAdapter } from './notification.virtual.co
     NotificationUserAdapter,
     NotificationOrganizationAdapter,
     NotificationVirtualContributorAdapter,
+    CalloutReactionEmailSuppressionService,
   ],
 })
 export class NotificationAdapterModule {}

@@ -11,6 +11,7 @@ import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in
 import { InAppNotificationPayloadSpace } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space';
 import { InAppNotificationPayloadSpaceCollaborationCallout } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout';
 import { InAppNotificationPayloadSpaceCollaborationCalloutPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.post.comment';
+import { InAppNotificationPayloadSpaceCollaborationCalloutReaction } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.reaction';
 import { InAppNotificationPayloadSpaceCommunicationMessageDirect } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.message.direct';
 import { InAppNotificationPayloadSpaceCommunicationUpdate } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.update';
 import { InAppNotificationPayloadSpaceCommunityActor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.actor';
@@ -66,6 +67,8 @@ import { InAppNotificationPayloadSpaceCommunityCalendarEventComment } from './dt
         return InAppNotificationPayloadSpaceCollaborationCalloutPostComment;
       case NotificationEventPayload.SPACE_COLLABORATION_CALLOUT_COMMENT:
         return InAppNotificationPayloadSpaceCollaborationCalloutComment;
+      case NotificationEventPayload.SPACE_COLLABORATION_CALLOUT_REACTION:
+        return InAppNotificationPayloadSpaceCollaborationCalloutReaction;
       case NotificationEventPayload.SPACE_COMMUNITY_CALENDAR_EVENT:
         return InAppNotificationPayloadSpaceCommunityCalendarEvent;
       case NotificationEventPayload.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT:

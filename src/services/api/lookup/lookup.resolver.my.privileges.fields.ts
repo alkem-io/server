@@ -137,9 +137,12 @@ export class LookupMyPrivilegesResolverFields {
     @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
-    const document = await this.documentService.getDocumentOrFail(id, {
-      relations: { authorization: true },
-    });
+    const document = await this.documentService.getUserFacingDocumentOrFail(
+      id,
+      {
+        relations: { authorization: true },
+      }
+    );
 
     return this.getMyPrivilegesOnAuthorizable(actorContext, document);
   }

@@ -1,5 +1,6 @@
 import { LogContext } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
+import { CommunityMembershipOrigin } from '@common/enums/community.membership.origin';
 import { SpaceLevel } from '@common/enums/space.level';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
@@ -44,7 +45,8 @@ export class RoleSetEventsService {
     roleSet: IRoleSet,
     actorContext: ActorContext,
     actorID: string,
-    actorType: ActorType
+    actorType: ActorType,
+    membershipOrigin: CommunityMembershipOrigin = CommunityMembershipOrigin.DIRECT
   ) {
     const community =
       await this.communityResolverService.getCommunityForRoleSet(roleSet.id);
@@ -63,6 +65,7 @@ export class RoleSetEventsService {
       triggeredBy: actorContext.actorID,
       actorType,
       community,
+      membershipOrigin,
     };
     await this.notificationAdapterSpace.spaceCommunityNewMember(
       notificationInput

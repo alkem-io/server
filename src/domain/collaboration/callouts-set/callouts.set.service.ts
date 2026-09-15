@@ -217,6 +217,7 @@ export class CalloutsSetService {
     calloutsSet: ICalloutsSet,
     calloutsData: CreateCalloutInput[],
     storageAggregator: IStorageAggregator,
+    actorContext: ActorContext,
     userID: string | undefined,
     parentSpaceId?: string
   ): Promise<ICallout[]> {
@@ -248,6 +249,7 @@ export class CalloutsSetService {
         calloutDefault,
         calloutsSet.tagsetTemplateSet.tagsetTemplates,
         storageAggregator,
+        actorContext,
         userID,
         parentSpaceId
       );
@@ -297,6 +299,7 @@ export class CalloutsSetService {
 
   public async createCalloutOnCalloutsSet(
     calloutData: CreateCalloutOnCalloutsSetInput,
+    actorContext: ActorContext,
     userID: string
   ): Promise<ICallout> {
     const collaborationID = calloutData.calloutsSetID;
@@ -345,6 +348,7 @@ export class CalloutsSetService {
       calloutData,
       tagsetTemplates,
       storageAggregator,
+      actorContext,
       userID,
       parentSpaceId
     );
@@ -371,7 +375,7 @@ export class CalloutsSetService {
   async createCallout(
     calloutsSet: ICalloutsSet,
     calloutInput: CreateCalloutInput,
-    actorContext?: ActorContext
+    actorContext: ActorContext
   ): Promise<ICallout> {
     const reservedNameIDs: string[] = [];
     // TODO      await this.namingService.getReservedNameIDsInCalloutsSet(calloutsSet.id);
@@ -404,7 +408,8 @@ export class CalloutsSetService {
       calloutInput,
       tagsetTemplates,
       storageAggregator,
-      actorContext?.actorID,
+      actorContext,
+      actorContext.actorID,
       parentSpaceId
     );
     callout.calloutsSet = calloutsSet;

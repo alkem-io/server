@@ -65,7 +65,7 @@ const CONNECT_TIMEOUT_MS = 500;
  */
 const MAX_RETRIES_PER_REQUEST = 1;
 
-export type RedisClientPurpose = 'session' | 'oidc' | 'health';
+export type RedisClientPurpose = 'session' | 'oidc' | 'health' | 'messaging';
 
 export type RedisClientConfig = {
   host: string;

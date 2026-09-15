@@ -60,4 +60,27 @@ describe('ApplicationResolverFields', () => {
       );
     });
   });
+
+  describe('user', () => {
+    it('S1 delegation — should return the user from applicationService.getUser and call it with application.id', async () => {
+      const mockUser = { id: 'user-1' } as any;
+      const mockApplication = { id: 'app-1' } as any;
+      (applicationService.getUser as Mock).mockResolvedValue(mockUser);
+
+      const result = await resolver.user(mockApplication);
+
+      expect(result).toBe(mockUser);
+      expect(applicationService.getUser).toHaveBeenCalledWith('app-1');
+    });
+
+    it('S2 null-on-missing — should return null without throwing when service resolves null', async () => {
+      const mockApplication = { id: 'app-1' } as any;
+      (applicationService.getUser as Mock).mockResolvedValue(null);
+
+      const result = await resolver.user(mockApplication);
+
+      expect(result).toBeNull();
+      expect(applicationService.getUser).toHaveBeenCalledWith('app-1');
+    });
+  });
 });

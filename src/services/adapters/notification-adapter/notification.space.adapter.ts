@@ -1,18 +1,24 @@
 import { ActorType } from '@common/enums/actor.type';
+import { CommunityMembershipOrigin } from '@common/enums/community.membership.origin';
 import { LogContext } from '@common/enums/logging.context';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
 import { UrlPathElementSpace } from '@common/enums/url.path.element.space';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CalloutLookupService } from '@domain/collaboration/callout/callout.lookup/callout.lookup.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InAppNotificationPayloadSpaceCollaborationCallout } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout';
 import { InAppNotificationPayloadSpaceCollaborationCalloutComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.comment';
 import { InAppNotificationPayloadSpaceCollaborationCalloutPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.post.comment';
+import { InAppNotificationPayloadSpaceCollaborationCalloutReaction } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.reaction';
 import { InAppNotificationPayloadSpaceCollaborationPoll } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.poll';
 import { InAppNotificationPayloadSpaceCommunicationMessageDirect } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.message.direct';
 import { InAppNotificationPayloadSpaceCommunityActor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.actor';
@@ -22,16 +28,19 @@ import { InAppNotificationPayloadSpaceCommunityCalendarEventComment } from '@pla
 import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
+import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InAppNotificationPayloadSpaceCommunicationUpdate } from '../../../platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.update';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
 import { NotificationPushAdapter } from '../notification-push-adapter/notification.push.adapter';
+import { CalloutReactionEmailSuppressionService } from './callout.reaction.email.suppression.service';
 import { NotificationInputBase } from './dto/notification.dto.input.base';
 import { NotificationInputCollaborationCalloutComment } from './dto/space/notification.dto.input.space.collaboration.callout.comment';
 import { NotificationInputCollaborationCalloutContributionCreated } from './dto/space/notification.dto.input.space.collaboration.callout.contribution.created';
 import { NotificationInputCollaborationCalloutPostContributionComment } from './dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { NotificationInputCalloutPublished } from './dto/space/notification.dto.input.space.collaboration.callout.published';
+import { NotificationInputCollaborationCalloutReaction } from './dto/space/notification.dto.input.space.collaboration.callout.reaction';
 import {
   NotificationInputCollaborationPoll,
   NotificationInputCollaborationPollModifiedOnPollIVotedOn,
@@ -44,12 +53,29 @@ import { NotificationInputUpdateSent } from './dto/space/notification.dto.input.
 import { NotificationInputCommunityApplication } from './dto/space/notification.dto.input.space.community.application';
 import { NotificationInputCommunityCalendarEventComment } from './dto/space/notification.dto.input.space.community.calendar.event.comment';
 import { NotificationInputCommunityCalendarEventCreated } from './dto/space/notification.dto.input.space.community.calendar.event.created';
+import { NotificationInputSpaceCommunityInvitationOutcome } from './dto/space/notification.dto.input.space.community.invitation.outcome';
 import { NotificationInputPlatformInvitation } from './dto/space/notification.dto.input.space.community.invitation.platform';
 import { NotificationInputVirtualContributorSpaceCommunityInvitationDeclined } from './dto/space/notification.dto.input.space.community.invitation.vc.declined';
 import { NotificationInputCommunityNewMember } from './dto/space/notification.dto.input.space.community.new.member';
 import { NotificationInputUserEmailChangeSpaceAdmin } from './dto/space/notification.dto.input.space.user.email.change';
 import { NotificationAdapter } from './notification.adapter';
 import { NotificationUserAdapter } from './notification.user.adapter';
+
+/** Server-side slug-to-glyph map for the 7 allow-listed reaction emojis. */
+const EMOJI_GLYPH_MAP: Readonly<Record<string, string>> = Object.freeze({
+  heart: '❤️',
+  'hugging-face': '🤗',
+  'clapping-hands': '👏',
+  'light-bulb': '💡',
+  bullseye: '🎯',
+  'check-mark': '✅',
+  rocket: '🚀',
+});
+
+/** Converts a reaction slug to its display glyph. Unknown slugs fall back to the humanized slug. */
+function emojiSlugToGlyph(slug: string): string {
+  return EMOJI_GLYPH_MAP[slug] ?? slug.replace(/-/g, ' ');
+}
 
 @Injectable()
 export class NotificationSpaceAdapter {
@@ -65,7 +91,10 @@ export class NotificationSpaceAdapter {
     private spaceLookupService: SpaceLookupService,
     private urlGeneratorService: UrlGeneratorService,
     private userLookupService: UserLookupService,
-    private calloutLookupService: CalloutLookupService
+    private calloutLookupService: CalloutLookupService,
+    private calloutReactionEmailSuppressionService: CalloutReactionEmailSuppressionService,
+    private configService: ConfigService<AlkemioConfig, true>,
+    private actorLookupService: ActorLookupService
   ) {}
 
   private async getTriggeredByDisplayName(
@@ -81,6 +110,21 @@ export class NotificationSpaceAdapter {
       return user?.profile?.displayName ?? 'Someone';
     } catch {
       return 'Someone';
+    }
+  }
+
+  private async getActorDisplayName(
+    actorID: string,
+    fallback: string
+  ): Promise<string> {
+    try {
+      const actor = await this.actorLookupService.getFullActorByIdOrFail(
+        actorID,
+        { relations: { profile: true } }
+      );
+      return actor?.profile?.displayName ?? fallback;
+    } catch {
+      return fallback;
     }
   }
 
@@ -757,13 +801,31 @@ export class NotificationSpaceAdapter {
         eventData.community.id
       );
 
-    // Notify the user
+    // Notify the new member ("welcome to the Space"). Always fires, whatever
+    // produced the membership.
     await this.notificationUserAdapter.userSpaceCommunityJoined(
       eventData,
       space
     );
 
-    // Notify the admins
+    // Notify the admins — but ONLY when this membership has no replacement
+    // notification telling them the same thing. An accepted invitation does:
+    // the dedicated "X accepted / declined the invitation" outcome reaches
+    // every admin of the invited Space (FR-020), so firing "a new member
+    // joined" as well would notify them twice for one event, which is what the
+    // product brief rules out. Every other origin — an approved application
+    // included — has no such replacement and keeps this notification
+    // (R40; see CommunityMembershipOrigin for why APPLICATION is not a member).
+    const membershipOrigin =
+      eventData.membershipOrigin ?? CommunityMembershipOrigin.DIRECT;
+    if (membershipOrigin !== CommunityMembershipOrigin.DIRECT) {
+      this.logger.verbose?.(
+        `Skipping admin new-member notification for actor ${eventData.actorID} in space ${space.id}: membership originated from ${membershipOrigin}`,
+        LogContext.NOTIFICATIONS
+      );
+      return;
+    }
+
     const adminRecipients = await this.getNotificationRecipientsSpace(
       adminEvent,
       eventData,
@@ -893,6 +955,177 @@ export class NotificationSpaceAdapter {
         }
       );
     }
+  }
+
+  /**
+   * "Someone responded to the invitation you sent" — accepted or declined,
+   * for any invited actor type.
+   *
+   * Recipients are EVERY admin of the Space, not `invitation.createdBy`
+   * alone: the sending admin is one of them while they still hold the role,
+   * but co-admins must be told too, and the event must still land when the
+   * inviter has since been deleted or demoted. Each recipient's own
+   * `space.admin.communityInvitationResponse` setting governs delivery.
+   *
+   * Do not re-scope this to the inviter. The generic "a new member joined"
+   * notification is deliberately suppressed for the same membership change
+   * (FR-020a, see `RoleSetEventsService.processCommunityNewMemberEvents`),
+   * so this event is the ONLY notification co-admins receive about it —
+   * narrowing the recipients here would silently tell them nothing at all.
+   *
+   * The one recipient removed is whoever answered the invitation, on EVERY
+   * channel. They are reachable here: an invitation may carry ADMIN as an
+   * extra role and `acceptInvitationToRoleSet` grants it BEFORE this dispatch,
+   * so the acceptor is already on the Space-admin credential set by the time
+   * recipients are resolved. Leaving them in tells a Space admin "<their own
+   * name> accepted the invitation to join <Space>" about their own click. Same
+   * reasoning as the organization-side welcome (R33), and the filter is
+   * applied once to all three lists — doing it per channel is how push ended
+   * up filtered and email and in-app not.
+   */
+  private async spaceAdminInvitationOutcome(
+    event: NotificationEvent,
+    eventData: NotificationInputSpaceCommunityInvitationOutcome,
+    space: ISpace,
+    actorType: ActorType,
+    push: { title: string; verb: string; fallbackName: string }
+  ): Promise<void> {
+    // Recipients are every admin of the Space (see the recipients service):
+    // the inviter is one of them when they still hold the role, but the
+    // event is not addressed to them alone.
+    const recipients = await this.getNotificationRecipientsSpace(
+      event,
+      eventData,
+      space.id
+    );
+
+    // Applied once, to every channel — see the docblock.
+    const withoutAnswerer = <T extends { id: string }>(list: T[]): T[] =>
+      list.filter(recipient => recipient.id !== eventData.triggeredBy);
+    const emailRecipients = withoutAnswerer(recipients.emailRecipients);
+    const inAppRecipients = withoutAnswerer(recipients.inAppRecipients);
+    const pushRecipients = withoutAnswerer(recipients.pushRecipients);
+
+    if (emailRecipients.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildActorSpaceCommunityInvitationOutcomePayload(
+          event,
+          eventData.triggeredBy,
+          emailRecipients,
+          eventData.invitedActorID,
+          space
+        );
+
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
+    }
+
+    const inAppReceiverIDs = inAppRecipients.map(recipient => recipient.id);
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadSpaceCommunityActor = {
+        type: NotificationEventPayload.SPACE_COMMUNITY_ACTOR,
+        spaceID: space.id,
+        actorID: eventData.invitedActorID,
+        actorType,
+      };
+
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        event,
+        NotificationEventCategory.SPACE_ADMIN,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
+    }
+
+    if (pushRecipients.length > 0) {
+      const spaceName = space.about?.profile?.displayName ?? 'your Space';
+      const actorName = await this.getActorDisplayName(
+        eventData.invitedActorID,
+        push.fallbackName
+      );
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipients,
+        event,
+        {
+          title: push.title,
+          body: `${actorName} ${push.verb} the invitation to join ${spaceName}`,
+          url: await this.urlGeneratorService.createSpaceAdminCommunityURL(
+            space.id
+          ),
+        }
+      );
+    }
+  }
+
+  public async spaceAdminOrganizationInvitationAccepted(
+    eventData: NotificationInputSpaceCommunityInvitationOutcome,
+    space: ISpace
+  ): Promise<void> {
+    await this.spaceAdminInvitationOutcome(
+      NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED,
+      eventData,
+      space,
+      ActorType.ORGANIZATION,
+      {
+        title: 'Invitation accepted',
+        verb: 'accepted',
+        fallbackName: 'The organization',
+      }
+    );
+  }
+
+  public async spaceAdminOrganizationInvitationDeclined(
+    eventData: NotificationInputSpaceCommunityInvitationOutcome,
+    space: ISpace
+  ): Promise<void> {
+    await this.spaceAdminInvitationOutcome(
+      NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED,
+      eventData,
+      space,
+      ActorType.ORGANIZATION,
+      {
+        title: 'Invitation declined',
+        verb: 'declined',
+        fallbackName: 'The organization',
+      }
+    );
+  }
+
+  public async spaceAdminUserInvitationAccepted(
+    eventData: NotificationInputSpaceCommunityInvitationOutcome,
+    space: ISpace
+  ): Promise<void> {
+    await this.spaceAdminInvitationOutcome(
+      NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_ACCEPTED,
+      eventData,
+      space,
+      ActorType.USER,
+      {
+        title: 'Invitation accepted',
+        verb: 'accepted',
+        fallbackName: 'Someone',
+      }
+    );
+  }
+
+  public async spaceAdminUserInvitationDeclined(
+    eventData: NotificationInputSpaceCommunityInvitationOutcome,
+    space: ISpace
+  ): Promise<void> {
+    await this.spaceAdminInvitationOutcome(
+      NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_DECLINED,
+      eventData,
+      space,
+      ActorType.USER,
+      {
+        title: 'Invitation declined',
+        verb: 'declined',
+        fallbackName: 'Someone',
+      }
+    );
   }
 
   public async spaceCommunityApplicationCreated(
@@ -1256,6 +1489,234 @@ export class NotificationSpaceAdapter {
       dto,
       spaceID
     );
+  }
+
+  /**
+   * Emits in-app, push, and email notifications for a new callout reaction.
+   *
+   * Key invariants (not to be violated):
+   * - Recipient is always the callout's current publisher at emit time,
+   *   falling back to createdBy, then a silent no-op.
+   * - Reactor is never notified of their own reaction.
+   * - Emission happens fire-and-forget outside the mutation transaction.
+   * - A deploy-gated kill switch silences all channels without code changes.
+   * - Email uses a leading-edge suppression window per (recipient, callout).
+   */
+  public async spaceCollaborationCalloutReaction(
+    eventData: NotificationInputCollaborationCalloutReaction
+  ): Promise<void> {
+    const event = NotificationEvent.SPACE_COLLABORATION_CALLOUT_REACTION;
+
+    // Kill-switch check — all channels silenced when disabled.
+    const killSwitchEnabled = this.configService.get(
+      'notifications.callout_reactions.enabled',
+      { infer: true }
+    );
+    if (!killSwitchEnabled) {
+      this.logger.verbose?.(
+        {
+          message: 'Callout reaction notifications disabled via kill switch',
+          reason: 'kill-switch',
+        },
+        LogContext.NOTIFICATIONS
+      );
+      return;
+    }
+
+    // Re-read the callout to get the current publisher at emit time (not the
+    // resolver's possibly-stale copy — this is what handles republish cases).
+    let callout: ICallout;
+    try {
+      callout = await this.calloutLookupService.getCalloutOrFail(
+        eventData.calloutID,
+        {
+          relations: {
+            framing: { profile: true },
+          },
+        }
+      );
+    } catch (error) {
+      // A missing callout is an expected "no recipient" skip. Any other error
+      // (DB failure, etc.) must surface rather than be silently swallowed.
+      if (!(error instanceof EntityNotFoundException)) {
+        this.logger.error(
+          {
+            message: 'Failed to load callout for reaction notification',
+            calloutID: eventData.calloutID,
+            error: (error as Error)?.message,
+          },
+          (error as Error)?.stack,
+          LogContext.NOTIFICATIONS
+        );
+        return;
+      }
+      this.logger.verbose?.(
+        {
+          message: 'Callout not found for reaction notification; skipping',
+          reason: 'no-recipient',
+          calloutID: eventData.calloutID,
+        },
+        LogContext.NOTIFICATIONS
+      );
+      return;
+    }
+
+    // Publisher resolution: publishedBy → createdBy → silent no-op.
+    const publisherID = callout.publishedBy ?? callout.createdBy;
+    if (!publisherID) {
+      this.logger.verbose?.(
+        {
+          message:
+            'No publisher or creator resolvable for callout reaction notification; skipping',
+          reason: 'no-recipient',
+          calloutID: eventData.calloutID,
+        },
+        LogContext.NOTIFICATIONS
+      );
+      return;
+    }
+
+    // Self-reaction: reactor is the publisher — skip all channels.
+    if (eventData.triggeredBy === publisherID) {
+      this.logger.verbose?.(
+        {
+          message: 'Reactor equals publisher for callout reaction; skipping',
+          reason: 'self-reaction',
+        },
+        LogContext.NOTIFICATIONS
+      );
+      return;
+    }
+
+    // Resolve community and space for payload construction.
+    const community =
+      await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
+        eventData.calloutID
+      );
+    const space =
+      await this.communityResolverService.getSpaceForCommunityOrFail(
+        community.id
+      );
+
+    // Resolve recipients using self-criteria (single-user, never audience fanout).
+    const recipientEventData = {
+      triggeredBy: eventData.triggeredBy,
+    };
+    const recipients = await this.notificationAdapter.getNotificationRecipients(
+      event,
+      recipientEventData,
+      space.id,
+      publisherID
+    );
+
+    const calloutDisplayName =
+      callout.framing?.profile?.displayName ?? 'a callout';
+    const calloutUrl = await this.urlGeneratorService.getCalloutUrlPath(
+      eventData.calloutID
+    );
+    const reactorDisplayName = await this.getTriggeredByDisplayName(
+      eventData.triggeredBy
+    );
+
+    // In-app notification — per-reaction, never debounced in v1.
+    const inAppReceiverIDs = recipients.inAppRecipients
+      .filter(r => r.id !== eventData.triggeredBy)
+      .map(r => r.id);
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadSpaceCollaborationCalloutReaction =
+        {
+          type: NotificationEventPayload.SPACE_COLLABORATION_CALLOUT_REACTION,
+          spaceID: space.id,
+          calloutID: eventData.calloutID,
+          emoji: eventData.emoji,
+        };
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        event,
+        NotificationEventCategory.SPACE_MEMBER,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
+    } else {
+      this.logger.verbose?.(
+        {
+          message: 'Callout reaction in-app channel disabled for recipient',
+          reason: 'channel-disabled',
+        },
+        LogContext.NOTIFICATIONS
+      );
+    }
+
+    // Email — leading-edge suppression window per (recipient, callout).
+    const emailRecipients = recipients.emailRecipients.filter(
+      r => r.id !== eventData.triggeredBy
+    );
+    if (emailRecipients.length > 0) {
+      const shouldSend =
+        await this.calloutReactionEmailSuppressionService.shouldSendLeadingEmail(
+          publisherID,
+          eventData.calloutID
+        );
+      if (shouldSend) {
+        const payload =
+          await this.notificationExternalAdapter.buildSpaceCollaborationCalloutReactionPayload(
+            event,
+            eventData.triggeredBy,
+            emailRecipients,
+            space,
+            eventData.calloutID,
+            calloutDisplayName,
+            eventData.emoji
+          );
+        this.notificationExternalAdapter.sendExternalNotifications(
+          event,
+          payload
+        );
+      } else {
+        this.logger.verbose?.(
+          {
+            message: 'Callout reaction email suppressed by leading-edge window',
+            reason: 'email-suppressed',
+            calloutID: eventData.calloutID,
+          },
+          LogContext.NOTIFICATIONS
+        );
+      }
+    } else {
+      this.logger.verbose?.(
+        {
+          message: 'Callout reaction email channel disabled for recipient',
+          reason: 'channel-disabled',
+        },
+        LogContext.NOTIFICATIONS
+      );
+    }
+
+    // Push — shared platform throttle + stable replace-tag per (event, callout).
+    const pushRecipients = recipients.pushRecipients.filter(
+      r => r.id !== eventData.triggeredBy
+    );
+    if (pushRecipients.length > 0) {
+      const emojiGlyph = emojiSlugToGlyph(eventData.emoji);
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipients,
+        event,
+        {
+          title: calloutDisplayName,
+          body: `${reactorDisplayName} reacted to your post with ${emojiGlyph}`,
+          url: calloutUrl,
+          tag: `${event}:${eventData.calloutID}`,
+        }
+      );
+    } else {
+      this.logger.verbose?.(
+        {
+          message: 'Callout reaction push channel disabled for recipient',
+          reason: 'channel-disabled',
+        },
+        LogContext.NOTIFICATIONS
+      );
+    }
   }
 
   private async sendPollNotification(

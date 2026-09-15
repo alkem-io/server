@@ -21,7 +21,7 @@ import {
   AUTH_STRATEGY_OIDC_COOKIE_SESSION,
   AUTH_STRATEGY_OIDC_HYDRA_BEARER,
 } from '@core/auth/oidc/strategies/strategy.names';
-import { X_GUEST_NAME_HEADER } from '@core/authentication/constants';
+import { decodeGuestNameHeader } from '@core/authentication/guest-name.resolver';
 import {
   CallHandler,
   ContextType,
@@ -279,10 +279,11 @@ export class AuthInterceptor implements NestInterceptor {
   }
 
   /**
-   * No session/bearer resolved. a public client
+   * No session/bearer resolved. A public client
    * (e.g. the guest-share whiteboard SPA) self-identifies with a display name
-   * in the `x-guest-name` header so per-resource guest-access policies can
-   * grant it `GLOBAL_GUEST`. Otherwise fall back to anonymous.
+   * in the Unicode-safe base64 or legacy raw `x-guest-name` header so
+   * per-resource guest-access policies can grant it `GLOBAL_GUEST`. Otherwise
+   * fall back to anonymous.
    */
   private resolveUnauthenticated(req: IncomingMessage): ActorContext {
     const guestName = decodeGuestNameHeader(req);
@@ -292,26 +293,6 @@ export class AuthInterceptor implements NestInterceptor {
     return this.actorContextService.createAnonymous();
   }
 }
-
-/**
- * Reads the `x-guest-name` header and base64-decodes it. The client encodes
- * the name (Unicode-safe) because HTTP headers are ISO-8859-1 only, so names
- * like `李明` cannot ride the wire raw. Returns the trimmed name, or undefined
- * when the header is absent, malformed, or empty after decode.
- */
-const decodeGuestNameHeader = (req: IncomingMessage): string | undefined => {
-  const raw = req.headers?.[X_GUEST_NAME_HEADER];
-  const value = Array.isArray(raw) ? raw[0] : raw;
-  if (typeof value !== 'string' || value.length === 0) {
-    return undefined;
-  }
-  try {
-    const decoded = Buffer.from(value, 'base64').toString('utf-8').trim();
-    return decoded.length > 0 ? decoded : undefined;
-  } catch {
-    return undefined;
-  }
-};
 
 const getRequest = (context: ExecutionContext) => {
   const contextType = context.getType<ContextType | 'graphql' | 'rmq'>();

@@ -1,6 +1,7 @@
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ICollaboraDocument } from '@domain/collaboration/collabora-document/collabora.document.interface';
+import { IClassification } from '@domain/common/classification/classification.interface';
 import { IMemo } from '@domain/common/memo/memo.interface';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { IUser } from '@domain/community/user/user.interface';
@@ -75,6 +76,19 @@ export class CalloutContributionResolverFields {
     @Parent() calloutContribution: ICalloutContribution
   ): Promise<ICollaboraDocument | null> {
     return await this.calloutContributionService.getCollaboraDocument(
+      calloutContribution
+    );
+  }
+
+  @ResolveField('classification', () => IClassification, {
+    nullable: true,
+    description:
+      'The Classification of this Contribution, present only for a task on a Tasks board (carries the task column).',
+  })
+  async classification(
+    @Parent() calloutContribution: ICalloutContribution
+  ): Promise<IClassification | null> {
+    return await this.calloutContributionService.getClassification(
       calloutContribution
     );
   }

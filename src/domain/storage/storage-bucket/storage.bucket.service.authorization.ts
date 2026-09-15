@@ -49,6 +49,15 @@ export class StorageBucketAuthorizationService {
 
     // Cascade down
     for (const document of storageBucket.documents) {
+      // Internal Yjs content snapshots (memo/whiteboard, written via
+      // FileServiceAdapter.createSnapshotInBucket) are NULL-authz and carry no
+      // tagset — their access is governed by the owning memo/whiteboard, not a
+      // per-file authorization policy. They live in the bucket purely for quota
+      // accounting, so there is nothing to reset; skip them in the cascade
+      // (otherwise DocumentAuthorizationService throws on the missing tagset).
+      if (!document.tagset || !document.tagset.authorization) {
+        continue;
+      }
       const documentAuthorizations =
         await this.documentAuthorizationService.applyAuthorizationPolicy(
           document,

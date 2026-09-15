@@ -23,6 +23,7 @@ import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/p
 import { PlatformRoleAssignmentAuditModule } from '@src/platform-admin/platform-role-assignment-audit/platform.role.assignment.audit.module';
 import { UserLookupModule } from '../user-lookup/user.lookup.module';
 import { UserSettingsModule } from '../user-settings/user.settings.module';
+import { AccountDeletionModule } from './account-deletion/account.deletion.module';
 import { UserResolverFields } from './user.resolver.fields';
 import { UserResolverMutations } from './user.resolver.mutations';
 import { UserResolverQueries } from './user.resolver.queries';
@@ -58,6 +59,7 @@ import { UserAuthorizationService } from './user.service.authorization';
     // OidcCoreModule imports only ConfigModule.
     OidcCoreModule,
     MessagingModule,
+    AccountDeletionModule,
     TypeOrmModule.forFeature([User]),
   ],
   providers: [

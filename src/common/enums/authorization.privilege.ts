@@ -44,6 +44,7 @@ export enum AuthorizationPrivilege {
   READ_USER_SETTINGS = 'read-user-settings',
   MOVE_POST = 'move-post',
   MOVE_CONTRIBUTION = 'move-contribution',
+  MOVE_TASK = 'move-task', // move a task between columns on a Tasks board (member-executable)
   ACCESS_INTERACTIVE_GUIDANCE = 'access-interactive-guidance',
   ACCESS_VIRTUAL_ASSISTANT = 'access-virtual-assistant', // may the user use the web AI assistant (004-web-ai-assistant, FR-027)
   UPDATE_CONTENT = 'update-content',

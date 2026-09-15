@@ -60,6 +60,62 @@ export class StorageAggregatorService {
     return this.storageAggregatorRepository.manager.transaction(doCreate);
   }
 
+  /**
+   * DB-only deletion mode for the account-deletion saga: joins the caller's
+   * transactional EntityManager and defers every document's byte deletion,
+   * and the emptied bucket row itself, to after commit (see
+   * `StorageBucketService.deleteStorageBucketForAccountDeletion`).
+   */
+  public async deleteForAccountDeletion(
+    storageAggregatorID: string,
+    em: EntityManager
+  ): Promise<{
+    storageAggregator: IStorageAggregator;
+    documentIDs: string[];
+    storageBucketIDs: string[];
+  }> {
+    const storageAggregator = await this.getStorageAggregatorOrFail(
+      storageAggregatorID,
+      { relations: { directStorage: true } }
+    );
+
+    if (!storageAggregator.directStorage) {
+      throw new EntityNotInitializedException(
+        'Unable to load direct storage on storage aggregator',
+        LogContext.STORAGE_AGGREGATOR,
+        { storageAggregatorID: storageAggregator.id }
+      );
+    }
+
+    if (storageAggregator.authorization) {
+      await this.authorizationPolicyService.delete(
+        storageAggregator.authorization,
+        em
+      );
+    }
+
+    const { storageBucketID, documentIDs } =
+      await this.storageBucketService.deleteStorageBucketForAccountDeletion(
+        storageAggregator.directStorage.id,
+        em
+      );
+
+    // Detach the loaded relation before removing the aggregator: the
+    // bucket row above was deliberately left in place, and this relation
+    // carries `cascade: true` — an attached child would let TypeORM
+    // cascade-remove it right back out from under
+    // `deleteStorageBucketForAccountDeletion`'s guarantee.
+    storageAggregator.directStorage = undefined;
+
+    const result = await em.remove(storageAggregator as StorageAggregator);
+    result.id = storageAggregatorID;
+    return {
+      storageAggregator: result,
+      documentIDs,
+      storageBucketIDs: [storageBucketID],
+    };
+  }
+
   async delete(storageAggregatorID: string): Promise<IStorageAggregator> {
     const storageAggregator = await this.getStorageAggregatorOrFail(
       storageAggregatorID,

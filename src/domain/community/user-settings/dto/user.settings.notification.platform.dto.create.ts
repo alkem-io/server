@@ -1,6 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
-import { IsBoolean, ValidateNested } from 'class-validator';
+import { ValidateNested } from 'class-validator';
 import { CreateUserSettingsNotificationChannelsInput } from './user.settings.notification.dto.channels.create';
 import { CreateUserSettingsNotificationPlatformAdminInput } from './user.settings.notification.platform.admin.dto.create';
 
@@ -11,7 +11,8 @@ export class CreateUserSettingsNotificationPlatformInput {
     description:
       'Receive a notification when a new Discussion is created in the Forum',
   })
-  @IsBoolean()
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationChannelsInput)
   forumDiscussionCreated!: CreateUserSettingsNotificationChannelsInput;
 
   @Field(() => CreateUserSettingsNotificationChannelsInput, {
@@ -19,7 +20,8 @@ export class CreateUserSettingsNotificationPlatformInput {
     description:
       'Receive a notification when a new comment is added to a Discussion I created in the Forum',
   })
-  @IsBoolean()
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationChannelsInput)
   forumDiscussionComment!: CreateUserSettingsNotificationChannelsInput;
 
   @Field(() => CreateUserSettingsNotificationPlatformAdminInput, {

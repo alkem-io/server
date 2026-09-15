@@ -48,16 +48,8 @@ interface CompactContribution {
     // For posts
     postContent?: string;
     commentCount?: number;
-    // For whiteboards - semantic analysis
-    whiteboardAnalysis?: {
-      texts: string[];
-      stats: Record<string, unknown>;
-      hint?: string;
-    };
     // For links
     uri?: string;
-    // For memos
-    memoContent?: string;
   };
   context?: {
     calloutId?: string;
@@ -69,7 +61,9 @@ interface CompactContribution {
 /**
  * Tool for analyzing contributions across the platform.
  * Supports filtering by user's own contributions, by callout, or by space.
- * Provides token-optimized output with semantic analysis for whiteboards.
+ * Provides token-optimized aggregate metadata; whiteboard/memo contributions
+ * surface title + description only (use analyze_whiteboard for a whiteboard's
+ * live scene).
  */
 @Injectable()
 export class ContributionsAnalyzeTool implements McpTool {
@@ -88,7 +82,8 @@ export class ContributionsAnalyzeTool implements McpTool {
       description:
         'Analyze contributions (posts, whiteboards, links, memos) across the platform. ' +
         'Can analyze your own contributions, contributions to a specific callout, or all contributions in a space. ' +
-        'Use "semantic" analysis for token-optimized output with whiteboard analysis.',
+        'Use "semantic" analysis for a token-optimized aggregate view (stats + interpretation hint). ' +
+        'Whiteboard/memo contributions surface title + description only — use analyze_whiteboard for a whiteboard scene.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -104,7 +99,7 @@ export class ContributionsAnalyzeTool implements McpTool {
             enum: ['summary', 'content', 'semantic'],
             description:
               'Type of analysis: "summary" (counts and stats), "content" (extract text content), ' +
-              '"semantic" (token-optimized with whiteboard analysis). Default: summary',
+              '"semantic" (token-optimized aggregate: stats + interpretation hint). Default: summary',
           },
           limit: {
             type: 'number',
@@ -414,11 +409,7 @@ export class ContributionsAnalyzeTool implements McpTool {
     const items: CompactContribution[] = [];
 
     for (const contrib of contributions) {
-      const item = await this.buildCompactContribution(
-        contrib,
-        agentInfo,
-        false
-      );
+      const item = await this.buildCompactContribution(contrib, agentInfo);
       items.push(item);
     }
 
@@ -430,7 +421,8 @@ export class ContributionsAnalyzeTool implements McpTool {
   }
 
   /**
-   * Semantic analysis - token-optimized with whiteboard analysis
+   * Semantic analysis - token-optimized aggregate view (stats, interpretation
+   * hint, and compact per-contribution texts).
    */
   private async analyzeSemanticContent(
     contributions: CalloutContribution[],
@@ -441,20 +433,13 @@ export class ContributionsAnalyzeTool implements McpTool {
     const typeCounts: Record<string, number> = {};
 
     for (const contrib of contributions) {
-      const item = await this.buildCompactContribution(
-        contrib,
-        agentInfo,
-        true
-      );
+      const item = await this.buildCompactContribution(contrib, agentInfo);
       items.push(item);
 
       // Collect all text for aggregate analysis
       if (item.title) allTexts.push(item.title);
       if (item.description) allTexts.push(item.description);
       if (item.content?.postContent) allTexts.push(item.content.postContent);
-      if (item.content?.whiteboardAnalysis?.texts) {
-        allTexts.push(...item.content.whiteboardAnalysis.texts);
-      }
 
       typeCounts[item.type] = (typeCounts[item.type] || 0) + 1;
     }
@@ -491,8 +476,7 @@ export class ContributionsAnalyzeTool implements McpTool {
    */
   private async buildCompactContribution(
     contribution: CalloutContribution,
-    agentInfo: ActorContext,
-    includeSemanticAnalysis: boolean
+    agentInfo: ActorContext
   ): Promise<CompactContribution> {
     const item: CompactContribution = {
       id: contribution.id,
@@ -528,16 +512,9 @@ export class ContributionsAnalyzeTool implements McpTool {
         if (contribution.whiteboard) {
           item.title = contribution.whiteboard.profile?.displayName;
           item.description = contribution.whiteboard.profile?.description;
-
-          if (includeSemanticAnalysis && contribution.whiteboard.content) {
-            // Perform semantic analysis on whiteboard
-            const analysis = this.analyzeWhiteboardContent(
-              contribution.whiteboard.content
-            );
-            item.content = {
-              whiteboardAnalysis: analysis,
-            };
-          }
+          // Whiteboard scene content is a Yjs-V2 snapshot (WS-only, no inline
+          // column). Contribution analysis surfaces title/description only; use
+          // analyze_whiteboard to analyze a specific whiteboard's live scene.
         }
         break;
 
@@ -555,75 +532,16 @@ export class ContributionsAnalyzeTool implements McpTool {
         if (contribution.memo) {
           item.title = contribution.memo.profile?.displayName;
           item.description = contribution.memo.profile?.description;
-          if (contribution.memo.content) {
-            // Memo content is stored as Buffer
-            item.content = {
-              memoContent: contribution.memo.content
-                .toString('utf-8')
-                .slice(0, 500),
-            };
-          }
+          // Memo content is a Yjs-V2 snapshot (WS/pointer-only, no inline column,
+          // and NOT UTF-8 text — decoding it needs the yjs→markdown loader against
+          // the file-service snapshot). Bulk contribution analysis surfaces
+          // title/description only, mirroring the whiteboard case above; per-memo
+          // content extraction is out of scope for this tool (006-collab-content-unification).
         }
         break;
     }
 
     return item;
-  }
-
-  /**
-   * Analyze whiteboard content - reuse semantic analysis logic
-   */
-  private analyzeWhiteboardContent(contentString: string): {
-    texts: string[];
-    stats: Record<string, unknown>;
-    hint?: string;
-  } {
-    try {
-      const content = JSON.parse(contentString);
-      const elements =
-        (content.elements as Array<Record<string, unknown>>) || [];
-
-      // Extract texts
-      const texts: string[] = [];
-      const typeCounts: Record<string, number> = {};
-
-      for (const el of elements) {
-        const type = el.type as string;
-        typeCounts[type] = (typeCounts[type] || 0) + 1;
-
-        if (type === 'text' && el.text) {
-          const text = String(el.text).trim();
-          if (text) texts.push(text);
-        }
-      }
-
-      // Count connections
-      const arrows = elements.filter(
-        el => el.type === 'arrow' && el.startBinding && el.endBinding
-      );
-
-      // Generate hint
-      const hints: string[] = [];
-      if (arrows.length > 2) hints.push('connected diagram');
-      if (typeCounts['rectangle'] > 3) hints.push('structured layout');
-      if (texts.length > 10) hints.push('text-heavy');
-
-      return {
-        texts: texts.slice(0, 20), // Limit for token efficiency
-        stats: {
-          elements: elements.length,
-          types: typeCounts,
-          textCount: texts.length,
-          connections: arrows.length,
-        },
-        hint: hints.length > 0 ? hints.join(', ') : 'visual content',
-      };
-    } catch {
-      return {
-        texts: [],
-        stats: { error: 'Failed to parse whiteboard content' },
-      };
-    }
   }
 
   /**
@@ -633,11 +551,6 @@ export class ContributionsAnalyzeTool implements McpTool {
     const texts: string[] = [];
     if (item.title) texts.push(item.title);
     if (item.content?.postContent) texts.push(item.content.postContent);
-    if (item.content?.whiteboardAnalysis?.texts) {
-      texts.push(...item.content.whiteboardAnalysis.texts.slice(0, 5));
-    }
-    if (item.content?.memoContent)
-      texts.push(item.content.memoContent.slice(0, 200));
     return texts;
   }
 

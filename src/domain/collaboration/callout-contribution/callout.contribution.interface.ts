@@ -1,4 +1,5 @@
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { IClassification } from '@domain/common/classification/classification.interface';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity/authorizable.interface';
 import { IMemo } from '@domain/common/memo/memo.interface';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
@@ -21,6 +22,8 @@ export abstract class ICalloutContribution extends IAuthorizable {
   memo?: IMemo;
 
   collaboraDocument?: ICollaboraDocument;
+
+  classification?: IClassification;
 
   createdBy?: string;
 

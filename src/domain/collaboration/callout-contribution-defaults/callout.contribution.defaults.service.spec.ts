@@ -1,3 +1,4 @@
+import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -14,6 +15,7 @@ describe('CalloutContributionDefaultsService', () => {
   let service: CalloutContributionDefaultsService;
   let profileDocumentsService: ProfileDocumentsService;
   let repository: Repository<CalloutContributionDefaults>;
+  let whiteboardService: WhiteboardService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -32,6 +34,7 @@ describe('CalloutContributionDefaultsService', () => {
     service = module.get(CalloutContributionDefaultsService);
     profileDocumentsService = module.get(ProfileDocumentsService);
     repository = module.get(getRepositoryToken(CalloutContributionDefaults));
+    whiteboardService = module.get(WhiteboardService);
   });
 
   describe('createCalloutContributionDefaults', () => {
@@ -115,6 +118,64 @@ describe('CalloutContributionDefaultsService', () => {
       );
       expect(defaults.postDescription).toBe(reuploaded);
       expect(repository.save).toHaveBeenCalledWith(defaults);
+    });
+
+    it('materializes an internal Whiteboard default into the owning Callout bucket', async () => {
+      const defaults = { id: 'defaults-id' } as CalloutContributionDefaults;
+      vi.mocked(
+        whiteboardService.materializeContentIntoBucket
+      ).mockResolvedValue({
+        content: 'target-owned-canonical',
+        createdDocumentIDs: ['copied-media'],
+      });
+
+      await service.materializeCalloutContributionDefaultsContent(
+        defaults,
+        storageBucket,
+        rollback,
+        {
+          whiteboardContent: 'source-canonical',
+          sourceStorageBucketID: 'source-bucket',
+        }
+      );
+
+      expect(
+        whiteboardService.materializeContentIntoBucket
+      ).toHaveBeenCalledWith(
+        'source-canonical',
+        storageBucket.id,
+        'source-bucket'
+      );
+      expect(defaults.whiteboardContent).toBe('target-owned-canonical');
+      expect(repository.save).toHaveBeenCalledWith(defaults);
+    });
+
+    it('compensates copied Whiteboard media and rolls back when persisting the default fails', async () => {
+      const defaults = { id: 'defaults-id' } as CalloutContributionDefaults;
+      vi.mocked(
+        whiteboardService.materializeContentIntoBucket
+      ).mockResolvedValue({
+        content: 'target-owned-canonical',
+        createdDocumentIDs: ['copied-media'],
+      });
+      vi.mocked(repository.save).mockRejectedValue(new Error('save failed'));
+
+      await expect(
+        service.materializeCalloutContributionDefaultsContent(
+          defaults,
+          storageBucket,
+          rollback,
+          {
+            whiteboardContent: 'source-canonical',
+            sourceStorageBucketID: 'source-bucket',
+          }
+        )
+      ).rejects.toThrow('save failed');
+
+      expect(
+        whiteboardService.deleteMaterializedContentDocuments
+      ).toHaveBeenCalledWith(['copied-media']);
+      expect(rollback).toHaveBeenCalled();
     });
 
     it('skips the save when re-upload returned identical markdown', async () => {
@@ -227,17 +288,17 @@ describe('CalloutContributionDefaultsService', () => {
       expect(result.postDescription).toBe('New Description');
     });
 
-    it('should update whiteboardContent when provided', () => {
+    it('clears whiteboardContent only when explicitly requested', () => {
       const defaults = {
         id: 'defaults-id',
         whiteboardContent: 'old-wb',
       } as CalloutContributionDefaults;
 
       const result = service.updateCalloutContributionDefaults(defaults, {
-        whiteboardContent: 'new-wb',
+        clearWhiteboardContent: true,
       });
 
-      expect(result.whiteboardContent).toBe('new-wb');
+      expect(result.whiteboardContent).toBeUndefined();
     });
 
     it('should not change fields when update data fields are falsy', () => {

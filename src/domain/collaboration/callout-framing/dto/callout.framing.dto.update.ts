@@ -3,8 +3,8 @@ import { CreateCollaboraDocumentInput } from '@domain/collaboration/collabora-do
 import { UpdateLinkInput } from '@domain/collaboration/link/dto';
 import { UpdatePollInput } from '@domain/collaboration/poll/dto/poll.dto.update';
 import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
+import { UUID } from '@domain/common/scalars';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
-import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 import { UpdateWhiteboardPreviewSettingsInput } from '@domain/common/whiteboard/types';
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
@@ -29,12 +29,16 @@ export class UpdateCalloutFramingInput {
   @IsOptional()
   type?: CalloutFramingType;
 
-  @Field(() => WhiteboardContent, {
+  /** Server-internal canonical snapshot used by trusted template serialization. */
+  whiteboardContent?: string;
+
+  @Field(() => UUID, {
     nullable: true,
-    description: 'The new content to be used.',
+    description:
+      'Replace the framing Whiteboard from another Whiteboard through a server-side authorized copy.',
   })
   @IsOptional()
-  whiteboardContent?: string;
+  sourceWhiteboardID?: string;
 
   @Field(() => UpdateWhiteboardPreviewSettingsInput, {
     nullable: true,
