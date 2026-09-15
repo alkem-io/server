@@ -539,6 +539,78 @@ describe('InnovationFlowService', () => {
   });
 
   describe('createStateOnInnovationFlow', () => {
+    beforeEach(() => {
+      // Adding a state rewrites the flow-state vocabulary, which re-loads the
+      // flow together with its template.
+      vi.mocked(repository.findOne).mockResolvedValue({
+        id: 'flow-1',
+        flowStatesTagsetTemplate: { id: 'tt-1', tagsets: [] },
+      } as any);
+    });
+
+    it('rewrites the vocabulary with the new state in flow order and keeps the current default', async () => {
+      const flow = {
+        id: 'flow-1',
+        currentStateID: 's-1',
+        states: [
+          { id: 's-1', displayName: 'A', sortOrder: 1 },
+          { id: 's-2', displayName: 'B', sortOrder: 2 },
+        ],
+        settings: { maximumNumberOfStates: 8, minimumNumberOfStates: 1 },
+      } as any;
+      const created = { id: 's-3', displayName: 'C', sortOrder: 3 } as any;
+      vi.mocked(
+        innovationFlowStateService.createInnovationFlowState
+      ).mockResolvedValue(created);
+      vi.mocked(innovationFlowStateService.save).mockResolvedValue(created);
+
+      await service.createStateOnInnovationFlow(flow, {
+        displayName: 'C',
+        sortOrder: 3,
+      } as any);
+
+      expect(
+        tagsetTemplateService.updateTagsetTemplateDefinition
+      ).toHaveBeenCalledWith(expect.objectContaining({ id: 'tt-1' }), {
+        allowedValues: ['A', 'B', 'C'],
+        defaultSelectedValue: 'A',
+      });
+      expect(tagsetService.updateTagsetsSelectedValue).toHaveBeenCalledWith(
+        expect.anything(),
+        ['A', 'B', 'C'],
+        'A'
+      );
+    });
+
+    it('orders the vocabulary by sort order when the new state is inserted first', async () => {
+      const flow = {
+        id: 'flow-1',
+        currentStateID: 's-1',
+        states: [
+          { id: 's-1', displayName: 'A', sortOrder: 1 },
+          { id: 's-2', displayName: 'B', sortOrder: 2 },
+        ],
+        settings: { maximumNumberOfStates: 8, minimumNumberOfStates: 1 },
+      } as any;
+      const created = { id: 's-3', displayName: 'C', sortOrder: 0 } as any;
+      vi.mocked(
+        innovationFlowStateService.createInnovationFlowState
+      ).mockResolvedValue(created);
+      vi.mocked(innovationFlowStateService.save).mockResolvedValue(created);
+
+      await service.createStateOnInnovationFlow(flow, {
+        displayName: 'C',
+        sortOrder: 0,
+      } as any);
+
+      expect(
+        tagsetTemplateService.updateTagsetTemplateDefinition
+      ).toHaveBeenCalledWith(expect.objectContaining({ id: 'tt-1' }), {
+        allowedValues: ['C', 'A', 'B'],
+        defaultSelectedValue: 'A',
+      });
+    });
+
     it('should create a new state on the innovation flow', async () => {
       const flow = {
         id: 'flow-1',
@@ -653,6 +725,67 @@ describe('InnovationFlowService', () => {
   });
 
   describe('deleteStateOnInnovationFlow', () => {
+    const deleteFrom = async (deletedID: string) => {
+      const flow = {
+        id: 'flow-1',
+        currentStateID: 's-1',
+        states: [
+          { id: 's-1', displayName: 'A', sortOrder: 1 },
+          { id: 's-2', displayName: 'B', sortOrder: 2 },
+          { id: 's-3', displayName: 'C', sortOrder: 3 },
+        ],
+        settings: { maximumNumberOfStates: 8, minimumNumberOfStates: 1 },
+      } as any;
+      (repository as any).manager = {
+        getRepository: vi.fn().mockReturnValue({
+          findOne: vi
+            .fn()
+            .mockResolvedValue({ id: 'collab-1', calloutsSet: { id: 'cs-1' } }),
+        }),
+      };
+      vi.mocked(_calloutsSetService.getCalloutsSetOrFail).mockResolvedValue({
+        id: 'cs-1',
+        callouts: [],
+      } as any);
+      const deleted = flow.states.find((s: any) => s.id === deletedID);
+      vi.mocked(
+        innovationFlowStateService.getInnovationFlowStateOrFail
+      ).mockResolvedValue(deleted);
+      vi.mocked(innovationFlowStateService.delete).mockResolvedValue({
+        ...deleted,
+      });
+      vi.mocked(repository.findOne).mockResolvedValue({
+        id: 'flow-1',
+        flowStatesTagsetTemplate: { id: 'tt-1', tagsets: [] },
+      } as any);
+
+      return service.deleteStateOnInnovationFlow(flow, {
+        ID: deletedID,
+      } as any);
+    };
+
+    it('drops the deleted name from the vocabulary and keeps the current default', async () => {
+      await deleteFrom('s-2');
+
+      expect(
+        tagsetTemplateService.updateTagsetTemplateDefinition
+      ).toHaveBeenCalledWith(expect.objectContaining({ id: 'tt-1' }), {
+        allowedValues: ['A', 'C'],
+        defaultSelectedValue: 'A',
+      });
+    });
+
+    it('moves the default to the first remaining state when the current state is deleted', async () => {
+      await deleteFrom('s-1');
+
+      expect(
+        tagsetTemplateService.updateTagsetTemplateDefinition
+      ).toHaveBeenCalledWith(expect.objectContaining({ id: 'tt-1' }), {
+        allowedValues: ['B', 'C'],
+        defaultSelectedValue: 'B',
+      });
+    });
+
     it('should throw RelationshipNotFoundException when states are not loaded', async () => {
       const flow = {
         id: 'flow-1',
@@ -919,6 +1052,78 @@ describe('InnovationFlowService', () => {
       expect(tagsetService.updateTagsetsSelectedValue).toHaveBeenCalled();
     });
 
+    describe('vocabulary default after a replacement', () => {
+      const replaceStates = async (
+        previousCurrentName: string,
+        newNames: string[]
+      ) => {
+        const flow = {
+          id: 'flow-1',
+          states: [
+            { id: 's-old-1', displayName: previousCurrentName, sortOrder: 10 },
+          ],
+          currentStateID: 's-old-1',
+        } as any;
+        vi.mocked(
+          innovationFlowStateService.getInnovationFlowStateOrFail
+        ).mockResolvedValue({
+          id: 's-old-1',
+          displayName: previousCurrentName,
+        } as any);
+        vi.mocked(innovationFlowStateService.delete).mockResolvedValue(
+          {} as any
+        );
+        const created = newNames.map((displayName, index) => ({
+          id: `s-new-${index}`,
+          displayName,
+          sortOrder: index + 1,
+        }));
+        const createMock = vi.mocked(
+          innovationFlowStateService.createInnovationFlowState
+        );
+        for (const state of created) {
+          createMock.mockResolvedValueOnce(state as any);
+        }
+        vi.mocked(repository.save).mockImplementation(
+          async (entity: any) => entity
+        );
+        vi.mocked(repository.findOne).mockResolvedValue({
+          id: 'flow-1',
+          flowStatesTagsetTemplate: { id: 'tst-1', tagsets: [] },
+        } as any);
+
+        await service.updateInnovationFlowStates(
+          flow,
+          newNames.map((displayName, index) => ({
+            displayName,
+            sortOrder: index + 1,
+          })) as any
+        );
+      };
+
+      it('keeps the previously current state as default when its name survives', async () => {
+        await replaceStates('Keep', ['First', 'Keep', 'Last']);
+
+        expect(
+          tagsetTemplateService.updateTagsetTemplateDefinition
+        ).toHaveBeenCalledWith(expect.objectContaining({ id: 'tst-1' }), {
+          allowedValues: ['First', 'Keep', 'Last'],
+          defaultSelectedValue: 'Keep',
+        });
+      });
+
+      it('falls back to the first new state when the previous current name is gone', async () => {
+        await replaceStates('Gone', ['First', 'Second']);
+
+        expect(
+          tagsetTemplateService.updateTagsetTemplateDefinition
+        ).toHaveBeenCalledWith(expect.objectContaining({ id: 'tst-1' }), {
+          allowedValues: ['First', 'Second'],
+          defaultSelectedValue: 'First',
+        });
+      });
+    });
+
     it('should throw ValidationException when a new state name contains a comma', async () => {
       const flow = {
         id: 'flow-1',
@@ -965,6 +1170,11 @@ describe('InnovationFlowService', () => {
         innovationFlowStateService.createInnovationFlowState
       ).mockResolvedValue(newState);
       vi.mocked(innovationFlowStateService.save).mockResolvedValue(newState);
+      // Adding a state rewrites the flow-state vocabulary, which re-loads the flow.
+      vi.mocked(repository.findOne).mockResolvedValue({
+        id: 'flow-l0',
+        flowStatesTagsetTemplate: { id: 'tt-l0', tagsets: [] },
+      } as any);
 
       const stateData = { displayName: 'Fifth' } as any;
       const result = await service.createStateOnInnovationFlow(flow, stateData);
