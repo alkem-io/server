@@ -360,18 +360,18 @@ export class RoleSetResolverFields {
     );
   }
 
-  // R3: pending invitations require the same authority as deciding them
-  // (organization admins/owners; Space admins) — GRANT, not the parent
-  // role set's READ, which the child policy never influenced and which
-  // every registered/public-Space-registered user holds. Deliberate on
-  // BOTH role-set types (the identical leak exists on a public Space).
-  // Verified live (R46): an account admin of the hosting organization holds
-  // neither UPDATE nor GRANT on a Space role set — the account CRUD cascade
-  // never reaches an L0 Space's policy (`account.service.authorization.ts`
-  // only invokes the Space's own policy builder, which gives account admins
-  // READ_ABOUT/READ_LICENSE) — so GRANT and UPDATE admit exactly the same
-  // holders here; GRANT is kept as the operator-ruled approve/reject guard.
-  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.GRANT)
+  // Pending invitations are readable by whoever may create one: the invite
+  // dialog has to see the outstanding invitations to avoid inviting the same
+  // person twice. ROLESET_ENTRY_ROLE_INVITE is held by organization
+  // admins/owners and Space admins (anyone who may assign may invite), by
+  // global admins/support on organizations, and by subspace admins only when
+  // the Space allows them to invite — never by plain members, and never via
+  // the parent role set's READ, which every registered user (or every
+  // registered user of a public Space) holds. Deliberate on BOTH role-set
+  // types: the identical leak exists on a public Space.
+  @AuthorizationActorHasPrivilege(
+    AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE
+  )
   @UseGuards(GraphqlGuard)
   @ResolveField('invitations', () => [IInvitation], {
     nullable: false,
@@ -381,8 +381,11 @@ export class RoleSetResolverFields {
     return await this.roleSetService.getInvitations(roleSet);
   }
 
-  // R3 (see `invitations` above).
-  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.GRANT)
+  // Same gate as `invitations` above: whoever may create a platform
+  // invitation may see the pending ones (the invite dialog dedupes on them).
+  @AuthorizationActorHasPrivilege(
+    AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE
+  )
   @UseGuards(GraphqlGuard)
   @ResolveField('platformInvitations', () => [IPlatformInvitation], {
     nullable: false,
@@ -395,7 +398,10 @@ export class RoleSetResolverFields {
     return await this.roleSetService.getPlatformInvitations(roleSet);
   }
 
-  // R3 (see `invitations` above).
+  // Pending applications carry the applicant's PII (their answers to the
+  // application form), so only those who decide them — GRANT holders — may
+  // read them. This is deliberately stricter than the invitation lists:
+  // being allowed to invite does not make someone an application decider.
   @AuthorizationActorHasPrivilege(AuthorizationPrivilege.GRANT)
   @UseGuards(GraphqlGuard)
   @ResolveField('applications', () => [IApplication], {

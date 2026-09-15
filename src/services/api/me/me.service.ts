@@ -139,8 +139,9 @@ export class MeService {
     for (const invitation of invitations) {
       if (!invitation.roleSet) {
         throw new EntityNotFoundException(
-          `RoleSet not found for organization invitation ${invitation.id}`,
-          LogContext.COMMUNITY
+          'RoleSet not found for organization invitation',
+          LogContext.COMMUNITY,
+          { invitationId: invitation.id }
         );
       }
       const organization =
@@ -182,8 +183,9 @@ export class MeService {
     for (const application of applications) {
       if (!application.roleSet) {
         throw new EntityNotFoundException(
-          `RoleSet not found for organization application ${application.id}`,
-          LogContext.COMMUNITY
+          'RoleSet not found for organization application',
+          LogContext.COMMUNITY,
+          { applicationId: application.id }
         );
       }
       const organization =

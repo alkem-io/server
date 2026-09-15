@@ -124,11 +124,13 @@ async function main() {
     ReturnType<typeof NestFactory.createApplicationContext>
   > | undefined;
   try {
-    const { AppModule } = await import('../../app.module');
-    const { SchemaBootstrapModule } = await import(
-      '../../schema-bootstrap/module.schema-bootstrap'
-    );
-    const rootModule = useLight ? SchemaBootstrapModule : AppModule;
+    // Import only the selected root module: pulling in AppModule also
+    // evaluates its whole import graph, which is exactly what the light
+    // bootstrap exists to avoid.
+    const rootModule = useLight
+      ? (await import('../../schema-bootstrap/module.schema-bootstrap'))
+          .SchemaBootstrapModule
+      : (await import('../../app.module')).AppModule;
     app = await NestFactory.createApplicationContext(rootModule, {
       logger: false,
     });

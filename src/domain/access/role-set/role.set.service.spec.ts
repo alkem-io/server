@@ -1842,12 +1842,140 @@ describe('RoleSetService', () => {
     });
   });
 
+  // The new-member notification dispatch runs after the credential has been
+  // committed, so a notifications/adapter failure must be logged and swallowed
+  // rather than failing the grant (or, on application approval, blocking the
+  // lifecycle event that follows). Only the dispatch is guarded — the cache
+  // refresh before it still propagates.
+  describe('assignActorToRole — new-member notification dispatch is best-effort', () => {
+    const policies = {
+      userPolicy: { minimum: -1, maximum: -1 },
+      organizationPolicy: { minimum: -1, maximum: -1 },
+      virtualContributorPolicy: { minimum: -1, maximum: -1 },
+    };
+    const actorContext = { actorID: 'admin-1' } as any;
+
+    const arrangeGrant = (roleSet: any) => {
+      (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+        ActorType.USER
+      );
+      // No parent role set, not yet in the role.
+      vi.spyOn(roleSetRepository, 'findOne').mockResolvedValue({
+        ...roleSet,
+        parentRoleSet: undefined,
+      });
+      (actorService.hasValidCredential as Mock).mockResolvedValue(false);
+      (actorLookupService.countActorsWithCredentials as Mock).mockResolvedValue(
+        0
+      );
+      (actorService.grantCredentialOrFail as Mock).mockResolvedValue(undefined);
+    };
+
+    it('ORGANIZATION: still resolves and logs when the new-associate dispatch rejects', async () => {
+      const roleSet = {
+        id: 'org-rs-1',
+        type: RoleSetType.ORGANIZATION,
+        entryRoleName: RoleName.ASSOCIATE,
+        roles: [
+          {
+            name: RoleName.ASSOCIATE,
+            credential: { type: 'org-associate', resourceID: 'org-1' },
+            ...policies,
+          },
+        ],
+      } as any;
+      arrangeGrant(roleSet);
+      const failure = new Error('notifications adapter down');
+      (
+        roleSetEventsService.processOrganizationNewAssociateEvents as Mock
+      ).mockRejectedValue(failure);
+      const logger = (service as any).logger;
+      (logger.error as Mock).mockClear();
+
+      await expect(
+        service.assignActorToRole(
+          roleSet,
+          RoleName.ASSOCIATE,
+          'actor-1',
+          actorContext,
+          true,
+          CommunityMembershipOrigin.DIRECT
+        )
+      ).resolves.toBe('actor-1');
+
+      expect(actorService.grantCredentialOrFail).toHaveBeenCalledWith(
+        'actor-1',
+        { type: 'org-associate', resourceID: 'org-1' },
+        undefined
+      );
+      expect(roleSetCacheService.setMembershipStatusCache).toHaveBeenCalledWith(
+        'actor-1',
+        'org-rs-1',
+        CommunityMembershipStatus.MEMBER
+      );
+      expect(
+        roleSetEventsService.processOrganizationNewAssociateEvents
+      ).toHaveBeenCalledOnce();
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.stringContaining('notifications adapter down'),
+        failure.stack,
+        expect.anything()
+      );
+    });
+
+    it('SPACE: still resolves and logs when the new-member dispatch rejects', async () => {
+      const roleSet = {
+        id: 'space-rs-1',
+        type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
+        roles: [
+          {
+            name: RoleName.MEMBER,
+            credential: { type: 'space-member', resourceID: 'space-1' },
+            ...policies,
+          },
+        ],
+      } as any;
+      arrangeGrant(roleSet);
+      const failure = new Error('rabbit unreachable');
+      (
+        roleSetEventsService.processCommunityNewMemberEvents as Mock
+      ).mockRejectedValue(failure);
+      const logger = (service as any).logger;
+      (logger.error as Mock).mockClear();
+
+      await expect(
+        service.assignActorToRole(
+          roleSet,
+          RoleName.MEMBER,
+          'actor-1',
+          actorContext,
+          true,
+          CommunityMembershipOrigin.DIRECT
+        )
+      ).resolves.toBe('actor-1');
+
+      expect(roleSetCacheService.setMembershipStatusCache).toHaveBeenCalledWith(
+        'actor-1',
+        'space-rs-1',
+        CommunityMembershipStatus.MEMBER
+      );
+      expect(
+        roleSetEventsService.processCommunityNewMemberEvents
+      ).toHaveBeenCalledOnce();
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.stringContaining('rabbit unreachable'),
+        failure.stack,
+        expect.anything()
+      );
+    });
+  });
+
   describe('removeActorFromRole', () => {
-    // Entry-role generalization (D1): an ORGANIZATION role set's entry role
-    // is ASSOCIATE, not MEMBER — the in-app notification cleanup only fires
-    // when the actor is removed from their entry role (fully removed from
-    // the organization), never when only ADMIN/OWNER is removed while the
-    // actor stays an associate.
+    // An ORGANIZATION role set's entry role is ASSOCIATE, not MEMBER, and an
+    // admin/owner need not be an associate at all — so the in-app
+    // notification cleanup fires only once the actor holds no role of the
+    // role set anymore, whichever role happened to be removed last.
     const organizationRoleSet = () =>
       ({
         id: 'rs-1',
@@ -1937,6 +2065,11 @@ describe('RoleSetService', () => {
         5
       );
       (actorService.revokeCredential as Mock).mockResolvedValue(undefined);
+      // Only the ASSOCIATE credential remains after the ADMIN revoke.
+      (actorService.hasValidCredential as Mock).mockImplementation(
+        async (_actorID: string, criteria: { type: string }) =>
+          criteria.type === 'org-associate'
+      );
 
       const inAppNotificationService = (service as any)
         .inAppNotificationService;
@@ -1958,6 +2091,85 @@ describe('RoleSetService', () => {
       expect(
         inAppNotificationService.deleteAllForReceiverInOrganization
       ).not.toHaveBeenCalled();
+    });
+
+    it('should NOT clean the in-app notifications when ASSOCIATE is removed but the actor keeps ADMIN', async () => {
+      const roleSet = organizationRoleSet();
+
+      (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+        'user'
+      );
+      (actorService.revokeCredential as Mock).mockResolvedValue(undefined);
+      // Remaining-role check after the ASSOCIATE revoke: ADMIN still held.
+      (actorService.hasValidCredential as Mock).mockImplementation(
+        async (_actorID: string, criteria: { type: string }) =>
+          criteria.type === 'org-admin'
+      );
+
+      const inAppNotificationService = (service as any)
+        .inAppNotificationService;
+      (
+        inAppNotificationService.deleteAllForReceiverInOrganization as Mock
+      ).mockResolvedValue(undefined);
+      (roleSetCacheService.cleanActorMembershipCache as Mock).mockResolvedValue(
+        undefined
+      );
+
+      const result = await service.removeActorFromRole(
+        roleSet,
+        RoleName.ASSOCIATE,
+        'actor-1',
+        false
+      );
+
+      expect(result).toBe('actor-1');
+      expect(actorService.revokeCredential).toHaveBeenCalledWith('actor-1', {
+        type: 'org-associate',
+        resourceID: 'org-1',
+      });
+      expect(
+        inAppNotificationService.deleteAllForReceiverInOrganization
+      ).not.toHaveBeenCalled();
+      expect(
+        roleSetCacheService.cleanActorMembershipCache
+      ).toHaveBeenCalledWith('actor-1', 'rs-1');
+    });
+
+    it('should clean the in-app notifications when ADMIN was the last role the actor held', async () => {
+      const roleSet = organizationRoleSet();
+
+      (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+        'user'
+      );
+      (actorService.revokeCredential as Mock).mockResolvedValue(undefined);
+      // Neither the implicit-role check (ADMIN/OWNER) nor the remaining-role
+      // check (ASSOCIATE/OWNER) finds a credential left.
+      (actorService.hasValidCredential as Mock).mockResolvedValue(false);
+
+      const orgLookupService = (service as any).organizationLookupService;
+      (orgLookupService.getOrganizationByIdOrFail as Mock).mockResolvedValue({
+        accountID: 'account-1',
+      });
+      const inAppNotificationService = (service as any)
+        .inAppNotificationService;
+      (
+        inAppNotificationService.deleteAllForReceiverInOrganization as Mock
+      ).mockResolvedValue(undefined);
+      (roleSetCacheService.cleanActorMembershipCache as Mock).mockResolvedValue(
+        undefined
+      );
+
+      const result = await service.removeActorFromRole(
+        roleSet,
+        RoleName.ADMIN,
+        'actor-1',
+        false
+      );
+
+      expect(result).toBe('actor-1');
+      expect(
+        inAppNotificationService.deleteAllForReceiverInOrganization
+      ).toHaveBeenCalledWith('actor-1', 'org-1');
     });
 
     it('should clean the membership cache of every descendant role-set when removing MEMBER from a SPACE (cascade)', async () => {

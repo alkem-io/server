@@ -1026,27 +1026,40 @@ export class RoleSetService {
             );
 
             if (triggerNewMemberEvents) {
-              await this.roleSetEventsService.processCommunityNewMemberEvents(
-                roleSet,
-                actorContext,
-                actorID,
-                actorType,
-                membershipOrigin
-              );
+              // The membership credential is already committed, so the
+              // notification dispatch is best-effort: a notifications /
+              // adapter failure is logged and must not fail the grant (nor,
+              // on application approval, block the lifecycle event that
+              // follows it).
+              try {
+                await this.roleSetEventsService.processCommunityNewMemberEvents(
+                  roleSet,
+                  actorContext,
+                  actorID,
+                  actorType,
+                  membershipOrigin
+                );
+              } catch (e: any) {
+                this.logger.error(
+                  `New-member notification dispatch failed for roleSet ${roleSet.id}, actor ${actorID}: ${e}`,
+                  e?.stack,
+                  LogContext.COMMUNITY
+                );
+              }
             }
           }
         }
         break;
       }
       case RoleSetType.ORGANIZATION: {
-        // Organizations have no room membership and no Space activity log
-        // (FR-026), so this arm is bounded to the two side effects that
-        // still apply: refresh the membership-status cache so every
-        // subsequent read (roleSet.myMembershipStatus,
-        // Organization.myAssociateEligibility) reflects the grant
-        // immediately, and dispatch the "someone joined" admin notification
-        // (acting user excluded, INVITATION origin suppressed downstream by
-        // the adapter since that flow gets its own response notification).
+        // Organizations have no room membership and no Space activity log,
+        // so this arm is bounded to the two side effects that still apply:
+        // refresh the membership-status cache so every subsequent read
+        // (roleSet.myMembershipStatus, Organization.myAssociateEligibility)
+        // reflects the grant immediately, and dispatch the "someone joined"
+        // admin notification (acting user excluded, INVITATION origin
+        // suppressed downstream by the adapter since that flow gets its own
+        // response notification).
         if (role === RoleName.ASSOCIATE) {
           await this.roleSetCacheService.setMembershipStatusCache(
             actorID,
@@ -1055,12 +1068,22 @@ export class RoleSetService {
           );
 
           if (actorContext && triggerNewMemberEvents) {
-            await this.roleSetEventsService.processOrganizationNewAssociateEvents(
-              roleSet,
-              actorContext,
-              actorID,
-              membershipOrigin
-            );
+            // Best-effort, as for Spaces: the credential is committed, so a
+            // notification failure is logged rather than failing the grant.
+            try {
+              await this.roleSetEventsService.processOrganizationNewAssociateEvents(
+                roleSet,
+                actorContext,
+                actorID,
+                membershipOrigin
+              );
+            } catch (e: any) {
+              this.logger.error(
+                `New-associate notification dispatch failed for roleSet ${roleSet.id}, actor ${actorID}: ${e}`,
+                e?.stack,
+                LogContext.COMMUNITY
+              );
+            }
           }
         }
         break;
@@ -1120,6 +1143,29 @@ export class RoleSetService {
       type: roleCredential.type,
       resourceID: roleCredential.resourceID,
     });
+  }
+
+  /**
+   * Whether the actor still holds any role of the role set other than the
+   * one just removed. Reads the credentials directly rather than the
+   * per-actor roles cache, which is only invalidated after the removal's
+   * side effects have run.
+   */
+  private async holdsAnyOtherRole(
+    actorID: string,
+    roleSet: IRoleSet,
+    removedRole: RoleName
+  ): Promise<boolean> {
+    const roleNames = await this.getRoleNames(roleSet);
+    for (const roleName of roleNames) {
+      if (roleName === removedRole) {
+        continue;
+      }
+      if (await this.isInRole(actorID, roleSet, roleName)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private async grantRoleCredential(
@@ -1248,10 +1294,18 @@ export class RoleSetService {
           await this.removeActorFromAccountAdminImplicitRole(roleSet, actorID);
         }
 
-        // Clean up notifications only when the actor is completely removed
-        // (the entry role, ASSOCIATE). If only ADMIN or OWNER is removed, the
-        // actor still has access as an associate.
-        if (roleType === roleSet.entryRoleName) {
+        // Clean up the actor's in-app notifications only once they hold no
+        // role in the organization at all. Any of the roles can be the last
+        // one to go: an admin or owner need not be an associate (the
+        // Associates editor exists for exactly that case), so removing
+        // ASSOCIATE while ADMIN/OWNER stays must keep their feed intact, and
+        // removing ADMIN as the last role must still clear it.
+        const stillHoldsARole = await this.holdsAnyOtherRole(
+          actorID,
+          roleSet,
+          roleType
+        );
+        if (!stillHoldsARole) {
           const adminCredential = await this.getCredentialDefinitionForRole(
             roleSet,
             RoleName.ADMIN
