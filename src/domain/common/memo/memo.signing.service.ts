@@ -21,7 +21,6 @@ import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import * as Y from 'yjs';
-import { yjsStateToMarkdown } from './conversion';
 import { IMemo } from './memo.interface';
 import { MemoPdfRenderer } from './memo.pdf.renderer';
 import { MemoService } from './memo.service';
@@ -58,13 +57,13 @@ export class MemoSigningService {
       memoId,
       actor.actorID
     );
-    const markdown = await this.collaborationDocumentService.read(
+    const state = await this.collaborationDocumentService.read(
       memoId,
       'memo',
       actor.actorID,
-      doc => yjsStateToMarkdown(Buffer.from(Y.encodeStateAsUpdateV2(doc)))
+      doc => Buffer.from(Y.encodeStateAsUpdateV2(doc))
     );
-    const pdf = await this.renderer.render(markdown, storageBucketId, actor);
+    const pdf = await this.renderer.render(state, storageBucketId, actor);
     const snapshot =
       await this.fileServiceAdapter.createInternalDocumentInBucket(
         pdf,
