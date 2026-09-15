@@ -1,8 +1,11 @@
 import { ActorType } from '@common/enums/actor.type';
+import { CommunityMembershipOrigin } from '@common/enums/community.membership.origin';
 import { SpaceLevel } from '@common/enums/space.level';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
+import { NotificationOrganizationAdapter } from '@services/adapters/notification-adapter/notification.organization.adapter';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
@@ -16,8 +19,10 @@ describe('RoleSetEventsService', () => {
   let service: RoleSetEventsService;
   let contributionReporter: ContributionReporterService;
   let notificationAdapterSpace: NotificationSpaceAdapter;
+  let notificationAdapterOrganization: NotificationOrganizationAdapter;
   let activityAdapter: ActivityAdapter;
   let communityResolverService: CommunityResolverService;
+  let organizationLookupService: OrganizationLookupService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -35,9 +40,16 @@ describe('RoleSetEventsService', () => {
     notificationAdapterSpace = module.get<NotificationSpaceAdapter>(
       NotificationSpaceAdapter
     );
+    notificationAdapterOrganization =
+      module.get<NotificationOrganizationAdapter>(
+        NotificationOrganizationAdapter
+      );
     activityAdapter = module.get<ActivityAdapter>(ActivityAdapter);
     communityResolverService = module.get<CommunityResolverService>(
       CommunityResolverService
+    );
+    organizationLookupService = module.get<OrganizationLookupService>(
+      OrganizationLookupService
     );
   });
 
@@ -180,6 +192,66 @@ describe('RoleSetEventsService', () => {
           ActorType.USER
         )
       ).rejects.toThrow(RoleSetMembershipException);
+    });
+  });
+
+  describe('processOrganizationNewAssociateEvents', () => {
+    it('resolves the organization for the role set and dispatches organizationAdminAssociateJoined with the membership origin threaded through', async () => {
+      const mockRoleSet = { id: 'org-rs-1' } as any;
+      const actorContext = { actorID: 'admin-1' } as any;
+
+      (
+        organizationLookupService.getOrganizationForRoleSetOrFail as Mock
+      ).mockResolvedValue({ id: 'org-1' });
+      (
+        notificationAdapterOrganization.organizationAdminAssociateJoined as Mock
+      ).mockResolvedValue(undefined);
+
+      await service.processOrganizationNewAssociateEvents(
+        mockRoleSet,
+        actorContext,
+        'associate-1',
+        CommunityMembershipOrigin.DIRECT
+      );
+
+      expect(
+        organizationLookupService.getOrganizationForRoleSetOrFail
+      ).toHaveBeenCalledWith('org-rs-1');
+      expect(
+        notificationAdapterOrganization.organizationAdminAssociateJoined
+      ).toHaveBeenCalledWith({
+        triggeredBy: 'admin-1',
+        organizationID: 'org-1',
+        associateID: 'associate-1',
+        membershipOrigin: CommunityMembershipOrigin.DIRECT,
+      });
+    });
+
+    it('still dispatches for an INVITATION origin — suppression is the adapter’s job, not this method’s', async () => {
+      const mockRoleSet = { id: 'org-rs-1' } as any;
+      const actorContext = { actorID: 'invitee-1' } as any;
+
+      (
+        organizationLookupService.getOrganizationForRoleSetOrFail as Mock
+      ).mockResolvedValue({ id: 'org-1' });
+      (
+        notificationAdapterOrganization.organizationAdminAssociateJoined as Mock
+      ).mockResolvedValue(undefined);
+
+      await service.processOrganizationNewAssociateEvents(
+        mockRoleSet,
+        actorContext,
+        'associate-1',
+        CommunityMembershipOrigin.INVITATION
+      );
+
+      expect(
+        notificationAdapterOrganization.organizationAdminAssociateJoined
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          membershipOrigin: CommunityMembershipOrigin.INVITATION,
+        })
+      );
     });
   });
 });

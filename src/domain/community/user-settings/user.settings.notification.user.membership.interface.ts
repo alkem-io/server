@@ -16,4 +16,18 @@ export abstract class IUserSettingsNotificationUserMembership {
       'Receive a notification when I am invited to join a Space community',
   })
   spaceCommunityInvitationReceived!: IUserSettingsNotificationChannels;
+
+  @Field(() => IUserSettingsNotificationChannels, {
+    nullable: false,
+    description:
+      'Receive a notification when I am invited to associate with an organisation',
+  })
+  organizationAssociateInvitationReceived!: IUserSettingsNotificationChannels;
+
+  @Field(() => IUserSettingsNotificationChannels, {
+    nullable: false,
+    description:
+      'Receive a notification when an organisation decides on my application to associate',
+  })
+  organizationAssociateApplicationDecided!: IUserSettingsNotificationChannels;
 }
