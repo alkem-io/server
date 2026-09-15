@@ -195,7 +195,10 @@ export const organizationData: { organization: IOrganization } = {
     rowId: 1,
     settings: {
       privacy: { contributionRolesPubliclyVisible: true },
-      membership: { allowUsersMatchingDomainToJoin: false },
+      membership: {
+        allowUsersMatchingDomainToJoin: false,
+        allowSpaceInvitations: true,
+      },
     },
   },
 };

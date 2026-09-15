@@ -213,7 +213,8 @@ function makeHarness({
     userLookupService,
     undefined as any, // calloutLookupService — unused
     undefined as any, // calloutReactionEmailSuppressionService — unused
-    undefined as any // configService — unused
+    undefined as any, // configService — unused
+    undefined as any // actorLookupService — unused
   );
 
   const notificationPlatformAdapter = {

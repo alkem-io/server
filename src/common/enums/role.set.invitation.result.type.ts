@@ -8,6 +8,8 @@ export enum RoleSetInvitationResultType {
   INVITATION_TO_PARENT_NOT_AUTHORIZED = 'invitation-to-parent-not-authorized',
   ALREADY_HAS_OPEN_APPLICATION = 'already-has-open-application',
   ALREADY_MEMBER_OF_ROLE_SET = 'already-member-of-role-set',
+  ORGANIZATION_NOT_ACCEPTING_INVITATIONS = 'organization-not-accepting-invitations',
+  ORGANIZATION_LEAD_ROLE_LIMIT_REACHED = 'organization-lead-role-limit-reached',
 }
 
 registerEnumType(RoleSetInvitationResultType, {

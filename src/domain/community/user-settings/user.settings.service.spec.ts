@@ -70,6 +70,7 @@ describe('UserSettingsService', () => {
         organization: {
           adminMentioned: defaultNotificationSetting(),
           adminMessageReceived: defaultNotificationSetting(),
+          adminSpaceCommunityInvitation: defaultNotificationSetting(),
         },
         user: {
           messageReceived: defaultNotificationSetting(),
@@ -640,6 +641,49 @@ describe('UserSettingsService', () => {
 
       expect(result.notification.platform.admin.spaceCreated.email).toBe(true);
       expect(result.notification.platform.admin.spaceCreated.inApp).toBe(true);
+    });
+  });
+
+  describe('updateSettings - notification.organization', () => {
+    it('should update adminSpaceCommunityInvitation notification', () => {
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = {
+        notification: {
+          organization: {
+            adminSpaceCommunityInvitation: { email: false, push: false },
+          },
+        },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(
+        result.notification.organization.adminSpaceCommunityInvitation.email
+      ).toBe(false);
+      expect(
+        result.notification.organization.adminSpaceCommunityInvitation.push
+      ).toBe(false);
+      expect(
+        result.notification.organization.adminSpaceCommunityInvitation.inApp
+      ).toBe(false);
+    });
+
+    it('should leave adminSpaceCommunityInvitation untouched when omitted', () => {
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = {
+        notification: {
+          organization: {
+            adminMentioned: { email: true },
+          },
+        },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(
+        result.notification.organization.adminSpaceCommunityInvitation
+      ).toEqual(defaultNotificationSetting());
+      expect(result.notification.organization.adminMentioned.email).toBe(true);
     });
   });
 

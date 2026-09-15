@@ -16,4 +16,11 @@ export abstract class IUserSettingsNotificationOrganization {
       'Receive a notification when the organization you are admin of is mentioned',
   })
   adminMentioned!: IUserSettingsNotificationChannels;
+
+  @Field(() => IUserSettingsNotificationChannels, {
+    nullable: false,
+    description:
+      'Receive a notification when an organization you administer is invited to a Space',
+  })
+  adminSpaceCommunityInvitation!: IUserSettingsNotificationChannels;
 }

@@ -25,6 +25,15 @@ export class CreateUserSettingsNotificationSpaceAdminInput {
   @Field(() => CreateUserSettingsNotificationChannelsInput, {
     nullable: false,
     description:
+      'Receive a notification when someone responds to an invitation you sent (admin)',
+  })
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationChannelsInput)
+  communityInvitationResponse!: CreateUserSettingsNotificationChannelsInput;
+
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
+    nullable: false,
+    description:
       'Receive a notification when a new member joins the community (admin)',
   })
   @ValidateNested()

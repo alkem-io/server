@@ -1,9 +1,10 @@
+import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { CalloutLookupModule } from '@domain/collaboration/callout/callout.lookup/callout.lookup.module';
 import { MessageDetailsModule } from '@domain/communication/message.details/message.details.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { NotificationRecipientsModule } from '@services/api/notification-recipients/notification.recipients.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { MessagingRedisModule } from '@services/infrastructure/redis-client/messaging-redis.module';
@@ -35,6 +36,7 @@ import { NotificationVirtualContributorAdapter } from './notification.virtual.co
     SpaceLookupModule,
     UserLookupModule,
     CalloutLookupModule,
+    forwardRef(() => RoleSetModule),
   ],
   providers: [
     NotificationAdapter,

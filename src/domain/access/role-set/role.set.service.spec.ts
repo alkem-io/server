@@ -1,5 +1,6 @@
 import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { CommunityMembershipOrigin } from '@common/enums/community.membership.origin';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { RoleName } from '@common/enums/role.name';
@@ -2663,7 +2664,12 @@ describe('RoleSetService', () => {
         RoleName.MEMBER,
         'user-1',
         expect.anything(),
-        true
+        true,
+        // An approved application carries DIRECT, so the generic "a new
+        // member joined" still reaches the Space admins (R40): there is no
+        // application-approved event to replace it, and suppressing would
+        // leave the approving admin's co-admins told nothing at all.
+        CommunityMembershipOrigin.DIRECT
       );
     });
 
@@ -2958,7 +2964,8 @@ describe('RoleSetService', () => {
           RoleName.MEMBER,
           'user-1',
           expect.anything(),
-          true
+          true,
+          CommunityMembershipOrigin.DIRECT
         );
       });
 
@@ -3003,6 +3010,116 @@ describe('RoleSetService', () => {
         ]);
       });
 
+      it('(R26) suppresses the new-member notification ONLY on the invited role set — every ancestor stays DIRECT', async () => {
+        // The ancestors were never invited to and never applied to, so their
+        // admins receive no invitation-response notification. Marking them
+        // INVITATION too would leave them told nothing at all.
+        const root = spaceRoleSet('root');
+        const mid = spaceRoleSet('mid');
+        const target = spaceRoleSet('target');
+        vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+          root,
+          mid,
+          target,
+        ]);
+        vi.spyOn(service, 'isMember').mockResolvedValue(false);
+        vi.spyOn(service as any, 'grantRoleCredential').mockResolvedValue(
+          undefined
+        );
+        passthroughTransaction();
+        const sideEffects = vi
+          .spyOn(service as any, 'applyRoleGrantSideEffects')
+          .mockResolvedValue(undefined);
+
+        await service.ensureMemberOfRoleSetAndAncestors(
+          target,
+          'user-1',
+          { actorID: 'user-1' } as any,
+          { source: 'invitation', invitedToParent: true }
+        );
+
+        expect(
+          sideEffects.mock.calls.map((c: any[]) => ({
+            roleSetId: c[0].id,
+            origin: c[6],
+          }))
+        ).toEqual([
+          { roleSetId: 'root', origin: CommunityMembershipOrigin.DIRECT },
+          { roleSetId: 'mid', origin: CommunityMembershipOrigin.DIRECT },
+          {
+            roleSetId: 'target',
+            origin: CommunityMembershipOrigin.INVITATION,
+          },
+        ]);
+      });
+
+      it('(R40) leaves an approved application on DIRECT for every role set — nothing replaces the generic notification', async () => {
+        const root = spaceRoleSet('root');
+        const target = spaceRoleSet('target');
+        vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+          root,
+          target,
+        ]);
+        vi.spyOn(service, 'isMember').mockResolvedValue(false);
+        vi.spyOn(
+          service as any,
+          'isCombinedApplicationGrantAuthorised'
+        ).mockResolvedValue(true);
+        vi.spyOn(service as any, 'grantRoleCredential').mockResolvedValue(
+          undefined
+        );
+        passthroughTransaction();
+        const sideEffects = vi
+          .spyOn(service as any, 'applyRoleGrantSideEffects')
+          .mockResolvedValue(undefined);
+
+        await service.ensureMemberOfRoleSetAndAncestors(
+          target,
+          'user-1',
+          { actorID: 'user-1' } as any,
+          { source: 'application' }
+        );
+
+        expect(
+          sideEffects.mock.calls.map((c: any[]) => ({
+            roleSetId: c[0].id,
+            origin: c[6],
+          }))
+        ).toEqual([
+          { roleSetId: 'root', origin: CommunityMembershipOrigin.DIRECT },
+          { roleSetId: 'target', origin: CommunityMembershipOrigin.DIRECT },
+        ]);
+      });
+
+      it('(R26) does not suppress for a Virtual Contributor — that actor type has no invitation-response notification', async () => {
+        (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+          ActorType.VIRTUAL_CONTRIBUTOR
+        );
+        const target = spaceRoleSet('target');
+        vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+          target,
+        ]);
+        vi.spyOn(service, 'isMember').mockResolvedValue(false);
+        vi.spyOn(service as any, 'grantRoleCredential').mockResolvedValue(
+          undefined
+        );
+        passthroughTransaction();
+        const sideEffects = vi
+          .spyOn(service as any, 'applyRoleGrantSideEffects')
+          .mockResolvedValue(undefined);
+
+        await service.ensureMemberOfRoleSetAndAncestors(
+          target,
+          'vc-1',
+          { actorID: 'user-1' } as any,
+          { source: 'invitation', invitedToParent: true }
+        );
+
+        expect(sideEffects.mock.calls[0][6]).toBe(
+          CommunityMembershipOrigin.DIRECT
+        );
+      });
+
       it('does not touch open-application / open-invitation caches (a direct join has neither)', async () => {
         const target = spaceRoleSet('target');
         vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
@@ -3040,6 +3157,94 @@ describe('RoleSetService', () => {
         expect(appCache).not.toHaveBeenCalled();
         expect(invCache).not.toHaveBeenCalled();
       });
+    });
+  });
+
+  describe('getRoleSetsToJoinOnAccept', () => {
+    const spaceRoleSet = (id: string): IRoleSet =>
+      ({ id, type: RoleSetType.SPACE }) as unknown as IRoleSet;
+
+    it('returns only the target when invitedToParent is false', async () => {
+      const target = spaceRoleSet('target');
+      const chainSpy = vi.spyOn(service, 'getRoleSetAncestorChain');
+
+      const result = await service.getRoleSetsToJoinOnAccept(
+        target,
+        'actor-1',
+        false
+      );
+
+      expect(result).toEqual([target]);
+      expect(chainSpy).not.toHaveBeenCalled();
+    });
+
+    it('returns the missing-only ancestor chain, root first, target last, when invitedToParent is true', async () => {
+      const root = spaceRoleSet('root');
+      const mid = spaceRoleSet('mid');
+      const target = spaceRoleSet('target');
+      vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+        root,
+        mid,
+        target,
+      ]);
+      // Already a member of root; missing mid and target.
+      vi.spyOn(service, 'isMember').mockImplementation(
+        async (_actorID: string, rs: IRoleSet) => rs.id === 'root'
+      );
+
+      const result = await service.getRoleSetsToJoinOnAccept(
+        target,
+        'actor-1',
+        true
+      );
+
+      expect(result).toEqual([mid, target]);
+    });
+
+    it('always includes the target — the invitee is never already a member of it', async () => {
+      const root = spaceRoleSet('root');
+      const target = spaceRoleSet('target');
+      vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+        root,
+        target,
+      ]);
+      vi.spyOn(service, 'isMember').mockResolvedValue(false);
+
+      const result = await service.getRoleSetsToJoinOnAccept(
+        target,
+        'actor-1',
+        true
+      );
+
+      expect(result).toEqual([root, target]);
+    });
+  });
+
+  describe('getSpacesToJoinOnAccept', () => {
+    it('maps the RoleSets to join, in order, to their Spaces via one shared computation', async () => {
+      const target = { id: 'target', type: RoleSetType.SPACE } as IRoleSet;
+      const roleSetsSpy = vi
+        .spyOn(service, 'getRoleSetsToJoinOnAccept')
+        .mockResolvedValue([
+          { id: 'root' } as IRoleSet,
+          { id: 'target' } as IRoleSet,
+        ]);
+      const communityResolverService = (service as any)
+        .communityResolverService;
+      (
+        communityResolverService.getSpaceForRoleSetOrFail as Mock
+      ).mockImplementation(async (roleSetID: string) => ({
+        id: `space-${roleSetID}`,
+      }));
+
+      const result = await service.getSpacesToJoinOnAccept(
+        target,
+        'actor-1',
+        true
+      );
+
+      expect(roleSetsSpy).toHaveBeenCalledWith(target, 'actor-1', true);
+      expect(result).toEqual([{ id: 'space-root' }, { id: 'space-target' }]);
     });
   });
 

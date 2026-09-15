@@ -22,4 +22,13 @@ export class UpdateUserSettingsNotificationOrganizationInput {
   @ValidateNested()
   @Type(() => NotificationSettingInput)
   adminMentioned?: NotificationSettingInput;
+
+  @Field(() => NotificationSettingInput, {
+    nullable: true,
+    description:
+      'Receive a notification when an organization you administer is invited to a Space',
+  })
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  adminSpaceCommunityInvitation?: NotificationSettingInput;
 }
