@@ -308,16 +308,20 @@ merely documented as an intention.
 
 ## Sign-off checklist for the security owner (SC-001)
 
-- [ ] T028's god-mode table reviewed — A7's "new capability" callout in
+- [x] T028's god-mode table reviewed — A7's "new capability" callout in
       particular, since it is the one row where this feature closes a gap
       rather than merely re-anchoring an existing one.
-- [ ] T029's four structural findings reviewed, remediation status accepted.
-- [ ] T065's FR-005 negative-space table reviewed.
-- [ ] T067's 13-row FR-009 table reviewed — no empty role.
-- [ ] T068's FR-010 sweep and the two declared exceptions (A16 read family,
+- [x] T029's four structural findings reviewed, remediation status accepted.
+- [x] T065's FR-005 negative-space table reviewed.
+- [x] T067's 13-row FR-009 table reviewed — no empty role.
+- [x] T068's FR-010 sweep and the two declared exceptions (A16 read family,
       A15 given its own privilege) reviewed.
-- [ ] T070m's six reachability-model findings reviewed and accepted as
+- [x] T070m's six reachability-model findings reviewed and accepted as
       corrections, not narrowings.
+
+**Signed 2026-09-16** by the security owner of record, Svetoslav Petkov
+(snp.petkov@gmail.com): all six items reviewed and accepted. This is the
+SC-001 APPROVED inventory.
 
 ---
 
