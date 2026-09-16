@@ -700,6 +700,18 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
         'src/domain/template/template/template.resolver.mutations.ts',
         'deleteTemplate',
       ],
+      // 2026-09-16 (R-F.2 sandbox walk): a CALLOUT template's content is
+      // edited through the generic `updateCallout`, whose gate had never
+      // taken A7's dual path — Support could create and delete a template
+      // in an organization's pack but not edit one. The branch is scoped
+      // to `callout.isTemplate` in code (the account cascade also reaches
+      // callouts inside an organization's SPACES, which FR-008(a) keeps
+      // closed to Support); the census declares the privilege reach — a
+      // matrix cell for this member must use a TEMPLATE callout fixture.
+      [
+        'src/domain/collaboration/callout/callout.resolver.mutations.ts',
+        'updateCallout',
+      ],
     ] as const
   ).map(
     ([file, member]): SurfaceRef => ({

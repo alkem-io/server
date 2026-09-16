@@ -204,6 +204,73 @@ describe('CalloutResolverMutations', () => {
       expect(authorizationPolicyService.saveAll).toHaveBeenCalled();
     });
 
+    // 027 A7 (R-F.2 sandbox walk, 2026-09-16): a CALLOUT template's content is
+    // a callout the client edits through THIS mutation (`UpdateCalloutTemplate`
+    // → `updateCallout`), and its policy carries Platform Support's cascaded
+    // PLATFORM_SUPPORT_ORG_RESOURCES — but the gate only ever asked for UPDATE,
+    // so Support could create and delete templates in an organization's pack
+    // and not edit one. Dual path, SCOPED to template content: the same
+    // cascade reaches every callout inside an organization's spaces, and
+    // FR-008(a) keeps Support out of those unless the space opts in.
+    describe('Platform Support on template content (A7 dual path)', () => {
+      const arrangeSupportHolding = (isTemplate: boolean) => {
+        const callout = {
+          id: 'callout-t',
+          isTemplate,
+          authorization: { id: 'auth-t' },
+        } as any;
+        vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+        vi.mocked(calloutService.updateCallout).mockResolvedValue(callout);
+        vi.mocked(
+          (resolver as any).roomResolverService
+            .getRoleSetAndPlatformRolesWithAccessForCallout
+        ).mockResolvedValue({
+          roleSet: { id: 'rs-1' },
+          platformRolesAccess: { roles: [] },
+        });
+        vi.mocked(
+          calloutAuthorizationService.applyAuthorizationPolicy
+        ).mockResolvedValue([]);
+        // Holds ONLY Support's privilege on the callout — never UPDATE.
+        vi.mocked(authorizationService.isAccessGranted).mockImplementation(
+          ((_a: unknown, _p: unknown, privilege: AuthorizationPrivilege) =>
+            privilege ===
+            AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES) as any
+        );
+        return callout;
+      };
+
+      it('PLATFORM_SUPPORT_ORG_RESOURCES alone updates a TEMPLATE callout without UPDATE', async () => {
+        arrangeSupportHolding(true);
+        const actorContext = { actorID: 'support' } as any;
+
+        await resolver.updateCallout(actorContext, {
+          ID: 'callout-t',
+          framing: {},
+        } as any);
+
+        expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+        expect(calloutService.updateCallout).toHaveBeenCalled();
+      });
+
+      it('the same privilege does NOT open a non-template callout — falls through to the owner UPDATE check', async () => {
+        const callout = arrangeSupportHolding(false);
+        const actorContext = { actorID: 'support' } as any;
+
+        await resolver.updateCallout(actorContext, {
+          ID: 'callout-t',
+          framing: {},
+        } as any);
+
+        expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+          actorContext,
+          callout.authorization,
+          AuthorizationPrivilege.UPDATE,
+          expect.any(String)
+        );
+      });
+    });
+
     it('resolves an ID-only source Callout into internal default content before update', async () => {
       const target = {
         id: 'target-callout',

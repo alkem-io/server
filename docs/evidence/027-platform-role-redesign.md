@@ -43,7 +43,7 @@ the two legacy cascades.
 | A4 | Change login email | 3 | ✅ | ✅ |
 | A5 | Delete user; reset identity/account | 3 | ✅ | ✅ |
 | A6 | Create/delete organization | 2 | ✅ (delete only) | ✅ (delete only) |
-| **A7** | **Edit org-owned pack/hub + template CRUD** | **8** | ✅ **new capability** (research C2 — org-owned packs/hubs sit under the `account` tree, which the root cascade already reaches; **T037 makes this an explicit gate, closing a path that was previously reachable ONLY by inheritance**) — spec-server-14 fix: scoped to ORGANIZATION-hosted accounts only, not every account | ✅ |
+| **A7** | **Edit org-owned pack/hub + template CRUD** | **8** → **9** *(2026-09-16: `updateCallout` on template content, scoped to `isTemplate`)* | ✅ **new capability** (research C2 — org-owned packs/hubs sit under the `account` tree, which the root cascade already reaches; **T037 makes this an explicit gate, closing a path that was previously reachable ONLY by inheritance**) — spec-server-14 fix: scoped to ORGANIZATION-hosted accounts only, not every account | ✅ |
 | A8 | Delete callout/contribution/space; delete org pack/hub; set publisher | 6 | ✅ | ✅ |
 | A9 | Move space/hub/pack/VC/callout | 13 | ✅ (4 of 13 via legacy `TRANSFER_*`; 7 of 13 via a resolver-local synthetic `PLATFORM_ADMIN` policy, not the root cascade) | partial |
 | A10 | Platform settings/config | 6 | ✅ | ✅ |
@@ -468,3 +468,17 @@ not a census row (a list read is not an A-row; `SCANNED_PRIVILEGES`,
 | Closure | `PRIVILEGE_COVERAGE` gained the key (`unit.coverage.spec.ts`); `reachability.spec.ts` / `surface.drift.spec.ts` unchanged and green | green |
 | Schema | +1 `AuthorizationPrivilege` value, additive; `schema:diff`/`schema:validate` clean | green |
 | Live (`:4027`, acceptance restore, `roles-admin-2@alkem.io` as subject) | reset → subject lacks the privilege and is refused the pack list → grant `PLATFORM_SUPPORT` → platform policy reports the privilege (and neither `PLATFORM_ADMIN` nor `PLATFORM_CONTENT_FULL_ACCESS`) → the three lists load → `spaces`/`accounts`/`virtualContributors`/`users` refused → revoke → refused again | 20/20 |
+
+### A7 gap found on the sandbox walk (2026-09-16, T102)
+
+Support could create and delete templates in an organization's pack but not
+**edit** a callout template: the client edits its content through the generic
+`updateCallout` (`UpdateCalloutTemplate`), whose gate checked plain `UPDATE`
+and never took A7's dual path — although the callout's stored policy already
+carried the cascaded `PLATFORM_SUPPORT_ORG_RESOURCES` (a template callout takes
+its parent's policy verbatim). Fixed as a dual path **scoped to
+`callout.isTemplate`**: the same account cascade reaches every callout inside
+an organization's spaces, which FR-008(a) keeps closed to Support. Ninth A7
+census entry; `reachability.spec.ts` / `surface.drift.spec.ts` green; RED→GREEN
+resolver spec asserts the privilege opens a template callout and does NOT open
+a non-template one.

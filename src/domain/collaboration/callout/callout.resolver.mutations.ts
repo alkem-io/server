@@ -204,12 +204,34 @@ export class CalloutResolverMutations {
         calloutsSet: { authorization: true },
       },
     });
-    this.authorizationService.grantAccessOrFail(
-      actorContext,
-      callout.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `update callout: ${callout.id}`
-    );
+    // 027-platform-role-redesign (A7, research D5) — dual path, SCOPED to
+    // template content. A CALLOUT template's content is a callout the client
+    // edits through this mutation (`UpdateCalloutTemplate`), and its policy
+    // carries Platform Support's PLATFORM_SUPPORT_ORG_RESOURCES cascaded from
+    // the owning organization's account (`template.service.authorization.ts`
+    // → `callout.service.authorization.ts`: a template callout takes its
+    // parent's policy verbatim). Without this branch Support could create and
+    // delete templates in an organization's pack but not edit one (sandbox
+    // walk, 2026-09-16). The `isTemplate` guard is load-bearing: the same
+    // account cascade reaches every callout inside an organization's spaces,
+    // and FR-008(a) keeps Support out of those unless the space opts in via
+    // `allowPlatformSupportAsAdmin` — so the privilege must never satisfy
+    // this gate for a non-template callout.
+    const canUpdateAsPlatformSupport =
+      callout.isTemplate &&
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        callout.authorization,
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+      );
+    if (!canUpdateAsPlatformSupport) {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        callout.authorization,
+        AuthorizationPrivilege.UPDATE,
+        `update callout: ${callout.id}`
+      );
+    }
 
     const defaults = calloutData.contributionDefaults;
     const defaultsDraftID = defaults?.draftWhiteboardID;
