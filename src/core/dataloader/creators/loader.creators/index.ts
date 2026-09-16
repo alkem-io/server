@@ -17,6 +17,7 @@ export * from './collaboration/knowledge.base.callouts.set.loader.creator';
 export * from './community/community.roleset.loader.creator';
 export * from './conversation/conversation.memberships.loader.creator';
 export * from './in-app-notification/actor.loader.creator';
+export * from './in-app-notification/application.loader.creator';
 export * from './in-app-notification/callout.loader.creator';
 export * from './in-app-notification/invitation.loader.creator';
 export * from './in-app-notification/poll.loader.creator';

@@ -61,4 +61,31 @@ describe('Organization entity — applyMembershipSettingsDefaults (@AfterLoad)',
 
     expect(() => organization.applyMembershipSettingsDefaults()).not.toThrow();
   });
+
+  it('fills in allowApplications with the mandated default (true) when absent', () => {
+    const organization = new Organization();
+    organization.settings = {
+      membership: { allowUsersMatchingDomainToJoin: false },
+      privacy: { contributionRolesPubliclyVisible: true },
+    } as any;
+
+    organization.applyMembershipSettingsDefaults();
+
+    expect(organization.settings.membership.allowApplications).toBe(true);
+  });
+
+  it('never overwrites an existing explicit allowApplications: false', () => {
+    const organization = new Organization();
+    organization.settings = {
+      membership: {
+        allowUsersMatchingDomainToJoin: false,
+        allowApplications: false,
+      },
+      privacy: { contributionRolesPubliclyVisible: true },
+    } as any;
+
+    organization.applyMembershipSettingsDefaults();
+
+    expect(organization.settings.membership.allowApplications).toBe(false);
+  });
 });

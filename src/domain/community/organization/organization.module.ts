@@ -6,6 +6,7 @@ import { LicenseEntitlementModule } from '@domain/common/license-entitlement/lic
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { Organization } from '@domain/community/organization';
 import { UserGroupModule } from '@domain/community/user-group/user-group.module';
+import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { AccountHostModule } from '@domain/space/account.host/account.host.module';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
@@ -37,6 +38,7 @@ import { OrganizationLicenseService } from './organization.service.license';
     OrganizationLookupModule,
     OrganizationSettingsModule,
     UserGroupModule,
+    UserLookupModule,
     EntityResolverModule,
     NamingModule,
     PlatformAuthorizationPolicyModule,
