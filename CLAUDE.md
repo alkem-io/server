@@ -122,7 +122,7 @@ loggable accounts for the platform roles. All share `AUTH_ADMIN_PASSWORD` from
 
 | Account | Role |
 |---|---|
-| `admin@alkem.io` | `global-admin` + `platform-roles-admin` (bootstrap-seeded) |
+| `admin@alkem.io` | `global-admin` + `platform-roles-admin` + `platform-operations-admin` + `platform-users-admin` + `platform-settings-admin` (bootstrap-seeded) |
 | `ops@alkem.io` | `platform-operations-admin` |
 | `users-admin@alkem.io` | `platform-users-admin` |
 | `support@alkem.io` | `platform-support` |

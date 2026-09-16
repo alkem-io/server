@@ -9,6 +9,15 @@
           "type": "platform-roles-admin"
         },
         {
+          "type": "platform-operations-admin"
+        },
+        {
+          "type": "platform-users-admin"
+        },
+        {
+          "type": "platform-settings-admin"
+        },
+        {
           "type": "global-admin"
         }
       ]

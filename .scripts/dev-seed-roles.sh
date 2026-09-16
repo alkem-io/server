@@ -185,7 +185,7 @@ cat <<EOF
 Done. All accounts share admin's password (AUTH_ADMIN_PASSWORD in .env);
 override with DEV_SEED_PASSWORD.
 
-  admin@alkem.io        platform-roles-admin        (bootstrap; assignment only)
+  admin@alkem.io        platform-roles-admin + operations/users/settings-admin (bootstrap)
   ops@alkem.io          platform-operations-admin   (authorization reset lives here)
   users-admin@alkem.io  platform-users-admin
   support@alkem.io      platform-support

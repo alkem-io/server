@@ -578,8 +578,24 @@ describe('BootstrapService', () => {
   //
   // Deviation from FR-013/T055 as written, accepted 2026-08-06. Recorded in
   // the workspace spec's residual-risks register (R-A.1).
+  //
+  //   2026-09-16     ADDED `platform-operations-admin`, `platform-users-admin`
+  //                  and `platform-settings-admin` — the R-A.1 greenfield
+  //                  first-boot gate was signed as a SEEDING decision. Roles
+  //                  Admin cannot self-assign, so on a fresh install with ONE
+  //                  human every un-seeded role is unreachable until a second
+  //                  account exists. The seeded set is what one person needs to
+  //                  bootstrap an environment: recover (authorization reset),
+  //                  manage people (identities, emails, Feature roles) and
+  //                  configure (platform settings). Deliberately NOT seeded:
+  //                  content-full-access (the scoped god mode), audit-reader
+  //                  (rule 4 exclusion — fatal), spaces-reader (rule 3, service
+  //                  accounts only — fatal), support/resource/license/feature.
+  //                  Being a human account, a PRE-EXISTING admin@alkem.io is NOT
+  //                  auto-granted these on restart — that is a Slice B runbook
+  //                  (T071a) item, not a bootstrap one.
   describe('users.json seed data', () => {
-    it('seeds admin@alkem.io with the break-glass role AND legacy global-admin (Slice A additivity)', () => {
+    it('seeds admin@alkem.io with the break-glass role, the three R-A.1 bootstrap roles AND legacy global-admin (Slice A additivity)', () => {
       const admin = (seededUsers as any).default
         ? (seededUsers as any).default.users.find(
             (u: any) => u.email === 'admin@alkem.io'
@@ -591,7 +607,13 @@ describe('BootstrapService', () => {
       const credentialTypes = admin.credentials.map((c: any) => c.type);
       // `platform-roles-admin` first: it is the FR-013b break-glass role and
       // the only one re-granted on a restart against a pre-existing account.
-      expect(credentialTypes).toEqual(['platform-roles-admin', 'global-admin']);
+      expect(credentialTypes).toEqual([
+        'platform-roles-admin',
+        'platform-operations-admin',
+        'platform-users-admin',
+        'platform-settings-admin',
+        'global-admin',
+      ]);
     });
 
     it('grants no OTHER legacy global role — the deviation is exactly one credential', () => {
