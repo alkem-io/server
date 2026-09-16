@@ -8,6 +8,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IOrganizationSettings } from '../organization-settings/organization.settings.interface';
 import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
+import { IOrganizationAssociateEligibility } from './dto/organization.associate.eligibility.dto';
 
 @ObjectType('Organization', {
   implements: () => [IGroupable, IActorFull],
@@ -62,4 +63,6 @@ export class IOrganization extends IActor implements IActorFull {
   verification?: IOrganizationVerification;
 
   storageAggregator?: IStorageAggregator;
+
+  myAssociateEligibility?: IOrganizationAssociateEligibility;
 }

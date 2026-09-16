@@ -65,4 +65,9 @@ export class Invitation extends AuthorizableEntity implements IInvitation {
 
   @Column('varchar', { length: TINY_TEXT_LENGTH, nullable: true })
   suggestedLanguage?: string;
+
+  // Transient (no @Column, never persisted) — set only on the object
+  // returned by the accept mutation for organization role sets when an
+  // offered extra role could not be granted.
+  extraRolesWithheld?: RoleName[];
 }

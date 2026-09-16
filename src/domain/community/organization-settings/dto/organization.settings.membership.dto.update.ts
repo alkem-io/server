@@ -25,4 +25,13 @@ export class UpdateOrganizationSettingsMembershipInput {
   @IsBoolean()
   @IsOptional()
   allowSpaceInvitations?: boolean;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description:
+      'Allow registered users to apply to associate with this Organization.',
+  })
+  @IsBoolean()
+  @IsOptional()
+  allowApplications?: boolean;
 }

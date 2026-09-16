@@ -28,7 +28,10 @@ import {
   Repository,
 } from 'typeorm';
 import { RoleSetCacheService } from '../role-set/role.set.service.cache';
-import { ApplicationLifecycleService } from './application.service.lifecycle';
+import {
+  ApplicationLifecycleService,
+  ApplicationLifecycleState,
+} from './application.service.lifecycle';
 
 @Injectable()
 export class ApplicationService {
@@ -212,6 +215,13 @@ export class ApplicationService {
   /** Synchronous check when the entity (with eager lifecycle) is already loaded. */
   isApplicationFinalized(application: IApplication): boolean {
     return this.applicationLifecycleService.isFinalState(application.lifecycle);
+  }
+
+  /** Synchronous state read when the entity (with eager lifecycle) is already loaded. */
+  getApplicationState(application: IApplication): ApplicationLifecycleState {
+    return this.applicationLifecycleService.getState(
+      application.lifecycle
+    ) as ApplicationLifecycleState;
   }
 
   async getQuestionsSorted(application: IApplication): Promise<IQuestion[]> {

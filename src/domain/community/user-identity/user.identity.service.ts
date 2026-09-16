@@ -1,5 +1,4 @@
 import { LogContext } from '@common/enums';
-import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 import { RoleName } from '@common/enums/role.name';
 import { VisualType } from '@common/enums/visual.type';
 import {
@@ -11,6 +10,7 @@ import { UserNotVerifiedException } from '@common/exceptions/user/user.not.verif
 import { getEmailDomain } from '@common/utils';
 import { KratosSessionData } from '@core/authentication/kratos.session';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { isDomainJoinEligible } from '@domain/community/organization/organization.domain.join.policy';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { CreateUserInput } from '@domain/community/user/dto/user.dto.create';
 import { User } from '@domain/community/user/user.entity';
@@ -347,18 +347,6 @@ export class UserIdentityService {
       return;
     }
 
-    const orgSettings = org.settings;
-    const orgMatchDomain =
-      orgSettings.membership.allowUsersMatchingDomainToJoin;
-
-    if (!orgMatchDomain) {
-      this.logger.verbose?.(
-        `Organization '${org.id}' setting 'allowUsersMatchingDomainToJoin' is disabled`,
-        LogContext.COMMUNITY
-      );
-      return;
-    }
-
     if (!org.verification || !org.roleSet) {
       throw new RelationshipNotFoundException(
         `Unable to load roleSet or Verification for Organization for matching user domain ${org.id}`,
@@ -366,12 +354,10 @@ export class UserIdentityService {
       );
     }
 
-    if (
-      org.verification.status !==
-      OrganizationVerificationEnum.VERIFIED_MANUAL_ATTESTATION
-    ) {
+    const eligibility = isDomainJoinEligible(org, userEmailDomain);
+    if (!eligibility.eligible) {
       this.logger.verbose?.(
-        `Organization '${org.id}' not verified`,
+        `Organization '${org.id}' domain-join not eligible for user ${user.id}: ${eligibility.reason}`,
         LogContext.COMMUNITY
       );
       return;

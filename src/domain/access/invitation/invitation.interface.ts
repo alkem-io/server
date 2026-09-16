@@ -37,4 +37,11 @@ export class IInvitation extends IAuthorizable {
       'Optional language the inviter expects the invitee to prefer; recorded per invitation.',
   })
   suggestedLanguage?: string;
+
+  @Field(() => [RoleName], {
+    nullable: true,
+    description:
+      'Offered extra roles that could not be granted when this invitation was accepted (organizations only, cap consumed in the meantime). Transient: set only on the object returned by the accept mutation, never persisted, and null everywhere else.',
+  })
+  extraRolesWithheld?: RoleName[];
 }

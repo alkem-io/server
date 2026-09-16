@@ -3,6 +3,8 @@ import { LogContext } from '@common/enums/logging.context';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
 import { BaseException } from '@common/exceptions/base.exception';
 import { Field, InterfaceType } from '@nestjs/graphql';
+import { InAppNotificationPayloadOrganizationAssociateActor } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.associate.actor';
+import { InAppNotificationPayloadOrganizationAssociateInvitation } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.associate.invitation';
 import { InAppNotificationPayloadOrganizationMessageDirect } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.direct';
 import { InAppNotificationPayloadOrganizationMessageRoom } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.room';
 import { InAppNotificationPayloadPlatformForumDiscussion } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.forum.discussion';
@@ -45,6 +47,10 @@ import { InAppNotificationPayloadSpaceCommunityCalendarEventComment } from './dt
         return InAppNotificationPayloadOrganizationMessageDirect;
       case NotificationEventPayload.ORGANIZATION_MESSAGE_ROOM:
         return InAppNotificationPayloadOrganizationMessageRoom;
+      case NotificationEventPayload.ORGANIZATION_ASSOCIATE_INVITATION:
+        return InAppNotificationPayloadOrganizationAssociateInvitation;
+      case NotificationEventPayload.ORGANIZATION_ASSOCIATE_ACTOR:
+        return InAppNotificationPayloadOrganizationAssociateActor;
 
       // Space notifications
       case NotificationEventPayload.SPACE:
