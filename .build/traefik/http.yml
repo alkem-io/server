@@ -194,6 +194,17 @@ http:
           X-Alkemio-Actor-Name: ""
           X-Alkemio-Session-Id: ""
 
+    # workspace#059: local parity with the production / dev-orchestration
+    # `wopi-private-path-rewrite` middleware. Maps the external preview contract
+    # path onto the protected /wopi-private root wopi-service registers the
+    # handler under. NOTE: this must run BEFORE any path-mutating middleware --
+    # strip-api-private-prefix would rewrite the path first and leave this
+    # regex with nothing to match, silently skipping the private rewrite.
+    wopi-private-path-rewrite:
+      replacePathRegex:
+        regex: '^/api/private/wopi/files/(.*)$'
+        replacement: '/wopi-private/files/$1'
+
     # workspace#038 / #1912: local parity with the production `mcp-api`
     # IngressRoute's `mcp-strip-delegation-headers`. External MCP callers must
     # never be able to attempt the internal-only delegated flow, so every
@@ -550,10 +561,33 @@ http:
         - 'web'
       priority: 155
 
-    # WOPI protocol endpoints (direct, opaque token auth — same domain as Collabora)
-    wopi-protocol:
-      rule: 'PathPrefix(`/wopi`)'
+    # workspace#059: authorized document preview. Identity at the gateway (same
+    # pattern as wopi-token), then the path is rewritten onto the protected
+    # /wopi-private root. Mirrors the infrastructure-operations and
+    # dev-orchestration IngressRoutes so local dev has the same routing as the
+    # cluster — without this the path falls through to the web client and every
+    # preview 404s.
+    wopi-preview:
+      rule: 'PathPrefix(`/api/private/wopi/files`)'
       service: 'wopi-service'
+      middlewares:
+        - strip-client-alkemio-headers
+        - alkemio-resolve
+        - wopi-private-path-rewrite
+      entryPoints:
+        - 'web'
+      priority: 156
+
+    # WOPI protocol endpoints (direct, opaque token auth — same domain as Collabora).
+    # Segment-safe by design: a lexical PathPrefix(`/wopi`) also matches
+    # /wopi-private and would expose the preview handler on this unauthenticated
+    # route. Client-supplied actor headers are stripped here for the same reason
+    # wopi-token strips them — wopi-service trusts X-Alkemio-Actor-Id as identity.
+    wopi-protocol:
+      rule: 'Path(`/wopi`) || PathPrefix(`/wopi/`)'
+      service: 'wopi-service'
+      middlewares:
+        - strip-client-alkemio-headers
       entryPoints:
         - 'web'
       priority: 145
