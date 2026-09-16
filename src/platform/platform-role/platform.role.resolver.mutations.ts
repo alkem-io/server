@@ -227,7 +227,11 @@ export class PlatformRoleResolverMutations {
       // role would be inert once Slice B drops platform-beta-tester (FR-009,
       // SC-007) — this is the one target role whose capability lives in a
       // manual entitlement grant rather than an authorization policy.
-      roleData.role === RoleName.FEATURE_BETA_TESTER
+      roleData.role === RoleName.FEATURE_BETA_TESTER ||
+      // Feature VC Campaign: same parity argument — the legacy
+      // platform-vc-campaign grant wrote this entitlement too, and the
+      // dashboard offer it targets requires role AND entitlement.
+      roleData.role === RoleName.FEATURE_VC_CAMPAIGN
     ) {
       // Also assign the user account a license plan
       // Account IS the Actor - use accountID directly as actorID
@@ -355,7 +359,8 @@ export class PlatformRoleResolverMutations {
     if (
       roleData.role === RoleName.PLATFORM_BETA_TESTER ||
       roleData.role === RoleName.PLATFORM_VC_CAMPAIGN ||
-      roleData.role === RoleName.FEATURE_BETA_TESTER // T040a
+      roleData.role === RoleName.FEATURE_BETA_TESTER || // T040a
+      roleData.role === RoleName.FEATURE_VC_CAMPAIGN
     ) {
       // Also remove the user account a license plan
       // Account IS the Actor - use accountID directly as actorID

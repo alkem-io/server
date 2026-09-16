@@ -17,4 +17,5 @@ export enum AuthorizationRoleGlobal {
   FEATURE_BETA_TESTER = 'feature-beta-tester',
   FEATURE_VIRTUAL_ASSISTANT = 'feature-virtual-assistant',
   FEATURE_ORGANIZATION_CREATOR = 'feature-organization-creator',
+  FEATURE_VC_CAMPAIGN = 'feature-vc-campaign',
 }

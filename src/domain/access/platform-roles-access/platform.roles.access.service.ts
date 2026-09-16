@@ -69,6 +69,7 @@ export const ROLE_CREDENTIAL_MAP: Record<RoleName, AuthorizationCredential> = {
     AuthorizationCredential.FEATURE_VIRTUAL_ASSISTANT,
   [RoleName.FEATURE_ORGANIZATION_CREATOR]:
     AuthorizationCredential.FEATURE_ORGANIZATION_CREATOR,
+  [RoleName.FEATURE_VC_CAMPAIGN]: AuthorizationCredential.FEATURE_VC_CAMPAIGN,
   [RoleName.REGISTERED]: AuthorizationCredential.GLOBAL_REGISTERED,
   [RoleName.GUEST]: AuthorizationCredential.GLOBAL_GUEST,
   [RoleName.ANONYMOUS]: AuthorizationCredential.GLOBAL_ANONYMOUS,

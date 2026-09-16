@@ -223,6 +223,41 @@ describe('PlatformRoleResolverMutations', () => {
       );
     });
 
+    // Feature VC Campaign mirrors T040a: the legacy platform-vc-campaign grant
+    // ALSO wrote the trial entitlement (the banner requires role AND
+    // entitlement), so the successor must too or the offer it targets is
+    // inert once Slice B drops the legacy role.
+    it('grants FEATURE_VC_CAMPAIGN the SAME trial license entitlement as legacy PLATFORM_VC_CAMPAIGN', async () => {
+      const actorContextWithCredentials = {
+        actorID: 'actor-1',
+        credentials: [{ type: AuthorizationCredential.PLATFORM_USERS_ADMIN }],
+      } as any;
+      const roleData = {
+        actorID: 'user-target',
+        role: RoleName.FEATURE_VC_CAMPAIGN,
+      };
+
+      (actorService.grantCredentialOrFail as Mock).mockResolvedValue(undefined);
+      (accountService.getAccountOrFail as Mock).mockResolvedValue({
+        id: 'account-1',
+      });
+      (accountLicenseService.applyLicensePolicy as Mock).mockResolvedValue([]);
+      (licenseService.saveAll as Mock).mockResolvedValue([]);
+
+      await resolver.assignPlatformRoleToUser(
+        actorContextWithCredentials,
+        roleData as any
+      );
+
+      expect(actorService.grantCredentialOrFail).toHaveBeenCalledWith(
+        'account-1',
+        expect.objectContaining({
+          type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
+          resourceID: 'account-1',
+        })
+      );
+    });
+
     it('should send global role change notification', async () => {
       const roleData = {
         actorID: 'user-target',
@@ -338,6 +373,36 @@ describe('PlatformRoleResolverMutations', () => {
         AuthorizationPrivilege.GRANT,
         expect.any(String)
       );
+      expect(actorService.revokeCredential).toHaveBeenCalledWith(
+        'account-1',
+        expect.objectContaining({
+          type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
+        })
+      );
+    });
+
+    it('revokes the trial license entitlement when FEATURE_VC_CAMPAIGN is removed (parity with legacy)', async () => {
+      const actorContextWithCredentials = {
+        actorID: 'actor-1',
+        credentials: [{ type: AuthorizationCredential.PLATFORM_USERS_ADMIN }],
+      } as any;
+      const roleData = {
+        actorID: 'user-target',
+        role: RoleName.FEATURE_VC_CAMPAIGN,
+      };
+
+      (actorService.revokeCredential as Mock).mockResolvedValue(undefined);
+      (accountService.getAccountOrFail as Mock).mockResolvedValue({
+        id: 'account-1',
+      });
+      (accountLicenseService.applyLicensePolicy as Mock).mockResolvedValue([]);
+      (licenseService.saveAll as Mock).mockResolvedValue([]);
+
+      await resolver.removePlatformRoleFromUser(
+        actorContextWithCredentials,
+        roleData as any
+      );
+
       expect(actorService.revokeCredential).toHaveBeenCalledWith(
         'account-1',
         expect.objectContaining({

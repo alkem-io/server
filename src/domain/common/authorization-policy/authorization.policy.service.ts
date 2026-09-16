@@ -149,6 +149,9 @@ export class AuthorizationPolicyService {
         case AuthorizationRoleGlobal.FEATURE_ORGANIZATION_CREATOR:
           credType = AuthorizationCredential.FEATURE_ORGANIZATION_CREATOR;
           break;
+        case AuthorizationRoleGlobal.FEATURE_VC_CAMPAIGN:
+          credType = AuthorizationCredential.FEATURE_VC_CAMPAIGN;
+          break;
         default:
           throw new ForbiddenException(
             `Authorization: invalid global role encountered: ${globalRole}`,

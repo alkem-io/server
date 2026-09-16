@@ -125,8 +125,10 @@ confirmed — no code path in this feature's diff adds
 | 11 | **`feature-beta-tester`** | Beta/trial license entitlement | **Licensing-policy credential rule (T040a), NOT an authorization-policy rule** — the row most likely to look empty if this table only checked `*.service.authorization.ts` files |
 | 12 | `feature-virtual-assistant` | Access the Web AI Assistant (`ACCESS_VIRTUAL_ASSISTANT`) | `platform.service.authorization.ts` (T035), additive alongside the pre-existing `assistant-access` grant |
 | 13 | `feature-organization-creator` | Create an organization (A6, shared with `platform-support`) | `CREATE_ORGANIZATION` grant (T035/T039) |
+| 14 | **`feature-vc-campaign`** *(added 2026-09-16)* | Targeted for the Virtual Contributor campaign: shown the dashboard VC-creation offer (client gate, `isVcCampaignTargeted`), and carries the same trial license entitlement as the legacy `platform-vc-campaign` | **Licensing-policy credential rule on grant/revoke (`platform.role.resolver.mutations.ts`, parity with T040a) — NO authorization-policy rule and no A-row surface, by design.** The audit had marked the legacy role inert and "removed"; its enforced capability is client-side targeting plus the entitlement, which is why it was invisible to a server-only sweep (runbook §2b) |
 
-Every row has a citable, enforced capability. No row is empty.
+Every row has a citable, enforced capability. No row is empty — row 14's is the
+one capability in this table that is not an authorization-policy privilege.
 
 ---
 

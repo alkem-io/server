@@ -42,6 +42,8 @@ export enum RoleName {
   FEATURE_VIRTUAL_ASSISTANT = 'feature-virtual-assistant',
   /** Create organizations. Does not confer organization deletion (Platform Support). */
   FEATURE_ORGANIZATION_CREATOR = 'feature-organization-creator',
+  /** Targeted for the Virtual Contributor campaign — shown the dashboard offer; carries the same trial entitlement as the legacy `platform-vc-campaign`. Administers nothing. */
+  FEATURE_VC_CAMPAIGN = 'feature-vc-campaign',
   REGISTERED = 'registered',
   GUEST = 'guest',
   ANONYMOUS = 'anonymous',

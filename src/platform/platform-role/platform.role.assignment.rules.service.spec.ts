@@ -1,3 +1,4 @@
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { RoleName } from '@common/enums/role.name';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -82,6 +83,19 @@ describe('PlatformRoleAssignmentRulesService', () => {
         message:
           'Rejected: role platform-support may not be granted to a organization',
       });
+    });
+
+    it('permits FEATURE_VC_CAMPAIGN targeting an organization — it is a Feature-family role', () => {
+      const violation = service.evaluate(
+        baseInput({
+          role: RoleName.FEATURE_VC_CAMPAIGN,
+          targetActorType: 'organization',
+        })
+      );
+      expect(violation).toBeUndefined();
+      expect(service.assignerPrivilegeFor(RoleName.FEATURE_VC_CAMPAIGN)).toBe(
+        AuthorizationPrivilege.FEATURE_ROLE_ASSIGN
+      );
     });
 
     it('permits a feature-* role targeting an organization (T064/FR-003, D8)', () => {

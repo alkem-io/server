@@ -66,6 +66,7 @@ const FEATURE_TARGET_ROLES: ReadonlySet<RoleName> = new Set([
   RoleName.FEATURE_BETA_TESTER,
   RoleName.FEATURE_VIRTUAL_ASSISTANT,
   RoleName.FEATURE_ORGANIZATION_CREATOR,
+  RoleName.FEATURE_VC_CAMPAIGN,
 ]);
 
 @Resolver(() => IRoleSet)
