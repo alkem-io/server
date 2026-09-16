@@ -36,6 +36,9 @@ describe('MeResolverFields', () => {
     meService.getCommunityInvitationsCountForUser.mockResolvedValue(3);
     meService.getCommunityInvitationsForUser.mockResolvedValue([]);
     meService.getCommunityApplicationsForUser.mockResolvedValue([]);
+    meService.getOrganizationInvitationsCountForUser.mockResolvedValue(0);
+    meService.getOrganizationInvitationsForUser.mockResolvedValue([]);
+    meService.getOrganizationApplicationsForUser.mockResolvedValue([]);
     meService.getSpaceMembershipsHierarchical.mockResolvedValue([]);
     meService.getSpaceMembershipsFlat.mockResolvedValue([]);
     meService.getMySpaces.mockResolvedValue([]);
@@ -212,6 +215,58 @@ describe('MeResolverFields', () => {
       expect(result).toBe(3);
       expect(
         meService.getCommunityInvitationsCountForUser
+      ).toHaveBeenCalledWith(actorContext.actorID, []);
+    });
+  });
+
+  describe('organization pending fields (R-1)', () => {
+    it('organizationInvitationsCount degrades to 0 for an anonymous actor', async () => {
+      const result = await resolver.organizationInvitationsCount(
+        anonymousActorContext,
+        []
+      );
+      expect(result).toBe(0);
+      expect(
+        meService.getOrganizationInvitationsCountForUser
+      ).not.toHaveBeenCalled();
+    });
+
+    it('organizationInvitations degrades to [] for an anonymous actor', async () => {
+      const result = await resolver.organizationInvitations(
+        anonymousActorContext,
+        []
+      );
+      expect(result).toEqual([]);
+    });
+
+    it('organizationApplications degrades to [] for an anonymous actor', async () => {
+      const result = await resolver.organizationApplications(
+        anonymousActorContext,
+        []
+      );
+      expect(result).toEqual([]);
+    });
+
+    it('delegates to MeService for an authenticated actor', async () => {
+      meService.getOrganizationInvitationsCountForUser.mockResolvedValue(2);
+      meService.getOrganizationInvitationsForUser.mockResolvedValue([
+        { id: 'oi-1' } as any,
+      ]);
+      meService.getOrganizationApplicationsForUser.mockResolvedValue([
+        { id: 'oa-1' } as any,
+      ]);
+
+      expect(
+        await resolver.organizationInvitationsCount(actorContext, [])
+      ).toBe(2);
+      expect(await resolver.organizationInvitations(actorContext, [])).toEqual([
+        { id: 'oi-1' },
+      ]);
+      expect(await resolver.organizationApplications(actorContext, [])).toEqual(
+        [{ id: 'oa-1' }]
+      );
+      expect(
+        meService.getOrganizationInvitationsCountForUser
       ).toHaveBeenCalledWith(actorContext.actorID, []);
     });
   });

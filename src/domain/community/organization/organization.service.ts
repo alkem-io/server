@@ -251,6 +251,7 @@ export class OrganizationService {
       membership: {
         allowUsersMatchingDomainToJoin: false,
         allowSpaceInvitations: true,
+        allowApplications: true,
       },
       privacy: {
         // Note: not currently used but will be near term.

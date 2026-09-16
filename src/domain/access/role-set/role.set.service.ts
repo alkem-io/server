@@ -28,6 +28,7 @@ import {
   IApplication,
 } from '@domain/access/application';
 import { ApplicationService } from '@domain/access/application/application.service';
+import { ApplicationLifecycleState } from '@domain/access/application/application.service.lifecycle';
 import { CreateInvitationInput, IInvitation } from '@domain/access/invitation';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
 import { CreatePlatformInvitationInput } from '@domain/access/invitation.platform/dto/platform.invitation.dto.create';
@@ -97,6 +98,17 @@ export interface EnsureMemberOfRoleSetAndAncestorsOptions {
   invitedToParent?: boolean;
   /** Invitation only: extra roles to (best-effort) grant on the target role-set. */
   extraRoles?: RoleName[];
+  /**
+   * Invitation only: the actor who offered those extra roles. An invitation is
+   * a durable, unexpiring grant, and the offerer's authority is checked only
+   * when it is created — so without re-checking here, an invitation planted by
+   * an administrator who has since been offboarded still confers ADMIN/OWNER
+   * (and with it account-admin standing over everything the organization hosts)
+   * whenever its recipient chooses to accept. Re-checked for ORGANIZATION role
+   * sets; a role whose offerer no longer has the standing to offer it is
+   * withheld, and withheld roles are already reported to both sides.
+   */
+  extraRolesOfferedBy?: string;
   /** Invitation only (SPACE target): remove the SPACE_MEMBER_INVITEE credential. */
   removeSpaceInviteeCredential?: boolean;
 }
@@ -464,12 +476,38 @@ export class RoleSetService {
       userID,
       roleSetID
     );
+    // On an ORGANIZATION role set a rejected application does not block a fresh
+    // one: an applicant the organization turned down may apply again later.
+    // `rejected` is not a final state — the Space flow keeps it as a waypoint to
+    // `archived`, and the settings tab archives from there — so finality alone
+    // would leave a rejected applicant permanently unable to re-apply.
+    //
+    // Scoped to organizations on purpose. Widening it would change shipped Space
+    // behaviour, where an admin archives the old row first. Safe here because
+    // this lookup only reports whether an application is open; creating the new
+    // one still runs every guard in the apply mutation.
+    //
+    // Resolved lazily: only a rejected application needs the role-set type, and
+    // those are rare, so the common path costs nothing extra.
+    let roleSetIsOrganization: boolean | undefined;
+
     for (const application of applications) {
       // skip any finalized applications; only want to return pending applications
       const isFinalized = await this.applicationService.isFinalizedApplication(
         application.id
       );
       if (isFinalized) continue;
+      if (
+        this.applicationService.getApplicationState(application) ===
+        ApplicationLifecycleState.REJECTED
+      ) {
+        roleSetIsOrganization ??=
+          (await this.getRoleSetOrFail(roleSetID)).type ===
+          RoleSetType.ORGANIZATION;
+        if (roleSetIsOrganization) {
+          continue;
+        }
+      }
       await this.roleSetCacheService.setOpenApplicationCache(
         userID,
         roleSetID,
@@ -556,6 +594,23 @@ export class RoleSetService {
       actorID,
       roleSetID
     );
+    // On an ORGANIZATION role set a declined invitation does not block a fresh
+    // one (FR-005). `rejected` is deliberately NOT a final state — 061 keeps it
+    // as a waypoint to `archived` for the Space flow — so finality alone would
+    // leave a declined user permanently un-invitable, with the re-invite path
+    // only reachable by archiving the old row first.
+    //
+    // Scoped to organizations on purpose: 061 documented archive-then-invite as
+    // the Space route, and widening this would change that shipped behaviour.
+    // Safe because the concern that removed the REINVITE lifecycle transition —
+    // looping someone back to `invited` past the opt-out, the role caps and the
+    // notification — does not apply here. This path only reports whether an
+    // invitation is open; creating the new one still goes through
+    // `inviteForEntryRoleOnRoleSet`, where every guard and the notification run.
+    // Resolved lazily: only a rejected invitation needs the role-set type, and
+    // rejected rows are rare, so the common path costs nothing extra.
+    let roleSetIsOrganization: boolean | undefined;
+
     for (const invitation of invitations) {
       // skip any finalized invitations; only return pending invitations
       const isFinalized = await this.invitationService.isFinalizedInvitation(
@@ -563,6 +618,16 @@ export class RoleSetService {
       );
       if (isFinalized) {
         continue;
+      }
+      if (
+        this.invitationService.getInvitationState(invitation) === 'rejected'
+      ) {
+        roleSetIsOrganization ??=
+          (await this.getRoleSetOrFail(roleSetID)).type ===
+          RoleSetType.ORGANIZATION;
+        if (roleSetIsOrganization) {
+          continue;
+        }
       }
       await this.roleSetCacheService.setOpenInvitationCache(
         actorID,
@@ -850,7 +915,7 @@ export class RoleSetService {
   public async acceptInvitationToRoleSet(
     invitationID: string,
     actorContext: ActorContext
-  ): Promise<void> {
+  ): Promise<{ extraRolesWithheld: RoleName[] }> {
     try {
       const invitation = await this.invitationService.getInvitationOrFail(
         invitationID,
@@ -884,7 +949,7 @@ export class RoleSetService {
       // a superset of the previous single-hop — research R2), `extraRoles` and
       // the invitee-credential cleanup are carried through unchanged, and the two
       // XState lifecycle machines stay separate.
-      await this.ensureMemberOfRoleSetAndAncestors(
+      return await this.ensureMemberOfRoleSetAndAncestors(
         roleSet,
         actorID,
         actorContext,
@@ -892,6 +957,7 @@ export class RoleSetService {
           source: 'invitation',
           invitedToParent: invitation.invitedToParent,
           extraRoles: invitation.extraRoles,
+          extraRolesOfferedBy: invitation.createdBy,
           removeSpaceInviteeCredential: true,
         }
       );
@@ -997,12 +1063,62 @@ export class RoleSetService {
             );
 
             if (triggerNewMemberEvents) {
-              await this.roleSetEventsService.processCommunityNewMemberEvents(
+              // The membership credential is already committed, so the
+              // notification dispatch is best-effort: a notifications /
+              // adapter failure is logged and must not fail the grant (nor,
+              // on application approval, block the lifecycle event that
+              // follows it).
+              try {
+                await this.roleSetEventsService.processCommunityNewMemberEvents(
+                  roleSet,
+                  actorContext,
+                  actorID,
+                  actorType,
+                  membershipOrigin
+                );
+              } catch (e: any) {
+                this.logger.error(
+                  `New-member notification dispatch failed for roleSet ${roleSet.id}, actor ${actorID}: ${e}`,
+                  e?.stack,
+                  LogContext.COMMUNITY
+                );
+              }
+            }
+          }
+        }
+        break;
+      }
+      case RoleSetType.ORGANIZATION: {
+        // Organizations have no room membership and no Space activity log,
+        // so this arm is bounded to the two side effects that still apply:
+        // refresh the membership-status cache so every subsequent read
+        // (roleSet.myMembershipStatus, Organization.myAssociateEligibility)
+        // reflects the grant immediately, and dispatch the "someone joined"
+        // admin notification (acting user excluded, INVITATION origin
+        // suppressed downstream by the adapter since that flow gets its own
+        // response notification).
+        if (role === RoleName.ASSOCIATE) {
+          await this.roleSetCacheService.setMembershipStatusCache(
+            actorID,
+            roleSet.id,
+            CommunityMembershipStatus.MEMBER
+          );
+
+          if (actorContext && triggerNewMemberEvents) {
+            // Best-effort, as for Spaces: the credential is committed, so a
+            // notification failure is logged rather than failing the grant.
+            try {
+              await this.roleSetEventsService.processOrganizationNewAssociateEvents(
                 roleSet,
                 actorContext,
                 actorID,
-                actorType,
                 membershipOrigin
+              );
+            } catch (e: any) {
+              this.logger.error(
+                `New-associate notification dispatch failed for roleSet ${roleSet.id}, actor ${actorID}: ${e}`,
+                e?.stack,
+                LogContext.COMMUNITY
               );
             }
           }
@@ -1043,7 +1159,7 @@ export class RoleSetService {
   ): Promise<boolean> {
     const membershipCredential = await this.getCredentialDefinitionForRole(
       roleSet,
-      RoleName.MEMBER
+      roleSet.entryRoleName
     );
     return await this.actorService.hasValidCredential(actorID, {
       type: membershipCredential.type,
@@ -1064,6 +1180,29 @@ export class RoleSetService {
       type: roleCredential.type,
       resourceID: roleCredential.resourceID,
     });
+  }
+
+  /**
+   * Whether the actor still holds any role of the role set other than the
+   * one just removed. Reads the credentials directly rather than the
+   * per-actor roles cache, which is only invalidated after the removal's
+   * side effects have run.
+   */
+  private async holdsAnyOtherRole(
+    actorID: string,
+    roleSet: IRoleSet,
+    removedRole: RoleName
+  ): Promise<boolean> {
+    const roleNames = await this.getRoleNames(roleSet);
+    for (const roleName of roleNames) {
+      if (roleName === removedRole) {
+        continue;
+      }
+      if (await this.isInRole(actorID, roleSet, roleName)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private async grantRoleCredential(
@@ -1192,9 +1331,18 @@ export class RoleSetService {
           await this.removeActorFromAccountAdminImplicitRole(roleSet, actorID);
         }
 
-        // Clean up notifications only when user is completely removed (MEMBER role)
-        // If only ADMIN or OWNER is removed, user still has access as MEMBER
-        if (roleType === RoleName.MEMBER) {
+        // Clean up the actor's in-app notifications only once they hold no
+        // role in the organization at all. Any of the roles can be the last
+        // one to go: an admin or owner need not be an associate (the
+        // Associates editor exists for exactly that case), so removing
+        // ASSOCIATE while ADMIN/OWNER stays must keep their feed intact, and
+        // removing ADMIN as the last role must still clear it.
+        const stillHoldsARole = await this.holdsAnyOtherRole(
+          actorID,
+          roleSet,
+          roleType
+        );
+        if (!stillHoldsARole) {
           const adminCredential = await this.getCredentialDefinitionForRole(
             roleSet,
             RoleName.ADMIN
@@ -1488,7 +1636,7 @@ export class RoleSetService {
     }
     const membershipCredential = await this.getCredentialDefinitionForRole(
       roleSet,
-      RoleName.MEMBER
+      roleSet.entryRoleName
     );
 
     const validCredential = await this.actorService.hasValidCredential(
@@ -1505,6 +1653,32 @@ export class RoleSetService {
     );
 
     return validCredential;
+  }
+
+  /**
+   * Whether `actorID` currently holds standing to offer ADMIN / OWNER on an
+   * organization role set: organization ADMIN or OWNER, or a platform
+   * GLOBAL_ADMIN / GLOBAL_SUPPORT credential.
+   */
+  private async mayStillOfferOrganizationRoles(
+    actorID: string,
+    roleSet: IRoleSet
+  ): Promise<boolean> {
+    if (
+      (await this.isInRole(actorID, roleSet, RoleName.ADMIN)) ||
+      (await this.isInRole(actorID, roleSet, RoleName.OWNER))
+    ) {
+      return true;
+    }
+    for (const type of [
+      AuthorizationCredential.GLOBAL_ADMIN,
+      AuthorizationCredential.GLOBAL_SUPPORT,
+    ]) {
+      if (await this.actorService.hasValidCredential(actorID, { type })) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public async isInRole(
@@ -1789,7 +1963,7 @@ export class RoleSetService {
   async getMembersCount(roleSet: IRoleSet): Promise<number> {
     const membershipCredential = await this.getCredentialDefinitionForRole(
       roleSet,
-      RoleName.MEMBER
+      roleSet.entryRoleName
     );
 
     const credentialMatches =
@@ -1801,16 +1975,54 @@ export class RoleSetService {
     return credentialMatches;
   }
 
+  /**
+   * The implicit roles that can exist on a role set of this type.
+   *
+   * Each implicit role belongs to exactly one role-set type, and its credential
+   * resolver rejects the other type outright rather than returning nothing —
+   * `getCredentialSpaceImplicitRole` requires SPACE, and
+   * `getCredentialForOrganizationImplicitRole` requires ORGANIZATION. So asking
+   * about an inapplicable role is not a harmless empty answer, it throws.
+   */
+  private getImplicitRolesForRoleSetType(
+    roleSetType: RoleSetType
+  ): RoleSetRoleImplicit[] {
+    switch (roleSetType) {
+      case RoleSetType.SPACE:
+        return [RoleSetRoleImplicit.SUBSPACE_ADMIN];
+      case RoleSetType.ORGANIZATION:
+        return [RoleSetRoleImplicit.ACCOUNT_ADMIN];
+      default:
+        return [];
+    }
+  }
+
+  /**
+   * Evaluates only the implicit roles that apply to this role set's type.
+   *
+   * Previously this iterated every member of `RoleSetRoleImplicit` regardless of
+   * type, so `myRolesImplicit` threw "Invalid roleSet type" for BOTH types — a
+   * space role set asked about ACCOUNT_ADMIN and an organization role set asked
+   * about SUBSPACE_ADMIN, and each credential resolver rejected the mismatch.
+   * The field has been unusable on organization role sets since ACCOUNT_ADMIN
+   * joined the enum; 062 is simply the first feature to query it there.
+   */
   async getImplicitRoles(
     actorContext: ActorContext,
     roleSet: IRoleSet
   ): Promise<RoleSetRoleImplicit[]> {
+    // An anonymous caller has no actor to hold a credential, and `actorID` is
+    // the empty string rather than undefined — passing it through reaches the
+    // database as an invalid uuid literal. Degrade to "no implicit roles",
+    // matching how the `me` sub-resolvers treat an empty actorID.
+    if (!actorContext.actorID) {
+      return [];
+    }
+
     const result: RoleSetRoleImplicit[] = [];
     const actor = await this.actorService.getActorOrFail(actorContext.actorID);
 
-    const rolesImplicit: RoleSetRoleImplicit[] = Object.values(
-      RoleSetRoleImplicit
-    ) as RoleSetRoleImplicit[];
+    const rolesImplicit = this.getImplicitRolesForRoleSetType(roleSet.type);
     for (const role of rolesImplicit) {
       const hasActorRole = await this.isInRoleImplicit(actor.id, roleSet, role);
       if (hasActorRole) {
@@ -2049,9 +2261,10 @@ export class RoleSetService {
    * ancestor-chain grant so there is no duplicated grant logic, SC-007/SC-013).
    *
    * When granting the ancestor chain: walks `parentRoleSet` from the target up
-   * to the L0 root, then grants `RoleName.MEMBER` on every role-set the actor is
-   * NOT already a member of, TOP-DOWN (root first) so the "must be member of the
-   * immediate parent" invariant holds at each step. All credential writes run in
+   * to the L0 root, then grants each role-set's own entry role on every
+   * role-set the actor is NOT already a member of, TOP-DOWN (root first) so
+   * the "must be member of the immediate parent" invariant holds at each
+   * step. All credential writes run in
    * a SINGLE transaction (FR-020, all-or-nothing); event/notification/Matrix and
    * cache side-effects are sequenced AFTER a successful commit (R6/R7).
    *
@@ -2072,7 +2285,8 @@ export class RoleSetService {
     actorID: string,
     actorContext: ActorContext,
     opts: EnsureMemberOfRoleSetAndAncestorsOptions
-  ): Promise<void> {
+  ): Promise<{ extraRolesWithheld: RoleName[] }> {
+    const extraRolesWithheld: RoleName[] = [];
     const actorType =
       await this.actorLookupService.getActorTypeByIdOrFail(actorID);
 
@@ -2148,7 +2362,7 @@ export class RoleSetService {
           for (const roleSetToGrant of toGrant) {
             await this.grantRoleCredential(
               roleSetToGrant,
-              RoleName.MEMBER,
+              roleSetToGrant.entryRoleName,
               actorID,
               actorType,
               manager
@@ -2168,7 +2382,7 @@ export class RoleSetService {
           try {
             await this.applyRoleGrantSideEffects(
               grantedRoleSet,
-              RoleName.MEMBER,
+              grantedRoleSet.entryRoleName,
               actorID,
               actorType,
               actorContext,
@@ -2214,7 +2428,7 @@ export class RoleSetService {
       // behaviour). For an application this is the FR-015 safe fallback.
       await this.assignActorToRole(
         targetRoleSet,
-        RoleName.MEMBER,
+        targetRoleSet.entryRoleName,
         actorID,
         actorContext,
         true,
@@ -2230,7 +2444,51 @@ export class RoleSetService {
     ) {
       await this.removeSpaceInviteeCredential(actorID, targetRoleSet);
     }
-    for (const extraRole of opts.extraRoles ?? []) {
+    // An invitation carrying ADMIN or OWNER is a durable grant with no expiry,
+    // and on an organization it also mints account-admin standing — cascading
+    // write and delete over every Space, Virtual Contributor and Innovation
+    // Pack the organization hosts. The offerer's authority was checked when the
+    // invitation was created and is not checked again by the accept path, which
+    // requires only that the invitee holds the accept privilege on their own
+    // invitation. So re-check it here: if whoever offered the role can no
+    // longer offer it, withhold the role rather than grant it.
+    //
+    // Scoped to organizations because that is where the elevated grant is
+    // implicit. Resolved once for the whole loop, and only when an extra role
+    // is actually on offer, so the ordinary path costs nothing.
+    //
+    // "May still offer" means holding the standing that granted
+    // ROLESET_ENTRY_ROLE_INVITE on an organization role set: an organization
+    // ADMIN / OWNER, or a platform GLOBAL_ADMIN / GLOBAL_SUPPORT (who hold
+    // ROLESET_ENTRY_ROLE_ASSIGN on every organization —
+    // `organization.service.authorization.ts`). Without the platform arm an
+    // invitation legitimately issued by platform support would silently lose
+    // its offered roles on accept.
+    const extraRoles = opts.extraRoles ?? [];
+    let offererMayStillOffer: boolean | undefined;
+    if (
+      extraRoles.length > 0 &&
+      targetRoleSet.type === RoleSetType.ORGANIZATION
+    ) {
+      offererMayStillOffer = opts.extraRolesOfferedBy
+        ? await this.mayStillOfferOrganizationRoles(
+            opts.extraRolesOfferedBy,
+            targetRoleSet
+          )
+        : // A deleted account leaves `createdBy` empty; nobody vouches for the
+          // offer any more, so it is not honoured.
+          false;
+    }
+
+    for (const extraRole of extraRoles) {
+      if (offererMayStillOffer === false) {
+        this.logger.warn?.(
+          `Extra role (${extraRole}) withheld for actor (${actorID}): the actor who offered it no longer holds organization-admin or platform-admin standing`,
+          LogContext.COMMUNITY
+        );
+        extraRolesWithheld.push(extraRole);
+        continue;
+      }
       try {
         await this.assignActorToRole(
           targetRoleSet,
@@ -2246,6 +2504,7 @@ export class RoleSetService {
           `Unable to add actor (${actorID}) to extra roles (${opts.extraRoles}) in community: ${e}`,
           LogContext.COMMUNITY
         );
+        extraRolesWithheld.push(extraRole);
       }
     }
 
@@ -2264,6 +2523,8 @@ export class RoleSetService {
         targetRoleSet.id
       );
     }
+
+    return { extraRolesWithheld };
   }
 
   /**
@@ -2548,7 +2809,7 @@ export class RoleSetService {
     for (const roleSet of roleSets) {
       const credential = this.getCredentialForRoleSync(
         roleSet,
-        RoleName.MEMBER
+        roleSet.entryRoleName
       );
       if (credential) {
         criteriaList.push({

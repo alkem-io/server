@@ -784,4 +784,24 @@ describe('RoleSetResolverFields', () => {
       expect(mockLoader.load).toHaveBeenCalledWith('rs-1');
     });
   });
+
+  // Pending-list confidentiality: none of the pending lists may fall back to
+  // the parent role set's READ, which every registered user (organizations)
+  // or every registered user of a public Space holds. Applications carry the
+  // applicant's PII, so only deciders (GRANT) read them; invitations and
+  // platform invitations are readable by whoever may create one
+  // (ROLESET_ENTRY_ROLE_INVITE), which the invite dialog's dedupe needs.
+  describe('pending-list confidentiality', () => {
+    it.each([
+      ['inivitations', AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE],
+      ['platformInvitations', AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE],
+      ['applications', AuthorizationPrivilege.GRANT],
+    ])('%s is gated on %s, not READ', (methodName, expectedPrivilege) => {
+      const privilege = Reflect.getMetadata(
+        'privilege',
+        (resolver as any)[methodName]
+      );
+      expect(privilege).toBe(expectedPrivilege);
+    });
+  });
 });
