@@ -209,6 +209,7 @@ export const A_ROW_GATE_COVERAGE: Record<ARowId, ARowGateCoverageEntry> = {
       'src/services/api/registration/registration.resolver.mutations.spec.ts',
       'src/platform-admin/core/identity/admin.identity.resolver.mutations.spec.ts',
       'test/integration/platform-admin/admin-user-account-delete.spec.ts',
+      'src/platform-admin/domain/mcp-api-key/admin.mcp.api.key.resolver.fields.spec.ts',
     ],
   },
   A6: {
@@ -276,6 +277,7 @@ export const A_ROW_GATE_COVERAGE: Record<ARowId, ARowGateCoverageEntry> = {
     gateSpecs: [
       'src/domain/space/space/space.service.platform.roles.access.spec.ts',
       'src/platform/forum-discussion/discussion.resolver.mutations.spec.ts',
+      'src/platform/forum/forum.resolver.mutations.spec.ts',
     ],
   },
   A16: {

@@ -584,6 +584,29 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
       legacyReachers: [GA, GS, GLM, GPM],
     },
+    // workspace#038 (MCP API-key lifecycle) landed on develop AFTER the
+    // census was written, gated on PLATFORM_ADMIN. A user's keys are
+    // user-credential lifecycle — this family — so both admin surfaces are
+    // re-anchored here. Pre-feature gate was PLATFORM_ADMIN, i.e. {GA, GS,
+    // GLM}; the platform PLATFORM_USERS_ADMIN rule also admits GPM.
+    {
+      file: 'src/platform-admin/domain/mcp-api-key/admin.mcp.api.key.resolver.fields.ts',
+      member: 'mcpApiKeys',
+      kind: 'graphql-field',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_USERS_ADMIN },
+      intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
+      legacyReachers: [GA, GS, GLM, GPM],
+    },
+    {
+      file: 'src/platform-admin/domain/mcp-api-key/admin.mcp.api.key.resolver.mutations.ts',
+      member: 'adminRevokeMcpApiKey',
+      kind: 'graphql-mutation',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_USERS_ADMIN },
+      intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
+      legacyReachers: [GA, GS, GLM, GPM],
+    },
   ],
 
   // ===== A6 — create / delete an organization =====
@@ -1198,6 +1221,23 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       member: 'deleteDiscussion',
       kind: 'graphql-mutation',
       tree: 'forum',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_FORUM_MANAGE },
+      intendedOwners: [AuthorizationCredential.PLATFORM_SUPPORT],
+      legacyReachers: [GA, GS],
+    },
+    // workspace#060 (forum reorganisation) landed on develop after the
+    // census, gating category removal on PLATFORM_ADMIN. Removing a forum
+    // category is editorial control of the forum — this family — so it is
+    // re-anchored onto PLATFORM_FORUM_MANAGE. Its pre-feature reacher set
+    // was PLATFORM_ADMIN's {GA, GS, GLM}; the forum rule carries {GA, GS}.
+    // `createDiscussion` in the same file is a member surface
+    // (CREATE_DISCUSSION) whose admin-only-category branch takes the same
+    // privilege over the forum policy; it is not a separate A-row surface.
+    {
+      file: 'src/platform/forum/forum.resolver.mutations.ts',
+      member: 'adminForumRemoveDiscussionCategory',
+      kind: 'graphql-mutation',
+      tree: 'platform',
       gate: { requires: AuthorizationPrivilege.PLATFORM_FORUM_MANAGE },
       intendedOwners: [AuthorizationCredential.PLATFORM_SUPPORT],
       legacyReachers: [GA, GS],

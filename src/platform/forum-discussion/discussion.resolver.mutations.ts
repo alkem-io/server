@@ -82,12 +82,12 @@ export class DiscussionResolverMutations {
 
     const previousCategory = discussion.category;
 
-    // Data-integrity, not a security fix: every actor who can reach this
-    // UPDATE gate is already a strict subset of the PLATFORM_ADMIN holders
-    // the create path requires for these same
-    // categories — this makes "the active list defines what's allowed"
-    // an invariant the server enforces on category-change too, not only
-    // on create.
+    // Data-integrity, not a security fix: the admin-only category check
+    // below re-asserts the SAME forum-family privilege the UPDATE gate
+    // above already required (027 A15 — the create path requires it for
+    // these same categories) — this makes "the active list defines
+    // what's allowed" an invariant the server enforces on category-change
+    // too, not only on create.
     //
     // Scoped to an actual *change*, not to the field merely being present:
     // the edit dialog always echoes the post's current category back on
@@ -114,12 +114,10 @@ export class DiscussionResolverMutations {
         newCategory
       );
       if (isAdminOnlyForumCategory(newCategory)) {
-        const platformAuthorization =
-          await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
         await this.authorizationService.grantAccessOrFail(
           actorContext,
-          platformAuthorization,
-          AuthorizationPrivilege.PLATFORM_ADMIN,
+          discussion.authorization,
+          AuthorizationPrivilege.PLATFORM_FORUM_MANAGE,
           `User not authorized to move discussion into ${newCategory} category.`
         );
       }

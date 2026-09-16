@@ -237,7 +237,7 @@ describe('DiscussionResolverMutations', () => {
       expect(discussionService.updateDiscussion).not.toHaveBeenCalled();
     });
 
-    it('requires PLATFORM_ADMIN to move a discussion into NEWSLETTER', async () => {
+    it('requires PLATFORM_FORUM_MANAGE on the discussion to move it into NEWSLETTER', async () => {
       const platformAuth = { id: 'plat-auth' } as any;
       platformAuthorizationService.getPlatformAuthorizationPolicy.mockResolvedValue(
         platformAuth
@@ -252,12 +252,24 @@ describe('DiscussionResolverMutations', () => {
         category: ForumDiscussionCategory.NEWSLETTER,
       } as any);
 
-      // Called twice: once for UPDATE on the discussion, once for
-      // PLATFORM_ADMIN on the platform policy.
+      // Called twice: once for PLATFORM_FORUM_MANAGE on the discussion,
+      // once more for the admin-only category — the SAME forum-family
+      // privilege on the same discussion policy (027 A15), never the
+      // retiring PLATFORM_ADMIN catch-all on the platform policy.
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledTimes(2);
+      expect(authorizationService.grantAccessOrFail).toHaveBeenNthCalledWith(
+        2,
+        actorContext,
+        baseDiscussion.authorization,
+        AuthorizationPrivilege.PLATFORM_FORUM_MANAGE,
+        expect.any(String)
+      );
+      expect(
+        platformAuthorizationService.getPlatformAuthorizationPolicy
+      ).not.toHaveBeenCalled();
     });
 
-    it('denies the move into NEWSLETTER when PLATFORM_ADMIN is refused', async () => {
+    it('denies the move into NEWSLETTER when the second PLATFORM_FORUM_MANAGE check is refused', async () => {
       const platformAuth = { id: 'plat-auth' } as any;
       platformAuthorizationService.getPlatformAuthorizationPolicy.mockResolvedValue(
         platformAuth
