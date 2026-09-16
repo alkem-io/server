@@ -161,6 +161,16 @@ export const INDIRECT_ENFORCEMENT_FILES: readonly string[] = [
   // multiply eight read-only affordances into the FR-024 denial matrix and
   // restate each family's intent in a second place, where it could drift
   // from the action it mirrors.
+  //
+  // R-F.2 (2026-09-16, research D29) — the other half of F6: three of those
+  // lists (`organizations`, `innovationPacks`, `innovationHubs`) additionally
+  // admit `PLATFORM_SUPPORT_LISTS_READ`, the ONE new privilege this closure
+  // introduced. Support's A6/A7 privileges are anchored on the organization
+  // and account trees, so the platform policy these lists check held nothing
+  // of Support's — the customer-facing admin role could not find what it
+  // services. Same disposition as above: a read, not an A-row, no census
+  // entry, no matrix cell; the privilege is mirrored in `privilege.grants.ts`
+  // so its grant set is spec-covered, and names no census gate by design.
   'src/platform-admin/admin/platform.admin.resolver.fields.ts',
   'src/platform-admin/core/identity/admin.identity.resolver.fields.ts',
 ];

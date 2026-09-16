@@ -508,6 +508,37 @@ describe('PlatformAuthorizationService', () => {
       expect(rules[0].cascade).toBe(true);
     });
 
+    // R-F.2 (2026-09-16, research D29): Support's console list read. A READ
+    // privilege on the platform policy, held by Support alone among the target
+    // roles — the two rejected alternatives are asserted absent: gating the lists
+    // on CREATE_ORGANIZATION would have admitted feature-organization-creator and
+    // beta-tester, and platform-content-full-access already reaches the lists
+    // through its own privilege and must not acquire Support's.
+    it('PLATFORM_SUPPORT_LISTS_READ (R-F.2): EXACTLY {platform-support} plus legacy {global-admin, global-support}, non-cascading — neither the org-creator pair nor content-full-access is among the reachers', async () => {
+      arrange();
+      await service.applyAuthorizationPolicy();
+
+      const rules = rulesGranting(
+        AuthorizationPrivilege.PLATFORM_SUPPORT_LISTS_READ
+      );
+      expect(rules).toHaveLength(1);
+      expect(rules[0].criterias).toEqual([
+        AuthorizationCredential.PLATFORM_SUPPORT,
+        AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_SUPPORT,
+      ]);
+      expect(rules[0].criterias).not.toContain(
+        AuthorizationCredential.FEATURE_ORGANIZATION_CREATOR
+      );
+      expect(rules[0].criterias).not.toContain(
+        AuthorizationCredential.BETA_TESTER
+      );
+      expect(rules[0].criterias).not.toContain(
+        AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS
+      );
+      expect(rules[0].cascade).toBe(false);
+    });
+
     it('PLATFORM_SETTINGS_ADMIN (T035, A10): EXACTLY the union of both surfaces it re-anchors — including platform-settings-admin itself', async () => {
       arrange();
       await service.applyAuthorizationPolicy();

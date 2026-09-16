@@ -41,6 +41,12 @@ export type ManagedPrivilege =
   | AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS
   | AuthorizationPrivilege.PLATFORM_USERS_ADMIN
   | AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+  // R-F.2 (2026-09-16, research D29) — Support's console list read. Mirrored
+  // here so `PRIVILEGE_COVERAGE` forces a grant-set spec, although it names
+  // NO census gate: the three `platformAdmin` list reads it admits are not
+  // A-rows (see `INDIRECT_ENFORCEMENT_FILES`' F6 note), so `SCANNED_PRIVILEGES`
+  // does not grow and `reachability.spec.ts` derives nothing from it.
+  | AuthorizationPrivilege.PLATFORM_SUPPORT_LISTS_READ
   | AuthorizationPrivilege.PLATFORM_FORUM_MANAGE
   | AuthorizationPrivilege.DELETE_ORGANIZATION
   | AuthorizationPrivilege.PLATFORM_AUDIT_READ
@@ -177,6 +183,20 @@ export const PRIVILEGE_GRANTS: Record<ManagedPrivilege, PrivilegeGrant> = {
     anchor: 'account',
     owningCredentials: [AuthorizationCredential.PLATFORM_SUPPORT],
     legacyCredentials: [],
+  },
+  // --- R-F.2 (2026-09-16, D29). Platform-anchored READ for the three
+  // console lists (organizations / packs / hubs); legacy reach is the pair
+  // that reached those lists via PLATFORM_ADMIN and mirrors Support's twin.
+  // GLOBAL_LICENSE_MANAGER also reaches the lists today through PLATFORM_ADMIN
+  // but is deliberately NOT a legacy reacher of THIS privilege — its Slice B
+  // successor (License Manager) does not own these lists (R-F.3).
+  [AuthorizationPrivilege.PLATFORM_SUPPORT_LISTS_READ]: {
+    anchor: 'platform',
+    owningCredentials: [AuthorizationCredential.PLATFORM_SUPPORT],
+    legacyCredentials: [
+      AuthorizationCredential.GLOBAL_ADMIN,
+      AuthorizationCredential.GLOBAL_SUPPORT,
+    ],
   },
   // --- A15 forum (T035). Mirrors the reach of the `global-support`
   // platform-subtree cascade it replaces (research D4/D6).

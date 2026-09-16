@@ -118,7 +118,7 @@ confirmed — no code path in this feature's diff adds
 | 4 | `platform-settings-admin` | Platform settings, iframe allow-list, notification blacklist, license-plan/policy definitions (A10/A13) | `PLATFORM_SETTINGS_ADMIN` grant (`platform.service.authorization.ts`, T035); gated resolvers T045/T047 |
 | 5 | `platform-operations-admin` | Authorization/license reset, operational maintenance mutations (A3/A11, 032) | Pre-existing 032 grant, unchanged by this feature |
 | 6 | `platform-users-admin` | Change login email, delete/reset user identity & account, assign Feature roles (A4/A5/A2) | `PLATFORM_USERS_ADMIN` grant (`user.service.authorization.ts`, T060); `FEATURE_ROLE_ASSIGN` (`platform.service.authorization.ts`, T034) |
-| 7 | `platform-support` | Create/delete organizations, edit org-owned packs/hubs, manage the forum, in-space support (A6/A7/A15) | `CREATE_ORGANIZATION`/`DELETE_ORGANIZATION` (T039), `PLATFORM_SUPPORT_ORG_RESOURCES` (T037), `PLATFORM_FORUM_MANAGE` (T035) |
+| 7 | `platform-support` | Create/delete organizations, edit org-owned packs/hubs, manage the forum, in-space support (A6/A7/A15); **find** those organizations/packs/hubs from the admin console (R-F.2, 2026-09-16) | `CREATE_ORGANIZATION`/`DELETE_ORGANIZATION` (T039), `PLATFORM_SUPPORT_ORG_RESOURCES` (T037), `PLATFORM_FORUM_MANAGE` (T035); `PLATFORM_SUPPORT_LISTS_READ` (T098 — `platform.service.authorization.ts`, admitted by `platform.admin.resolver.fields.ts` `organizations`/`innovationPacks`/`innovationHubs`; **a read, no census row** — research D29) |
 | 8 | `platform-license-manager` | Assign/revoke license plans, change space visibility (A12/A14) | `ACCOUNT_LICENSE_MANAGE` extension (T037) |
 | 9 | `platform-spaces-reader` | Cross-space read (A16) | `READ` grant on the space tree, replacing the void `global-spaces-reader` (T038) |
 | 10 | `platform-audit-reader` | Read the platform audit trail (A19); read Platform/Feature holder lists (A20/A20b) | `PLATFORM_AUDIT_READ` (T035); `PLATFORM_ROLE_HOLDERS_READ` (T034) |
@@ -439,3 +439,32 @@ fix hint). It does **not** implement sec-server-18's parts (a) and (c):
 
 Both remain open hardening items for a follow-up piece of work, not closed
 by this fix pass.
+
+---
+
+## R-F.2 — Support's console lists (2026-09-16, T097–T101)
+
+**Finding (operator, sandbox):** a Support-only holder had no browser path to
+A6/A7 — `/admin` hidden, organization settings redirecting, no pack manage
+link; SC-003 passed only through GraphQL. Server cause: the three console
+lists check `PLATFORM_ADMIN | PLATFORM_CONTENT_FULL_ACCESS` on the **platform**
+policy, where Support's account/organization-anchored privileges are invisible.
+
+**Change:** `PLATFORM_SUPPORT_LISTS_READ` (`platform-support-lists-read`), one
+non-cascading platform credential rule granting it to
+`{platform-support, global-admin, global-support}`; admitted by
+`platformAdmin.organizations` / `innovationPacks` / `innovationHubs` only. No
+migration — lands on the next `authorizationPolicyResetOnPlatform`. Not
+`CREATE_ORGANIZATION` (admits Feature Organization Creator + beta-tester),
+not a census row (a list read is not an A-row; `SCANNED_PRIVILEGES`,
+`reachability.spec.ts` and the FR-024 matrix are unchanged).
+
+**Evidence:**
+
+| Layer | What | Result |
+|---|---|---|
+| Unit (RED→GREEN) | `platform.admin.resolver.fields.spec.ts`: the privilege alone reaches the three lists and falls through to `PLATFORM_ADMIN` on `spaces`/`accounts`/`virtualContributors`/`users`/`identity` | 8 new cases, green |
+| Unit | `platform.service.authorization.spec.ts`: grant set EXACTLY `{platform-support, global-admin, global-support}`, `cascade=false`, neither org-creator credential nor `platform-content-full-access` present | green |
+| Closure | `PRIVILEGE_COVERAGE` gained the key (`unit.coverage.spec.ts`); `reachability.spec.ts` / `surface.drift.spec.ts` unchanged and green | green |
+| Schema | +1 `AuthorizationPrivilege` value, additive; `schema:diff`/`schema:validate` clean | green |
+| Live (`:4027`, acceptance restore, `roles-admin-2@alkem.io` as subject) | reset → subject lacks the privilege and is refused the pack list → grant `PLATFORM_SUPPORT` → platform policy reports the privilege (and neither `PLATFORM_ADMIN` nor `PLATFORM_CONTENT_FULL_ACCESS`) → the three lists load → `spaces`/`accounts`/`virtualContributors`/`users` refused → revoke → refused again | 20/20 |

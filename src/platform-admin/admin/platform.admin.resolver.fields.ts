@@ -120,6 +120,8 @@ export class PlatformAdminResolverFields {
       [
         AuthorizationPrivilege.PLATFORM_ADMIN,
         AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
+        // R-F.2 (2026-09-16): Support's console list read — see `organizations`.
+        AuthorizationPrivilege.PLATFORM_SUPPORT_LISTS_READ,
       ],
       'platformAdmin InnovationHubs'
     );
@@ -142,6 +144,8 @@ export class PlatformAdminResolverFields {
       [
         AuthorizationPrivilege.PLATFORM_ADMIN,
         AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
+        // R-F.2 (2026-09-16): Support's console list read — see `organizations`.
+        AuthorizationPrivilege.PLATFORM_SUPPORT_LISTS_READ,
       ],
       'platformAdmin InnovationPacks'
     );
@@ -219,6 +223,14 @@ export class PlatformAdminResolverFields {
       [
         AuthorizationPrivilege.PLATFORM_ADMIN,
         AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
+        // 027 R-F.2 (2026-09-16, research D29) — the other half of F6. Platform
+        // Support owns the organization lifecycle (A6) and org-owned pack/hub
+        // edits (A7), but its privileges are anchored on the organization and
+        // account trees; on THIS policy it held nothing, so it could not find
+        // what it services. A dedicated platform-level READ admits it to the
+        // three lists whose rows it acts on — organizations, packs, hubs — and
+        // to no other field here. Each row's action still meets its own gate.
+        AuthorizationPrivilege.PLATFORM_SUPPORT_LISTS_READ,
       ],
       'platformAdmin Organizations'
     );

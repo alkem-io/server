@@ -14,6 +14,7 @@ import {
   CREDENTIAL_RULE_TYPES_PLATFORM_OPERATIONS_ADMIN,
   CREDENTIAL_RULE_TYPES_PLATFORM_READ_REGISTERED,
   CREDENTIAL_RULE_TYPES_PLATFORM_ROLE_HOLDERS_READ,
+  CREDENTIAL_RULE_TYPES_PLATFORM_SUPPORT_LISTS_READ,
   CREDENTIAL_RULE_TYPES_PLATFORM_USERS_ADMIN,
   CREDENTIAL_RULE_TYPES_SET_SERVICE_PROFILE,
 } from '@common/constants';
@@ -401,6 +402,28 @@ export class PlatformAuthorizationService {
       );
     platformForumManage.cascade = true;
     credentialRules.push(platformForumManage);
+
+    // 027-platform-role-redesign, R-F.2 (2026-09-16, research D29) — Support's
+    // console LIST READ. Its owning privilege (PLATFORM_SUPPORT_ORG_RESOURCES)
+    // is anchored on the account tree, so this platform policy — the one the
+    // `platformAdmin.{organizations,innovationPacks,innovationHubs}` lists
+    // check — held nothing of Support's, and the customer-facing admin role
+    // could not FIND what it exists to service. A read, not a write: every
+    // action reached from a list keeps its own A6/A7/A8 gate. Deliberately
+    // NOT CREATE_ORGANIZATION (would admit feature-organization-creator and
+    // beta-tester, FR-007(e)). Non-cascading: the lists live here.
+    const platformSupportListsRead =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_SUPPORT_LISTS_READ],
+        [
+          AuthorizationCredential.PLATFORM_SUPPORT,
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        CREDENTIAL_RULE_TYPES_PLATFORM_SUPPORT_LISTS_READ
+      );
+    platformSupportListsRead.cascade = false;
+    credentialRules.push(platformSupportListsRead);
 
     const globalSupportPlatformAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
