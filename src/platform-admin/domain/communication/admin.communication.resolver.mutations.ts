@@ -12,11 +12,13 @@ import { TaskService } from '@services/task';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
 import { AdminCommunicationForumHierarchyReconcileService } from './admin.communication.forum.hierarchy.reconcile.service';
+import { AdminCommunicationReconcileGovernanceService } from './admin.communication.reconcile.governance.service';
 import { AdminCommunicationService } from './admin.communication.service';
 import { AdminCommunicationSpaceSyncService } from './admin.communication.space.sync.service';
 import { CommunicationAdminEnsureAccessInput } from './dto/admin.communication.dto.ensure.access.input';
 import { CommunicationAdminMigrateRoomsResult } from './dto/admin.communication.dto.migrate.rooms.result';
 import { AdminCommunicationReconcileForumHierarchyInput } from './dto/admin.communication.dto.reconcile.forum.hierarchy';
+import { AdminCommunicationReconcileGovernanceInput } from './dto/admin.communication.dto.reconcile.governance';
 import { CommunicationAdminRemoveOrphanedRoomInput } from './dto/admin.communication.dto.remove.orphaned.room';
 import { CommunicationAdminUpdateRoomStateInput } from './dto/admin.communication.dto.update.room.state';
 
@@ -31,6 +33,7 @@ export class AdminCommunicationResolverMutations {
     private adminCommunicationService: AdminCommunicationService,
     private adminCommunicationSpaceSyncService: AdminCommunicationSpaceSyncService,
     private adminCommunicationForumHierarchyReconcileService: AdminCommunicationForumHierarchyReconcileService,
+    private adminCommunicationReconcileGovernanceService: AdminCommunicationReconcileGovernanceService,
     private taskService: TaskService,
     private platformOperationsAuditService: PlatformOperationsAuditService
   ) {
@@ -284,6 +287,44 @@ export class AdminCommunicationResolverMutations {
     // itself never awaits it, so a category-by-category convergence never
     // sits inside the request/response cycle.
     void this.adminCommunicationForumHierarchyReconcileService.reconcile(
+      task.id,
+      actorContext.actorID,
+      reconcileData
+    );
+
+    return task.id;
+  }
+
+  @Mutation(() => String, {
+    description:
+      'Reconcile messaging-side governance for one space subtree or one conversation room against current platform state — report-first (dryRun defaults true), budgeted, never a delete. Returns a task id; the pass runs asynchronously and the task completes with the summary.',
+  })
+  @Profiling.api
+  async adminCommunicationReconcileGovernance(
+    @Args('reconcileData')
+    reconcileData: AdminCommunicationReconcileGovernanceInput,
+    @CurrentActor() actorContext: ActorContext
+  ): Promise<string> {
+    await this.authorizationService.grantAccessOrFail(
+      actorContext,
+      this.communicationGlobalAdminPolicy,
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
+      'communications admin reconcile governance'
+    );
+
+    // Scope errors fail the mutation synchronously — a task is only ever
+    // created for a well-formed request.
+    this.adminCommunicationReconcileGovernanceService.validateScope(
+      reconcileData
+    );
+
+    const task = await this.taskService.create();
+
+    // Fire-and-forget: the pass owns the task's lifecycle from here (results,
+    // completion, and the one audit row written at pass end) — the mutation
+    // never awaits it, so a tree-wide reconciliation never sits inside the
+    // request/response cycle.
+    void this.adminCommunicationReconcileGovernanceService.reconcile(
       task.id,
       actorContext.actorID,
       reconcileData

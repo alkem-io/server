@@ -1528,6 +1528,15 @@ export class CommunicationAdapter {
     return allSucceeded;
   }
 
+  /**
+   * Whether the communications integration is on at all. Operator-facing
+   * maintenance passes check this up front so a disabled adapter yields an
+   * honest failed pass instead of a stream of silent no-op "successes".
+   */
+  isEnabled(): boolean {
+    return this.enabled;
+  }
+
   // ============================================================================
   // Governance & Revocation
   //
