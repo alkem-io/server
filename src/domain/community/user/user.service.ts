@@ -764,7 +764,11 @@ export class UserService {
     try {
       await this.oidcSessionRevocationService.revokeAllForSub(
         user.authenticationID,
-        'account_deleted'
+        'account_deleted',
+        // The actor id enables the messaging-side device sweep — Matrix
+        // access/refresh tokens die with the account, not just the BFF
+        // sessions.
+        { actorID: id }
       );
     } catch (error: any) {
       outcomes.sessionRevocationSucceeded = false;

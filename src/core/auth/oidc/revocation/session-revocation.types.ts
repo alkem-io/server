@@ -101,6 +101,14 @@ export type SessionRevocationReport = {
   /** True iff no entry failed locally and none failed remotely. */
   complete: boolean;
   /**
+   * How many Matrix devices the messaging-side leg deleted, or `null` when
+   * the leg was skipped (no `actorID` supplied, or no subject) or failed
+   * (adapter disabled, unreachable, or the call threw). Reported separately
+   * from `complete` on purpose: the local teardown is the access-control
+   * outcome, the device sweep is a messaging-side completeness step.
+   */
+  matrixDevicesDeleted: number | null;
+  /**
    * Whether the subject-level revocation marker was written. False for
    * `exceptSid` (scoped) revocations, which must not reject the surviving
    * session, and false if the marker write itself failed.
@@ -117,4 +125,10 @@ export type RevokeAllForSubOptions = {
   exceptSid?: string;
   /** Propagated into every audit record; generated when absent. */
   correlationId?: string;
+  /**
+   * The platform actor whose Matrix devices should also be deleted after the
+   * session teardown, invalidating messaging access and refresh tokens.
+   * Absent means the messaging-side leg is skipped entirely.
+   */
+  actorID?: string;
 };

@@ -1,6 +1,7 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { UserIdentityDeletionException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { OidcSessionRevocationService } from '@core/auth/oidc/revocation/oidc-session-revocation.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { IUser } from '@domain/community/user/user.interface';
@@ -21,6 +22,7 @@ export class AdminUsersMutations {
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
     private kratosService: KratosService,
     private userService: UserService,
+    private oidcSessionRevocationService: OidcSessionRevocationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService
   ) {}
 
@@ -42,6 +44,26 @@ export class AdminUsersMutations {
     );
 
     const user = await this.userService.getUserByIdOrFail(userID);
+
+    // Revoke every live session and the actor's Matrix devices BEFORE the
+    // identity is deleted: once the Kratos identity is gone its sub can no
+    // longer be resolved, so a revocation attempted afterwards would have
+    // nothing to key on. Best-effort — a failed revocation is logged and
+    // never blocks the account deletion the admin asked for.
+    try {
+      await this.oidcSessionRevocationService.revokeAllForSub(
+        user.authenticationID,
+        'admin_revoked',
+        { actorID: user.id }
+      );
+    } catch (error: any) {
+      this.logger.error?.(
+        `Failed to revoke sessions before account deletion for User ID ${userID}: ${error?.message}`,
+        error?.stack,
+        LogContext.AUTH
+      );
+    }
+
     try {
       await this.kratosService.deleteIdentityByEmail(user.email);
       const updatedUser =
