@@ -1,4 +1,10 @@
-import { ORGANIZATION_NOTIFICATION_CREDENTIAL_TYPES } from '@common/constants/authorization';
+import {
+  getPlatformAdminNotificationCriteria,
+  isPlatformAdminNotificationEvent,
+  ORGANIZATION_NOTIFICATION_CREDENTIAL_TYPES,
+  PLATFORM_ADMIN_NOTIFICATION_ROUTING,
+  type PlatformAdminNotificationEvent,
+} from '@common/constants/authorization';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
@@ -50,6 +56,44 @@ const DEFAULT_CALLOUT_REACTION_CHANNELS: IUserSettingsNotificationChannels =
     inApp: true,
     push: true,
   });
+
+export type PlatformAdminNotificationResolutionCause =
+  | 'ok'
+  | 'channel-off'
+  | 'provisioning-gap'
+  | 'stale-policy'
+  | 'actor-only';
+
+export interface PlatformAdminNotificationResolutionCounts {
+  criteriaCount: number;
+  candidateCount: number;
+  channelEnabledCount: number;
+  privilegedCount: number;
+  actorExcludedCount: number;
+  recipientCount: number;
+}
+
+// The severity-by-cause resolution for one channel's platform-admin
+// recipient set, in the order data-model.md §5 specifies — first match
+// wins. Pure, so it is tested directly against every staged condition
+// without touching the service's dependencies.
+export function resolvePlatformAdminRecipientCause(
+  counts: PlatformAdminNotificationResolutionCounts
+): PlatformAdminNotificationResolutionCause {
+  if (counts.criteriaCount > 0 && counts.candidateCount === 0) {
+    return 'provisioning-gap';
+  }
+  if (counts.channelEnabledCount === 0) {
+    return 'channel-off';
+  }
+  if (counts.privilegedCount === 0) {
+    return 'stale-policy';
+  }
+  if (counts.recipientCount === 0 && counts.actorExcludedCount > 0) {
+    return 'actor-only';
+  }
+  return 'ok';
+}
 
 @Injectable()
 export class NotificationRecipientsService {
@@ -189,25 +233,119 @@ export class NotificationRecipientsService {
       );
     }
 
+    // The acting operator is excluded from their own platform-admin
+    // notification here, in resolution, for every channel — driven by the
+    // routing table's row flag, and by identity regardless of which
+    // credential made them a candidate. Doing it here rather
+    // than per-channel in each adapter gives the exclusion one owner and
+    // means this recipient-resolution query already reflects the truth.
+    const excludeActor =
+      isPlatformAdminNotificationEvent(eventData.eventType) &&
+      PLATFORM_ADMIN_NOTIFICATION_ROUTING[eventData.eventType].excludeActor &&
+      !!eventData.triggeredBy;
+    const withoutActor = (recipients: IUser[]) =>
+      excludeActor
+        ? recipients.filter(recipient => recipient.id !== eventData.triggeredBy)
+        : recipients;
+
+    const emailRecipientsFinal = withoutActor(emailRecipientsWithPrivilege);
+    const inAppRecipientsFinal = withoutActor(inAppRecipientsWithPrivilege);
+    const pushRecipientsFinal = withoutActor(pushRecipientsWithPrivilege);
+
+    if (isPlatformAdminNotificationEvent(eventData.eventType)) {
+      this.emitPlatformAdminNotificationResolutionObservation(
+        eventData.eventType,
+        credentialCriteria.length,
+        candidateRecipients.length,
+        {
+          email: {
+            channelEnabledCount: emailRecipientsWithNotificationEnabled.length,
+            privilegedCount: emailRecipientsWithPrivilege.length,
+            recipients: emailRecipientsFinal,
+          },
+          inApp: {
+            channelEnabledCount: inAppRecipientsWithNotificationEnabled.length,
+            privilegedCount: inAppRecipientsWithPrivilege.length,
+            recipients: inAppRecipientsFinal,
+          },
+          push: {
+            channelEnabledCount: pushRecipientsWithNotificationEnabled.length,
+            privilegedCount: pushRecipientsWithPrivilege.length,
+            recipients: pushRecipientsFinal,
+          },
+        }
+      );
+    }
+
     this.logger.verbose?.(
-      `[${eventData.eventType}] - 5a. Email has ${emailRecipientsWithPrivilege.length} recipients: ${emailRecipientsWithPrivilege.map(recipient => recipient.email).join(', ')}`,
+      `[${eventData.eventType}] - 5a. Email has ${emailRecipientsFinal.length} recipients: ${emailRecipientsFinal.map(recipient => recipient.email).join(', ')}`,
       LogContext.NOTIFICATIONS
     );
     this.logger.verbose?.(
-      `[${eventData.eventType}] - 5b. InApp has ${inAppRecipientsWithPrivilege.length} recipients: ${inAppRecipientsWithPrivilege.map(recipient => recipient.email).join(', ')}`,
+      `[${eventData.eventType}] - 5b. InApp has ${inAppRecipientsFinal.length} recipients: ${inAppRecipientsFinal.map(recipient => recipient.email).join(', ')}`,
       LogContext.NOTIFICATIONS
     );
     this.logger.verbose?.(
-      `[${eventData.eventType}] - 5c. Push has ${pushRecipientsWithPrivilege.length} recipients: ${pushRecipientsWithPrivilege.map(recipient => recipient.id).join(', ')}`,
+      `[${eventData.eventType}] - 5c. Push has ${pushRecipientsFinal.length} recipients: ${pushRecipientsFinal.map(recipient => recipient.id).join(', ')}`,
       LogContext.NOTIFICATIONS
     );
 
     return {
-      emailRecipients: emailRecipientsWithPrivilege,
-      inAppRecipients: inAppRecipientsWithPrivilege,
-      pushRecipients: pushRecipientsWithPrivilege,
+      emailRecipients: emailRecipientsFinal,
+      inAppRecipients: inAppRecipientsFinal,
+      pushRecipients: pushRecipientsFinal,
       triggeredBy,
     };
+  }
+
+  // One structured, operator-visible log entry per channel for each of the
+  // five platform-admin events — never a throw, so a logging failure can
+  // never take down recipient resolution or the action that triggered it.
+  private emitPlatformAdminNotificationResolutionObservation(
+    eventType: PlatformAdminNotificationEvent,
+    criteriaCount: number,
+    candidateCount: number,
+    channels: Record<
+      'email' | 'inApp' | 'push',
+      {
+        channelEnabledCount: number;
+        privilegedCount: number;
+        recipients: IUser[];
+      }
+    >
+  ): void {
+    for (const channel of ['email', 'inApp', 'push'] as const) {
+      try {
+        const { channelEnabledCount, privilegedCount, recipients } =
+          channels[channel];
+        const actorExcludedCount = privilegedCount - recipients.length;
+        const counts = {
+          criteriaCount,
+          candidateCount,
+          channelEnabledCount,
+          privilegedCount,
+          actorExcludedCount,
+          recipientCount: recipients.length,
+        };
+        const cause = resolvePlatformAdminRecipientCause(counts);
+        const entry = {
+          message: 'platform-admin notification recipients resolved',
+          eventType,
+          channel,
+          ...counts,
+          cause,
+        };
+        if (cause === 'stale-policy') {
+          this.logger.error?.(entry, '', LogContext.NOTIFICATIONS);
+        } else if (cause === 'provisioning-gap') {
+          this.logger.warn?.(entry, LogContext.NOTIFICATIONS);
+        } else {
+          this.logger.log?.(entry, LogContext.NOTIFICATIONS);
+        }
+      } catch {
+        // Observability must never be able to fail recipient resolution.
+      }
+    }
   }
 
   private async filterRecipientsWithPrivileges(
@@ -518,29 +656,12 @@ export class NotificationRecipientsService {
         break;
       }
       case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_CREATED:
+      case NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED:
+      case NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED:
       case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED:
       case NotificationEvent.USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
-        credentialCriteria = this.getPlatformRoleCriteria([
-          AuthorizationCredential.PLATFORM_SUPPORT,
-          AuthorizationCredential.PLATFORM_USERS_ADMIN,
-        ]);
-        break;
-      }
-      case NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED: {
-        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
-        credentialCriteria = this.getPlatformRoleCriteria([
-          AuthorizationCredential.PLATFORM_SUPPORT,
-          AuthorizationCredential.PLATFORM_USERS_ADMIN,
-          AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
-        ]);
-        break;
-      }
-      case NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED: {
-        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
-        credentialCriteria = this.getPlatformRoleCriteria([
-          AuthorizationCredential.PLATFORM_ROLES_ADMIN,
-        ]);
+        credentialCriteria = getPlatformAdminNotificationCriteria(eventType);
         break;
       }
       case NotificationEvent.ORGANIZATION_ADMIN_MESSAGE:
@@ -1053,25 +1174,5 @@ export class NotificationRecipientsService {
         resourceID: virtual.account.id,
       },
     ];
-  }
-
-  /**
-   * 027-platform-role-redesign (T076, routing amended 2026-10-05): the legacy
-   * global credentials that used to define "platform admin" for NOTIFICATION
-   * RECIPIENT purposes are gone. This is a notification-routing question, not
-   * an authorization one — "who should be told when something platform-wide
-   * happens" — so each platform-admin event names the roles that act on it:
-   * Support and Users Admin for user and space lifecycle, License Manager for a
-   * new space (it licenses it), and Roles Admin ALONE for a role change.
-   * Content Full Access receives none of them (operator ruling), Audit Reader
-   * must never be a recipient (it reviews the trail, it does not operate), and
-   * Spaces Reader is a service account with no inbox. Every role named here
-   * must also be in the platform `RECEIVE_NOTIFICATIONS_ADMIN` rule, or the
-   * privilege filter drops it.
-   */
-  private getPlatformRoleCriteria(
-    credentialTypes: AuthorizationCredential[]
-  ): CredentialsSearchInput[] {
-    return credentialTypes.map(type => ({ type, resourceID: '' }));
   }
 }

@@ -14,6 +14,7 @@ import { PlatformAuthorizationPolicyService } from '@platform/authorization/plat
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationRecipientsService } from './notification.recipients.service';
 
 describe('NotificationRecipientsService', () => {
@@ -24,6 +25,13 @@ describe('NotificationRecipientsService', () => {
   let organizationLookupService: OrganizationLookupService;
   let authorizationService: AuthorizationService;
   let platformAuthorizationService: PlatformAuthorizationPolicyService;
+  let logger: {
+    log: ReturnType<typeof vi.fn>;
+    warn: ReturnType<typeof vi.fn>;
+    error: ReturnType<typeof vi.fn>;
+    verbose: ReturnType<typeof vi.fn>;
+    debug: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -47,6 +55,7 @@ describe('NotificationRecipientsService', () => {
     platformAuthorizationService = module.get(
       PlatformAuthorizationPolicyService
     );
+    logger = module.get(WINSTON_MODULE_NEST_PROVIDER);
 
     // Default mocks to prevent proxy objects in template literals
     vi.mocked(userLookupService.getUsersByIds).mockResolvedValue([]);
@@ -293,68 +302,51 @@ describe('NotificationRecipientsService', () => {
       );
     });
 
-    // 027-platform-role-redesign (T076, Slice B; routing amended 2026-10-05):
-    // the recipient set moved off `{global-admin, global-support,
-    // global-license-manager}`. This is a notification-ROUTING question — who
-    // should be told when something platform-wide happens — so each event
-    // names the roles that act on it. Content Full Access receives none of
-    // them (operator ruling), Audit Reader is deliberately excluded (it reviews
-    // the trail, it does not operate) and so is Spaces Reader (a service
-    // account with no inbox); asserting the exact array per event is what
-    // keeps any of them from creeping back in.
     it.each([
+      [
+        NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED,
+        [AuthorizationCredential.PLATFORM_ROLES_ADMIN],
+      ],
+      [
+        NotificationEvent.USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION,
+        [
+          AuthorizationCredential.PLATFORM_ROLES_ADMIN,
+          AuthorizationCredential.PLATFORM_USERS_ADMIN,
+        ],
+      ],
       [
         NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_CREATED,
         [
-          AuthorizationCredential.PLATFORM_SUPPORT,
           AuthorizationCredential.PLATFORM_USERS_ADMIN,
+          AuthorizationCredential.PLATFORM_SUPPORT,
         ],
       ],
       [
         NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED,
         [
-          AuthorizationCredential.PLATFORM_SUPPORT,
           AuthorizationCredential.PLATFORM_USERS_ADMIN,
-        ],
-      ],
-      [
-        NotificationEvent.USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION,
-        [
           AuthorizationCredential.PLATFORM_SUPPORT,
-          AuthorizationCredential.PLATFORM_USERS_ADMIN,
         ],
       ],
       [
         NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED,
         [
           AuthorizationCredential.PLATFORM_SUPPORT,
-          AuthorizationCredential.PLATFORM_USERS_ADMIN,
           AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
         ],
       ],
-      [
-        NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED,
-        [AuthorizationCredential.PLATFORM_ROLES_ADMIN],
-      ],
-    ])('routes %s to exactly %j — never Content Full Access, Audit Reader or Spaces Reader', async (eventType, expectedTypes) => {
+    ] as const)('uses exactly the routing table row for %s (workspace#065)', async (eventType, rowRecipients) => {
       await service.getRecipients({ eventType });
 
-      const [criteria] = (
-        userLookupService.usersWithCredentials as unknown as {
-          mock: { calls: [{ type: AuthorizationCredential }[]][] };
-        }
-      ).mock.calls[0];
-      const types = criteria.map(c => c.type);
+      const expectedCriteria = rowRecipients.map(type => ({
+        type,
+        resourceID: '',
+      }));
 
-      expect(types).toEqual(expectedTypes);
-      expect(types).not.toContain(
-        AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS
-      );
-      expect(types).not.toContain(
-        AuthorizationCredential.PLATFORM_AUDIT_READER
-      );
-      expect(types).not.toContain(
-        AuthorizationCredential.PLATFORM_SPACES_READER
+      expect(userLookupService.usersWithCredentials).toHaveBeenCalledWith(
+        expectedCriteria,
+        undefined,
+        expect.any(Object)
       );
     });
 
@@ -1785,6 +1777,312 @@ describe('NotificationRecipientsService', () => {
           // no spaceID provided
         })
       ).rejects.toThrow(ValidationException);
+    });
+  });
+
+  describe('065 — platform admin notification routing: actor exclusion and resolution observation', () => {
+    const adminSettingsAllOn = () => ({
+      platform: {
+        admin: {
+          userProfileCreated: { email: true, inApp: true, push: true },
+          userProfileRemoved: { email: true, inApp: true, push: true },
+          spaceCreated: { email: true, inApp: true, push: true },
+          userGlobalRoleChanged: { email: true, inApp: true, push: true },
+          userEmailChanged: { email: true, inApp: true, push: true },
+        },
+      },
+    });
+    const adminSettingsAllOff = () => ({
+      platform: {
+        admin: {
+          userProfileCreated: { email: false, inApp: false, push: false },
+          userProfileRemoved: { email: false, inApp: false, push: false },
+          spaceCreated: { email: false, inApp: false, push: false },
+          userGlobalRoleChanged: { email: false, inApp: false, push: false },
+          userEmailChanged: { email: false, inApp: false, push: false },
+        },
+      },
+    });
+
+    const platformAdminUser = (
+      id: string,
+      credentialTypes: string[],
+      channelsOn = true
+    ) =>
+      ({
+        id,
+        email: `${id}@example.com`,
+        settings: {
+          notification: channelsOn
+            ? adminSettingsAllOn()
+            : adminSettingsAllOff(),
+        },
+        credentials: credentialTypes.map(type => ({ type, resourceID: '' })),
+      }) as unknown as IUser;
+
+    beforeEach(() => {
+      vi.mocked(
+        platformAuthorizationService.getPlatformAuthorizationPolicy
+      ).mockResolvedValue({ id: 'platform-auth' } as any);
+    });
+
+    it.each([
+      [NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED, true],
+      [NotificationEvent.USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION, true],
+      [NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED, true],
+      [NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_CREATED, false],
+      [NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED, false],
+    ] as const)('%s excludes the acting operator on every channel iff its row says so (US4)', async (eventType, shouldExclude) => {
+      const actor = platformAdminUser('actor', [
+        AuthorizationCredential.PLATFORM_ROLES_ADMIN,
+      ]);
+      const other = platformAdminUser('other', [
+        AuthorizationCredential.PLATFORM_ROLES_ADMIN,
+      ]);
+
+      vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+        actor,
+        other,
+      ]);
+      vi.mocked(userLookupService.getUsersByIds).mockResolvedValue([
+        actor,
+        other,
+      ]);
+      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue(actor);
+      vi.mocked(
+        authorizationService.isAccessGrantedForCredentials
+      ).mockReturnValue(true);
+
+      const result = await service.getRecipients({
+        eventType,
+        triggeredBy: 'actor',
+      });
+
+      const ids = (list: IUser[]) => list.map(u => u.id);
+      if (shouldExclude) {
+        expect(ids(result.emailRecipients)).toEqual(['other']);
+        expect(ids(result.inAppRecipients)).toEqual(['other']);
+        expect(ids(result.pushRecipients)).toEqual(['other']);
+      } else {
+        expect(ids(result.emailRecipients).sort()).toEqual(['actor', 'other']);
+      }
+      // The exclusion is part of resolution: the query result already
+      // reflects it, regardless of the outcome above (US4-AS6).
+      expect(result.triggeredBy).toBe(actor);
+    });
+
+    it('is a no-op when triggeredBy is undefined', async () => {
+      const holder = platformAdminUser('holder', [
+        AuthorizationCredential.PLATFORM_ROLES_ADMIN,
+      ]);
+      vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+        holder,
+      ]);
+      vi.mocked(userLookupService.getUsersByIds).mockResolvedValue([holder]);
+      vi.mocked(
+        authorizationService.isAccessGrantedForCredentials
+      ).mockReturnValue(true);
+
+      const result = await service.getRecipients({
+        eventType: NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED,
+      });
+
+      expect(result.emailRecipients.map(u => u.id)).toEqual(['holder']);
+      expect(result.triggeredBy).toBeUndefined();
+    });
+
+    describe('resolution observation (US3)', () => {
+      const findEntry = (
+        mockFn: ReturnType<typeof vi.fn>,
+        channel: 'email' | 'inApp' | 'push'
+      ) =>
+        mockFn.mock.calls
+          .map(call => call[0])
+          .find(
+            (entry: any) =>
+              entry?.message ===
+                'platform-admin notification recipients resolved' &&
+              entry.channel === channel
+          );
+
+      it('ok: candidates present, channel enabled, privileged — logs at info with cause "ok"', async () => {
+        const holder = platformAdminUser('holder', [
+          AuthorizationCredential.PLATFORM_SUPPORT,
+        ]);
+        vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+          holder,
+        ]);
+        vi.mocked(userLookupService.getUsersByIds).mockResolvedValue([holder]);
+        vi.mocked(
+          authorizationService.isAccessGrantedForCredentials
+        ).mockReturnValue(true);
+
+        await service.getRecipients({
+          eventType: NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED,
+        });
+
+        const entry = findEntry(logger.log, 'email');
+        expect(entry).toMatchObject({
+          eventType: NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED,
+          cause: 'ok',
+          recipientCount: 1,
+          actorExcludedCount: 0,
+        });
+      });
+
+      it('provisioning-gap: nobody holds a routed role — logs at warn', async () => {
+        vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([]);
+
+        await service.getRecipients({
+          eventType: NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED,
+        });
+
+        const entry = findEntry(logger.warn, 'email');
+        expect(entry).toMatchObject({
+          cause: 'provisioning-gap',
+          candidateCount: 0,
+          recipientCount: 0,
+        });
+        expect(logger.error).not.toHaveBeenCalled();
+      });
+
+      it('stale-policy: channel-enabled candidates exist but none holds the privilege — logs at error naming the event', async () => {
+        const holder = platformAdminUser('holder', [
+          AuthorizationCredential.PLATFORM_SUPPORT,
+        ]);
+        vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+          holder,
+        ]);
+        vi.mocked(userLookupService.getUsersByIds).mockResolvedValue([holder]);
+        vi.mocked(
+          authorizationService.isAccessGrantedForCredentials
+        ).mockReturnValue(false);
+
+        await service.getRecipients({
+          eventType: NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED,
+        });
+
+        const entry = findEntry(logger.error, 'email');
+        expect(entry).toMatchObject({
+          eventType: NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED,
+          cause: 'stale-policy',
+          channelEnabledCount: 1,
+          privilegedCount: 0,
+          recipientCount: 0,
+        });
+      });
+
+      it('channel-off: every candidate has the channel switched off — logs at info', async () => {
+        const holder = platformAdminUser(
+          'holder',
+          [AuthorizationCredential.PLATFORM_SUPPORT],
+          false
+        );
+        vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+          holder,
+        ]);
+        vi.mocked(userLookupService.getUsersByIds).mockResolvedValue([holder]);
+        vi.mocked(
+          authorizationService.isAccessGrantedForCredentials
+        ).mockReturnValue(true);
+
+        await service.getRecipients({
+          eventType: NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED,
+        });
+
+        const entry = findEntry(logger.log, 'email');
+        expect(entry).toMatchObject({
+          cause: 'channel-off',
+          channelEnabledCount: 0,
+        });
+        expect(logger.error).not.toHaveBeenCalled();
+        expect(logger.warn).not.toHaveBeenCalled();
+      });
+
+      it('actor-only: the sole candidate is the operator who performed the act — logs at info with actorExcludedCount 1', async () => {
+        const actor = platformAdminUser('actor', [
+          AuthorizationCredential.PLATFORM_ROLES_ADMIN,
+        ]);
+        vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+          actor,
+        ]);
+        vi.mocked(userLookupService.getUsersByIds).mockResolvedValue([actor]);
+        vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue(actor);
+        vi.mocked(
+          authorizationService.isAccessGrantedForCredentials
+        ).mockReturnValue(true);
+
+        const result = await service.getRecipients({
+          eventType: NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED,
+          triggeredBy: 'actor',
+        });
+
+        expect(result.emailRecipients).toHaveLength(0);
+        const entry = findEntry(logger.log, 'email');
+        expect(entry).toMatchObject({
+          cause: 'actor-only',
+          recipientCount: 0,
+          actorExcludedCount: 1,
+        });
+        expect(logger.error).not.toHaveBeenCalled();
+        expect(logger.warn).not.toHaveBeenCalled();
+      });
+
+      it('emits no platform-admin resolution entry for a non-platform-admin event', async () => {
+        vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([]);
+
+        await service.getRecipients({
+          eventType: NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION,
+          spaceID: 'space-1',
+        });
+
+        const anyPlatformAdminEntry = [
+          ...logger.log.mock.calls,
+          ...logger.warn.mock.calls,
+          ...logger.error.mock.calls,
+        ].some(
+          call =>
+            (call[0] as any)?.message ===
+            'platform-admin notification recipients resolved'
+        );
+        expect(anyPlatformAdminEntry).toBe(false);
+      });
+
+      it('resolves (never rejects) for every empty state, returning empty lists', async () => {
+        vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([]);
+
+        await expect(
+          service.getRecipients({
+            eventType: NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED,
+          })
+        ).resolves.toMatchObject({
+          emailRecipients: [],
+          inAppRecipients: [],
+          pushRecipients: [],
+        });
+      });
+
+      it('does not reject when the logger throws', async () => {
+        const holder = platformAdminUser('holder', [
+          AuthorizationCredential.PLATFORM_SUPPORT,
+        ]);
+        vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+          holder,
+        ]);
+        vi.mocked(userLookupService.getUsersByIds).mockResolvedValue([holder]);
+        vi.mocked(
+          authorizationService.isAccessGrantedForCredentials
+        ).mockReturnValue(true);
+        logger.log.mockImplementation(() => {
+          throw new Error('logging backend unavailable');
+        });
+
+        await expect(
+          service.getRecipients({
+            eventType: NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED,
+          })
+        ).resolves.toBeDefined();
+      });
     });
   });
 });
