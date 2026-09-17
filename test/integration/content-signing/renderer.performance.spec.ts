@@ -139,23 +139,19 @@ const nearLimitEditorFixture = (imageCount: number) => {
     MAX_MEMO_EDITOR_CONTENT_BYTES / representativeTextBytes
   );
   let selectedParagraphs = 0;
+  let selectedFixture = editorFixture(imageCount, selectedParagraphs);
   while (low <= high) {
     const paragraphs = Math.floor((low + high) / 2);
-    const bytes = Buffer.byteLength(
-      JSON.stringify(editorDocument(imageCount, paragraphs).toJSON())
-    );
-    if (bytes <= targetBytes) {
+    const fixture = editorFixture(imageCount, paragraphs);
+    if (fixture.jsonBytes <= targetBytes) {
       selectedParagraphs = paragraphs;
+      selectedFixture = fixture;
       low = paragraphs + 1;
     } else high = paragraphs - 1;
   }
   return {
-    ...editorFixture(imageCount, selectedParagraphs),
-    nextJsonBytes: Buffer.byteLength(
-      JSON.stringify(
-        editorDocument(imageCount, selectedParagraphs + 1).toJSON()
-      )
-    ),
+    ...selectedFixture,
+    nextJsonBytes: editorFixture(imageCount, selectedParagraphs + 1).jsonBytes,
     targetBytes,
   };
 };

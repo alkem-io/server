@@ -1720,6 +1720,9 @@ describe('WhiteboardService', () => {
       await expect(service.hasVisibleContent(canonical)).resolves.toBe(true);
       await expect(service.hasVisibleContent(legacy)).resolves.toBe(true);
       await expect(service.hasVisibleContent(undefined)).resolves.toBe(false);
+      // A cleared contribution default is stored as SQL NULL, so the
+      // availability signal has to treat null as "nothing to offer".
+      await expect(service.hasVisibleContent(null)).resolves.toBe(false);
       await expect(service.hasVisibleContent('not-content')).resolves.toBe(
         false
       );

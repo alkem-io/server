@@ -757,4 +757,17 @@ describe('MemoPdfRenderer', () => {
     expect(text).toContain('Unsupported content: object');
     expect(text).not.toContain('hidden object text');
   });
+
+  it('routes emoji when html-to-pdfmake returns a bare text node', async () => {
+    const pdf = await renderer.renderSanitizerFixture(
+      'Hello 🎉 world',
+      'bucket-1',
+      actor
+    );
+
+    expect((await extractText(pdf)).replace(/\s+/g, ' ')).toContain(
+      'Hello 🎉 world'
+    );
+    expect(pdf.toString('latin1')).toContain('NotoEmoji');
+  });
 });

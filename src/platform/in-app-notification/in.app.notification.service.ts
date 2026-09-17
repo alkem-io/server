@@ -22,6 +22,8 @@ import {
   UpdateResult,
 } from 'typeorm';
 import {
+  InAppNotificationPayloadOrganizationAssociateActor,
+  InAppNotificationPayloadOrganizationAssociateInvitation,
   InAppNotificationPayloadOrganizationMessageDirect,
   InAppNotificationPayloadOrganizationMessageRoom,
 } from '../in-app-notification-payload/dto/organization';
@@ -462,6 +464,19 @@ export class InAppNotificationService {
         break;
       }
 
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_ACCEPTED:
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_DECLINED:
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_APPLICATION:
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_JOINED: {
+        const typedPayload =
+          payload as InAppNotificationPayloadOrganizationAssociateActor;
+        result.organizationID = typedPayload.organizationID;
+        result.contributorActorId = typedPayload.actorID;
+        result.applicationID = typedPayload.applicationID;
+        result.invitationID = typedPayload.invitationID;
+        break;
+      }
+
       // ========================================
       // SPACE NOTIFICATIONS
       // ========================================
@@ -659,6 +674,23 @@ export class InAppNotificationService {
           payload as InAppNotificationPayloadSpaceCommunityActor
         ).actorID;
         break;
+
+      case NotificationEvent.USER_ORGANIZATION_ASSOCIATE_INVITATION: {
+        const typedPayload =
+          payload as InAppNotificationPayloadOrganizationAssociateInvitation;
+        result.organizationID = typedPayload.organizationID;
+        result.invitationID = typedPayload.invitationID;
+        break;
+      }
+
+      case NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_APPROVED:
+      case NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_DECLINED: {
+        const typedPayload =
+          payload as InAppNotificationPayloadOrganizationAssociateActor;
+        result.organizationID = typedPayload.organizationID;
+        result.applicationID = typedPayload.applicationID;
+        break;
+      }
 
       case NotificationEvent.USER_MESSAGE:
         result.userID = (
