@@ -1,5 +1,6 @@
 import { AuthorizationPrivilege } from '@common/enums';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { OidcSessionRevocationService } from '@core/auth/oidc/revocation/oidc-session-revocation.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
@@ -48,12 +49,16 @@ describe('Platform-admin identity deletion flows', () => {
       getUserByIdOrFail: Mock;
       clearAuthenticationIDForUser: Mock;
     };
+    const oidcSessionRevocationService = {
+      revokeAllForSub: vi.fn().mockResolvedValue(undefined),
+    } as unknown as OidcSessionRevocationService;
 
     const resolver = new AdminUsersMutations(
       authorizationService,
       platformAuthorizationPolicyService,
       kratosService,
       userService,
+      oidcSessionRevocationService,
       createLogger()
     );
 

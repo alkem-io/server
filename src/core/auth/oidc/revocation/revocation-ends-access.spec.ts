@@ -3,6 +3,7 @@ import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import type { Request } from 'express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { OidcService } from '../oidc.service';
@@ -223,6 +224,12 @@ async function buildStack(sids: string[]) {
           getIssuer: () => ({
             metadata: { revocation_endpoint: 'https://hydra.test/revoke' },
           }),
+        },
+      },
+      {
+        provide: CommunicationAdapter,
+        useValue: {
+          revokeActorDevices: vi.fn(async () => ({ deletedCount: 0 })),
         },
       },
       {

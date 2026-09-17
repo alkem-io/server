@@ -1,5 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import type { AuditEvent } from '../audit';
 import { OidcService } from '../oidc.service';
@@ -60,6 +61,7 @@ async function buildHarness(options?: {
   markerImpl?: () => Promise<number>;
   revocationEndpoint?: string | undefined;
   issuerThrows?: boolean;
+  revokeActorDevicesImpl?: () => Promise<unknown>;
 }) {
   const sids = options?.sids ?? ['sid-1'];
   const commands: { cmd: string; args: unknown[] }[] = [];
@@ -139,12 +141,23 @@ async function buildHarness(options?: {
     debug: vi.fn((...args: unknown[]) => logLines.push(args)),
   };
 
+  const communicationAdapter = {
+    revokeActorDevices: vi.fn(async () => {
+      order.push('revokeActorDevices');
+      if (options?.revokeActorDevicesImpl) {
+        return options.revokeActorDevicesImpl();
+      }
+      return { deletedCount: 2 };
+    }),
+  };
+
   const moduleRef = await Test.createTestingModule({
     providers: [
       OidcSessionRevocationService,
       { provide: OIDC_REDIS_CLIENT, useValue: redis },
       { provide: SESSION_STORE_HANDLE, useValue: sessionStore },
       { provide: OidcService, useValue: oidcService },
+      { provide: CommunicationAdapter, useValue: communicationAdapter },
       {
         provide: ConfigService,
         useValue: { get: vi.fn(() => CLIENT_ID) },
@@ -158,6 +171,7 @@ async function buildHarness(options?: {
     redis,
     sessionStore,
     oidcService,
+    communicationAdapter,
     logger,
     commands,
     auditRecords,
@@ -1055,5 +1069,98 @@ describe('revokeAllForSub — report counters partition the entries', () => {
     // Still incomplete — a remote gap is a completeness gap, just not an
     // access-control one.
     expect(report.complete).toBe(false);
+  });
+});
+
+describe('revokeAllForSub — Matrix device revocation leg', () => {
+  it('with actorID set: awaits revokeActorDevices AFTER the local teardown, reports the count, audits the leg', async () => {
+    const h = await buildHarness({ sids: ['sid-1'] });
+    stdoutSpy = captureAudit(h);
+    okFetch();
+
+    const report = await h.service.revokeAllForSub(SUB, 'account_deleted', {
+      actorID: 'actor-1',
+    });
+
+    expect(h.communicationAdapter.revokeActorDevices).toHaveBeenCalledWith(
+      'actor-1',
+      'account_deleted'
+    );
+    // Ordering: every local teardown write lands before the device leg — the
+    // device sweep is a completeness step, never a substitute for the local
+    // access-control outcome.
+    const deviceIndex = h.order.indexOf('revokeActorDevices');
+    const lastTeardownIndex = h.order.lastIndexOf('markTerminated:sid-1');
+    expect(deviceIndex).toBeGreaterThan(lastTeardownIndex);
+
+    expect(report.matrixDevicesDeleted).toBe(2);
+
+    const legAudit = h.auditRecords.find(
+      r => r.event_type === 'session.revocation.matrix_devices'
+    );
+    expect(legAudit).toBeDefined();
+    expect(legAudit!.outcome).toBe('success');
+    expect(legAudit!.reason).toBe('account_deleted');
+    expect(legAudit!.truncated_input).toContain('actor-1');
+    expect(legAudit!.truncated_input).toContain('deleted=2');
+  });
+
+  it('without actorID: the leg is skipped entirely and recorded as null', async () => {
+    const h = await buildHarness({ sids: ['sid-1'] });
+    stdoutSpy = captureAudit(h);
+    okFetch();
+
+    const report = await h.service.revokeAllForSub(SUB, 'account_deleted');
+
+    expect(h.communicationAdapter.revokeActorDevices).not.toHaveBeenCalled();
+    expect(report.matrixDevicesDeleted).toBeNull();
+    expect(
+      h.auditRecords.some(
+        r => r.event_type === 'session.revocation.matrix_devices'
+      )
+    ).toBe(false);
+  });
+
+  it('a throwing device leg never fails the revocation: null count, failure audit, resolved report', async () => {
+    const h = await buildHarness({
+      sids: ['sid-1'],
+      revokeActorDevicesImpl: async () => {
+        throw new Error('adapter transport down');
+      },
+    });
+    stdoutSpy = captureAudit(h);
+    okFetch();
+
+    const report = await h.service.revokeAllForSub(SUB, 'admin_revoked', {
+      actorID: 'actor-1',
+    });
+
+    expect(report.matrixDevicesDeleted).toBeNull();
+    // The local teardown still fully succeeded.
+    expect(report.failedCount).toBe(0);
+    const legAudit = h.auditRecords.find(
+      r => r.event_type === 'session.revocation.matrix_devices'
+    );
+    expect(legAudit!.outcome).toBe('failure');
+    expect(legAudit!.truncated_input).toContain('actor-1');
+  });
+
+  it('a disabled or unreachable adapter is a failed leg, never a fabricated zero', async () => {
+    const h = await buildHarness({
+      sids: ['sid-1'],
+      revokeActorDevicesImpl: async () => ({ disabled: true }),
+    });
+    stdoutSpy = captureAudit(h);
+    okFetch();
+
+    const report = await h.service.revokeAllForSub(SUB, 'account_deleted', {
+      actorID: 'actor-1',
+    });
+
+    expect(report.matrixDevicesDeleted).toBeNull();
+    const legAudit = h.auditRecords.find(
+      r => r.event_type === 'session.revocation.matrix_devices'
+    );
+    expect(legAudit!.outcome).toBe('failure');
   });
 });

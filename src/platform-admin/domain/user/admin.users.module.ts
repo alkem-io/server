@@ -1,3 +1,4 @@
+import { OidcCoreModule } from '@core/auth/oidc/oidc-core.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { Module } from '@nestjs/common';
@@ -11,6 +12,7 @@ import { AdminUsersMutations } from './admin.users.resolver.mutations';
     PlatformAuthorizationPolicyModule,
     KratosModule,
     UserModule,
+    OidcCoreModule,
   ],
   providers: [AdminUsersMutations],
   exports: [],

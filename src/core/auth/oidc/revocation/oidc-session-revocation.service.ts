@@ -1,5 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { LogContext } from '@src/common/enums';
 import { AlkemioConfig } from '@src/types';
 import { randomUUID } from 'crypto';
@@ -88,6 +89,7 @@ export class OidcSessionRevocationService {
     @Inject(SESSION_STORE_HANDLE)
     private readonly sessionStore: SessionStoreHandle,
     private readonly oidcService: OidcService,
+    private readonly communicationAdapter: CommunicationAdapter,
     configService: ConfigService<AlkemioConfig, true>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
@@ -133,6 +135,7 @@ export class OidcSessionRevocationService {
         failedCount: 0,
         tokenRevocationFailedCount: 0,
         complete: true,
+        matrixDevicesDeleted: null,
         subjectMarked: false,
       };
     }
@@ -207,6 +210,14 @@ export class OidcSessionRevocationService {
       truncated_input: `revoked=${revokedCount} failed=${failedCount} token_revocation_failed=${tokenRevocationFailedCount} subject_marked=${subjectMarked} total=${entries.length}`,
     });
 
+    // The messaging-side completeness leg, strictly AFTER the local/issuer
+    // teardown: the local teardown alone is the access-control outcome, so a
+    // failing device sweep must never fail the revocation — it is reported
+    // (null count + failure audit) and left to the operator repair mutation.
+    const matrixDevicesDeleted = opts?.actorID
+      ? await this.revokeMatrixDevices(opts.actorID, sub, reason, correlationId)
+      : null;
+
     return {
       sub,
       reason,
@@ -216,8 +227,75 @@ export class OidcSessionRevocationService {
       failedCount,
       tokenRevocationFailedCount,
       complete,
+      matrixDevicesDeleted,
       subjectMarked,
     };
+  }
+
+  /**
+   * Delete every Matrix device of the actor, invalidating messaging access
+   * AND refresh tokens. Awaited, audited, and never throwing: `null` means
+   * "not done" (disabled, unreachable, or threw) — never a fabricated zero.
+   */
+  private async revokeMatrixDevices(
+    actorID: string,
+    sub: string,
+    reason: SessionRevocationReason,
+    correlationId: string
+  ): Promise<number | null> {
+    try {
+      const result = await this.communicationAdapter.revokeActorDevices(
+        actorID,
+        reason
+      );
+      if (result && !('disabled' in result)) {
+        emitAudit({
+          event_type: 'session.revocation.matrix_devices',
+          outcome: 'success',
+          sub,
+          client_id: null,
+          correlation_id: correlationId,
+          request_id: correlationId,
+          reason,
+          truncated_input: `actor=${actorID} deleted=${result.deletedCount}`,
+        });
+        return result.deletedCount;
+      }
+      emitAudit({
+        event_type: 'session.revocation.matrix_devices',
+        outcome: 'failure',
+        sub,
+        client_id: null,
+        correlation_id: correlationId,
+        request_id: correlationId,
+        reason,
+        truncated_input: `actor=${actorID} error=${
+          result === undefined ? 'adapter_unreachable' : 'adapter_disabled'
+        }`,
+      });
+      return null;
+    } catch (error) {
+      emitAudit({
+        event_type: 'session.revocation.matrix_devices',
+        outcome: 'failure',
+        sub,
+        client_id: null,
+        correlation_id: correlationId,
+        request_id: correlationId,
+        reason,
+        truncated_input: `actor=${actorID} error=threw`,
+      });
+      this.logger.warn?.(
+        {
+          message:
+            'Matrix device revocation leg failed; the session revocation stands',
+          actorID,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        LogContext.AUTH
+      );
+      return null;
+    }
   }
 
   /**
