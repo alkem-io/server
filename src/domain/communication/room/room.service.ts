@@ -1,3 +1,8 @@
+import {
+  JoinRule,
+  JoinRuleInvite,
+  JoinRuleRestricted,
+} from '@alkemio/matrix-adapter-lib';
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { RoomType } from '@common/enums/room.type';
@@ -250,6 +255,13 @@ export class RoomService {
       const isConversation = isConversationLegacy || isDirect || isGroup;
       const customState = {
         'io.alkemio.visibility': { visible: isConversation },
+        // Platform identity marker (069, data-model E3): Alkemio declares the
+        // owning entity at creation; the control plane writes it bot-only.
+        'io.alkemio.entity': {
+          entityId: room.id,
+          entityType: 'thread',
+          parentId: roomData.parentContextId ?? null,
+        },
       };
 
       await this.communicationAdapter.createRoom(
@@ -259,7 +271,7 @@ export class RoomService {
         initialMembers,
         roomData.parentContextId,
         roomData.avatarUrl,
-        roomData.joinRule,
+        this.deriveMembershipMode(roomData),
         roomData.isPublic,
         customState
       );
@@ -271,6 +283,38 @@ export class RoomService {
         LogContext.COMMUNICATION
       );
     }
+  }
+
+  /**
+   * Alkemio DECLARES the membership mode per room — the control plane applies
+   * it capped by room-version capability and never infers it (069, FR-008):
+   * restricted (space-entitled) only for space-anchored rooms whose READ
+   * authorization is at least the space's membership — updates rooms by
+   * nature, comment rooms only when the caller declared the content
+   * read-wide (published). Everything else, including every conversation
+   * room and all draft content, stays platform-driven (invite).
+   */
+  private deriveMembershipMode(roomData: CreateRoomInput): JoinRule {
+    if (roomData.joinRule) return roomData.joinRule;
+    if (!roomData.parentContextId) return JoinRuleInvite;
+    if (roomData.type === RoomType.UPDATES) return JoinRuleRestricted;
+    return roomData.contentReadableBySpaceMembers
+      ? JoinRuleRestricted
+      : JoinRuleInvite;
+  }
+
+  /**
+   * Declare a room's membership mode as space-entitled (restricted) — the
+   * authorization-relevant transition when content widens to space-readable,
+   * e.g. a callout being published (069, FR-008).
+   */
+  public async declareSpaceEntitledMembership(roomID: string): Promise<void> {
+    await this.communicationAdapter.updateRoom(
+      roomID,
+      undefined,
+      undefined,
+      JoinRuleRestricted
+    );
   }
 
   async addReactionToMessage(

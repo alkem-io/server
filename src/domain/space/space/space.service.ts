@@ -288,7 +288,17 @@ export class SpaceService {
       undefined, // avatarUrl — set later when user uploads avatar
       JoinRuleInvite,
       undefined,
-      { 'io.alkemio.visibility': { visible: false } }
+      {
+        'io.alkemio.visibility': { visible: false },
+        // Platform identity marker (069, data-model E3): declared by Alkemio
+        // at creation, written bot-only, the room's ownership readable from
+        // the room itself.
+        'io.alkemio.entity': {
+          entityId: space.id,
+          entityType: 'space',
+          parentId: parentSpaceId ?? null,
+        },
+      }
     );
     // Anchor the UPDATES room to this space's Matrix space
     if (space.community?.communication?.updates) {
