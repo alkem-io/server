@@ -83,16 +83,17 @@ describe('SpacePlatformRolesAccessService', () => {
         // 027-platform-role-redesign (T076/T077, Slice B): the four legacy
         // per-space role entries are gone — `global-admin`,
         // `global-license-manager`, `global-support` and the void
-        // `global-spaces-read` (research C1). Six remain: the three identity
+        // `global-spaces-read` (research C1). Seven remain: the three identity
         // tiers plus `platform-license-manager` (re-anchored from
         // `global-license-manager`, because A12/A14 are unexercisable if the
-        // owner cannot read a space's license), `platform-spaces-reader` and
-        // `platform-support`.
+        // owner cannot read a space's license), `platform-spaces-reader`,
+        // `platform-support`, and — live finding F5 — `platform-resource-admin`
+        // (A9's mover needs READ on what it may move).
         //
         // `platform-content-full-access` is deliberately NOT here: its reach
         // over space content is the root content rule's cascade (FR-004), not a
         // per-space grant, so adding it would double-count.
-        expect(result.roles.length).toBe(6);
+        expect(result.roles.length).toBe(7);
 
         const roleNames = result.roles.map(r => r.roleName);
         expect(roleNames).toContain(RoleName.ANONYMOUS);
@@ -102,6 +103,25 @@ describe('SpacePlatformRolesAccessService', () => {
         expect(roleNames).toContain(RoleName.PLATFORM_SPACES_READER);
         expect(roleNames).toContain(RoleName.PLATFORM_SUPPORT);
         expect(roleNames).not.toContain(RoleName.PLATFORM_CONTENT_FULL_ACCESS);
+        expect(roleNames).toContain(RoleName.PLATFORM_RESOURCE_ADMIN);
+      });
+
+      // Live finding F5: the resource mover could move a Space it was not
+      // allowed to look at. READ only — never the CRUD set the in-space
+      // support flag grants, because this role does not edit space content.
+      it('grants PLATFORM_RESOURCE_ADMIN plain READ, and nothing more', () => {
+        const space = createSpace();
+        const result = service.createPlatformRolesAccess(
+          space,
+          defaultSettings
+        );
+
+        const resourceAdmin = result.roles.find(
+          r => r.roleName === RoleName.PLATFORM_RESOURCE_ADMIN
+        );
+        expect(resourceAdmin?.grantedPrivileges).toEqual([
+          AuthorizationPrivilege.READ,
+        ]);
       });
 
       it('should grant READ to anonymous users on public L0 space', () => {

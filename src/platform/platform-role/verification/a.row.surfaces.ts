@@ -144,6 +144,35 @@ export const INDIRECT_ENFORCEMENT_FILES: readonly string[] = [
   // never trips rule 1/2 on its own — this entry exists so rule 4 (the
   // credential-typed-argument completeness scan) recognizes the file.
   'src/platform-admin/domain/authorization/admin.authorization.resolver.queries.ts',
+  // Live finding F6 (2026-08-10): the admin console's INVENTORY READS —
+  // `platformAdmin.{users,accounts,spaces,organizations,innovationPacks,
+  // innovationHubs,virtualContributors,identity}` and `identity.identities`.
+  // They are the second clause of this list's contract ("the hit belongs to a
+  // code path this census does not cover"), NOT an indirection: the census's
+  // 21 A-rows enumerate the ACTIONS a role takes, and none of them is "read
+  // the list the section is made of". Each field admits, alongside the
+  // retiring `PLATFORM_ADMIN` catch-all it has always checked, the ONE
+  // per-family privilege whose A-row owns what the list contains —
+  // `PLATFORM_USERS_ADMIN` (A4/A5) for the user and Kratos-identity lists,
+  // `PLATFORM_CONTENT_FULL_ACCESS` (A8) for the resource lists. No new
+  // privilege vocabulary, no new grant: both are already declared, already
+  // anchored on the platform policy, and already censused at their own
+  // action surfaces. Censusing these reads as A-row surfaces instead would
+  // multiply eight read-only affordances into the FR-024 denial matrix and
+  // restate each family's intent in a second place, where it could drift
+  // from the action it mirrors.
+  //
+  // R-F.2 (2026-09-16, research D29) — the other half of F6: three of those
+  // lists (`organizations`, `innovationPacks`, `innovationHubs`) additionally
+  // admit `PLATFORM_SUPPORT_LISTS_READ`, the ONE new privilege this closure
+  // introduced. Support's A6/A7 privileges are anchored on the organization
+  // and account trees, so the platform policy these lists check held nothing
+  // of Support's — the customer-facing admin role could not find what it
+  // services. Same disposition as above: a read, not an A-row, no census
+  // entry, no matrix cell; the privilege is mirrored in `privilege.grants.ts`
+  // so its grant set is spec-covered, and names no census gate by design.
+  'src/platform-admin/admin/platform.admin.resolver.fields.ts',
+  'src/platform-admin/core/identity/admin.identity.resolver.fields.ts',
 ];
 
 // 027-platform-role-redesign (T083a, Slice B): the GA/GS/GSM/GLM/GPM aliases
@@ -572,6 +601,29 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       legacyReachers: [],
       lifecycle: { declarationOnly: true },
     },
+    // workspace#038 (MCP API-key lifecycle) landed on develop AFTER the
+    // census was written, gated on PLATFORM_ADMIN. A user's keys are
+    // user-credential lifecycle — this family — so both admin surfaces are
+    // re-anchored here. Pre-feature gate was PLATFORM_ADMIN; at Slice B the
+    // legacy reachers are gone, so only the owning role remains.
+    {
+      file: 'src/platform-admin/domain/mcp-api-key/admin.mcp.api.key.resolver.fields.ts',
+      member: 'mcpApiKeys',
+      kind: 'graphql-field',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_USERS_ADMIN },
+      intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
+      legacyReachers: [],
+    },
+    {
+      file: 'src/platform-admin/domain/mcp-api-key/admin.mcp.api.key.resolver.mutations.ts',
+      member: 'adminRevokeMcpApiKey',
+      kind: 'graphql-mutation',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_USERS_ADMIN },
+      intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
+      legacyReachers: [],
+    },
   ],
 
   // ===== A6 — create / delete an organization =====
@@ -656,6 +708,18 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
           'src/domain/template/template/template.resolver.mutations.ts',
           'deleteTemplate',
         ],
+        // 2026-09-16 (R-F.2 sandbox walk): a CALLOUT template's content is
+        // edited through the generic `updateCallout`, whose gate had never
+        // taken A7's dual path — Support could create and delete a template
+        // in an organization's pack but not edit one. The branch is scoped
+        // to `callout.isTemplate` in code (the account cascade also reaches
+        // callouts inside an organization's SPACES, which FR-008(a) keeps
+        // closed to Support); the census declares the privilege reach — a
+        // matrix cell for this member must use a TEMPLATE callout fixture.
+        [
+          'src/domain/collaboration/callout/callout.resolver.mutations.ts',
+          'updateCallout',
+        ],
       ] as const
     ).map(
       ([file, member]): SurfaceRef => ({
@@ -690,17 +754,10 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
         legacyReachers: [],
       })
     ),
-    // T074 (Slice B): Support needs the organization LIST to reach the org-owned resources spec row 7 gives it. Gated on A7's own privilege, for which T076 added a platform-level rule (holder set unchanged: `platform-support` alone).
-    {
-      file: 'src/platform-admin/admin/platform.admin.resolver.fields.ts',
-      member: 'organizations',
-      kind: 'graphql-field',
-      tree: 'platform',
-      gate: { requires: AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES },
-      intendedOwners: [AuthorizationCredential.PLATFORM_SUPPORT],
-      legacyReachers: [],
-      lifecycle: { declarationOnly: true },
-    },
+    // R-F.2 (2026-09-16, research D29): the `platformAdmin.organizations`
+    // list is NOT censused here — like the other console inventory reads it
+    // admits `PLATFORM_SUPPORT_LISTS_READ` (plus Content Full Access) and is
+    // a read affordance, not an A-row action. See the note above A1.
   ],
 
   // ===== A8 — delete callout/contribution/space; delete an org-owned
@@ -1036,7 +1093,8 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
   ],
 
   // ===== A11 — operational machinery (032, pre-existing) =====
-  // Contract's "~10" corrected to 13 by grepping the tree.
+  // Contract's "~10" corrected to 14 by grepping the tree (the two
+  // collaboration-migration mutations replaced the retired whiteboard one).
   A11: [
     ...(
       [
@@ -1070,9 +1128,18 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
           'adminSearchIngestFromScratch',
           'platform',
         ],
+        // Landed on develop by 003/006 (collaboration persistence) in place of
+        // the deleted `adminUploadFilesFromContentToStorageBucket`; gated on
+        // PLATFORM_OPERATIONS_ADMIN at the platform policy exactly like the
+        // rest of this family.
         [
-          'src/platform-admin/domain/whiteboard/admin.whiteboard.resolver.mutations.ts',
-          'adminUploadFilesFromContentToStorageBucket',
+          'src/services/collaboration-integration/migration/collaboration-migration.resolver.mutations.ts',
+          'migrateLegacyMemoContent',
+          'platform',
+        ],
+        [
+          'src/services/collaboration-integration/migration/collaboration-migration.resolver.mutations.ts',
+          'migrateLegacyWhiteboardContent',
           'platform',
         ],
         [
@@ -1357,6 +1424,23 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       intendedOwners: [AuthorizationCredential.PLATFORM_SUPPORT],
       legacyReachers: [],
       lifecycle: { declarationOnly: true },
+    },
+    // workspace#060 (forum reorganisation) landed on develop after the
+    // census, gating category removal on PLATFORM_ADMIN. Removing a forum
+    // category is editorial control of the forum — this family — so it is
+    // re-anchored onto PLATFORM_FORUM_MANAGE. Its pre-feature reacher set
+    // was PLATFORM_ADMIN's {GA, GS, GLM}; the forum rule carries {GA, GS}.
+    // `createDiscussion` in the same file is a member surface
+    // (CREATE_DISCUSSION) whose admin-only-category branch takes the same
+    // privilege over the forum policy; it is not a separate A-row surface.
+    {
+      file: 'src/platform/forum/forum.resolver.mutations.ts',
+      member: 'adminForumRemoveDiscussionCategory',
+      kind: 'graphql-mutation',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_FORUM_MANAGE },
+      intendedOwners: [AuthorizationCredential.PLATFORM_SUPPORT],
+      legacyReachers: [],
     },
   ],
 

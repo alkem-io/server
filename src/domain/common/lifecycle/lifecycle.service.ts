@@ -6,7 +6,7 @@ import {
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { AnyMachineSnapshot, AnyStateMachine, createActor } from 'xstate';
 import { LifecycleEventInput } from './dto/lifecycle.dto.event';
 import { Lifecycle } from './lifecycle.entity';
@@ -29,8 +29,14 @@ export class LifecycleService {
     return this.save(lifecycle);
   }
 
-  async deleteLifecycle(lifecycleID: string): Promise<ILifecycle> {
+  async deleteLifecycle(
+    lifecycleID: string,
+    em?: EntityManager
+  ): Promise<ILifecycle> {
     const lifecycle = await this.getLifecycleOrFail(lifecycleID);
+    if (em) {
+      return em.remove(lifecycle as Lifecycle);
+    }
     return this.lifecycleRepository.remove(lifecycle as Lifecycle);
   }
 

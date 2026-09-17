@@ -1,3 +1,4 @@
+import { CONVERSATION_GROUP_MEMBER_COUNT_MAX } from '@common/constants';
 import { LogContext } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
@@ -8,6 +9,7 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
+import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
 import { Actor } from '@domain/actor/actor/actor.entity';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -20,9 +22,12 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { CommunicationAdapterException } from '@services/adapters/communication-adapter/communication.adapter.exception';
+import { RoomMemberUpdatedEvent } from '@services/event-handlers/internal/message-inbox/room.member.updated.event';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
 import { EntityManager, FindOneOptions, In, Repository } from 'typeorm';
 import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
@@ -53,6 +58,7 @@ export class ConversationService {
     private conversationRepository: Repository<Conversation>,
     @InjectRepository(ConversationMembership)
     private conversationMembershipRepository: Repository<ConversationMembership>,
+    private eventEmitter: EventEmitter2,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -212,6 +218,44 @@ export class ConversationService {
       return conversation;
     }
 
+    // sec-server-10: CreateConversationInput.memberIDs bounds membership at
+    // creation time, but without this check a group could still be grown
+    // past CONVERSATION_GROUP_MEMBER_COUNT_MAX one addMember RPC at a time —
+    // and every added member becomes a notification-fan-out target for
+    // every future message.
+    const currentMemberCount =
+      await this.conversationMembershipRepository.count({
+        where: { conversationId },
+      });
+    if (currentMemberCount >= CONVERSATION_GROUP_MEMBER_COUNT_MAX) {
+      throw new ValidationException(
+        'Group conversation has reached the maximum member count',
+        LogContext.COMMUNICATION_CONVERSATION,
+        { conversationId, maxMembers: CONVERSATION_GROUP_MEMBER_COUNT_MAX }
+      );
+    }
+
+    // sec-server-1: same consent gate as GROUP creation
+    // (MessagingService.filterMembersByConsent) — a non-consenting user must
+    // never be added to a group after the fact either, or the
+    // 034-messaging-notifications pipeline will push them
+    // attacker-authored copy by default. Non-USER actors (VC, Organization,
+    // …) have no such setting and are exempt — mirrors
+    // `checkReceivingUserAccessAndSettings`'s "not a user -> skip".
+    const memberUser = await this.userLookupService.getUserById(memberActorId, {
+      relations: { settings: true },
+    });
+    if (
+      memberUser &&
+      !memberUser.settings?.communication?.allowOtherUsersToSendMessages
+    ) {
+      throw new MessagingNotEnabledException(
+        'User is not open to receiving messages',
+        LogContext.COMMUNICATION_CONVERSATION,
+        { userId: memberUser.id }
+      );
+    }
+
     // Send to Matrix only — DB will be updated when room.member.updated event arrives
     await this.communicationAdapter.batchAddMember(memberActorId, [
       conversation.room.id,
@@ -258,10 +302,49 @@ export class ConversationService {
       );
     }
 
-    // Send to Matrix only — DB will be updated when room.member.updated event arrives
-    await this.communicationAdapter.batchRemoveMember(memberActorId, [
-      conversation.room.id,
-    ]);
+    try {
+      // Send to Matrix only — DB will be updated when room.member.updated
+      // event arrives. `ensureAllSucceeded` makes this throw (rather than
+      // silently report a false "success") when Matrix rejects the kick
+      // (e.g. insufficient power level) — the RPC is synchronous and the
+      // failure is already known here, so it must not be swallowed as an
+      // optimistic true.
+      await this.communicationAdapter.batchRemoveMember(
+        memberActorId,
+        [conversation.room.id],
+        undefined,
+        { ensureAllSucceeded: true }
+      );
+    } catch (error) {
+      if (error instanceof CommunicationAdapterException) {
+        // sec-server-11: group-conversation kicks are known to be rejected
+        // by Matrix with M_FORBIDDEN/insufficient-power-level for rooms
+        // whose Matrix-side creator/power-level holder differs from the
+        // bot account — a matrix-adapter defect, out of scope for this repo
+        // (see docs/matrix-admin-reflection.md, Finding 1). Until that
+        // lands, Alkemio must stay authoritative for its OWN membership and
+        // notification targeting: a user must always have a way to leave
+        // (or be removed from) a group conversation on the Alkemio side,
+        // even when the underlying Matrix kick is rejected — otherwise
+        // consent, once bypassed by enrollment into a group, could never be
+        // withdrawn per-conversation short of a global settings toggle.
+        // Remove the local membership (notification recipients are re-read
+        // from that table at send time — this alone stops all further
+        // targeting) and log the Matrix-side divergence for manual
+        // reconciliation, rather than surfacing the failure to the caller.
+        this.logger.warn?.(
+          `removeMember: Matrix kick rejected for actor ${memberActorId} in conversation ${conversationId} (${error.message}) — proceeding with authoritative local removal; Matrix-side room membership may now diverge, see docs/matrix-admin-reflection.md`,
+          LogContext.COMMUNICATION_CONVERSATION
+        );
+        await this.completeLocalMemberRemoval(
+          conversationId,
+          conversation.room.id,
+          memberActorId
+        );
+        return conversation;
+      }
+      throw error;
+    }
 
     this.logger.verbose?.(
       `Sent remove-member RPC for ${memberActorId} from group conversation ${conversationId}`,
@@ -269,6 +352,63 @@ export class ConversationService {
     );
 
     return conversation;
+  }
+
+  /**
+   * sec-server-11: drive the local-only removal through the SAME completion
+   * workflow the Matrix-confirmed path uses, by emitting the internal
+   * `room.member.updated` (leave) event that
+   * `MessageInboxService.handleConversationMemberLeft` consumes: persist the
+   * membership removal, re-apply the conversation authorization policy,
+   * publish MEMBER_REMOVED and — when the last member leaves — delete the
+   * conversation and publish CONVERSATION_DELETED.
+   *
+   * Deleting the membership row directly here would skip all of that: clients
+   * would never see the removal, the authorization policy would keep granting
+   * the removed member access, and an emptied conversation would linger.
+   *
+   * The removal itself is authoritative and must not depend on that workflow
+   * succeeding, so a failing listener — or an application context that has no
+   * listener at all — falls back to the row deletion alone (idempotent: the
+   * handler may already have performed it) and is logged for reconciliation.
+   */
+  private async completeLocalMemberRemoval(
+    conversationId: string,
+    roomId: string,
+    memberActorId: string
+  ): Promise<void> {
+    try {
+      const listenerResults = await this.eventEmitter.emitAsync(
+        'room.member.updated',
+        new RoomMemberUpdatedEvent({
+          roomId,
+          memberActorID: memberActorId,
+          senderActorID: memberActorId,
+          membership: 'leave',
+          timestamp: Date.now(),
+        })
+      );
+      if (listenerResults.length > 0) {
+        return;
+      }
+      this.logger.warn?.(
+        `removeMember: no listener handled the local removal of ${memberActorId} from conversation ${conversationId} — deleting the membership row directly`,
+        LogContext.COMMUNICATION_CONVERSATION
+      );
+    } catch (error: any) {
+      this.logger.error?.(
+        {
+          message:
+            'removeMember: local removal completion workflow failed — falling back to deleting the membership row only',
+          conversationId,
+          memberActorId,
+          error: error?.message,
+        },
+        error?.stack,
+        LogContext.COMMUNICATION_CONVERSATION
+      );
+    }
+    await this.persistMemberRemoved(conversationId, memberActorId);
   }
 
   /**
@@ -758,6 +898,62 @@ export class ConversationService {
       select: ['actorID'],
     });
     return memberships.map(m => m.actorID);
+  }
+
+  /**
+   * 034-messaging-notifications (R4, data-model §5.3) — bulk variant of
+   * `getConversationOrFail` for the digest flush path, which resolves every
+   * pending conversation for one recipient-track at once.
+   *
+   * ONE query regardless of how many conversations are pending. Conversations
+   * that no longer exist are simply absent from the result — the flush drops
+   * them rather than failing the whole digest (US2-AS4).
+   *
+   * @param conversationIds - UUIDs of the conversations to resolve
+   * @returns The conversations that still exist, with their room loaded
+   */
+  async getConversationsByIds(
+    conversationIds: string[]
+  ): Promise<IConversation[]> {
+    if (conversationIds.length === 0) {
+      return [];
+    }
+    return await this.conversationRepository.find({
+      where: { id: In(conversationIds) },
+      relations: { room: true },
+    });
+  }
+
+  /**
+   * 034-messaging-notifications (R4) — bulk variant of
+   * `getConversationMemberActorIds`, so the digest flush can check
+   * "is the recipient still a member?" for every pending conversation in ONE
+   * query rather than one per conversation.
+   *
+   * @param conversationIds - UUIDs of the conversations
+   * @returns Map of conversation ID -> member actor IDs (absent conversations
+   * are simply missing from the map)
+   */
+  async getMemberActorIdsForConversations(
+    conversationIds: string[]
+  ): Promise<Map<string, string[]>> {
+    const result = new Map<string, string[]>();
+    if (conversationIds.length === 0) {
+      return result;
+    }
+    const memberships = await this.conversationMembershipRepository.find({
+      where: { conversationId: In(conversationIds) },
+      select: ['conversationId', 'actorID'],
+    });
+    for (const membership of memberships) {
+      const existing = result.get(membership.conversationId);
+      if (existing) {
+        existing.push(membership.actorID);
+      } else {
+        result.set(membership.conversationId, [membership.actorID]);
+      }
+    }
+    return result;
   }
 
   /**

@@ -20,6 +20,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy/authori
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseService } from '@domain/common/license/license.service';
 import { CreateTagsetTemplateInput } from '@domain/common/tagset-template';
+import { resolveDefaultSelectedValue } from '@domain/common/tagset-template/tagset.template.utils';
 import { Space } from '@domain/space/space/space.entity';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
@@ -52,7 +53,7 @@ export class CollaborationService {
   async createCollaboration(
     collaborationData: CreateCollaborationInput,
     storageAggregator: IStorageAggregator,
-    actorContext?: ActorContext
+    actorContext: ActorContext
   ): Promise<ICollaboration> {
     if (
       !collaborationData.calloutsSetData ||
@@ -119,6 +120,12 @@ export class CollaborationService {
           limit: 0,
           enabled: false,
         },
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_MEMO_SIGNING,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
       ],
     });
 
@@ -151,7 +158,8 @@ export class CollaborationService {
           collaboration.calloutsSet,
           collaborationData.calloutsSetData.calloutsData,
           storageAggregator,
-          actorContext?.actorID,
+          actorContext,
+          actorContext.actorID,
           collaborationData.parentSpaceId
         );
     }
@@ -202,13 +210,10 @@ export class CollaborationService {
     const allowedValues = [...innovationFlowData.states]
       .sort(sortBySortOrder)
       .map(state => state.displayName);
-    let defaultSelectedValue = innovationFlowData.currentStateDisplayName;
-    if (
-      !defaultSelectedValue ||
-      allowedValues.indexOf(defaultSelectedValue) === -1
-    ) {
-      defaultSelectedValue = allowedValues[0];
-    }
+    const defaultSelectedValue = resolveDefaultSelectedValue(
+      allowedValues,
+      innovationFlowData.currentStateDisplayName
+    );
 
     const tagsetTemplateDataStates: CreateTagsetTemplateInput = {
       name: TagsetReservedName.FLOW_STATE,

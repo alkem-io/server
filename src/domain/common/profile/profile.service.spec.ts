@@ -469,6 +469,62 @@ describe('ProfileService', () => {
     });
   });
 
+  describe('deleteProfileForAccountDeletion', () => {
+    it('threads the passed EntityManager everywhere and surfaces collected document external ids', async () => {
+      const profile = {
+        id: 'p-1',
+        tagsets: [{ id: 'ts-1' }],
+        references: [{ id: 'ref-1' }],
+        storageBucket: { id: 'sb-1' },
+        visuals: [{ id: 'v-1' }],
+        location: { id: 'loc-1' },
+        authorization: { id: 'auth-1' },
+      } as unknown as Profile;
+
+      vi.spyOn(Profile, 'findOne').mockResolvedValue(profile);
+      vi.mocked(tagsetService.removeTagset).mockResolvedValue({} as any);
+      vi.mocked(referenceService.deleteReference).mockResolvedValue({} as any);
+      vi.mocked(
+        storageBucketService.deleteStorageBucketForAccountDeletion
+      ).mockResolvedValue({
+        storageBucketID: 'sb-1',
+        documentIDs: ['ext-1'],
+      });
+      vi.mocked(visualService.deleteVisual).mockResolvedValue({} as any);
+      vi.mocked(locationService.removeLocation).mockResolvedValue({} as any);
+      vi.mocked(authorizationPolicyService.delete).mockResolvedValue({} as any);
+      const em = { remove: vi.fn().mockResolvedValue(profile) } as any;
+
+      const result = await service.deleteProfileForAccountDeletion('p-1', em);
+
+      expect(tagsetService.removeTagset).toHaveBeenCalledWith('ts-1', em);
+      expect(referenceService.deleteReference).toHaveBeenCalledWith(
+        { ID: 'ref-1' },
+        em
+      );
+      expect(
+        storageBucketService.deleteStorageBucketForAccountDeletion
+      ).toHaveBeenCalledWith('sb-1', em);
+      expect(storageBucketService.deleteStorageBucket).not.toHaveBeenCalled();
+      expect(visualService.deleteVisual).toHaveBeenCalledWith(
+        { ID: 'v-1' },
+        em
+      );
+      expect(locationService.removeLocation).toHaveBeenCalledWith(
+        profile.location,
+        em
+      );
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        profile.authorization,
+        em
+      );
+      expect(profile.storageBucket).toBeUndefined();
+      expect(em.remove).toHaveBeenCalledWith(profile);
+      expect(result.documentIDs).toEqual(['ext-1']);
+      expect(result.storageBucketIDs).toEqual(['sb-1']);
+    });
+  });
+
   describe('addVisualsOnProfile', () => {
     it('should create correct visual for AVATAR, BANNER, and CARD types', async () => {
       const avatarVisual = { id: 'av-1', name: VisualType.AVATAR, uri: '' };
@@ -1158,86 +1214,33 @@ describe('ProfileService', () => {
   });
 
   describe('convertTagsetTemplatesToCreateTagsetInput', () => {
-    it('should transform templates to input array', () => {
-      const templates: Partial<ITagsetTemplate>[] = [
-        {
-          name: 'skills',
-          type: TagsetType.FREEFORM,
-          allowedValues: [],
-        },
-        {
-          name: 'industry',
-          type: TagsetType.SELECT_ONE,
-          allowedValues: ['tech', 'finance'],
-        },
-      ];
-
-      const result = service.convertTagsetTemplatesToCreateTagsetInput(
-        templates as ITagsetTemplate[]
-      );
-
-      expect(result).toHaveLength(2);
-      expect(result[0]).toEqual(
-        expect.objectContaining({
-          name: 'skills',
-          type: TagsetType.FREEFORM,
-          tags: undefined,
-        })
-      );
-      expect(result[1]).toEqual(
-        expect.objectContaining({
-          name: 'industry',
-          type: TagsetType.SELECT_ONE,
-        })
-      );
-    });
-
-    it('should include defaultSelectedValue as tag when present', () => {
+    // The conversion itself (including how a template's default is resolved)
+    // is owned by TagsetService and covered in tagset.service.spec.ts; this
+    // used to be a duplicated implementation, so all that matters here is that
+    // it is not one any more.
+    it('should delegate to TagsetService', () => {
       const templates: Partial<ITagsetTemplate>[] = [
         {
           name: 'industry',
           type: TagsetType.SELECT_ONE,
           allowedValues: ['tech', 'finance'],
-          defaultSelectedValue: 'tech',
         },
       ];
+      const converted = [
+        { name: 'industry', type: TagsetType.SELECT_ONE, tags: ['tech'] },
+      ];
+      vi.mocked(
+        tagsetService.convertTagsetTemplatesToCreateTagsetInput
+      ).mockReturnValue(converted as any);
 
       const result = service.convertTagsetTemplatesToCreateTagsetInput(
         templates as ITagsetTemplate[]
       );
 
-      expect(result[0].tags).toEqual(['tech']);
-    });
-
-    it('should set tags to undefined when no defaultSelectedValue', () => {
-      const templates: Partial<ITagsetTemplate>[] = [
-        {
-          name: 'skills',
-          type: TagsetType.FREEFORM,
-          allowedValues: [],
-          defaultSelectedValue: undefined,
-        },
-      ];
-
-      const result = service.convertTagsetTemplatesToCreateTagsetInput(
-        templates as ITagsetTemplate[]
-      );
-
-      expect(result[0].tags).toBeUndefined();
-    });
-
-    it('should include tagsetTemplate reference in each input', () => {
-      const template = {
-        name: 'skills',
-        type: TagsetType.FREEFORM,
-        allowedValues: [],
-      } as unknown as ITagsetTemplate;
-
-      const result = service.convertTagsetTemplatesToCreateTagsetInput([
-        template,
-      ]);
-
-      expect(result[0].tagsetTemplate).toBe(template);
+      expect(
+        tagsetService.convertTagsetTemplatesToCreateTagsetInput
+      ).toHaveBeenCalledWith(templates);
+      expect(result).toBe(converted);
     });
   });
 });

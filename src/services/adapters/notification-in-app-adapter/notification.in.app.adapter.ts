@@ -14,6 +14,15 @@ import { QueryFailedError } from 'typeorm';
 export class NotificationInAppAdapter {
   private static readonly NOT_SUPPORTED_IN_APP_EVENTS: NotificationEvent[] = [
     NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM,
+    // 034-messaging-notifications (FR-003/D-2): in-app is permanently OFF for
+    // both conversation-message events, enforced HERE at the platform
+    // boundary — never by the client settings screen, and regardless of the
+    // stored `inApp` preference value. This is a defensive backstop: the
+    // producer path never calls sendInAppNotifications for these events at
+    // all, but if it (or a future caller) ever did, no in-app notification
+    // record would be created.
+    NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
+    NotificationEvent.USER_CONVERSATION_MESSAGE_GROUP,
   ];
 
   constructor(

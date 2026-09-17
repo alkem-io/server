@@ -159,6 +159,60 @@ export interface PlatformResourceAuditDetails {
 }
 
 /**
+ * MCP API key lifecycle category payload shape (workspace#038, FR-022). One
+ * row per mint or revoke of an MCP API key. Deliberately an ALLOWLIST — never
+ * add a field here without also updating the exclusion test in
+ * `mcp-api-key.audit.service.spec.ts`.
+ *
+ * Forbidden by construction: the plaintext key, `keyHash` (or any
+ * prefix/suffix of either), `lastUsedFromIp` or any caller-supplied address,
+ * and the raw mutation input. `requestContext.ip` is deliberately NOT
+ * populated for this category — the only address available at this layer is
+ * client-influenced (`X-Forwarded-For`), so recording it would put a
+ * spoofable value in an audit record.
+ */
+export interface McpApiKeyAuditDetails {
+  /** The row id — an identifier, not a credential. */
+  keyId?: string;
+  /** The user's label for the key. */
+  keyName?: string;
+  /** The granted scope, flattened. */
+  operations?: ('read' | 'tools')[];
+  /** ISO timestamp, when an expiry was set at mint. */
+  expiresAt?: string;
+}
+
+/**
+ * Account-deletion category payload shape. One primary row per completed
+ * deletion (written inside the deletion transaction) plus one appended row
+ * per post-commit external leg (identity removal, stored-file cleanup,
+ * session revocation), linked by `subjectUserId`.
+ *
+ * Deliberately an ALLOWLIST — never a display name or email address of the
+ * departed user: the primary record's whole purpose is to survive its
+ * subject without re-creating the personal-data record the deletion just
+ * erased.
+ */
+export interface AccountDeletionAuditDetails {
+  /** The deleted account's id. Primary record only. */
+  accountID?: string;
+  /** Always `'pass'` — the blocker predicate that authorized the deletion. */
+  blockerCheck?: 'pass';
+  /**
+   * The stored billing linkage at deletion time (or `null` when none was
+   * ever linked), for finance reconciliation. Never a live billing-provider
+   * query. Primary record only.
+   */
+  externalSubscriptionID?: string | null;
+  /** Count of documents whose bytes were queued for post-commit cleanup. */
+  documentCount?: number;
+  /** File-bytes leg: the external ids a batch attempted to delete. */
+  fileExternalIDs?: string[];
+  /** Failure rows only: `<ErrorName>: <message>`, truncated. */
+  error?: string;
+}
+
+/**
  * Cross-category shape of `platform_audit_entry.details`. Every field is
  * optional — the per-category audit-service (`UserEmailChangeAuditService`,
  * `UserPasswordChangeAuditService`, ...) enforces which keys it writes for
@@ -172,7 +226,9 @@ export type PlatformAuditDetails = EmailChangeAuditDetails &
   PlatformRoleAssignmentAuditDetails &
   PlatformUserRecordAuditDetails &
   PlatformConfigurationAuditDetails &
-  PlatformResourceAuditDetails;
+  PlatformResourceAuditDetails &
+  McpApiKeyAuditDetails &
+  AccountDeletionAuditDetails;
 
 /**
  * Row shape of `platform_audit_entry`. Append-only; retained indefinitely

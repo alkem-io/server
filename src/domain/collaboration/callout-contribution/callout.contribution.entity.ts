@@ -2,6 +2,7 @@ import { ENUM_LENGTH } from '@common/constants';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { ICalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.interface';
 import { CollaboraDocument } from '@domain/collaboration/collabora-document/collabora.document.entity';
+import { Classification } from '@domain/common/classification/classification.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { Memo } from '@domain/common/memo/memo.entity';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
@@ -68,6 +69,16 @@ export class CalloutContribution
   })
   @JoinColumn()
   collaboraDocument?: CollaboraDocument;
+
+  // Present only for tasks on a Tasks board: carries the reserved 'task' tagset
+  // whose single value is the task's column. Null for every other contribution.
+  @OneToOne(() => Classification, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  classification?: Classification;
 
   @ManyToOne(
     () => Callout,

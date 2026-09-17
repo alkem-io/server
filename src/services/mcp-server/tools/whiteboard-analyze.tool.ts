@@ -2,9 +2,13 @@ import { LogContext } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { loadWhiteboardFork } from '@domain/common/whiteboard/whiteboard.fork';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { CollaborationDocumentService } from '@services/collaboration-client/collaboration-document.service';
+import { DocumentPurgingError } from '@services/collaboration-client/collaboration-document.session';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { readWhiteboardScene } from '../collaboration/whiteboard-scene.reader';
 import { McpTool, McpToolDefinition, McpToolResult } from '../dto/mcp.types';
 
 interface AnalyzeWhiteboardArgs {
@@ -63,6 +67,7 @@ export class WhiteboardAnalyzeTool implements McpTool {
   constructor(
     private readonly whiteboardService: WhiteboardService,
     private readonly authorizationService: AuthorizationService,
+    private readonly collaborationService: CollaborationDocumentService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -124,27 +129,39 @@ export class WhiteboardAnalyzeTool implements McpTool {
       'Analyze whiteboard'
     );
 
-    // Parse content
-    let content: Record<string, unknown> = {};
+    // Read the LIVE scene from the collaboration room — joining as an ephemeral
+    // collaborator (a cold room materializes from its durable snapshot first). The
+    // fork owns the element↔Y.Map schema (yMapToElement); the server does not read
+    // file storage or reimplement the schema.
+    const fork = await loadWhiteboardFork();
+    let elements: Array<Record<string, unknown>>;
+    let files: Record<string, unknown>;
     try {
-      content = JSON.parse(whiteboard.content || '{}');
-    } catch {
+      ({ elements, files } = await this.collaborationService.read(
+        whiteboardId,
+        'whiteboard',
+        agentInfo.actorID,
+        doc => readWhiteboardScene(doc, fork)
+      ));
+    } catch (error) {
+      const message =
+        error instanceof DocumentPurgingError
+          ? `Whiteboard ${whiteboardId} has been deleted.`
+          : `Could not read whiteboard ${whiteboardId}: ${error instanceof Error ? error.message : 'unknown error'}`;
+      this.logger.warn?.(
+        `analyze_whiteboard: ${message}`,
+        LogContext.MCP_SERVER
+      );
       return {
         content: [
           {
             type: 'text',
-            text: JSON.stringify({
-              error: 'Failed to parse whiteboard content',
-              whiteboardId,
-            }),
+            text: JSON.stringify({ error: message, whiteboardId }),
           },
         ],
         isError: true,
       };
     }
-
-    const elements = (content.elements as Array<Record<string, unknown>>) || [];
-    const files = (content.files as Record<string, unknown>) || {};
 
     let result: Record<string, unknown>;
 

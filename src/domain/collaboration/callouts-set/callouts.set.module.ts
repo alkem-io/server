@@ -2,6 +2,7 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { TagsetTemplateSetModule } from '@domain/common/tagset-template-set/tagset.template.set.module';
 import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
+import { WhiteboardDraftModule } from '@domain/common/whiteboard-draft';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
@@ -12,6 +13,7 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
 import { CalloutModule } from '../callout/callout.module';
+import { TaskBoardModule } from '../callout/task-board/task.board.module';
 import { CollaborationLicenseModule } from '../collaboration/collaboration.license.module';
 import { PostModule } from '../post/post.module';
 import { CalloutsSet } from './callouts.set.entity';
@@ -35,7 +37,9 @@ import { CalloutsSetAuthorizationService } from './callouts.set.service.authoriz
     NamingModule,
     EntityResolverModule,
     WhiteboardModule,
+    WhiteboardDraftModule,
     PostModule,
+    TaskBoardModule,
     TypeOrmModule.forFeature([CalloutsSet]),
   ],
   providers: [

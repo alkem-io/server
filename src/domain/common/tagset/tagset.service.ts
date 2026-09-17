@@ -17,6 +17,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { ITagsetTemplate } from '../tagset-template';
+import { resolveDefaultTags } from '../tagset-template/tagset.template.utils';
 import { Tagset } from './tagset.entity';
 import { ITagset } from './tagset.interface';
 
@@ -55,12 +56,14 @@ export class TagsetService {
     return tagset as ITagset;
   }
 
-  async removeTagset(tagsetID: string): Promise<ITagset> {
+  async removeTagset(tagsetID: string, em?: EntityManager): Promise<ITagset> {
     const tagset = await this.getTagsetOrFail(tagsetID);
     if (tagset.authorization)
-      await this.authorizationPolicyService.delete(tagset.authorization);
+      await this.authorizationPolicyService.delete(tagset.authorization, em);
 
-    const result = await this.tagsetRepository.remove(tagset as Tagset);
+    const result = em
+      ? await em.remove(tagset as Tagset)
+      : await this.tagsetRepository.remove(tagset as Tagset);
     result.id = tagsetID;
     return result;
   }
@@ -344,13 +347,17 @@ export class TagsetService {
   ): CreateTagsetInput[] {
     const result: CreateTagsetInput[] = [];
     for (const tagsetTemplate of tagsetTemplates) {
+      // Trusting `defaultSelectedValue` blindly here is the same defect fixed
+      // for the transfer path in story #6021: a template with no default, or a
+      // default naming a state that no longer exists, produces a tagset that
+      // matches none of the Space's phases, so the Callout is filtered out of
+      // every tab and looks like it vanished.
+      const defaultTags = resolveDefaultTags(tagsetTemplate);
       const input: CreateTagsetInput = {
         name: tagsetTemplate.name,
         type: tagsetTemplate.type,
         tagsetTemplate: tagsetTemplate,
-        tags: tagsetTemplate.defaultSelectedValue
-          ? [tagsetTemplate.defaultSelectedValue]
-          : undefined,
+        tags: defaultTags.length > 0 ? defaultTags : undefined,
       };
       result.push(input);
     }

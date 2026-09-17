@@ -1,11 +1,14 @@
 import { AuthorizationCredential, LogContext } from '@common/enums';
+import { SearchVisibility } from '@common/enums/search.visibility';
 import { EntityNotFoundException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { VirtualAssistantService } from '@domain/community/virtual-assistant/virtual.assistant.service';
 import { Account } from '@domain/space/account/account.entity';
 import { Space } from '@domain/space/space/space.entity';
+import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getEntityManagerToken } from '@nestjs/typeorm';
 import { PlatformRoleAssignmentRulesService } from '@platform/platform-role/platform.role.assignment.rules.service';
 import { McpApiKeyService } from '@services/mcp-server/auth/mcp-api-key.service';
 import { PlatformRoleAssignmentAuditService } from '@src/platform-admin/platform-role-assignment-audit/platform.role.assignment.audit.service';
@@ -143,9 +146,34 @@ describe('BootstrapService', () => {
     mocks.messagingService = {};
     mocks.templatesSetService = {
       createTemplate: vi.fn().mockResolvedValue({ id: 'tmpl-new' }),
+      // Pre-populated with every seeded nameID so the classification-seed
+      // step below is a no-op in the generic bootstrap() tests — its own
+      // behaviour is covered by bootstrap.service.classification.spec.ts.
+      getTemplatesOfType: vi
+        .fn()
+        .mockResolvedValue([{ id: 'ct-1', nameID: 'sdgs' }]),
     };
     mocks.templateDefaultService = {
       save: vi.fn().mockResolvedValue(undefined),
+    };
+    mocks.innovationPackService = {
+      getInnovationPackByNameIdOrFail: vi.fn().mockResolvedValue({
+        id: 'classification-pack-1',
+        searchVisibility: SearchVisibility.PUBLIC,
+        listedInStore: true,
+      }),
+      save: vi.fn().mockResolvedValue(undefined),
+      getTemplatesSetOrFail: vi
+        .fn()
+        .mockResolvedValue({ id: 'classification-templates-set-1' }),
+    };
+    mocks.entityManager = {
+      // Runs the callback against a fake manager exposing just `.query`,
+      // mirroring the shape ensureClassificationTemplatesArePresent needs
+      // for the advisory-lock statement.
+      transaction: vi.fn(async (runInTransaction: any) =>
+        runInTransaction({ query: vi.fn().mockResolvedValue(undefined) })
+      ),
     };
 
     // Build injectors map using class tokens
@@ -312,6 +340,14 @@ describe('BootstrapService', () => {
         {
           provide: PlatformWellKnownVirtualContributorsService,
           useValue: mocks.platformWellKnownVCService,
+        },
+        {
+          provide: InnovationPackService,
+          useValue: mocks.innovationPackService,
+        },
+        {
+          provide: getEntityManagerToken('default'),
+          useValue: mocks.entityManager,
         },
       ],
     })
@@ -502,20 +538,64 @@ describe('BootstrapService', () => {
     });
   });
 
-  // 027-platform-role-redesign (spec-server-19 fix, reverting sec-server-15):
-  // sec-server-15 seeded `global-admin` alongside `platform-roles-admin` on
-  // this account to keep several `[GLOBAL_ADMIN]`-pinned legacy policies
-  // reachable on a fresh cluster — but that directly contradicts FR-013's
-  // "no god-mode role may be reintroduced ... the seeded account holds
-  // Platform Roles Admin only" and T055's identical requirement. The break-
-  // glass recovery drill (T071, quickstart.md §5) exercises
-  // `platform-roles-admin` recovery specifically and never requires
-  // `global-admin`; the `[GLOBAL_ADMIN]`-pinned surfaces (the four FR-022
-  // credential mutations, the legacy `global-*` role assignment branch, the
-  // A9 conversion resolver's legacy reach) are Slice-B-retiring god-mode
-  // paths this feature exists to remove, not to keep freshly reachable.
-  describe('users.json seed data (spec-server-19 fix)', () => {
-    it('seeds admin@alkem.io with Platform Roles Admin ONLY — no god-mode role', () => {
+  // 027-platform-role-redesign — this seed has now flipped three times; the
+  // history is recorded here so it is not flipped a fourth by whoever reads
+  // only the last comment.
+  //
+  //   sec-server-15  ADDED `global-admin` — "to keep several
+  //                  `[GLOBAL_ADMIN]`-pinned legacy policies reachable on a
+  //                  fresh cluster".
+  //   spec-server-19 REVERTED it as a god-mode reintroduction, citing FR-013
+  //                  ("the seeded account holds Platform Roles Admin only")
+  //                  and T055.
+  //   2026-08-06     RESTORED, deliberately, with the cost measured.
+  //
+  // Both reviewers were right about their own half. spec-server-19 is correct
+  // about the LETTER of FR-013/T055 — and that letter describes the SLICE B
+  // end state, where `global-admin` does not exist at all. Applying it during
+  // Slice A breaks the additive guarantee at the only point that bootstraps a
+  // cluster, and sec-server-15's warning turned out to be concrete:
+  //
+  //   * A fresh database has NO account that can run
+  //     `authorizationPolicyResetAll` — `platform-roles-admin` is
+  //     assignment-only, cannot self-assign (rule `self-assignment`), and
+  //     cannot grant the legacy roles (resolver-pinned `[GLOBAL_ADMIN]`
+  //     policy). Bootstrap writes an Alkemio user row but no Kratos identity,
+  //     so no other seeded account can even log in to break the cycle.
+  //   * `test-suites` cannot run AT ALL: `TestUser.GLOBAL_ADMIN` is
+  //     `admin@alkem.io` and is the DEFAULT actor for every request
+  //     (`graphql.request.ts`), used at 878 sites across 121 of 145 spec
+  //     files. Its own fixture seeding is documented as running "by the
+  //     legacy GLOBAL_ADMIN fixture ... via the Slice A root cascade".
+  //     Measured 2026-08-06: 35 of 62 failures were scenario setup failing on
+  //     `create-organization`.
+  //
+  // Those `[GLOBAL_ADMIN]`-pinned surfaces are indeed Slice-B-retiring — and
+  // during Slice A they MUST still work, because "nothing is taken away" is
+  // the promise this slice makes. Slice B removes this credential together
+  // with the role itself (and `test-suites` T021 removes the legacy
+  // fixtures); until then, seeding it is what makes the slice additive.
+  //
+  // Deviation from FR-013/T055 as written, accepted 2026-08-06. Recorded in
+  // the workspace spec's residual-risks register (R-A.1).
+  //
+  //   2026-09-16     ADDED `platform-operations-admin`, `platform-users-admin`
+  //                  and `platform-settings-admin` — the R-A.1 greenfield
+  //                  first-boot gate was signed as a SEEDING decision. Roles
+  //                  Admin cannot self-assign, so on a fresh install with ONE
+  //                  human every un-seeded role is unreachable until a second
+  //                  account exists. The seeded set is what one person needs to
+  //                  bootstrap an environment: recover (authorization reset),
+  //                  manage people (identities, emails, Feature roles) and
+  //                  configure (platform settings). Deliberately NOT seeded:
+  //                  content-full-access (the scoped god mode), audit-reader
+  //                  (rule 4 exclusion — fatal), spaces-reader (rule 3, service
+  //                  accounts only — fatal), support/resource/license/feature.
+  //                  Being a human account, a PRE-EXISTING admin@alkem.io is NOT
+  //                  auto-granted these on restart — that is a Slice B runbook
+  //                  (T071a) item, not a bootstrap one.
+  describe('users.json seed data', () => {
+    it('seeds admin@alkem.io with the break-glass role, the three R-A.1 bootstrap roles AND legacy global-admin (Slice A additivity)', () => {
       const admin = (seededUsers as any).default
         ? (seededUsers as any).default.users.find(
             (u: any) => u.email === 'admin@alkem.io'
@@ -525,7 +605,29 @@ describe('BootstrapService', () => {
           );
       expect(admin).toBeDefined();
       const credentialTypes = admin.credentials.map((c: any) => c.type);
-      expect(credentialTypes).toEqual(['platform-roles-admin']);
+      // `platform-roles-admin` first: it is the FR-013b break-glass role and
+      // the only one re-granted on a restart against a pre-existing account.
+      expect(credentialTypes).toEqual([
+        'platform-roles-admin',
+        'platform-operations-admin',
+        'platform-users-admin',
+        'platform-settings-admin',
+        'global-admin',
+      ]);
+    });
+
+    it('grants no OTHER legacy global role — the deviation is exactly one credential', () => {
+      const admin = (seededUsers as any).default
+        ? (seededUsers as any).default.users.find(
+            (u: any) => u.email === 'admin@alkem.io'
+          )
+        : (seededUsers as any).users.find(
+            (u: any) => u.email === 'admin@alkem.io'
+          );
+      const legacy = admin.credentials
+        .map((c: any) => c.type)
+        .filter((t: string) => t.startsWith('global-'));
+      expect(legacy).toEqual(['global-admin']);
     });
   });
 

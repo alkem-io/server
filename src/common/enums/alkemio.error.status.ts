@@ -59,6 +59,11 @@ export enum AlkemioErrorStatus {
   CALLOUT_CLOSED = 'CALLOUT_CLOSED',
   API_RESTRICTED_ACCESS = 'API_RESTRICTED_ACCESS',
   FORUM_DISCUSSION_CATEGORY = 'FORUM_DISCUSSION_CATEGORY',
+  // Distinct from FORUM_DISCUSSION_CATEGORY (which flags a value not on the
+  // allowed list): this flags an allowed category that still holds posts,
+  // so `adminForumRemoveDiscussionCategory` refused to remove it — ops
+  // tooling needs to tell the two apart.
+  FORUM_DISCUSSION_CATEGORY_NOT_EMPTY = 'FORUM_DISCUSSION_CATEGORY_NOT_EMPTY',
   OPERATION_NOT_ALLOWED = 'OPERATION_NOT_ALLOWED',
   NOT_FOUND = 'NOT_FOUND',
   EXCALIDRAW_AMQP_RESULT_ERROR = 'EXCALIDRAW_AMQP_RESULT_ERROR',
@@ -79,4 +84,20 @@ export enum AlkemioErrorStatus {
   // 027-platform-role-redesign: fail-closed role-assignment audit write
   // failure — the grant/revoke does not take effect (FR-027).
   PLATFORM_ROLE_ASSIGNMENT_AUDIT_FAILED = 'PLATFORM_ROLE_ASSIGNMENT_AUDIT_FAILED',
+  // Self-account deletion: the calling session is older than the privileged
+  // window (or its issue time is missing/unparseable — fail closed). Distinct
+  // from SESSION_EXPIRED so the client can route specifically to the
+  // re-authentication round trip rather than a generic sign-in prompt.
+  SESSION_REFRESH_REQUIRED = 'SESSION_REFRESH_REQUIRED',
+  // Self-account deletion: the account still holds a blocking resource (or is
+  // the sole owner of an organization). The client re-runs the pre-flight
+  // read on this code and renders the itemized blocked dialog from the fresh
+  // answer.
+  ACCOUNT_DELETION_BLOCKED = 'ACCOUNT_DELETION_BLOCKED',
+  // Organization user-associates: applying is switched off by the
+  // organization's own membership setting.
+  ROLE_SET_APPLICATIONS_NOT_ACCEPTED = 'ROLESET_APPLICATIONS_NOT_ACCEPTED',
+  // Organization user-associates: the direct join door (domain match) is not
+  // open for this viewer on this organization at this moment.
+  ROLE_SET_JOIN_NOT_ELIGIBLE = 'ROLESET_JOIN_NOT_ELIGIBLE',
 }

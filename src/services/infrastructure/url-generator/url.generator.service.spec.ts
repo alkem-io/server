@@ -82,6 +82,42 @@ describe('UrlGeneratorService', () => {
     });
   });
 
+  describe('getConversationUrl (034-messaging-notifications, contract C-6)', () => {
+    it('pins the exact deep-link format `{platform.url}/?chat={conversationID}`', () => {
+      const result = service.getConversationUrl('conversation-123');
+
+      expect(result).toBe(`${ENDPOINT}/?chat=conversation-123`);
+    });
+
+    it('never returns a bare home/root link regardless of ID shape', () => {
+      const result = service.getConversationUrl(
+        '00000000-0000-0000-0000-000000000000'
+      );
+
+      expect(result).not.toBe('/');
+      expect(result).not.toBe(ENDPOINT);
+      expect(result).toContain('?chat=');
+    });
+  });
+
+  describe('getConversationDeepLinkPath (034-messaging-notifications, contract C-4)', () => {
+    it('pins the exact bare relative path `/?chat={conversationID}` — never platform-prefixed', () => {
+      const result = service.getConversationDeepLinkPath('conversation-123');
+
+      expect(result).toBe('/?chat=conversation-123');
+      expect(result).not.toContain(ENDPOINT);
+    });
+
+    it('never returns the bare home/root link anti-pattern regardless of ID shape', () => {
+      const result = service.getConversationDeepLinkPath(
+        '00000000-0000-0000-0000-000000000000'
+      );
+
+      expect(result).not.toBe('/');
+      expect(result).toContain('?chat=');
+    });
+  });
+
   describe('generateUrlForProfile', () => {
     it('should return cached URL when available', async () => {
       cacheService.getUrlFromCache.mockResolvedValue(
@@ -536,6 +572,23 @@ describe('UrlGeneratorService', () => {
     });
   });
 
+  describe('getOrganizationSettingsInvitationsUrlPath', () => {
+    it('should generate the relative organization Invitations tab path', () => {
+      const result = service.getOrganizationSettingsInvitationsUrlPath('acme');
+      expect(result).toBe('/organization/acme/settings/invitations');
+    });
+  });
+
+  describe('createUrlForOrganizationSettingsInvitations', () => {
+    it('should generate the absolute organization Invitations tab URL', () => {
+      const result =
+        service.createUrlForOrganizationSettingsInvitations('acme');
+      expect(result).toBe(
+        `${ENDPOINT}/${UrlPathBase.ORGANIZATION}/acme/settings/invitations`
+      );
+    });
+  });
+
   describe('getCalendarEventIcsRestUrl', () => {
     it('should generate the correct ICS REST URL', () => {
       const configService = {
@@ -547,6 +600,20 @@ describe('UrlGeneratorService', () => {
       const result = service.getCalendarEventIcsRestUrl('event-123');
 
       expect(result).toContain('/calendar/event/event-123/ics');
+    });
+  });
+
+  describe('getMemoSigningSnapshotRestUrl', () => {
+    it('should generate the absolute private snapshot URL', () => {
+      (service as any).configService = {
+        get: vi.fn().mockReturnValue({
+          path_api_private_rest: '/api/private/rest',
+        }),
+      };
+
+      expect(service.getMemoSigningSnapshotRestUrl('attempt-123')).toBe(
+        `${ENDPOINT}/api/private/rest/content-signing/attempt-123/snapshot`
+      );
     });
   });
 

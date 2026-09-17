@@ -3,6 +3,7 @@ import { PlatformRolesAccessModule } from '@domain/access/platform-roles-access/
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { CollaboraDocumentModule } from '@domain/collaboration/collabora-document/collabora.document.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { ClassificationModule } from '@domain/common/classification/classification.module';
 import { MemoModule } from '@domain/common/memo/memo.module';
 import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
@@ -20,6 +21,7 @@ import { CalloutContributionAuthorizationService } from './callout.contribution.
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
+    ClassificationModule,
     CollaboraDocumentModule,
     WhiteboardModule,
     PostModule,

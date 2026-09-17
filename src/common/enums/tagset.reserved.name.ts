@@ -6,6 +6,7 @@ export enum TagsetReservedName {
   SKILLS = 'skills',
   CAPABILITIES = 'capabilities',
   KEYWORDS = 'keywords',
+  TASK = 'task',
 }
 
 registerEnumType(TagsetReservedName, {

@@ -4,10 +4,12 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { TaskService } from '@services/task';
 import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock, vi } from 'vitest';
+import { AdminCommunicationForumHierarchyReconcileService } from './admin.communication.forum.hierarchy.reconcile.service';
 import { AdminCommunicationResolverMutations } from './admin.communication.resolver.mutations';
 import { AdminCommunicationService } from './admin.communication.service';
 import { AdminCommunicationSpaceSyncService } from './admin.communication.space.sync.service';
@@ -19,6 +21,8 @@ describe('AdminCommunicationResolverMutations', () => {
   let authorizationService: Record<string, Mock>;
   let authorizationPolicyService: Record<string, Mock>;
   let adminCommunicationService: Record<string, Mock>;
+  let adminCommunicationForumHierarchyReconcileService: Record<string, Mock>;
+  let taskService: Record<string, Mock>;
 
   const actorContext = { actorID: 'actor-1' } as any as ActorContext;
 
@@ -38,6 +42,10 @@ describe('AdminCommunicationResolverMutations', () => {
     adminCommunicationSpaceSyncService = module.get(
       AdminCommunicationSpaceSyncService
     ) as any;
+    adminCommunicationForumHierarchyReconcileService = module.get(
+      AdminCommunicationForumHierarchyReconcileService
+    ) as any;
+    taskService = module.get(TaskService) as any;
   });
 
   afterEach(() => {
@@ -132,6 +140,75 @@ describe('AdminCommunicationResolverMutations', () => {
     });
   });
 
+  describe('adminCommunicationReconcileForumHierarchy', () => {
+    it('checks authorization, creates a task, kicks the pass without awaiting it, and returns the task id', async () => {
+      const reconcileData = {
+        dryRun: true,
+        pruneUnknown: false,
+        repairRoomParentPointers: false,
+        maxOperations: 200,
+      } as any;
+      taskService.create.mockResolvedValue({ id: 'task-1' });
+      // Deliberately never resolves — if the resolver awaited the pass this
+      // test would hang, proving the fire-and-forget contract (T004).
+      adminCommunicationForumHierarchyReconcileService.reconcile.mockReturnValue(
+        new Promise(() => {})
+      );
+
+      const result = await resolver.adminCommunicationReconcileForumHierarchy(
+        reconcileData,
+        actorContext
+      );
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
+      expect(taskService.create).toHaveBeenCalled();
+      expect(
+        adminCommunicationForumHierarchyReconcileService.reconcile
+      ).toHaveBeenCalledWith('task-1', 'actor-1', reconcileData);
+      expect(result).toBe('task-1');
+    });
+
+    it('invokes the reconcile service with the schema defaults when the caller supplies them', async () => {
+      const defaults = {
+        dryRun: true,
+        pruneUnknown: false,
+        repairRoomParentPointers: false,
+        maxOperations: 200,
+      };
+      taskService.create.mockResolvedValue({ id: 'task-2' });
+      adminCommunicationForumHierarchyReconcileService.reconcile.mockReturnValue(
+        new Promise(() => {})
+      );
+
+      await resolver.adminCommunicationReconcileForumHierarchy(
+        defaults as any,
+        actorContext
+      );
+
+      expect(
+        adminCommunicationForumHierarchyReconcileService.reconcile
+      ).toHaveBeenCalledWith('task-2', 'actor-1', defaults);
+    });
+
+    it('does not create a task or reach the reconcile service when authorization fails', async () => {
+      authorizationService.grantAccessOrFail.mockImplementation(() => {
+        throw new Error('Forbidden');
+      });
+
+      await expect(
+        resolver.adminCommunicationReconcileForumHierarchy(
+          {} as any,
+          actorContext
+        )
+      ).rejects.toThrow('Forbidden');
+
+      expect(taskService.create).not.toHaveBeenCalled();
+      expect(
+        adminCommunicationForumHierarchyReconcileService.reconcile
+      ).not.toHaveBeenCalled();
+    });
+  });
+
   // These tests pin the grant set of the synthetic comms policy. They exist
   // because that grant set is deliberately NARROWER than the platform
   // authorization policy: the other global roles (GLOBAL_SUPPORT here, and
@@ -207,6 +284,19 @@ describe('AdminCommunicationResolverMutations', () => {
         'adminCommunicationSyncSpaceHierarchy',
         () => resolver.adminCommunicationSyncSpaceHierarchy(actorContext),
       ],
+      [
+        'adminCommunicationReconcileForumHierarchy',
+        () =>
+          resolver.adminCommunicationReconcileForumHierarchy(
+            {
+              dryRun: true,
+              pruneUnknown: false,
+              repairRoomParentPointers: false,
+              maxOperations: 200,
+            } as any,
+            actorContext
+          ),
+      ],
     ])('%s checks PLATFORM_OPERATIONS_ADMIN against the comms policy', async (_name, invoke) => {
       // The policy the resolver actually holds — asserting reference
       // identity here is the point: these mutations must never be gated on
@@ -239,6 +329,20 @@ describe('AdminCommunicationResolverMutations', () => {
         () =>
           resolver.adminCommunicationMigrateOrphanedConversations(actorContext),
         () => adminCommunicationService.migrateConversationRooms,
+      ],
+      [
+        'adminCommunicationReconcileForumHierarchy',
+        () =>
+          resolver.adminCommunicationReconcileForumHierarchy(
+            {
+              dryRun: true,
+              pruneUnknown: false,
+              repairRoomParentPointers: false,
+              maxOperations: 200,
+            } as any,
+            actorContext
+          ),
+        () => taskService.create,
       ],
     ])('%s does not run when the authorization check fails', async (_name, invoke, service) => {
       authorizationService.grantAccessOrFail.mockImplementation(() => {

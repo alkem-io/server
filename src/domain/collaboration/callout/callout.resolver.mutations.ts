@@ -1,11 +1,13 @@
 import { SUBSCRIPTION_CALLOUT_POST_CREATED } from '@common/constants';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { CalloutAllowedActors } from '@common/enums/callout.allowed.contributors';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { ReactionType } from '@common/enums/reaction.type';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import {
   RelationshipNotFoundException,
@@ -15,15 +17,20 @@ import { CalloutClosedException } from '@common/exceptions/callout/callout.close
 import { streamToBuffer } from '@common/utils/file.util';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import {
   CalloutPostCreatedPayload,
   DeleteCalloutInput,
   UpdateCalloutEntityInput,
 } from '@domain/collaboration/callout/dto';
+import { CollaboraDocumentEventsService } from '@domain/collaboration/collabora-document/events/collabora.document.events.service';
 import { IPost } from '@domain/collaboration/post/post.interface';
+import { ReactionService } from '@domain/collaboration/reaction/reaction.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IMemo } from '@domain/common/memo/types';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
+import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
+import { WhiteboardDraftService } from '@domain/common/whiteboard-draft';
 import { Inject } from '@nestjs/common/decorators';
 import { ConfigService } from '@nestjs/config';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
@@ -54,12 +61,23 @@ import { ICollaboraDocument } from '../collabora-document/collabora.document.int
 import { ImportCollaboraDocumentInput } from '../collabora-document/dto/collabora.document.dto.import';
 import { CollaborationLicenseService } from '../collaboration/collaboration.service.license';
 import { ILink } from '../link/link.interface';
+import { CalloutContributionDefaultSourceService } from './callout.contribution.default.source.service';
 import { ICallout } from './callout.interface';
 import { CalloutService } from './callout.service';
 import { CalloutAuthorizationService } from './callout.service.authorization';
 import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contribution';
+import {
+  AddReactionToCalloutInput,
+  RemoveReactionFromCalloutInput,
+} from './dto/callout.dto.reaction.input';
 import { UpdateCalloutPublishInfoInput } from './dto/callout.dto.update.publish.info';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
+import { CreateTaskColumnOnCalloutInput } from './task-board/dto/task.board.dto.column.create';
+import { DeleteTaskColumnOnCalloutInput } from './task-board/dto/task.board.dto.column.delete';
+import { UpdateTaskColumnsSortOrderOnCalloutInput } from './task-board/dto/task.board.dto.column.sort.order';
+import { UpdateTaskColumnOnCalloutInput } from './task-board/dto/task.board.dto.column.update';
+import { TaskBoardColumnService } from './task-board/task.board.column.service';
+import { TaskBoardService } from './task-board/task.board.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -69,11 +87,13 @@ export class CalloutResolverMutations {
     private readonly logger: WinstonLogger,
     private readonly communityResolverService: CommunityResolverService,
     private readonly contributionReporter: ContributionReporterService,
+    private readonly collaboraDocumentEventsService: CollaboraDocumentEventsService,
     private readonly activityAdapter: ActivityAdapter,
     private readonly notificationAdapterSpace: NotificationSpaceAdapter,
     private readonly authorizationService: AuthorizationService,
     private readonly authorizationPolicyService: AuthorizationPolicyService,
     private readonly calloutService: CalloutService,
+    private readonly contributionDefaultSourceService: CalloutContributionDefaultSourceService,
     private readonly calloutAuthorizationService: CalloutAuthorizationService,
     private readonly roomResolverService: RoomResolverService,
     private readonly contributionAuthorizationService: CalloutContributionAuthorizationService,
@@ -82,9 +102,39 @@ export class CalloutResolverMutations {
     private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly collaborationLicenseService: CollaborationLicenseService,
     private readonly platformResourceAuditService: PlatformResourceAuditService,
+    private readonly whiteboardService: WhiteboardService,
+    private readonly whiteboardDraftService: WhiteboardDraftService,
+    private readonly reactionService: ReactionService,
+    private readonly actorLookupService: ActorLookupService,
+    private readonly taskBoardColumnService: TaskBoardColumnService,
+    private readonly taskBoardService: TaskBoardService,
     @Inject(SUBSCRIPTION_CALLOUT_POST_CREATED)
     private readonly postCreatedSubscription: PubSubEngine
   ) {}
+
+  /**
+   * A clone may read its source only after the actor is granted READ: when a
+   * `sourceWhiteboardID` is present, load it with its authorization and
+   * `grantAccessOrFail` READ (throws Forbidden). No-op when there is no source.
+   */
+  private async assertActorCanReadSourceWhiteboard(
+    actorContext: ActorContext,
+    sourceWhiteboardID?: string
+  ): Promise<void> {
+    if (!sourceWhiteboardID) {
+      return;
+    }
+    const source = await this.whiteboardService.getWhiteboardOrFail(
+      sourceWhiteboardID,
+      { relations: { authorization: true } }
+    );
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      source.authorization,
+      AuthorizationPrivilege.READ,
+      `clone whiteboard content from source: ${sourceWhiteboardID}`
+    );
+  }
 
   @Mutation(() => ICallout, {
     description: 'Delete a Callout.',
@@ -151,12 +201,58 @@ export class CalloutResolverMutations {
         calloutsSet: { authorization: true },
       },
     });
-    this.authorizationService.grantAccessOrFail(
-      actorContext,
-      callout.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `update callout: ${callout.id}`
-    );
+    // 027-platform-role-redesign (A7, research D5) — dual path, SCOPED to
+    // template content. A CALLOUT template's content is a callout the client
+    // edits through this mutation (`UpdateCalloutTemplate`), and its policy
+    // carries Platform Support's PLATFORM_SUPPORT_ORG_RESOURCES cascaded from
+    // the owning organization's account (`template.service.authorization.ts`
+    // → `callout.service.authorization.ts`: a template callout takes its
+    // parent's policy verbatim). Without this branch Support could create and
+    // delete templates in an organization's pack but not edit one (sandbox
+    // walk, 2026-09-16). The `isTemplate` guard is load-bearing: the same
+    // account cascade reaches every callout inside an organization's spaces,
+    // and FR-008(a) keeps Support out of those unless the space opts in via
+    // `allowPlatformSupportAsAdmin` — so the privilege must never satisfy
+    // this gate for a non-template callout.
+    const canUpdateAsPlatformSupport =
+      callout.isTemplate &&
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        callout.authorization,
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+      );
+    if (!canUpdateAsPlatformSupport) {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        callout.authorization,
+        AuthorizationPrivilege.UPDATE,
+        `update callout: ${callout.id}`
+      );
+    }
+
+    const defaults = calloutData.contributionDefaults;
+    const defaultsDraftID = defaults?.draftWhiteboardID;
+    await using draftConsumption =
+      await this.whiteboardDraftService.acquireForConsumption(
+        defaultsDraftID ? [defaultsDraftID] : [],
+        actorContext
+      );
+    if (defaultsDraftID) {
+      if (
+        defaults.sourceWhiteboardID ||
+        defaults.sourceCalloutID ||
+        defaults.clearWhiteboardContent
+      ) {
+        throw new ValidationException(
+          'draftWhiteboardID, contribution-default source fields, and clearWhiteboardContent are mutually exclusive',
+          LogContext.WHITEBOARDS
+        );
+      }
+      const draft = draftConsumption.drafts.get(defaultsDraftID)!;
+      defaults.sourceWhiteboardID = draft.id;
+      defaults.draftWhiteboardID = undefined;
+    }
+    await this.contributionDefaultSourceService.prepare(defaults, actorContext);
 
     // CONTRIBUTORS framing is admin-only and collaboration-only for LIVE callouts
     // (FR-004a/FR-004f, R5). Mirror the create guard on the update path so the
@@ -213,8 +309,14 @@ export class CalloutResolverMutations {
     const updatedCallout = await this.calloutService.updateCallout(
       callout,
       calloutData,
+      actorContext,
       actorContext.actorID
     );
+
+    // The updated Callout now durably owns the draft content. Make the draft
+    // non-consumable before later authorization work can fail, so a retry
+    // cannot apply the same draft to a second update.
+    await draftConsumption.markConsumed();
 
     // Reset authorization policy for the callout and its child entities
     // This is needed because updateCallout might create new entities (like comments room)
@@ -233,7 +335,91 @@ export class CalloutResolverMutations {
       );
 
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+    await draftConsumption.complete();
     return updatedCallout;
+  }
+
+  // Column administration on a Tasks board. Each is gated on UPDATE of the
+  // callout — configuring the board's columns is an admin capability, distinct
+  // from the MOVE_TASK any member holds to move a task between columns. The
+  // rename/delete sweeps and the reorder run transactionally under a template
+  // row lock inside the service.
+
+  @Mutation(() => ICallout, {
+    description: 'Add a column to a Tasks board Callout.',
+  })
+  async createTaskColumnOnCallout(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('columnData') columnData: CreateTaskColumnOnCalloutInput
+  ): Promise<ICallout> {
+    await this.authorizeTaskColumnEdit(actorContext, columnData.calloutID);
+    return this.taskBoardColumnService.createTaskColumn(
+      columnData.calloutID,
+      columnData.name
+    );
+  }
+
+  @Mutation(() => ICallout, {
+    description: 'Rename a column on a Tasks board Callout.',
+  })
+  async updateTaskColumnOnCallout(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('columnData') columnData: UpdateTaskColumnOnCalloutInput
+  ): Promise<ICallout> {
+    await this.authorizeTaskColumnEdit(actorContext, columnData.calloutID);
+    return this.taskBoardColumnService.renameTaskColumn(
+      columnData.calloutID,
+      columnData.currentName,
+      columnData.newName
+    );
+  }
+
+  @Mutation(() => ICallout, {
+    description: 'Remove a column from a Tasks board Callout.',
+  })
+  async deleteTaskColumnOnCallout(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('columnData') columnData: DeleteTaskColumnOnCalloutInput
+  ): Promise<ICallout> {
+    await this.authorizeTaskColumnEdit(actorContext, columnData.calloutID);
+    return this.taskBoardColumnService.deleteTaskColumn(
+      columnData.calloutID,
+      columnData.name
+    );
+  }
+
+  @Mutation(() => ICallout, {
+    description: 'Reorder the columns of a Tasks board Callout.',
+  })
+  async updateTaskColumnsSortOrderOnCallout(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('sortOrderData')
+    sortOrderData: UpdateTaskColumnsSortOrderOnCalloutInput
+  ): Promise<ICallout> {
+    await this.authorizeTaskColumnEdit(actorContext, sortOrderData.calloutID);
+    return this.taskBoardColumnService.reorderTaskColumns(
+      sortOrderData.calloutID,
+      sortOrderData.columnNames
+    );
+  }
+
+  /**
+   * Loads the callout's authorization and fails unless the actor may UPDATE it.
+   * Shared by every column-administration mutation so they gate identically.
+   */
+  private async authorizeTaskColumnEdit(
+    actorContext: ActorContext,
+    calloutID: string
+  ): Promise<void> {
+    const callout = await this.calloutService.getCalloutOrFail(calloutID, {
+      relations: { authorization: true },
+    });
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      callout.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `configure task board columns: ${callout.id}`
+    );
   }
 
   @Mutation(() => ICallout, {
@@ -422,10 +608,24 @@ export class CalloutResolverMutations {
       );
     }
 
+    // A clone (a WHITEBOARD contribution's `whiteboard.sourceWhiteboardID`) may read
+    // its source only after the actor is granted READ.
+    await this.assertActorCanReadSourceWhiteboard(
+      actorContext,
+      contributionData.type === CalloutContributionType.WHITEBOARD
+        ? contributionData.whiteboard?.sourceWhiteboardID
+        : undefined
+    );
+
     let contribution = await this.calloutService.createContributionOnCallout(
       contributionData,
+      actorContext,
       actorContext.actorID
     );
+
+    // Captured here, before the save below, so the analytics branch cannot
+    // be disturbed by any future change to what the save call returns.
+    const isTask = this.taskBoardService.isTask(contribution);
 
     const { roleSet, platformRolesAccess, spaceSettings } =
       await this.roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout(
@@ -503,7 +703,8 @@ export class CalloutResolverMutations {
             contribution,
             contribution.post,
             levelZeroSpaceID,
-            actorContext
+            actorContext,
+            isTask
           );
         }
       }
@@ -654,40 +855,13 @@ export class CalloutResolverMutations {
       );
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
-    // Lifecycle analytics (US4 / FR-013): record the upload as a single-actor
-    // COLLABORA_DOCUMENT_UPLOADED event for the uploading user. Resolve the
-    // level-zero space by the freshly-created CollaboraDocument the same way
-    // the open path does (via the community resolver), then report.
-    // Best-effort (FR-008): the contribution is already persisted above, so a
-    // failure here must NOT fail the import — that would prompt a client retry
-    // and a duplicate document. Catch and log; never re-throw.
     if (contribution.collaboraDocument) {
-      try {
-        const collaboraDocument = contribution.collaboraDocument;
-        const community =
-          await this.communityResolverService.getCommunityForCollaboraDocumentOrFail(
-            collaboraDocument.id
-          );
-        const levelZeroSpaceID =
-          await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
-            community.id
-          );
-        this.contributionReporter.calloutCollaboraDocumentUploaded(
-          {
-            id: collaboraDocument.id,
-            name:
-              collaboraDocument.profile?.displayName ?? collaboraDocument.id,
-            space: levelZeroSpaceID,
-          },
-          actorContext
-        );
-      } catch (e: any) {
-        this.logger.error(
-          `Failed to report COLLABORA_DOCUMENT_UPLOADED analytics for contribution ${contribution.id}: ${e?.message}`,
-          e?.stack,
-          LogContext.COLLABORATION
-        );
-      }
+      const collaboraDocument = contribution.collaboraDocument;
+      this.collaboraDocumentEventsService.publishUploaded(
+        collaboraDocument.id,
+        collaboraDocument.profile?.displayName ?? collaboraDocument.id,
+        actorContext
+      );
     }
 
     return await this.calloutContributionService.getCalloutContributionOrFail(
@@ -768,7 +942,8 @@ export class CalloutResolverMutations {
     contribution: ICalloutContribution,
     post: IPost,
     levelZeroSpaceID: string,
-    actorContext: ActorContext
+    actorContext: ActorContext,
+    isTask: boolean
   ) {
     const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
       {
@@ -788,14 +963,25 @@ export class CalloutResolverMutations {
     };
     this.activityAdapter.calloutPostCreated(activityLogInput);
 
-    this.contributionReporter.calloutPostCreated(
-      {
-        id: post.id,
-        name: post.profile.displayName,
-        space: levelZeroSpaceID,
-      },
-      actorContext
-    );
+    if (isTask) {
+      this.contributionReporter.taskCreated(
+        {
+          id: post.id,
+          name: post.profile.displayName,
+          space: levelZeroSpaceID,
+        },
+        actorContext
+      );
+    } else {
+      this.contributionReporter.calloutPostCreated(
+        {
+          id: post.id,
+          name: post.profile.displayName,
+          space: levelZeroSpaceID,
+        },
+        actorContext
+      );
+    }
   }
 
   private async processActivityMemoCreated(
@@ -871,13 +1057,24 @@ export class CalloutResolverMutations {
     sortOrderData: UpdateContributionCalloutsSortOrderInput
   ): Promise<ICalloutContribution[]> {
     const callout = await this.calloutService.getCalloutOrFail(
-      sortOrderData.calloutID
+      sortOrderData.calloutID,
+      { relations: { authorization: true, classification: { tagsets: true } } }
     );
+
+    // A Tasks board persists its drag-and-drop ordering through this same
+    // mutation. Reordering tasks is a board-member action, not a callout-admin
+    // one, so a board is authorized on MOVE_TASK — the exact privilege that
+    // already gates moving a task between columns — rather than the callout-wide
+    // UPDATE. This reuses the existing board privilege (no new credential rules)
+    // and keeps non-board callouts on UPDATE, where reordering is an admin edit.
+    const requiredPrivilege = this.taskBoardService.isTaskBoard(callout)
+      ? AuthorizationPrivilege.MOVE_TASK
+      : AuthorizationPrivilege.UPDATE;
 
     this.authorizationService.grantAccessOrFail(
       actorContext,
       callout.authorization,
-      AuthorizationPrivilege.UPDATE,
+      requiredPrivilege,
       `update contribution sort order on callout: ${sortOrderData.calloutID}`
     );
 
@@ -885,5 +1082,157 @@ export class CalloutResolverMutations {
       sortOrderData.calloutID,
       sortOrderData
     );
+  }
+
+  @Mutation(() => ICallout, {
+    description:
+      "Adds or swaps the requesting user's single reaction on a Callout. Requires CONTRIBUTE on the Callout. The Callout must be published and not a template. The emoji must be on the platform allow-list.",
+  })
+  async addReactionToCallout(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('reactionData') reactionData: AddReactionToCalloutInput
+  ): Promise<ICallout> {
+    const callout = await this.calloutService.getCalloutOrFail(
+      reactionData.calloutID,
+      { relations: { authorization: true } }
+    );
+
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      callout.authorization,
+      AuthorizationPrivilege.CONTRIBUTE,
+      `react to callout: ${callout.id}`
+    );
+
+    // Anonymous actors have no actorID and cannot react.
+    if (!actorContext.actorID) {
+      throw new ValidationException(
+        'Authentication is required to react to a Callout',
+        LogContext.COLLABORATION,
+        { calloutId: callout.id }
+      );
+    }
+
+    // Human users only. Reaction.createdBy is an FK to user(id), so a
+    // non-user actor (e.g. a Virtual Contributor) would violate the FK and
+    // mis-attribute the reaction — reject it before writing.
+    const actorType = await this.actorLookupService.getActorTypeByIdOrFail(
+      actorContext.actorID
+    );
+    if (actorType !== ActorType.USER) {
+      throw new ValidationException(
+        'Only human users can react to a Callout',
+        LogContext.COLLABORATION,
+        { calloutId: callout.id, actorType }
+      );
+    }
+
+    // Only published, non-template callouts accept reactions.
+    if (callout.settings.visibility !== CalloutVisibility.PUBLISHED) {
+      throw new ValidationException(
+        'Reactions are only allowed on published Callouts',
+        LogContext.COLLABORATION,
+        { calloutId: callout.id, visibility: callout.settings.visibility }
+      );
+    }
+    if (callout.isTemplate) {
+      throw new ValidationException(
+        'Reactions are not allowed on template Callouts',
+        LogContext.COLLABORATION,
+        { calloutId: callout.id }
+      );
+    }
+
+    this.reactionService.validateAllowedEmojiOrFail(reactionData.emoji);
+
+    const { created } = await this.reactionService.upsertReaction(
+      ReactionType.POST,
+      callout.id,
+      actorContext.actorID,
+      reactionData.emoji
+    );
+
+    // Emit a notification only on a genuine new reaction — swaps and idempotent
+    // re-adds are silent. Fire-and-forget outside the mutation result path so
+    // that a notification failure never fails the reaction itself.
+    if (created) {
+      this.notificationAdapterSpace
+        .spaceCollaborationCalloutReaction({
+          calloutID: callout.id,
+          triggeredBy: actorContext.actorID,
+          emoji: reactionData.emoji,
+        })
+        .catch((err: unknown) => {
+          this.logger.error?.(
+            {
+              message: 'Failed to emit callout reaction notification',
+              calloutId: callout.id,
+              error: (err as Error)?.message,
+            },
+            (err as Error)?.stack,
+            LogContext.NOTIFICATIONS
+          );
+        });
+    }
+
+    return this.calloutService.getCalloutOrFail(reactionData.calloutID);
+  }
+
+  @Mutation(() => ICallout, {
+    description:
+      "Removes the requesting user's reaction from a Callout. Idempotent — no error when no reaction exists. Self-scoped; requires only authentication (not CONTRIBUTE). Returns the Callout only when the caller retains READ access on it.",
+  })
+  async removeReactionFromCallout(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('reactionData') reactionData: RemoveReactionFromCalloutInput
+  ): Promise<ICallout> {
+    // Only authentication is required — removal does not need CONTRIBUTE.
+    if (!actorContext.actorID) {
+      throw new ValidationException(
+        'Authentication is required to remove a reaction from a Callout',
+        LogContext.COLLABORATION,
+        { calloutId: reactionData.calloutID }
+      );
+    }
+
+    // Fetch with authorization relation so the READ check below can proceed.
+    const callout = await this.calloutService.getCalloutOrFail(
+      reactionData.calloutID,
+      { relations: { authorization: true } }
+    );
+
+    // Human users only. Reaction.createdBy is an FK to user(id); a non-user
+    // actor (e.g. a Virtual Contributor) can never own a reaction, so reject
+    // it rather than issue a delete keyed on a non-user id.
+    const actorType = await this.actorLookupService.getActorTypeByIdOrFail(
+      actorContext.actorID
+    );
+    if (actorType !== ActorType.USER) {
+      throw new ValidationException(
+        'Only human users can react to a Callout',
+        LogContext.COLLABORATION,
+        { calloutId: callout.id, actorType }
+      );
+    }
+
+    // Idempotent: removal is a no-op if no reaction exists.
+    await this.reactionService.removeReaction(
+      ReactionType.POST,
+      callout.id,
+      actorContext.actorID
+    );
+
+    // Verify the caller can read the callout before disclosing any of its
+    // fields. This prevents the mutation from acting as an IDOR oracle —
+    // a caller who has already lost space membership cannot use it to read
+    // callout metadata across space boundaries.
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      callout.authorization,
+      AuthorizationPrivilege.READ,
+      `read callout after reaction removal: ${callout.id}`
+    );
+
+    return callout;
   }
 }

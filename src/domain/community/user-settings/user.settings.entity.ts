@@ -1,13 +1,40 @@
 import { TINY_TEXT_LENGTH } from '@common/constants';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { Column, Entity } from 'typeorm';
+import { AfterLoad, Column, Entity } from 'typeorm';
 import { IUserSettingsAssistant } from './user.settings.assistant.interface';
 import { IUserSettingsCommunication } from './user.settings.communications.interface';
+import { IUserSettingsDashboard } from './user.settings.dashboard.interface';
 import { DESIGN_VERSION_CURRENT_DEFAULT } from './user.settings.design.version.constants';
 import { IUserSettingsHomeSpace } from './user.settings.home.space.interface';
 import { IUserSettings } from './user.settings.interface';
+import {
+  DEFAULT_INVITATION_RESPONSE_CHANNELS,
+  DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS,
+  DEFAULT_ORGANIZATION_SPACE_INVITATION_CHANNELS,
+} from './user.settings.notification.defaults.constants';
 import { IUserSettingsNotification } from './user.settings.notification.interface';
 import { IUserSettingsPrivacy } from './user.settings.privacy.interface';
+
+// 034-messaging-notifications (FR-004, corr-server-3): the mandated default
+// for the two messaging-notification rows. Same literal values as the
+// migration (1785336300000) and getDefaultUserSettings() — kept as a
+// standalone constant here because this hook must be defensive independently
+// of both (rolling-deploy race: an old pod can persist a `user_settings` row
+// without these keys AFTER the migration has already run once).
+const DEFAULT_CONVERSATION_MESSAGE_CHANNELS = Object.freeze({
+  email: false,
+  inApp: false,
+  push: true,
+});
+
+// 041-callout-reaction-notifications (FR-007, R-7): the mandated default for
+// the callout-reaction notification row. email OFF, inApp ON, push ON.
+// Same defensive pattern as DEFAULT_CONVERSATION_MESSAGE_CHANNELS above.
+const DEFAULT_CALLOUT_REACTION_CHANNELS = Object.freeze({
+  email: false,
+  inApp: true,
+  push: true,
+});
 
 @Entity()
 export class UserSettings extends AuthorizableEntity implements IUserSettings {
@@ -32,6 +59,12 @@ export class UserSettings extends AuthorizableEntity implements IUserSettings {
   })
   homeSpace!: IUserSettingsHomeSpace;
 
+  @Column('jsonb', {
+    nullable: false,
+    default: { activityView: true },
+  })
+  dashboard!: IUserSettingsDashboard;
+
   @Column('int', { nullable: false, default: DESIGN_VERSION_CURRENT_DEFAULT })
   designVersion!: number;
 
@@ -40,4 +73,146 @@ export class UserSettings extends AuthorizableEntity implements IUserSettings {
 
   @Column('boolean', { nullable: false, default: false })
   languageOfferAnswered!: boolean;
+
+  /**
+   * 034-messaging-notifications (corr-server-3): defend on read against a
+   * `user_settings` row whose `notification.user` object predates the two
+   * messaging-notification keys — the additive backfill migration
+   * (1785336300000) heals every row it can reach, but a row inserted by an
+   * old pod during a rolling deploy AFTER the migration has already run is
+   * never revisited. Without this, the non-null GraphQL fields
+   * (`UserSettingsNotificationUser.conversationMessageDirect/Group`) would
+   * null out the parent chain, and `getChannelsSettingsForEvent` would throw
+   * for the whole recipients batch. Runs for every entity load regardless of
+   * query path (recipients lookup, settings resolver, admin tooling).
+   */
+  @AfterLoad()
+  applyConversationMessageNotificationDefaults() {
+    if (!this.notification?.user) {
+      return;
+    }
+    if (!this.notification.user.conversationMessageDirect) {
+      this.notification.user.conversationMessageDirect = {
+        ...DEFAULT_CONVERSATION_MESSAGE_CHANNELS,
+      };
+    }
+    if (!this.notification.user.conversationMessageGroup) {
+      this.notification.user.conversationMessageGroup = {
+        ...DEFAULT_CONVERSATION_MESSAGE_CHANNELS,
+      };
+    }
+  }
+
+  /**
+   * Defend on read for the callout-reaction notification preference. A
+   * `user_settings` row that predates the backfill migration or was inserted
+   * by an old pod during a rolling deploy lacks this key. Without this hook
+   * the non-null GraphQL field would surface a null and crash the recipients
+   * batch. Runs for every entity load regardless of query path.
+   */
+  @AfterLoad()
+  applyCalloutReactionNotificationDefaults() {
+    if (!this.notification?.space) {
+      return;
+    }
+    if (!this.notification.space.collaborationCalloutReaction) {
+      this.notification.space.collaborationCalloutReaction = {
+        ...DEFAULT_CALLOUT_REACTION_CHANNELS,
+      };
+    }
+  }
+
+  /**
+   * Defend on read for the "organization you administer is invited to a
+   * Space" notification preference. A `user_settings` row that predates the
+   * backfill migration or was inserted by an old pod during a rolling
+   * deploy lacks this key. Without this hook the non-null GraphQL field
+   * would surface a null and crash the recipients batch. Runs for every
+   * entity load regardless of query path.
+   */
+  @AfterLoad()
+  applyOrganizationSpaceInvitationDefaults() {
+    if (!this.notification?.organization) {
+      return;
+    }
+    if (!this.notification.organization.adminSpaceCommunityInvitation) {
+      this.notification.organization.adminSpaceCommunityInvitation = {
+        ...DEFAULT_ORGANIZATION_SPACE_INVITATION_CHANNELS,
+      };
+    }
+  }
+
+  /**
+   * Defend on read for the "someone responded to an invitation you sent"
+   * notification preference. A `user_settings` row that predates the
+   * backfill migration or was inserted by an old pod during a rolling
+   * deploy lacks this key; without this hook the non-null GraphQL field
+   * would surface a null and the recipients batch would drop the outcome
+   * notification. Runs for every entity load regardless of query path.
+   *
+   * Seeds the row's PREDECESSOR (`communityNewMember`) before the mandated
+   * default, mirroring the `COALESCE` in migration 1788600000000. This row
+   * was split out of `communityNewMember`, so seeding a flat all-on here
+   * would silently re-enable, on all three channels, an event a Space admin
+   * had deliberately switched off — and because this hook's value is
+   * persisted on the next save of the entity, the migration's
+   * `WHERE ... IS NULL` guard could never correct it afterwards.
+   */
+  @AfterLoad()
+  applyInvitationResponseDefaults() {
+    if (!this.notification?.space?.admin) {
+      return;
+    }
+    if (!this.notification.space.admin.communityInvitationResponse) {
+      this.notification.space.admin.communityInvitationResponse = {
+        ...(this.notification.space.admin.communityNewMember ??
+          DEFAULT_INVITATION_RESPONSE_CHANNELS),
+      };
+    }
+  }
+
+  /**
+   * Defend on read for the five organization-associate notification
+   * preferences (two user-side, three organisation-side). A `user_settings`
+   * row that predates the backfill migrations or was inserted by an old pod
+   * during a rolling deploy lacks these keys; without this hook the
+   * non-null GraphQL fields would surface a null and crash the recipients
+   * batch. Runs for every entity load regardless of query path.
+   */
+  @AfterLoad()
+  applyOrganizationAssociateDefaults() {
+    if (this.notification?.user?.membership) {
+      if (
+        !this.notification.user.membership
+          .organizationAssociateInvitationReceived
+      ) {
+        this.notification.user.membership.organizationAssociateInvitationReceived =
+          { ...DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS };
+      }
+      if (
+        !this.notification.user.membership
+          .organizationAssociateApplicationDecided
+      ) {
+        this.notification.user.membership.organizationAssociateApplicationDecided =
+          { ...DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS };
+      }
+    }
+    if (this.notification?.organization) {
+      if (!this.notification.organization.adminAssociateInvitationResponse) {
+        this.notification.organization.adminAssociateInvitationResponse = {
+          ...DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS,
+        };
+      }
+      if (!this.notification.organization.adminAssociateApplicationReceived) {
+        this.notification.organization.adminAssociateApplicationReceived = {
+          ...DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS,
+        };
+      }
+      if (!this.notification.organization.adminAssociateJoined) {
+        this.notification.organization.adminAssociateJoined = {
+          ...DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS,
+        };
+      }
+    }
+  }
 }

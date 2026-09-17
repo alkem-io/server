@@ -13,7 +13,22 @@ export type McpConfig = {
   };
 };
 
+/**
+ * 034-messaging-notifications (Operator Ruling R4, data-model §6). One
+ * debounce track: `quiet_period_seconds` is the reset window, and
+ * `max_delay_seconds` is the FR-011b cap measured from the recipient's first
+ * un-notified message on that track. Effective fire time is
+ * `min(lastMessage + quiet, firstMessage + maxDelay)`.
+ */
+export type MessagingDigestTrackConfig = {
+  quiet_period_seconds: number;
+  max_delay_seconds: number;
+};
+
 export type AlkemioConfig = {
+  trustGateway: {
+    url: string;
+  };
   authorization: {
     chunk: number;
   };
@@ -263,8 +278,46 @@ export type AlkemioConfig = {
       max_notifications_per_user: number;
       max_retention_period_days: number;
     };
+    callout_reactions: {
+      enabled: boolean;
+      /** Leading-edge email suppression window per (recipient, callout) in seconds. */
+      email_suppression_window_seconds: number;
+    };
+    organization_invitations: {
+      /** Destination for the zero-admin escalation email; never required to boot. */
+      support_email: string;
+    };
+    messaging: {
+      enabled: boolean;
+      /**
+       * 034-messaging-notifications / Operator Ruling R4. Debounce windows
+       * for the four per-recipient digest tracks, plus the sweep that flushes
+       * them. Validated at boot by `buildDigestConfig` — per track
+       * `quiet_period_seconds <= max_delay_seconds`, and
+       * `sweep_interval_seconds <= min(quiet periods)`.
+       */
+      digest: {
+        sweep_interval_seconds: number;
+        max_dispatch_attempts: number;
+        retry_backoff_seconds: number;
+        push: {
+          direct: MessagingDigestTrackConfig;
+          group: MessagingDigestTrackConfig;
+        };
+        email: {
+          direct: MessagingDigestTrackConfig;
+          group: MessagingDigestTrackConfig;
+        };
+      };
+    };
   };
   collaboration: {
+    service: {
+      url: string;
+      actor_id_header: string;
+      connect_timeout: number;
+      durability_timeout: number;
+    };
     membership: {
       cache_ttl: number;
     };

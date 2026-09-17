@@ -179,4 +179,17 @@ export const NEW_PLATFORM_ROLE_SEED_DEFINITIONS: PlatformRoleSeedDefinition[] =
       organizationPolicy: FEATURE_HOLDER_KIND_ORG_POLICY,
       virtualContributorPolicy: NO_VC_POLICY,
     },
+    // Feature VC Campaign (2026-09-16, runbook §2b): successor of the legacy
+    // `platform-vc-campaign`, which the audit had marked inert — server-side
+    // it grants no privilege, but the client gates the dashboard VC offer on
+    // it, so dropping it without a successor loses the only proactive VC
+    // creation surface. Seeded by `1785600000000-AddFeatureVcCampaignRole`
+    // on already-bootstrapped databases.
+    {
+      name: 'feature-vc-campaign',
+      credentialType: 'feature-vc-campaign',
+      userPolicy: ORDINARY_USER_POLICY,
+      organizationPolicy: FEATURE_HOLDER_KIND_ORG_POLICY,
+      virtualContributorPolicy: NO_VC_POLICY,
+    },
   ];

@@ -29,4 +29,18 @@ export abstract class IUserSettingsNotificationUser {
       'Receive a notification when someone replies to a comment I made.',
   })
   commentReply!: IUserSettingsNotificationChannels;
+
+  @Field(() => IUserSettingsNotificationChannels, {
+    nullable: false,
+    description:
+      'Receive a notification when someone sends me a direct (1:1) chat message. The inApp channel is permanently OFF (enforced platform-wide) — the stored value is retained for row-shape symmetry only.',
+  })
+  conversationMessageDirect!: IUserSettingsNotificationChannels;
+
+  @Field(() => IUserSettingsNotificationChannels, {
+    nullable: false,
+    description:
+      'Receive a notification when someone posts in a group chat I am a member of. The inApp channel is permanently OFF (enforced platform-wide) — the stored value is retained for row-shape symmetry only.',
+  })
+  conversationMessageGroup!: IUserSettingsNotificationChannels;
 }

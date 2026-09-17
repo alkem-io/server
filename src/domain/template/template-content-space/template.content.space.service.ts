@@ -44,7 +44,7 @@ export class TemplateContentSpaceService {
   public async createTemplateContentSpace(
     templateContentSpaceData: CreateTemplateContentSpaceInput,
     storageAggregator: IStorageAggregator,
-    actorContext?: ActorContext
+    actorContext: ActorContext
   ): Promise<ITemplateContentSpace> {
     const templateContentSpace: ITemplateContentSpace =
       TemplateContentSpace.create(templateContentSpaceData);
@@ -435,6 +435,12 @@ export class TemplateContentSpaceService {
           dataType: LicenseEntitlementDataType.FLAG,
           limit: 0,
           enabled: true,
+        },
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_MEMO_SIGNING,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
         },
       ],
     });

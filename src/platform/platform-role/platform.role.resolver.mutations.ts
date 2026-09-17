@@ -216,12 +216,15 @@ export class PlatformRoleResolverMutations {
     if (
       // 027-platform-role-redesign (T040a, closed by T077): Feature Beta Tester
       // carries the SAME beta/trial license entitlement as the two legacy roles
-      // it replaces (spec §Target global role model row 11), and is now the
-      // ONLY role that does — `platform-beta-tester` and `platform-vc-campaign`
-      // are gone. This is the one target role whose capability lives in a
-      // manual entitlement grant rather than an authorization policy, which is
-      // why FR-009/SC-007 name it explicitly.
-      roleData.role === RoleName.FEATURE_BETA_TESTER
+      // it replaces (spec §Target global role model row 11) — `platform-beta-
+      // tester` and `platform-vc-campaign` are gone. This is the one capability
+      // that lives in a manual entitlement grant rather than an authorization
+      // policy, which is why FR-009/SC-007 name it explicitly.
+      roleData.role === RoleName.FEATURE_BETA_TESTER ||
+      // Feature VC Campaign: same parity argument — the legacy
+      // platform-vc-campaign grant wrote this entitlement too, and the
+      // dashboard offer it targets requires role AND entitlement.
+      roleData.role === RoleName.FEATURE_VC_CAMPAIGN
     ) {
       // Also assign the user account a license plan
       // Account IS the Actor - use accountID directly as actorID
@@ -320,7 +323,8 @@ export class PlatformRoleResolverMutations {
     );
     if (
       // T040a, closed by T077 — see the grant side's comment.
-      roleData.role === RoleName.FEATURE_BETA_TESTER
+      roleData.role === RoleName.FEATURE_BETA_TESTER ||
+      roleData.role === RoleName.FEATURE_VC_CAMPAIGN
     ) {
       // Also remove the user account a license plan
       // Account IS the Actor - use accountID directly as actorID

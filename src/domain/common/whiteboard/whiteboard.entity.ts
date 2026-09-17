@@ -1,62 +1,60 @@
-import { ENUM_LENGTH } from '@common/constants';
+import { ENUM_LENGTH, MID_TEXT_LENGTH } from '@common/constants';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
-import { compressText, decompressText } from '@common/utils/compression.util';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
-import {
-  AfterInsert,
-  AfterLoad,
-  AfterUpdate,
-  BeforeInsert,
-  BeforeUpdate,
-  Column,
-  Entity,
-  OneToOne,
-} from 'typeorm';
+import { Column, Entity, OneToOne } from 'typeorm';
 import { NameableEntity } from '../entity/nameable-entity/nameable.entity';
 import { IWhiteboard } from './whiteboard.interface';
 import { IWhiteboardPreviewSettings } from './whiteboard.preview.settings.interface';
 
 @Entity()
 export class Whiteboard extends NameableEntity implements IWhiteboard {
-  constructor(content?: string) {
-    super();
-    this.content = content || '';
-  }
+  // The inline `content` column (Excalidraw JSON, gzip-compressed) and its
+  // `@BeforeInsert/@BeforeUpdate/@AfterLoad` (de)compression hooks are UNMAPPED
+  // (006-collab-content-unification, R2/FR-005): whiteboard content is stored ONLY
+  // as a Yjs-V2 snapshot in the document's own storage bucket, located by
+  // `contentPointer`. In the staged release the DB column is RETAINED for the progressive
+  // back-fill (migration-only, with a temporary `DEFAULT ''` so entity-unmapped
+  // inserts satisfy its NOT NULL) and dropped only in cleanup after the back-fill
+  // is verified. Legacy Excalidraw scenes are converted server-side (the progressive
+  // migration) via the fork-based `whiteboardSceneToYjsV2State` and written to the
+  // bucket; the live create/update paths persist the editor's Yjs-V2 snapshot verbatim.
 
-  @BeforeInsert()
-  @BeforeUpdate()
-  async compressValue() {
-    if (this.content !== '') {
-      try {
-        this.content = await compressText(this.content);
-      } catch {
-        this.content = '';
-        // rethrow to be caught higher, does not crash the server
-        throw new Error('Failed to compress content');
-      }
-    }
-  }
-  @AfterInsert()
-  @AfterUpdate()
-  @AfterLoad()
-  async decompressValue() {
-    if (this.content !== '') {
-      try {
-        this.content = await decompressText(this.content);
-      } catch (e: any) {
-        this.content = '';
-        // rethrow to be caught higher, does not crash the server
-        throw new Error(`Failed to decompress content: ${e?.message}`);
-      }
-    }
-  }
+  /**
+   * The file-service id of this whiteboard's stored Yjs-V2 snapshot — file-service
+   * is the single storage backend for the Alkemio stack. Part of the unified
+   * metadata/index (FR-001).
+   */
+  @Column('varchar', { length: MID_TEXT_LENGTH, nullable: true })
+  contentPointer?: string;
 
-  @Column('text', { nullable: false })
-  content!: string;
+  /** Temporary progressive-rollout marker; removed after the legacy back-fill. */
+  @Column('boolean', { nullable: false, default: true })
+  migrated!: boolean;
+
+  /**
+   * The collaboration content version owned by the collaboration-service room
+   * (the contract `version`). The room bumps it per persisted snapshot, sends
+   * it on `collaboration-save`, and adopts the stored value back on
+   * `collaboration-fetch` when it rehydrates (FR-004, data-model.md §metadata).
+   *
+   * Distinct from the inherited TypeORM `@VersionColumn` (`version`), which is a
+   * server-internal optimistic-locking counter and MUST NOT be conflated with
+   * this contract value.
+   */
+  @Column('int', { nullable: true })
+  contentVersion?: number;
 
   @Column('uuid', { nullable: true })
   createdBy?: string;
+
+  /**
+   * Non-NULL only while this Whiteboard is a temporary live form draft.
+   * Ordinary and finalized Whiteboards always keep this NULL, which makes the
+   * cleanup boundary explicit without a parallel draft model.
+   */
+  @Column('timestamptz', { nullable: true })
+  draftExpiresAt?: Date | null;
 
   @Column('varchar', {
     length: ENUM_LENGTH,

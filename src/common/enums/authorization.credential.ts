@@ -27,6 +27,7 @@ export enum AuthorizationCredential {
   FEATURE_BETA_TESTER = 'feature-beta-tester',
   FEATURE_VIRTUAL_ASSISTANT = 'feature-virtual-assistant',
   FEATURE_ORGANIZATION_CREATOR = 'feature-organization-creator',
+  FEATURE_VC_CAMPAIGN = 'feature-vc-campaign',
 
   USER_SELF_MANAGEMENT = 'user-self', // able to update a user
 

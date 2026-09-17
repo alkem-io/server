@@ -3,6 +3,8 @@ import { LogContext } from '@common/enums/logging.context';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
 import { BaseException } from '@common/exceptions/base.exception';
 import { Field, InterfaceType } from '@nestjs/graphql';
+import { InAppNotificationPayloadOrganizationAssociateActor } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.associate.actor';
+import { InAppNotificationPayloadOrganizationAssociateInvitation } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.associate.invitation';
 import { InAppNotificationPayloadOrganizationMessageDirect } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.direct';
 import { InAppNotificationPayloadOrganizationMessageRoom } from '@platform/in-app-notification-payload/dto/organization/notification.in.app.payload.organization.message.room';
 import { InAppNotificationPayloadPlatformForumDiscussion } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.forum.discussion';
@@ -11,6 +13,7 @@ import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in
 import { InAppNotificationPayloadSpace } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space';
 import { InAppNotificationPayloadSpaceCollaborationCallout } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout';
 import { InAppNotificationPayloadSpaceCollaborationCalloutPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.post.comment';
+import { InAppNotificationPayloadSpaceCollaborationCalloutReaction } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.reaction';
 import { InAppNotificationPayloadSpaceCommunicationMessageDirect } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.message.direct';
 import { InAppNotificationPayloadSpaceCommunicationUpdate } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.update';
 import { InAppNotificationPayloadSpaceCommunityActor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.actor';
@@ -44,6 +47,10 @@ import { InAppNotificationPayloadSpaceCommunityCalendarEventComment } from './dt
         return InAppNotificationPayloadOrganizationMessageDirect;
       case NotificationEventPayload.ORGANIZATION_MESSAGE_ROOM:
         return InAppNotificationPayloadOrganizationMessageRoom;
+      case NotificationEventPayload.ORGANIZATION_ASSOCIATE_INVITATION:
+        return InAppNotificationPayloadOrganizationAssociateInvitation;
+      case NotificationEventPayload.ORGANIZATION_ASSOCIATE_ACTOR:
+        return InAppNotificationPayloadOrganizationAssociateActor;
 
       // Space notifications
       case NotificationEventPayload.SPACE:
@@ -66,6 +73,8 @@ import { InAppNotificationPayloadSpaceCommunityCalendarEventComment } from './dt
         return InAppNotificationPayloadSpaceCollaborationCalloutPostComment;
       case NotificationEventPayload.SPACE_COLLABORATION_CALLOUT_COMMENT:
         return InAppNotificationPayloadSpaceCollaborationCalloutComment;
+      case NotificationEventPayload.SPACE_COLLABORATION_CALLOUT_REACTION:
+        return InAppNotificationPayloadSpaceCollaborationCalloutReaction;
       case NotificationEventPayload.SPACE_COMMUNITY_CALENDAR_EVENT:
         return InAppNotificationPayloadSpaceCommunityCalendarEvent;
       case NotificationEventPayload.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT:

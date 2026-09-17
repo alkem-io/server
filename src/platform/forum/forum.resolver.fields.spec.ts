@@ -1,4 +1,5 @@
 import { ActorType } from '@common/enums/actor.type';
+import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -68,6 +69,49 @@ describe('ForumResolverFields', () => {
         undefined,
         undefined
       );
+    });
+  });
+
+  describe('discussionCategories', () => {
+    it('returns the stored list unchanged when every value is known', () => {
+      const forum = {
+        discussionCategories: [
+          ForumDiscussionCategory.OTHER,
+          ForumDiscussionCategory.HELP,
+        ],
+      } as any;
+
+      const result = resolver.discussionCategories(forum);
+
+      expect(result).toEqual([
+        ForumDiscussionCategory.OTHER,
+        ForumDiscussionCategory.HELP,
+      ]);
+    });
+
+    it('drops an unknown stored value instead of throwing (rollback/mixed-fleet guard)', () => {
+      const forum = {
+        discussionCategories: [
+          ForumDiscussionCategory.OTHER,
+          'legacy-x',
+          ForumDiscussionCategory.NEWSLETTER,
+        ],
+      } as any;
+
+      const result = resolver.discussionCategories(forum);
+
+      expect(result).toEqual([
+        ForumDiscussionCategory.OTHER,
+        ForumDiscussionCategory.NEWSLETTER,
+      ]);
+    });
+
+    it('returns an empty list rather than throwing when every stored value is unknown', () => {
+      const forum = { discussionCategories: ['legacy-a', 'legacy-b'] } as any;
+
+      const result = resolver.discussionCategories(forum);
+
+      expect(result).toEqual([]);
     });
   });
 });

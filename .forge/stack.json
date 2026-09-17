@@ -1,0 +1,75 @@
+{
+  "feature_id": "038-mcp-api-key-management",
+  "compose": {
+    "project": "forge-038-mcp-api-key-management",
+    "dir": "worktrees/038-mcp-api-key-management/server",
+    "file": "quickstart-services.yml",
+    "env_file": ".env.docker",
+    "up_cmd": "docker compose -p forge-038-mcp-api-key-management -f quickstart-services.yml --env-file .env.docker up --build --force-recreate -d",
+    "down_cmd": "docker compose -p forge-038-mcp-api-key-management -f quickstart-services.yml --env-file .env.docker down -v"
+  },
+  "isolation": {
+    "ports": "standard",
+    "offset": 0,
+    "seed": "bootstrap"
+  },
+  "dsn_sanity_check": {
+    "performed": true,
+    "method": "psql localhost:5432 -> inet_server_addr() = 172.19.0.9; docker inspect alkemio_dev_postgres IPAddress = 172.19.0.9; container compose.project label = forge-038-mcp-api-key-management",
+    "result": "pass"
+  },
+  "volumes_created": [
+    "forge-038-mcp-api-key-management_alkemio_dev_backup",
+    "forge-038-mcp-api-key-management_alkemio_dev_postgres",
+    "forge-038-mcp-api-key-management_alkemio_dev_redis",
+    "forge-038-mcp-api-key-management_alkemio_dev_storage",
+    "forge-038-mcp-api-key-management_alkemio_dev_synapse"
+  ],
+  "migrations": {
+    "repo": "server",
+    "command": "DATABASE_HOST=localhost DATABASE_PORT=5432 DATABASE_USERNAME=synapse DATABASE_PASSWORD=synapse DATABASE_NAME=alkemio pnpm run migration:run",
+    "ran_from": "worktrees/038-mcp-api-key-management/server",
+    "status": "success",
+    "notable_migration": "AddMcpApiKeyAuditCategory1786500000000"
+  },
+  "services": [
+    {
+      "repo": "server",
+      "worktree": "worktrees/038-mcp-api-key-management/server",
+      "start_cmd": "pnpm start:dev",
+      "env_file": "worktrees/038-mcp-api-key-management/server/.env",
+      "env_overrides": {
+        "MCP_ENABLED": "true",
+        "MCP_API_KEY_ENABLED": "true"
+      },
+      "pid": 274499,
+      "log": "worktrees/038-mcp-api-key-management/server/.forge/logs/server.log",
+      "health_url": "http://localhost:4000/health/ready",
+      "health_url_via_traefik": "http://localhost:3000 (traefik proxies /rest,/graphql etc to host.docker.internal:4000)",
+      "port": 4000,
+      "state": "healthy"
+    },
+    {
+      "repo": "client-web",
+      "worktree": "worktrees/038-mcp-api-key-management/client-web",
+      "start_cmd": "pnpm start",
+      "env_file": "worktrees/038-mcp-api-key-management/client-web/.env",
+      "pid": 296158,
+      "log": "worktrees/038-mcp-api-key-management/server/.forge/logs/client-web.log",
+      "health_url": "http://localhost:3001",
+      "health_url_via_traefik": "http://localhost:3000",
+      "port": 3001,
+      "state": "healthy"
+    }
+  ],
+  "ports": {
+    "3000": "traefik (dependency edge router; entrypoint 'web' -> server:4000, client-web:3001)",
+    "5432": "postgres (via traefik postgres entrypoint)",
+    "5672": "rabbitmq",
+    "4433": "kratos public (in-network only, not published to host in this compose file)",
+    "4455": "not published to host in this compose file; not a conflict source",
+    "4000": "server (nest, worktree source, direct)",
+    "3001": "client-web (vite, worktree source, direct)"
+  },
+  "booted_at": "2026-08-12T12:56:23Z"
+}

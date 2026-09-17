@@ -3,6 +3,7 @@ import {
   CREDENTIAL_RULE_ORGANIZATION_READ,
   CREDENTIAL_RULE_TYPES_DELETE_ORGANIZATION,
   CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET,
+  CREDENTIAL_RULE_TYPES_ORGANIZATION_ROLESET_APPLY,
 } from '@common/constants';
 import {
   AuthorizationCredential,
@@ -288,6 +289,22 @@ export class OrganizationAuthorizationService {
       );
     organizationAdmin.cascade = false;
     newRules.push(organizationAdmin);
+
+    // Every registered user may APPLY to associate with the organization
+    // (operator ruling R4). Stored as a credential rule rather than an
+    // ad-hoc mutation-side check because the operator confirmed a full
+    // authorization reset is planned after this rollout anyway. There is no
+    // corresponding JOIN rule: the direct-join door is a per-viewer fact
+    // (email domain match) that a static credential rule cannot express, so
+    // it stays a mutation-side check.
+    const globalRegisteredApply =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_APPLY],
+        [AuthorizationCredential.GLOBAL_REGISTERED],
+        CREDENTIAL_RULE_TYPES_ORGANIZATION_ROLESET_APPLY
+      );
+    globalRegisteredApply.cascade = false;
+    newRules.push(globalRegisteredApply);
 
     return newRules;
   }

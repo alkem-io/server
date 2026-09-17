@@ -40,6 +40,7 @@ import { TemplateService } from '@domain/template/template/template.service';
 import { TemplateApplierService } from '@domain/template/template-applier/template.applier.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { actorContextData } from '@test/data/actorContext.mock';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -575,7 +576,7 @@ describe('Office Docs gate — updateCollaborationFromSpaceTemplate wiring (FR-0
       service.updateCollaborationFromSpaceTemplate(
         { spaceTemplateID: 'tpl-1', addCallouts: true } as any,
         { id: COLLABORATION_ID } as any,
-        'user-1'
+        actorContextData.actorContext
       )
     ).rejects.toThrow(FR_007_MESSAGE);
     expect(gateSpy).toHaveBeenCalledWith(COLLABORATION_ID);
@@ -614,7 +615,7 @@ describe('Office Docs gate — updateCollaborationFromSpaceTemplate wiring (FR-0
           innovationFlow: {} as any,
           calloutsSet: { callouts: [] } as any,
         } as any,
-        'user-1'
+        actorContextData.actorContext
       );
     } catch {
       /* downstream calls may fail in isolated mock env */

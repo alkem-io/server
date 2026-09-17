@@ -85,7 +85,8 @@ describe('TemplateResolverMutations', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
       expect(templateService.updateTemplate).toHaveBeenCalledWith(
         template,
-        updateData
+        updateData,
+        actorContext
       );
       expect(result).toBe(updatedTemplate);
       // spec-server-9 fix: A7's dual path is UPDATE ∨

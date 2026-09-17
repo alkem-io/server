@@ -121,29 +121,40 @@ export class RoleSetResolverMutations {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       roleData.roleSetID
     );
-    this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
 
-    // Check if has **both** grant + assign org privileges
-    this.authorizationService.grantAccessOrFail(
+    await this.authorizeAssignOrganization(
       actorContext,
-      roleSet.authorization,
-      AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION,
-      `assign organization RoleSet role: ${roleSet.id}`
+      roleSet,
+      roleData.actorID
     );
-    this.authorizationService.grantAccessOrFail(
-      actorContext,
-      roleSet.authorization,
-      AuthorizationPrivilege.GRANT,
-      `assign organization RoleSet role: ${roleSet.id}`
-    );
+
+    // Assert the actor really IS an organization BEFORE any write. This lookup
+    // used to run only after `assignActorToRole` had already granted the
+    // credential, and nothing else on this path checks the type:
+    // `assignActorToRole` derives the actor type from the DB and applies THAT
+    // type's policy, so a non-organization actorID was assigned first and
+    // rejected afterwards, leaving the credential granted while the caller saw
+    // an error (there is no transaction around the two).
+    //
+    // That mattered little while the mutation required
+    // ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION (global admin / support / beta
+    // tester) for every call. R32 relaxed it to GRANT alone for an actor
+    // already holding the entry role, so any Space admin can now reach this
+    // path — and aiming it at a Virtual Contributor already in the Space
+    // granted that VC a Space role while skipping the
+    // SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS entitlement that
+    // `assignRoleToVirtualContributor` enforces for exactly this operation.
+    const organization =
+      await this.organizationLookupService.getOrganizationByIdOrFail(
+        roleData.actorID
+      );
+
     await this.roleSetService.assignActorToRole(
       roleSet,
       roleData.role,
       roleData.actorID
     );
-    return await this.organizationLookupService.getOrganizationByIdOrFail(
-      roleData.actorID
-    );
+    return organization;
   }
 
   @Mutation(() => IVirtualContributor, {
@@ -397,7 +408,11 @@ export class RoleSetResolverMutations {
         await this.authorizeAssignUser(actorContext, roleSet, roleData.role);
         break;
       case ActorType.ORGANIZATION:
-        await this.authorizeAssignOrganization(actorContext, roleSet);
+        await this.authorizeAssignOrganization(
+          actorContext,
+          roleSet,
+          roleData.actorID
+        );
         break;
       case ActorType.VIRTUAL_CONTRIBUTOR:
         await this.authorizeAssignVirtualContributor(
@@ -527,18 +542,45 @@ export class RoleSetResolverMutations {
     );
   }
 
+  /**
+   * Bringing a NEW organization into a Space requires
+   * `ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION` (GLOBAL_ADMIN / GLOBAL_SUPPORT /
+   * BETA_TESTER) plus GRANT. Changing the role of one that is ALREADY in the
+   * role set requires GRANT alone.
+   *
+   * The assign-organization privilege protects the organization's *consent*: a
+   * direct add puts an organization into a Space without ever asking it, which
+   * is why it stays global-only (R6). Consent is about entering the Space, not
+   * about which role the organization holds once it is in. Since
+   * workspace#061 an organization enters by accepting an invitation from a
+   * Space admin, and that admin must then be able to move it between Member and
+   * Lead and to remove it again — the same GRANT that
+   * `removeRoleFromOrganization` has always required, and the same authority
+   * they already hold over every user member. Without this split the invite
+   * flow ships a front door with no management surface behind it (R32).
+   */
   private async authorizeAssignOrganization(
     actorContext: ActorContext,
-    roleSet: IRoleSet
+    roleSet: IRoleSet,
+    actorID: string
   ): Promise<void> {
     this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
 
-    this.authorizationService.grantAccessOrFail(
-      actorContext,
-      roleSet.authorization,
-      AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION,
-      `assign organization RoleSet role: ${roleSet.id}`
+    const alreadyInRoleSet = await this.roleSetService.isInRole(
+      actorID,
+      roleSet,
+      roleSet.entryRoleName
     );
+
+    if (!alreadyInRoleSet) {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        roleSet.authorization,
+        AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION,
+        `assign organization RoleSet role: ${roleSet.id}`
+      );
+    }
+
     this.authorizationService.grantAccessOrFail(
       actorContext,
       roleSet.authorization,

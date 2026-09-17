@@ -5,7 +5,19 @@ import { INameable } from '../entity/nameable-entity/nameable.interface';
 
 @ObjectType('Memo')
 export abstract class IMemo extends INameable {
-  content?: Buffer;
+  // The inline `content` (Yjs-V2 bytes) is UNMAPPED — memo content lives only as a
+  // Yjs-V2 snapshot located by `contentPointer` (mirrors IWhiteboard). The DB
+  // column is retained during progressive migration and dropped in the separately
+  // reviewed post-release cleanup.
+  // Internal metadata/index columns (FR-001) — not exposed on the GraphQL API.
+  contentPointer?: string;
+
+  // Internal temporary progressive-rollout marker; not exposed in GraphQL.
+  migrated!: boolean;
+
+  // Collaboration content version owned by the collab room (contract `version`,
+  // FR-004) — distinct from the inherited TypeORM `@VersionColumn`. Internal.
+  contentVersion?: number;
 
   @Field(() => ContentUpdatePolicy, {
     description: 'The policy governing who can update the Memo content.',

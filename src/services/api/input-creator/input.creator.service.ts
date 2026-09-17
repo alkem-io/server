@@ -1,12 +1,14 @@
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutSelectionMode } from '@common/enums/callout.selection.mode';
 import { LogContext } from '@common/enums/logging.context';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { validateAndConvertVisualTypeName } from '@common/enums/visual.type';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
+import { TaskBoardService } from '@domain/collaboration/callout/task-board/task.board.service';
 import { ICalloutContributionDefaults } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.interface';
 import { CreateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto/callout.contribution.defaults.dto.create';
 import { ICalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.interface';
@@ -44,6 +46,7 @@ import { CreateTemplateContentSpaceInput } from '@domain/template/template-conte
 import { TemplateContentSpace } from '@domain/template/template-content-space/template.content.space.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager } from 'typeorm';
 
@@ -53,10 +56,35 @@ export class InputCreatorService {
     private collaborationService: CollaborationService,
     private spaceLookupService: SpaceLookupService,
     private calloutService: CalloutService,
+    private taskBoardService: TaskBoardService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    private fileServiceAdapter: FileServiceAdapter
   ) {}
+
+  /**
+   * Reads a document's stored Yjs-V2 snapshot from file-service by pointer
+   * (006-collab-content-unification): content is no longer an inline column, so
+   * the duplicate/export builders below re-read it from the document's bucket.
+   * Returns the raw snapshot bytes, or `undefined` when there is no pointer / the
+   * snapshot is missing.
+   */
+  private async fetchSnapshot(
+    contentPointer?: string
+  ): Promise<Buffer | undefined> {
+    if (!contentPointer) {
+      return undefined;
+    }
+    const [item] = await this.fileServiceAdapter.getContentBatch([
+      contentPointer,
+    ]);
+    if (!item?.found || !item.contentBase64) {
+      return undefined;
+    }
+    return Buffer.from(item.contentBase64, 'base64');
+  }
 
   public async buildCreateCalloutInputsFromCallouts(
     callouts: ICallout[]
@@ -78,13 +106,16 @@ export class InputCreatorService {
       relations: {
         contributionDefaults: true,
         classification: {
-          tagsets: true,
+          // The task marker's template carries the board's ordered columns,
+          // read when serialising a Tasks board to a template.
+          tagsets: { tagsetTemplate: true },
         },
         framing: {
           profile: {
             tagsets: true,
             references: true,
             visuals: true,
+            storageBucket: true,
           },
           whiteboard: {
             profile: {
@@ -147,10 +178,15 @@ export class InputCreatorService {
 
     return {
       nameID: callout.nameID,
+      // A Tasks board is captured as its own block, not as a raw 'task' tagset:
+      // emit the ordered columns so a callout created from this template is a
+      // board again, and strip the marker from the generic classification so it
+      // is not double-materialised.
+      taskBoard: this.buildTaskBoardInputFromCallout(callout),
       classification: this.buildCreateClassificationInputFromClassification(
         callout.classification
       ),
-      framing: this.buildCreateCalloutFramingInputFromCalloutFraming(
+      framing: await this.buildCreateCalloutFramingInputFromCalloutFraming(
         callout.framing
       ),
       settings: this.stripSelectionFromSettings(
@@ -159,7 +195,8 @@ export class InputCreatorService {
       ),
       contributionDefaults:
         this.buildCreateCalloutContributionDefaultsInputFromCalloutContributionDefaults(
-          callout.contributionDefaults
+          callout.contributionDefaults,
+          callout.framing.profile.storageBucket?.id
         ),
       sortOrder: callout.sortOrder,
     };
@@ -418,19 +455,26 @@ export class InputCreatorService {
     return result;
   }
 
-  public buildCreateWhiteboardInputFromWhiteboard(
+  public async buildCreateWhiteboardInputFromWhiteboard(
     whiteboard?: IWhiteboard
-  ): CreateWhiteboardInput | undefined {
+  ): Promise<CreateWhiteboardInput | undefined> {
     if (!whiteboard) return undefined;
+    // Content is the stored Yjs-V2 snapshot in the whiteboard's bucket. A duplicate
+    // carries the SAME CRDT bytes (base64) verbatim — no Excalidraw scene/JSON round
+    // trip; create re-homes the snapshot's embedded media into the new bucket
+    // (006-collab-content-unification).
+    const snapshot = await this.fetchSnapshot(whiteboard.contentPointer);
     return {
       profile: this.buildCreateProfileInputFromProfile(whiteboard.profile),
-      content: whiteboard.content,
+      content: snapshot ? Buffer.from(snapshot).toString('base64') : undefined,
       nameID: whiteboard.nameID,
       previewSettings: whiteboard.previewSettings,
     };
   }
 
-  public buildCreateMemoInputFromMemo(memo: IMemo): CreateMemoInput {
+  public async buildCreateMemoInputFromMemo(
+    memo: IMemo
+  ): Promise<CreateMemoInput> {
     if (!memo.profile) {
       throw new EntityNotInitializedException(
         'Memo not fully initialised',
@@ -441,9 +485,11 @@ export class InputCreatorService {
         }
       );
     }
+    // Derive the markdown from the stored snapshot (content is no longer inline).
+    const snapshot = await this.fetchSnapshot(memo.contentPointer);
     return {
       nameID: memo.nameID,
-      markdown: memo.content ? yjsStateToMarkdown(memo.content) : undefined,
+      markdown: snapshot ? yjsStateToMarkdown(snapshot) : undefined,
       profile: this.buildCreateProfileInputFromProfile(memo.profile),
     };
   }
@@ -465,9 +511,9 @@ export class InputCreatorService {
     return result;
   }
 
-  private buildCreateCalloutFramingInputFromCalloutFraming(
+  private async buildCreateCalloutFramingInputFromCalloutFraming(
     calloutFraming: ICalloutFraming
-  ): CreateCalloutFramingInput {
+  ): Promise<CreateCalloutFramingInput> {
     if (!calloutFraming.profile) {
       throw new EntityNotInitializedException(
         'CalloutFraming not fully initialised',
@@ -481,7 +527,7 @@ export class InputCreatorService {
     return {
       type: calloutFraming.type,
       profile: this.buildCreateProfileInputFromProfile(calloutFraming.profile),
-      whiteboard: this.buildCreateWhiteboardInputFromWhiteboard(
+      whiteboard: await this.buildCreateWhiteboardInputFromWhiteboard(
         calloutFraming.whiteboard
       ),
       link: calloutFraming.link?.profile
@@ -493,7 +539,7 @@ export class InputCreatorService {
           }
         : undefined,
       memo: calloutFraming.memo
-        ? this.buildCreateMemoInputFromMemo(calloutFraming.memo)
+        ? await this.buildCreateMemoInputFromMemo(calloutFraming.memo)
         : undefined,
       mediaGallery: calloutFraming.mediaGallery?.visuals
         ? {
@@ -507,15 +553,29 @@ export class InputCreatorService {
   }
 
   private buildCreateCalloutContributionDefaultsInputFromCalloutContributionDefaults(
-    calloutContributionDefaults?: ICalloutContributionDefaults
+    calloutContributionDefaults?: ICalloutContributionDefaults,
+    sourceStorageBucketID?: string
   ): CreateCalloutContributionDefaultsInput | undefined {
     if (!calloutContributionDefaults) {
       return undefined;
+    }
+    if (
+      calloutContributionDefaults.whiteboardContent &&
+      !sourceStorageBucketID
+    ) {
+      throw new EntityNotInitializedException(
+        'Source Callout has a Whiteboard default but no owning storage bucket',
+        LogContext.INPUT_CREATOR,
+        { calloutContributionDefaultsId: calloutContributionDefaults.id }
+      );
     }
     const result: CreateCalloutContributionDefaultsInput = {
       defaultDisplayName: calloutContributionDefaults.defaultDisplayName,
       postDescription: calloutContributionDefaults.postDescription,
       whiteboardContent: calloutContributionDefaults.whiteboardContent,
+      sourceStorageBucketID: calloutContributionDefaults.whiteboardContent
+        ? sourceStorageBucketID
+        : undefined,
     };
     return result;
   }
@@ -523,9 +583,30 @@ export class InputCreatorService {
   private buildCreateClassificationInputFromClassification(
     classification: IClassification
   ): CreateClassificationInput {
+    // A Tasks board's 'task' marker tagset is captured by the taskBoard block,
+    // not as a generic tagset — strip it so a template doesn't carry a bare
+    // 'task' tagset that would otherwise be re-created without its board state.
+    const tagsets = (classification.tagsets ?? []).filter(
+      tagset => tagset.name !== TagsetReservedName.TASK
+    );
     return {
-      tagsets: this.buildCreateTagsetsInputFromTagsets(classification.tagsets),
+      tagsets: this.buildCreateTagsetsInputFromTagsets(tagsets),
     };
+  }
+
+  /**
+   * The Tasks board block for a callout being serialised to a template. Returns
+   * undefined when the callout is not a board; otherwise the board's ordered
+   * columns, so a callout created from the template is a board with the same
+   * columns and no tasks.
+   */
+  private buildTaskBoardInputFromCallout(
+    callout: ICallout
+  ): { columns: string[] } | undefined {
+    if (!this.taskBoardService.isTaskBoard(callout)) {
+      return undefined;
+    }
+    return { columns: this.taskBoardService.getColumns(callout) };
   }
 
   public buildCreateProfileInputFromProfile(

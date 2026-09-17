@@ -41,6 +41,12 @@ export type ManagedPrivilege =
   | AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS
   | AuthorizationPrivilege.PLATFORM_USERS_ADMIN
   | AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+  // R-F.2 (2026-09-16, research D29) — Support's console list read. Mirrored
+  // here so `PRIVILEGE_COVERAGE` forces a grant-set spec, although it names
+  // NO census gate: the three `platformAdmin` list reads it admits are not
+  // A-rows (see `INDIRECT_ENFORCEMENT_FILES`' F6 note), so `SCANNED_PRIVILEGES`
+  // does not grow and `reachability.spec.ts` derives nothing from it.
+  | AuthorizationPrivilege.PLATFORM_SUPPORT_LISTS_READ
   | AuthorizationPrivilege.PLATFORM_FORUM_MANAGE
   | AuthorizationPrivilege.DELETE_ORGANIZATION
   | AuthorizationPrivilege.PLATFORM_AUDIT_READ
@@ -162,6 +168,15 @@ export const PRIVILEGE_GRANTS: Record<ManagedPrivilege, PrivilegeGrant> = {
   // does not extend to CREATE/UPDATE/DELETE, so there is no legacy reacher.
   [AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES]: {
     anchor: 'account',
+    owningCredentials: [AuthorizationCredential.PLATFORM_SUPPORT],
+    legacyCredentials: [],
+  },
+  // --- R-F.2 (2026-09-16, D29). Platform-anchored READ for the three
+  // console lists (organizations / packs / hubs). Slice B: the legacy pair
+  // that reached those lists via PLATFORM_ADMIN is gone; License Manager
+  // does not own these lists (R-F.3).
+  [AuthorizationPrivilege.PLATFORM_SUPPORT_LISTS_READ]: {
+    anchor: 'platform',
     owningCredentials: [AuthorizationCredential.PLATFORM_SUPPORT],
     legacyCredentials: [],
   },

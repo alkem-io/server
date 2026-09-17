@@ -2,11 +2,15 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { MemoSigningContinueInput } from '@domain/common/memo/dto/memo.signing.continue.input';
+import { MemoSigningPrepareInput } from '@domain/common/memo/dto/memo.signing.prepare.input';
 import { IMemo } from '@domain/common/memo/memo.interface';
 import { MemoResolverMutations } from '@domain/common/memo/memo.resolver.mutations';
 import { MemoService } from '@domain/common/memo/memo.service';
 import { MemoAuthorizationService } from '@domain/common/memo/memo.service.authorization';
+import { MemoSigningService } from '@domain/common/memo/memo.signing.service';
 import { LoggerService } from '@nestjs/common';
+import { validate } from 'class-validator';
 import { EntityManager } from 'typeorm';
 import { type Mocked, vi } from 'vitest';
 
@@ -29,6 +33,11 @@ const createResolver = () => {
     applyAuthorizationPolicy: vi.fn(),
   } as unknown as Mocked<MemoAuthorizationService>;
 
+  const memoSigningService = {
+    prepareMemoSigning: vi.fn(),
+    continueMemoSigning: vi.fn(),
+  } as unknown as Mocked<MemoSigningService>;
+
   const entityManager = {
     findOne: vi.fn(),
   } as unknown as Mocked<EntityManager>;
@@ -43,6 +52,7 @@ const createResolver = () => {
     authorizationPolicyService,
     memoService,
     memoAuthService,
+    memoSigningService,
     entityManager,
     logger
   );
@@ -52,6 +62,7 @@ const createResolver = () => {
     authorizationService,
     memoService,
     memoAuthService,
+    memoSigningService,
     authorizationPolicyService,
     entityManager,
   };
@@ -60,6 +71,52 @@ const createResolver = () => {
 describe('MemoResolverMutations', () => {
   const actorContext = new ActorContext();
   actorContext.actorID = 'user-1';
+
+  it('delegates server-owned signing preparation without accepting PDF input', async () => {
+    const { resolver, memoSigningService } = createResolver();
+    const result = {
+      attemptId: 'attempt-1',
+      previewUrl: '/api/private/rest/content-signing/attempt-1/snapshot',
+    };
+    memoSigningService.prepareMemoSigning.mockResolvedValue(result);
+
+    await expect(
+      resolver.prepareMemoSigning(actorContext, { memoID: 'memo-1' })
+    ).resolves.toBe(result);
+    expect(memoSigningService.prepareMemoSigning).toHaveBeenCalledWith(
+      'memo-1',
+      actorContext
+    );
+    expect(resolver.prepareMemoSigning).toHaveLength(2);
+  });
+
+  it('delegates continuation by attempt ID without accepting state or PDF', async () => {
+    const { resolver, memoSigningService } = createResolver();
+    const result = {
+      authorizeUrl: 'https://connect.acc.cleverbase.com/authorize',
+    };
+    memoSigningService.continueMemoSigning.mockResolvedValue(result);
+
+    await expect(
+      resolver.continueMemoSigning(actorContext, { attemptID: 'attempt-1' })
+    ).resolves.toBe(result);
+    expect(memoSigningService.continueMemoSigning).toHaveBeenCalledWith(
+      'attempt-1',
+      actorContext
+    );
+    expect(resolver.continueMemoSigning).toHaveLength(2);
+  });
+
+  it.each([
+    [MemoSigningPrepareInput, 'memoID'],
+    [MemoSigningContinueInput, 'attemptID'],
+  ])('validates %s as a UUID input', async (Input, field) => {
+    const input = Object.assign(new Input(), { [field]: 'not-a-uuid' });
+
+    await expect(validate(input)).resolves.toEqual([
+      expect.objectContaining({ property: field }),
+    ]);
+  });
 
   describe('updateMemo', () => {
     it('authorizes and updates memo without re-applying auth when policy unchanged', async () => {

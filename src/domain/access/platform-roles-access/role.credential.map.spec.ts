@@ -61,6 +61,23 @@ describe('027-platform-role-redesign: ROLE_CREDENTIAL_MAP anti-drift (FR-011/SC-
     return value as RoleName;
   }
 
+  // Feature VC Campaign (2026-09-16): the legacy `platform-vc-campaign` was
+  // audited as inert and slated for removal, but the client gates the
+  // dashboard campaign banner on it — it is the TARGETING half of the VC
+  // offer (runbook §2b). It survives as the fourth Feature role, seeded
+  // additively beside its legacy twin like every other target role.
+  it('seeds feature-vc-campaign as a Feature role — organization-holdable, one canonical identifier', () => {
+    const def = NEW_PLATFORM_ROLE_SEED_DEFINITIONS.find(
+      d => d.name === 'feature-vc-campaign'
+    );
+    expect(def).toBeDefined();
+    expect(def?.credentialType).toBe('feature-vc-campaign');
+    expect(def?.organizationPolicy).toEqual({ minimum: 0, maximum: -1 });
+    expect(ROLE_CREDENTIAL_MAP[RoleName.FEATURE_VC_CAMPAIGN]).toBe(
+      AuthorizationCredential.FEATURE_VC_CAMPAIGN
+    );
+  });
+
   it.each(
     allSeedDefinitions
   )('seed definition "$name" has a matching ROLE_CREDENTIAL_MAP entry, correctly resolved', def => {

@@ -91,11 +91,13 @@ export interface McpApiKeyScope {
 }
 
 /**
- * DI tokens for collecting MCP tools / resource providers as multi-provider
- * arrays. Each tool/resource is registered with `{ provide: MCP_TOOL,
- * useClass: X, multi: true }`, and the registries inject the resulting array —
- * so adding a tool is a single edit (one provider line) with no manual
- * register() call to forget.
+ * DI tokens under which the aggregated MCP tool / resource-provider arrays are
+ * exposed. The concrete tool/resource classes are registered as ordinary
+ * providers (listed once in `TOOL_PROVIDERS` / `RESOURCE_PROVIDERS` in
+ * `mcp-server.module.ts`), and a single aggregator `useFactory` injects that
+ * list and returns it under this token — so adding a tool is a one-line edit to
+ * the list with no manual register() call to forget. (This is NOT a Nest
+ * `multi: true` multi-provider — one factory gathers the injected classes.)
  */
 export const MCP_TOOL = Symbol('MCP_TOOL');
 export const MCP_RESOURCE_PROVIDER = Symbol('MCP_RESOURCE_PROVIDER');

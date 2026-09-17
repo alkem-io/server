@@ -1,5 +1,7 @@
+import { createRequire } from 'node:module';
 import { LogContext, ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
@@ -8,59 +10,176 @@ import { WhiteboardPreviewMode } from '@common/enums/whiteboard.preview.mode';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  ForbiddenException,
   RelationshipNotFoundException,
+  ValidationException,
 } from '@common/exceptions';
-import { ExcalidrawContent } from '@common/interfaces';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import {
+  CollaborationLifecycleService,
+  CollaborationMetadata,
+  CollaborationMetadataUpdate,
+} from '@domain/common/collaboration-metadata';
+import type { ILicense } from '@domain/common/license/license.interface';
 import { IProfile } from '@domain/common/profile';
-import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
+import { DocumentService } from '@domain/storage/document/document.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
+import { CollaborationDocumentService } from '@services/collaboration-client/collaboration-document.service';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import type * as Yjs from 'yjs';
 import { AuthorizationPolicy } from '../authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { LicenseService } from '../license/license.service';
 import { ProfileService } from '../profile/profile.service';
+import {
+  findUnresolvedLiveImage,
+  parseLegacyWhiteboardScene,
+  whiteboardSceneToYjsV2State,
+} from './conversion';
 import { CreateWhiteboardInput } from './dto/whiteboard.dto.create';
 import { UpdateWhiteboardInput } from './dto/whiteboard.dto.update';
 import { Whiteboard } from './whiteboard.entity';
+import { loadWhiteboardFork, WhiteboardFork } from './whiteboard.fork';
 import { IWhiteboard } from './whiteboard.interface';
+
+/**
+ * Native-CJS `yjs` — the SAME single instance the CJS headless fork (`loadWhiteboardFork`)
+ * resolves, in production (server is CJS: `import * as Y` compiles to `require('yjs')`) AND
+ * under the Vitest ESM runner (where a bare `import` would resolve to `yjs.mjs`, a SECOND
+ * instance). `rehomeSnapshotAssets` decodes a snapshot into a `Y.Doc` and hands it to the
+ * fork's `readAssetLocators`/`writeAssetLocators`, so decode + fork MUST share one runtime;
+ * `createRequire(__filename)` is zero semantic change in compiled CommonJS and removes the
+ * cross-runtime discrepancy at this fork-crossing site under test.
+ */
+const Y = createRequire(__filename)('yjs') as typeof import('yjs');
+
+export interface ResolvedWhiteboardContentSource {
+  content: string;
+  storageBucketID: string;
+  previewURI?: string;
+}
+
+export interface MaterializedWhiteboardContent {
+  content: string;
+  createdDocumentIDs: string[];
+}
 
 @Injectable()
 export class WhiteboardService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
+    private readonly collaborationDocumentService: CollaborationDocumentService,
     @InjectRepository(Whiteboard)
     private whiteboardRepository: Repository<Whiteboard>,
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileService: ProfileService,
-    private profileDocumentsService: ProfileDocumentsService,
     private communityResolverService: CommunityResolverService,
-    private licenseService: LicenseService
+    private licenseService: LicenseService,
+    private collaborationLifecycleService: CollaborationLifecycleService,
+    private fileServiceAdapter: FileServiceAdapter,
+    private authorizationService: AuthorizationService,
+    private documentService: DocumentService,
+    private storageBucketService: StorageBucketService
   ) {}
 
   async createWhiteboard(
     whiteboardData: CreateWhiteboardInput,
     storageAggregator: IStorageAggregator,
-    userID?: string
+    actorContext: ActorContext
   ): Promise<IWhiteboard> {
+    // The initial content arrives server-side as a base64 Yjs-V2 snapshot (the
+    // single CRDT representation — never an Excalidraw scene/JSON) on client
+    // create, from-template, and duplicate. It is NO LONGER stored inline — it is
+    // written to the whiteboard's own bucket below (R1/R2/FR-005). Hold it aside;
+    // `Whiteboard.create` no longer carries it, nor the source-copy pointer.
+    const {
+      content,
+      sourceWhiteboardID,
+      sourceStorageBucketID,
+      draftWhiteboardID: _draftWhiteboardID,
+      draftExpiresAt,
+      ...entityData
+    } = whiteboardData;
+
+    // XOR by PRESENCE (not truthiness): `content` and `sourceWhiteboardID` are
+    // mutually exclusive. A create that supplies BOTH is malformed — reject BEFORE
+    // any DB / file / collab side effect. `content === ''` (or an encoded-empty
+    // snapshot) still counts as present, so a source clone can never smuggle a
+    // second, untrusted content representation alongside it.
+    if (content != null && sourceWhiteboardID != null) {
+      throw new ValidationException(
+        'A whiteboard create must supply EITHER content OR sourceWhiteboardID, not both',
+        LogContext.WHITEBOARDS
+      );
+    }
+    if (_draftWhiteboardID != null) {
+      throw new ValidationException(
+        'draftWhiteboardID must be claimed by the owning create mutation before Whiteboard materialization',
+        LogContext.WHITEBOARDS
+      );
+    }
+
+    // Resolve the initial snapshot + the authorization boundary for its embedded
+    // media. The two branches carry DIFFERENT trust:
+    //  - `sourceWhiteboardID` (clone / Save-as-Template): the service authorizes
+    //    READ on the source it dereferences HERE (the resolver only authorizes
+    //    CREATE on the destination parent); embedded-media locators are then
+    //    constrained to the source's OWN bucket. A source with no stored snapshot
+    //    seeds an EMPTY board — never a fallback to client `content`.
+    //  - direct `content`: locators are untrusted → per-document READ under the
+    //    initiating actor (identical rule to a live content replacement).
+    let initialScene: string | undefined;
+    let sourceBucketId = sourceStorageBucketID;
+    let sourcePreviewURI: string | undefined;
+    if (sourceWhiteboardID != null) {
+      const source = await this.resolveContentSource(
+        sourceWhiteboardID,
+        actorContext
+      );
+      sourceBucketId = source.storageBucketID;
+      initialScene = source.content;
+      sourcePreviewURI = source.previewURI;
+    } else {
+      initialScene = content ?? undefined;
+    }
+
     // Phase 1: build entity tree in memory (no file-service-go calls).
     const whiteboard: IWhiteboard = Whiteboard.create({
-      ...whiteboardData,
+      ...entityData,
     });
     whiteboard.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.WHITEBOARD
     );
-    whiteboard.createdBy = userID;
+    // `ActorContext.actorID` is typed `string` and defaults to '' for an empty/anonymous
+    // context; `|| undefined` keeps a malformed empty-string out of the UUID column (NULL).
+    whiteboard.createdBy = actorContext.actorID || undefined;
+    whiteboard.draftExpiresAt = draftExpiresAt;
     whiteboard.contentUpdatePolicy = ContentUpdatePolicy.CONTRIBUTORS;
 
+    const profileData = {
+      ...(whiteboardData.profile ?? { displayName: 'Whiteboard' }),
+    };
+    if (
+      sourcePreviewURI &&
+      !profileData.visuals?.some(
+        visual => visual.name === VisualType.WHITEBOARD_PREVIEW
+      )
+    ) {
+      profileData.visuals = [
+        ...(profileData.visuals ?? []),
+        { name: VisualType.WHITEBOARD_PREVIEW, uri: sourcePreviewURI },
+      ];
+    }
     whiteboard.profile = await this.profileService.createProfile(
-      whiteboardData.profile ?? {
-        displayName: 'Whiteboard',
-      },
+      profileData,
       ProfileType.WHITEBOARD,
       storageAggregator
     );
@@ -78,64 +197,402 @@ export class WhiteboardService {
     // work and rolls back the saved entity on failure so callers receive a
     // fully-materialized whiteboard or a thrown error, never a half-state.
     const saved = await this.whiteboardRepository.save(whiteboard);
-    // The helper mutates the profile in place AND saves it; the saved
-    // whiteboard's `.profile` reference is the same instance, so no
-    // explicit reassignment is required (TypeORM Profile entity type
-    // wouldn't accept the IProfile return shape anyway).
     await this.profileService.materializeProfileContentAndVisualsOrRollback(
       saved.profile,
-      whiteboardData.profile?.visuals,
+      profileData.visuals,
       [VisualType.CARD, VisualType.WHITEBOARD_PREVIEW],
       () => this.deleteWhiteboard(saved.id)
     );
 
-    // Phase 3: re-home the WB content's embedded file references into
-    // the new whiteboard's bucket. Without this, cloned WBs (template
-    // creation, space-from-template, callout-from-template, etc.)
-    // permanently reference the source's bucket — which becomes
-    // dangling the moment the source is deleted, and silently
-    // gets MOVED out of the source on the first user save. Doing it
-    // eagerly at clone time gives the new WB its own copies of
-    // referenced docs (the helper now uses COPY semantics, leaving
-    // the source intact).
-    if (saved.content) {
-      try {
-        const reuploaded = await this.reuploadDocumentsIfNotInBucket(
-          this.parseWhiteboardContent(saved.content),
-          saved.profile.id
+    // Phase 3: persist the editor's Yjs-V2 snapshot verbatim into the new
+    // whiteboard's own bucket. `initialScene` is base64-encoded Yjs CRDT state (the
+    // single representation everywhere — never an Excalidraw scene/JSON). Embedded
+    // media is re-homed into this bucket by operating on the snapshot's own `files`
+    // Y.Map, not a reconstructed scene. Release A (staged rollout): EVERY create
+    // seeds a real snapshot — an empty create is encoded as the canonical empty
+    // Y.Doc (`whiteboardSceneToYjsV2State('')`). The existing create sequence may
+    // have a short internal NULL-pointer interval, but it publishes the pointer
+    // before returning the document to its caller. Cleanup fails
+    // closed on any NULL/blank pointer under its write fence but leaves the column
+    // NULLABLE for the transient new-row window. The room materializes empty +
+    // editable (FR-010) either way.
+    try {
+      const storageBucketId = saved.profile.storageBucket?.id;
+      if (!storageBucketId) {
+        throw new EntityNotInitializedException(
+          'Whiteboard storage bucket not initialized when writing initial snapshot',
+          LogContext.WHITEBOARDS,
+          { whiteboardId: saved.id }
         );
-        const reuploadedJson = JSON.stringify(reuploaded);
-        if (reuploadedJson !== saved.content) {
-          saved.content = reuploadedJson;
-          await this.whiteboardRepository.save(saved);
-        }
-      } catch (error) {
-        await this.deleteWhiteboard(saved.id).catch(rollbackError => {
-          const stack =
-            rollbackError instanceof Error ? (rollbackError.stack ?? '') : '';
-          this.logger.error?.(
-            {
-              message: 'Rollback after WB content reupload failure also failed',
-              whiteboardId: saved.id,
-              rollbackError: String(rollbackError),
-            },
-            stack,
-            LogContext.WHITEBOARDS
-          );
-        });
-        throw error;
       }
+      let snapshot: Buffer;
+      if (initialScene) {
+        // Create's outer catch deletes the whole whiteboard on failure, which cascades a
+        // bucket cleanup, so the copied `createdTargetLocators` need no separate
+        // compensation here (unlike the pre-existing-whiteboard UPDATE path).
+        ({ snapshot } = await this.rehomeSnapshotAssets(
+          Buffer.from(initialScene, 'base64'),
+          storageBucketId,
+          { actorContext, sourceBucketId }
+        ));
+      } else {
+        snapshot = Buffer.from(await whiteboardSceneToYjsV2State(''));
+      }
+      const result = await this.fileServiceAdapter.createSnapshotInBucket(
+        snapshot,
+        storageBucketId
+      );
+      saved.contentPointer = result.id;
+      saved.contentVersion = 0;
+      await this.whiteboardRepository.save(saved);
+    } catch (error) {
+      await this.deleteWhiteboard(saved.id).catch(rollbackError => {
+        const stack =
+          rollbackError instanceof Error ? (rollbackError.stack ?? '') : '';
+        this.logger.error?.(
+          {
+            message:
+              'Rollback after WB snapshot write / reupload failure also failed',
+            whiteboardId: saved.id,
+            rollbackError: String(rollbackError),
+          },
+          stack,
+          LogContext.WHITEBOARDS
+        );
+      });
+      throw error;
     }
     return saved;
   }
 
-  private parseWhiteboardContent(raw: string): ExcalidrawContent {
+  /**
+   * Resolves and authorizes a server-side whiteboard copy source. Callout
+   * contribution defaults use this before persisting any source-derived bytes;
+   * only the canonical snapshot and its owning bucket continue to phase two.
+   */
+  public async resolveContentSource(
+    sourceWhiteboardID: string,
+    actorContext: ActorContext
+  ): Promise<ResolvedWhiteboardContentSource> {
+    const source = await this.getWhiteboardOrFail(sourceWhiteboardID, {
+      loadEagerRelations: false,
+      relations: {
+        authorization: true,
+        profile: { storageBucket: true, visuals: true },
+      },
+    });
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      source.authorization,
+      AuthorizationPrivilege.READ,
+      `copy whiteboard content from source: ${sourceWhiteboardID}`
+    );
+    const storageBucketID = source.profile?.storageBucket?.id;
+    if (!storageBucketID) {
+      throw new EntityNotInitializedException(
+        'Source whiteboard storage bucket unresolved; cannot constrain copied media',
+        LogContext.WHITEBOARDS,
+        { sourceWhiteboardID }
+      );
+    }
+    const content =
+      (await this.getWhiteboardContent(sourceWhiteboardID)) ||
+      Buffer.from(await whiteboardSceneToYjsV2State('')).toString('base64');
+    const previewURI = source.profile?.visuals?.find(
+      visual => visual.name === VisualType.WHITEBOARD_PREVIEW && visual.uri
+    )?.uri;
+    return { content, storageBucketID, previewURI };
+  }
+
+  /**
+   * Re-homes canonical default content into its owning Callout bucket. Content
+   * with media must carry the server-derived source bucket constraint; direct
+   * GraphQL snapshot transport is not a supported authoring path.
+   */
+  public async materializeContentIntoBucket(
+    content: string | undefined,
+    targetBucketID: string,
+    sourceBucketID?: string
+  ): Promise<MaterializedWhiteboardContent> {
+    const snapshot = content
+      ? Buffer.from(content, 'base64')
+      : Buffer.from(await whiteboardSceneToYjsV2State(''));
+    const result = await this.rehomeSnapshotAssets(snapshot, targetBucketID, {
+      sourceBucketId: sourceBucketID,
+    });
+    return {
+      content: result.snapshot.toString('base64'),
+      createdDocumentIDs: result.createdTargetLocators,
+    };
+  }
+
+  /** Returns only a non-binary availability signal for persisted defaults/UI cards. */
+  public async hasVisibleContent(content?: string): Promise<boolean> {
+    if (!content?.trim()) {
+      return false;
+    }
+    const legacy = parseLegacyWhiteboardScene(content);
+    if (legacy) {
+      return legacy.elements.some(element => element.isDeleted !== true);
+    }
     try {
-      return JSON.parse(raw) as ExcalidrawContent;
+      const fork = await loadWhiteboardFork();
+      const decoded = fork.decodeSnapshot(Buffer.from(content, 'base64'));
+      return decoded.elements.some(element => element.isDeleted !== true);
     } catch {
-      // Empty / non-JSON content (legacy or fresh WB) — return a shape
-      // the reupload walker treats as a no-op (no `files` map).
-      return { elements: [], files: {} } as unknown as ExcalidrawContent;
+      return false;
+    }
+  }
+
+  public async deleteMaterializedContentDocuments(
+    documentIDs: string[]
+  ): Promise<void> {
+    await Promise.all(
+      documentIDs.map(id =>
+        this.fileServiceAdapter.deleteDocument(id).catch(cleanupError => {
+          this.logger.warn?.(
+            {
+              message:
+                'Failed to clean up materialized whiteboard media document',
+              documentId: id,
+              error: String(cleanupError),
+            },
+            LogContext.WHITEBOARDS
+          );
+        })
+      )
+    );
+  }
+
+  public async replaceContentFromSource(
+    targetWhiteboardID: string,
+    sourceWhiteboardID: string,
+    actorContext: ActorContext
+  ): Promise<IWhiteboard> {
+    const target = await this.getWhiteboardOrFail(targetWhiteboardID, {
+      loadEagerRelations: false,
+      relations: {
+        authorization: true,
+        profile: { storageBucket: true },
+      },
+    });
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      target.authorization,
+      AuthorizationPrivilege.UPDATE_CONTENT,
+      `replace whiteboard content: ${targetWhiteboardID}`
+    );
+    const targetStorageBucketID = target.profile?.storageBucket?.id;
+    if (!targetStorageBucketID) {
+      throw new EntityNotInitializedException(
+        'Target whiteboard storage bucket unresolved; cannot replace content',
+        LogContext.WHITEBOARDS,
+        { targetWhiteboardID }
+      );
+    }
+
+    const source = await this.resolveContentSource(
+      sourceWhiteboardID,
+      actorContext
+    );
+    const materialized = await this.materializeContentIntoBucket(
+      source.content,
+      targetStorageBucketID,
+      source.storageBucketID
+    );
+    try {
+      const fork = await loadWhiteboardFork();
+      const desired = fork.decodeSnapshot(
+        Buffer.from(materialized.content, 'base64')
+      );
+      await this.collaborationDocumentService.mutate(
+        targetWhiteboardID,
+        'whiteboard',
+        actorContext.actorID,
+        doc => {
+          const scene = new fork.Scene(undefined, { doc });
+          scene.beginLogicalMutation();
+          try {
+            scene.replaceAllElements(desired.elements as never, {
+              recordHistory: false,
+            });
+            scene.setAssetLocators(desired.assets, { prune: true });
+            scene.setAppState(desired.appState, { prune: true });
+          } finally {
+            scene.endLogicalMutation();
+            scene.destroy();
+          }
+        }
+      );
+    } catch (error) {
+      await this.deleteMaterializedContentDocuments(
+        materialized.createdDocumentIDs
+      );
+      throw error;
+    }
+    return target;
+  }
+
+  /**
+   * Authorized locator-only re-home of a Yjs-V2 whiteboard snapshot's embedded media
+   * into `targetBucketId` (006-collab-content-unification write-path). The snapshot's
+   * asset map is the physical `FILES` Y.Map of opaque file-service locator STRINGS — the
+   * logical API name is `assets`; the physical root name `files` is a FROZEN legacy schema
+   * name from the BinaryFileData era (renaming it is a stored-format break, not cleanup;
+   * see whiteboard.fork). For every locator this loads its source document, AUTHORIZES it,
+   * and — unless it already lives in the target bucket — asks file-service to copy it there.
+   * File-service alone owns deduplication; this service treats the returned document id as
+   * opaque and compensates it only when the copy reports `reused !== true`. Authorization is
+   * caller-scoped:
+   *   - source clone (`sourceBucketId` set): the locator's document MUST live in that exact
+   *     resolver-authorized source bucket — a foreign locator is a crafted reference → reject;
+   *   - direct untrusted content: per-document READ under `actorContext` (same rule as a
+   *     live content replacement).
+   * PHASE 1 authorizes + copies EVERY locator; PHASE 2 rewrites the map in ONE `doc.transact`
+   * under `LOCAL_ORIGIN`. A copy failure before the rewrite best-effort deletes the fresh
+   * target copies and publishes NO locator (the caller's entity rollback removes a
+   * half-created whiteboard). An empty asset map returns the snapshot verbatim (no lookups).
+   * The loaded doc is edited IN PLACE (never decode→edit→re-encode, which would discard CRDT
+   * lineage / deletion / reconciliation state).
+   */
+  private async rehomeSnapshotAssets(
+    snapshot: Uint8Array,
+    targetBucketId: string,
+    authz: { actorContext?: ActorContext; sourceBucketId?: string }
+  ): Promise<{ snapshot: Buffer; createdTargetLocators: string[] }> {
+    // Returns the re-homed snapshot AND the file-service ids of any media copied into
+    // `targetBucketId` on this call. A failure DURING re-home is compensated here (the
+    // catch below best-effort deletes the fresh copies). A failure AFTER this returns
+    // (checkpoint write / entity save) has no such cascade on the UPDATE path, so the
+    // caller MUST delete `createdTargetLocators` itself; create relies on its own
+    // whiteboard/bucket-delete cascade and may ignore them.
+    const fork = await loadWhiteboardFork();
+    const doc = new Y.Doc();
+    const createdTargetLocators: string[] = [];
+    try {
+      Y.applyUpdateV2(doc, snapshot);
+      const yAssets = doc.getMap<unknown>(fork.FILES);
+      // `readAssetLocators` is loud on legacy/invalid (non-string) values.
+      const current = fork.readAssetLocators(yAssets) as Record<string, string>;
+
+      // Desired-snapshot preflight (shared with the live-replace path): every live
+      // image element that names a fileId MUST have a matching asset locator here.
+      // This runs BEFORE the empty-map early return and BEFORE any copy — a snapshot
+      // carrying an image(fileId=f1) with no assets entry would otherwise slip through
+      // as "no assets to re-home" and land an unresolvable image (ed-yjs: a prune-write
+      // over such a map is silent, not an error). It examines the DESIRED elements, so a
+      // locator whose only referencing image was removed by this snapshot is not required.
+      this.assertDesiredAssetsResolveImages(doc, fork, current);
+
+      const fileIds = Object.keys(current);
+      if (fileIds.length === 0) {
+        return { snapshot: Buffer.from(snapshot), createdTargetLocators };
+      }
+
+      // PHASE 1: authorize + copy EVERY asset into the target bucket first
+      // (abort-before-mutation — the Y.Map is not touched until all copies succeed).
+      const desired: Record<string, string> = {};
+      for (const fileId of fileIds) {
+        const sourceLocator = current[fileId];
+        const sourceDocument = await this.documentService.getDocumentOrFail(
+          sourceLocator,
+          {
+            loadEagerRelations: false,
+            relations: { authorization: true, storageBucket: true },
+          }
+        );
+        const sourceDocumentBucketId = sourceDocument.storageBucket?.id;
+
+        if (authz.sourceBucketId != null) {
+          // Source clone: every locator MUST belong to the authorized source bucket.
+          if (sourceDocumentBucketId !== authz.sourceBucketId) {
+            throw new ForbiddenException(
+              'Whiteboard source-copy references a document outside the authorized source bucket',
+              LogContext.WHITEBOARDS,
+              { fileId }
+            );
+          }
+        } else if (authz.actorContext) {
+          // Direct untrusted content: per-document READ under the initiating actor.
+          this.authorizationService.grantAccessOrFail(
+            authz.actorContext,
+            sourceDocument.authorization,
+            AuthorizationPrivilege.READ,
+            `re-home whiteboard media document: ${sourceLocator}`
+          );
+        } else {
+          throw new ValidationException(
+            'Whiteboard default content with media must name a server-authorized source Whiteboard',
+            LogContext.WHITEBOARDS,
+            { fileId }
+          );
+        }
+
+        if (sourceDocumentBucketId === targetBucketId) {
+          // Already target-owned — retain the locator, do not copy.
+          desired[fileId] = sourceLocator;
+          continue;
+        }
+        const copied = await this.storageBucketService.copyDocumentToBucket(
+          targetBucketId,
+          sourceDocument,
+          authz.actorContext?.actorID || undefined
+        );
+        if (copied.reused !== true) {
+          createdTargetLocators.push(copied.id);
+        }
+        desired[fileId] = copied.id;
+      }
+
+      // PHASE 2: all copies succeeded → rewrite the asset map in ONE transaction.
+      doc.transact(() => {
+        fork.writeAssetLocators(yAssets, desired, { prune: true });
+      }, fork.LOCAL_ORIGIN);
+      return {
+        snapshot: Buffer.from(Y.encodeStateAsUpdateV2(doc)),
+        createdTargetLocators,
+      };
+    } catch (error) {
+      // Pre-rewrite failure: best-effort delete the fresh target copies; publish NO locator.
+      await Promise.all(
+        createdTargetLocators.map(id =>
+          this.fileServiceAdapter.deleteDocument(id).catch(() => undefined)
+        )
+      );
+      throw error;
+    } finally {
+      doc.destroy();
+    }
+  }
+
+  /**
+   * Desired-snapshot consistency preflight, shared by creation/source-copy (here) and
+   * the live whole-scene replacement path. For every non-deleted IMAGE element carrying
+   * a non-null `fileId`, the snapshot's asset map MUST hold a valid (non-empty string)
+   * locator for that `fileId`. A missing/invalid reference is rejected BEFORE any asset
+   * copy or Scene mutation.
+   *
+   * Why it examines the DESIRED elements (this exact snapshot), not a prior scene: a
+   * whole-scene replacement legitimately drops elements, so a locator whose only
+   * referencing image is gone here should be pruned — but a NEW image that names an
+   * absent asset must never land, because `setAssetLocators(...,{prune:true})` removes
+   * unreferenced locators silently (no write/encode error; measured in ed-yjs), which
+   * would otherwise leave a live image pointing at nothing.
+   */
+  private assertDesiredAssetsResolveImages(
+    doc: Yjs.Doc,
+    fork: WhiteboardFork,
+    assets: Record<string, string>
+  ): void {
+    // Shared cold-load image→asset integrity invariant (also enforced by the Release-A
+    // migration verifier) — a live image element whose fileId has no file-map locator.
+    const offender = findUnresolvedLiveImage(doc, fork, assets);
+    if (offender) {
+      throw new ValidationException(
+        'Whiteboard snapshot references an image asset that is missing from its file map',
+        LogContext.WHITEBOARDS,
+        { elementId: offender.elementId, fileId: offender.fileId }
+      );
     }
   }
 
@@ -178,13 +635,22 @@ export class WhiteboardService {
       );
     }
 
+    // Publish-confirm BEFORE changing any owner state. The collaboration service
+    // tombstones this id briefly and evicts a live room; if RabbitMQ is unavailable,
+    // deletion fails cleanly before the profile, bucket/blob, authorization, or leaf
+    // is touched. A crash after the confirm can temporarily tombstone a document
+    // that remains in the DB, but the tombstone expires and a retry is idempotent.
+    await this.collaborationLifecycleService.publishDocumentDeleted(
+      whiteboardID
+    );
+
     await this.profileService.deleteProfile(whiteboard.profile.id);
     await this.authorizationPolicyService.delete(whiteboard.authorization);
-
     const deletedWhiteboard = await this.whiteboardRepository.remove(
       whiteboard as Whiteboard
     );
     deletedWhiteboard.id = whiteboardID;
+
     return deletedWhiteboard;
   }
 
@@ -225,48 +691,289 @@ export class WhiteboardService {
     return whiteboard;
   }
 
+  /**
+   * Server-side whiteboard content set (template / framing-content edit — NOT a
+   * live collab session). Re-homes embedded media into the whiteboard's bucket,
+   * converts the scene to a Yjs-V2 snapshot, and replaces the stored snapshot in
+   * the bucket (R1/R2/FR-005) — the inline `content` column is unmapped (retained
+   * during progressive migration, dropped in cleanup). The content
+   * originates server-side here, so it is persisted directly; the next open seeds
+   * from this snapshot. The superseded snapshot file is deleted (latest-only).
+   */
   async updateWhiteboardContent(
     whiteboardInputId: string,
-    updateWhiteboardContent: string
+    updateWhiteboardContent: string,
+    actorContext: ActorContext
   ): Promise<IWhiteboard> {
     const whiteboard = await this.getWhiteboardOrFail(whiteboardInputId, {
       loadEagerRelations: false,
       relations: {
-        profile: true,
+        profile: { storageBucket: true },
       },
       select: {
         id: true,
+        contentPointer: true,
         profile: {
           id: true,
+          storageBucket: { id: true },
         },
       },
     });
-    const newWhiteboardContent = JSON.parse(updateWhiteboardContent);
-
-    if (!whiteboard?.profile) {
+    if (!whiteboard?.profile?.storageBucket) {
       throw new EntityNotInitializedException(
-        `Profile not initialized on whiteboard: '${whiteboard.id}'`,
+        `Profile / storage bucket not initialized on whiteboard: '${whiteboard.id}'`,
         LogContext.COLLABORATION
       );
     }
 
-    // TODO: is this still needed? It is a lot of work to be doing on every
-    // whiteboard content save. Plus I think it is an inherent risk.
-    const newContentWithFiles = await this.reuploadDocumentsIfNotInBucket(
-      newWhiteboardContent,
-      whiteboard?.profile.id
+    // `updateWhiteboardContent` is a base64-encoded Yjs-V2 snapshot (the single CRDT
+    // representation — no Excalidraw scene/JSON). Re-home embedded media through the
+    // SAME authorized, locator-native owner the create/clone flow uses
+    // (`rehomeSnapshotAssets`): the snapshot's FILES Y.Map holds opaque file-service
+    // locator strings, and every locator is per-document READ-authorized under the
+    // initiating actor and copied into this whiteboard's own bucket if it lives
+    // elsewhere. Direct untrusted content → no `sourceBucketId` (per-document READ),
+    // matching the live-replacement rule. One owner for both create and update — the
+    // BinaryFileData-shaped `rehomeSnapshotMedia` no-op path is gone.
+    const { snapshot, createdTargetLocators } = await this.rehomeSnapshotAssets(
+      Buffer.from(updateWhiteboardContent, 'base64'),
+      whiteboard.profile.storageBucket.id,
+      { actorContext }
     );
+    const previousPointer = whiteboard.contentPointer;
+    let newCheckpointId: string | undefined;
+    try {
+      const result = await this.fileServiceAdapter.createSnapshotInBucket(
+        snapshot,
+        whiteboard.profile.storageBucket.id
+      );
+      // Only a NEWLY-created checkpoint is ours to compensate. createSnapshotInBucket
+      // can DEDUP (`reused: true`) to an existing same-bucket row — possibly the current
+      // `previousPointer` for an unchanged update, or a row owned by another whiteboard —
+      // which must NEVER be deleted (storage.bucket.service guards cleanup with
+      // `!result.reused`). Defensively also refuse to compensate the previous pointer.
+      newCheckpointId =
+        result.reused === false && result.id !== previousPointer
+          ? result.id
+          : undefined;
+      whiteboard.contentPointer = result.id;
+      const saved = await this.save(whiteboard);
 
-    whiteboard.content = JSON.stringify(newContentWithFiles);
+      // Success: the superseded previous snapshot is now unreferenced — best-effort delete.
+      if (previousPointer && previousPointer !== result.id) {
+        await this.fileServiceAdapter
+          .deleteDocument(previousPointer)
+          .catch(error => {
+            this.logger.warn?.(
+              {
+                message: 'Failed to delete superseded whiteboard snapshot',
+                whiteboardId: whiteboard.id,
+                previousPointer,
+                error: String(error),
+              },
+              LogContext.WHITEBOARDS
+            );
+          });
+      }
+      return saved;
+    } catch (error) {
+      // The whiteboard already exists, so there is NO entity-cascade cleanup as on create.
+      // Compensate at the earliest owner: best-effort delete the media rehomeSnapshotAssets
+      // copied into this bucket AND the freshly-written checkpoint, so a failed update leaks
+      // neither target-owned media nor an orphan snapshot. `contentPointer` was never
+      // persisted (the save failed or never ran), so the PREVIOUS pointer stays the durable
+      // owner. Preserve + rethrow the original error.
+      const orphans = [...createdTargetLocators];
+      if (newCheckpointId) {
+        orphans.push(newCheckpointId);
+      }
+      await Promise.all(
+        orphans.map(id =>
+          this.fileServiceAdapter.deleteDocument(id).catch(cleanupError => {
+            this.logger.warn?.(
+              {
+                message:
+                  'Failed to clean up orphaned asset/checkpoint after whiteboard content-update failure',
+                whiteboardId: whiteboard.id,
+                orphanId: id,
+                error: String(cleanupError),
+              },
+              LogContext.WHITEBOARDS
+            );
+          })
+        )
+      );
+      throw error;
+    }
+  }
 
-    return this.save(whiteboard);
+  /**
+   * Reads a whiteboard's stored content as a base64-encoded Yjs-V2 snapshot — the
+   * single CRDT representation, kept opaque (no Excalidraw scene/JSON, no
+   * decode/re-encode). The snapshot lives in the whiteboard's own file-service
+   * bucket and is located by `contentPointer`; this re-reads it the same way the
+   * memo-content loader / input-creator builders do (file-service
+   * `content-batch`), NOT the inline column (unmapped — retained in Release A,
+   * dropped in post-release cleanup; 006-collab-content-unification).
+   *
+   * Server-side copy path (#29): the "Save as Template" flow can no longer read a
+   * live whiteboard's content on the client, so the server reads the source
+   * whiteboard's snapshot here and seeds the new template whiteboard with it.
+   *
+   * A whiteboard that was never edited (no `contentPointer`) — or whose snapshot is
+   * missing — returns `''`, matching the empty/unset-pointer convention: a new
+   * whiteboard seeded with `''` materializes empty + editable (FR-010), exactly as
+   * a fresh whiteboard created with no content.
+   *
+   * @throws {EntityNotFoundException} when the whiteboard does not exist.
+   */
+  async getWhiteboardContent(whiteboardId: string): Promise<string> {
+    const whiteboard = await this.getWhiteboardOrFail(whiteboardId, {
+      loadEagerRelations: false,
+      select: {
+        id: true,
+        contentPointer: true,
+      },
+    });
+    if (!whiteboard.contentPointer) {
+      return '';
+    }
+    const [item] = await this.fileServiceAdapter.getContentBatch([
+      whiteboard.contentPointer,
+    ]);
+    if (!item?.found || !item.contentBase64) {
+      return '';
+    }
+    // Already base64 from the content-batch endpoint — returned verbatim.
+    return item.contentBase64;
+  }
+
+  /**
+   * Reads the unified collaboration metadata/index for a whiteboard (FR-005).
+   * Only the index + the entity's own `authorizationPolicyId` (=
+   * `authorizationId`) are returned; the blob never leaves the server here.
+   * @throws {EntityNotFoundException} when the whiteboard does not exist.
+   */
+  async getCollaborationMetadata(
+    whiteboardId: string
+  ): Promise<CollaborationMetadata> {
+    const whiteboard = (await this.getWhiteboardOrFail(whiteboardId, {
+      loadEagerRelations: false,
+      relations: {
+        authorization: true,
+        profile: { storageBucket: true },
+      },
+      select: {
+        id: true,
+        contentVersion: true,
+        contentPointer: true,
+        migrated: true,
+        authorization: { id: true },
+        profile: { id: true, storageBucket: { id: true } },
+      },
+    })) as Whiteboard;
+
+    return {
+      // Return the persisted contract version (`contentVersion`), NOT the
+      // TypeORM `@VersionColumn`, so a reloaded room sees the version it owns.
+      version: whiteboard.contentVersion ?? 0,
+      // Coerce a DB NULL (a freshly-created row before its initial snapshot
+      // pointer is attached) to `undefined` so the contract reply shape stays
+      // `string | undefined`. The pointer column is legitimately nullable for
+      // this transient window; cleanup requires zero NULL/blank pointers, but
+      // does not make the column NOT NULL.
+      contentPointer: whiteboard.contentPointer ?? undefined,
+      migrated: whiteboard.migrated,
+      authorizationPolicyId: whiteboard.authorization?.id,
+      // The whiteboard's OWN storage bucket (via its profile) — the collab
+      // service persists this doc's snapshot into this bucket, not a flat one.
+      storageBucketId: whiteboard.profile?.storageBucket?.id,
+    };
+  }
+
+  /**
+   * Upserts the unified collaboration metadata/index for a whiteboard
+   * (FR-003): the contract `version` + `contentPointer`. The room
+   * owns the version (`contracts/persistence-ports.md`), so the value it sends
+   * is PERSISTED verbatim into `contentVersion` and round-tripped back on fetch
+   * — the server does NOT substitute its own counter. The inherited TypeORM
+   * `@VersionColumn` (`version`) keeps its independent optimistic-locking role
+   * and is left untouched. The inline blob (`content`) is NOT touched here — it
+   * never crosses the unified bus.
+   * @throws {EntityNotFoundException} when the whiteboard does not exist.
+   */
+  async saveCollaborationMetadata(
+    whiteboardId: string,
+    update: CollaborationMetadataUpdate
+  ): Promise<CollaborationMetadata> {
+    // Ensure the whiteboard exists (structured not-found upstream) before the
+    // index-only write.
+    await this.getWhiteboardOrFail(whiteboardId, {
+      loadEagerRelations: false,
+      select: { id: true },
+    });
+
+    // Update only the index columns via the query builder so the
+    // content-bearing `@BeforeUpdate` compression hook (and the file-reupload
+    // work in the full save path) is NOT triggered for a metadata-only write.
+    // The room-owned contract version is persisted verbatim into
+    // `contentVersion` (NOT the `@VersionColumn`) so fetch round-trips it.
+    //
+    // `contentPointer` is produced solely by the checkpoint store's metapointer
+    // `Record` (on establishment/recreation); PreRegister and Room.persist omit it.
+    // A blank/omitted pointer on a save means UNCHANGED — set it only when a real
+    // pointer is present; otherwise preserve the stored one, so a partial or
+    // redelivered save never orphans the content.
+    const set: { contentVersion: number; contentPointer?: string } = {
+      contentVersion: update.version,
+    };
+    if (update.contentPointer) {
+      set.contentPointer = update.contentPointer;
+    }
+    await this.whiteboardRepository
+      .createQueryBuilder()
+      .update(Whiteboard)
+      .set(set)
+      .where('id = :id', { id: whiteboardId })
+      .execute();
+
+    // Project the persisted index back into the contract shape rather than
+    // returning a partial `IWhiteboard` (only a subset of columns is selected).
+    const whiteboard = (await this.getWhiteboardOrFail(whiteboardId, {
+      loadEagerRelations: false,
+      relations: { authorization: true },
+      select: {
+        id: true,
+        contentVersion: true,
+        contentPointer: true,
+        migrated: true,
+        authorization: { id: true },
+      },
+    })) as Whiteboard;
+
+    return {
+      version: whiteboard.contentVersion ?? 0,
+      contentPointer: whiteboard.contentPointer ?? undefined,
+      migrated: whiteboard.migrated,
+      authorizationPolicyId: whiteboard.authorization?.id,
+    };
   }
 
   public async isMultiUser(whiteboardId: string): Promise<boolean> {
-    const license =
-      await this.communityResolverService.getCollaborationLicenseFromWhiteboardOrFail(
-        whiteboardId
-      );
+    await this.getWhiteboardOrFail(whiteboardId);
+
+    let license: ILicense;
+    try {
+      license =
+        await this.communityResolverService.getCollaborationLicenseFromWhiteboardOrFail(
+          whiteboardId
+        );
+    } catch (error) {
+      // Standalone whiteboards (templates and pre-bind drafts) deliberately
+      // have no parent Collaboration and therefore no inherited entitlement.
+      if (error instanceof EntityNotFoundException) return false;
+      throw error;
+    }
 
     return this.licenseService.isEntitlementEnabled(
       license,
@@ -298,82 +1005,4 @@ export class WhiteboardService {
     return this.whiteboardRepository.save(whiteboard);
   }
   // todo: use one optimized query with a "where not exists"
-  // to return just the ones not in the bucket
-  // https://github.com/alkem-io/server/issues/4559
-  /**
-   * Re-uploads documents if not in the bucket.
-   * @throws {EntityNotInitializedException} if profile or storage bucket is not found.
-   */
-  private async reuploadDocumentsIfNotInBucket(
-    whiteboardContent: ExcalidrawContent,
-    profileIdToCheck: string
-  ): Promise<ExcalidrawContent> {
-    if (!whiteboardContent.files) {
-      return whiteboardContent;
-    }
-
-    const files = Object.entries(whiteboardContent.files);
-
-    if (!files.length) {
-      return whiteboardContent;
-    }
-
-    const profile = await this.profileService.getProfileOrFail(
-      profileIdToCheck,
-      {
-        relations: {
-          storageBucket: {
-            documents: true,
-          },
-        },
-      }
-    );
-    if (!profile.storageBucket) {
-      throw new EntityNotInitializedException(
-        'Profile: no definition of StorageBucket',
-        LogContext.PROFILE
-      );
-    }
-
-    for (const [, file] of files) {
-      if (!file.url) {
-        continue;
-      }
-      let newDocUrl: string | undefined;
-      try {
-        newDocUrl =
-          await this.profileDocumentsService.reuploadFileOnStorageBucket(
-            file.url,
-            profile.storageBucket,
-            true
-          );
-      } catch (e: any) {
-        if (e instanceof EntityNotFoundException) {
-          this.logger.warn?.(
-            `Tried to re-upload file (${file.url}) but file was not found: ${e?.message}`,
-            LogContext.WHITEBOARDS
-          );
-        } else {
-          this.logger.warn?.(
-            `Tried to re-upload file (${file.url}) but an error occurred: ${e?.message}`,
-            LogContext.WHITEBOARDS
-          );
-        }
-
-        newDocUrl = undefined;
-      }
-
-      if (!newDocUrl || newDocUrl === file.url) {
-        continue;
-      }
-
-      // change the url to the new document
-      whiteboardContent.files[file.id] = {
-        ...file,
-        url: newDocUrl,
-      };
-    }
-
-    return whiteboardContent;
-  }
 }

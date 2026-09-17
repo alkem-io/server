@@ -1,6 +1,7 @@
 import { JoinRuleInvite } from '@alkemio/matrix-adapter-lib';
 import { UUID_LENGTH } from '@common/constants';
-import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { ActivityEventType } from '@common/enums/activity.event.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
@@ -16,6 +17,7 @@ import { SpaceVisibility } from '@common/enums/space.visibility';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { TemplateType } from '@common/enums/template.type';
+import { UrlPathElementSpace } from '@common/enums/url.path.element.space';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -27,6 +29,7 @@ import { OperationNotAllowedException } from '@common/exceptions/operation.not.a
 import { getDiff, hasOnlyAllowedFields } from '@common/utils';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PaginationArgs } from '@core/pagination';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
@@ -40,7 +43,6 @@ import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.in
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import {
-  L0_FIXED_INNOVATION_FLOW_STATES,
   L0_MAX_INNOVATION_FLOW_STATES,
   L0_MIN_INNOVATION_FLOW_STATES,
   SUBSPACE_MAX_INNOVATION_FLOW_STATES,
@@ -71,13 +73,20 @@ import { Activity } from '@platform/activity';
 import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
 import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { groupCredentialsByEntity } from '@services/api/roles/util/group.credentials.by.entity';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 import { keyBy } from 'lodash';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
+import {
+  Brackets,
+  FindManyOptions,
+  FindOneOptions,
+  In,
+  Repository,
+} from 'typeorm';
 import { IAccount } from '../account/account.interface';
 import { ISpaceAbout } from '../space.about/space.about.interface';
 import { SpaceAboutService } from '../space.about/space.about.service';
@@ -98,6 +107,21 @@ import { orderSubspaces } from './subspace.ordering';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
+// Activity event types excluded from the most-active ranking and the per-Space
+// activity score, matching the dashboard feed's EXCLUDED_ACTIVITY_TYPES.
+const EXPLORE_SPACES_EXCLUDED_ACTIVITY_TYPES = [
+  ActivityEventType.CALLOUT_WHITEBOARD_CONTENT_MODIFIED,
+];
+// The ranking query's privacy Brackets are a coarse pre-filter; the authoritative
+// READ check afterwards can still drop candidates (e.g. a PUBLIC L1 subspace of a
+// PRIVATE L0 the actor can't read). Over-fetch candidates so those drops don't
+// leave the caller with fewer than `limit` readable Spaces, then slice to `limit`.
+const EXPLORE_SPACES_OVERFETCH_FACTOR = 3;
+// How many URL cache entries invalidateUrlCacheForSpaceSubtree revokes at once.
+// A deep subtree produces spaces x (profiles + space-keyed entries) ids; this
+// keeps the sweep parallel without fanning the whole set onto the cache backend
+// in one go.
+const SPACE_URL_CACHE_REVOKE_BATCH_SIZE = 50;
 
 type SpaceSortingData = {
   id: string;
@@ -111,6 +135,7 @@ export class SpaceService {
   constructor(
     private actorService: ActorService,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private authorizationService: AuthorizationService,
     private spacesFilterService: SpaceFilterService,
     private spaceAboutService: SpaceAboutService,
     private communityService: CommunityService,
@@ -448,6 +473,12 @@ export class SpaceService {
           dataType: LicenseEntitlementDataType.FLAG,
           limit: 0,
           enabled: true,
+        },
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_MEMO_SIGNING,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
         },
       ],
     });
@@ -802,11 +833,20 @@ export class SpaceService {
   }
 
   public async getExploreSpaces(
+    actorContext: ActorContext,
     limit = EXPLORE_SPACES_LIMIT,
     daysOld = EXPLORE_SPACES_ACTIVITY_DAYS_OLD
   ): Promise<ISpace[]> {
     const daysAgo = new Date();
     daysAgo.setDate(daysAgo.getDate() - daysOld);
+
+    // Actor scoping: public Spaces are visible to everyone; private Spaces only
+    // to the actor when they hold a Space credential for it. The member set is
+    // keyed by Space ID (== credential resourceID).
+    const credentialMap = groupCredentialsByEntity(actorContext.credentials);
+    const memberSpaceIds = Array.from(
+      credentialMap.get('spaces')?.keys() ?? []
+    );
 
     // First, get the space IDs ordered by activity count using a subquery approach
     // This avoids PostgreSQL GROUP BY issues with joined columns
@@ -814,15 +854,36 @@ export class SpaceService {
       .createQueryBuilder('s')
       .select('s.id', 'id')
       .innerJoin(Activity, 'a', 's.collaborationId = a.collaborationID')
-      .where({
-        level: SpaceLevel.L0,
+      // L0 and L1 Spaces, scored by their own collaboration (no roll-up)
+      .where('s.level IN (:...levels)', {
+        levels: [SpaceLevel.L0, SpaceLevel.L1],
+      })
+      .andWhere('s.visibility = :visibility', {
         visibility: SpaceVisibility.ACTIVE,
       })
       // activities in the past "daysOld" days
       .andWhere('a.createdDate >= :daysAgo', { daysAgo })
+      // Only visible events, excluding whiteboard-content-modified — keeps the
+      // ranking count aligned with Space.activityScore and the dashboard feed.
+      .andWhere('a.visibility = true')
+      .andWhere('a.type NOT IN (:...excludeTypes)', {
+        excludeTypes: EXPLORE_SPACES_EXCLUDED_ACTIVITY_TYPES,
+      })
+      // Privacy filter: public Space OR one the actor is a member of. Privacy
+      // lives in the JSONB `settings` column, so it is filtered via a JSONB path.
+      .andWhere(
+        new Brackets(qb => {
+          qb.where(`s.settings->'privacy'->>'mode' = :publicPrivacyMode`, {
+            publicPrivacyMode: SpacePrivacyMode.PUBLIC,
+          });
+          if (memberSpaceIds.length > 0) {
+            qb.orWhere('s.id IN (:...memberSpaceIds)', { memberSpaceIds });
+          }
+        })
+      )
       .groupBy('s.id')
       .orderBy('COUNT(a.id)', 'DESC')
-      .limit(limit)
+      .limit(limit * EXPLORE_SPACES_OVERFETCH_FACTOR)
       .getRawMany<{ id: string }>();
 
     if (spaceIdsWithActivity.length === 0) {
@@ -836,11 +897,37 @@ export class SpaceService {
       where: { id: In(spaceIds) },
     });
 
-    // Preserve the activity-based ordering from the first query
-    const spaceMap = new Map(spaces.map(space => [space.id, space]));
+    // Authoritative READ check. The privacy Brackets above are a coarse,
+    // own-Space-only pre-filter kept purely to bound the ranking query - they
+    // cannot cheaply encode the full ancestor-aware/parent-membership
+    // authorization model (e.g. a PUBLIC L1 subspace of a PRIVATE L0 parent is
+    // NOT world-readable, but a member of that private parent CAN read it).
+    // `space.authorization` is eager-loaded and is the same policy every other
+    // Space-reading path enforces, so re-check READ against it here before
+    // returning any row — this is what actually determines FR-006 compliance.
+    const authorizedSpaces = spaces.filter(space => {
+      try {
+        return this.authorizationService.isAccessGranted(
+          actorContext,
+          space.authorization,
+          AuthorizationPrivilege.READ
+        );
+      } catch (error) {
+        this.logger.warn?.(
+          `getExploreSpaces: unable to evaluate READ access for space '${space.id}'; excluding from results: ${error}`,
+          LogContext.SPACES
+        );
+        return false;
+      }
+    });
+
+    // Preserve the activity-based ordering from the first query, then apply the
+    // caller's limit — the query over-fetched candidates to survive READ drops.
+    const spaceMap = new Map(authorizedSpaces.map(space => [space.id, space]));
     return spaceIds
       .map(id => spaceMap.get(id))
-      .filter((space): space is Space => space !== undefined);
+      .filter((space): space is Space => space !== undefined)
+      .slice(0, limit);
   }
 
   async getSpace(
@@ -941,14 +1028,16 @@ export class SpaceService {
    * lifted verbatim out of the old `updateSpacePlatformSettings`. The caller
    * (`space.resolver.mutations.ts`'s `updateSpace`) checks `UPDATE_NAMEID`
    * before reaching here; this method does the reserved-name validation and
-   * the URL-cache sweep the rename requires.
+   * returns the previous nameID so the caller can sweep the URL cache AFTER
+   * the rename is committed (sweeping earlier leaves a window in which a
+   * concurrent read repopulates the cache from the pre-rename row).
    */
   private async applyProtectedNameIDUpdate(
     space: ISpace,
     nameID: string
-  ): Promise<void> {
+  ): Promise<string | undefined> {
     if (nameID === space.nameID) {
-      return;
+      return undefined;
     }
 
     let reservedNameIDs: string[] = [];
@@ -972,21 +1061,59 @@ export class SpaceService {
 
     const oldNameID = space.nameID;
     space.nameID = nameID;
+    return oldNameID;
+  }
 
-    await this.invalidateUrlCacheForSpaceSubtree(space.id);
+  /**
+   * Every UrlGenerator cache entry that is keyed by a space id rather than by a
+   * profile id: `getSpaceUrlPathByID()` caches the bare space id plus one entry
+   * per `UrlPathElementSpace` sub-path it was asked for.
+   */
+  private getSpaceKeyedUrlCacheIds(spaceId: string): string[] {
+    return [
+      spaceId,
+      ...Object.values(UrlPathElementSpace).map(
+        spacePath => `${spaceId}-${spacePath}`
+      ),
+    ];
+  }
 
-    this.logger.verbose?.(
-      `Invalidated URL cache subtree for space ${space.id} (nameID: ${oldNameID} -> ${nameID})`,
-      LogContext.SPACES
-    );
+  /**
+   * Every UrlGenerator cache entry a single space owns directly — the profiles
+   * whose URL is derived from the space path, plus the space-id-keyed entries.
+   * The space's N-per-space content — callouts, framing and contribution content,
+   * and calendar events — is swept separately by
+   * `revokeUrlCachesForContentInSpaces`, in one SQL pass for the whole subtree.
+   */
+  private getUrlCacheIdsForSpace(space: Space): string[] {
+    const profileIds = [
+      space.profile?.id, // ProfileType.SPACE — the Space actor profile
+      space.about?.profile?.id, // ProfileType.SPACE_ABOUT
+      space.about?.guidelines?.profile?.id, // ProfileType.COMMUNITY_GUIDELINES
+      space.collaboration?.innovationFlow?.profile?.id, // ProfileType.INNOVATION_FLOW
+    ].filter((profileId): profileId is string => !!profileId);
+
+    const spaceKeyedIds = space.id
+      ? this.getSpaceKeyedUrlCacheIds(space.id)
+      : [];
+
+    return [...new Set([...profileIds, ...spaceKeyedIds])];
   }
 
   /**
    * Invalidates URL cache entries for a space and all of its descendant spaces.
    * Used after operations that change a space's URL path (transfer, L1↔L0/L2 conversion).
-   * Sweeps space-about profiles AND every callout/contribution profile reachable
-   * from those spaces — activity-log entries surface callout-derived URLs, so the
-   * inner sweep is what keeps them from pointing at the old path.
+   * Sweeps, for every space in the subtree: the space actor profile, the
+   * space-about profile, the community-guidelines profile, the innovation-flow
+   * profile, and the space-id-keyed entries written by `getSpaceUrlPathByID()`
+   * (which notifications and the URL resolver read) — AND every callout /
+   * contribution / calendar profile reachable from those spaces. Activity-log
+   * entries surface callout-derived URLs, so the inner sweep is what keeps them
+   * from pointing at the old path.
+   *
+   * Note: innovation flow *states* carry no Profile (displayName/description are
+   * plain columns on `innovation_flow_state`), so they hold no URL cache entry
+   * and need no sweep.
    */
   public async invalidateUrlCacheForSpaceSubtree(
     spaceId: string
@@ -995,34 +1122,61 @@ export class SpaceService {
       await this.spaceLookupService.getAllDescendantSpaceIDs(spaceId);
     const allSpaceIds = [spaceId, ...descendantIds];
 
+    // Every relation below is 1:1 all the way down, so this stays a single row
+    // per space. Eager relations are suppressed: only profile ids are read here
+    // — note that means `about.guidelines.profile` has to be requested
+    // explicitly even though it is declared `eager: true`.
     const spaces = await this.spaceRepository.find({
       where: { id: In(allSpaceIds) },
-      relations: { about: { profile: true } },
+      relations: {
+        profile: true,
+        about: { profile: true, guidelines: { profile: true } },
+        collaboration: { innovationFlow: { profile: true } },
+      },
+      loadEagerRelations: false,
     });
 
-    for (const space of spaces) {
-      const profileId = space.about?.profile?.id;
-      if (!profileId) {
-        continue;
-      }
+    // Revoked in bounded batches rather than one round trip at a time: a deep
+    // subtree yields spaces x (profiles + space-keyed entries) ids, so a single
+    // Promise.all over all of them would fan out unbounded onto the cache
+    // backend. Each revoke is independently isolated below, so one unreachable
+    // key can abort neither its batch nor the sweep.
+    const revocations = spaces.flatMap(space =>
+      this.getUrlCacheIdsForSpace(space).map(cacheId => async () => {
+        try {
+          await this.urlGeneratorCacheService.revokeUrlCache(cacheId);
+        } catch (error) {
+          const stack = error instanceof Error ? (error.stack ?? '') : '';
+          this.logger.error(
+            {
+              message: 'Failed to invalidate URL cache for space subtree',
+              // The space that owns the entry — for a descendant this is not
+              // the subtree root, so both are logged to keep an incident
+              // traceable to the space whose URL is now stale.
+              spaceId: space.id,
+              subtreeRootSpaceId: spaceId,
+              cacheId,
+            },
+            stack,
+            LogContext.SPACES
+          );
+        }
+      })
+    );
 
-      try {
-        await this.urlGeneratorCacheService.revokeUrlCache(profileId);
-      } catch (error) {
-        const stack = error instanceof Error ? (error.stack ?? '') : '';
-        this.logger.error(
-          {
-            message: 'Failed to invalidate URL cache for space subtree',
-            spaceId,
-            profileId,
-          },
-          stack,
-          LogContext.SPACES
-        );
-      }
+    for (
+      let i = 0;
+      i < revocations.length;
+      i += SPACE_URL_CACHE_REVOKE_BATCH_SIZE
+    ) {
+      await Promise.all(
+        revocations
+          .slice(i, i + SPACE_URL_CACHE_REVOKE_BATCH_SIZE)
+          .map(revoke => revoke())
+      );
     }
 
-    await this.urlGeneratorCacheService.revokeUrlCachesForCalloutsInSpaces(
+    await this.urlGeneratorCacheService.revokeUrlCachesForContentInSpaces(
       allSpaceIds
     );
   }
@@ -1303,19 +1457,19 @@ export class SpaceService {
     }
     if (
       templateContentSpace.collaboration.innovationFlow.states.length <
-      L0_FIXED_INNOVATION_FLOW_STATES
+      L0_MIN_INNOVATION_FLOW_STATES
     ) {
       throw new ValidationException(
         'Template content space innovation flow states must satisfy the required minimum',
         LogContext.SPACES,
         {
           templateContentSpaceID,
-          minimumRequiredStates: L0_FIXED_INNOVATION_FLOW_STATES,
+          minimumRequiredStates: L0_MIN_INNOVATION_FLOW_STATES,
         }
       );
     }
-    // Story #6177: keep the L0 minimum at the fixed-phase count, but raise the
-    // maximum to the subspace allowance so admins can add tabs beyond the fixed 4.
+    // client-web#9528: L0 spaces share the subspace 1..8 allowance, so any
+    // template (including a subspace-shaped one) can seed an L0 space.
     templateContentSpace.collaboration.innovationFlow.settings.minimumNumberOfStates =
       L0_MIN_INNOVATION_FLOW_STATES;
     templateContentSpace.collaboration.innovationFlow.settings.maximumNumberOfStates =
@@ -1628,8 +1782,12 @@ export class SpaceService {
     // 027-platform-role-redesign (T078, FR-020, A17): the protected section.
     // The resolver has already required UPDATE_NAMEID when this is present —
     // an ordinary UPDATE holder never reaches this branch.
+    let renamedFrom: string | undefined;
     if (spaceData.nameID !== undefined) {
-      await this.applyProtectedNameIDUpdate(space, spaceData.nameID);
+      renamedFrom = await this.applyProtectedNameIDUpdate(
+        space,
+        spaceData.nameID
+      );
     }
 
     if (spaceData.about) {
@@ -1663,7 +1821,20 @@ export class SpaceService {
       }
     }
 
-    return await this.save(space);
+    const saved = await this.save(space);
+
+    // Only after the new nameID is committed: revoking earlier leaves a window
+    // in which a concurrent read repopulates the cache from the pre-rename row.
+    if (renamedFrom !== undefined) {
+      await this.invalidateUrlCacheForSpaceSubtree(saved.id);
+
+      this.logger.verbose?.(
+        `Invalidated URL cache subtree for space ${saved.id} (nameID: ${renamedFrom} -> ${saved.nameID})`,
+        LogContext.SPACES
+      );
+    }
+
+    return saved;
   }
 
   async getSubspaceInLevelZeroScopeOrFail(

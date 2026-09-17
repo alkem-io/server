@@ -4,6 +4,7 @@ import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, ValidateNested } from 'class-validator';
 import { CreateUserSettingsAssistantInput } from './user.settings.assistant.dto.create';
 import { CreateUserSettingsCommunicationInput } from './user.settings.communications.dto.create';
+import { CreateUserSettingsDashboardInput } from './user.settings.dashboard.dto.create';
 import { CreateUserSettingsHomeSpaceInput } from './user.settings.home.space.dto.create';
 import { CreateUserSettingsNotificationInput } from './user.settings.notification.dto.create';
 import { CreateUserSettingsPrivacyInput } from './user.settings.privacy.dto.create';
@@ -50,6 +51,15 @@ export class CreateUserSettingsInput {
   @ValidateNested()
   @Type(() => CreateUserSettingsHomeSpaceInput)
   homeSpace?: CreateUserSettingsHomeSpaceInput;
+
+  @Field(() => CreateUserSettingsDashboardInput, {
+    nullable: true,
+    description: 'Settings related to the home dashboard view.',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateUserSettingsDashboardInput)
+  dashboard?: CreateUserSettingsDashboardInput;
 
   @Field(() => Int, {
     nullable: true,

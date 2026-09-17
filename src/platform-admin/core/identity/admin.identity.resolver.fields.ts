@@ -33,6 +33,10 @@ export class AdminIdentityResolverFields {
     })
     filter?: IdentityVerificationStatusFilter
   ): Promise<KratosIdentityDto[]> {
+    // 027-platform-role-redesign (live finding F6, closed by T074 in Slice B)
+    // — the read half of A5. `platform-users-admin` owns identity reset and
+    // account deletion, so it owns the list those act on; the retired
+    // `PLATFORM_ADMIN` catch-all this field rode is gone.
     await this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),

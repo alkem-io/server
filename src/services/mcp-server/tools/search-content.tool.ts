@@ -56,7 +56,7 @@ interface LooseSearchResult {
  * `isError` result rather than a silent empty result set.
  *
  * This is a discovery tool: use it to find a candidate id, confirm the right
- * one, then act with analyze_whiteboard / update_whiteboard_content / etc.
+ * one, then act with analyze_whiteboard / edit_whiteboard_elements / etc.
  */
 @Injectable()
 export class SearchContentTool implements McpTool {
@@ -196,7 +196,7 @@ export class SearchContentTool implements McpTool {
 
     // The base `id` is the Elasticsearch document id, not the Alkemio entity
     // UUID — use the hydrated entity's own id so the result is actionable
-    // (e.g. feeding it into analyze_whiteboard / update_whiteboard_content).
+    // (e.g. feeding it into analyze_whiteboard / edit_whiteboard_elements).
     const entityId =
       r.whiteboard?.id ??
       r.post?.id ??

@@ -111,9 +111,9 @@ describe('UrlGeneratorCacheService', () => {
     });
   });
 
-  describe('revokeUrlCachesForCalloutsInSpaces', () => {
+  describe('revokeUrlCachesForContentInSpaces', () => {
     it('is a no-op when no spaces are provided', async () => {
-      await service.revokeUrlCachesForCalloutsInSpaces([]);
+      await service.revokeUrlCachesForContentInSpaces([]);
 
       expect(entityManager.connection.query).not.toHaveBeenCalled();
       expect(cacheManager.del).not.toHaveBeenCalled();
@@ -130,7 +130,7 @@ describe('UrlGeneratorCacheService', () => {
       ]);
       cacheManager.del.mockResolvedValue(undefined);
 
-      await service.revokeUrlCachesForCalloutsInSpaces(['space-a', 'space-b']);
+      await service.revokeUrlCachesForContentInSpaces(['space-a', 'space-b']);
 
       expect(entityManager.connection.query).toHaveBeenCalledTimes(1);
       const [, params] = entityManager.connection.query.mock.calls[0];
@@ -144,6 +144,28 @@ describe('UrlGeneratorCacheService', () => {
       expect(deletedKeys).toHaveLength(4); // dedup + null skipped
     });
 
+    it('sweeps framing memos, collabora documents and calendar events too', async () => {
+      entityManager.connection.query.mockResolvedValue([]);
+
+      await service.revokeUrlCachesForContentInSpaces(['space-a']);
+
+      const [sql] = entityManager.connection.query.mock.calls[0];
+      // These four joins are the ones that were missing while their profiles
+      // still resolved to a space-derived URL. Matched on the join shape rather
+      // than an exact substring: the SQL is column-aligned for readability, so
+      // asserting the padding would break on a reformat that changes nothing.
+      expect(sql).toMatch(/"memo"\s+fm\s+ON\s+fm\."id"\s*=\s*cf\."memoId"/);
+      expect(sql).toMatch(
+        /"collabora_document"\s+fcd\s+ON\s+fcd\."id"\s*=\s*cf\."collaboraDocumentId"/
+      );
+      expect(sql).toMatch(
+        /"collabora_document"\s+cd\s+ON\s+cd\."id"\s*=\s*cc\."collaboraDocumentId"/
+      );
+      expect(sql).toMatch(
+        /"calendar_event"\s+ce\s+ON\s+ce\."calendarId"\s*=\s*t\."calendarId"/
+      );
+    });
+
     it('logs and continues when a single revoke fails', async () => {
       entityManager.connection.query.mockResolvedValue([
         { profileId: 'p-1' },
@@ -153,7 +175,7 @@ describe('UrlGeneratorCacheService', () => {
         .mockRejectedValueOnce(new Error('boom'))
         .mockResolvedValueOnce(undefined);
 
-      await service.revokeUrlCachesForCalloutsInSpaces(['space-a']);
+      await service.revokeUrlCachesForContentInSpaces(['space-a']);
 
       expect(cacheManager.del).toHaveBeenCalledTimes(2);
       expect(logger.error).toHaveBeenCalled();

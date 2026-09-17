@@ -50,6 +50,8 @@ export const CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS_ALL =
   'credentialRuleTypes-organizationGlobalAdminsAll';
 export const CREDENTIAL_RULE_TYPES_ORGANIZATION_PLATFORM_ADMIN =
   'credentialRuleTypes-organizationPlatformAdmin';
+export const CREDENTIAL_RULE_TYPES_ORGANIZATION_ROLESET_APPLY =
+  'credentialRuleTypes-organizationRoleSetApply';
 export const CREDENTIAL_RULE_TYPES_USER_AUTHORIZATION_RESET =
   'credentialRuleTypes-userAuthorizationReset';
 export const CREDENTIAL_RULE_TYPES_USER_PLATFORM_ADMIN =
@@ -146,6 +148,8 @@ export const CREDENTIAL_RULE_TYPES_PLATFORM_CONTENT_FULL_ACCESS =
   'credentialRuleTypes-platformContentFullAccess';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_SUPPORT_ORG_RESOURCES =
   'credentialRuleTypes-platformSupportOrgResources';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_SUPPORT_LISTS_READ =
+  'credentialRuleTypes-platformSupportListsRead';
 export const CREDENTIAL_RULE_TYPES_DELETE_ORGANIZATION =
   'credentialRuleTypes-deleteOrganization';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_USERS_ADMIN =

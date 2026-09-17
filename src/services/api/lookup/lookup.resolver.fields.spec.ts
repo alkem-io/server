@@ -55,7 +55,7 @@ describe('LookupResolverFields', () => {
   let roomService: { getRoomOrFail: Mock };
   let calendarEventService: { getCalendarEventOrFail: Mock };
   let calendarService: { getCalendarOrFail: Mock };
-  let documentService: { getDocumentOrFail: Mock };
+  let documentService: { getUserFacingDocumentOrFail: Mock };
   let templateService: { getTemplateOrFail: Mock };
   let templatesSetService: { getTemplatesSetOrFail: Mock };
   let templatesManagerService: { getTemplatesManagerOrFail: Mock };
@@ -216,11 +216,14 @@ describe('LookupResolverFields', () => {
   describe('document', () => {
     it('should lookup document and check authorization', async () => {
       const doc = createEntityWithAuth('doc-1');
-      documentService.getDocumentOrFail.mockResolvedValue(doc);
+      documentService.getUserFacingDocumentOrFail.mockResolvedValue(doc);
       authorizationService.grantAccessOrFail.mockReturnValue(undefined);
 
       const result = await resolver.document(actorContext, 'doc-1');
       expect(result).toBe(doc);
+      expect(documentService.getUserFacingDocumentOrFail).toHaveBeenCalledWith(
+        'doc-1'
+      );
     });
   });
 

@@ -118,14 +118,13 @@ describe('PlatformInvitationService', () => {
       expect(invitationData.email).toBe('test@example.com');
     });
 
-    // 027-platform-role-redesign (T077, Slice B): INVERTED. `platform-beta-tester`
-    // and `platform-vc-campaign` were the only roles a platform invitation could
-    // carry, and both are retired. `acceptedPlatformRoles` is now empty BY
-    // DESIGN, not by omission: the successor `feature-*` roles are granted
-    // through `assignPlatformRoleTo{User,Organization}`, which run the six
-    // assignment rules and the fail-closed audit write (FR-012). An invitation
-    // would bypass both, so it must be rejected — including for the successor.
-    it('rejects an invitation carrying a feature role — the assignment surface owns that, with the rules and the audit write', async () => {
+    // 027-platform-role-redesign (T077, Slice B): `platform-beta-tester` is
+    // retired and its successor `feature-beta-tester` is granted ONLY through
+    // `assignPlatformRoleTo{User,Organization}`, which run the six assignment
+    // rules and the fail-closed audit write (FR-012). An invitation would
+    // bypass both, so it is rejected. (`feature-vc-campaign` is the one
+    // accepted feature role — see the test below.)
+    it('rejects an invitation carrying feature-beta-tester — the assignment surface owns that, with the rules and the audit write', async () => {
       const roleSet = { type: RoleSetType.PLATFORM } as IRoleSet;
       const invitationData = {
         email: 'user@test.com',
@@ -184,6 +183,24 @@ describe('PlatformInvitationService', () => {
       await expect(
         service.createPlatformInvitation(roleSet, invitationData)
       ).rejects.toThrow(ValidationException);
+    });
+
+    it('should allow FEATURE_VC_CAMPAIGN (the platform-vc-campaign successor) as an accepted platform role', async () => {
+      const roleSet = { type: RoleSetType.PLATFORM } as IRoleSet;
+      const invitationData = {
+        email: 'user@test.com',
+        createdBy: 'user-1',
+        roleSetInvitedToParent: false,
+        roleSetExtraRoles: [RoleName.FEATURE_VC_CAMPAIGN],
+      };
+
+      vi.spyOn(platformInvitationRepository, 'save').mockImplementation(
+        async (entity: any) => entity
+      );
+
+      await expect(
+        service.createPlatformInvitation(roleSet, invitationData)
+      ).resolves.toBeDefined();
     });
 
     it('should throw ValidationException when any role in the list is disallowed for platform roleSet', async () => {

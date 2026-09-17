@@ -1,5 +1,8 @@
 import { CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
+import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
+import { OrganizationAssociateEligibilityReason } from '@common/enums/organization.associate.eligibility.reason';
+import { getEmailDomain } from '@common/utils';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
@@ -10,6 +13,7 @@ import { OrganizationStorageAggregatorLoaderCreator } from '@core/dataloader/cre
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IActor } from '@domain/actor/actor/actor.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { INVP } from '@domain/common/nvp/nvp.interface';
@@ -18,11 +22,14 @@ import { UUID } from '@domain/common/scalars';
 import { IOrganization } from '@domain/community/organization';
 import { IUserGroup } from '@domain/community/user-group';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { IAccount } from '@domain/space/account/account.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IOrganizationSettings } from '../organization-settings/organization.settings.interface';
 import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
+import { IOrganizationAssociateEligibility } from './dto/organization.associate.eligibility.dto';
+import { isDomainJoinEligible } from './organization.domain.join.policy';
 import { Organization } from './organization.entity';
 import { OrganizationService } from './organization.service';
 
@@ -31,8 +38,117 @@ export class OrganizationResolverFields {
   constructor(
     private authorizationService: AuthorizationService,
     private organizationService: OrganizationService,
-    private groupService: UserGroupService
+    private groupService: UserGroupService,
+    private roleSetService: RoleSetService,
+    private userLookupService: UserLookupService
   ) {}
+
+  /**
+   * The viewer-relative "what may I do on this organization" signal (FR-016):
+   * apply, join directly, respond to a pending invitation, wait on a pending
+   * application, or nothing (already an associate / not authenticated).
+   * Never throws — absence is expressed through `reason`, not an error, so a
+   * profile page render never fails because of this field. The mutation
+   * side (`joinRoleSet`, `applyForEntryRoleOnRoleSet`) re-checks eligibility
+   * independently; this field is advisory for the interface only.
+   */
+  @ResolveField(
+    'myAssociateEligibility',
+    () => IOrganizationAssociateEligibility,
+    {
+      nullable: false,
+      description:
+        "The viewer's eligibility to apply to, or join, this organization as an associate.",
+    }
+  )
+  async myAssociateEligibility(
+    @Parent() parent: Organization,
+    @CurrentActor() actorContext: ActorContext
+  ): Promise<IOrganizationAssociateEligibility> {
+    const notEligible = (
+      reason: OrganizationAssociateEligibilityReason
+    ): IOrganizationAssociateEligibility => ({
+      canApply: false,
+      canJoinDirectly: false,
+      reason,
+    });
+
+    if (!actorContext.actorID || actorContext.isAnonymous) {
+      return notEligible(
+        OrganizationAssociateEligibilityReason.NOT_AUTHENTICATED
+      );
+    }
+
+    const organization = await this.organizationService.getOrganizationOrFail(
+      parent.id,
+      { relations: { roleSet: true, verification: true } }
+    );
+    if (!organization.roleSet) {
+      return notEligible(
+        OrganizationAssociateEligibilityReason.NOT_AUTHENTICATED
+      );
+    }
+
+    const membershipStatus =
+      await this.roleSetService.getMembershipStatusByActorContext(
+        actorContext,
+        organization.roleSet
+      );
+    if (membershipStatus === CommunityMembershipStatus.MEMBER) {
+      return notEligible(
+        OrganizationAssociateEligibilityReason.ALREADY_ASSOCIATE
+      );
+    }
+    if (membershipStatus === CommunityMembershipStatus.INVITATION_PENDING) {
+      return notEligible(
+        OrganizationAssociateEligibilityReason.INVITATION_PENDING
+      );
+    }
+    if (membershipStatus === CommunityMembershipStatus.APPLICATION_PENDING) {
+      return notEligible(
+        OrganizationAssociateEligibilityReason.APPLICATION_PENDING
+      );
+    }
+
+    const user = await this.userLookupService.getUserByIdOrFail(
+      actorContext.actorID
+    );
+    const domainEligibility = isDomainJoinEligible(
+      organization,
+      getEmailDomain(user.email)
+    );
+    const allowApplications =
+      organization.settings?.membership?.allowApplications ?? true;
+    const applyGranted = this.authorizationService.isAccessGranted(
+      actorContext,
+      organization.roleSet.authorization,
+      AuthorizationPrivilege.ROLESET_ENTRY_ROLE_APPLY
+    );
+    const canApply = allowApplications && applyGranted;
+
+    if (domainEligibility.eligible) {
+      return {
+        canApply,
+        canJoinDirectly: true,
+        reason: OrganizationAssociateEligibilityReason.ELIGIBLE_TO_JOIN,
+      };
+    }
+    if (!allowApplications) {
+      return notEligible(
+        OrganizationAssociateEligibilityReason.APPLICATIONS_NOT_ACCEPTED
+      );
+    }
+    if (!applyGranted) {
+      return notEligible(
+        OrganizationAssociateEligibilityReason.APPLY_NOT_GRANTED
+      );
+    }
+    return {
+      canApply: true,
+      canJoinDirectly: false,
+      reason: OrganizationAssociateEligibilityReason.ELIGIBLE_TO_APPLY,
+    };
+  }
 
   @ResolveField('groups', () => [IUserGroup], {
     nullable: true,

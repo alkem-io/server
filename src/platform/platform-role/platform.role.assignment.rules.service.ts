@@ -30,11 +30,12 @@ export const PLATFORM_FAMILY_ROLES: ReadonlySet<RoleName> = new Set([
   RoleName.PLATFORM_OPERATIONS_ADMIN,
 ]);
 
-/** The three `Feature …` roles (spec rows 11-13). */
+/** The four `Feature …` roles (spec rows 11-14). */
 export const FEATURE_FAMILY_ROLES: ReadonlySet<RoleName> = new Set([
   RoleName.FEATURE_BETA_TESTER,
   RoleName.FEATURE_VIRTUAL_ASSISTANT,
   RoleName.FEATURE_ORGANIZATION_CREATOR,
+  RoleName.FEATURE_VC_CAMPAIGN,
 ]);
 
 export interface PlatformRoleAssignmentEvaluationInput {

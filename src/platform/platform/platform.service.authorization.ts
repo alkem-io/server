@@ -13,7 +13,7 @@ import {
   CREDENTIAL_RULE_TYPES_PLATFORM_READ_REGISTERED,
   CREDENTIAL_RULE_TYPES_PLATFORM_ROLE_HOLDERS_READ,
   CREDENTIAL_RULE_TYPES_PLATFORM_ROLES_ASSIGN,
-  CREDENTIAL_RULE_TYPES_PLATFORM_SUPPORT_ORG_RESOURCES,
+  CREDENTIAL_RULE_TYPES_PLATFORM_SUPPORT_LISTS_READ,
   CREDENTIAL_RULE_TYPES_PLATFORM_USERS_ADMIN,
   CREDENTIAL_RULE_TYPES_SET_SERVICE_PROFILE,
 } from '@common/constants';
@@ -270,20 +270,6 @@ export class PlatformAuthorizationService {
     // gated now names its own family's privilege (T074), and each of those has
     // its own rule below or on the entity policy that owns it.
     //
-    // A7's support privilege gets a platform-level rule because the
-    // `platformAdmin.organizations` listing is gated on it: Support needs the
-    // organization list to reach the org-owned resources spec row 7 gives it.
-    // Holder set unchanged (`platform-support` alone) — this names where the
-    // privilege is checked, it does not widen who holds it.
-    const platformSupportOrgResources =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES],
-        [AuthorizationCredential.PLATFORM_SUPPORT],
-        CREDENTIAL_RULE_TYPES_PLATFORM_SUPPORT_ORG_RESOURCES
-      );
-    platformSupportOrgResources.cascade = false;
-    credentialRules.push(platformSupportOrgResources);
-
     // Operational & maintenance mutation family — dedicated privilege, own
     // rule (never merged into the platformAdmin rule above). Grant set mirrors
     // today's PLATFORM_ADMIN holders plus the Platform Operations Admin role.
@@ -378,17 +364,36 @@ export class PlatformAuthorizationService {
     platformForumManage.cascade = true;
     credentialRules.push(platformForumManage);
 
+    // 027-platform-role-redesign, R-F.2 (2026-09-16, research D29) — Support's
+    // console LIST READ. Its owning privilege (PLATFORM_SUPPORT_ORG_RESOURCES)
+    // is anchored on the account tree, so this platform policy — the one the
+    // `platformAdmin.{organizations,innovationPacks,innovationHubs}` lists
+    // check — held nothing of Support's, and the customer-facing admin role
+    // could not FIND what it exists to service. A read, not a write: every
+    // action reached from a list keeps its own A6/A7/A8 gate. Deliberately
+    // NOT CREATE_ORGANIZATION (would admit feature-organization-creator and
+    // beta-tester, FR-007(e)). Non-cascading: the lists live here.
+    // Slice B (T076): `platform-support` alone — the legacy reachers are gone.
+    const platformSupportListsRead =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_SUPPORT_LISTS_READ],
+        [AuthorizationCredential.PLATFORM_SUPPORT],
+        CREDENTIAL_RULE_TYPES_PLATFORM_SUPPORT_LISTS_READ
+      );
+    platformSupportListsRead.cascade = false;
+    credentialRules.push(platformSupportListsRead);
+
     // 027-platform-role-redesign (T073, Slice B): the `global-support`
     // platform-SUBTREE cascade that stood here — cascading CRUD over
     // platform, forum, library, templates-manager, role-set, storage,
     // messaging and (transitively) the licensing tree — is DELETED. Support's
     // reach is now A6, A7 and A15 only, each through its own named
-    // privilege. Everything that rode this cascade was re-anchored in Slice
-    // A: the forum onto `PLATFORM_FORUM_MANAGE` immediately above (T035 +
-    // T049), the rest onto the per-family privileges. Do not reintroduce a
-    // subtree cascade to "restore" a capability — name the surface and gate
-    // it, or `surface.drift.spec.ts` and the A15 denial cells will disagree
-    // with you.
+    // privilege, plus the non-cascading list read immediately above.
+    // Everything that rode this cascade was re-anchored in Slice A: the forum
+    // onto `PLATFORM_FORUM_MANAGE` (T035 + T049), the rest onto the
+    // per-family privileges. Do not reintroduce a subtree cascade to
+    // "restore" a capability — name the surface and gate it, or
+    // `surface.drift.spec.ts` and the A15 denial cells will disagree with you.
 
     // AUTHORIZATION_RESET holders: GLOBAL_ADMIN, GLOBAL_SUPPORT,
     // GLOBAL_LICENSE_MANAGER and PLATFORM_OPERATIONS_ADMIN.
@@ -423,7 +428,11 @@ export class PlatformAuthorizationService {
     platformAdminNotifications.cascade = false;
     credentialRules.push(platformAdminNotifications);
 
-    // Allow organization admins to access organization admin notification settings
+    // Allow organization admins to access organization admin notification
+    // settings. ADMIN only, matching who actually receives the organization
+    // notifications (ORGANIZATION_NOTIFICATION_CREDENTIAL_TYPES) — an owner
+    // who is not also an admin receives none of them, so there is nothing for
+    // them to switch off here.
     const receiveNotificationsOrganizationAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ORGANIZATION_ADMIN],

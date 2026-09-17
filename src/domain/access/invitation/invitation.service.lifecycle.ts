@@ -83,10 +83,26 @@ export const invitationLifecycleMachine: ILifecycleDefinition = {
     },
     rejected: {
       on: {
-        REINVITE: {
-          guard: 'hasUpdatePrivilege',
-          target: InvitationLifecycleState.INVITED,
-        },
+        // There is deliberately NO transition back to `invited` here.
+        //
+        // A REINVITE guarded on `hasUpdatePrivilege` was reachable by the
+        // INVITING Space admin (they hold UPDATE through the RoleSet's
+        // inherited authorization) and bypassed every check that makes an
+        // invitation legitimate: `eventOnInvitation` re-runs neither
+        // `guardOrganizationInvitation` — the organization's
+        // `allowSpaceInvitations` opt-out (FR-004/R2) and the Lead-slot
+        // limit — nor the invitation notification, so a declining
+        // organization could be returned to `invited` on a loop, silently,
+        // by the exact party the opt-out exists to protect against.
+        //
+        // Re-inviting after a decline is not lost, only routed through its
+        // single guarded owner: ARCHIVE the declined invitation (the Space
+        // admin's existing "remove pending" action —
+        // `useCommunityTabData.pendingDelete` already sends exactly this
+        // event for a non-`invited` invitation), which IS final, and then
+        // invite again through `inviteForEntryRoleOnRoleSet`, where the
+        // opt-out, the Lead-slot check and the org-admin notification all
+        // run as they do for any other invitation.
         ARCHIVE: {
           guard: 'hasUpdatePrivilege',
           target: InvitationLifecycleState.ARCHIVED,

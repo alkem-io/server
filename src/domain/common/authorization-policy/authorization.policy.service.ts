@@ -23,7 +23,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOptionsSelect, Repository } from 'typeorm';
+import { EntityManager, FindOptionsSelect, Repository } from 'typeorm';
 import { IAuthorizationPolicyRuleCredential } from '../../../core/authorization/authorization.policy.rule.credential.interface';
 import { IAuthorizationPolicy } from './authorization.policy.interface';
 
@@ -140,6 +140,9 @@ export class AuthorizationPolicyService {
         case AuthorizationRoleGlobal.FEATURE_ORGANIZATION_CREATOR:
           credType = AuthorizationCredential.FEATURE_ORGANIZATION_CREATOR;
           break;
+        case AuthorizationRoleGlobal.FEATURE_VC_CAMPAIGN:
+          credType = AuthorizationCredential.FEATURE_VC_CAMPAIGN;
+          break;
         default:
           throw new ForbiddenException(
             `Authorization: invalid global role encountered: ${globalRole}`,
@@ -213,14 +216,25 @@ export class AuthorizationPolicyService {
   }
 
   async delete(
-    authorizationPolicy: IAuthorizationPolicy
+    authorizationPolicy: IAuthorizationPolicy,
+    em?: EntityManager
   ): Promise<IAuthorizationPolicy> {
+    if (em) {
+      return await em.remove(authorizationPolicy as AuthorizationPolicy);
+    }
     return await this.authorizationPolicyRepository.remove(
       authorizationPolicy as AuthorizationPolicy
     );
   }
 
-  async deleteById(authorizationPolicyId: string): Promise<void> {
+  async deleteById(
+    authorizationPolicyId: string,
+    em?: EntityManager
+  ): Promise<void> {
+    if (em) {
+      await em.delete(AuthorizationPolicy, { id: authorizationPolicyId });
+      return;
+    }
     await this.authorizationPolicyRepository.delete({
       id: authorizationPolicyId,
     });

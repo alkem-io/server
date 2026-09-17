@@ -209,7 +209,8 @@ describe('MCP delegation — entity access is bound to the user (SC-003)', () =>
       resourceRegistry as any,
       authorizationService as any,
       capabilityGateService as any,
-      logger as any
+      logger as any,
+      {} as any
     );
     return { service, provider, authorizationService };
   };

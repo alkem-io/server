@@ -1,3 +1,4 @@
+import { ORGANIZATION_NOTIFICATION_CREDENTIAL_TYPES } from '@common/constants/authorization';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
@@ -16,6 +17,11 @@ import { OrganizationLookupService } from '@domain/community/organization-lookup
 import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { IUserSettingsNotificationChannels } from '@domain/community/user-settings/user.settings.notification.channels.interface';
+import {
+  DEFAULT_INVITATION_RESPONSE_CHANNELS,
+  DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS,
+  DEFAULT_ORGANIZATION_SPACE_INVITATION_CHANNELS,
+} from '@domain/community/user-settings/user.settings.notification.defaults.constants';
 import { IUserSettingsNotification } from '@domain/community/user-settings/user.settings.notification.interface';
 import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
@@ -24,6 +30,25 @@ import { PlatformAuthorizationPolicyService } from '@platform/authorization/plat
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationRecipientsInput } from './dto/notification.recipients.dto.input';
 import { NotificationRecipientResult } from './dto/notification.recipients.dto.result';
+
+// 034-messaging-notifications (FR-004, corr-server-3): same mandated default
+// as the migration (1785336300000) and `UserSettings.applyConversationMessageNotificationDefaults`.
+const DEFAULT_CONVERSATION_MESSAGE_CHANNELS: IUserSettingsNotificationChannels =
+  Object.freeze({
+    email: false,
+    inApp: false,
+    push: true,
+  });
+
+// 041-callout-reaction-notifications (FR-007, R-7): defend on read — a
+// `user_settings` row that predates the backfill migration lacks this key.
+// Same mandated defaults as the migration and `@AfterLoad` hook.
+const DEFAULT_CALLOUT_REACTION_CHANNELS: IUserSettingsNotificationChannels =
+  Object.freeze({
+    email: false,
+    inApp: true,
+    push: true,
+  });
 
 @Injectable()
 export class NotificationRecipientsService {
@@ -51,7 +76,8 @@ export class NotificationRecipientsService {
         eventData.spaceID,
         eventData.userID,
         eventData.organizationID,
-        eventData.virtualContributorID
+        eventData.virtualContributorID,
+        eventData.userIDs
       );
 
     this.logger.verbose?.(
@@ -268,6 +294,41 @@ export class NotificationRecipientsService {
       case NotificationEvent.USER_SPACE_COMMUNITY_INVITATION:
         return notificationSettings.user.membership
           .spaceCommunityInvitationReceived;
+      case NotificationEvent.USER_ORGANIZATION_ASSOCIATE_INVITATION:
+        // Defend on read against a row that predates the backfill
+        // migration or was inserted by an old pod during a rolling
+        // deploy. `UserSettings.applyOrganizationAssociateDefaults`
+        // (@AfterLoad) already heals entity-loaded rows; this covers
+        // other load paths.
+        return (
+          notificationSettings.user?.membership
+            ?.organizationAssociateInvitationReceived ??
+          DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS
+        );
+      case NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_APPROVED:
+      case NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_DECLINED:
+        return (
+          notificationSettings.user?.membership
+            ?.organizationAssociateApplicationDecided ??
+          DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS
+        );
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_ACCEPTED:
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_DECLINED:
+        return (
+          notificationSettings.organization?.adminAssociateInvitationResponse ??
+          DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS
+        );
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_APPLICATION:
+        return (
+          notificationSettings.organization
+            ?.adminAssociateApplicationReceived ??
+          DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS
+        );
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_JOINED:
+        return (
+          notificationSettings.organization?.adminAssociateJoined ??
+          DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS
+        );
       case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
       case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION_DECLINED:
         return notificationSettings.user.membership.spaceCommunityJoined;
@@ -277,6 +338,24 @@ export class NotificationRecipientsService {
         return notificationSettings.user.mentioned;
       case NotificationEvent.USER_MESSAGE:
         return notificationSettings.user.messageReceived;
+      case NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT:
+        // corr-server-3: defend on read — a `user_settings` row that predates
+        // the two messaging keys (rolling-deploy race past the one-shot
+        // backfill migration) must never crash recipient resolution for the
+        // WHOLE batch. `UserSettings.applyConversationMessageNotificationDefaults`
+        // (@AfterLoad) already heals this for entity-loaded rows; this
+        // fallback covers any other load path (e.g. raw/partial selects) —
+        // including one that omits the whole `user` object, hence the
+        // optional chain rather than a leaf-key check.
+        return (
+          notificationSettings.user?.conversationMessageDirect ??
+          DEFAULT_CONVERSATION_MESSAGE_CHANNELS
+        );
+      case NotificationEvent.USER_CONVERSATION_MESSAGE_GROUP:
+        return (
+          notificationSettings.user?.conversationMessageGroup ??
+          DEFAULT_CONVERSATION_MESSAGE_CHANNELS
+        );
       case NotificationEvent.ORGANIZATION_MESSAGE_SENDER:
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION:
         return notificationSettings.space.admin.communityApplicationReceived;
@@ -315,11 +394,62 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE:
         return notificationSettings.space
           .collaborationPollVoteAffectedByOptionChange;
-      case NotificationEvent.SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED:
-        return notificationSettings.space.admin.communityNewMember;
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_REACTION:
+        // corr-server-3 pattern: defend on read against a row that predates
+        // the backfill migration or was inserted by an old pod during a rolling
+        // deploy. `UserSettings.applyCalloutReactionNotificationDefaults`
+        // (@AfterLoad) already heals entity-loaded rows; this covers other
+        // load paths (e.g. raw/partial selects).
+        return (
+          notificationSettings.space?.collaborationCalloutReaction ??
+          DEFAULT_CALLOUT_REACTION_CHANNELS
+        );
       case NotificationEvent.VIRTUAL_ADMIN_SPACE_COMMUNITY_INVITATION:
         return notificationSettings.virtualContributor
           .adminSpaceCommunityInvitation;
+      case NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION:
+        // Defend on read against a row that predates the backfill migration
+        // or was inserted by an old pod during a rolling deploy.
+        // `UserSettings.applyOrganizationSpaceInvitationDefaults`
+        // (@AfterLoad) already heals entity-loaded rows; this covers other
+        // load paths.
+        return (
+          notificationSettings.organization?.adminSpaceCommunityInvitation ??
+          DEFAULT_ORGANIZATION_SPACE_INVITATION_CHANNELS
+        );
+      case NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED:
+        // Same control as the invitation itself: the "your organization has
+        // joined" notice is the closing half of that lifecycle, so it is not
+        // given a separate settings row.
+        return (
+          notificationSettings.organization?.adminSpaceCommunityInvitation ??
+          DEFAULT_ORGANIZATION_SPACE_INVITATION_CHANNELS
+        );
+      // Every "someone responded to an invitation you sent" event shares one
+      // control, distinct from "a new member joined" — accepting an
+      // invitation is a response to the recipient's own action, not an
+      // unprompted join.
+      case NotificationEvent.SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED:
+      case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED:
+      case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED:
+      case NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_ACCEPTED:
+      case NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_DECLINED:
+        // Defend on read against a row that predates the backfill migration
+        // (1788600000000) or was inserted by an old pod during a rolling
+        // deploy. `UserSettings.applyInvitationResponseDefaults` (@AfterLoad)
+        // already heals entity-loaded rows; this covers other load paths.
+        //
+        // The fallback is the row's PREDECESSOR (`communityNewMember`) before
+        // the mandated default, mirroring the migration's `COALESCE`: an
+        // admin who deliberately muted "a new member joined" must not be
+        // silently re-enabled on all three channels for the event that was
+        // split out of it. Only a row with neither key gets the all-on
+        // default, and such a user was already all-on.
+        return (
+          notificationSettings.space?.admin?.communityInvitationResponse ??
+          notificationSettings.space?.admin?.communityNewMember ??
+          DEFAULT_INVITATION_RESPONSE_CHANNELS
+        );
 
       // Fixed values
       case NotificationEvent.USER_SIGN_UP_WELCOME:
@@ -348,7 +478,8 @@ export class NotificationRecipientsService {
     spaceID?: string,
     userID?: string,
     organizationID?: string,
-    virtualContributorID?: string
+    virtualContributorID?: string,
+    userIDs?: string[]
   ): Promise<{
     privilegeRequired: AuthorizationPrivilege | undefined;
     credentialCriteria: CredentialsSearchInput[];
@@ -426,8 +557,10 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL:
       case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_POLL_I_VOTED_ON:
       case NotificationEvent.SPACE_COLLABORATION_POLL_MODIFIED_ON_POLL_I_VOTED_ON:
-      case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE: {
-        // Only notify the targeted user (poll creator or prior voter)
+      case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE:
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_REACTION: {
+        // Only notify the targeted user (callout publisher or poll creator/voter).
+        // Self-criteria produces a single-user query — never fans out to space audience.
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;
       }
@@ -449,8 +582,36 @@ export class NotificationRecipientsService {
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;
       }
+      case NotificationEvent.USER_ORGANIZATION_ASSOCIATE_INVITATION:
+      case NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_APPROVED:
+      case NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_DECLINED: {
+        // Single recipient — the invitee / applicant themself.
+        credentialCriteria = this.getUserSelfCriteria(userID);
+        break;
+      }
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_ACCEPTED:
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_DECLINED:
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_APPLICATION:
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_JOINED: {
+        // ADMIN standing only (061 R17b) — owners who are not admins decide
+        // from the tab but are not notified.
+        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
+        credentialCriteria =
+          this.getOrganizationAdminCredentialCriteria(organizationID);
+        break;
+      }
       case NotificationEvent.SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED: {
-        // Notify the space admin who sent the VC invitation
+        // Notify the space admin who sent the VC invitation.
+        //
+        // ASYMMETRY, deliberate and out of scope to change: this event now
+        // shares the `space.admin.communityInvitationResponse` setting with
+        // the four organization/user outcome events (R27), but keeps its
+        // pre-existing inviter-only audience, while those four fan out to
+        // every Space admin (R28/FR-020). One toggle, two audiences.
+        // Widening this one would change Virtual-Contributor behaviour that
+        // `server#4100` does not otherwise touch, and it is unchanged from
+        // `develop` — including that an inviter who has since been deleted
+        // resolves to nobody. Recorded rather than silently inherited.
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;
@@ -459,6 +620,53 @@ export class NotificationRecipientsService {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
         credentialCriteria =
           await this.getVirtualContributorCriteria(virtualContributorID);
+        break;
+      }
+      case NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION: {
+        // Resolved by ADMIN standing, not the associate sweep the two
+        // shipped organization events use — an admin who is not an
+        // associate is still notified.
+        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
+        credentialCriteria =
+          this.getOrganizationAdminCredentialCriteria(organizationID);
+        break;
+      }
+      case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED:
+      case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED:
+      case NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_ACCEPTED:
+      case NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_DECLINED: {
+        // EVERY admin of the Space, not only the one who sent the invitation
+        // (product email: "Space admin(s) gets notification that the
+        // organization has accepted or rejected their invitation"). This
+        // event is the replacement for the generic "a new member joined"
+        // notification, which R26 suppresses for invitation-sourced
+        // memberships; sending it only to the inviter would leave every
+        // co-admin — and a Space whose inviter has since been deleted or
+        // demoted — with no notification at all.
+        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
+        credentialCriteria = this.getSpaceAdminCredentialCriteria(spaceID);
+        break;
+      }
+      case NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED: {
+        // Every ADMIN of the organization that just joined. Resolved by ADMIN
+        // standing, not associate membership, exactly as the invitation event
+        // is. This resolves the raw ADMIN set; the admin who accepted is
+        // filtered out of it downstream, on all three channels, by
+        // `notification.organization.adapter.ts` (R33) — the welcome exists to
+        // tell the OTHER admins no action is needed, so if the acceptor is the
+        // only admin the event ends with no recipients and is not sent.
+        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
+        credentialCriteria =
+          this.getOrganizationAdminCredentialCriteria(organizationID);
+        break;
+      }
+      case NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT:
+      case NotificationEvent.USER_CONVERSATION_MESSAGE_GROUP: {
+        // 034-messaging-notifications (FR-005/FR-020, D-13): recipients are
+        // the (already sender-excluded) conversation members, resolved in
+        // ONE OR-combined credentials query — no per-recipient privilege
+        // check, mirroring USER_MESSAGE/USER_MENTIONED above.
+        credentialCriteria = this.getUserSelfCriteriaForUserIDs(userIDs);
         break;
       }
       default: {
@@ -488,7 +696,13 @@ export class NotificationRecipientsService {
         return await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
       }
       case NotificationEvent.ORGANIZATION_ADMIN_MESSAGE:
-      case NotificationEvent.ORGANIZATION_ADMIN_MENTIONED: {
+      case NotificationEvent.ORGANIZATION_ADMIN_MENTIONED:
+      case NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION:
+      case NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED:
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_ACCEPTED:
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_DECLINED:
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_APPLICATION:
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_JOINED: {
         // get the organization authorization policy
         if (!organizationID) {
           throw new ValidationException(
@@ -514,6 +728,10 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER:
       case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION:
       case NotificationEvent.SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED:
+      case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED:
+      case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED:
+      case NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_ACCEPTED:
+      case NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_DECLINED:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_COMMENT:
@@ -550,7 +768,10 @@ export class NotificationRecipientsService {
       case NotificationEvent.USER_COMMENT_REPLY:
       case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
       case NotificationEvent.USER_SPACE_COMMUNITY_INVITATION:
-      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION_DECLINED: {
+      case NotificationEvent.USER_SPACE_COMMUNITY_APPLICATION_DECLINED:
+      case NotificationEvent.USER_ORGANIZATION_ASSOCIATE_INVITATION:
+      case NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_APPROVED:
+      case NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_DECLINED: {
         // get the User authorization policy
         // Use userID if provided, otherwise fall back to entityID for backward compatibility
         const targetUserID = userID || entityID;
@@ -620,6 +841,35 @@ export class NotificationRecipientsService {
         resourceID: organizationID,
       },
     ];
+  }
+
+  /**
+   * The organization's ADMINS — resolved by admin standing, not by associate
+   * membership and not by ownership. R17b: product ruled that these
+   * notifications go to admins only, so this deliberately uses
+   * `ORGANIZATION_NOTIFICATION_CREDENTIAL_TYPES` rather than the broader
+   * `ORGANIZATION_MANAGER_CREDENTIAL_TYPES` that `getActorsManagedByUser`
+   * uses. Do not add the owner credential back: an owner who is not an admin
+   * has no settings row governing these events and so could not mute them.
+   * One criterion per credential type; the recipients query OR-combines them.
+   */
+  private getOrganizationAdminCredentialCriteria(
+    organizationID: string | undefined
+  ): CredentialsSearchInput[] {
+    if (!organizationID) {
+      throw new ValidationException(
+        'Organization ID is required for notification recipients',
+        LogContext.NOTIFICATIONS
+      );
+    }
+    // ADMIN only — not ORGANIZATION_MANAGER_CREDENTIAL_TYPES. Product asked
+    // for "all organization admins" (server#4100 / notifications#356 / the
+    // product email thread); an owner who is not also an admin can still
+    // accept on the organization's behalf but is not notified.
+    return ORGANIZATION_NOTIFICATION_CREDENTIAL_TYPES.map(type => ({
+      type,
+      resourceID: organizationID,
+    }));
   }
 
   private getSpaceCredentialCriteria(
@@ -715,6 +965,23 @@ export class NotificationRecipientsService {
         resourceID: userID,
       },
     ];
+  }
+
+  private getUserSelfCriteriaForUserIDs(
+    userIDs: string[] | undefined
+  ): CredentialsSearchInput[] {
+    if (!userIDs || userIDs.length === 0) {
+      throw new ValidationException(
+        'User IDs are required for notification recipients',
+        LogContext.NOTIFICATIONS
+      );
+    }
+    // One OR-combined query (FR-020) — usersWithCredentials builds an OR
+    // condition across every criteria element.
+    return userIDs.map(userID => ({
+      type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+      resourceID: userID,
+    }));
   }
 
   private async getVirtualContributorCriteria(

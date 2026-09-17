@@ -371,6 +371,37 @@ describe('RoleSetResolverFields', () => {
     });
 
     // Neither PLATFORM_ROLE_HOLDERS_READ nor FEATURE_ROLE_HOLDERS_READ.
+    it('should allow FEATURE_VC_CAMPAIGN holders to be read with FEATURE_ROLE_HOLDERS_READ (it is a feature target role)', async () => {
+      const mockRoleSet = {
+        id: 'rs-1',
+        authorization: { id: 'auth-1' },
+      } as any;
+      const mockOrgs = [{ id: 'org-1' }] as any[];
+      (roleSetService.getOrganizationsWithRole as Mock).mockResolvedValue(
+        mockOrgs
+      );
+      (authorizationService.isAccessGranted as Mock).mockImplementation(
+        (_actor, _auth, privilege) =>
+          privilege === AuthorizationPrivilege.FEATURE_ROLE_HOLDERS_READ
+      );
+
+      const result = await resolver.organizationsInRole(
+        mockActorContext,
+        mockRoleSet,
+        RoleName.FEATURE_VC_CAMPAIGN
+      );
+
+      expect(result).toEqual(mockOrgs);
+      // The feature-target branch is what admitted the read — not the
+      // ordinary-role plain-READ path a non-target role would take.
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        mockActorContext,
+        mockRoleSet.authorization,
+        AuthorizationPrivilege.FEATURE_ROLE_HOLDERS_READ
+      );
+      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+    });
+
     it('should deny a feature-* target role when neither holder-read privilege is held', async () => {
       const mockRoleSet = {
         id: 'rs-1',
@@ -751,6 +782,26 @@ describe('RoleSetResolverFields', () => {
 
       expect(result).toBe(mockLicense);
       expect(mockLoader.load).toHaveBeenCalledWith('rs-1');
+    });
+  });
+
+  // Pending-list confidentiality: none of the pending lists may fall back to
+  // the parent role set's READ, which every registered user (organizations)
+  // or every registered user of a public Space holds. Applications carry the
+  // applicant's PII, so only deciders (GRANT) read them; invitations and
+  // platform invitations are readable by whoever may create one
+  // (ROLESET_ENTRY_ROLE_INVITE), which the invite dialog's dedupe needs.
+  describe('pending-list confidentiality', () => {
+    it.each([
+      ['inivitations', AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE],
+      ['platformInvitations', AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE],
+      ['applications', AuthorizationPrivilege.GRANT],
+    ])('%s is gated on %s, not READ', (methodName, expectedPrivilege) => {
+      const privilege = Reflect.getMetadata(
+        'privilege',
+        (resolver as any)[methodName]
+      );
+      expect(privilege).toBe(expectedPrivilege);
     });
   });
 });

@@ -10,6 +10,14 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { PushNotificationMessage } from './push.notification.message';
 import { PushThrottleService } from './push.throttle.service';
 
+export interface PushNotificationPayload {
+  title: string;
+  body: string;
+  url: string;
+  /** FR-024 — collapse key. Omitted by notification kinds that should stack. */
+  tag?: string;
+}
+
 @Injectable()
 export class NotificationPushAdapter {
   private readonly pushEnabled: boolean;
@@ -30,17 +38,13 @@ export class NotificationPushAdapter {
   async sendPushNotifications(
     pushRecipients: IUser[],
     event: NotificationEvent,
-    payload: { title: string; body: string; url: string }
+    payload: PushNotificationPayload
   ): Promise<void> {
-    if (!this.pushEnabled) {
+    if (!this.pushEnabled || pushRecipients.length === 0) {
       return;
     }
 
-    if (pushRecipients.length === 0) {
-      return;
-    }
-
-    // Filter by throttle
+    // Filter by the shared (non-messaging) throttle bucket.
     const allowedUserIds: string[] = [];
     for (const user of pushRecipients) {
       const allowed = await this.pushThrottleService.isAllowed(user.id);
@@ -49,6 +53,48 @@ export class NotificationPushAdapter {
       }
     }
 
+    await this.publishToSubscriptions(allowedUserIds, event, payload);
+  }
+
+  /**
+   * 034-messaging-notifications (FR-012 / Operator Ruling R4 / D-21).
+   *
+   * Same delivery mechanism as `sendPushNotifications`, but with NO rate
+   * limiter of any kind. That is deliberate, not an omission:
+   *
+   *  - the shared `PushThrottleService` bucket is untouched, so chat volume
+   *    can never starve mentions/invitations (US4-AS2), and
+   *  - a messaging-specific budget was DELETED by D-21, because the FR-011b
+   *    delay cap already bounds the dispatch rate per recipient to a fixed
+   *    function of configuration (worst case 12 direct + 4 group pushes an
+   *    hour), independent of message volume. A counter that can only trip
+   *    after a hard cap already bounded the rate adds a failure mode without
+   *    adding a guarantee.
+   *
+   * Independence is therefore by NON-PARTICIPATION: a messaging push touches
+   * no `push:throttle:*` key at all.
+   */
+  async sendMessagingPushNotifications(
+    pushRecipients: IUser[],
+    event: NotificationEvent,
+    payload: PushNotificationPayload
+  ): Promise<void> {
+    if (!this.pushEnabled || pushRecipients.length === 0) {
+      return;
+    }
+
+    await this.publishToSubscriptions(
+      pushRecipients.map(user => user.id),
+      event,
+      payload
+    );
+  }
+
+  private async publishToSubscriptions(
+    allowedUserIds: string[],
+    event: NotificationEvent,
+    payload: PushNotificationPayload
+  ): Promise<void> {
     if (allowedUserIds.length === 0) {
       return;
     }
@@ -78,6 +124,7 @@ export class NotificationPushAdapter {
           url: payload.url,
           eventType: event,
           timestamp,
+          ...(payload.tag ? { tag: payload.tag } : {}),
         },
         retryCount: 0,
       };

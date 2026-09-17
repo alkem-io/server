@@ -43,7 +43,7 @@ the two legacy cascades.
 | A4 | Change login email | 3 | ✅ | ✅ |
 | A5 | Delete user; reset identity/account | 3 | ✅ | ✅ |
 | A6 | Create/delete organization | 2 | ✅ (delete only) | ✅ (delete only) |
-| **A7** | **Edit org-owned pack/hub + template CRUD** | **8** | ✅ **new capability** (research C2 — org-owned packs/hubs sit under the `account` tree, which the root cascade already reaches; **T037 makes this an explicit gate, closing a path that was previously reachable ONLY by inheritance**) — spec-server-14 fix: scoped to ORGANIZATION-hosted accounts only, not every account | ✅ |
+| **A7** | **Edit org-owned pack/hub + template CRUD** | **8** → **9** *(2026-09-16: `updateCallout` on template content, scoped to `isTemplate`)* | ✅ **new capability** (research C2 — org-owned packs/hubs sit under the `account` tree, which the root cascade already reaches; **T037 makes this an explicit gate, closing a path that was previously reachable ONLY by inheritance**) — spec-server-14 fix: scoped to ORGANIZATION-hosted accounts only, not every account | ✅ |
 | A8 | Delete callout/contribution/space; delete org pack/hub; set publisher | 6 | ✅ | ✅ |
 | A9 | Move space/hub/pack/VC/callout | 13 | ✅ (4 of 13 via legacy `TRANSFER_*`; 7 of 13 via a resolver-local synthetic `PLATFORM_ADMIN` policy, not the root cascade) | partial |
 | A10 | Platform settings/config | 6 | ✅ | ✅ |
@@ -118,15 +118,17 @@ confirmed — no code path in this feature's diff adds
 | 4 | `platform-settings-admin` | Platform settings, iframe allow-list, notification blacklist, license-plan/policy definitions (A10/A13) | `PLATFORM_SETTINGS_ADMIN` grant (`platform.service.authorization.ts`, T035); gated resolvers T045/T047 |
 | 5 | `platform-operations-admin` | Authorization/license reset, operational maintenance mutations (A3/A11, 032) | Pre-existing 032 grant, unchanged by this feature |
 | 6 | `platform-users-admin` | Change login email, delete/reset user identity & account, assign Feature roles (A4/A5/A2) | `PLATFORM_USERS_ADMIN` grant (`user.service.authorization.ts`, T060); `FEATURE_ROLE_ASSIGN` (`platform.service.authorization.ts`, T034) |
-| 7 | `platform-support` | Create/delete organizations, edit org-owned packs/hubs, manage the forum, in-space support (A6/A7/A15) | `CREATE_ORGANIZATION`/`DELETE_ORGANIZATION` (T039), `PLATFORM_SUPPORT_ORG_RESOURCES` (T037), `PLATFORM_FORUM_MANAGE` (T035) |
+| 7 | `platform-support` | Create/delete organizations, edit org-owned packs/hubs, manage the forum, in-space support (A6/A7/A15); **find** those organizations/packs/hubs from the admin console (R-F.2, 2026-09-16) | `CREATE_ORGANIZATION`/`DELETE_ORGANIZATION` (T039), `PLATFORM_SUPPORT_ORG_RESOURCES` (T037), `PLATFORM_FORUM_MANAGE` (T035); `PLATFORM_SUPPORT_LISTS_READ` (T098 — `platform.service.authorization.ts`, admitted by `platform.admin.resolver.fields.ts` `organizations`/`innovationPacks`/`innovationHubs`; **a read, no census row** — research D29) |
 | 8 | `platform-license-manager` | Assign/revoke license plans, change space visibility (A12/A14) | `ACCOUNT_LICENSE_MANAGE` extension (T037) |
 | 9 | `platform-spaces-reader` | Cross-space read (A16) | `READ` grant on the space tree, replacing the void `global-spaces-reader` (T038) |
 | 10 | `platform-audit-reader` | Read the platform audit trail (A19); read Platform/Feature holder lists (A20/A20b) | `PLATFORM_AUDIT_READ` (T035); `PLATFORM_ROLE_HOLDERS_READ` (T034) |
 | 11 | **`feature-beta-tester`** | Beta/trial license entitlement | **Licensing-policy credential rule (T040a), NOT an authorization-policy rule** — the row most likely to look empty if this table only checked `*.service.authorization.ts` files |
 | 12 | `feature-virtual-assistant` | Access the Web AI Assistant (`ACCESS_VIRTUAL_ASSISTANT`) | `platform.service.authorization.ts` (T035), additive alongside the pre-existing `assistant-access` grant |
 | 13 | `feature-organization-creator` | Create an organization (A6, shared with `platform-support`) | `CREATE_ORGANIZATION` grant (T035/T039) |
+| 14 | **`feature-vc-campaign`** *(added 2026-09-16)* | Targeted for the Virtual Contributor campaign: shown the dashboard VC-creation offer (client gate, `isVcCampaignTargeted`), and carries the same trial license entitlement as the legacy `platform-vc-campaign` | **Licensing-policy credential rule on grant/revoke (`platform.role.resolver.mutations.ts`, parity with T040a) — NO authorization-policy rule and no A-row surface, by design.** The audit had marked the legacy role inert and "removed"; its enforced capability is client-side targeting plus the entitlement, which is why it was invisible to a server-only sweep (runbook §2b) |
 
-Every row has a citable, enforced capability. No row is empty.
+Every row has a citable, enforced capability. No row is empty — row 14's is the
+one capability in this table that is not an authorization-policy privilege.
 
 ---
 
@@ -306,16 +308,20 @@ merely documented as an intention.
 
 ## Sign-off checklist for the security owner (SC-001)
 
-- [ ] T028's god-mode table reviewed — A7's "new capability" callout in
+- [x] T028's god-mode table reviewed — A7's "new capability" callout in
       particular, since it is the one row where this feature closes a gap
       rather than merely re-anchoring an existing one.
-- [ ] T029's four structural findings reviewed, remediation status accepted.
-- [ ] T065's FR-005 negative-space table reviewed.
-- [ ] T067's 13-row FR-009 table reviewed — no empty role.
-- [ ] T068's FR-010 sweep and the two declared exceptions (A16 read family,
+- [x] T029's four structural findings reviewed, remediation status accepted.
+- [x] T065's FR-005 negative-space table reviewed.
+- [x] T067's 13-row FR-009 table reviewed — no empty role.
+- [x] T068's FR-010 sweep and the two declared exceptions (A16 read family,
       A15 given its own privilege) reviewed.
-- [ ] T070m's six reachability-model findings reviewed and accepted as
+- [x] T070m's six reachability-model findings reviewed and accepted as
       corrections, not narrowings.
+
+**Signed 2026-09-16** by the security owner of record, Svetoslav Petkov
+(snp.petkov@gmail.com): all six items reviewed and accepted. This is the
+SC-001 APPROVED inventory.
 
 ---
 
@@ -433,3 +439,46 @@ fix hint). It does **not** implement sec-server-18's parts (a) and (c):
 
 Both remain open hardening items for a follow-up piece of work, not closed
 by this fix pass.
+
+---
+
+## R-F.2 — Support's console lists (2026-09-16, T097–T101)
+
+**Finding (operator, sandbox):** a Support-only holder had no browser path to
+A6/A7 — `/admin` hidden, organization settings redirecting, no pack manage
+link; SC-003 passed only through GraphQL. Server cause: the three console
+lists check `PLATFORM_ADMIN | PLATFORM_CONTENT_FULL_ACCESS` on the **platform**
+policy, where Support's account/organization-anchored privileges are invisible.
+
+**Change:** `PLATFORM_SUPPORT_LISTS_READ` (`platform-support-lists-read`), one
+non-cascading platform credential rule granting it to
+`{platform-support, global-admin, global-support}`; admitted by
+`platformAdmin.organizations` / `innovationPacks` / `innovationHubs` only. No
+migration — lands on the next `authorizationPolicyResetOnPlatform`. Not
+`CREATE_ORGANIZATION` (admits Feature Organization Creator + beta-tester),
+not a census row (a list read is not an A-row; `SCANNED_PRIVILEGES`,
+`reachability.spec.ts` and the FR-024 matrix are unchanged).
+
+**Evidence:**
+
+| Layer | What | Result |
+|---|---|---|
+| Unit (RED→GREEN) | `platform.admin.resolver.fields.spec.ts`: the privilege alone reaches the three lists and falls through to `PLATFORM_ADMIN` on `spaces`/`accounts`/`virtualContributors`/`users`/`identity` | 8 new cases, green |
+| Unit | `platform.service.authorization.spec.ts`: grant set EXACTLY `{platform-support, global-admin, global-support}`, `cascade=false`, neither org-creator credential nor `platform-content-full-access` present | green |
+| Closure | `PRIVILEGE_COVERAGE` gained the key (`unit.coverage.spec.ts`); `reachability.spec.ts` / `surface.drift.spec.ts` unchanged and green | green |
+| Schema | +1 `AuthorizationPrivilege` value, additive; `schema:diff`/`schema:validate` clean | green |
+| Live (`:4027`, acceptance restore, `roles-admin-2@alkem.io` as subject) | reset → subject lacks the privilege and is refused the pack list → grant `PLATFORM_SUPPORT` → platform policy reports the privilege (and neither `PLATFORM_ADMIN` nor `PLATFORM_CONTENT_FULL_ACCESS`) → the three lists load → `spaces`/`accounts`/`virtualContributors`/`users` refused → revoke → refused again | 20/20 |
+
+### A7 gap found on the sandbox walk (2026-09-16, T102)
+
+Support could create and delete templates in an organization's pack but not
+**edit** a callout template: the client edits its content through the generic
+`updateCallout` (`UpdateCalloutTemplate`), whose gate checked plain `UPDATE`
+and never took A7's dual path — although the callout's stored policy already
+carried the cascaded `PLATFORM_SUPPORT_ORG_RESOURCES` (a template callout takes
+its parent's policy verbatim). Fixed as a dual path **scoped to
+`callout.isTemplate`**: the same account cascade reaches every callout inside
+an organization's spaces, which FR-008(a) keeps closed to Support. Ninth A7
+census entry; `reachability.spec.ts` / `surface.drift.spec.ts` green; RED→GREEN
+resolver spec asserts the privilege opens a template callout and does NOT open
+a non-template one.

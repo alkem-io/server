@@ -25,6 +25,15 @@ export class UpdateUserSettingsNotificationSpaceAdminInput {
   @Field(() => NotificationSettingInput, {
     nullable: true,
     description:
+      'Receive a notification when someone responds to an invitation you sent (admin)',
+  })
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  communityInvitationResponse?: NotificationSettingInput;
+
+  @Field(() => NotificationSettingInput, {
+    nullable: true,
+    description:
       'Receive a notification when a new member joins the community (admin)',
   })
   @ValidateNested()

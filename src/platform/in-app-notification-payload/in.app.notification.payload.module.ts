@@ -1,14 +1,16 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { OrganizationLoaderCreator } from '@core/dataloader/creators';
+import { ApplicationLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/application.loader.creator';
 import { CalendarEventLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/calendar.event.loader.creator';
 import { MessageDetailsModule } from '@domain/communication/message.details/message.details.module';
 import { Module } from '@nestjs/common';
 import {
+  InAppNotificationPayloadOrganizationAssociateActorResolverFields,
+  InAppNotificationPayloadOrganizationAssociateInvitationResolverFields,
   InAppNotificationPayloadOrganizationMessageDirectResolverFields,
   InAppNotificationPayloadOrganizationMessageRoomResolverFields,
   InAppNotificationPayloadPlatformForumDiscussionResolverFields,
   InAppNotificationPayloadPlatformGlobalRoleChangeResolverFields,
-  InAppNotificationPayloadPlatformUserProfileRemovedResolverFields,
   InAppNotificationPayloadSpaceCollaborationCalloutCommentResolverFields,
   InAppNotificationPayloadSpaceCollaborationCalloutPostCommentResolverFields,
   InAppNotificationPayloadSpaceCommunicationMessageDirectResolverFields,
@@ -23,6 +25,7 @@ import {
   InAppNotificationPayloadUserMessageRoomResolverFields,
   InAppNotificationPayloadVirtualContributorFieldsResolver,
 } from './field-resolvers';
+import { InAppNotificationPayloadSpaceCollaborationCalloutReactionResolverFields } from './field-resolvers/space/in.app.notification.payload.space.collaboration.callout.reaction.resolver.fields';
 import { InAppNotificationPayloadSpaceCollaborationCalloutResolverFields } from './field-resolvers/space/in.app.notification.payload.space.collaboration.callout.resolver.fields';
 import { InAppNotificationPayloadSpaceCollaborationPollResolverFields } from './field-resolvers/space/in.app.notification.payload.space.collaboration.poll.resolver.fields';
 import { InAppNotificationPayloadSpaceCommunityCalendarEventCommentResolverFields } from './field-resolvers/space/in.app.notification.payload.space.community.calendar.event.comment.resolver.fields';
@@ -33,6 +36,7 @@ import { InAppNotificationPayloadSpaceCommunityCalendarEventCommentResolverField
     // add in all the other payload resolvers from the ../field-resolvers directory
     InAppNotificationPayloadSpaceCollaborationCalloutResolverFields,
     InAppNotificationPayloadSpaceCollaborationCalloutPostCommentResolverFields,
+    InAppNotificationPayloadSpaceCollaborationCalloutReactionResolverFields,
     InAppNotificationPayloadSpaceCollaborationPollResolverFields,
     InAppNotificationPayloadSpaceCollaborationCalloutCommentResolverFields,
     InAppNotificationPayloadSpaceResolverFields,
@@ -48,10 +52,12 @@ import { InAppNotificationPayloadSpaceCommunityCalendarEventCommentResolverField
     InAppNotificationPayloadUserMessageDirectResolverFields,
     InAppNotificationPayloadOrganizationMessageDirectResolverFields,
     InAppNotificationPayloadOrganizationMessageRoomResolverFields,
+    InAppNotificationPayloadOrganizationAssociateInvitationResolverFields,
+    InAppNotificationPayloadOrganizationAssociateActorResolverFields,
     InAppNotificationPayloadPlatformGlobalRoleChangeResolverFields,
     InAppNotificationPayloadPlatformForumDiscussionResolverFields,
-    InAppNotificationPayloadPlatformUserProfileRemovedResolverFields,
     OrganizationLoaderCreator,
+    ApplicationLoaderCreator,
     CalendarEventLoaderCreator,
     InAppNotificationPayloadVirtualContributorFieldsResolver,
   ],

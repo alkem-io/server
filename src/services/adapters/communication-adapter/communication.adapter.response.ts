@@ -99,13 +99,24 @@ export function extractErrorInfo(
 /**
  * Process a batch operation response that includes per-item results.
  * Used for batchAddMember, batchRemoveMember, etc.
+ *
+ * IMPORTANT: the Go adapter's batch response types (e.g.
+ * `BatchRemoveMemberResponse`) embed `BaseResponse` anonymously, which Go's
+ * JSON encoding flattens onto the top level of the wire payload — there is
+ * no nested `BaseResponse` key on the actual response. The top-level
+ * `success` flag only reflects whether the RPC envelope itself was
+ * processed; an individual item (e.g. a single room's kick) can still have
+ * failed while the envelope reports `success: true` — always consult
+ * `results` for the authoritative per-item outcome (see
+ * `isBatchOperationSuccessful`).
  */
 export function processBatchResponse(response: {
-  BaseResponse: BaseResponse;
+  success: boolean;
+  error?: ErrorResponse;
   results?: { [key: string]: BaseResponse };
 }): BatchOperationResult {
   const result: BatchOperationResult = {
-    success: response.BaseResponse.success,
+    success: response.success,
     successCount: 0,
     failureCount: 0,
     itemResults: new Map(),

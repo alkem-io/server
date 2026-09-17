@@ -1,6 +1,11 @@
+import { resolveForwardAuthGuestName } from '@core/authentication/guest-name.resolver';
 import { Controller, Get, Query, Req, Res } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { ANONYMOUS_ACTOR_ID, HEADER_ACTOR_ID } from './constants';
+import {
+  ANONYMOUS_ACTOR_ID,
+  GUEST_ACTOR_ID,
+  HEADER_ACTOR_ID,
+} from './constants';
 import {
   ForwardAuthResolverService,
   SessionStoreUnavailableError,
@@ -19,13 +24,13 @@ import {
   Identity sources tried in order:
     1. session cookie               — browsers/SPA (BFF Redis-backed session).
     2. `Authorization: Bearer <jwt>` — API/M2M (Hydra-issued, JWKS-validated)
-    3. `?guestName=` query param    — anonymous guest with display name
+    3. existing guest metadata      — named guest compatibility identity
   …all resolved by the shared `ForwardAuthResolverService`.
 
   Semantics: ALWAYS returns 200 AND ALWAYS stamps `X-Alkemio-Actor-Id`.
-  Authenticated users get their canonical actor id; guests get the synthetic
-  `guest-<uuid>` minted by ActorContextService.createGuest; un-credentialed
-  callers get the nil-UUID sentinel (`ANONYMOUS_ACTOR_ID`), which
+  Authenticated users get their canonical actor id; named guests get the
+  reserved transport UUID (`GUEST_ACTOR_ID`); un-credentialed callers get the
+  nil-UUID sentinel (`ANONYMOUS_ACTOR_ID`), which
   auth-evaluation-service resolves to GLOBAL_ANONYMOUS. Downstream services
   (file-service-go, etc.) require the header to ALWAYS be present so they
   can distinguish "gateway stamped: anonymous" from "gateway didn't run".
@@ -46,14 +51,13 @@ export class ForwardAuthController {
 
   @Get('forward-auth')
   async resolve(
-    @Query('guestName') guestNameRaw: string | undefined,
+    @Query('guestName') guestNameRaw: unknown,
     @Req() req: Request,
     @Res() res: Response
   ): Promise<void> {
     res.setHeader('Cache-Control', 'no-store');
 
-    const guestName =
-      typeof guestNameRaw === 'string' ? guestNameRaw : undefined;
+    const guestName = resolveForwardAuthGuestName(req, guestNameRaw);
 
     let ctx;
     try {
@@ -70,14 +74,20 @@ export class ForwardAuthController {
       throw err;
     }
 
-    // Always stamp the actor header. Authenticated/guest contexts carry their
-    // own actorID; anonymous contexts get the nil-UUID sentinel that
+    // Always stamp the actor header. The named guest sentinel exists only on
+    // this transport boundary; general ActorContext guest semantics retain an
+    // empty actorID so no persisted-actor consumer can mistake it for a user.
+    // Anonymous contexts get the nil-UUID sentinel that
     // auth-evaluation-service recognises as GLOBAL_ANONYMOUS. Downstream
     // services 401 on a missing header (by design), so omitting it here would
     // make public reads unreachable for unauthenticated callers.
     res.setHeader(
       HEADER_ACTOR_ID,
-      ctx.actorID && ctx.actorID.length > 0 ? ctx.actorID : ANONYMOUS_ACTOR_ID
+      ctx.actorID && ctx.actorID.length > 0
+        ? ctx.actorID
+        : ctx.isGuest
+          ? GUEST_ACTOR_ID
+          : ANONYMOUS_ACTOR_ID
     );
     res.status(200).end();
   }

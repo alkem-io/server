@@ -19,7 +19,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Readable } from 'stream';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { DeleteVisualInput } from './dto/visual.dto.delete';
 import {
@@ -74,19 +74,28 @@ export class VisualService {
     if (visualData.alternativeText !== undefined) {
       visual.alternativeText = visualData.alternativeText;
     }
+    if (visualData.aspectRatio !== undefined) {
+      this.validateAspectRatio(visual, visualData.aspectRatio);
+      visual.aspectRatio = visualData.aspectRatio;
+    }
 
     return await this.visualRepository.save(visual);
   }
 
-  async deleteVisual(deleteData: DeleteVisualInput): Promise<IVisual> {
+  async deleteVisual(
+    deleteData: DeleteVisualInput,
+    em?: EntityManager
+  ): Promise<IVisual> {
     const visualID = deleteData.ID;
     const visual = await this.getVisualOrFail(visualID);
 
     if (visual.authorization)
-      await this.authorizationPolicyService.delete(visual.authorization);
+      await this.authorizationPolicyService.delete(visual.authorization, em);
 
     const { id } = visual;
-    const result = await this.visualRepository.remove(visual as Visual);
+    const result = em
+      ? await em.remove(visual as Visual)
+      : await this.visualRepository.remove(visual as Visual);
     return {
       ...result,
       id,
@@ -296,6 +305,30 @@ export class VisualService {
         `Upload image has a height resolution of '${imageHeight}' which is not in the allowed range of ${visual.minHeight} - ${visual.maxHeight} pixels!`,
         LogContext.COMMUNITY
       );
+  }
+
+  /**
+   * Bounds are read from the CURRENT constants rather than the stored row, for
+   * the same reason validateMimeType does: the allowed range is a property of
+   * the visual TYPE, not of the individual visual, so widening it must not
+   * require a data migration. A visual whose name is not a known type has a
+   * fixed shape and cannot be re-shaped at all.
+   */
+  public validateAspectRatio(visual: IVisual, aspectRatio: number) {
+    const constraints =
+      DEFAULT_VISUAL_CONSTRAINTS[
+        visual.name as keyof typeof DEFAULT_VISUAL_CONSTRAINTS
+      ];
+    const min = constraints ? constraints.minAspectRatio : visual.aspectRatio;
+    const max = constraints ? constraints.maxAspectRatio : visual.aspectRatio;
+
+    if (aspectRatio < min || aspectRatio > max) {
+      throw new ValidationException(
+        `Aspect ratio '${aspectRatio}' is not in the allowed range of ${min} - ${max}!`,
+        LogContext.COMMUNITY,
+        { visualId: visual.id, visualName: visual.name }
+      );
+    }
   }
 
   public createVisualBanner(uri?: string): IVisual {

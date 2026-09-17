@@ -4,7 +4,6 @@ import { LogContext } from '@common/enums';
 import { SpaceLevel } from '@common/enums/space.level';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { ExcalidrawContent, isExcalidrawTextElement } from '@common/interfaces';
 import { isDefined } from '@common/utils';
 import { asyncMap } from '@common/utils/async.map';
 import { asyncMapSequential } from '@common/utils/async.map.sequential';
@@ -21,6 +20,7 @@ import { Client as ElasticClient, estypes } from '@elastic/elasticsearch';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectEntityManager } from '@nestjs/typeorm';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { ElasticResponseError } from '@services/external/elasticsearch/types';
 import { TaskService } from '@services/task';
 import { Task } from '@services/task/task.interface';
@@ -155,6 +155,7 @@ export class SearchIngestService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
     private configService: ConfigService<AlkemioConfig, true>,
     private taskService: TaskService,
+    private fileServiceAdapter: FileServiceAdapter,
     private collaboraTextExtractService: CollaboraTextExtractService
   ) {
     this.indexPattern = getIndexPattern(this.configService);
@@ -177,6 +178,13 @@ export class SearchIngestService {
    * did we have aliases?
    *  - no -> do nothing
    *  - yes -> delete index
+   *
+   * KNOWN DEFECT — tracked in alkem-io/server#6382 (pre-existing, not a 006/Yjs
+   * issue): no admission guard + fire-and-forget from two entry points means two
+   * overlapping full rebuilds can race — a stalled earlier run can finish last and
+   * replace/delete the newer promoted index, so search silently serves a stale index
+   * (plus a `generateSuffix()`-before-try task leak). Fix per the issue = reject via a
+   * PG session advisory lock + UUID suffix; do NOT add Yjs/pointer-version plumbing.
    */
   public async ingestFromScratch(task: Task) {
     this.logger.verbose?.('Starting search ingest from scratch');
@@ -1160,7 +1168,6 @@ export class SearchIngestService {
                   id: true,
                   whiteboard: {
                     id: true,
-                    content: true,
                     profile: profileSelectOptions,
                   },
                 },
@@ -1168,7 +1175,6 @@ export class SearchIngestService {
                   id: true,
                   whiteboard: {
                     id: true,
-                    content: true,
                     profile: profileSelectOptions,
                   },
                 },
@@ -1211,20 +1217,15 @@ export class SearchIngestService {
                 callout.id
               );
               // a callout can have whiteboard in the framing
-              // AND whiteboards in the contributions
+              // AND whiteboards in the contributions.
+              // NOTE (006-collab-content-unification): the whiteboard scene is no
+              // longer a JSON column — content lives only as a Yjs-V2 snapshot in
+              // the document's bucket — so the scene-text body is no longer indexed.
+              // Whiteboards are indexed by their profile (name/description/tags).
               const wbs = [];
               if (callout.framing.whiteboard) {
-                const content = extractTextFromWhiteboardContent(
-                  callout.framing.whiteboard.content
-                );
-                // only whiteboards with content are ingested
-                if (!content) {
-                  return;
-                }
-
                 wbs.push({
                   ...callout.framing.whiteboard,
-                  content,
                   type: SearchResultType.WHITEBOARD,
                   license: {
                     visibility: space?.visibility ?? EMPTY_VALUE,
@@ -1251,17 +1252,8 @@ export class SearchIngestService {
                   return;
                 }
 
-                const content = extractTextFromWhiteboardContent(
-                  contribution.whiteboard.content
-                );
-                // only whiteboards with content are ingested
-                if (!content) {
-                  return;
-                }
-
                 wbs.push({
                   ...contribution.whiteboard,
-                  content,
                   type: SearchResultType.WHITEBOARD,
                   license: {
                     visibility: space?.visibility ?? EMPTY_VALUE,
@@ -1355,7 +1347,7 @@ export class SearchIngestService {
                 id: true,
                 memo: {
                   id: true,
-                  content: true,
+                  contentPointer: true,
                   profile: profileSelectOptions,
                 },
               },
@@ -1363,7 +1355,7 @@ export class SearchIngestService {
                 id: true,
                 memo: {
                   id: true,
-                  content: true,
+                  contentPointer: true,
                   profile: profileSelectOptions,
                 },
               },
@@ -1389,13 +1381,21 @@ export class SearchIngestService {
       take: limit,
     });
 
+    // Memo content lives only as a Yjs-V2 snapshot in the document's bucket
+    // (006-collab-content-unification): derive the searchable markdown (FR-006)
+    // from those snapshots in ONE batched file-service read for the whole page,
+    // keyed by `contentPointer`, instead of the dropped inline column.
+    const markdownByPointer = await this.fetchMemoMarkdownByPointer(spaces);
+
     const memoForIngestion = (
       memo: Memo,
       callout: Callout,
       space: Space,
       flowStateID: string | undefined
     ) => {
-      const markdown = extractMarkdownFromMemoContent(memo.content);
+      const markdown = memo.contentPointer
+        ? markdownByPointer.get(memo.contentPointer)
+        : undefined;
       // only memos with content are ingested
       if (!markdown) {
         return;
@@ -1403,7 +1403,7 @@ export class SearchIngestService {
 
       return {
         ...memo,
-        content: undefined,
+        contentPointer: undefined,
         markdown,
         type: SearchResultType.MEMO,
         license: {
@@ -1464,6 +1464,63 @@ export class SearchIngestService {
         })
         .filter(isDefined);
     });
+  }
+
+  /**
+   * Batched derivation of memo `markdown` from the stored Yjs-V2 snapshots for a
+   * page of spaces (006-collab-content-unification, T008): gathers every memo
+   * `contentPointer` (framing + contributions), reads them in ONE file-service
+   * `content-batch` call, and decodes each to markdown — replacing the per-memo
+   * inline-column read. Returns a `pointer → markdown` map; un-decodable / missing
+   * snapshots are omitted (the memo is then skipped from ingestion).
+   */
+  private async fetchMemoMarkdownByPointer(
+    spaces: Space[]
+  ): Promise<Map<string, string>> {
+    const pointers = new Set<string>();
+    for (const space of spaces) {
+      const callouts = space.collaboration?.calloutsSet?.callouts ?? [];
+      for (const callout of callouts) {
+        if (callout.framing.memo?.contentPointer) {
+          pointers.add(callout.framing.memo.contentPointer);
+        }
+        for (const contribution of callout.contributions ?? []) {
+          if (contribution.memo?.contentPointer) {
+            pointers.add(contribution.memo.contentPointer);
+          }
+        }
+      }
+    }
+
+    const result = new Map<string, string>();
+    if (pointers.size === 0) {
+      return result;
+    }
+
+    const items = await this.fileServiceAdapter.getContentBatch([...pointers]);
+    for (const item of items) {
+      if (!item.found || !item.contentBase64) {
+        continue;
+      }
+      try {
+        const markdown = yjsStateToMarkdown(
+          Buffer.from(item.contentBase64, 'base64')
+        );
+        if (markdown) {
+          result.set(item.id, markdown);
+        }
+      } catch (error) {
+        this.logger.warn?.(
+          {
+            message: 'Search ingest: failed to decode memo snapshot',
+            pointer: item.id,
+            error: String(error),
+          },
+          LogContext.SEARCH_INGEST
+        );
+      }
+    }
+    return result;
   }
 
   private fetchCollaboraDocumentCount() {
@@ -1938,30 +1995,4 @@ const resolveCalloutFlowStateID = (
   }
 
   return flowStateID;
-};
-
-const extractTextFromWhiteboardContent = (content: string): string => {
-  if (!content) {
-    return '';
-  }
-
-  try {
-    const { elements }: ExcalidrawContent = JSON.parse(content);
-    return elements
-      .filter(isExcalidrawTextElement)
-      .map(x => x.originalText)
-      .join(' ');
-  } catch (_error: any) {
-    return '';
-  }
-};
-
-const extractMarkdownFromMemoContent = (
-  content?: Buffer
-): string | undefined => {
-  if (!content) {
-    return undefined;
-  }
-
-  return yjsStateToMarkdown(content);
 };

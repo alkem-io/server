@@ -2,9 +2,12 @@ import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { loadWhiteboardFork } from '@domain/common/whiteboard/whiteboard.fork';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { CollaborationDocumentService } from '@services/collaboration-client/collaboration-document.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { readWhiteboardScene } from '../collaboration/whiteboard-scene.reader';
 import {
   MCP_CONSTANTS,
   McpReadResourceResult,
@@ -22,6 +25,7 @@ const WHITEBOARD_URI_PATTERN = `${MCP_CONSTANTS.URI_SCHEME}://whiteboards/`;
 export class WhiteboardResourceProvider implements McpResourceProvider {
   constructor(
     private readonly whiteboardService: WhiteboardService,
+    private readonly collaborationService: CollaborationDocumentService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -80,16 +84,21 @@ export class WhiteboardResourceProvider implements McpResourceProvider {
       }
     );
 
-    // Parse the Excalidraw content
-    let content: Record<string, unknown> = {};
-    try {
-      content = JSON.parse(whiteboard.content || '{}');
-    } catch {
-      this.logger.warn?.(
-        `Failed to parse whiteboard content for ${whiteboardId}`,
-        LogContext.MCP_SERVER
-      );
-    }
+    // Read the LIVE scene from the collaboration room via the fork's schema
+    // (cold rooms materialize from the durable snapshot). No inline column, no
+    // server-side scene reimplementation.
+    //
+    // A read REJECTION propagates — a failed read (including a purging/deleted
+    // room, DocumentPurgingError) must surface as an error to the caller, never
+    // be masked as a synthetic empty scene. A genuinely-empty SUCCESSFUL read
+    // legitimately returns no elements/files.
+    const fork = await loadWhiteboardFork();
+    const { elements, files } = await this.collaborationService.read(
+      whiteboardId,
+      'whiteboard',
+      agentInfo.actorID,
+      doc => readWhiteboardScene(doc, fork)
+    );
 
     const resourceData = {
       id: whiteboard.id,
@@ -97,13 +106,7 @@ export class WhiteboardResourceProvider implements McpResourceProvider {
         displayName: whiteboard.profile?.displayName,
         description: whiteboard.profile?.description,
       },
-      content: {
-        type: content.type || 'excalidraw',
-        version: content.version,
-        elements: content.elements || [],
-        files: content.files || {},
-        appState: content.appState || {},
-      },
+      content: { type: 'excalidraw', elements, files },
       contentUpdatePolicy: whiteboard.contentUpdatePolicy,
       createdBy: whiteboard.createdBy,
       previewSettings: whiteboard.previewSettings,
