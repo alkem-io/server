@@ -166,6 +166,58 @@ describe('ConversationAuthorizationService', () => {
       expect(userLookupService.getUserById).not.toHaveBeenCalled();
     });
 
+    it("rebuilds from CURRENT membership: a departed member's stale rule is gone after one apply (#6329 cause 2)", async () => {
+      // Seed the PERSISTED policy with a stale participant rule naming a
+      // departed user — exactly what accumulated in production before the
+      // reset-then-append fix.
+      const staleRule = {
+        name: 'Communication Conversation Participants Access (Membership-based)',
+        criterias: [
+          { type: 'user-self-management', resourceID: 'departed-user' },
+        ],
+        grantedPrivileges: ['read', 'contribute'],
+        cascade: true,
+      };
+      const mockAuth = {
+        id: 'auth-1',
+        credentialRules: [staleRule],
+        privilegeRules: [],
+      };
+      const mockConversation = {
+        id: 'conv-1',
+        authorization: mockAuth,
+        room: undefined,
+      } as any;
+
+      conversationService.getConversationOrFail.mockResolvedValue(
+        mockConversation
+      );
+      conversationService.getConversationMembers.mockResolvedValue([
+        { actorID: 'agent-1', actorType: ActorType.USER },
+      ] as any);
+      userLookupService.getUserById.mockResolvedValue({
+        id: 'current-user',
+      } as any);
+      // Real reset semantics: clear both rule arrays (the production
+      // implementation the service delegates to).
+      authorizationPolicyService.reset.mockImplementation(((policy: any) => {
+        policy.credentialRules = [];
+        policy.privilegeRules = [];
+        return policy;
+      }) as any);
+      const freshRule = { criterias: [{ resourceID: 'current-user' }] };
+      authorizationPolicyService.createCredentialRule.mockReturnValue(
+        freshRule as any
+      );
+
+      const result = await service.applyAuthorizationPolicy('conv-1');
+
+      expect(authorizationPolicyService.reset).toHaveBeenCalledWith(mockAuth);
+      expect(result[0].credentialRules).toHaveLength(1);
+      expect(result[0].credentialRules[0]).toBe(freshRule);
+      expect(result[0].credentialRules).not.toContain(staleRule);
+    });
+
     it('should skip user members that cannot be resolved', async () => {
       const mockAuth = { id: 'auth-1', credentialRules: [] };
       const mockConversation = {

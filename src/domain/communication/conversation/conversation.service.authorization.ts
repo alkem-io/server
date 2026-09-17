@@ -13,11 +13,15 @@ import { RoomAuthorizationService } from '@domain/communication/room/room.servic
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { ConversationService } from './conversation.service';
 
 @Injectable()
 export class ConversationAuthorizationService {
   constructor(
+    // Circular with ConversationService (removeMember re-applies this
+    // policy synchronously) — forwardRef on both sides of the cycle.
+    @Inject(forwardRef(() => ConversationService))
     private conversationService: ConversationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private roomAuthorizationService: RoomAuthorizationService,
