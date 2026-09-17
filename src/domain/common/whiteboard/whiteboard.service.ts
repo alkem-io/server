@@ -327,7 +327,7 @@ export class WhiteboardService {
   }
 
   /** Returns only a non-binary availability signal for persisted defaults/UI cards. */
-  public async hasVisibleContent(content?: string): Promise<boolean> {
+  public async hasVisibleContent(content?: string | null): Promise<boolean> {
     if (!content?.trim()) {
       return false;
     }
