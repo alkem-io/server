@@ -1186,6 +1186,406 @@ describe('CalloutResolverMutations', () => {
         expect(contributionReporter.calloutPostCreated).not.toHaveBeenCalled();
       });
     });
+
+    // The single notification gate: one emission point for all five contribution
+    // types, `sendNotification !== false` as the only predicate (explicit-false
+    // only — never truthiness), dispatched independently of activity/analytics.
+    describe('sendNotification gate (single notification emission point)', () => {
+      let logger: {
+        verbose: ReturnType<typeof vi.fn>;
+        error: ReturnType<typeof vi.fn>;
+      };
+
+      beforeEach(() => {
+        logger = (resolver as any).logger;
+      });
+
+      const buildContributionData = (
+        type: CalloutContributionType,
+        mode: 'omitted' | boolean
+      ) => {
+        const data: any = { calloutID: 'callout-1', type };
+        if (mode !== 'omitted') {
+          data.sendNotification = mode;
+        }
+        switch (type) {
+          case CalloutContributionType.POST:
+            data.post = {};
+            break;
+          case CalloutContributionType.LINK:
+            data.link = {};
+            break;
+          case CalloutContributionType.WHITEBOARD:
+            data.whiteboard = {};
+            break;
+          case CalloutContributionType.MEMO:
+            data.memo = {};
+            break;
+          case CalloutContributionType.COLLABORA_DOCUMENT:
+            data.collaboraDocument = {};
+            break;
+        }
+        return data;
+      };
+
+      const buildMaterializedContribution = (type: CalloutContributionType) => {
+        const base = { id: 'contrib-1', sortOrder: 1 };
+        switch (type) {
+          case CalloutContributionType.POST:
+            return {
+              ...base,
+              post: {
+                id: 'post-1',
+                profile: { displayName: 'P', storageBucket: {} },
+              },
+            };
+          case CalloutContributionType.LINK:
+            return {
+              ...base,
+              link: { id: 'link-1', profile: { displayName: 'L' } },
+            };
+          case CalloutContributionType.WHITEBOARD:
+            return { ...base, whiteboard: { id: 'wb-1', nameID: 'wb' } };
+          case CalloutContributionType.MEMO:
+            return { ...base, memo: { id: 'memo-1', nameID: 'memo' } };
+          case CalloutContributionType.COLLABORA_DOCUMENT:
+            return {
+              ...base,
+              collaboraDocument: { id: 'doc-1', profile: { displayName: 'D' } },
+            };
+          default:
+            return base;
+        }
+      };
+
+      const setupHappyPath = (
+        type: CalloutContributionType,
+        visibility: CalloutVisibility = CalloutVisibility.PUBLISHED
+      ) => {
+        const callout = {
+          id: 'callout-1',
+          authorization: { id: 'auth-1' },
+          calloutsSet: { id: 'cs-1', type: CalloutsSetType.COLLABORATION },
+          settings: {
+            contribution: {
+              enabled: true,
+              canAddContributions: CalloutAllowedActors.MEMBERS,
+            },
+            visibility,
+          },
+        } as any;
+        const contribution = buildMaterializedContribution(type);
+
+        vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+        vi.mocked(calloutService.createContributionOnCallout).mockResolvedValue(
+          contribution as any
+        );
+        // Only the POST branch reads this (task vs. ordinary post is out of
+        // scope for the notify gate) — pin it false so the reporter method
+        // asserted below is the deterministic one.
+        vi.mocked(taskBoardService.isTask).mockReturnValue(false);
+
+        const roomResolverService = (resolver as any).roomResolverService;
+        vi.mocked(
+          roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout
+        ).mockResolvedValue({
+          roleSet: { id: 'rs-1' },
+          platformRolesAccess: { roles: [] },
+          spaceSettings: {},
+        });
+
+        vi.mocked(_calloutContributionService.save).mockResolvedValue(
+          contribution as any
+        );
+        vi.mocked(
+          _calloutContributionService.materializeCalloutContributionContent
+        ).mockResolvedValue(undefined as any);
+        vi.mocked(
+          _calloutContributionService.getStorageBucketForContribution
+        ).mockResolvedValue({ id: 'bucket-1' } as any);
+        vi.mocked(
+          _contributionAuthorizationService.applyAuthorizationPolicy
+        ).mockResolvedValue([]);
+        vi.mocked(
+          _calloutContributionService.getCalloutContributionOrFail
+        ).mockResolvedValue(contribution as any);
+
+        const communityResolverService = (resolver as any)
+          .communityResolverService;
+        vi.mocked(
+          communityResolverService.getLevelZeroSpaceIdForCalloutsSet
+        ).mockResolvedValue('space-root');
+
+        return { callout, contribution };
+      };
+
+      const CONTRIBUTION_TYPES: Array<{
+        type: CalloutContributionType;
+        activityMethod?: keyof ActivityAdapter;
+        reporterMethod: string;
+      }> = [
+        {
+          type: CalloutContributionType.POST,
+          activityMethod: 'calloutPostCreated',
+          reporterMethod: 'calloutPostCreated',
+        },
+        {
+          type: CalloutContributionType.LINK,
+          activityMethod: 'calloutLinkCreated',
+          reporterMethod: 'calloutLinkCreated',
+        },
+        {
+          type: CalloutContributionType.WHITEBOARD,
+          activityMethod: 'calloutWhiteboardCreated',
+          reporterMethod: 'calloutWhiteboardCreated',
+        },
+        {
+          type: CalloutContributionType.MEMO,
+          activityMethod: 'calloutMemoCreated',
+          reporterMethod: 'calloutMemoCreated',
+        },
+        {
+          // Document contributions write no activity-log entry at all, today —
+          // pre-existing asymmetry, not something this feature changes.
+          type: CalloutContributionType.COLLABORA_DOCUMENT,
+          reporterMethod: 'calloutCollaboraDocumentCreated',
+        },
+      ];
+
+      describe.each(CONTRIBUTION_TYPES)('$type', ({
+        type,
+        activityMethod,
+        reporterMethod,
+      }) => {
+        it.each([
+          ['omitted', 'omitted' as const],
+          ['explicit true', true as const],
+        ])('notifies when sendNotification is %s', async (_label, mode) => {
+          setupHappyPath(type);
+          const actorContext = { actorID: 'user-1' } as any;
+
+          await resolver.createContributionOnCallout(
+            actorContext,
+            buildContributionData(type, mode)
+          );
+
+          expect(
+            notificationAdapterSpace.spaceCollaborationCalloutContributionCreated
+          ).toHaveBeenCalledTimes(1);
+          if (activityMethod) {
+            expect(activityAdapter[activityMethod]).toHaveBeenCalledTimes(1);
+          }
+          expect(
+            (resolver as any).contributionReporter[reporterMethod]
+          ).toHaveBeenCalledTimes(1);
+          expect(logger.verbose).not.toHaveBeenCalled();
+        });
+
+        it('suppresses the notification but keeps activity/reporter independent when sendNotification is explicit false', async () => {
+          setupHappyPath(type);
+          const actorContext = { actorID: 'user-1' } as any;
+
+          await resolver.createContributionOnCallout(
+            actorContext,
+            buildContributionData(type, false)
+          );
+
+          expect(
+            notificationAdapterSpace.spaceCollaborationCalloutContributionCreated
+          ).not.toHaveBeenCalled();
+          if (activityMethod) {
+            expect(activityAdapter[activityMethod]).toHaveBeenCalledTimes(1);
+          }
+          expect(
+            (resolver as any).contributionReporter[reporterMethod]
+          ).toHaveBeenCalledTimes(1);
+          expect(logger.verbose).toHaveBeenCalledTimes(1);
+          expect(logger.verbose).toHaveBeenCalledWith(
+            expect.objectContaining({
+              message: 'Contribution notification suppressed by author',
+              calloutID: 'callout-1',
+              contributionID: 'contrib-1',
+              contributionType: type,
+              triggeredBy: 'user-1',
+              spaceID: 'space-root',
+              suppressed: true,
+            }),
+            LogContext.NOTIFICATIONS
+          );
+        });
+      });
+
+      it('reaches the resolver with sendNotification wholly absent from the input object (in-process/MCP producer shape) and still notifies — pins !== false against truthiness/?? drift', async () => {
+        setupHappyPath(CalloutContributionType.POST);
+        const actorContext = { actorID: 'user-1' } as any;
+        const input = {
+          calloutID: 'callout-1',
+          type: CalloutContributionType.POST,
+          post: {},
+        };
+        expect('sendNotification' in input).toBe(false);
+
+        await resolver.createContributionOnCallout(actorContext, input as any);
+
+        expect(
+          notificationAdapterSpace.spaceCollaborationCalloutContributionCreated
+        ).toHaveBeenCalledTimes(1);
+      });
+
+      it('publishes the CALLOUT_POST_CREATED subscription identically whether sendNotification is true or false (live-update signal is not a notification)', async () => {
+        setupHappyPath(CalloutContributionType.POST);
+        const actorContext = { actorID: 'user-1' } as any;
+
+        await resolver.createContributionOnCallout(
+          actorContext,
+          buildContributionData(CalloutContributionType.POST, true)
+        );
+        expect(postCreatedSubscription.publish).toHaveBeenCalledTimes(1);
+
+        vi.mocked(postCreatedSubscription.publish).mockClear();
+        vi.mocked(
+          notificationAdapterSpace.spaceCollaborationCalloutContributionCreated
+        ).mockClear();
+
+        await resolver.createContributionOnCallout(
+          actorContext,
+          buildContributionData(CalloutContributionType.POST, false)
+        );
+        expect(postCreatedSubscription.publish).toHaveBeenCalledTimes(1);
+      });
+
+      it('does not fail the mutation, still dispatches activity/reporter, and logs the error when the adapter rejects (fire-and-forget; activity is never lost to a notification failure)', async () => {
+        setupHappyPath(CalloutContributionType.POST);
+        const adapterError = new Error('adapter unavailable');
+        vi.mocked(
+          notificationAdapterSpace.spaceCollaborationCalloutContributionCreated
+        ).mockRejectedValue(adapterError);
+        const actorContext = { actorID: 'user-1' } as any;
+
+        const result = await resolver.createContributionOnCallout(
+          actorContext,
+          buildContributionData(CalloutContributionType.POST, true)
+        );
+
+        expect(result).toBeDefined();
+        expect(activityAdapter.calloutPostCreated).toHaveBeenCalledTimes(1);
+        expect(
+          (resolver as any).contributionReporter.calloutPostCreated
+        ).toHaveBeenCalledTimes(1);
+
+        // Let the un-awaited adapter promise's attached .catch settle before asserting.
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(logger.error).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: 'Failed to send contribution-created notification',
+            calloutId: 'callout-1',
+            contributionId: 'contrib-1',
+          }),
+          expect.anything(),
+          LogContext.NOTIFICATIONS
+        );
+      });
+
+      it('never notifies a DRAFT contribution even when sendNotification is explicit true — the pre-existing publication veto outranks the flag', async () => {
+        setupHappyPath(CalloutContributionType.POST, CalloutVisibility.DRAFT);
+        const actorContext = { actorID: 'user-1' } as any;
+
+        await resolver.createContributionOnCallout(
+          actorContext,
+          buildContributionData(CalloutContributionType.POST, true)
+        );
+
+        expect(
+          notificationAdapterSpace.spaceCollaborationCalloutContributionCreated
+        ).not.toHaveBeenCalled();
+        expect(logger.verbose).not.toHaveBeenCalled();
+      });
+
+      it('never notifies a non-COLLABORATION callouts set, regardless of the flag', async () => {
+        const callout = {
+          id: 'callout-1',
+          authorization: { id: 'auth-1' },
+          calloutsSet: { id: 'cs-1', type: CalloutsSetType.KNOWLEDGE_BASE },
+          settings: {
+            contribution: {
+              enabled: true,
+              canAddContributions: CalloutAllowedActors.MEMBERS,
+            },
+            visibility: CalloutVisibility.PUBLISHED,
+          },
+        } as any;
+        const contribution = buildMaterializedContribution(
+          CalloutContributionType.POST
+        );
+
+        vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+        vi.mocked(calloutService.createContributionOnCallout).mockResolvedValue(
+          contribution as any
+        );
+        vi.mocked(_calloutContributionService.save).mockResolvedValue(
+          contribution as any
+        );
+        vi.mocked(
+          _calloutContributionService.materializeCalloutContributionContent
+        ).mockResolvedValue(undefined as any);
+        vi.mocked(
+          _calloutContributionService.getStorageBucketForContribution
+        ).mockResolvedValue({ id: 'bucket-1' } as any);
+        vi.mocked(
+          _contributionAuthorizationService.applyAuthorizationPolicy
+        ).mockResolvedValue([]);
+        vi.mocked(
+          _calloutContributionService.getCalloutContributionOrFail
+        ).mockResolvedValue(contribution as any);
+
+        const roomResolverService = (resolver as any).roomResolverService;
+        vi.mocked(
+          roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout
+        ).mockResolvedValue({
+          roleSet: { id: 'rs-1' },
+          platformRolesAccess: { roles: [] },
+          spaceSettings: {},
+        });
+
+        const actorContext = { actorID: 'user-1' } as any;
+
+        await resolver.createContributionOnCallout(
+          actorContext,
+          buildContributionData(CalloutContributionType.POST, false)
+        );
+
+        expect(
+          notificationAdapterSpace.spaceCollaborationCalloutContributionCreated
+        ).not.toHaveBeenCalled();
+        expect(logger.verbose).not.toHaveBeenCalled();
+      });
+
+      it('never notifies when the contribution has no materialized leaf — the gate is data-driven, not flag-driven', async () => {
+        setupHappyPath(CalloutContributionType.POST);
+        const contributionNoLeaf = { id: 'contrib-1', sortOrder: 1 };
+        vi.mocked(calloutService.createContributionOnCallout).mockResolvedValue(
+          contributionNoLeaf as any
+        );
+        vi.mocked(_calloutContributionService.save).mockResolvedValue(
+          contributionNoLeaf as any
+        );
+        vi.mocked(
+          _calloutContributionService.getCalloutContributionOrFail
+        ).mockResolvedValue(contributionNoLeaf as any);
+
+        const actorContext = { actorID: 'user-1' } as any;
+        const data = buildContributionData(CalloutContributionType.POST, true);
+        delete data.post;
+
+        await resolver.createContributionOnCallout(actorContext, data);
+
+        expect(
+          notificationAdapterSpace.spaceCollaborationCalloutContributionCreated
+        ).not.toHaveBeenCalled();
+        expect(logger.verbose).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe('importCollaboraDocument', () => {
