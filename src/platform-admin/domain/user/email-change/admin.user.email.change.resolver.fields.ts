@@ -36,7 +36,7 @@ export class AdminUserEmailChangeResolverFields {
     @CurrentActor() actorContext: ActorContext,
     @Args('userID', { type: () => UUID }) userID: string
   ): Promise<UserEmailChangeAuditEntry | null> {
-    await this.assertPlatformAdmin(
+    await this.assertAuditRead(
       actorContext,
       `platformAdmin latestUserEmailChangeAuditEntry subject=${userID}`
     );
@@ -59,7 +59,7 @@ export class AdminUserEmailChangeResolverFields {
     @Args('before', { type: () => String, nullable: true }) before?: string,
     @Args('last', { type: () => Float, nullable: true }) last?: number
   ): Promise<UserEmailChangeAuditEntries> {
-    await this.assertPlatformAdmin(
+    await this.assertAuditRead(
       actorContext,
       `platformAdmin userEmailChangeAuditEntries subject=${userID}`
     );
@@ -94,7 +94,7 @@ export class AdminUserEmailChangeResolverFields {
   // duties working as specified (FR-007(b): one action, one owning role).
   // Do NOT "fix" this by also granting PLATFORM_USERS_ADMIN; it needs a
   // sign-off, not a workaround.
-  private async assertPlatformAdmin(
+  private async assertAuditRead(
     actorContext: ActorContext,
     description: string
   ): Promise<void> {

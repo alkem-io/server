@@ -595,7 +595,7 @@ describe('BootstrapService', () => {
   //                  auto-granted these on restart — that is a Slice B runbook
   //                  (T071a) item, not a bootstrap one.
   describe('users.json seed data', () => {
-    it('seeds admin@alkem.io with the break-glass role, the three R-A.1 bootstrap roles AND legacy global-admin (Slice A additivity)', () => {
+    it('seeds admin@alkem.io with the break-glass role and the three R-A.1 bootstrap roles — and nothing legacy (Slice B, T081/T077)', () => {
       const admin = (seededUsers as any).default
         ? (seededUsers as any).default.users.find(
             (u: any) => u.email === 'admin@alkem.io'
@@ -607,27 +607,35 @@ describe('BootstrapService', () => {
       const credentialTypes = admin.credentials.map((c: any) => c.type);
       // `platform-roles-admin` first: it is the FR-013b break-glass role and
       // the only one re-granted on a restart against a pre-existing account.
+      // Slice B (T077): `global-admin` left the seed with the role — a seeded
+      // credential of a retired type would be exactly the void row research
+      // C1 found, and there is no rule left that reads it.
       expect(credentialTypes).toEqual([
         'platform-roles-admin',
         'platform-operations-admin',
         'platform-users-admin',
         'platform-settings-admin',
-        'global-admin',
       ]);
     });
 
-    it('grants no OTHER legacy global role — the deviation is exactly one credential', () => {
-      const admin = (seededUsers as any).default
-        ? (seededUsers as any).default.users.find(
-            (u: any) => u.email === 'admin@alkem.io'
-          )
-        : (seededUsers as any).users.find(
-            (u: any) => u.email === 'admin@alkem.io'
-          );
-      const legacy = admin.credentials
-        .map((c: any) => c.type)
-        .filter((t: string) => t.startsWith('global-'));
-      expect(legacy).toEqual(['global-admin']);
+    it('seeds NO legacy global credential on any account (Slice B): the notifications service account keeps its user row and holds nothing', () => {
+      const users = (seededUsers as any).default
+        ? (seededUsers as any).default.users
+        : (seededUsers as any).users;
+      const legacy = users.flatMap((u: any) =>
+        (u.credentials ?? [])
+          .map((c: any) => c.type)
+          .filter((t: string) => t.startsWith('global-'))
+      );
+      expect(legacy).toEqual([]);
+      // Research D12 / plan: `global-community-read` disappeared with the
+      // Community Reader role. The account has no Kratos identity (R-A item
+      // 4), so the credential was inert; no replacement is granted.
+      const notifications = users.find(
+        (u: any) => u.email === 'notifications@alkem.io'
+      );
+      expect(notifications).toBeDefined();
+      expect(notifications.credentials).toEqual([]);
     });
   });
 
