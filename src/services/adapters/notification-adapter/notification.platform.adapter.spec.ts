@@ -1,4 +1,6 @@
+import { RoleChangeType } from '@alkemio/notifications-lib';
 import { NotificationEvent } from '@common/enums/notification.event';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
@@ -6,6 +8,7 @@ import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { vi } from 'vitest';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
+import { NotificationPushAdapter } from '../notification-push-adapter/notification.push.adapter';
 import { NotificationAdapter } from './notification.adapter';
 import { NotificationPlatformAdapter } from './notification.platform.adapter';
 
@@ -14,6 +17,8 @@ describe('NotificationPlatformAdapter', () => {
   let notificationAdapter: NotificationAdapter;
   let externalAdapter: NotificationExternalAdapter;
   let inAppAdapter: NotificationInAppAdapter;
+  let pushAdapter: NotificationPushAdapter;
+  let userLookupService: UserLookupService;
   let communityResolverService: CommunityResolverService;
   let urlGeneratorService: UrlGeneratorService;
 
@@ -47,6 +52,8 @@ describe('NotificationPlatformAdapter', () => {
     inAppAdapter = module.get<NotificationInAppAdapter>(
       NotificationInAppAdapter
     );
+    pushAdapter = module.get<NotificationPushAdapter>(NotificationPushAdapter);
+    userLookupService = module.get<UserLookupService>(UserLookupService);
     communityResolverService = module.get<CommunityResolverService>(
       CommunityResolverService
     );
@@ -95,6 +102,103 @@ describe('NotificationPlatformAdapter', () => {
       } as any);
 
       expect(inAppAdapter.sendInAppNotifications).not.toHaveBeenCalled();
+    });
+
+    it('065: suppresses the notification entirely for a Feature-family role grant, on every channel', async () => {
+      await adapter.platformGlobalRoleChanged({
+        triggeredBy: 'user-1',
+        userID: 'user-2',
+        type: RoleChangeType.ADDED,
+        role: 'feature-beta-tester',
+      } as any);
+
+      expect(
+        notificationAdapter.getNotificationRecipients
+      ).not.toHaveBeenCalled();
+      expect(externalAdapter.sendExternalNotifications).not.toHaveBeenCalled();
+      expect(inAppAdapter.sendInAppNotifications).not.toHaveBeenCalled();
+    });
+
+    it('065: still emits for a Platform-family role change', async () => {
+      mockRecipients([{ id: 'admin-1' }], [{ id: 'admin-1' }]);
+      vi.mocked(
+        externalAdapter.buildPlatformGlobalRoleChangedNotificationPayload
+      ).mockResolvedValue({} as any);
+
+      await adapter.platformGlobalRoleChanged({
+        triggeredBy: 'user-1',
+        userID: 'user-2',
+        type: RoleChangeType.ADDED,
+        role: 'platform-resource-admin',
+      } as any);
+
+      expect(notificationAdapter.getNotificationRecipients).toHaveBeenCalled();
+      expect(externalAdapter.sendExternalNotifications).toHaveBeenCalled();
+    });
+
+    it('065: still emits for a legacy credential change through the retiring mutations (Slice A transition audience is not suppressed)', async () => {
+      mockRecipients([{ id: 'admin-1' }], [{ id: 'admin-1' }]);
+      vi.mocked(
+        externalAdapter.buildPlatformGlobalRoleChangedNotificationPayload
+      ).mockResolvedValue({} as any);
+
+      await adapter.platformGlobalRoleChanged({
+        triggeredBy: 'user-1',
+        userID: 'user-2',
+        type: RoleChangeType.ADDED,
+        role: 'global-support',
+      } as any);
+
+      expect(notificationAdapter.getNotificationRecipients).toHaveBeenCalled();
+      expect(externalAdapter.sendExternalNotifications).toHaveBeenCalled();
+    });
+
+    it('065: sets changeType on the in-app payload from the event type', async () => {
+      mockRecipients([{ id: 'admin-1' }], [{ id: 'admin-1' }]);
+      vi.mocked(
+        externalAdapter.buildPlatformGlobalRoleChangedNotificationPayload
+      ).mockResolvedValue({} as any);
+
+      await adapter.platformGlobalRoleChanged({
+        triggeredBy: 'user-1',
+        userID: 'user-2',
+        type: RoleChangeType.REMOVED,
+        role: 'platform-resource-admin',
+      } as any);
+
+      const inAppPayload = vi.mocked(inAppAdapter.sendInAppNotifications).mock
+        .calls[0][4];
+      expect(inAppPayload).toMatchObject({
+        changeType: RoleChangeType.REMOVED,
+      });
+    });
+
+    it('065: renders the push body with the human-readable role label, verbatim slug never leaking', async () => {
+      vi.mocked(
+        notificationAdapter.getNotificationRecipients
+      ).mockResolvedValue({
+        emailRecipients: [],
+        inAppRecipients: [],
+        pushRecipients: [{ id: 'admin-1' }],
+      } as any);
+      vi.mocked(
+        externalAdapter.buildPlatformGlobalRoleChangedNotificationPayload
+      ).mockResolvedValue({} as any);
+      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue({
+        profile: { displayName: 'Someone' },
+      } as any);
+
+      await adapter.platformGlobalRoleChanged({
+        triggeredBy: 'user-1',
+        userID: 'user-2',
+        type: RoleChangeType.REMOVED,
+        role: 'platform-resource-admin',
+      } as any);
+
+      const pushCall = vi.mocked(pushAdapter.sendPushNotifications).mock
+        .calls[0];
+      expect(pushCall[2].body).toContain('Platform Resource Admin');
+      expect(pushCall[2].body).not.toContain('platform-resource-admin');
     });
   });
 
