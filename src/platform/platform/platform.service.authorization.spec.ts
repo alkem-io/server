@@ -1,7 +1,9 @@
+import { PLATFORM_ADMIN_NOTIFICATION_GRANT_CREDENTIALS } from '@common/constants/authorization';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { RoleSetType } from '@common/enums/role.set.type';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -9,6 +11,7 @@ import { MessagingAuthorizationService } from '@domain/communication/messaging/m
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
 import { LibraryAuthorizationService } from '@library/library/library.service.authorization';
+import { LoggerService } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { ForumAuthorizationService } from '@platform/forum/forum.service.authorization';
@@ -547,32 +550,6 @@ describe('PlatformAuthorizationService', () => {
       expect(rules[0].cascade).toBe(false);
     });
 
-    it('RECEIVE_NOTIFICATIONS_ADMIN (T076, routing amended 2026-10-05): EXACTLY the union of the per-event recipient roles, non-cascading — content-full-access, audit-reader and spaces-reader are NOT among the reachers', async () => {
-      arrange();
-      await service.applyAuthorizationPolicy();
-
-      const rules = rulesGranting(
-        AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN
-      );
-      expect(rules).toHaveLength(1);
-      expect(rules[0].criterias).toEqual([
-        AuthorizationCredential.PLATFORM_SUPPORT,
-        AuthorizationCredential.PLATFORM_USERS_ADMIN,
-        AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
-        AuthorizationCredential.PLATFORM_ROLES_ADMIN,
-      ]);
-      expect(rules[0].criterias).not.toContain(
-        AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS
-      );
-      expect(rules[0].criterias).not.toContain(
-        AuthorizationCredential.PLATFORM_AUDIT_READER
-      );
-      expect(rules[0].criterias).not.toContain(
-        AuthorizationCredential.PLATFORM_SPACES_READER
-      );
-      expect(rules[0].cascade).toBe(false);
-    });
-
     it('PLATFORM_SETTINGS_ADMIN (T035, A10): EXACTLY the union of both surfaces it re-anchors — including platform-settings-admin itself', async () => {
       arrange();
       await service.applyAuthorizationPolicy();
@@ -646,6 +623,90 @@ describe('PlatformAuthorizationService', () => {
       );
 
       expect(blanketCrudRules).toEqual([]);
+    });
+  });
+  // workspace#065: RECEIVE_NOTIFICATIONS_ADMIN is derived from the platform
+  // admin notification routing table, never a hand-typed list — the
+  // divergence RED for the derived-grant invariant.
+  describe('065 — RECEIVE_NOTIFICATIONS_ADMIN derived grant', () => {
+    const arrange = () => {
+      authorizationPolicyService.createCredentialRuleUsingTypesOnly.mockImplementation(
+        ((privileges: any, types: any, name: any) => ({
+          grantedPrivileges: privileges,
+          criterias: types,
+          name,
+          cascade: true,
+        })) as any
+      );
+      platformService.getPlatformOrFail.mockResolvedValue(mockPlatform);
+      messagingAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
+    };
+
+    const rulesGranting = (privilege: AuthorizationPrivilege) =>
+      authorizationPolicyService.createCredentialRuleUsingTypesOnly.mock.results
+        .map(r => r.value)
+        .filter((rule: any) => rule.grantedPrivileges?.includes(privilege));
+
+    it('is the only rule granting RECEIVE_NOTIFICATIONS_ADMIN, non-cascading, with criteria set-equal to the derived grant credentials', async () => {
+      arrange();
+      await service.applyAuthorizationPolicy();
+
+      const rules = rulesGranting(
+        AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN
+      );
+      expect(rules).toHaveLength(1);
+      expect(new Set(rules[0].criterias)).toEqual(
+        new Set(PLATFORM_ADMIN_NOTIFICATION_GRANT_CREDENTIALS)
+      );
+      expect(rules[0].criterias).toHaveLength(
+        PLATFORM_ADMIN_NOTIFICATION_GRANT_CREDENTIALS.length
+      );
+      expect(rules[0].grantedPrivileges).toEqual([
+        AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN,
+      ]);
+      expect(rules[0].cascade).toBe(false);
+    });
+
+    it('denies RECEIVE_NOTIFICATIONS_ADMIN to a platform-content-full-access-only or platform-audit-reader-only credential set, on the built rule', () => {
+      const authorizationService = new AuthorizationService({
+        verbose: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        log: vi.fn(),
+      } as unknown as LoggerService);
+
+      const builtRule = {
+        grantedPrivileges: [AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN],
+        criterias: PLATFORM_ADMIN_NOTIFICATION_GRANT_CREDENTIALS.map(type => ({
+          type,
+          resourceID: '',
+        })),
+        cascade: false,
+        name: 'Receive notifications platform admin',
+      };
+      const builtPolicy = {
+        id: 'platform-auth',
+        credentialRules: [builtRule],
+        privilegeRules: [],
+      } as unknown as IAuthorizationPolicy;
+
+      const grants = (type: AuthorizationCredential) =>
+        authorizationService.isAccessGrantedForCredentials(
+          [{ type, resourceID: '' }],
+          builtPolicy,
+          AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN
+        );
+
+      expect(grants(AuthorizationCredential.PLATFORM_ROLES_ADMIN)).toBe(true);
+      expect(grants(AuthorizationCredential.PLATFORM_LICENSE_MANAGER)).toBe(
+        true
+      );
+      expect(grants(AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS)).toBe(
+        false
+      );
+      expect(grants(AuthorizationCredential.PLATFORM_AUDIT_READER)).toBe(false);
     });
   });
 });
