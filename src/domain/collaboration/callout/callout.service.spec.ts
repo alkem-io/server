@@ -558,6 +558,44 @@ describe('CalloutService', () => {
       expect(callout.settings.visibility).toBe(CalloutVisibility.PUBLISHED);
       expect(repository.save).toHaveBeenCalled();
     });
+
+    it('069/FR-008: publication declares space-entitled membership on the comments room', async () => {
+      const callout = {
+        id: 'callout-1',
+        settings: { visibility: CalloutVisibility.DRAFT },
+        comments: { id: 'comments-room-1' },
+      } as any;
+      vi.mocked(repository.findOne).mockResolvedValue(callout);
+      vi.mocked(repository.save).mockResolvedValue(callout);
+
+      await service.updateCalloutVisibility({
+        calloutID: 'callout-1',
+        visibility: CalloutVisibility.PUBLISHED,
+      } as any);
+
+      expect(
+        vi.mocked(roomService.declareSpaceEntitledMembership)
+      ).toHaveBeenCalledWith('comments-room-1');
+    });
+
+    it('069/FR-008: an already-published callout does not re-declare the mode', async () => {
+      const callout = {
+        id: 'callout-1',
+        settings: { visibility: CalloutVisibility.PUBLISHED },
+        comments: { id: 'comments-room-1' },
+      } as any;
+      vi.mocked(repository.findOne).mockResolvedValue(callout);
+      vi.mocked(repository.save).mockResolvedValue(callout);
+
+      await service.updateCalloutVisibility({
+        calloutID: 'callout-1',
+        visibility: CalloutVisibility.PUBLISHED,
+      } as any);
+
+      expect(
+        vi.mocked(roomService.declareSpaceEntitledMembership)
+      ).not.toHaveBeenCalled();
+    });
   });
 
   describe('updateCalloutPublishInfo', () => {

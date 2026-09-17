@@ -207,6 +207,11 @@ export class CalloutService {
         displayName: `callout-comments-${callout.nameID}`,
         type: RoomType.CALLOUT,
         parentContextId: parentSpaceId,
+        // Published content is readable by every space member, so its
+        // comments room may use space-entitled membership; drafts stay
+        // platform-driven until publication widens read access.
+        contentReadableBySpaceMembers:
+          callout.settings.visibility === CalloutVisibility.PUBLISHED,
       });
     }
 
@@ -489,13 +494,33 @@ export class CalloutService {
     calloutVisibilityUpdateData: UpdateCalloutVisibilityInput
   ): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(
-      calloutVisibilityUpdateData.calloutID
+      calloutVisibilityUpdateData.calloutID,
+      { relations: { comments: true } }
     );
 
+    const wasPublished =
+      callout.settings.visibility === CalloutVisibility.PUBLISHED;
     if (calloutVisibilityUpdateData.visibility)
       callout.settings.visibility = calloutVisibilityUpdateData.visibility;
 
-    return await this.calloutRepository.save(callout);
+    const saved = await this.calloutRepository.save(callout);
+
+    // Publication widens read access to at least space membership — an
+    // authorization-relevant change Alkemio must DECLARE to the messaging
+    // control plane so the comments room switches to space-entitled
+    // membership (069, FR-008). The control plane applies it capped by room
+    // capability; it never infers it.
+    if (
+      !wasPublished &&
+      callout.settings.visibility === CalloutVisibility.PUBLISHED &&
+      callout.comments
+    ) {
+      await this.roomService.declareSpaceEntitledMembership(
+        callout.comments.id
+      );
+    }
+
+    return saved;
   }
 
   public async updateCalloutPublishInfo(
@@ -688,6 +713,8 @@ export class CalloutService {
         displayName: `callout-comments-${callout.nameID}`,
         type: RoomType.CALLOUT,
         parentContextId: parentSpaceId,
+        contentReadableBySpaceMembers:
+          callout.settings.visibility === CalloutVisibility.PUBLISHED,
       });
     }
 

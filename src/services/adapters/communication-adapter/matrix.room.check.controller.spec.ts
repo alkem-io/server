@@ -81,6 +81,23 @@ describe('MatrixRoomCheckController', () => {
   });
 
   describe('getRoomInfo wire translation', () => {
+    it('069: carries the governance extension with conversation defaults (thread / invite / shared)', async () => {
+      messagingService.getRoomInfo.mockResolvedValue({
+        type: 'conversation_direct',
+        isDirect: true,
+        members: [],
+      } as any);
+
+      const result = await controller.getRoomInfo({
+        alkemio_room_id: 'room-069',
+      });
+
+      expect(result.entity_type).toBe('thread');
+      expect(result.join_rule).toBe('invite');
+      expect(result.visibility).toBe('shared');
+      expect(result.parent_context_id).toBeUndefined();
+    });
+
     const roomId = '88888888-8888-4888-8888-888888888888';
 
     it('hit → maps domain shape to snake_case wire response', async () => {
@@ -103,6 +120,9 @@ describe('MatrixRoomCheckController', () => {
           { actor_id: 'a', display_name: 'Alice' },
           { actor_id: 'b', display_name: 'Bob' },
         ],
+        entity_type: 'thread',
+        join_rule: 'invite',
+        visibility: 'shared',
       });
     });
 
@@ -120,6 +140,9 @@ describe('MatrixRoomCheckController', () => {
         type: '',
         is_direct: false,
         members: [],
+        entity_type: 'thread',
+        join_rule: 'invite',
+        visibility: 'shared',
       });
     });
 
@@ -133,6 +156,9 @@ describe('MatrixRoomCheckController', () => {
         type: '',
         is_direct: false,
         members: [],
+        entity_type: 'thread',
+        join_rule: 'invite',
+        visibility: 'shared',
       });
     });
   });

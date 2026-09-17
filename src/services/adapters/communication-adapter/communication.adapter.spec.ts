@@ -689,6 +689,94 @@ describe('CommunicationAdapter', () => {
     });
   });
 
+  describe('069: cascading space revocation + per-item evaluation', () => {
+    it('revokeSpaceMember: envelope true + per-context false is a FAILURE for that context', async () => {
+      mockAmqpConnection.request.mockResolvedValue({
+        success: true,
+        results: {
+          'space-ok': { success: true },
+          'space-bad': {
+            success: false,
+            error: { code: 'X', message: 'kick failed' },
+          },
+        },
+        child_rooms_kicked: 3,
+      });
+
+      const result = await adapter.revokeSpaceMember('actor-1', [
+        'space-ok',
+        'space-bad',
+      ]);
+
+      expect(result).toEqual({
+        allSucceeded: false,
+        childRoomsKicked: 3,
+        failedContextIds: ['space-bad'],
+      });
+    });
+
+    it('revokeSpaceMember: a context missing from results is NOT a success', async () => {
+      mockAmqpConnection.request.mockResolvedValue({
+        success: true,
+        results: { 'space-1': { success: true } },
+        child_rooms_kicked: 0,
+      });
+
+      const result = await adapter.revokeSpaceMember('actor-1', [
+        'space-1',
+        'space-2',
+      ]);
+
+      expect(result).toMatchObject({
+        allSucceeded: false,
+        failedContextIds: ['space-2'],
+      });
+    });
+
+    it('batchRemoveSpaceMember: per-item correlation — envelope true alone never reports success', async () => {
+      mockAmqpConnection.request.mockResolvedValue({
+        success: true,
+        results: {},
+      });
+
+      const result = await adapter.batchRemoveSpaceMember('actor-1', [
+        'space-1',
+      ]);
+
+      expect(result).toBe(false);
+    });
+
+    it('batchRemoveSpaceMember: ensureAllSucceeded throws on partial failure', async () => {
+      mockAmqpConnection.request.mockResolvedValue({
+        success: true,
+        results: {
+          'space-1': { success: false, error: { code: 'X', message: 'no' } },
+        },
+      });
+
+      await expect(
+        adapter.batchRemoveSpaceMember('actor-1', ['space-1'], undefined, {
+          ensureAllSucceeded: true,
+        })
+      ).rejects.toThrow();
+    });
+
+    it('revokeActorDevices: success carries the deleted count', async () => {
+      mockAmqpConnection.request.mockResolvedValue({
+        success: true,
+        deleted_count: 2,
+        device_ids: ['A', 'B'],
+      });
+
+      const result = await adapter.revokeActorDevices(
+        'actor-1',
+        'admin_revoked'
+      );
+
+      expect(result).toEqual({ deletedCount: 2 });
+    });
+  });
+
   describe('disabled communications', () => {
     let disabledAdapter: CommunicationAdapter;
 
@@ -750,6 +838,32 @@ describe('CommunicationAdapter', () => {
       });
 
       expect(result).toBe('');
+      expect(mockAmqpConnection.request).not.toHaveBeenCalled();
+    });
+
+    it('069: every governance wrapper returns the { disabled: true } sentinel when disabled — never a fabricated success', async () => {
+      expect(
+        await disabledAdapter.repairRoomGovernance({
+          alkemio_room_id: 'room-1',
+          join_rule: 'invite',
+          visibility: 'shared',
+          is_direct: false,
+          dry_run: true,
+        })
+      ).toEqual({ disabled: true });
+      expect(
+        await disabledAdapter.repairSpaceGovernance({
+          alkemio_context_id: 'space-1',
+          elevated_actor_ids: [],
+          dry_run: true,
+        })
+      ).toEqual({ disabled: true });
+      expect(
+        await disabledAdapter.revokeSpaceMember('actor-1', ['space-1'])
+      ).toEqual({ disabled: true });
+      expect(await disabledAdapter.revokeActorDevices('actor-1')).toEqual({
+        disabled: true,
+      });
       expect(mockAmqpConnection.request).not.toHaveBeenCalled();
     });
 

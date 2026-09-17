@@ -69,9 +69,16 @@ describe('RoomService', () => {
         undefined,
         undefined,
         undefined,
+        'invite', // unanchored thread room stays platform-driven (069, FR-008)
         undefined,
-        undefined,
-        { 'io.alkemio.visibility': { visible: false } }
+        {
+          'io.alkemio.visibility': { visible: false },
+          'io.alkemio.entity': {
+            entityId: 'room-1',
+            entityType: 'thread',
+            parentId: null,
+          },
+        }
       );
     });
 
@@ -97,9 +104,16 @@ describe('RoomService', () => {
         ['agent-1'],
         undefined,
         undefined,
+        'invite',
         undefined,
-        undefined,
-        { 'io.alkemio.visibility': { visible: false } }
+        {
+          'io.alkemio.visibility': { visible: false },
+          'io.alkemio.entity': {
+            entityId: 'room-1',
+            entityType: 'thread',
+            parentId: null,
+          },
+        }
       );
     });
 
@@ -126,9 +140,82 @@ describe('RoomService', () => {
         ['agent-1', 'agent-2'],
         undefined,
         undefined,
+        'invite', // conversation rooms are always platform-driven
         undefined,
+        {
+          'io.alkemio.visibility': { visible: true },
+          'io.alkemio.entity': {
+            entityId: 'room-1',
+            entityType: 'thread',
+            parentId: null,
+          },
+        }
+      );
+    });
+
+    it('069/FR-008: declares the membership mode per room type and read-wideness', async () => {
+      const savedRoom = {
+        id: 'room-1',
+        displayName: 'r',
+        type: RoomType.UPDATES,
+      };
+      roomRepo.save.mockResolvedValue(savedRoom as any);
+      communicationAdapter.createRoom.mockResolvedValue(undefined as any);
+
+      // Updates rooms are read-at-least-membership by nature: space-entitled.
+      await service.createRoom({
+        displayName: 'updates',
+        type: RoomType.UPDATES,
+        parentContextId: 'space-1',
+      });
+      expect(communicationAdapter.createRoom).toHaveBeenLastCalledWith(
+        'room-1',
+        RoomType.UPDATES,
+        'updates',
         undefined,
-        { 'io.alkemio.visibility': { visible: true } }
+        'space-1',
+        undefined,
+        'restricted',
+        undefined,
+        expect.anything()
+      );
+
+      // Published callout comments: caller declares read-wide -> restricted.
+      await service.createRoom({
+        displayName: 'comments',
+        type: RoomType.CALLOUT,
+        parentContextId: 'space-1',
+        contentReadableBySpaceMembers: true,
+      });
+      expect(communicationAdapter.createRoom).toHaveBeenLastCalledWith(
+        'room-1',
+        RoomType.CALLOUT,
+        'comments',
+        undefined,
+        'space-1',
+        undefined,
+        'restricted',
+        undefined,
+        expect.anything()
+      );
+
+      // Draft callout comments: anchored but NOT read-wide -> platform-driven.
+      await service.createRoom({
+        displayName: 'draft-comments',
+        type: RoomType.CALLOUT,
+        parentContextId: 'space-1',
+        contentReadableBySpaceMembers: false,
+      });
+      expect(communicationAdapter.createRoom).toHaveBeenLastCalledWith(
+        'room-1',
+        RoomType.CALLOUT,
+        'draft-comments',
+        undefined,
+        'space-1',
+        undefined,
+        'invite',
+        undefined,
+        expect.anything()
       );
     });
 
