@@ -131,6 +131,13 @@ const normalizeSetChildrenResponse = (
   unresolved: response.unresolved ?? [],
   parent_pointers_repaired: response.parent_pointers_repaired ?? [],
   parent_pointers_deferred: response.parent_pointers_deferred ?? [],
+  parent_pointers_unprocessable: response.parent_pointers_unprocessable ?? [],
+  // An adapter predating the field sends no `converged` at all. Defaulting it
+  // to false rather than true keeps the caller's termination condition
+  // conservative against version skew: an old adapter reports "not finished"
+  // and the pass reports outstanding work, instead of claiming a convergence
+  // it never actually verified.
+  converged: response.converged ?? false,
 });
 
 /**
@@ -764,10 +771,27 @@ export class CommunicationAdapter {
   ): Promise<SetChildrenResponse | { disabled: true } | undefined> {
     if (!this.enabled) return { disabled: true };
 
+    // Stamp the caller's absolute expiry from the RPC timeout that governs
+    // this very call, so the two can never drift apart.
+    //
+    // The adapter's own execution deadline starts when it dequeues the
+    // message, which bounds its processing but says nothing about how long
+    // the request waited first. Under load that wait can outlast the timeout
+    // below — and at that point this method has already returned `undefined`
+    // and its caller has moved on, very likely re-reading state and reissuing.
+    // Without an expiry the adapter would still execute the abandoned request,
+    // writing Matrix state from a snapshot the caller has superseded. With
+    // one, it rejects the request untouched.
+    const payload: SetChildrenRequest = {
+      ...request,
+      expires_at_unix_ms:
+        request.expires_at_unix_ms ?? Date.now() + this.rpcTimeout,
+    };
+
     const response = await this.sendCommand({
       operation: 'setChildren',
       topic: MatrixAdapterEventType.COMMUNICATION_HIERARCHY_SET_CHILDREN,
-      payload: request satisfies SetChildrenRequest,
+      payload: payload satisfies SetChildrenRequest,
       errorContext: { parentContextId: request.parent_context_id },
       onError: 'silent',
     });
