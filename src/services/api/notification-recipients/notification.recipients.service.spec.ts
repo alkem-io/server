@@ -1,7 +1,10 @@
 import { ORGANIZATION_NOTIFICATION_CREDENTIAL_TYPES } from '@common/constants/authorization';
-import { AuthorizationCredential } from '@common/enums';
+import { AuthorizationCredential, LogContext } from '@common/enums';
 import { NotificationEvent } from '@common/enums/notification.event';
-import { ValidationException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { NotificationEventException } from '@common/exceptions/notification.event.exception';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
@@ -159,7 +162,7 @@ describe('NotificationRecipientsService', () => {
         email: 'trigger@example.com',
       } as unknown as IUser;
 
-      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue(
+      vi.mocked(userLookupService.getUserById).mockResolvedValue(
         triggeredByUser
       );
 
@@ -169,6 +172,64 @@ describe('NotificationRecipientsService', () => {
       });
 
       expect(result.triggeredBy).toBe(triggeredByUser);
+    });
+
+    it('resolves triggeredBy to undefined (never rejects) when the actor row is already gone — self-deletion order-of-operations', async () => {
+      // Reproduces the live-verification defect (US4-AS4): a self-deletion
+      // removes the user row BEFORE this call, so the strict `OrFail` lookup
+      // this service used to make would throw EntityNotFoundException on
+      // every single occurrence — aborting recipient resolution before any
+      // candidate/channel/privilege filtering, and before the resolution
+      // observability entry, ever ran. `getUserByIdOrFail` is mocked to
+      // reject exactly as it does in production for a since-deleted id, to
+      // discriminate the old eager lookup (would propagate this rejection)
+      // from the tolerant one (uses `getUserById`, unaffected).
+      vi.mocked(userLookupService.getUserByIdOrFail).mockRejectedValue(
+        new EntityNotFoundException('User not found', LogContext.COMMUNITY, {
+          userId: 'self-deleted-user',
+        })
+      );
+      vi.mocked(userLookupService.getUserById).mockResolvedValue(null);
+
+      const holder = {
+        id: 'users-admin',
+        email: 'users-admin@example.com',
+        settings: {
+          notification: {
+            platform: {
+              admin: {
+                userProfileRemoved: { email: true, inApp: true, push: true },
+              },
+            },
+          },
+        },
+        credentials: [
+          {
+            type: AuthorizationCredential.PLATFORM_ROLES_ADMIN,
+            resourceID: '',
+          },
+        ],
+      } as unknown as IUser;
+      vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+        holder,
+      ]);
+      vi.mocked(userLookupService.getUsersByIds).mockResolvedValue([holder]);
+      vi.mocked(
+        authorizationService.isAccessGrantedForCredentials
+      ).mockReturnValue(true);
+      vi.mocked(
+        platformAuthorizationService.getPlatformAuthorizationPolicy
+      ).mockResolvedValue({ id: 'platform-auth' } as any);
+
+      const result = await service.getRecipients({
+        eventType: NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED,
+        triggeredBy: 'self-deleted-user',
+      });
+
+      expect(result.triggeredBy).toBeUndefined();
+      expect(result.emailRecipients.map(u => u.id)).toEqual(['users-admin']);
+      expect(result.inAppRecipients.map(u => u.id)).toEqual(['users-admin']);
+      expect(result.pushRecipients.map(u => u.id)).toEqual(['users-admin']);
     });
 
     it('should filter recipients without notification enabled', async () => {
@@ -1848,7 +1909,7 @@ describe('NotificationRecipientsService', () => {
         actor,
         other,
       ]);
-      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue(actor);
+      vi.mocked(userLookupService.getUserById).mockResolvedValue(actor);
       vi.mocked(
         authorizationService.isAccessGrantedForCredentials
       ).mockReturnValue(true);
@@ -2007,7 +2068,7 @@ describe('NotificationRecipientsService', () => {
           actor,
         ]);
         vi.mocked(userLookupService.getUsersByIds).mockResolvedValue([actor]);
-        vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue(actor);
+        vi.mocked(userLookupService.getUserById).mockResolvedValue(actor);
         vi.mocked(
           authorizationService.isAccessGrantedForCredentials
         ).mockReturnValue(true);
@@ -2162,9 +2223,7 @@ describe('NotificationRecipientsService', () => {
             actor,
           ]);
           vi.mocked(userLookupService.getUsersByIds).mockResolvedValue([actor]);
-          vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue(
-            actor
-          );
+          vi.mocked(userLookupService.getUserById).mockResolvedValue(actor);
           vi.mocked(
             authorizationService.isAccessGrantedForCredentials
           ).mockReturnValue(true);

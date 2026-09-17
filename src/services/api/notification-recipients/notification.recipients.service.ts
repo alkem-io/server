@@ -222,8 +222,18 @@ export class NotificationRecipientsService {
       LogContext.NOTIFICATIONS
     );
 
+    // Tolerant lookup: this entity only populates the optional GraphQL
+    // passthrough field below. Actor exclusion further down works off the
+    // raw id string alone, so it is unaffected either way. A self-deletion
+    // removes the acting user's row before this call ever runs (the
+    // deletion must complete regardless of whether this notification can be
+    // sent), which would make an `OrFail` lookup here throw on every single
+    // self-deletion and abort recipient resolution before any candidate,
+    // channel, or privilege filtering — and before the resolution
+    // observability entry — ever runs.
     const triggeredBy = eventData.triggeredBy
-      ? await this.userLookupService.getUserByIdOrFail(eventData.triggeredBy)
+      ? ((await this.userLookupService.getUserById(eventData.triggeredBy)) ??
+        undefined)
       : undefined;
 
     if (!triggeredBy) {
