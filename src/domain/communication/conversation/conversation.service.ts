@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { CONVERSATION_GROUP_MEMBER_COUNT_MAX } from '@common/constants';
 import { LogContext } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
@@ -21,19 +22,18 @@ import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { forwardRef, Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { CommunicationAdapterException } from '@services/adapters/communication-adapter/communication.adapter.exception';
-import { RoomMemberUpdatedEvent } from '@services/event-handlers/internal/message-inbox/room.member.updated.event';
+import { SubscriptionPublishService } from '@services/subscriptions/subscription-service/subscription.publish.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
 import { EntityManager, FindOneOptions, In, Repository } from 'typeorm';
 import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
 import { IConversationMembership } from '../conversation-membership/conversation.membership.interface';
 import { Conversation } from './conversation.entity';
 import { IConversation } from './conversation.interface';
+import { ConversationAuthorizationService } from './conversation.service.authorization';
 
 /**
  * Extended membership type that includes actor type information.
@@ -54,11 +54,13 @@ export class ConversationService {
     private virtualActorLookupService: VirtualActorLookupService,
     private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService,
     private communicationAdapter: CommunicationAdapter,
+    @Inject(forwardRef(() => ConversationAuthorizationService))
+    private conversationAuthorizationService: ConversationAuthorizationService,
+    private subscriptionPublishService: SubscriptionPublishService,
     @InjectRepository(Conversation)
     private conversationRepository: Repository<Conversation>,
     @InjectRepository(ConversationMembership)
     private conversationMembershipRepository: Repository<ConversationMembership>,
-    private eventEmitter: EventEmitter2,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -270,8 +272,14 @@ export class ConversationService {
   }
 
   /**
-   * Remove a member from a group conversation.
-   * Sends RPC to Matrix only — DB persistence and auto-delete happen via room.member.updated event.
+   * Remove a member from a group conversation — authoritative and SYNCHRONOUS
+   * on the Alkemio side (contract membership-revocation §1, closes
+   * server#6329 cause 2): the membership row is deleted, the conversation's
+   * authorization rebuilt from the remaining members, and MEMBER_REMOVED
+   * published BEFORE this method returns, regardless of the messaging-side
+   * outcome. The Matrix kick is a projection issued in the same call: when
+   * the backend rejects it or is unreachable, the divergence is recorded and
+   * the next reconciliation converges the messaging side.
    */
   public async removeMember(
     conversationId: string,
@@ -302,113 +310,82 @@ export class ConversationService {
       );
     }
 
+    // 1. Alkemio-side revocation, synchronous: row gone, authorization
+    //    rebuilt from current members, event published — all before the
+    //    Matrix leg runs and regardless of its outcome.
+    const memberActorIdsBefore =
+      await this.getConversationMemberActorIds(conversationId);
+    const { remaining } = await this.persistMemberRemoved(
+      conversationId,
+      memberActorId
+    );
+
+    if (remaining === 0) {
+      // Last member removed: publish first, then delete (which also tears
+      // down the Matrix room), then announce the deletion — mirroring the
+      // inbound-leave workflow so clients never see a deletion that did not
+      // commit.
+      await this.subscriptionPublishService.publishConversationEvent({
+        eventID: `conversation-event-${randomUUID()}`,
+        memberActorIds: memberActorIdsBefore,
+        memberRemoved: {
+          conversation,
+          removedMemberID: memberActorId,
+        },
+      });
+      await this.deleteConversation(conversationId);
+      await this.subscriptionPublishService.publishConversationEvent({
+        eventID: `conversation-event-${randomUUID()}`,
+        memberActorIds: memberActorIdsBefore,
+        conversationDeleted: {
+          conversationID: conversationId,
+        },
+      });
+      return conversation;
+    }
+
+    const authorizations =
+      await this.conversationAuthorizationService.applyAuthorizationPolicy(
+        conversationId
+      );
+    await this.authorizationPolicyService.saveAll(authorizations);
+
+    await this.subscriptionPublishService.publishConversationEvent({
+      eventID: `conversation-event-${randomUUID()}`,
+      memberActorIds: memberActorIdsBefore,
+      memberRemoved: {
+        conversation,
+        removedMemberID: memberActorId,
+      },
+    });
+
+    // 2. Matrix projection: the bot kick, per-item evaluated. A rejection or
+    //    transport failure is a recorded divergence — never a failed
+    //    mutation: the Alkemio-side removal above is already complete, and
+    //    reconciliation converges the messaging side (US1-AS4).
     try {
-      // Send to Matrix only — DB will be updated when room.member.updated
-      // event arrives. `ensureAllSucceeded` makes this throw (rather than
-      // silently report a false "success") when Matrix rejects the kick
-      // (e.g. insufficient power level) — the RPC is synchronous and the
-      // failure is already known here, so it must not be swallowed as an
-      // optimistic true.
       await this.communicationAdapter.batchRemoveMember(
         memberActorId,
         [conversation.room.id],
         undefined,
         { ensureAllSucceeded: true }
       );
-    } catch (error) {
-      if (error instanceof CommunicationAdapterException) {
-        // sec-server-11: group-conversation kicks are known to be rejected
-        // by Matrix with M_FORBIDDEN/insufficient-power-level for rooms
-        // whose Matrix-side creator/power-level holder differs from the
-        // bot account — a matrix-adapter defect, out of scope for this repo
-        // (see docs/matrix-admin-reflection.md, Finding 1). Until that
-        // lands, Alkemio must stay authoritative for its OWN membership and
-        // notification targeting: a user must always have a way to leave
-        // (or be removed from) a group conversation on the Alkemio side,
-        // even when the underlying Matrix kick is rejected — otherwise
-        // consent, once bypassed by enrollment into a group, could never be
-        // withdrawn per-conversation short of a global settings toggle.
-        // Remove the local membership (notification recipients are re-read
-        // from that table at send time — this alone stops all further
-        // targeting) and log the Matrix-side divergence for manual
-        // reconciliation, rather than surfacing the failure to the caller.
-        this.logger.warn?.(
-          `removeMember: Matrix kick rejected for actor ${memberActorId} in conversation ${conversationId} (${error.message}) — proceeding with authoritative local removal; Matrix-side room membership may now diverge, see docs/matrix-admin-reflection.md`,
-          LogContext.COMMUNICATION_CONVERSATION
-        );
-        await this.completeLocalMemberRemoval(
-          conversationId,
-          conversation.room.id,
-          memberActorId
-        );
-        return conversation;
-      }
-      throw error;
-    }
-
-    this.logger.verbose?.(
-      `Sent remove-member RPC for ${memberActorId} from group conversation ${conversationId}`,
-      LogContext.COMMUNICATION_CONVERSATION
-    );
-
-    return conversation;
-  }
-
-  /**
-   * sec-server-11: drive the local-only removal through the SAME completion
-   * workflow the Matrix-confirmed path uses, by emitting the internal
-   * `room.member.updated` (leave) event that
-   * `MessageInboxService.handleConversationMemberLeft` consumes: persist the
-   * membership removal, re-apply the conversation authorization policy,
-   * publish MEMBER_REMOVED and — when the last member leaves — delete the
-   * conversation and publish CONVERSATION_DELETED.
-   *
-   * Deleting the membership row directly here would skip all of that: clients
-   * would never see the removal, the authorization policy would keep granting
-   * the removed member access, and an emptied conversation would linger.
-   *
-   * The removal itself is authoritative and must not depend on that workflow
-   * succeeding, so a failing listener — or an application context that has no
-   * listener at all — falls back to the row deletion alone (idempotent: the
-   * handler may already have performed it) and is logged for reconciliation.
-   */
-  private async completeLocalMemberRemoval(
-    conversationId: string,
-    roomId: string,
-    memberActorId: string
-  ): Promise<void> {
-    try {
-      const listenerResults = await this.eventEmitter.emitAsync(
-        'room.member.updated',
-        new RoomMemberUpdatedEvent({
-          roomId,
-          memberActorID: memberActorId,
-          senderActorID: memberActorId,
-          membership: 'leave',
-          timestamp: Date.now(),
-        })
-      );
-      if (listenerResults.length > 0) {
-        return;
-      }
-      this.logger.warn?.(
-        `removeMember: no listener handled the local removal of ${memberActorId} from conversation ${conversationId} — deleting the membership row directly`,
-        LogContext.COMMUNICATION_CONVERSATION
-      );
     } catch (error: any) {
-      this.logger.error?.(
+      this.logger.warn?.(
         {
-          message:
-            'removeMember: local removal completion workflow failed — falling back to deleting the membership row only',
+          message: 'governance.divergence',
+          class: 'membership',
+          roomId: conversation.room.id,
           conversationId,
           memberActorId,
-          error: error?.message,
+          detail: `Matrix kick failed after authoritative local removal: ${error?.message}`,
+          at: Date.now(),
         },
-        error?.stack,
         LogContext.COMMUNICATION_CONVERSATION
       );
     }
-    await this.persistMemberRemoved(conversationId, memberActorId);
+
+    return conversation;
   }
 
   /**
@@ -438,27 +415,33 @@ export class ConversationService {
   }
 
   /**
-   * Persist a membership removal. Called from the event handler when
-   * a room.member.updated event with membership=leave is received.
-   * @returns The remaining member count.
+   * Persist a membership removal. Called from removeMember (the mutation
+   * path) and from the inbound room.member.updated leave handler.
+   * @returns deleted — how many rows the delete removed (0 means the removal
+   * already happened, e.g. the bot-kick echo after a server-side removal) —
+   * and the remaining member count.
    */
   public async persistMemberRemoved(
     conversationId: string,
     memberActorId: string
-  ): Promise<number> {
-    await this.conversationMembershipRepository.delete({
+  ): Promise<{ deleted: number; remaining: number }> {
+    const deleteResult = await this.conversationMembershipRepository.delete({
       conversationId,
       actorID: memberActorId,
     });
+    const deleted = deleteResult.affected ?? 0;
 
-    this.logger.verbose?.(
-      `Persisted member ${memberActorId} removed from conversation ${conversationId}`,
-      LogContext.COMMUNICATION_CONVERSATION
-    );
+    if (deleted > 0) {
+      this.logger.verbose?.(
+        `Persisted member ${memberActorId} removed from conversation ${conversationId}`,
+        LogContext.COMMUNICATION_CONVERSATION
+      );
+    }
 
-    return this.conversationMembershipRepository.count({
+    const remaining = await this.conversationMembershipRepository.count({
       where: { conversationId },
     });
+    return { deleted, remaining };
   }
 
   public async deleteConversation(

@@ -2,6 +2,7 @@ import { RoomType } from '@common/enums/room.type';
 import { MutationType } from '@common/enums/subscriptions';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { ConversationService } from '@domain/communication/conversation/conversation.service';
+import { ConversationAuthorizationService } from '@domain/communication/conversation/conversation.service.authorization';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { RoomServiceEvents } from '@domain/communication/room/room.service.events';
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
@@ -34,11 +35,12 @@ describe('MessageInboxService', () => {
   let messageNotificationService: Mocked<MessageNotificationService>;
   let vcInvocationService: Mocked<VcInvocationService>;
   let conversationService: Mocked<ConversationService>;
+  let module: TestingModule;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
 
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [MessageInboxService, MockWinstonProvider],
     })
       .useMocker(defaultMockerFactory)
@@ -569,6 +571,75 @@ describe('MessageInboxService', () => {
   });
 
   describe('handleRoomMemberUpdated', () => {
+    const leaveEvent = () =>
+      new RoomMemberUpdatedEvent({
+        roomId: 'room-1',
+        memberActorID: 'actor-b',
+        senderActorID: 'actor-a',
+        membership: 'leave',
+        timestamp: 10000,
+      });
+
+    const mockGroupConversationRoom = () => {
+      roomLookupService.getRoomOrFail.mockResolvedValue(
+        makeRoom({ type: RoomType.CONVERSATION_GROUP }) as any
+      );
+      conversationService.findConversationByRoomId.mockResolvedValue({
+        id: 'conv-1',
+      } as any);
+      conversationService.getConversationMemberActorIds.mockResolvedValue([
+        'actor-a',
+        'actor-b',
+      ]);
+      conversationService.getConversationOrFail.mockResolvedValue({
+        id: 'conv-1',
+      } as any);
+    };
+
+    it('069/T037: a bot-kick echo after a server-side removal is a no-op (no second re-apply, no second MEMBER_REMOVED)', async () => {
+      mockGroupConversationRoom();
+      const conversationAuthorizationService = module.get(
+        ConversationAuthorizationService
+      ) as Mocked<ConversationAuthorizationService>;
+      // The row is already gone — the mutation path removed it.
+      conversationService.persistMemberRemoved.mockResolvedValue({
+        deleted: 0,
+        remaining: 2,
+      });
+
+      await service.handleRoomMemberUpdated(leaveEvent());
+
+      expect(
+        conversationAuthorizationService.applyAuthorizationPolicy
+      ).not.toHaveBeenCalled();
+      expect(
+        subscriptionPublishService.publishConversationEvent
+      ).not.toHaveBeenCalled();
+    });
+
+    it('069/T037: an Element-originated leave (row still present) keeps the full workflow', async () => {
+      mockGroupConversationRoom();
+      const conversationAuthorizationService = module.get(
+        ConversationAuthorizationService
+      ) as Mocked<ConversationAuthorizationService>;
+      conversationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        [] as any
+      );
+      conversationService.persistMemberRemoved.mockResolvedValue({
+        deleted: 1,
+        remaining: 1,
+      });
+
+      await service.handleRoomMemberUpdated(leaveEvent());
+
+      expect(
+        conversationAuthorizationService.applyAuthorizationPolicy
+      ).toHaveBeenCalledWith('conv-1');
+      expect(
+        subscriptionPublishService.publishConversationEvent
+      ).toHaveBeenCalledTimes(1);
+    });
+
     it('should return early for non-join/leave membership types', async () => {
       await service.handleRoomMemberUpdated(
         new RoomMemberUpdatedEvent({

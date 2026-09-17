@@ -11,12 +11,15 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { ConversationService } from './conversation.service';
 
 @Injectable()
 export class ConversationAuthorizationService {
   constructor(
+    // Circular with ConversationService (removeMember re-applies this
+    // policy synchronously) — forwardRef on both sides of the cycle.
+    @Inject(forwardRef(() => ConversationService))
     private conversationService: ConversationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private roomAuthorizationService: RoomAuthorizationService,
@@ -66,9 +69,12 @@ export class ConversationAuthorizationService {
       // the platform's service credentials, not user credentials.
     }
 
-    // Add READ + CONTRIBUTE access for all user participants
-    // T057: Membership grants both read and send message privileges
-    // T058: Structured logging with conversation ID and agent IDs in exception details
+    // Rebuild from CURRENT membership: reset, then grant (house convention —
+    // cf. user.service.authorization.ts). The conversation policy is a
+    // standalone root, so without the reset every re-apply would APPEND a new
+    // participant rule and a removed member's grant would survive forever
+    // (server#6329 cause 2).
+    this.authorizationPolicyService.reset(conversation.authorization);
     conversation.authorization.credentialRules.push(
       this.createCredentialRuleParticipantAccess(participantUserIDs)
     );
