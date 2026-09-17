@@ -1529,7 +1529,7 @@ export class CommunicationAdapter {
   }
 
   // ============================================================================
-  // Governance & Revocation (workspace#069-matrix-governance-hardening)
+  // Governance & Revocation
   //
   // Every wrapper below returns a distinguishable { disabled: true } sentinel
   // when the communications integration is off — NEVER a fabricated success

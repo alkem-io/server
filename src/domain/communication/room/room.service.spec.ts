@@ -69,7 +69,7 @@ describe('RoomService', () => {
         undefined,
         undefined,
         undefined,
-        'invite', // unanchored thread room stays platform-driven (069, FR-008)
+        'invite', // unanchored thread room stays platform-driven
         undefined,
         {
           'io.alkemio.visibility': { visible: false },
@@ -153,7 +153,7 @@ describe('RoomService', () => {
       );
     });
 
-    it('069/FR-008: declares the membership mode per room type and read-wideness', async () => {
+    it('declares the membership mode per room type and read-wideness', async () => {
       const savedRoom = {
         id: 'room-1',
         displayName: 'r',

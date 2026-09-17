@@ -255,7 +255,7 @@ export class RoomService {
       const isConversation = isConversationLegacy || isDirect || isGroup;
       const customState = {
         'io.alkemio.visibility': { visible: isConversation },
-        // Platform identity marker (069, data-model E3): Alkemio declares the
+        // Platform identity marker: Alkemio declares the
         // owning entity at creation; the control plane writes it bot-only.
         'io.alkemio.entity': {
           entityId: room.id,
@@ -287,7 +287,7 @@ export class RoomService {
 
   /**
    * Alkemio DECLARES the membership mode per room — the control plane applies
-   * it capped by room-version capability and never infers it (069, FR-008):
+   * it capped by room-version capability and never infers it:
    * restricted (space-entitled) only for space-anchored rooms whose READ
    * authorization is at least the space's membership — updates rooms by
    * nature, comment rooms only when the caller declared the content
@@ -306,7 +306,7 @@ export class RoomService {
   /**
    * Declare a room's membership mode as space-entitled (restricted) — the
    * authorization-relevant transition when content widens to space-readable,
-   * e.g. a callout being published (069, FR-008).
+   * e.g. a callout being published.
    */
   public async declareSpaceEntitledMembership(roomID: string): Promise<void> {
     await this.communicationAdapter.updateRoom(

@@ -198,10 +198,11 @@ describe('CommunicationService', () => {
         'actor-1',
         ['room-1']
       );
-      expect(communicationAdapter.batchAddSpaceMember).toHaveBeenCalledWith(
-        'actor-1',
-        ['space-1']
-      );
+      // 069/R-10: the space-level call is DELETED, not repaired — it never
+      // worked (communication.spaceID was always empty on the production
+      // path). Space-room membership flows through the authorization-derived
+      // projection instead.
+      expect(communicationAdapter.batchAddSpaceMember).not.toHaveBeenCalled();
     });
 
     it('should return true without calling adapter when actorID is empty', async () => {
@@ -282,10 +283,9 @@ describe('CommunicationService', () => {
         'actor-1',
         ['room-1']
       );
-      expect(communicationAdapter.batchRemoveSpaceMember).toHaveBeenCalledWith(
-        'actor-1',
-        ['space-1']
-      );
+      expect(
+        communicationAdapter.batchRemoveSpaceMember
+      ).not.toHaveBeenCalled();
     });
   });
 });
