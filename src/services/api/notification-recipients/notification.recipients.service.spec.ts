@@ -2073,7 +2073,12 @@ describe('NotificationRecipientsService', () => {
         vi.mocked(
           authorizationService.isAccessGrantedForCredentials
         ).mockReturnValue(true);
-        logger.log.mockImplementation(() => {
+        // `mockImplementationOnce`, not `mockImplementation`: the winston
+        // mock provider is a module-scoped singleton shared by every spec
+        // file under isolate:false, so a persistent override here would
+        // leak a throwing `logger.log` into whichever spec runs next in
+        // this worker (see docs/testing-flakiness.md #4).
+        logger.log.mockImplementationOnce(() => {
           throw new Error('logging backend unavailable');
         });
 
@@ -2082,6 +2087,125 @@ describe('NotificationRecipientsService', () => {
             eventType: NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED,
           })
         ).resolves.toBeDefined();
+      });
+
+      describe('@forge-acceptance — US3 live-walk reproduction (agents-hq/specs/065-platform-admin-notification-routing)', () => {
+        // Mirrors the manual acceptance walk performed against the isolated
+        // forge-065 stack (admin@alkem.io via GraphQL `notificationRecipients`):
+        // AS1 ok/info for all five events, AS4 channel-off/info, AS5
+        // actor-only/info, AS6 never-throws. AS2 (stale-policy) and AS3
+        // (provisioning-gap) are covered by the sibling tests above — they
+        // cannot be staged live on a freshly-bootstrapped stack because
+        // admin@alkem.io always holds the legacy trio + PLATFORM_USERS_ADMIN.
+        it.each([
+          NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_CREATED,
+          NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED,
+          NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED,
+          NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED,
+          NotificationEvent.USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION,
+        ])('US3-AS1: %s resolves a non-empty email set at cause "ok" when the routed role is held with the channel on', async eventType => {
+          const holder = platformAdminUser('holder', [
+            AuthorizationCredential.PLATFORM_SUPPORT,
+          ]);
+          vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+            holder,
+          ]);
+          vi.mocked(userLookupService.getUsersByIds).mockResolvedValue([
+            holder,
+          ]);
+          vi.mocked(
+            authorizationService.isAccessGrantedForCredentials
+          ).mockReturnValue(true);
+
+          const result = await service.getRecipients({ eventType });
+
+          expect(result.emailRecipients.length).toBeGreaterThan(0);
+          const entry = findEntry(logger.log, 'email');
+          expect(entry).toMatchObject({ eventType, cause: 'ok' });
+        });
+
+        it('US3-AS4: every candidate channel-off resolves an empty set at cause "channel-off" (info), no error/warn', async () => {
+          const holder = platformAdminUser(
+            'holder',
+            [AuthorizationCredential.PLATFORM_SUPPORT],
+            false
+          );
+          vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+            holder,
+          ]);
+          vi.mocked(userLookupService.getUsersByIds).mockImplementation(
+            async ids => (ids.length > 0 ? [holder] : [])
+          );
+          vi.mocked(
+            authorizationService.isAccessGrantedForCredentials
+          ).mockReturnValue(true);
+
+          const result = await service.getRecipients({
+            eventType: NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED,
+          });
+
+          expect(result.emailRecipients).toHaveLength(0);
+          const entry = findEntry(logger.log, 'email');
+          expect(entry).toMatchObject({
+            cause: 'channel-off',
+            channelEnabledCount: 0,
+          });
+          expect(logger.error).not.toHaveBeenCalled();
+          expect(logger.warn).not.toHaveBeenCalled();
+        });
+
+        it('US3-AS5: the sole candidate being triggeredBy resolves an empty set at cause "actor-only" (info), no error', async () => {
+          const actor = platformAdminUser('actor', [
+            AuthorizationCredential.PLATFORM_ROLES_ADMIN,
+          ]);
+          vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+            actor,
+          ]);
+          vi.mocked(userLookupService.getUsersByIds).mockResolvedValue([actor]);
+          vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue(
+            actor
+          );
+          vi.mocked(
+            authorizationService.isAccessGrantedForCredentials
+          ).mockReturnValue(true);
+
+          const result = await service.getRecipients({
+            eventType: NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED,
+            triggeredBy: 'actor',
+          });
+
+          expect(result.emailRecipients).toHaveLength(0);
+          expect(logger.error).not.toHaveBeenCalled();
+          const entry = findEntry(logger.log, 'email');
+          expect(entry).toMatchObject({
+            cause: 'actor-only',
+            actorExcludedCount: 1,
+          });
+        });
+
+        it('US3-AS6: recipient resolution never rejects, so the originating action always completes — even under a provisioning-gap with a failing logger', async () => {
+          vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue(
+            []
+          );
+          // Zero candidates resolves cause "provisioning-gap", which logs via
+          // `warn` (see emitPlatformAdminNotificationResolutionObservation) —
+          // not `log`. Throwing from the method actually invoked, once, so
+          // the mock is guaranteed to be consumed here rather than leaking
+          // into whichever spec file runs next in this worker.
+          logger.warn.mockImplementationOnce(() => {
+            throw new Error('logging backend unavailable');
+          });
+
+          await expect(
+            service.getRecipients({
+              eventType: NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED,
+            })
+          ).resolves.toMatchObject({
+            emailRecipients: [],
+            inAppRecipients: [],
+            pushRecipients: [],
+          });
+        });
       });
     });
   });
