@@ -72,8 +72,7 @@ export class ConversationAuthorizationService {
     // Rebuild from CURRENT membership: reset, then grant (house convention —
     // cf. user.service.authorization.ts). The conversation policy is a
     // standalone root, so without the reset every re-apply would APPEND a new
-    // participant rule and a removed member's grant would survive forever
-    // (server#6329 cause 2).
+    // participant rule and a removed member's grant would survive forever.
     this.authorizationPolicyService.reset(conversation.authorization);
     conversation.authorization.credentialRules.push(
       this.createCredentialRuleParticipantAccess(participantUserIDs)

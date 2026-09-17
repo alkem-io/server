@@ -290,7 +290,7 @@ export class SpaceService {
       undefined,
       {
         'io.alkemio.visibility': { visible: false },
-        // Platform identity marker (069, data-model E3): declared by Alkemio
+        // Platform identity marker: declared by Alkemio
         // at creation, written bot-only, the room's ownership readable from
         // the room itself.
         'io.alkemio.entity': {

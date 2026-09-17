@@ -8,10 +8,12 @@ import { CommunityModule } from '@domain/community/community/community.module';
 import { User } from '@domain/community/user/user.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { Space } from '@domain/space/space/space.entity';
+import { SpaceMembershipProjectionModule } from '@domain/space/space-membership-projection/space.membership.projection.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Forum } from '@platform/forum/forum.entity';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
+import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { TaskModule } from '@services/task';
 import { PlatformOperationsAuditModule } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.module';
 import { AdminCommunicationForumHierarchyReconcileService } from './admin.communication.forum.hierarchy.reconcile.service';
@@ -29,6 +31,8 @@ import { AdminCommunicationSpaceSyncService } from './admin.communication.space.
     CommunicationModule,
     CommunicationAdapterModule,
     ConversationModule,
+    EntityResolverModule,
+    SpaceMembershipProjectionModule,
     TaskModule,
     TypeOrmModule.forFeature([Space, Forum, Room, User, VirtualContributor]),
   ],

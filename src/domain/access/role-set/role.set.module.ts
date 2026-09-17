@@ -8,13 +8,14 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { FormModule } from '@domain/common/form/form.module';
 import { LicenseModule } from '@domain/common/license/license.module';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
-import { CommunityCommunicationModule } from '@domain/community/community-communication/community.communication.module';
+import { CommunicationModule } from '@domain/communication/communication/communication.module';
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { VirtualActorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
+import { SpaceMembershipProjectionModule } from '@domain/space/space-membership-projection/space.membership.projection.module';
 import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { InAppNotificationModule } from '@platform/in-app-notification/in.app.notification.module';
@@ -64,7 +65,8 @@ import { RoleSetServiceLifecycleInvitation } from './role.set.service.lifecycle.
     ContributionReporterModule,
     ActivityAdapterModule,
     LifecycleModule,
-    CommunityCommunicationModule,
+    CommunicationModule,
+    SpaceMembershipProjectionModule,
     InAppNotificationModule,
     TypeOrmModule.forFeature([RoleSet]),
     RoleSetCacheModule,

@@ -43,7 +43,7 @@ import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
 import { IForm } from '@domain/common/form/form.interface';
 import { FormService } from '@domain/common/form/form.service';
 import { LicenseService } from '@domain/common/license/license.service';
-import { CommunityCommunicationService } from '@domain/community/community-communication/community.communication.service';
+import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { IUser } from '@domain/community/user/user.interface';
@@ -53,6 +53,7 @@ import { VirtualContributorLookupService } from '@domain/community/virtual-contr
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { SpaceMembershipProjectionService } from '@domain/space/space-membership-projection/space.membership.projection.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
@@ -128,7 +129,8 @@ export class RoleSetService {
     private communityResolverService: CommunityResolverService,
     private roleSetEventsService: RoleSetEventsService,
     private aiServerAdapter: AiServerAdapter,
-    private communityCommunicationService: CommunityCommunicationService,
+    private communicationService: CommunicationService,
+    private spaceMembershipProjectionService: SpaceMembershipProjectionService,
     private licenseService: LicenseService,
     private inAppNotificationService: InAppNotificationService,
     @InjectRepository(RoleSet)
@@ -982,6 +984,24 @@ export class RoleSetService {
       });
     }
   }
+  private logMembershipDivergence(
+    roleSetID: string,
+    actorID: string,
+    detail: string
+  ) {
+    this.logger.warn?.(
+      {
+        message: 'governance.divergence',
+        class: 'membership',
+        roleSetID,
+        actorID,
+        detail,
+        at: Date.now(),
+      },
+      LogContext.COMMUNITY
+    );
+  }
+
   private async actorAddedToRole(
     actorID: string,
     actorType: ActorType,
@@ -1007,10 +1027,21 @@ export class RoleSetService {
             await this.communityResolverService.getCommunicationForRoleSet(
               roleSet.id
             );
-          await this.communityCommunicationService.addMemberToCommunication(
-            communication,
-            actorID
-          );
+          // Updates-room membership (room-level, direct). Awaited and
+          // observable — a failure is a recorded divergence, never a failed
+          // grant (replaces the fire-and-forget bridge).
+          try {
+            await this.communicationService.addContributorToCommunications(
+              communication,
+              actorID
+            );
+          } catch (error: any) {
+            this.logMembershipDivergence(
+              roleSet.id,
+              actorID,
+              `updates-room add failed: ${error?.message}`
+            );
+          }
 
           await this.roleSetCacheService.setMembershipStatusCache(
             actorID,
@@ -1046,6 +1077,36 @@ export class RoleSetService {
                   LogContext.COMMUNITY
                 );
               }
+            }
+          }
+        }
+
+        // Space-room membership is a projection of CURRENT authorization:
+        // every membership-affecting role change on a SPACE
+        // role-set re-projects the actor — MEMBER grants add, ADMIN/LEAD
+        // grants add AND elevate (power 75), inherited participation flows
+        // into the descendant subtree.
+        if (
+          role === RoleName.MEMBER ||
+          role === RoleName.ADMIN ||
+          role === RoleName.LEAD
+        ) {
+          const space =
+            await this.communityResolverService.getSpaceForRoleSetOrFail(
+              roleSet.id
+            );
+          await this.spaceMembershipProjectionService.projectActor(
+            actorID,
+            space.id
+          );
+          if (role === RoleName.ADMIN || role === RoleName.LEAD) {
+            const descendantSpaceIDs =
+              await this.spaceLookupService.getAllDescendantSpaceIDs(space.id);
+            for (const descendantSpaceID of descendantSpaceIDs) {
+              await this.spaceMembershipProjectionService.projectActor(
+                actorID,
+                descendantSpaceID
+              );
             }
           }
         }
@@ -1252,16 +1313,46 @@ export class RoleSetService {
             actorID
           );
         }
+        if (roleType === RoleName.ADMIN || roleType === RoleName.LEAD) {
+          // Re-project on demotion: the actor may keep membership but loses
+          // the elevated (power 75) entry — and inherited participation in
+          // the descendant subtree.
+          const space =
+            await this.communityResolverService.getSpaceForRoleSetOrFail(
+              roleSet.id
+            );
+          await this.spaceMembershipProjectionService.projectActor(
+            actorID,
+            space.id
+          );
+          const descendantSpaceIDs =
+            await this.spaceLookupService.getAllDescendantSpaceIDs(space.id);
+          for (const descendantSpaceID of descendantSpaceIDs) {
+            await this.spaceMembershipProjectionService.projectActor(
+              actorID,
+              descendantSpaceID
+            );
+          }
+        }
         if (roleType === RoleName.MEMBER) {
           const communication =
             await this.communityResolverService.getCommunicationForRoleSet(
               roleSet.id
             );
-          // Remove from communication (works for any actor)
-          await this.communityCommunicationService.removeMemberFromCommunication(
-            communication,
-            actorID
-          );
+          // Updates-room removal (room-level, direct). Awaited and
+          // observable (replaces the fire-and-forget bridge).
+          try {
+            await this.communicationService.removeActorFromCommunications(
+              communication,
+              actorID
+            );
+          } catch (error: any) {
+            this.logMembershipDivergence(
+              roleSet.id,
+              actorID,
+              `updates-room removal failed: ${error?.message}`
+            );
+          }
 
           const space =
             await this.communityResolverService.getSpaceForRoleSetOrFail(
@@ -1273,6 +1364,21 @@ export class RoleSetService {
             await this.spaceLookupService.getAllDescendantSpaceIDs(space.id);
           if (descendantSpaceIDs.length > 0) {
             await this.revokeSpaceTreeCredentials(actorID, descendantSpaceIDs);
+          }
+
+          // Space-room projection from CURRENT authorization:
+          // the space itself, then every descendant whose credentials the
+          // cascade above just revoked — each unwinds the space room AND its
+          // anchored child rooms through the cascading revocation topic.
+          await this.spaceMembershipProjectionService.projectActor(
+            actorID,
+            space.id
+          );
+          for (const descendantSpaceID of descendantSpaceIDs) {
+            await this.spaceMembershipProjectionService.projectActor(
+              actorID,
+              descendantSpaceID
+            );
           }
 
           // Clean up notifications for this space and all descendant spaces

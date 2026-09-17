@@ -8,8 +8,10 @@ import { ConversationService } from '@domain/communication/conversation/conversa
 import { IRoom } from '@domain/communication/room/room.interface';
 import { CommunityService } from '@domain/community/community/community.service';
 import { IUser } from '@domain/community/user/user.interface';
+import { SpaceMembershipProjectionService } from '@domain/space/space-membership-projection/space.membership.projection.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CommunicationAdminMembershipInput } from './dto';
 import { CommunicationAdminEnsureAccessInput } from './dto/admin.communication.dto.ensure.access.input';
@@ -28,6 +30,8 @@ export class AdminCommunicationService {
     private communityService: CommunityService,
     private roleSetService: RoleSetService,
     private conversationService: ConversationService,
+    private communityResolverService: CommunityResolverService,
+    private spaceMembershipProjectionService: SpaceMembershipProjectionService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -132,6 +136,16 @@ export class AdminCommunicationService {
         communityMember.id
       );
     }
+
+    // Space-room membership converges through the authorization-derived
+    // projection — the room-level loop above only covers the
+    // updates room.
+    const space = await this.communityResolverService.getSpaceForRoleSetOrFail(
+      community.roleSet.id
+    );
+    await this.spaceMembershipProjectionService.projectSpace(space.id, {
+      dryRun: false,
+    });
     return true;
   }
 

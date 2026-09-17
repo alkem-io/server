@@ -273,8 +273,7 @@ export class ConversationService {
 
   /**
    * Remove a member from a group conversation — authoritative and SYNCHRONOUS
-   * on the Alkemio side (contract membership-revocation §1, closes
-   * server#6329 cause 2): the membership row is deleted, the conversation's
+   * on the Alkemio side: the membership row is deleted, the conversation's
    * authorization rebuilt from the remaining members, and MEMBER_REMOVED
    * published BEFORE this method returns, regardless of the messaging-side
    * outcome. The Matrix kick is a projection issued in the same call: when

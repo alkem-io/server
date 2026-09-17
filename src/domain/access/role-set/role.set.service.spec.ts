@@ -1842,6 +1842,124 @@ describe('RoleSetService', () => {
     });
   });
 
+  // Space-room membership is a projection of CURRENT authorization: every
+  // membership-affecting SPACE role grant re-projects the actor, awaited
+  // inside the grant (not fire-and-forget), and elevated roles cascade into
+  // the descendant subtree.
+  describe('actorAddedToRole — SPACE membership projection', () => {
+    const spaceRoleSet = {
+      id: 'rs-space',
+      type: RoleSetType.SPACE,
+    } as any;
+
+    let communityResolverService: any;
+    let communicationService: any;
+    let spaceMembershipProjectionService: any;
+    let spaceLookupService: any;
+
+    beforeEach(() => {
+      communityResolverService = (service as any).communityResolverService;
+      communicationService = (service as any).communicationService;
+      spaceMembershipProjectionService = (service as any)
+        .spaceMembershipProjectionService;
+      spaceLookupService = (service as any).spaceLookupService;
+
+      (
+        communityResolverService.getCommunicationForRoleSet as Mock
+      ).mockResolvedValue({ id: 'comm-1' });
+      (
+        communityResolverService.getSpaceForRoleSetOrFail as Mock
+      ).mockResolvedValue({ id: 'space-1' });
+      (
+        communicationService.addContributorToCommunications as Mock
+      ).mockResolvedValue(true);
+      (spaceMembershipProjectionService.projectActor as Mock).mockResolvedValue(
+        undefined
+      );
+      (spaceLookupService.getAllDescendantSpaceIDs as Mock).mockResolvedValue(
+        []
+      );
+    });
+
+    it('a MEMBER grant projects the actor into the space room — and is AWAITED, not fire-and-forget', async () => {
+      let projectionSettled = false;
+      (
+        spaceMembershipProjectionService.projectActor as Mock
+      ).mockImplementation(
+        () =>
+          new Promise<void>(resolve =>
+            setImmediate(() => {
+              projectionSettled = true;
+              resolve();
+            })
+          )
+      );
+
+      await (service as any).actorAddedToRole(
+        'actor-1',
+        ActorType.USER,
+        spaceRoleSet,
+        RoleName.MEMBER,
+        undefined,
+        false,
+        CommunityMembershipOrigin.DIRECT
+      );
+
+      expect(
+        spaceMembershipProjectionService.projectActor
+      ).toHaveBeenCalledWith('actor-1', 'space-1');
+      // The grant only resolves after the projection promise did — the old
+      // fire-and-forget bridge would leave this false.
+      expect(projectionSettled).toBe(true);
+      // Updates-room add is likewise awaited on the MEMBER path.
+      expect(
+        communicationService.addContributorToCommunications
+      ).toHaveBeenCalledWith({ id: 'comm-1' }, 'actor-1');
+    });
+
+    it('an ADMIN grant projects the space AND its descendant subtree (elevation cascades)', async () => {
+      (spaceLookupService.getAllDescendantSpaceIDs as Mock).mockResolvedValue([
+        'space-sub',
+        'space-subsub',
+      ]);
+
+      await (service as any).actorAddedToRole(
+        'actor-1',
+        ActorType.USER,
+        spaceRoleSet,
+        RoleName.ADMIN,
+        undefined,
+        false,
+        CommunityMembershipOrigin.DIRECT
+      );
+
+      const projected = (
+        spaceMembershipProjectionService.projectActor as Mock
+      ).mock.calls.map(call => call[1]);
+      expect(projected).toEqual(['space-1', 'space-sub', 'space-subsub']);
+      // ADMIN is not the entry role: no updates-room add, no member cache.
+      expect(
+        communicationService.addContributorToCommunications
+      ).not.toHaveBeenCalled();
+    });
+
+    it('a non-membership role grant does not project at all', async () => {
+      await (service as any).actorAddedToRole(
+        'actor-1',
+        ActorType.USER,
+        spaceRoleSet,
+        RoleName.GLOBAL_COMMUNITY_READER,
+        undefined,
+        false,
+        CommunityMembershipOrigin.DIRECT
+      );
+
+      expect(
+        spaceMembershipProjectionService.projectActor
+      ).not.toHaveBeenCalled();
+    });
+  });
+
   // The new-member notification dispatch runs after the credential has been
   // committed, so a notifications/adapter failure must be logged and swallowed
   // rather than failing the grant (or, on application approval, blocking the
@@ -2202,11 +2320,15 @@ describe('RoleSetService', () => {
         communityResolverService.getSpaceForRoleSetOrFail as Mock
       ).mockResolvedValue({ id: 'space-parent' });
 
-      const communityCommunicationService = (service as any)
-        .communityCommunicationService;
+      const communicationService = (service as any).communicationService;
       (
-        communityCommunicationService.removeMemberFromCommunication as Mock
-      ).mockResolvedValue(undefined);
+        communicationService.removeActorFromCommunications as Mock
+      ).mockResolvedValue(true);
+      const spaceMembershipProjectionService = (service as any)
+        .spaceMembershipProjectionService;
+      (spaceMembershipProjectionService.projectActor as Mock).mockResolvedValue(
+        undefined
+      );
 
       const spaceLookupService = (service as any).spaceLookupService;
       (spaceLookupService.getAllDescendantSpaceIDs as Mock).mockResolvedValue([
@@ -2243,6 +2365,17 @@ describe('RoleSetService', () => {
         type: AuthorizationCredential.SPACE_MEMBER,
         resourceID: 'space-sub',
       });
+      // The membership projection re-converges the space AND every descendant
+      // AFTER the subtree credentials were revoked — each projection reads
+      // post-revocation authorization, so the actor leaves every space room.
+      const projectedSpaces = (
+        spaceMembershipProjectionService.projectActor as Mock
+      ).mock.calls.map((call: any[]) => call[1]);
+      expect(projectedSpaces).toEqual([
+        'space-parent',
+        'space-sub',
+        'space-subsub',
+      ]);
       // Cache cleaned for the target role-set AND each descendant's role-set —
       // a stale descendant isMember entry would otherwise block a later
       // re-application with ROLE_SET_ALREADY_MEMBER.
@@ -2292,11 +2425,15 @@ describe('RoleSetService', () => {
         .mockResolvedValueOnce(undefined)
         .mockResolvedValueOnce('rs-of-space-subsub');
 
-      const communityCommunicationService = (service as any)
-        .communityCommunicationService;
+      const communicationService = (service as any).communicationService;
       (
-        communityCommunicationService.removeMemberFromCommunication as Mock
-      ).mockResolvedValue(undefined);
+        communicationService.removeActorFromCommunications as Mock
+      ).mockResolvedValue(true);
+      const spaceMembershipProjectionService = (service as any)
+        .spaceMembershipProjectionService;
+      (spaceMembershipProjectionService.projectActor as Mock).mockResolvedValue(
+        undefined
+      );
 
       const spaceLookupService = (service as any).spaceLookupService;
       (spaceLookupService.getAllDescendantSpaceIDs as Mock).mockResolvedValue([

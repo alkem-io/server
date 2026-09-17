@@ -102,7 +102,7 @@ export class MatrixRoomCheckController {
           actor_id: m.actorId,
           display_name: m.displayName,
         })),
-        // Governance extension (069, data-model E8): this handler serves the
+        // Governance extension: this handler serves the
         // Element room-check reconciliation flow, which only ever concerns
         // conversation rooms — always thread-class, never space-anchored,
         // platform-driven membership, shared history. An old adapter simply
