@@ -687,6 +687,63 @@ export class CalloutResolverMutations {
           );
         }
       }
+
+      // One notification gate for every contribution type, dispatched after the
+      // activity/analytics work above so a notification failure can never drop
+      // the activity entry. Only an explicit `false` suppresses — an absent
+      // value (every in-process producer that bypasses GraphQL's default-value
+      // substitution) must still notify.
+      const contributionMaterialized =
+        (contributionData.post && contribution.post) ||
+        (contributionData.link && contribution.link) ||
+        (contributionData.whiteboard && contribution.whiteboard) ||
+        (contributionData.memo && contribution.memo) ||
+        (contributionData.collaboraDocument && contribution.collaboraDocument);
+
+      if (
+        callout.settings.visibility === CalloutVisibility.PUBLISHED &&
+        contributionMaterialized
+      ) {
+        if (contributionData.sendNotification !== false) {
+          const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
+            {
+              contribution,
+              callout,
+              contributionType: contributionData.type,
+              triggeredBy: actorContext.actorID,
+            };
+          this.notificationAdapterSpace
+            .spaceCollaborationCalloutContributionCreated(notificationInput)
+            .catch((err: unknown) => {
+              this.logger.error?.(
+                {
+                  message: 'Failed to send contribution-created notification',
+                  calloutId: callout.id,
+                  contributionId: contribution.id,
+                  error: (err as Error)?.message,
+                },
+                (err as Error)?.stack,
+                LogContext.NOTIFICATIONS
+              );
+            });
+        } else {
+          // The only observability for a suppressed emission: distinguishes an
+          // author-suppressed contribution from a genuinely broken delivery, at
+          // the same log level the adapter uses for its own delivery lines.
+          this.logger.verbose?.(
+            {
+              message: 'Contribution notification suppressed by author',
+              calloutID: callout.id,
+              contributionID: contribution.id,
+              contributionType: contributionData.type,
+              triggeredBy: actorContext.actorID,
+              spaceID: levelZeroSpaceID,
+              suppressed: true,
+            },
+            LogContext.NOTIFICATIONS
+          );
+        }
+      }
     }
 
     return await this.calloutContributionService.getCalloutContributionOrFail(
@@ -804,16 +861,6 @@ export class CalloutResolverMutations {
     levelZeroSpaceID: string,
     actorContext: ActorContext
   ) {
-    const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
-      {
-        contribution: contribution,
-        callout: callout,
-        contributionType: CalloutContributionType.LINK,
-        triggeredBy: actorContext.actorID,
-      };
-    await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
-      notificationInput
-    );
     const activityLogInput: ActivityInputCalloutLinkCreated = {
       triggeredBy: actorContext.actorID,
       link: link,
@@ -838,17 +885,6 @@ export class CalloutResolverMutations {
     levelZeroSpaceID: string,
     actorContext: ActorContext
   ) {
-    const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
-      {
-        contribution: contribution,
-        callout: callout,
-        contributionType: CalloutContributionType.WHITEBOARD,
-        triggeredBy: actorContext.actorID,
-      };
-    await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
-      notificationInput
-    );
-
     this.activityAdapter.calloutWhiteboardCreated({
       triggeredBy: actorContext.actorID,
       whiteboard: whiteboard,
@@ -873,17 +909,6 @@ export class CalloutResolverMutations {
     actorContext: ActorContext,
     isTask: boolean
   ) {
-    const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
-      {
-        contribution: contribution,
-        callout: callout,
-        contributionType: CalloutContributionType.POST,
-        triggeredBy: actorContext.actorID,
-      };
-    await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
-      notificationInput
-    );
-
     const activityLogInput: ActivityInputCalloutPostCreated = {
       triggeredBy: actorContext.actorID,
       post: post,
@@ -919,17 +944,6 @@ export class CalloutResolverMutations {
     levelZeroSpaceID: string,
     actorContext: ActorContext
   ) {
-    const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
-      {
-        contribution: contribution,
-        callout: callout,
-        contributionType: CalloutContributionType.MEMO,
-        triggeredBy: actorContext.actorID,
-      };
-    await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
-      notificationInput
-    );
-
     const activityLogInput: ActivityInputCalloutMemoCreated = {
       triggeredBy: actorContext.actorID,
       memo: memo,
@@ -954,17 +968,6 @@ export class CalloutResolverMutations {
     levelZeroSpaceID: string,
     actorContext: ActorContext
   ) {
-    const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
-      {
-        contribution: contribution,
-        callout: callout,
-        contributionType: CalloutContributionType.COLLABORA_DOCUMENT,
-        triggeredBy: actorContext.actorID,
-      };
-    await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
-      notificationInput
-    );
-
     this.contributionReporter.calloutCollaboraDocumentCreated(
       {
         id: collaboraDocument.id,
