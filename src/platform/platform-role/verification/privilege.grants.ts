@@ -47,6 +47,10 @@ export type ManagedPrivilege =
   // A-rows (see `INDIRECT_ENFORCEMENT_FILES`' F6 note), so `SCANNED_PRIVILEGES`
   // does not grow and `reachability.spec.ts` derives nothing from it.
   | AuthorizationPrivilege.PLATFORM_SUPPORT_LISTS_READ
+  // R-F.3 (2026-09-18) — the License Manager's twin of the above: console
+  // list read for spaces / organizations / users. Same disposition — no
+  // census gate, grant set spec-covered through `PRIVILEGE_COVERAGE`.
+  | AuthorizationPrivilege.PLATFORM_LICENSING_LISTS_READ
   | AuthorizationPrivilege.PLATFORM_FORUM_MANAGE
   | AuthorizationPrivilege.DELETE_ORGANIZATION
   | AuthorizationPrivilege.PLATFORM_AUDIT_READ
@@ -196,6 +200,18 @@ export const PRIVILEGE_GRANTS: Record<ManagedPrivilege, PrivilegeGrant> = {
     legacyCredentials: [
       AuthorizationCredential.GLOBAL_ADMIN,
       AuthorizationCredential.GLOBAL_SUPPORT,
+    ],
+  },
+  // --- R-F.3 (2026-09-18, licensing-section-design.md). Platform-anchored
+  // READ for the three console lists the License Manager licenses (spaces /
+  // organizations / users); legacy reach is A12's pair, which reached those
+  // lists via PLATFORM_ADMIN.
+  [AuthorizationPrivilege.PLATFORM_LICENSING_LISTS_READ]: {
+    anchor: 'platform',
+    owningCredentials: [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
+    legacyCredentials: [
+      AuthorizationCredential.GLOBAL_ADMIN,
+      AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
     ],
   },
   // --- A15 forum (T035). Mirrors the reach of the `global-support`

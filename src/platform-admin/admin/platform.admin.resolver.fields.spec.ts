@@ -354,5 +354,90 @@ describe('PlatformAdminResolverFields', () => {
         );
       });
     });
+
+    // R-F.3 (2026-09-18, licensing-section-design.md) — the License Manager's
+    // half of F1. Its owning privileges (ACCOUNT_LICENSE_MANAGE @account/@space,
+    // GRANT @licensing-framework) live off the platform policy, so the three
+    // lists whose rows it licenses — spaces, organizations, users — refused
+    // it. A dedicated platform-level READ admits it to exactly those three,
+    // and to nothing else here. `User.email` keeps its own READ_USER_PII field
+    // gate (user.resolver.fields.spec.ts), which is what makes admitting the
+    // users list safe.
+    describe('PLATFORM_LICENSING_LISTS_READ (R-F.3)', () => {
+      beforeEach(() => {
+        admits(AuthorizationPrivilege.PLATFORM_LICENSING_LISTS_READ);
+      });
+
+      it('alone reaches the space list', async () => {
+        platformAdminService.getAllSpaces.mockResolvedValue([]);
+
+        await resolver.spaces(actorContext, {} as any);
+
+        expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+        expect(platformAdminService.getAllSpaces).toHaveBeenCalled();
+      });
+
+      it('alone reaches the organization list', async () => {
+        platformAdminService.getAllOrganizations.mockResolvedValue({
+          items: [],
+        });
+
+        await resolver.organizations(actorContext, { first: 10 } as any);
+
+        expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+        expect(platformAdminService.getAllOrganizations).toHaveBeenCalled();
+      });
+
+      it('alone reaches the user list', async () => {
+        platformAdminService.getAllUsers.mockResolvedValue({ items: [] });
+
+        await resolver.users(actorContext, { first: 10 } as any);
+
+        expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+        expect(platformAdminService.getAllUsers).toHaveBeenCalled();
+      });
+
+      it.each([
+        [
+          'accounts',
+          'platformAdmin Accounts',
+          () => resolver.accounts(actorContext),
+        ],
+        [
+          'innovationPacks',
+          'platformAdmin InnovationPacks',
+          () => resolver.innovationPacks(actorContext),
+        ],
+        [
+          'innovationHubs',
+          'platformAdmin InnovationHubs',
+          () => resolver.innovationHubs(actorContext),
+        ],
+        [
+          'virtualContributors',
+          'platformAdmin Virtual Contributors',
+          () => resolver.virtualContributors(actorContext, {} as any),
+        ],
+        [
+          'identity',
+          'platformAdmin Identity',
+          () => resolver.identity(actorContext),
+        ],
+      ])('does NOT reach %s — falls through to the catch-all', async (_field, msg, call) => {
+        platformAdminService.getAllAccounts.mockResolvedValue([]);
+        platformAdminService.getAllInnovationPacks.mockResolvedValue([]);
+        platformAdminService.getAllInnovationHubs.mockResolvedValue([]);
+        platformAdminService.getAllVirtualContributors.mockResolvedValue([]);
+
+        await call();
+
+        expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+          actorContext,
+          platformPolicy,
+          AuthorizationPrivilege.PLATFORM_ADMIN,
+          msg
+        );
+      });
+    });
   });
 });

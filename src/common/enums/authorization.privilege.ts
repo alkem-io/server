@@ -64,6 +64,7 @@ export enum AuthorizationPrivilege {
   PLATFORM_USERS_ADMIN = 'platform-users-admin', // user-record family: email change, identity/account delete, PII read
   PLATFORM_SUPPORT_ORG_RESOURCES = 'platform-support-org-resources', // A7 — org-owned packs/hubs update + full template CRUD
   PLATFORM_SUPPORT_LISTS_READ = 'platform-support-lists-read', // R-F.2 (2026-09-16) — Support's console list read (orgs/packs/hubs); no A-row, no write
+  PLATFORM_LICENSING_LISTS_READ = 'platform-licensing-lists-read', // R-F.3 (2026-09-18) — License Manager's console list read (spaces/orgs/users); no A-row, no write
   PLATFORM_FORUM_MANAGE = 'platform-forum-manage', // A15 — the platform forum, off the GLOBAL_SUPPORT cascade
   DELETE_ORGANIZATION = 'delete-organization', // A6 — organization deletion, off plain DELETE
   PLATFORM_AUDIT_READ = 'platform-audit-read', // A19 — read the platform audit trail (PII-masked)

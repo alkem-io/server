@@ -539,6 +539,36 @@ describe('PlatformAuthorizationService', () => {
       expect(rules[0].cascade).toBe(false);
     });
 
+    // R-F.3 (2026-09-18, licensing-section-design.md): the License Manager's
+    // console list read. Legacy reach mirrors A12's pair. Settings Admin DEFINES
+    // plans (A13) and must not get the usage lists for free; Support and
+    // Content Full Access reach lists through their own privileges and must not
+    // acquire this one.
+    it('PLATFORM_LICENSING_LISTS_READ (R-F.3): EXACTLY {platform-license-manager} plus legacy {global-admin, global-license-manager}, non-cascading — settings-admin, support and content-full-access are NOT among the reachers', async () => {
+      arrange();
+      await service.applyAuthorizationPolicy();
+
+      const rules = rulesGranting(
+        AuthorizationPrivilege.PLATFORM_LICENSING_LISTS_READ
+      );
+      expect(rules).toHaveLength(1);
+      expect(rules[0].criterias).toEqual([
+        AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
+        AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+      ]);
+      expect(rules[0].criterias).not.toContain(
+        AuthorizationCredential.PLATFORM_SETTINGS_ADMIN
+      );
+      expect(rules[0].criterias).not.toContain(
+        AuthorizationCredential.PLATFORM_SUPPORT
+      );
+      expect(rules[0].criterias).not.toContain(
+        AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS
+      );
+      expect(rules[0].cascade).toBe(false);
+    });
+
     it('PLATFORM_SETTINGS_ADMIN (T035, A10): EXACTLY the union of both surfaces it re-anchors — including platform-settings-admin itself', async () => {
       arrange();
       await service.applyAuthorizationPolicy();

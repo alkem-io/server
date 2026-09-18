@@ -171,6 +171,10 @@ export const INDIRECT_ENFORCEMENT_FILES: readonly string[] = [
   // services. Same disposition as above: a read, not an A-row, no census
   // entry, no matrix cell; the privilege is mirrored in `privilege.grants.ts`
   // so its grant set is spec-covered, and names no census gate by design.
+  //
+  // R-F.3 (2026-09-18, licensing-section-design.md) — the License Manager's
+  // twin: `spaces`, `organizations`, `users` additionally admit
+  // `PLATFORM_LICENSING_LISTS_READ`. Same disposition, same reasons.
   'src/platform-admin/admin/platform.admin.resolver.fields.ts',
   'src/platform-admin/core/identity/admin.identity.resolver.fields.ts',
 ];

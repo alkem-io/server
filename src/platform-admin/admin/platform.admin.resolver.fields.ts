@@ -167,6 +167,15 @@ export class PlatformAdminResolverFields {
       [
         AuthorizationPrivilege.PLATFORM_ADMIN,
         AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
+        // 027 R-F.3 (2026-09-18, licensing-section-design.md) — the License
+        // Manager's half of F1. It owns plan assignment on spaces (A12) and
+        // space visibility (A14), but those privileges are anchored on the
+        // space and licensing-framework trees; on THIS policy it held nothing,
+        // so it could not list what it licenses. A dedicated platform-level
+        // READ admits it to the three lists whose rows it acts on — spaces,
+        // organizations, users — and to no other field here. Each row's
+        // action still meets its own A12/A14 gate.
+        AuthorizationPrivilege.PLATFORM_LICENSING_LISTS_READ,
       ],
       'platformAdmin Spaces'
     );
@@ -195,6 +204,10 @@ export class PlatformAdminResolverFields {
       [
         AuthorizationPrivilege.PLATFORM_ADMIN,
         AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
+        // R-F.3 (2026-09-18): License Manager's console list read — see
+        // `spaces`. Safe on the USERS list only because `User.email` / `phone`
+        // keep their own per-field READ_USER_PII gate (user.resolver.fields.ts).
+        AuthorizationPrivilege.PLATFORM_LICENSING_LISTS_READ,
       ],
       'platformAdmin Users'
     );
@@ -231,6 +244,8 @@ export class PlatformAdminResolverFields {
         // three lists whose rows it acts on — organizations, packs, hubs — and
         // to no other field here. Each row's action still meets its own gate.
         AuthorizationPrivilege.PLATFORM_SUPPORT_LISTS_READ,
+        // R-F.3 (2026-09-18): License Manager's console list read — see `spaces`.
+        AuthorizationPrivilege.PLATFORM_LICENSING_LISTS_READ,
       ],
       'platformAdmin Organizations'
     );

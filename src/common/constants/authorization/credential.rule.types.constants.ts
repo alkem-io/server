@@ -145,6 +145,8 @@ export const CREDENTIAL_RULE_TYPES_PLATFORM_SUPPORT_ORG_RESOURCES =
   'credentialRuleTypes-platformSupportOrgResources';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_SUPPORT_LISTS_READ =
   'credentialRuleTypes-platformSupportListsRead';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_LICENSING_LISTS_READ =
+  'credentialRuleTypes-platformLicensingListsRead';
 export const CREDENTIAL_RULE_TYPES_DELETE_ORGANIZATION =
   'credentialRuleTypes-deleteOrganization';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_USERS_ADMIN =

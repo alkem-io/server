@@ -418,6 +418,11 @@ export const PRIVILEGE_COVERAGE: Record<
     ruleSpec: PLATFORM_POLICY_SPEC,
     grantSetSpec: PLATFORM_POLICY_SPEC,
   },
+  // R-F.3 (2026-09-18) — the License Manager's console list read, platform-anchored.
+  [AuthorizationPrivilege.PLATFORM_LICENSING_LISTS_READ]: {
+    ruleSpec: PLATFORM_POLICY_SPEC,
+    grantSetSpec: PLATFORM_POLICY_SPEC,
+  },
   [AuthorizationPrivilege.DELETE_ORGANIZATION]: {
     ruleSpec: ORGANIZATION_POLICY_SPEC,
     grantSetSpec: ORGANIZATION_POLICY_SPEC,

@@ -1,5 +1,6 @@
 import { AuthorizationCredential } from '@common/enums';
 import { AuthenticationType } from '@common/enums/authentication.type';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
   DELETED_USER_SENTINEL,
@@ -83,6 +84,29 @@ describe('UserResolverFields', () => {
 
       const result = await resolver.email(user, actorContext);
       expect(result).toBe('not accessible');
+    });
+
+    // R-F.3 (2026-09-18): admitting the License Manager to the platformAdmin
+    // users list is safe ONLY because email is gated per field, on the user's
+    // own policy, by READ_USER_PII — never by any platform list-read privilege.
+    it('asks READ_USER_PII on the user policy, and nothing else', async () => {
+      const user = {
+        id: 'user-1',
+        email: 'test@example.com',
+        authorization: { id: 'auth-1' },
+      } as any;
+      const actorContext = { actorID: 'actor-1', credentials: [] } as any;
+
+      authorizationService.isAccessGranted.mockReturnValue(false);
+
+      await resolver.email(user, actorContext);
+
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledTimes(1);
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        actorContext,
+        user.authorization,
+        AuthorizationPrivilege.READ_USER_PII
+      );
     });
   });
 

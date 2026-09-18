@@ -119,7 +119,7 @@ confirmed — no code path in this feature's diff adds
 | 5 | `platform-operations-admin` | Authorization/license reset, operational maintenance mutations (A3/A11, 032) | Pre-existing 032 grant, unchanged by this feature |
 | 6 | `platform-users-admin` | Change login email, delete/reset user identity & account, assign Feature roles (A4/A5/A2) | `PLATFORM_USERS_ADMIN` grant (`user.service.authorization.ts`, T060); `FEATURE_ROLE_ASSIGN` (`platform.service.authorization.ts`, T034) |
 | 7 | `platform-support` | Create/delete organizations, edit org-owned packs/hubs, manage the forum, in-space support (A6/A7/A15); **find** those organizations/packs/hubs from the admin console (R-F.2, 2026-09-16) | `CREATE_ORGANIZATION`/`DELETE_ORGANIZATION` (T039), `PLATFORM_SUPPORT_ORG_RESOURCES` (T037), `PLATFORM_FORUM_MANAGE` (T035); `PLATFORM_SUPPORT_LISTS_READ` (T098 — `platform.service.authorization.ts`, admitted by `platform.admin.resolver.fields.ts` `organizations`/`innovationPacks`/`innovationHubs`; **a read, no census row** — research D29) |
-| 8 | `platform-license-manager` | Assign/revoke license plans, change space visibility (A12/A14) | `ACCOUNT_LICENSE_MANAGE` extension (T037) |
+| 8 | `platform-license-manager` | Assign/revoke license plans, change space visibility (A12/A14); **find** those spaces/organizations/users from the admin console (R-F.3, 2026-09-18) | `ACCOUNT_LICENSE_MANAGE` extension (T037); `PLATFORM_LICENSING_LISTS_READ` (T104 — `platform.service.authorization.ts`, admitted by `platform.admin.resolver.fields.ts` `spaces`/`organizations`/`users`; **a read, no census row** — Support's R-F.2 twin) |
 | 9 | `platform-spaces-reader` | Cross-space read (A16) | `READ` grant on the space tree, replacing the void `global-spaces-reader` (T038) |
 | 10 | `platform-audit-reader` | Read the platform audit trail (A19); read Platform/Feature holder lists (A20/A20b) | `PLATFORM_AUDIT_READ` (T035); `PLATFORM_ROLE_HOLDERS_READ` (T034) |
 | 11 | **`feature-beta-tester`** | Beta/trial license entitlement | **Licensing-policy credential rule (T040a), NOT an authorization-policy rule** — the row most likely to look empty if this table only checked `*.service.authorization.ts` files |
@@ -482,3 +482,38 @@ an organization's spaces, which FR-008(a) keeps closed to Support. Ninth A7
 census entry; `reachability.spec.ts` / `surface.drift.spec.ts` green; RED→GREEN
 resolver spec asserts the privilege opens a template callout and does NOT open
 a non-template one.
+
+---
+
+## R-F.3 — the License Manager's console lists (2026-09-18, T103–T107)
+
+**Finding (spec review, `residual-risks.md` R-F.3):** a License-Manager-only
+holder had no browser path to A12/A14 — `/admin` hidden, and no section of its
+own. Server cause: the three console lists it licenses (`spaces`, `users`,
+`organizations`) check platform-policy privileges, where the role's
+account/space/licensing-framework-anchored privileges are invisible (F1).
+Design: `agents-hq/specs/027-platform-role-redesign/licensing-section-design.md`
+(operator approved prototype A, 2026-09-18).
+
+**Change:** `PLATFORM_LICENSING_LISTS_READ` (`platform-licensing-lists-read`),
+one non-cascading platform credential rule granting it to
+`{platform-license-manager, global-admin, global-license-manager}` (A12's legacy
+pair); admitted by `platformAdmin.spaces` / `organizations` / `users` only. No
+migration — lands on the next `authorizationPolicyResetOnPlatform`. Not
+`platform-settings-admin` (defines plans, A13; must not get the usage lists for
+free). Admitting the **users** list is safe only because `User.email` / `phone`
+keep their per-field `READ_USER_PII` gate — asserted, not assumed. Not a census
+row (Support's R-F.2 disposition; `SCANNED_PRIVILEGES`, `reachability.spec.ts`
+and the FR-024 matrix are unchanged).
+
+**Evidence:**
+
+| Layer | What | Result |
+|---|---|---|
+| Unit (RED→GREEN) | `platform.admin.resolver.fields.spec.ts`: the privilege alone reaches the three lists and falls through to `PLATFORM_ADMIN` on `accounts`/`innovationPacks`/`innovationHubs`/`virtualContributors`/`identity` | 8 new cases, green |
+| Unit (RED→GREEN) | `platform.service.authorization.spec.ts`: grant set EXACTLY `{platform-license-manager, global-admin, global-license-manager}`, `cascade=false`; `platform-settings-admin`, `platform-support`, `platform-content-full-access` absent | green |
+| Unit (guard) | `user.resolver.fields.spec.ts`: `User.email` asks exactly `READ_USER_PII` on the user's own policy, once — no platform list-read privilege is consulted | green |
+| Closure | `PRIVILEGE_COVERAGE` gained the key (`unit.coverage.spec.ts`); `reachability.spec.ts` / `surface.drift.spec.ts` unchanged and green | green |
+| Schema | +1 `AuthorizationPrivilege` value, additive; `schema:diff` 1 additive / 0 breaking, `schema:validate` clean | green |
+| Live | Pending — client-web Phase 11 walk (`licensing` section as `platform.licensemanager`) is the acceptance surface; server-only drive to follow on the `:4027` stack after the next platform authorization reset | open |
+
