@@ -8516,6 +8516,10 @@ input CreateContributionOnCalloutInput {
   link: CreateLinkInput
   memo: CreateMemoInput
   post: CreatePostInput
+  """
+  Send the space-member and space-admin contribution notifications. Defaults to true; only an explicit false suppresses. The activity log entry is written regardless.
+  """
+  sendNotification: Boolean = true
   """The sort order to assign to this Contribution."""
   sortOrder: Float
   """
