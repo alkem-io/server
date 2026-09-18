@@ -1193,6 +1193,7 @@ describe('CalloutResolverMutations', () => {
     describe('sendNotification gate (single notification emission point)', () => {
       let logger: {
         verbose: ReturnType<typeof vi.fn>;
+        warn: ReturnType<typeof vi.fn>;
         error: ReturnType<typeof vi.fn>;
       };
 
@@ -1399,8 +1400,16 @@ describe('CalloutResolverMutations', () => {
           expect(
             (resolver as any).contributionReporter[reporterMethod]
           ).toHaveBeenCalledTimes(1);
-          expect(logger.verbose).toHaveBeenCalledTimes(1);
-          expect(logger.verbose).toHaveBeenCalledWith(
+          // Pins the log LEVEL, not merely that some log call happened: the
+          // production console transport is configured to `warn` and
+          // discards `verbose`, so this suppression record is the only
+          // production trace that silence was chosen rather than a broken
+          // delivery pipeline. Asserting the specific `warn` method (and
+          // that `verbose` was never used for it) catches a regression to
+          // `logger.verbose` that a call-count-only assertion would miss.
+          expect(logger.verbose).not.toHaveBeenCalled();
+          expect(logger.warn).toHaveBeenCalledTimes(1);
+          expect(logger.warn).toHaveBeenCalledWith(
             expect.objectContaining({
               message: 'Contribution notification suppressed by author',
               calloutID: 'callout-1',

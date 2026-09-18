@@ -728,9 +728,11 @@ export class CalloutResolverMutations {
             });
         } else {
           // The only observability for a suppressed emission: distinguishes an
-          // author-suppressed contribution from a genuinely broken delivery, at
-          // the same log level the adapter uses for its own delivery lines.
-          this.logger.verbose?.(
+          // author-suppressed contribution from a genuinely broken delivery.
+          // Logged at warn, not verbose — production's console transport
+          // floor discards verbose, and this record is the sole trace that
+          // silence was chosen rather than a broken delivery pipeline.
+          this.logger.warn?.(
             {
               message: 'Contribution notification suppressed by author',
               calloutID: callout.id,
