@@ -1379,7 +1379,14 @@ describe('CalloutResolverMutations', () => {
           expect(
             (resolver as any).contributionReporter[reporterMethod]
           ).toHaveBeenCalledTimes(1);
-          expect(logger.verbose).not.toHaveBeenCalled();
+          // Pins the negative case against the actual suppression-record
+          // method (`warn`), not the abandoned `verbose` one: a regression
+          // that logs the suppression marker unconditionally (dropping the
+          // `sendNotification !== false` gate) must fail here.
+          expect(logger.warn).not.toHaveBeenCalledWith(
+            expect.objectContaining({ suppressed: true }),
+            LogContext.NOTIFICATIONS
+          );
         });
 
         it('suppresses the notification but keeps activity/reporter independent when sendNotification is explicit false', async () => {
@@ -1508,7 +1515,10 @@ describe('CalloutResolverMutations', () => {
         expect(
           notificationAdapterSpace.spaceCollaborationCalloutContributionCreated
         ).not.toHaveBeenCalled();
-        expect(logger.verbose).not.toHaveBeenCalled();
+        expect(logger.warn).not.toHaveBeenCalledWith(
+          expect.objectContaining({ suppressed: true }),
+          LogContext.NOTIFICATIONS
+        );
       });
 
       it('never notifies a non-COLLABORATION callouts set, regardless of the flag', async () => {
@@ -1567,7 +1577,10 @@ describe('CalloutResolverMutations', () => {
         expect(
           notificationAdapterSpace.spaceCollaborationCalloutContributionCreated
         ).not.toHaveBeenCalled();
-        expect(logger.verbose).not.toHaveBeenCalled();
+        expect(logger.warn).not.toHaveBeenCalledWith(
+          expect.objectContaining({ suppressed: true }),
+          LogContext.NOTIFICATIONS
+        );
       });
 
       it('never notifies when the contribution has no materialized leaf — the gate is data-driven, not flag-driven', async () => {
@@ -1592,7 +1605,10 @@ describe('CalloutResolverMutations', () => {
         expect(
           notificationAdapterSpace.spaceCollaborationCalloutContributionCreated
         ).not.toHaveBeenCalled();
-        expect(logger.verbose).not.toHaveBeenCalled();
+        expect(logger.warn).not.toHaveBeenCalledWith(
+          expect.objectContaining({ suppressed: true }),
+          LogContext.NOTIFICATIONS
+        );
       });
     });
   });
