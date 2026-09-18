@@ -1,6 +1,9 @@
+import { AccountDeletionBlockerService } from '@domain/community/user/account-deletion/account.deletion.blocker.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { createMock } from '@golevelup/ts-vitest';
 import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
+import { McpApiKeyService } from '@services/mcp-server/auth/mcp-api-key.service';
 import { LogContext } from '@src/common/enums';
 import { MeResolverFields } from './me.resolver.fields';
 import { MeService } from './me.service';
@@ -14,6 +17,13 @@ describe('MeResolverFields', () => {
   let inAppNotificationService: ReturnType<
     typeof createMock<InAppNotificationService>
   >;
+  let mcpApiKeyServiceMock: ReturnType<typeof createMock<McpApiKeyService>>;
+  let accountDeletionBlockerServiceMock: ReturnType<
+    typeof createMock<AccountDeletionBlockerService>
+  >;
+  let accountLookupServiceMock: ReturnType<
+    typeof createMock<AccountLookupService>
+  >;
   // A plain stub injected as the resolver's logger. Deliberately NOT a
   // `vi.spyOn(Logger.prototype, …)`: vitest runs with `isolate: false`, so a
   // prototype spy that is never restored leaks a no-op logger into every later
@@ -26,6 +36,9 @@ describe('MeResolverFields', () => {
     meService.getCommunityInvitationsCountForUser.mockResolvedValue(3);
     meService.getCommunityInvitationsForUser.mockResolvedValue([]);
     meService.getCommunityApplicationsForUser.mockResolvedValue([]);
+    meService.getOrganizationInvitationsCountForUser.mockResolvedValue(0);
+    meService.getOrganizationInvitationsForUser.mockResolvedValue([]);
+    meService.getOrganizationApplicationsForUser.mockResolvedValue([]);
     meService.getSpaceMembershipsHierarchical.mockResolvedValue([]);
     meService.getSpaceMembershipsFlat.mockResolvedValue([]);
     meService.getMySpaces.mockResolvedValue([]);
@@ -43,10 +56,30 @@ describe('MeResolverFields', () => {
       5
     );
 
+    mcpApiKeyServiceMock = createMock<McpApiKeyService>();
+    mcpApiKeyServiceMock.listUserKeysForProjection.mockResolvedValue([]);
+
+    accountDeletionBlockerServiceMock =
+      createMock<AccountDeletionBlockerService>();
+    accountDeletionBlockerServiceMock.getBlockers.mockResolvedValue({
+      canDelete: true,
+      blockers: [],
+      totals: [],
+      truncated: false,
+    });
+
+    accountLookupServiceMock = createMock<AccountLookupService>();
+    accountLookupServiceMock.getAccountOrFail.mockResolvedValue({
+      id: 'account-1',
+    } as any);
+
     resolver = new MeResolverFields(
       meService,
       userLookupService,
       inAppNotificationService,
+      mcpApiKeyServiceMock,
+      accountDeletionBlockerServiceMock,
+      accountLookupServiceMock,
       logger as any
     );
   });
@@ -186,6 +219,58 @@ describe('MeResolverFields', () => {
     });
   });
 
+  describe('organization pending fields (R-1)', () => {
+    it('organizationInvitationsCount degrades to 0 for an anonymous actor', async () => {
+      const result = await resolver.organizationInvitationsCount(
+        anonymousActorContext,
+        []
+      );
+      expect(result).toBe(0);
+      expect(
+        meService.getOrganizationInvitationsCountForUser
+      ).not.toHaveBeenCalled();
+    });
+
+    it('organizationInvitations degrades to [] for an anonymous actor', async () => {
+      const result = await resolver.organizationInvitations(
+        anonymousActorContext,
+        []
+      );
+      expect(result).toEqual([]);
+    });
+
+    it('organizationApplications degrades to [] for an anonymous actor', async () => {
+      const result = await resolver.organizationApplications(
+        anonymousActorContext,
+        []
+      );
+      expect(result).toEqual([]);
+    });
+
+    it('delegates to MeService for an authenticated actor', async () => {
+      meService.getOrganizationInvitationsCountForUser.mockResolvedValue(2);
+      meService.getOrganizationInvitationsForUser.mockResolvedValue([
+        { id: 'oi-1' } as any,
+      ]);
+      meService.getOrganizationApplicationsForUser.mockResolvedValue([
+        { id: 'oa-1' } as any,
+      ]);
+
+      expect(
+        await resolver.organizationInvitationsCount(actorContext, [])
+      ).toBe(2);
+      expect(await resolver.organizationInvitations(actorContext, [])).toEqual([
+        { id: 'oi-1' },
+      ]);
+      expect(await resolver.organizationApplications(actorContext, [])).toEqual(
+        [{ id: 'oa-1' }]
+      );
+      expect(
+        meService.getOrganizationInvitationsCountForUser
+      ).toHaveBeenCalledWith(actorContext.actorID, []);
+    });
+  });
+
   describe('communityInvitations degradation', () => {
     it('should return an empty array when actorID is missing, without throwing', async () => {
       const result = await resolver.communityInvitations(
@@ -270,6 +355,54 @@ describe('MeResolverFields', () => {
     expect(result).toEqual([]);
   });
 
+  describe('mcpApiKeys (workspace#038)', () => {
+    it('returns an empty array when actorID is missing, without throwing', async () => {
+      const result = await resolver.mcpApiKeys(anonymousActorContext);
+      expect(result).toEqual([]);
+    });
+
+    it('does not call the service when actorID is missing', async () => {
+      await resolver.mcpApiKeys(anonymousActorContext);
+      expect(
+        mcpApiKeyServiceMock.listUserKeysForProjection
+      ).not.toHaveBeenCalled();
+    });
+
+    it("returns only the caller's keys, newest first, incl. revoked/expired, with no keyHash (FR-008/FR-009, US2-AS2)", async () => {
+      const now = new Date('2026-08-12T00:00:00.000Z');
+      const older = new Date('2026-08-01T00:00:00.000Z');
+      mcpApiKeyServiceMock.listUserKeysForProjection.mockResolvedValue([
+        {
+          id: 'k-new',
+          name: 'new key',
+          scopes: [{ operations: ['read'] }],
+          createdDate: now,
+          isActive: true,
+        },
+        {
+          id: 'k-revoked',
+          name: 'revoked key',
+          scopes: [{ operations: ['tools'] }],
+          createdDate: older,
+          isActive: false,
+        },
+      ] as any);
+
+      const result = await resolver.mcpApiKeys(actorContext);
+
+      expect(
+        mcpApiKeyServiceMock.listUserKeysForProjection
+      ).toHaveBeenCalledWith(actorContext.actorID);
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe('k-new');
+      expect(result[1].id).toBe('k-revoked');
+      expect(result[1].status).toBe('revoked');
+      for (const key of result) {
+        expect(key).not.toHaveProperty('keyHash');
+      }
+    });
+  });
+
   describe('conversations degradation', () => {
     it('should return the empty container when actorID is missing, without throwing', async () => {
       const result = await resolver.conversations(anonymousActorContext);
@@ -291,6 +424,107 @@ describe('MeResolverFields', () => {
       const result = await resolver.conversations(actorContext);
       expect(result).toBeDefined();
       expect(logger.verbose).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('accountDeletion', () => {
+    it('degrades to the empty status when unauthenticated, without calling the blocker service', async () => {
+      const result = await resolver.accountDeletion(anonymousActorContext);
+
+      expect(result).toEqual({
+        canDelete: false,
+        sessionFresh: false,
+        blockers: [],
+        truncated: false,
+        totals: [],
+        externalSubscriptionLinked: false,
+      });
+      expect(
+        accountDeletionBlockerServiceMock.getBlockers
+      ).not.toHaveBeenCalled();
+    });
+
+    it('calls the shared blocker predicate on the self branch (FR-006 same-predicate)', async () => {
+      const userWithAccount = { id: 'user-123', accountID: 'account-1' };
+      const userLookupService = createMock<UserLookupService>();
+      userLookupService.getUserByIdOrFail.mockResolvedValue(
+        userWithAccount as any
+      );
+      resolver = new MeResolverFields(
+        meService,
+        userLookupService,
+        inAppNotificationService,
+        mcpApiKeyServiceMock,
+        accountDeletionBlockerServiceMock,
+        accountLookupServiceMock,
+        logger as any
+      );
+
+      await resolver.accountDeletion(actorContext);
+
+      expect(
+        accountDeletionBlockerServiceMock.getBlockers
+      ).toHaveBeenCalledWith('user-123', 'account-1', 'self');
+    });
+
+    it('reports sessionFresh true within the privileged window and false when stale/missing', async () => {
+      const fresh = { ...actorContext, issuedAt: Date.now() - 60_000 };
+      const stale = {
+        ...actorContext,
+        issuedAt: Date.now() - 16 * 60 * 1000,
+      };
+      const missing = { ...actorContext, issuedAt: undefined };
+
+      expect((await resolver.accountDeletion(fresh)).sessionFresh).toBe(true);
+      expect((await resolver.accountDeletion(stale)).sessionFresh).toBe(false);
+      expect((await resolver.accountDeletion(missing)).sessionFresh).toBe(
+        false
+      );
+    });
+
+    it('maps the stored externalSubscriptionID to a boolean linkage flag', async () => {
+      accountLookupServiceMock.getAccountOrFail.mockResolvedValue({
+        id: 'account-1',
+        externalSubscriptionID: 'wingback-1',
+      } as any);
+
+      const result = await resolver.accountDeletion(actorContext);
+
+      expect(result.externalSubscriptionLinked).toBe(true);
+    });
+
+    it('reports externalSubscriptionLinked false when no subscription is stored', async () => {
+      accountLookupServiceMock.getAccountOrFail.mockResolvedValue({
+        id: 'account-1',
+        externalSubscriptionID: undefined,
+      } as any);
+
+      const result = await resolver.accountDeletion(actorContext);
+
+      expect(result.externalSubscriptionLinked).toBe(false);
+    });
+
+    it('passes through canDelete/blockers/truncated/totals from the blocker service verbatim', async () => {
+      accountDeletionBlockerServiceMock.getBlockers.mockResolvedValue({
+        canDelete: false,
+        blockers: [
+          {
+            kind: 'ACCOUNT_SPACE' as any,
+            resourceID: 'space-1',
+            displayName: 'My Space',
+            selfResolvable: true,
+          },
+        ],
+        totals: [{ kind: 'ACCOUNT_SPACE' as any, total: 1 }],
+        truncated: false,
+      });
+
+      const result = await resolver.accountDeletion(actorContext);
+
+      expect(result.canDelete).toBe(false);
+      expect(result.blockers).toHaveLength(1);
+      expect(result.blockers[0].displayName).toBe('My Space');
+      expect(result.totals).toEqual([{ kind: 'ACCOUNT_SPACE', total: 1 }]);
     });
   });
 });

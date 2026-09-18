@@ -131,7 +131,7 @@ export class InputCreatorResolverFields {
     );
 
     const whiteboardInput =
-      this.inputCreatorService.buildCreateWhiteboardInputFromWhiteboard(
+      await this.inputCreatorService.buildCreateWhiteboardInputFromWhiteboard(
         whiteboard
       );
     if (!whiteboardInput) {

@@ -12,6 +12,7 @@ import {
   NotificationEventPayloadSpace,
   NotificationEventPayloadSpaceCalendarEvent,
   NotificationEventPayloadSpaceCollaborationCallout,
+  NotificationEventPayloadSpaceCollaborationCalloutReaction,
   NotificationEventPayloadSpaceCommunicationMessageDirect,
   NotificationEventPayloadSpaceCommunicationUpdate,
   NotificationEventPayloadSpaceCommunityApplication,
@@ -36,6 +37,7 @@ import { LogContext } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { NotificationEvent } from '@common/enums/notification.event';
+import { RoleName } from '@common/enums/role.name';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
@@ -77,6 +79,10 @@ import { NotificationInputCollaborationCalloutContributionCreated } from '../not
 import { NotificationInputCollaborationCalloutPostContributionComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { NotificationInputCommentReply } from '../notification-adapter/dto/space/notification.dto.input.space.communication.user.comment.reply';
 import { NotificationInputUserEmailChangeSpaceAdmin } from '../notification-adapter/dto/space/notification.dto.input.space.user.email.change';
+import {
+  NotificationEventPayloadOrganizationAssociateActor,
+  NotificationEventPayloadOrganizationAssociateInvitation,
+} from './notification.event.payload.organization.associate.bridge';
 
 interface CalloutContributionPayload {
   id: string;
@@ -85,6 +91,20 @@ interface CalloutContributionPayload {
   createdBy: ContributorPayload;
   type: CalloutContributionType;
   url: string;
+}
+
+/**
+ * Temporary bridge until `@alkemio/notifications-lib` publishes this
+ * interface (merge gate — see the contract's rollout ordering). Mirrors
+ * the lib shape exactly so the swap to the published import is a pure
+ * type-only change.
+ */
+interface NotificationEventPayloadSpaceCommunityInvitationOrganization
+  extends NotificationEventPayloadSpaceCommunityInvitation {
+  organizationInvitationsUrl: string;
+  extraRoles: string[];
+  spacesToJoin: { displayName: string; url: string }[];
+  recipientEmail?: string;
 }
 
 @Injectable()
@@ -277,6 +297,98 @@ export class NotificationExternalAdapter {
     return result;
   }
 
+  async buildOrganizationSpaceCommunityInvitationPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    organizationID: string,
+    space: ISpace,
+    spacesToJoin: ISpace[],
+    extraRoles: RoleName[],
+    welcomeMessage?: string,
+    recipientEmail?: string
+  ): Promise<NotificationEventPayloadSpaceCommunityInvitationOrganization> {
+    const spacePayload = await this.buildSpacePayload(
+      eventType,
+      triggeredBy,
+      recipients,
+      space
+    );
+    const organization = await this.actorLookupService.getFullActorByIdOrFail(
+      organizationID,
+      {
+        relations: {
+          profile: true,
+        },
+      }
+    );
+    if (!organization.profile) {
+      throw new EntityNotFoundException(
+        'Unable to find Organization profile',
+        LogContext.COMMUNITY,
+        { organizationID }
+      );
+    }
+    const organizationPayload: ContributorPayload = {
+      id: organization.id,
+      profile: {
+        displayName: organization.profile.displayName,
+        url: this.urlGeneratorService.createUrlForContributor(organization),
+      },
+      type: getActorType(organization),
+    };
+    const spacesToJoinPayload = await Promise.all(
+      spacesToJoin.map(async spaceToJoin => ({
+        displayName: spaceToJoin.about.profile.displayName,
+        url: await this.urlGeneratorService.generateUrlForProfile(
+          spaceToJoin.about.profile
+        ),
+      }))
+    );
+
+    const result: NotificationEventPayloadSpaceCommunityInvitationOrganization =
+      {
+        invitee: organizationPayload,
+        welcomeMessage,
+        organizationInvitationsUrl:
+          this.urlGeneratorService.createUrlForOrganizationSettingsInvitations(
+            organization.nameID
+          ),
+        extraRoles: extraRoles.map(role => role.toString()),
+        spacesToJoin: spacesToJoinPayload,
+        ...(recipientEmail ? { recipientEmail } : {}),
+        ...spacePayload,
+      };
+    return result;
+  }
+
+  /**
+   * Invitation accept/decline outcome payload. Actor-agnostic — the
+   * `invitee` is resolved through the shared contributor lookup, so the
+   * same builder serves organization and user invitation responses.
+   */
+  async buildActorSpaceCommunityInvitationOutcomePayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    invitedActorID: string,
+    space: ISpace
+  ): Promise<NotificationEventPayloadSpaceCommunityInvitation> {
+    const spacePayload = await this.buildSpacePayload(
+      eventType,
+      triggeredBy,
+      recipients,
+      space
+    );
+    const invitedActorPayload =
+      await this.getContributorPayloadOrFail(invitedActorID);
+    const result: NotificationEventPayloadSpaceCommunityInvitation = {
+      invitee: invitedActorPayload,
+      ...spacePayload,
+    };
+    return result;
+  }
+
   async buildSpaceCommunityExternalInvitationCreatedNotificationPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
@@ -392,9 +504,25 @@ export class NotificationExternalAdapter {
           contribution.memo.nameID
         ),
       };
+    } else if (contribution.collaboraDocument) {
+      contributionPayload = {
+        id: contribution.collaboraDocument.id,
+        type: CalloutContributionType.COLLABORA_DOCUMENT,
+        createdBy: await this.getContributorPayloadOrFail(
+          contribution.createdBy ||
+            contribution.collaboraDocument.createdBy ||
+            ''
+        ),
+        displayName: contribution.collaboraDocument.profile?.displayName ?? '',
+        description: contribution.collaboraDocument.profile?.description ?? '',
+        // Collabora documents have no client deep-link route — the client opens
+        // them in a dialog from the callout page — so the canonical URL is the
+        // containing callout (mirrors UrlGeneratorService + the link branch).
+        url: calloutURL,
+      };
     } else {
       throw new RelationshipNotFoundException(
-        'No valid contribution type found (post, whiteboard, or link)',
+        'No valid contribution type found (post, whiteboard, link, memo, or collabora document)',
         LogContext.NOTIFICATIONS,
         {
           contribution: contribution.id,
@@ -765,6 +893,45 @@ export class NotificationExternalAdapter {
     };
   }
 
+  /**
+   * Builds the AMQP payload for a callout-reaction email notification.
+   * The shape is no-content-by-construction: framing.description is always
+   * empty so no callout body is ever transmitted.
+   */
+  async buildSpaceCollaborationCalloutReactionPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    space: ISpace,
+    calloutId: string,
+    calloutDisplayName: string,
+    emoji: string
+  ): Promise<NotificationEventPayloadSpaceCollaborationCalloutReaction> {
+    const spacePayload = await this.buildSpacePayload(
+      eventType,
+      triggeredBy,
+      recipients,
+      space
+    );
+    const calloutURL =
+      await this.urlGeneratorService.getCalloutUrlPath(calloutId);
+
+    return {
+      ...spacePayload,
+      callout: {
+        id: calloutId,
+        framing: {
+          id: '',
+          type: '',
+          displayName: calloutDisplayName,
+          description: '',
+          url: calloutURL,
+        },
+      },
+      reaction: { emoji },
+    };
+  }
+
   async buildPlatformSpaceCreatedPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
@@ -910,12 +1077,14 @@ export class NotificationExternalAdapter {
     eventType: NotificationEvent,
     triggeredBy: string,
     recipients: IUser[],
-    user: IUser
+    user: IUser,
+    triggeredByPayload?: UserPayload
   ): Promise<NotificationEventPayloadPlatformUserRemoved> {
     const basePayload = await this.buildBaseEventPayload(
       eventType,
       triggeredBy,
-      recipients
+      recipients,
+      triggeredByPayload
     );
     const result: NotificationEventPayloadPlatformUserRemoved = {
       user: {
@@ -1150,6 +1319,115 @@ export class NotificationExternalAdapter {
     return payload;
   }
 
+  /**
+   * The invitee is notified naming the organization, the offered extra
+   * role(s) and the message (never rendered in an email subject or push
+   * body by the template — the field just carries the text).
+   */
+  async buildOrganizationAssociateInvitationPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    organizationID: string,
+    inviteeID: string,
+    extraRoles: RoleName[],
+    welcomeMessage?: string
+  ): Promise<NotificationEventPayloadOrganizationAssociateInvitation> {
+    const organizationPayload = await this.buildOrganizationPayload(
+      eventType,
+      triggeredBy,
+      recipients,
+      organizationID
+    );
+    const organization = await this.actorLookupService.getFullActorByIdOrFail(
+      organizationID,
+      { relations: { profile: true } }
+    );
+    const inviteePayload = await this.getContributorPayloadOrFail(inviteeID);
+    const payload: NotificationEventPayloadOrganizationAssociateInvitation = {
+      invitee: inviteePayload,
+      extraRoles: extraRoles.map(role => role.toString()),
+      welcomeMessage,
+      organizationUrl: this.urlGeneratorService.createUrlForOrganizationNameID(
+        organization.nameID
+      ),
+      ...organizationPayload,
+    };
+    return payload;
+  }
+
+  /**
+   * Actor-shape payload shared by the six response/application/joined
+   * events: the `actor` is the invitee (responses), the applicant
+   * (application events) or the new associate (joined). `recipientEmail`
+   * is populated ONLY on the zero-admin application escalation, together
+   * with an empty `recipients` list.
+   */
+  async buildOrganizationAssociateActorPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    organizationID: string,
+    actorID: string,
+    options?: {
+      extraRoles?: RoleName[];
+      extraRolesWithheld?: RoleName[];
+      applicationMessage?: string;
+      recipientEmail?: string;
+    }
+  ): Promise<NotificationEventPayloadOrganizationAssociateActor> {
+    const organizationPayload = await this.buildOrganizationPayload(
+      eventType,
+      triggeredBy,
+      recipients,
+      organizationID
+    );
+    const organization = await this.actorLookupService.getFullActorByIdOrFail(
+      organizationID,
+      { relations: { profile: true } }
+    );
+    const actorPayload = await this.getContributorPayloadOrFail(actorID);
+    const payload: NotificationEventPayloadOrganizationAssociateActor = {
+      actor: actorPayload,
+      extraRoles: (options?.extraRoles ?? []).map(role => role.toString()),
+      extraRolesWithheld: (options?.extraRolesWithheld ?? []).map(role =>
+        role.toString()
+      ),
+      applicationMessage: options?.applicationMessage,
+      organizationAssociatesUrl:
+        this.urlGeneratorService.createUrlForOrganizationSettingsAssociates(
+          organization.nameID
+        ),
+      organizationUrl: this.urlGeneratorService.createUrlForOrganizationNameID(
+        organization.nameID
+      ),
+      ...(options?.recipientEmail
+        ? { recipientEmail: options.recipientEmail }
+        : {}),
+      ...organizationPayload,
+    };
+    return payload;
+  }
+
+  private async buildOrganizationPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    organizationID: string
+  ): Promise<{ organization: ContributorPayload } & BaseEventPayload> {
+    const basePayload = await this.buildBaseEventPayload(
+      eventType,
+      triggeredBy,
+      recipients
+    );
+    const organizationContributor =
+      await this.getContributorPayloadOrFail(organizationID);
+    return {
+      organization: organizationContributor,
+      ...basePayload,
+    };
+  }
+
   async buildSpaceCommunicationMessageDirectNotificationPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
@@ -1263,9 +1541,11 @@ export class NotificationExternalAdapter {
   private async buildBaseEventPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
-    recipients: IUser[]
+    recipients: IUser[],
+    triggeredByPayload?: UserPayload
   ): Promise<BaseEventPayload> {
-    const contributor = await this.getUserPayloadOrFail(triggeredBy);
+    const contributor =
+      triggeredByPayload ?? (await this.getUserPayloadOrFail(triggeredBy));
     const result: BaseEventPayload = {
       eventType,
       triggeredBy: contributor,
@@ -1372,7 +1652,14 @@ export class NotificationExternalAdapter {
     return result;
   }
 
-  private createUserPayloadFromUser(user: IUser): UserPayload {
+  /**
+   * Builds a `UserPayload` straight from an already-loaded `IUser`, with no
+   * DB lookup. Exposed for callers that must resolve a notification's
+   * initiator payload BEFORE an action that removes the initiator's own row
+   * — e.g. self-account deletion, where the initiator IS the departed user
+   * and a post-deletion lookup by id would fail.
+   */
+  public createUserPayloadFromUser(user: IUser): UserPayload {
     return {
       id: user.id,
       firstName: user.firstName,

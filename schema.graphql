@@ -31,8 +31,14 @@ scalar Upload
 """A uuid identifier. Length 36 characters."""
 scalar UUID
 
-"""Content of a Whiteboard, as JSON."""
-scalar WhiteboardContent
+"""The kind of resource blocking a user from deleting their own account."""
+enum AccountDeletionBlockerKind {
+  ACCOUNT_INNOVATION_HUB
+  ACCOUNT_INNOVATION_PACK
+  ACCOUNT_SPACE
+  ACCOUNT_VIRTUAL_CONTRIBUTOR
+  SOLE_ORGANIZATION_OWNER
+}
 
 enum AccountType {
   ORGANIZATION
@@ -224,6 +230,7 @@ enum AuthorizationPrivilege {
   LICENSE_RESET
   MOVE_CONTRIBUTION
   MOVE_POST
+  MOVE_TASK
   PLATFORM_ADMIN
   PLATFORM_OPERATIONS_ADMIN
   PLATFORM_SETTINGS_ADMIN
@@ -311,8 +318,14 @@ enum CalloutVisibility {
   PUBLISHED
 }
 
+enum ClassificationCardinality {
+  MULTI_SELECT
+  SINGLE_SELECT
+}
+
 enum CollaboraDocumentType {
   DRAWING
+  PDF
   PRESENTATION
   SPREADSHEET
   WORDPROCESSING
@@ -384,6 +397,7 @@ enum CredentialType {
   PLATFORM_OPERATIONS_ADMIN
   SPACE_ADMIN
   SPACE_FEATURE_MEMO_MULTI_USER
+  SPACE_FEATURE_MEMO_SIGNING
   SPACE_FEATURE_OFFICE_DOCUMENTS
   SPACE_FEATURE_SAVE_AS_TEMPLATE
   SPACE_FEATURE_VIRTUAL_CONTRIBUTORS
@@ -419,9 +433,11 @@ enum ForumDiscussionCategory {
   CHALLENGE_CENTRIC
   COMMUNITY_BUILDING
   HELP
+  NEWSLETTER
   OTHER
   PLATFORM_FUNCTIONALITIES
   RELEASES
+  TIPS_AND_TRICKS
 }
 
 enum ForumDiscussionPrivacy {
@@ -462,6 +478,7 @@ enum LicenseEntitlementType {
   ACCOUNT_SPACE_PREMIUM
   ACCOUNT_VIRTUAL_CONTRIBUTOR
   SPACE_FLAG_MEMO_MULTI_USER
+  SPACE_FLAG_MEMO_SIGNING
   SPACE_FLAG_OFFICE_DOCUMENTS
   SPACE_FLAG_SAVE_AS_TEMPLATE
   SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS
@@ -483,6 +500,7 @@ enum LicenseType {
 enum LicensingCredentialBasedCredentialType {
   ACCOUNT_LICENSE_PLUS
   SPACE_FEATURE_MEMO_MULTI_USER
+  SPACE_FEATURE_MEMO_SIGNING
   SPACE_FEATURE_OFFICE_DOCUMENTS
   SPACE_FEATURE_SAVE_AS_TEMPLATE
   SPACE_FEATURE_VIRTUAL_CONTRIBUTORS
@@ -498,6 +516,27 @@ enum LicensingCredentialBasedPlanType {
   ACCOUNT_PLAN
   SPACE_FEATURE_FLAG
   SPACE_PLAN
+}
+
+"""Operations an MCP API key may perform."""
+enum McpApiKeyOperation {
+  READ
+  TOOLS
+}
+
+"""
+Lifecycle status of an MCP API key. REVOKED takes precedence over EXPIRED.
+"""
+enum McpApiKeyStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+}
+
+enum MemoSignatureVerificationStatus {
+  INVALID
+  UNAVAILABLE
+  VERIFIED
 }
 
 enum MimeType {
@@ -550,8 +589,14 @@ enum MutationType {
 }
 
 enum NotificationEvent {
+  ORGANIZATION_ADMIN_ASSOCIATE_APPLICATION
+  ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_ACCEPTED
+  ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_DECLINED
+  ORGANIZATION_ADMIN_ASSOCIATE_JOINED
   ORGANIZATION_ADMIN_MENTIONED
   ORGANIZATION_ADMIN_MESSAGE
+  ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION
+  ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED
   ORGANIZATION_MESSAGE_SENDER
   PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED
   PLATFORM_ADMIN_SPACE_CREATED
@@ -562,11 +607,16 @@ enum NotificationEvent {
   SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION
   SPACE_ADMIN_COMMUNITY_APPLICATION
   SPACE_ADMIN_COMMUNITY_NEW_MEMBER
+  SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED
+  SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED
+  SPACE_ADMIN_USER_COMMUNITY_INVITATION_ACCEPTED
+  SPACE_ADMIN_USER_COMMUNITY_INVITATION_DECLINED
   SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED
   SPACE_COLLABORATION_CALLOUT_COMMENT
   SPACE_COLLABORATION_CALLOUT_CONTRIBUTION
   SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT
   SPACE_COLLABORATION_CALLOUT_PUBLISHED
+  SPACE_COLLABORATION_CALLOUT_REACTION
   SPACE_COLLABORATION_POLL_MODIFIED_ON_POLL_I_VOTED_ON
   SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE
   SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL
@@ -585,6 +635,9 @@ enum NotificationEvent {
   USER_EMAIL_CHANGE_SPACE_ADMIN_NOTIFICATION
   USER_MENTIONED
   USER_MESSAGE
+  USER_ORGANIZATION_ASSOCIATE_APPLICATION_APPROVED
+  USER_ORGANIZATION_ASSOCIATE_APPLICATION_DECLINED
+  USER_ORGANIZATION_ASSOCIATE_INVITATION
   USER_PASSWORD_CHANGE_SECURITY_SIGNAL
   USER_SIGN_UP_WELCOME
   USER_SPACE_COMMUNITY_APPLICATION_DECLINED
@@ -610,6 +663,8 @@ enum NotificationEventInAppState {
 }
 
 enum NotificationEventPayload {
+  ORGANIZATION_ASSOCIATE_ACTOR
+  ORGANIZATION_ASSOCIATE_INVITATION
   ORGANIZATION_MESSAGE_DIRECT
   ORGANIZATION_MESSAGE_ROOM
   PLATFORM_FORUM_DISCUSSION
@@ -619,6 +674,7 @@ enum NotificationEventPayload {
   SPACE_COLLABORATION_CALLOUT
   SPACE_COLLABORATION_CALLOUT_COMMENT
   SPACE_COLLABORATION_CALLOUT_POST_COMMENT
+  SPACE_COLLABORATION_CALLOUT_REACTION
   SPACE_COLLABORATION_POLL
   SPACE_COMMUNICATION_MESSAGE_DIRECT
   SPACE_COMMUNICATION_UPDATE
@@ -656,6 +712,17 @@ enum OpenAIModel {
   O3_MINI
   O3_PRO
   O4_MINI
+}
+
+enum OrganizationAssociateEligibilityReason {
+  ALREADY_ASSOCIATE
+  APPLICATION_PENDING
+  APPLICATIONS_NOT_ACCEPTED
+  APPLY_NOT_GRANTED
+  ELIGIBLE_TO_APPLY
+  ELIGIBLE_TO_JOIN
+  INVITATION_PENDING
+  NOT_AUTHENTICATED
 }
 
 enum OrganizationVerificationEnum {
@@ -767,14 +834,21 @@ enum RoleName {
   REGISTERED
 }
 
+enum RoleSetInvitationResultNotice {
+  ORGANIZATION_HAS_NO_ADMINISTRATORS
+}
+
 enum RoleSetInvitationResultType {
   ALREADY_HAS_OPEN_APPLICATION
   ALREADY_INVITED_TO_PLATFORM_AND_ROLE_SET
   ALREADY_INVITED_TO_ROLE_SET
   ALREADY_MEMBER_OF_ROLE_SET
+  EXTRA_ROLE_LIMIT_REACHED
   INVITATION_TO_PARENT_NOT_AUTHORIZED
   INVITED_TO_PLATFORM_AND_ROLE_SET
   INVITED_TO_ROLE_SET
+  ORGANIZATION_LEAD_ROLE_LIMIT_REACHED
+  ORGANIZATION_NOT_ACCEPTING_INVITATIONS
 }
 
 enum RoleSetRoleImplicit {
@@ -830,6 +904,34 @@ enum SearchVisibility {
   PUBLIC
 }
 
+"""
+The widgets available for the Space sidepanel, per InnovationFlow state (tab).
+"""
+enum SidebarWidget {
+  ABOUT
+  ADD_USER
+  APPLICATION_BUTTON
+  CONTACT_LEADS
+  CREATE_POST
+  CREATE_SUBSPACE
+  EVENTS
+  GUIDELINES
+  INDEX
+  INTENT
+  SEARCH
+  SUBSPACE_LINKS
+  UPDATES
+  VIRTUAL_CONTRIBUTORS
+}
+
+enum SigningAttemptStatus {
+  CANCELLED
+  EXPIRED
+  FAILED
+  PENDING
+  SIGNED
+}
+
 enum SpaceLevel {
   L0
   L1
@@ -868,6 +970,7 @@ enum TagsetReservedName {
   FLOW_STATE
   KEYWORDS
   SKILLS
+  TASK
 }
 
 enum TagsetType {
@@ -893,6 +996,7 @@ enum TemplateDefaultType {
 
 enum TemplateType {
   CALLOUT
+  CLASSIFICATION
   COMMUNITY_GUIDELINES
   POST
   SPACE
@@ -1152,6 +1256,29 @@ type Account implements ActorFull {
   updatedDate: DateTime!
   """The virtual contributors for this Account."""
   virtualContributors: [VirtualContributor!]!
+}
+
+"""
+One item blocking a user from deleting their own account — a space, virtual contributor, innovation pack, innovation hub, or an organization the user is the sole owner of.
+"""
+type AccountDeletionBlocker {
+  displayName: String!
+  kind: AccountDeletionBlockerKind!
+  resourceID: UUID!
+  """
+  True when the user can resolve the blocker alone, via the existing account-resources page. False for a sole-owned organization — ownership must be handed over, or support contacted.
+  """
+  selfResolvable: Boolean!
+  """Client-navigable URL of the blocking resource, when one exists."""
+  url: String
+}
+
+"""
+Accurate per-kind total, independent of whether the itemized blocker list was truncated.
+"""
+type AccountDeletionBlockerTotal {
+  kind: AccountDeletionBlockerKind!
+  total: Int!
 }
 
 type AccountLicensePlan {
@@ -1639,6 +1766,8 @@ type Application {
   state: String!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+  """The User who submitted this Application."""
+  user: User
 }
 
 type AssistantCapability {
@@ -1826,10 +1955,22 @@ type Callout {
   publishedBy: User
   """The Date of the publishing of this Callout."""
   publishedDate: DateTime
+  """
+  Who reacted (tier-2). Bounded: 100 most recent by last change, descending. Fetch only on demand.
+  """
+  reactions: [CalloutReaction!]!
+  """
+  Cheap always-shown summary (tier-1). Dataloader-batched; safe to select on feeds.
+  """
+  reactionsSummary: CalloutReactionsSummary!
   """The Callout Settings associated with this Callout."""
   settings: CalloutSettings!
   """The sorting order for this Callout."""
   sortOrder: Float!
+  """
+  Per-column task counts for a Tasks board callout, in the board-defined column order and zero-filled; null when the callout is not a Tasks board.
+  """
+  taskColumnCounts: [TaskColumnCount!]
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
 }
@@ -1837,6 +1978,10 @@ type Callout {
 type CalloutContribution {
   """The authorization rules for the entity"""
   authorization: Authorization
+  """
+  The Classification of this Contribution, present only for a task on a Tasks board (carries the task column).
+  """
+  classification: Classification
   """The CollaboraDocument that was contributed."""
   collaboraDocument: CollaboraDocument
   """The user that created this Document"""
@@ -1870,8 +2015,10 @@ type CalloutContributionDefaults {
   postDescription: Markdown
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
-  """The default whiteboard content for whiteboard responses."""
-  whiteboardContent: WhiteboardContent
+  """
+  Whether this Callout has a non-empty default for Whiteboard contributions.
+  """
+  whiteboardContentAvailable: Boolean!
 }
 
 type CalloutContributionsCountOutput {
@@ -1967,6 +2114,38 @@ type CalloutPostCreated {
   post: Post!
   """The sorting order for this Contribution."""
   sortOrder: Float!
+}
+
+type CalloutReaction {
+  """Allow-list slug (e.g. "heart")."""
+  emoji: String!
+  """The unique identifier."""
+  id: UUID!
+  """
+  When this person's reaction was made or last changed (a swap updates this).
+  """
+  updatedDate: DateTime!
+  """
+  The reactor. Null only in the deletion race window; clients skip null users.
+  """
+  user: User
+}
+
+type CalloutReactionsSummary {
+  """The emoji slugs a user may react with on this Callout."""
+  allowedEmojis: [String!]!
+  """
+  Distinct emoji slugs currently in use, in allow-list order. Never carries counts.
+  """
+  emojis: [String!]!
+  """
+  The requesting user's current reaction slug; null when none or unauthenticated.
+  """
+  myReactionEmoji: String
+  """
+  Number of distinct people currently holding a reaction on this Callout.
+  """
+  total: Int!
 }
 
 type CalloutSelectionSettings {
@@ -2077,6 +2256,52 @@ type Classification {
   updatedDate: DateTime!
 }
 
+"""One vocabulary group on a host entity — the spec's 'a Classification'."""
+type ClassificationEntry {
+  """Whether one or several values may be selected."""
+  cardinality: ClassificationCardinality!
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """
+  Render-only: false means 'not shown on the Space page'. NOT an access control.
+  """
+  display: Boolean!
+  """
+  Per-instance display label; defaults to the source template's, overridable to resolve a conflict.
+  """
+  displayLabel: String!
+  """The ID of the entity"""
+  id: UUID!
+  """Ids of the currently selected values."""
+  selectedValueIDs: [String!]!
+  """The selected values resolved against `values`, in authored order."""
+  selectedValues: [ClassificationValue!]!
+  """Render order on the host entity — order of addition, oldest first."""
+  sortOrder: Float!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+  """The snapshot vocabulary, in authored order. Never re-sorted."""
+  values: [ClassificationValue!]!
+}
+
+"""
+Cardinality + value set of a Classification Template. Null unless type == CLASSIFICATION.
+"""
+type ClassificationTemplateContent {
+  cardinality: ClassificationCardinality!
+  values: [ClassificationValue!]!
+}
+
+"""One selectable option in a classification's vocabulary."""
+type ClassificationValue {
+  """
+  Stable identifier — aggregation key. Copied verbatim into every snapshot; never re-derived on rename.
+  """
+  id: String!
+  """Human-readable, single-language label."""
+  label: String!
+}
+
 type CollaboraDocument {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -2122,6 +2347,24 @@ type Collaboration {
   timeline: Timeline!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+}
+
+type CollaborationMigrationIssue {
+  id: String!
+  reason: String!
+}
+
+type CollaborationMigrationResult {
+  failed: Int!
+  failedDocuments: [CollaborationMigrationIssue!]!
+  flagged: Int!
+  flaggedDocuments: [CollaborationMigrationIssue!]!
+  migrated: Int!
+  total: Int!
+  """
+  Legacy Whiteboard contribution defaults without a complete owning Callout path.
+  """
+  unattached: Int!
 }
 
 type Communication {
@@ -2468,6 +2711,10 @@ type CreateCalloutContributionData {
   post: CreatePostData
   """The sort order to assign to this Contribution."""
   sortOrder: Float
+  """
+  The Tasks board column this task starts in. Only valid when the parent Callout is a Tasks board; defaults to the first column.
+  """
+  taskColumn: String
   type: CalloutContributionType!
   whiteboard: CreateWhiteboardData
 }
@@ -2475,9 +2722,20 @@ type CreateCalloutContributionData {
 type CreateCalloutContributionDefaultsData {
   """The default title to use for new contributions."""
   defaultDisplayName: String
+  """
+  Use a server-owned live Whiteboard contribution-default draft. Mutually exclusive with either source field.
+  """
+  draftWhiteboardID: UUID
   """The default description to use for new Post contributions."""
   postDescription: Markdown
-  whiteboardContent: WhiteboardContent
+  """
+  Copy the internal Whiteboard contribution default from this source Callout. Mutually exclusive with sourceWhiteboardID.
+  """
+  sourceCalloutID: UUID
+  """
+  Seed the default from an existing Whiteboard. The server copies its content and media into the owning Callout bucket; the source id is not persisted.
+  """
+  sourceWhiteboardID: UUID
 }
 
 type CreateCalloutContributorsMapViewData {
@@ -2523,6 +2781,10 @@ type CreateCalloutData {
   settings: CreateCalloutSettingsData
   """The sort order to assign to this Callout."""
   sortOrder: Float
+  """
+  When present, creates this Callout as a Tasks board. Requires a POST-only contribution type.
+  """
+  taskBoard: CreateCalloutTaskBoardData
 }
 
 type CreateCalloutFramingData {
@@ -2590,6 +2852,13 @@ type CreateCalloutsSetData {
   calloutsData: [CreateCalloutData!]
 }
 
+type CreateCalloutTaskBoardData {
+  """
+  The ordered columns of the Tasks board. The first is the default column. Omit to seed the default set.
+  """
+  columns: [String!]
+}
+
 type CreateClassificationData {
   tagsets: [CreateTagsetData!]!
 }
@@ -2644,6 +2913,10 @@ type CreateInnovationFlowStateSettingsData {
   Optional. Whether Posts in this State show publish details in the feed. Defaults to true when omitted.
   """
   showPublishDetails: Boolean
+  """
+  Optional. Ordered sidebar widgets; defaults to [INTENT, CREATE_POST, APPLICATION_BUTTON, SEARCH, INDEX] when omitted.
+  """
+  sidebar: [SidebarWidget!]
   """
   Optional. Whether the phase is shown in member-facing navigation. Defaults to true when omitted.
   """
@@ -2724,12 +2997,19 @@ type CreateVisualOnProfileData {
 }
 
 type CreateWhiteboardData {
-  content: WhiteboardContent
+  """
+  Use a server-owned live Whiteboard draft as the trusted source for final materialization. Mutually exclusive with sourceWhiteboardID.
+  """
+  draftWhiteboardID: UUID
   """A readable identifier, unique within the containing scope."""
   nameID: NameID
   """The preview settings for the whiteboard."""
   previewSettings: CreateWhiteboardPreviewSettingsData
   profile: CreateProfileData
+  """
+  Seed the new Whiteboard from the stored content of an existing Whiteboard through a server-side authorized copy. Omission creates an empty Whiteboard.
+  """
+  sourceWhiteboardID: UUID
 }
 
 type CreateWhiteboardPreviewSettingsData {
@@ -2955,6 +3235,34 @@ type InAppNotification {
   updatedDate: DateTime!
 }
 
+type InAppNotificationPayloadOrganizationAssociateActor implements InAppNotificationPayload {
+  """The user who applied, responded to an invitation, or joined."""
+  actor: Actor
+  """The underlying application — set for the three application events."""
+  application: Application
+  """
+  Offered extra roles that could not be granted (set only on the accepted-invitation event).
+  """
+  extraRolesWithheld: [RoleName!]
+  """The underlying invitation — set for the two response events."""
+  invitation: Invitation
+  """The organization the actor is associated with."""
+  organization: Organization
+  """The payload type."""
+  type: NotificationEventPayload!
+}
+
+type InAppNotificationPayloadOrganizationAssociateInvitation implements InAppNotificationPayload {
+  """
+  The underlying invitation — offered role(s) and message. Null once the invitation record no longer resolves (e.g. the organization was deleted).
+  """
+  invitation: Invitation
+  """The organization the invitation is for."""
+  organization: Organization
+  """The payload type."""
+  type: NotificationEventPayload!
+}
+
 type InAppNotificationPayloadOrganizationMessageDirect implements InAppNotificationPayload {
   """The message content."""
   message: String!
@@ -3010,10 +3318,6 @@ type InAppNotificationPayloadPlatformUserMessageRoom implements InAppNotificatio
 type InAppNotificationPayloadPlatformUserProfileRemoved implements InAppNotificationPayload {
   """The payload type."""
   type: NotificationEventPayload!
-  """The display name of the User that was removed."""
-  userDisplayName: String!
-  """The email of the User that was removed."""
-  userEmail: String!
 }
 
 type InAppNotificationPayloadSpace implements InAppNotificationPayload {
@@ -3049,6 +3353,19 @@ type InAppNotificationPayloadSpaceCollaborationCalloutPostComment implements InA
   """The details of the message."""
   messageDetails: MessageDetails
   """The Space where the comment was made."""
+  space: Space!
+  """The payload type."""
+  type: NotificationEventPayload!
+}
+
+type InAppNotificationPayloadSpaceCollaborationCalloutReaction implements InAppNotificationPayload {
+  """The Callout that was reacted to."""
+  callout: Callout!
+  """
+  The emoji slug from the platform allow-list. Clients own slug-to-glyph rendering.
+  """
+  emoji: String!
+  """The Space where the reaction was made."""
   space: Space!
   """The payload type."""
   type: NotificationEventPayload!
@@ -3124,6 +3441,14 @@ type InAppNotificationPayloadSpaceCommunityCalendarEventComment implements InApp
 }
 
 type InAppNotificationPayloadSpaceCommunityInvitation implements InAppNotificationPayload {
+  """
+  The underlying invitation — role(s) offered, whether the parent Space is also joined, and the Spaces that will be joined on acceptance.
+  """
+  invitation: Invitation
+  """
+  The organization the invitation is for, when the invitee is an organization.
+  """
+  organization: Organization
   """The Space that the invitation is for."""
   space: Space!
   """The payload type."""
@@ -3214,6 +3539,10 @@ type InnovationFlowStateSettings {
   Whether Posts in this State show publish details (publisher, publish date, avatar) in the feed. Presentation only — does not restrict access to publisher data. Default true.
   """
   showPublishDetails: Boolean!
+  """
+  Ordered widgets shown in the Space sidepanel for this State. May be empty.
+  """
+  sidebar: [SidebarWidget!]!
   """
   Whether this State/phase is shown in the member-facing navigation. Default true. UI-affordance only: it does NOT gate access to the phase content.
   """
@@ -3311,6 +3640,10 @@ type Invitation {
   Additional roles to assign to the Actor, in addition to the entry Role.
   """
   extraRoles: [RoleName!]!
+  """
+  Offered extra roles that could not be granted when this invitation was accepted (organizations only, cap consumed in the meantime). Transient: set only on the object returned by the accept mutation, never persisted, and null everywhere else.
+  """
+  extraRolesWithheld: [RoleName!]
   """The ID of the entity"""
   id: UUID!
   """Whether to also add the invited actor to the parent community."""
@@ -3320,6 +3653,10 @@ type Invitation {
   lifecycle: Lifecycle!
   """The next events of this Lifecycle."""
   nextEvents: [String!]!
+  """
+  The Spaces that will be joined if this invitation is accepted, root Space first; null when the caller may not answer this invitation on the invited Actor's behalf.
+  """
+  spacesToJoinOnAccept: [SpaceJoinPreview!]
   """The current state of this Lifecycle."""
   state: String!
   """
@@ -3780,6 +4117,59 @@ type LookupQueryResults {
   whiteboard(ID: UUID!): Whiteboard
 }
 
+"""
+Metadata for one MCP API key. The key value itself is never exposed here.
+"""
+type McpApiKey {
+  createdDate: DateTime!
+  """Optional expiry chosen at mint."""
+  expiresAt: DateTime
+  id: UUID!
+  """When this key last authenticated a request."""
+  lastUsedAt: DateTime
+  """Source address of the last request this key authenticated."""
+  lastUsedFromIp: String
+  """User-supplied label. Not unique."""
+  name: String!
+  """Granted operations, flattened from the stored scope."""
+  operations: [McpApiKeyOperation!]!
+  status: McpApiKeyStatus!
+}
+
+"""
+Result of minting a key. The only place the plaintext is ever returned.
+"""
+type McpApiKeyMintResult {
+  """
+  The plaintext key. Returned EXACTLY ONCE — it is not stored and cannot be re-derived.
+  """
+  apiKey: String!
+  """Metadata for the key just created."""
+  key: McpApiKey!
+}
+
+"""
+Self-scoped pre-flight read for account deletion: whether the calling user can delete their own account right now, and if not, exactly what blocks them. Computed by the same predicate the deleteUser mutation's self-branch guard uses, so the two can never drift. Not gated on session freshness — see sessionFresh.
+"""
+type MeAccountDeletionStatus {
+  """Itemized blockers, capped at 25."""
+  blockers: [AccountDeletionBlocker!]!
+  """True iff no blockers exist for the self branch."""
+  canDelete: Boolean!
+  """
+  True when the account carries a stored external billing linkage. Surfaced for transparency and captured in the audit record on deletion — never a blocker.
+  """
+  externalSubscriptionLinked: Boolean!
+  """
+  True iff the calling session currently satisfies the privileged freshness window. Advisory for client routing; the deleteUser mutation re-enforces this authoritatively at mutation time.
+  """
+  sessionFresh: Boolean!
+  """Accurate per-kind totals, independent of truncation."""
+  totals: [AccountDeletionBlockerTotal!]!
+  """True when the blocker list above was truncated at the cap."""
+  truncated: Boolean!
+}
+
 type MeConversationsResult {
   """
   All conversations (direct and group) for the current authenticated user. Client handles categorization by room type and member actor types.
@@ -3806,10 +4196,6 @@ type MediaGallery {
 type Memo {
   """The authorization rules for the entity"""
   authorization: Authorization
-  """
-  The last saved binary stateV2 of the Yjs document, used to collaborate on the Memo, represented in base64.
-  """
-  content: String
   """The policy governing who can update the Memo content."""
   contentUpdatePolicy: ContentUpdatePolicy!
   """The user that created this Memo"""
@@ -3826,11 +4212,41 @@ type Memo {
   nameID: NameID!
   """The Profile for this Memo."""
   profile: Profile!
+  """Signed copies of this Memo visible to readers of the Memo."""
+  signatures: [MemoSignature!]!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
 }
 
+type MemoSignature {
+  """The Alkemio user who initiated this signed copy."""
+  actor: User
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The immutable PDF produced for this signed copy."""
+  document: Document
+  """The ID of the entity"""
+  id: UUID!
+  """The terminal outcome of this Memo signing attempt."""
+  status: SigningAttemptStatus!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
+
+type MemoSigningContinueResult {
+  authorizeUrl: String!
+}
+
+type MemoSigningPrepareResult {
+  attemptId: UUID!
+  previewUrl: String!
+}
+
 type MeQueryResults {
+  """
+  Self-scoped pre-flight read for account deletion: whether the calling user can delete their own account right now, and if not, exactly what blocks them.
+  """
+  accountDeletion: MeAccountDeletionStatus!
   """The community applications current authenticated user can act on."""
   communityApplications(
     """The state names you want to filter on"""
@@ -3850,6 +4266,10 @@ type MeQueryResults {
   conversations: MeConversationsResult!
   """The query id"""
   id: String!
+  """
+  The current user's MCP API keys, newest first. Includes revoked and expired keys so last-used evidence survives revocation.
+  """
+  mcpApiKeys: [McpApiKey!]!
   """The Spaces I am contributing to"""
   mySpaces(
     """
@@ -3873,6 +4293,25 @@ type MeQueryResults {
   The total number of unread notifications for the current authenticated user across all notification types.
   """
   notificationsUnreadCount: Float!
+  """
+  The current authenticated user's own pending organization applications.
+  """
+  organizationApplications(
+    """The state names you want to filter on"""
+    states: [String!]
+  ): [OrganizationApplicationResult!]!
+  """The current authenticated user's own pending organization invitations."""
+  organizationInvitations(
+    """The state names you want to filter on"""
+    states: [String!]
+  ): [OrganizationInvitationResult!]!
+  """
+  The number of the current authenticated user's own pending organization invitations.
+  """
+  organizationInvitationsCount(
+    """The state names you want to filter on"""
+    states: [String!]
+  ): Float!
   """The Spaces the current user is a member of as a flat list."""
   spaceMembershipsFlat: [CommunityMembershipResult!]!
   """The hierarchy of the Spaces the current user is a member."""
@@ -4004,6 +4443,10 @@ type ModelCardSpaceUsageResult {
 }
 
 type Mutation {
+  """
+  Adds a Classification to a Space by copying a Classification Template (Step A).
+  """
+  addClassificationEntryFromTemplate(classificationData: AddClassificationEntryFromTemplateInput!): ClassificationEntry!
   """Adds an Iframe Allowed URL to the Platform Settings"""
   addIframeAllowedURL(whitelistedURL: String!): [String!]!
   """Adds a full email address to the platform notification blacklist"""
@@ -4012,6 +4455,10 @@ type Mutation {
   Add a new option to a Poll. Requires UPDATE privilege, or CONTRIBUTE privilege when the poll setting allowContributorsAddOptions is enabled. The new option is appended with the next available sort order.
   """
   addPollOption(optionData: AddPollOptionInput!): Poll!
+  """
+  Adds or swaps the requesting user's single reaction on a Callout. Requires CONTRIBUTE on the Callout. The Callout must be published and not a template. The emoji must be on the platform allow-list.
+  """
+  addReactionToCallout(reactionData: AddReactionToCalloutInput!): Callout!
   """Add a reaction to a message from the specified Room."""
   addReactionToMessageInRoom(reactionData: RoomAddReactionToMessageInput!): Reaction!
   """Adds a new visual to the specified media gallery."""
@@ -4022,6 +4469,10 @@ type Mutation {
   Create rooms for legacy conversations that were created without one (from lazy room creation era).
   """
   adminCommunicationMigrateOrphanedConversations: CommunicationAdminMigrateRoomsResult!
+  """
+  Reconcile the Matrix space hierarchy that mirrors the forum against the current forum/discussion state — report-first (dryRun defaults true), scoped to categories + the forum space, never a delete. Returns a task id; the pass runs asynchronously and the task completes with the summary.
+  """
+  adminCommunicationReconcileForumHierarchy(reconcileData: AdminCommunicationReconcileForumHierarchyInput!): String!
   """Remove an orphaned room from messaging platform."""
   adminCommunicationRemoveOrphanedRoom(orphanedRoomData: CommunicationAdminRemoveOrphanedRoomInput!): Boolean!
   """
@@ -4030,6 +4481,10 @@ type Mutation {
   adminCommunicationSyncSpaceHierarchy: Boolean!
   """Allow updating the state flags of a particular rule."""
   adminCommunicationUpdateRoomState(roomStateData: CommunicationAdminUpdateRoomStateInput!): Boolean!
+  """
+  Removes one category from the platform Forum's active discussionCategories list. Refuses while any Discussion still carries the category. Idempotent for an already-absent category. The enum member is never removed. Requires PLATFORM_ADMIN. Audited (PLATFORM_OPERATIONS).
+  """
+  adminForumRemoveDiscussionCategory(removeData: ForumRemoveDiscussionCategoryInput!): Forum!
   """Delete a Kratos identity by ID."""
   adminIdentityDeleteKratosIdentity(kratosIdentityId: UUID!): Boolean!
   """
@@ -4042,6 +4497,8 @@ type Mutation {
   adminLicensePolicyDeleteCredentialRule(deleteData: DeleteLicensePolicyCredentialRuleInput!): LicensingCredentialBasedPolicyCredentialRule!
   """Updates a CredentialRule on the LicensePolicy."""
   adminLicensePolicyUpdateCredentialRule(updateData: UpdateLicensePolicyCredentialRuleInput!): LicensingCredentialBasedPolicyCredentialRule!
+  """Platform admin: revoke a named user's MCP API key. Idempotent."""
+  adminRevokeMcpApiKey(revokeData: AdminRevokeMcpApiKeyInput!): McpApiKey!
   """
   Ingests new data into Elasticsearch from scratch. This will delete all existing data and ingest new data from the source. This is an admin only operation.
   """
@@ -4120,6 +4577,8 @@ type Mutation {
   castPollVote(voteData: CastPollVoteInput!): Poll!
   """Deletes collections nameID-..."""
   cleanupCollections: MigrateEmbeddings!
+  """Starts signing the prepared Memo copy."""
+  continueMemoSigning(signingData: MemoSigningContinueInput!): MemoSigningContinueResult!
   """Move an L1 Space up in the hierarchy, to be a L0 Space."""
   convertSpaceL1ToSpaceL0(convertData: ConvertSpaceL1ToSpaceL0Input!): Space!
   """
@@ -4136,6 +4595,10 @@ type Mutation {
   Create a new Callout on the CalloutsSet. When `file` is supplied alongside a COLLABORA_DOCUMENT framing, the new callout is framed with a Collabora document populated from the uploaded bytes (file-service-go sniffs MIME, validates format and size, and derives the document type; any documentType in the input is ignored on the upload path; displayName defaults from the filename when absent). When `file` is omitted, the existing blank-create behaviour applies and framing.collaboraDocument must specify both displayName and documentType.
   """
   createCalloutOnCalloutsSet(calloutData: CreateCalloutOnCalloutsSetInput!, file: Upload): Callout!
+  """
+  Creates a Classification on a Space ad hoc, without a Template (API-only).
+  """
+  createClassificationEntry(classificationData: CreateClassificationEntryInput!): ClassificationEntry!
   """Create a new Contribution on the Callout."""
   createContributionOnCallout(contributionData: CreateContributionOnCalloutInput!): CalloutContribution!
   """
@@ -4168,6 +4631,8 @@ type Mutation {
   createSubspace(subspaceData: CreateSubspaceInput!): Space!
   """Creates a new Tagset on the specified Profile"""
   createTagsetOnProfile(tagsetData: CreateTagsetOnProfileInput!): Tagset!
+  """Add a column to a Tasks board Callout."""
+  createTaskColumnOnCallout(columnData: CreateTaskColumnOnCalloutInput!): Callout!
   """Creates a new Template on the specified TemplatesSet."""
   createTemplate(templateData: CreateTemplateOnTemplatesSetInput!): Template!
   """
@@ -4182,6 +4647,14 @@ type Mutation {
   createUser(userData: CreateUserInput!): User!
   """Creates a new VirtualContributor on an Account."""
   createVirtualContributor(virtualContributorData: CreateVirtualContributorOnAccountInput!): VirtualContributor!
+  """
+  Materializes a server-owned live Whiteboard draft for a Callout form. Content remains on the collaboration transport; GraphQL returns identifiers only.
+  """
+  createWhiteboardDraftOnCalloutsSet(draftData: CreateWhiteboardDraftOnCalloutsSetInput!): UUID!
+  """
+  Materializes a server-owned live Whiteboard draft for a Template form. GraphQL returns identifiers only.
+  """
+  createWhiteboardDraftOnTemplatesSet(draftData: CreateWhiteboardDraftOnTemplatesSetInput!): UUID!
   """Creates an account in Wingback"""
   createWingbackAccount(accountID: UUID!): String!
   """Removes the specified Application."""
@@ -4190,6 +4663,10 @@ type Mutation {
   deleteCalendarEvent(deleteData: DeleteCalendarEventInput!): CalendarEvent!
   """Delete a Callout."""
   deleteCallout(deleteData: DeleteCalloutInput!): Callout!
+  """
+  Permanently removes a Classification from a Space. No template and no other Space is affected.
+  """
+  deleteClassificationEntry(classificationData: DeleteClassificationEntryInput!): ClassificationEntry!
   """Deletes the specified CollaboraDocument."""
   deleteCollaboraDocument(deleteData: DeleteCollaboraDocumentInput!): CollaboraDocument!
   """Deletes a contribution."""
@@ -4228,6 +4705,8 @@ type Mutation {
   deleteStateOnInnovationFlow(stateData: DeleteStateOnInnovationFlowInput!): InnovationFlowState!
   """Deletes a Storage Bucket"""
   deleteStorageBucket(deleteData: DeleteStorageBuckeetInput!): StorageBucket!
+  """Remove a column from a Tasks board Callout."""
+  deleteTaskColumnOnCallout(columnData: DeleteTaskColumnOnCalloutInput!): Callout!
   """Deletes the specified Template."""
   deleteTemplate(deleteData: DeleteTemplateInput!): Template!
   """Deletes the specified User."""
@@ -4240,6 +4719,10 @@ type Mutation {
   deleteVisualFromMediaGallery(deleteData: DeleteVisualFromMediaGalleryInput!): Visual!
   """Deletes the specified Whiteboard."""
   deleteWhiteboard(whiteboardData: DeleteWhiteboardInput!): Whiteboard!
+  """
+  Idempotently discards a server-owned live Whiteboard draft through the canonical Whiteboard deletion path.
+  """
+  deleteWhiteboardDraft(whiteboardID: UUID!): UUID!
   """
   Re-enable a previously disabled push notification subscription for the current user.
   """
@@ -4284,6 +4767,18 @@ type Mutation {
   Mark notifications as unread. If no filter is provided, marks all user notifications as unread. If filter with types is provided, marks only those notification types as unread.
   """
   markNotificationsAsUnread(filter: NotificationEventsFilterInput): Boolean!
+  """
+  Migrates all pending legacy memo content. Idempotent: repeated calls process only rows whose migrated marker is false.
+  """
+  migrateLegacyMemoContent: CollaborationMigrationResult!
+  """
+  Migrates pending legacy Whiteboard documents and independently normalizes every legacy Whiteboard contribution default, including defaults stored by Callout templates. Idempotent: repeated calls process only unmigrated documents and non-canonical defaults.
+  """
+  migrateLegacyWhiteboardContent: CollaborationMigrationResult!
+  """
+  Mint a new MCP API key for the current user. Returns the plaintext exactly once.
+  """
+  mintMcpApiKey(mintData: MintMcpApiKeyInput!): McpApiKeyMintResult!
   """Moves the specified Contribution to another Callout."""
   moveContributionToCallout(moveContributionData: MoveCalloutContributionInput!): CalloutContribution!
   """
@@ -4298,6 +4793,12 @@ type Mutation {
   Move an L2 sub-subspace to become an L2 subspace under a target L1 in a different L0 space.       The subspace stays at level 2 but changes both its parent L1 and its top-level L0.       All community roles (including admins) are cleared and pending invitations dropped.       Platform access rules are recomputed from the new parent hierarchy.       Requires platform admin privileges.
   """
   moveSpaceL2ToSpaceL1(moveData: MoveSpaceL2ToSpaceL1Input!): Space!
+  """
+  Moves a task to another column on its Tasks board. Authorized as MOVE_TASK on the parent Callout, so a board member can move any task.
+  """
+  moveTaskToColumn(moveData: MoveTaskToColumnInput!): CalloutContribution!
+  """Prepares an exact PDF preview for signing the specified Memo."""
+  prepareMemoSigning(signingData: MemoSigningPrepareInput!): MemoSigningPrepareResult!
   """Refresh the Bodies of Knowledge on All VCs"""
   refreshAllBodiesOfKnowledge: Boolean!
   """
@@ -4328,6 +4829,10 @@ type Mutation {
   Remove the current user vote from a Poll. Requires CONTRIBUTE privilege on the Poll. If the user has not voted, returns a validation error.
   """
   removePollVote(voteData: RemovePollVoteInput!): Poll!
+  """
+  Removes the requesting user's reaction from a Callout. Idempotent — no error when no reaction exists. Self-scoped; requires only authentication (not CONTRIBUTE). Returns the Callout only when the caller retains READ access on it.
+  """
+  removeReactionFromCallout(reactionData: RemoveReactionFromCalloutInput!): Callout!
   """Remove a reaction on a message from the specified Room."""
   removeReactionToMessageInRoom(reactionData: RoomRemoveReactionToMessageInput!): Boolean!
   """
@@ -4350,6 +4855,10 @@ type Mutation {
   Replace the backing file of an existing CollaboraDocument in place, preserving its identity. Requires UPDATE on the document. The replacement must be an allowed OfficeDocs format, within the size cap, and the SAME document type as the current file. Refused while the document is being edited.
   """
   replaceCollaboraDocument(file: Upload!, replaceData: ReplaceCollaboraDocumentInput!): CollaboraDocument!
+  """
+  Replace a Whiteboard from another Whiteboard through the live collaboration room. Content and media are copied server-side; snapshot bytes never pass through GraphQL.
+  """
+  replaceWhiteboardContentFromSource(input: ReplaceWhiteboardContentFromSourceInput!): Whiteboard!
   """Resets the interaction with the VC by recreating the room."""
   resetConversationVc(input: ConversationVcResetInput!): Conversation!
   """Reset all license plans on Accounts"""
@@ -4364,6 +4873,8 @@ type Mutation {
   revokeLicensePlanFromAccount(planData: RevokeLicensePlanFromAccount!): Account!
   """Revokes the specified LicensePlan on a Space."""
   revokeLicensePlanFromSpace(planData: RevokeLicensePlanFromSpace!): Space!
+  """Revoke one of the current user's own MCP API keys. Idempotent."""
+  revokeMcpApiKey(revokeData: RevokeMcpApiKeyInput!): McpApiKey!
   """
   Send a private (1:1) chat message to each of the given Users individually. Does NOT create a group conversation. Each recipient is processed independently and reported on; partial success is possible.
   """
@@ -4426,6 +4937,16 @@ type Mutation {
   updateCalloutsSortOrder(sortOrderData: UpdateCalloutsSortOrderInput!): [Callout!]!
   """Update the visibility of the specified Callout."""
   updateCalloutVisibility(calloutData: UpdateCalloutVisibilityInput!): Callout!
+  """
+  Updates a Classification's definition — label, cardinality and/or value set (API-only).
+  """
+  updateClassificationEntry(classificationData: UpdateClassificationEntryInput!): ClassificationEntry!
+  """
+  Toggles a Classification's shown/hidden state on the Space's About page.
+  """
+  updateClassificationEntryDisplay(classificationData: UpdateClassificationEntryDisplayInput!): ClassificationEntry!
+  """Replaces the selected values of a Classification (Step B)."""
+  updateClassificationEntrySelection(classificationData: UpdateClassificationEntrySelectionInput!): ClassificationEntry!
   """Updates a Tagset on a Classification."""
   updateClassificationTagset(updateData: UpdateClassificationSelectTagsetValueInput!): Tagset!
   """Updates the specified CollaboraDocument."""
@@ -4506,6 +5027,10 @@ type Mutation {
   updateSubspacesSortOrder(sortOrderData: UpdateSubspacesSortOrderInput!): [Space!]!
   """Updates the specified Tagset."""
   updateTagset(updateData: UpdateTagsetInput!): Tagset!
+  """Rename a column on a Tasks board Callout."""
+  updateTaskColumnOnCallout(columnData: UpdateTaskColumnOnCalloutInput!): Callout!
+  """Reorder the columns of a Tasks board Callout."""
+  updateTaskColumnsSortOrderOnCallout(sortOrderData: UpdateTaskColumnsSortOrderOnCalloutInput!): Callout!
   """Updates the specified Template."""
   updateTemplate(updateData: UpdateTemplateInput!): Template!
   """Updates the TemplateContentSpace."""
@@ -4608,6 +5133,10 @@ type Organization implements ActorFull & Groupable {
   legalEntityName: String
   """Metrics about the activity within this Organization."""
   metrics: [NVP!]
+  """
+  The viewer's eligibility to apply to, or join, this organization as an associate.
+  """
+  myAssociateEligibility: OrganizationAssociateEligibility!
   """A name identifier of the entity, unique within a given scope."""
   nameID: NameID!
   """The profile for this Actor."""
@@ -4629,6 +5158,37 @@ type Organization implements ActorFull & Groupable {
   website: String
 }
 
+type OrganizationApplicationResult {
+  """The application itself"""
+  application: Application!
+  """ID for the pending organization application"""
+  id: UUID!
+  """The organization the application is for"""
+  organization: Organization!
+}
+
+type OrganizationAssociateEligibility {
+  """
+  Whether the viewer may apply to associate with this organization right now.
+  """
+  canApply: Boolean!
+  """
+  Whether the viewer may join this organization directly, with one click (domain match).
+  """
+  canJoinDirectly: Boolean!
+  """Why the viewer is (or is not) eligible, precedence-ordered."""
+  reason: OrganizationAssociateEligibilityReason!
+}
+
+type OrganizationInvitationResult {
+  """ID for the pending organization invitation"""
+  id: UUID!
+  """The invitation itself"""
+  invitation: Invitation!
+  """The organization the invitation is for"""
+  organization: Organization!
+}
+
 type OrganizationSettings {
   """The membership settings for this Organization."""
   membership: OrganizationSettingsMembership!
@@ -4637,6 +5197,10 @@ type OrganizationSettings {
 }
 
 type OrganizationSettingsMembership {
+  """Allow registered users to apply to associate with this Organization."""
+  allowApplications: Boolean!
+  """Allow Spaces to invite this Organization to join them."""
+  allowSpaceInvitations: Boolean!
   """
   Allow Users with email addresses matching the domain of this Organization to join.
   """
@@ -4827,6 +5391,10 @@ type PlatformAdminQueryResults {
   The most recent email-change audit entry for the named subject user. Returns null if no audit entry exists.
   """
   latestUserEmailChangeAuditEntry(userID: UUID!): UserEmailChangeAuditEntry
+  """
+  MCP API keys belonging to the named user. Platform admins only. Keys bound to a system actor are never returned.
+  """
+  mcpApiKeys(userID: UUID!): [McpApiKey!]!
   """
   Retrieve all Organizations on the Platform. This is only available to Platform Admins.
   """
@@ -5395,6 +5963,8 @@ type Query {
   rolesVirtualContributor(rolesData: RolesActorInput!): ActorRoles!
   """Search the platform for terms supplied"""
   search(searchData: SearchInput!): ISearchResults!
+  """A Memo signing attempt belonging to the current actor."""
+  signingAttempt(ID: UUID!): MemoSignature!
   """
   The Spaces on this platform; If accessed through an Innovation Hub will return ONLY the Spaces defined in it.
   """
@@ -5457,6 +6027,8 @@ type Query {
   Returns the VAPID public key needed by clients to subscribe to push notifications. Returns null if push notifications are not enabled on this server.
   """
   vapidPublicKey: String
+  """Checks the stored integrity of a signed Memo copy."""
+  verifyMemoSignature(verificationData: MemoSignatureVerifyInput!): MemoSignatureVerificationStatus!
   """A particular VirtualContributor"""
   virtualContributor(ID: UUID!): VirtualContributor!
   """
@@ -5765,6 +6337,18 @@ type RoleSetInvitationResult {
   """
   application: Application
   invitation: Invitation
+  """
+  The id of the invited actor this result belongs to, when the invitee was an actor or an email that resolved to an existing user.
+  """
+  invitedActorID: UUID
+  """
+  The email address this result belongs to, when the invitee was submitted as an email address.
+  """
+  invitedEmail: String
+  """
+  An informational addendum to the result, set only alongside a successful invite outcome.
+  """
+  notice: RoleSetInvitationResultNotice
   platformInvitation: PlatformInvitation
   type: RoleSetInvitationResultType!
 }
@@ -6164,6 +6748,10 @@ type Space implements ActorFull {
 type SpaceAbout {
   """The authorization rules for the entity"""
   authorization: Authorization
+  """
+  The classification entries on this About, in sortOrder. Empty array when none exist — never null, never an error.
+  """
+  classifications: [ClassificationEntry!]!
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The guidelines for members of this Community."""
@@ -6205,6 +6793,15 @@ type SpaceAboutMembership {
   myPrivileges: [AuthorizationPrivilege!]
   """The identifier of the RoleSet within the Space."""
   roleSetID: UUID!
+}
+
+type SpaceJoinPreview {
+  """The display name of the Space that will be joined."""
+  displayName: String!
+  """The ID of the Space that will be joined."""
+  id: UUID!
+  """The URL of the Space that will be joined."""
+  url: String!
 }
 
 type SpacePendingMembershipInfo {
@@ -6494,11 +7091,22 @@ type Task {
   type: String
 }
 
+type TaskColumnCount {
+  """The Tasks board column, in the board-defined order."""
+  column: String!
+  """The number of tasks currently in this column."""
+  count: Int!
+}
+
 type Template {
   """The authorization rules for the entity"""
   authorization: Authorization
   """The Callout for this Template."""
   callout: Callout
+  """
+  The classification vocabulary; null unless this Template is of type CLASSIFICATION — and never null when it is.
+  """
+  classification: ClassificationTemplateContent
   """The Community Guidelines for this Template."""
   communityGuidelines: CommunityGuidelines
   """The Space for this Template."""
@@ -6590,6 +7198,10 @@ type TemplatesSet {
   calloutTemplates: [Template!]!
   """The total number of CalloutTemplates in this TemplatesSet."""
   calloutTemplatesCount: Float!
+  """The Classification Templates in this TemplatesSet."""
+  classificationTemplates: [Template!]!
+  """The total number of Classification Templates in this TemplatesSet."""
+  classificationTemplatesCount: Float!
   """The CommunityGuidelines in this TemplatesSet."""
   communityGuidelinesTemplates: [Template!]!
   """The total number of CommunityGuidelinesTemplates in this TemplatesSet."""
@@ -6942,6 +7554,18 @@ type UserSettingsNotificationChannels {
 
 type UserSettingsNotificationOrganization {
   """
+  Receive a notification when someone applies to associate with an organisation you administer
+  """
+  adminAssociateApplicationReceived: UserSettingsNotificationChannels!
+  """
+  Receive a notification when someone responds to an invitation to associate with an organisation you administer
+  """
+  adminAssociateInvitationResponse: UserSettingsNotificationChannels!
+  """
+  Receive a notification when someone joins an organisation you administer as an associate
+  """
+  adminAssociateJoined: UserSettingsNotificationChannels!
+  """
   Receive a notification when the organization you are admin of is mentioned
   """
   adminMentioned: UserSettingsNotificationChannels!
@@ -6949,6 +7573,10 @@ type UserSettingsNotificationOrganization {
   Receive notification when the organization you are admin of is messaged
   """
   adminMessageReceived: UserSettingsNotificationChannels!
+  """
+  Receive a notification when an organization you administer is invited to a Space
+  """
+  adminSpaceCommunityInvitation: UserSettingsNotificationChannels!
 }
 
 type UserSettingsNotificationPlatform {
@@ -6997,6 +7625,8 @@ type UserSettingsNotificationSpace {
   collaborationCalloutPostContributionComment: UserSettingsNotificationChannels!
   """Receive a notification when a callout is published"""
   collaborationCalloutPublished: UserSettingsNotificationChannels!
+  """Receive a notification when someone reacts to a callout you published"""
+  collaborationCalloutReaction: UserSettingsNotificationChannels!
   """Receive a notification when a poll you voted on is modified"""
   collaborationPollModifiedOnPollIVotedOn: UserSettingsNotificationChannels!
   """
@@ -7022,6 +7652,10 @@ type UserSettingsNotificationSpaceAdmin {
   communicationMessageReceived: UserSettingsNotificationChannels!
   """Receive a notification when an application is received"""
   communityApplicationReceived: UserSettingsNotificationChannels!
+  """
+  Receive a notification when someone responds to an invitation you sent (admin)
+  """
+  communityInvitationResponse: UserSettingsNotificationChannels!
   """Receive a notification when a new member joins the community (admin)"""
   communityNewMember: UserSettingsNotificationChannels!
   """
@@ -7050,6 +7684,14 @@ type UserSettingsNotificationUser {
 }
 
 type UserSettingsNotificationUserMembership {
+  """
+  Receive a notification when an organisation decides on my application to associate
+  """
+  organizationAssociateApplicationDecided: UserSettingsNotificationChannels!
+  """
+  Receive a notification when I am invited to associate with an organisation
+  """
+  organizationAssociateInvitationReceived: UserSettingsNotificationChannels!
   """Receive a notification when I am invited to join a Space community"""
   spaceCommunityInvitationReceived: UserSettingsNotificationChannels!
   """
@@ -7274,8 +7916,6 @@ type VisualConstraints {
 type Whiteboard {
   """The authorization rules for the entity"""
   authorization: Authorization
-  """The visual content of the Whiteboard."""
-  content: WhiteboardContent!
   """The policy governing who can update the Whiteboard content."""
   contentUpdatePolicy: ContentUpdatePolicy!
   """The user that created this Whiteboard"""
@@ -7404,9 +8044,29 @@ input ActorFilterInput {
   credentials: [AuthorizationCredential!]
 }
 
+input AddClassificationEntryFromTemplateInput {
+  """
+  Override for the entry's display label. Defaults to the source template's display name.
+  """
+  displayLabel: String
+  """The Space to add the Classification to."""
+  spaceID: UUID!
+  """The Classification Template to copy the vocabulary from."""
+  templateID: UUID!
+}
+
 input AddPollOptionInput {
   pollID: UUID!
   text: String!
+}
+
+input AddReactionToCalloutInput {
+  """The ID of the Callout to react to."""
+  calloutID: UUID!
+  """
+  Must be one of the platform allowed emoji slugs; validated server-side (ValidationException on miss).
+  """
+  emoji: String!
 }
 
 input AddVisualToMediaGalleryInput {
@@ -7418,6 +8078,33 @@ input AddVisualToMediaGalleryInput {
   The type of visual to add (e.g. MEDIA_GALLERY_IMAGE, MEDIA_GALLERY_VIDEO).
   """
   visualType: VisualType!
+}
+
+input AdminCommunicationReconcileForumHierarchyInput {
+  """
+  Report-only when true (the default): compute drift and write nothing. Set false to apply the two-phase convergence.
+  """
+  dryRun: Boolean! = true
+  """
+  Cumulative adapter write budget for this invocation. When exceeded mid-pass the remaining parents are reported failed rather than attempted, and a re-invocation converges the rest.
+  """
+  maxOperations: Int! = 200
+  """
+  When applying (dryRun=false), also remove extra edges whose child no longer resolves to any Alkemio room (a deleted discussion’s ghost edge). Never removes a space.
+  """
+  pruneUnknown: Boolean! = false
+  """
+  Opt-in repair of the room-side m.space.parent pointer on touched children, under its own separate and lower write budget. Off by default: the underlying operation can admin-join the bot into rooms people read.
+  """
+  repairRoomParentPointers: Boolean! = false
+}
+
+input AdminRevokeMcpApiKeyInput {
+  keyID: UUID!
+  """
+  Owner of the key. Required — it scopes the revoke and the audit subject.
+  """
+  userID: UUID!
 }
 
 input AdminUserEmailChangeDriftResolveInput {
@@ -7623,9 +8310,20 @@ input CreateCalendarEventOnCalendarInput {
 input CreateCalloutContributionDefaultsInput {
   """The default title to use for new contributions."""
   defaultDisplayName: String
+  """
+  Use a server-owned live Whiteboard contribution-default draft. Mutually exclusive with either source field.
+  """
+  draftWhiteboardID: UUID
   """The default description to use for new Post contributions."""
   postDescription: Markdown
-  whiteboardContent: WhiteboardContent
+  """
+  Copy the internal Whiteboard contribution default from this source Callout. Mutually exclusive with sourceWhiteboardID.
+  """
+  sourceCalloutID: UUID
+  """
+  Seed the default from an existing Whiteboard. The server copies its content and media into the owning Callout bucket; the source id is not persisted.
+  """
+  sourceWhiteboardID: UUID
 }
 
 input CreateCalloutContributionInput {
@@ -7635,6 +8333,10 @@ input CreateCalloutContributionInput {
   post: CreatePostInput
   """The sort order to assign to this Contribution."""
   sortOrder: Float
+  """
+  The Tasks board column this task starts in. Only valid when the parent Callout is a Tasks board; defaults to the first column.
+  """
+  taskColumn: String
   type: CalloutContributionType!
   whiteboard: CreateWhiteboardInput
 }
@@ -7700,6 +8402,10 @@ input CreateCalloutInput {
   settings: CreateCalloutSettingsInput
   """The sort order to assign to this Callout."""
   sortOrder: Float
+  """
+  When present, creates this Callout as a Tasks board. Requires a POST-only contribution type.
+  """
+  taskBoard: CreateCalloutTaskBoardInput
 }
 
 input CreateCalloutOnCalloutsSetInput {
@@ -7718,6 +8424,10 @@ input CreateCalloutOnCalloutsSetInput {
   settings: CreateCalloutSettingsInput
   """The sort order to assign to this Callout."""
   sortOrder: Float
+  """
+  When present, creates this Callout as a Tasks board. Requires a POST-only contribution type.
+  """
+  taskBoard: CreateCalloutTaskBoardInput
 }
 
 input CreateCalloutSelectionSettingsInput {
@@ -7767,8 +8477,40 @@ input CreateCalloutsSetInput {
   calloutsData: [CreateCalloutInput!]
 }
 
+input CreateCalloutTaskBoardInput {
+  """
+  The ordered columns of the Tasks board. The first is the default column. Omit to seed the default set.
+  """
+  columns: [String!]
+}
+
+input CreateClassificationEntryInput {
+  cardinality: ClassificationCardinality!
+  displayLabel: String!
+  """
+  Optional selection to apply in the same write. Omitted -> selectedValueIDs: [].
+  """
+  selectedValueIDs: [String!]
+  """The Space to add the Classification to."""
+  spaceID: UUID!
+  values: [CreateClassificationValueInput!]!
+}
+
 input CreateClassificationInput {
   tagsets: [CreateTagsetInput!]!
+}
+
+input CreateClassificationTemplateContentInput {
+  cardinality: ClassificationCardinality!
+  values: [CreateClassificationValueInput!]!
+}
+
+input CreateClassificationValueInput {
+  """
+  Optional explicit stable id. Omitted -> slugified from `label` once, at authoring time.
+  """
+  id: String
+  label: String!
 }
 
 input CreateCollaboraDocumentInput {
@@ -7812,6 +8554,10 @@ input CreateContributionOnCalloutInput {
   post: CreatePostInput
   """The sort order to assign to this Contribution."""
   sortOrder: Float
+  """
+  The Tasks board column this task starts in. Only valid when the parent Callout is a Tasks board; defaults to the first column.
+  """
+  taskColumn: String
   type: CalloutContributionType!
   whiteboard: CreateWhiteboardInput
 }
@@ -7863,6 +8609,10 @@ input CreateInnovationFlowStateSettingsInput {
   Optional. Whether Posts in this State show publish details in the feed. Defaults to true when omitted.
   """
   showPublishDetails: Boolean
+  """
+  Optional. Ordered sidebar widgets; defaults to [INTENT, CREATE_POST, APPLICATION_BUTTON, SEARCH, INDEX] when omitted.
+  """
+  sidebar: [SidebarWidget!]
   """
   Optional. Whether the phase is shown in member-facing navigation. Defaults to true when omitted.
   """
@@ -8147,6 +8897,13 @@ input CreateTagsetOnProfileInput {
   type: TagsetType
 }
 
+input CreateTaskColumnOnCalloutInput {
+  """The Tasks board Callout to add a column to."""
+  calloutID: UUID!
+  """The name of the new column. Appended after the last column."""
+  name: String!
+}
+
 input CreateTemplateContentSpaceInput {
   about: CreateSpaceAboutInput!
   collaborationData: CreateCollaborationInput!
@@ -8181,6 +8938,8 @@ input CreateTemplateFromSpaceOnTemplatesSetInput {
 input CreateTemplateOnTemplatesSetInput {
   """The Callout to associate with this template."""
   calloutData: CreateCalloutInput
+  """The cardinality and value set for a Classification Template."""
+  classificationData: CreateClassificationTemplateContentInput
   """The Community guidelines to associate with this template."""
   communityGuidelinesData: CreateCommunityGuidelinesInput
   """The Template Content for a Space to associate with this template."""
@@ -8241,13 +9000,32 @@ input CreateVisualOnProfileInput {
   uri: String!
 }
 
+input CreateWhiteboardDraftOnCalloutsSetInput {
+  calloutsSetID: UUID!
+  sourceCalloutID: UUID
+  sourceWhiteboardID: UUID
+}
+
+input CreateWhiteboardDraftOnTemplatesSetInput {
+  sourceCalloutID: UUID
+  sourceWhiteboardID: UUID
+  templatesSetID: UUID!
+}
+
 input CreateWhiteboardInput {
-  content: WhiteboardContent
+  """
+  Use a server-owned live Whiteboard draft as the trusted source for final materialization. Mutually exclusive with sourceWhiteboardID.
+  """
+  draftWhiteboardID: UUID
   """A readable identifier, unique within the containing scope."""
   nameID: NameID
   """The preview settings for the whiteboard."""
   previewSettings: CreateWhiteboardPreviewSettingsInput
   profile: CreateProfileInput
+  """
+  Seed the new Whiteboard from the stored content of an existing Whiteboard through a server-side authorized copy. Omission creates an empty Whiteboard.
+  """
+  sourceWhiteboardID: UUID
 }
 
 input CreateWhiteboardPreviewSettingsInput {
@@ -8270,6 +9048,10 @@ input DeleteCalendarEventInput {
 }
 
 input DeleteCalloutInput {
+  ID: UUID!
+}
+
+input DeleteClassificationEntryInput {
   ID: UUID!
 }
 
@@ -8351,6 +9133,15 @@ input DeleteStorageBuckeetInput {
   ID: UUID!
 }
 
+input DeleteTaskColumnOnCalloutInput {
+  """The Tasks board Callout to remove a column from."""
+  calloutID: UUID!
+  """
+  The column to remove. Matched case-insensitively. The first (default) column cannot be removed; removing any other column reflows its tasks onto the first column.
+  """
+  name: String!
+}
+
 input DeleteTemplateInput {
   ID: UUID!
 }
@@ -8426,6 +9217,11 @@ input ForumCreateDiscussionInput {
   forumID: UUID!
   profile: CreateProfileInput!
   tags: [String!]
+}
+
+input ForumRemoveDiscussionCategoryInput {
+  """The category to remove from the platform Forum active category list."""
+  category: ForumDiscussionCategory!
 }
 
 input GrantAssistantActorCapabilitiesInput {
@@ -8532,6 +9328,32 @@ input LicensingGrantedEntitlementInput {
   type: LicenseEntitlementType!
 }
 
+input MemoSignatureVerifyInput {
+  """The signed Memo attempt to verify."""
+  attemptID: UUID!
+}
+
+input MemoSigningContinueInput {
+  """The prepared signing attempt to start."""
+  attemptID: UUID!
+}
+
+input MemoSigningPrepareInput {
+  """The Memo to prepare for signing."""
+  memoID: UUID!
+}
+
+input MintMcpApiKeyInput {
+  """Optional expiry. MUST be in the future when supplied."""
+  expiresAt: DateTime
+  """Label for the key. 1..128 characters after trimming."""
+  name: String!
+  """
+  At least one operation. Duplicates are removed; order is not significant.
+  """
+  operations: [McpApiKeyOperation!]!
+}
+
 input MoveCalloutContributionInput {
   """ID of the Callout to move the Contribution to."""
   calloutID: UUID!
@@ -8580,6 +9402,15 @@ input MoveSpaceL2ToSpaceL1Input {
   The target L1 subspace in a different L0 (new parent for the moved L2).
   """
   targetSpaceL1ID: UUID!
+}
+
+input MoveTaskToColumnInput {
+  """
+  The destination column on the Tasks board. Matched case-insensitively to an existing column.
+  """
+  column: String!
+  """The task (Callout Contribution) to move."""
+  contributionID: UUID!
 }
 
 input NotificationEmailAddressInput {
@@ -8726,6 +9557,11 @@ input RemovePollVoteInput {
   pollID: UUID!
 }
 
+input RemoveReactionFromCalloutInput {
+  """The ID of the Callout to remove the reaction from."""
+  calloutID: UUID!
+}
+
 input RemoveRoleOnRoleSetInput {
   actorID: UUID!
   role: RoleName!
@@ -8749,6 +9585,13 @@ input ReplaceCollaboraDocumentInput {
   displayName: String
   """The ID of the CollaboraDocument whose backing file is being replaced."""
   ID: UUID!
+}
+
+input ReplaceWhiteboardContentFromSourceInput {
+  """The Whiteboard whose content and media are copied into the target."""
+  sourceWhiteboardID: UUID!
+  """The Whiteboard whose content is replaced."""
+  targetWhiteboardID: UUID!
 }
 
 input RevokeAuthorizationCredentialInput {
@@ -8775,6 +9618,10 @@ input RevokeLicensePlanFromSpace {
   licensingID: UUID
   """The ID of the Space to assign the LicensePlan to."""
   spaceID: UUID!
+}
+
+input RevokeMcpApiKeyInput {
+  keyID: UUID!
 }
 
 input RevokeOrganizationAuthorizationCredentialInput {
@@ -9044,12 +9891,26 @@ input UpdateCalendarEventInput {
 }
 
 input UpdateCalloutContributionDefaultsInput {
+  """
+  Remove the stored Whiteboard contribution default. Mutually exclusive with sourceWhiteboardID and sourceCalloutID.
+  """
+  clearWhiteboardContent: Boolean
   """The default title to use for new contributions."""
   defaultDisplayName: String
+  """
+  Replace the default from a server-owned live Whiteboard contribution-default draft. Mutually exclusive with either source field and clearWhiteboardContent.
+  """
+  draftWhiteboardID: UUID
   """The default description to use for new Post contributions."""
   postDescription: Markdown
-  """The default description to use for new Whiteboard contributions."""
-  whiteboardContent: WhiteboardContent
+  """
+  Copy the internal Whiteboard contribution default from this source Callout. Mutually exclusive with sourceWhiteboardID and clearWhiteboardContent.
+  """
+  sourceCalloutID: UUID
+  """
+  Replace the default from an existing Whiteboard. The server copies its content and media into the owning Callout bucket; the source id is not persisted.
+  """
+  sourceWhiteboardID: UUID
 }
 
 input UpdateCalloutContributorsSettingsInput {
@@ -9099,10 +9960,12 @@ input UpdateCalloutFramingInput {
   poll: UpdatePollInput
   """The Profile of the Template."""
   profile: UpdateProfileInput
+  """
+  Replace the framing Whiteboard from another Whiteboard through a server-side authorized copy.
+  """
+  sourceWhiteboardID: UUID
   """The type of additional content attached to the framing of the callout."""
   type: CalloutFramingType
-  """The new content to be used."""
-  whiteboardContent: WhiteboardContent
   """The new preview settings for the Whiteboard."""
   whiteboardPreviewSettings: UpdateWhiteboardPreviewSettingsInput
 }
@@ -9171,6 +10034,26 @@ input UpdateCalloutVisibilityInput {
   sendNotification: Boolean = true
   """Visibility of the Callout."""
   visibility: CalloutVisibility!
+}
+
+input UpdateClassificationEntryDisplayInput {
+  classificationEntryID: UUID!
+  display: Boolean!
+}
+
+input UpdateClassificationEntryInput {
+  cardinality: ClassificationCardinality
+  classificationEntryID: UUID!
+  displayLabel: String
+  values: [CreateClassificationValueInput!]
+}
+
+input UpdateClassificationEntrySelectionInput {
+  classificationEntryID: UUID!
+  """
+  The complete set of selected value ids. An empty list clears the selection.
+  """
+  selectedValueIDs: [String!]!
 }
 
 input UpdateClassificationInput {
@@ -9313,6 +10196,10 @@ input UpdateInnovationFlowStateSettingsInput {
   Optional. Sets whether Posts in this State show publish details (publisher, publish date, avatar) in the feed; omission leaves the stored value unchanged.
   """
   showPublishDetails: Boolean
+  """
+  Optional. Ordered sidebar widgets for this State; omission leaves the stored value unchanged. Duplicates rejected; max 20 entries.
+  """
+  sidebar: [SidebarWidget!]
   """
   Optional. Sets whether the phase is shown in member-facing navigation; omission leaves the stored value unchanged.
   """
@@ -9475,10 +10362,14 @@ input UpdateOrganizationSettingsInput {
 }
 
 input UpdateOrganizationSettingsMembershipInput {
+  """Allow registered users to apply to associate with this Organization."""
+  allowApplications: Boolean
+  """Allow Spaces to invite this Organization to join them."""
+  allowSpaceInvitations: Boolean
   """
   Allow Users with email addresses matching the domain of this Organization to join.
   """
-  allowUsersMatchingDomainToJoin: Boolean!
+  allowUsersMatchingDomainToJoin: Boolean
 }
 
 input UpdateOrganizationSettingsPrivacyInput {
@@ -9669,6 +10560,26 @@ input UpdateTagsetInput {
   tags: [String!]!
 }
 
+input UpdateTaskColumnOnCalloutInput {
+  """The Tasks board Callout whose column is being renamed."""
+  calloutID: UUID!
+  """
+  The current column name. Matched case-insensitively to an existing column.
+  """
+  currentName: String!
+  """The new column name. Tasks in the column follow the rename."""
+  newName: String!
+}
+
+input UpdateTaskColumnsSortOrderOnCalloutInput {
+  """The Tasks board Callout whose columns are being reordered."""
+  calloutID: UUID!
+  """
+  Every existing column exactly once, in the new left-to-right order. Matched case-insensitively.
+  """
+  columnNames: [String!]!
+}
+
 input UpdateTemplateContentSpaceInput {
   """Update the TemplateContentSpace About information."""
   about: UpdateSpaceAboutInput
@@ -9694,6 +10605,8 @@ input UpdateTemplateFromSpaceInput {
 }
 
 input UpdateTemplateInput {
+  """The cardinality and value set for a Classification Template."""
+  classificationData: CreateClassificationTemplateContentInput
   ID: UUID!
   """
   The default description to be pre-filled when users create Posts based on this template.
@@ -9701,8 +10614,10 @@ input UpdateTemplateInput {
   postDefaultDescription: Markdown
   """The Profile of the Template."""
   profile: UpdateProfileInput
-  """The new content to be used."""
-  whiteboardContent: WhiteboardContent
+  """
+  Replace this Whiteboard Template from an existing Whiteboard through a server-side authorized copy.
+  """
+  sourceWhiteboardID: UUID
 }
 
 input UpdateUserGroupInput {
@@ -9817,6 +10732,18 @@ input UpdateUserSettingsNotificationInput {
 
 input UpdateUserSettingsNotificationOrganizationInput {
   """
+  Receive a notification when someone applies to associate with an organisation you administer
+  """
+  adminAssociateApplicationReceived: NotificationSettingInput
+  """
+  Receive a notification when someone responds to an invitation to associate with an organisation you administer
+  """
+  adminAssociateInvitationResponse: NotificationSettingInput
+  """
+  Receive a notification when someone joins an organisation you administer as an associate
+  """
+  adminAssociateJoined: NotificationSettingInput
+  """
   Receive a notification when the organization you are admin of is mentioned
   """
   adminMentioned: NotificationSettingInput
@@ -9824,6 +10751,10 @@ input UpdateUserSettingsNotificationOrganizationInput {
   Receive notification when the organization you are admin of is messaged
   """
   adminMessageReceived: NotificationSettingInput
+  """
+  Receive a notification when an organization you administer is invited to a Space
+  """
+  adminSpaceCommunityInvitation: NotificationSettingInput
 }
 
 input UpdateUserSettingsNotificationPlatformAdminInput {
@@ -9870,6 +10801,10 @@ input UpdateUserSettingsNotificationSpaceAdminInput {
   communicationMessageReceived: NotificationSettingInput
   """Receive a notification when an application is received"""
   communityApplicationReceived: NotificationSettingInput
+  """
+  Receive a notification when someone responds to an invitation you sent (admin)
+  """
+  communityInvitationResponse: NotificationSettingInput
   """Receive a notification when a new member joins the community (admin)"""
   communityNewMember: NotificationSettingInput
   """
@@ -9889,6 +10824,8 @@ input UpdateUserSettingsNotificationSpaceInput {
   collaborationCalloutPostContributionComment: NotificationSettingInput
   """Receive a notification when a callout is published"""
   collaborationCalloutPublished: NotificationSettingInput
+  """Receive a notification when someone reacts to a callout you published"""
+  collaborationCalloutReaction: NotificationSettingInput
   """Receive a notification when a poll you voted on is modified"""
   collaborationPollModifiedOnPollIVotedOn: NotificationSettingInput
   """
@@ -9927,6 +10864,14 @@ input UpdateUserSettingsNotificationUserInput {
 }
 
 input UpdateUserSettingsNotificationUserMembershipInput {
+  """
+  Receive a notification when an organisation decides on my application to associate
+  """
+  organizationAssociateApplicationDecided: NotificationSettingInput
+  """
+  Receive a notification when I am invited to associate with an organisation
+  """
+  organizationAssociateInvitationReceived: NotificationSettingInput
   """Receive a notification for community invitation"""
   spaceCommunityInvitationReceived: NotificationSettingInput
   """

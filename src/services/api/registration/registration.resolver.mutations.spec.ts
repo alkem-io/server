@@ -1,4 +1,6 @@
+import { PRIVILEGED_SESSION_WINDOW_MS } from '@common/constants';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { SessionRefreshRequiredException } from '@common/exceptions';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
@@ -8,6 +10,7 @@ import { AccountAuthorizationService } from '@domain/space/account/account.servi
 import { Test, TestingModule } from '@nestjs/testing';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
+import { NotificationExternalAdapter } from '@services/adapters/notification-external-adapter/notification.external.adapter';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock } from 'vitest';
@@ -35,6 +38,7 @@ describe('RegistrationResolverMutations', () => {
   let accountAuthorizationService: { applyAuthorizationPolicy: Mock };
   let authorizationPolicyService: { saveAll: Mock };
   let notificationPlatformAdapter: { platformUserRemoved: Mock };
+  let notificationExternalAdapter: { createUserPayloadFromUser: Mock };
 
   const actorContext = { actorID: 'actor-1', credentials: [] } as any;
 
@@ -64,6 +68,9 @@ describe('RegistrationResolverMutations', () => {
     authorizationPolicyService = module.get(AuthorizationPolicyService) as any;
     notificationPlatformAdapter = module.get(
       NotificationPlatformAdapter
+    ) as any;
+    notificationExternalAdapter = module.get(
+      NotificationExternalAdapter
     ) as any;
   });
 
@@ -171,8 +178,163 @@ describe('RegistrationResolverMutations', () => {
         expect.objectContaining({
           triggeredBy: 'actor-1',
           user,
+          triggeredByPayload: undefined,
         })
       );
+      // The admin-on-other branch never pre-resolves a payload — only the
+      // self branch can safely look the initiator up post-deletion.
+      expect(
+        notificationExternalAdapter.createUserPayloadFromUser
+      ).not.toHaveBeenCalled();
+      expect(
+        registrationService.deleteUserWithPendingMemberships
+      ).toHaveBeenCalledWith({ ID: 'user-1' }, 'admin', 'actor-1');
+    });
+
+    it('does not fail the mutation when the notification adapter throws (best-effort)', async () => {
+      const user = {
+        id: 'user-1',
+        authorization: { id: 'auth-1' },
+        profile: { displayName: 'John' },
+      };
+      userService.getUserByIdOrFail.mockResolvedValue(user);
+      authorizationService.grantAccessOrFail.mockReturnValue(undefined);
+      registrationService.deleteUserWithPendingMemberships.mockResolvedValue(
+        user
+      );
+      notificationPlatformAdapter.platformUserRemoved.mockRejectedValue(
+        new Error('notification adapter exploded')
+      );
+
+      const result = await resolver.deleteUser(actorContext, {
+        ID: 'user-1',
+      });
+
+      expect(result).toBe(user);
+    });
+
+    describe('self-deletion (actor == target)', () => {
+      const selfActorContext = (issuedAt?: number) =>
+        ({
+          actorID: 'user-1',
+          credentials: [],
+          issuedAt,
+        }) as any;
+
+      it('refuses with SessionRefreshRequiredException when the session is older than the privileged window', async () => {
+        const staleIssuedAt = Date.now() - PRIVILEGED_SESSION_WINDOW_MS - 1;
+
+        await expect(
+          resolver.deleteUser(selfActorContext(staleIssuedAt), {
+            ID: 'user-1',
+          })
+        ).rejects.toThrow(SessionRefreshRequiredException);
+        expect(
+          registrationService.deleteUserWithPendingMemberships
+        ).not.toHaveBeenCalled();
+      });
+
+      it('fails closed — refuses when issuedAt is missing', async () => {
+        await expect(
+          resolver.deleteUser(selfActorContext(undefined), { ID: 'user-1' })
+        ).rejects.toThrow(SessionRefreshRequiredException);
+      });
+
+      it('fails closed — refuses when issuedAt is zero', async () => {
+        await expect(
+          resolver.deleteUser(selfActorContext(0), { ID: 'user-1' })
+        ).rejects.toThrow(SessionRefreshRequiredException);
+      });
+
+      // A future-dated issuedAt makes `now - issuedAt` negative, which is not
+      // greater than the window — so an upper-bound-only check would let it
+      // through. Clock skew between the BFF and this node is enough to produce
+      // one, so the gate requires a non-negative age as well.
+      it('fails closed — refuses a future-dated issuedAt rather than reading it as fresh', async () => {
+        await expect(
+          resolver.deleteUser(selfActorContext(Date.now() + 60_000), {
+            ID: 'user-1',
+          })
+        ).rejects.toThrow(SessionRefreshRequiredException);
+      });
+
+      it('proceeds, pins deleteIdentity, and passes branch self when the session is fresh', async () => {
+        const freshIssuedAt = Date.now() - 60_000;
+        const user = {
+          id: 'user-1',
+          authorization: { id: 'auth-1' },
+          profile: { displayName: 'Self' },
+        };
+        userService.getUserByIdOrFail.mockResolvedValue(user);
+        authorizationService.grantAccessOrFail.mockReturnValue(undefined);
+        registrationService.deleteUserWithPendingMemberships.mockResolvedValue(
+          user
+        );
+        notificationPlatformAdapter.platformUserRemoved.mockResolvedValue(
+          undefined
+        );
+        const preResolvedPayload = { id: 'user-1' };
+        notificationExternalAdapter.createUserPayloadFromUser.mockReturnValue(
+          preResolvedPayload
+        );
+
+        const result = await resolver.deleteUser(
+          selfActorContext(freshIssuedAt),
+          { ID: 'user-1', deleteIdentity: false }
+        );
+
+        expect(result).toBe(user);
+        expect(
+          registrationService.deleteUserWithPendingMemberships
+        ).toHaveBeenCalledWith(
+          { ID: 'user-1', deleteIdentity: true },
+          'self',
+          'user-1'
+        );
+        // The self branch pre-resolves the initiator's notification payload
+        // from the still-loaded pre-deletion entity, BEFORE the deletion
+        // call — a post-deletion lookup by id would fail, since the
+        // initiator IS the departed user.
+        expect(
+          notificationExternalAdapter.createUserPayloadFromUser
+        ).toHaveBeenCalledWith(user);
+        expect(
+          notificationPlatformAdapter.platformUserRemoved
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({ triggeredByPayload: preResolvedPayload })
+        );
+      });
+
+      it('does not gate an admin deleting someone else even with a stale/missing issuedAt', async () => {
+        const user = {
+          id: 'other-user',
+          authorization: { id: 'auth-1' },
+          profile: { displayName: 'Other' },
+        };
+        userService.getUserByIdOrFail.mockResolvedValue(user);
+        authorizationService.grantAccessOrFail.mockReturnValue(undefined);
+        registrationService.deleteUserWithPendingMemberships.mockResolvedValue(
+          user
+        );
+        notificationPlatformAdapter.platformUserRemoved.mockResolvedValue(
+          undefined
+        );
+
+        const staleAdminContext = {
+          actorID: 'admin-1',
+          credentials: [],
+          issuedAt: undefined,
+        } as any;
+
+        const result = await resolver.deleteUser(staleAdminContext, {
+          ID: 'other-user',
+        });
+
+        expect(result).toBe(user);
+        expect(
+          registrationService.deleteUserWithPendingMemberships
+        ).toHaveBeenCalledWith({ ID: 'other-user' }, 'admin', 'admin-1');
+      });
     });
   });
 

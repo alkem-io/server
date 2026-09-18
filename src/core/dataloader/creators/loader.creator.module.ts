@@ -1,9 +1,10 @@
+import { ReactionModule } from '@domain/collaboration/reaction/reaction.module';
 import { Module } from '@nestjs/common';
+import { FileServiceAdapterModule } from '@services/adapters/file-service-adapter/file.service.adapter.module';
 import * as creators from './loader.creators';
 
 @Module({
-  // Creators are dependency-free: they take the globally-provided TypeORM
-  // EntityManager, so this module needs no imports of its own.
+  imports: [FileServiceAdapterModule, ReactionModule],
   providers: Object.values(creators),
 })
 export class LoaderCreatorModule {}

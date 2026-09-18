@@ -1,9 +1,11 @@
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { WhiteboardService } from '@domain/common/whiteboard';
+import { WhiteboardDraftService } from '@domain/common/whiteboard-draft';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { TemplateContentSpaceService } from '@domain/template/template-content-space/template.content.space.service';
-import { LoggerService } from '@nestjs/common';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { vi } from 'vitest';
 import { TemplateService } from '../template/template.service';
 import { TemplateAuthorizationService } from '../template/template.service.authorization';
@@ -23,10 +25,20 @@ describe('TemplatesSetResolverMutations', () => {
   let templateAuthorizationService: {
     applyAuthorizationPolicy: ReturnType<typeof vi.fn>;
   };
-  let templateService: { getTemplateOrFail: ReturnType<typeof vi.fn> };
+  let templateService: {
+    getTemplateOrFail: ReturnType<typeof vi.fn>;
+    prepareContributionDefaultSource: ReturnType<typeof vi.fn>;
+  };
   let spaceLookupService: { getSpaceOrFail: ReturnType<typeof vi.fn> };
   let templateContentSpaceService: {
     getTemplateContentSpaceOrFail: ReturnType<typeof vi.fn>;
+  };
+  let whiteboardService: {
+    getWhiteboardOrFail: ReturnType<typeof vi.fn>;
+  };
+  let whiteboardDraftService: {
+    acquireForConsumption: ReturnType<typeof vi.fn>;
+    materialize: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -39,9 +51,26 @@ describe('TemplatesSetResolverMutations', () => {
       createTemplateFromContentSpace: vi.fn(),
     };
     templateAuthorizationService = { applyAuthorizationPolicy: vi.fn() };
-    templateService = { getTemplateOrFail: vi.fn() };
+    templateService = {
+      getTemplateOrFail: vi.fn(),
+      prepareContributionDefaultSource: vi.fn(),
+    };
     spaceLookupService = { getSpaceOrFail: vi.fn() };
     templateContentSpaceService = { getTemplateContentSpaceOrFail: vi.fn() };
+    whiteboardService = {
+      getWhiteboardOrFail: vi.fn(),
+    };
+    const releaseDraftLock = vi.fn();
+    whiteboardDraftService = {
+      acquireForConsumption: vi.fn().mockResolvedValue({
+        drafts: new Map(),
+        markConsumed: vi.fn(),
+        complete: vi.fn(),
+        release: releaseDraftLock,
+        [Symbol.asyncDispose]: releaseDraftLock,
+      }),
+      materialize: vi.fn(),
+    };
 
     resolver = new TemplatesSetResolverMutations(
       authorizationService as unknown as AuthorizationService,
@@ -51,7 +80,11 @@ describe('TemplatesSetResolverMutations', () => {
       templateService as unknown as TemplateService,
       spaceLookupService as unknown as SpaceLookupService,
       templateContentSpaceService as unknown as TemplateContentSpaceService,
-      MockWinstonProvider.useValue as unknown as LoggerService
+      whiteboardService as unknown as WhiteboardService,
+      whiteboardDraftService as unknown as WhiteboardDraftService,
+      {
+        getStorageAggregatorForTemplatesSet: vi.fn(),
+      } as unknown as StorageAggregatorResolverService
     );
   });
 
@@ -79,10 +112,240 @@ describe('TemplatesSetResolverMutations', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
       expect(templatesSetService.createTemplate).toHaveBeenCalledWith(
         templatesSet,
-        templateData
+        templateData,
+        actorContext
       );
       expect(authorizationPolicyService.saveAll).toHaveBeenCalled();
       expect(result).toBe(template);
+    });
+
+    it('holds an owned framing draft through final creation and deletes it before releasing', async () => {
+      const templatesSet = { id: 'ts-1', authorization: { id: 'ts-auth' } };
+      templatesSetService.getTemplatesSetOrFail.mockResolvedValue(templatesSet);
+      const template = { id: 'tpl-1' };
+      templatesSetService.createTemplate.mockResolvedValue(template);
+      templateAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
+      templateService.getTemplateOrFail.mockResolvedValue(template);
+      whiteboardService.getWhiteboardOrFail.mockResolvedValue({
+        id: 'draft-wb',
+        authorization: { id: 'draft-auth' },
+      });
+      const order: string[] = [];
+      const complete = vi.fn(async () => {
+        order.push('complete');
+      });
+      const release = vi.fn(async () => {
+        order.push('release');
+      });
+      whiteboardDraftService.acquireForConsumption.mockResolvedValue({
+        drafts: new Map([['draft-wb', { id: 'draft-wb' }]]),
+        markConsumed: vi.fn(async () => {
+          order.push('markConsumed');
+        }),
+        complete,
+        release,
+        [Symbol.asyncDispose]: release,
+      });
+      const input = {
+        templatesSetID: 'ts-1',
+        whiteboard: { draftWhiteboardID: 'draft-wb' },
+      } as any;
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await resolver.createTemplate(actorContext, input);
+
+      expect(whiteboardDraftService.acquireForConsumption).toHaveBeenCalledWith(
+        ['draft-wb'],
+        actorContext
+      );
+      expect(input.whiteboard).toEqual({
+        draftWhiteboardID: undefined,
+        sourceWhiteboardID: 'draft-wb',
+      });
+      expect(order).toEqual(['markConsumed', 'complete', 'release']);
+    });
+
+    it('does not create a duplicate after a post-persistence failure', async () => {
+      const templatesSet = { id: 'ts-1', authorization: { id: 'ts-auth' } };
+      templatesSetService.getTemplatesSetOrFail.mockResolvedValue(templatesSet);
+      templatesSetService.createTemplate.mockResolvedValue({ id: 'tpl-1' });
+      whiteboardService.getWhiteboardOrFail.mockResolvedValue({
+        id: 'draft-wb',
+        authorization: { id: 'draft-auth' },
+      });
+      templateAuthorizationService.applyAuthorizationPolicy.mockRejectedValue(
+        new Error('post-persistence authorization failed')
+      );
+      let consumed = false;
+      whiteboardDraftService.acquireForConsumption.mockImplementation(
+        async () => {
+          if (consumed) {
+            throw new Error('Whiteboard draft has expired');
+          }
+          const release = vi.fn();
+          return {
+            drafts: new Map([['draft-wb', { id: 'draft-wb' }]]),
+            markConsumed: vi.fn(async () => {
+              consumed = true;
+            }),
+            complete: vi.fn(),
+            release,
+            [Symbol.asyncDispose]: release,
+          };
+        }
+      );
+      const input = () =>
+        ({
+          templatesSetID: 'ts-1',
+          whiteboard: { draftWhiteboardID: 'draft-wb' },
+        }) as any;
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await expect(
+        resolver.createTemplate(actorContext, input())
+      ).rejects.toThrow('post-persistence authorization failed');
+      await expect(
+        resolver.createTemplate(actorContext, input())
+      ).rejects.toThrow('Whiteboard draft has expired');
+
+      expect(templatesSetService.createTemplate).toHaveBeenCalledOnce();
+    });
+
+    it('does not consume a nullable GraphQL draft ID', async () => {
+      const templatesSet = { id: 'ts-1', authorization: { id: 'ts-auth' } };
+      templatesSetService.getTemplatesSetOrFail.mockResolvedValue(templatesSet);
+      templatesSetService.createTemplate.mockRejectedValue(
+        new Error('stop after draft acquisition')
+      );
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await expect(
+        resolver.createTemplate(actorContext, {
+          templatesSetID: 'ts-1',
+          whiteboard: { draftWhiteboardID: null },
+        } as any)
+      ).rejects.toThrow('stop after draft acquisition');
+
+      expect(whiteboardDraftService.acquireForConsumption).toHaveBeenCalledWith(
+        [],
+        actorContext
+      );
+    });
+
+    it('does NOT load a source whiteboard when the template has no sourceWhiteboardID', async () => {
+      const templatesSet = { id: 'ts-1', authorization: { id: 'ts-auth' } };
+      templatesSetService.getTemplatesSetOrFail.mockResolvedValue(templatesSet);
+      templatesSetService.createTemplate.mockResolvedValue({ id: 'tpl-1' });
+      templateAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
+      templateService.getTemplateOrFail.mockResolvedValue({ id: 'tpl-1' });
+
+      await resolver.createTemplate(
+        { actorID: 'user-1' } as any,
+        {
+          templatesSetID: 'ts-1',
+          whiteboard: { content: 'x' },
+        } as any
+      );
+
+      expect(whiteboardService.getWhiteboardOrFail).not.toHaveBeenCalled();
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledTimes(1); // CREATE only
+    });
+
+    it('requires READ on the SOURCE whiteboard before copying it (duplicate/import)', async () => {
+      const templatesSet = { id: 'ts-1', authorization: { id: 'ts-auth' } };
+      templatesSetService.getTemplatesSetOrFail.mockResolvedValue(templatesSet);
+      const source = { id: 'src-wb-1', authorization: { id: 'src-auth' } };
+      whiteboardService.getWhiteboardOrFail.mockResolvedValue(source);
+      templatesSetService.createTemplate.mockResolvedValue({ id: 'tpl-1' });
+      templateAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
+      templateService.getTemplateOrFail.mockResolvedValue({ id: 'tpl-1' });
+
+      await resolver.createTemplate(
+        { actorID: 'user-1' } as any,
+        {
+          templatesSetID: 'ts-1',
+          whiteboard: { sourceWhiteboardID: 'src-wb-1' },
+        } as any
+      );
+
+      // Loaded WITH its authorization, then READ-checked before the copy.
+      expect(whiteboardService.getWhiteboardOrFail).toHaveBeenCalledWith(
+        'src-wb-1',
+        {
+          relations: { authorization: true },
+        }
+      );
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledTimes(2); // CREATE + READ(source)
+      expect(authorizationService.grantAccessOrFail).toHaveBeenLastCalledWith(
+        expect.anything(),
+        source.authorization,
+        AuthorizationPrivilege.READ,
+        expect.stringContaining('src-wb-1')
+      );
+    });
+
+    it('propagates a Forbidden from the source READ check (does not create the template)', async () => {
+      const templatesSet = { id: 'ts-1', authorization: { id: 'ts-auth' } };
+      templatesSetService.getTemplatesSetOrFail.mockResolvedValue(templatesSet);
+      whiteboardService.getWhiteboardOrFail.mockResolvedValue({
+        id: 'src-wb-1',
+        authorization: { id: 'src-auth' },
+      });
+      // First grant (CREATE) ok; second grant (source READ) throws.
+      authorizationService.grantAccessOrFail
+        .mockImplementationOnce(() => {})
+        .mockImplementationOnce(() => {
+          throw new Error('Forbidden');
+        });
+
+      await expect(
+        resolver.createTemplate(
+          { actorID: 'user-1' } as any,
+          {
+            templatesSetID: 'ts-1',
+            whiteboard: { sourceWhiteboardID: 'src-wb-1' },
+          } as any
+        )
+      ).rejects.toThrow('Forbidden');
+
+      expect(templatesSetService.createTemplate).not.toHaveBeenCalled();
+    });
+
+    it('delegates contribution-default source preparation to TemplateService', async () => {
+      const templatesSet = { id: 'ts-1', authorization: { id: 'ts-auth' } };
+      templatesSetService.getTemplatesSetOrFail.mockResolvedValue(templatesSet);
+      templatesSetService.createTemplate.mockResolvedValue({ id: 'tpl-1' });
+      templateAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
+      templateService.getTemplateOrFail.mockResolvedValue({ id: 'tpl-1' });
+      const input = {
+        templatesSetID: 'ts-1',
+        calloutData: {
+          contributionDefaults: { sourceCalloutID: 'source-callout' },
+        },
+      } as any;
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await resolver.createTemplate(actorContext, input);
+
+      expect(
+        templateService.prepareContributionDefaultSource
+      ).toHaveBeenCalledWith(
+        input.calloutData.contributionDefaults,
+        actorContext
+      );
+      expect(templatesSetService.createTemplate).toHaveBeenCalledWith(
+        templatesSet,
+        input,
+        actorContext
+      );
     });
   });
 
@@ -112,7 +375,8 @@ describe('TemplatesSetResolverMutations', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledTimes(2);
       expect(templatesSetService.createTemplateFromSpace).toHaveBeenCalledWith(
         templatesSet,
-        templateData
+        templateData,
+        actorContext
       );
     });
   });
@@ -150,7 +414,7 @@ describe('TemplatesSetResolverMutations', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledTimes(2);
       expect(
         templatesSetService.createTemplateFromContentSpace
-      ).toHaveBeenCalledWith(templatesSet, templateData);
+      ).toHaveBeenCalledWith(templatesSet, templateData, actorContext);
     });
   });
 });

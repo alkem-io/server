@@ -51,9 +51,9 @@ export class ActorContextService {
   }
 
   /**
-   * Populates the given ActorContext with credentials from the database.
+   * Populates the given ActorContext from the database.
    * Used when actorID is already known (from JWT token or metadata_public).
-   * Only loads credentials - no user lookup needed.
+   * Authentication identity is populated only for User actors.
    */
   public async populateFromActorID(
     ctx: ActorContext,
@@ -62,6 +62,12 @@ export class ActorContextService {
     ctx.actorID = actorID;
     ctx.credentials =
       await this.actorLookupService.getActorCredentialsOrFail(actorID);
+    const user = await this.entityManager.findOne(User, {
+      where: { id: actorID },
+      select: { authenticationID: true },
+      loadEagerRelations: false,
+    });
+    ctx.authenticationID = user?.authenticationID ?? undefined;
   }
 
   /**

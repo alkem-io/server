@@ -1,8 +1,10 @@
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import {
   EntityNotFoundException,
   NotSupportedException,
 } from '@common/exceptions';
+import { ClassificationService } from '@domain/common/classification/classification.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
@@ -21,6 +23,7 @@ describe('CalloutContributionMoveService', () => {
   let calloutRepository: Repository<Callout>;
   let contributionRepository: Repository<CalloutContribution>;
   let contributionService: CalloutContributionService;
+  let classificationService: ClassificationService;
   let urlGeneratorCacheService: UrlGeneratorCacheService;
 
   beforeEach(async () => {
@@ -44,6 +47,7 @@ describe('CalloutContributionMoveService', () => {
       getRepositoryToken(CalloutContribution)
     );
     contributionService = module.get(CalloutContributionService);
+    classificationService = module.get(ClassificationService);
     urlGeneratorCacheService = module.get(UrlGeneratorCacheService);
   });
 
@@ -109,6 +113,112 @@ describe('CalloutContributionMoveService', () => {
         'post-profile-id'
       );
       expect(contributionRepository.save).toHaveBeenCalledWith(contribution);
+    });
+
+    // A Tasks board target callout: its classification carries the reserved
+    // `task` tagset whose template lists the board's columns.
+    function createBoardTargetCallout(columns: string[]) {
+      return {
+        id: 'target-board',
+        calloutsSet: { id: calloutsSetId },
+        settings: {
+          contribution: { allowedTypes: [CalloutContributionType.POST] },
+        },
+        classification: {
+          tagsets: [
+            {
+              name: TagsetReservedName.TASK,
+              tagsetTemplate: { allowedValues: columns },
+            },
+          ],
+        },
+      } as any;
+    }
+
+    it('seeds a task-column classification (first column) when moving a post INTO a Tasks board', async () => {
+      const contribution = createContribution({
+        post: { profile: { id: 'post-profile-id' } },
+      });
+      const targetBoard = createBoardTargetCallout(['To Do', 'In Progress']);
+
+      vi.mocked(
+        contributionService.getCalloutContributionOrFail
+      ).mockResolvedValue(contribution);
+      vi.mocked(calloutRepository.findOne).mockResolvedValue(targetBoard);
+      vi.mocked(classificationService.createClassification).mockReturnValue({
+        id: 'new-classification',
+      } as any);
+      vi.mocked(contributionRepository.save).mockImplementation(
+        async (c: any) => c
+      );
+
+      await service.moveContributionToCallout('contribution-1', 'target-board');
+
+      expect(classificationService.createClassification).toHaveBeenCalledWith(
+        [{ allowedValues: ['To Do', 'In Progress'] }],
+        { tagsets: [{ name: TagsetReservedName.TASK, tags: ['To Do'] }] }
+      );
+      // No previous classification to delete.
+      expect(classificationService.deleteClassification).not.toHaveBeenCalled();
+      expect((contribution as any).classification).toEqual({
+        id: 'new-classification',
+      });
+    });
+
+    it('drops the task classification when moving a task OUT to an ordinary callout', async () => {
+      const contribution = {
+        ...createContribution({ post: { profile: { id: 'post-profile-id' } } }),
+        classification: { id: 'old-classification' },
+      } as any;
+      const targetCallout = createTargetCallout([CalloutContributionType.POST]);
+
+      vi.mocked(
+        contributionService.getCalloutContributionOrFail
+      ).mockResolvedValue(contribution);
+      vi.mocked(calloutRepository.findOne).mockResolvedValue(targetCallout);
+      vi.mocked(contributionRepository.save).mockImplementation(
+        async (c: any) => c
+      );
+
+      await service.moveContributionToCallout(
+        'contribution-1',
+        'target-callout'
+      );
+
+      expect(contribution.classification).toBeNull();
+      expect(classificationService.createClassification).not.toHaveBeenCalled();
+      expect(classificationService.deleteClassification).toHaveBeenCalledWith(
+        'old-classification'
+      );
+    });
+
+    it('re-seeds the classification when moving a task between two Tasks boards', async () => {
+      const contribution = {
+        ...createContribution({ post: { profile: { id: 'post-profile-id' } } }),
+        classification: { id: 'old-classification' },
+      } as any;
+      const targetBoard = createBoardTargetCallout(['Backlog', 'Done']);
+
+      vi.mocked(
+        contributionService.getCalloutContributionOrFail
+      ).mockResolvedValue(contribution);
+      vi.mocked(calloutRepository.findOne).mockResolvedValue(targetBoard);
+      vi.mocked(classificationService.createClassification).mockReturnValue({
+        id: 'new-classification',
+      } as any);
+      vi.mocked(contributionRepository.save).mockImplementation(
+        async (c: any) => c
+      );
+
+      await service.moveContributionToCallout('contribution-1', 'target-board');
+
+      expect(classificationService.createClassification).toHaveBeenCalledWith(
+        [{ allowedValues: ['Backlog', 'Done'] }],
+        { tagsets: [{ name: TagsetReservedName.TASK, tags: ['Backlog'] }] }
+      );
+      expect(classificationService.deleteClassification).toHaveBeenCalledWith(
+        'old-classification'
+      );
     });
 
     it('should throw EntityNotFoundException when target callout is not found', async () => {

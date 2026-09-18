@@ -1,14 +1,17 @@
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ClassificationService } from '@domain/common/classification/classification.service';
 import { MemoService } from '@domain/common/memo/memo.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { actorContextData } from '@test/data/actorContext.mock';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -28,6 +31,7 @@ describe('CalloutContributionService', () => {
   let linkService: LinkService;
   let memoService: MemoService;
   let authorizationPolicyService: AuthorizationPolicyService;
+  let classificationService: ClassificationService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -57,6 +61,7 @@ describe('CalloutContributionService', () => {
     linkService = module.get(LinkService);
     memoService = module.get(MemoService);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
+    classificationService = module.get(ClassificationService);
   });
 
   describe('createCalloutContribution', () => {
@@ -81,6 +86,7 @@ describe('CalloutContributionService', () => {
         storageAggregator,
         contributionSettings,
         undefined,
+        actorContextData.actorContext,
         userID
       );
 
@@ -94,6 +100,30 @@ describe('CalloutContributionService', () => {
         userID,
         undefined
       );
+    });
+
+    // Defense-in-depth for anonymous/system contexts (actorID='' → userID=''): the
+    // contribution's createdBy must map to NULL/undefined, never the empty string into
+    // its nullable `uuid` column.
+    it('maps an empty-string userID to an undefined contribution createdBy', async () => {
+      vi.mocked(postService.createPost).mockResolvedValue({
+        id: 'post-1',
+      } as any);
+
+      const result = await service.createCalloutContribution(
+        {
+          type: CalloutContributionType.POST,
+          post: { profileData: { displayName: 'Test Post' } },
+          sortOrder: 5,
+        } as any,
+        storageAggregator,
+        { allowedTypes: [CalloutContributionType.POST] } as any,
+        undefined,
+        actorContextData.actorContext,
+        ''
+      );
+
+      expect(result.createdBy).toBeUndefined();
     });
 
     it('should create a WHITEBOARD contribution when type is allowed', async () => {
@@ -115,6 +145,7 @@ describe('CalloutContributionService', () => {
         storageAggregator,
         contributionSettings,
         undefined,
+        actorContextData.actorContext,
         userID
       );
 
@@ -138,6 +169,7 @@ describe('CalloutContributionService', () => {
         storageAggregator,
         contributionSettings,
         undefined,
+        actorContextData.actorContext,
         userID
       );
 
@@ -161,6 +193,7 @@ describe('CalloutContributionService', () => {
         storageAggregator,
         contributionSettings,
         undefined,
+        actorContextData.actorContext,
         userID
       );
 
@@ -183,6 +216,7 @@ describe('CalloutContributionService', () => {
         storageAggregator,
         contributionSettings,
         undefined,
+        actorContextData.actorContext,
         userID
       );
 
@@ -204,6 +238,7 @@ describe('CalloutContributionService', () => {
           storageAggregator,
           contributionSettings,
           undefined,
+          actorContextData.actorContext,
           userID
         )
       ).rejects.toThrow(ValidationException);
@@ -224,6 +259,7 @@ describe('CalloutContributionService', () => {
           storageAggregator,
           contributionSettings,
           undefined,
+          actorContextData.actorContext,
           userID
         )
       ).rejects.toThrow(ValidationException);
@@ -245,6 +281,7 @@ describe('CalloutContributionService', () => {
           storageAggregator,
           contributionSettings,
           undefined,
+          actorContextData.actorContext,
           userID
         )
       ).rejects.toThrow(ValidationException);
@@ -276,6 +313,7 @@ describe('CalloutContributionService', () => {
         contributionsData,
         storageAggregator,
         contributionSettings,
+        actorContextData.actorContext,
         'user-1'
       );
 
@@ -375,6 +413,46 @@ describe('CalloutContributionService', () => {
       await expect(service.delete('nonexistent')).rejects.toThrow(
         EntityNotFoundException
       );
+    });
+
+    it("deletes a task's column classification before removing the contribution", async () => {
+      const contribution = {
+        id: 'contrib-1',
+        post: undefined,
+        whiteboard: undefined,
+        link: undefined,
+        memo: undefined,
+        authorization: undefined,
+        classification: { id: 'cls-1' },
+      } as any;
+
+      vi.mocked(repository.findOne).mockResolvedValue(contribution);
+      vi.mocked(repository.remove).mockResolvedValue({ id: undefined } as any);
+
+      await service.delete('contrib-1');
+
+      expect(classificationService.deleteClassification).toHaveBeenCalledWith(
+        'cls-1'
+      );
+    });
+
+    it('deletes no classification when the contribution is not a task', async () => {
+      const contribution = {
+        id: 'contrib-1',
+        post: { id: 'post-1' },
+        whiteboard: undefined,
+        link: undefined,
+        memo: undefined,
+        authorization: undefined,
+        classification: undefined,
+      } as any;
+
+      vi.mocked(repository.findOne).mockResolvedValue(contribution);
+      vi.mocked(repository.remove).mockResolvedValue({ id: undefined } as any);
+
+      await service.delete('contrib-1');
+
+      expect(classificationService.deleteClassification).not.toHaveBeenCalled();
     });
   });
 
@@ -645,6 +723,113 @@ describe('CalloutContributionService', () => {
       for (const id of calloutIds) {
         expect(result.get(id)).toBe(1);
       }
+    });
+  });
+
+  describe('task column assignment on creation', () => {
+    const storageAggregator = { id: 'agg-1' } as any;
+    const contributionSettings = {
+      allowedTypes: [CalloutContributionType.POST],
+    } as any;
+    const boardTemplate = {
+      id: 'tmpl-1',
+      allowedValues: ['Backlog', 'To do', 'In progress', 'Done'],
+    } as any;
+
+    const buildPostData = (taskColumn?: string) =>
+      ({
+        type: CalloutContributionType.POST,
+        post: { profileData: { displayName: 'Task' } },
+        ...(taskColumn === undefined ? {} : { taskColumn }),
+      }) as any;
+
+    beforeEach(() => {
+      vi.mocked(postService.createPost).mockResolvedValue({
+        id: 'post-1',
+      } as any);
+    });
+
+    it('normalizes an explicit column to its canonical spelling', async () => {
+      await service.createCalloutContribution(
+        buildPostData('in progress'),
+        storageAggregator,
+        contributionSettings,
+        undefined,
+        actorContextData.actorContext,
+        'user-1',
+        boardTemplate
+      );
+
+      expect(classificationService.createClassification).toHaveBeenCalledWith(
+        [boardTemplate],
+        {
+          tagsets: [{ name: TagsetReservedName.TASK, tags: ['In progress'] }],
+        }
+      );
+    });
+
+    it('defaults an omitted column to the first board column', async () => {
+      await service.createCalloutContribution(
+        buildPostData(),
+        storageAggregator,
+        contributionSettings,
+        undefined,
+        actorContextData.actorContext,
+        'user-1',
+        boardTemplate
+      );
+
+      expect(classificationService.createClassification).toHaveBeenCalledWith(
+        [boardTemplate],
+        {
+          tagsets: [{ name: TagsetReservedName.TASK, tags: ['Backlog'] }],
+        }
+      );
+    });
+
+    it('rejects a column that is not on the board', async () => {
+      await expect(
+        service.createCalloutContribution(
+          buildPostData('Nonexistent'),
+          storageAggregator,
+          contributionSettings,
+          undefined,
+          actorContextData.actorContext,
+          'user-1',
+          boardTemplate
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(classificationService.createClassification).not.toHaveBeenCalled();
+    });
+
+    it('rejects a task column supplied for a non-board callout', async () => {
+      await expect(
+        service.createCalloutContribution(
+          buildPostData('Backlog'),
+          storageAggregator,
+          contributionSettings,
+          undefined,
+          actorContextData.actorContext,
+          'user-1',
+          undefined
+        )
+      ).rejects.toThrow(ValidationException);
+    });
+
+    it('assigns no classification for a non-board callout with no column', async () => {
+      const result = await service.createCalloutContribution(
+        buildPostData(),
+        storageAggregator,
+        contributionSettings,
+        undefined,
+        actorContextData.actorContext,
+        'user-1',
+        undefined
+      );
+
+      expect(result.classification).toBeUndefined();
+      expect(classificationService.createClassification).not.toHaveBeenCalled();
     });
   });
 });

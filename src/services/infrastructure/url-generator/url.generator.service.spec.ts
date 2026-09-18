@@ -572,6 +572,23 @@ describe('UrlGeneratorService', () => {
     });
   });
 
+  describe('getOrganizationSettingsInvitationsUrlPath', () => {
+    it('should generate the relative organization Invitations tab path', () => {
+      const result = service.getOrganizationSettingsInvitationsUrlPath('acme');
+      expect(result).toBe('/organization/acme/settings/invitations');
+    });
+  });
+
+  describe('createUrlForOrganizationSettingsInvitations', () => {
+    it('should generate the absolute organization Invitations tab URL', () => {
+      const result =
+        service.createUrlForOrganizationSettingsInvitations('acme');
+      expect(result).toBe(
+        `${ENDPOINT}/${UrlPathBase.ORGANIZATION}/acme/settings/invitations`
+      );
+    });
+  });
+
   describe('getCalendarEventIcsRestUrl', () => {
     it('should generate the correct ICS REST URL', () => {
       const configService = {
@@ -583,6 +600,20 @@ describe('UrlGeneratorService', () => {
       const result = service.getCalendarEventIcsRestUrl('event-123');
 
       expect(result).toContain('/calendar/event/event-123/ics');
+    });
+  });
+
+  describe('getMemoSigningSnapshotRestUrl', () => {
+    it('should generate the absolute private snapshot URL', () => {
+      (service as any).configService = {
+        get: vi.fn().mockReturnValue({
+          path_api_private_rest: '/api/private/rest',
+        }),
+      };
+
+      expect(service.getMemoSigningSnapshotRestUrl('attempt-123')).toBe(
+        `${ENDPOINT}/api/private/rest/content-signing/attempt-123/snapshot`
+      );
     });
   });
 

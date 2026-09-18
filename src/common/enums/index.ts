@@ -1,3 +1,4 @@
+export * from './account.deletion.blocker.kind';
 export * from './actor.type';
 export * from './alkemio.error.status';
 export * from './authentication.provider';
@@ -6,6 +7,7 @@ export * from './authorization.credential.global';
 export * from './authorization.privilege';
 export * from './authorization.verified.credential';
 export * from './collabora.document.type';
+export * from './collaboration.content.type';
 export * from './error.category';
 export * from './logging.context';
 export * from './messaging.queue';

@@ -11,6 +11,7 @@ import { CreateTemplateContentSpaceInput } from '@domain/template/template-conte
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
+import { CreateClassificationTemplateContentInput } from './classification.template.content.dto.create';
 import { CreateTemplateBaseInput } from './template.dto.create.base';
 
 @InputType()
@@ -66,4 +67,13 @@ export class CreateTemplateInput extends CreateTemplateBaseInput {
   @ValidateNested()
   @Type(() => CreateTemplateContentSpaceInput)
   contentSpaceData?: CreateTemplateContentSpaceInput;
+
+  @Field(() => CreateClassificationTemplateContentInput, {
+    nullable: true,
+    description: 'The cardinality and value set for a Classification Template.',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateClassificationTemplateContentInput)
+  classificationData?: CreateClassificationTemplateContentInput;
 }

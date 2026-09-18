@@ -1,4 +1,5 @@
 export * from './dto/whiteboard.dto.create';
+export * from './dto/whiteboard.dto.replace.content.from.source';
 export * from './dto/whiteboard.dto.update';
 export * from './dto/whiteboard.dto.update.entity';
 export * from './dto/whiteboard.preview.settings.coordinates.dto';

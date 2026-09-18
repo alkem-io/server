@@ -167,13 +167,14 @@ describe('MessageNotificationService', () => {
       const room = mockRoom(RoomType.POST);
       const message = mockMessage();
       const actorContext = mockActorContext();
+      const mockContribution = { id: 'contrib-1' };
 
       roomMentionsService.getMentionsFromText.mockResolvedValue([]);
       roomResolverService.getCalloutWithPostContributionForRoom.mockResolvedValue(
         {
           post: { id: 'post-1' },
           callout: { id: 'callout-1' },
-          contribution: { id: 'contrib-1' },
+          contribution: mockContribution,
         } as any
       );
       roomServiceEvents.processNotificationPostContributionComment.mockResolvedValue(
@@ -189,6 +190,16 @@ describe('MessageNotificationService', () => {
         roomServiceEvents.processNotificationPostContributionComment
       ).toHaveBeenCalled();
       expect(roomServiceEvents.processActivityPostComment).toHaveBeenCalled();
+      // The resolver's `contribution` (carrying classification/tagsets after
+      // the widened load) must be passed through as the 5th argument, not
+      // dropped as it was before this branch existed.
+      expect(roomServiceEvents.processActivityPostComment).toHaveBeenCalledWith(
+        { id: 'post-1' },
+        room,
+        message,
+        actorContext,
+        mockContribution
+      );
     });
 
     it('should process CALLOUT room type only when visibility is PUBLISHED and type is COLLABORATION', async () => {

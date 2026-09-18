@@ -22,6 +22,8 @@ import {
   UpdateResult,
 } from 'typeorm';
 import {
+  InAppNotificationPayloadOrganizationAssociateActor,
+  InAppNotificationPayloadOrganizationAssociateInvitation,
   InAppNotificationPayloadOrganizationMessageDirect,
   InAppNotificationPayloadOrganizationMessageRoom,
 } from '../in-app-notification-payload/dto/organization';
@@ -31,6 +33,7 @@ import {
   InAppNotificationPayloadSpaceCollaborationCallout,
   InAppNotificationPayloadSpaceCollaborationCalloutComment,
   InAppNotificationPayloadSpaceCollaborationCalloutPostComment,
+  InAppNotificationPayloadSpaceCollaborationCalloutReaction,
   InAppNotificationPayloadSpaceCommunicationMessageDirect,
   InAppNotificationPayloadSpaceCommunicationUpdate,
   InAppNotificationPayloadSpaceCommunityActor,
@@ -444,6 +447,36 @@ export class InAppNotificationService {
         ).organizationID;
         break;
 
+      case NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION: {
+        const typedPayload =
+          payload as InAppNotificationPayloadSpaceCommunityInvitation;
+        result.spaceID = typedPayload.spaceID;
+        result.invitationID = typedPayload.invitationID;
+        result.organizationID = typedPayload.organizationID;
+        break;
+      }
+
+      case NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED: {
+        const typedPayload =
+          payload as InAppNotificationPayloadSpaceCommunityActor;
+        result.spaceID = typedPayload.spaceID;
+        result.organizationID = typedPayload.actorID;
+        break;
+      }
+
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_ACCEPTED:
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_DECLINED:
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_APPLICATION:
+      case NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_JOINED: {
+        const typedPayload =
+          payload as InAppNotificationPayloadOrganizationAssociateActor;
+        result.organizationID = typedPayload.organizationID;
+        result.contributorActorId = typedPayload.actorID;
+        result.applicationID = typedPayload.applicationID;
+        result.invitationID = typedPayload.invitationID;
+        break;
+      }
+
       // ========================================
       // SPACE NOTIFICATIONS
       // ========================================
@@ -482,6 +515,36 @@ export class InAppNotificationService {
           payload as InAppNotificationPayloadSpaceCommunityActor
         ).actorID;
         break;
+
+      case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED:
+      case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED: {
+        const typedPayload =
+          payload as InAppNotificationPayloadSpaceCommunityActor;
+        result.spaceID = typedPayload.spaceID;
+        // `contributorActorId`, NOT `organizationID` — matching the USER and
+        // Virtual-Contributor siblings below. These are SPACE-admin
+        // notifications about an organization; `organizationID` means "this
+        // notification belongs to that organization's own feed", and
+        // `removeActorFromRole` uses it to wipe a user's notifications when
+        // they stop being an ASSOCIATE of that organization
+        // (deleteAllForReceiverInOrganization). A Space admin who also happens
+        // to be an associate of the invited organization would then lose this
+        // Space-admin row the moment they left the organization — two
+        // unrelated memberships, one delete. The Actor FK still cascades when
+        // the organization itself is deleted, because an Organization IS an
+        // Actor.
+        result.contributorActorId = typedPayload.actorID;
+        break;
+      }
+
+      case NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_ACCEPTED:
+      case NotificationEvent.SPACE_ADMIN_USER_COMMUNITY_INVITATION_DECLINED: {
+        const typedPayload =
+          payload as InAppNotificationPayloadSpaceCommunityActor;
+        result.spaceID = typedPayload.spaceID;
+        result.contributorActorId = typedPayload.actorID;
+        break;
+      }
 
       case NotificationEvent.SPACE_LEAD_COMMUNICATION_MESSAGE:
         result.spaceID = (
@@ -545,6 +608,14 @@ export class InAppNotificationService {
         break;
       }
 
+      case NotificationEvent.SPACE_COLLABORATION_CALLOUT_REACTION: {
+        const typedPayload =
+          payload as InAppNotificationPayloadSpaceCollaborationCalloutReaction;
+        result.spaceID = typedPayload.spaceID;
+        result.calloutID = typedPayload.calloutID;
+        break;
+      }
+
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT: {
         const typedPayload =
           payload as InAppNotificationPayloadSpaceCollaborationCalloutPostComment;
@@ -603,6 +674,23 @@ export class InAppNotificationService {
           payload as InAppNotificationPayloadSpaceCommunityActor
         ).actorID;
         break;
+
+      case NotificationEvent.USER_ORGANIZATION_ASSOCIATE_INVITATION: {
+        const typedPayload =
+          payload as InAppNotificationPayloadOrganizationAssociateInvitation;
+        result.organizationID = typedPayload.organizationID;
+        result.invitationID = typedPayload.invitationID;
+        break;
+      }
+
+      case NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_APPROVED:
+      case NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_DECLINED: {
+        const typedPayload =
+          payload as InAppNotificationPayloadOrganizationAssociateActor;
+        result.organizationID = typedPayload.organizationID;
+        result.applicationID = typedPayload.applicationID;
+        break;
+      }
 
       case NotificationEvent.USER_MESSAGE:
         result.userID = (

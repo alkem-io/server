@@ -1,4 +1,5 @@
 import { CalloutDescriptionDisplayMode } from '@common/enums/callout.description.display.mode';
+import { SidebarWidget } from '@common/enums/sidebar.widget';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('InnovationFlowStateSettings')
@@ -29,4 +30,11 @@ export abstract class IInnovationFlowStateSettings {
       'Whether Posts in this State show publish details (publisher, publish date, avatar) in the feed. Presentation only — does not restrict access to publisher data. Default true.',
   })
   showPublishDetails!: boolean;
+
+  @Field(() => [SidebarWidget], {
+    nullable: false,
+    description:
+      'Ordered widgets shown in the Space sidepanel for this State. May be empty.',
+  })
+  sidebar!: SidebarWidget[];
 }

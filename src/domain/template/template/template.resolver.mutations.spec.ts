@@ -75,7 +75,8 @@ describe('TemplateResolverMutations', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
       expect(templateService.updateTemplate).toHaveBeenCalledWith(
         template,
-        updateData
+        updateData,
+        actorContext
       );
       expect(result).toBe(updatedTemplate);
     });

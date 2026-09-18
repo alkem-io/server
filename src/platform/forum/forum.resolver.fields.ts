@@ -1,5 +1,6 @@
 import { AuthorizationPrivilege } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
+import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
 import { GraphqlGuard } from '@core/authorization';
 import { ContributorFilterInput } from '@core/filtering/input-types';
 import { IActorFull } from '@domain/actor/actor/actor.interface';
@@ -13,6 +14,7 @@ import {
 } from '@src/common/decorators';
 import { IDiscussion } from '../forum-discussion/discussion.interface';
 import { DiscussionsInput } from './dto/forum.dto.discussions.input';
+import { isKnownForumCategory } from './forum.category.allowed';
 import { IForum } from './forum.interface';
 import { ForumService } from './forum.service';
 
@@ -84,6 +86,24 @@ export class ForumResolverFields {
       types,
       filter,
       limit
+    );
+  }
+
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('discussionCategories', () => [ForumDiscussionCategory], {
+    nullable: false,
+    description: 'The active discussion categories for this Forum.',
+  })
+  discussionCategories(@Parent() forum: IForum): ForumDiscussionCategory[] {
+    // Rollback/mixed-fleet guard: a stored value this
+    // running build does not recognise (rolled-back server, migration
+    // ahead of code, or hand-edited data) is dropped here, not thrown — the
+    // non-null enum chain `[ForumDiscussionCategory!]!` would otherwise
+    // null the entire platform query for every client on any drift.
+    return forum.discussionCategories.filter(
+      (category): category is ForumDiscussionCategory =>
+        isKnownForumCategory(category)
     );
   }
 }

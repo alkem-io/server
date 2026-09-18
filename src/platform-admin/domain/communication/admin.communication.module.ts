@@ -12,13 +12,17 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Forum } from '@platform/forum/forum.entity';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
+import { MessagingRedisModule } from '@services/infrastructure/redis-client/messaging-redis.module';
+import { TaskModule } from '@services/task';
 import { PlatformOperationsAuditModule } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.module';
+import { AdminCommunicationForumHierarchyReconcileService } from './admin.communication.forum.hierarchy.reconcile.service';
 import { AdminCommunicationResolverMutations } from './admin.communication.resolver.mutations';
 import { AdminCommunicationService } from './admin.communication.service';
 import { AdminCommunicationSpaceSyncService } from './admin.communication.space.sync.service';
 
 @Module({
   imports: [
+    MessagingRedisModule,
     PlatformOperationsAuditModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
@@ -27,11 +31,13 @@ import { AdminCommunicationSpaceSyncService } from './admin.communication.space.
     CommunicationModule,
     CommunicationAdapterModule,
     ConversationModule,
+    TaskModule,
     TypeOrmModule.forFeature([Space, Forum, Room, User, VirtualContributor]),
   ],
   providers: [
     AdminCommunicationService,
     AdminCommunicationSpaceSyncService,
+    AdminCommunicationForumHierarchyReconcileService,
     AdminCommunicationResolverMutations,
   ],
   exports: [AdminCommunicationService],

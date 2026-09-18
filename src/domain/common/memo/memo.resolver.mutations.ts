@@ -12,9 +12,14 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager } from 'typeorm';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { DeleteMemoInput } from './dto/memo.dto.delete';
+import { MemoSigningContinueInput } from './dto/memo.signing.continue.input';
+import { MemoSigningContinueResult } from './dto/memo.signing.continue.result';
+import { MemoSigningPrepareInput } from './dto/memo.signing.prepare.input';
+import { MemoSigningPrepareResult } from './dto/memo.signing.prepare.result';
 import { IMemo } from './memo.interface';
 import { MemoService } from './memo.service';
 import { MemoAuthorizationService } from './memo.service.authorization';
+import { MemoSigningService } from './memo.signing.service';
 import { UpdateMemoEntityInput } from './types';
 
 @InstrumentResolver()
@@ -25,9 +30,31 @@ export class MemoResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private memoService: MemoService,
     private memoAuthService: MemoAuthorizationService,
+    private memoSigningService: MemoSigningService,
     @InjectEntityManager() private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
+
+  @Mutation(() => MemoSigningPrepareResult, {
+    description:
+      'Prepares an exact PDF preview for signing the specified Memo.',
+  })
+  prepareMemoSigning(
+    @CurrentActor() actor: ActorContext,
+    @Args('signingData') { memoID }: MemoSigningPrepareInput
+  ): Promise<MemoSigningPrepareResult> {
+    return this.memoSigningService.prepareMemoSigning(memoID, actor);
+  }
+
+  @Mutation(() => MemoSigningContinueResult, {
+    description: 'Starts signing the prepared Memo copy.',
+  })
+  continueMemoSigning(
+    @CurrentActor() actor: ActorContext,
+    @Args('signingData') { attemptID }: MemoSigningContinueInput
+  ): Promise<MemoSigningContinueResult> {
+    return this.memoSigningService.continueMemoSigning(attemptID, actor);
+  }
 
   @Mutation(() => IMemo, {
     description: 'Updates the specified Memo.',

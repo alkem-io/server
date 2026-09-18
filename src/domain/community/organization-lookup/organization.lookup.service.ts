@@ -20,9 +20,10 @@ export class OrganizationLookupService {
 
   async getOrganizationById(
     orgId: string,
-    options?: FindOneOptions<Organization>
+    options?: FindOneOptions<Organization>,
+    em?: EntityManager
   ): Promise<IOrganization | null> {
-    return this.entityManager.findOne(Organization, {
+    return (em ?? this.entityManager).findOne(Organization, {
       ...options,
       where: { ...options?.where, id: orgId },
     });
@@ -108,6 +109,30 @@ export class OrganizationLookupService {
         'Organization not found',
         LogContext.COMMUNITY,
         { orgId }
+      );
+    }
+    return organization;
+  }
+
+  /**
+   * The organization that owns a given role set. Mirrors
+   * CommunityResolverService.getSpaceForRoleSetOrFail for the ORGANIZATION
+   * side — every membership side-effect that needs to resolve "which
+   * organization is this role set for" goes through this single owner.
+   */
+  async getOrganizationForRoleSetOrFail(
+    roleSetID: string,
+    options?: FindOneOptions<Organization>
+  ): Promise<IOrganization> {
+    const organization = await this.entityManager.findOne(Organization, {
+      ...options,
+      where: { ...options?.where, roleSet: { id: roleSetID } },
+    });
+    if (!organization) {
+      throw new EntityNotFoundException(
+        'Unable to find Organization for RoleSet',
+        LogContext.COMMUNITY,
+        { roleSetID }
       );
     }
     return organization;

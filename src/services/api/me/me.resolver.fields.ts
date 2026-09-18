@@ -1,22 +1,42 @@
+import { PRIVILEGED_SESSION_WINDOW_MS } from '@common/constants';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { PaginationArgs } from '@core/pagination';
 import { PaginatedInAppNotifications } from '@core/pagination/paginated.in-app-notification';
+import { AccountDeletionBlockerService } from '@domain/community/user/account-deletion/account.deletion.blocker.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Float, ResolveField, Resolver } from '@nestjs/graphql';
 import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
 import { MeQueryResults } from '@services/api/me/dto';
+import { McpApiKeyService } from '@services/mcp-server/auth/mcp-api-key.service';
+import {
+  IMcpApiKey,
+  toGraphqlMcpApiKey,
+} from '@services/mcp-server/dto/mcp.api.key.dto';
 import { CurrentActor } from '@src/common/decorators';
 import { LogContext } from '@src/common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { MeAccountDeletionStatus } from './dto/me.account.deletion.status.dto';
 import { CommunityApplicationResult } from './dto/me.application.result';
 import { MeConversationsResult } from './dto/me.conversations.result';
 import { CommunityInvitationResult } from './dto/me.invitation.result';
 import { CommunityMembershipResult } from './dto/me.membership.result';
 import { NotificationEventsFilterInput } from './dto/me.notification.event.filter.dto.input';
+import { OrganizationApplicationResult } from './dto/me.organization.application.result';
+import { OrganizationInvitationResult } from './dto/me.organization.invitation.result';
 import { MySpaceResults } from './dto/my.journeys.results';
 import { MeService } from './me.service';
+
+const EMPTY_ACCOUNT_DELETION_STATUS: MeAccountDeletionStatus = {
+  canDelete: false,
+  sessionFresh: false,
+  blockers: [],
+  truncated: false,
+  totals: [],
+  externalSubscriptionLinked: false,
+};
 
 @Resolver(() => MeQueryResults)
 export class MeResolverFields {
@@ -24,6 +44,9 @@ export class MeResolverFields {
     private meService: MeService,
     private userLookupService: UserLookupService,
     private inAppNotificationService: InAppNotificationService,
+    private mcpApiKeyService: McpApiKeyService,
+    private accountDeletionBlockerService: AccountDeletionBlockerService,
+    private accountLookupService: AccountLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -179,6 +202,95 @@ export class MeResolverFields {
     );
   }
 
+  @ResolveField('organizationInvitationsCount', () => Number, {
+    description:
+      "The number of the current authenticated user's own pending organization invitations.",
+  })
+  public async organizationInvitationsCount(
+    @CurrentActor() actorContext: ActorContext,
+    @Args({
+      name: 'states',
+      nullable: true,
+      type: () => [String],
+      description: 'The state names you want to filter on',
+    })
+    states: string[]
+  ): Promise<number> {
+    if (!actorContext.actorID) {
+      this.logger.verbose?.(
+        'Degrading me.organizationInvitationsCount to its empty value: request has no resolved actor',
+        LogContext.AUTH
+      );
+      return 0;
+    }
+    return this.meService.getOrganizationInvitationsCountForUser(
+      actorContext.actorID,
+      states
+    );
+  }
+
+  @ResolveField(
+    'organizationInvitations',
+    () => [OrganizationInvitationResult],
+    {
+      description:
+        "The current authenticated user's own pending organization invitations.",
+    }
+  )
+  public async organizationInvitations(
+    @CurrentActor() actorContext: ActorContext,
+    @Args({
+      name: 'states',
+      nullable: true,
+      type: () => [String],
+      description: 'The state names you want to filter on',
+    })
+    states: string[]
+  ): Promise<OrganizationInvitationResult[]> {
+    if (!actorContext.actorID) {
+      this.logger.verbose?.(
+        'Degrading me.organizationInvitations to its empty value: request has no resolved actor',
+        LogContext.AUTH
+      );
+      return [];
+    }
+    return this.meService.getOrganizationInvitationsForUser(
+      actorContext.actorID,
+      states
+    );
+  }
+
+  @ResolveField(
+    'organizationApplications',
+    () => [OrganizationApplicationResult],
+    {
+      description:
+        "The current authenticated user's own pending organization applications.",
+    }
+  )
+  public async organizationApplications(
+    @CurrentActor() actorContext: ActorContext,
+    @Args({
+      name: 'states',
+      nullable: true,
+      type: () => [String],
+      description: 'The state names you want to filter on',
+    })
+    states: string[]
+  ): Promise<OrganizationApplicationResult[]> {
+    if (!actorContext.actorID) {
+      this.logger.verbose?.(
+        'Degrading me.organizationApplications to its empty value: request has no resolved actor',
+        LogContext.AUTH
+      );
+      return [];
+    }
+    return this.meService.getOrganizationApplicationsForUser(
+      actorContext.actorID,
+      states
+    );
+  }
+
   @ResolveField(() => [CommunityMembershipResult], {
     description: 'The hierarchy of the Spaces the current user is a member.',
   })
@@ -220,6 +332,70 @@ export class MeResolverFields {
     limit: number
   ): Promise<MySpaceResults[]> {
     return this.meService.getMySpaces(actorContext, limit);
+  }
+
+  @ResolveField('mcpApiKeys', () => [IMcpApiKey], {
+    nullable: false,
+    description:
+      "The current user's MCP API keys, newest first. Includes revoked and expired keys so last-used evidence survives revocation.",
+  })
+  public async mcpApiKeys(
+    @CurrentActor() actorContext: ActorContext
+  ): Promise<IMcpApiKey[]> {
+    if (!actorContext.actorID || actorContext.isAnonymous) {
+      this.logger.verbose?.(
+        'Degrading me.mcpApiKeys to its empty value: request has no resolved actor',
+        LogContext.AUTH
+      );
+      return [];
+    }
+    const rows = await this.mcpApiKeyService.listUserKeysForProjection(
+      actorContext.actorID
+    );
+    return rows.map(toGraphqlMcpApiKey);
+  }
+
+  @ResolveField('accountDeletion', () => MeAccountDeletionStatus, {
+    nullable: false,
+    description:
+      'Self-scoped pre-flight read for account deletion: whether the calling user can delete their own account right now, and if not, exactly what blocks them.',
+  })
+  public async accountDeletion(
+    @CurrentActor() actorContext: ActorContext
+  ): Promise<MeAccountDeletionStatus> {
+    if (!actorContext.actorID || actorContext.isAnonymous) {
+      this.logger.verbose?.(
+        'Degrading me.accountDeletion to its empty value: request has no resolved actor',
+        LogContext.AUTH
+      );
+      return EMPTY_ACCOUNT_DELETION_STATUS;
+    }
+
+    const user = await this.userLookupService.getUserByIdOrFail(
+      actorContext.actorID
+    );
+    const account = await this.accountLookupService.getAccountOrFail(
+      user.accountID
+    );
+    // Same predicate the deleteUser mutation's self-branch guard calls
+    // (FR-006) — this read and that refusal can never drift.
+    const blockerResult = await this.accountDeletionBlockerService.getBlockers(
+      actorContext.actorID,
+      user.accountID,
+      'self'
+    );
+    const sessionFresh =
+      !!actorContext.issuedAt &&
+      Date.now() - actorContext.issuedAt <= PRIVILEGED_SESSION_WINDOW_MS;
+
+    return {
+      canDelete: blockerResult.canDelete,
+      sessionFresh,
+      blockers: blockerResult.blockers,
+      truncated: blockerResult.truncated,
+      totals: blockerResult.totals,
+      externalSubscriptionLinked: !!account.externalSubscriptionID,
+    };
   }
 
   @ResolveField(() => MeConversationsResult, {

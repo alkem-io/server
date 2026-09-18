@@ -12,7 +12,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy/authori
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { NotificationSettingInput } from './dto/notification.setting.input';
 import { CreateUserSettingsInput } from './dto/user.settings.dto.create';
 import { UpdateUserSettingsEntityInput } from './dto/user.settings.dto.update';
@@ -161,6 +161,22 @@ export class UserSettingsService {
         settings.notification.organization.adminMessageReceived,
         notificationOrganizationData.adminMessageReceived
       );
+      this.updateNotificationSetting(
+        settings.notification.organization.adminSpaceCommunityInvitation,
+        notificationOrganizationData.adminSpaceCommunityInvitation
+      );
+      this.updateNotificationSetting(
+        settings.notification.organization.adminAssociateInvitationResponse,
+        notificationOrganizationData.adminAssociateInvitationResponse
+      );
+      this.updateNotificationSetting(
+        settings.notification.organization.adminAssociateApplicationReceived,
+        notificationOrganizationData.adminAssociateApplicationReceived
+      );
+      this.updateNotificationSetting(
+        settings.notification.organization.adminAssociateJoined,
+        notificationOrganizationData.adminAssociateJoined
+      );
     }
 
     const notificationSpaceData = updateData.notification?.space;
@@ -176,6 +192,10 @@ export class UserSettingsService {
         this.updateNotificationSetting(
           settings.notification.space.admin.communityNewMember,
           adminData.communityNewMember
+        );
+        this.updateNotificationSetting(
+          settings.notification.space.admin.communityInvitationResponse,
+          adminData.communityInvitationResponse
         );
         this.updateNotificationSetting(
           settings.notification.space.admin.communicationMessageReceived,
@@ -233,6 +253,10 @@ export class UserSettingsService {
         settings.notification.space.collaborationPollVoteAffectedByOptionChange,
         notificationSpaceData.collaborationPollVoteAffectedByOptionChange
       );
+      this.updateNotificationSetting(
+        settings.notification.space.collaborationCalloutReaction,
+        notificationSpaceData.collaborationCalloutReaction
+      );
     }
 
     const notificationUserData = updateData.notification?.user;
@@ -275,6 +299,16 @@ export class UserSettingsService {
         this.updateNotificationSetting(
           settings.notification.user.membership.spaceCommunityJoined,
           membershipData.spaceCommunityJoined
+        );
+        this.updateNotificationSetting(
+          settings.notification.user.membership
+            .organizationAssociateInvitationReceived,
+          membershipData.organizationAssociateInvitationReceived
+        );
+        this.updateNotificationSetting(
+          settings.notification.user.membership
+            .organizationAssociateApplicationDecided,
+          membershipData.organizationAssociateApplicationDecided
         );
       }
     }
@@ -386,9 +420,16 @@ export class UserSettingsService {
     return settings;
   }
 
-  async deleteUserSettings(userSettingsID: string): Promise<IUserSettings> {
+  async deleteUserSettings(
+    userSettingsID: string,
+    em?: EntityManager
+  ): Promise<IUserSettings> {
     const userSettings = await this.getUserSettingsOrFail(userSettingsID);
-    await this.userSettingsRepository.remove(userSettings as UserSettings);
+    if (em) {
+      await em.remove(userSettings as UserSettings);
+    } else {
+      await this.userSettingsRepository.remove(userSettings as UserSettings);
+    }
     return userSettings;
   }
 

@@ -8,4 +8,17 @@ export abstract class IOrganizationSettingsMembership {
       'Allow Users with email addresses matching the domain of this Organization to join.',
   })
   allowUsersMatchingDomainToJoin!: boolean;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Allow Spaces to invite this Organization to join them.',
+  })
+  allowSpaceInvitations!: boolean;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description:
+      'Allow registered users to apply to associate with this Organization.',
+  })
+  allowApplications!: boolean;
 }

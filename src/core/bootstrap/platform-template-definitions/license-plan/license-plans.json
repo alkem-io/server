@@ -139,6 +139,20 @@
       "assignToNewOrganizationAccounts": "0",
       "assignToNewUserAccounts": "0",
       "type": "space-feature-flag"
+    },
+    {
+      "name": "SPACE_FEATURE_MEMO_SIGNING",
+      "enabled": "1",
+      "sortOrder": "110",
+      "pricePerMonth": "0.00",
+      "isFree": "1",
+      "trialEnabled": "0",
+      "requiresPaymentMethod": "0",
+      "requiresContactSupport": "1",
+      "licenseCredential": "space-feature-memo-signing",
+      "assignToNewOrganizationAccounts": "0",
+      "assignToNewUserAccounts": "0",
+      "type": "space-feature-flag"
     }
   ]
 }

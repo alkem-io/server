@@ -24,6 +24,13 @@ curl -X POST \
   http://localhost:4000/graphql
 ```
 
+Raw ASCII names remain supported for API compatibility. Browser clients encode
+Unicode names as UTF-8 base64 in the same header; the server decodes that form
+first and falls back to the raw value for legacy callers. Because the historical
+header has no encoding marker, a raw value that is itself canonical base64 of
+whitespace is treated as encoded and therefore empty; callers should encode
+browser-supplied names or use an ordinary non-base64 raw display name.
+
 ### Implementation Details
 
 #### Core Architecture:

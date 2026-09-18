@@ -25,6 +25,18 @@ export class ProfileAvatarService {
     private readonly logger: LoggerService
   ) {}
 
+  /** Host only — the full avatar URL can carry provider signing tokens. */
+  private getHost(urlString?: string): string | undefined {
+    if (!urlString) {
+      return undefined;
+    }
+    try {
+      return new URL(urlString).host;
+    } catch {
+      return undefined;
+    }
+  }
+
   private isValidHttpUrl(urlString: string): boolean {
     let url;
 
@@ -90,6 +102,7 @@ export class ProfileAvatarService {
         storageBucket: true,
       },
     });
+    let sourceURI: string | undefined;
     try {
       if (!profile.visuals || !profile.storageBucket) {
         throw new EntityNotInitializedException(
@@ -108,6 +121,7 @@ export class ProfileAvatarService {
       }
 
       const uri = avatarVisual.uri;
+      sourceURI = uri;
       const avatarDocument =
         await this.storageBucketService.ensureAvatarUrlIsDocument(
           uri,
@@ -117,10 +131,24 @@ export class ProfileAvatarService {
       const avatartURI =
         this.documentService.getPubliclyAccessibleURL(avatarDocument);
       avatarVisual.uri = avatartURI;
-    } catch (error) {
-      // This method should never stop the creation of a contributor
+    } catch (error: any) {
+      // This method should never stop the creation of a contributor, so the
+      // failure is swallowed and the Profile keeps whatever (external) avatar
+      // URI it already had. Log it as structured data so the silent fallback
+      // stays greppable and alertable: `avatarHost` identifies a CDN that has
+      // started rejecting us, `httpStatus` separates a block (403) from a dead
+      // link (404) or an outage (5xx).
       this.logger.error(
-        `Unable to ensure Avatar for profile ${profile.id} is stored in local storage bucket: ${error}`,
+        {
+          msg: 'AVATAR_NOT_STORED_LOCALLY',
+          name: ProfileAvatarService.name,
+          profileID: profile.id,
+          avatarHost: this.getHost(sourceURI),
+          httpStatus: error?.httpStatus,
+          errorCode: error?.errorCode,
+          error: error?.message,
+        },
+        error?.stack,
         LogContext.COMMUNITY
       );
     }

@@ -81,8 +81,19 @@ export class CredentialService {
    * Count credentials matching the search criteria.
    */
   async countMatchingCredentials(
-    credentialCriteria: CredentialsSearchInput
+    credentialCriteria: CredentialsSearchInput,
+    em?: EntityManager
   ): Promise<number> {
+    if (em) {
+      return await em.count(Credential, {
+        where: credentialCriteria.resourceID
+          ? {
+              type: credentialCriteria.type,
+              resourceID: credentialCriteria.resourceID,
+            }
+          : { type: credentialCriteria.type },
+      });
+    }
     if (!credentialCriteria.resourceID) {
       return await this.credentialRepository
         .createQueryBuilder('credential')
@@ -148,7 +159,13 @@ export class CredentialService {
   /**
    * Find credentials by actor ID.
    */
-  async findCredentialsByActorID(actorID: string): Promise<Credential[]> {
+  async findCredentialsByActorID(
+    actorID: string,
+    em?: EntityManager
+  ): Promise<Credential[]> {
+    if (em) {
+      return await em.find(Credential, { where: { actorID } });
+    }
     return await this.credentialRepository.find({
       where: { actorID },
     });

@@ -11,12 +11,28 @@ import * as Y from 'yjs';
 import { newLineReplacement } from './const';
 import { markdownSchema } from './markdown.schema';
 
-/**
+// A stateless markdown-it instance used only to compute an image's CommonMark
+// `alt` from its already-parsed inline children. renderInlineAsText is
+// markdown-it's own "alt kludge": it strips markup (keeps text + inline HTML,
+// recurses into nested images, renders soft/hard breaks as newlines, and drops
+// mark tokens like em/strong/code). Using it avoids storing raw markdown markers.
+const altRenderer = markdownIt();
+const imageAltText = (token: MarkdownItToken): string =>
+  altRenderer.renderer.renderInlineAsText(
+    token.children ?? [],
+    altRenderer.options,
+    {}
+  );
 
- * Converts a markdown string to a Yjs state update, encoded in binary.
- * @param _markdown
+/**
+ * Converts a markdown string to the ProseMirror document node (the shared parse used
+ * by both the Yjs-V2 encoder and the live-room content replacement). This is the ONE
+ * markdown→PM converter; keep all fidelity handling (strong→bold, tables via HTML,
+ * <br>→paragraph) here so the two consumers can never diverge.
  */
-export const markdownToYjsV2State = (_markdown: string): Uint8Array => {
+export const markdownToProseMirrorNode = (
+  _markdown: string
+): ProseMirrorNode => {
   // Convert <strong>...</strong> to **...** for Markdown bold
   // it is something to do with the schema or the rules that I cannot solve
   const strongProcessed = _markdown.replace(
@@ -31,27 +47,32 @@ export const markdownToYjsV2State = (_markdown: string): Uint8Array => {
     /\|.*\|/.test(strongProcessed) &&
     /(^|\n)\s*\|(\s*[-:]+\s*\|)+\s*($|\n)/.test(strongProcessed);
 
-  let pmDoc: ProseMirrorNode;
-
   if (hasTable) {
     // Use HTML-based parsing for content with tables
     // Don't apply newLineReplacement - it would break table row structure
     // <br> tags in cells will be handled by parseMarkdownViaHtml
-    pmDoc = parseMarkdownViaHtml(strongProcessed);
-  } else {
-    // For non-table content, apply <br> replacement for paragraph breaks
-    const processed = strongProcessed.replace(
-      /<br\s*\/?>(\r?\n)?/gm,
-      newLineReplacement
-    );
-    const mdParser = new MarkdownParser(
-      markdownSchema,
-      markdownIt().enable('table'),
-      parserRules
-    );
-    pmDoc = mdParser.parse(processed);
+    return parseMarkdownViaHtml(strongProcessed);
   }
+  // For non-table content, apply <br> replacement for paragraph breaks
+  const processed = strongProcessed.replace(
+    /<br\s*\/?>(\r?\n)?/gm,
+    newLineReplacement
+  );
+  const mdParser = new MarkdownParser(
+    markdownSchema,
+    markdownIt().enable('table'),
+    parserRules
+  );
+  return mdParser.parse(processed);
+};
 
+/**
+
+ * Converts a markdown string to a Yjs state update, encoded in binary.
+ * @param _markdown
+ */
+export const markdownToYjsV2State = (_markdown: string): Uint8Array => {
+  const pmDoc = markdownToProseMirrorNode(_markdown);
   const ydoc = prosemirrorToYDoc(pmDoc, 'default');
   return Y.encodeStateAsUpdateV2(ydoc);
 };
@@ -160,7 +181,11 @@ const parserRules: MarkdownParser['tokens'] = {
     node: 'image',
     getAttrs: (token: MarkdownItToken) => ({
       src: token.attrGet('src'),
-      alt: token.attrGet('alt'),
+      // markdown-it leaves `attrGet('alt')` as an empty placeholder; the alt text
+      // lives in the token's inline children. CommonMark requires the alt to be
+      // plain text with markup stripped, so render the children via markdown-it's
+      // renderInlineAsText rather than reading the raw `token.content` markers.
+      alt: imageAltText(token),
       title: token.attrGet('title'),
     }),
   },

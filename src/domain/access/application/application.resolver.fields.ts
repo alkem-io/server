@@ -3,6 +3,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { Application, IApplication } from '@domain/access/application';
 import { IActor } from '@domain/actor/actor/actor.interface';
 import { IQuestion } from '@domain/common/question/question.interface';
+import { IUser } from '@domain/community/user/user.interface';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
@@ -35,5 +36,16 @@ export class ApplicationResolverFields {
   @Profiling.api
   async questions(@Parent() application: Application): Promise<IQuestion[]> {
     return await this.applicationService.getQuestionsSorted(application);
+  }
+
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('user', () => IUser, {
+    nullable: true,
+    description: 'The User who submitted this Application.',
+  })
+  @Profiling.api
+  async user(@Parent() application: Application): Promise<IUser | null> {
+    return await this.applicationService.getUser(application.id);
   }
 }

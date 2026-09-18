@@ -78,8 +78,8 @@ if [ "$ALREADY_EXISTS" = false ]; then
   done
   [ -n "$EMAIL_BODY" ] || fail "No verification email found for $EMAIL"
 
-  TOKEN=$(printf '%s' "$EMAIL_BODY" | grep -oP 'token=\K[a-zA-Z0-9]+' | head -1 || true)
-  VFLOW=$(printf '%s' "$EMAIL_BODY" | grep -oP 'flow=\K[a-f0-9-]+' | head -1 || true)
+  TOKEN=$(printf '%s' "$EMAIL_BODY" | grep -o 'token=[a-zA-Z0-9]*' | head -1 | cut -d= -f2 || true)
+  VFLOW=$(printf '%s' "$EMAIL_BODY" | grep -o 'flow=[a-f0-9-]*' | head -1 | cut -d= -f2 || true)
   [ -n "$TOKEN" ] && [ -n "$VFLOW" ] || fail "Could not extract verification token/flow from email"
 
   VERIFY_RESULT=$(curl -s -X POST "$KRATOS_PUBLIC_URL/self-service/verification?flow=$VFLOW" \

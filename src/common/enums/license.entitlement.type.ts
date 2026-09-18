@@ -15,6 +15,7 @@ export enum LicenseEntitlementType {
   SPACE_FLAG_WHITEBOARD_MULTI_USER = 'space-flag-whiteboard-multi-user',
   SPACE_FLAG_MEMO_MULTI_USER = 'space-flag-memo-multi-user',
   SPACE_FLAG_OFFICE_DOCUMENTS = 'space-flag-office-documents',
+  SPACE_FLAG_MEMO_SIGNING = 'space-flag-memo-signing',
   // 004-web-ai-assistant (FR-027b, Increment B): the acting user's Account
   // monthly weighted-token allowance for the web AI assistant. A LIMIT
   // entitlement resolved by the credential-based licensing engine; the per-tier

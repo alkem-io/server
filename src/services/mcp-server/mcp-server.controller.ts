@@ -2,76 +2,43 @@ import { LogContext } from '@common/enums';
 import { ActorContext } from '@core/actor-context/actor.context';
 import {
   All,
-  Body,
   Controller,
-  Delete,
-  Get,
   Headers,
   HttpCode,
   Inject,
   LoggerService,
-  Param,
-  Post,
   Req,
   Res,
-  UnauthorizedException,
   UseGuards,
-  UsePipes,
-  ValidationPipe,
 } from '@nestjs/common';
-import {
-  IsArray,
-  IsInt,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  Max,
-  Min,
-} from 'class-validator';
 import { Request, Response } from 'express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import {
-  CreateMcpApiKeyInput,
-  McpApiKeyService,
-} from './auth/mcp-api-key.service';
 import { McpAuthGuard } from './auth/mcp-auth.guard';
 import { McpApiKeyScope } from './dto/mcp.types';
 import { McpServerService } from './mcp-server.service';
 
 /**
- * DTO for creating an MCP API key
- */
-class CreateApiKeyDto {
-  @IsString()
-  @IsNotEmpty()
-  name!: string;
-
-  @IsOptional()
-  @IsString()
-  description?: string;
-
-  @IsOptional()
-  @IsArray()
-  scopes?: McpApiKeyScope[];
-
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Max(365)
-  expiresInDays?: number;
-}
-
-/**
  * MCP Server Controller
  *
  * Handles MCP protocol requests via HTTP + SSE transport.
- * Also provides API key management endpoints.
+ *
+ * API-key LIFECYCLE (mint/list/revoke) does NOT live here, and never has a
+ * REST surface again (workspace#038, R-038-2). The three former
+ * `/rest/mcp/api-keys` handlers were deleted: they were internet-reachable
+ * (Traefik `PathPrefix(/rest/mcp)`) and guarded only by `McpAuthGuard`, so a
+ * leaked MCP key could mint MORE MCP keys — uncapped, unaudited. Lifecycle
+ * operations are GraphQL-only (`mintMcpApiKey`, `me.mcpApiKeys`,
+ * `revokeMcpApiKey`, `platformAdmin.mcpApiKeys`, `adminRevokeMcpApiKey`),
+ * which never consults `McpAuthGuard` — see
+ * `mcp-api-key.resolver.mutations.ts` and `admin.mcp.api.key.resolver.fields.ts`.
+ * This closes the escalation by construction rather than by a reject-branch;
+ * verified by a negative test asserting these paths 404
+ * (`mcp-server.controller.spec.ts`, US3-AS3).
  */
 @Controller('/rest/mcp')
 export class McpServerController {
   constructor(
     private readonly mcpServerService: McpServerService,
-    private readonly mcpApiKeyService: McpApiKeyService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -91,15 +58,14 @@ export class McpServerController {
     @Res() res: Response,
     @Headers('mcp-session-id') sessionId?: string
   ): Promise<void> {
-    // Skip if this is an API key management request
-    if (req.path.includes('/api-keys')) {
-      return;
-    }
-
     // Get agent info from Passport (set by McpAuthGuard)
     const agentInfo = (req as any).user as ActorContext | undefined;
     // API-key scopes, set by McpApiKeyStrategy when authenticated via a key.
     const scopes = (req as any).mcpApiKeyScopes as McpApiKeyScope[] | undefined;
+    // The validated key's id, set by McpApiKeyStrategy alongside the scopes —
+    // threaded through to the session so it can be revalidated on the
+    // no-fresh-auth branch (workspace#038 FR-013).
+    const apiKeyId = (req as any).mcpApiKeyId as string | undefined;
 
     this.logger.verbose?.(
       `MCP ${req.method} request received, session: ${sessionId || 'new'}, user: ${agentInfo?.actorID || 'anonymous'}`,
@@ -112,7 +78,8 @@ export class McpServerController {
         res as unknown as import('http').ServerResponse,
         sessionId,
         agentInfo,
-        scopes
+        scopes,
+        apiKeyId
       );
     } catch (error) {
       this.logger.error?.(
@@ -131,98 +98,5 @@ export class McpServerController {
         });
       }
     }
-  }
-
-  /**
-   * Create a new MCP API key for the authenticated user
-   */
-  @Post('api-keys')
-  @HttpCode(201)
-  @UseGuards(McpAuthGuard)
-  @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
-  async createApiKey(@Req() req: Request, @Body() body: CreateApiKeyDto) {
-    const agentInfo = (req as any).user as ActorContext | undefined;
-    const userId = agentInfo?.actorID;
-    if (!userId) {
-      throw new UnauthorizedException(
-        'User must be authenticated to create API keys'
-      );
-    }
-
-    const input: CreateMcpApiKeyInput = {
-      name: body.name,
-      description: body.description,
-      userId,
-      scopes: body.scopes,
-      expiresAt: body.expiresInDays
-        ? new Date(Date.now() + body.expiresInDays * 24 * 60 * 60 * 1000)
-        : undefined,
-    };
-
-    const result = await this.mcpApiKeyService.createApiKey(input);
-
-    this.logger.verbose?.(
-      `Created MCP API key ${result.id} for user ${userId}`,
-      LogContext.MCP_SERVER
-    );
-
-    return {
-      id: result.id,
-      name: result.name,
-      apiKey: result.apiKey, // Only returned on creation!
-      expiresAt: result.expiresAt,
-      message: 'Save this API key securely - it will not be shown again',
-    };
-  }
-
-  /**
-   * List API keys for the authenticated user
-   */
-  @Get('api-keys')
-  @UseGuards(McpAuthGuard)
-  async listApiKeys(@Req() req: Request) {
-    const agentInfo = (req as any).user as ActorContext | undefined;
-    const userId = agentInfo?.actorID;
-    if (!userId) {
-      throw new UnauthorizedException(
-        'User must be authenticated to list API keys'
-      );
-    }
-
-    const keys = await this.mcpApiKeyService.listApiKeysForUser(userId);
-
-    return keys.map(key => ({
-      id: key.id,
-      name: key.name,
-      description: key.description,
-      scopes: key.scopes,
-      isActive: key.isActive,
-      expiresAt: key.expiresAt,
-      lastUsedAt: key.lastUsedAt,
-      createdAt: key.createdDate,
-    }));
-  }
-
-  /**
-   * Revoke (deactivate) an API key
-   */
-  @Delete('api-keys/:id')
-  @HttpCode(204)
-  @UseGuards(McpAuthGuard)
-  async revokeApiKey(@Req() req: Request, @Param('id') keyId: string) {
-    const agentInfo = (req as any).user as ActorContext | undefined;
-    const userId = agentInfo?.actorID;
-    if (!userId) {
-      throw new UnauthorizedException(
-        'User must be authenticated to revoke API keys'
-      );
-    }
-
-    await this.mcpApiKeyService.revokeApiKey(keyId, userId);
-
-    this.logger.verbose?.(
-      `Revoked MCP API key ${keyId} for user ${userId}`,
-      LogContext.MCP_SERVER
-    );
   }
 }

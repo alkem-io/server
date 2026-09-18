@@ -1,5 +1,6 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { ClassificationModule } from '@domain/common/classification/classification.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
@@ -15,6 +16,7 @@ import { CalloutContributionMoveService } from './callout.contribution.move.serv
     CalloutModule,
     AuthorizationModule,
     CalloutContributionModule,
+    ClassificationModule,
     CollaborationLicenseModule,
     UrlGeneratorModule,
     TypeOrmModule.forFeature([CalloutContribution, Callout]),

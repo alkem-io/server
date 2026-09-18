@@ -8,12 +8,15 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
+import { TaskService } from '@services/task';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
+import { AdminCommunicationForumHierarchyReconcileService } from './admin.communication.forum.hierarchy.reconcile.service';
 import { AdminCommunicationService } from './admin.communication.service';
 import { AdminCommunicationSpaceSyncService } from './admin.communication.space.sync.service';
 import { CommunicationAdminEnsureAccessInput } from './dto/admin.communication.dto.ensure.access.input';
 import { CommunicationAdminMigrateRoomsResult } from './dto/admin.communication.dto.migrate.rooms.result';
+import { AdminCommunicationReconcileForumHierarchyInput } from './dto/admin.communication.dto.reconcile.forum.hierarchy';
 import { CommunicationAdminRemoveOrphanedRoomInput } from './dto/admin.communication.dto.remove.orphaned.room';
 import { CommunicationAdminUpdateRoomStateInput } from './dto/admin.communication.dto.update.room.state';
 
@@ -27,6 +30,8 @@ export class AdminCommunicationResolverMutations {
     private authorizationService: AuthorizationService,
     private adminCommunicationService: AdminCommunicationService,
     private adminCommunicationSpaceSyncService: AdminCommunicationSpaceSyncService,
+    private adminCommunicationForumHierarchyReconcileService: AdminCommunicationForumHierarchyReconcileService,
+    private taskService: TaskService,
     private platformOperationsAuditService: PlatformOperationsAuditService
   ) {
     // Synthetic, in-memory policy — built once at construction, never
@@ -253,5 +258,37 @@ export class AdminCommunicationResolverMutations {
       });
       throw error;
     }
+  }
+
+  @Mutation(() => String, {
+    description:
+      'Reconcile the Matrix space hierarchy that mirrors the forum against the current forum/discussion state — report-first (dryRun defaults true), scoped to categories + the forum space, never a delete. Returns a task id; the pass runs asynchronously and the task completes with the summary.',
+  })
+  @Profiling.api
+  async adminCommunicationReconcileForumHierarchy(
+    @Args('reconcileData')
+    reconcileData: AdminCommunicationReconcileForumHierarchyInput,
+    @CurrentActor() actorContext: ActorContext
+  ): Promise<string> {
+    await this.authorizationService.grantAccessOrFail(
+      actorContext,
+      this.communicationGlobalAdminPolicy,
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
+      'communications admin reconcile forum hierarchy'
+    );
+
+    const task = await this.taskService.create();
+
+    // Fire-and-forget: the pass owns the task's lifecycle from here (results,
+    // completion, and the one audit row written at pass end) — the mutation
+    // itself never awaits it, so a category-by-category convergence never
+    // sits inside the request/response cycle.
+    void this.adminCommunicationForumHierarchyReconcileService.reconcile(
+      task.id,
+      actorContext.actorID,
+      reconcileData
+    );
+
+    return task.id;
   }
 }

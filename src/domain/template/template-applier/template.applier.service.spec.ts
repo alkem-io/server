@@ -1,4 +1,6 @@
+import { ForbiddenException } from '@common/exceptions';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
@@ -6,6 +8,7 @@ import { InnovationFlowService } from '@domain/collaboration/innovation-flow/inn
 import { Test, TestingModule } from '@nestjs/testing';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { actorContextData } from '@test/data/actorContext.mock';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -22,6 +25,7 @@ describe('TemplateApplierService', () => {
   let inputCreatorService: Mocked<InputCreatorService>;
   let storageAggregatorResolverService: Mocked<StorageAggregatorResolverService>;
   let collaborationService: Mocked<CollaborationService>;
+  let authorizationService: Mocked<AuthorizationService>;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -54,6 +58,9 @@ describe('TemplateApplierService', () => {
     collaborationService = module.get(
       CollaborationService
     ) as Mocked<CollaborationService>;
+    authorizationService = module.get(
+      AuthorizationService
+    ) as Mocked<AuthorizationService>;
   });
 
   describe('updateCollaborationFromSpaceTemplate', () => {
@@ -75,7 +82,7 @@ describe('TemplateApplierService', () => {
         service.updateCollaborationFromSpaceTemplate(
           updateData,
           targetCollab,
-          'user-1'
+          actorContextData.actorContext
         )
       ).rejects.toThrow(RelationshipNotFoundException);
     });
@@ -97,7 +104,7 @@ describe('TemplateApplierService', () => {
         service.updateCollaborationFromSpaceTemplate(
           updateData,
           { id: 'collab-1' } as any,
-          'user-1'
+          actorContextData.actorContext
         )
       ).rejects.toThrow(RelationshipNotFoundException);
     });
@@ -135,7 +142,7 @@ describe('TemplateApplierService', () => {
         service.updateCollaborationFromSpaceTemplate(
           updateData,
           targetCollab,
-          'user-1'
+          actorContextData.actorContext
         )
       ).rejects.toThrow(RelationshipNotFoundException);
     });
@@ -186,7 +193,7 @@ describe('TemplateApplierService', () => {
           deleteExistingCallouts: true,
         },
         targetCollab,
-        'user-1'
+        actorContextData.actorContext
       );
 
       expect(calloutService.deleteCallout).toHaveBeenCalledWith(
@@ -235,7 +242,7 @@ describe('TemplateApplierService', () => {
             deleteExistingCallouts: true,
           },
           targetCollab,
-          'user-1'
+          actorContextData.actorContext
         )
       ).rejects.toThrow('overflow');
 
@@ -293,7 +300,7 @@ describe('TemplateApplierService', () => {
           deleteExistingCallouts: false,
         },
         targetCollab,
-        'user-1'
+        actorContextData.actorContext
       );
 
       expect(calloutsSetService.addCallouts).toHaveBeenCalled();
@@ -351,7 +358,7 @@ describe('TemplateApplierService', () => {
           deleteExistingCallouts: false,
         },
         targetCollab,
-        'user-1'
+        actorContextData.actorContext
       );
 
       expect(
@@ -404,13 +411,73 @@ describe('TemplateApplierService', () => {
           deleteExistingCallouts: false,
         },
         targetCollab,
-        'user-1'
+        actorContextData.actorContext
       );
 
       expect(
         templateService.ensureCalloutsInValidGroupsAndStates
       ).toHaveBeenCalledWith(targetCollab);
       expect(collaborationService.save).toHaveBeenCalledWith(targetCollab);
+    });
+
+    // The resolver only authorizes UPDATE on the TARGET collaboration; without a
+    // source READ a caller could name any spaceTemplateID and exfiltrate its callouts
+    // / whiteboard snapshots (and destroy the target on the way). The source READ MUST
+    // gate the whole apply, and MUST sit before the destructive phase (delete existing
+    // callouts) and before any source dereference.
+    it('RED: a forbidden source READ aborts the apply before any deletion, source read, or creation', async () => {
+      const sourceCollab = {
+        innovationFlow: { states: [{ displayName: 'State1' }] },
+        calloutsSet: { callouts: [{ id: 'src-callout-1' }] },
+      };
+      templateService.getTemplateOrFail.mockResolvedValue({
+        id: 'tpl-1',
+        authorization: { id: 'src-tpl-auth' },
+        contentSpace: { id: 'tcs-1', collaboration: sourceCollab },
+      } as any);
+      // The initiating actor lacks READ on the source template.
+      authorizationService.grantAccessOrFail.mockImplementation(() => {
+        throw new ForbiddenException('denied', 'test' as any);
+      });
+
+      const existingCallout = { id: 'existing-callout-1' };
+      const targetCollab = {
+        id: 'collab-1',
+        innovationFlow: { states: [{ displayName: 'Old' }] },
+        calloutsSet: { callouts: [existingCallout] },
+      } as any;
+
+      await expect(
+        service.updateCollaborationFromSpaceTemplate(
+          {
+            collaborationID: 'collab-1',
+            spaceTemplateID: 'tpl-1',
+            addCallouts: true,
+            deleteExistingCallouts: true,
+          },
+          targetCollab,
+          actorContextData.actorContext
+        )
+      ).rejects.toThrow(ForbiddenException);
+
+      // The READ was demanded on the SOURCE template's authorization policy.
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContextData.actorContext,
+        expect.objectContaining({ id: 'src-tpl-auth' }),
+        expect.anything(),
+        expect.any(String)
+      );
+      // Zero target deletions, zero source-content build/fetch, zero creations,
+      // and the target's InnovationFlow is never mutated.
+      expect(calloutService.deleteCallout).not.toHaveBeenCalled();
+      expect(
+        inputCreatorService.buildCreateCalloutInputsFromCallouts
+      ).not.toHaveBeenCalled();
+      expect(calloutsSetService.addCallouts).not.toHaveBeenCalled();
+      expect(
+        innovationFlowService.updateInnovationFlowStatesFromTemplate
+      ).not.toHaveBeenCalled();
+      expect(targetCollab.calloutsSet.callouts).toEqual([existingCallout]);
     });
   });
 });

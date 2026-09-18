@@ -16,13 +16,22 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { NVPService } from '@domain/common/nvp/nvp.service';
 import { IQuestion } from '@domain/common/question/question.interface';
+import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
+import {
+  EntityManager,
+  FindManyOptions,
+  FindOneOptions,
+  Repository,
+} from 'typeorm';
 import { RoleSetCacheService } from '../role-set/role.set.service.cache';
-import { ApplicationLifecycleService } from './application.service.lifecycle';
+import {
+  ApplicationLifecycleService,
+  ApplicationLifecycleState,
+} from './application.service.lifecycle';
 
 @Injectable()
 export class ApplicationService {
@@ -58,7 +67,8 @@ export class ApplicationService {
   }
 
   async deleteApplication(
-    deleteData: DeleteApplicationInput
+    deleteData: DeleteApplicationInput,
+    em?: EntityManager
   ): Promise<IApplication> {
     const applicationID = deleteData.ID;
     const application = await this.getApplicationOrFail(applicationID, {
@@ -66,17 +76,20 @@ export class ApplicationService {
     });
     if (application.questions) {
       for (const question of application.questions) {
-        await this.nvpService.removeNVP(question.id);
+        await this.nvpService.removeNVP(question.id, em);
       }
     }
 
-    await this.lifecycleService.deleteLifecycle(application.lifecycle.id);
+    await this.lifecycleService.deleteLifecycle(application.lifecycle.id, em);
     if (application.authorization)
-      await this.authorizationPolicyService.delete(application.authorization);
+      await this.authorizationPolicyService.delete(
+        application.authorization,
+        em
+      );
 
-    const result = await this.applicationRepository.remove(
-      application as Application
-    );
+    const result = em
+      ? await em.remove(application as Application)
+      : await this.applicationRepository.remove(application as Application);
     result.id = applicationID;
 
     if (application.user?.id && application.roleSet?.id) {
@@ -124,6 +137,13 @@ export class ApplicationService {
         { applicationID }
       );
     return user;
+  }
+
+  async getUser(applicationID: string): Promise<IUser | null> {
+    const application = await this.getApplicationOrFail(applicationID, {
+      relations: { user: true },
+    });
+    return application.user ?? null;
   }
 
   async findExistingApplications(
@@ -195,6 +215,13 @@ export class ApplicationService {
   /** Synchronous check when the entity (with eager lifecycle) is already loaded. */
   isApplicationFinalized(application: IApplication): boolean {
     return this.applicationLifecycleService.isFinalState(application.lifecycle);
+  }
+
+  /** Synchronous state read when the entity (with eager lifecycle) is already loaded. */
+  getApplicationState(application: IApplication): ApplicationLifecycleState {
+    return this.applicationLifecycleService.getState(
+      application.lifecycle
+    ) as ApplicationLifecycleState;
   }
 
   async getQuestionsSorted(application: IApplication): Promise<IQuestion[]> {

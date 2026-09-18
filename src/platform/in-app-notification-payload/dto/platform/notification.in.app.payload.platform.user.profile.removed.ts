@@ -6,7 +6,5 @@ import { InAppNotificationPayloadPlatformBase } from './notification.in.app.payl
   implements: () => IInAppNotificationPayload,
 })
 export abstract class InAppNotificationPayloadPlatformUserProfileRemoved extends InAppNotificationPayloadPlatformBase {
-  userDisplayName!: string;
-  userEmail!: string;
   declare type: NotificationEventPayload.PLATFORM_USER_PROFILE_REMOVED;
 }

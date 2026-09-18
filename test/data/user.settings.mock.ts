@@ -26,6 +26,11 @@ export const userSettingsData: { userSettings: IUserSettings } = {
             inApp: true,
             push: true,
           },
+          communityInvitationResponse: {
+            email: true,
+            inApp: true,
+            push: true,
+          },
           communicationMessageReceived: {
             email: true,
             inApp: true,
@@ -94,6 +99,11 @@ export const userSettingsData: { userSettings: IUserSettings } = {
           inApp: true,
           push: false,
         },
+        collaborationCalloutReaction: {
+          email: false,
+          inApp: true,
+          push: true,
+        },
       },
       platform: {
         admin: {
@@ -146,6 +156,26 @@ export const userSettingsData: { userSettings: IUserSettings } = {
           inApp: true,
           push: true,
         },
+        adminSpaceCommunityInvitation: {
+          email: true,
+          inApp: true,
+          push: true,
+        },
+        adminAssociateInvitationResponse: {
+          email: true,
+          inApp: true,
+          push: true,
+        },
+        adminAssociateApplicationReceived: {
+          email: true,
+          inApp: true,
+          push: true,
+        },
+        adminAssociateJoined: {
+          email: true,
+          inApp: true,
+          push: true,
+        },
       },
       virtualContributor: {
         adminSpaceCommunityInvitation: {
@@ -187,6 +217,16 @@ export const userSettingsData: { userSettings: IUserSettings } = {
             push: true,
           },
           spaceCommunityJoined: {
+            email: true,
+            inApp: true,
+            push: true,
+          },
+          organizationAssociateInvitationReceived: {
+            email: true,
+            inApp: true,
+            push: true,
+          },
+          organizationAssociateApplicationDecided: {
             email: true,
             inApp: true,
             push: true,

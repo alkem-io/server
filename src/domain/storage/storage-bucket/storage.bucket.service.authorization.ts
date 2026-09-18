@@ -49,6 +49,26 @@ export class StorageBucketAuthorizationService {
 
     // Cascade down
     for (const document of storageBucket.documents) {
+      // Internal Yjs content snapshots (memo/whiteboard, written via
+      // FileServiceAdapter.createSnapshotInBucket) are NULL-authz — their
+      // access is governed by the owning memo/whiteboard, not a per-file
+      // authorization policy. They live in the bucket purely for quota
+      // accounting, so there is nothing to reset; skip them in the cascade.
+      //
+      // The test is NULL-authz (the same property DocumentService
+      // .isUserFacingDocument keys on), NOT "has no tagset". Tagset-less is too
+      // broad in both directions: feature 013's INBOUND Element attachments are
+      // tagset-less but DO carry their own policy, and that policy MUST be
+      // reset+re-inherited here — it is what revokes a departing member's READ
+      // on conversation attachments, re-run on every membership change. Skipping
+      // them left the stale policy in place, so a removed member kept access.
+      // It also swallowed the "tagset relation not loaded" case that
+      // DocumentAuthorizationService deliberately throws on, which would let a
+      // caller that forgot `relations: { documents: { tagset: true } }` leave
+      // every document's tagset policy stale platform-wide, silently.
+      if (!document.authorization) {
+        continue;
+      }
       const documentAuthorizations =
         await this.documentAuthorizationService.applyAuthorizationPolicy(
           document,

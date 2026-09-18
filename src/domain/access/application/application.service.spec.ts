@@ -171,13 +171,15 @@ describe('ApplicationService', () => {
       const result = await service.deleteApplication({ ID: 'app-1' });
 
       expect(nvpService.removeNVP).toHaveBeenCalledTimes(2);
-      expect(nvpService.removeNVP).toHaveBeenCalledWith('q-1');
-      expect(nvpService.removeNVP).toHaveBeenCalledWith('q-2');
+      expect(nvpService.removeNVP).toHaveBeenCalledWith('q-1', undefined);
+      expect(nvpService.removeNVP).toHaveBeenCalledWith('q-2', undefined);
       expect(lifecycleService.deleteLifecycle).toHaveBeenCalledWith(
-        'lifecycle-1'
+        'lifecycle-1',
+        undefined
       );
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
-        mockApplication.authorization
+        mockApplication.authorization,
+        undefined
       );
       expect(result.id).toBe('app-1');
     });
@@ -269,6 +271,42 @@ describe('ApplicationService', () => {
       expect(
         roleSetCacheService.deleteOpenApplicationFromCache
       ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getUser', () => {
+    it('should return the user when the relation is present', async () => {
+      const mockUser = { id: 'user-1' } as any;
+      const mockApplication = {
+        id: 'app-1',
+        user: mockUser,
+      } as Application;
+
+      vi.spyOn(service, 'getApplicationOrFail').mockResolvedValue(
+        mockApplication
+      );
+
+      const result = await service.getUser('app-1');
+
+      expect(result).toBe(mockUser);
+      expect(service.getApplicationOrFail).toHaveBeenCalledWith('app-1', {
+        relations: { user: true },
+      });
+    });
+
+    it('should return null when the user relation is missing', async () => {
+      const mockApplication = {
+        id: 'app-1',
+        user: undefined,
+      } as Application;
+
+      vi.spyOn(service, 'getApplicationOrFail').mockResolvedValue(
+        mockApplication
+      );
+
+      const result = await service.getUser('app-1');
+
+      expect(result).toBeNull();
     });
   });
 

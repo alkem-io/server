@@ -1,0 +1,100 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  namespace: default
+  name: alkemio-server-deployment
+  labels:
+    app: alkemio-server
+
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: alkemio-server
+  template:
+    metadata:
+      labels:
+        app: alkemio-server
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: alkemio-server
+          image: rg.nl-ams.scw.cloud/alkemio/alkemio-server:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: RABBITMQ_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: alkemio-rabbitmq-cluster-default-user
+                  key: host
+            - name: RABBITMQ_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: alkemio-rabbitmq-cluster-default-user
+                  key: port
+            - name: RABBITMQ_USER
+              valueFrom:
+                secretKeyRef:
+                  name: alkemio-rabbitmq-cluster-default-user
+                  key: username
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: alkemio-rabbitmq-cluster-default-user
+                  key: password
+            - name: ELASTICSEARCH_API_KEY
+              valueFrom:
+                configMapKeyRef:
+                  name: alkemio-elastic-config
+                  key: SERVER_ELASTIC_API_KEY
+            - name: APM_ACTIVE
+              valueFrom:
+                configMapKeyRef:
+                  name: alkemio-config
+                  key: APM_COLLABORATION_SERVICE_ACTIVE
+            - name: APM_TRANSACTION_PERCENTAGE
+              valueFrom:
+                configMapKeyRef:
+                  name: alkemio-config
+                  key: APM_COLLABORATION_SERVICE_TRANSACTION_PERCENTAGE
+            - name: LOGGING_LEVEL_CONSOLE
+              valueFrom:
+                configMapKeyRef:
+                  name: alkemio-config
+                  key: SERVER_LOGGING_LEVEL
+            - name: DATABASE_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: alkemio-config
+                  key: POSTGRES_USER
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                configMapKeyRef:
+                  name: alkemio-config
+                  key: POSTGRES_PASSWORD
+          envFrom:
+            - secretRef:
+                name: alkemio-secrets
+            - configMapRef:
+                name: alkemio-config
+            - configMapRef:
+                name: alkemio-elastic-config
+          ports:
+            - name: graphql
+              containerPort: 4000
+          volumeMounts:
+            - name: file-storage
+              mountPath: /storage
+      volumes:
+        - name: file-storage
+          persistentVolumeClaim:
+            claimName: file-storage-pvc2

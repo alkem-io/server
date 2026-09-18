@@ -7,7 +7,7 @@ import { RelationshipNotFoundException } from '@common/exceptions/relationship.n
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { AuthorizationPolicy } from '../authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { ILicenseEntitlement } from '../license-entitlement/license.entitlement.interface';
@@ -59,7 +59,10 @@ export class LicenseService {
     return license;
   }
 
-  async removeLicenseOrFail(licenseID: string): Promise<ILicense | never> {
+  async removeLicenseOrFail(
+    licenseID: string,
+    em?: EntityManager
+  ): Promise<ILicense | never> {
     // Note need to load it in with all contained entities so can remove fully
     const license = await this.getLicenseOrFail(licenseID, {
       relations: {
@@ -70,16 +73,17 @@ export class LicenseService {
 
     for (const entitlement of entitlements) {
       await this.licenseEntitlementService.deleteEntitlementOrFail(
-        entitlement.id
+        entitlement.id,
+        em
       );
     }
 
     if (license.authorization)
-      await this.authorizationPolicyService.delete(license.authorization);
+      await this.authorizationPolicyService.delete(license.authorization, em);
 
-    const deletedLicense = await this.licenseRepository.remove(
-      license as License
-    );
+    const deletedLicense = em
+      ? await em.remove(license as License)
+      : await this.licenseRepository.remove(license as License);
     deletedLicense.id = license.id;
     return deletedLicense;
   }

@@ -13,17 +13,16 @@ import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { McpTool, McpToolDefinition, McpToolResult } from '../dto/mcp.types';
-import { resolveTemplateScene } from './whiteboard-template-scene';
+import { resolveTemplateWhiteboardId } from './whiteboard-template-source';
 
 interface CreateWhiteboardInSpaceArgs {
   spaceId: string;
   displayName: string;
-  /** A full Excalidraw scene JSON string. Provide this OR `fromTemplateId`. */
-  content?: string;
   /**
-   * A whiteboard TEMPLATE id to fill the new board with, by reference. When set,
-   * the server loads the template scene server-side — the scene never travels
-   * through the model. Provide this OR `content` (or neither for a blank board).
+   * A whiteboard TEMPLATE id to fill the new board with. The server copies that
+   * template's stored Yjs-V2 snapshot into the new board (`sourceWhiteboardID`) —
+   * one content representation, never a scene through the model. Omit for a blank
+   * board.
    */
   fromTemplateId?: string;
 }
@@ -68,11 +67,9 @@ export class CreateWhiteboardInSpaceTool implements McpTool {
         'callout exists. (To add a whiteboard to an EXISTING callout that accepts contributions, use ' +
         'create_whiteboard instead.) Provide the space UUID (resolve it from a name via ' +
         'search_content), or a TOP-LEVEL space nameID / URL slug; a SUBSPACE requires its UUID. ' +
-        'To start FROM A TEMPLATE, set "fromTemplateId" — the ' +
-        'server fills the board with the template scene by reference, so do NOT generate or paste the ' +
-        'scene yourself. Otherwise set "content" to a full Excalidraw scene JSON string, or omit both ' +
-        'for a blank board. Provide at most one of "fromTemplateId" or "content". Requires ' +
-        'CREATE_CALLOUT access on the space.',
+        'Omit "fromTemplateId" for a BLANK board; set it to a whiteboard TEMPLATE id to fill the ' +
+        "board from that template — the server copies the template's stored content, so do NOT " +
+        'generate or paste any scene yourself. Requires CREATE_CALLOUT access on the space.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -91,15 +88,8 @@ export class CreateWhiteboardInSpaceTool implements McpTool {
           fromTemplateId: {
             type: 'string',
             description:
-              'A whiteboard template id to fill the new board with, by reference. PREFERRED way to ' +
-              'start from a template — the server applies the template scene; do not pass the scene ' +
-              'yourself. Provide this OR "content".',
-          },
-          content: {
-            type: 'string',
-            description:
-              'A full Excalidraw scene JSON string. Optional — omit for a blank board. To start from ' +
-              'a template use "fromTemplateId" instead. Provide this OR "fromTemplateId".',
+              'Optional whiteboard TEMPLATE id to fill the new board from. The server copies that ' +
+              "template's stored content — do not pass any scene yourself. Omit for a blank board.",
           },
         },
         required: ['spaceId', 'displayName'],
@@ -111,7 +101,7 @@ export class CreateWhiteboardInSpaceTool implements McpTool {
     args: unknown,
     actorContext: ActorContext
   ): Promise<McpToolResult> {
-    const { spaceId, displayName, content, fromTemplateId } =
+    const { spaceId, displayName, fromTemplateId } =
       args as CreateWhiteboardInSpaceArgs;
 
     if (!spaceId || !displayName) {
@@ -120,18 +110,12 @@ export class CreateWhiteboardInSpaceTool implements McpTool {
     if (displayName.trim().length < 3) {
       return this.errorResult('"displayName" must be at least 3 characters.');
     }
-    if (content && fromTemplateId) {
-      return this.errorResult(
-        'Provide only one of "fromTemplateId" or "content", not both.'
-      );
-    }
 
-    // Resolve the scene the new board starts with: from a template (server-side,
-    // by reference — the scene never passes through the model), the explicit
-    // content arg, or blank.
-    let sceneContent: string | undefined;
+    // A template fills the new board by COPYING the template whiteboard's stored
+    // Yjs-V2 snapshot server-side (sourceWhiteboardID) — one content representation.
+    let sourceWhiteboardID: string | undefined;
     if (fromTemplateId) {
-      const resolved = await resolveTemplateScene(
+      const resolved = await resolveTemplateWhiteboardId(
         this.templateService,
         this.authorizationService,
         fromTemplateId,
@@ -140,16 +124,7 @@ export class CreateWhiteboardInSpaceTool implements McpTool {
       if ('error' in resolved) {
         return this.errorResult(resolved.error);
       }
-      sceneContent = resolved.scene;
-    } else if (content !== undefined && content !== '') {
-      try {
-        JSON.parse(content);
-      } catch {
-        return this.errorResult(
-          'The "content" is not valid JSON. Provide a valid Excalidraw scene JSON string, or use "fromTemplateId" to start from a template.'
-        );
-      }
-      sceneContent = content;
+      sourceWhiteboardID = resolved.whiteboardId;
     }
 
     // Resolve the space/subspace -> its Collaboration -> CalloutsSet (where
@@ -187,7 +162,7 @@ export class CreateWhiteboardInSpaceTool implements McpTool {
         type: CalloutFramingType.WHITEBOARD,
         whiteboard: {
           profile: { displayName },
-          ...(sceneContent ? { content: sceneContent } : {}),
+          ...(sourceWhiteboardID ? { sourceWhiteboardID } : {}),
         },
       },
     } as CreateCalloutOnCalloutsSetInput;

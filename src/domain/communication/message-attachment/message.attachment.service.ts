@@ -1410,6 +1410,26 @@ export class MessageAttachmentService {
           raw.document_id,
           { relations: { authorization: true, storageBucket: true } }
         );
+        // Policy-less rows are internal collaboration snapshots, not
+        // user-facing Documents, and must never enter per-document
+        // authorization (see DocumentService.isUserFacingDocument). The bucket
+        // and ownership gates below already make one unreachable here, but this
+        // is the same influenceable-id entry point they guard, and without the
+        // check a policy-less row would reach the READ gate in
+        // resolveReadAttachment, where isAccessGranted THROWS on an absent
+        // policy instead of denying. Fail closed, and quietly, like the gates.
+        if (!this.documentService.isUserFacingDocument(document)) {
+          this.logger.warn?.(
+            {
+              message:
+                'Outbound attachment document_id refers to a non user-facing document; ignoring',
+              documentId: raw.document_id,
+              storageBucketId,
+            },
+            LogContext.COMMUNICATION
+          );
+          return null;
+        }
         if (document.storageBucket?.id !== storageBucketId) {
           this.logger.warn?.(
             {

@@ -176,7 +176,7 @@ describe('Capability gate — system-invoked actor call (T030/T031)', () => {
       { capability: 'search_content', enabled: true },
     ]);
     const reason = await gate.checkToolAllowed(
-      'update_whiteboard_content',
+      'edit_whiteboard_elements',
       actorContext()
     );
     expect(reason).toBe(CAPABILITY_DISABLED_REASON);

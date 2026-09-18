@@ -170,6 +170,11 @@ const STATUS_METADATA: Record<AlkemioErrorStatus, ErrorMetadata> = {
     specificCode: 116,
     userMessage: 'userMessages.authorization.loginFlowInit',
   },
+  [AlkemioErrorStatus.SESSION_REFRESH_REQUIRED]: {
+    category: ErrorCategory.AUTHORIZATION,
+    specificCode: 117,
+    userMessage: 'userMessages.authorization.sessionRefreshRequired',
+  },
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 12xxx - VALIDATION: Input/state validation errors
@@ -278,6 +283,16 @@ const STATUS_METADATA: Record<AlkemioErrorStatus, ErrorMetadata> = {
     specificCode: 116,
     userMessage: 'userMessages.operations.roleSetAlreadyMember',
   },
+  [AlkemioErrorStatus.ROLE_SET_APPLICATIONS_NOT_ACCEPTED]: {
+    category: ErrorCategory.OPERATIONS,
+    specificCode: 122,
+    userMessage: 'userMessages.operations.roleSetApplicationsNotAccepted',
+  },
+  [AlkemioErrorStatus.ROLE_SET_JOIN_NOT_ELIGIBLE]: {
+    category: ErrorCategory.OPERATIONS,
+    specificCode: 123,
+    userMessage: 'userMessages.operations.roleSetJoinNotEligible',
+  },
   [AlkemioErrorStatus.ROLE_SET_INVITATION]: {
     category: ErrorCategory.OPERATIONS,
     specificCode: 105,
@@ -327,6 +342,16 @@ const STATUS_METADATA: Record<AlkemioErrorStatus, ErrorMetadata> = {
     category: ErrorCategory.OPERATIONS,
     specificCode: 113,
     userMessage: 'userMessages.operations.userIdentityDeletionFailed',
+  },
+  [AlkemioErrorStatus.ACCOUNT_DELETION_BLOCKED]: {
+    category: ErrorCategory.OPERATIONS,
+    specificCode: 117,
+    userMessage: 'userMessages.operations.accountDeletionBlocked',
+  },
+  [AlkemioErrorStatus.FORUM_DISCUSSION_CATEGORY_NOT_EMPTY]: {
+    category: ErrorCategory.OPERATIONS,
+    specificCode: 118,
+    userMessage: 'userMessages.operations.forumDiscussionCategoryNotEmpty',
   },
 
   // ═══════════════════════════════════════════════════════════════════════════

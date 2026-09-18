@@ -1,16 +1,60 @@
+import { X509Certificate } from 'node:crypto';
+import { LogContext } from '@common/enums';
 import { AuthenticationType } from '@common/enums/authentication.type';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import type { Identity } from '@ory/kratos-client';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { KratosService } from './kratos.service';
+import {
+  CLEVERBASE_SIGNING_CERTIFICATE_CLAIM,
+  KratosService,
+} from './kratos.service';
+
+const SYNTHETIC_SIGNING_CERTIFICATE = `-----BEGIN CERTIFICATE-----
+MIIDWjCCAkICAwZ5MjANBgkqhkiG9w0BAQsFADByMQswCQYDVQQGEwJOTDEVMBMG
+A1UECgwMQWxrZW1pbyBUZXN0MR0wGwYDVQQFExRIQi1TWU5USEVUSUMtTUFQUElO
+RzEtMCsGA1UEAwwkQ2xldmVyYmFzZSBTeW50aGV0aWMgU2lnbmluZyBGaXh0dXJl
+MB4XDTI2MDkwOTExMjgyN1oXDTM2MDkwNjExMjgyN1owcjELMAkGA1UEBhMCTkwx
+FTATBgNVBAoMDEFsa2VtaW8gVGVzdDEdMBsGA1UEBRMUSEItU1lOVEhFVElDLU1B
+UFBJTkcxLTArBgNVBAMMJENsZXZlcmJhc2UgU3ludGhldGljIFNpZ25pbmcgRml4
+dHVyZTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALNWCz0VvupVRssl
+Ie+gtx1JXPgYoOvjLLDiidfVBg4OmRlsmbUCreIU7I3f2V6aTMZMu+V7zsAiMfhk
+SDbQ1MlYdTOurozOsaDStKXc6U0hyHdmmfgLrHyS7AtUdf1C1X7NkVfx6WcOTxPN
+gJ6ETEAKCgVhI/AVUB2PodYohfgWMzg2Q6WlxlJuppY/BM4Yt4ak6kctWznOlgbY
+TpZ1cOEctwKkjzeHfSFOJ9W9jrXPbjeLNnrpUqqbnTGqdJrS1RFVOBkXKbPN4rec
+GDS5jswIi7sycR2VDuXz5Bc6QOMYUhSO6AJbekbls4894aawiK66PVePv7cLGk/a
+r19IvwECAwEAATANBgkqhkiG9w0BAQsFAAOCAQEAIwXspPD6MtwaRydrPNAm4ptp
+OT1JTPI6/gO93V+rINJw0pUNul7bdbrY0V0J3YQeEOdj/NaZmCMFPCoMy2zRJNWa
+jHAmckA8pRxGDLHSxG+r/YnToTCIL/U+23J1mA09+WziJ2gfyjcFgPO54IPxFd9p
+CWxwC+UrF0us1oSwr2bVeSEMVJuCDRVwrTkCxfVxcHH1FvIVYqJ5bIF3ZMDgbsYj
+qiYHn/rrKDOL6ZmZqsNHUXXa1pQMb5c5zdXfeSWhbVFKBljJDMi323tCPkn0i5VJ
+Fl690EDNrENZPXRU2sgWhVsc2L8Pjpu2+9NeTem+pdNrLRt+XGrLwBIjM++3hQ==
+-----END CERTIFICATE-----`;
+
+const createSyntheticIDToken = (claims: Record<string, unknown>): string =>
+  [
+    Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString(
+      'base64url'
+    ),
+    Buffer.from(JSON.stringify(claims)).toString('base64url'),
+    'synthetic-signature',
+  ].join('.');
 
 describe('KratosService', () => {
   let service: KratosService;
+  const warn = MockWinstonProvider.useValue.warn as ReturnType<typeof vi.fn>;
+  const expectRedactedSigningIdentityWarning = () => {
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(
+      'Stored Cleverbase signing identity is unavailable for identity kratos-identity.',
+      LogContext.KRATOS
+    );
+  };
 
   beforeEach(async () => {
     vi.restoreAllMocks();
+    warn.mockClear();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -505,6 +549,215 @@ describe('KratosService', () => {
       await service.deleteIdentityByEmail('test@test.com');
 
       expect(deleteSpy).toHaveBeenCalledWith({ id: 'id-1' });
+    });
+  });
+
+  describe('getCleverbaseSubject', () => {
+    const createIdentity = (initialIDToken?: unknown) =>
+      ({
+        credentials: {
+          oidc: {
+            identifiers: [
+              'linkedin:elsewhere',
+              'cleverbase:subject-from-provider',
+            ],
+            config: {
+              providers: [
+                {
+                  provider: 'linkedin',
+                  subject: 'elsewhere',
+                  initial_id_token: createSyntheticIDToken({
+                    [CLEVERBASE_SIGNING_CERTIFICATE_CLAIM]:
+                      SYNTHETIC_SIGNING_CERTIFICATE,
+                  }),
+                },
+                {
+                  provider: 'cleverbase',
+                  subject: 'subject-from-provider',
+                  ...(initialIDToken === undefined
+                    ? {}
+                    : { initial_id_token: initialIDToken }),
+                },
+              ],
+            },
+          },
+        },
+      }) as any;
+
+    it('returns the signing certificate subject serialNumber instead of its certificate serial or provider subject', async () => {
+      const getIdentity = vi
+        .spyOn(service, 'getIdentityById')
+        .mockResolvedValue(
+          createIdentity(
+            createSyntheticIDToken({
+              [CLEVERBASE_SIGNING_CERTIFICATE_CLAIM]:
+                SYNTHETIC_SIGNING_CERTIFICATE,
+            })
+          )
+        );
+
+      await expect(
+        service.getCleverbaseSubject('kratos-identity')
+      ).resolves.toBe('HB-SYNTHETIC-MAPPING');
+      expect(getIdentity).toHaveBeenCalledWith('kratos-identity', ['oidc']);
+    });
+
+    it.each([
+      ['the Cleverbase provider has no initial ID token', undefined],
+      [
+        'the initial ID token has no signing certificate claim',
+        createSyntheticIDToken({ sub: 'subject-from-provider' }),
+      ],
+    ])('falls back to the provider subject when %s', async (_label, token) => {
+      vi.spyOn(service, 'getIdentityById').mockResolvedValue(
+        createIdentity(token)
+      );
+
+      await expect(
+        service.getCleverbaseSubject('kratos-identity')
+      ).resolves.toBe('subject-from-provider');
+    });
+
+    it.each([
+      ['empty', ''],
+      ['whitespace-only', '   '],
+    ])('falls back and logs a redacted warning when the initial ID token is %s', async (_label, token) => {
+      vi.spyOn(service, 'getIdentityById').mockResolvedValue(
+        createIdentity(token)
+      );
+
+      await expect(
+        service.getCleverbaseSubject('kratos-identity')
+      ).resolves.toBe('subject-from-provider');
+      expectRedactedSigningIdentityWarning();
+    });
+
+    it.each([
+      ['is malformed', 'not-a-jwt'],
+      [
+        'has a malformed payload',
+        ['synthetic-header', 'not-base64url!', 'synthetic-signature'].join('.'),
+      ],
+      [
+        'has a non-JSON payload',
+        [
+          'synthetic-header',
+          Buffer.from('not-json').toString('base64url'),
+          'synthetic-signature',
+        ].join('.'),
+      ],
+      [
+        'has a non-string signing certificate claim',
+        createSyntheticIDToken({
+          [CLEVERBASE_SIGNING_CERTIFICATE_CLAIM]: 123,
+        }),
+      ],
+      [
+        'has a malformed signing certificate claim',
+        createSyntheticIDToken({
+          [CLEVERBASE_SIGNING_CERTIFICATE_CLAIM]: 'not-a-certificate',
+        }),
+      ],
+    ])('does not fall back when the initial ID token %s', async (_label, token) => {
+      vi.spyOn(service, 'getIdentityById').mockResolvedValue(
+        createIdentity(token)
+      );
+
+      await expect(
+        service.getCleverbaseSubject('kratos-identity')
+      ).resolves.toBeUndefined();
+      expectRedactedSigningIdentityWarning();
+    });
+
+    it('does not fall back when the signing certificate has no subject serialNumber', async () => {
+      vi.spyOn(X509Certificate.prototype, 'toLegacyObject').mockReturnValue({
+        subject: { CN: 'Synthetic fixture without subject serialNumber' },
+      } as any);
+      vi.spyOn(service, 'getIdentityById').mockResolvedValue(
+        createIdentity(
+          createSyntheticIDToken({
+            [CLEVERBASE_SIGNING_CERTIFICATE_CLAIM]:
+              SYNTHETIC_SIGNING_CERTIFICATE,
+          })
+        )
+      );
+
+      await expect(
+        service.getCleverbaseSubject('kratos-identity')
+      ).resolves.toBeUndefined();
+      expectRedactedSigningIdentityWarning();
+    });
+
+    it('does not use a signing certificate from another OIDC provider', async () => {
+      vi.spyOn(service, 'getIdentityById').mockResolvedValue(
+        createIdentity(undefined)
+      );
+
+      await expect(
+        service.getCleverbaseSubject('kratos-identity')
+      ).resolves.toBe('subject-from-provider');
+    });
+
+    it('requires the linked Cleverbase provider even when an OIDC token contains the signing certificate', async () => {
+      vi.spyOn(service, 'getIdentityById').mockResolvedValue({
+        credentials: {
+          oidc: {
+            identifiers: ['github:subject'],
+            config: {
+              providers: [
+                {
+                  provider: 'github',
+                  subject: 'subject',
+                  initial_id_token: createSyntheticIDToken({
+                    [CLEVERBASE_SIGNING_CERTIFICATE_CLAIM]:
+                      SYNTHETIC_SIGNING_CERTIFICATE,
+                  }),
+                },
+              ],
+            },
+          },
+        },
+      } as any);
+
+      await expect(
+        service.getCleverbaseSubject('kratos-identity')
+      ).resolves.toBeUndefined();
+    });
+
+    it.each([
+      ['missing credentials', {}],
+      ['missing OIDC credentials', { credentials: { password: {} } }],
+      [
+        'another provider',
+        { credentials: { oidc: { identifiers: ['github:subject'] } } },
+      ],
+      [
+        'an empty provider subject',
+        { credentials: { oidc: { identifiers: ['cleverbase:'] } } },
+      ],
+    ])('returns undefined for %s', async (_label, identity) => {
+      vi.spyOn(service, 'getIdentityById').mockResolvedValue(identity as any);
+
+      await expect(
+        service.getCleverbaseSubject('kratos-identity')
+      ).resolves.toBeUndefined();
+    });
+
+    it('returns undefined when the Kratos identity no longer exists', async () => {
+      vi.spyOn(service, 'getIdentityById').mockResolvedValue(undefined);
+
+      await expect(
+        service.getCleverbaseSubject('missing-identity')
+      ).resolves.toBeUndefined();
+    });
+
+    it('propagates Kratos failures other than a missing identity', async () => {
+      const unavailable = new Error('Kratos unavailable');
+      vi.spyOn(service, 'getIdentityById').mockRejectedValue(unavailable);
+
+      await expect(
+        service.getCleverbaseSubject('kratos-identity')
+      ).rejects.toBe(unavailable);
     });
   });
 
