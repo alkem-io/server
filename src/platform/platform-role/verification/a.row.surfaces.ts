@@ -177,6 +177,15 @@ export const INDIRECT_ENFORCEMENT_FILES: readonly string[] = [
   // `PLATFORM_LICENSING_LISTS_READ`. Same disposition, same reasons.
   'src/platform-admin/admin/platform.admin.resolver.fields.ts',
   'src/platform-admin/core/identity/admin.identity.resolver.fields.ts',
+  // R-F.3 sandbox walk (2026-09-18, T108) — `User.account` / `Organization.account`
+  // FIELD VISIBILITY: both resolvers additionally return the account when the
+  // actor holds ACCOUNT_LICENSE_MANAGE on the account's own policy, so the
+  // License Manager can learn the account id it licenses. A read of an id,
+  // not an A-row: A12's real gates stay on the assign/revoke mutations
+  // (`admin.licensing.resolver.mutations.ts`, censused). No census entry, no
+  // matrix cell — same disposition as the list reads above.
+  'src/domain/community/user/user.resolver.fields.ts',
+  'src/domain/community/organization/organization.resolver.fields.ts',
 ];
 
 const GA = AuthorizationCredential.GLOBAL_ADMIN;

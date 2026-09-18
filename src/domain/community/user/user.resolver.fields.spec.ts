@@ -202,6 +202,50 @@ describe('UserResolverFields', () => {
       const result = await resolver.account(user, actorContext);
       expect(result).toBeUndefined();
     });
+
+    // 027 R-F.3 (2026-09-18): the Platform License Manager assigns plans to
+    // accounts (A12) but holds no READ_USER_PII — so the field that carries the
+    // account id it needs was closed to it. The account opens when the actor
+    // holds ACCOUNT_LICENSE_MANAGE on the ACCOUNT's own policy: the role's real
+    // privilege on the real resource, never a PII read.
+    it('returns the account to an actor holding ACCOUNT_LICENSE_MANAGE on the account itself, without PII', async () => {
+      const mockAccount = {
+        id: 'account-1',
+        authorization: { id: 'account-auth' },
+      };
+      const user = { id: 'user-1', authorization: { id: 'auth-1' } } as any;
+      const actorContext = { actorID: 'other-user', credentials: [] } as any;
+
+      authorizationService.isAccessGranted.mockImplementation(
+        (_actor: unknown, policy: any, privilege: AuthorizationPrivilege) =>
+          policy?.id === 'account-auth' &&
+          privilege === AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE
+      );
+      userService.getAccount.mockResolvedValue(mockAccount);
+
+      const result = await resolver.account(user, actorContext);
+      expect(result).toBe(mockAccount);
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        actorContext,
+        user.authorization,
+        AuthorizationPrivilege.READ_USER_PII
+      );
+    });
+
+    it('stays closed when the actor holds neither PII nor license-manage on the account', async () => {
+      const mockAccount = {
+        id: 'account-1',
+        authorization: { id: 'account-auth' },
+      };
+      const user = { id: 'user-1', authorization: { id: 'auth-1' } } as any;
+      const actorContext = { actorID: 'other-user', credentials: [] } as any;
+
+      authorizationService.isAccessGranted.mockReturnValue(false);
+      userService.getAccount.mockResolvedValue(mockAccount);
+
+      const result = await resolver.account(user, actorContext);
+      expect(result).toBeUndefined();
+    });
   });
 
   describe('authentication', () => {

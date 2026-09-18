@@ -517,3 +517,21 @@ and the FR-024 matrix are unchanged).
 | Schema | +1 `AuthorizationPrivilege` value, additive; `schema:diff` 1 additive / 0 breaking, `schema:validate` clean | green |
 | Live | Pending — client-web Phase 11 walk (`licensing` section as `platform.licensemanager`) is the acceptance surface; server-only drive to follow on the `:4027` stack after the next platform authorization reset | open |
 
+
+### Account fields hid every account id from the License Manager (sandbox walk 2026-09-18, T108)
+
+The operator walked the deployed Licensing section as a License-Manager-only
+user: plan buttons were disabled on every user and on every organization but
+its own. `User.account` is gated on `READ_USER_PII` and `Organization.account`
+on organization `UPDATE` — neither held by the role, by design — so the field
+that carries the account id the section needs resolved `null`. A12's narrowing
+off `PLATFORM_ADMIN` left the read behind gates meant for other families.
+
+**Change:** both field resolvers ALSO return the account when the actor holds
+`ACCOUNT_LICENSE_MANAGE` on the **account's own** policy (eager on every
+actor). The role's real privilege on the real resource; no PII crosses — email
+and phone keep their own gate. RED→GREEN in `user.resolver.fields.spec.ts` and
+`organization.resolver.fields.spec.ts`: license-manage on the account opens it
+without PII/UPDATE; neither privilege keeps it closed. Same walk also caught the
+client echoing the alias into `updateSpacePlatformSettings`, which the
+corr-server-6 rename gate refuses — fixed client-side (visibility only).
