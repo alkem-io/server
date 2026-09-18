@@ -177,6 +177,23 @@ export class UserResolverFields {
     if (accountVisible) {
       return await this.userService.getAccount(user);
     }
+    // 027 R-F.3 (2026-09-18): the Platform License Manager assigns plans to
+    // accounts (A12) but holds no READ_USER_PII, so this field — the only
+    // place the console learns the account id — was closed to it. Open the
+    // account when the actor holds ACCOUNT_LICENSE_MANAGE on the account's OWN
+    // policy: the role's real privilege on the real resource. No PII crosses
+    // here; the email/phone fields keep their own gate.
+    const account = await this.userService.getAccount(user);
+    if (
+      account.authorization &&
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        account.authorization,
+        AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE
+      )
+    ) {
+      return account;
+    }
     return undefined;
   }
 

@@ -1,4 +1,5 @@
 import { SUBSCRIPTION_DISCUSSION_UPDATED } from '@common/constants/providers';
+import { AuthorizationPrivilege } from '@common/enums';
 import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
 import { ValidationException } from '@common/exceptions/validation.exception';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -138,7 +139,7 @@ describe('ForumResolverMutations', () => {
       expect(subscriptionPubSub.publish).toHaveBeenCalled();
     });
 
-    it('should check PLATFORM_ADMIN privilege for RELEASES category', async () => {
+    it('gates the RELEASES category on PLATFORM_FORUM_MANAGE over the forum policy', async () => {
       const releasesCreateData = {
         ...createData,
         category: ForumDiscussionCategory.RELEASES,
@@ -150,8 +151,20 @@ describe('ForumResolverMutations', () => {
 
       await resolver.createDiscussion(actorContext, releasesCreateData);
 
-      // Should have been called twice - once for CREATE_DISCUSSION, once for PLATFORM_ADMIN
+      // Twice: CREATE_DISCUSSION, then the admin-only category gate — which
+      // is the forum family's own privilege (027 A15), checked on the forum
+      // policy it cascades to, never the retiring PLATFORM_ADMIN catch-all.
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledTimes(2);
+      expect(authorizationService.grantAccessOrFail).toHaveBeenNthCalledWith(
+        2,
+        actorContext,
+        forum.authorization,
+        AuthorizationPrivilege.PLATFORM_FORUM_MANAGE,
+        expect.any(String)
+      );
+      expect(
+        platformAuthorizationService.getPlatformAuthorizationPolicy
+      ).not.toHaveBeenCalled();
     });
 
     it('should throw ValidationException when display name is taken', async () => {
@@ -164,7 +177,7 @@ describe('ForumResolverMutations', () => {
       ).rejects.toThrow(ValidationException);
     });
 
-    it('should check PLATFORM_ADMIN privilege for NEWSLETTER category', async () => {
+    it('gates the NEWSLETTER category on PLATFORM_FORUM_MANAGE over the forum policy', async () => {
       const newsletterCreateData = {
         ...createData,
         category: ForumDiscussionCategory.NEWSLETTER,
@@ -177,6 +190,13 @@ describe('ForumResolverMutations', () => {
       await resolver.createDiscussion(actorContext, newsletterCreateData);
 
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledTimes(2);
+      expect(authorizationService.grantAccessOrFail).toHaveBeenNthCalledWith(
+        2,
+        actorContext,
+        forum.authorization,
+        AuthorizationPrivilege.PLATFORM_FORUM_MANAGE,
+        expect.any(String)
+      );
     });
   });
 
@@ -198,7 +218,29 @@ describe('ForumResolverMutations', () => {
       );
     });
 
-    it('rejects when the actor lacks PLATFORM_ADMIN and writes no audit row at all', async () => {
+    it('gates on PLATFORM_FORUM_MANAGE over the platform policy (027 A15), not PLATFORM_ADMIN', async () => {
+      authorizationService.grantAccessOrFail.mockResolvedValue(
+        undefined as any
+      );
+      forumService.removeDiscussionCategory.mockResolvedValue({
+        forum,
+        removed: true,
+      } as any);
+
+      await resolver.adminForumRemoveDiscussionCategory(
+        actorContext,
+        removeData
+      );
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        platformAuth,
+        AuthorizationPrivilege.PLATFORM_FORUM_MANAGE,
+        expect.any(String)
+      );
+    });
+
+    it('rejects when the actor lacks PLATFORM_FORUM_MANAGE and writes no audit row at all', async () => {
       const authError = new Error('not authorized');
       authorizationService.grantAccessOrFail.mockImplementation(() => {
         throw authError;

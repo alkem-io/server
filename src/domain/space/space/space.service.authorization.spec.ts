@@ -256,6 +256,99 @@ describe('SpaceAuthorizationService', () => {
       ).toHaveBeenCalled();
     });
 
+    // 027-platform-role-redesign (T048, A14, T070f): the space-visibility
+    // mutation's own re-anchor onto ACCOUNT_LICENSE_MANAGE. In Slice A the
+    // mutation is still updateSpacePlatformSettings — the rename to
+    // adminUpdateSpaceVisibility is Slice B (T078).
+    it('grants ACCOUNT_LICENSE_MANAGE EXACTLY {global-admin, global-support, platform-license-manager} on the space policy, non-cascading', async () => {
+      const mockSpace = createMockSpace();
+      (spaceLookupService.getSpaceOrFail as any).mockResolvedValue(
+        mockSpace as any
+      );
+      (
+        platformRolesAccessService.getCredentialsForRolesWithAccess as any
+      ).mockReturnValue([
+        { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
+      ]);
+      (platformRolesAccessService.getPrivilegesForRole as any).mockReturnValue(
+        []
+      );
+      (authorizationPolicyService.reset as any).mockReturnValue(
+        mockSpace.authorization as any
+      );
+      (
+        authorizationPolicyService.inheritParentAuthorization as any
+      ).mockReturnValue(mockSpace.authorization as any);
+      (
+        authorizationPolicyService.appendCredentialAuthorizationRules as any
+      ).mockReturnValue(mockSpace.authorization as any);
+      (authorizationPolicyService.createCredentialRule as any).mockReturnValue({
+        cascade: false,
+      } as any);
+      (
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly as any
+      ).mockImplementation(
+        (privileges: any, types: any, name: any) =>
+          ({
+            grantedPrivileges: privileges,
+            criterias: types,
+            name,
+            cascade: true,
+          }) as any
+      );
+      (
+        authorizationPolicyService.appendPrivilegeAuthorizationRuleMapping as any
+      ).mockReturnValue(mockSpace.authorization as any);
+      (authorizationPolicyService.save as any).mockResolvedValue(
+        mockSpace.authorization as any
+      );
+      (authorizationPolicyService.saveAll as any).mockResolvedValue([] as any);
+      (roleSetService.getCredentialsForRole as any).mockResolvedValue([]);
+      (
+        roleSetService.getCredentialsForRoleWithParents as any
+      ).mockResolvedValue([]);
+      (
+        roleSetService.getDirectParentCredentialForRole as any
+      ).mockResolvedValue(undefined);
+      (
+        communityAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+      (
+        storageAggregatorAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+      (
+        collaborationAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+      (
+        licenseAuthorizationService.applyAuthorizationPolicy as any
+      ).mockReturnValue([]);
+      (
+        templatesManagerAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+      (
+        spaceAboutAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+
+      await service.applyAuthorizationPolicy('space-1');
+
+      const rules = (
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly as any
+      ).mock.results
+        .map((r: any) => r.value)
+        .filter((rule: any) =>
+          rule.grantedPrivileges?.includes(
+            AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE
+          )
+        );
+      expect(rules).toHaveLength(1);
+      expect(rules[0].criterias).toEqual([
+        AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_SUPPORT,
+        AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
+      ]);
+      expect(rules[0].cascade).toBe(false);
+    });
+
     it('should apply auth policy for ARCHIVED space without membership', async () => {
       const mockSpace = createMockSpace({
         visibility: SpaceVisibility.ARCHIVED,

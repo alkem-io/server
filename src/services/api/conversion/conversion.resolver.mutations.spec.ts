@@ -4,10 +4,12 @@ import { CalloutTransferService } from '@domain/collaboration/callout-transfer/c
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseService } from '@domain/common/license/license.service';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
+import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
 import { SpaceService } from '@domain/space/space/space.service';
 import { SpaceAuthorizationService } from '@domain/space/space/space.service.authorization';
 import { SpaceLicenseService } from '@domain/space/space/space.service.license';
 import { Test, TestingModule } from '@nestjs/testing';
+import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock, vi } from 'vitest';
@@ -36,9 +38,13 @@ describe('ConversionResolverMutations', () => {
   let virtualContributorService: {
     getVirtualContributorByIdOrFail: Mock;
   };
+  let virtualContributorAuthorizationService: {
+    applyAuthorizationPolicy: Mock;
+  };
   let _calloutTransferService: { transferCallout: Mock };
   let spaceLicenseService: { applyLicensePolicy: Mock };
   let licenseService: { saveAll: Mock };
+  let platformResourceAuditService: { recordEventForActor: Mock };
 
   const actorContext = { actorID: 'actor-1', credentials: [] } as any;
 
@@ -58,9 +64,18 @@ describe('ConversionResolverMutations', () => {
     spaceAuthorizationService = module.get(SpaceAuthorizationService) as any;
     authorizationPolicyService = module.get(AuthorizationPolicyService) as any;
     virtualContributorService = module.get(VirtualContributorService) as any;
+    virtualContributorAuthorizationService = module.get(
+      VirtualContributorAuthorizationService
+    ) as any;
     _calloutTransferService = module.get(CalloutTransferService) as any;
     spaceLicenseService = module.get(SpaceLicenseService) as any;
     licenseService = module.get(LicenseService) as any;
+    platformResourceAuditService = module.get(
+      PlatformResourceAuditService
+    ) as any;
+    platformResourceAuditService.recordEventForActor.mockResolvedValue(
+      undefined
+    );
   });
 
   it('should be defined', () => {
@@ -96,6 +111,38 @@ describe('ConversionResolverMutations', () => {
         spaceService.invalidateUrlCacheForSpaceSubtree
       ).toHaveBeenCalledWith('space-l0');
       expect(result).toBe(convertedSpace);
+    });
+
+    // 027-platform-role-redesign (corr-server-18 fix): A9 declares this
+    // surface `platform-resource-admin`-owned, same as the three cross-L0
+    // moves — every successful call MUST write a platform_resource audit row.
+    it('writes a platform_resource audit row on success (corr-server-18)', async () => {
+      authorizationService.grantAccessOrFail.mockReturnValue(undefined);
+      const convertedSpace = { id: 'space-l0' };
+      conversionService.convertSpaceL1ToSpaceL0OrFail.mockResolvedValue(
+        convertedSpace
+      );
+      spaceService.save.mockResolvedValue(convertedSpace);
+      spaceAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([]);
+      authorizationPolicyService.saveAll.mockResolvedValue(undefined);
+      spaceService.getSpaceOrFail.mockResolvedValue(convertedSpace);
+
+      await resolver.convertSpaceL1ToSpaceL0(actorContext, {
+        spaceL1ID: 'space-l1',
+      });
+
+      expect(
+        platformResourceAuditService.recordEventForActor
+      ).toHaveBeenCalledWith(
+        actorContext,
+        expect.any(Array),
+        expect.any(Array),
+        expect.objectContaining({
+          resourceKind: 'space',
+          resourceId: 'space-l0',
+          outcome: 'moved',
+        })
+      );
     });
 
     it('reconciles the Free license entitlements after promotion', async () => {
@@ -155,6 +202,39 @@ describe('ConversionResolverMutations', () => {
       ).toHaveBeenCalledWith('space-l1');
       expect(result).toBe(convertedSpace);
     });
+
+    // 027-platform-role-redesign (corr-server-18 fix)
+    it('writes a platform_resource audit row on success (corr-server-18)', async () => {
+      const convertedSpace = {
+        id: 'space-l1',
+        parentSpace: { authorization: { id: 'auth-parent' } },
+      };
+      authorizationService.grantAccessOrFail.mockReturnValue(undefined);
+      conversionService.convertSpaceL2ToSpaceL1OrFail.mockResolvedValue(
+        convertedSpace
+      );
+      spaceService.save.mockResolvedValue(convertedSpace);
+      spaceService.getSpaceOrFail.mockResolvedValue(convertedSpace);
+      spaceAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([]);
+      authorizationPolicyService.saveAll.mockResolvedValue(undefined);
+
+      await resolver.convertSpaceL2ToSpaceL1(actorContext, {
+        spaceL2ID: 'space-l2',
+      });
+
+      expect(
+        platformResourceAuditService.recordEventForActor
+      ).toHaveBeenCalledWith(
+        actorContext,
+        expect.any(Array),
+        expect.any(Array),
+        expect.objectContaining({
+          resourceKind: 'space',
+          resourceId: 'space-l1',
+          outcome: 'moved',
+        })
+      );
+    });
   });
 
   describe('convertSpaceL1ToSpaceL2', () => {
@@ -187,6 +267,40 @@ describe('ConversionResolverMutations', () => {
         spaceService.invalidateUrlCacheForSpaceSubtree
       ).toHaveBeenCalledWith('space-l2');
       expect(result).toBe(convertedSpace);
+    });
+
+    // 027-platform-role-redesign (corr-server-18 fix)
+    it('writes a platform_resource audit row on success (corr-server-18)', async () => {
+      const convertedSpace = {
+        id: 'space-l2',
+        parentSpace: { authorization: { id: 'auth-parent' } },
+      };
+      authorizationService.grantAccessOrFail.mockReturnValue(undefined);
+      conversionService.convertSpaceL1ToSpaceL2OrFail.mockResolvedValue(
+        convertedSpace
+      );
+      spaceService.save.mockResolvedValue(convertedSpace);
+      spaceService.getSpaceOrFail.mockResolvedValue(convertedSpace);
+      spaceAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([]);
+      authorizationPolicyService.saveAll.mockResolvedValue(undefined);
+
+      await resolver.convertSpaceL1ToSpaceL2(actorContext, {
+        spaceL1ID: 'space-l1',
+        parentSpaceL1ID: 'parent-l1',
+      });
+
+      expect(
+        platformResourceAuditService.recordEventForActor
+      ).toHaveBeenCalledWith(
+        actorContext,
+        expect.any(Array),
+        expect.any(Array),
+        expect.objectContaining({
+          resourceKind: 'space',
+          resourceId: 'space-l2',
+          outcome: 'moved',
+        })
+      );
     });
   });
 
@@ -295,6 +409,53 @@ describe('ConversionResolverMutations', () => {
           virtualContributorID: 'vc-1',
         })
       ).rejects.toThrow();
+    });
+
+    // 027-platform-role-redesign (corr-server-18 fix): A9 declares this
+    // surface `platform-resource-admin`-owned, riding the SAME synthetic
+    // policy as the six space moves/conversions — a successful conversion
+    // MUST write a platform_resource audit row exactly as they do.
+    it('writes a platform_resource audit row on success (corr-server-18)', async () => {
+      authorizationService.grantAccessOrFail.mockReturnValue(undefined);
+      virtualContributorService.getVirtualContributorByIdOrFail.mockResolvedValue(
+        {
+          id: 'vc-1',
+          knowledgeBase: { calloutsSet: { id: 'cs-target' } },
+          account: { id: 'acc-1' },
+          bodyOfKnowledgeType: 'alkemio-space',
+          bodyOfKnowledgeID: 'space-1',
+        }
+      );
+      spaceService.getSpaceOrFail.mockResolvedValue({
+        id: 'space-1',
+        collaboration: {
+          calloutsSet: { id: 'cs-source', callouts: [] },
+        },
+      });
+      spaceService.getAccountForLevelZeroSpaceOrFail.mockResolvedValue({
+        id: 'acc-1',
+      });
+      virtualContributorAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
+      authorizationPolicyService.saveAll.mockResolvedValue(undefined);
+
+      await resolver.convertVirtualContributorToUseKnowledgeBase(actorContext, {
+        virtualContributorID: 'vc-1',
+      });
+
+      expect(
+        platformResourceAuditService.recordEventForActor
+      ).toHaveBeenCalledWith(
+        actorContext,
+        expect.any(Array),
+        expect.any(Array),
+        expect.objectContaining({
+          resourceKind: 'virtual-contributor',
+          resourceId: 'vc-1',
+          outcome: 'moved',
+        })
+      );
     });
   });
 

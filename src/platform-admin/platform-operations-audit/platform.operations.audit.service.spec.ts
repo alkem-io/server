@@ -32,7 +32,12 @@ describe('PlatformOperationsAuditService', () => {
     service = module.get(PlatformOperationsAuditService);
   });
 
-  it('writes actor as both initiator and subject with the fixed admin-tier role', async () => {
+  // 027-platform-role-redesign (T025/D11): the actor-in-both-columns
+  // placeholder is RETIRED — a platform-wide operation now writes a NULL
+  // subject, never the actor. This is a behavioural change to already-
+  // delivered 032 code, a hard prerequisite for SC-015's derived
+  // self-affecting predicate (initiatorUserId = subjectUserId) to be sound.
+  it('writes the actor as initiator and NULL subject for a platform-wide operation (no targetUserId)', async () => {
     await service.recordOperation({
       actorID: 'actor-1',
       action: 'adminUpdateGeoLocationData',
@@ -41,13 +46,38 @@ describe('PlatformOperationsAuditService', () => {
 
     expect(repo.create).toHaveBeenCalledWith({
       category: PlatformAuditCategory.PLATFORM_OPERATIONS,
-      subjectUserId: 'actor-1',
+      subjectUserId: undefined,
       initiatorUserId: 'actor-1',
       initiatorRole: PlatformAuditInitiatorRole.PLATFORM_ADMIN,
       outcome: PlatformAuditOutcome.OPERATION_SUCCEEDED,
       details: { action: 'adminUpdateGeoLocationData' },
     });
     expect(repo.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('writes the REAL targeted user as subject for a per-user operation', async () => {
+    await service.recordOperation({
+      actorID: 'actor-1',
+      targetUserId: 'target-user-9',
+      action: 'adminMigrateUserAvatar',
+      outcome: 'success',
+    });
+
+    const entry = repo.create.mock.calls[0][0];
+    expect(entry.subjectUserId).toBe('target-user-9');
+    expect(entry.initiatorUserId).toBe('actor-1');
+  });
+
+  it('SC-015: a self-targeted per-user operation is derivable as self-affecting (initiatorUserId = subjectUserId)', async () => {
+    await service.recordOperation({
+      actorID: 'actor-1',
+      targetUserId: 'actor-1',
+      action: 'adminMigrateUserAvatar',
+      outcome: 'success',
+    });
+
+    const entry = repo.create.mock.calls[0][0];
+    expect(entry.initiatorUserId).toBe(entry.subjectUserId);
   });
 
   it('maps a failure outcome to OPERATION_FAILED', async () => {
