@@ -33,11 +33,15 @@ file-service is the sole durable store.
                  bounded by `timeout_s`; the keep-alive drain of a non-streamed
                  reply is bounded FAR tighter by the fixed `DRAIN_TIMEOUT_S`
                  (it is a courtesy, not a request — see `_drain_and_release`);
-                 the streamed content body is bounded by a TIME-TO-FIRST-BYTE
-                 deadline (also `timeout_s`), after which legitimate slow-client
-                 backpressure governs. A fixed whole-body deadline is
-                 deliberately AVOIDED — it cannot distinguish a file-service
-                 stall from client backpressure.
+                 the streamed content body is bounded by TWO deadlines, both
+                 `timeout_s` — a TIME-TO-FIRST-BYTE deadline, and thereafter a
+                 BACKPRESSURE-AWARE BODY-IDLE deadline that is SUSPENDED for as
+                 long as the downstream consumer has paused us. A fixed
+                 whole-body deadline is still deliberately AVOIDED — it cannot
+                 distinguish a file-service stall from client backpressure — but
+                 an idle timer that stops running while the client is the reason
+                 no bytes move CAN, so the stream is bounded without penalising
+                 a legitimately slow Element client. See `_ConsumerSink`.
 
 Redirects: NOT specially handled, and deliberately so. file-service is an
 in-cluster internal service reached by service DNS with no proxy in front, and
@@ -61,6 +65,13 @@ state of its own (no circuit breaker): resilience/backpressure is Synapse's and
 treq's concern, and a stateful breaker cannot model a `fetch` whose duration is a
 minutes-long body stream.
 
+The ONE piece of module-level state is `_cache_pool`, the provider's own thread
+pool for blocking cache-file work (`_cache_file_pool`). That is a process
+RESOURCE with a lifecycle — created once, bounded, stopped on reactor shutdown —
+not per-request or cross-request coordination: no request can observe another
+through it, and removing it changes no behaviour, only which threads the work
+runs on. Mainline `synapse-s3-storage-provider` owns one for the same reason.
+
 Deployment: copied into /data/modules (alongside alkemio_room_control.py) and
 discovered via PYTHONPATH=/data/modules. Configured under
 `media_storage_providers` in homeserver.yaml.
@@ -82,17 +93,19 @@ import os
 from typing import TYPE_CHECKING, Optional
 from urllib.parse import quote
 
-from twisted.internet import defer
+from twisted.internet import defer, task, threads
 from twisted.internet.defer import Deferred
 from twisted.internet.error import ConnectionDone
-from twisted.internet.interfaces import IConsumer
+from twisted.internet.interfaces import IConsumer, IPushProducer
 from twisted.internet.protocol import Protocol
-from twisted.web.client import ResponseDone
+from twisted.python.threadpool import ThreadPool
+from twisted.web.client import FileBodyProducer, ResponseDone
 from twisted.web.http import PotentialDataLoss
+from zope.interface import implementer
 
 import treq
 
-from synapse.logging.context import defer_to_thread, make_deferred_yieldable
+from synapse.logging.context import defer_to_threadpool, make_deferred_yieldable
 from synapse.media._base import Responder
 from synapse.media.storage_provider import StorageProvider
 
@@ -172,13 +185,273 @@ async def _with_timeout(reactor, timeout_s, d):
 
     Only for RAW treq deferreds (json/content body reads) that are NOT
     logcontext-managed — `make_deferred_yieldable` here is correct. Do NOT use it
-    for `defer_to_thread`, which is already logcontext-wrapped (a second wrap would
-    resume under the sentinel context); bound that one with `addTimeout` directly.
+    for `defer_to_threadpool`, which is already logcontext-wrapped (a second wrap
+    would resume under the sentinel context); bound that one with `addTimeout`
+    directly.
     """
     # On deadline, addTimeout cancels `d` and converts the resulting
     # CancelledError to a defer.TimeoutError on the errback chain.
     d.addTimeout(timeout_s, reactor)
     return await make_deferred_yieldable(d)
+
+
+# Upper bound on the provider's OWN cache-file thread pool (see
+# `_cache_file_pool`). Deliberately NOT mainline's 40.
+#
+# Mainline's 40 is sized for threads that PARK: `s3_storage_provider`'s
+# `_stream_to_producer` sits on `wakeup_event.wait(90)` for as long as the
+# consumer keeps it paused, so it needs roughly one thread per concurrent
+# download. This provider never parks a pool thread — a thread is held for
+# exactly one `open()`, one 64 KiB `read()` or one `close()` and then released,
+# and a PAUSED stream holds none at all (see `_ThreadedFileBodyProducer`). Demand
+# here is therefore "one short syscall per in-flight upload", not "one thread per
+# upload for its lifetime".
+#
+# Sizing: at a pessimistic 1 ms per 64 KiB cache read a SINGLE thread sustains
+# ~64 MB/s, far above the 1 MB/s floor `_STORE_MIN_THROUGHPUT_BPS` assumes and
+# above `max_upload_size` (50M) per request, so a handful of threads is already
+# ample. 8 buys headroom for two things: a burst of EOF closes landing alongside
+# in-flight reads, and the one case that CAN hold a thread — a wedged media-store
+# mount, where a read and the close that follows it can each strand one, because
+# a call already running in a `deferToThreadPool` thread cannot be cancelled.
+#
+# `min=0` so an idle Synapse pays nothing. (Mainline leaves `minthreads` at
+# twisted's `ThreadPool` default of 5 and so keeps 5 threads alive forever.)
+_CACHE_POOL_MAX_THREADS = 8
+
+# The process-wide pool, created on first use by `_cache_file_pool`.
+_cache_pool = None
+
+
+def _cache_file_pool(reactor):
+    """
+    The provider's OWN thread pool for blocking cache-file work — created once
+    per process and stopped on reactor shutdown.
+
+    WHY NOT `reactor.getThreadPool()`. Twisted sizes the shared reactor pool at
+    `ThreadPool(0, 10)` (`twisted/internet/base.py::_initThreadPool`) and Synapse
+    never resizes it: there is no homeserver.yaml knob, and `synapse/app/_base.py`
+    only registers it for metrics. TEN THREADS is the entire budget for our
+    process — a MONOLITH (`replicas: 1`, no media worker), so client API, media
+    and auth all share it. The competition is severe, and we are part of it:
+
+      - `BackgroundFileConsumer._writer` (`synapse/util/file_consumer.py`) takes
+        one of those ten via `reactor.getThreadPool()` and PARKS it on an untimed
+        `Queue.get()` for the ENTIRE duration of a transfer. Synapse uses it in
+        one place that matters here — `MediaStorage.ensure_media_is_in_local_cache`
+        -> `provider.fetch(...)`, i.e. OUR OWN fetch — reached from
+        `generate_local_exact_thumbnail` / `_generate_thumbnails`. Our media store
+        is an ephemeral 5 GiB emptyDir with a purge sidecar, so a thumbnail
+        request for any purged or post-restart upload takes exactly that path.
+        Ten concurrent cold thumbnails pin the pool outright. NOTE this is NOT
+        bounded by the `timeout_s` stall deadlines: those bound a SILENT stream,
+        whereas a perfectly healthy download holds its writer thread for as long
+        as it takes to transfer.
+      - `MediaStorage.write_to_file` (every upload), thumbnail generation
+        (CPU-bound Pillow, several per image), large-response JSON encoding and
+        bcrypt login hashing all land on the same pool via `defer_to_thread`.
+
+    Meanwhile `store_file` runs under `effective_timeout` and the guarded open
+    under `store_timeout_s`. Those clocks do not care whether our work is RUNNING
+    or merely QUEUED, so a full pool fails an upload that is healthy in every
+    other respect — the finding this pool answers.
+
+    Synapse itself treats the shared pool as scarce and carves out dedicated ones
+    for precisely this reason: `gai_resolver` ("numbers of DNS requests don't
+    starve out other users of the threadpool") and the 50-thread
+    `media_threadpool` backing `ThreadedFileSender`, whose docstring states the
+    rule we also follow — "we're never waiting in the threadpool, as otherwise
+    its easy to starve it of threads". The mainline `synapse-s3-storage-provider`
+    owns one too (`ThreadPool(name="s3-pool", maxthreads=40)`).
+
+    The isolation runs BOTH ways, which is the second reason for it: a wedged
+    media-store mount now strands OUR threads instead of Synapse's login,
+    thumbnail and upload paths.
+
+    LIFECYCLE. Module-level, not per-instance, and guarded. Synapse builds one
+    provider per `media_storage_providers` entry from `MediaRepository` (itself
+    `@cache_in_self`), but nothing stops a process from constructing the provider
+    more than once — a second config entry, a second HomeServer, a test harness —
+    and mainline's unguarded per-instance `ThreadPool(...)` + shutdown trigger in
+    `__init__` would then start a second pool and register a second trigger. One
+    pool per PROCESS is the right granularity anyway: it mirrors twisted's own
+    reactor pool and Synapse's `@cache_in_self` `media_threadpool`.
+
+    Created LAZILY and only ever on the reactor thread (`__init__`, `store_file`
+    and the producer's read loop all run there), so no lock is needed and a
+    process that never stores media never spawns a thread.
+
+    The shutdown trigger is registered BEFORE `start()` on purpose: if a reactor
+    cannot register one, no threads have been spawned yet and there is nothing to
+    leak. It is not optional — without it Python waits on the non-daemon workers
+    and Synapse shutdown hangs (~30 s; the bug mainline retrofitted in its PR #43)
+    — and the reactor trigger is the ONLY route available: `ModuleApi` exposes no
+    shutdown hook, and `HomeServer.register_sync_shutdown_handler` landed after
+    the deployed v1.132.0 and is private anyway. `"during"` is the phase twisted
+    uses for its own pool and mainline for its s3 pool.
+    """
+    global _cache_pool
+    if _cache_pool is None:
+        pool = ThreadPool(
+            minthreads=0,
+            maxthreads=_CACHE_POOL_MAX_THREADS,
+            name="alkemio-fileservice-cache",
+        )
+        reactor.addSystemEventTrigger("during", "shutdown", pool.stop)
+        pool.start()
+        _cache_pool = pool
+    return _cache_pool
+
+
+def _read_in_thread(reactor, fn):
+    """
+    Run ONE blocking cache-file read in the PROVIDER'S thread pool.
+
+    The pool is ours, not `reactor.getThreadPool()` — see `_cache_file_pool` for
+    why the shared ten-thread reactor pool cannot be relied on here.
+
+    Deliberately twisted's own threadpool bridge and NOT Synapse's
+    `defer_to_threadpool`: a Cooperator tick runs under the SENTINEL logcontext
+    (the cooperator schedules via `reactor.callLater`, which carries none), and
+    Synapse's helper logs `Calling defer_to_threadpool from sentinel context:
+    metrics will be lost` every time it is called that way — that would be one
+    warning per 64 KiB chunk, ~1600 of them for a 100 MB upload. There is no
+    logcontext inside the tick to preserve, so there is nothing to lose by
+    skipping the wrapper. (The guarded open in `store_file` DOES run under a real
+    logcontext and so uses Synapse's wrapper, on this same pool.)
+
+    This is the single seam through which every cache-file read must pass; the
+    unit tests substitute it to drive the loop without a real thread pool.
+    """
+    return threads.deferToThreadPool(reactor, _cache_file_pool(reactor), fn)
+
+
+def _close_off_reactor(reactor, handle) -> None:
+    """
+    Close a cache-file handle WITHOUT blocking the reactor thread.
+
+    `io.BufferedReader.close()` acquires the object's buffer lock, so closing a
+    handle while a chunk read is still in flight in the thread pool BLOCKS the
+    caller until that read returns. On the reactor thread that is exactly the
+    stall `_ThreadedFileBodyProducer` exists to prevent — merely relocated from
+    the read loop into teardown — so the close goes to the thread pool too.
+
+    It goes to the PROVIDER'S pool, not `reactor.getThreadPool()`, for the same
+    reason the reads do (see `_cache_file_pool`): the close is the tail of the
+    same upload, under the same deadline, and on a wedged mount it strands a
+    thread for as long as the read it is waiting on — which must not be one of
+    Synapse's ten.
+
+    Fire-and-forget and best-effort: nothing can act on a close failure, and a
+    failure here must never fail an upload that is already durable. Falls back to
+    an inline close if the pool cannot be obtained or the dispatch fails (the
+    unit tests' `Clock`/stand-in reactors take this path, where no in-flight read
+    can collide with it).
+    """
+
+    def _close():
+        try:
+            handle.close()
+        except Exception as exc:  # noqa: BLE001 - best-effort
+            logger.debug("cache-file close failed (ignored): %s", exc)
+
+    try:
+        _cache_file_pool(reactor).callInThread(_close)
+    except Exception as exc:  # noqa: BLE001 - best-effort dispatch
+        logger.debug("threaded cache-file close dispatch failed: %s", exc)
+        _close()
+
+
+class _ThreadedFileBodyProducer(FileBodyProducer):
+    """
+    `FileBodyProducer` whose chunk reads happen in the reactor's THREAD POOL.
+
+    WHY. treq streams the upload through twisted's `FileBodyProducer` (inside its
+    `MultiPartProducer`), whose `_writeloop` calls `self._inputFile.read(...)`
+    ON THE REACTOR THREAD. The Cooperator yields between chunks, so no single
+    read monopolises the reactor — but each individual read still blocks it, and
+    while the reactor is blocked it cannot run `callLater`, so the store's own
+    `addTimeout` deadline cannot fire either: the one guard that is supposed to
+    bound a wedged media-store read is disarmed by the very thing it guards.
+
+    The mainline `synapse-s3-storage-provider` does NOT accept that trade-off (an
+    earlier comment here claimed it did — that was wrong): its `store_file` hands
+    boto3's `upload_file` — which opens and reads the file itself — to
+    `ModuleApi.defer_to_threadpool` on a dedicated pool, so the reactor thread
+    never touches the file. Synapse core does the same in the other direction
+    with `ThreadedFileSender`. Twisted ships no threaded `IBodyProducer` to reuse
+    (`FileBodyProducer` is one of only two `IBodyProducer` implementers in the
+    whole tree), so this is the minimal adaptation of the one it does ship.
+
+    HOW, and why backpressure survives. The mechanism is twisted's own: a
+    generator driven by a `Cooperator` may YIELD A DEFERRED, and
+    `CooperativeTask._oneWorkUnit` then `pause()`s the task and `resume()`s it
+    when that Deferred fires. So the read moves off-reactor while every piece of
+    producer machinery stays the base class's — `pauseProducing` /
+    `resumeProducing` still just pause/resume the same `CooperativeTask`, and an
+    external pause simply STACKS with the read's own (pause counts are balanced,
+    so the loop only advances once the read has returned AND the consumer has
+    resumed). Nothing about backpressure is reimplemented here.
+
+    No thread is held while the stream is paused or idle: a pool thread is
+    occupied only for the duration of one `read()`. (Contrast the mainline s3
+    provider's `_stream_to_producer`, which parks a pool thread on
+    `wakeup_event.wait(90)` for as long as the consumer stays paused — the
+    dependent-task starvation twisted's own threading howto warns about.)
+
+    A read that raises propagates as `TaskFailed` to `startProducing`'s Deferred
+    and so fails the upload, rather than silently truncating the body.
+    """
+
+    def __init__(self, input_file, reactor, length, cooperator=task, read_size=2 ** 16):
+        self._reactor = reactor
+        self._known_length = length
+        super().__init__(input_file, cooperator=cooperator, readSize=read_size)
+
+    def _determineLength(self, fObj):
+        # The base class probes the length with seek/tell, putting two more
+        # potentially-blocking syscalls on the reactor thread at construction
+        # time. `_guarded_open` already fstat'd the OPEN fd off-reactor, so use
+        # that size instead of re-probing.
+        return self._known_length
+
+    def _read_chunk(self):
+        """The one blocking call — only ever executed in the thread pool."""
+        return self._inputFile.read(self._readSize)
+
+    def _writeloop(self, consumer):
+        chunk = []
+        while True:
+            d = _read_in_thread(self._reactor, self._read_chunk)
+            d.addCallback(chunk.append)
+            # The Cooperator pauses this task until the threaded read fires.
+            yield d
+            data = chunk.pop()
+            if not data:
+                # EOF. The base class closes inline here; keep the close off the
+                # reactor for the same reason the reads are.
+                _close_off_reactor(self._reactor, self._inputFile)
+                break
+            consumer.write(data)
+            yield None
+
+    def stopProducing(self):
+        # The base class closes the handle INLINE, on the reactor thread, and
+        # does it BEFORE stopping the task — so a cancelled upload whose read is
+        # still wedged in the pool would block the reactor on the buffer lock,
+        # reintroducing the stall from the other end. Stop the task first, then
+        # close off-reactor.
+        pending = getattr(self, "_task", None)
+        if pending is not None:
+            try:
+                pending.stop()
+            except task.TaskFinished:
+                # Already finished (the cooperative task completed, or a prior
+                # stopProducing stopped it) — `stop()` on a finished task raises
+                # rather than being a no-op. Nothing to stop is the desired end
+                # state here, so swallow it; the off-reactor close below still runs.
+                pass
+        _close_off_reactor(self._reactor, self._inputFile)
 
 
 def _stop_producing(transport) -> None:
@@ -212,16 +485,67 @@ def _abort_connection(resp) -> None:
         logger.debug("file-service connection abort failed (ignored): %s", exc)
 
 
+@implementer(IPushProducer)
 class _ConsumerSink(Protocol):
     """
     Twisted body protocol that forwards a streamed HTTP response body straight
     into a Synapse media consumer, firing `finished` on completion.
 
-    Backpressure: the response-body transport is an IPushProducer, so it is
-    registered with the downstream consumer as a streaming producer. A slow
-    consumer (e.g. a slow Element client on the read path) can then pause/resume
-    the upstream TCP read instead of forcing this protocol to buffer an unbounded
-    amount of data in memory.
+    Backpressure: the response-body transport is an IPushProducer. We register
+    OURSELVES with the downstream consumer as its streaming producer and forward
+    every `pauseProducing` / `resumeProducing` / `stopProducing` verbatim to that
+    transport, so a slow consumer (e.g. a slow Element client on the read path)
+    still pauses/resumes the upstream TCP read instead of forcing this protocol
+    to buffer an unbounded amount of data in memory. The interposition exists for
+    ONE reason — the stall deadlines below: the sink has to know when the
+    consumer has paused us so it can SUSPEND the body-idle deadline for exactly
+    that time.
+
+    STALL CONTRACT — read this before changing the two deadlines.
+
+    NOTHING OUTSIDE THIS MODULE BOUNDS A STALLED CONTENT STREAM. Verified
+    against Synapse 1.161 / Twisted 25.5 / treq 26.7:
+
+      - `synapse/media/_base.py::respond_with_responder` and
+        `synapse/media/media_storage.py::ensure_media_is_in_local_cache` both
+        bare-`await` `write_to_consumer(...)` with no deadline, and
+        `synapse/media/storage_provider.py` adds none. (The media servlets'
+        `max_timeout_ms` bounds only the pre-Responder async-upload poll.)
+      - Twisted DISABLES the HTTP channel idle timeout for the whole duration of
+        response generation — `HTTPChannel.allContentReceived` saves and clears
+        it and only `requestDone` restores it — and Synapse never installs one
+        anyway: `SynapseSite.buildProtocol` constructs the protocol without
+        `HTTPFactory.buildProtocol`'s `p.timeOut = self.timeOut`, so it stays
+        `None`.
+      - treq's `timeout=` is `callLater(timeout, d.cancel)` on the REQUEST
+        Deferred, cancelled the moment the response headers arrive, so it never
+        covers the body.
+
+    So a file-service that answers 200 and then goes silent leaves `finished`
+    unresolved forever: Synapse holds the request and the unbuffered connection,
+    and on the `ensure_media_is_in_local_cache` path it ALSO parks a reactor
+    threadpool thread indefinitely (`BackgroundFileConsumer._writer` blocks on an
+    untimed `Queue.get`). The only external escape is a client disconnect, which
+    reaches us as `HTTPChannel.stopProducing()` -> our `stopProducing()` — and
+    only because we register a producer at all; there is no client at all on the
+    `ensure_media_is_in_local_cache` path.
+
+    Two deadlines therefore bound the stream, both `timeout_s`:
+
+      1. TIME TO FIRST BYTE — nothing has arrived yet, so the consumer cannot
+         have paused anything and an idle read is unambiguously a stall.
+      2. BODY IDLE, from the first byte on — reset by every chunk, and SUSPENDED
+         while the consumer has us paused. That suspension is the whole point:
+         a legitimately slow Element client STOPS the clock rather than tripping
+         it, which is the objection that previously kept this stream unbounded.
+         A fixed whole-body deadline is still rejected for the same old reason —
+         it cannot tell a file-service stall from a slow client. This mirrors
+         what Synapse does for every upstream body IT reads
+         (`matrixfederationclient.py` `d.addTimeout(...)`, `http/client.py`
+         `timeout_deferred(..., timeout=30)` — "Ensure that the body is not read
+         forever") and what the Go side of this same feature already does on the
+         symmetric send path (`mediaStreamTimeout` in
+         internal/infrastructure/matrix/mautrix.go).
 
     TRUNCATION CONTRACT — read this before changing `connectionLost`.
 
@@ -278,6 +602,7 @@ class _ConsumerSink(Protocol):
         reactor=None,
         ttfb_timeout=None,
         expected_length=None,
+        idle_timeout=None,
     ):
         self._consumer = consumer
         self._finished = finished
@@ -288,17 +613,24 @@ class _ConsumerSink(Protocol):
         self._ttfb = None  # pending time-to-first-byte timeout call (IDelayedCall)
         # Declared Content-Length, or None when the framing does not carry one.
         self._expected_length = expected_length
+        self._idle_timeout = idle_timeout
+        self._idle = None  # pending body-idle timeout call (IDelayedCall)
+        self._paused = False  # consumer paused us -> the idle deadline is suspended
 
     def makeConnection(self, transport) -> None:
         Protocol.makeConnection(self, transport)
         # `transport` is Twisted's TransportProxyProducer for the response body —
-        # an IPushProducer. Register it so the consumer applies real backpressure.
+        # an IPushProducer. Register OURSELVES as the consumer's streaming
+        # producer (every call is forwarded to `transport` — see the IPushProducer
+        # block below) so the consumer applies real backpressure AND we learn when
+        # it pauses us, which the body-idle deadline needs.
         # Degrade gracefully if the consumer cannot accept a producer — but LOG
         # it: without the producer this streams with NO backpressure, so a slow
-        # client buffers the whole media file in memory. That is a real,
-        # diagnosable degradation, not a no-op, and it must not be silent.
+        # client buffers the whole media file in memory, and a client disconnect
+        # no longer reaches us either. That is a real, diagnosable degradation,
+        # not a no-op, and it must not be silent.
         try:
-            self._consumer.registerProducer(transport, True)
+            self._consumer.registerProducer(self, True)
             self._producer_registered = True
         except (AttributeError, RuntimeError) as exc:
             self._producer_registered = False
@@ -311,11 +643,16 @@ class _ConsumerSink(Protocol):
 
         # Time-to-first-byte deadline: file-service returning 200 then going silent
         # BEFORE any body byte must not hang the media request (and hold the
-        # unbuffered connection open). This is a TTFB timeout ONLY — before the
-        # first byte the consumer hasn't paused anything, so an idle read is a real
-        # stall; AFTER the first byte, legitimate slow-client backpressure (a paused
-        # producer stops dataReceived) governs, which an idle timer cannot
-        # distinguish from a server stall, so we impose no further deadline.
+        # unbuffered connection open). Before the first byte the consumer has not
+        # paused anything, so an idle read is an unambiguous stall.
+        #
+        # AFTER the first byte the backpressure-suspended body-idle deadline takes
+        # over (see `_arm_idle` and the STALL CONTRACT in the class docstring). The
+        # two are strictly sequential: this one is cancelled in `dataReceived`, which
+        # is also where the idle deadline is first armed. A plain idle timer could not
+        # replace it, because it cannot distinguish a server stall from legitimate
+        # slow-client backpressure — which is why `_arm_idle` suspends on
+        # `pauseProducing` and re-arms on `resumeProducing`.
         if self._reactor is not None and self._ttfb_timeout is not None:
             self._ttfb = self._reactor.callLater(
                 self._ttfb_timeout, self._on_ttfb_timeout
@@ -326,10 +663,71 @@ class _ConsumerSink(Protocol):
             self._ttfb.cancel()
         self._ttfb = None
 
-    def _on_ttfb_timeout(self) -> None:
-        # No body byte arrived within the deadline: abort the (unbuffered)
-        # connection and fail so Synapse maps the Responder to a media error.
-        self._ttfb = None
+    # -- body-idle deadline (armed only once bytes are flowing) ----------------
+
+    def _cancel_idle(self) -> None:
+        if self._idle is not None and self._idle.active():
+            self._idle.cancel()
+        self._idle = None
+
+    def _arm_idle(self) -> None:
+        """(Re)start the body-idle deadline — a no-op while suspended or done.
+
+        Declining to arm while `_paused` is what makes the deadline
+        backpressure-aware: the clock only runs when file-service, not the
+        consumer, is the reason no bytes are moving.
+
+        `_written == 0` keeps the two deadlines strictly sequential: before the
+        first byte the TTFB deadline owns the stream, so a pause/resume that far
+        ahead of any data must not arm a redundant second timer for the same
+        condition.
+        """
+        self._cancel_idle()
+        if self._paused or self._written == 0 or self._finished.called:
+            return
+        if self._reactor is not None and self._idle_timeout is not None:
+            self._idle = self._reactor.callLater(
+                self._idle_timeout, self._on_idle_timeout
+            )
+
+    # -- IPushProducer: a pass-through proxy in front of the body transport ----
+    #
+    # Every call is forwarded verbatim, so the backpressure the consumer gets is
+    # exactly the transport's. The only added behaviour is suspending/resuming
+    # the body-idle deadline, and cancelling both deadlines on a consumer-driven
+    # stop (a client disconnect arrives here via `HTTPChannel.stopProducing`).
+    #
+    # NOTE `stopProducing` deliberately does NOT resolve `finished`:
+    # `connectionLost` stays the single place this stream's result is decided.
+    # Aborting the transport below delivers exactly that.
+
+    def pauseProducing(self) -> None:
+        self._paused = True
+        self._cancel_idle()
+        transport = getattr(self, "transport", None)
+        if transport is not None:
+            transport.pauseProducing()
+
+    def resumeProducing(self) -> None:
+        self._paused = False
+        transport = getattr(self, "transport", None)
+        if transport is not None:
+            transport.resumeProducing()
+        self._arm_idle()
+
+    def stopProducing(self) -> None:
+        self._cancel_ttfb()
+        self._cancel_idle()
+        _stop_producing(getattr(self, "transport", None))
+
+    # -- stall handling --------------------------------------------------------
+
+    def _fail_stalled(self, message: str) -> None:
+        """
+        Shared teardown for BOTH stall deadlines (TTFB and body-idle): drop the
+        producer, abort the (unbuffered) connection, and errback `finished` so
+        Synapse maps the Responder to a media error instead of hanging.
+        """
         if self._finished.called:
             return
         if self._producer_registered:
@@ -349,25 +747,43 @@ class _ConsumerSink(Protocol):
                 # noise, and the outcome (a failed media fetch) is already
                 # reported by the errback.
                 logger.debug(
-                    "unregisterProducer during TTFB-timeout teardown raised "
+                    "unregisterProducer during stall teardown raised "
                     "%s: %s — consumer already torn down, ignoring",
                     type(exc).__name__,
                     exc,
                 )
             self._producer_registered = False
         _stop_producing(getattr(self, "transport", None))
-        self._finished.errback(
-            defer.TimeoutError(
-                "file-service content stall: no body within %ss" % self._ttfb_timeout
-            )
+        self._finished.errback(defer.TimeoutError(message))
+
+    def _on_ttfb_timeout(self) -> None:
+        # No body byte arrived within the deadline.
+        self._ttfb = None
+        self._fail_stalled(
+            "file-service content stall: no body within %ss" % self._ttfb_timeout
+        )
+
+    def _on_idle_timeout(self) -> None:
+        # Bytes were flowing, the consumer is READY for more (we are not paused —
+        # `pauseProducing` would have suspended this deadline), and file-service
+        # has sent nothing for the whole window. That is an upstream stall.
+        self._idle = None
+        self._fail_stalled(
+            "file-service content stall: no body byte for %ss after %d bytes "
+            "(consumer was not paused)" % (self._idle_timeout, self._written)
         )
 
     def dataReceived(self, data: bytes) -> None:
-        # First byte arrived — cancel the TTFB deadline; from here client
-        # backpressure governs and we impose no further timeout.
+        # First byte arrived — cancel the TTFB deadline; from here the body-idle
+        # deadline governs, suspended for as long as the consumer pauses us.
         self._cancel_ttfb()
         self._consumer.write(data)
         self._written += len(data)
+        # Re-arm AFTER the write: `write` can synchronously pause us (a twisted
+        # Request whose send buffer just filled), and `_arm_idle` declines to arm
+        # while paused — so the deadline correctly stays suspended instead of
+        # being restarted against a consumer that has stopped reading.
+        self._arm_idle()
 
     def connectionLost(self, reason=None) -> None:
         # ResponseDone/ConnectionDone are a clean close. INTENTIONAL divergence
@@ -376,13 +792,16 @@ class _ConsumerSink(Protocol):
         # PotentialDataLoss (a truncated download, no clean terminator) as a
         # FAILURE — the consumer must NOT be told the media completed when bytes may
         # be missing. Only ResponseDone/ConnectionDone count as success here.
+        # Both stall deadlines are cancelled here so neither can outlive the
+        # stream as a pending IDelayedCall on the reactor.
         self._cancel_ttfb()
+        self._cancel_idle()
         if self._producer_registered:
             try:
                 self._consumer.unregisterProducer()
             except (AttributeError, RuntimeError) as exc:
                 # SWALLOWED DELIBERATELY — same teardown race as
-                # `_on_ttfb_timeout`: the connection is already gone, so a
+                # `_fail_stalled`: the connection is already gone, so a
                 # consumer that closed first has nothing left to unregister.
                 # Raising here would be strictly worse than ignoring it, because
                 # `connectionLost` is the ONLY place the result of this stream is
@@ -563,14 +982,20 @@ class _FileServiceResponder(Responder):
     The response's declared `Content-Length` is captured up front and handed to
     the sink, which fails the stream if the body ends short of it (see
     `_ConsumerSink`'s TRUNCATION CONTRACT).
+
+    `stall_timeout` is ONE knob (the provider's `timeout_s`) that arms BOTH of
+    the sink's deadlines — time-to-first-byte and, thereafter, the
+    backpressure-suspended body-idle deadline. They are the same failure
+    (file-service went silent) seen before and after the first byte, so they get
+    the same budget rather than a second operator-facing knob.
     """
 
-    def __init__(self, response, reactor=None, ttfb_timeout=None):
+    def __init__(self, response, reactor=None, stall_timeout=None):
         self._response = response
         self._streamed = False
         self._aborted = False
         self._reactor = reactor
-        self._ttfb_timeout = ttfb_timeout
+        self._stall_timeout = stall_timeout
         self._expected_length = _declared_body_length(response)
 
     def write_to_consumer(self, consumer: IConsumer) -> "Deferred[int]":
@@ -581,8 +1006,9 @@ class _FileServiceResponder(Responder):
                     consumer,
                     finished,
                     self._reactor,
-                    self._ttfb_timeout,
+                    self._stall_timeout,
                     self._expected_length,
+                    self._stall_timeout,
                 )
             )
         except Exception as exc:  # noqa: BLE001 - a synchronous deliverBody raise
@@ -777,24 +1203,25 @@ class FileServiceStorageProvider(StorageProvider):
         # attribute — derive the absolute path the same way the on-disk store does
         # (matching synapse-s3-storage-provider).
         #
-        # Opening it is done OFF the reactor (defer_to_thread below) because
+        # Opening it is done OFF the reactor (defer_to_threadpool below) because
         # open() on a wedged media-store mount can block for an unbounded time and
         # would stall the whole Synapse worker.
         #
-        # The subsequent READS are a different matter, and are deliberately NOT
-        # off-reactor: treq wraps the handle in twisted's FileBodyProducer (inside
-        # its MultiPartProducer), which reads it in 64 KiB chunks driven by a
-        # Cooperator — incrementally, ON THE REACTOR THREAD, yielding between
-        # chunks. So the file is never copied into memory whole and no single read
-        # monopolises the reactor, but a wedged mount can still block a chunk read.
-        # That is the same trade-off the mainline s3_storage_provider makes; the
-        # off-reactor open is what covers the unbounded case.
+        # The subsequent READS go off-reactor too, via
+        # `_ThreadedFileBodyProducer` below: treq would otherwise stream the file
+        # through twisted's stock `FileBodyProducer`, which reads it in 64 KiB
+        # chunks ON THE REACTOR THREAD. The Cooperator yields between chunks so no
+        # single read monopolises the reactor, but each read still blocks it — and
+        # a blocked reactor cannot run `callLater`, so the size-scaled store
+        # deadline below could not fire either. The mainline s3_storage_provider
+        # makes NO such trade-off (it hands the whole boto3 upload, file read
+        # included, to a threadpool); see `_ThreadedFileBodyProducer`.
         cache_file = os.path.join(self.cache_path, path)
 
         # Bound the open by `store_timeout_s` so a wedged media-store mount fails
         # the upload fast instead of stalling the request forever. Two caveats
         # handled here:
-        #  - `defer_to_thread` already returns a logcontext-wrapped Deferred, so we
+        #  - `defer_to_threadpool` already returns a logcontext-wrapped Deferred, so we
         #    add the deadline with `addTimeout` DIRECTLY and await it WITHOUT a
         #    second `make_deferred_yieldable` (that would resume the rest of the
         #    upload under the sentinel logcontext).
@@ -836,7 +1263,16 @@ class FileServiceStorageProvider(StorageProvider):
                     except Exception:  # noqa: BLE001 - best-effort
                         pass
 
-        open_d = defer_to_thread(self.reactor, _guarded_open)
+        # Synapse's `defer_to_threadpool` (not twisted's) because this runs under
+        # a REAL logcontext — unlike the Cooperator tick in `_read_in_thread` —
+        # so the wrapper has a context to preserve and logs no sentinel warning.
+        # On the PROVIDER'S pool, not the shared reactor pool: this open is the
+        # first thing an upload does and it carries its own `store_timeout_s`
+        # deadline, so a queued-behind-a-full-pool open fails the upload just as
+        # surely as a queued read would (see `_cache_file_pool`).
+        open_d = defer_to_threadpool(
+            self.reactor, _cache_file_pool(self.reactor), _guarded_open
+        )
         open_d.addTimeout(self.store_timeout_s, self.reactor)
         try:
             stream, file_size = await open_d
@@ -860,7 +1296,17 @@ class FileServiceStorageProvider(StorageProvider):
             # however they were supplied.
             # test_store_multipart_body_puts_every_metadata_part_before_the_file
             # asserts this against the bytes treq actually serialises.
-            files = {"file": (media_id, stream)}
+            # Hand treq a producer rather than the bare handle: `_convert_files`
+            # would otherwise adapt the handle with `IBodyProducer(...)` into the
+            # stock, reactor-reading `FileBodyProducer`. The 2-tuple shape is
+            # kept so treq still derives the same part filename and content type
+            # as before — only the reads move to the thread pool.
+            files = {
+                "file": (
+                    media_id,
+                    _ThreadedFileBodyProducer(stream, self.reactor, file_size),
+                )
+            }
             data = {
                 "storageBucketId": self.matrix_media_bucket_id,
                 "externalReference": media_id,
@@ -944,15 +1390,17 @@ class FileServiceStorageProvider(StorageProvider):
             # success path already means the body send finished. On the
             # timeout/error paths the request has been cancelled and the
             # connection aborted, which is exactly when the handle SHOULD go.
-            # (FileBodyProducer also closes the handle itself once read; this
-            # close is idempotent belt-and-braces for the paths where it never
-            # got that far.)
+            # (`_ThreadedFileBodyProducer` also closes the handle itself, at EOF
+            # and on stopProducing; this close is idempotent belt-and-braces for
+            # the paths where it never got that far.)
             # test_store_does_not_close_handle_before_the_body_send_completes
             # pins the ordering.
-            try:
-                stream.close()
-            except Exception:  # noqa: BLE001 - best-effort
-                pass
+            #
+            # Off-reactor for the same reason the reads are: on the timeout path
+            # a chunk read may still be wedged in the pool, and closing the
+            # handle under it would block the reactor on the buffer lock (see
+            # `_close_off_reactor`).
+            _close_off_reactor(self.reactor, stream)
 
     async def fetch(self, path: str, file_info: "FileInfo") -> Optional[Responder]:
         """
@@ -1079,8 +1527,11 @@ class FileServiceStorageProvider(StorageProvider):
             logger.debug(
                 "Serving media_id=%s from file-service doc_id=%s", media_id, doc_id
             )
-            # Thread the reactor + TTFB deadline so a 200-then-silent content stream
-            # can't hang the media request (time-to-first-byte only; see _ConsumerSink).
+            # Thread the reactor + stall deadline so a 200-then-silent content
+            # stream can't hang the media request — before the first byte (TTFB)
+            # or after it (backpressure-suspended body idle). Nothing in Synapse,
+            # twisted or treq bounds this for us; see `_ConsumerSink`'s STALL
+            # CONTRACT for the verification.
             return _FileServiceResponder(content_resp, self.reactor, self.timeout_s)
 
         except Exception as exc:  # noqa: BLE001 - transport / timeout / parse error
@@ -1115,11 +1566,15 @@ def _positive_number(config: dict, key: str, default, cast):
         value = cast(raw)
         if not math.isfinite(value):
             raise ValueError("value is not finite")
-    except (TypeError, ValueError, OverflowError):
+    except (TypeError, ValueError, OverflowError) as err:
+        # Chain the original (ruff B904): the cause distinguishes "not a number
+        # at all" (TypeError) from "NaN/inf" (ValueError) from "int too large to
+        # convert" (OverflowError) in the boot traceback, which is the only
+        # diagnostic an operator gets for a bad homeserver.yaml value.
         raise ValueError(
             "FileServiceStorageProvider: '%s' must be a finite number, got %r"
             % (key, raw)
-        )
+        ) from err
     if value <= 0:
         raise ValueError(
             "FileServiceStorageProvider: '%s' must be > 0, got %r" % (key, value)
@@ -1130,7 +1585,7 @@ def _positive_number(config: dict, key: str, default, cast):
 def _open_stream(file_path: str):
     """Open the local cache file for streaming into the multipart body.
 
-    Called via defer_to_thread so the open() syscall never runs on the reactor;
+    Called via defer_to_threadpool so the open() syscall never runs on the reactor;
     treq's cooperative FileBodyProducer then reads the handle in chunks, so the
     file is streamed rather than buffered whole in memory.
     """
