@@ -65,6 +65,13 @@ state of its own (no circuit breaker): resilience/backpressure is Synapse's and
 treq's concern, and a stateful breaker cannot model a `fetch` whose duration is a
 minutes-long body stream.
 
+The ONE piece of module-level state is `_cache_pool`, the provider's own thread
+pool for blocking cache-file work (`_cache_file_pool`). That is a process
+RESOURCE with a lifecycle — created once, bounded, stopped on reactor shutdown —
+not per-request or cross-request coordination: no request can observe another
+through it, and removing it changes no behaviour, only which threads the work
+runs on. Mainline `synapse-s3-storage-provider` owns one for the same reason.
+
 Deployment: copied into /data/modules (alongside alkemio_room_control.py) and
 discovered via PYTHONPATH=/data/modules. Configured under
 `media_storage_providers` in homeserver.yaml.
@@ -91,13 +98,14 @@ from twisted.internet.defer import Deferred
 from twisted.internet.error import ConnectionDone
 from twisted.internet.interfaces import IConsumer, IPushProducer
 from twisted.internet.protocol import Protocol
+from twisted.python.threadpool import ThreadPool
 from twisted.web.client import FileBodyProducer, ResponseDone
 from twisted.web.http import PotentialDataLoss
 from zope.interface import implementer
 
 import treq
 
-from synapse.logging.context import defer_to_thread, make_deferred_yieldable
+from synapse.logging.context import defer_to_threadpool, make_deferred_yieldable
 from synapse.media._base import Responder
 from synapse.media.storage_provider import StorageProvider
 
@@ -177,8 +185,9 @@ async def _with_timeout(reactor, timeout_s, d):
 
     Only for RAW treq deferreds (json/content body reads) that are NOT
     logcontext-managed — `make_deferred_yieldable` here is correct. Do NOT use it
-    for `defer_to_thread`, which is already logcontext-wrapped (a second wrap would
-    resume under the sentinel context); bound that one with `addTimeout` directly.
+    for `defer_to_threadpool`, which is already logcontext-wrapped (a second wrap
+    would resume under the sentinel context); bound that one with `addTimeout`
+    directly.
     """
     # On deadline, addTimeout cancels `d` and converts the resulting
     # CancelledError to a defer.TimeoutError on the errback chain.
@@ -186,23 +195,135 @@ async def _with_timeout(reactor, timeout_s, d):
     return await make_deferred_yieldable(d)
 
 
+# Upper bound on the provider's OWN cache-file thread pool (see
+# `_cache_file_pool`). Deliberately NOT mainline's 40.
+#
+# Mainline's 40 is sized for threads that PARK: `s3_storage_provider`'s
+# `_stream_to_producer` sits on `wakeup_event.wait(90)` for as long as the
+# consumer keeps it paused, so it needs roughly one thread per concurrent
+# download. This provider never parks a pool thread — a thread is held for
+# exactly one `open()`, one 64 KiB `read()` or one `close()` and then released,
+# and a PAUSED stream holds none at all (see `_ThreadedFileBodyProducer`). Demand
+# here is therefore "one short syscall per in-flight upload", not "one thread per
+# upload for its lifetime".
+#
+# Sizing: at a pessimistic 1 ms per 64 KiB cache read a SINGLE thread sustains
+# ~64 MB/s, far above the 1 MB/s floor `_STORE_MIN_THROUGHPUT_BPS` assumes and
+# above `max_upload_size` (50M) per request, so a handful of threads is already
+# ample. 8 buys headroom for two things: a burst of EOF closes landing alongside
+# in-flight reads, and the one case that CAN hold a thread — a wedged media-store
+# mount, where a read and the close that follows it can each strand one, because
+# a call already running in a `deferToThreadPool` thread cannot be cancelled.
+#
+# `min=0` so an idle Synapse pays nothing. (Mainline leaves `minthreads` at
+# twisted's `ThreadPool` default of 5 and so keeps 5 threads alive forever.)
+_CACHE_POOL_MAX_THREADS = 8
+
+# The process-wide pool, created on first use by `_cache_file_pool`.
+_cache_pool = None
+
+
+def _cache_file_pool(reactor):
+    """
+    The provider's OWN thread pool for blocking cache-file work — created once
+    per process and stopped on reactor shutdown.
+
+    WHY NOT `reactor.getThreadPool()`. Twisted sizes the shared reactor pool at
+    `ThreadPool(0, 10)` (`twisted/internet/base.py::_initThreadPool`) and Synapse
+    never resizes it: there is no homeserver.yaml knob, and `synapse/app/_base.py`
+    only registers it for metrics. TEN THREADS is the entire budget for our
+    process — a MONOLITH (`replicas: 1`, no media worker), so client API, media
+    and auth all share it. The competition is severe, and we are part of it:
+
+      - `BackgroundFileConsumer._writer` (`synapse/util/file_consumer.py`) takes
+        one of those ten via `reactor.getThreadPool()` and PARKS it on an untimed
+        `Queue.get()` for the ENTIRE duration of a transfer. Synapse uses it in
+        one place that matters here — `MediaStorage.ensure_media_is_in_local_cache`
+        -> `provider.fetch(...)`, i.e. OUR OWN fetch — reached from
+        `generate_local_exact_thumbnail` / `_generate_thumbnails`. Our media store
+        is an ephemeral 5 GiB emptyDir with a purge sidecar, so a thumbnail
+        request for any purged or post-restart upload takes exactly that path.
+        Ten concurrent cold thumbnails pin the pool outright. NOTE this is NOT
+        bounded by the `timeout_s` stall deadlines: those bound a SILENT stream,
+        whereas a perfectly healthy download holds its writer thread for as long
+        as it takes to transfer.
+      - `MediaStorage.write_to_file` (every upload), thumbnail generation
+        (CPU-bound Pillow, several per image), large-response JSON encoding and
+        bcrypt login hashing all land on the same pool via `defer_to_thread`.
+
+    Meanwhile `store_file` runs under `effective_timeout` and the guarded open
+    under `store_timeout_s`. Those clocks do not care whether our work is RUNNING
+    or merely QUEUED, so a full pool fails an upload that is healthy in every
+    other respect — the finding this pool answers.
+
+    Synapse itself treats the shared pool as scarce and carves out dedicated ones
+    for precisely this reason: `gai_resolver` ("numbers of DNS requests don't
+    starve out other users of the threadpool") and the 50-thread
+    `media_threadpool` backing `ThreadedFileSender`, whose docstring states the
+    rule we also follow — "we're never waiting in the threadpool, as otherwise
+    its easy to starve it of threads". The mainline `synapse-s3-storage-provider`
+    owns one too (`ThreadPool(name="s3-pool", maxthreads=40)`).
+
+    The isolation runs BOTH ways, which is the second reason for it: a wedged
+    media-store mount now strands OUR threads instead of Synapse's login,
+    thumbnail and upload paths.
+
+    LIFECYCLE. Module-level, not per-instance, and guarded. Synapse builds one
+    provider per `media_storage_providers` entry from `MediaRepository` (itself
+    `@cache_in_self`), but nothing stops a process from constructing the provider
+    more than once — a second config entry, a second HomeServer, a test harness —
+    and mainline's unguarded per-instance `ThreadPool(...)` + shutdown trigger in
+    `__init__` would then start a second pool and register a second trigger. One
+    pool per PROCESS is the right granularity anyway: it mirrors twisted's own
+    reactor pool and Synapse's `@cache_in_self` `media_threadpool`.
+
+    Created LAZILY and only ever on the reactor thread (`__init__`, `store_file`
+    and the producer's read loop all run there), so no lock is needed and a
+    process that never stores media never spawns a thread.
+
+    The shutdown trigger is registered BEFORE `start()` on purpose: if a reactor
+    cannot register one, no threads have been spawned yet and there is nothing to
+    leak. It is not optional — without it Python waits on the non-daemon workers
+    and Synapse shutdown hangs (~30 s; the bug mainline retrofitted in its PR #43)
+    — and the reactor trigger is the ONLY route available: `ModuleApi` exposes no
+    shutdown hook, and `HomeServer.register_sync_shutdown_handler` landed after
+    the deployed v1.132.0 and is private anyway. `"during"` is the phase twisted
+    uses for its own pool and mainline for its s3 pool.
+    """
+    global _cache_pool
+    if _cache_pool is None:
+        pool = ThreadPool(
+            minthreads=0,
+            maxthreads=_CACHE_POOL_MAX_THREADS,
+            name="alkemio-fileservice-cache",
+        )
+        reactor.addSystemEventTrigger("during", "shutdown", pool.stop)
+        pool.start()
+        _cache_pool = pool
+    return _cache_pool
+
+
 def _read_in_thread(reactor, fn):
     """
-    Run ONE blocking cache-file read in the reactor's thread pool.
+    Run ONE blocking cache-file read in the PROVIDER'S thread pool.
+
+    The pool is ours, not `reactor.getThreadPool()` — see `_cache_file_pool` for
+    why the shared ten-thread reactor pool cannot be relied on here.
 
     Deliberately twisted's own threadpool bridge and NOT Synapse's
-    `defer_to_thread`: a Cooperator tick runs under the SENTINEL logcontext (the
-    cooperator schedules via `reactor.callLater`, which carries none), and
+    `defer_to_threadpool`: a Cooperator tick runs under the SENTINEL logcontext
+    (the cooperator schedules via `reactor.callLater`, which carries none), and
     Synapse's helper logs `Calling defer_to_threadpool from sentinel context:
     metrics will be lost` every time it is called that way — that would be one
     warning per 64 KiB chunk, ~1600 of them for a 100 MB upload. There is no
     logcontext inside the tick to preserve, so there is nothing to lose by
-    skipping the wrapper.
+    skipping the wrapper. (The guarded open in `store_file` DOES run under a real
+    logcontext and so uses Synapse's wrapper, on this same pool.)
 
     This is the single seam through which every cache-file read must pass; the
     unit tests substitute it to drive the loop without a real thread pool.
     """
-    return threads.deferToThreadPool(reactor, reactor.getThreadPool(), fn)
+    return threads.deferToThreadPool(reactor, _cache_file_pool(reactor), fn)
 
 
 def _close_off_reactor(reactor, handle) -> None:
@@ -215,10 +336,17 @@ def _close_off_reactor(reactor, handle) -> None:
     stall `_ThreadedFileBodyProducer` exists to prevent — merely relocated from
     the read loop into teardown — so the close goes to the thread pool too.
 
+    It goes to the PROVIDER'S pool, not `reactor.getThreadPool()`, for the same
+    reason the reads do (see `_cache_file_pool`): the close is the tail of the
+    same upload, under the same deadline, and on a wedged mount it strands a
+    thread for as long as the read it is waiting on — which must not be one of
+    Synapse's ten.
+
     Fire-and-forget and best-effort: nothing can act on a close failure, and a
     failure here must never fail an upload that is already durable. Falls back to
-    an inline close when the reactor exposes no thread pool (the unit tests'
-    `Clock`), where no in-flight read can collide with it.
+    an inline close if the pool cannot be obtained or the dispatch fails (the
+    unit tests' `Clock`/stand-in reactors take this path, where no in-flight read
+    can collide with it).
     """
 
     def _close():
@@ -227,12 +355,8 @@ def _close_off_reactor(reactor, handle) -> None:
         except Exception as exc:  # noqa: BLE001 - best-effort
             logger.debug("cache-file close failed (ignored): %s", exc)
 
-    get_pool = getattr(reactor, "getThreadPool", None)
-    if get_pool is None:
-        _close()
-        return
     try:
-        get_pool().callInThread(_close)
+        _cache_file_pool(reactor).callInThread(_close)
     except Exception as exc:  # noqa: BLE001 - best-effort dispatch
         logger.debug("threaded cache-file close dispatch failed: %s", exc)
         _close()
@@ -1079,7 +1203,7 @@ class FileServiceStorageProvider(StorageProvider):
         # attribute — derive the absolute path the same way the on-disk store does
         # (matching synapse-s3-storage-provider).
         #
-        # Opening it is done OFF the reactor (defer_to_thread below) because
+        # Opening it is done OFF the reactor (defer_to_threadpool below) because
         # open() on a wedged media-store mount can block for an unbounded time and
         # would stall the whole Synapse worker.
         #
@@ -1097,7 +1221,7 @@ class FileServiceStorageProvider(StorageProvider):
         # Bound the open by `store_timeout_s` so a wedged media-store mount fails
         # the upload fast instead of stalling the request forever. Two caveats
         # handled here:
-        #  - `defer_to_thread` already returns a logcontext-wrapped Deferred, so we
+        #  - `defer_to_threadpool` already returns a logcontext-wrapped Deferred, so we
         #    add the deadline with `addTimeout` DIRECTLY and await it WITHOUT a
         #    second `make_deferred_yieldable` (that would resume the rest of the
         #    upload under the sentinel logcontext).
@@ -1139,7 +1263,16 @@ class FileServiceStorageProvider(StorageProvider):
                     except Exception:  # noqa: BLE001 - best-effort
                         pass
 
-        open_d = defer_to_thread(self.reactor, _guarded_open)
+        # Synapse's `defer_to_threadpool` (not twisted's) because this runs under
+        # a REAL logcontext — unlike the Cooperator tick in `_read_in_thread` —
+        # so the wrapper has a context to preserve and logs no sentinel warning.
+        # On the PROVIDER'S pool, not the shared reactor pool: this open is the
+        # first thing an upload does and it carries its own `store_timeout_s`
+        # deadline, so a queued-behind-a-full-pool open fails the upload just as
+        # surely as a queued read would (see `_cache_file_pool`).
+        open_d = defer_to_threadpool(
+            self.reactor, _cache_file_pool(self.reactor), _guarded_open
+        )
         open_d.addTimeout(self.store_timeout_s, self.reactor)
         try:
             stream, file_size = await open_d
@@ -1452,7 +1585,7 @@ def _positive_number(config: dict, key: str, default, cast):
 def _open_stream(file_path: str):
     """Open the local cache file for streaming into the multipart body.
 
-    Called via defer_to_thread so the open() syscall never runs on the reactor;
+    Called via defer_to_threadpool so the open() syscall never runs on the reactor;
     treq's cooperative FileBodyProducer then reads the handle in chunks, so the
     file is streamed rather than buffered whole in memory.
     """
