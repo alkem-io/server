@@ -29,12 +29,29 @@ file-service is the sole durable store.
                  Cache miss or ANY failure (non-200 / transport / timeout /
                  malformed body) -> return None, which Synapse treats as a cache
                  miss (media-not-found) — the correct degradation during an
-                 outage. Timeout model: connection + headers + metadata-read +
-                 drain are each bounded by `timeout_s`; the streamed content body
-                 is bounded by a TIME-TO-FIRST-BYTE deadline (also `timeout_s`),
-                 after which legitimate slow-client backpressure governs. A fixed
-                 whole-body deadline is deliberately AVOIDED — it cannot
-                 distinguish a file-service stall from client backpressure.
+                 outage. Timeout model: connection + headers + metadata-read are
+                 bounded by `timeout_s`; the keep-alive drain of a non-streamed
+                 reply is bounded FAR tighter by the fixed `DRAIN_TIMEOUT_S`
+                 (it is a courtesy, not a request — see `_drain_and_release`);
+                 the streamed content body is bounded by a TIME-TO-FIRST-BYTE
+                 deadline (also `timeout_s`), after which legitimate slow-client
+                 backpressure governs. A fixed whole-body deadline is
+                 deliberately AVOIDED — it cannot distinguish a file-service
+                 stall from client backpressure.
+
+Redirects: NOT specially handled, and deliberately so. file-service is an
+in-cluster internal service reached by service DNS with no proxy in front, and
+it never redirects on these endpoints — a 3xx cannot legitimately occur, so
+there is nothing to handle. (For the record, treq FOLLOWS redirects by default:
+`treq.api.get`/`post` default `allow_redirects=True` and
+`treq.client.HTTPClient.request` wraps the agent in twisted's `RedirectAgent`.
+Earlier comments here claimed the opposite; they were wrong. Should file-service
+ever gain a redirecting front door, this is the assumption to revisit.)
+
+Truncation: a streamed content body that ends short of its declared
+`Content-Length` is reported as an ERROR (never as a completed media stream) —
+see `_ConsumerSink`, whose docstring also records the residual Synapse-side
+exposure we cannot close from here.
 
 The provider holds NO durable state; the media_id <-> document mapping lives on
 the file-service document's opaque `externalReference`. It follows the standard
@@ -111,12 +128,26 @@ _MAX_META_BYTES = 1 << 20  # 1 MiB
 # Keep-alive drain bounds for non-streamed reply bodies (misses/errors, store
 # reply). The body is tiny in the common case; if it exceeds either bound the
 # backend is misbehaving, so we abort (tear down) rather than keep reading.
+#
+# This is deliberately a FIXED constant and NOT the operator-tunable `timeout_s`:
+# the drain is a keep-alive courtesy on a reply we have already decided to
+# discard, and every second it is allowed to stall is added latency on the
+# Element media read path (and on a 201 store that is already durable). Binding
+# it to `timeout_s` would let an operator raising the request timeout silently
+# raise worst-case miss latency too. See `_drain_and_release`.
 DRAIN_TIMEOUT_S = 2.0
 _MAX_DRAIN_BYTES = 1 << 20  # 1 MiB
 
 
 class _BodyTooLarge(Exception):
     """A response body exceeded its byte cap (`_MAX_META_BYTES`/`_MAX_DRAIN_BYTES`)."""
+
+
+class _ShortBody(Exception):
+    """
+    A streamed content body ended cleanly but delivered fewer bytes than the
+    response's declared `Content-Length` (see `_ConsumerSink.connectionLost`).
+    """
 
 
 class _OpenAfterTimeout(Exception):
@@ -191,6 +222,53 @@ class _ConsumerSink(Protocol):
     consumer (e.g. a slow Element client on the read path) can then pause/resume
     the upstream TCP read instead of forcing this protocol to buffer an unbounded
     amount of data in memory.
+
+    TRUNCATION CONTRACT — read this before changing `connectionLost`.
+
+    We NEVER report a short body as a completed media stream. Two independent
+    guards enforce that:
+
+      1. a non-clean close (`PotentialDataLoss`, `ResponseFailed`, a transport
+         error) errbacks — see `connectionLost`;
+      2. a CLEAN close that delivered fewer bytes than the response's declared
+         `Content-Length` errbacks with `_ShortBody`. file-service sets a
+         `Content-Length` on every `/content` path (the Go bridge refuses to
+         upload without one — see `sendAttachment` in
+         internal/infrastructure/matrix/mautrix.go), so this guard is armed for
+         real traffic. When the length is UNKNOWN (chunked, or a gzipped body
+         whose header length describes the compressed bytes) the guard stands
+         down and only (1) applies — see `_declared_body_length`.
+
+    Guard 2 is defence in depth rather than the sole detector: for an identity
+    body with a `Content-Length`, twisted's own `_IdentityTransferDecoder`
+    already raises `_DataLoss` on a short read, which reaches us as
+    `ResponseFailed` and trips guard 1. Guard 2 makes the invariant OURS instead
+    of a dependency's internal, and it closes this class's own leniency — we
+    accept a bare `ConnectionDone` as a clean end.
+
+    RESIDUAL EXPOSURE WE CANNOT CLOSE FROM HERE (Synapse-side, deliberate).
+    `synapse/media/media_storage.py::ensure_media_is_in_local_cache` opens the
+    FINAL cache path (`BackgroundFileConsumer(open(local_path, "wb"), ...)`) —
+    no temp file, no rename, no try/finally, no cleanup — and the later
+    completeness gate on that path is `os.path.exists(local_path)` ALONE. So
+    whatever bytes we wrote before erroring stay on disk under the final name and
+    a subsequent request presents them as complete. Erroring cannot undo that:
+    the file is created by Synapse's `open()` before our first byte, so even a
+    fetch that fails with ZERO bytes written (e.g. the TTFB deadline below)
+    leaves a 0-byte file behind. That is a Synapse defect, not one we can fix
+    here without over-reaching:
+      - the path is only reachable through `consumer._file_obj.name`, a PRIVATE
+        attribute of a Synapse-internal consumer that is not part of `IConsumer`
+        and is absent on the HTTP-serving path (where the consumer is the
+        twisted Request);
+      - unlinking it races a concurrent re-fetch that has already opened the same
+        final path, turning a rare corruption into a rare hard failure;
+      - it would put a blocking filesystem syscall on the reactor thread — the
+        exact hazard `store_file` goes off-reactor to avoid.
+    We therefore fail LOUDLY and leave the cleanup to Synapse. Note the
+    HTTP-serving path (`synapse/media/_base.py::respond_with_responder`) is NOT
+    exposed: it sets `Content-Length` from the DB `media_length`, so a truncated
+    serve is detected by the HTTP client and nothing is persisted.
     """
 
     def __init__(
@@ -199,6 +277,7 @@ class _ConsumerSink(Protocol):
         finished: "Deferred[int]",
         reactor=None,
         ttfb_timeout=None,
+        expected_length=None,
     ):
         self._consumer = consumer
         self._finished = finished
@@ -207,6 +286,8 @@ class _ConsumerSink(Protocol):
         self._reactor = reactor
         self._ttfb_timeout = ttfb_timeout
         self._ttfb = None  # pending time-to-first-byte timeout call (IDelayedCall)
+        # Declared Content-Length, or None when the framing does not carry one.
+        self._expected_length = expected_length
 
     def makeConnection(self, transport) -> None:
         Protocol.makeConnection(self, transport)
@@ -254,8 +335,25 @@ class _ConsumerSink(Protocol):
         if self._producer_registered:
             try:
                 self._consumer.unregisterProducer()
-            except (AttributeError, RuntimeError):
-                pass
+            except (AttributeError, RuntimeError) as exc:
+                # SWALLOWED DELIBERATELY — this is teardown, and the request is
+                # already being failed on the next lines. A consumer that has
+                # itself finished/closed first raises here (a Synapse
+                # BackgroundFileConsumer whose file is closed, or a twisted
+                # Request already finished), which is a benign shutdown race, not
+                # a fault: there is nothing left to unregister. Raising instead
+                # would replace the ACCURATE "file-service content stall" error
+                # below with a misleading AttributeError and skip
+                # `_stop_producing`, leaking the unbuffered connection we came
+                # here to abort. Debug-level only: on the normal path this is
+                # noise, and the outcome (a failed media fetch) is already
+                # reported by the errback.
+                logger.debug(
+                    "unregisterProducer during TTFB-timeout teardown raised "
+                    "%s: %s — consumer already torn down, ignoring",
+                    type(exc).__name__,
+                    exc,
+                )
             self._producer_registered = False
         _stop_producing(getattr(self, "transport", None))
         self._finished.errback(
@@ -282,13 +380,42 @@ class _ConsumerSink(Protocol):
         if self._producer_registered:
             try:
                 self._consumer.unregisterProducer()
-            except (AttributeError, RuntimeError):
-                pass
+            except (AttributeError, RuntimeError) as exc:
+                # SWALLOWED DELIBERATELY — same teardown race as
+                # `_on_ttfb_timeout`: the connection is already gone, so a
+                # consumer that closed first has nothing left to unregister.
+                # Raising here would be strictly worse than ignoring it, because
+                # `connectionLost` is the ONLY place the result of this stream is
+                # decided: the callback/errback below would never run and
+                # `_finished` would hang forever, stalling the media request
+                # rather than completing or failing it. Debug-level only — the
+                # real outcome is carried by the callback/errback that follows.
+                logger.debug(
+                    "unregisterProducer during connectionLost raised %s: %s — "
+                    "consumer already torn down, ignoring",
+                    type(exc).__name__,
+                    exc,
+                )
             self._producer_registered = False
 
         if self._finished.called:
             return
         if reason is None or reason.check(ResponseDone, ConnectionDone):
+            # Clean close — but "clean" is not "complete". If the response
+            # declared a Content-Length, the byte count MUST match it; a short
+            # body is a truncated download and must never be reported as a
+            # completed media stream (see the TRUNCATION CONTRACT above).
+            if (
+                self._expected_length is not None
+                and self._written != self._expected_length
+            ):
+                self._finished.errback(
+                    _ShortBody(
+                        "file-service content body ended after %d bytes, "
+                        "expected %d" % (self._written, self._expected_length)
+                    )
+                )
+                return
             self._finished.callback(self._written)
         else:
             self._finished.errback(reason)
@@ -308,6 +435,30 @@ class _DrainAndAbort(Protocol):
 
     def dataReceived(self, data: bytes) -> None:  # pragma: no cover - aborted
         pass
+
+
+def _declared_body_length(response):
+    """
+    The response's declared body length in bytes, or None when it is UNKNOWN.
+
+    twisted sets `IResponse.length` from `Content-Length` and otherwise leaves it
+    as the `UNKNOWN_LENGTH` SENTINEL (a str, not an int), so an `isinstance(...,
+    int)` test is the whole check — no need to import the sentinel. Two cases
+    deliberately read as unknown:
+
+      - a chunked / unframed body (twisted never sets `length`);
+      - a transfer-COMPRESSED body: treq always wraps the agent in
+        `ContentDecoderAgent(..., [(b"gzip", GzipDecoder)])`, and `GzipDecoder`
+        sets `length = UNKNOWN_LENGTH` because the `Content-Length` header
+        describes the COMPRESSED bytes, not the decoded ones we forward.
+        Comparing against that header would fail every gzipped stream.
+
+    bool is an int subclass, so exclude it explicitly.
+    """
+    length = getattr(response, "length", None)
+    if isinstance(length, bool) or not isinstance(length, int):
+        return None
+    return length
 
 
 def _body_end_is_clean(reason) -> bool:
@@ -408,6 +559,10 @@ class _FileServiceResponder(Responder):
     `deliverBody` raise), `__exit__` ABORTS the connection so the treq pool is
     not exhausted. `_streamed` is set only AFTER `deliverBody` succeeds, and
     `_abort` is idempotent, so the normal fully-streamed path never double-aborts.
+
+    The response's declared `Content-Length` is captured up front and handed to
+    the sink, which fails the stream if the body ends short of it (see
+    `_ConsumerSink`'s TRUNCATION CONTRACT).
     """
 
     def __init__(self, response, reactor=None, ttfb_timeout=None):
@@ -416,13 +571,18 @@ class _FileServiceResponder(Responder):
         self._aborted = False
         self._reactor = reactor
         self._ttfb_timeout = ttfb_timeout
+        self._expected_length = _declared_body_length(response)
 
     def write_to_consumer(self, consumer: IConsumer) -> "Deferred[int]":
         finished = defer.Deferred()  # type: Deferred[int]
         try:
             self._response.deliverBody(
                 _ConsumerSink(
-                    consumer, finished, self._reactor, self._ttfb_timeout
+                    consumer,
+                    finished,
+                    self._reactor,
+                    self._ttfb_timeout,
+                    self._expected_length,
                 )
             )
         except Exception as exc:  # noqa: BLE001 - a synchronous deliverBody raise
@@ -737,6 +897,7 @@ class FileServiceStorageProvider(StorageProvider):
 
             # unbuffered=True so we can RELEASE the reply connection without
             # reading it (a buffered reply's stopProducing is a no-op).
+            # Redirects are not specially handled — see the module docstring.
             resp = await make_deferred_yieldable(
                 treq.post(
                     url,
@@ -749,8 +910,8 @@ class FileServiceStorageProvider(StorageProvider):
             )
 
             if resp.code != _STORE_SUCCESS_CODE:
-                # Only 201 Created confirms a durable store. A 2xx-non-201, a 3xx
-                # redirect, or a 4xx/5xx is NOT a confirmed store — fail loudly.
+                # Only 201 Created confirms a durable store. Anything else — a
+                # 2xx-non-201, or a 4xx/5xx — is NOT a confirmed store: fail loudly.
                 # We never need the reply body: drain it (keep-alive), then fail.
                 await self._drain_and_release(resp)
                 raise RuntimeError(
@@ -828,6 +989,7 @@ class FileServiceStorageProvider(StorageProvider):
         try:
             # unbuffered=True so misses/errors can be RELEASED without reading
             # (a buffered response's stopProducing is a no-op — the old leak).
+            # Redirects are not specially handled — see the module docstring.
             meta_resp = await make_deferred_yieldable(
                 treq.get(
                     lookup_url,
@@ -842,9 +1004,8 @@ class FileServiceStorageProvider(StorageProvider):
                 return None
             if meta_resp.code != 200:
                 # Strict: only 200 carries a parseable doc. A 2xx-non-200 (e.g. 204)
-                # or a 3xx redirect (treq does not follow) is NOT a doc — miss,
-                # don't parse a non-doc body. (Matches the strict == 201 store check
-                # and the Go strict == http.StatusOK.)
+                # is NOT a doc — miss, don't parse a non-doc body. (Matches the
+                # strict == 201 store check and the Go strict == http.StatusOK.)
                 return await self._release_and_miss(
                     meta_resp,
                     "file-service by-reference unexpected HTTP %d for media_id=%s",
@@ -882,6 +1043,8 @@ class FileServiceStorageProvider(StorageProvider):
                 self.file_service_url,
                 quote(doc_id, safe=""),
             )
+            # Same flags as the lookup above: unbuffered so a non-200 can be
+            # released without reading.
             content_resp = await make_deferred_yieldable(
                 treq.get(
                     content_url,
@@ -903,8 +1066,8 @@ class FileServiceStorageProvider(StorageProvider):
                 return None
             if content_resp.code != 200:
                 # Strict: only a 200 streams the media body. A 2xx-non-200 (e.g.
-                # 204) or a 3xx redirect (treq does not follow) must NOT be streamed
-                # as media — miss, drain/abort the body instead.
+                # 204) must NOT be streamed as media — miss, drain/abort the
+                # body instead.
                 return await self._release_and_miss(
                     content_resp,
                     "file-service content unexpected HTTP %d for doc_id=%s media_id=%s",
