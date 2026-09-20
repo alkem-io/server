@@ -322,6 +322,10 @@ class _ThreadedFileBodyProducer(FileBodyProducer):
             try:
                 pending.stop()
             except task.TaskFinished:
+                # Already finished (the cooperative task completed, or a prior
+                # stopProducing stopped it) — `stop()` on a finished task raises
+                # rather than being a no-op. Nothing to stop is the desired end
+                # state here, so swallow it; the off-reactor close below still runs.
                 pass
         _close_off_reactor(self._reactor, self._inputFile)
 
@@ -515,11 +519,16 @@ class _ConsumerSink(Protocol):
 
         # Time-to-first-byte deadline: file-service returning 200 then going silent
         # BEFORE any body byte must not hang the media request (and hold the
-        # unbuffered connection open). This is a TTFB timeout ONLY — before the
-        # first byte the consumer hasn't paused anything, so an idle read is a real
-        # stall; AFTER the first byte, legitimate slow-client backpressure (a paused
-        # producer stops dataReceived) governs, which an idle timer cannot
-        # distinguish from a server stall, so we impose no further deadline.
+        # unbuffered connection open). Before the first byte the consumer has not
+        # paused anything, so an idle read is an unambiguous stall.
+        #
+        # AFTER the first byte the backpressure-suspended body-idle deadline takes
+        # over (see `_arm_idle` and the STALL CONTRACT in the class docstring). The
+        # two are strictly sequential: this one is cancelled in `dataReceived`, which
+        # is also where the idle deadline is first armed. A plain idle timer could not
+        # replace it, because it cannot distinguish a server stall from legitimate
+        # slow-client backpressure — which is why `_arm_idle` suspends on
+        # `pauseProducing` and re-arms on `resumeProducing`.
         if self._reactor is not None and self._ttfb_timeout is not None:
             self._ttfb = self._reactor.callLater(
                 self._ttfb_timeout, self._on_ttfb_timeout
