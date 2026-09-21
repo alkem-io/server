@@ -5,6 +5,7 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mocked, vi } from 'vitest';
 import { IMessage } from '../message/message.interface';
+import { ProxySurfaceUsageService } from '../proxy-surface/proxy.surface.usage.service';
 import { RoomDataLoader } from './room.data.loader';
 import { IRoom } from './room.interface';
 import { RoomResolverFields } from './room.resolver.fields';
@@ -15,6 +16,7 @@ describe('RoomResolverFields', () => {
   let roomService: Mocked<RoomService>;
   let authorizationService: Mocked<AuthorizationService>;
   let roomDataLoader: Mocked<RoomDataLoader>;
+  let proxySurfaceUsage: Mocked<ProxySurfaceUsageService>;
 
   const actorContext = { actorID: 'user-1' } as ActorContext;
 
@@ -40,10 +42,91 @@ describe('RoomResolverFields', () => {
     resolver = module.get(RoomResolverFields);
     roomService = module.get(RoomService);
     authorizationService = module.get(AuthorizationService);
+    proxySurfaceUsage = module.get(ProxySurfaceUsageService);
+  });
+
+  describe('proxy usage counting', () => {
+    const room = { id: 'room-1', type: 'conversation_group' } as any;
+    const context = { req: { headers: {} } } as any;
+
+    it('counts each proxy read once per resolved parent room, and readiness never', async () => {
+      roomService.getMessages.mockResolvedValue([]);
+      roomService.getRoomOrFail.mockResolvedValue({
+        ...room,
+        authorization: {},
+      });
+      roomService.getUnreadCounts.mockResolvedValue({
+        roomUnreadCount: 0,
+      } as any);
+      roomDataLoader.loadUnreadCount.mockResolvedValue(0);
+      roomDataLoader.loadLastMessage.mockResolvedValue(null);
+
+      await resolver.messages(room, context);
+      await resolver.lastMessage(room, context);
+      await resolver.unreadCount(room, actorContext, context);
+      await resolver.unreadCounts(room, actorContext, undefined, context);
+      resolver.readiness(room);
+
+      expect(
+        proxySurfaceUsage.record.mock.calls.map(([input]) => input)
+      ).toEqual([
+        {
+          surface: 'Room.messages',
+          roomType: 'conversation_group',
+          req: context.req,
+        },
+        {
+          surface: 'Room.lastMessage',
+          roomType: 'conversation_group',
+          req: context.req,
+        },
+        {
+          surface: 'Room.unreadCount',
+          roomType: 'conversation_group',
+          req: context.req,
+        },
+        {
+          surface: 'Room.unreadCounts',
+          roomType: 'conversation_group',
+          req: context.req,
+        },
+      ]);
+    });
   });
 
   it('should be defined', () => {
     expect(resolver).toBeDefined();
+  });
+
+  describe('readiness', () => {
+    it('resolves from the entity record without any adapter or service call', () => {
+      const room = {
+        id: 'room-1',
+        readiness: {
+          state: 'FAILED',
+          reason: 'ADAPTER_TIMEOUT',
+          detail: 'The messaging backend did not answer in time.',
+          updatedAt: '2026-09-04T10:00:00.000Z',
+        },
+      } as unknown as IRoom;
+
+      const result = resolver.readiness(room);
+
+      expect(result).toEqual({
+        state: 'FAILED',
+        reason: 'ADAPTER_TIMEOUT',
+        detail: 'The messaging backend did not answer in time.',
+        updatedDate: new Date('2026-09-04T10:00:00.000Z'),
+      });
+      expect(roomService.getRoomOrFail).not.toHaveBeenCalled();
+      expect(roomService.getMessages).not.toHaveBeenCalled();
+    });
+
+    it('reads a missing record as legacy UNKNOWN', () => {
+      const result = resolver.readiness({ id: 'room-1' } as unknown as IRoom);
+      expect(result.state).toBe('UNKNOWN');
+      expect(result.reason).toBe('LEGACY_UNVERIFIED');
+    });
   });
 
   describe('messages', () => {

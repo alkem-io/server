@@ -1,21 +1,24 @@
 import { JoinRuleInvite, JoinRulePublic } from '@alkemio/matrix-adapter-lib';
-import { GLOBAL_POLICY_ADMIN_COMMUNICATION_GRANT } from '@common/constants/authorization/global.policy.constants';
 import { CurrentActor, Profiling } from '@common/decorators';
-import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ITask } from '@domain/task/dto';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 import { TaskService } from '@services/task';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
 import { AdminCommunicationForumHierarchyReconcileService } from './admin.communication.forum.hierarchy.reconcile.service';
+import { createCommunicationOperationsPolicy } from './admin.communication.policy';
+import { AdminCommunicationReconcileService } from './admin.communication.reconcile.service';
 import { AdminCommunicationService } from './admin.communication.service';
 import { AdminCommunicationSpaceSyncService } from './admin.communication.space.sync.service';
 import { CommunicationAdminEnsureAccessInput } from './dto/admin.communication.dto.ensure.access.input';
 import { CommunicationAdminMigrateRoomsResult } from './dto/admin.communication.dto.migrate.rooms.result';
+import { CommunicationAdminReconcileConversationRoomsInput } from './dto/admin.communication.dto.reconcile';
 import { AdminCommunicationReconcileForumHierarchyInput } from './dto/admin.communication.dto.reconcile.forum.hierarchy';
 import { CommunicationAdminRemoveOrphanedRoomInput } from './dto/admin.communication.dto.remove.orphaned.room';
 import { CommunicationAdminUpdateRoomStateInput } from './dto/admin.communication.dto.update.room.state';
@@ -31,6 +34,7 @@ export class AdminCommunicationResolverMutations {
     private adminCommunicationService: AdminCommunicationService,
     private adminCommunicationSpaceSyncService: AdminCommunicationSpaceSyncService,
     private adminCommunicationForumHierarchyReconcileService: AdminCommunicationForumHierarchyReconcileService,
+    private adminCommunicationReconcileService: AdminCommunicationReconcileService,
     private taskService: TaskService,
     private platformOperationsAuditService: PlatformOperationsAuditService
   ) {
@@ -40,29 +44,14 @@ export class AdminCommunicationResolverMutations {
     // NARROWER role set than the platform authorization policy: GLOBAL_ADMIN
     // (historic holder) + PLATFORM_OPERATIONS_ADMIN. Every other global role,
     // GLOBAL_SUPPORT included, stays excluded — these mutations act directly
-    // on Matrix rooms across every Space.
-    //
-    // GRANT and PLATFORM_ADMIN are retained in the privilege set so
-    // GLOBAL_ADMIN's develop-era grants on this policy are preserved verbatim;
-    // the resolver gates themselves check PLATFORM_OPERATIONS_ADMIN. The
-    // privilege is granted here on this synthetic policy only — holders gain
-    // nothing on the platform policy through this rule.
+    // on Matrix rooms across every Space. The same policy gates the operator
+    // reads on platformAdmin.communication (shared factory).
     //
     // Covered by admin.communication.resolver.mutations.spec.ts — see the
     // 'authorization policy' describe block.
-    this.communicationGlobalAdminPolicy =
-      this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
-        [
-          AuthorizationRoleGlobal.GLOBAL_ADMIN,
-          AuthorizationRoleGlobal.PLATFORM_OPERATIONS_ADMIN,
-        ],
-        [
-          AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
-          AuthorizationPrivilege.GRANT,
-          AuthorizationPrivilege.PLATFORM_ADMIN,
-        ],
-        GLOBAL_POLICY_ADMIN_COMMUNICATION_GRANT
-      );
+    this.communicationGlobalAdminPolicy = createCommunicationOperationsPolicy(
+      this.authorizationPolicyService
+    );
   }
 
   @Mutation(() => Boolean, {
@@ -192,9 +181,58 @@ export class AdminCommunicationResolverMutations {
     }
   }
 
+  @Mutation(() => ITask, {
+    description:
+      'Reconcile recorded room readiness with the messaging backend: probes every room whose readiness is not READY (or every room with includeReady), records READY or FAILED/ROOM_MISSING — retiring UNKNOWN — and, with repair, re-creates missing conversation rooms under their existing id and converges membership. Runs as a background task; the returned Task completes with a JSON summary line {scanned, ready, failed, repaired, repairFailed, unknownRemaining} readable through the task query. Idempotent — safe to re-run.',
+  })
+  @Profiling.api
+  async adminCommunicationReconcileConversationRooms(
+    @Args('reconcileData')
+    reconcileData: CommunicationAdminReconcileConversationRoomsInput,
+    @CurrentActor() actorContext: ActorContext
+  ): Promise<ITask> {
+    await this.authorizationService.grantAccessOrFail(
+      actorContext,
+      this.communicationGlobalAdminPolicy,
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
+      'communications admin reconcile conversation rooms'
+    );
+    try {
+      const task = await this.adminCommunicationReconcileService.start({
+        repair: reconcileData.repair,
+        includeReady: reconcileData.includeReady,
+      });
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'adminCommunicationReconcileConversationRooms',
+        target: {
+          taskID: task.id,
+          repair: reconcileData.repair,
+          includeReady: reconcileData.includeReady,
+        },
+        outcome: 'success',
+      });
+      return task;
+    } catch (error) {
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'adminCommunicationReconcileConversationRooms',
+        target: {
+          repair: reconcileData.repair,
+          includeReady: reconcileData.includeReady,
+        },
+        outcome: 'failure',
+        error,
+      });
+      throw error;
+    }
+  }
+
   @Mutation(() => CommunicationAdminMigrateRoomsResult, {
     description:
       'Create rooms for legacy conversations that were created without one (from lazy room creation era).',
+    deprecationReason:
+      'REMOVE_AFTER=2026-12-20 | Dead since roomId became NOT NULL; replaced by adminCommunicationReconcileConversationRooms (readiness-based reconciliation).',
   })
   @Profiling.api
   async adminCommunicationMigrateOrphanedConversations(

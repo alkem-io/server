@@ -1,5 +1,6 @@
 import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { RoomReadinessRecord } from '@domain/communication/room/dto/room.readiness';
 import { Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
@@ -124,7 +125,9 @@ export class RoomLookupService {
    */
   async updatePartial(
     roomId: string,
-    fields: Partial<Record<'displayName' | 'avatarUrl', string | null>>
+    fields: Partial<Record<'displayName' | 'avatarUrl', string | null>> & {
+      readiness?: RoomReadinessRecord;
+    }
   ): Promise<void> {
     await this.roomRepository.update(roomId, fields as any);
   }

@@ -5,10 +5,12 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TaskService } from '@services/task';
+import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock, vi } from 'vitest';
 import { AdminCommunicationForumHierarchyReconcileService } from './admin.communication.forum.hierarchy.reconcile.service';
+import { AdminCommunicationReconcileService } from './admin.communication.reconcile.service';
 import { AdminCommunicationResolverMutations } from './admin.communication.resolver.mutations';
 import { AdminCommunicationService } from './admin.communication.service';
 
@@ -19,6 +21,8 @@ describe('AdminCommunicationResolverMutations', () => {
   let adminCommunicationService: Record<string, Mock>;
   let adminCommunicationForumHierarchyReconcileService: Record<string, Mock>;
   let taskService: Record<string, Mock>;
+  let adminCommunicationReconcileService: Record<string, Mock>;
+  let platformOperationsAuditService: Record<string, Mock>;
 
   const actorContext = { actorID: 'actor-1' } as any as ActorContext;
 
@@ -39,6 +43,12 @@ describe('AdminCommunicationResolverMutations', () => {
       AdminCommunicationForumHierarchyReconcileService
     ) as any;
     taskService = module.get(TaskService) as any;
+    adminCommunicationReconcileService = module.get(
+      AdminCommunicationReconcileService
+    ) as any;
+    platformOperationsAuditService = module.get(
+      PlatformOperationsAuditService
+    ) as any;
   });
 
   afterEach(() => {
@@ -47,6 +57,70 @@ describe('AdminCommunicationResolverMutations', () => {
 
   it('should be defined', () => {
     expect(resolver).toBeDefined();
+  });
+
+  describe('adminCommunicationReconcileConversationRooms', () => {
+    const input = { repair: true, includeReady: false } as any;
+
+    it('denies non-operators before starting anything', async () => {
+      authorizationService.grantAccessOrFail.mockImplementation(() => {
+        throw new Error('forbidden');
+      });
+
+      await expect(
+        resolver.adminCommunicationReconcileConversationRooms(
+          input,
+          actorContext
+        )
+      ).rejects.toThrow('forbidden');
+      expect(adminCommunicationReconcileService.start).not.toHaveBeenCalled();
+      expect(
+        platformOperationsAuditService.recordOperation
+      ).not.toHaveBeenCalled();
+    });
+
+    it('starts the sweep task, returns it and audits the start', async () => {
+      const task = { id: 'task-1', status: 'in-progress' };
+      adminCommunicationReconcileService.start.mockResolvedValue(task);
+
+      const result =
+        await resolver.adminCommunicationReconcileConversationRooms(
+          input,
+          actorContext
+        );
+
+      expect(result).toBe(task);
+      expect(adminCommunicationReconcileService.start).toHaveBeenCalledWith({
+        repair: true,
+        includeReady: false,
+      });
+      expect(
+        platformOperationsAuditService.recordOperation
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorID: 'actor-1',
+          action: 'adminCommunicationReconcileConversationRooms',
+          outcome: 'success',
+          target: expect.objectContaining({ taskID: 'task-1', repair: true }),
+        })
+      );
+    });
+
+    it('audits a failed start and rethrows', async () => {
+      adminCommunicationReconcileService.start.mockRejectedValue(
+        new Error('cache down')
+      );
+
+      await expect(
+        resolver.adminCommunicationReconcileConversationRooms(
+          input,
+          actorContext
+        )
+      ).rejects.toThrow('cache down');
+      expect(
+        platformOperationsAuditService.recordOperation
+      ).toHaveBeenCalledWith(expect.objectContaining({ outcome: 'failure' }));
+    });
   });
 
   describe('adminCommunicationEnsureAccessToCommunications', () => {

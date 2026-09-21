@@ -69,6 +69,12 @@ export class SubscriptionReadService {
     );
   }
 
+  public subscribeToConversationGovernanceEvents() {
+    return this.subscriptionConversationEvents.asyncIterableIterator(
+      SubscriptionType.CONVERSATION_GOVERNANCE_EVENTS
+    );
+  }
+
   public subscribeToPollVoteUpdated() {
     return this.subscriptionPollVoteUpdated.asyncIterableIterator(
       SubscriptionType.POLL_VOTE_UPDATED

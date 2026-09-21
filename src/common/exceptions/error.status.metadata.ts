@@ -467,6 +467,14 @@ const STATUS_METADATA: Record<AlkemioErrorStatus, ErrorMetadata> = {
     specificCode: 118,
     userMessage: 'userMessages.system.excalidrawServerInit',
   },
+  // The messaging adapter being unreachable is infrastructure unavailability,
+  // not an authorization outcome; 121 is the next free slot after the
+  // contiguous 101-120 band.
+  [AlkemioErrorStatus.COMMUNICATION_ADAPTER_UNAVAILABLE]: {
+    category: ErrorCategory.SYSTEM,
+    specificCode: 121,
+    userMessage: 'userMessages.system.communicationAdapterUnavailable',
+  },
   // ═══════════════════════════════════════════════════════════════════════════
   // 99xxx - FALLBACK: Unmapped errors
   // ═══════════════════════════════════════════════════════════════════════════

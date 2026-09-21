@@ -16,11 +16,13 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { MessageModule } from '../message/message.module';
 import { MessageAttachmentModule } from '../message-attachment/message.attachment.module';
+import { ProxySurfaceModule } from '../proxy-surface/proxy.surface.module';
 import { RoomLookupModule } from '../room-lookup/room.lookup.module';
 import { VirtualContributorMessageModule } from '../virtual.contributor.message/virtual.contributor.message.module';
 import { RoomDataLoader } from './room.data.loader';
 import { Room } from './room.entity';
 import { RoomEventResolverSubscription } from './room.event.resolver.subscription';
+import { RoomReadinessService } from './room.readiness.service';
 import { RoomResolverFields } from './room.resolver.fields';
 import { RoomResolverMutations } from './room.resolver.mutations';
 import { RoomService } from './room.service';
@@ -45,12 +47,14 @@ import { RoomServiceEvents } from './room.service.events';
     UserLookupModule,
     RoomLookupModule,
     TypeOrmModule.forFeature([Room]),
+    ProxySurfaceModule,
     SubscriptionServiceModule,
     InAppNotificationModule,
     TaskBoardModule,
   ],
   providers: [
     RoomService,
+    RoomReadinessService,
     RoomAuthorizationService,
     RoomResolverFields,
     RoomResolverMutations,
@@ -58,6 +62,11 @@ import { RoomServiceEvents } from './room.service.events';
     RoomServiceEvents,
     RoomDataLoader,
   ],
-  exports: [RoomService, RoomServiceEvents, RoomAuthorizationService],
+  exports: [
+    RoomService,
+    RoomReadinessService,
+    RoomServiceEvents,
+    RoomAuthorizationService,
+  ],
 })
 export class RoomModule {}

@@ -3,11 +3,12 @@ import { LogContext } from '@common/enums';
 import { ForbiddenException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { Inject, LoggerService } from '@nestjs/common';
-import { Resolver } from '@nestjs/graphql';
+import { Context, Resolver } from '@nestjs/graphql';
 import { SubscriptionReadService } from '@services/subscriptions/subscription-service';
 import { ConversationEventSubscriptionPayload } from '@services/subscriptions/subscription-service/dto';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ProxySurfaceUsageService } from '../proxy-surface/proxy.surface.usage.service';
 import { IConversation } from './conversation.interface';
 import {
   ConversationEventSubscriptionResult,
@@ -39,6 +40,7 @@ const rehydrateConversationDates = (
 export class ConversationEventResolverSubscription {
   constructor(
     private subscriptionService: SubscriptionReadService,
+    private proxySurfaceUsage: ProxySurfaceUsageService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -143,7 +145,10 @@ export class ConversationEventResolverSubscription {
       },
     }
   )
-  public async conversationEvents(@CurrentActor() actorContext: ActorContext) {
+  public async conversationEvents(
+    @CurrentActor() actorContext: ActorContext,
+    @Context() context?: IGraphQLContext
+  ) {
     if (!actorContext.actorID) {
       throw new ForbiddenException(
         'User could not be resolved',
@@ -156,6 +161,13 @@ export class ConversationEventResolverSubscription {
       `[Conversation Events] User ${actorContext.actorID} subscribed to conversation events`,
       LogContext.SUBSCRIPTIONS
     );
+
+    // The mixed channel is a retirement candidate: counted once at
+    // registration, without a room kind.
+    this.proxySurfaceUsage.record({
+      surface: 'Subscription.conversationEvents',
+      req: context?.req,
+    });
 
     return this.subscriptionService.subscribeToConversationEvents();
   }

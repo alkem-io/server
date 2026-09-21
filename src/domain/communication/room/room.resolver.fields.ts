@@ -4,15 +4,24 @@ import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { MessageID } from '@domain/common/scalars';
 import { UseGuards } from '@nestjs/common';
-import { Args, Int, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import {
+  Args,
+  Context,
+  Int,
+  Parent,
+  ResolveField,
+  Resolver,
+} from '@nestjs/graphql';
 import {
   AuthorizationActorHasPrivilege,
   CurrentActor,
 } from '@src/common/decorators';
 import { IMessage } from '../message/message.interface';
 import { MessageAttachmentService } from '../message-attachment/message.attachment.service';
+import { ProxySurfaceUsageService } from '../proxy-surface/proxy.surface.usage.service';
 import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
 import { RoomUnreadCounts } from './dto/room.dto.unread.counts';
+import { RoomReadiness, toRoomReadiness } from './dto/room.readiness';
 import { RoomDataLoader } from './room.data.loader';
 import { IRoom } from './room.interface';
 import { RoomService } from './room.service';
@@ -23,8 +32,18 @@ export class RoomResolverFields {
     private readonly roomService: RoomService,
     private readonly authorizationService: AuthorizationService,
     private readonly roomDataLoader: RoomDataLoader,
-    private readonly messageAttachmentService: MessageAttachmentService
+    private readonly messageAttachmentService: MessageAttachmentService,
+    private readonly proxySurfaceUsage: ProxySurfaceUsageService
   ) {}
+
+  /** Proxy reads count once per resolved parent room. */
+  private count(surface: string, room: IRoom, context?: IGraphQLContext) {
+    this.proxySurfaceUsage.record({
+      surface,
+      roomType: room.type,
+      req: context?.req,
+    });
+  }
 
   @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
@@ -32,12 +51,25 @@ export class RoomResolverFields {
     nullable: false,
     description: 'Messages in this Room.',
   })
-  async messages(@Parent() room: IRoom): Promise<IMessage[]> {
+  async messages(
+    @Parent() room: IRoom,
+    @Context() context?: IGraphQLContext
+  ): Promise<IMessage[]> {
+    this.count('Room.messages', room, context);
     const result = await this.roomService.getMessages(room);
     if (!result) return [];
     // Share one bucket/document lookup across the history field resolvers.
     await this.messageAttachmentService.stampAttachmentBucket(room, result);
     return result;
+  }
+
+  @ResolveField('readiness', () => RoomReadiness, {
+    nullable: false,
+    description:
+      'Whether the messaging backend room behind this Room is known to exist, and why. Read from the platform record; never a backend round trip. UNKNOWN means not yet verified — treat as usable and offer repair on failure.',
+  })
+  readiness(@Parent() room: IRoom): RoomReadiness {
+    return toRoomReadiness(room.readiness);
   }
 
   @ResolveField('vcInteractions', () => [IVcInteraction], {
@@ -78,8 +110,10 @@ export class RoomResolverFields {
       description:
         'Optional thread IDs to get per-thread unread counts. If not provided, only room-level count is returned.',
     })
-    threadIds?: string[]
+    threadIds?: string[],
+    @Context() context?: IGraphQLContext
   ): Promise<RoomUnreadCounts> {
+    this.count('Room.unreadCounts', room, context);
     const reloadedRoom = await this.roomService.getRoomOrFail(room.id);
     this.authorizationService.grantAccessOrFail(
       actorContext,
@@ -104,8 +138,10 @@ export class RoomResolverFields {
   })
   async unreadCount(
     @Parent() room: IRoom,
-    @CurrentActor() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext,
+    @Context() context?: IGraphQLContext
   ): Promise<number> {
+    this.count('Room.unreadCount', room, context);
     return this.roomDataLoader.loadUnreadCount(room.id, actorContext.actorID);
   }
 
@@ -116,7 +152,11 @@ export class RoomResolverFields {
     description:
       'The last message sent to the Room. Useful for conversation previews.',
   })
-  async lastMessage(@Parent() room: IRoom): Promise<IMessage | null> {
+  async lastMessage(
+    @Parent() room: IRoom,
+    @Context() context?: IGraphQLContext
+  ): Promise<IMessage | null> {
+    this.count('Room.lastMessage', room, context);
     return this.roomDataLoader.loadLastMessage(room.id);
   }
 }

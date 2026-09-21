@@ -3,5 +3,8 @@ export * from './conversation.dto.create';
 export * from './conversation.dto.delete';
 export * from './conversation.dto.leave';
 export * from './conversation.dto.remove-member';
+export * from './conversation.dto.repair';
 export * from './conversation.dto.update';
+export * from './conversation.governance.event';
+export * from './conversation.repair.result';
 export * from './subscription';

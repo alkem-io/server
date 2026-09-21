@@ -1,4 +1,5 @@
 import { ActorContext } from '@core/actor-context/actor.context';
+import { recordAuthenticationMethod } from '@core/auth/authentication.method';
 import {
   CORRELATION_ID_REQUEST_KEY,
   getCorrelationId,
@@ -62,6 +63,7 @@ export class HydraBearerStrategy extends PassportStrategy(
         correlationId;
     }
 
+    recordAuthenticationMethod(req, 'hydra-bearer');
     return result.actorContext;
   }
 }

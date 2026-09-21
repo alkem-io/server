@@ -7,14 +7,18 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { MessageID } from '@domain/common/scalars';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IMessage } from '../message/message.interface';
 import { IMessageReaction } from '../message.reaction/message.reaction.interface';
 import { MessageAttachmentService } from '../message-attachment/message.attachment.service';
+import { hasAttachments } from '../proxy-surface/proxy.surface.media';
+import { ProxySurfaceUsageService } from '../proxy-surface/proxy.surface.usage.service';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.message';
 import { RoomMarkMessageReadInput } from './dto/room.dto.mark.message.read';
@@ -37,7 +41,9 @@ export class RoomResolverMutations {
     private roomLookupService: RoomLookupService,
     private userLookupService: UserLookupService,
     private communicationAdapter: CommunicationAdapter,
-    private messageAttachmentService: MessageAttachmentService
+    private messageAttachmentService: MessageAttachmentService,
+    private proxySurfaceUsage: ProxySurfaceUsageService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   @Mutation(() => IMessage, {
@@ -46,7 +52,8 @@ export class RoomResolverMutations {
   })
   async sendMessageToRoom(
     @Args('messageData') messageData: RoomSendMessageInput,
-    @CurrentActor() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext,
+    @Context() context?: IGraphQLContext
   ): Promise<IMessage> {
     const room = await this.roomService.getRoomOrFail(messageData.roomID, {
       relations: { authorization: true },
@@ -58,6 +65,12 @@ export class RoomResolverMutations {
       AuthorizationPrivilege.CREATE_MESSAGE,
       `room send message: ${room.id}`
     );
+    this.proxySurfaceUsage.record({
+      surface: 'Mutation.sendMessageToRoom',
+      roomType: room.type,
+      media: hasAttachments(messageData),
+      req: context?.req,
+    });
 
     await this.validateMessageOnCalloutOrFail(room);
     await this.validateMessageOnDirectConversationOrFail(room, actorContext);
@@ -171,7 +184,8 @@ export class RoomResolverMutations {
   })
   async sendMessageReplyToRoom(
     @Args('messageData') messageData: RoomSendMessageReplyInput,
-    @CurrentActor() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext,
+    @Context() context?: IGraphQLContext
   ): Promise<IMessage> {
     const room = await this.roomService.getRoomOrFail(messageData.roomID, {
       relations: { authorization: true },
@@ -183,6 +197,12 @@ export class RoomResolverMutations {
       AuthorizationPrivilege.CREATE_MESSAGE_REPLY,
       `room reply to message: ${room.id}`
     );
+    this.proxySurfaceUsage.record({
+      surface: 'Mutation.sendMessageReplyToRoom',
+      roomType: room.type,
+      media: hasAttachments(messageData),
+      req: context?.req,
+    });
 
     await this.validateMessageOnCalloutOrFail(room);
     await this.validateMessageOnDirectConversationOrFail(room, actorContext);
@@ -212,7 +232,8 @@ export class RoomResolverMutations {
   })
   async addReactionToMessageInRoom(
     @Args('reactionData') reactionData: RoomAddReactionToMessageInput,
-    @CurrentActor() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext,
+    @Context() context?: IGraphQLContext
   ): Promise<IMessageReaction> {
     const room = await this.roomService.getRoomOrFail(reactionData.roomID);
 
@@ -222,6 +243,11 @@ export class RoomResolverMutations {
       AuthorizationPrivilege.CREATE_MESSAGE_REACTION,
       `room add reaction to message in room: ${room.id}`
     );
+    this.proxySurfaceUsage.record({
+      surface: 'Mutation.addReactionToMessageInRoom',
+      roomType: room.type,
+      req: context?.req,
+    });
 
     const reaction = await this.roomService.addReactionToMessage(
       room,
@@ -242,7 +268,8 @@ export class RoomResolverMutations {
   })
   async removeMessageOnRoom(
     @Args('messageData') messageData: RoomRemoveMessageInput,
-    @CurrentActor() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext,
+    @Context() context?: IGraphQLContext
   ): Promise<string> {
     const room = await this.roomService.getRoomOrFail(messageData.roomID);
 
@@ -260,6 +287,11 @@ export class RoomResolverMutations {
       AuthorizationPrivilege.DELETE,
       `room remove message: ${room.id}`
     );
+    this.proxySurfaceUsage.record({
+      surface: 'Mutation.removeMessageOnRoom',
+      roomType: room.type,
+      req: context?.req,
+    });
 
     // Pass actorContext.actorID for future use when Matrix admin reflection is implemented
     // See: docs/matrix-admin-reflection.md
@@ -279,7 +311,8 @@ export class RoomResolverMutations {
   })
   async removeReactionToMessageInRoom(
     @Args('reactionData') reactionData: RoomRemoveReactionToMessageInput,
-    @CurrentActor() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext,
+    @Context() context?: IGraphQLContext
   ): Promise<boolean> {
     const room = await this.roomService.getRoomOrFail(reactionData.roomID);
 
@@ -299,6 +332,11 @@ export class RoomResolverMutations {
       AuthorizationPrivilege.DELETE,
       `room remove reaction: ${room.id}`
     );
+    this.proxySurfaceUsage.record({
+      surface: 'Mutation.removeReactionToMessageInRoom',
+      roomType: room.type,
+      req: context?.req,
+    });
 
     // Pass actorContext.actorID for future use when Matrix admin reflection is implemented
     // See: docs/matrix-admin-reflection.md
@@ -317,7 +355,8 @@ export class RoomResolverMutations {
   })
   async markMessageAsReadInRoom(
     @Args('messageData') messageData: RoomMarkMessageReadInput,
-    @CurrentActor() actorContext: ActorContext
+    @CurrentActor() actorContext: ActorContext,
+    @Context() context?: IGraphQLContext
   ): Promise<boolean> {
     const room = await this.roomService.getRoomOrFail(messageData.roomID, {
       relations: { authorization: true },
@@ -329,6 +368,11 @@ export class RoomResolverMutations {
       AuthorizationPrivilege.READ,
       `room mark message as read: ${room.id}`
     );
+    this.proxySurfaceUsage.record({
+      surface: 'Mutation.markMessageAsReadInRoom',
+      roomType: room.type,
+      req: context?.req,
+    });
 
     return this.roomService.markMessageAsRead(
       room,

@@ -1,4 +1,6 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { ProxySurfaceModule } from '@domain/communication/proxy-surface/proxy.surface.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { VirtualAssistantModule } from '@domain/community/virtual-assistant/virtual.assistant.module';
@@ -28,6 +30,8 @@ import { PlatformAdminService } from './platform.admin.service';
     SpaceModule,
     AdminCommunicationModule,
     AdminIdentityModule,
+    AuthorizationPolicyModule,
+    ProxySurfaceModule,
   ],
   providers: [
     PlatformAdminService,

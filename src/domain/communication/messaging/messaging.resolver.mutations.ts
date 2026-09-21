@@ -17,6 +17,8 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IConversation } from '../conversation/conversation.interface';
+import { DirectConversationResolutionResult } from './dto/direct.conversation.resolution.result';
+import { ResolveDirectConversationsInput } from './dto/messaging.dto.resolve.direct';
 import { MessagingService } from './messaging.service';
 
 @InstrumentResolver()
@@ -76,6 +78,30 @@ export class MessagingResolverMutations {
     };
 
     return await this.messagingService.createConversation(internalData);
+  }
+
+  @Mutation(() => [DirectConversationResolutionResult], {
+    description:
+      'Resolve — reuse or create — the direct Conversation with each of the given recipients, without sending any message. Per recipient: CREATED with the new conversation, RESOLVED with the existing one, BLOCKED_NO_CONSENT when the recipient does not accept messages from other users, FAILED when the recipient could not be resolved. Same authorization and consent rules as createConversation; concurrent calls for the same pair converge on one conversation. More than 100 recipients is rejected before any recipient is processed.',
+  })
+  async resolveDirectConversations(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('resolutionData')
+    resolutionData: ResolveDirectConversationsInput
+  ): Promise<DirectConversationResolutionResult[]> {
+    const messaging = await this.messagingService.getPlatformMessaging();
+
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      messaging.authorization,
+      AuthorizationPrivilege.CREATE,
+      `resolve direct conversations on messaging: ${messaging.id}`
+    );
+
+    return await this.messagingService.resolveDirectConversations(
+      actorContext.actorID,
+      resolutionData.memberIDs
+    );
   }
 
   /**

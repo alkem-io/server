@@ -25,6 +25,8 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
   ActivityCreatedSubscriptionPayload,
   ConversationEventSubscriptionPayload,
+  ConversationGovernanceEventData,
+  ConversationGovernanceEventSubscriptionPayload,
   InAppNotificationCounterSubscriptionPayload,
   ReadReceiptData,
   RoomEventSubscriptionPayload,
@@ -45,7 +47,10 @@ export class SubscriptionPublishService {
     @Inject(SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER)
     private inAppNotificationCounterSubscription: TypedPubSubEngine,
     @Inject(SUBSCRIPTION_CONVERSATION_EVENT)
-    private conversationEventsSubscription: TypedPubSubEngine<ConversationEventSubscriptionPayload>,
+    private conversationEventsSubscription: TypedPubSubEngine<
+      | ConversationEventSubscriptionPayload
+      | ConversationGovernanceEventSubscriptionPayload
+    >,
     @Inject(SUBSCRIPTION_POLL_VOTE_UPDATED)
     private pollVoteUpdatedSubscription: TypedPubSubEngine<PollSubscriptionPayload>,
     @Inject(SUBSCRIPTION_POLL_OPTIONS_CHANGED)
@@ -183,6 +188,32 @@ export class SubscriptionPublishService {
 
     return this.conversationEventsSubscription.publish(
       SubscriptionType.CONVERSATION_EVENTS,
+      payload
+    );
+  }
+
+  /**
+   * Governance-only conversation channel. Shares the conversation-events
+   * transport but uses its own trigger, so subscribers of one never see the
+   * other. Never called for message, reaction or read-receipt triggers.
+   */
+  public publishConversationGovernanceEvent(
+    memberActorIds: string[],
+    event: ConversationGovernanceEventData
+  ): Promise<void> {
+    const payload: ConversationGovernanceEventSubscriptionPayload = {
+      eventID: `conversation-governance-event-${randomInt()}`,
+      memberActorIds: [...new Set(memberActorIds)],
+      event,
+    };
+
+    this.logger.verbose?.(
+      `Publishing conversation governance event: eventID=${payload.eventID}, type=${event.eventType}, conversationID=${event.conversationID}`,
+      LogContext.SUBSCRIPTIONS
+    );
+
+    return this.conversationEventsSubscription.publish(
+      SubscriptionType.CONVERSATION_GOVERNANCE_EVENTS,
       payload
     );
   }

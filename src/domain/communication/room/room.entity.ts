@@ -5,6 +5,7 @@ import { Post } from '@domain/collaboration/post/post.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Column, Entity, OneToOne } from 'typeorm';
 import { VcInteractionsByThread } from '../vc-interaction/vc.interaction.entity';
+import { RoomReadinessRecord } from './dto/room.readiness';
 import { IRoom } from './room.interface';
 
 // Shape of the vcData JSONB column in the room table.
@@ -28,6 +29,19 @@ export class Room extends AuthorizableEntity implements IRoom {
   // The actual DB column – holds vcInteractionsByThread nested under interactionsByThread key
   @Column('jsonb', { nullable: true, default: {} })
   vcData!: VcData;
+
+  // Recorded provisioning readiness of the backend room. Written only by
+  // RoomReadinessService (provisioning outcome, backend confirmation,
+  // verification probes); the DB default marks pre-existing rows as legacy.
+  @Column('jsonb', {
+    nullable: false,
+    default: {
+      state: 'UNKNOWN',
+      reason: 'LEGACY_UNVERIFIED',
+      updatedAt: '2026-09-21T00:00:00.000Z',
+    },
+  })
+  readiness!: RoomReadinessRecord;
 
   // Transparent getter/setter so all existing code continues to work unchanged.
   // Getter always initialises the nested map so callers can safely mutate the returned reference.

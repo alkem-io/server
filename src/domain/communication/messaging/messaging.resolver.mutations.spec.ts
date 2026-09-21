@@ -1,3 +1,4 @@
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ConversationCreationType } from '@common/enums/conversation.creation.type';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
@@ -126,6 +127,42 @@ describe('MessagingResolverMutations', () => {
           memberIDs: ['other-user'],
         } as any)
       ).rejects.toThrow(EntityNotInitializedException);
+    });
+
+    it('resolveDirectConversations checks CREATE on the platform messaging and delegates', async () => {
+      const results = [{ memberID: 'u-2', status: 'CREATED' }] as any;
+      messagingService.resolveDirectConversations.mockResolvedValue(results);
+
+      const result = await resolver.resolveDirectConversations(actorContext, {
+        memberIDs: ['u-2'],
+      });
+
+      expect(result).toBe(results);
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        { id: 'auth-1' },
+        AuthorizationPrivilege.CREATE,
+        expect.any(String)
+      );
+      expect(messagingService.resolveDirectConversations).toHaveBeenCalledWith(
+        'user-1',
+        ['u-2']
+      );
+    });
+
+    it('resolveDirectConversations never reaches the service when the caller is not permitted', async () => {
+      authorizationService.grantAccessOrFail.mockImplementation(() => {
+        throw new Error('denied');
+      });
+
+      await expect(
+        resolver.resolveDirectConversations(actorContext, {
+          memberIDs: ['u-2'],
+        })
+      ).rejects.toThrow('denied');
+      expect(
+        messagingService.resolveDirectConversations
+      ).not.toHaveBeenCalled();
     });
 
     it('should skip user settings check for DIRECT with non-user member (e.g. VC)', async () => {
