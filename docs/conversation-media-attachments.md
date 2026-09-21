@@ -11,13 +11,11 @@ Alkemio is a **tiered client of Synapse here, not a replacement for it**: Synaps
 owns the media blob and its lifecycle; the server owns placement (which Alkemio
 bucket a file lives in), authorization, and the read model.
 
-## Feature flag
+## Rollout
 
-All user-facing behaviour is gated by `communications.message_attachments.enabled`
-(env `COMMUNICATIONS_MESSAGE_ATTACHMENTS_ENABLED`, **default `false`**). When off:
-the GraphQL surface stays present (additive, backward-compatible) but
-`Message.attachments` resolves to `[]`, outbound attachment ids are rejected, and
-no inbound re-home happens.
+There is **no feature flag** — the behaviour is unconditionally on. Rollout is
+controlled by **deployment order**: the Synapse storage provider, file-service
+and matrix-adapter must be in place before the server code that depends on them.
 
 ## Storage model
 
@@ -167,8 +165,9 @@ message list, so the per-message resolver does no repeated room→bucket lookups
   redaction and Synapse retention/purge governs the blob, so the server does
   **not** release or delete attachment media when a message is deleted. This is a
   settled scope decision, not a gap.
-- **Staging cleanup** — `MessageAttachmentCleanupService` (daily cron, flag-gated)
-  releases only **unsent conversation-bucket uploads** older than 24h
+- **Staging cleanup** — `MessageAttachmentCleanupService` (daily cron,
+  cross-replica claimed) releases only **unsent conversation-bucket uploads**
+  older than 24h
   (`temporaryLocation: true` + aggregator type `CONVERSATION`). It deliberately
   does **not** age-sweep `matrix_media` staging rows — those back live Synapse
   media, and reaping them by age would lose data and break Element reads;

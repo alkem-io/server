@@ -3,11 +3,9 @@ import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { Document } from '@domain/storage/document/document.entity';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MESSAGING_REDIS_CLIENT } from '@services/infrastructure/redis-client/messaging-redis.provider';
-import { AlkemioConfig } from '@src/types/alkemio.config';
 import type { Redis } from 'ioredis';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LessThan, Repository } from 'typeorm';
@@ -69,9 +67,9 @@ const SWEEP_CLAIM_TTL_SECONDS = 12 * 60 * 60; // 12h
  * the canonical `DocumentService.deleteDocument` (FIX 5) — which delegates the
  * `file` delete to file-service AND cleans up the server-owned auth-policy +
  * tagset rows from the DeleteDocumentResult (never direct TypeORM writes).
- * Disabled unless the feature flag is on. If the platform runs an equivalent
- * file-service CronJob, that is authoritative and this can be left off (see
- * plan / infra).
+ * If the platform runs an equivalent file-service CronJob, that one is
+ * authoritative (see plan / infra) — the two sweeps are idempotent against each
+ * other, since a row already released simply no longer matches the query.
  *
  * CROSS-REPLICA CLAIM — mirrors ConversationDigestSweepService (034,
  * FR-021/D-25): EVERY replica runs the schedule, and the run is claimed by a
@@ -89,10 +87,7 @@ const SWEEP_CLAIM_TTL_SECONDS = 12 * 60 * 60; // 12h
  */
 @Injectable()
 export class MessageAttachmentCleanupService {
-  private readonly enabled: boolean;
-
   constructor(
-    private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly documentService: DocumentService,
     @InjectRepository(Document)
     private readonly documentRepository: Repository<Document>,
@@ -100,18 +95,10 @@ export class MessageAttachmentCleanupService {
     private readonly redis: Redis,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
-  ) {
-    this.enabled = this.configService.get(
-      'communications.message_attachments.enabled',
-      { infer: true }
-    );
-  }
+  ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async sweepStagingDocuments(): Promise<void> {
-    if (!this.enabled) {
-      return;
-    }
     if (!(await this.claimRun())) {
       return;
     }

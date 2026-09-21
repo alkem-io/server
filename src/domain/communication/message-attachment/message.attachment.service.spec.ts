@@ -30,12 +30,11 @@ const CONV_BUCKET = 'conv-bucket';
 const CALLOUT_BUCKET = 'callout-bucket';
 
 const mockConfig = {
-  get: vi.fn((key: string) => {
-    if (key === 'communications.message_attachments.enabled') return true;
-    if (key === 'storage.file_service.matrix_media_bucket_id')
-      return MATRIX_MEDIA_BUCKET;
-    return undefined;
-  }),
+  get: vi.fn((key: string) =>
+    key === 'storage.file_service.matrix_media_bucket_id'
+      ? MATRIX_MEDIA_BUCKET
+      : undefined
+  ),
 };
 
 const conversationRoom: IRoom = {

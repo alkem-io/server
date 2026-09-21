@@ -1,7 +1,6 @@
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { Document } from '@domain/storage/document/document.entity';
 import { DocumentService } from '@domain/storage/document/document.service';
-import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { MESSAGING_REDIS_CLIENT } from '@services/infrastructure/redis-client/messaging-redis.provider';
@@ -11,15 +10,6 @@ import { type Mocked } from 'vitest';
 import { MessageAttachmentCleanupService } from './message.attachment.cleanup.service';
 
 const MATRIX_MEDIA_BUCKET = 'matrix-media-bucket';
-
-const mockConfig = {
-  get: vi.fn((key: string) => {
-    if (key === 'communications.message_attachments.enabled') return true;
-    if (key === 'storage.file_service.matrix_media_bucket_id')
-      return MATRIX_MEDIA_BUCKET;
-    return undefined;
-  }),
-};
 
 describe('MessageAttachmentCleanupService', () => {
   let service: MessageAttachmentCleanupService;
@@ -37,7 +27,6 @@ describe('MessageAttachmentCleanupService', () => {
       providers: [
         MessageAttachmentCleanupService,
         MockWinstonProvider,
-        { provide: ConfigService, useValue: mockConfig },
         {
           provide: getRepositoryToken(Document),
           useValue: documentRepository,
@@ -77,35 +66,15 @@ describe('MessageAttachmentCleanupService', () => {
     });
   });
 
-  it('does nothing when the feature flag is off', async () => {
-    const disabledConfig = {
-      get: vi.fn((key: string) => {
-        if (key === 'communications.message_attachments.enabled') return false;
-        return MATRIX_MEDIA_BUCKET;
-      }),
-    };
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        MessageAttachmentCleanupService,
-        MockWinstonProvider,
-        { provide: ConfigService, useValue: disabledConfig },
-        {
-          provide: getRepositoryToken(Document),
-          useValue: documentRepository,
-        },
-        { provide: MESSAGING_REDIS_CLIENT, useValue: redis },
-      ],
-    })
-      .useMocker(defaultMockerFactory)
-      .compile();
-    const disabled = module.get(MessageAttachmentCleanupService);
+  it('runs unconditionally — the cross-replica claim is the ONLY gate ahead of the sweep', async () => {
+    // There is no enable/disable config: a scheduled tick goes straight to the
+    // claim and, once won, straight to the query.
+    documentRepository.find.mockResolvedValue([]);
 
-    await disabled.sweepStagingDocuments();
+    await service.sweepStagingDocuments();
 
-    expect(documentRepository.find).not.toHaveBeenCalled();
-    // The flag short-circuits BEFORE the claim — a disabled sweep must not even
-    // consume the day's claim, or it would suppress an enabled replica.
-    expect(redis.set).not.toHaveBeenCalled();
+    expect(redis.set).toHaveBeenCalledTimes(1);
+    expect(documentRepository.find).toHaveBeenCalledTimes(1);
   });
 
   describe('cross-replica claim', () => {

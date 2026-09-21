@@ -159,12 +159,9 @@ type InboundDocumentsByReference = Map<string, IDocument> | undefined;
  * and blob lifecycle are Synapse's job (message deletion is per-event redaction;
  * Synapse retention/purge governs the blob), so the server does NOT release or
  * GC attachment media when a message is deleted.
- *
- * Gated by the `communications.message_attachments.enabled` feature flag.
  */
 @Injectable()
 export class MessageAttachmentService {
-  private readonly enabled: boolean;
   private readonly matrixMediaBucketId: string;
   /**
    * FIX [1]: in-process single-flight for inbound re-homes, keyed by
@@ -210,10 +207,6 @@ export class MessageAttachmentService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
-    this.enabled = this.configService.get(
-      'communications.message_attachments.enabled',
-      { infer: true }
-    );
     this.matrixMediaBucketId = this.configService.get(
       'storage.file_service.matrix_media_bucket_id',
       { infer: true }
@@ -229,7 +222,8 @@ export class MessageAttachmentService {
    * mutating anything. Validates count <=10, that each document is in the
    * conversation bucket, is owned by the sender, is READable by the sender, and
    * that type/size satisfy the bucket policy (FR-020/022/023). Returns the
-   * resolved refs for the communication adapter; `[]` when the feature is off.
+   * resolved refs for the communication adapter; `[]` when the message carries
+   * no attachment ids.
    *
    * Pinning (`temporaryLocation=false`) is deliberately NOT done here — it is
    * deferred to `persistOutboundAttachments`, called only AFTER the message send
@@ -244,12 +238,6 @@ export class MessageAttachmentService {
   ): Promise<CommunicationMessageAttachment[]> {
     if (!documentIds || documentIds.length === 0) {
       return [];
-    }
-    if (!this.enabled) {
-      throw new ValidationException(
-        'Message attachments are not enabled',
-        LogContext.COMMUNICATION
-      );
     }
     if (documentIds.length > MAX_MESSAGE_ATTACHMENTS) {
       throw new ValidationException(
@@ -420,7 +408,7 @@ export class MessageAttachmentService {
   public async persistOutboundAttachments(
     attachments: CommunicationMessageAttachment[] | undefined
   ): Promise<void> {
-    if (!this.enabled || !attachments || attachments.length === 0) {
+    if (!attachments || attachments.length === 0) {
       return;
     }
     await Promise.all(
@@ -479,7 +467,7 @@ export class MessageAttachmentService {
     senderActorID: string,
     attachments: ReceivedAttachment[] | undefined
   ): Promise<string | undefined> {
-    if (!this.enabled || !attachments || attachments.length === 0) {
+    if (!attachments || attachments.length === 0) {
       return undefined;
     }
 
@@ -821,7 +809,7 @@ export class MessageAttachmentService {
     room: IRoom,
     messages: IMessage[] | undefined
   ): Promise<void> {
-    if (!this.enabled || !messages?.length) {
+    if (!messages?.length) {
       return;
     }
     const pending = messages.filter(
@@ -1064,8 +1052,8 @@ export class MessageAttachmentService {
   /**
    * Resolve a message's attachments to `MessageAttachment` (T012), READ-gated.
    * Outbound media is resolved by `document_id` from the event; inbound media by
-   * `by-reference(bucket, media_id)`. Returns `[]` when the feature is off, when
-   * the message carries no attachments, or when the resolution bucket is unknown.
+   * `by-reference(bucket, media_id)`. Returns `[]` when the message carries no
+   * attachments, or when the resolution bucket is unknown.
    *
    * Image dimensions come straight off the Matrix event (`info.w`/`info.h`),
    * exactly as Element and every other Matrix client renders them — see
@@ -1075,7 +1063,7 @@ export class MessageAttachmentService {
     message: IMessage,
     actorContext: ActorContext
   ): Promise<IMessageAttachment[]> {
-    if (!this.enabled || !message.rawAttachments?.length) {
+    if (!message.rawAttachments?.length) {
       return [];
     }
 

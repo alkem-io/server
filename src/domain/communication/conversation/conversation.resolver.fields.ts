@@ -13,26 +13,16 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { IActor } from '@domain/actor/actor/actor.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { ConfigService } from '@nestjs/config';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AlkemioConfig } from '@src/types/alkemio.config';
 import { IConversation } from './conversation.interface';
 import { ConversationService } from './conversation.service';
 
 @Resolver(() => IConversation)
 export class ConversationResolverFields {
-  private readonly attachmentsEnabled: boolean;
-
   constructor(
     private readonly conversationService: ConversationService,
-    private readonly authorizationService: AuthorizationService,
-    configService: ConfigService<AlkemioConfig, true>
-  ) {
-    this.attachmentsEnabled = configService.get(
-      'communications.message_attachments.enabled',
-      { infer: true }
-    );
-  }
+    private readonly authorizationService: AuthorizationService
+  ) {}
 
   @ResolveField('room', () => IRoom, {
     nullable: false,
@@ -77,11 +67,6 @@ export class ConversationResolverFields {
     @Parent() conversation: IConversation,
     @CurrentActor() actorContext: ActorContext
   ): Promise<IStorageBucket | null> {
-    // Behind the message-attachments feature flag (T016): the field exists in the
-    // schema but resolves to null while disabled, so clients show no upload UI.
-    if (!this.attachmentsEnabled) {
-      return null;
-    }
     // A conversation with no bucket yet is an accepted, backfillable state
     // (getStorageBucket throws EntityNotInitializedException). The field is
     // nullable, so resolve to null instead of failing the whole query; re-throw

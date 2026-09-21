@@ -353,12 +353,6 @@ communications:
     connection_timeout: ${COMMUNICATIONS_MATRIX_CONNECTION_TIMEOUT}:30000
   discussions:
     enabled: ${COMMUNICATIONS_DISCUSSIONS_ENABLED}:true
-  # Conversation media attachments (feature 013-matrix-media-file-service).
-  # Default OFF — gates the message `attachments` field/input and the inbound
-  # re-home of Element-origin media. Flip on (ACC -> PROD) once the supporting
-  # file-service + matrix-adapter + Synapse provider rollout is in place.
-  message_attachments:
-    enabled: ${COMMUNICATIONS_MESSAGE_ATTACHMENTS_ENABLED}:false
 
 
 ## storage ##

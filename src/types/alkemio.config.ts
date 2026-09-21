@@ -165,9 +165,6 @@ export type AlkemioConfig = {
     direct_message_rooms: {
       enabled: boolean;
     };
-    message_attachments: {
-      enabled: boolean;
-    };
   };
   storage: {
     enabled: boolean;

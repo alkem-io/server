@@ -4,7 +4,6 @@ import {
   ForbiddenException,
 } from '@common/exceptions';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mocked } from 'vitest';
@@ -27,19 +26,9 @@ describe('ConversationResolverFields.storageBucket (C1)', () => {
   let conversationService: Mocked<ConversationService>;
   let authorizationService: Mocked<AuthorizationService>;
 
-  const build = async (flagEnabled: boolean) => {
-    const mockConfig = {
-      get: vi.fn((key: string) =>
-        key === 'communications.message_attachments.enabled'
-          ? flagEnabled
-          : undefined
-      ),
-    };
+  const build = async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        ConversationResolverFields,
-        { provide: ConfigService, useValue: mockConfig },
-      ],
+      providers: [ConversationResolverFields],
     })
       .useMocker(defaultMockerFactory)
       .compile();
@@ -50,15 +39,8 @@ describe('ConversationResolverFields.storageBucket (C1)', () => {
     conversationService.getStorageBucket.mockResolvedValue(bucket);
   };
 
-  it('returns null when message attachments are disabled', async () => {
-    await build(false);
-    const result = await resolver.storageBucket(conversation, {} as any);
-    expect(result).toBeNull();
-    expect(conversationService.getStorageBucket).not.toHaveBeenCalled();
-  });
-
   it('returns the bucket for a member (READ granted)', async () => {
-    await build(true);
+    await build();
     authorizationService.grantAccessOrFail.mockReturnValue(true as any);
     const result = await resolver.storageBucket(conversation, {} as any);
     expect(result).toBe(bucket);
@@ -66,7 +48,7 @@ describe('ConversationResolverFields.storageBucket (C1)', () => {
   });
 
   it('returns null when the conversation has no bucket yet (FIX 4, backfillable state)', async () => {
-    await build(true);
+    await build();
     // getStorageBucket throws EntityNotInitializedException for a bucket-less
     // conversation; the nullable field must resolve to null, not fail the query.
     conversationService.getStorageBucket.mockRejectedValue(
@@ -86,7 +68,7 @@ describe('ConversationResolverFields.storageBucket (C1)', () => {
     // on the next ConversationAuthorizationService reset. Until then the READ
     // gate would throw ForbiddenException AT A MEMBER and fail the whole
     // conversation query — degrade to null, exactly like "no bucket yet".
-    await build(true);
+    await build();
     conversationService.getStorageBucket.mockResolvedValue({
       id: 'conv-bucket',
       authorization: { id: 'auth', credentialRules: [] },
@@ -99,7 +81,7 @@ describe('ConversationResolverFields.storageBucket (C1)', () => {
   });
 
   it('denies a non-member (READ gate throws)', async () => {
-    await build(true);
+    await build();
     authorizationService.grantAccessOrFail.mockImplementation(() => {
       throw new ForbiddenException('denied', LogContext.AUTH);
     });

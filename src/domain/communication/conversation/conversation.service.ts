@@ -28,7 +28,6 @@ import { StorageAggregatorService } from '@domain/storage/storage-aggregator/sto
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
@@ -36,7 +35,6 @@ import { CommunicationAdapter } from '@services/adapters/communication-adapter/c
 import { CommunicationAdapterException } from '@services/adapters/communication-adapter/communication.adapter.exception';
 import { RoomMemberUpdatedEvent } from '@services/event-handlers/internal/message-inbox/room.member.updated.event';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { AlkemioConfig } from '@src/types/alkemio.config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
 import { EntityManager, FindOneOptions, In, Repository } from 'typeorm';
 import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
@@ -56,9 +54,6 @@ interface IConversationMembershipWithActorType extends IConversationMembership {
 
 @Injectable()
 export class ConversationService {
-  /** `communications.message_attachments.enabled` (feature 013, T016). */
-  private readonly attachmentsEnabled: boolean;
-
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private roomService: RoomService,
@@ -75,14 +70,8 @@ export class ConversationService {
     @InjectRepository(ConversationMembership)
     private conversationMembershipRepository: Repository<ConversationMembership>,
     private eventEmitter: EventEmitter2,
-    configService: ConfigService<AlkemioConfig, true>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
-  ) {
-    this.attachmentsEnabled = configService.get(
-      'communications.message_attachments.enabled',
-      { infer: true }
-    );
-  }
+  ) {}
 
   /**
    * Create a conversation with N members.
@@ -132,20 +121,16 @@ export class ConversationService {
     // authorization_policy remains (FIX 1). Least-invasive of the options:
     // preserves the "home from the start" ordering and adds only cleanup.
     //
-    // Behind the SAME feature flag as every read/write attachment path (T016).
-    // The flag defaults to FALSE, so without this gate every conversation
-    // creation committed four extra rows in a separate transaction on the
-    // creation hot path — plus a compensating-delete failure mode — for a
-    // feature that is off. "No bucket yet" is already an accepted, backfillable
-    // state: ConversationService.getStorageBucket throws
-    // EntityNotInitializedException and ConversationResolverFields.storageBucket
-    // resolves it to null, and the auth cascade skips a conversation with no
-    // aggregator. Turning the flag on provisions new conversations from that
-    // point; pre-existing ones are covered by the 1782300000002 backfill.
-    if (this.attachmentsEnabled) {
-      conversation.storageAggregator =
-        await this.createConversationStorageAggregator();
-    }
+    // Unconditional: EVERY new conversation is provisioned here, so it has a
+    // bucket from the moment it exists. Pre-existing conversations are covered
+    // by the 1782300000002 backfill migration. "No bucket yet" therefore only
+    // survives as a tolerated read-side state (ConversationService
+    // .getStorageBucket throws EntityNotInitializedException and
+    // ConversationResolverFields.storageBucket resolves it to null, and the auth
+    // cascade skips a conversation with no aggregator) for rows the backfill has
+    // not yet reached.
+    conversation.storageAggregator =
+      await this.createConversationStorageAggregator();
 
     // Tracks whether the conversation ROW has been committed. Rollback is only
     // legitimate while the conversation is still uncommitted (B2) — see the

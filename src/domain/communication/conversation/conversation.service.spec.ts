@@ -1,5 +1,7 @@
 import { ActorType } from '@common/enums/actor.type';
+import { CONVERSATION_MEDIA_ALLOWED_MIME_TYPES } from '@common/enums/mime.file.type';
 import { RoomType } from '@common/enums/room.type';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -13,13 +15,13 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
-import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { CommunicationAdapterException } from '@services/adapters/communication-adapter/communication.adapter.exception';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
@@ -28,6 +30,7 @@ import { type Mocked, vi } from 'vitest';
 import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
 import { Conversation } from './conversation.entity';
 import { IConversation } from './conversation.interface';
+import { CONVERSATION_MEDIA_MAX_FILE_SIZE } from './conversation.media.constants';
 import { ConversationService } from './conversation.service';
 
 describe('ConversationService', () => {
@@ -39,6 +42,7 @@ describe('ConversationService', () => {
   let virtualActorLookupService: Mocked<VirtualActorLookupService>;
   let platformWellKnownVCService: Mocked<PlatformWellKnownVirtualContributorsService>;
   let storageAggregatorService: Mocked<StorageAggregatorService>;
+  let storageAggregatorResolverService: Mocked<StorageAggregatorResolverService>;
   let storageBucketService: Mocked<StorageBucketService>;
   let communicationAdapter: Mocked<CommunicationAdapter>;
   let conversationRepo: Mocked<Repository<Conversation>>;
@@ -62,18 +66,6 @@ describe('ConversationService', () => {
         repositoryProviderMockFactory(Conversation),
         repositoryProviderMockFactory(ConversationMembership),
         MockWinstonProvider,
-        // Feature 013 attachments ON for the default suite — the eager
-        // per-conversation storage provisioning is gated on this flag.
-        {
-          provide: ConfigService,
-          useValue: {
-            get: vi.fn((key: string) =>
-              key === 'communications.message_attachments.enabled'
-                ? true
-                : undefined
-            ),
-          },
-        },
       ],
     })
       .useMocker(defaultMockerFactory)
@@ -89,6 +81,9 @@ describe('ConversationService', () => {
       PlatformWellKnownVirtualContributorsService
     );
     storageAggregatorService = module.get(StorageAggregatorService);
+    storageAggregatorResolverService = module.get(
+      StorageAggregatorResolverService
+    );
     storageBucketService = module.get(StorageBucketService);
     communicationAdapter = module.get(CommunicationAdapter);
     conversationRepo = module.get(getRepositoryToken(Conversation));
@@ -1075,58 +1070,50 @@ describe('ConversationService', () => {
       expect(roomService.createRoom).not.toHaveBeenCalled();
     });
 
-    it('does NOT provision storage when the message-attachments flag is OFF (its shipped default)', async () => {
-      // Every read/write attachment path is flag-gated; the provisioning must be
-      // too. With the flag off (the default) a conversation creation committed
-      // four extra rows — storage_aggregator + bucket + 2 authorization_policy —
-      // in a separate transaction on the creation hot path, plus a
-      // compensating-delete failure mode, for a feature that is disabled.
-      const disabledModule: TestingModule = await Test.createTestingModule({
-        providers: [
-          ConversationService,
-          repositoryProviderMockFactory(Conversation),
-          repositoryProviderMockFactory(ConversationMembership),
-          MockWinstonProvider,
-          {
-            provide: ConfigService,
-            useValue: { get: vi.fn().mockReturnValue(false) },
-          },
-        ],
-      })
-        .useMocker(defaultMockerFactory)
-        .compile();
-      const disabled = disabledModule.get(ConversationService);
-      const disabledStorageAggregatorService: Mocked<StorageAggregatorService> =
-        disabledModule.get(StorageAggregatorService);
-      const disabledRoomService: Mocked<RoomService> =
-        disabledModule.get(RoomService);
-      const disabledConversationRepo = disabledModule.get(
-        getRepositoryToken(Conversation)
+    it('ALWAYS provisions the per-conversation storage, attached to the conversation before it is saved', async () => {
+      // Unconditional by design (no feature flag): every new conversation gets
+      // its StorageAggregator + media-policy bucket eagerly, so message
+      // attachments have a membership-authorized home from the moment the
+      // conversation exists. Pre-existing conversations are covered by the
+      // 1782300000002 backfill.
+      const platformAggregator = { id: 'platform-agg' } as any;
+      storageAggregatorResolverService.getPlatformStorageAggregator.mockResolvedValue(
+        platformAggregator
       );
-      const disabledMembershipRepo = disabledModule.get(
-        getRepositoryToken(ConversationMembership)
-      );
-      (disabledMembershipRepo as any).manager = { find: vi.fn() };
-      disabledRoomService.createRoom.mockResolvedValue({ id: 'room-1' } as any);
-      disabledConversationRepo.save.mockResolvedValue({
-        id: 'conv-new',
-      } as Conversation);
-      disabledMembershipRepo.create.mockImplementation((d: any) => d);
-      disabledMembershipRepo.save.mockResolvedValue([] as any);
+      const bucket = { id: 'bucket-1' } as any;
+      storageAggregatorService.createStorageAggregator.mockResolvedValue({
+        id: 'agg-1',
+        directStorage: bucket,
+      } as any);
+      storageBucketService.save.mockResolvedValue(bucket);
+      roomService.createRoom.mockResolvedValue({ id: 'room-1' } as any);
+      conversationRepo.save.mockImplementation(async (c: any) => c);
+      membershipRepo.create.mockImplementation(data => data as any);
+      membershipRepo.save.mockResolvedValue([] as any);
 
-      const conversation = await disabled.createConversation(
+      await service.createConversation(
         'agent-1',
         ['agent-2'],
         RoomType.CONVERSATION_DIRECT
       );
 
-      expect(conversation).toBeDefined();
       expect(
-        disabledStorageAggregatorService.createStorageAggregator
-      ).not.toHaveBeenCalled();
-      // The conversation is still created — "no bucket yet" is an accepted,
-      // backfillable state that Conversation.storageBucket resolves to null.
-      expect(disabledConversationRepo.save).toHaveBeenCalled();
+        storageAggregatorService.createStorageAggregator
+      ).toHaveBeenCalledWith(
+        StorageAggregatorType.CONVERSATION,
+        platformAggregator
+      );
+      // The aggregator must be ON the entity handed to save(), not created and
+      // dropped — that is what gives the conversation storage from the start.
+      const saved = conversationRepo.save.mock.calls[0][0] as any;
+      expect(saved.storageAggregator).toEqual(
+        expect.objectContaining({ id: 'agg-1' })
+      );
+      // And the bucket policy is tightened to the conversation media set.
+      expect(bucket.allowedMimeTypes).toBe(
+        CONVERSATION_MEDIA_ALLOWED_MIME_TYPES
+      );
+      expect(bucket.maxFileSize).toBe(CONVERSATION_MEDIA_MAX_FILE_SIZE);
     });
 
     it('B2: does NOT destroy the storage when the conversation row is already committed', async () => {
