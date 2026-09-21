@@ -61,7 +61,7 @@ export class ConversationResolverFields {
   @ResolveField('storageBucket', () => IStorageBucket, {
     nullable: true,
     description:
-      "The storage bucket holding this Conversation's message attachments (feature 013). READ-gated to conversation members; null when message attachments are disabled.",
+      "The storage bucket holding this Conversation's message attachments (feature 013). READ-gated to conversation members; null for a conversation that has no bucket yet (an accepted, backfillable state).",
   })
   async storageBucket(
     @Parent() conversation: IConversation,
