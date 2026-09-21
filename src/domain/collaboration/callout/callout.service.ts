@@ -148,6 +148,15 @@ export class CalloutService {
         calloutData.settings?.framing?.selection
       );
 
+    // Validate + normalize the card-variant settings (SPACES-only). Runs
+    // after selection normalization so the framing type is stable.
+    callout.settings.framing =
+      this.calloutFramingService.validateAndNormalizeSpacesSettings(
+        callout.framing.type,
+        callout.settings.framing,
+        calloutData.settings?.framing?.spaces
+      );
+
     // AC3 host-scope guard: reject any selectedId not in the host's RoleSet
     // (contributors) or not a direct subspace of the host (spaces). Only runs
     // when the normalized selection is CUSTOM + non-empty (FR-006).
@@ -614,6 +623,23 @@ export class CalloutService {
         callout.framing.type,
         callout.settings.framing,
         calloutUpdateData.settings?.framing?.selection
+      );
+
+    // Re-validate + normalize the card-variant settings. Strip a stale stored
+    // block on a framing-type change away from SPACES (unlike selection, this
+    // block is SPACES-only) and apply partial-update semantics for the new
+    // value.
+    if (
+      callout.framing.type !== CalloutFramingType.SPACES &&
+      callout.settings.framing.spaces
+    ) {
+      delete callout.settings.framing.spaces;
+    }
+    callout.settings.framing =
+      this.calloutFramingService.validateAndNormalizeSpacesSettings(
+        callout.framing.type,
+        callout.settings.framing,
+        calloutUpdateData.settings?.framing?.spaces
       );
 
     // AC3 host-scope guard on update: only validate ids the caller explicitly
