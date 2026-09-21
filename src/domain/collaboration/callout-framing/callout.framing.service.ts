@@ -9,6 +9,7 @@ import {
 } from '@common/enums/contributor.actor.types';
 import { ContributorCollectionView } from '@common/enums/contributor.collection.view';
 import { LogContext } from '@common/enums/logging.context';
+import { SpaceCollectionCardVariant } from '@common/enums/space.collection.card.variant';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { VisualType } from '@common/enums/visual.type';
@@ -746,11 +747,9 @@ export class CalloutFramingService {
           LogContext.COLLABORATION
         );
       }
-      // A SPACES framing is deliberately CONFIG-FREE
-      // (workspace#013-spaces-collection-callout, FR-004b): it carries no
-      // framing settings block (no contributors object, no counts, no view/map).
-      // The check above already rejects any `contributors` payload on a SPACES
-      // callout; nothing else needs to be persisted for SPACES.
+      // This function only polices the `contributors` block. A SPACES framing
+      // carries no `contributors` block, and its own settings (`selection`,
+      // `spaces`) are handled by the two normalizers below.
       return framingSettings;
     }
 
@@ -905,6 +904,59 @@ export class CalloutFramingService {
           ...new Set(incomingSelection.selectedIds),
         ];
       }
+    }
+
+    return framingSettings;
+  }
+
+  /**
+   * Validate + normalize the card-variant settings against the framing type.
+   * Mutates and returns the framing settings object so the caller can persist
+   * the normalized result.
+   *
+   * Called AFTER validateAndNormalizeSelectionSettings at both create and
+   * update call sites in CalloutService.
+   *
+   * Rules:
+   * - `spaces` present only iff `framingType === SPACES` — unlike `selection`,
+   *   this block is SPACES-only (CONTRIBUTORS included in the rejection).
+   * - On a SPACES framing: materialize a missing `spaces` to
+   *   `{cardVariant: COMPACT}` (read-time default). A caller-provided `{}`
+   *   never leaves the block without a `cardVariant`.
+   * - Partial-update semantics: omitted `cardVariant` ⇒ keep the stored value
+   *   (or default to COMPACT when nothing is stored); provided `cardVariant`
+   *   ⇒ replace it.
+   */
+  public validateAndNormalizeSpacesSettings(
+    framingType: CalloutFramingType,
+    framingSettings: ICalloutSettingsFraming,
+    incomingSpaces?: { cardVariant?: SpaceCollectionCardVariant }
+  ): ICalloutSettingsFraming {
+    const isSpaces = framingType === CalloutFramingType.SPACES;
+
+    if (!isSpaces) {
+      // Any provided spaces settings on a non-SPACES kind is a caller error.
+      if (incomingSpaces !== undefined) {
+        throw new ValidationException(
+          'Card-variant settings can only be set when framing.type = SPACES.',
+          LogContext.COLLABORATION
+        );
+      }
+      // Strip any stale block that might linger from a type change.
+      delete framingSettings.spaces;
+      return framingSettings;
+    }
+
+    // --- SPACES ---
+    // Materialize the stored block if absent (read-time default).
+    if (!framingSettings.spaces) {
+      framingSettings.spaces = {
+        cardVariant: SpaceCollectionCardVariant.COMPACT,
+      };
+    }
+
+    if (incomingSpaces?.cardVariant !== undefined) {
+      framingSettings.spaces.cardVariant = incomingSpaces.cardVariant;
     }
 
     return framingSettings;
