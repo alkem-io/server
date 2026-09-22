@@ -420,6 +420,35 @@ describe('CalloutService — card-variant settings wiring', () => {
         SpaceCollectionCardVariant.EXPANDED
       );
     });
+
+    it('passes the pre-merge stored cardVariant as the 4th arg (sec-server-2 wiring)', async () => {
+      const callout = existingSpacesCallout({
+        cardVariant: SpaceCollectionCardVariant.EXPANDED,
+      });
+      const { getRepositoryToken } = await import('@nestjs/typeorm');
+      const calloutRepo = module.get<any>(getRepositoryToken(Callout));
+      vi.mocked(calloutRepo.findOne).mockResolvedValue(callout);
+
+      await service.updateCallout(
+        callout,
+        {
+          settings: {
+            framing: { spaces: { cardVariant: null } },
+          },
+        } as any,
+        actorContextData.actorContext,
+        'user-1'
+      );
+
+      expect(
+        mockFramingService.validateAndNormalizeSpacesSettings
+      ).toHaveBeenCalledWith(
+        CalloutFramingType.SPACES,
+        expect.anything(),
+        { cardVariant: null },
+        SpaceCollectionCardVariant.EXPANDED
+      );
+    });
   });
 });
 
@@ -489,6 +518,63 @@ describe('CalloutService settings merge -> real CalloutFramingService.validateAn
 
     expect(normalized.spaces).toEqual({
       cardVariant: SpaceCollectionCardVariant.COMPACT,
+    });
+  });
+
+  // security:server:sec-server-2 — lodash `merge`/`mergeWith` skip `undefined`
+  // source values but assign `null` verbatim, so an explicit
+  // `cardVariant: null` survives the same merge shown above unless the
+  // normalizer itself treats null as "not provided".
+
+  it('createCalloutSettings-shaped merge: cardVariant: null persists COMPACT, never null (sec-server-2)', () => {
+    const calloutSettings = cloneDeep(DefaultCalloutSettings) as any;
+    const settingsData = { framing: { spaces: { cardVariant: null } } };
+
+    merge(calloutSettings, settingsData);
+    // Confirms the hazard: lodash assigns the explicit null verbatim.
+    expect(calloutSettings.framing.spaces).toEqual({ cardVariant: null });
+
+    const normalized = realFramingService.validateAndNormalizeSpacesSettings(
+      CalloutFramingType.SPACES,
+      calloutSettings.framing,
+      settingsData.framing.spaces
+    );
+
+    expect(normalized.spaces).toEqual({
+      cardVariant: SpaceCollectionCardVariant.COMPACT,
+    });
+  });
+
+  it('updateCallout-shaped mergeWith on a callout stored as EXPANDED: cardVariant: null leaves EXPANDED unchanged (sec-server-2)', () => {
+    const storedFraming = {
+      commentsEnabled: true,
+      spaces: { cardVariant: SpaceCollectionCardVariant.EXPANDED },
+    } as any;
+    // Exactly what CalloutService.updateCallout does: snapshot the stored
+    // value BEFORE the merge, since the merge itself can clobber it.
+    const priorCardVariant = storedFraming.spaces?.cardVariant;
+    const updateData = { framing: { spaces: { cardVariant: null } } };
+
+    const mergedFraming = mergeWith(
+      storedFraming,
+      updateData.framing,
+      (_existing: unknown, incoming: unknown) =>
+        Array.isArray(incoming) ? incoming : undefined
+    );
+    // Confirms the hazard: lodash assigns the explicit null verbatim, clobbering
+    // the previously stored EXPANDED value before the normalizer ever runs —
+    // this is exactly why the normalizer needs the pre-merge snapshot.
+    expect(mergedFraming.spaces).toEqual({ cardVariant: null });
+
+    const normalized = realFramingService.validateAndNormalizeSpacesSettings(
+      CalloutFramingType.SPACES,
+      mergedFraming,
+      updateData.framing.spaces,
+      priorCardVariant
+    );
+
+    expect(normalized.spaces).toEqual({
+      cardVariant: SpaceCollectionCardVariant.EXPANDED,
     });
   });
 });

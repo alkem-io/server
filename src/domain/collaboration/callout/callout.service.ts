@@ -559,6 +559,13 @@ export class CalloutService {
     }
     const targetStorageBucketID = callout.framing.profile?.storageBucket?.id;
 
+    // Captured before the settings merge below can clobber it: the generic
+    // `mergeWith` assigns an explicit `null` from the caller's input verbatim
+    // (it only skips `undefined`), so an update that sends
+    // `cardVariant: null` would otherwise overwrite this pre-merge value
+    // before validateAndNormalizeSpacesSettings ever runs.
+    const priorCardVariant = callout.settings.framing.spaces?.cardVariant;
+
     if (calloutUpdateData.framing) {
       callout.framing = await this.calloutFramingService.updateCalloutFraming(
         callout.framing,
@@ -639,7 +646,8 @@ export class CalloutService {
       this.calloutFramingService.validateAndNormalizeSpacesSettings(
         callout.framing.type,
         callout.settings.framing,
-        calloutUpdateData.settings?.framing?.spaces
+        calloutUpdateData.settings?.framing?.spaces,
+        priorCardVariant
       );
 
     // AC3 host-scope guard on update: only validate ids the caller explicitly

@@ -217,4 +217,46 @@ describe('CalloutFramingService.validateAndNormalizeSpacesSettings', () => {
     );
     expect(result.selection).toEqual(selection);
   });
+
+  // --- security:server:sec-server-2: an explicit `null` is "not provided",
+  // never a value to persist — matches the `!= null` convention documented
+  // in innovation.flow.state.service.ts for the same non-nullable-field hazard.
+
+  it('create with cardVariant: null on a SPACES framing persists COMPACT, never null (sec-server-2)', () => {
+    const framing = baseFraming();
+    const result = service.validateAndNormalizeSpacesSettings(
+      CalloutFramingType.SPACES,
+      framing,
+      { cardVariant: null }
+    );
+    expect(result.spaces).toEqual({
+      cardVariant: SpaceCollectionCardVariant.COMPACT,
+    });
+  });
+
+  it('update with cardVariant: null on a callout stored as EXPANDED leaves EXPANDED unchanged (sec-server-2)', () => {
+    const framing = baseFraming({
+      cardVariant: SpaceCollectionCardVariant.EXPANDED,
+    });
+    const result = service.validateAndNormalizeSpacesSettings(
+      CalloutFramingType.SPACES,
+      framing,
+      { cardVariant: null }
+    );
+    expect(result.spaces).toEqual({
+      cardVariant: SpaceCollectionCardVariant.EXPANDED,
+    });
+  });
+
+  it('update with spaces: null on a non-SPACES callout does not throw (sec-server-2)', () => {
+    const framing = baseFraming();
+    expect(() =>
+      service.validateAndNormalizeSpacesSettings(
+        CalloutFramingType.NONE,
+        framing,
+        null
+      )
+    ).not.toThrow();
+    expect(framing.spaces).toBeUndefined();
+  });
 });

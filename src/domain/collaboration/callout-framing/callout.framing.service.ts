@@ -927,17 +927,38 @@ export class CalloutFramingService {
    * - Partial-update semantics: omitted `cardVariant` ⇒ keep the stored value
    *   (or default to COMPACT when nothing is stored); provided `cardVariant`
    *   ⇒ replace it.
+   *
+   * `priorCardVariant` is the value captured by the caller from the DB-loaded
+   * entity BEFORE any generic settings merge ran (CalloutService's `merge`/
+   * `mergeWith` at both call sites). It exists because that merge overwrites
+   * a non-array leaf with an explicit `null` from the caller's input — lodash
+   * skips `undefined` source values but assigns `null` verbatim — so by the
+   * time this normalizer runs, `framingSettings.spaces.cardVariant` may
+   * already have been clobbered to `null` even though a real value was
+   * stored. Falling back to the pre-merge snapshot is what makes an explicit
+   * `cardVariant: null` on update actually preserve the stored value, rather
+   * than only appearing to (see callout.service.spaces.settings.spec.ts).
    */
   public validateAndNormalizeSpacesSettings(
     framingType: CalloutFramingType,
     framingSettings: ICalloutSettingsFraming,
-    incomingSpaces?: { cardVariant?: SpaceCollectionCardVariant }
+    // Both levels are typed as nullable here, not just optional: the GraphQL
+    // input fields are `nullable: true` and class-validator's `@IsOptional()`
+    // lets an explicit `null` through unchanged, so a `null` genuinely
+    // reaches this normalizer at runtime even though the DTO's own TS field
+    // type only declares `?:` (optional, not nullable).
+    incomingSpaces?: { cardVariant?: SpaceCollectionCardVariant | null } | null,
+    priorCardVariant?: SpaceCollectionCardVariant
   ): ICalloutSettingsFraming {
     const isSpaces = framingType === CalloutFramingType.SPACES;
 
     if (!isSpaces) {
       // Any provided spaces settings on a non-SPACES kind is a caller error.
-      if (incomingSpaces !== undefined) {
+      // `!= null` (not `!== undefined`): the GraphQL input is nullable, so a
+      // client can send an explicit `spaces: null` for an untouched/cleared
+      // optional block — that must be treated as "not provided", not as a
+      // caller error, matching the innovation-flow-state settings convention.
+      if (incomingSpaces != null) {
         throw new ValidationException(
           'Card-variant settings can only be set when framing.type = SPACES.',
           LogContext.COLLABORATION
@@ -955,11 +976,20 @@ export class CalloutFramingService {
     // Default a missing `cardVariant` independently of the block's presence —
     // a caller-supplied `{}` (already merged into settings before this runs)
     // must never persist without one, since the field is non-nullable.
-    if (framingSettings.spaces.cardVariant === undefined) {
-      framingSettings.spaces.cardVariant = SpaceCollectionCardVariant.COMPACT;
+    // `== null` (not `=== undefined`): a caller-merged `null` (the GraphQL
+    // input's `cardVariant` is nullable, and class-validator's `@IsOptional()`
+    // does not strip an explicit null) must default the same way an omitted
+    // field does — the stored value is non-nullable and must never persist
+    // `null`. Prefer the pre-merge snapshot over the (possibly merge-
+    // clobbered) current value — see the `priorCardVariant` doc above.
+    if (framingSettings.spaces.cardVariant == null) {
+      framingSettings.spaces.cardVariant =
+        priorCardVariant ?? SpaceCollectionCardVariant.COMPACT;
     }
 
-    if (incomingSpaces?.cardVariant !== undefined) {
+    // `!= null`: an explicit `cardVariant: null` is "not provided" (keep the
+    // default/stored value just applied above), never a value to persist.
+    if (incomingSpaces?.cardVariant != null) {
       framingSettings.spaces.cardVariant = incomingSpaces.cardVariant;
     }
 
