@@ -13,7 +13,7 @@ import { VisualType } from '@common/enums/visual.type';
 import { ValidationException } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { StorageUploadFailedException } from '@common/exceptions/storage/storage.upload.failed.exception';
-import { streamToBuffer, tryRollback } from '@common/utils';
+import { tryRollback } from '@common/utils';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -266,22 +266,49 @@ export class StorageBucketService {
     // multipart body always carries a filename attribute.
     const effectiveFilename = filename?.trim() || UNSPECIFIED_FILENAME;
     try {
-      const streamTimeoutMs = this.configService.get<number>(
-        'storage.file.stream_timeout_ms',
-        { infer: true }
-      )!;
-      const buffer = await streamToBuffer(readStream, streamTimeoutMs);
+      const storage = await this.getStorageBucketOrFail(storageBucketId, {
+        relations: { authorization: true, storageAggregator: true },
+      });
+      this.validateMimeTypes(storage, mimeType);
 
-      // Go file-service-go handles image processing (HEIC→JPEG, compression)
-      return await this.uploadFileAsDocumentFromBuffer(
+      // Conversation files are durable on upload, so a caller-requested
+      // temporary placement is overridden, and their policy is composed before
+      // the insert rather than by the resolver afterwards.
+      const isConversation = this.isConversationBucket(storage);
+      const temporaryLocation = isConversation ? false : temporaryDocument;
+
+      // The size limit is enforced DURING the transfer by the adapter: the
+      // body length is not known up front, and buffering the whole file just
+      // to measure it is what this path exists to avoid.
+      return await this.persistDocumentWithPreparedAuth(
         storageBucketId,
-        buffer,
-        effectiveFilename,
-        mimeType,
-        userID,
-        temporaryDocument
+        (authId, tagsetId) =>
+          this.fileServiceAdapter.createDocumentFromStream(
+            readStream,
+            {
+              displayName: effectiveFilename,
+              mimeType,
+              storageBucketId,
+              authorizationId: authId,
+              tagsetId,
+              createdBy: userID || undefined,
+              temporaryLocation,
+              allowedMimeTypes: storage.allowedMimeTypes.join(','),
+              maxFileSize: storage.maxFileSize,
+              skipDedup: temporaryLocation || undefined,
+            },
+            storage.maxFileSize
+          ),
+        isConversation ? storage.authorization : undefined,
+        isConversation
+          ? { createdBy: userID, destinationBucket: storage }
+          : undefined
       );
     } catch (error: any) {
+      // Release the source when we fail BEFORE the adapter consumed it
+      // (validation, bucket load, policy composition); the adapter owns it
+      // from invocation onwards.
+      readStream.destroy();
       if (error instanceof StorageUploadFailedException) {
         throw error;
       }
@@ -325,11 +352,7 @@ export class StorageBucketService {
     skipDedup = false,
     allowedMimeTypesOverride?: string[]
   ): Promise<IDocument> {
-    // `storageAggregator` is joined ONLY to classify the bucket for the
-    // per-uploader-row rule below — a single FK join.
-    const storage = await this.getStorageBucketOrFail(storageBucketId, {
-      relations: { storageAggregator: true },
-    });
+    const storage = await this.getStorageBucketOrFail(storageBucketId);
 
     const effectiveAllowedMimes =
       allowedMimeTypesOverride ?? storage.allowedMimeTypes;
@@ -338,11 +361,11 @@ export class StorageBucketService {
     }
     this.validateSize(storage, buffer.length);
 
-    // Conversation buckets and staged (temporary) uploads must NEVER
-    // content-dedup — see requiresPerUploaderDocuments.
-    const effectiveSkipDedup =
-      skipDedup ||
-      this.requiresPerUploaderDocuments(storage, temporaryLocation);
+    // A STAGED (temporary) upload must never content-dedup: a staged row is
+    // moved and mutated by the caller that created it, so collapsing two
+    // uploaders onto one row would let one caller's move affect another's
+    // document.
+    const effectiveSkipDedup = skipDedup || temporaryLocation;
 
     return this.persistDocumentWithPreparedAuth(
       storageBucketId,
@@ -363,70 +386,6 @@ export class StorageBucketService {
   }
 
   /**
-   * Whether this upload must get its OWN row rather than being collapsed into
-   * an existing one by file-service's per-bucket CONTENT dedup. True for
-   * CONVERSATION buckets, and for any STAGED (`temporaryLocation`) upload
-   * (feature 013).
-   *
-   * WHY THE `temporaryLocation` LEG: message attachments are not only sent in
-   * conversation rooms. A callout/post COMMENT-room attachment uploads into the
-   * parent callout's pre-existing COLLABORATION bucket (see
-   * MessageAttachmentService.getCommentRoomParentBucket), where the callout's own
-   * content media already lives — and that bucket hangs off the SPACE storage
-   * aggregator, indistinguishable by type from every other space bucket, so the
-   * bucket-type test below neither covers it nor could be widened to. Content
-   * dedup there hands the sender a PRE-EXISTING durable row.
-   * `resolveOutboundAttachments` then rejects it with 'Attachment is not owned by
-   * the sender' or 'Attachment has already been sent' for a perfectly ordinary
-   * file. `temporaryLocation` is the right discriminator because it is exactly
-   * the attachment path and nothing else in that bucket: a sendable attachment
-   * MUST be a fresh unsent upload (the send path's single-use gate requires
-   * `temporaryLocation === true`), while callout/post CONTENT uploads into the
-   * same bucket are durable from the start and keep deduping untouched.
-   *
-   * It is also the correct rule independently of 013: a staged upload is by
-   * definition a row its uploader will later MUTATE (move bucket, flip durable,
-   * or roll back — see TemporaryStorageService.moveTemporaryDocuments), so
-   * handing back a row that belongs to someone else, or one already committed,
-   * is never what the caller asked for. Same reasoning already applied
-   * explicitly by the Collabora create/replace flows, which pass both
-   * `temporaryLocation: true` and `skipDedup: true` "so this doc owns its own
-   * backing row".
-   *
-   * WHY (bucket type): a conversation bucket is SHARED by every member, and message
-   * attachments are attributed by `createdBy` on both the send and the read
-   * path — the outbound send requires the document to be owned by the sender
-   * and to still be an unsent (`temporaryLocation`) upload, and the read
-   * resolves an outbound `document_id` only when it is owned by the message's
-   * sender. Content dedup breaks both at once: after Alice sends `logo.png`,
-   * Bob uploading the SAME BYTES into the same conversation bucket got back
-   * ALICE's now-durable row (`reused: true`), which then failed the ownership
-   * gate AND the single-use gate — so Bob simply could not send that file, and
-   * neither could Alice send it a second time. Reachable in any group
-   * conversation where two people share the same image.
-   *
-   * Fixing it HERE (a fresh row per uploader) rather than by relaxing those
-   * gates is deliberate: the gates are the confused-deputy protection that
-   * stops a crafted event or a guessed id surfacing/pinning another member's
-   * document, and the read-path ownership check is what makes them binding —
-   * relaxing the send gate alone would let the send succeed and still resolve
-   * to nothing on every read. Giving each sender their own row satisfies both
-   * gates untouched.
-   *
-   * Cost is a row, not bytes: content is content-addressed, so the second row
-   * points at the SAME blob, and file-service only deletes a blob once no row
-   * references it. This mirrors the established `skipDedup: true` usage for
-   * Collabora documents and profile-document re-uploads, where each entity
-   * likewise must own its backing row.
-   */
-  private requiresPerUploaderDocuments(
-    storageBucket: IStorageBucket,
-    temporaryLocation: boolean
-  ): boolean {
-    return temporaryLocation || this.isConversationBucket(storageBucket);
-  }
-
-  /**
    * Copy an existing document into another bucket via file-service-go's
    * /internal/file/copy endpoint (v0.0.14+). No bytes traverse the wire —
    * the new row references the same content. Replaces the legacy
@@ -440,14 +399,19 @@ export class StorageBucketService {
     destinationBucketId: string,
     sourceDocument: IDocument,
     userID?: string,
-    skipDedup = false
+    skipDedup = false,
+    options?: { externalReference?: string; displayName?: string }
   ): Promise<IDocument> {
     const destination = await this.getStorageBucketOrFail(destinationBucketId, {
-      relations: { authorization: true },
+      // storageAggregator scopes the document creator rule; see
+      // persistDocumentWithPreparedAuth.
+      relations: { authorization: true, storageAggregator: true },
     });
 
     this.validateMimeTypes(destination, sourceDocument.mimeType);
     this.validateSize(destination, sourceDocument.size);
+
+    const createdBy = userID || sourceDocument.createdBy || undefined;
 
     return this.persistDocumentWithPreparedAuth(
       destinationBucketId,
@@ -457,38 +421,39 @@ export class StorageBucketService {
           destinationBucketId,
           authorizationId: authId,
           tagsetId,
-          createdBy: userID || sourceDocument.createdBy || undefined,
+          createdBy,
           skipDedup: skipDedup || undefined,
+          externalReference: options?.externalReference,
+          displayName: options?.displayName,
         }),
-      destination.authorization
+      destination.authorization,
+      { createdBy, destinationBucket: destination }
     );
   }
 
   /**
-   * Shared scaffolding for any operation that needs to materialize a new
-   * `Document` row in `bucketId`: pre-create the auth-policy + tagset that
-   * the document FK-references, run the caller-supplied file-service-go
-   * call, then either:
-   *   - on dedup-reuse (`result.reused === true`): release the pre-created
-   *     rows since Go ignored them and kept the existing row's values
-   *     authoritative;
-   *   - on error: roll back every pre-created resource AND, if Go did
-   *     create a fresh row before the failure, delete it too. On reuse
-   *     during a later failure, the source row belongs to another caller
-   *     and must be preserved.
+   * Materializes a new `Document` row in `bucketId`: pre-create and fully
+   * compose its auth-policy + tagset, then run the caller's file-service-go
+   * call. On dedup-reuse the pre-created rows are released, since Go kept the
+   * existing row authoritative. Nothing is deleted once the call has been
+   * invoked — see the invocation boundary below.
    *
-   * Both create and copy flows go through here so the auth/tagset
-   * lifecycle and dedup-reuse contract stay consistent across the two.
+   * Both create and copy flow through here so the auth/tagset lifecycle and
+   * the dedup-reuse contract stay identical.
    */
   private async persistDocumentWithPreparedAuth(
     bucketId: string,
     goCall: (authId: string, tagsetId: string) => Promise<CreateDocumentResult>,
-    parentAuthorization?: IAuthorizationPolicy
+    parentAuthorization?: IAuthorizationPolicy,
+    prepared?: { createdBy?: string; destinationBucket?: IStorageBucket }
   ): Promise<IDocument> {
     let savedAuth;
     let savedTagset;
     let result;
     let document;
+    // Invocation boundary: goCall can commit and then throw on a lost
+    // response, so an undefined `result` is not evidence that no row exists.
+    let goInvoked = false;
     try {
       const authorization = new AuthorizationPolicy(
         AuthorizationPolicyType.DOCUMENT
@@ -501,6 +466,24 @@ export class StorageBucketService {
       });
       savedTagset = await this.tagsetService.save(tagset);
 
+      // Compose the FULL policy before the insert, so the row is authorized
+      // the instant it exists. The compositor needs no Go row id.
+      if (parentAuthorization) {
+        const pending = {
+          id: `pending-document-in-${bucketId}`,
+          authorization: savedAuth,
+          createdBy: prepared?.createdBy,
+          tagset: savedTagset,
+        } as unknown as IDocument;
+        await this.documentAuthorizationService.applyAuthorizationPolicy(
+          pending,
+          parentAuthorization,
+          prepared?.destinationBucket?.storageAggregator?.type !==
+            StorageAggregatorType.CONVERSATION
+        );
+      }
+
+      goInvoked = true;
       result = await goCall(savedAuth.id, savedTagset.id);
 
       // Load with relations needed for auth/tagset consumers. On dedup
@@ -512,34 +495,14 @@ export class StorageBucketService {
           storageBucket: true,
         },
       });
-
-      // A copy creates a logical document in the destination bucket. Finish its
-      // inherited policy before its opaque file ID can escape to a whiteboard
-      // snapshot or another caller. Upload mutations apply authorization at
-      // their resolver boundary, so only copy supplies a parent here.
-      if (!result.reused && parentAuthorization) {
-        await this.documentAuthorizationService.applyAuthorizationPolicy(
-          document,
-          parentAuthorization
-        );
-      }
     } catch (error) {
       // Independent rollbacks so one cleanup failure doesn't skip the rest.
       // Bind narrowed values into const locals so the closures don't re-widen.
       //
-      // Important: only delete the Go-side document if this request created
-      // it (reused=false). On a dedup reuse, `result.id` refers to someone
-      // else's existing document — deleting it would corrupt their data.
-      const createdDoc = result;
-      if (createdDoc && !createdDoc.reused) {
-        await tryRollback(
-          () => this.fileServiceAdapter.deleteDocument(createdDoc.id),
-          `Failed to rollback Go-side document ${createdDoc.id}`,
-          this.logger,
-          LogContext.STORAGE_BUCKET
-        );
-      }
-      const createdAuth = savedAuth;
+      // Release only if the call never started: once invoked, a committed row
+      // may reference these even on rejection. No Go-side delete either — an
+      // unreferenced row is recoverable, a deleted referenced one is not.
+      const createdAuth = goInvoked ? undefined : savedAuth;
       if (createdAuth) {
         await tryRollback(
           () => this.authorizationPolicyService.delete(createdAuth),
@@ -548,7 +511,7 @@ export class StorageBucketService {
           LogContext.STORAGE_BUCKET
         );
       }
-      const createdTagset = savedTagset;
+      const createdTagset = goInvoked ? undefined : savedTagset;
       if (createdTagset) {
         await tryRollback(
           () => this.tagsetService.removeTagset(createdTagset.id),
@@ -700,10 +663,8 @@ export class StorageBucketService {
     args: StorageBucketArgsDocuments,
     actorContext: ActorContext
   ): Promise<IDocument[]> {
-    // `storageAggregator` is joined ONLY to classify the bucket for the staging
-    // rule below (see isListableInStagingState) — it is a single FK join.
     const storageLoaded = await this.getStorageBucketOrFail(storage.id, {
-      relations: { documents: true, storageAggregator: true },
+      relations: { documents: true },
     });
     const allDocuments = storageLoaded.documents;
     if (!allDocuments)
@@ -715,20 +676,11 @@ export class StorageBucketService {
     // Policy-less rows are internal collaboration snapshots. They are real
     // file rows for quota and lifecycle purposes, but are not user-facing
     // Documents and must never enter per-document authorization — so they are
-    // dropped FIRST, before any privilege or staging test runs.
-    //
-    // Then keep the documents the current user has READ privilege to, and — on
-    // CONVERSATION buckets only — hide OTHER actors' still-staged uploads (A3).
-    // See isListableInStagingState for why that rule is scoped.
-    const hideOtherActorsStagedUploads =
-      this.isConversationBucket(storageLoaded);
+    // dropped FIRST, before the privilege test runs.
     const readableDocuments = allDocuments
       .filter(document => this.documentService.isUserFacingDocument(document))
-      .filter(
-        document =>
-          this.hasAgentAccessToDocument(document, actorContext) &&
-          (!hideOtherActorsStagedUploads ||
-            this.isListableInStagingState(document, actorContext))
+      .filter(document =>
+        this.hasAgentAccessToDocument(document, actorContext)
       );
 
     // (a) by IDs, results in order specified by IDs
@@ -763,51 +715,6 @@ export class StorageBucketService {
       actorContext,
       document.authorization,
       AuthorizationPrivilege.READ
-    );
-  }
-
-  /**
-   * A document that is still in its temporary (staging) location has NOT been
-   * committed to anything yet — it is an in-flight upload that its uploader has
-   * not finished with. On a CONVERSATION bucket it must therefore only be
-   * LISTED for the actor that created it (A3).
-   *
-   * WHY THIS IS NEEDED: document authorization is INHERITED from the bucket, so
-   * everyone who can read the bucket can read every document in it — including
-   * uploads nobody has committed. Feature 013 made that a real disclosure: a
-   * Conversation now exposes its shared, membership-authorized storage bucket
-   * (`Conversation.storageBucket`), so without this filter every member could
-   * enumerate every OTHER member's still-unsent attachment uploads — name, size
-   * and a downloadable URL — before the message was ever sent.
-   *
-   * WHY IT IS SCOPED TO CONVERSATION BUCKETS: `getFilteredDocuments` backs
-   * `StorageBucket.documents` and `StorageBucket.document(ID)` for EVERY bucket
-   * on the platform. Applying the rule unconditionally silently narrowed a
-   * long-standing listing everywhere — space/profile/collaboration buckets,
-   * where other staging flows (Collabora import, profile temporary storage,
-   * template + innovation-pack reference uploads) legitimately produce
-   * `temporaryLocation` rows that admins and the owning flows expect to see
-   * listed. That is a pre-existing platform behaviour and a broader lifecycle
-   * question that feature 013 does not own. The NEW exposure 013 introduced is
-   * the conversation bucket alone, so that is exactly where the new restriction
-   * applies; every other bucket keeps its pre-013 listing.
-   *
-   * Deliberately a LISTING rule, not an authorization rule: it is applied at the
-   * single GraphQL exposure choke point (`documents` / `document(ID)`), so it
-   * cannot break any internal flow that resolves a staged document by id (e.g.
-   * the outbound attachment send path, which goes through DocumentService).
-   * Fail-closed on an unknown actor: an anonymous caller never matches
-   * `createdBy` and therefore never sees a staged document.
-   */
-  private isListableInStagingState(
-    document: IDocument,
-    actorContext: ActorContext
-  ): boolean {
-    if (document.temporaryLocation !== true) {
-      return true;
-    }
-    return (
-      !!actorContext.actorID && document.createdBy === actorContext.actorID
     );
   }
 

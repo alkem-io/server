@@ -35,13 +35,7 @@ export class RoomResolverFields {
   async messages(@Parent() room: IRoom): Promise<IMessage[]> {
     const result = await this.roomService.getMessages(room);
     if (!result) return [];
-    // Feature 013 (C2): this is the single point where a room's WHOLE
-    // (unpaginated) message list materializes, so resolve the room's attachment
-    // bucket ONCE here and stamp it on every message. The per-message
-    // `Message.attachments` resolver then takes its zero-query fast path instead
-    // of re-resolving room → conversation/callout → storage aggregator for each
-    // message individually. Best-effort: never throws, never changes what the
-    // field returns.
+    // Share one bucket/document lookup across the history field resolvers.
     await this.messageAttachmentService.stampAttachmentBucket(room, result);
     return result;
   }

@@ -331,6 +331,7 @@ describe('CommunicationAdapter', () => {
     it('should return IMessage with correct structure', async () => {
       const response = createSuccessResponse({
         message_id: 'msg-123',
+        content: 'Test message',
         timestamp: 1234567890123,
       });
       mockAmqpConnection.request.mockResolvedValue(response);
@@ -358,9 +359,21 @@ describe('CommunicationAdapter', () => {
       });
     });
 
-    it('returns the forwarded attachments + room on the send response (FIX 6)', async () => {
+    it('returns the actual sent media reference instead of the requested batch', async () => {
       const response = createSuccessResponse({
         message_id: 'msg-att',
+        content: 'pic.png',
+        attachments: [
+          {
+            document_id: 'doc-1',
+            media_id: 'actual-media',
+            display_name: 'pic.png',
+            mime_type: 'image/png',
+            size: 900,
+            width: 10,
+            height: 20,
+          },
+        ],
         timestamp: 1234567890123,
       });
       mockAmqpConnection.request.mockResolvedValue(response);
@@ -368,7 +381,7 @@ describe('CommunicationAdapter', () => {
       const result = await adapter.sendMessage({
         roomID: 'room-uuid-123',
         actorID: 'actor-uuid-456',
-        message: 'with media',
+        message: '',
         attachments: [
           {
             documentId: 'doc-1',
@@ -382,12 +395,14 @@ describe('CommunicationAdapter', () => {
       });
 
       expect(result.roomID).toBe('room-uuid-123');
+      expect(result.message).toBe('pic.png');
       expect(result.rawAttachments).toEqual([
         {
           document_id: 'doc-1',
+          media_id: 'actual-media',
           display_name: 'pic.png',
           mime_type: 'image/png',
-          size: 1000,
+          size: 900,
           // Dims must survive the mapper — they become the m.image event's
           // info.w/info.h, so dropping them is what makes Element reflow.
           width: 10,

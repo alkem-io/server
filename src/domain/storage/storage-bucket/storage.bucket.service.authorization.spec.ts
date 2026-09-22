@@ -105,7 +105,7 @@ describe('StorageBucketAuthorizationService', () => {
       );
       expect(
         documentAuthorizationService.applyAuthorizationPolicy
-      ).toHaveBeenCalledWith(doc1, privilegeAuth);
+      ).toHaveBeenCalledWith(doc1, privilegeAuth, true);
       expect(authorizationPolicyService.saveAll).toHaveBeenCalled();
     });
 

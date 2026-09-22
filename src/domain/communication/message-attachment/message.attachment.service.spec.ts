@@ -1,2854 +1,316 @@
-import { LogContext } from '@common/enums';
+import { ReceivedAttachment } from '@alkemio/matrix-adapter-lib';
+import { AuthorizationPrivilege } from '@common/enums';
 import { RoomType } from '@common/enums/room.type';
-import {
-  EntityNotFoundException,
-  ValidationException,
-} from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IRoom } from '@domain/communication/room/room.interface';
+import { IDocument } from '@domain/storage/document/document.interface';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { createMock } from '@golevelup/ts-vitest';
 import { ConfigService } from '@nestjs/config';
-import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { type Mocked } from 'vitest';
-import { Conversation } from '../conversation/conversation.entity';
-import { Room } from '../room/room.entity';
+import { AlkemioConfig } from '@src/types/alkemio.config';
+import { IMessage } from '../message/message.interface';
+import { IRoom } from '../room/room.interface';
 import {
   MessageAttachmentService,
   sanitizeAttachmentDisplayName,
 } from './message.attachment.service';
 
-const MATRIX_MEDIA_BUCKET = 'matrix-media-bucket';
-const CONV_BUCKET = 'conv-bucket';
-const CALLOUT_BUCKET = 'callout-bucket';
-
-const mockConfig = {
-  get: vi.fn((key: string) =>
-    key === 'storage.file_service.matrix_media_bucket_id'
-      ? MATRIX_MEDIA_BUCKET
-      : undefined
-  ),
+const providerID = '11111111-1111-4111-8111-111111111111';
+const documentID = '22222222-2222-4222-8222-222222222222';
+const room = { id: 'room', type: RoomType.CONVERSATION_GROUP } as IRoom;
+const actor = { actorID: 'bob' } as ActorContext;
+const raw: ReceivedAttachment = {
+  media_id: 'media',
+  display_name: 'from-element.png',
+  mime_type: 'image/png',
+  size: 10,
 };
-
-const conversationRoom: IRoom = {
-  id: 'room-1',
-  type: RoomType.CONVERSATION_GROUP,
-} as IRoom;
-
-const calloutRoom: IRoom = {
-  id: 'callout-room-1',
-  type: RoomType.CALLOUT,
-} as IRoom;
-
-const conversationBucket = {
-  id: CONV_BUCKET,
-  allowedMimeTypes: ['image/png'],
-  maxFileSize: 52428800,
-  authorization: { id: 'conv-bucket-auth' },
-};
+const message = (attachment = raw): IMessage => ({
+  id: 'event',
+  message: '',
+  sender: 'alice',
+  timestamp: 1,
+  reactions: [],
+  roomID: room.id,
+  rawAttachments: [attachment],
+});
+const makeDocument = (values: Partial<IDocument> = {}): IDocument =>
+  ({
+    id: documentID,
+    displayName: 'stored.png',
+    mimeType: 'image/png',
+    size: 10,
+    externalID: 'hash',
+    externalReference: 'media',
+    storageBucket: { id: 'conversation' },
+    authorization: { id: 'policy' },
+    createdBy: 'alice',
+    temporaryLocation: false,
+    ...values,
+  }) as IDocument;
 
 describe('MessageAttachmentService', () => {
+  const documents = createMock<DocumentService>();
+  const storage = createMock<StorageBucketService>();
+  const auth = createMock<AuthorizationService>();
+  const aggregators = createMock<StorageAggregatorResolverService>();
+  const rooms = createMock<RoomResolverService>();
+  const documentRepository = { find: vi.fn() };
+  const conversationRepository = { findOne: vi.fn() };
+  const roomRepository = { findOne: vi.fn() };
+  const bucket = {
+    id: 'conversation',
+    authorization: { id: 'bucket-policy' },
+    allowedMimeTypes: ['image/png'],
+    maxFileSize: 50,
+  };
   let service: MessageAttachmentService;
-  let fileServiceAdapter: Mocked<FileServiceAdapter>;
-  let documentService: Mocked<DocumentService>;
-  let storageBucketService: Mocked<StorageBucketService>;
-  let authorizationService: Mocked<AuthorizationService>;
-  let authorizationPolicyService: Mocked<AuthorizationPolicyService>;
-  let storageAggregatorResolverService: Mocked<StorageAggregatorResolverService>;
-  let roomResolverService: Mocked<RoomResolverService>;
-  let conversationRepository: {
-    findOne: ReturnType<typeof vi.fn>;
-    manager: { findOne: ReturnType<typeof vi.fn> };
-  };
-  let roomRepository: { findOne: ReturnType<typeof vi.fn> };
+  let provider: IDocument;
 
-  beforeEach(async () => {
-    vi.restoreAllMocks();
-    conversationRepository = {
-      findOne: vi.fn(),
-      manager: { findOne: vi.fn() },
-    };
-    roomRepository = { findOne: vi.fn() };
-
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        MessageAttachmentService,
-        MockWinstonProvider,
-        { provide: ConfigService, useValue: mockConfig },
-        {
-          provide: getRepositoryToken(Conversation),
-          useValue: conversationRepository,
-        },
-        {
-          provide: getRepositoryToken(Room),
-          useValue: roomRepository,
-        },
-      ],
-    })
-      .useMocker(defaultMockerFactory)
-      .compile();
-
-    service = module.get(MessageAttachmentService);
-    fileServiceAdapter = module.get(FileServiceAdapter);
-    documentService = module.get(DocumentService);
-    storageBucketService = module.get(StorageBucketService);
-    authorizationService = module.get(AuthorizationService);
-    authorizationPolicyService = module.get(AuthorizationPolicyService);
-    storageAggregatorResolverService = module.get(
-      StorageAggregatorResolverService
-    );
-    roomResolverService = module.get(RoomResolverService);
-
+  beforeEach(() => {
+    vi.resetAllMocks();
+    provider = makeDocument({
+      id: providerID,
+      displayName: 'media',
+      storageBucket: { id: 'matrix' } as any,
+      authorization: undefined,
+    });
+    documentRepository.find.mockResolvedValue([provider]);
+    roomRepository.findOne.mockResolvedValue(room);
     conversationRepository.findOne.mockResolvedValue({
-      id: 'conv-1',
-      storageAggregator: { directStorage: { id: CONV_BUCKET } },
+      storageAggregator: { directStorage: bucket },
     });
-    storageBucketService.getStorageBucketOrFail.mockResolvedValue(
-      conversationBucket as any
+    documents.getDocumentOrFail.mockResolvedValue(makeDocument());
+    documents.getPubliclyAccessibleURL.mockReturnValue(
+      'https://alkemio.test/api/private/rest/storage/document'
     );
-    authorizationPolicyService.inheritParentAuthorization.mockReturnValue({
-      id: 'minted',
-    } as any);
-    authorizationPolicyService.save.mockResolvedValue({
-      id: 'minted-auth',
-    } as any);
-    // C1: inbound (media_id) read resolution is a SINGLE batched server-side
-    // query per message. Default to "nothing re-homed yet" so a test that does
-    // not care never picks up a deep-mock proxy as a document list.
-    documentService.getDocumentsByReferencesInBucket.mockResolvedValue([]);
-    // SEND path only. Real signature is `Promise<DocumentReferenceResult | null>`;
-    // default to the "no meta" answer so a test that does not care about dims
-    // never picks up a deep-mock proxy as a width/height value.
-    fileServiceAdapter.getDocumentMeta.mockResolvedValue(null);
+    auth.isAccessGranted.mockReturnValue(true);
+    storage.copyDocumentToBucket.mockResolvedValue(makeDocument());
+    service = new MessageAttachmentService(
+      { get: () => 'matrix' } as unknown as ConfigService<AlkemioConfig, true>,
+      documents,
+      storage,
+      auth,
+      aggregators,
+      rooms,
+      conversationRepository as any,
+      roomRepository as any,
+      documentRepository as any,
+      { warn: vi.fn(), error: vi.fn(), log: vi.fn() }
+    );
   });
 
-  /**
-   * The realistic conversation bucket the OUTBOUND path resolves (via the
-   * conversation repository), carrying the curated MIME allow-list and the
-   * 50 MiB cap so `validateAgainstBucketPolicy` is genuinely load-bearing in
-   * the outbound tests (D2), not a silent no-op against a policy-less stub.
-   */
-  const useConversationBucket = () => {
+  it('allows an authorized member to send an existing durable document', async () => {
+    const refs = await service.resolveOutboundAttachments(room, actor, [
+      documentID,
+    ]);
+    expect(refs).toEqual([
+      {
+        documentId: documentID,
+        displayName: 'stored.png',
+        mimeType: 'image/png',
+        size: 10,
+      },
+    ]);
+    expect(auth.grantAccessOrFail).toHaveBeenCalledWith(
+      actor,
+      expect.anything(),
+      AuthorizationPrivilege.READ,
+      expect.any(String)
+    );
+  });
+
+  it.each([
+    { storageBucket: { id: 'other' } },
+    { size: 51 },
+    { mimeType: 'application/x-executable' },
+  ])('rejects an out-of-scope or disallowed outbound document: %j', async overrides => {
+    documents.getDocumentOrFail.mockResolvedValue(
+      makeDocument(overrides as any)
+    );
+    await expect(
+      service.resolveOutboundAttachments(room, actor, [documentID])
+    ).rejects.toThrow();
+  });
+
+  it('rejects an outbound batch before loading documents', async () => {
+    await expect(
+      service.resolveOutboundAttachments(room, actor, [documentID, providerID])
+    ).rejects.toThrow('one attachment');
+    expect(documents.getDocumentOrFail).not.toHaveBeenCalled();
+  });
+
+  it('copies Element media before any read and leaves the provider row unchanged', async () => {
+    const before = structuredClone(provider);
+    expect(await service.prepareInboundAttachments(room, 'alice', [raw])).toBe(
+      'conversation'
+    );
+    expect(storage.copyDocumentToBucket).toHaveBeenCalledWith(
+      'conversation',
+      provider,
+      'alice',
+      false,
+      {
+        externalReference: 'media',
+        displayName: 'from-element.png',
+      }
+    );
+    expect(provider).toEqual(before);
+  });
+
+  it('reuses a web hint only for the same bucket and content hash', async () => {
+    documentRepository.find.mockResolvedValue([
+      provider,
+      makeDocument({ externalReference: undefined }),
+    ]);
+    await service.prepareInboundAttachments(room, 'bob', [
+      { ...raw, document_id: documentID },
+    ]);
+    expect(storage.copyDocumentToBucket).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { externalID: 'different-bytes' },
+    { storageBucket: { id: 'other-conversation' } },
+    { authorization: undefined },
+  ])('ignores an invalid hint and copies the actual media: %j', async overrides => {
+    documentRepository.find.mockResolvedValue([
+      provider,
+      makeDocument({ externalReference: undefined, ...overrides } as any),
+    ]);
+    await service.prepareInboundAttachments(room, 'bob', [
+      { ...raw, document_id: documentID },
+    ]);
+    expect(storage.copyDocumentToBucket).toHaveBeenCalledWith(
+      'conversation',
+      provider,
+      'bob',
+      false,
+      expect.anything()
+    );
+  });
+
+  it('a repeated event reuses the scoped conversation copy', async () => {
+    documentRepository.find.mockResolvedValue([provider, makeDocument()]);
+    await service.prepareInboundAttachments(room, 'bob', [raw]);
+    expect(storage.copyDocumentToBucket).not.toHaveBeenCalled();
+  });
+
+  it('forwards media to another conversation with its own copy', async () => {
     conversationRepository.findOne.mockResolvedValue({
-      id: 'conv-1',
-      storageAggregator: { directStorage: conversationBucket },
+      storageAggregator: { directStorage: { ...bucket, id: 'other' } },
     });
-  };
-
-  /** C1: the inbound documents a read's batched by-reference query resolves. */
-  const inboundDocuments = (...documents: any[]) => {
-    documentService.getDocumentsByReferencesInBucket.mockResolvedValue(
-      documents as any
+    documentRepository.find.mockResolvedValue([provider, makeDocument()]);
+    await service.prepareInboundAttachments(room, 'bob', [raw]);
+    expect(storage.copyDocumentToBucket).toHaveBeenCalledWith(
+      'other',
+      provider,
+      'bob',
+      false,
+      expect.anything()
     );
-  };
-
-  // --- T009 outbound validation ---
-
-  describe('resolveOutboundAttachments', () => {
-    it('returns [] when there are no attachments', async () => {
-      const refs = await service.resolveOutboundAttachments(
-        conversationRoom,
-        {} as any,
-        undefined
-      );
-      expect(refs).toEqual([]);
-    });
-
-    it('rejects more than 10 attachments', async () => {
-      const ids = Array.from({ length: 11 }, (_, i) => `doc-${i}`);
-      await expect(
-        service.resolveOutboundAttachments(conversationRoom, {} as any, ids)
-      ).rejects.toBeInstanceOf(ValidationException);
-    });
-
-    it('rejects a document that is not in the conversation bucket', async () => {
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-1',
-        storageBucket: { id: 'some-other-bucket' },
-        authorization: { id: 'a' },
-      } as any);
-
-      await expect(
-        service.resolveOutboundAttachments(conversationRoom, {} as any, [
-          'doc-1',
-        ])
-      ).rejects.toBeInstanceOf(ValidationException);
-    });
-
-    it('rejects an attachment not owned by the sender (outbound == read invariant)', async () => {
-      // FIX 3: a member may only attach their OWN uploads. A doc in the bucket
-      // but owned by another member must be rejected before send.
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-1',
-        createdBy: 'another-member',
-        mimeType: 'image/png',
-        size: 1000,
-        storageBucket: { id: CONV_BUCKET },
-        authorization: { id: 'doc-auth' },
-      } as any);
-
-      await expect(
-        service.resolveOutboundAttachments(
-          conversationRoom,
-          { actorID: 'sender-1' } as any,
-          ['doc-1']
-        )
-      ).rejects.toBeInstanceOf(ValidationException);
-      // Nothing pinned when validation rejects.
-      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-    });
-
-    it('rejects a durable (already-sent) attachment — single-use invariant (FIX 1)', async () => {
-      // A durable doc (temporaryLocation !== true) was already consumed by a
-      // prior send; re-attaching it would let one document back two messages, so
-      // deleting one would destroy the other's only file row. Reject it.
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-1',
-        createdBy: 'sender-1',
-        mimeType: 'image/png',
-        size: 1000,
-        temporaryLocation: false,
-        storageBucket: { id: CONV_BUCKET },
-        authorization: { id: 'doc-auth' },
-      } as any);
-
-      await expect(
-        service.resolveOutboundAttachments(
-          conversationRoom,
-          { actorID: 'sender-1' } as any,
-          ['doc-1']
-        )
-      ).rejects.toBeInstanceOf(ValidationException);
-      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-    });
-
-    // A1 (two senders, same file). Alice sends logo.png; the send pins her row
-    // durable with createdBy=Alice. Bob then attaches the SAME BYTES. With
-    // per-bucket content dedup the upload handed Bob back ALICE's row, which
-    // fails BOTH gates above — so Bob could never send that file. The fix is at
-    // UPLOAD (conversation buckets skipDedup, see
-    // StorageBucketService.requiresPerUploaderDocuments): Bob gets his own
-    // fresh, temporary row and both gates pass UNTOUCHED. This pins that the
-    // gates were NOT weakened to achieve it.
-    describe('A1: a second sender can send a file another member already sent', () => {
-      const aliceDurableRow = {
-        id: 'doc-alice',
-        createdBy: 'alice',
-        displayName: 'logo.png',
-        mimeType: 'image/png',
-        size: 1000,
-        temporaryLocation: false, // pinned by Alice's send
-        storageBucket: { id: CONV_BUCKET },
-        authorization: { id: 'doc-auth' },
-      };
-
-      it("still REFUSES Alice's row when handed to Bob (confused-deputy gates intact)", async () => {
-        documentService.getDocumentOrFail.mockResolvedValue(
-          aliceDurableRow as any
-        );
-
-        await expect(
-          service.resolveOutboundAttachments(
-            conversationRoom,
-            { actorID: 'bob' } as any,
-            ['doc-alice']
-          )
-        ).rejects.toBeInstanceOf(ValidationException);
-      });
-
-      it("ACCEPTS Bob's own fresh row for the identical bytes", async () => {
-        documentService.getDocumentOrFail.mockResolvedValue({
-          ...aliceDurableRow,
-          id: 'doc-bob',
-          createdBy: 'bob',
-          temporaryLocation: true, // Bob's own unsent upload
-        } as any);
-
-        const refs = await service.resolveOutboundAttachments(
-          conversationRoom,
-          { actorID: 'bob' } as any,
-          ['doc-bob']
-        );
-
-        expect(refs).toHaveLength(1);
-        expect(refs[0]).toMatchObject({
-          documentId: 'doc-bob',
-          displayName: 'logo.png',
-        });
-      });
-    });
-
-    it('resolves + validates a sender-owned attachment, READ-gates, and does NOT pin during resolve', async () => {
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-1',
-        createdBy: 'sender-1',
-        displayName: 'pic.png',
-        mimeType: 'image/png',
-        size: 1000,
-        temporaryLocation: true,
-        storageBucket: { id: CONV_BUCKET },
-        authorization: { id: 'doc-auth' },
-      } as any);
-
-      const refs = await service.resolveOutboundAttachments(
-        conversationRoom,
-        { actorID: 'sender-1' } as any,
-        ['doc-1']
-      );
-
-      expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
-      // FIX 0: pinning (temporaryLocation=false) is DEFERRED to
-      // persistOutboundAttachments (called only after the send succeeds), so
-      // resolve itself must not flip anything.
-      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      expect(refs).toEqual([
-        {
-          documentId: 'doc-1',
-          displayName: 'pic.png',
-          mimeType: 'image/png',
-          size: 1000,
-        },
-      ]);
-    });
-
-    describe('outbound image dimensions', () => {
-      /** A sender-owned, staged, in-bucket doc of the given mime type. */
-      const outboundDoc = (id: string, mimeType: string) => ({
-        id,
-        createdBy: 'sender-1',
-        displayName: `${id}.bin`,
-        mimeType,
-        size: 1000,
-        temporaryLocation: true,
-        storageBucket: { id: CONV_BUCKET },
-        authorization: { id: `${id}-auth` },
-      });
-
-      it('sets width/height on IMAGE refs from file-service meta, so the m.image event carries info.w/info.h', async () => {
-        // WHY this exists: Element (and every Matrix client) populates info.w/h
-        // for its own uploads. Without these the outbound event is dimensionless
-        // and Element reflows its layout as our image loads.
-        documentService.getDocumentOrFail.mockImplementation(
-          async (id: string) => outboundDoc(id, 'image/png') as any
-        );
-        fileServiceAdapter.getDocumentMeta.mockImplementation(
-          async (id: string) =>
-            ({
-              id,
-              imageWidth: id === 'img-a' ? 640 : 100,
-              imageHeight: id === 'img-a' ? 480 : 50,
-            }) as any
-        );
-
-        const refs = await service.resolveOutboundAttachments(
-          conversationRoom,
-          { actorID: 'sender-1' } as any,
-          ['img-a', 'img-b']
-        );
-
-        // Dims are matched BY DOCUMENT ID, and ref order is untouched.
-        expect(refs).toEqual([
-          expect.objectContaining({
-            documentId: 'img-a',
-            width: 640,
-            height: 480,
-          }),
-          expect.objectContaining({
-            documentId: 'img-b',
-            width: 100,
-            height: 50,
-          }),
-        ]);
-        // Bounded: exactly one lookup per image, never more.
-        expect(fileServiceAdapter.getDocumentMeta).toHaveBeenCalledTimes(2);
-      });
-
-      it('a meta failure still SENDS: dims stay undefined and nothing throws', async () => {
-        documentService.getDocumentOrFail.mockImplementation(
-          async (id: string) => outboundDoc(id, 'image/png') as any
-        );
-        // Best-effort: even a REJECTION (not just the adapter's own null
-        // degradation) must never reach the send.
-        fileServiceAdapter.getDocumentMeta.mockRejectedValue(
-          new Error('file-service is down')
-        );
-
-        const refs = await service.resolveOutboundAttachments(
-          conversationRoom,
-          { actorID: 'sender-1' } as any,
-          ['img-a']
-        );
-
-        expect(refs).toHaveLength(1);
-        expect(refs[0].documentId).toBe('img-a');
-        expect(refs[0].width).toBeUndefined();
-        expect(refs[0].height).toBeUndefined();
-      });
-
-      it('a NON-IMAGE attachment triggers NO meta fetch at all', async () => {
-        documentService.getDocumentOrFail.mockImplementation(
-          async (id: string) => outboundDoc(id, 'application/pdf') as any
-        );
-
-        const refs = await service.resolveOutboundAttachments(
-          conversationRoom,
-          { actorID: 'sender-1' } as any,
-          ['doc-pdf']
-        );
-
-        expect(refs).toHaveLength(1);
-        expect(refs[0].width).toBeUndefined();
-        expect(refs[0].height).toBeUndefined();
-        expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
-      });
-
-      it('a dimension the wire cannot carry (0 / non-integer / out of Int range) counts as ABSENT', async () => {
-        documentService.getDocumentOrFail.mockImplementation(
-          async (id: string) => outboundDoc(id, 'image/png') as any
-        );
-        fileServiceAdapter.getDocumentMeta.mockResolvedValue({
-          id: 'img-a',
-          imageWidth: 0,
-          imageHeight: 1.5,
-        } as any);
-
-        const refs = await service.resolveOutboundAttachments(
-          conversationRoom,
-          { actorID: 'sender-1' } as any,
-          ['img-a']
-        );
-
-        expect(refs[0].width).toBeUndefined();
-        expect(refs[0].height).toBeUndefined();
-      });
-    });
-
-    it('[1] loads the attachment documents in PARALLEL, then validates in order (refs keep input order)', async () => {
-      // The per-id getDocumentOrFail loads are independent I/O and must be issued
-      // concurrently (worst-case ~1 round-trip, not N) BEFORE the CPU-only
-      // validation pass. Track concurrency of the loads and assert the returned
-      // refs keep documentIds order. Non-image docs so the dims batch stays out
-      // of the way — this isolates the load-concurrency assertion.
-      const docs: Record<string, any> = {
-        'doc-x': {
-          id: 'doc-x',
-          createdBy: 'sender-1',
-          displayName: 'x.pdf',
-          mimeType: 'application/pdf',
-          size: 1,
-          temporaryLocation: true,
-          storageBucket: { id: CONV_BUCKET },
-          authorization: { id: 'auth-x' },
-        },
-        'doc-y': {
-          id: 'doc-y',
-          createdBy: 'sender-1',
-          displayName: 'y.pdf',
-          mimeType: 'application/pdf',
-          size: 2,
-          temporaryLocation: true,
-          storageBucket: { id: CONV_BUCKET },
-          authorization: { id: 'auth-y' },
-        },
-        'doc-z': {
-          id: 'doc-z',
-          createdBy: 'sender-1',
-          displayName: 'z.pdf',
-          mimeType: 'application/pdf',
-          size: 3,
-          temporaryLocation: true,
-          storageBucket: { id: CONV_BUCKET },
-          authorization: { id: 'auth-z' },
-        },
-      };
-      let inFlight = 0;
-      let maxInFlight = 0;
-      documentService.getDocumentOrFail.mockImplementation(
-        async (id: string) => {
-          inFlight += 1;
-          maxInFlight = Math.max(maxInFlight, inFlight);
-          await Promise.resolve();
-          inFlight -= 1;
-          return docs[id];
-        }
-      );
-
-      const refs = await service.resolveOutboundAttachments(
-        conversationRoom,
-        { actorID: 'sender-1' } as any,
-        ['doc-x', 'doc-y', 'doc-z']
-      );
-
-      // All three loads overlapped in flight → parallelised, not serialised.
-      expect(maxInFlight).toBe(3);
-      // Validation still ran (READ-gate) and refs preserve documentIds order.
-      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledTimes(3);
-      expect(refs.map(r => r.documentId)).toEqual(['doc-x', 'doc-y', 'doc-z']);
-    });
-
-    it('[1] restores per-position error precedence: doc[0] WRONG-BUCKET ValidationException surfaces before doc[1] not-found, and loads still overlap', async () => {
-      // Regression guard: Promise.all rejected on the FIRST load failure
-      // regardless of position, so a LATER doc's not-found could preempt an
-      // EARLIER doc's ValidationException. allSettled + an ordered validation
-      // pass restores the sequential loop's precedence — position 0's error
-      // (here a WRONG-BUCKET ValidationException) surfaces before position 1's
-      // not-found — while both loads still run concurrently.
-      let inFlight = 0;
-      let maxInFlight = 0;
-      documentService.getDocumentOrFail.mockImplementation(
-        async (id: string) => {
-          inFlight += 1;
-          maxInFlight = Math.max(maxInFlight, inFlight);
-          await Promise.resolve();
-          inFlight -= 1;
-          if (id === 'doc-missing') {
-            // Later position's LOAD failure — must NOT preempt position 0.
-            throw new EntityNotFoundException(
-              'Document not found',
-              LogContext.COMMUNICATION
-            );
-          }
-          // Position 0: owned + staged, but in the WRONG bucket → its VALIDATION
-          // must throw first.
-          return {
-            id: 'doc-wrong-bucket',
-            createdBy: 'sender-1',
-            mimeType: 'image/png',
-            size: 1000,
-            temporaryLocation: true,
-            storageBucket: { id: 'some-other-bucket' },
-            authorization: { id: 'a' },
-          } as any;
-        }
-      );
-
-      const error = await service
-        .resolveOutboundAttachments(
-          conversationRoom,
-          { actorID: 'sender-1' } as any,
-          ['doc-wrong-bucket', 'doc-missing']
-        )
-        .catch(e => e);
-
-      // Position 0's WRONG-BUCKET ValidationException surfaces — NOT doc[1]'s
-      // not-found.
-      expect(error).toBeInstanceOf(ValidationException);
-      expect((error as Error).message).toContain(
-        'Attachment does not belong to this conversation'
-      );
-      // Both loads still overlapped in flight → allSettled kept them concurrent.
-      expect(maxInFlight).toBe(2);
-    });
-
-    it('[1] a load failure at position 0 surfaces that load error (not masked by later positions)', async () => {
-      // When the FIRST position's load fails, its error surfaces at its position
-      // (the ordered pass re-throws settled[0].reason) — matching the old
-      // sequential loop, which would have thrown on doc-0 before touching doc-1.
-      const notFound = new EntityNotFoundException(
-        'Document not found',
-        LogContext.COMMUNICATION
-      );
-      documentService.getDocumentOrFail.mockImplementation(
-        async (id: string) => {
-          if (id === 'doc-0') {
-            throw notFound;
-          }
-          return {
-            id,
-            createdBy: 'sender-1',
-            mimeType: 'image/png',
-            size: 1000,
-            temporaryLocation: true,
-            storageBucket: { id: CONV_BUCKET },
-            authorization: { id: 'a' },
-          } as any;
-        }
-      );
-
-      await expect(
-        service.resolveOutboundAttachments(
-          conversationRoom,
-          { actorID: 'sender-1' } as any,
-          ['doc-0', 'doc-1']
-        )
-      ).rejects.toBe(notFound);
-    });
   });
 
-  // --- FIX 0: deferred pinning after send ---
-
-  describe('persistOutboundAttachments', () => {
-    it('flips temporaryLocation=false for every attachment after a successful send', async () => {
-      await service.persistOutboundAttachments([
-        {
-          documentId: 'doc-1',
-          displayName: 'p',
-          mimeType: 'image/png',
-          size: 1,
-        },
-        {
-          documentId: 'doc-2',
-          displayName: 'q',
-          mimeType: 'image/png',
-          size: 2,
-        },
-      ] as any);
-
-      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith('doc-1', {
-        temporaryLocation: false,
-      });
-      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith('doc-2', {
-        temporaryLocation: false,
-      });
-    });
-
-    it('is a no-op when there are no attachments', async () => {
-      await service.persistOutboundAttachments([]);
-      await service.persistOutboundAttachments(undefined);
-      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-    });
-
-    it('is best-effort: a pin failure does not throw into the post-send path', async () => {
-      fileServiceAdapter.moveDocument.mockRejectedValueOnce(
-        new Error('transient')
-      );
-      await expect(
-        service.persistOutboundAttachments([
-          {
-            documentId: 'doc-1',
-            displayName: 'p',
-            mimeType: 'image/png',
-            size: 1,
-          },
-        ] as any)
-      ).resolves.toBeUndefined();
-    });
+  it('propagates a placement failure to the receipt boundary', async () => {
+    storage.copyDocumentToBucket.mockRejectedValue(
+      new Error('copy unavailable')
+    );
+    await expect(
+      service.prepareInboundAttachments(room, 'alice', [raw])
+    ).rejects.toThrow('copy unavailable');
   });
 
-  // --- T013 inbound re-home ---
-
-  describe('rehomeInboundAttachments', () => {
-    it('MOVES a staging document into the conversation bucket', async () => {
-      fileServiceAdapter.getDocumentByReference
-        .mockResolvedValueOnce(null) // not already in target
-        .mockResolvedValueOnce({
-          id: 'doc-staging',
-          storageBucketId: MATRIX_MEDIA_BUCKET,
-          mimeType: 'image/png',
-        } as any); // global canonical lookup
-
-      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-        {
-          media_id: 'media-1',
-          display_name: 'x',
-          mime_type: 'image/png',
-          size: 1,
-        },
-      ]);
-
-      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith(
-        'doc-staging',
-        expect.objectContaining({
-          storageBucketId: CONV_BUCKET,
-          createdBy: 'sender-1',
-          externalReference: 'media-1',
-        })
-      );
-      expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
-    });
-
-    it('MOVE restores the human filename over the provider media-id placeholder', async () => {
-      // The Synapse storage provider names every staging row after the opaque
-      // media_id (it runs below the Matrix event layer). The re-home MOVE is the
-      // only point that can restore the event `body`, so without this an
-      // Element-sent holiday.jpg shows up as `media-1` and downloads
-      // extension-less.
-      fileServiceAdapter.getDocumentByReference
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({
-          id: 'doc-staging',
-          displayName: 'media-1',
-          storageBucketId: MATRIX_MEDIA_BUCKET,
-          mimeType: 'image/jpeg',
-        } as any);
-
-      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-        {
-          media_id: 'media-1',
-          display_name: 'holiday.jpg',
-          mime_type: 'image/jpeg',
-          size: 1,
-        },
-      ]);
-
-      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith(
-        'doc-staging',
-        expect.objectContaining({ displayName: 'holiday.jpg' })
-      );
-    });
-
-    it('MOVE sanitizes a crafted display_name instead of letting file-service reject the whole re-home', async () => {
-      // display_name comes verbatim off an attacker-influenceable Matrix event.
-      // It rides the SAME atomic PATCH as authorizationId/createdBy/
-      // externalReference, so an unsanitized malformed name would fail the
-      // entire re-home and make the attachment permanently invisible.
-      fileServiceAdapter.getDocumentByReference
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({
-          id: 'doc-staging',
-          storageBucketId: MATRIX_MEDIA_BUCKET,
-          mimeType: 'image/png',
-        } as any);
-
-      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-        {
-          media_id: 'media-1',
-          // NUL is written as an ESCAPE, never as a raw 0x00 byte: a literal NUL
-          // makes this whole file classify as BINARY, so grep/rg silently skip
-          // it (it stops being greppable, which has already caused a
-          // near-miss when verifying dead code). The sanitizer sees the same
-          // character either way.
-          display_name: '../../etc/pas\u0000swd\n',
-          mime_type: 'image/png',
-          size: 1,
-        },
-      ]);
-
-      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith(
-        'doc-staging',
-        expect.objectContaining({ displayName: '.._.._etc_passwd' })
-      );
-    });
-
-    it('MOVE falls back to the staging media id when display_name sanitizes to nothing', async () => {
-      fileServiceAdapter.getDocumentByReference
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({
-          id: 'doc-staging',
-          storageBucketId: MATRIX_MEDIA_BUCKET,
-          mimeType: 'image/png',
-        } as any);
-
-      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-        {
-          media_id: 'media-1',
-          display_name: '   ',
-          mime_type: 'image/png',
-          size: 1,
-        },
-      ]);
-
-      // Never send an empty displayName — file-service rejects it (NOT NULL /
-      // non-whitespace), which would fail the whole re-home.
-      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith(
-        'doc-staging',
-        expect.objectContaining({ displayName: 'media-1' })
-      );
-    });
-
-    it('COPIES (re-share) when the media is already homed elsewhere; the copy is born durable → NO separate pin', async () => {
-      fileServiceAdapter.getDocumentByReference
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({
-          id: 'doc-other',
-          storageBucketId: 'another-conversation-bucket',
-          mimeType: 'image/png',
-        } as any);
-      fileServiceAdapter.copyDocument.mockResolvedValue({
-        id: 'doc-copied',
-      } as any);
-
-      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-        {
-          media_id: 'media-1',
-          display_name: 'x',
-          mime_type: 'image/png',
-          size: 1,
-        },
-      ]);
-
-      expect(fileServiceAdapter.copyDocument).toHaveBeenCalledWith(
-        expect.objectContaining({
-          sourceId: 'doc-other',
-          destinationBucketId: CONV_BUCKET,
-          externalReference: 'media-1',
-          // Reference-bearing copies must bypass content-dedup so each media_id
-          // keeps its own row (and its reference).
-          skipDedup: true,
-        })
-      );
-      // The file-service copy is born durable (CopyDocument hardcodes
-      // temporaryLocation:false), so the re-share path issues NO follow-up
-      // pin/PATCH — moveDocument is never called on the COPY branch.
-      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-    });
-
-    it('re-share is idempotent: a second receive of the same media_id early-returns without re-copying', async () => {
-      // Idempotency: the copy already exists in the target bucket → return early,
-      // no re-copy, no canonical lookup, no auth mint, no pin.
-      fileServiceAdapter.getDocumentByReference.mockResolvedValueOnce({
-        id: 'doc-copied',
-        storageBucketId: CONV_BUCKET,
-      } as any);
-
-      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-        {
-          media_id: 'media-1',
-          display_name: 'x',
-          mime_type: 'image/png',
-          size: 1,
-        },
-      ]);
-
-      expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
-      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      expect(authorizationPolicyService.save).not.toHaveBeenCalled();
-      // Only the single bucket-scoped idempotency lookup ran.
-      expect(fileServiceAdapter.getDocumentByReference).toHaveBeenCalledTimes(
-        1
-      );
-    });
-
-    it('never aborts the inbound handler when target bucket resolution throws (FIX 2)', async () => {
-      // getTargetBucketForRoom → conversationRepository.findOne throws
-      // transiently. The handler must not propagate — inbound message processing
-      // continues.
-      conversationRepository.findOne.mockRejectedValueOnce(
-        new Error('bucket lookup failed')
-      );
-
-      await expect(
-        service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-          {
-            media_id: 'media-1',
-            display_name: 'x',
-            mime_type: 'image/png',
-            size: 1,
-          },
-        ])
-      ).resolves.toBeUndefined();
-      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
-    });
-
-    it('cleans up the minted auth policy when placement (MOVE) fails', async () => {
-      fileServiceAdapter.getDocumentByReference
-        .mockResolvedValueOnce(null) // not already in target
-        .mockResolvedValueOnce({
-          id: 'doc-staging',
-          storageBucketId: MATRIX_MEDIA_BUCKET,
-          mimeType: 'image/png',
-        } as any);
-      fileServiceAdapter.moveDocument.mockRejectedValueOnce(
-        new Error('placement failed')
-      );
-
-      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-        {
-          media_id: 'media-1',
-          display_name: 'x',
-          mime_type: 'image/png',
-          size: 1,
-        },
-      ]);
-
-      // The auth minted before placement must not leak when the MOVE fails.
-      expect(authorizationPolicyService.deleteById).toHaveBeenCalledWith(
-        'minted-auth'
-      );
-    });
-
-    it('is idempotent: does nothing when the document is already in the target bucket', async () => {
-      fileServiceAdapter.getDocumentByReference.mockResolvedValueOnce({
-        id: 'doc-existing',
-        storageBucketId: CONV_BUCKET,
-      } as any);
-
-      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-        {
-          media_id: 'media-1',
-          display_name: 'x',
-          mime_type: 'image/png',
-          size: 1,
-        },
-      ]);
-
-      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
-    });
-
-    it('HEIC: MOVES verbatim like any other type — single mint, no second doc', async () => {
-      fileServiceAdapter.getDocumentByReference
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({
-          id: 'doc-heic',
-          displayName: 'photo.heic',
-          storageBucketId: MATRIX_MEDIA_BUCKET,
-          mimeType: 'image/heic',
-        } as any);
-
-      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-        {
-          media_id: 'media-heic',
-          display_name: 'photo.heic',
-          mime_type: 'image/heic',
-          size: 1,
-        },
-      ]);
-
-      // Uniform re-home: a single verbatim MOVE, a single auth mint, and no
-      // second transcoded conversation doc (serve-time transcode lives in
-      // file-service now).
-      expect(authorizationPolicyService.save).toHaveBeenCalledTimes(1);
-      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith(
-        'doc-heic',
-        expect.objectContaining({
-          storageBucketId: CONV_BUCKET,
-          createdBy: 'sender-1',
-          externalReference: 'media-heic',
-        })
-      );
-      expect(fileServiceAdapter.createDocument).not.toHaveBeenCalled();
-      expect(fileServiceAdapter.getDocumentContent).not.toHaveBeenCalled();
-    });
-
-    it('comment-room (callout): re-homes into the parent callout bucket', async () => {
-      // FIX [2]: parent-callout resolution now delegates to RoomResolverService's
-      // canonical getCalloutForRoom instead of a hand-rolled Callout query.
-      roomResolverService.getCalloutForRoom.mockResolvedValue({
-        id: 'callout-1',
-      } as any);
-      storageAggregatorResolverService.getStorageAggregatorForCallout.mockResolvedValue(
-        {
-          id: 'agg-1',
-          directStorage: { id: CALLOUT_BUCKET, authorization: { id: 'cb-a' } },
-        } as any
-      );
-      fileServiceAdapter.getDocumentByReference
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({
-          id: 'doc-staging',
-          storageBucketId: MATRIX_MEDIA_BUCKET,
-          mimeType: 'image/png',
-        } as any);
-
-      const bucketId = await service.rehomeInboundAttachments(
-        calloutRoom,
-        'sender-1',
-        [
-          {
-            media_id: 'media-c',
-            display_name: 'x',
-            mime_type: 'image/png',
-            size: 1,
-          },
-        ]
-      );
-
-      expect(bucketId).toBe(CALLOUT_BUCKET);
-      expect(roomResolverService.getCalloutForRoom).toHaveBeenCalledWith(
-        'callout-room-1'
-      );
-      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith(
-        'doc-staging',
-        expect.objectContaining({ storageBucketId: CALLOUT_BUCKET })
-      );
-    });
-
-    it('comment-room (post): resolves the parent callout via the post helper and re-homes into its bucket', async () => {
-      // FIX [2]: post comment rooms resolve their owning callout via
-      // RoomResolverService.getCalloutWithPostContributionForRoom; the callout id
-      // is extracted from the returned { post, callout, contribution } shape.
-      const postRoom: IRoom = {
-        id: 'post-room-1',
-        type: RoomType.POST,
-      } as IRoom;
-      roomResolverService.getCalloutWithPostContributionForRoom.mockResolvedValue(
-        {
-          post: { id: 'post-1' },
-          callout: { id: 'callout-1' },
-          contribution: { id: 'contrib-1' },
-        } as any
-      );
-      storageAggregatorResolverService.getStorageAggregatorForCallout.mockResolvedValue(
-        {
-          id: 'agg-1',
-          directStorage: { id: CALLOUT_BUCKET, authorization: { id: 'cb-a' } },
-        } as any
-      );
-      fileServiceAdapter.getDocumentByReference
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({
-          id: 'doc-staging',
-          storageBucketId: MATRIX_MEDIA_BUCKET,
-          mimeType: 'image/png',
-        } as any);
-
-      const bucketId = await service.rehomeInboundAttachments(
-        postRoom,
-        'sender-1',
-        [
-          {
-            media_id: 'media-p',
-            display_name: 'x',
-            mime_type: 'image/png',
-            size: 1,
-          },
-        ]
-      );
-
-      expect(bucketId).toBe(CALLOUT_BUCKET);
-      expect(
-        roomResolverService.getCalloutWithPostContributionForRoom
-      ).toHaveBeenCalledWith('post-room-1');
-      expect(
-        storageAggregatorResolverService.getStorageAggregatorForCallout
-      ).toHaveBeenCalledWith('callout-1', expect.anything());
-      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith(
-        'doc-staging',
-        expect.objectContaining({ storageBucketId: CALLOUT_BUCKET })
-      );
-    });
-
-    it('comment-room: a genuine no-callout (EntityNotFoundException) leaves media in staging (best-effort, no throw)', async () => {
-      // The RoomResolverService helpers THROW EntityNotFoundException for a
-      // genuine "no callout for this room" miss; resolveParentCalloutId catches
-      // ONLY that not-found case and returns undefined, so an unresolvable callout
-      // comment room leaves the media in staging instead of aborting inbound
-      // processing.
-      roomResolverService.getCalloutForRoom.mockRejectedValue(
-        new EntityNotFoundException(
-          'Unable to identify Callout for Room',
-          LogContext.COLLABORATION
-        )
-      );
-
-      const bucketId = await service.rehomeInboundAttachments(
-        calloutRoom,
-        'sender-1',
-        [
-          {
-            media_id: 'media-c',
-            display_name: 'x',
-            mime_type: 'image/png',
-            size: 1,
-          },
-        ]
-      );
-
-      expect(bucketId).toBeUndefined();
-      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
-    });
-
-    it('[0] comment-room: a transient DB error from the resolver still degrades gracefully on the INBOUND path (outer wrapper catches it, media stays in staging)', async () => {
-      // A NON-not-found error (transient DB/infra) is RE-THROWN by
-      // resolveParentCalloutId (not swallowed into undefined). On the inbound
-      // re-home path getTargetBucketForRoom is wrapped in its own
-      // leave-in-staging try/catch, so the propagated error is still handled here
-      // — inbound message processing is never aborted.
-      roomResolverService.getCalloutForRoom.mockRejectedValue(
-        new Error('db connection reset')
-      );
-
-      const bucketId = await service.rehomeInboundAttachments(
-        calloutRoom,
-        'sender-1',
-        [
-          {
-            media_id: 'media-c',
-            display_name: 'x',
-            mime_type: 'image/png',
-            size: 1,
-          },
-        ]
-      );
-
-      expect(bucketId).toBeUndefined();
-      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
-    });
+  it('leaves unsupported or absent provider media unavailable without copying', async () => {
+    provider.size = 51;
+    await service.prepareInboundAttachments(room, 'alice', [raw]);
+    documentRepository.find.mockResolvedValue([]);
+    await service.prepareInboundAttachments(room, 'alice', [raw]);
+    expect(storage.copyDocumentToBucket).not.toHaveBeenCalled();
   });
 
-  // --- FIX [0]: resolveParentCalloutId error narrowing ---
-
-  describe('resolveParentCalloutId (FIX [0]) — narrow not-found catch, propagate DB errors', () => {
-    it('callout room: a genuine no-callout (EntityNotFoundException) → returns undefined', async () => {
-      roomResolverService.getCalloutForRoom.mockRejectedValue(
-        new EntityNotFoundException(
-          'Unable to identify Callout for Room',
-          LogContext.COLLABORATION
-        )
-      );
-
-      await expect(
-        (service as any).resolveParentCalloutId(calloutRoom)
-      ).resolves.toBeUndefined();
-    });
-
-    it('callout room: a real DB/infra error (generic Error) PROPAGATES OUT (not swallowed, not converted to undefined)', async () => {
-      const dbError = new Error('db connection reset');
-      roomResolverService.getCalloutForRoom.mockRejectedValue(dbError);
-
-      await expect(
-        (service as any).resolveParentCalloutId(calloutRoom)
-      ).rejects.toBe(dbError);
-    });
-
-    it('post room: a genuine no-callout (EntityNotFoundException) → returns undefined', async () => {
-      const postRoom: IRoom = {
-        id: 'post-room-1',
-        type: RoomType.POST,
-      } as IRoom;
-      roomResolverService.getCalloutWithPostContributionForRoom.mockRejectedValue(
-        new EntityNotFoundException(
-          'Unable to identify Callout with Post contribution for Room',
-          LogContext.COLLABORATION
-        )
-      );
-
-      await expect(
-        (service as any).resolveParentCalloutId(postRoom)
-      ).resolves.toBeUndefined();
-    });
-
-    it('post room: a real DB/infra error (generic Error) PROPAGATES OUT (not swallowed)', async () => {
-      const postRoom: IRoom = {
-        id: 'post-room-1',
-        type: RoomType.POST,
-      } as IRoom;
-      const dbError = new Error('db pool exhausted');
-      roomResolverService.getCalloutWithPostContributionForRoom.mockRejectedValue(
-        dbError
-      );
-
-      await expect(
-        (service as any).resolveParentCalloutId(postRoom)
-      ).rejects.toBe(dbError);
-    });
-
-    it('[0] OUTBOUND: a transient DB error on a VALID comment room surfaces the REAL error, NOT a terminal ValidationException', async () => {
-      // The regression: the outbound send path has NO leave-in-staging wrapper,
-      // so a masked no-callout miss became a terminal
-      // ValidationException('...only supported on conversation and comment
-      // rooms') for a valid comment room during a momentary DB blip. With the
-      // narrowed catch the real (retryable) DB error must propagate instead.
-      const dbError = new Error('db connection reset');
-      roomResolverService.getCalloutForRoom.mockRejectedValue(dbError);
-
-      const error = await service
-        .resolveOutboundAttachments(
-          calloutRoom,
-          { actorID: 'sender-1' } as any,
-          ['doc-1']
-        )
-        .catch(e => e);
-
-      expect(error).toBe(dbError);
-      expect(error).not.toBeInstanceOf(ValidationException);
-    });
-
-    it('[0] OUTBOUND: a genuine no-callout (EntityNotFoundException) still yields the terminal ValidationException for an unsupported/unresolvable room', async () => {
-      // The genuine no-callout case (helper throws EntityNotFoundException) is
-      // caught → undefined → getAttachmentBucketForRoomOrFail throws the terminal
-      // ValidationException. This is the correct terminal outcome for a room whose
-      // parent callout truly cannot be resolved.
-      roomResolverService.getCalloutForRoom.mockRejectedValue(
-        new EntityNotFoundException(
-          'Unable to identify Callout for Room',
-          LogContext.COLLABORATION
-        )
-      );
-
-      await expect(
-        service.resolveOutboundAttachments(
-          calloutRoom,
-          { actorID: 'sender-1' } as any,
-          ['doc-1']
-        )
-      ).rejects.toBeInstanceOf(ValidationException);
-    });
+  it('reads use the event name and authorized document metadata, without writes', async () => {
+    documentRepository.find.mockResolvedValue([provider, makeDocument()]);
+    const result = await service.resolveMessageAttachments(
+      message({ ...raw, width: 24, height: 24 }),
+      actor
+    );
+    expect(result).toEqual([
+      {
+        id: documentID,
+        url: expect.any(String),
+        displayName: 'from-element.png',
+        mimeType: 'image/png',
+        size: 10,
+        width: 24,
+        height: 24,
+      },
+    ]);
+    expect(storage.copyDocumentToBucket).not.toHaveBeenCalled();
   });
 
-  // --- C2: resolve the room's bucket ONCE per read ---
-
-  describe('stampAttachmentBucket', () => {
-    const withAttachments = (id: string) =>
-      ({
-        id,
-        roomID: 'room-1',
-        rawAttachments: [{ media_id: `media-${id}` }],
-      }) as any;
-
-    it('resolves the room bucket ONCE for a whole message batch and stamps every message', async () => {
-      // CommunicationAdapter.convertMessageDtoToIMessage never sets
-      // storageBucketId, so on an unpaginated history read every message
-      // individually re-resolved room → conversation → storage aggregator. One
-      // resolution for the batch puts them all on the zero-query fast path.
-      const messages = [
-        withAttachments('m1'),
-        withAttachments('m2'),
-        withAttachments('m3'),
-      ];
-
-      await service.stampAttachmentBucket(conversationRoom, messages);
-
-      expect(conversationRepository.findOne).toHaveBeenCalledTimes(1);
-      expect(messages.map(m => m.storageBucketId)).toEqual([
-        CONV_BUCKET,
-        CONV_BUCKET,
-        CONV_BUCKET,
-      ]);
-    });
-
-    it('does not resolve anything when no message carries attachments', async () => {
-      const messages = [{ id: 'm1', roomID: 'room-1' }] as any[];
-
-      await service.stampAttachmentBucket(conversationRoom, messages);
-
-      expect(conversationRepository.findOne).not.toHaveBeenCalled();
-      expect(messages[0].storageBucketId).toBeUndefined();
-    });
-
-    it('never overwrites a storageBucketId already set by the live path', async () => {
-      const live = {
-        id: 'm1',
-        roomID: 'room-1',
-        storageBucketId: 'already-set',
-        rawAttachments: [{ media_id: 'media-1' }],
-      } as any;
-
-      await service.stampAttachmentBucket(conversationRoom, [live]);
-
-      expect(live.storageBucketId).toBe('already-set');
-    });
-
-    it('degrades silently when the bucket cannot be resolved (reads must never break)', async () => {
-      conversationRepository.findOne.mockRejectedValue(new Error('db down'));
-      const messages = [withAttachments('m1')];
-
-      await expect(
-        service.stampAttachmentBucket(conversationRoom, messages)
-      ).resolves.toBeUndefined();
-      expect(messages[0].storageBucketId).toBeUndefined();
-    });
+  it('denied and missing documents expose only the event filename', async () => {
+    documentRepository.find.mockResolvedValue([provider, makeDocument()]);
+    auth.isAccessGranted.mockReturnValue(false);
+    expect(await service.resolveMessageAttachments(message(), actor)).toEqual([
+      { displayName: raw.display_name },
+    ]);
+    documentRepository.find.mockResolvedValue([]);
+    expect(await service.resolveMessageAttachments(message(), actor)).toEqual([
+      { displayName: raw.display_name },
+    ]);
+    expect(storage.copyDocumentToBucket).not.toHaveBeenCalled();
   });
 
-  // --- outbound coalesce (eliminate the stranded matrix_media twin) ---
-
-  describe('rehomeInboundAttachments — outbound coalesce', () => {
-    const outboundEcho = {
-      document_id: 'doc-D',
-      media_id: 'media-Y',
-      display_name: 'pic.png',
-      mime_type: 'image/png',
-      size: 1,
-    };
-
-    // Bucket-aware by-reference mock: the coalesce path now does TWO lookups for
-    // the same media id — one scoped to the room bucket (idempotency / no-
-    // overwrite), one scoped to matrix_media (locate the staging twin).
-    const mockByReference = (perBucket: Record<string, any>) => {
-      fileServiceAdapter.getDocumentByReference.mockImplementation(
-        async (_ref: string, bucketId?: string) =>
-          (bucketId ? perBucket[bucketId] : undefined) ?? null
-      );
-    };
-
-    it('stamps externalReference on D (owned by sender) and deletes the matrix_media staging twin', async () => {
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-D',
-        createdBy: 'sender-1',
-        storageBucket: { id: CONV_BUCKET },
-      } as any);
-      mockByReference({
-        // reference slot free in the conversation bucket → safe to stamp
-        [CONV_BUCKET]: null,
-        // staging twin present in matrix_media → delete it
-        [MATRIX_MEDIA_BUCKET]: {
-          id: 'doc-twin',
-          storageBucketId: MATRIX_MEDIA_BUCKET,
-        },
-      });
-
-      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-        outboundEcho,
-      ]);
-
-      // (1) D stamped with the Synapse media id.
-      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith('doc-D', {
-        externalReference: 'media-Y',
-      });
-      // (2) twin looked up scoped to matrix_media, then deleted — via the
-      // CANONICAL DocumentService path, which also releases the server-owned
-      // auth-policy + tagset rows. The raw adapter delete leaks those, so this
-      // call site must never use it (the invariant MessageAttachmentCleanup
-      // states and enforces).
-      expect(fileServiceAdapter.getDocumentByReference).toHaveBeenCalledWith(
-        'media-Y',
-        MATRIX_MEDIA_BUCKET
-      );
-      expect(documentService.deleteDocument).toHaveBeenCalledWith({
-        ID: 'doc-twin',
-      });
-      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
-      // No re-home of the echo.
-      expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
-    });
-
-    it('is idempotent: re-delivery finds D already stamped → no second stamp, no overwrite', async () => {
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-D',
-        createdBy: 'sender-1',
-        storageBucket: { id: CONV_BUCKET },
-      } as any);
-      mockByReference({
-        // media id already resolves to D in this bucket (stamped previously)
-        [CONV_BUCKET]: { id: 'doc-D', storageBucketId: CONV_BUCKET },
-        // twin already swept on the first delivery
-        [MATRIX_MEDIA_BUCKET]: null,
-      });
-
-      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-        outboundEcho,
-      ]);
-
-      // The stamp is NEVER re-applied (no overwrite of the existing reference).
-      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      expect(documentService.deleteDocument).not.toHaveBeenCalled();
-    });
-
-    it('confused-deputy guard: rejects a forged echo whose document_id is owned by another member — no stamp AND no pin', async () => {
-      // Attacker (sender-1) forges an m.image pointing at victim's re-homed doc
-      // D + an arbitrary media_id; D IS in the room bucket but is NOT owned by
-      // the sender → coalesce must NOT overwrite D's reference, and the
-      // delivery-pin (full-gate [0]) must NOT fire either — a forged event can
-      // never pin someone else's temporary doc.
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-D',
-        createdBy: 'victim-member',
-        temporaryLocation: true,
-        storageBucket: { id: CONV_BUCKET },
-      } as any);
-
-      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-        outboundEcho,
-      ]);
-
-      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      expect(documentService.deleteDocument).not.toHaveBeenCalled();
-    });
-
-    it('no-overwrite guard: skips when media_id already resolves to a different document in the bucket', async () => {
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-D',
-        createdBy: 'sender-1',
-        storageBucket: { id: CONV_BUCKET },
-      } as any);
-      mockByReference({
-        // media id is already bound to a DIFFERENT doc here — never steal it
-        [CONV_BUCKET]: { id: 'doc-other', storageBucketId: CONV_BUCKET },
-        [MATRIX_MEDIA_BUCKET]: {
-          id: 'doc-twin',
-          storageBucketId: MATRIX_MEDIA_BUCKET,
-        },
-      });
-
-      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-        outboundEcho,
-      ]);
-
-      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      expect(documentService.deleteDocument).not.toHaveBeenCalled();
-    });
-
-    it('confused-deputy guard: ignores an echo whose document_id is not in the room bucket', async () => {
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-D',
-        createdBy: 'sender-1',
-        storageBucket: { id: 'a-foreign-bucket' },
-      } as any);
-
-      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-        outboundEcho,
-      ]);
-
-      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      expect(documentService.deleteDocument).not.toHaveBeenCalled();
-    });
-
-    it('echo without media_id + durable doc → nothing to do (no twin work possible, nothing to pin)', async () => {
-      // The guards now run BEFORE the !media_id branch (full-gate [0]), so the
-      // doc IS loaded — but a durable doc needs no pin, and without a media_id
-      // no twin/stamp work is possible.
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-D',
-        createdBy: 'sender-1',
-        temporaryLocation: false,
-        storageBucket: { id: CONV_BUCKET },
-      } as any);
-
-      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-        {
-          document_id: 'doc-D',
-          display_name: 'pic.png',
-          mime_type: 'image/png',
-          size: 1,
-        },
-      ]);
-
-      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      expect(documentService.deleteDocument).not.toHaveBeenCalled();
-      expect(fileServiceAdapter.getDocumentByReference).not.toHaveBeenCalled();
-    });
-
-    it('full-gate [0]: echo WITHOUT media_id + temporary doc → standalone delivery-pin, no twin/stamp work', async () => {
-      // The echo is Synapse's proof of delivery: even when no media_id is
-      // surfaced (twin not locatable), the doc must be pinned durable so the
-      // 24h sweep cannot reap a delivered attachment.
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-D',
-        createdBy: 'sender-1',
-        temporaryLocation: true,
-        storageBucket: { id: CONV_BUCKET },
-      } as any);
-
-      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-        {
-          document_id: 'doc-D',
-          display_name: 'pic.png',
-          mime_type: 'image/png',
-          size: 1,
-        },
-      ]);
-
-      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledTimes(1);
-      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith('doc-D', {
-        temporaryLocation: false,
-      });
-      expect(fileServiceAdapter.getDocumentByReference).not.toHaveBeenCalled();
-      expect(documentService.deleteDocument).not.toHaveBeenCalled();
-    });
-
-    it('full-gate [0]: echo WITH media_id + temporary doc → the pin is FOLDED into the stamp (one PATCH)', async () => {
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-D',
-        createdBy: 'sender-1',
-        temporaryLocation: true,
-        storageBucket: { id: CONV_BUCKET },
-      } as any);
-      mockByReference({
-        [CONV_BUCKET]: null, // reference slot free → stamp
-        [MATRIX_MEDIA_BUCKET]: {
-          id: 'doc-twin',
-          storageBucketId: MATRIX_MEDIA_BUCKET,
-        },
-      });
-
-      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-        outboundEcho,
-      ]);
-
-      // ONE moveDocument carrying BOTH the stamp and the pin.
-      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledTimes(1);
-      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith('doc-D', {
-        externalReference: 'media-Y',
-        temporaryLocation: false,
-      });
-      // Twin cleanup unaffected.
-      expect(documentService.deleteDocument).toHaveBeenCalledWith({
-        ID: 'doc-twin',
-      });
-    });
-
-    it('full-gate [0]: already stamped to this doc but STILL temporary → standalone pin issued', async () => {
-      // A prior delivery stamped media-Y onto D but the pin never landed (or
-      // the pre-fix code never pinned). The re-delivered echo must still heal.
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-D',
-        createdBy: 'sender-1',
-        externalReference: 'media-Y',
-        temporaryLocation: true,
-        storageBucket: { id: CONV_BUCKET },
-      } as any);
-      mockByReference({
-        [CONV_BUCKET]: { id: 'doc-D', storageBucketId: CONV_BUCKET },
-        [MATRIX_MEDIA_BUCKET]: null, // twin already swept
-      });
-
-      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-        outboundEcho,
-      ]);
-
-      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledTimes(1);
-      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith('doc-D', {
-        temporaryLocation: false,
-      });
-      expect(documentService.deleteDocument).not.toHaveBeenCalled();
-    });
-
-    it('no-overwrite: skips when D already carries a DIFFERENT externalReference', async () => {
-      // D is owned by the sender and lives in the room bucket, but it ALREADY
-      // references mediaX. A fresh echo carrying media-Y must NOT overwrite it
-      // (that would detach the earlier message referencing mediaX).
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-D',
-        createdBy: 'sender-1',
-        externalReference: 'media-X',
-        storageBucket: { id: CONV_BUCKET },
-      } as any);
-      mockByReference({
-        // media-Y slot is free here — the OLD guard would have stamped it.
-        [CONV_BUCKET]: null,
-        [MATRIX_MEDIA_BUCKET]: {
-          id: 'doc-twin',
-          storageBucketId: MATRIX_MEDIA_BUCKET,
-        },
-      });
-
-      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-        outboundEcho,
-      ]);
-
-      // Neither the overwrite stamp nor the twin delete fires.
-      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      expect(documentService.deleteDocument).not.toHaveBeenCalled();
-    });
-
-    it('stamps when D has no existing externalReference (unset slot)', async () => {
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-D',
-        createdBy: 'sender-1',
-        externalReference: undefined,
-        storageBucket: { id: CONV_BUCKET },
-      } as any);
-      mockByReference({
-        [CONV_BUCKET]: null,
-        [MATRIX_MEDIA_BUCKET]: {
-          id: 'doc-twin',
-          storageBucketId: MATRIX_MEDIA_BUCKET,
-        },
-      });
-
-      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-        outboundEcho,
-      ]);
-
-      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith('doc-D', {
-        externalReference: 'media-Y',
-      });
-      expect(documentService.deleteDocument).toHaveBeenCalledWith({
-        ID: 'doc-twin',
-      });
-    });
-
-    it('idempotent: no re-stamp when D already references exactly media_id', async () => {
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-D',
-        createdBy: 'sender-1',
-        externalReference: 'media-Y',
-        storageBucket: { id: CONV_BUCKET },
-      } as any);
-      mockByReference({
-        // media-Y already resolves to D in this bucket; twin already swept.
-        [CONV_BUCKET]: { id: 'doc-D', storageBucketId: CONV_BUCKET },
-        [MATRIX_MEDIA_BUCKET]: null,
-      });
-
-      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-        outboundEcho,
-      ]);
-
-      // The reference is identical → no stamp, and nothing to delete.
-      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      expect(documentService.deleteDocument).not.toHaveBeenCalled();
-    });
+  it('batch history performs one document lookup across all field resolutions', async () => {
+    documentRepository.find.mockResolvedValue([provider, makeDocument()]);
+    const messages = [
+      message(),
+      message({
+        ...raw,
+        document_id: documentID,
+        display_name: 'reshared.png',
+      }),
+    ];
+    await service.stampAttachmentBucket(room, messages);
+    const results = await Promise.all(
+      messages.map(item => service.resolveMessageAttachments(item, actor))
+    );
+    expect(documentRepository.find).toHaveBeenCalledTimes(1);
+    expect(results.map(items => items[0].displayName)).toEqual([
+      'from-element.png',
+      'reshared.png',
+    ]);
   });
 
-  // --- T013 read resolution ---
-
-  describe('resolveMessageAttachments', () => {
-    it('resolves an outbound (document_id) attachment owned by the sender and READ-gates it', async () => {
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-1',
-        createdBy: 'sender-1',
-        displayName: 'pic.png',
-        mimeType: 'image/png',
-        size: 1000,
-        storageBucket: { id: CONV_BUCKET },
-        authorization: { id: 'doc-auth' },
-      } as any);
-      authorizationService.isAccessGranted.mockReturnValue(true);
-      documentService.getPubliclyAccessibleURL.mockReturnValue(
-        'https://docs/doc-1'
-      );
-
-      const result = await service.resolveMessageAttachments(
-        {
-          id: 'm1',
-          sender: 'sender-1',
-          storageBucketId: CONV_BUCKET,
-          rawAttachments: [
-            {
-              document_id: 'doc-1',
-              display_name: 'pic.png',
-              mime_type: 'image/png',
-              size: 1000,
-            },
-          ],
-        } as any,
-        {} as any
-      );
-
-      expect(result).toEqual([
-        expect.objectContaining({ id: 'doc-1', url: 'https://docs/doc-1' }),
-      ]);
-    });
-
-    it('read-heal (full-gate [0]): pins a still-temporary outbound doc durable on read — delivered message is proof-of-send', async () => {
-      // The message EXISTS (it is being read), so it was delivered — yet its doc
-      // is still temporary: the post-send flip and the echo pin both failed.
-      // The read must heal it so the 24h sweep cannot reap it.
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-1',
-        createdBy: 'sender-1',
-        displayName: 'pic.png',
-        mimeType: 'image/png',
-        size: 1000,
-        temporaryLocation: true,
-        storageBucket: { id: CONV_BUCKET },
-        authorization: { id: 'doc-auth' },
-      } as any);
-      authorizationService.isAccessGranted.mockReturnValue(true);
-      documentService.getPubliclyAccessibleURL.mockReturnValue(
-        'https://docs/doc-1'
-      );
-
-      const result = await service.resolveMessageAttachments(
-        {
-          id: 'm1',
-          sender: 'sender-1',
-          storageBucketId: CONV_BUCKET,
-          rawAttachments: [
-            { document_id: 'doc-1', mime_type: 'image/png', size: 1000 },
-          ],
-        } as any,
-        {} as any
-      );
-
-      // Healed via the ISOLATED best-effort pin (short timeout, zero retries,
-      // no circuit-breaker accounting) — NEVER the retrying, breaker-accounted
-      // moveDocument, which on an unpaginated history read would fan out one
-      // breaker-accounted write per unpinned attachment and trip the shared
-      // file-service breaker that guards uploads platform-wide.
-      expect(
-        fileServiceAdapter.pinDocumentDurableBestEffort
-      ).toHaveBeenCalledWith('doc-1');
-      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      expect(result).toEqual([expect.objectContaining({ id: 'doc-1' })]);
-    });
-
-    it('read-heal (full-gate [0]): a pin failure NEVER fails the read — the attachment is still returned', async () => {
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-1',
-        createdBy: 'sender-1',
-        displayName: 'pic.png',
-        mimeType: 'image/png',
-        size: 1000,
-        temporaryLocation: true,
-        storageBucket: { id: CONV_BUCKET },
-        authorization: { id: 'doc-auth' },
-      } as any);
-      fileServiceAdapter.pinDocumentDurableBestEffort.mockRejectedValue(
-        new Error('file-service down')
-      );
-      authorizationService.isAccessGranted.mockReturnValue(true);
-      documentService.getPubliclyAccessibleURL.mockReturnValue(
-        'https://docs/doc-1'
-      );
-
-      const result = await service.resolveMessageAttachments(
-        {
-          id: 'm1',
-          sender: 'sender-1',
-          storageBucketId: CONV_BUCKET,
-          rawAttachments: [
-            { document_id: 'doc-1', mime_type: 'image/png', size: 1000 },
-          ],
-        } as any,
-        {} as any
-      );
-
-      // The pin was attempted, rejected — and the read still succeeded.
-      expect(
-        fileServiceAdapter.pinDocumentDurableBestEffort
-      ).toHaveBeenCalledWith('doc-1');
-      expect(result).toEqual([expect.objectContaining({ id: 'doc-1' })]);
-    });
-
-    it('read-heal (full-gate [0]): no redundant pin when the outbound doc is already durable', async () => {
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-1',
-        createdBy: 'sender-1',
-        displayName: 'pic.png',
-        mimeType: 'image/png',
-        size: 1000,
-        temporaryLocation: false,
-        storageBucket: { id: CONV_BUCKET },
-        authorization: { id: 'doc-auth' },
-      } as any);
-      authorizationService.isAccessGranted.mockReturnValue(true);
-      documentService.getPubliclyAccessibleURL.mockReturnValue(
-        'https://docs/doc-1'
-      );
-
-      const result = await service.resolveMessageAttachments(
-        {
-          id: 'm1',
-          sender: 'sender-1',
-          storageBucketId: CONV_BUCKET,
-          rawAttachments: [
-            { document_id: 'doc-1', mime_type: 'image/png', size: 1000 },
-          ],
-        } as any,
-        {} as any
-      );
-
-      expect(
-        fileServiceAdapter.pinDocumentDurableBestEffort
-      ).not.toHaveBeenCalled();
-      expect(result).toEqual([expect.objectContaining({ id: 'doc-1' })]);
-    });
-
-    it('read-heal (full-gate [0]): a viewer DENIED by the READ gate triggers no pin at all', async () => {
-      // Ordering matters: the heal is a maintenance write, not part of deciding
-      // what a viewer may see. A denied viewer opening a room full of unpinned
-      // attachments must cost ZERO file-service writes.
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-1',
-        createdBy: 'sender-1',
-        displayName: 'pic.png',
-        mimeType: 'image/png',
-        size: 1000,
-        temporaryLocation: true,
-        storageBucket: { id: CONV_BUCKET },
-        authorization: { id: 'doc-auth' },
-      } as any);
-      authorizationService.isAccessGranted.mockReturnValue(false);
-
-      const result = await service.resolveMessageAttachments(
-        {
-          id: 'm1',
-          sender: 'sender-1',
-          storageBucketId: CONV_BUCKET,
-          rawAttachments: [
-            { document_id: 'doc-1', mime_type: 'image/png', size: 1000 },
-          ],
-        } as any,
-        {} as any
-      );
-
-      expect(result).toEqual([]);
-      expect(
-        fileServiceAdapter.pinDocumentDurableBestEffort
-      ).not.toHaveBeenCalled();
-      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-    });
-
-    it('read-heal (full-gate [0]): concurrent resolutions of the SAME document issue only ONE pin', async () => {
-      // Bounds the read-path fan-out: an unpaginated history read resolves the
-      // same documents for every concurrent viewer, and a re-read while a pin is
-      // still in flight adds nothing.
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-1',
-        createdBy: 'sender-1',
-        displayName: 'pic.png',
-        mimeType: 'image/png',
-        size: 1000,
-        temporaryLocation: true,
-        storageBucket: { id: CONV_BUCKET },
-        authorization: { id: 'doc-auth' },
-      } as any);
-      authorizationService.isAccessGranted.mockReturnValue(true);
-      documentService.getPubliclyAccessibleURL.mockReturnValue(
-        'https://docs/doc-1'
-      );
-      // The pin stays in flight until both resolutions have run.
-      let releasePin: () => void = () => undefined;
-      fileServiceAdapter.pinDocumentDurableBestEffort.mockReturnValue(
-        new Promise<boolean>(resolve => {
-          releasePin = () => resolve(true);
-        })
-      );
-
-      const pending = service.resolveMessageAttachments(
-        {
-          id: 'm1',
-          sender: 'sender-1',
-          storageBucketId: CONV_BUCKET,
-          rawAttachments: [
-            { document_id: 'doc-1', mime_type: 'image/png', size: 1000 },
-            { document_id: 'doc-1', mime_type: 'image/png', size: 1000 },
-          ],
-        } as any,
-        {} as any
-      );
-      await Promise.resolve();
-      releasePin();
-      await pending;
-
-      expect(
-        fileServiceAdapter.pinDocumentDurableBestEffort
-      ).toHaveBeenCalledTimes(1);
-    });
-
-    it('size that a GraphQL Int! cannot carry degrades to 0 rather than failing the whole Message', async () => {
-      // `IMessageAttachment.size` is NON-null, so an unrepresentable value would
-      // throw during serialization AFTER resolveMessageAttachments' per-
-      // attachment catch — failing the entire Message, not just this attachment.
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-1',
-        createdBy: 'sender-1',
-        displayName: 'huge.bin',
-        mimeType: 'application/pdf',
-        size: 3_000_000_000, // > INT32_MAX
-        temporaryLocation: false,
-        storageBucket: { id: CONV_BUCKET },
-        authorization: { id: 'doc-auth' },
-      } as any);
-      authorizationService.isAccessGranted.mockReturnValue(true);
-      documentService.getPubliclyAccessibleURL.mockReturnValue(
-        'https://docs/doc-1'
-      );
-
-      const result = await service.resolveMessageAttachments(
-        {
-          id: 'm1',
-          sender: 'sender-1',
-          storageBucketId: CONV_BUCKET,
-          rawAttachments: [
-            { document_id: 'doc-1', mime_type: 'application/pdf', size: 1 },
-          ],
-        } as any,
-        {} as any
-      );
-
-      // Degraded to the "size unknown" sentinel; the attachment still resolves.
-      expect(result).toEqual([
-        expect.objectContaining({ id: 'doc-1', size: 0 }),
-      ]);
-    });
-
-    it('a representable size is passed through verbatim', async () => {
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-1',
-        createdBy: 'sender-1',
-        displayName: 'pic.png',
-        mimeType: 'image/png',
-        size: 1234,
-        temporaryLocation: false,
-        storageBucket: { id: CONV_BUCKET },
-        authorization: { id: 'doc-auth' },
-      } as any);
-      authorizationService.isAccessGranted.mockReturnValue(true);
-      documentService.getPubliclyAccessibleURL.mockReturnValue(
-        'https://docs/doc-1'
-      );
-
-      const result = await service.resolveMessageAttachments(
-        {
-          id: 'm1',
-          sender: 'sender-1',
-          storageBucketId: CONV_BUCKET,
-          rawAttachments: [
-            { document_id: 'doc-1', mime_type: 'image/png', size: 1 },
-          ],
-        } as any,
-        {} as any
-      );
-
-      expect(result).toEqual([
-        expect.objectContaining({ id: 'doc-1', size: 1234 }),
-      ]);
-    });
-
-    it('attribution-spoof: ignores an outbound document_id owned by another member (forged under the sender)', async () => {
-      // The message claims to be from sender-1, but document_id points at a doc
-      // owned by another member that lives in the same conversation bucket.
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-victim',
-        createdBy: 'victim-member',
-        storageBucket: { id: CONV_BUCKET },
-        authorization: { id: 'doc-auth' },
-      } as any);
-      authorizationService.isAccessGranted.mockReturnValue(true);
-
-      const result = await service.resolveMessageAttachments(
-        {
-          id: 'm1',
-          sender: 'sender-1',
-          storageBucketId: CONV_BUCKET,
-          rawAttachments: [
-            { document_id: 'doc-victim', mime_type: 'image/png', size: 1 },
-          ],
-        } as any,
-        {} as any
-      );
-
-      expect(result).toEqual([]);
-    });
-
-    it('M5: ignores an outbound document_id that does not belong to the message bucket', async () => {
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-evil',
-        storageBucket: { id: 'a-foreign-bucket' },
-        authorization: { id: 'doc-auth' },
-      } as any);
-      authorizationService.isAccessGranted.mockReturnValue(true);
-
-      const result = await service.resolveMessageAttachments(
-        {
-          id: 'm1',
-          storageBucketId: CONV_BUCKET,
-          rawAttachments: [
-            { document_id: 'doc-evil', mime_type: 'image/png', size: 1 },
-          ],
-        } as any,
-        {} as any
-      );
-
-      expect(result).toEqual([]);
-    });
-
-    it('H1: resolves an inbound (media_id) attachment on a history read via roomID fallback', async () => {
-      // No storageBucketId on the message (history read path); roomID present.
-      roomRepository.findOne.mockResolvedValue({
-        id: 'room-1',
-        type: RoomType.CONVERSATION_GROUP,
-      });
-      inboundDocuments({
-        id: 'doc-rehomed',
-        externalReference: 'media-1',
-        createdBy: 'sender-1',
-        displayName: 'pic.png',
-        mimeType: 'image/png',
-        size: 1000,
-        temporaryLocation: false,
-        authorization: { id: 'doc-auth' },
-      });
-      authorizationService.isAccessGranted.mockReturnValue(true);
-      documentService.getPubliclyAccessibleURL.mockReturnValue(
-        'https://docs/doc-rehomed'
-      );
-
-      const result = await service.resolveMessageAttachments(
-        {
-          id: 'm1',
-          sender: 'sender-1',
-          roomID: 'room-1',
-          rawAttachments: [
-            {
-              media_id: 'media-1',
-              display_name: 'x',
-              mime_type: 'image/png',
-              size: 1,
-            },
-          ],
-        } as any,
-        {} as any
-      );
-
-      expect(
-        documentService.getDocumentsByReferencesInBucket
-      ).toHaveBeenCalledWith(CONV_BUCKET, ['media-1']);
-      expect(result).toEqual([expect.objectContaining({ id: 'doc-rehomed' })]);
-    });
-
-    it('C1: inbound read resolution issues NO breaker-accounted file-service lookup, and batches the whole message into ONE query', async () => {
-      // getDocumentByReference IS accounted against the SHARED file-service
-      // circuit breaker (unlike the best-effort dims batch, which deliberately
-      // bypasses it), and Message.attachments is an unpaginated @ResolveField —
-      // so one per attachment could trip the breaker
-      // that guards uploads platform-wide. Inbound refs are now resolved from the
-      // server's own DB, once per message.
-      inboundDocuments(
-        {
-          id: 'doc-a',
-          externalReference: 'media-a',
-          createdBy: 'sender-1',
-          displayName: 'a.png',
-          mimeType: 'image/png',
-          size: 10,
-          temporaryLocation: false,
-          authorization: { id: 'doc-auth' },
-        },
-        {
-          id: 'doc-b',
-          externalReference: 'media-b',
-          createdBy: 'sender-1',
-          displayName: 'b.png',
-          mimeType: 'image/png',
-          size: 20,
-          temporaryLocation: false,
-          authorization: { id: 'doc-auth' },
-        }
-      );
-      authorizationService.isAccessGranted.mockReturnValue(true);
-      documentService.getPubliclyAccessibleURL.mockReturnValue(
-        'https://docs/x'
-      );
-
-      const result = await service.resolveMessageAttachments(
-        {
-          id: 'm1',
-          sender: 'sender-1',
-          storageBucketId: CONV_BUCKET,
-          rawAttachments: [
-            {
-              media_id: 'media-a',
-              mime_type: 'image/png',
-              size: 10,
-              width: 1,
-              height: 1,
-            },
-            {
-              media_id: 'media-b',
-              mime_type: 'image/png',
-              size: 20,
-              width: 1,
-              height: 1,
-            },
-          ],
-        } as any,
-        {} as any
-      );
-
-      expect(fileServiceAdapter.getDocumentByReference).not.toHaveBeenCalled();
-      expect(
-        documentService.getDocumentsByReferencesInBucket
-      ).toHaveBeenCalledTimes(1);
-      expect(
-        documentService.getDocumentsByReferencesInBucket
-      ).toHaveBeenCalledWith(CONV_BUCKET, ['media-a', 'media-b']);
-      expect(result).toEqual([
-        expect.objectContaining({ id: 'doc-a' }),
-        expect.objectContaining({ id: 'doc-b' }),
-      ]);
-    });
-
-    it('C1: omits inbound attachments (without kicking off a re-home) when the batched lookup itself fails', async () => {
-      // A failed batch is an INFRASTRUCTURE failure, not "not re-homed yet" —
-      // treating it as a miss would fire a pointless re-home WRITE on every read.
-      documentService.getDocumentsByReferencesInBucket.mockRejectedValue(
-        new Error('db down')
-      );
-      const rehomeSpy = vi
-        .spyOn(service as any, 'rehomeOne')
-        .mockResolvedValue(undefined);
-
-      const result = await service.resolveMessageAttachments(
-        {
-          id: 'm1',
-          sender: 'sender-1',
-          storageBucketId: CONV_BUCKET,
-          rawAttachments: [
-            { media_id: 'media-1', mime_type: 'image/png', size: 1 },
-          ],
-        } as any,
-        {} as any
-      );
-
-      expect(result).toEqual([]);
-      expect(rehomeSpy).not.toHaveBeenCalled();
-    });
-
-    it('C3: a re-share by a DIFFERENT sender still resolves (the row keeps the first sharer as createdBy)', async () => {
-      // (bucket, externalReference) is UNIQUE, so a re-share of media already in
-      // this conversation reuses the FIRST sharer's row. A sender-ownership gate
-      // could therefore never be satisfied by the second sharer and dropped their
-      // attachment forever. Element/Synapse let any member reference any mxc://
-      // URI, so this is ordinary Matrix forwarding, not an attack.
-      inboundDocuments({
-        id: 'doc-shared',
-        externalReference: 'media-1',
-        createdBy: 'alice',
-        displayName: 'pic.png',
-        mimeType: 'image/png',
-        size: 1000,
-        temporaryLocation: false,
-        authorization: { id: 'doc-auth' },
-      });
-      authorizationService.isAccessGranted.mockReturnValue(true);
-      documentService.getPubliclyAccessibleURL.mockReturnValue(
-        'https://docs/doc-shared'
-      );
-
-      const result = await service.resolveMessageAttachments(
-        {
-          id: 'm1',
-          sender: 'bob',
-          storageBucketId: CONV_BUCKET,
-          rawAttachments: [
-            { media_id: 'media-1', mime_type: 'image/png', size: 1000 },
-          ],
-        } as any,
-        {} as any
-      );
-
-      expect(result).toEqual([expect.objectContaining({ id: 'doc-shared' })]);
-    });
-
-    it('C3: an inbound media_id resolving to a STILL-STAGED document is refused (confused-deputy gate)', async () => {
-      // The gate that replaces sender-ownership: a temporaryLocation document is
-      // somebody's UNSENT upload, so a crafted media_id must never surface it.
-      inboundDocuments({
-        id: 'doc-unsent',
-        externalReference: 'media-1',
-        createdBy: 'alice',
-        displayName: 'secret.png',
-        mimeType: 'image/png',
-        size: 1000,
-        temporaryLocation: true,
-        authorization: { id: 'doc-auth' },
-      });
-      authorizationService.isAccessGranted.mockReturnValue(true);
-
-      const result = await service.resolveMessageAttachments(
-        {
-          id: 'm1',
-          sender: 'bob',
-          storageBucketId: CONV_BUCKET,
-          rawAttachments: [
-            { media_id: 'media-1', mime_type: 'image/png', size: 1000 },
-          ],
-        } as any,
-        {} as any
-      );
-
-      expect(result).toEqual([]);
-    });
-
-    it('leaves width/height undefined for non-image inbound content', async () => {
-      // A PDF carries no dims — the event asserts none for non-image content,
-      // so the resolved attachment stays dimensionless.
-      inboundDocuments({
-        id: 'doc-rehomed',
-        externalReference: 'media-1',
-        createdBy: 'sender-1',
-        displayName: 'doc.pdf',
-        mimeType: 'application/pdf',
-        size: 1000,
-        temporaryLocation: false,
-        authorization: { id: 'doc-auth' },
-      });
-      authorizationService.isAccessGranted.mockReturnValue(true);
-      documentService.getPubliclyAccessibleURL.mockReturnValue(
-        'https://docs/doc-rehomed'
-      );
-
-      const result = await service.resolveMessageAttachments(
-        {
-          id: 'm1',
-          sender: 'sender-1',
-          storageBucketId: CONV_BUCKET,
-          rawAttachments: [
-            { media_id: 'media-1', mime_type: 'application/pdf', size: 1 },
-          ],
-        } as any,
-        {} as any
-      );
-
-      expect(result).toEqual([
-        expect.objectContaining({
-          id: 'doc-rehomed',
-          width: undefined,
-          height: undefined,
-        }),
-      ]);
-    });
-
-    it('FIX 2: lazily re-homes an inbound media_id that missed the bucket lookup, then resolves it', async () => {
-      // Eager re-home failed transiently → media still in matrix_media staging,
-      // so the bucket-scoped lookup misses. The read path must lazily re-home
-      // (MOVE) and then resolve the now-homed doc, instead of returning nothing
-      // forever.
-      fileServiceAdapter.getDocumentByReference
-        .mockResolvedValueOnce(null) // (1) rehomeOne: not already in target
-        .mockResolvedValueOnce({
-          id: 'doc-staging',
-          storageBucketId: MATRIX_MEDIA_BUCKET,
-          mimeType: 'image/png',
-          size: 1000,
-        } as any); // (2) rehomeOne: global canonical lookup
-      documentService.getDocumentsByReferencesInBucket
-        .mockResolvedValueOnce([]) // batched read lookup: still in staging → miss
-        .mockResolvedValue([
-          {
-            id: 'doc-rehomed',
-            externalReference: 'media-1',
-            createdBy: 'sender-1',
-            displayName: 'pic.png',
-            mimeType: 'image/png',
-            size: 1000,
-            temporaryLocation: false,
-            authorization: { id: 'doc-auth' },
-          },
-        ] as any); // re-run after the lazy re-home
-      authorizationService.isAccessGranted.mockReturnValue(true);
-      documentService.getPubliclyAccessibleURL.mockReturnValue(
-        'https://docs/doc-rehomed'
-      );
-
-      const result = await service.resolveMessageAttachments(
-        {
-          id: 'm1',
-          sender: 'sender-1',
-          storageBucketId: CONV_BUCKET,
-          rawAttachments: [
-            {
-              media_id: 'media-1',
-              display_name: 'x',
-              mime_type: 'image/png',
-              size: 1,
-            },
-          ],
-        } as any,
-        {} as any
-      );
-
-      // The lazy re-home MOVEd the staging doc into the conversation bucket...
-      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith(
-        'doc-staging',
-        expect.objectContaining({
-          storageBucketId: CONV_BUCKET,
-          createdBy: 'sender-1',
-          externalReference: 'media-1',
-        })
-      );
-      // ...and the attachment now resolves instead of being permanently invisible.
-      expect(result).toEqual([expect.objectContaining({ id: 'doc-rehomed' })]);
-    });
-
-    it('FIX 2: does not lazily re-home when the sender is unknown (cannot attribute)', async () => {
-      // No sender → the re-home cannot stamp createdBy / mint attribution, so it
-      // must be skipped and the attachment omitted (still self-heals once a read
-      // carries a sender).
-      documentService.getDocumentsByReferencesInBucket.mockResolvedValue([]);
-
-      const result = await service.resolveMessageAttachments(
-        {
-          id: 'm1',
-          storageBucketId: CONV_BUCKET,
-          rawAttachments: [
-            {
-              media_id: 'media-1',
-              display_name: 'x',
-              mime_type: 'image/png',
-              size: 1,
-            },
-          ],
-        } as any,
-        {} as any
-      );
-
-      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
-      expect(result).toEqual([]);
-    });
-
-    it('[4] fast path: an outbound read with storageBucketId set never calls getStorageBucketOrFail', async () => {
-      // The live-subscription fast path carries the bucket id on the message. The
-      // common read cases (here: outbound-echo id resolution) never need the full
-      // bucket, so resolveMessageBucket must resolve the id query-free — no
-      // getStorageBucketOrFail round-trip + auth join per subscription message.
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-1',
-        createdBy: 'sender-1',
-        displayName: 'pic.png',
-        mimeType: 'image/png',
-        size: 1000,
-        storageBucket: { id: CONV_BUCKET },
-        authorization: { id: 'doc-auth' },
-      } as any);
-      authorizationService.isAccessGranted.mockReturnValue(true);
-      documentService.getPubliclyAccessibleURL.mockReturnValue(
-        'https://docs/doc-1'
-      );
-
-      const result = await service.resolveMessageAttachments(
-        {
-          id: 'm1',
-          sender: 'sender-1',
-          storageBucketId: CONV_BUCKET,
-          rawAttachments: [
-            { document_id: 'doc-1', mime_type: 'image/png', size: 1000 },
-          ],
-        } as any,
-        {} as any
-      );
-
-      expect(
-        storageBucketService.getStorageBucketOrFail
-      ).not.toHaveBeenCalled();
-      expect(result).toEqual([expect.objectContaining({ id: 'doc-1' })]);
-    });
-
-    it('[4] fast path inbound miss: lazy-loads the bucket via getStorageBucketOrFail ONLY when a re-home is needed', async () => {
-      // storageBucketId is set (fast path) so resolveMessageBucket returns the id
-      // with NO bucket. An inbound (media_id) miss needs bucket.authorization to
-      // mint the doc auth, so the full bucket must be loaded LAZILY here — and only
-      // now, not eagerly for every message.
-      const rehomeSpy = vi
-        .spyOn(service as any, 'rehomeOne')
-        .mockResolvedValue(undefined);
-      documentService.getDocumentsByReferencesInBucket
-        .mockResolvedValueOnce([]) // batched read lookup misses
-        .mockResolvedValue([
-          {
-            id: 'doc-rehomed',
-            externalReference: 'media-1',
-            createdBy: 'sender-1',
-            displayName: 'pic.png',
-            mimeType: 'image/png',
-            size: 1000,
-            temporaryLocation: false,
-            authorization: { id: 'doc-auth' },
-          },
-        ] as any); // re-lookup after re-home
-      authorizationService.isAccessGranted.mockReturnValue(true);
-      documentService.getPubliclyAccessibleURL.mockReturnValue(
-        'https://docs/doc-rehomed'
-      );
-
-      const result = await service.resolveMessageAttachments(
-        {
-          id: 'm1',
-          sender: 'sender-1',
-          storageBucketId: CONV_BUCKET,
-          rawAttachments: [
-            { media_id: 'media-1', mime_type: 'image/png', size: 1 },
-          ],
-        } as any,
-        {} as any
-      );
-
-      // The bucket was lazy-loaded exactly for the re-home.
-      expect(storageBucketService.getStorageBucketOrFail).toHaveBeenCalledWith(
-        CONV_BUCKET,
-        { relations: { authorization: true } }
-      );
-      expect(rehomeSpy).toHaveBeenCalledTimes(1);
-      expect(result).toEqual([expect.objectContaining({ id: 'doc-rehomed' })]);
-    });
-
-    it('[1] single-flight: two concurrent inbound-miss reads for the same media_id re-home the WRITE ONCE but load the bucket PER-READER', async () => {
-      // Both attachments carry the SAME media_id and both MISS the bucket-scoped
-      // lookup. Without coalescing each would re-home the same media (orphaned auth
-      // on MOVE / duplicate doc on COPY). Single-flight collapses the WRITE to ONE
-      // rehomeOne invocation. FIX [1] round-5c: the read-only bucket load is
-      // intentionally PER-READER (fault isolation) — a transient bucket-load
-      // failure for one reader must NOT cascade to concurrent coalesced readers, so
-      // getStorageBucketOrFail is called once PER reader (twice here), the accepted
-      // cheap cost of that isolation. Only the WRITE is coalesced.
-      const rehomeSpy = vi
-        .spyOn(service as any, 'rehomeOne')
-        .mockResolvedValue(undefined);
-      documentService.getDocumentsByReferencesInBucket
-        .mockResolvedValueOnce([]) // ONE batched lookup for the message: miss
-        .mockResolvedValue([
-          {
-            id: 'doc-rehomed',
-            externalReference: 'media-same',
-            createdBy: 'sender-1',
-            displayName: 'pic.png',
-            mimeType: 'image/png',
-            size: 1000,
-            temporaryLocation: false,
-            authorization: { id: 'doc-auth' },
-          },
-        ] as any); // both post-re-home re-lookups hit
-      authorizationService.isAccessGranted.mockReturnValue(true);
-      documentService.getPubliclyAccessibleURL.mockReturnValue(
-        'https://docs/doc-rehomed'
-      );
-
-      const result = await service.resolveMessageAttachments(
-        {
-          id: 'm1',
-          sender: 'sender-1',
-          storageBucketId: CONV_BUCKET,
-          rawAttachments: [
-            { media_id: 'media-same', mime_type: 'image/png', size: 1 },
-            { media_id: 'media-same', mime_type: 'image/png', size: 1 },
-          ],
-        } as any,
-        {} as any
-      );
-
-      // The WRITE is still coalesced — the key [1] invariant (one placement, so no
-      // duplicate mint+MOVE / COPY).
-      expect(rehomeSpy).toHaveBeenCalledTimes(1);
-      // The read-only bucket load is PER-READER for fault isolation — each of the
-      // two concurrent readers loads its own bucket (the deliberate trade).
-      expect(storageBucketService.getStorageBucketOrFail).toHaveBeenCalledTimes(
-        2
-      );
-      expect(result).toEqual([
-        expect.objectContaining({ id: 'doc-rehomed' }),
-        expect.objectContaining({ id: 'doc-rehomed' }),
-      ]);
-    });
-
-    it('denies a non-member (READ not granted)', async () => {
-      documentService.getDocumentOrFail.mockResolvedValue({
-        id: 'doc-1',
-        createdBy: 'sender-1',
-        storageBucket: { id: CONV_BUCKET },
-        authorization: { id: 'doc-auth' },
-      } as any);
-      authorizationService.isAccessGranted.mockReturnValue(false);
-
-      const result = await service.resolveMessageAttachments(
-        {
-          id: 'm1',
-          sender: 'sender-1',
-          storageBucketId: CONV_BUCKET,
-          rawAttachments: [
-            {
-              document_id: 'doc-1',
-              display_name: 'x',
-              mime_type: 'image/png',
-              size: 1,
-            },
-          ],
-        } as any,
-        {} as any
-      );
-
-      expect(result).toEqual([]);
-    });
-
-    it('read path degrades gracefully: a transient bucket-resolution throw omits attachments, never fails the read (FIX B)', async () => {
-      // History read (no storageBucketId, roomID present). getTargetBucketForRoom
-      // → conversationRepository.findOne throws transiently; the resolver must NOT
-      // propagate — attachments are omitted, the history query still succeeds.
-      roomRepository.findOne.mockResolvedValue({
-        id: 'room-1',
-        type: RoomType.CONVERSATION_GROUP,
-      });
-      conversationRepository.findOne.mockRejectedValueOnce(
-        new Error('db down during read')
-      );
-
-      const result = await service.resolveMessageAttachments(
-        {
-          id: 'm1',
-          sender: 'sender-1',
-          roomID: 'room-1',
-          rawAttachments: [
-            {
-              media_id: 'media-1',
-              display_name: 'x',
-              mime_type: 'image/png',
-              size: 1,
-            },
-          ],
-        } as any,
-        {} as any
-      );
-
-      expect(result).toEqual([]);
-    });
-
-    it('fault-isolates a per-attachment failure: one attachment throwing omits ONLY it, the read still succeeds (FIX 2)', async () => {
-      // Two outbound attachments. Resolving the SECOND throws where the round-2
-      // guard did NOT reach — the READ-gate (isAccessGranted) on a malformed auth
-      // relation. The batch must not reject: the good attachment resolves, the
-      // failing one is omitted, the whole getMessages query still succeeds.
-      documentService.getDocumentOrFail.mockImplementation(
-        async (id: string) =>
-          ({
-            id,
-            createdBy: 'sender-1',
-            displayName: `${id}.png`,
-            mimeType: 'image/png',
-            size: 10,
-            storageBucket: { id: CONV_BUCKET },
-            authorization: { id: id === 'doc-bad' ? 'bad-auth' : 'good-auth' },
-          }) as any
-      );
-      authorizationService.isAccessGranted.mockImplementation(
-        (_ctx: any, auth: any) => {
-          if (auth?.id === 'bad-auth') {
-            throw new Error('auth check blew up on a malformed relation');
-          }
-          return true;
-        }
-      );
-      documentService.getPubliclyAccessibleURL.mockReturnValue(
-        'https://docs/doc-good'
-      );
-
-      const result = await service.resolveMessageAttachments(
-        {
-          id: 'm1',
-          sender: 'sender-1',
-          storageBucketId: CONV_BUCKET,
-          rawAttachments: [
-            { document_id: 'doc-good', mime_type: 'image/png', size: 10 },
-            { document_id: 'doc-bad', mime_type: 'image/png', size: 10 },
-          ],
-        } as any,
-        {} as any
-      );
-
-      // The whole query did NOT reject; only the failing attachment is omitted.
-      expect(result).toEqual([expect.objectContaining({ id: 'doc-good' })]);
-    });
-  });
-
-  // --- read-path image dimensions (anti-N+1 + gate ordering) ---
-
-  describe('resolveMessageAttachments — image dimensions', () => {
-    const outboundDoc = {
-      id: 'doc-1',
-      createdBy: 'sender-1',
-      displayName: 'pic.png',
-      mimeType: 'image/png',
-      size: 1000,
-      temporaryLocation: false,
-      storageBucket: { id: CONV_BUCKET },
-      authorization: { id: 'doc-auth' },
-    };
-
-    const readRaw = (...raws: Record<string, unknown>[]) =>
-      service.resolveMessageAttachments(
-        {
-          id: 'm1',
-          sender: 'sender-1',
-          storageBucketId: CONV_BUCKET,
-          rawAttachments: raws,
-        } as any,
-        {} as any
-      );
-
-    const readOutbound = (raw: Record<string, unknown>) => readRaw(raw);
-
-    beforeEach(() => {
-      documentService.getDocumentOrFail.mockResolvedValue(outboundDoc as any);
-      documentService.getPubliclyAccessibleURL.mockReturnValue(
-        'https://docs/doc-1'
-      );
-      authorizationService.isAccessGranted.mockReturnValue(true);
-    });
-
-    it('non-image mime: the attachment stays dimensionless', async () => {
-      documentService.getDocumentOrFail.mockResolvedValue({
-        ...outboundDoc,
-        id: 'doc-pdf',
-        displayName: 'doc.pdf',
-        mimeType: 'application/pdf',
-      } as any);
-
-      const result = await readOutbound({
-        document_id: 'doc-pdf',
-        display_name: 'doc.pdf',
-        mime_type: 'application/pdf',
-        size: 1000,
-      });
-
-      expect(result).toEqual([
-        expect.objectContaining({
-          id: 'doc-pdf',
-          width: undefined,
-          height: undefined,
-        }),
-      ]);
-    });
-
-    it('inbound: the event dims stand when file-service has no measurement', async () => {
-      inboundDocuments({
-        id: 'doc-rehomed',
-        externalReference: 'media-1',
-        createdBy: 'sender-1',
-        displayName: 'pic.png',
-        mimeType: 'image/png',
-        size: 1000,
-        temporaryLocation: false,
-        authorization: { id: 'doc-auth' },
-      });
-
-      const result = await service.resolveMessageAttachments(
-        {
-          id: 'm1',
-          sender: 'sender-1',
-          storageBucketId: CONV_BUCKET,
-          rawAttachments: [
-            {
-              media_id: 'media-1',
-              display_name: 'pic.png',
-              mime_type: 'image/png',
-              size: 1000,
-              width: 800,
-              height: 600,
-            },
-          ],
-        } as any,
-        {} as any
-      );
-
-      expect(result).toEqual([
-        expect.objectContaining({ width: 800, height: 600 }),
-      ]);
-    });
-
-    it('an event dimension the GraphQL `Int` cannot carry counts as ABSENT', async () => {
-      // `info.w`/`info.h` come verbatim off an attacker-influenceable event. A 0
-      // pixel count is not a real dimension (no image is 0 wide), and a value
-      // outside the signed 32-bit range would throw during `Int` serialization
-      // and fail the whole message read. Both resolve dimensionless instead.
-      inboundDocuments({
-        id: 'doc-rehomed',
-        externalReference: 'media-1',
-        createdBy: 'sender-1',
-        displayName: 'pic.png',
-        mimeType: 'image/png',
-        size: 1000,
-        temporaryLocation: false,
-        authorization: { id: 'doc-auth' },
-      });
-      const readEventDims = (width: number, height: number) =>
-        service.resolveMessageAttachments(
-          {
-            id: 'm1',
-            sender: 'sender-1',
-            storageBucketId: CONV_BUCKET,
-            rawAttachments: [
-              {
-                media_id: 'media-1',
-                display_name: 'pic.png',
-                mime_type: 'image/png',
-                size: 1000,
-                width,
-                height,
-              },
-            ],
-          } as any,
-          {} as any
-        );
-
-      const dimensionless = [
-        expect.objectContaining({ width: undefined, height: undefined }),
-      ];
-      expect(await readEventDims(0, 0)).toEqual(dimensionless);
-      expect(await readEventDims(-1, -1)).toEqual(dimensionless);
-      expect(await readEventDims(2_147_483_648, 2_147_483_648)).toEqual(
-        dimensionless
-      );
-    });
-  });
-
-  // --- D2: bucket-policy enforcement (FR-020/FR-022) ---
-
-  describe('bucket policy enforcement', () => {
-    const senderContext = { actorID: 'sender-1' } as any;
-    const stagedDoc = (overrides: Record<string, unknown> = {}) => ({
-      id: 'doc-1',
-      createdBy: 'sender-1',
-      displayName: 'pic.png',
-      mimeType: 'image/png',
-      size: 1000,
-      temporaryLocation: true,
-      storageBucket: { id: CONV_BUCKET },
-      authorization: { id: 'doc-auth' },
-      ...overrides,
-    });
-
-    beforeEach(() => {
-      // The REAL conversation bucket policy — allow-list ['image/png'] + 50 MiB.
-      useConversationBucket();
-      authorizationService.grantAccessOrFail.mockReturnValue(true as any);
-    });
-
-    it('outbound: accepts a document whose MIME type is on the bucket allow-list', async () => {
-      documentService.getDocumentOrFail.mockResolvedValue(stagedDoc() as any);
-
-      const refs = await service.resolveOutboundAttachments(
-        conversationRoom,
-        senderContext,
-        ['doc-1']
-      );
-
-      expect(refs).toEqual([
-        expect.objectContaining({ documentId: 'doc-1', mimeType: 'image/png' }),
-      ]);
-    });
-
-    it('outbound: REJECTS a document whose MIME type is not on the bucket allow-list (FR-022)', async () => {
-      documentService.getDocumentOrFail.mockResolvedValue(
-        stagedDoc({ mimeType: 'application/x-msdownload' }) as any
-      );
-
-      await expect(
-        service.resolveOutboundAttachments(conversationRoom, senderContext, [
-          'doc-1',
-        ])
-      ).rejects.toThrow(/type is not permitted/);
-    });
-
-    it('outbound: REJECTS a document larger than the bucket cap (FR-020)', async () => {
-      documentService.getDocumentOrFail.mockResolvedValue(
-        stagedDoc({ size: 52428801 }) as any
-      );
-
-      await expect(
-        service.resolveOutboundAttachments(conversationRoom, senderContext, [
-          'doc-1',
-        ])
-      ).rejects.toThrow(/exceeds the maximum allowed size/);
-    });
-
-    it('D1: inbound re-home REFUSES media whose MIME type is not on the target bucket allow-list', async () => {
-      fileServiceAdapter.getDocumentByReference
-        .mockResolvedValueOnce(null) // not already in the target bucket
-        .mockResolvedValueOnce({
-          id: 'doc-staging',
-          storageBucketId: MATRIX_MEDIA_BUCKET,
-          mimeType: 'application/x-msdownload',
-          size: 1000,
-        } as any);
-
-      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-        { media_id: 'media-1', display_name: 'evil.exe' },
-      ] as any);
-
-      // Left in staging: nothing moved, nothing copied, no auth policy minted.
-      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
-      expect(authorizationPolicyService.save).not.toHaveBeenCalled();
-    });
-
-    it('D1: inbound re-home REFUSES media larger than the target bucket cap', async () => {
-      fileServiceAdapter.getDocumentByReference
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({
-          id: 'doc-staging',
-          storageBucketId: MATRIX_MEDIA_BUCKET,
-          mimeType: 'image/png',
-          size: 52428801,
-        } as any);
-
-      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-        { media_id: 'media-1', display_name: 'huge.png' },
-      ] as any);
-
-      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
-      expect(authorizationPolicyService.save).not.toHaveBeenCalled();
-    });
-
-    it('D1: inbound re-home ACCEPTS media that satisfies the target bucket policy', async () => {
-      fileServiceAdapter.getDocumentByReference
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({
-          id: 'doc-staging',
-          storageBucketId: MATRIX_MEDIA_BUCKET,
-          mimeType: 'image/png',
-          size: 1000,
-        } as any);
-
-      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-        { media_id: 'media-1', display_name: 'ok.png' },
-      ] as any);
-
-      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith(
-        'doc-staging',
-        expect.objectContaining({
-          storageBucketId: CONV_BUCKET,
-          externalReference: 'media-1',
-        })
-      );
-    });
+  it('comment media uses the existing callout bucket', async () => {
+    rooms.getCalloutForRoom.mockResolvedValue({ id: 'callout' } as any);
+    aggregators.getStorageAggregatorForCallout.mockResolvedValue({
+      directStorage: bucket,
+    } as any);
+    await service.prepareInboundAttachments(
+      { ...room, type: RoomType.CALLOUT },
+      'alice',
+      [raw]
+    );
+    expect(storage.copyDocumentToBucket).toHaveBeenCalledWith(
+      'conversation',
+      provider,
+      'alice',
+      false,
+      expect.anything()
+    );
   });
 });
 
-// --- Finding A: inbound filename sanitization ---
-
-describe('sanitizeAttachmentDisplayName', () => {
-  const FALLBACK = 'zQtvVFbLNbcuMwYqRLWCWNfR'; // a Synapse media_id
-
-  it('passes an ordinary filename through untouched', () => {
-    expect(sanitizeAttachmentDisplayName('holiday.jpg', FALLBACK)).toBe(
-      'holiday.jpg'
-    );
-  });
-
-  it('neutralises BOTH path separators (file-service rejects `/` and `\\`)', () => {
-    expect(sanitizeAttachmentDisplayName('../../etc/passwd', FALLBACK)).toBe(
-      '.._.._etc_passwd'
-    );
-    expect(
-      sanitizeAttachmentDisplayName('C:\\Windows\\evil.exe', FALLBACK)
-    ).toBe('C:_Windows_evil.exe');
-  });
-
-  it('strips control characters (C0 and DEL)', () => {
-    expect(
-      sanitizeAttachmentDisplayName('ho\u0000li\u001fday\u007f.jpg', FALLBACK)
-    ).toBe('holiday.jpg');
-    // A newline is a control character too — dropping it keeps the PATCH valid.
-    expect(sanitizeAttachmentDisplayName('a\nb.png', FALLBACK)).toBe('ab.png');
-  });
-
-  it('trims surrounding whitespace', () => {
-    expect(sanitizeAttachmentDisplayName('  spaced.png  ', FALLBACK)).toBe(
-      'spaced.png'
-    );
-  });
-
-  it('leaves a name at exactly the 512-byte cap alone', () => {
-    const exact = 'a'.repeat(512);
-    expect(sanitizeAttachmentDisplayName(exact, FALLBACK)).toBe(exact);
-    expect(sanitizeAttachmentDisplayName(`${exact}bbb`, FALLBACK)).toBe(exact);
-  });
-
-  it('clamps to 512 BYTES (not code units) without splitting a multi-byte character', () => {
-    // The cap is BYTES, and 3-byte characters do not tile it: 300 of them = 900
-    // bytes, and the 512-byte cut lands INSIDE character 171 — a naive slice
-    // would emit a truncated sequence that decodes to a replacement character.
-    // Only 170 whole characters (510 bytes) fit.
-    expect(Buffer.byteLength('日', 'utf8')).toBe(3);
-    const result = sanitizeAttachmentDisplayName('日'.repeat(300), FALLBACK);
-    expect(Buffer.byteLength(result, 'utf8')).toBeLessThanOrEqual(512);
-    expect(result).toBe('日'.repeat(170));
-    expect(result).not.toContain('\uFFFD');
-
-    // Astral (4-byte) characters must survive intact too — never split into a
-    // lone surrogate. The leading 'a' pushes the cut off the 4-byte grid so the
-    // walk-back is genuinely exercised: 1 + 127*4 = 509 bytes fit.
-    const emoji = sanitizeAttachmentDisplayName(
-      `a${'😀'.repeat(200)}`,
-      FALLBACK
-    );
-    expect(Buffer.byteLength(emoji, 'utf8')).toBeLessThanOrEqual(512);
-    expect(emoji).toBe(`a${'😀'.repeat(127)}`);
-    expect(emoji).not.toContain('\uFFFD');
-  });
-
-  it('falls back to the staging name when nothing survives sanitization', () => {
-    expect(sanitizeAttachmentDisplayName('', FALLBACK)).toBe(FALLBACK);
-    expect(sanitizeAttachmentDisplayName('    ', FALLBACK)).toBe(FALLBACK);
-    expect(sanitizeAttachmentDisplayName('\u0000\u0001\u007f', FALLBACK)).toBe(
-      FALLBACK
-    );
-    expect(sanitizeAttachmentDisplayName(undefined, FALLBACK)).toBe(FALLBACK);
-    expect(sanitizeAttachmentDisplayName(null, FALLBACK)).toBe(FALLBACK);
-  });
+it('normalizes names to the existing file-service contract without splitting UTF-8', () => {
+  expect(sanitizeAttachmentDisplayName(' a/b\\c\x01.png ', 'media')).toBe(
+    'a_b_c.png'
+  );
+  expect(sanitizeAttachmentDisplayName('😀'.repeat(200), 'media')).toBe(
+    '😀'.repeat(128)
+  );
+  expect(sanitizeAttachmentDisplayName('  ', 'media')).toBe('media');
 });

@@ -24,4 +24,11 @@ export interface CopyDocumentInput {
    * re-shared conversation document still resolves by-reference.
    */
   externalReference?: string;
+  /**
+   * Overrides the copied row's name. Omitted inherits the source's. The Synapse
+   * storage provider names its staging row after the media id, so a conversation
+   * copy supplies the event's real filename here. Ignored by file-service on a
+   * dedup-reused row, which keeps its own name.
+   */
+  displayName?: string;
 }

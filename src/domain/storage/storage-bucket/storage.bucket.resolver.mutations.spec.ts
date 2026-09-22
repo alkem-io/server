@@ -1,4 +1,5 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -159,6 +160,50 @@ describe('StorageBucketResolverMutations', () => {
         id: 'doc-1',
         url: 'https://alkem.io/api/private/rest/storage/document/doc-1',
       });
+    });
+
+    it('does NOT recompose the policy for a CONVERSATION bucket', async () => {
+      // The service already composed the full policy before the row existed.
+      // Recomposing here would rewrite the same rules on the hot path.
+      const actorContext = new ActorContext();
+      actorContext.actorID = 'bob';
+      const bucket = {
+        id: 'bucket-conversation',
+        authorization: { id: 'auth-bucket' },
+        storageAggregator: { type: StorageAggregatorType.CONVERSATION },
+      };
+      const fileUpload = {
+        createReadStream: () => vi.fn(),
+        filename: 'holiday.png',
+        mimetype: 'image/png',
+      };
+
+      (storageBucketService.getStorageBucketOrFail as Mock).mockResolvedValue(
+        bucket
+      );
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+      (storageBucketService.uploadFileAsDocument as Mock).mockResolvedValue({
+        id: 'doc-conv',
+        externalID: 'ext-conv',
+        authorization: { id: 'doc-auth' },
+      });
+      (documentService.getPubliclyAccessibleURL as Mock).mockReturnValue(
+        'https://alkem.io/api/private/rest/storage/document/doc-conv'
+      );
+
+      const result = await resolver.uploadFileOnStorageBucket(
+        actorContext,
+        { storageBucketId: 'bucket-conversation' } as any,
+        fileUpload as any
+      );
+
+      expect(
+        documentAuthorizationService.applyAuthorizationPolicy
+      ).not.toHaveBeenCalled();
+      expect(authorizationPolicyService.saveAll).not.toHaveBeenCalled();
+      expect(result.id).toBe('doc-conv');
     });
   });
 });

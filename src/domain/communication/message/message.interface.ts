@@ -1,6 +1,7 @@
 import { ReceivedAttachment } from '@alkemio/matrix-adapter-lib';
 import { MessageID } from '@domain/common/scalars';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
+import { IDocument } from '@domain/storage/document/document.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IMessageReaction } from '../message.reaction/message.reaction.interface';
 
@@ -46,6 +47,9 @@ export class IMessage {
   // of our own media) and/or `media_id` (Element-origin, the inbound re-home /
   // by-reference key). Resolved to `MessageAttachment` by `@ResolveField`.
   rawAttachments?: ReceivedAttachment[];
+
+  // Shared read-only lookup for a room-history response.
+  attachmentDocuments?: Map<string, IDocument>;
 
   // The storage bucket the attachments resolve against (the conversation bucket,
   // or the parent callout/post bucket for comment rooms). Set by message

@@ -83,7 +83,7 @@ describe('RoomResolverMutations', () => {
       );
     });
 
-    it('pins the resolved attachments durable only AFTER send succeeds (FIX 0)', async () => {
+    it('passes validated media to the one-event send', async () => {
       const messageAttachmentService = (resolver as any)
         .messageAttachmentService as Mocked<MessageAttachmentService>;
       const resolvedRefs = [{ documentId: 'doc-1' }] as any;
@@ -93,19 +93,19 @@ describe('RoomResolverMutations', () => {
       roomLookupService.sendMessage.mockResolvedValue({ id: 'msg-1' } as any);
 
       await resolver.sendMessageToRoom(
-        { roomID: 'room-1', message: 'Hello', attachments: ['doc-1'] } as any,
+        { roomID: 'room-1', message: '', attachments: ['doc-1'] } as any,
         actorContext
       );
 
-      // Resolve/validate happens before send; the durable pin happens after,
-      // with the SAME resolved refs (deferred until the send is confirmed).
-      expect(roomLookupService.sendMessage).toHaveBeenCalled();
-      expect(
-        messageAttachmentService.persistOutboundAttachments
-      ).toHaveBeenCalledWith(resolvedRefs);
+      expect(roomLookupService.sendMessage).toHaveBeenCalledWith(
+        mockRoom,
+        actorContext.actorID,
+        { roomID: 'room-1', message: '', attachments: ['doc-1'] },
+        resolvedRefs
+      );
     });
 
-    it('does NOT pin attachments when the send throws (FIX 0)', async () => {
+    it('propagates an unconfirmed send', async () => {
       const messageAttachmentService = (resolver as any)
         .messageAttachmentService as Mocked<MessageAttachmentService>;
       messageAttachmentService.resolveOutboundAttachments.mockResolvedValue([
@@ -115,14 +115,10 @@ describe('RoomResolverMutations', () => {
 
       await expect(
         resolver.sendMessageToRoom(
-          { roomID: 'room-1', message: 'Hello', attachments: ['doc-1'] } as any,
+          { roomID: 'room-1', message: '', attachments: ['doc-1'] } as any,
           actorContext
         )
       ).rejects.toThrow('send failed');
-
-      expect(
-        messageAttachmentService.persistOutboundAttachments
-      ).not.toHaveBeenCalled();
     });
 
     it('should throw CalloutClosedException when callout comments are disabled', async () => {

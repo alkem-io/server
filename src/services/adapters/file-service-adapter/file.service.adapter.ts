@@ -11,6 +11,7 @@ import { isAxiosError } from 'axios';
 import FormData from 'form-data';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { firstValueFrom } from 'rxjs';
+import { Readable, Transform } from 'stream';
 import type {
   ContentBatchItemResult,
   ContentBatchResponse,
@@ -29,23 +30,6 @@ import {
 
 const LOG_PREFIX = '[FileService]';
 const FILE_PATH_PREFIX = '/internal/file';
-
-/**
- * SHORT timeout for the best-effort outbound image-dimensions fetch
- * (`getDocumentMeta`). Deliberately far below the adapter's full request
- * timeout: image dims are a cosmetic rendering hint on the hot send path, so a
- * degraded file-service `/meta` must add at most this much latency — never the
- * full timeout × retries — and must never block the send.
- */
-const DOCUMENT_META_TIMEOUT_MS = 2500;
-
-/**
- * SHORT timeout for the best-effort read-path durability heal
- * (`pinDocumentDurableBestEffort`). Same rationale as
- * `DOCUMENT_META_TIMEOUT_MS`: a self-heal riding a message READ must add at
- * most this much latency and never the full timeout × retries.
- */
-const DOCUMENT_PIN_TIMEOUT_MS = 2500;
 
 // Snapshot uploads mirror the collaboration-service BlobStore (store.go): a fixed
 // display name + a `.ybin` filename, so create-time and collab-saved snapshots are
@@ -85,24 +69,11 @@ export class FileServiceAdapter extends HttpClientBase {
     });
   }
 
-  /**
-   * Create a document in the Go file-service-go.
-   * Sends file + metadata as multipart/form-data.
-   */
-  async createDocument(
-    file: Buffer,
+  /** The non-file multipart fields, shared by the buffer and stream paths. */
+  private appendDocumentMetadata(
+    form: FormData,
     metadata: CreateDocumentMetadata
-  ): Promise<CreateDocumentResult> {
-    this.checkEnabledAndCircuit('createDocument');
-
-    const form = new FormData();
-    form.append('file', file, {
-      filename: metadata.displayName,
-      // Pass the caller-declared MIME type so the Go service can trust it
-      // when content-based detection is inconclusive (e.g. zero-byte files or
-      // ambiguous magic bytes). Defaults to generic octet-stream otherwise.
-      contentType: metadata.mimeType ?? 'application/octet-stream',
-    });
+  ): void {
     form.append('displayName', metadata.displayName);
     form.append('storageBucketId', metadata.storageBucketId);
     form.append('authorizationId', metadata.authorizationId);
@@ -127,6 +98,105 @@ export class FileServiceAdapter extends HttpClientBase {
     if (metadata.skipDedup) {
       form.append('skipDedup', 'true');
     }
+  }
+
+  /**
+   * Streaming counterpart of `createDocument`: the bytes flow
+   * request -> multipart -> file-service without ever being held whole in
+   * memory. Used by the upload path, which starts from a `Readable`.
+   *
+   * `maxBytes` is enforced DURING the transfer, so an oversized upload is cut
+   * off mid-flight rather than after it has been fully received.
+   *
+   * Deliberately does NOT go through `sendRequest`: that pipeline retries a
+   * POST on 503/504, and by then the request body has been sent, so the
+   * stream is exhausted and a replay would transmit a truncated body. One
+   * attempt only. Breaker accounting is kept.
+   */
+  async createDocumentFromStream(
+    readStream: Readable,
+    metadata: CreateDocumentMetadata,
+    maxBytes: number
+  ): Promise<CreateDocumentResult> {
+    this.checkEnabledAndCircuit('createDocumentFromStream');
+
+    let bytesSeen = 0;
+    const cap = new Transform({
+      transform(chunk, _encoding, callback) {
+        bytesSeen += chunk.length;
+        if (maxBytes > 0 && bytesSeen > maxBytes) {
+          callback(
+            new Error(
+              `upload exceeds the maximum allowed size of ${maxBytes} bytes`
+            )
+          );
+          return;
+        }
+        callback(null, chunk);
+      },
+    });
+    // Propagate a source failure into the capped stream so the request fails
+    // rather than silently sending a short body.
+    readStream.on('error', err => cap.destroy(err));
+    readStream.pipe(cap);
+
+    const form = new FormData();
+    form.append('file', cap, {
+      filename: metadata.displayName,
+      contentType: metadata.mimeType ?? 'application/octet-stream',
+    });
+    this.appendDocumentMetadata(form, metadata);
+
+    const url = `${this.baseUrl}${FILE_PATH_PREFIX}`;
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post<CreateDocumentResult>(url, form, {
+          headers: form.getHeaders(),
+          timeout: this.requestTimeout,
+          // MUST stay 0. It is the only way to reach axios' native http
+          // transport: the default follow-redirects transport pushes every
+          // written chunk into `_requestBodyBuffers` to be able to replay the
+          // body on a redirect, which holds the whole file in memory and
+          // defeats the entire point of this path. The endpoint is a fixed
+          // internal one and never redirects.
+          maxRedirects: 0,
+          // The body length is unknown up front; let axios stream it.
+          maxBodyLength: Infinity,
+          maxContentLength: Infinity,
+        })
+      );
+      this.circuitBreaker.onSuccess();
+      return response.data;
+    } catch (error) {
+      this.circuitBreaker.onFailure();
+      throw this.handleError('createDocumentFromStream', error, {
+        storageBucketId: metadata.storageBucketId,
+        displayName: metadata.displayName,
+      });
+    } finally {
+      readStream.destroy();
+    }
+  }
+
+  /**
+   * Create a document in the Go file-service-go.
+   * Sends file + metadata as multipart/form-data.
+   */
+  async createDocument(
+    file: Buffer,
+    metadata: CreateDocumentMetadata
+  ): Promise<CreateDocumentResult> {
+    this.checkEnabledAndCircuit('createDocument');
+
+    const form = new FormData();
+    form.append('file', file, {
+      filename: metadata.displayName,
+      // Pass the caller-declared MIME type so the Go service can trust it
+      // when content-based detection is inconclusive (e.g. zero-byte files or
+      // ambiguous magic bytes). Defaults to generic octet-stream otherwise.
+      contentType: metadata.mimeType ?? 'application/octet-stream',
+    });
+    this.appendDocumentMetadata(form, metadata);
 
     return this.sendRequest<CreateDocumentResult>(
       'createDocument',
@@ -369,128 +439,6 @@ export class FileServiceAdapter extends HttpClientBase {
         return null;
       }
       throw error;
-    }
-  }
-
-  /**
-   * Fetch a document's metadata by id (feature 013):
-   * `GET /internal/file/{documentId}/meta` — the by-id meta route
-   * `documentMetaResponse` backs. The OUTBOUND send path uses this to source
-   * intrinsic image dimensions (`imageWidth` / `imageHeight`): those are
-   * transient, file-service-owned fields (cached `content_metadata`), absent
-   * from the server's Document entity after a DB load, so the outbound
-   * attachment ref can only carry them by asking file-service. The `/meta`
-   * response is the SAME `documentMetaResponse` shape returned by-reference, so
-   * it deserializes as a `DocumentReferenceResult` (dims are all the caller
-   * reads).
-   *
-   * SEND PATH ONLY, and that is what keeps a by-id call affordable: one message
-   * carries at most `MAX_MESSAGE_ATTACHMENTS` (10) attachments and is sent one
-   * at a time, so the fan-out is hard-bounded. The READ path does NOT call this
-   * — it takes the Matrix event's own `info.w`/`info.h`, exactly as Element
-   * does — because `Message.attachments` resolves over UNPAGINATED history,
-   * where any per-attachment fetch is an unbounded N+1.
-   *
-   * BEST-EFFORT + FULLY ISOLATED (deliberately unlike every other method here):
-   * image dims are a cosmetic rendering hint, so this fetch MUST NOT be able to
-   * (a) block the hot send path for long, or (b) pollute the SHARED circuit
-   * breaker that guards uploads/pins — a degraded `/meta` must never fast-fail
-   * unrelated healthy file-service traffic. It therefore does NOT route through
-   * `sendRequest` / `checkEnabledAndCircuit`: it issues a DIRECT axios GET with a
-   * SHORT timeout (`DOCUMENT_META_TIMEOUT_MS`), ZERO retries, and no breaker
-   * accounting, and resolves EVERY failure (timeout / 4xx / 5xx / network / 404)
-   * to `null` — NEVER propagating. A benign 404 (no meta / not found) is expected
-   * and stays quiet; every other failure (timeout / 5xx / network / other) is
-   * logged at WARN so the dropped dimensions stay observable. The `enabled` gate
-   * is kept (returns `null`, does not throw). The caller also guards the result,
-   * as defence-in-depth.
-   */
-  async getDocumentMeta(
-    documentId: string
-  ): Promise<DocumentReferenceResult | null> {
-    if (!this.enabled) {
-      return null;
-    }
-
-    const url = `${this.baseUrl}${this.fileMetaPath(documentId)}`;
-    try {
-      const response = await firstValueFrom(
-        this.httpService.get<DocumentReferenceResult>(url, {
-          timeout: DOCUMENT_META_TIMEOUT_MS,
-        })
-      );
-      return response.data;
-    } catch (error) {
-      // Best-effort: EVERY failure resolves to `null` — dims are a rendering
-      // hint, so the send proceeds without them and the shared breaker is
-      // untouched. A genuine 404 (the document has no meta / not found) is
-      // expected on this path and stays QUIET to avoid log spam; every other
-      // failure (timeout / 5xx / network / other) is logged at WARN so dropped
-      // dimensions are observable. Failures are logged but NEVER propagate.
-      if (isAxiosError(error) && error.response?.status === 404) {
-        return null;
-      }
-      this.logger.warn?.(
-        {
-          message: `${this.logPrefix} Best-effort document meta lookup failed; attachment dimensions omitted`,
-          documentId,
-          error: error instanceof Error ? error.message : String(error),
-        },
-        this.logContext
-      );
-      return null;
-    }
-  }
-
-  /**
-   * Flip a document out of staging (`temporaryLocation = false`) as a
-   * BEST-EFFORT, FULLY ISOLATED call — the READ-path durability heal of feature
-   * 013 (`MessageAttachmentService.resolveReadAttachment`).
-   *
-   * Same isolation contract, and for the same reason, as `getDocumentMeta`:
-   * `Message.attachments` resolves over UNPAGINATED history, so anything issued
-   * from there fans out per attachment per viewer per page load. Routing that
-   * through `sendRequest` would make a single room open in a degraded state
-   * spend N retrying, breaker-accounted calls and trip the SHARED file-service
-   * circuit breaker that guards uploads and pins for the WHOLE platform — the
-   * exact hazard the inbound batching fix (`loadInboundDocuments`) removed from
-   * this path.
-   *
-   * So: a DIRECT axios PATCH with a SHORT timeout (`DOCUMENT_PIN_TIMEOUT_MS`),
-   * ZERO retries, NO breaker accounting, and every failure resolved to `false`
-   * rather than propagating. The heal is idempotent and re-attempted on the next
-   * read, so dropping one costs nothing; it is logged at WARN so a persistently
-   * failing pin stays observable. The `enabled` gate is kept (returns `false`,
-   * does not throw).
-   *
-   * NOT a substitute for `moveDocument` on write paths: those are authoritative
-   * and MUST stay retried + breaker-accounted.
-   */
-  async pinDocumentDurableBestEffort(documentId: string): Promise<boolean> {
-    if (!this.enabled) {
-      return false;
-    }
-
-    const url = `${this.baseUrl}${this.filePath(documentId)}`;
-    try {
-      await firstValueFrom(
-        this.httpService.patch<UpdateDocumentResult>(
-          url,
-          { temporaryLocation: false },
-          { timeout: DOCUMENT_PIN_TIMEOUT_MS }
-        )
-      );
-      return true;
-    } catch (error) {
-      this.logger.warn?.(
-        {
-          message: `${this.logPrefix} Best-effort durability pin failed; it will be retried on the next read`,
-          documentId,
-          error: error instanceof Error ? error.message : String(error),
-        },
-        this.logContext
-      );
-      return false;
     }
   }
 

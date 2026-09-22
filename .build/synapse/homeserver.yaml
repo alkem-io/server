@@ -231,7 +231,7 @@ oidc_providers:
     client_id: "synapse-client"
     client_secret: "Ihky1jTsQ21uwdJvhjpiF1ZhHArymSZpK6eiZrPKgPo="
     # OIDC scopes (FR-010)
-    scopes: ["openid", "profile", "email"]
+    scopes: ["openid", "profile", "email", "alkemio"]
     # User attribute mapping (FR-005, FR-007)
     user_mapping_provider:
       config:

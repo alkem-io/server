@@ -4328,7 +4328,7 @@ type MeQueryResults {
 """A message that was sent in a chat room"""
 type Message {
   """
-  The media attachments on this Message (feature 013). READ-gated; empty when the feature is disabled or the viewer cannot read the documents.
+  Media attachments; unavailable documents retain their event filename without a download URL.
   """
   attachments: [MessageAttachment!]!
   """The id for the message event."""
@@ -4351,13 +4351,13 @@ type MessageAttachment {
   """The pixel height of the attachment (images only)."""
   height: Int
   """The file-service document id of the attachment."""
-  id: UUID!
+  id: UUID
   """The MIME type of the attachment."""
-  mimeType: String!
+  mimeType: String
   """The size of the attachment in bytes."""
-  size: Int!
+  size: Int
   """The Alkemio document URL (authorized via conversation policy)."""
-  url: String!
+  url: String
   """The pixel width of the attachment (images only)."""
   width: Int
 }
@@ -9677,7 +9677,7 @@ input RoomRemoveReactionToMessageInput {
 
 input RoomSendMessageInput {
   """
-  The file-service document ids of attachments to send with the message (max 10).
+  The file-service document ids of attachments to send with the message (one per event).
   """
   attachments: [UUID!]
   """The message being sent"""
@@ -9688,7 +9688,7 @@ input RoomSendMessageInput {
 
 input RoomSendMessageReplyInput {
   """
-  The file-service document ids of attachments to send with the message (max 10).
+  The file-service document ids of attachments to send with the message (one per event).
   """
   attachments: [UUID!]
   """The message being sent"""

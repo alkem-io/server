@@ -54,7 +54,7 @@ export class MessageResolverFields {
   @ResolveField('attachments', () => [IMessageAttachment], {
     nullable: false,
     description:
-      'The media attachments on this Message (feature 013). READ-gated; empty when the feature is disabled or the viewer cannot read the documents.',
+      'Media attachments; unavailable documents retain their event filename without a download URL.',
   })
   async attachments(
     @Parent() message: IMessage,

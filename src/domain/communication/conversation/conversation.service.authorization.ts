@@ -38,14 +38,7 @@ export class ConversationAuthorizationService {
             authorization: true,
             directStorage: {
               authorization: true,
-              // Mirror the sibling StorageAggregatorAuthorizationService relation
-              // spec EXACTLY (`documents: { tagset: true }`): the bucket auth
-              // reset cascades into DocumentAuthorizationService.applyAuthorizationPolicy,
-              // which dereferences `document.tagset` + `document.tagset.authorization`
-              // (both throw RelationshipNotFoundException if unloaded). `authorization`
-              // is eager on Document/Tagset (AuthorizableEntity), so requesting the
-              // tagset relation is what makes the nested auth available once a
-              // conversation has accrued attachment documents (FIX 0).
+              // The document cascade also needs the tagset policy.
               documents: {
                 tagset: true,
               },
@@ -85,27 +78,7 @@ export class ConversationAuthorizationService {
       // the platform's service credentials, not user credentials.
     }
 
-    // ALWAYS RESET FIRST (A1). `applyAuthorizationPolicy` is re-run on EVERY
-    // membership change (join/leave — see MessageInboxService) as well as on the
-    // platform-wide Messaging cascade, and `conversation.authorization` is a
-    // PERSISTED policy whose `credentialRules` jsonb round-trips from the DB.
-    // Appending without resetting therefore ACCUMULATED one participant rule per
-    // reset: after Bob left, the previously-persisted rule granting
-    // READ+CONTRIBUTE to [alice, bob] survived alongside the new [alice] rule, so
-    // Bob kept access forever. Feature 013 makes that materially worse — the
-    // conversation policy is now inherited by the conversation storage bucket and
-    // cascaded onto every attachment document, so a removed member would retain
-    // READ on the conversation's attachments too.
-    //
-    // Resetting is safe here because this policy has exactly ONE rule source:
-    // the participant rule built below. The conversation policy does NOT inherit
-    // from its parent Messaging policy (MessagingAuthorizationService cascades by
-    // calling this method, it does not pass a parent authorization), and nothing
-    // else in the codebase writes conversation.authorization.credentialRules. So
-    // after the reset the rebuilt participant rule fully restores every current
-    // member's access. This mirrors the sibling storage-aggregator branch below
-    // and the reset-then-append convention used by every other domain
-    // (organization/user/account/space/... .service.authorization.ts).
+    // Replace the previous participant snapshot so removed members lose grants.
     conversation.authorization = this.authorizationPolicyService.reset(
       conversation.authorization
     );
@@ -137,14 +110,8 @@ export class ConversationAuthorizationService {
       updatedAuthorizations.push(roomAuthorization);
     }
 
-    // Cascade to the per-conversation storage (feature 013). The bucket auth is
-    // RESET + INHERITED from the Conversation's own (membership-based)
-    // authorization — so READ on conversation attachments is granted to exactly
-    // the same holders as conversation access, and follows membership changes
-    // live. Crucially we DO NOT use the generic StorageAggregator auth here:
-    // that grants anonymous/registered READ, which would expose attachments to
-    // every signed-in user. Members get FILE_UPLOAD via the bucket's CONTRIBUTE
-    // privilege rule; non-members inherit nothing and are denied (FR-007).
+    // Conversation storage inherits the participant policy, not the generic
+    // storage-aggregator policy that grants registered/anonymous access.
     const storageAggregator = conversation.storageAggregator;
     if (storageAggregator?.directStorage && storageAggregator.authorization) {
       storageAggregator.authorization = this.authorizationPolicyService.reset(
@@ -160,6 +127,8 @@ export class ConversationAuthorizationService {
       // The bucket auth service resets+inherits the bucket from the aggregator
       // auth, appends file-upload/delete privilege rules, cascades to documents,
       // and persists internally (returns []).
+      // The bucket cascade reads the aggregator to suppress the creator rule.
+      storageAggregator.directStorage.storageAggregator = storageAggregator;
       await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
         storageAggregator.directStorage,
         storageAggregator.authorization

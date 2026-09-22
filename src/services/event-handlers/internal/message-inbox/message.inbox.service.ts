@@ -66,6 +66,18 @@ export class MessageInboxService {
   // MESSAGE EVENTS
   // ============================================================
 
+  @OnEvent('message.attachments.prepare', { suppressErrors: false })
+  async prepareMessageAttachments(event: MessageReceivedEvent): Promise<void> {
+    const { payload } = event;
+    const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
+    event.storageBucketId =
+      await this.messageAttachmentService.prepareInboundAttachments(
+        room,
+        payload.actorID,
+        payload.message.attachments
+      );
+  }
+
   @OnEvent('message.received')
   async handleMessageReceived(event: MessageReceivedEvent): Promise<void> {
     const { payload } = event;
@@ -80,16 +92,6 @@ export class MessageInboxService {
     // Atomically increment message count to avoid race conditions
     await this.roomLookupService.incrementMessagesCount(room.id);
 
-    // feature 013: EAGER re-home of inbound (Element-origin) media on receive,
-    // so reads are plain lookups. Returns the resolution bucket id (or undefined
-    // when the feature is off / no attachments / unresolved room).
-    const storageBucketId =
-      await this.messageAttachmentService.rehomeInboundAttachments(
-        room,
-        payload.actorID,
-        payload.message.attachments
-      );
-
     // Build message object
     const message: IMessage = {
       id: payload.message.id,
@@ -103,7 +105,7 @@ export class MessageInboxService {
       // roomID is the resolver's fallback for resolving the bucket on history
       // reads (H1).
       rawAttachments: payload.message.attachments,
-      storageBucketId,
+      storageBucketId: event.storageBucketId,
       roomID: room.id,
     };
 

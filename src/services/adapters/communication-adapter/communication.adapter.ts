@@ -943,9 +943,6 @@ export class CommunicationAdapter {
       });
     }
 
-    // FIX 6: map the attachments ONCE — the same AttachmentRef[] feeds both the
-    // outbound Matrix payload and the send-response `rawAttachments` carrier
-    // (AttachmentRef is structurally a ReceivedAttachment; see toAttachmentRefs).
     const attachmentRefs = this.toAttachmentRefs(sendMessageData.attachments);
 
     const response = await this.sendCommand({
@@ -955,6 +952,7 @@ export class CommunicationAdapter {
         alkemio_room_id: sendMessageData.roomID,
         sender_actor_id: sendMessageData.actorID,
         content: sendMessageData.message,
+        timeout_ms: Math.max(1, this.rpcTimeout - 1000),
         attachments: attachmentRefs,
       } satisfies SendMessageRequest,
       errorContext: { roomID: sendMessageData.roomID },
@@ -968,15 +966,12 @@ export class CommunicationAdapter {
 
     return {
       id: response!.message_id,
-      message: sendMessageData.message,
+      message: response!.content,
       sender: sendMessageData.actorID,
       timestamp: response!.timestamp,
       threadID: undefined,
       reactions: [],
-      // feature 013: carry the just-sent attachments + room on the response so
-      // the send result resolves attachments like the read path (roomID is the
-      // resolver's fallback to resolve the bucket when storageBucketId is unset).
-      rawAttachments: attachmentRefs,
+      rawAttachments: response!.attachments,
       roomID: sendMessageData.roomID,
     };
   }
@@ -988,8 +983,6 @@ export class CommunicationAdapter {
   async sendMessageReply(
     sendMessageData: CommunicationSendMessageReplyInput
   ): Promise<IMessage> {
-    // FIX 6: map the attachments ONCE — reused by both the outbound payload and
-    // the reply-response `rawAttachments` carrier (see sendMessage).
     const attachmentRefs = this.toAttachmentRefs(sendMessageData.attachments);
 
     const response = await this.sendCommand({
@@ -999,6 +992,7 @@ export class CommunicationAdapter {
         alkemio_room_id: sendMessageData.roomID,
         sender_actor_id: sendMessageData.actorID,
         content: sendMessageData.message,
+        timeout_ms: Math.max(1, this.rpcTimeout - 1000),
         parent_message_id: sendMessageData.threadID,
         attachments: attachmentRefs,
       } satisfies SendMessageRequest,
@@ -1013,14 +1007,12 @@ export class CommunicationAdapter {
 
     return {
       id: response!.message_id,
-      message: sendMessageData.message,
+      message: response!.content,
       sender: sendMessageData.actorID,
       timestamp: response!.timestamp,
       threadID: sendMessageData.threadID,
       reactions: [],
-      // feature 013: carry the just-sent attachments + room on the reply response
-      // so it resolves attachments like the read path (see sendMessage).
-      rawAttachments: attachmentRefs,
+      rawAttachments: response!.attachments,
       roomID: sendMessageData.roomID,
     };
   }

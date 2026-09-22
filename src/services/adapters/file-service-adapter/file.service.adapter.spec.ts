@@ -1,10 +1,10 @@
-import { LogContext } from '@common/enums';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AxiosError, AxiosHeaders, AxiosResponse } from 'axios';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { defer, of, throwError } from 'rxjs';
+import { PassThrough, Readable } from 'stream';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import { FileServiceAdapter } from './file.service.adapter';
 import {
@@ -271,6 +271,153 @@ describe('FileServiceAdapter', () => {
       ).rejects.toThrow(FileServiceAdapterException);
 
       expect(subscribeCount).toBe(3);
+    });
+  });
+
+  describe('createDocumentFromStream', () => {
+    const metadata = {
+      displayName: 'holiday.png',
+      mimeType: 'image/png',
+      storageBucketId: 'bucket-1',
+      authorizationId: 'auth-1',
+    };
+
+    const okResponse = {
+      data: { id: 'doc-1', externalID: 'ext', mimeType: 'image/png', size: 4 },
+      status: 201,
+      statusText: 'Created',
+      headers: {},
+      config: { headers: new AxiosHeaders() },
+    } as AxiosResponse;
+
+    // Collect what the multipart body actually emits, proving the bytes were
+    // streamed through rather than buffered by the adapter. The returned
+    // observable settles only AFTER the body is fully read, as a real request
+    // does — the adapter's cleanup must not run before the body is sent.
+    const drain = (form: any): Promise<Buffer> =>
+      new Promise((resolve, reject) => {
+        const chunks: Buffer[] = [];
+        const sink = new PassThrough();
+        sink.on('data', (c: Buffer) => chunks.push(Buffer.from(c)));
+        sink.on('end', () => resolve(Buffer.concat(chunks)));
+        sink.on('error', reject);
+        form.on('error', reject);
+        form.pipe(sink);
+      });
+
+    const postAfterBodyRead = (
+      capture: (body: Promise<Buffer>) => void
+    ): Mock =>
+      vi.fn((_url: string, form: any) => {
+        const body = drain(form);
+        capture(body);
+        return defer(async () => {
+          await body.catch(() => undefined);
+          return okResponse;
+        });
+      }) as unknown as Mock;
+
+    it('streams the source bytes into the multipart body without buffering them first', async () => {
+      let sent: Promise<Buffer> | undefined;
+      (httpService.post as Mock).mockImplementation(
+        postAfterBodyRead(b => (sent = b))
+      );
+
+      const source = Readable.from([Buffer.from('abc'), Buffer.from('de')]);
+      await adapter.createDocumentFromStream(source, metadata, 1024);
+
+      const body = await sent!;
+      expect(body.toString()).toContain('abcde');
+      expect(body.toString()).toContain('filename="holiday.png"');
+      expect(body.toString()).toContain('name="storageBucketId"');
+    });
+
+    it('pins maxRedirects to 0 so axios uses the native transport, not the replaying one', async () => {
+      // follow-redirects (axios' default transport) pushes every written chunk
+      // into `_requestBodyBuffers` so it can replay the body on a redirect,
+      // which holds the whole file in RAM. axios selects the native http
+      // transport ONLY when maxRedirects === 0.
+      let sent: Promise<Buffer> | undefined;
+      (httpService.post as Mock).mockImplementation(
+        postAfterBodyRead(b => (sent = b))
+      );
+
+      await adapter.createDocumentFromStream(
+        Readable.from([Buffer.from('abc')]),
+        metadata,
+        1024
+      );
+      await sent;
+
+      expect(httpService.post).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.anything(),
+        expect.objectContaining({ maxRedirects: 0 })
+      );
+    });
+
+    it('aborts mid-transfer once maxBytes is exceeded, rather than after the whole file arrives', async () => {
+      let seen = 0;
+      let sent: Promise<Buffer> | undefined;
+      (httpService.post as Mock).mockImplementation(
+        postAfterBodyRead(b => (sent = b))
+      );
+
+      // 200 chunks of 64 KiB (12.5 MiB) against a 1 MiB cap. Chunks are larger
+      // than the stream's read-ahead window, so the source CANNOT be drained
+      // before the cap trips — which is the property being proved.
+      const CHUNK = 64 * 1024;
+      const TOTAL_CHUNKS = 200;
+      const source = new Readable({
+        read() {
+          seen += 1;
+          this.push(seen <= TOTAL_CHUNKS ? Buffer.alloc(CHUNK, 'x') : null);
+        },
+      });
+
+      await adapter.createDocumentFromStream(source, metadata, 1024 * 1024);
+      await expect(sent!).rejects.toThrow(/exceeds the maximum allowed size/);
+      // Rejected partway through, not after the whole 12.5 MiB was read.
+      expect(seen).toBeLessThan(TOTAL_CHUNKS);
+    });
+
+    it('issues exactly ONE attempt on a 503 — a consumed stream must never be replayed', async () => {
+      // The shared pipeline retries POST on 503. Replaying here would resend
+      // an exhausted stream as a truncated body, so this path does not retry.
+      const error = new AxiosError('unavailable', 'ERR', undefined, undefined, {
+        status: 503,
+        statusText: 'Service Unavailable',
+        data: {},
+        headers: {},
+        config: { headers: new AxiosHeaders() },
+      } as AxiosResponse);
+      (httpService.post as Mock).mockReturnValue(throwError(() => error));
+
+      await expect(
+        adapter.createDocumentFromStream(
+          Readable.from([Buffer.from('abc')]),
+          metadata,
+          1024
+        )
+      ).rejects.toThrow();
+
+      expect(httpService.post).toHaveBeenCalledTimes(1);
+    });
+
+    it('fails the request when the SOURCE stream errors, instead of sending a short body', async () => {
+      let sent: Promise<Buffer> | undefined;
+      (httpService.post as Mock).mockImplementation(
+        postAfterBodyRead(b => (sent = b))
+      );
+
+      const source = new Readable({
+        read() {
+          this.destroy(new Error('disk read failed'));
+        },
+      });
+
+      await adapter.createDocumentFromStream(source, metadata, 1024);
+      await expect(sent!).rejects.toThrow('disk read failed');
     });
   });
 
@@ -653,311 +800,6 @@ describe('FileServiceAdapter', () => {
         ref: 'media-1',
         bucketId: 'bucket-1',
       });
-    });
-  });
-
-  describe('getDocumentMeta (best-effort, isolated from the shared breaker)', () => {
-    it('issues a DIRECT GET with the SHORT timeout — bypassing sendRequest/the breaker — and returns the metadata incl. image dimensions', async () => {
-      const responseData = {
-        id: 'doc-1',
-        externalID: 'hash-123',
-        mimeType: 'image/png',
-        size: 1024,
-        storageBucketId: 'bucket-1',
-        imageWidth: 640,
-        imageHeight: 480,
-      };
-
-      (httpService.get as Mock).mockReturnValue(
-        of(axiosResponse(responseData))
-      );
-
-      const result = await adapter.getDocumentMeta('doc-1');
-
-      expect(result).toEqual(responseData);
-      // Direct httpService.get (NOT the breaker-routed request pipeline).
-      expect(httpService.request).not.toHaveBeenCalled();
-      const [url, options] = (httpService.get as Mock).mock.calls[0];
-      expect(url).toBe('http://file-service:4003/internal/file/doc-1/meta');
-      // SHORT per-call timeout (DOCUMENT_META_TIMEOUT_MS), no retries config.
-      expect(options).toEqual({ timeout: 2500 });
-    });
-
-    it('returns null on 404 (unknown document) rather than throwing — QUIETLY, without logging', async () => {
-      const axiosError = new AxiosError('Not Found', '404', undefined, null, {
-        status: 404,
-        data: { error: 'document not found' },
-        statusText: 'Not Found',
-        headers: {},
-        config: { headers: new AxiosHeaders() },
-      });
-
-      (httpService.get as Mock).mockReturnValue(throwError(() => axiosError));
-      mockLogger.warn.mockClear();
-
-      await expect(adapter.getDocumentMeta('missing')).resolves.toBeNull();
-      // A benign 404 is expected on this best-effort path — no warn (would spam).
-      expect(mockLogger.warn).not.toHaveBeenCalled();
-    });
-
-    it('swallows EVERY failure (5xx / timeout / network) to null — never propagates — and logs a WARN so dropped dims are observable', async () => {
-      const failures = [
-        // 5xx
-        new AxiosError('Boom', '500', undefined, null, {
-          status: 500,
-          data: { error: 'internal' },
-          statusText: 'Internal Server Error',
-          headers: {},
-          config: { headers: new AxiosHeaders() },
-        }),
-        // timeout
-        Object.assign(
-          new AxiosError('timeout of 2500ms exceeded', 'ECONNABORTED'),
-          {
-            code: 'ECONNABORTED',
-          }
-        ),
-        // network (no response)
-        Object.assign(new AxiosError('socket hang up', 'ECONNRESET'), {
-          code: 'ECONNRESET',
-        }),
-      ];
-
-      for (const err of failures) {
-        (httpService.get as Mock).mockReturnValue(throwError(() => err));
-        mockLogger.warn.mockClear();
-
-        await expect(adapter.getDocumentMeta('doc-1')).resolves.toBeNull();
-
-        // Non-404 degradation → exactly one WARN carrying the documentId + the
-        // error message, and the STORAGE_BUCKET context the adapter's other
-        // logs use.
-        expect(mockLogger.warn).toHaveBeenCalledTimes(1);
-        const [payload, context] = mockLogger.warn.mock.calls[0];
-        expect(payload).toMatchObject({
-          message: expect.stringContaining(
-            'Best-effort document meta lookup failed'
-          ),
-          documentId: 'doc-1',
-          error: err.message,
-        });
-        expect(context).toBe(LogContext.STORAGE_BUCKET);
-      }
-    });
-
-    it('does NOT gate on the shared circuit breaker — still fetches even when the breaker is OPEN', async () => {
-      // Trip the SHARED breaker via 5 failing breaker-guarded requests (503 is
-      // retriable + counted). One breaker failure per completed request.
-      const err503 = new AxiosError(
-        'Service Unavailable',
-        '503',
-        undefined,
-        null,
-        {
-          status: 503,
-          data: {},
-          statusText: 'Service Unavailable',
-          headers: {},
-          config: { headers: new AxiosHeaders() },
-        }
-      );
-      (httpService.request as Mock).mockReturnValue(throwError(() => err503));
-      for (let i = 0; i < 5; i++) {
-        await adapter.deleteDocument(`doc-${i}`).catch(() => undefined);
-      }
-      // Sanity: the breaker is now OPEN — a guarded call short-circuits (no HTTP).
-      (httpService.request as Mock).mockClear();
-      await expect(adapter.deleteDocument('guarded')).rejects.toThrow(
-        StorageServiceUnavailableException
-      );
-      expect(httpService.request).not.toHaveBeenCalled();
-
-      // getDocumentMeta ignores the open breaker: it STILL issues its direct GET
-      // and returns dims (never throws the open-circuit exception).
-      (httpService.get as Mock).mockReturnValue(
-        of(
-          axiosResponse({
-            id: 'doc-1',
-            externalID: 'ext',
-            mimeType: 'image/png',
-            size: 1,
-            storageBucketId: 'bucket-1',
-            imageWidth: 4,
-            imageHeight: 2,
-          })
-        )
-      );
-      const result = await adapter.getDocumentMeta('doc-1');
-      expect(result).toMatchObject({ imageWidth: 4, imageHeight: 2 });
-      expect(httpService.get).toHaveBeenCalledTimes(1);
-    });
-
-    it('failing meta fetches never trip the shared breaker guarding uploads/pins', async () => {
-      const err500 = new AxiosError('Boom', '500', undefined, null, {
-        status: 500,
-        data: { error: 'internal' },
-        statusText: 'Internal Server Error',
-        headers: {},
-        config: { headers: new AxiosHeaders() },
-      });
-      (httpService.get as Mock).mockReturnValue(throwError(() => err500));
-
-      // Ten failed meta fetches — far past the breaker threshold if they counted.
-      for (let i = 0; i < 10; i++) {
-        await expect(adapter.getDocumentMeta(`doc-${i}`)).resolves.toBeNull();
-      }
-
-      // The shared breaker is still CLOSED: a guarded delete reaches the network,
-      // not short-circuited.
-      (httpService.request as Mock).mockReturnValue(
-        of(axiosResponse({ authorizationId: 'a', tagsetId: 't' }))
-      );
-      await adapter.deleteDocument('doc-x');
-      expect(httpService.request).toHaveBeenCalledTimes(1);
-    });
-
-    it('returns null when the adapter is disabled (best-effort, does not throw)', async () => {
-      const disabledModule = await Test.createTestingModule({
-        providers: [
-          FileServiceAdapter,
-          {
-            provide: HttpService,
-            useValue: { request: vi.fn(), get: vi.fn(), patch: vi.fn() },
-          },
-          {
-            provide: ConfigService,
-            useValue: {
-              get: vi.fn((key: string) =>
-                key === 'storage.file_service.enabled'
-                  ? false
-                  : mockConfigValues[key]
-              ),
-            },
-          },
-          {
-            provide: WINSTON_MODULE_NEST_PROVIDER,
-            useValue: mockLogger,
-          },
-        ],
-      }).compile();
-
-      const disabledAdapter =
-        disabledModule.get<FileServiceAdapter>(FileServiceAdapter);
-      const disabledHttp = disabledModule.get<HttpService>(HttpService);
-
-      await expect(
-        disabledAdapter.getDocumentMeta('doc-1')
-      ).resolves.toBeNull();
-      // No HTTP attempted when disabled.
-      expect(disabledHttp.get).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('pinDocumentDurableBestEffort (read-path heal, isolated from the shared breaker)', () => {
-    it('issues ONE direct PATCH with a short timeout and no retries, and reports success', async () => {
-      (httpService.patch as Mock).mockReturnValue(
-        of(axiosResponse({ id: 'doc-1', temporaryLocation: false }))
-      );
-
-      await expect(adapter.pinDocumentDurableBestEffort('doc-1')).resolves.toBe(
-        true
-      );
-
-      expect(httpService.patch).toHaveBeenCalledTimes(1);
-      const [url, body, config] = (httpService.patch as Mock).mock.calls[0];
-      expect(url).toBe('http://file-service:4003/internal/file/doc-1');
-      expect(body).toEqual({ temporaryLocation: false });
-      expect(config.timeout).toBeLessThan(
-        mockConfigValues['storage.file_service.timeout'] as number
-      );
-      // The direct axios call is NOT routed through sendRequest, so nothing on
-      // this path is retried.
-      expect(httpService.request).not.toHaveBeenCalled();
-    });
-
-    it('resolves EVERY failure to false and NEVER throws (a read must not fail on a heal)', async () => {
-      const err500 = new AxiosError('Boom', '500', undefined, null, {
-        status: 500,
-        data: { error: 'internal' },
-        statusText: 'Internal Server Error',
-        headers: {},
-        config: { headers: new AxiosHeaders() },
-      });
-      (httpService.patch as Mock).mockReturnValue(throwError(() => err500));
-      mockLogger.warn.mockClear();
-
-      await expect(adapter.pinDocumentDurableBestEffort('doc-1')).resolves.toBe(
-        false
-      );
-
-      expect(mockLogger.warn).toHaveBeenCalledTimes(1);
-      const [payload, context] = mockLogger.warn.mock.calls[0];
-      expect(payload).toMatchObject({
-        message: expect.stringContaining('Best-effort durability pin failed'),
-        documentId: 'doc-1',
-      });
-      expect(context).toBe(LogContext.STORAGE_BUCKET);
-    });
-
-    it('failing pins never trip the shared breaker guarding uploads', async () => {
-      const err500 = new AxiosError('Boom', '500', undefined, null, {
-        status: 500,
-        data: { error: 'internal' },
-        statusText: 'Internal Server Error',
-        headers: {},
-        config: { headers: new AxiosHeaders() },
-      });
-      (httpService.patch as Mock).mockReturnValue(throwError(() => err500));
-
-      // Ten failed pins — far past the breaker threshold if they counted. This
-      // unpaginated-read fan-out is exactly what the isolation exists for.
-      for (let i = 0; i < 10; i++) {
-        await expect(
-          adapter.pinDocumentDurableBestEffort(`doc-${i}`)
-        ).resolves.toBe(false);
-      }
-
-      // The shared breaker is still CLOSED: a guarded delete reaches the network.
-      (httpService.request as Mock).mockReturnValue(
-        of(axiosResponse({ authorizationId: 'a', tagsetId: 't' }))
-      );
-      await adapter.deleteDocument('doc-x');
-      expect(httpService.request).toHaveBeenCalledTimes(1);
-    });
-
-    it('returns false when the adapter is disabled and issues no HTTP', async () => {
-      const disabledModule = await Test.createTestingModule({
-        providers: [
-          FileServiceAdapter,
-          {
-            provide: HttpService,
-            useValue: { request: vi.fn(), get: vi.fn(), patch: vi.fn() },
-          },
-          {
-            provide: ConfigService,
-            useValue: {
-              get: vi.fn((key: string) =>
-                key === 'storage.file_service.enabled'
-                  ? false
-                  : mockConfigValues[key]
-              ),
-            },
-          },
-          {
-            provide: WINSTON_MODULE_NEST_PROVIDER,
-            useValue: mockLogger,
-          },
-        ],
-      }).compile();
-
-      const disabledAdapter =
-        disabledModule.get<FileServiceAdapter>(FileServiceAdapter);
-      const disabledHttp = disabledModule.get<HttpService>(HttpService);
-
-      await expect(
-        disabledAdapter.pinDocumentDurableBestEffort('doc-1')
-      ).resolves.toBe(false);
-      expect(disabledHttp.patch).not.toHaveBeenCalled();
     });
   });
 

@@ -9,17 +9,17 @@ import { Field, Int, ObjectType } from '@nestjs/graphql';
 @ObjectType('MessageAttachment')
 export class IMessageAttachment {
   @Field(() => UUID, {
-    nullable: false,
+    nullable: true,
     description: 'The file-service document id of the attachment.',
   })
-  id!: string;
+  id?: string;
 
   @Field(() => String, {
-    nullable: false,
+    nullable: true,
     description:
       'The Alkemio document URL (authorized via conversation policy).',
   })
-  url!: string;
+  url?: string;
 
   @Field(() => String, {
     nullable: false,
@@ -28,16 +28,16 @@ export class IMessageAttachment {
   displayName!: string;
 
   @Field(() => String, {
-    nullable: false,
+    nullable: true,
     description: 'The MIME type of the attachment.',
   })
-  mimeType!: string;
+  mimeType?: string;
 
   @Field(() => Int, {
-    nullable: false,
+    nullable: true,
     description: 'The size of the attachment in bytes.',
   })
-  size!: number;
+  size?: number;
 
   @Field(() => Int, {
     nullable: true,

@@ -6,13 +6,6 @@ import { BaseHandler } from './base.handler';
 const UUID_A = '11111111-1111-4111-8111-111111111111';
 const UUID_B = '22222222-2222-4222-8222-222222222222';
 
-const uuidList = (count: number): string[] =>
-  Array.from(
-    { length: count },
-    (_unused, index) =>
-      `3333333${index.toString(16)}-3333-4333-8333-333333333333`
-  );
-
 const reply = (attachments?: string[]): RoomSendMessageReplyInput =>
   Object.assign(new RoomSendMessageReplyInput(), {
     roomID: UUID_A,
@@ -26,7 +19,7 @@ const reply = (attachments?: string[]): RoomSendMessageReplyInput =>
  * equality on the constructor — so a SUBCLASS of a listed input is NOT covered
  * by its parent's entry. `RoomSendMessageReplyInput extends
  * RoomSendMessageInput`, so before it was listed in its own right the reply
- * mutation ran NO class-validator rules at all: `attachments` had no <=10 cap,
+ * mutation ran NO class-validator rules at all: `attachments` had no size cap,
  * no uniqueness check and no UUID check.
  */
 describe('BaseHandler', () => {
@@ -37,15 +30,15 @@ describe('BaseHandler', () => {
   });
 
   describe('RoomSendMessageReplyInput (feature 013 attachments)', () => {
-    it('accepts a well-formed reply with attachments', async () => {
+    it('accepts a well-formed reply with one attachment', async () => {
       await expect(
-        handler.handle(reply([UUID_A, UUID_B]), RoomSendMessageReplyInput)
+        handler.handle(reply([UUID_A]), RoomSendMessageReplyInput)
       ).resolves.toBeNull();
     });
 
     it('rejects more than the maximum number of attachments on a REPLY', async () => {
       await expect(
-        handler.handle(reply(uuidList(11)), RoomSendMessageReplyInput)
+        handler.handle(reply([UUID_A, UUID_B]), RoomSendMessageReplyInput)
       ).rejects.toThrow(ValidationException);
     });
 
@@ -67,7 +60,7 @@ describe('BaseHandler', () => {
       const input = Object.assign(new RoomSendMessageInput(), {
         roomID: UUID_A,
         message: 'hello',
-        attachments: uuidList(11),
+        attachments: [UUID_A, UUID_B],
       });
 
       await expect(handler.handle(input, RoomSendMessageInput)).rejects.toThrow(
