@@ -1,4 +1,4 @@
-import { CommunicationMessageAttachment } from './communication.message.attachment';
+import { CommunicationMessageAttachment } from '@services/adapters/communication-adapter/dto/communication.message.attachment';
 
 export class CommunicationSendMessageInput {
   actorID!: string;

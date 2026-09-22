@@ -1,6 +1,7 @@
 import { LogContext } from '@common/enums';
 import { RoomType } from '@common/enums/room.type';
 import { MutationType } from '@common/enums/subscriptions';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { ActorService } from '@domain/actor/actor/actor.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -70,12 +71,20 @@ export class MessageInboxService {
   async prepareMessageAttachments(event: MessageReceivedEvent): Promise<void> {
     const { payload } = event;
     const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
-    event.storageBucketId =
-      await this.messageAttachmentService.prepareInboundAttachments(
-        room,
-        payload.actorID,
-        payload.message.attachments
+    try {
+      event.storageBucketId =
+        await this.messageAttachmentService.prepareInboundAttachments(
+          room,
+          payload.actorID,
+          payload.message.attachments
+        );
+    } catch (error) {
+      if (!(error instanceof EntityNotFoundException)) throw error;
+      this.logger.warn(
+        `Attachment storage unavailable: roomId=${payload.roomId}, messageId=${payload.message.id}`,
+        LogContext.COMMUNICATION
       );
+    }
   }
 
   @OnEvent('message.received')

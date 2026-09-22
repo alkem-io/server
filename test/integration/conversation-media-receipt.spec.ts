@@ -107,7 +107,7 @@ describe('conversation media receipt boundary', () => {
       const result = await module
         .get(CommunicationAdapterEventService)
         .onMessageReceived(payload);
-      expect(result).toBeInstanceOf(Nack);
+      expect(result).toEqual(new Nack(true));
       expect(received).not.toHaveBeenCalled();
       expect(
         module.get(RoomLookupService).incrementMessagesCount
@@ -116,6 +116,29 @@ describe('conversation media receipt boundary', () => {
       await module.close();
     }
   });
+  it('still delivers the message when attachment storage no longer exists', async () => {
+    const module = await setup(
+      vi
+        .fn()
+        .mockRejectedValue(
+          new EntityNotFoundException('Document deleted', LogContext.DOCUMENT)
+        )
+    );
+    try {
+      const received = vi.fn();
+      module.get(EventEmitter2).on('message.received', received);
+      const result = await module
+        .get(CommunicationAdapterEventService)
+        .onMessageReceived(payload);
+      expect(result).toBeUndefined();
+      expect(received).toHaveBeenCalledWith(
+        expect.objectContaining({ payload, storageBucketId: undefined })
+      );
+    } finally {
+      await module.close();
+    }
+  });
+
   it('does not requeue media for a deleted room', async () => {
     const prepare = vi.fn();
     const module = await setup(prepare);

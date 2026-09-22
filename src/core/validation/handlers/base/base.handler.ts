@@ -155,7 +155,7 @@ export class BaseHandler extends AbstractHandler {
       // the constructor, so a SUBCLASS is not covered by its parent's entry.
       // RoomSendMessageReplyInput extends RoomSendMessageInput, so without its
       // own entry NONE of the inherited validators ran on the reply mutation:
-      // `attachments` had no <=10 cap (@ArrayMaxSize), no uniqueness
+      // `attachments` had no <=1 cap (@ArrayMaxSize), no uniqueness
       // (@ArrayUnique) and no UUID check (@IsUUID), and `message` no
       // @MaxLength. Any new subclass of a listed input needs its own entry too.
       RoomSendMessageReplyInput,

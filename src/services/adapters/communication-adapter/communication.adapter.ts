@@ -72,6 +72,7 @@ import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
+import { CommunicationMessageAttachment } from '@services/adapters/communication-adapter/dto/communication.message.attachment';
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CommunicationAdapterException } from './communication.adapter.exception';
@@ -84,7 +85,6 @@ import { CommunicationAddReactionToMessageInput } from './dto/communication.dto.
 import { CommunicationDeleteMessageInput } from './dto/communication.dto.message.delete';
 import { CommunicationSendMessageInput } from './dto/communication.dto.message.send';
 import { CommunicationRemoveReactionToMessageInput } from './dto/communication.dto.remove.reaction';
-import { CommunicationMessageAttachment } from './dto/communication.message.attachment';
 import { CommunicationSendMessageReplyInput } from './dto/communications.dto.message.reply';
 
 /**

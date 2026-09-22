@@ -80,7 +80,7 @@ export class CommunicationAdapterEventService {
 
       // Return void for successful ack
     } catch (error) {
-      // A deleted room/document cannot become placeable through redelivery.
+      // A deleted room cannot become placeable through redelivery.
       if (error instanceof EntityNotFoundException) {
         this.logger.warn(
           `Ignoring media receipt for a missing entity: ${error}`,
