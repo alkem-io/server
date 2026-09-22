@@ -101,6 +101,34 @@ describe('CalloutFramingService.validateAndNormalizeSpacesSettings', () => {
     });
   });
 
+  it('a post-merge empty stored block ({}) with incomingSpaces undefined materializes COMPACT, never a block without cardVariant (V4)', () => {
+    // Reproduces the real production input shape: both CalloutService call
+    // sites merge the caller's `settings.framing.spaces` into the defaults
+    // BEFORE this normalizer runs, so a caller-supplied `spaces: {}` arrives
+    // here as an already-present, cardVariant-less block — not as `undefined`.
+    const framing = baseFraming({} as ICalloutSettingsFraming['spaces']);
+    const result = service.validateAndNormalizeSpacesSettings(
+      CalloutFramingType.SPACES,
+      framing,
+      undefined
+    );
+    expect(result.spaces).toEqual({
+      cardVariant: SpaceCollectionCardVariant.COMPACT,
+    });
+  });
+
+  it('a post-merge empty stored block ({}) with incomingSpaces = {} materializes COMPACT, never a block without cardVariant (V4)', () => {
+    const framing = baseFraming({} as ICalloutSettingsFraming['spaces']);
+    const result = service.validateAndNormalizeSpacesSettings(
+      CalloutFramingType.SPACES,
+      framing,
+      {}
+    );
+    expect(result.spaces).toEqual({
+      cardVariant: SpaceCollectionCardVariant.COMPACT,
+    });
+  });
+
   it('incomingSpaces = {} with EXPANDED stored stays EXPANDED (V4)', () => {
     const framing = baseFraming({
       cardVariant: SpaceCollectionCardVariant.EXPANDED,

@@ -52,6 +52,7 @@ import {
   Repository,
 } from 'typeorm';
 import { ICalloutSettingsFraming } from '../callout-settings/callout.settings.framing.interface';
+import { ICalloutSpacesSettings } from '../callout-settings/callout.settings.spaces.interface';
 import { ILink } from '../link/link.interface';
 import { CalloutFraming } from './callout.framing.entity';
 import { ICalloutFraming } from './callout.framing.interface';
@@ -949,10 +950,13 @@ export class CalloutFramingService {
 
     // --- SPACES ---
     // Materialize the stored block if absent (read-time default).
-    if (!framingSettings.spaces) {
-      framingSettings.spaces = {
-        cardVariant: SpaceCollectionCardVariant.COMPACT,
-      };
+    framingSettings.spaces ??= {} as ICalloutSpacesSettings;
+
+    // Default a missing `cardVariant` independently of the block's presence —
+    // a caller-supplied `{}` (already merged into settings before this runs)
+    // must never persist without one, since the field is non-nullable.
+    if (framingSettings.spaces.cardVariant === undefined) {
+      framingSettings.spaces.cardVariant = SpaceCollectionCardVariant.COMPACT;
     }
 
     if (incomingSpaces?.cardVariant !== undefined) {

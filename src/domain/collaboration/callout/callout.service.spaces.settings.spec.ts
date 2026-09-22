@@ -9,6 +9,9 @@ import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { cloneDeep, merge, mergeWith } from 'lodash';
+import { CalloutFramingService } from '../callout-framing/callout.framing.service';
+import { DefaultCalloutSettings } from '../callout-settings/callout.settings.default';
 import { Callout } from './callout.entity';
 import { CalloutService } from './callout.service';
 
@@ -53,8 +56,14 @@ describe('CalloutService — card-variant settings wiring', () => {
           delete s.spaces;
           return s;
         }
+        // Materialize the block and default `cardVariant` independently, so
+        // an already-merged `spaces: {}` (the real production shape at both
+        // call sites) is defaulted the same way the real normalizer does.
         if (!s.spaces) {
-          s.spaces = { cardVariant: SpaceCollectionCardVariant.COMPACT };
+          s.spaces = {};
+        }
+        if (s.spaces.cardVariant === undefined) {
+          s.spaces.cardVariant = SpaceCollectionCardVariant.COMPACT;
         }
         if (incoming?.cardVariant !== undefined) {
           s.spaces.cardVariant = incoming.cardVariant;
@@ -188,6 +197,22 @@ describe('CalloutService — card-variant settings wiring', () => {
       );
     });
 
+    it('defaults to COMPACT on a SPACES callout with an empty spaces block ({}) — regression for corr-server-1/spec-server-1/sec-server-1', async () => {
+      // `spaces: {}` — the shape a client sends when it builds the block but
+      // leaves `cardVariant` undefined (dropped by JSON variable serialization).
+      const result = await service.createCallout(
+        makeSpacesCalloutInput({}),
+        [],
+        { id: 'agg-1' } as any,
+        actorContextData.actorContext,
+        'user-1'
+      );
+
+      expect(result.settings.framing.spaces?.cardVariant).toBe(
+        SpaceCollectionCardVariant.COMPACT
+      );
+    });
+
     it('rejects card-variant settings on a NONE callout and persists nothing', async () => {
       mockFramingService.createCalloutFraming.mockResolvedValue({
         id: 'framing-none',
@@ -308,6 +333,24 @@ describe('CalloutService — card-variant settings wiring', () => {
       );
     });
 
+    it('a legacy callout with no stored block sending spaces: {} persists COMPACT — regression for corr-server-1/spec-server-1/sec-server-1', async () => {
+      const callout = existingSpacesCallout(undefined);
+      const { getRepositoryToken } = await import('@nestjs/typeorm');
+      const calloutRepo = module.get<any>(getRepositoryToken(Callout));
+      vi.mocked(calloutRepo.findOne).mockResolvedValue(callout);
+
+      const result = await service.updateCallout(
+        callout,
+        { settings: { framing: { spaces: {} } } } as any,
+        actorContextData.actorContext,
+        'user-1'
+      );
+
+      expect(result.settings.framing.spaces?.cardVariant).toBe(
+        SpaceCollectionCardVariant.COMPACT
+      );
+    });
+
     it('removes the block when the framing type changes away from SPACES', async () => {
       const callout = existingSpacesCallout({
         cardVariant: SpaceCollectionCardVariant.EXPANDED,
@@ -376,6 +419,76 @@ describe('CalloutService — card-variant settings wiring', () => {
       expect(result.settings.framing.spaces?.cardVariant).toBe(
         SpaceCollectionCardVariant.EXPANDED
       );
+    });
+  });
+});
+
+/**
+ * Exercises the REAL merge (lodash, exactly as CalloutService's
+ * createCalloutSettings/updateCallout run it) followed by the REAL
+ * CalloutFramingService.validateAndNormalizeSpacesSettings — not the
+ * hand-copied stub above. This is the discriminating regression coverage for
+ * corr-server-1 / spec-server-1 / sec-server-1: both mocked wiring suites and
+ * the normalizer's own unit spec can stay green while the actual
+ * merge→normalize interaction is still broken, because neither previously
+ * fed the normalizer the true post-merge `spaces: {}` shape.
+ *
+ * validateAndNormalizeSpacesSettings has no dependency on any of
+ * CalloutFramingService's injected collaborators, so a direct instantiation
+ * (bypassing Nest DI) is sufficient and keeps this test fast and isolated.
+ */
+describe('CalloutService settings merge -> real CalloutFramingService.validateAndNormalizeSpacesSettings (regression)', () => {
+  type FramingServiceCtor = new (...args: unknown[]) => CalloutFramingService;
+  const realFramingService = new (
+    CalloutFramingService as unknown as FramingServiceCtor
+  )(...(Array(13).fill(undefined) as unknown[]));
+
+  it('createCalloutSettings-shaped merge: spaces: {} persists { cardVariant: COMPACT }, never a block without cardVariant', () => {
+    const calloutSettings = cloneDeep(DefaultCalloutSettings) as any;
+    const settingsData = { framing: { spaces: {} } };
+
+    // Exactly what CalloutService.createCalloutSettings does before calling
+    // the normalizer (callout.service.ts createCalloutSettings + line ~154).
+    merge(calloutSettings, settingsData);
+    expect(calloutSettings.framing.spaces).toEqual({});
+
+    const normalized = realFramingService.validateAndNormalizeSpacesSettings(
+      CalloutFramingType.SPACES,
+      calloutSettings.framing,
+      settingsData.framing.spaces
+    );
+
+    expect(normalized.spaces).toEqual({
+      cardVariant: SpaceCollectionCardVariant.COMPACT,
+    });
+  });
+
+  it('updateCallout-shaped mergeWith on a legacy callout with no stored block: spaces: {} persists { cardVariant: COMPACT }', () => {
+    const storedFraming = {
+      commentsEnabled: true,
+      selection: { mode: CalloutSelectionMode.AUTO, selectedIds: [] },
+      // No `spaces` key stored — the pre-existing-row shape (probe 8).
+    } as any;
+    const updateData = { framing: { spaces: {} } };
+
+    // Exactly what CalloutService.updateCallout does before calling the
+    // normalizer (callout.service.ts updateCallout mergeWith + line ~639).
+    const mergedFraming = mergeWith(
+      storedFraming,
+      updateData.framing,
+      (_existing: unknown, incoming: unknown) =>
+        Array.isArray(incoming) ? incoming : undefined
+    );
+    expect(mergedFraming.spaces).toEqual({});
+
+    const normalized = realFramingService.validateAndNormalizeSpacesSettings(
+      CalloutFramingType.SPACES,
+      mergedFraming,
+      updateData.framing.spaces
+    );
+
+    expect(normalized.spaces).toEqual({
+      cardVariant: SpaceCollectionCardVariant.COMPACT,
     });
   });
 });
