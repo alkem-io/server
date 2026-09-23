@@ -9,20 +9,20 @@ import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { cloneDeep, merge, mergeWith } from 'lodash';
+import { cloneDeep } from 'lodash';
 import { CalloutFramingService } from '../callout-framing/callout.framing.service';
 import { DefaultCalloutSettings } from '../callout-settings/callout.settings.default';
 import { Callout } from './callout.entity';
 import { CalloutService } from './callout.service';
+import { mergeCalloutSettings } from './callout.settings.merge';
 
 /**
  * Wiring tests for the card-variant normalizer at both CalloutService call
  * sites (create + update). The normalizer's own validation matrix lives in
  * callout.framing.spaces.validation.spec.ts; this file only proves the
- * service passes the right arguments at the right call sites and applies the
- * pre-strip on a framing-type change away from SPACES.
- *
- * Mitigates risk R-9 (repos.yaml). Contract: S1-S6.
+ * service passes the right arguments at the right call sites. (A SPACES
+ * framing can never change kind — updateCalloutFraming rejects it — so there
+ * is no "type changed away from SPACES" case to wire.)
  */
 describe('CalloutService — card-variant settings wiring', () => {
   let service: CalloutService;
@@ -197,7 +197,7 @@ describe('CalloutService — card-variant settings wiring', () => {
       );
     });
 
-    it('defaults to COMPACT on a SPACES callout with an empty spaces block ({}) — regression for corr-server-1/spec-server-1/sec-server-1', async () => {
+    it('defaults to COMPACT on a SPACES callout with an empty spaces block ({})', async () => {
       // `spaces: {}` — the shape a client sends when it builds the block but
       // leaves `cardVariant` undefined (dropped by JSON variable serialization).
       const result = await service.createCallout(
@@ -333,7 +333,7 @@ describe('CalloutService — card-variant settings wiring', () => {
       );
     });
 
-    it('a legacy callout with no stored block sending spaces: {} persists COMPACT — regression for corr-server-1/spec-server-1/sec-server-1', async () => {
+    it('a legacy callout with no stored block sending spaces: {} persists COMPACT', async () => {
       const callout = existingSpacesCallout(undefined);
       const { getRepositoryToken } = await import('@nestjs/typeorm');
       const calloutRepo = module.get<any>(getRepositoryToken(Callout));
@@ -349,28 +349,6 @@ describe('CalloutService — card-variant settings wiring', () => {
       expect(result.settings.framing.spaces?.cardVariant).toBe(
         SpaceCollectionCardVariant.COMPACT
       );
-    });
-
-    it('removes the block when the framing type changes away from SPACES', async () => {
-      const callout = existingSpacesCallout({
-        cardVariant: SpaceCollectionCardVariant.EXPANDED,
-      });
-      const { getRepositoryToken } = await import('@nestjs/typeorm');
-      const calloutRepo = module.get<any>(getRepositoryToken(Callout));
-      vi.mocked(calloutRepo.findOne).mockResolvedValue(callout);
-      mockFramingService.updateCalloutFraming.mockResolvedValue({
-        id: 'framing-1',
-        type: CalloutFramingType.NONE,
-      });
-
-      const result = await service.updateCallout(
-        callout,
-        { framing: { type: CalloutFramingType.NONE } } as any,
-        actorContextData.actorContext,
-        'user-1'
-      );
-
-      expect(result.settings.framing.spaces).toBeUndefined();
     });
 
     it('still invokes the selection scope guard exactly as before (independence)', async () => {
@@ -420,161 +398,213 @@ describe('CalloutService — card-variant settings wiring', () => {
         SpaceCollectionCardVariant.EXPANDED
       );
     });
-
-    it('passes the pre-merge stored cardVariant as the 4th arg (sec-server-2 wiring)', async () => {
-      const callout = existingSpacesCallout({
-        cardVariant: SpaceCollectionCardVariant.EXPANDED,
-      });
-      const { getRepositoryToken } = await import('@nestjs/typeorm');
-      const calloutRepo = module.get<any>(getRepositoryToken(Callout));
-      vi.mocked(calloutRepo.findOne).mockResolvedValue(callout);
-
-      await service.updateCallout(
-        callout,
-        {
-          settings: {
-            framing: { spaces: { cardVariant: null } },
-          },
-        } as any,
-        actorContextData.actorContext,
-        'user-1'
-      );
-
-      expect(
-        mockFramingService.validateAndNormalizeSpacesSettings
-      ).toHaveBeenCalledWith(
-        CalloutFramingType.SPACES,
-        expect.anything(),
-        { cardVariant: null },
-        SpaceCollectionCardVariant.EXPANDED
-      );
-    });
   });
 });
 
 /**
- * Exercises the REAL merge (lodash, exactly as CalloutService's
- * createCalloutSettings/updateCallout run it) followed by the REAL
- * CalloutFramingService.validateAndNormalizeSpacesSettings — not the
- * hand-copied stub above. This is the discriminating regression coverage for
- * corr-server-1 / spec-server-1 / sec-server-1: both mocked wiring suites and
- * the normalizer's own unit spec can stay green while the actual
- * merge→normalize interaction is still broken, because neither previously
- * fed the normalizer the true post-merge `spaces: {}` shape.
+ * Exercises the REAL settings merge (mergeCalloutSettings, exactly as
+ * CalloutService's createCalloutSettings/updateCallout run it) followed by
+ * the REAL normalizers — not the mocked wiring above. Both mocked wiring
+ * suites and the normalizers' own unit specs can stay green while the actual
+ * merge→normalize interaction is broken, because neither feeds a normalizer
+ * the true post-merge shape.
  *
- * validateAndNormalizeSpacesSettings has no dependency on any of
- * CalloutFramingService's injected collaborators, so a direct instantiation
- * (bypassing Nest DI) is sufficient and keeps this test fast and isolated.
+ * The normalizers have no dependency on CalloutFramingService's injected
+ * collaborators, so a direct instantiation (bypassing Nest DI) is sufficient.
  */
-describe('CalloutService settings merge -> real CalloutFramingService.validateAndNormalizeSpacesSettings (regression)', () => {
+describe('CalloutService settings merge -> real CalloutFramingService normalizers (regression)', () => {
   type FramingServiceCtor = new (...args: unknown[]) => CalloutFramingService;
   const realFramingService = new (
     CalloutFramingService as unknown as FramingServiceCtor
   )(...(Array(13).fill(undefined) as unknown[]));
 
-  it('createCalloutSettings-shaped merge: spaces: {} persists { cardVariant: COMPACT }, never a block without cardVariant', () => {
-    const calloutSettings = cloneDeep(DefaultCalloutSettings) as any;
-    const settingsData = { framing: { spaces: {} } };
-
-    // Exactly what CalloutService.createCalloutSettings does before calling
-    // the normalizer (callout.service.ts createCalloutSettings + line ~154).
-    merge(calloutSettings, settingsData);
-    expect(calloutSettings.framing.spaces).toEqual({});
-
-    const normalized = realFramingService.validateAndNormalizeSpacesSettings(
-      CalloutFramingType.SPACES,
-      calloutSettings.framing,
-      settingsData.framing.spaces
-    );
-
-    expect(normalized.spaces).toEqual({
-      cardVariant: SpaceCollectionCardVariant.COMPACT,
-    });
-  });
-
-  it('updateCallout-shaped mergeWith on a legacy callout with no stored block: spaces: {} persists { cardVariant: COMPACT }', () => {
-    const storedFraming = {
+  const storedSpacesFraming = () =>
+    ({
       commentsEnabled: true,
-      selection: { mode: CalloutSelectionMode.AUTO, selectedIds: [] },
-      // No `spaces` key stored — the pre-existing-row shape (probe 8).
-    } as any;
-    const updateData = { framing: { spaces: {} } };
-
-    // Exactly what CalloutService.updateCallout does before calling the
-    // normalizer (callout.service.ts updateCallout mergeWith + line ~639).
-    const mergedFraming = mergeWith(
-      storedFraming,
-      updateData.framing,
-      (_existing: unknown, incoming: unknown) =>
-        Array.isArray(incoming) ? incoming : undefined
-    );
-    expect(mergedFraming.spaces).toEqual({});
-
-    const normalized = realFramingService.validateAndNormalizeSpacesSettings(
-      CalloutFramingType.SPACES,
-      mergedFraming,
-      updateData.framing.spaces
-    );
-
-    expect(normalized.spaces).toEqual({
-      cardVariant: SpaceCollectionCardVariant.COMPACT,
-    });
-  });
-
-  // security:server:sec-server-2 — lodash `merge`/`mergeWith` skip `undefined`
-  // source values but assign `null` verbatim, so an explicit
-  // `cardVariant: null` survives the same merge shown above unless the
-  // normalizer itself treats null as "not provided".
-
-  it('createCalloutSettings-shaped merge: cardVariant: null persists COMPACT, never null (sec-server-2)', () => {
-    const calloutSettings = cloneDeep(DefaultCalloutSettings) as any;
-    const settingsData = { framing: { spaces: { cardVariant: null } } };
-
-    merge(calloutSettings, settingsData);
-    // Confirms the hazard: lodash assigns the explicit null verbatim.
-    expect(calloutSettings.framing.spaces).toEqual({ cardVariant: null });
-
-    const normalized = realFramingService.validateAndNormalizeSpacesSettings(
-      CalloutFramingType.SPACES,
-      calloutSettings.framing,
-      settingsData.framing.spaces
-    );
-
-    expect(normalized.spaces).toEqual({
-      cardVariant: SpaceCollectionCardVariant.COMPACT,
-    });
-  });
-
-  it('updateCallout-shaped mergeWith on a callout stored as EXPANDED: cardVariant: null leaves EXPANDED unchanged (sec-server-2)', () => {
-    const storedFraming = {
-      commentsEnabled: true,
+      selection: { mode: CalloutSelectionMode.CUSTOM, selectedIds: ['a', 'b'] },
       spaces: { cardVariant: SpaceCollectionCardVariant.EXPANDED },
-    } as any;
-    // Exactly what CalloutService.updateCallout does: snapshot the stored
-    // value BEFORE the merge, since the merge itself can clobber it.
-    const priorCardVariant = storedFraming.spaces?.cardVariant;
-    const updateData = { framing: { spaces: { cardVariant: null } } };
+    }) as any;
 
-    const mergedFraming = mergeWith(
-      storedFraming,
-      updateData.framing,
-      (_existing: unknown, incoming: unknown) =>
-        Array.isArray(incoming) ? incoming : undefined
-    );
-    // Confirms the hazard: lodash assigns the explicit null verbatim, clobbering
-    // the previously stored EXPANDED value before the normalizer ever runs —
-    // this is exactly why the normalizer needs the pre-merge snapshot.
-    expect(mergedFraming.spaces).toEqual({ cardVariant: null });
+  describe('spaces block', () => {
+    it('create: spaces: {} persists { cardVariant: COMPACT }, never a block without cardVariant', () => {
+      const calloutSettings = cloneDeep(DefaultCalloutSettings) as any;
+      const settingsData = { framing: { spaces: {} } };
 
-    const normalized = realFramingService.validateAndNormalizeSpacesSettings(
-      CalloutFramingType.SPACES,
-      mergedFraming,
-      updateData.framing.spaces,
-      priorCardVariant
-    );
+      mergeCalloutSettings(calloutSettings, settingsData);
+      expect(calloutSettings.framing.spaces).toEqual({});
 
-    expect(normalized.spaces).toEqual({
-      cardVariant: SpaceCollectionCardVariant.EXPANDED,
+      const normalized = realFramingService.validateAndNormalizeSpacesSettings(
+        CalloutFramingType.SPACES,
+        calloutSettings.framing,
+        settingsData.framing.spaces
+      );
+      expect(normalized.spaces).toEqual({
+        cardVariant: SpaceCollectionCardVariant.COMPACT,
+      });
+    });
+
+    it('update on a legacy callout with no stored block: spaces: {} persists { cardVariant: COMPACT }', () => {
+      const storedFraming = {
+        commentsEnabled: true,
+        selection: { mode: CalloutSelectionMode.AUTO, selectedIds: [] },
+        // No `spaces` key stored — the pre-existing-row shape.
+      } as any;
+      const updateData = { framing: { spaces: {} } };
+
+      const merged = mergeCalloutSettings(storedFraming, updateData.framing);
+      expect(merged.spaces).toEqual({});
+
+      const normalized = realFramingService.validateAndNormalizeSpacesSettings(
+        CalloutFramingType.SPACES,
+        merged,
+        updateData.framing.spaces
+      );
+      expect(normalized.spaces).toEqual({
+        cardVariant: SpaceCollectionCardVariant.COMPACT,
+      });
+    });
+
+    it('create: cardVariant: null persists COMPACT, never null', () => {
+      const calloutSettings = cloneDeep(DefaultCalloutSettings) as any;
+      const settingsData = { framing: { spaces: { cardVariant: null } } };
+
+      mergeCalloutSettings(calloutSettings, settingsData);
+
+      const normalized = realFramingService.validateAndNormalizeSpacesSettings(
+        CalloutFramingType.SPACES,
+        calloutSettings.framing,
+        settingsData.framing.spaces
+      );
+      expect(normalized.spaces).toEqual({
+        cardVariant: SpaceCollectionCardVariant.COMPACT,
+      });
+    });
+
+    it('update: cardVariant: null on a callout stored as EXPANDED leaves EXPANDED unchanged', () => {
+      const storedFraming = storedSpacesFraming();
+      const updateData = { framing: { spaces: { cardVariant: null } } };
+
+      const merged = mergeCalloutSettings(storedFraming, updateData.framing);
+      // The merge itself keeps the stored scalar — no pre-merge snapshot needed.
+      expect(merged.spaces).toEqual({
+        cardVariant: SpaceCollectionCardVariant.EXPANDED,
+      });
+
+      const normalized = realFramingService.validateAndNormalizeSpacesSettings(
+        CalloutFramingType.SPACES,
+        merged,
+        updateData.framing.spaces
+      );
+      expect(normalized.spaces).toEqual({
+        cardVariant: SpaceCollectionCardVariant.EXPANDED,
+      });
+    });
+  });
+
+  // The same null hazard exists on every other nullable scalar leaf of the
+  // settings input; the shared merge rule closes the class, not one field.
+  describe('sibling leaves', () => {
+    it('update: selection: { mode: null } keeps the stored CUSTOM mode and its ids', () => {
+      const storedFraming = storedSpacesFraming();
+      const updateData = { framing: { selection: { mode: null } } };
+
+      const merged = mergeCalloutSettings(storedFraming, updateData.framing);
+      expect(merged.selection.mode).toBe(CalloutSelectionMode.CUSTOM);
+
+      const normalized =
+        realFramingService.validateAndNormalizeSelectionSettings(
+          CalloutFramingType.SPACES,
+          merged,
+          updateData.framing.selection as any
+        );
+      expect(normalized.selection).toEqual({
+        mode: CalloutSelectionMode.CUSTOM,
+        selectedIds: ['a', 'b'],
+      });
+    });
+
+    it('update: selection: { mode: null } on a legacy callout with no stored block persists AUTO, never null', () => {
+      const storedFraming = { commentsEnabled: true } as any;
+      const updateData = { framing: { selection: { mode: null } } };
+
+      const merged = mergeCalloutSettings(storedFraming, updateData.framing);
+      const normalized =
+        realFramingService.validateAndNormalizeSelectionSettings(
+          CalloutFramingType.CONTRIBUTORS,
+          merged,
+          updateData.framing.selection as any
+        );
+      expect(normalized.selection).toEqual({
+        mode: CalloutSelectionMode.AUTO,
+        selectedIds: [],
+      });
+    });
+
+    it('create: selection: {} persists { AUTO, [] }, never a block without a mode', () => {
+      const calloutSettings = cloneDeep(DefaultCalloutSettings) as any;
+      const settingsData = { framing: { selection: {} } };
+
+      mergeCalloutSettings(calloutSettings, settingsData);
+      const normalized =
+        realFramingService.validateAndNormalizeSelectionSettings(
+          CalloutFramingType.SPACES,
+          calloutSettings.framing,
+          settingsData.framing.selection as any
+        );
+      expect(normalized.selection).toEqual({
+        mode: CalloutSelectionMode.AUTO,
+        selectedIds: [],
+      });
+    });
+
+    it('update: selectedIds: null keeps the stored ids', () => {
+      const storedFraming = storedSpacesFraming();
+      const merged = mergeCalloutSettings(storedFraming, {
+        selection: { selectedIds: null },
+      });
+      expect(merged.selection.selectedIds).toEqual(['a', 'b']);
+    });
+
+    it('update: commentsEnabled: null keeps the stored boolean', () => {
+      const storedFraming = storedSpacesFraming();
+      const merged = mergeCalloutSettings(storedFraming, {
+        commentsEnabled: null,
+      });
+      expect(merged.commentsEnabled).toBe(true);
+    });
+
+    it('update: visibility: null keeps the stored visibility', () => {
+      const stored = {
+        visibility: 'PUBLISHED',
+        framing: { commentsEnabled: true },
+      } as any;
+      const merged = mergeCalloutSettings(stored, { visibility: null });
+      expect(merged.visibility).toBe('PUBLISHED');
+    });
+
+    it('update: an object-valued leaf can still be cleared with null (contributors.mapView)', () => {
+      const stored = {
+        framing: {
+          commentsEnabled: true,
+          contributors: { mapView: { longitude: 1, latitude: 2, zoom: 3 } },
+        },
+      } as any;
+      const merged = mergeCalloutSettings(stored, {
+        framing: { contributors: { mapView: null } },
+      });
+      expect(merged.framing.contributors.mapView).toBeNull();
+    });
+
+    it('update: arrays replace wholesale (a shorter list persists as sent)', () => {
+      const stored = {
+        framing: {
+          contributors: { contributorTypes: ['USER', 'ORGANIZATION'] },
+        },
+      } as any;
+      const merged = mergeCalloutSettings(stored, {
+        framing: { contributors: { contributorTypes: ['USER'] } },
+      });
+      expect(merged.framing.contributors.contributorTypes).toEqual(['USER']);
     });
   });
 });

@@ -229,6 +229,62 @@ describe('CalloutFramingService.validateAndNormalizeSelectionSettings', () => {
     expect(result.selection?.selectedIds).toEqual(['a']);
   });
 
+  // --- Explicit null on a nullable input field means "not provided" ---
+
+  it('keeps the stored CUSTOM mode when incoming mode is an explicit null', () => {
+    const framing = baseFraming({
+      mode: CalloutSelectionMode.CUSTOM,
+      selectedIds: ['a'],
+    });
+    const result = service.validateAndNormalizeSelectionSettings(
+      CalloutFramingType.CONTRIBUTORS,
+      framing,
+      { mode: null } as any
+    );
+    expect(result.selection).toEqual({
+      mode: CalloutSelectionMode.CUSTOM,
+      selectedIds: ['a'],
+    });
+  });
+
+  it('never persists a null mode: a merged { mode: null } on a fresh block becomes AUTO', () => {
+    const framing = baseFraming({ mode: null, selectedIds: null } as any);
+    const result = service.validateAndNormalizeSelectionSettings(
+      CalloutFramingType.SPACES,
+      framing,
+      { mode: null } as any
+    );
+    expect(result.selection).toEqual({
+      mode: CalloutSelectionMode.AUTO,
+      selectedIds: [],
+    });
+  });
+
+  it('keeps the stored selectedIds when incoming selectedIds is an explicit null', () => {
+    const framing = baseFraming({
+      mode: CalloutSelectionMode.CUSTOM,
+      selectedIds: ['a'],
+    });
+    const result = service.validateAndNormalizeSelectionSettings(
+      CalloutFramingType.SPACES,
+      framing,
+      { selectedIds: null } as any
+    );
+    expect(result.selection?.selectedIds).toEqual(['a']);
+  });
+
+  it('does not reject an explicit selection: null on a non-collection framing', () => {
+    const framing = baseFraming();
+    expect(() =>
+      service.validateAndNormalizeSelectionSettings(
+        CalloutFramingType.NONE,
+        framing,
+        null as any
+      )
+    ).not.toThrow();
+    expect(framing.selection).toBeUndefined();
+  });
+
   // --- Deduplication (FR-004 / T004) ---
 
   it('deduplicates selectedIds (FR-004)', () => {

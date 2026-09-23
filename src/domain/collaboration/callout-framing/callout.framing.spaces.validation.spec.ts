@@ -218,11 +218,11 @@ describe('CalloutFramingService.validateAndNormalizeSpacesSettings', () => {
     expect(result.selection).toEqual(selection);
   });
 
-  // --- security:server:sec-server-2: an explicit `null` is "not provided",
+  // --- An explicit `null` on a nullable input field is "not provided",
   // never a value to persist — matches the `!= null` convention documented
   // in innovation.flow.state.service.ts for the same non-nullable-field hazard.
 
-  it('create with cardVariant: null on a SPACES framing persists COMPACT, never null (sec-server-2)', () => {
+  it('create with cardVariant: null on a SPACES framing persists COMPACT, never null', () => {
     const framing = baseFraming();
     const result = service.validateAndNormalizeSpacesSettings(
       CalloutFramingType.SPACES,
@@ -234,7 +234,7 @@ describe('CalloutFramingService.validateAndNormalizeSpacesSettings', () => {
     });
   });
 
-  it('update with cardVariant: null on a callout stored as EXPANDED leaves EXPANDED unchanged (sec-server-2)', () => {
+  it('update with cardVariant: null on a callout stored as EXPANDED leaves EXPANDED unchanged', () => {
     const framing = baseFraming({
       cardVariant: SpaceCollectionCardVariant.EXPANDED,
     });
@@ -248,7 +248,7 @@ describe('CalloutFramingService.validateAndNormalizeSpacesSettings', () => {
     });
   });
 
-  it('update with spaces: null on a non-SPACES callout does not throw (sec-server-2)', () => {
+  it('update with spaces: null on a non-SPACES callout does not throw', () => {
     const framing = baseFraming();
     expect(() =>
       service.validateAndNormalizeSpacesSettings(

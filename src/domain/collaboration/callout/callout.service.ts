@@ -43,7 +43,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { cloneDeep, keyBy, merge, mergeWith } from 'lodash';
+import { cloneDeep, keyBy } from 'lodash';
 import {
   DeepPartial,
   EntityManager,
@@ -65,6 +65,7 @@ import { CollaboraDocumentService } from '../collabora-document/collabora.docume
 import { ImportCollaboraDocumentInput } from '../collabora-document/dto/collabora.document.dto.import';
 import { CreatePostInput } from '../post/dto/post.dto.create';
 import { ReactionService } from '../reaction/reaction.service';
+import { mergeCalloutSettings } from './callout.settings.merge';
 import { CalloutContributionsCountOutput } from './dto/callout.contributions.count.dto';
 import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contribution';
 import { UpdateCalloutInput } from './dto/callout.dto.update';
@@ -424,10 +425,7 @@ export class CalloutService {
     settingsData?: CreateCalloutInput['settings']
   ): ICalloutSettings {
     const calloutSettings = cloneDeep(DefaultCalloutSettings);
-    if (settingsData) {
-      merge(calloutSettings, settingsData);
-    }
-    return calloutSettings;
+    return mergeCalloutSettings(calloutSettings, settingsData);
   }
 
   private validateCreateCalloutData(calloutData: CreateCalloutInput) {
@@ -559,13 +557,6 @@ export class CalloutService {
     }
     const targetStorageBucketID = callout.framing.profile?.storageBucket?.id;
 
-    // Captured before the settings merge below can clobber it: the generic
-    // `mergeWith` assigns an explicit `null` from the caller's input verbatim
-    // (it only skips `undefined`), so an update that sends
-    // `cardVariant: null` would otherwise overwrite this pre-merge value
-    // before validateAndNormalizeSpacesSettings ever runs.
-    const priorCardVariant = callout.settings.framing.spaces?.cardVariant;
-
     if (calloutUpdateData.framing) {
       callout.framing = await this.calloutFramingService.updateCalloutFraming(
         callout.framing,
@@ -578,15 +569,11 @@ export class CalloutService {
     }
 
     if (calloutUpdateData.settings) {
-      // Replace arrays wholesale instead of deep-merging them element-by-index:
-      // a default `merge` keeps the longer stored array's tail, so EXCLUDING a
-      // contributor type (sending a shorter `contributorTypes`) would silently
-      // not persist. Arrays in settings are config lists, not positional patches.
-      callout.settings = mergeWith(
+      // Arrays replace wholesale and an explicit null never clears a scalar
+      // leaf — see callout.settings.merge.ts for why both rules matter.
+      callout.settings = mergeCalloutSettings(
         callout.settings,
-        calloutUpdateData.settings,
-        (_existing, incoming) =>
-          Array.isArray(incoming) ? incoming : undefined
+        calloutUpdateData.settings
       );
     }
 
@@ -632,22 +619,15 @@ export class CalloutService {
         calloutUpdateData.settings?.framing?.selection
       );
 
-    // Re-validate + normalize the card-variant settings. Strip a stale stored
-    // block on a framing-type change away from SPACES (unlike selection, this
-    // block is SPACES-only) and apply partial-update semantics for the new
-    // value.
-    if (
-      callout.framing.type !== CalloutFramingType.SPACES &&
-      callout.settings.framing.spaces
-    ) {
-      delete callout.settings.framing.spaces;
-    }
+    // Re-validate + normalize the card-variant settings with partial-update
+    // semantics. No pre-strip here: a SPACES framing can never change kind
+    // (updateCalloutFraming rejects it), and the normalizer itself removes
+    // the block on every non-SPACES framing.
     callout.settings.framing =
       this.calloutFramingService.validateAndNormalizeSpacesSettings(
         callout.framing.type,
         callout.settings.framing,
-        calloutUpdateData.settings?.framing?.spaces,
-        priorCardVariant
+        calloutUpdateData.settings?.framing?.spaces
       );
 
     // AC3 host-scope guard on update: only validate ids the caller explicitly

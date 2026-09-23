@@ -872,7 +872,9 @@ export class CalloutFramingService {
 
     if (!isCollectionKind) {
       // Any provided selection on a non-collection kind is a caller error.
-      if (incomingSelection !== undefined) {
+      // `!= null`: the GraphQL input is nullable and `@IsOptional()` passes an
+      // explicit `null` through, which means "not provided", not a value.
+      if (incomingSelection != null) {
         throw new ValidationException(
           'Selection settings can only be set when framing.type ∈ {CONTRIBUTORS, SPACES}.',
           LogContext.COLLABORATION
@@ -886,20 +888,23 @@ export class CalloutFramingService {
     }
 
     // --- Collection kind ---
-    // Materialize the stored block if absent (read-time default — FR-016).
-    if (!framingSettings.selection) {
-      framingSettings.selection = {
-        mode: CalloutSelectionMode.AUTO,
-        selectedIds: [],
-      };
-    }
+    // Materialize the stored block if absent (read-time default — FR-016), and
+    // default each leaf independently of the block's presence: a merged
+    // `selection: {}` or `{ mode: null }` must never persist without a mode,
+    // since both output fields are non-nullable.
+    framingSettings.selection ??= {} as ICalloutSettingsFraming['selection'] &
+      object;
+    framingSettings.selection.mode ??= CalloutSelectionMode.AUTO;
+    framingSettings.selection.selectedIds ??= [];
 
-    if (incomingSelection !== undefined) {
-      // Partial-update: only replace the fields that were explicitly provided.
-      if (incomingSelection.mode !== undefined) {
+    if (incomingSelection != null) {
+      // Partial-update: only replace the fields that were explicitly
+      // provided. `!= null` throughout: an explicit `null` on a nullable input
+      // field is "not provided" and keeps the stored value.
+      if (incomingSelection.mode != null) {
         framingSettings.selection.mode = incomingSelection.mode;
       }
-      if (incomingSelection.selectedIds !== undefined) {
+      if (incomingSelection.selectedIds != null) {
         // Deduplicate, preserving first occurrence (FR-004).
         framingSettings.selection.selectedIds = [
           ...new Set(incomingSelection.selectedIds),
@@ -928,16 +933,10 @@ export class CalloutFramingService {
    *   (or default to COMPACT when nothing is stored); provided `cardVariant`
    *   ⇒ replace it.
    *
-   * `priorCardVariant` is the value captured by the caller from the DB-loaded
-   * entity BEFORE any generic settings merge ran (CalloutService's `merge`/
-   * `mergeWith` at both call sites). It exists because that merge overwrites
-   * a non-array leaf with an explicit `null` from the caller's input — lodash
-   * skips `undefined` source values but assigns `null` verbatim — so by the
-   * time this normalizer runs, `framingSettings.spaces.cardVariant` may
-   * already have been clobbered to `null` even though a real value was
-   * stored. Falling back to the pre-merge snapshot is what makes an explicit
-   * `cardVariant: null` on update actually preserve the stored value, rather
-   * than only appearing to (see callout.service.spaces.settings.spec.ts).
+   * An explicit `cardVariant: null` from a caller never reaches a stored
+   * value: the settings merge in CalloutService keeps the stored scalar when
+   * the incoming leaf is `null` (see callout.settings.merge.ts). This
+   * normalizer still treats `null` as "not provided" so it is safe on its own.
    */
   public validateAndNormalizeSpacesSettings(
     framingType: CalloutFramingType,
@@ -947,8 +946,7 @@ export class CalloutFramingService {
     // lets an explicit `null` through unchanged, so a `null` genuinely
     // reaches this normalizer at runtime even though the DTO's own TS field
     // type only declares `?:` (optional, not nullable).
-    incomingSpaces?: { cardVariant?: SpaceCollectionCardVariant | null } | null,
-    priorCardVariant?: SpaceCollectionCardVariant
+    incomingSpaces?: { cardVariant?: SpaceCollectionCardVariant | null } | null
   ): ICalloutSettingsFraming {
     const isSpaces = framingType === CalloutFramingType.SPACES;
 
@@ -976,16 +974,10 @@ export class CalloutFramingService {
     // Default a missing `cardVariant` independently of the block's presence —
     // a caller-supplied `{}` (already merged into settings before this runs)
     // must never persist without one, since the field is non-nullable.
-    // `== null` (not `=== undefined`): a caller-merged `null` (the GraphQL
-    // input's `cardVariant` is nullable, and class-validator's `@IsOptional()`
-    // does not strip an explicit null) must default the same way an omitted
-    // field does — the stored value is non-nullable and must never persist
-    // `null`. Prefer the pre-merge snapshot over the (possibly merge-
-    // clobbered) current value — see the `priorCardVariant` doc above.
-    if (framingSettings.spaces.cardVariant == null) {
-      framingSettings.spaces.cardVariant =
-        priorCardVariant ?? SpaceCollectionCardVariant.COMPACT;
-    }
+    // `??=` (null or undefined): a `null` that reached this block must
+    // default the same way an omitted field does — the stored value is
+    // non-nullable and must never persist `null`.
+    framingSettings.spaces.cardVariant ??= SpaceCollectionCardVariant.COMPACT;
 
     // `!= null`: an explicit `cardVariant: null` is "not provided" (keep the
     // default/stored value just applied above), never a value to persist.
