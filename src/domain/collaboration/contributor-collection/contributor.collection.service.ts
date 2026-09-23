@@ -1,6 +1,8 @@
 import { ActorType } from '@common/enums/actor.type';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { CalloutSelectionMode } from '@common/enums/callout.selection.mode';
 import { RoleName } from '@common/enums/role.name';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { UserInformationVisibility } from '@common/enums/user.information.visibility';
 import { VisualType } from '@common/enums/visual.type';
 import { EntityNotFoundException } from '@common/exceptions';
@@ -8,10 +10,14 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { Actor } from '@domain/actor/actor/actor.entity';
+import { Credential } from '@domain/actor/credential/credential.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
+import { Tagset } from '@domain/common/tagset/tagset.entity';
+import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { Community } from '@domain/community/community/community.entity';
 import { ICommunity } from '@domain/community/community/community.interface';
+import { Organization } from '@domain/community/organization/organization.entity';
 import { Space } from '@domain/space/space/space.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
@@ -19,9 +25,30 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { EntityManager, In } from 'typeorm';
 import { ICalloutContributorsSettings } from '../callout-settings/callout.settings.contributors.interface';
+import {
+  normalizeTagline,
+  normalizeWebsite,
+  pickContributorTags,
+  truncateToMonthUtc,
+} from './contributor.card.enrichment';
 import { IContributorCollectionCounts } from './dto/contributor.collection.counts';
 import { IContributorCollectionItem } from './dto/contributor.collection.item';
 import { IContributorLocation } from './dto/contributor.location';
+
+// Tagset names read for the tags-preference-order enrichment, per contributor
+// type (data-model.md §1). One narrow read covers whichever names the type
+// needs; unrelated tagsets (default, flow-state, task, …) are never fetched.
+const TAGSET_NAMES_BY_TYPE: Partial<Record<ActorType, TagsetReservedName[]>> = {
+  [ActorType.USER]: [TagsetReservedName.SKILLS, TagsetReservedName.KEYWORDS],
+  [ActorType.ORGANIZATION]: [
+    TagsetReservedName.KEYWORDS,
+    TagsetReservedName.CAPABILITIES,
+  ],
+  [ActorType.VIRTUAL_CONTRIBUTOR]: [
+    TagsetReservedName.KEYWORDS,
+    TagsetReservedName.CAPABILITIES,
+  ],
+};
 
 // A contributor row, decorated with the role label and a leads-first sort flag.
 type RankedContributorId = {
@@ -235,6 +262,147 @@ export class ContributorCollectionService {
     return result;
   }
 
+  /**
+   * Load the profile-scoped tagsets used by the tags enrichment, keyed by
+   * profile id — one narrow read per contributor type, restricted to the
+   * pair of tagset names that type's preference order can select from.
+   * Deliberately separate from `loadProfilesById` (spec D-TAGQ): joining
+   * tagsets into that read alongside `visuals` would multiply the wide
+   * profile rows (two one-to-many relations on the same root).
+   */
+  private async loadTagsetsByProfileId(
+    profileIds: string[],
+    type: ActorType
+  ): Promise<Map<string, ITagset[]>> {
+    const result = new Map<string, ITagset[]>();
+    if (profileIds.length === 0) {
+      return result;
+    }
+    const names = TAGSET_NAMES_BY_TYPE[type];
+    if (!names) {
+      return result;
+    }
+    const tagsets = await this.entityManager.find(Tagset, {
+      where: { profile: { id: In(profileIds) }, name: In(names) },
+      relations: { profile: true },
+      select: {
+        id: true,
+        name: true,
+        tags: true,
+        profile: { id: true },
+      },
+    });
+    for (const tagset of tagsets) {
+      const profileId = tagset.profile?.id;
+      if (!profileId) {
+        continue;
+      }
+      const existing = result.get(profileId);
+      if (existing) {
+        existing.push(tagset);
+      } else {
+        result.set(profileId, [tagset]);
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Narrow read of the organization website column for the given
+   * organization ids, keyed by id. Users and Virtual Contributors never call
+   * this — `website` is undefined for them without any read.
+   */
+  private async loadOrganizationWebsites(
+    organizationIds: string[]
+  ): Promise<Map<string, string>> {
+    const result = new Map<string, string>();
+    if (organizationIds.length === 0) {
+      return result;
+    }
+    const organizations = await this.entityManager.find(Organization, {
+      where: { id: In(organizationIds) },
+      select: { id: true, website: true },
+    });
+    for (const organization of organizations) {
+      result.set(organization.id, organization.website);
+    }
+    return result;
+  }
+
+  /**
+   * Count the distinct USER actors holding the organization-associate
+   * credential, per organization id — the same semantic as
+   * `Organization.metrics`' "associates" value, batched. An organization
+   * absent from the result gets 0 (not undefined). Deliberately NOT
+   * `CredentialService.countMatchingCredentialsBatch`: that helper ignores
+   * the actor type and groups on `resourceID` alone, so a stray non-user
+   * associate row (or one with a null actor) would inflate the count here.
+   */
+  private async countAssociatesByOrganizationId(
+    organizationIds: string[]
+  ): Promise<Map<string, number>> {
+    const result = new Map<string, number>();
+    if (organizationIds.length === 0) {
+      return result;
+    }
+    const rows = await this.entityManager
+      .createQueryBuilder(Credential, 'credential')
+      .innerJoin('credential.actor', 'actor')
+      .select('credential.resourceID', 'resourceID')
+      .addSelect('COUNT(DISTINCT credential.actorId)', 'count')
+      .where('credential.type = :type', {
+        type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
+      })
+      .andWhere('credential.resourceID IN (:...organizationIds)', {
+        organizationIds,
+      })
+      .andWhere('actor.type = :actorType', { actorType: ActorType.USER })
+      .groupBy('credential.resourceID')
+      .getRawMany<{ resourceID: string; count: string }>();
+
+    for (const row of rows) {
+      result.set(row.resourceID, Number(row.count));
+    }
+    return result;
+  }
+
+  /**
+   * The earliest member-credential `createdDate` per USER actor id, for the
+   * callout's own role set — never a hard-coded `'space-member'` string, so
+   * an L1/L2 callout reports the subspace's own membership. An id absent
+   * from the result holds no member credential there (e.g. admin-only).
+   */
+  private async loadJoinedDatesByActorId(
+    roleSet: IRoleSet,
+    actorIds: string[]
+  ): Promise<Map<string, Date>> {
+    const result = new Map<string, Date>();
+    if (actorIds.length === 0) {
+      return result;
+    }
+    const membershipCredential =
+      await this.roleSetService.getCredentialDefinitionForRole(
+        roleSet,
+        RoleName.MEMBER
+      );
+    const rows = await this.entityManager
+      .createQueryBuilder(Credential, 'credential')
+      .select('credential.actorId', 'actorId')
+      .addSelect('MIN(credential.createdDate)', 'minCreatedDate')
+      .where('credential.type = :type', { type: membershipCredential.type })
+      .andWhere('credential.resourceID = :resourceID', {
+        resourceID: membershipCredential.resourceID,
+      })
+      .andWhere('credential.actorId IN (:...actorIds)', { actorIds })
+      .groupBy('credential.actorId')
+      .getRawMany<{ actorId: string; minCreatedDate: string }>();
+
+    for (const row of rows) {
+      result.set(row.actorId, new Date(row.minCreatedDate));
+    }
+    return result;
+  }
+
   private getAvatarUrl(profile?: IProfile): string | undefined {
     return profile?.visuals?.find(v => v.name === VisualType.AVATAR)?.uri;
   }
@@ -310,6 +478,32 @@ export class ContributorCollectionService {
 
     const profilesById = await this.loadProfilesById(ranked.map(r => r.id));
 
+    // Enrichment reads (constant in contributor count, FR-031): one narrow
+    // tagset read for every type; website + associates reads only for
+    // ORGANIZATION; the joined-date read only for USER. Each helper
+    // short-circuits to an empty map — and issues no read — for an empty id
+    // list, so the wrong-type branches below cost nothing.
+    const profileIds = [...profilesById.values()]
+      .map(loaded => loaded.profile?.id)
+      .filter((id): id is string => !!id);
+    const tagsetsByProfileId = await this.loadTagsetsByProfileId(
+      profileIds,
+      type
+    );
+
+    const organizationIds =
+      type === ActorType.ORGANIZATION ? ranked.map(r => r.id) : [];
+    const websitesByOrganizationId =
+      await this.loadOrganizationWebsites(organizationIds);
+    const associatesCountByOrganizationId =
+      await this.countAssociatesByOrganizationId(organizationIds);
+
+    const userIds = type === ActorType.USER ? ranked.map(r => r.id) : [];
+    const joinedDatesByActorId = await this.loadJoinedDatesByActorId(
+      roleSet,
+      userIds
+    );
+
     const items: (IContributorCollectionItem & { rank: number })[] = [];
     for (const entry of ranked) {
       const loaded = profilesById.get(entry.id);
@@ -317,6 +511,13 @@ export class ContributorCollectionService {
       const url = profile
         ? await this.safeGenerateUrl(type, profile, loaded?.nameID)
         : undefined;
+      const profileTagsets = profile?.id
+        ? (tagsetsByProfileId.get(profile.id) ?? [])
+        : [];
+      const joinedDate =
+        type === ActorType.USER
+          ? joinedDatesByActorId.get(entry.id)
+          : undefined;
       items.push({
         id: entry.id,
         type,
@@ -325,6 +526,17 @@ export class ContributorCollectionService {
         roleLabel: entry.roleLabel,
         url,
         location: this.buildLocation(type, profile),
+        tagline: normalizeTagline(profile?.tagline),
+        tags: pickContributorTags(type, profileTagsets),
+        joinedDate: joinedDate ? truncateToMonthUtc(joinedDate) : undefined,
+        website:
+          type === ActorType.ORGANIZATION
+            ? normalizeWebsite(websitesByOrganizationId.get(entry.id))
+            : undefined,
+        associatesCount:
+          type === ActorType.ORGANIZATION
+            ? (associatesCountByOrganizationId.get(entry.id) ?? 0)
+            : undefined,
         rank: entry.rank,
       });
     }
