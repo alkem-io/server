@@ -480,4 +480,139 @@ describe('TemplateApplierService', () => {
       expect(targetCollab.calloutsSet.callouts).toEqual([existingCallout]);
     });
   });
+  describe('flow-state vocabulary after a template apply', () => {
+    const flowStateTemplateOf = (collab: any) =>
+      collab.calloutsSet.tagsetTemplateSet.tagsetTemplates.find(
+        (template: any) => template.name === 'flow-state'
+      );
+
+    const buildFixture = () => {
+      const sourceStates = [
+        { displayName: 'New A', sortOrder: 1 },
+        { displayName: 'New B', sortOrder: 2 },
+      ];
+      templateService.getTemplateOrFail.mockResolvedValue({
+        id: 'tpl-1',
+        contentSpace: {
+          id: 'tcs-1',
+          collaboration: {
+            innovationFlow: { states: sourceStates },
+            calloutsSet: { callouts: [] },
+          },
+        },
+      } as any);
+
+      // The collaboration graph as the resolver loads it: the callouts set carries
+      // its own copy of the flow-state template, read before the flow is updated.
+      const targetCollab = {
+        id: 'collab-1',
+        innovationFlow: {
+          id: 'flow-1',
+          states: [{ displayName: 'Old A' }, { displayName: 'Old B' }],
+        },
+        calloutsSet: {
+          id: 'cs-1',
+          tagsetTemplateSet: {
+            id: 'tts-1',
+            tagsetTemplates: [
+              {
+                id: 'tt-flow',
+                name: 'flow-state',
+                allowedValues: ['Old A', 'Old B'],
+                defaultSelectedValue: 'Old A',
+              },
+            ],
+          },
+          callouts: [],
+        },
+      } as any;
+
+      inputCreatorService.buildCreateInnovationFlowStateInputFromInnovationFlowState.mockReturnValue(
+        sourceStates as any
+      );
+      innovationFlowService.updateInnovationFlowStatesFromTemplate.mockResolvedValue(
+        { id: 'flow-1', states: sourceStates } as any
+      );
+      // What the database holds once the flow update has run.
+      calloutsSetService.getTagsetTemplatesSet.mockResolvedValue({
+        id: 'tts-1',
+        tagsetTemplates: [
+          {
+            id: 'tt-flow',
+            name: 'flow-state',
+            allowedValues: ['New A', 'New B'],
+            defaultSelectedValue: 'New A',
+          },
+        ],
+      } as any);
+      storageAggregatorResolverService.getStorageAggregatorForCollaboration.mockResolvedValue(
+        {} as any
+      );
+      templateService.ensureCalloutsInValidGroupsAndStates.mockReturnValue(
+        undefined as any
+      );
+      collaborationService.save.mockImplementation(
+        async (collab: any) => collab
+      );
+      return targetCollab;
+    };
+
+    it('re-reads the vocabulary after the flow update so the cascade save carries the new state names', async () => {
+      const targetCollab = buildFixture();
+
+      await service.updateCollaborationFromSpaceTemplate(
+        {
+          collaborationID: 'collab-1',
+          spaceTemplateID: 'tpl-1',
+          addCallouts: false,
+          deleteExistingCallouts: false,
+        },
+        targetCollab,
+        actorContextData.actorContext
+      );
+
+      expect(calloutsSetService.getTagsetTemplatesSet).toHaveBeenCalledWith(
+        'cs-1'
+      );
+      const reloadOrder =
+        calloutsSetService.getTagsetTemplatesSet.mock.invocationCallOrder[0];
+      const flowUpdateOrder =
+        innovationFlowService.updateInnovationFlowStatesFromTemplate.mock
+          .invocationCallOrder[0];
+      expect(reloadOrder).toBeGreaterThan(flowUpdateOrder);
+
+      const saved = collaborationService.save.mock.calls[0][0];
+      expect(flowStateTemplateOf(saved).allowedValues).toEqual([
+        'New A',
+        'New B',
+      ]);
+      expect(flowStateTemplateOf(saved).defaultSelectedValue).toBe('New A');
+    });
+
+    it('classifies callouts added from the template against the updated vocabulary', async () => {
+      const targetCollab = buildFixture();
+      inputCreatorService.buildCreateCalloutInputsFromCallouts.mockResolvedValue(
+        [] as any
+      );
+      calloutsSetService.addCallouts.mockResolvedValue([]);
+
+      await service.updateCollaborationFromSpaceTemplate(
+        {
+          collaborationID: 'collab-1',
+          spaceTemplateID: 'tpl-1',
+          addCallouts: true,
+          deleteExistingCallouts: false,
+        },
+        targetCollab,
+        actorContextData.actorContext
+      );
+
+      const calloutsSetPassed = calloutsSetService.addCallouts.mock.calls[0][0];
+      expect(
+        calloutsSetPassed.tagsetTemplateSet?.tagsetTemplates.find(
+          (template: any) => template.name === 'flow-state'
+        )?.allowedValues
+      ).toEqual(['New A', 'New B']);
+    });
+  });
 });
