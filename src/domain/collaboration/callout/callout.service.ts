@@ -105,6 +105,13 @@ export class CalloutService {
     parentSpaceId?: string
   ): Promise<ICallout> {
     this.validateCreateCalloutData(calloutData);
+    // Reject an off-kind selection/spaces block before any framing child
+    // (profile, whiteboard, poll, …) is created: a rejected request persists
+    // nothing. The normalizers below re-apply the same rule.
+    this.calloutFramingService.validateSettingsBlocksForFramingType(
+      calloutData.framing.type ?? CalloutFramingType.NONE,
+      calloutData.settings?.framing
+    );
 
     if (!calloutData.sortOrder) {
       calloutData.sortOrder = 10;
@@ -557,6 +564,15 @@ export class CalloutService {
     }
     const targetStorageBucketID = callout.framing.profile?.storageBucket?.id;
 
+    // Reject an off-kind selection/spaces block against the TARGET framing
+    // type before updateCalloutFraming runs: it has side effects (e.g. a type
+    // change deletes the whiteboard) and there is no transaction, so a
+    // rejected request must fail here to persist nothing.
+    this.calloutFramingService.validateSettingsBlocksForFramingType(
+      calloutUpdateData.framing?.type ?? callout.framing.type,
+      calloutUpdateData.settings?.framing
+    );
+
     if (calloutUpdateData.framing) {
       callout.framing = await this.calloutFramingService.updateCalloutFraming(
         callout.framing,
@@ -633,11 +649,11 @@ export class CalloutService {
     // AC3 host-scope guard on update: only validate ids the caller explicitly
     // submitted in this request (FR-008: stale stored ids must be inert — no
     // admin action required to remove a since-departed member/subspace).
-    // The guard still runs in full on the CREATE path (line ~135) where there
-    // are no pre-existing stored ids.
-    if (
-      calloutUpdateData.settings?.framing?.selection?.selectedIds !== undefined
-    ) {
+    // The guard still runs in full on the CREATE path where there are no
+    // pre-existing stored ids. `!= null`: an explicit `selectedIds: null` (or
+    // `selection: null`) keeps the stored list, so there is nothing submitted
+    // to validate — re-checking stale stored ids would reject the update.
+    if (calloutUpdateData.settings?.framing?.selection?.selectedIds != null) {
       const updateParentSpaceId = callout.calloutsSet
         ? await this.getParentSpaceId(callout.calloutsSet.id)
         : undefined;

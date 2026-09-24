@@ -6,6 +6,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { cloneDeep } from 'lodash';
 import { ICalloutSettingsFraming } from '../callout-settings/callout.settings.framing.interface';
 import { CalloutFraming } from './callout.framing.entity';
 import { CalloutFramingService } from './callout.framing.service';
@@ -182,18 +183,23 @@ describe('CalloutFramingService.validateAndNormalizeSpacesSettings', () => {
     };
     const contributors = undefined; // SPACES never carries contributors
     const framing = baseFraming(undefined, selection, contributors);
+    // Independent snapshots taken BEFORE the call: comparing against the
+    // same (possibly mutated-in-place) object would always pass.
+    const selectionBefore = cloneDeep(framing.selection);
+    const contributorsBefore = cloneDeep(framing.contributors);
     const result = service.validateAndNormalizeSpacesSettings(
       CalloutFramingType.SPACES,
       framing,
       { cardVariant: SpaceCollectionCardVariant.EXPANDED }
     );
-    expect(result.selection).toEqual(selection);
-    expect(result.contributors).toEqual(contributors);
+    expect(result.selection).toEqual(selectionBefore);
+    expect(result.contributors).toEqual(contributorsBefore);
   });
 
   it('leaves selection deep-equal before/after on the reject path (V8)', () => {
     const selection = { mode: CalloutSelectionMode.CUSTOM, selectedIds: ['x'] };
     const framing = baseFraming(undefined, selection);
+    const selectionBefore = cloneDeep(framing.selection);
     expect(() =>
       service.validateAndNormalizeSpacesSettings(
         CalloutFramingType.CONTRIBUTORS,
@@ -201,7 +207,7 @@ describe('CalloutFramingService.validateAndNormalizeSpacesSettings', () => {
         { cardVariant: SpaceCollectionCardVariant.EXPANDED }
       )
     ).toThrow(ValidationException);
-    expect(framing.selection).toEqual(selection);
+    expect(framing.selection).toEqual(selectionBefore);
   });
 
   it('leaves selection deep-equal before/after on the strip path (V8)', () => {
@@ -210,12 +216,13 @@ describe('CalloutFramingService.validateAndNormalizeSpacesSettings', () => {
       { cardVariant: SpaceCollectionCardVariant.EXPANDED },
       selection
     );
+    const selectionBefore = cloneDeep(framing.selection);
     const result = service.validateAndNormalizeSpacesSettings(
       CalloutFramingType.NONE,
       framing,
       undefined
     );
-    expect(result.selection).toEqual(selection);
+    expect(result.selection).toEqual(selectionBefore);
   });
 
   // --- An explicit `null` on a nullable input field is "not provided",

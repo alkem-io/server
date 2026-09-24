@@ -1,9 +1,12 @@
+import { ActorType } from '@common/enums/actor.type';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutSelectionMode } from '@common/enums/callout.selection.mode';
 import { SpaceCollectionCardVariant } from '@common/enums/space.collection.card.variant';
+import { ValidationException } from '@common/exceptions';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { mergeCalloutSettings } from '@domain/collaboration/callout/callout.settings.merge';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { actorContextData } from '@test/data/actorContext.mock';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -16,62 +19,32 @@ import { DefaultCalloutSettings } from '../callout-settings/callout.settings.def
 import { Callout } from './callout.entity';
 import { CalloutService } from './callout.service';
 
+type FramingServiceCtor = new (...args: unknown[]) => CalloutFramingService;
+
 /**
- * Wiring tests for the card-variant normalizer at both CalloutService call
- * sites (create + update). The normalizer's own validation matrix lives in
- * callout.framing.spaces.validation.spec.ts; this file only proves the
- * service passes the right arguments at the right call sites. (A SPACES
- * framing can never change kind — updateCalloutFraming rejects it — so there
- * is no "type changed away from SPACES" case to wire.)
+ * A REAL CalloutFramingService: the settings normalizers and the up-front
+ * off-kind block check run their production code. Its injected collaborators
+ * are all left undefined — the pure normalizers never touch them — and only
+ * the two I/O methods (framing create/update) are replaced per test.
+ */
+const newRealFramingService = () =>
+  new (CalloutFramingService as unknown as FramingServiceCtor)(
+    ...(Array(13).fill(undefined) as unknown[])
+  );
+
+/**
+ * Wiring tests for the card-variant and selection normalizers at both
+ * CalloutService call sites (create + update), end to end through the real
+ * settings merge and the real normalizers. The normalizers' own validation
+ * matrix lives in callout.framing.spaces.validation.spec.ts /
+ * callout.framing.selection.validation.spec.ts.
  */
 describe('CalloutService — card-variant settings wiring', () => {
   let service: CalloutService;
   let module: TestingModule;
-
-  const mockFramingService = {
-    createCalloutFraming: vi.fn(),
-    updateCalloutFraming: vi.fn(),
-    validateAndNormalizeContributorsSettings: vi.fn((_, s) => s),
-    validateAndNormalizeSelectionSettings: vi.fn((_, s, inc) => {
-      if (!s.selection) {
-        s.selection = { mode: CalloutSelectionMode.AUTO, selectedIds: [] };
-      }
-      if (inc !== undefined) {
-        if (inc.mode !== undefined) s.selection.mode = inc.mode;
-        if (inc.selectedIds !== undefined)
-          s.selection.selectedIds = inc.selectedIds;
-      }
-      return s;
-    }),
-    // Real-shaped simulation of validateAndNormalizeSpacesSettings so the
-    // wiring tests below exercise the same contract as the real service.
-    validateAndNormalizeSpacesSettings: vi.fn(
-      (
-        framingType: CalloutFramingType,
-        s: any,
-        incoming?: { cardVariant?: SpaceCollectionCardVariant }
-      ) => {
-        const isSpaces = framingType === CalloutFramingType.SPACES;
-        if (!isSpaces) {
-          delete s.spaces;
-          return s;
-        }
-        // Materialize the block and default `cardVariant` independently, so
-        // an already-merged `spaces: {}` (the real production shape at both
-        // call sites) is defaulted the same way the real normalizer does.
-        if (!s.spaces) {
-          s.spaces = {};
-        }
-        if (s.spaces.cardVariant === undefined) {
-          s.spaces.cardVariant = SpaceCollectionCardVariant.COMPACT;
-        }
-        if (incoming?.cardVariant !== undefined) {
-          s.spaces.cardVariant = incoming.cardVariant;
-        }
-        return s;
-      }
-    ),
-  };
+  let framingService: CalloutFramingService;
+  let calloutRepo: any;
+  let scopeGuardSpy: ReturnType<typeof vi.spyOn>;
 
   const mockContributionDefaultsService = {
     createCalloutContributionDefaults: vi.fn(),
@@ -83,10 +56,43 @@ describe('CalloutService — card-variant settings wiring', () => {
     updateClassification: vi.fn(),
   };
 
+  /** Host space with the given direct subspaces, resolved via calloutsSet. */
+  function mockHostSpace(subspaceIds: string[]) {
+    calloutRepo.manager = {
+      findOne: vi.fn().mockResolvedValue({
+        id: 'host-space-1',
+        subspaces: subspaceIds.map(id => ({ id })),
+      }),
+      createQueryBuilder: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        from: vi.fn().mockReturnThis(),
+        innerJoin: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        getRawOne: vi.fn().mockResolvedValue({ spaceId: 'host-space-1' }),
+      }),
+    };
+  }
+
   beforeEach(async () => {
     vi.restoreAllMocks();
-    mockFramingService.validateAndNormalizeSpacesSettings.mockClear();
-    mockFramingService.validateAndNormalizeSelectionSettings.mockClear();
+
+    framingService = newRealFramingService();
+    // I/O only: the framing children (profile, whiteboard, …) are not under
+    // test. Every normalizer stays real (spied, calling through).
+    vi.spyOn(framingService, 'createCalloutFraming').mockImplementation(
+      async data =>
+        ({
+          id: 'framing-1',
+          type: data.type ?? CalloutFramingType.NONE,
+          profile: { storageBucket: { id: 'sb-1' } },
+        }) as any
+    );
+    vi.spyOn(framingService, 'updateCalloutFraming').mockImplementation(
+      async (framing, data) =>
+        ({ ...framing, type: data.type ?? framing.type }) as any
+    );
+    vi.spyOn(framingService, 'validateAndNormalizeSpacesSettings');
+    vi.spyOn(framingService, 'validateAndNormalizeSelectionSettings');
 
     vi.spyOn(Callout, 'create').mockImplementation((input: any) => {
       const entity = new Callout();
@@ -100,6 +106,7 @@ describe('CalloutService — card-variant settings wiring', () => {
         repositoryProviderMockFactory(Callout),
         MockCacheManager,
         MockWinstonProvider,
+        { provide: CalloutFramingService, useValue: framingService },
         {
           provide: RoleSetService,
           useValue: {
@@ -111,12 +118,6 @@ describe('CalloutService — card-variant settings wiring', () => {
       ],
     })
       .useMocker(token => {
-        if (
-          typeof token === 'function' &&
-          token.name === 'CalloutFramingService'
-        ) {
-          return mockFramingService;
-        }
         if (
           typeof token === 'function' &&
           token.name === 'CalloutContributionDefaultsService'
@@ -134,26 +135,32 @@ describe('CalloutService — card-variant settings wiring', () => {
       .compile();
 
     service = module.get(CalloutService);
+    // Call-through spy on the private host-scope guard.
+    scopeGuardSpy = vi.spyOn(service as any, 'validateSelectionScopeGuard');
 
-    mockFramingService.createCalloutFraming.mockResolvedValue({
-      id: 'framing-1',
-      type: CalloutFramingType.SPACES,
-      profile: { storageBucket: { id: 'sb-1' } },
-    });
+    calloutRepo = module.get<any>(getRepositoryToken(Callout));
+    vi.mocked(calloutRepo.save).mockImplementation(async (c: any) => c);
+    const storageAggregatorResolverService = module.get(
+      StorageAggregatorResolverService
+    );
+    vi.mocked(
+      storageAggregatorResolverService.getStorageAggregatorForCallout
+    ).mockResolvedValue({ id: 'agg-1' } as any);
   });
 
-  function makeSpacesCalloutInput(spaces?: {
-    cardVariant?: SpaceCollectionCardVariant;
-  }) {
+  function makeCalloutInput(
+    type: CalloutFramingType,
+    framingSettings: Record<string, unknown>
+  ) {
     return {
-      nameID: 'test-spaces-callout',
+      nameID: 'test-callout',
       framing: {
-        type: CalloutFramingType.SPACES,
+        type,
         profile: { displayName: 'Test', tagsets: [] },
         tags: [],
       },
       settings: {
-        framing: { spaces },
+        framing: framingSettings,
         contribution: { allowedTypes: [] },
       },
       contributions: [],
@@ -161,118 +168,94 @@ describe('CalloutService — card-variant settings wiring', () => {
     } as any;
   }
 
+  const makeSpacesCalloutInput = (spaces?: {
+    cardVariant?: SpaceCollectionCardVariant;
+  }) => makeCalloutInput(CalloutFramingType.SPACES, { spaces });
+
+  const create = (input: any) =>
+    service.createCallout(
+      input,
+      [],
+      { id: 'agg-1' } as any,
+      actorContextData.actorContext,
+      'user-1'
+    );
+
   describe('createCallout', () => {
     it('persists an EXPANDED card variant on a SPACES callout', async () => {
-      const result = await service.createCallout(
+      const result = await create(
         makeSpacesCalloutInput({
           cardVariant: SpaceCollectionCardVariant.EXPANDED,
-        }),
-        [],
-        { id: 'agg-1' } as any,
-        actorContextData.actorContext,
-        'user-1'
+        })
       );
 
       expect(result.settings.framing.spaces?.cardVariant).toBe(
         SpaceCollectionCardVariant.EXPANDED
       );
       expect(
-        mockFramingService.validateAndNormalizeSpacesSettings
+        framingService.validateAndNormalizeSpacesSettings
       ).toHaveBeenCalledWith(CalloutFramingType.SPACES, expect.anything(), {
         cardVariant: SpaceCollectionCardVariant.EXPANDED,
       });
     });
 
     it('defaults to COMPACT on a SPACES callout with no spaces settings', async () => {
-      const result = await service.createCallout(
-        makeSpacesCalloutInput(undefined),
-        [],
-        { id: 'agg-1' } as any,
-        actorContextData.actorContext,
-        'user-1'
-      );
+      const result = await create(makeSpacesCalloutInput(undefined));
 
-      expect(result.settings.framing.spaces?.cardVariant).toBe(
-        SpaceCollectionCardVariant.COMPACT
-      );
+      expect(result.settings.framing.spaces).toEqual({
+        cardVariant: SpaceCollectionCardVariant.COMPACT,
+      });
     });
 
     it('defaults to COMPACT on a SPACES callout with an empty spaces block ({})', async () => {
       // `spaces: {}` — the shape a client sends when it builds the block but
       // leaves `cardVariant` undefined (dropped by JSON variable serialization).
-      const result = await service.createCallout(
-        makeSpacesCalloutInput({}),
-        [],
-        { id: 'agg-1' } as any,
-        actorContextData.actorContext,
-        'user-1'
-      );
+      const result = await create(makeSpacesCalloutInput({}));
 
-      expect(result.settings.framing.spaces?.cardVariant).toBe(
-        SpaceCollectionCardVariant.COMPACT
-      );
+      expect(result.settings.framing.spaces).toEqual({
+        cardVariant: SpaceCollectionCardVariant.COMPACT,
+      });
     });
 
-    it('rejects card-variant settings on a NONE callout and persists nothing', async () => {
-      mockFramingService.createCalloutFraming.mockResolvedValue({
-        id: 'framing-none',
-        type: CalloutFramingType.NONE,
-        profile: { storageBucket: { id: 'sb-none' } },
-      });
-      // Exercise the real rejection shape by having the stub throw, exactly
-      // as the real normalizer does for a non-SPACES kind with incoming data.
-      mockFramingService.validateAndNormalizeSpacesSettings.mockImplementationOnce(
-        () => {
-          throw new Error(
-            'Card-variant settings can only be set when framing.type = SPACES.'
-          );
-        }
-      );
-
-      const input = {
-        nameID: 'test-none-callout',
-        framing: {
-          type: CalloutFramingType.NONE,
-          profile: { displayName: 'Test', tagsets: [] },
-          tags: [],
-        },
-        settings: {
-          framing: {
-            spaces: { cardVariant: SpaceCollectionCardVariant.EXPANDED },
-          },
-          contribution: { allowedTypes: [] },
-        },
-        contributions: [],
-        classification: {},
-      } as any;
-
+    it('rejects card-variant settings on a NONE callout before creating any framing', async () => {
       await expect(
-        service.createCallout(
-          input,
-          [],
-          { id: 'agg-1' } as any,
-          actorContextData.actorContext,
-          'user-1'
+        create(
+          makeCalloutInput(CalloutFramingType.NONE, {
+            spaces: { cardVariant: SpaceCollectionCardVariant.EXPANDED },
+          })
         )
-      ).rejects.toThrow();
+      ).rejects.toThrow(
+        'Card-variant settings can only be set when framing.type = SPACES.'
+      );
+      expect(framingService.createCalloutFraming).not.toHaveBeenCalled();
+      expect(calloutRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('rejects selection settings on a NONE callout before creating any framing', async () => {
+      await expect(
+        create(
+          makeCalloutInput(CalloutFramingType.NONE, {
+            selection: { mode: CalloutSelectionMode.AUTO },
+          })
+        )
+      ).rejects.toThrow(ValidationException);
+      expect(framingService.createCalloutFraming).not.toHaveBeenCalled();
     });
   });
 
   describe('updateCallout', () => {
-    function existingSpacesCallout(spaces?: {
-      cardVariant: SpaceCollectionCardVariant;
-    }) {
+    function existingCallout(
+      type: CalloutFramingType,
+      framingSettings: Record<string, unknown>
+    ) {
       return {
         id: 'callout-1',
-        framing: { id: 'framing-1', type: CalloutFramingType.SPACES },
+        framing: { id: 'framing-1', type },
         contributionDefaults: { id: 'defaults-1' },
         settings: {
           contribution: { allowedTypes: [] },
-          framing: {
-            commentsEnabled: true,
-            spaces,
-            selection: { mode: CalloutSelectionMode.AUTO, selectedIds: [] },
-          },
+          // commentsEnabled false: no comment room is created on update.
+          framing: { commentsEnabled: false, ...framingSettings },
         },
         classification: { id: 'class-1', tagsets: [] },
         calloutsSet: { id: 'cs-1' },
@@ -280,32 +263,32 @@ describe('CalloutService — card-variant settings wiring', () => {
       } as any;
     }
 
-    beforeEach(async () => {
-      const { getRepositoryToken } = await import('@nestjs/typeorm');
-      const calloutRepo = module.get<any>(getRepositoryToken(Callout));
-      vi.mocked(calloutRepo.save).mockImplementation(async (c: any) => c);
+    function existingSpacesCallout(
+      spaces?: { cardVariant: SpaceCollectionCardVariant },
+      selection: { mode: CalloutSelectionMode; selectedIds: string[] } = {
+        mode: CalloutSelectionMode.AUTO,
+        selectedIds: [],
+      }
+    ) {
+      return existingCallout(CalloutFramingType.SPACES, { spaces, selection });
+    }
 
-      const storageAggregatorResolverService = module.get(
-        StorageAggregatorResolverService
-      );
-      vi.mocked(
-        storageAggregatorResolverService.getStorageAggregatorForCallout
-      ).mockResolvedValue({ id: 'agg-1' } as any);
-    });
-
-    it('keeps stored EXPANDED when the update omits spaces', async () => {
-      const callout = existingSpacesCallout({
-        cardVariant: SpaceCollectionCardVariant.EXPANDED,
-      });
-      const { getRepositoryToken } = await import('@nestjs/typeorm');
-      const calloutRepo = module.get<any>(getRepositoryToken(Callout));
+    async function update(callout: any, updateData: any) {
       vi.mocked(calloutRepo.findOne).mockResolvedValue(callout);
-
-      const result = await service.updateCallout(
+      return service.updateCallout(
         callout,
-        { settings: { framing: { commentsEnabled: false } } } as any,
+        updateData,
         actorContextData.actorContext,
         'user-1'
+      );
+    }
+
+    it('keeps stored EXPANDED when the update omits spaces', async () => {
+      const result = await update(
+        existingSpacesCallout({
+          cardVariant: SpaceCollectionCardVariant.EXPANDED,
+        }),
+        { settings: { framing: { commentsEnabled: false } } }
       );
 
       expect(result.settings.framing.spaces?.cardVariant).toBe(
@@ -314,18 +297,11 @@ describe('CalloutService — card-variant settings wiring', () => {
     });
 
     it('keeps stored EXPANDED when the update sends spaces: {}', async () => {
-      const callout = existingSpacesCallout({
-        cardVariant: SpaceCollectionCardVariant.EXPANDED,
-      });
-      const { getRepositoryToken } = await import('@nestjs/typeorm');
-      const calloutRepo = module.get<any>(getRepositoryToken(Callout));
-      vi.mocked(calloutRepo.findOne).mockResolvedValue(callout);
-
-      const result = await service.updateCallout(
-        callout,
-        { settings: { framing: { spaces: {} } } } as any,
-        actorContextData.actorContext,
-        'user-1'
+      const result = await update(
+        existingSpacesCallout({
+          cardVariant: SpaceCollectionCardVariant.EXPANDED,
+        }),
+        { settings: { framing: { spaces: {} } } }
       );
 
       expect(result.settings.framing.spaces?.cardVariant).toBe(
@@ -333,47 +309,98 @@ describe('CalloutService — card-variant settings wiring', () => {
       );
     });
 
-    it('a legacy callout with no stored block sending spaces: {} persists COMPACT', async () => {
-      const callout = existingSpacesCallout(undefined);
-      const { getRepositoryToken } = await import('@nestjs/typeorm');
-      const calloutRepo = module.get<any>(getRepositoryToken(Callout));
-      vi.mocked(calloutRepo.findOne).mockResolvedValue(callout);
-
-      const result = await service.updateCallout(
-        callout,
-        { settings: { framing: { spaces: {} } } } as any,
-        actorContextData.actorContext,
-        'user-1'
+    it('keeps stored EXPANDED when the update sends spaces: null', async () => {
+      const result = await update(
+        existingSpacesCallout({
+          cardVariant: SpaceCollectionCardVariant.EXPANDED,
+        }),
+        { settings: { framing: { spaces: null } } }
       );
 
-      expect(result.settings.framing.spaces?.cardVariant).toBe(
-        SpaceCollectionCardVariant.COMPACT
-      );
+      expect(result.settings.framing.spaces).toEqual({
+        cardVariant: SpaceCollectionCardVariant.EXPANDED,
+      });
     });
 
-    it('still invokes the selection scope guard exactly as before (independence)', async () => {
-      const callout = existingSpacesCallout({
+    it('a legacy callout with no stored block sending spaces: {} persists COMPACT', async () => {
+      const result = await update(existingSpacesCallout(undefined), {
+        settings: { framing: { spaces: {} } },
+      });
+
+      expect(result.settings.framing.spaces).toEqual({
         cardVariant: SpaceCollectionCardVariant.COMPACT,
       });
-      const { getRepositoryToken } = await import('@nestjs/typeorm');
-      const calloutRepo = module.get<any>(getRepositoryToken(Callout));
-      vi.mocked(calloutRepo.findOne).mockResolvedValue(callout);
-      calloutRepo.manager = {
-        findOne: vi.fn().mockResolvedValue({
-          id: 'host-space-1',
-          subspaces: [{ id: 'sub-1' }],
-        }),
-        createQueryBuilder: vi.fn().mockReturnValue({
-          select: vi.fn().mockReturnThis(),
-          from: vi.fn().mockReturnThis(),
-          innerJoin: vi.fn().mockReturnThis(),
-          where: vi.fn().mockReturnThis(),
-          getRawOne: vi.fn().mockResolvedValue({ spaceId: 'host-space-1' }),
-        }),
-      };
+    });
 
-      const result = await service.updateCallout(
-        callout,
+    it('keeps a stored CUSTOM selection when the update sends selection: null', async () => {
+      // Stored ids are stale (no longer subspaces of the host): they must stay
+      // inert — kept as stored, never re-validated (025 FR-008).
+      mockHostSpace([]);
+      const result = await update(
+        existingSpacesCallout(
+          { cardVariant: SpaceCollectionCardVariant.EXPANDED },
+          { mode: CalloutSelectionMode.CUSTOM, selectedIds: ['a', 'b'] }
+        ),
+        { settings: { framing: { selection: null } } }
+      );
+
+      expect(result.settings.framing.selection).toEqual({
+        mode: CalloutSelectionMode.CUSTOM,
+        selectedIds: ['a', 'b'],
+      });
+      expect(scopeGuardSpy).not.toHaveBeenCalled();
+    });
+
+    it('selectedIds: null with stale stored ids succeeds without running the scope guard', async () => {
+      mockHostSpace([]); // 'stale-1' is no longer a subspace of the host
+      const result = await update(
+        existingSpacesCallout(
+          { cardVariant: SpaceCollectionCardVariant.COMPACT },
+          { mode: CalloutSelectionMode.CUSTOM, selectedIds: ['stale-1'] }
+        ),
+        {
+          settings: {
+            framing: {
+              selection: { selectedIds: null },
+              spaces: { cardVariant: SpaceCollectionCardVariant.EXPANDED },
+            },
+          },
+        }
+      );
+
+      expect(result.settings.framing.selection).toEqual({
+        mode: CalloutSelectionMode.CUSTOM,
+        selectedIds: ['stale-1'],
+      });
+      expect(result.settings.framing.spaces?.cardVariant).toBe(
+        SpaceCollectionCardVariant.EXPANDED
+      );
+      expect(scopeGuardSpy).not.toHaveBeenCalled();
+    });
+
+    it('omitting selectedIds does not run the scope guard', async () => {
+      await update(
+        existingSpacesCallout({
+          cardVariant: SpaceCollectionCardVariant.COMPACT,
+        }),
+        {
+          settings: {
+            framing: {
+              spaces: { cardVariant: SpaceCollectionCardVariant.EXPANDED },
+            },
+          },
+        }
+      );
+
+      expect(scopeGuardSpy).not.toHaveBeenCalled();
+    });
+
+    it('runs the selection scope guard on submitted selectedIds, independently of spaces', async () => {
+      mockHostSpace(['sub-1']);
+      const result = await update(
+        existingSpacesCallout({
+          cardVariant: SpaceCollectionCardVariant.COMPACT,
+        }),
         {
           settings: {
             framing: {
@@ -384,11 +411,15 @@ describe('CalloutService — card-variant settings wiring', () => {
               },
             },
           },
-        } as any,
-        actorContextData.actorContext,
-        'user-1'
+        }
       );
 
+      expect(scopeGuardSpy).toHaveBeenCalledTimes(1);
+      expect(scopeGuardSpy).toHaveBeenCalledWith(
+        CalloutFramingType.SPACES,
+        { mode: CalloutSelectionMode.CUSTOM, selectedIds: ['sub-1'] },
+        'host-space-1'
+      );
       // Writing spaces never disturbs the sibling selection block.
       expect(result.settings.framing.selection).toEqual({
         mode: CalloutSelectionMode.CUSTOM,
@@ -397,6 +428,95 @@ describe('CalloutService — card-variant settings wiring', () => {
       expect(result.settings.framing.spaces?.cardVariant).toBe(
         SpaceCollectionCardVariant.EXPANDED
       );
+    });
+
+    it('rejects a submitted out-of-scope selectedId via the scope guard', async () => {
+      mockHostSpace(['sub-1']);
+      await expect(
+        update(existingSpacesCallout(undefined), {
+          settings: {
+            framing: {
+              selection: {
+                mode: CalloutSelectionMode.CUSTOM,
+                selectedIds: ['foreign'],
+              },
+            },
+          },
+        })
+      ).rejects.toThrow(ValidationException);
+      expect(scopeGuardSpy).toHaveBeenCalledTimes(1);
+      expect(calloutRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('rejects an off-kind spaces block on a WHITEBOARD -> NONE change before touching the framing', async () => {
+      await expect(
+        update(existingCallout(CalloutFramingType.WHITEBOARD, {}), {
+          framing: { type: CalloutFramingType.NONE },
+          settings: {
+            framing: {
+              spaces: { cardVariant: SpaceCollectionCardVariant.EXPANDED },
+            },
+          },
+        })
+      ).rejects.toThrow(
+        'Card-variant settings can only be set when framing.type = SPACES.'
+      );
+      // updateCalloutFraming deletes the whiteboard on a type change; a
+      // rejected request must never reach it.
+      expect(framingService.updateCalloutFraming).not.toHaveBeenCalled();
+      expect(calloutRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('rejects an off-kind selection block on a WHITEBOARD -> NONE change before touching the framing', async () => {
+      await expect(
+        update(existingCallout(CalloutFramingType.WHITEBOARD, {}), {
+          framing: { type: CalloutFramingType.NONE },
+          settings: {
+            framing: { selection: { mode: CalloutSelectionMode.AUTO } },
+          },
+        })
+      ).rejects.toThrow(
+        'Selection settings can only be set when framing.type ∈ {CONTRIBUTORS, SPACES}.'
+      );
+      expect(framingService.updateCalloutFraming).not.toHaveBeenCalled();
+    });
+
+    it('validates the settings blocks against the TARGET framing type', async () => {
+      // Stored type NONE, target SPACES: a spaces block is valid for the target.
+      const result = await update(
+        existingCallout(CalloutFramingType.NONE, {}),
+        {
+          framing: { type: CalloutFramingType.SPACES },
+          settings: {
+            framing: {
+              spaces: { cardVariant: SpaceCollectionCardVariant.EXPANDED },
+            },
+          },
+        }
+      );
+
+      expect(framingService.updateCalloutFraming).toHaveBeenCalledTimes(1);
+      expect(result.settings.framing.spaces).toEqual({
+        cardVariant: SpaceCollectionCardVariant.EXPANDED,
+      });
+    });
+
+    it('contributors.mapView: null still clears the stored map view', async () => {
+      const result = await update(
+        existingCallout(CalloutFramingType.CONTRIBUTORS, {
+          contributors: {
+            contributorTypes: [ActorType.USER],
+            mapView: { longitude: 1, latitude: 2, zoom: 3 },
+          },
+          selection: { mode: CalloutSelectionMode.AUTO, selectedIds: [] },
+        }),
+        { settings: { framing: { contributors: { mapView: null } } } }
+      );
+
+      expect(result.settings.framing.contributors?.mapView).toBeNull();
+      expect(result.settings.framing.contributors?.contributorTypes).toEqual([
+        ActorType.USER,
+      ]);
     });
   });
 });
@@ -413,10 +533,7 @@ describe('CalloutService — card-variant settings wiring', () => {
  * collaborators, so a direct instantiation (bypassing Nest DI) is sufficient.
  */
 describe('CalloutService settings merge -> real CalloutFramingService normalizers (regression)', () => {
-  type FramingServiceCtor = new (...args: unknown[]) => CalloutFramingService;
-  const realFramingService = new (
-    CalloutFramingService as unknown as FramingServiceCtor
-  )(...(Array(13).fill(undefined) as unknown[]));
+  const realFramingService = newRealFramingService();
 
   const storedSpacesFraming = () =>
     ({
@@ -580,6 +697,23 @@ describe('CalloutService settings merge -> real CalloutFramingService normalizer
       } as any;
       const merged = mergeCalloutSettings(stored, { visibility: null });
       expect(merged.visibility).toBe('PUBLISHED');
+    });
+
+    it('update: framing.spaces: null and framing.selection: null keep the stored blocks', () => {
+      const stored = { framing: storedSpacesFraming() } as any;
+      const input = { framing: { spaces: null, selection: null } };
+      const inputBefore = cloneDeep(input);
+
+      const merged = mergeCalloutSettings(stored, input);
+      expect(merged.framing.spaces).toEqual({
+        cardVariant: SpaceCollectionCardVariant.EXPANDED,
+      });
+      expect(merged.framing.selection).toEqual({
+        mode: CalloutSelectionMode.CUSTOM,
+        selectedIds: ['a', 'b'],
+      });
+      // The caller's input is read again after the merge: never mutated.
+      expect(input).toEqual(inputBefore);
     });
 
     it('update: an object-valued leaf can still be cleared with null (contributors.mapView)', () => {

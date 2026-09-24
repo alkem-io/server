@@ -844,6 +844,64 @@ export class CalloutFramingService {
   }
 
   /**
+   * Reject a caller-provided `selection` or `spaces` settings block that the
+   * target framing type cannot carry. Pure — no I/O, no mutation — so
+   * CalloutService runs it BEFORE creating or updating the framing: a rejected
+   * request must persist nothing (framing updates have side effects, e.g.
+   * deleting a whiteboard on a type change). The normalizers below enforce
+   * the same rules with the same messages.
+   *
+   * An explicit `null` block is "not provided", never a caller error.
+   */
+  public validateSettingsBlocksForFramingType(
+    framingType: CalloutFramingType,
+    incomingFramingSettings?: {
+      selection?: unknown;
+      spaces?: unknown;
+    } | null
+  ): void {
+    this.assertSelectionSettingsAllowed(
+      framingType,
+      incomingFramingSettings?.selection
+    );
+    this.assertSpacesSettingsAllowed(
+      framingType,
+      incomingFramingSettings?.spaces
+    );
+  }
+
+  // `!= null` (not `!== undefined`) in both assertions: the GraphQL input is
+  // nullable and `@IsOptional()` lets an explicit `null` through, which means
+  // "not provided" — matching the innovation-flow-state settings convention.
+  private assertSelectionSettingsAllowed(
+    framingType: CalloutFramingType,
+    incomingSelection: unknown
+  ): void {
+    if (
+      incomingSelection != null &&
+      framingType !== CalloutFramingType.CONTRIBUTORS &&
+      framingType !== CalloutFramingType.SPACES
+    ) {
+      throw new ValidationException(
+        'Selection settings can only be set when framing.type ∈ {CONTRIBUTORS, SPACES}.',
+        LogContext.COLLABORATION
+      );
+    }
+  }
+
+  private assertSpacesSettingsAllowed(
+    framingType: CalloutFramingType,
+    incomingSpaces: unknown
+  ): void {
+    if (incomingSpaces != null && framingType !== CalloutFramingType.SPACES) {
+      throw new ValidationException(
+        'Card-variant settings can only be set when framing.type = SPACES.',
+        LogContext.COLLABORATION
+      );
+    }
+  }
+
+  /**
    * Validate + normalize the selection settings against the framing type
    * (FR-013/FR-022 — workspace#025-callout-manual-selection). Mutates and
    * returns the framing settings object so the caller can persist the result.
@@ -858,13 +916,20 @@ export class CalloutFramingService {
    * - Partial-update semantics (FR-022): omitted field ⇒ keep stored value;
    *   provided field ⇒ replace whole. Works identically for create (no stored
    *   value → both fields default to AUTO / []).
+   *   An explicit `null` — on the whole block or on a field — is "not
+   *   provided" and keeps the stored value.
    * - `selectedIds` is deduplicated in place (FR-004/T004).
    * - The byte-identical contributors guard above is kept untouched.
    */
   public validateAndNormalizeSelectionSettings(
     framingType: CalloutFramingType,
     framingSettings: ICalloutSettingsFraming,
-    incomingSelection?: { mode?: CalloutSelectionMode; selectedIds?: string[] }
+    // Nullable, not just optional: the GraphQL input is nullable and
+    // `@IsOptional()` passes an explicit `null` through at runtime.
+    incomingSelection?: {
+      mode?: CalloutSelectionMode | null;
+      selectedIds?: string[] | null;
+    } | null
   ): ICalloutSettingsFraming {
     const isCollectionKind =
       framingType === CalloutFramingType.CONTRIBUTORS ||
@@ -872,14 +937,7 @@ export class CalloutFramingService {
 
     if (!isCollectionKind) {
       // Any provided selection on a non-collection kind is a caller error.
-      // `!= null`: the GraphQL input is nullable and `@IsOptional()` passes an
-      // explicit `null` through, which means "not provided", not a value.
-      if (incomingSelection != null) {
-        throw new ValidationException(
-          'Selection settings can only be set when framing.type ∈ {CONTRIBUTORS, SPACES}.',
-          LogContext.COLLABORATION
-        );
-      }
+      this.assertSelectionSettingsAllowed(framingType, incomingSelection);
       // Non-collection framing: strip any stale selection that might linger
       // from a type change (defensive; the merge path in CalloutService strips
       // it too, but belt-and-suspenders).
@@ -933,10 +991,11 @@ export class CalloutFramingService {
    *   (or default to COMPACT when nothing is stored); provided `cardVariant`
    *   ⇒ replace it.
    *
-   * An explicit `cardVariant: null` from a caller never reaches a stored
-   * value: the settings merge in CalloutService keeps the stored scalar when
-   * the incoming leaf is `null` (see callout.settings.merge.ts). This
-   * normalizer still treats `null` as "not provided" so it is safe on its own.
+   * An explicit `null` from a caller — on `cardVariant` or on the whole
+   * `spaces` block — never reaches a stored value: the settings merge in
+   * CalloutService keeps the stored value in both cases (see
+   * callout.settings.merge.ts). This normalizer still treats a `null`
+   * `incomingSpaces` / `cardVariant` as "not provided" so it is safe on its own.
    */
   public validateAndNormalizeSpacesSettings(
     framingType: CalloutFramingType,
@@ -952,16 +1011,7 @@ export class CalloutFramingService {
 
     if (!isSpaces) {
       // Any provided spaces settings on a non-SPACES kind is a caller error.
-      // `!= null` (not `!== undefined`): the GraphQL input is nullable, so a
-      // client can send an explicit `spaces: null` for an untouched/cleared
-      // optional block — that must be treated as "not provided", not as a
-      // caller error, matching the innovation-flow-state settings convention.
-      if (incomingSpaces != null) {
-        throw new ValidationException(
-          'Card-variant settings can only be set when framing.type = SPACES.',
-          LogContext.COLLABORATION
-        );
-      }
+      this.assertSpacesSettingsAllowed(framingType, incomingSpaces);
       // Strip any stale block that might linger from a type change.
       delete framingSettings.spaces;
       return framingSettings;
