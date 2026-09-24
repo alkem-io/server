@@ -125,6 +125,20 @@ describe('RoleSetCacheService', () => {
       expect(results).toEqual([[RoleName.MEMBER], undefined]);
     });
 
+    it('should report a null mget slot (Redis nil) as a miss', async () => {
+      (cacheManager.store.mget as Mock).mockResolvedValue([
+        null,
+        [RoleName.MEMBER],
+      ]);
+
+      const results = await service.getActorRolesBatchFromCache([
+        { actorID: 'a1', roleSetId: 'rs-1' },
+        { actorID: 'a2', roleSetId: 'rs-2' },
+      ]);
+
+      expect(results).toEqual([undefined, [RoleName.MEMBER]]);
+    });
+
     it('should use mget for membership status batch', async () => {
       const entries = [
         { actorID: 'a1', roleSetId: 'rs-1' },
