@@ -3,6 +3,7 @@ import { ActorModule } from '@domain/actor/actor/actor.module';
 import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ConversationModule } from '@domain/communication/conversation/conversation.module';
+import { MessageAttachmentModule } from '@domain/communication/message-attachment/message.attachment.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { RoomLookupModule } from '@domain/communication/room-lookup/room.lookup.module';
 import { RoomMentionsModule } from '@domain/communication/room-mentions/room.mentions.module';
@@ -44,6 +45,7 @@ import { VcInvocationService } from './vc.invocation.service';
     EntityResolverModule,
     InAppNotificationModule,
     ConversationModule,
+    MessageAttachmentModule,
     // 034-messaging-notifications
     UserLookupModule,
     NotificationRecipientsModule,

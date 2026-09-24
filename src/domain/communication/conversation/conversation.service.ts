@@ -2,7 +2,9 @@ import { CONVERSATION_GROUP_MEMBER_COUNT_MAX } from '@common/constants';
 import { LogContext } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CONVERSATION_MEDIA_ALLOWED_MIME_TYPES } from '@common/enums/mime.file.type';
 import { RoomType } from '@common/enums/room.type';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import {
   EntityNotFoundException,
@@ -21,6 +23,10 @@ import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -28,12 +34,14 @@ import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { CommunicationAdapterException } from '@services/adapters/communication-adapter/communication.adapter.exception';
 import { RoomMemberUpdatedEvent } from '@services/event-handlers/internal/message-inbox/room.member.updated.event';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
 import { EntityManager, FindOneOptions, In, Repository } from 'typeorm';
 import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
 import { IConversationMembership } from '../conversation-membership/conversation.membership.interface';
 import { Conversation } from './conversation.entity';
 import { IConversation } from './conversation.interface';
+import { CONVERSATION_MEDIA_MAX_FILE_SIZE } from './conversation.media.constants';
 
 /**
  * Extended membership type that includes actor type information.
@@ -54,6 +62,9 @@ export class ConversationService {
     private virtualActorLookupService: VirtualActorLookupService,
     private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService,
     private communicationAdapter: CommunicationAdapter,
+    private storageAggregatorService: StorageAggregatorService,
+    private storageBucketService: StorageBucketService,
+    private storageAggregatorResolverService: StorageAggregatorResolverService,
     @InjectRepository(Conversation)
     private conversationRepository: Repository<Conversation>,
     @InjectRepository(ConversationMembership)
@@ -61,8 +72,6 @@ export class ConversationService {
     private eventEmitter: EventEmitter2,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
-
-  // TODO: do we support uploading content in a conversation? If so will need to pass in a storage aggregator
 
   /**
    * Create a conversation with N members.
@@ -100,42 +109,99 @@ export class ConversationService {
       AuthorizationPolicyType.COMMUNICATION_CONVERSATION
     );
 
-    // Create room — either by asking the adapter to create the Matrix room
-    // (normal flow) or with a pre-assigned UUID (Element room-check flow:
-    // Synapse creates the Matrix room, the adapter reconciles it; the server
-    // MUST NOT ask the adapter to create a room here).
-    conversation.room = externalRoomId
-      ? await this.roomService.createRoomFromExternal({
-          id: externalRoomId,
-          type: roomType,
+    // Eagerly create the per-conversation storage so message attachments
+    // (feature 013) have a membership-authorized home from the start. The
+    // bucket auth is mirrored from the conversation in
+    // ConversationAuthorizationService.applyAuthorizationPolicy.
+    //
+    // This commits its own transaction (storage_aggregator + bucket + 2 auth
+    // rows) BEFORE the room (a Matrix RPC that can fail) and the conversation /
+    // membership rows are persisted. If any of those later steps throws, roll
+    // the storage back so no orphaned storage_aggregator/storage_bucket/
+    // authorization_policy remains (FIX 1). Least-invasive of the options:
+    // preserves the "home from the start" ordering and adds only cleanup.
+    //
+    // Unconditional: EVERY new conversation is provisioned here, so it has a
+    // bucket from the moment it exists. Pre-existing conversations are covered
+    // by the 1782300000002 backfill migration. "No bucket yet" therefore only
+    // survives as a tolerated read-side state (ConversationService
+    // .getStorageBucket throws EntityNotInitializedException and
+    // ConversationResolverFields.storageBucket resolves it to null, and the auth
+    // cascade skips a conversation with no aggregator) for rows the backfill has
+    // not yet reached.
+    conversation.storageAggregator =
+      await this.createConversationStorageAggregator();
+
+    // Tracks whether the conversation ROW has been committed. Rollback is only
+    // legitimate while the conversation is still uncommitted (B2) — see the
+    // catch block.
+    let conversationPersisted = false;
+
+    try {
+      // Create room — either by asking the adapter to create the Matrix room
+      // (normal flow) or with a pre-assigned UUID (Element room-check flow:
+      // Synapse creates the Matrix room, the adapter reconciles it; the server
+      // MUST NOT ask the adapter to create a room here).
+      conversation.room = externalRoomId
+        ? await this.roomService.createRoomFromExternal({
+            id: externalRoomId,
+            type: roomType,
+          })
+        : await this.createConversationRoom(
+            allMemberIds,
+            roomType,
+            displayName,
+            avatarUrl
+          );
+
+      // Save conversation to get ID
+      const savedConversation = await this.conversationRepository.save(
+        conversation as Conversation
+      );
+      conversationPersisted = true;
+
+      // Create membership records for all members
+      const memberships = allMemberIds.map(actorID =>
+        this.conversationMembershipRepository.create({
+          conversationId: savedConversation.id,
+          actorID,
         })
-      : await this.createConversationRoom(
-          allMemberIds,
-          roomType,
-          displayName,
-          avatarUrl
+      );
+      await this.conversationMembershipRepository.save(memberships);
+
+      this.logger.verbose?.(
+        `Created ${roomType} conversation ${savedConversation.id} with ${allMemberIds.length} members`,
+        LogContext.COMMUNICATION_CONVERSATION
+      );
+
+      return savedConversation;
+    } catch (error) {
+      // Roll back the pre-created storage so a failed room/conversation/
+      // membership step never leaves orphaned storage (FIX 1). Best-effort —
+      // never mask the original failure.
+      //
+      // ONLY roll back what is genuinely UNCOMMITTED (B2). Once the conversation
+      // row itself is durable (the failure was a later step, e.g. the membership
+      // insert), deleting its storage aggregator is DESTRUCTIVE, not a rollback:
+      // `conversation.storageAggregatorId` is `ON DELETE SET NULL`, so the
+      // committed conversation would be left with no storage and no repair path
+      // (the one-shot backfill migration has already run and only fills
+      // conversations it saw). A conversation with intact storage but missing
+      // memberships is repairable — memberships are (re)persisted from
+      // room.member.updated events and the auth reset re-runs from there — so
+      // prefer leaving it repairable and LOUD over destroying its storage.
+      const orphanedAggregatorId = conversation.storageAggregator?.id;
+      if (orphanedAggregatorId && !conversationPersisted) {
+        await this.rollbackConversationStorageAggregator(orphanedAggregatorId);
+      } else if (orphanedAggregatorId) {
+        this.logger.error(
+          `Conversation ${conversation.id} was already persisted when creation failed; leaving its storage aggregator ${orphanedAggregatorId} intact for repair rather than stranding the conversation without storage`,
+          (error as Error)?.stack,
+          LogContext.COMMUNICATION_CONVERSATION
         );
-
-    // Save conversation to get ID
-    const savedConversation = await this.conversationRepository.save(
-      conversation as Conversation
-    );
-
-    // Create membership records for all members
-    const memberships = allMemberIds.map(actorID =>
-      this.conversationMembershipRepository.create({
-        conversationId: savedConversation.id,
-        actorID,
-      })
-    );
-    await this.conversationMembershipRepository.save(memberships);
-
-    this.logger.verbose?.(
-      `Created ${roomType} conversation ${savedConversation.id} with ${allMemberIds.length} members`,
-      LogContext.COMMUNICATION_CONVERSATION
-    );
-
-    return savedConversation;
+      }
+      throw error;
+    }
   }
 
   /**
@@ -163,6 +229,105 @@ export class ConversationService {
       memberActorIDs,
       avatarUrl,
     });
+  }
+
+  /**
+   * Create the per-conversation StorageAggregator + bucket (feature 013),
+   * parented to the platform StorageAggregator. The directStorage bucket policy
+   * is curated for conversation media: a safe MIME set (images/audio/video/
+   * common docs; executables/scripts/unknown rejected) and a 50 MiB cap, so the
+   * limits are enforced server-side and forwarded to file-service on upload —
+   * not only on the client (FR-020, FR-022).
+   */
+  private async createConversationStorageAggregator(): Promise<IStorageAggregator> {
+    const platformStorageAggregator =
+      await this.storageAggregatorResolverService.getPlatformStorageAggregator();
+
+    const storageAggregator =
+      await this.storageAggregatorService.createStorageAggregator(
+        StorageAggregatorType.CONVERSATION,
+        platformStorageAggregator
+      );
+
+    // Tighten the directStorage bucket policy to the conversation media set.
+    // createStorageAggregator has ALREADY committed the aggregator + bucket + 2
+    // auth rows (step 1). This bucket save is a SECOND persistence step: if it
+    // fails transiently the exception would otherwise propagate BEFORE the
+    // aggregator is assigned to conversation.storageAggregator and BEFORE the
+    // caller's outer try/catch is entered, so the caller's rollback could not
+    // reach it and the just-created aggregator + bucket + auth rows would leak
+    // permanently (FIX 1). Keep this method ATOMIC instead: on a step-2 failure,
+    // roll the aggregator back via the SAME StorageAggregatorService.delete the
+    // caller's rollback drives, then re-throw — best-effort, never masking the
+    // original error.
+    const bucket = storageAggregator.directStorage;
+    if (bucket) {
+      try {
+        bucket.allowedMimeTypes = CONVERSATION_MEDIA_ALLOWED_MIME_TYPES;
+        bucket.maxFileSize = CONVERSATION_MEDIA_MAX_FILE_SIZE;
+        storageAggregator.directStorage =
+          await this.storageBucketService.save(bucket);
+      } catch (error) {
+        // Keep this method atomic: best-effort roll back the just-created
+        // aggregator, then re-throw the ORIGINAL error unmasked (FIX 1). The
+        // helper only handles its OWN cleanup failure.
+        await this.rollbackConversationStorageAggregator(storageAggregator.id);
+        throw error;
+      }
+    }
+
+    return storageAggregator;
+  }
+
+  /**
+   * Best-effort rollback of a conversation's storage aggregator during
+   * create-time cleanup (FIX 1). Shared by both createConversation catch
+   * blocks: the inner one (a partially-created aggregator whose step-2 bucket
+   * policy save failed) and the outer one (an aggregator orphaned by a later
+   * room/conversation/membership failure). Deletes the aggregator + bucket +
+   * auth rows via StorageAggregatorService.delete and never throws — it only
+   * logs its OWN cleanup failure so the caller can re-throw the ORIGINAL error
+   * unmasked.
+   */
+  private async rollbackConversationStorageAggregator(
+    aggregatorId: string
+  ): Promise<void> {
+    await this.storageAggregatorService
+      .delete(aggregatorId)
+      .catch(cleanupError =>
+        this.logger.error(
+          `Failed to roll back conversation storage aggregator ${aggregatorId} during create cleanup: ${
+            (cleanupError as Error)?.message
+          }`,
+          (cleanupError as Error)?.stack,
+          LogContext.COMMUNICATION_CONVERSATION
+        )
+      );
+  }
+
+  /**
+   * Resolve the conversation's storage bucket (feature 013, C1) with its
+   * authorization loaded, so the GraphQL resolver can READ-gate it and the web
+   * client can discover the bucket id + policy (allowedMimeTypes/maxFileSize)
+   * to upload attachments before sending.
+   */
+  public async getStorageBucket(
+    conversationID: string
+  ): Promise<IStorageBucket> {
+    const conversation = await this.getConversationOrFail(conversationID, {
+      relations: {
+        storageAggregator: { directStorage: { authorization: true } },
+      },
+    });
+    const bucket = conversation.storageAggregator?.directStorage;
+    if (!bucket) {
+      throw new EntityNotInitializedException(
+        'Conversation has no storage bucket',
+        LogContext.COMMUNICATION_CONVERSATION,
+        { conversationID }
+      );
+    }
+    return bucket;
   }
 
   public async getConversationOrFail(
@@ -468,6 +633,7 @@ export class ConversationService {
       relations: {
         room: true,
         messaging: true,
+        storageAggregator: true,
       },
     });
 
@@ -485,6 +651,41 @@ export class ConversationService {
     // Note: Conversations now belong to the platform Messaging, not to a user.
     // Memberships are cleaned up via cascade when the conversation is deleted.
 
+    // Release the per-conversation storage (feature 013) as the SINGLE deletion
+    // path (FIX 5). Delete the aggregator EXPLICITLY — this cleans its bucket +
+    // documents + auth (StorageAggregatorService.delete). The relation no longer
+    // cascade-removes (cascade: insert/update only), so the later
+    // conversationRepository.remove does NOT double-delete the already-removed
+    // aggregator (which previously threw EntityNotFound and orphaned bucket/docs).
+    // Detach the in-memory reference as well, so nothing revisits the removed row.
+    //
+    // ORDERING — this MUST run before BOTH the room delete and the authorization
+    // delete, because it is the only fallible REMOTE step (a file-service HTTP
+    // call per document) and it is the only one whose failure must stay
+    // recoverable:
+    //
+    //  * BEFORE `deleteRoom`: `Conversation.room` is a `@JoinColumn` FK declared
+    //    `onDelete: 'CASCADE'`, so deleting the ROOM row cascade-deletes the
+    //    CONVERSATION row with it. Running the teardown after `deleteRoom` meant
+    //    a teardown failure stranded the bucket + every attachment with NO
+    //    conversation row left to retry the delete from — unrecoverable, and the
+    //    opposite of what the previous comment here claimed.
+    //  * BEFORE the authorization delete: a teardown failure would otherwise
+    //    leave the conversation alive with a NULL authorizationId, so nothing
+    //    could authorize a retry — the conversation became undeletable.
+    //
+    // With the teardown first, a failure here leaves the conversation, its room
+    // and its authorization FULLY INTACT and the delete simply retryable. The
+    // reverse partial (storage released, then `deleteRoom` fails) is also
+    // recoverable: `storageAggregatorId` is `onDelete: 'SET NULL'`, so the
+    // surviving conversation just has no aggregator and the retry skips straight
+    // past this block.
+    const storageAggregatorId = conversation.storageAggregator?.id;
+    if (storageAggregatorId) {
+      await this.storageAggregatorService.delete(storageAggregatorId);
+      conversation.storageAggregator = undefined;
+    }
+
     // Delete the room entity
     const room = conversation.room;
     // For direct messaging rooms, provide sender/receiver IDs to handle Matrix cleanup
@@ -492,7 +693,11 @@ export class ConversationService {
       `Deleting conversation room (${room.id}) of type (${room.type})`,
       LogContext.COMMUNICATION_CONVERSATION
     );
-    // The Matrix adapter handles room type internally
+    // The Matrix adapter handles room type internally. NOTE: this also
+    // cascade-deletes the conversation row itself (see the FK note above), so
+    // everything after this point operates on an already-removed row —
+    // `authorizationPolicyService.delete` still cleans the now-unreferenced
+    // policy, and `conversationRepository.remove` is a no-op DELETE by id.
     await this.roomService.deleteRoom({
       roomID: conversation.room.id,
     });

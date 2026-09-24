@@ -320,6 +320,78 @@ describe('MessageInboxService', () => {
       );
     });
 
+    // feature 013: an edit changes the TEXT only. The published IMessage is
+    // rebuilt from the edit payload, so anything the attachments resolver needs
+    // has to be carried over from the original message — otherwise
+    // `Message.attachments` resolves to [] and editing a message makes its
+    // media vanish for every live subscriber.
+    it('carries the attachment resolution fields over from the original message', async () => {
+      const originalMessage = {
+        id: 'orig-msg-1',
+        timestamp: 999,
+        reactions: [],
+        rawAttachments: [{ media_id: 'media-1' }],
+        storageBucketId: 'bucket-1',
+        roomID: 'room-1',
+      };
+      const room = makeRoom();
+      roomLookupService.getMessageInRoom.mockResolvedValue({
+        message: originalMessage,
+        room,
+      } as any);
+
+      await service.handleMessageEdited(
+        new MessageEditedEvent({
+          roomId: 'room-1',
+          senderActorID: 'actor-1',
+          originalMessageId: 'orig-msg-1',
+          newMessageId: 'new-msg-1',
+          newContent: 'Updated content',
+          timestamp: 2000,
+        })
+      );
+
+      expect(subscriptionPublishService.publishRoomEvent).toHaveBeenCalledWith(
+        room,
+        MutationType.UPDATE,
+        expect.objectContaining({
+          rawAttachments: [{ media_id: 'media-1' }],
+          storageBucketId: 'bucket-1',
+          roomID: 'room-1',
+        })
+      );
+    });
+
+    it('falls back to the room id when the original message carries no roomID', async () => {
+      const room = makeRoom({ id: 'room-1' });
+      roomLookupService.getMessageInRoom.mockResolvedValue({
+        message: {
+          id: 'orig-msg-1',
+          timestamp: 999,
+          reactions: [],
+          rawAttachments: [{ media_id: 'media-1' }],
+        },
+        room,
+      } as any);
+
+      await service.handleMessageEdited(
+        new MessageEditedEvent({
+          roomId: 'room-1',
+          senderActorID: 'actor-1',
+          originalMessageId: 'orig-msg-1',
+          newMessageId: 'new-msg-1',
+          newContent: 'Updated content',
+          timestamp: 2000,
+        })
+      );
+
+      expect(subscriptionPublishService.publishRoomEvent).toHaveBeenCalledWith(
+        room,
+        MutationType.UPDATE,
+        expect.objectContaining({ roomID: 'room-1' })
+      );
+    });
+
     it('should not publish event when original message is not found', async () => {
       roomLookupService.getMessageInRoom.mockResolvedValue({
         message: null,

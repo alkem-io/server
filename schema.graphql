@@ -540,21 +540,27 @@ enum MemoSignatureVerificationStatus {
 }
 
 enum MimeType {
+  AAC
   AVIF
   BMP
   CSV
   DOC
   DOCX
+  FLAC
   GIF
   HEIC
   HEIF
   ICS
   JPEG
   JPG
+  MP3
+  MP4
   ODG
   ODP
   ODS
   ODT
+  OGA
+  OGV
   PDF
   PNG
   POTM
@@ -564,8 +570,12 @@ enum MimeType {
   PPT
   PPTM
   PPTX
+  QUICKTIME
   RTF
   SVG
+  WAV
+  WEBA
+  WEBM
   WEBP
   XLS
   XLSX
@@ -955,6 +965,7 @@ enum SpaceVisibility {
 
 enum StorageAggregatorType {
   ACCOUNT
+  CONVERSATION
   ORGANIZATION
   PLATFORM
   SPACE
@@ -2610,6 +2621,10 @@ type Conversation {
   messaging: Messaging!
   """The room for this Conversation."""
   room: Room!
+  """
+  The storage bucket holding this Conversation's message attachments (feature 013). READ-gated to conversation members; null for a conversation that has no bucket yet (an accepted, backfillable state).
+  """
+  storageBucket: StorageBucket
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
 }
@@ -4340,6 +4355,10 @@ type MeQueryResults {
 
 """A message that was sent in a chat room"""
 type Message {
+  """
+  Media attachments; unavailable documents retain their event filename without a download URL.
+  """
+  attachments: [MessageAttachment!]!
   """The id for the message event."""
   id: MessageID!
   """The message being sent"""
@@ -4352,6 +4371,23 @@ type Message {
   threadID: MessageID
   """The server timestamp in UTC"""
   timestamp: Float!
+}
+
+type MessageAttachment {
+  """The filename / display name of the attachment."""
+  displayName: String!
+  """The pixel height of the attachment (images only)."""
+  height: Int
+  """The file-service document id of the attachment."""
+  id: UUID
+  """The MIME type of the attachment."""
+  mimeType: String
+  """The size of the attachment in bytes."""
+  size: Int
+  """The Alkemio document URL (authorized via conversation policy)."""
+  url: String
+  """The pixel width of the attachment (images only)."""
+  width: Int
 }
 
 """
@@ -9677,6 +9713,10 @@ input RoomRemoveReactionToMessageInput {
 }
 
 input RoomSendMessageInput {
+  """
+  The file-service document ids of attachments to send with the message (one per event).
+  """
+  attachments: [UUID!]
   """The message being sent"""
   message: String!
   """The Room the message is being sent to"""
@@ -9684,6 +9724,10 @@ input RoomSendMessageInput {
 }
 
 input RoomSendMessageReplyInput {
+  """
+  The file-service document ids of attachments to send with the message (one per event).
+  """
+  attachments: [UUID!]
   """The message being sent"""
   message: String!
   """The Room the message is being sent to"""

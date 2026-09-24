@@ -198,6 +198,7 @@ export type AlkemioConfig = {
       timeout: number;
       retries: number;
       enabled: boolean;
+      matrix_media_bucket_id: string;
     };
     collabora: {
       wopi_service_url: string;

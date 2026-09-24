@@ -10,6 +10,8 @@ import { AlkemioConfig } from '@src/types/alkemio.config';
 import { isAxiosError } from 'axios';
 import FormData from 'form-data';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { firstValueFrom } from 'rxjs';
+import { Readable, Transform } from 'stream';
 import type {
   ContentBatchItemResult,
   ContentBatchResponse,
@@ -17,6 +19,7 @@ import type {
   CreateDocumentMetadata,
   CreateDocumentResult,
   DeleteDocumentResult,
+  DocumentReferenceResult,
   UpdateDocumentInput,
   UpdateDocumentResult,
 } from './dto';
@@ -66,24 +69,11 @@ export class FileServiceAdapter extends HttpClientBase {
     });
   }
 
-  /**
-   * Create a document in the Go file-service-go.
-   * Sends file + metadata as multipart/form-data.
-   */
-  async createDocument(
-    file: Buffer,
+  /** The non-file multipart fields, shared by the buffer and stream paths. */
+  private appendDocumentMetadata(
+    form: FormData,
     metadata: CreateDocumentMetadata
-  ): Promise<CreateDocumentResult> {
-    this.checkEnabledAndCircuit('createDocument');
-
-    const form = new FormData();
-    form.append('file', file, {
-      filename: metadata.displayName,
-      // Pass the caller-declared MIME type so the Go service can trust it
-      // when content-based detection is inconclusive (e.g. zero-byte files or
-      // ambiguous magic bytes). Defaults to generic octet-stream otherwise.
-      contentType: metadata.mimeType ?? 'application/octet-stream',
-    });
+  ): void {
     form.append('displayName', metadata.displayName);
     form.append('storageBucketId', metadata.storageBucketId);
     form.append('authorizationId', metadata.authorizationId);
@@ -108,6 +98,105 @@ export class FileServiceAdapter extends HttpClientBase {
     if (metadata.skipDedup) {
       form.append('skipDedup', 'true');
     }
+  }
+
+  /**
+   * Streaming counterpart of `createDocument`: the bytes flow
+   * request -> multipart -> file-service without ever being held whole in
+   * memory. Used by the upload path, which starts from a `Readable`.
+   *
+   * `maxBytes` is enforced DURING the transfer, so an oversized upload is cut
+   * off mid-flight rather than after it has been fully received.
+   *
+   * Deliberately does NOT go through `sendRequest`: that pipeline retries a
+   * POST on 503/504, and by then the request body has been sent, so the
+   * stream is exhausted and a replay would transmit a truncated body. One
+   * attempt only. Breaker accounting is kept.
+   */
+  async createDocumentFromStream(
+    readStream: Readable,
+    metadata: CreateDocumentMetadata,
+    maxBytes: number
+  ): Promise<CreateDocumentResult> {
+    this.checkEnabledAndCircuit('createDocumentFromStream');
+
+    let bytesSeen = 0;
+    const cap = new Transform({
+      transform(chunk, _encoding, callback) {
+        bytesSeen += chunk.length;
+        if (maxBytes > 0 && bytesSeen > maxBytes) {
+          callback(
+            new Error(
+              `upload exceeds the maximum allowed size of ${maxBytes} bytes`
+            )
+          );
+          return;
+        }
+        callback(null, chunk);
+      },
+    });
+    // Propagate a source failure into the capped stream so the request fails
+    // rather than silently sending a short body.
+    readStream.on('error', err => cap.destroy(err));
+    readStream.pipe(cap);
+
+    const form = new FormData();
+    form.append('file', cap, {
+      filename: metadata.displayName,
+      contentType: metadata.mimeType ?? 'application/octet-stream',
+    });
+    this.appendDocumentMetadata(form, metadata);
+
+    const url = `${this.baseUrl}${FILE_PATH_PREFIX}`;
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post<CreateDocumentResult>(url, form, {
+          headers: form.getHeaders(),
+          timeout: this.requestTimeout,
+          // MUST stay 0. It is the only way to reach axios' native http
+          // transport: the default follow-redirects transport pushes every
+          // written chunk into `_requestBodyBuffers` to be able to replay the
+          // body on a redirect, which holds the whole file in memory and
+          // defeats the entire point of this path. The endpoint is a fixed
+          // internal one and never redirects.
+          maxRedirects: 0,
+          // The body length is unknown up front; let axios stream it.
+          maxBodyLength: Infinity,
+          maxContentLength: Infinity,
+        })
+      );
+      this.circuitBreaker.onSuccess();
+      return response.data;
+    } catch (error) {
+      this.circuitBreaker.onFailure();
+      throw this.handleError('createDocumentFromStream', error, {
+        storageBucketId: metadata.storageBucketId,
+        displayName: metadata.displayName,
+      });
+    } finally {
+      readStream.destroy();
+    }
+  }
+
+  /**
+   * Create a document in the Go file-service-go.
+   * Sends file + metadata as multipart/form-data.
+   */
+  async createDocument(
+    file: Buffer,
+    metadata: CreateDocumentMetadata
+  ): Promise<CreateDocumentResult> {
+    this.checkEnabledAndCircuit('createDocument');
+
+    const form = new FormData();
+    form.append('file', file, {
+      filename: metadata.displayName,
+      // Pass the caller-declared MIME type so the Go service can trust it
+      // when content-based detection is inconclusive (e.g. zero-byte files or
+      // ambiguous magic bytes). Defaults to generic octet-stream otherwise.
+      contentType: metadata.mimeType ?? 'application/octet-stream',
+    });
+    this.appendDocumentMetadata(form, metadata);
 
     return this.sendRequest<CreateDocumentResult>(
       'createDocument',
@@ -279,12 +368,90 @@ export class FileServiceAdapter extends HttpClientBase {
     );
   }
 
+  /**
+   * Re-home a document (feature 013): a single PATCH that moves the row into a
+   * new bucket while re-pointing its authorization policy, owner, and opaque
+   * reference. This is the primary inbound re-home — move a `matrix_media`
+   * staging document into a conversation bucket and mirror membership auth onto
+   * it, all in one call. Thin semantic wrapper over the PATCH endpoint.
+   */
+  async moveDocument(
+    documentId: string,
+    patch: Pick<
+      UpdateDocumentInput,
+      | 'storageBucketId'
+      | 'authorizationId'
+      | 'createdBy'
+      | 'externalReference'
+      | 'temporaryLocation'
+      | 'displayName'
+    >
+  ): Promise<UpdateDocumentResult> {
+    // DELEGATE to updateDocument: identical endpoint/verb/body/return type, so
+    // there is ONE PATCH implementation. Re-home callers keep the narrower typed
+    // surface via this signature; only the shared transport differs (the
+    // operation is logged/circuit-accounted as `updateDocument`).
+    return this.updateDocument(documentId, patch);
+  }
+
+  /**
+   * Resolve a document by its opaque `externalReference` (feature 013).
+   *
+   * - `bucketId` omitted → global lookup (provider `fetch` form): returns any
+   *   document whose `externalReference = ref` (all share one blob). Used to
+   *   decide MOVE vs COPY during re-home.
+   * - `bucketId` present → bucket-scoped lookup (read resolution): the document
+   *   in that bucket carrying the reference.
+   *
+   * Returns `null` on 404 (no match) rather than throwing.
+   */
+  async getDocumentByReference(
+    ref: string,
+    bucketId?: string
+  ): Promise<DocumentReferenceResult | null> {
+    this.checkEnabledAndCircuit('getDocumentByReference');
+
+    const params = new URLSearchParams({ ref });
+    if (bucketId) {
+      params.append('bucketId', bucketId);
+    }
+    const path = `${FILE_PATH_PREFIX}/by-reference?${params.toString()}`;
+
+    try {
+      // ref + bucketId are already carried as QUERY params in `path`. They must
+      // ride the `context` (6th) arg — NOT `data` (4th) — so this GET issues no
+      // body and, on a non-404 failure, the error context still carries
+      // ref/bucketId. Positional signature:
+      // sendRequest(operation, method, path, data?, headers?, context?).
+      return await this.sendRequest<DocumentReferenceResult>(
+        'getDocumentByReference',
+        'get',
+        path,
+        undefined,
+        undefined,
+        { ref, bucketId }
+      );
+    } catch (error) {
+      if (
+        error instanceof FileServiceAdapterException &&
+        error.httpStatus === 404
+      ) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
   private filePath(documentId: string): string {
     return `${FILE_PATH_PREFIX}/${documentId}`;
   }
 
   private fileContentPath(documentId: string): string {
     return `${this.filePath(documentId)}/content`;
+  }
+
+  private fileMetaPath(documentId: string): string {
+    return `${this.filePath(documentId)}/meta`;
   }
 
   private checkEnabledAndCircuit(operation: string): void {
