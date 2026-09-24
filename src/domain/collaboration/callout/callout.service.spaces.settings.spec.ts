@@ -2,6 +2,7 @@ import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutSelectionMode } from '@common/enums/callout.selection.mode';
 import { SpaceCollectionCardVariant } from '@common/enums/space.collection.card.variant';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { mergeCalloutSettings } from '@domain/collaboration/callout/callout.settings.merge';
 import { Test, TestingModule } from '@nestjs/testing';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { actorContextData } from '@test/data/actorContext.mock';
@@ -14,7 +15,6 @@ import { CalloutFramingService } from '../callout-framing/callout.framing.servic
 import { DefaultCalloutSettings } from '../callout-settings/callout.settings.default';
 import { Callout } from './callout.entity';
 import { CalloutService } from './callout.service';
-import { mergeCalloutSettings } from './callout.settings.merge';
 
 /**
  * Wiring tests for the card-variant normalizer at both CalloutService call
