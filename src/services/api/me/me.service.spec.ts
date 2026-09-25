@@ -1,6 +1,7 @@
 import { AuthorizationCredential } from '@common/enums';
 import { SpaceLevel } from '@common/enums/space.level';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceService } from '@domain/space/space/space.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -67,9 +68,12 @@ describe('MeService', () => {
   let rolesService: {
     getCommunityInvitationsForUser: Mock;
     getCommunityApplicationsForUser: Mock;
+    getOrganizationInvitationsForUser: Mock;
+    getOrganizationApplicationsForUser: Mock;
   };
   let spaceService: { getSpacesInList: Mock };
   let communityResolverService: { getSpaceForRoleSetOrFail: Mock };
+  let organizationLookupService: { getOrganizationForRoleSetOrFail: Mock };
   let logger: any;
 
   beforeEach(async () => {
@@ -91,6 +95,7 @@ describe('MeService', () => {
     rolesService = module.get(RolesService) as any;
     spaceService = module.get(SpaceService) as any;
     communityResolverService = module.get(CommunityResolverService) as any;
+    organizationLookupService = module.get(OrganizationLookupService) as any;
     logger = module.get(WINSTON_MODULE_NEST_PROVIDER);
   });
 
@@ -229,6 +234,71 @@ describe('MeService', () => {
       await expect(
         service.getCommunityApplicationsForUser('user-1')
       ).rejects.toThrow();
+    });
+  });
+
+  describe('getOrganizationInvitationsForUser / getOrganizationApplicationsForUser (R-1)', () => {
+    it('returns the organization-shaped invitation results', async () => {
+      const invitation = { id: 'inv-1', roleSet: { id: 'org-rs-1' } };
+      rolesService.getOrganizationInvitationsForUser.mockResolvedValue([
+        invitation,
+      ]);
+      organizationLookupService.getOrganizationForRoleSetOrFail.mockResolvedValue(
+        { id: 'org-1' }
+      );
+
+      const results = await service.getOrganizationInvitationsForUser('user-1');
+
+      expect(results).toHaveLength(1);
+      expect(results[0].id).toBe('inv-1');
+      expect(results[0].invitation).toBe(invitation);
+      expect(results[0].organization).toEqual({ id: 'org-1' });
+      // Never touches the Space lookup — no Space exists for an organization role set.
+      expect(
+        communityResolverService.getSpaceForRoleSetOrFail
+      ).not.toHaveBeenCalled();
+    });
+
+    it('the invitation count equals the length of the (already filtered) list', async () => {
+      rolesService.getOrganizationInvitationsForUser.mockResolvedValue([
+        { id: 'inv-1' },
+        { id: 'inv-2' },
+      ]);
+
+      const count =
+        await service.getOrganizationInvitationsCountForUser('user-1');
+
+      expect(count).toBe(2);
+    });
+
+    it('returns the organization-shaped application results', async () => {
+      const application = { id: 'app-1', roleSet: { id: 'org-rs-1' } };
+      rolesService.getOrganizationApplicationsForUser.mockResolvedValue([
+        application,
+      ]);
+      organizationLookupService.getOrganizationForRoleSetOrFail.mockResolvedValue(
+        { id: 'org-1' }
+      );
+
+      const results =
+        await service.getOrganizationApplicationsForUser('user-1');
+
+      expect(results).toHaveLength(1);
+      expect(results[0].id).toBe('app-1');
+      expect(results[0].application).toBe(application);
+      expect(results[0].organization).toEqual({ id: 'org-1' });
+    });
+
+    it('returns empty arrays when the user has no organization pending rows', async () => {
+      rolesService.getOrganizationInvitationsForUser.mockResolvedValue([]);
+      rolesService.getOrganizationApplicationsForUser.mockResolvedValue([]);
+
+      expect(await service.getOrganizationInvitationsForUser('user-1')).toEqual(
+        []
+      );
+      expect(
+        await service.getOrganizationApplicationsForUser('user-1')
+      ).toEqual([]);
     });
   });
 

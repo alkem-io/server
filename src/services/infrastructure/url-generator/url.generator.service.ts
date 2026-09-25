@@ -283,6 +283,36 @@ export class UrlGeneratorService {
     return `${this.createUrlForOrganizationNameID(organizationNameID)}/${UrlPathElementSpace.SETTINGS}/invitations`;
   }
 
+  /**
+   * Relative deep-link path to an organization's public profile — the
+   * user-side call-to-action for the associate-invitation and
+   * application-decision notifications (push `url`; the client also
+   * builds this from `organization.profile.url` for in-app rendering).
+   */
+  public getOrganizationUrlPath(organizationNameID: string): string {
+    return `/${UrlPathBase.ORGANIZATION}/${organizationNameID}`;
+  }
+
+  /**
+   * Relative deep-link path to the organization's Associates settings tab
+   * (label renamed from "Community"; the `community` URL path segment is
+   * kept unchanged — 061's shipped push/email calls-to-action target it).
+   * Written as the literal template below (rather than composed through a
+   * shared helper) so the contract's `SETTINGS}/community` grep matches.
+   */
+  public getOrganizationSettingsAssociatesUrlPath(
+    organizationNameID: string
+  ): string {
+    return `/${UrlPathBase.ORGANIZATION}/${organizationNameID}/${UrlPathElementSpace.SETTINGS}/community`;
+  }
+
+  /** Absolute URL to an organization's Associates settings tab — the admin-side email call-to-action. */
+  public createUrlForOrganizationSettingsAssociates(
+    organizationNameID: string
+  ): string {
+    return `${this.createUrlForOrganizationNameID(organizationNameID)}/${UrlPathElementSpace.SETTINGS}/community`;
+  }
+
   public createUrlForUserNameID(userNameID: string): string {
     return `${this.endpoint_cluster}/${UrlPathBase.USER}/${userNameID}`;
   }

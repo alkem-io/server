@@ -1,7 +1,9 @@
 // Space Payload Field Resolvers
 
-export * from './organization/in.app.notification.payload.organization.message.direct.resolver.fields';
 // Organization Field Resolvers
+export * from './organization/in.app.notification.payload.organization.associate.actor.resolver.fields';
+export * from './organization/in.app.notification.payload.organization.associate.invitation.resolver.fields';
+export * from './organization/in.app.notification.payload.organization.message.direct.resolver.fields';
 export * from './organization/in.app.notification.payload.organization.message.room.resolver.fields';
 export * from './platform/in.app.notification.payload.platform.forum.discussion.resolver.fields';
 export * from './platform/in.app.notification.payload.platform.global.role.change.resolver.fields';

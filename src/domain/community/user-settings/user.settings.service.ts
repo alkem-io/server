@@ -165,6 +165,18 @@ export class UserSettingsService {
         settings.notification.organization.adminSpaceCommunityInvitation,
         notificationOrganizationData.adminSpaceCommunityInvitation
       );
+      this.updateNotificationSetting(
+        settings.notification.organization.adminAssociateInvitationResponse,
+        notificationOrganizationData.adminAssociateInvitationResponse
+      );
+      this.updateNotificationSetting(
+        settings.notification.organization.adminAssociateApplicationReceived,
+        notificationOrganizationData.adminAssociateApplicationReceived
+      );
+      this.updateNotificationSetting(
+        settings.notification.organization.adminAssociateJoined,
+        notificationOrganizationData.adminAssociateJoined
+      );
     }
 
     const notificationSpaceData = updateData.notification?.space;
@@ -287,6 +299,16 @@ export class UserSettingsService {
         this.updateNotificationSetting(
           settings.notification.user.membership.spaceCommunityJoined,
           membershipData.spaceCommunityJoined
+        );
+        this.updateNotificationSetting(
+          settings.notification.user.membership
+            .organizationAssociateInvitationReceived,
+          membershipData.organizationAssociateInvitationReceived
+        );
+        this.updateNotificationSetting(
+          settings.notification.user.membership
+            .organizationAssociateApplicationDecided,
+          membershipData.organizationAssociateApplicationDecided
         );
       }
     }

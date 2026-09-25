@@ -288,7 +288,14 @@ describe('CalloutContributionDefaultsService', () => {
       expect(result.postDescription).toBe('New Description');
     });
 
-    it('clears whiteboardContent only when explicitly requested', () => {
+    // Regression: the cleared value must be `null`, never `undefined`.
+    // The entity is persisted through a cascading `Repository.save()`, and
+    // TypeORM treats a property set to `undefined` as "not provided" and omits
+    // it from the UPDATE's SET clause — so an `undefined` clear is a silent
+    // no-op in the database while every in-memory assertion still looks
+    // correct. Only `null` writes a SQL NULL and actually removes the stored
+    // default. Asserting `toBeUndefined()` here is what let the defect ship.
+    it('clears whiteboardContent to null (not undefined) when explicitly requested', () => {
       const defaults = {
         id: 'defaults-id',
         whiteboardContent: 'old-wb',
@@ -298,7 +305,8 @@ describe('CalloutContributionDefaultsService', () => {
         clearWhiteboardContent: true,
       });
 
-      expect(result.whiteboardContent).toBeUndefined();
+      expect(result.whiteboardContent).toBeNull();
+      expect(result.whiteboardContent).not.toBeUndefined();
     });
 
     it('should not change fields when update data fields are falsy', () => {

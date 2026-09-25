@@ -540,21 +540,27 @@ enum MemoSignatureVerificationStatus {
 }
 
 enum MimeType {
+  AAC
   AVIF
   BMP
   CSV
   DOC
   DOCX
+  FLAC
   GIF
   HEIC
   HEIF
   ICS
   JPEG
   JPG
+  MP3
+  MP4
   ODG
   ODP
   ODS
   ODT
+  OGA
+  OGV
   PDF
   PNG
   POTM
@@ -564,8 +570,12 @@ enum MimeType {
   PPT
   PPTM
   PPTX
+  QUICKTIME
   RTF
   SVG
+  WAV
+  WEBA
+  WEBM
   WEBP
   XLS
   XLSX
@@ -579,6 +589,10 @@ enum MutationType {
 }
 
 enum NotificationEvent {
+  ORGANIZATION_ADMIN_ASSOCIATE_APPLICATION
+  ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_ACCEPTED
+  ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_DECLINED
+  ORGANIZATION_ADMIN_ASSOCIATE_JOINED
   ORGANIZATION_ADMIN_MENTIONED
   ORGANIZATION_ADMIN_MESSAGE
   ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION
@@ -621,6 +635,9 @@ enum NotificationEvent {
   USER_EMAIL_CHANGE_SPACE_ADMIN_NOTIFICATION
   USER_MENTIONED
   USER_MESSAGE
+  USER_ORGANIZATION_ASSOCIATE_APPLICATION_APPROVED
+  USER_ORGANIZATION_ASSOCIATE_APPLICATION_DECLINED
+  USER_ORGANIZATION_ASSOCIATE_INVITATION
   USER_PASSWORD_CHANGE_SECURITY_SIGNAL
   USER_SIGN_UP_WELCOME
   USER_SPACE_COMMUNITY_APPLICATION_DECLINED
@@ -646,6 +663,8 @@ enum NotificationEventInAppState {
 }
 
 enum NotificationEventPayload {
+  ORGANIZATION_ASSOCIATE_ACTOR
+  ORGANIZATION_ASSOCIATE_INVITATION
   ORGANIZATION_MESSAGE_DIRECT
   ORGANIZATION_MESSAGE_ROOM
   PLATFORM_FORUM_DISCUSSION
@@ -693,6 +712,17 @@ enum OpenAIModel {
   O3_MINI
   O3_PRO
   O4_MINI
+}
+
+enum OrganizationAssociateEligibilityReason {
+  ALREADY_ASSOCIATE
+  APPLICATION_PENDING
+  APPLICATIONS_NOT_ACCEPTED
+  APPLY_NOT_GRANTED
+  ELIGIBLE_TO_APPLY
+  ELIGIBLE_TO_JOIN
+  INVITATION_PENDING
+  NOT_AUTHENTICATED
 }
 
 enum OrganizationVerificationEnum {
@@ -813,6 +843,7 @@ enum RoleSetInvitationResultType {
   ALREADY_INVITED_TO_PLATFORM_AND_ROLE_SET
   ALREADY_INVITED_TO_ROLE_SET
   ALREADY_MEMBER_OF_ROLE_SET
+  EXTRA_ROLE_LIMIT_REACHED
   INVITATION_TO_PARENT_NOT_AUTHORIZED
   INVITED_TO_PLATFORM_AND_ROLE_SET
   INVITED_TO_ROLE_SET
@@ -926,6 +957,7 @@ enum SpaceVisibility {
 
 enum StorageAggregatorType {
   ACCOUNT
+  CONVERSATION
   ORGANIZATION
   PLATFORM
   SPACE
@@ -2574,6 +2606,10 @@ type Conversation {
   messaging: Messaging!
   """The room for this Conversation."""
   room: Room!
+  """
+  The storage bucket holding this Conversation's message attachments (feature 013). READ-gated to conversation members; null for a conversation that has no bucket yet (an accepted, backfillable state).
+  """
+  storageBucket: StorageBucket
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
 }
@@ -3203,6 +3239,34 @@ type InAppNotification {
   updatedDate: DateTime!
 }
 
+type InAppNotificationPayloadOrganizationAssociateActor implements InAppNotificationPayload {
+  """The user who applied, responded to an invitation, or joined."""
+  actor: Actor
+  """The underlying application — set for the three application events."""
+  application: Application
+  """
+  Offered extra roles that could not be granted (set only on the accepted-invitation event).
+  """
+  extraRolesWithheld: [RoleName!]
+  """The underlying invitation — set for the two response events."""
+  invitation: Invitation
+  """The organization the actor is associated with."""
+  organization: Organization
+  """The payload type."""
+  type: NotificationEventPayload!
+}
+
+type InAppNotificationPayloadOrganizationAssociateInvitation implements InAppNotificationPayload {
+  """
+  The underlying invitation — offered role(s) and message. Null once the invitation record no longer resolves (e.g. the organization was deleted).
+  """
+  invitation: Invitation
+  """The organization the invitation is for."""
+  organization: Organization
+  """The payload type."""
+  type: NotificationEventPayload!
+}
+
 type InAppNotificationPayloadOrganizationMessageDirect implements InAppNotificationPayload {
   """The message content."""
   message: String!
@@ -3580,6 +3644,10 @@ type Invitation {
   Additional roles to assign to the Actor, in addition to the entry Role.
   """
   extraRoles: [RoleName!]!
+  """
+  Offered extra roles that could not be granted when this invitation was accepted (organizations only, cap consumed in the meantime). Transient: set only on the object returned by the accept mutation, never persisted, and null everywhere else.
+  """
+  extraRolesWithheld: [RoleName!]
   """The ID of the entity"""
   id: UUID!
   """Whether to also add the invited actor to the parent community."""
@@ -4229,6 +4297,25 @@ type MeQueryResults {
   The total number of unread notifications for the current authenticated user across all notification types.
   """
   notificationsUnreadCount: Float!
+  """
+  The current authenticated user's own pending organization applications.
+  """
+  organizationApplications(
+    """The state names you want to filter on"""
+    states: [String!]
+  ): [OrganizationApplicationResult!]!
+  """The current authenticated user's own pending organization invitations."""
+  organizationInvitations(
+    """The state names you want to filter on"""
+    states: [String!]
+  ): [OrganizationInvitationResult!]!
+  """
+  The number of the current authenticated user's own pending organization invitations.
+  """
+  organizationInvitationsCount(
+    """The state names you want to filter on"""
+    states: [String!]
+  ): Float!
   """The Spaces the current user is a member of as a flat list."""
   spaceMembershipsFlat: [CommunityMembershipResult!]!
   """The hierarchy of the Spaces the current user is a member."""
@@ -4244,6 +4331,10 @@ type MeQueryResults {
 
 """A message that was sent in a chat room"""
 type Message {
+  """
+  Media attachments; unavailable documents retain their event filename without a download URL.
+  """
+  attachments: [MessageAttachment!]!
   """The id for the message event."""
   id: MessageID!
   """The message being sent"""
@@ -4256,6 +4347,23 @@ type Message {
   threadID: MessageID
   """The server timestamp in UTC"""
   timestamp: Float!
+}
+
+type MessageAttachment {
+  """The filename / display name of the attachment."""
+  displayName: String!
+  """The pixel height of the attachment (images only)."""
+  height: Int
+  """The file-service document id of the attachment."""
+  id: UUID
+  """The MIME type of the attachment."""
+  mimeType: String
+  """The size of the attachment in bytes."""
+  size: Int
+  """The Alkemio document URL (authorized via conversation policy)."""
+  url: String
+  """The pixel width of the attachment (images only)."""
+  width: Int
 }
 
 """
@@ -5029,6 +5137,10 @@ type Organization implements ActorFull & Groupable {
   legalEntityName: String
   """Metrics about the activity within this Organization."""
   metrics: [NVP!]
+  """
+  The viewer's eligibility to apply to, or join, this organization as an associate.
+  """
+  myAssociateEligibility: OrganizationAssociateEligibility!
   """A name identifier of the entity, unique within a given scope."""
   nameID: NameID!
   """The profile for this Actor."""
@@ -5050,6 +5162,37 @@ type Organization implements ActorFull & Groupable {
   website: String
 }
 
+type OrganizationApplicationResult {
+  """The application itself"""
+  application: Application!
+  """ID for the pending organization application"""
+  id: UUID!
+  """The organization the application is for"""
+  organization: Organization!
+}
+
+type OrganizationAssociateEligibility {
+  """
+  Whether the viewer may apply to associate with this organization right now.
+  """
+  canApply: Boolean!
+  """
+  Whether the viewer may join this organization directly, with one click (domain match).
+  """
+  canJoinDirectly: Boolean!
+  """Why the viewer is (or is not) eligible, precedence-ordered."""
+  reason: OrganizationAssociateEligibilityReason!
+}
+
+type OrganizationInvitationResult {
+  """ID for the pending organization invitation"""
+  id: UUID!
+  """The invitation itself"""
+  invitation: Invitation!
+  """The organization the invitation is for"""
+  organization: Organization!
+}
+
 type OrganizationSettings {
   """The membership settings for this Organization."""
   membership: OrganizationSettingsMembership!
@@ -5058,6 +5201,8 @@ type OrganizationSettings {
 }
 
 type OrganizationSettingsMembership {
+  """Allow registered users to apply to associate with this Organization."""
+  allowApplications: Boolean!
   """Allow Spaces to invite this Organization to join them."""
   allowSpaceInvitations: Boolean!
   """
@@ -7413,6 +7558,18 @@ type UserSettingsNotificationChannels {
 
 type UserSettingsNotificationOrganization {
   """
+  Receive a notification when someone applies to associate with an organisation you administer
+  """
+  adminAssociateApplicationReceived: UserSettingsNotificationChannels!
+  """
+  Receive a notification when someone responds to an invitation to associate with an organisation you administer
+  """
+  adminAssociateInvitationResponse: UserSettingsNotificationChannels!
+  """
+  Receive a notification when someone joins an organisation you administer as an associate
+  """
+  adminAssociateJoined: UserSettingsNotificationChannels!
+  """
   Receive a notification when the organization you are admin of is mentioned
   """
   adminMentioned: UserSettingsNotificationChannels!
@@ -7531,6 +7688,14 @@ type UserSettingsNotificationUser {
 }
 
 type UserSettingsNotificationUserMembership {
+  """
+  Receive a notification when an organisation decides on my application to associate
+  """
+  organizationAssociateApplicationDecided: UserSettingsNotificationChannels!
+  """
+  Receive a notification when I am invited to associate with an organisation
+  """
+  organizationAssociateInvitationReceived: UserSettingsNotificationChannels!
   """Receive a notification when I am invited to join a Space community"""
   spaceCommunityInvitationReceived: UserSettingsNotificationChannels!
   """
@@ -8391,6 +8556,10 @@ input CreateContributionOnCalloutInput {
   link: CreateLinkInput
   memo: CreateMemoInput
   post: CreatePostInput
+  """
+  Send the space-member and space-admin contribution notifications. Defaults to true; only an explicit false suppresses. The activity log entry is written regardless.
+  """
+  sendNotification: Boolean = true
   """The sort order to assign to this Contribution."""
   sortOrder: Float
   """
@@ -9511,6 +9680,10 @@ input RoomRemoveReactionToMessageInput {
 }
 
 input RoomSendMessageInput {
+  """
+  The file-service document ids of attachments to send with the message (one per event).
+  """
+  attachments: [UUID!]
   """The message being sent"""
   message: String!
   """The Room the message is being sent to"""
@@ -9518,6 +9691,10 @@ input RoomSendMessageInput {
 }
 
 input RoomSendMessageReplyInput {
+  """
+  The file-service document ids of attachments to send with the message (one per event).
+  """
+  attachments: [UUID!]
   """The message being sent"""
   message: String!
   """The Room the message is being sent to"""
@@ -10193,6 +10370,8 @@ input UpdateOrganizationSettingsInput {
 }
 
 input UpdateOrganizationSettingsMembershipInput {
+  """Allow registered users to apply to associate with this Organization."""
+  allowApplications: Boolean
   """Allow Spaces to invite this Organization to join them."""
   allowSpaceInvitations: Boolean
   """
@@ -10561,6 +10740,18 @@ input UpdateUserSettingsNotificationInput {
 
 input UpdateUserSettingsNotificationOrganizationInput {
   """
+  Receive a notification when someone applies to associate with an organisation you administer
+  """
+  adminAssociateApplicationReceived: NotificationSettingInput
+  """
+  Receive a notification when someone responds to an invitation to associate with an organisation you administer
+  """
+  adminAssociateInvitationResponse: NotificationSettingInput
+  """
+  Receive a notification when someone joins an organisation you administer as an associate
+  """
+  adminAssociateJoined: NotificationSettingInput
+  """
   Receive a notification when the organization you are admin of is mentioned
   """
   adminMentioned: NotificationSettingInput
@@ -10681,6 +10872,14 @@ input UpdateUserSettingsNotificationUserInput {
 }
 
 input UpdateUserSettingsNotificationUserMembershipInput {
+  """
+  Receive a notification when an organisation decides on my application to associate
+  """
+  organizationAssociateApplicationDecided: NotificationSettingInput
+  """
+  Receive a notification when I am invited to associate with an organisation
+  """
+  organizationAssociateInvitationReceived: NotificationSettingInput
   """Receive a notification for community invitation"""
   spaceCommunityInvitationReceived: NotificationSettingInput
   """

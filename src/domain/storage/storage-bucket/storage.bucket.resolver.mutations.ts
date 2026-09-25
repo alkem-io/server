@@ -1,4 +1,5 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -38,7 +39,8 @@ export class StorageBucketResolverMutations {
   ): Promise<StorageBucketUploadFileResult> {
     const storageBucket =
       await this.storageBucketService.getStorageBucketOrFail(
-        uploadData.storageBucketId
+        uploadData.storageBucketId,
+        { relations: { storageAggregator: true } }
       );
 
     this.authorizationService.grantAccessOrFail(
@@ -59,12 +61,21 @@ export class StorageBucketResolverMutations {
       uploadData.temporaryLocation
     );
 
-    const documentAuthorizations =
-      await this.documentAuthorizationService.applyAuthorizationPolicy(
-        document,
-        storageBucket.authorization
-      );
-    await this.authorizationPolicyService.saveAll(documentAuthorizations);
+    // A conversation upload already had its FULL policy composed before the
+    // row was inserted, so it is authorized the instant it exists; recomposing
+    // it here would only rewrite the same rules. Every other bucket type keeps
+    // the original post-insert composition.
+    if (
+      storageBucket.storageAggregator?.type !==
+      StorageAggregatorType.CONVERSATION
+    ) {
+      const documentAuthorizations =
+        await this.documentAuthorizationService.applyAuthorizationPolicy(
+          document,
+          storageBucket.authorization
+        );
+      await this.authorizationPolicyService.saveAll(documentAuthorizations);
+    }
 
     return {
       id: document.id,

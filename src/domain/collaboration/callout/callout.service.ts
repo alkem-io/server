@@ -641,7 +641,7 @@ export class CalloutService {
       );
     }
 
-    let previousWhiteboardContent: string | undefined;
+    let previousWhiteboardContent: string | null | undefined;
     let materializedWhiteboardDocumentIDs: string[] = [];
     if (calloutUpdateData.contributionDefaults) {
       previousWhiteboardContent =

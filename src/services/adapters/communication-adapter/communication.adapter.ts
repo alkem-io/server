@@ -4,6 +4,7 @@ import {
   AlkemioContextID,
   // ID type aliases
   AlkemioRoomID,
+  AttachmentRef,
   BatchAddMemberRequest,
   BatchAddSpaceMemberRequest,
   BatchGetLastMessagesRequest,
@@ -41,6 +42,7 @@ import {
   MarkMessageReadRequest,
   // Event types (topics)
   MatrixAdapterEventType,
+  ReceivedAttachment,
   RemoveReactionRequest,
   RequestFor,
   ResponseFor,
@@ -70,6 +72,7 @@ import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
+import { CommunicationMessageAttachment } from '@services/adapters/communication-adapter/dto/communication.message.attachment';
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CommunicationAdapterException } from './communication.adapter.exception';
@@ -131,6 +134,13 @@ const normalizeSetChildrenResponse = (
   unresolved: response.unresolved ?? [],
   parent_pointers_repaired: response.parent_pointers_repaired ?? [],
   parent_pointers_deferred: response.parent_pointers_deferred ?? [],
+  parent_pointers_unprocessable: response.parent_pointers_unprocessable ?? [],
+  // An adapter predating the field sends no `converged` at all. Defaulting it
+  // to false rather than true keeps the caller's termination condition
+  // conservative against version skew: an old adapter reports "not finished"
+  // and the pass reports outstanding work, instead of claiming a convergence
+  // it never actually verified.
+  converged: response.converged ?? false,
 });
 
 /**
@@ -605,7 +615,7 @@ export class CommunicationAdapter {
     });
 
     return (response?.messages ?? []).map(msg =>
-      this.convertMessageDtoToIMessage(msg)
+      this.convertMessageDtoToIMessage(msg, alkemioRoomId)
     );
   }
 
@@ -764,10 +774,27 @@ export class CommunicationAdapter {
   ): Promise<SetChildrenResponse | { disabled: true } | undefined> {
     if (!this.enabled) return { disabled: true };
 
+    // Stamp the caller's absolute expiry from the RPC timeout that governs
+    // this very call, so the two can never drift apart.
+    //
+    // The adapter's own execution deadline starts when it dequeues the
+    // message, which bounds its processing but says nothing about how long
+    // the request waited first. Under load that wait can outlast the timeout
+    // below — and at that point this method has already returned `undefined`
+    // and its caller has moved on, very likely re-reading state and reissuing.
+    // Without an expiry the adapter would still execute the abandoned request,
+    // writing Matrix state from a snapshot the caller has superseded. With
+    // one, it rejects the request untouched.
+    const payload: SetChildrenRequest = {
+      ...request,
+      expires_at_unix_ms:
+        request.expires_at_unix_ms ?? Date.now() + this.rpcTimeout,
+    };
+
     const response = await this.sendCommand({
       operation: 'setChildren',
       topic: MatrixAdapterEventType.COMMUNICATION_HIERARCHY_SET_CHILDREN,
-      payload: request satisfies SetChildrenRequest,
+      payload: payload satisfies SetChildrenRequest,
       errorContext: { parentContextId: request.parent_context_id },
       onError: 'silent',
     });
@@ -916,6 +943,8 @@ export class CommunicationAdapter {
       });
     }
 
+    const attachmentRefs = this.toAttachmentRefs(sendMessageData.attachments);
+
     const response = await this.sendCommand({
       operation: 'sendMessage',
       topic: MatrixAdapterEventType.COMMUNICATION_MESSAGE_SEND,
@@ -923,6 +952,8 @@ export class CommunicationAdapter {
         alkemio_room_id: sendMessageData.roomID,
         sender_actor_id: sendMessageData.actorID,
         content: sendMessageData.message,
+        timeout_ms: Math.max(1, this.rpcTimeout - 1000),
+        attachments: attachmentRefs,
       } satisfies SendMessageRequest,
       errorContext: { roomID: sendMessageData.roomID },
       ensureSuccess: true,
@@ -935,11 +966,13 @@ export class CommunicationAdapter {
 
     return {
       id: response!.message_id,
-      message: sendMessageData.message,
+      message: response!.content,
       sender: sendMessageData.actorID,
       timestamp: response!.timestamp,
       threadID: undefined,
       reactions: [],
+      rawAttachments: response!.attachments,
+      roomID: sendMessageData.roomID,
     };
   }
 
@@ -950,6 +983,8 @@ export class CommunicationAdapter {
   async sendMessageReply(
     sendMessageData: CommunicationSendMessageReplyInput
   ): Promise<IMessage> {
+    const attachmentRefs = this.toAttachmentRefs(sendMessageData.attachments);
+
     const response = await this.sendCommand({
       operation: 'sendMessageReply',
       topic: MatrixAdapterEventType.COMMUNICATION_MESSAGE_SEND,
@@ -957,7 +992,9 @@ export class CommunicationAdapter {
         alkemio_room_id: sendMessageData.roomID,
         sender_actor_id: sendMessageData.actorID,
         content: sendMessageData.message,
+        timeout_ms: Math.max(1, this.rpcTimeout - 1000),
         parent_message_id: sendMessageData.threadID,
+        attachments: attachmentRefs,
       } satisfies SendMessageRequest,
       errorContext: { roomID: sendMessageData.roomID },
       ensureSuccess: true,
@@ -970,11 +1007,13 @@ export class CommunicationAdapter {
 
     return {
       id: response!.message_id,
-      message: sendMessageData.message,
+      message: response!.content,
       sender: sendMessageData.actorID,
       timestamp: response!.timestamp,
       threadID: sendMessageData.threadID,
       reactions: [],
+      rawAttachments: response!.attachments,
+      roomID: sendMessageData.roomID,
     };
   }
 
@@ -1100,7 +1139,10 @@ export class CommunicationAdapter {
       return undefined;
     }
 
-    return this.convertMessageDtoToIMessage(response.message);
+    return this.convertMessageDtoToIMessage(
+      response.message,
+      data.alkemioRoomId
+    );
   }
 
   /**
@@ -1307,7 +1349,7 @@ export class CommunicationAdapter {
 
     if (!response?.message) return null;
 
-    return this.convertMessageDtoToIMessage(response.message);
+    return this.convertMessageDtoToIMessage(response.message, alkemioRoomId);
   }
 
   /**
@@ -1335,7 +1377,9 @@ export class CommunicationAdapter {
 
     for (const roomId of alkemioRoomIds) {
       const msgDto = messages[roomId];
-      result[roomId] = msgDto ? this.convertMessageDtoToIMessage(msgDto) : null;
+      result[roomId] = msgDto
+        ? this.convertMessageDtoToIMessage(msgDto, roomId)
+        : null;
     }
 
     return result;
@@ -1457,7 +1501,7 @@ export class CommunicationAdapter {
     response: GetRoomResponse
   ): CommunicationRoomResult {
     const messages = (response.messages ?? []).map(msg =>
-      this.convertMessageDtoToIMessage(msg)
+      this.convertMessageDtoToIMessage(msg, response.alkemio_room_id)
     );
     return {
       id: response.alkemio_room_id,
@@ -1476,7 +1520,7 @@ export class CommunicationAdapter {
     response: GetRoomAsUserResponse
   ): IRoomWithReadState {
     const messages = (response.messages ?? []).map(msg =>
-      this.convertMessageDtoToIMessage(msg)
+      this.convertMessageDtoToIMessage(msg, response.alkemio_room_id)
     );
     return {
       id: response.alkemio_room_id,
@@ -1493,19 +1537,23 @@ export class CommunicationAdapter {
   /**
    * Convert a MessageDto from the Go adapter to an IMessage.
    */
-  private convertMessageDtoToIMessage(msg: {
-    id: string;
-    content: string;
-    sender_actor_id: string;
-    timestamp: number; // Unix milliseconds (contract with matrix-adapter)
-    thread_id?: string;
-    reactions?: Array<{
+  private convertMessageDtoToIMessage(
+    msg: {
       id: string;
-      emoji: string;
+      content: string;
       sender_actor_id: string;
-      timestamp: number;
-    }>;
-  }): IMessage {
+      timestamp: number; // Unix milliseconds (contract with matrix-adapter)
+      thread_id?: string;
+      reactions?: Array<{
+        id: string;
+        emoji: string;
+        sender_actor_id: string;
+        timestamp: number;
+      }>;
+      attachments?: ReceivedAttachment[];
+    },
+    alkemioRoomId?: AlkemioRoomID
+  ): IMessage {
     return {
       id: msg.id,
       message: msg.content,
@@ -1518,7 +1566,43 @@ export class CommunicationAdapter {
         sender: r.sender_actor_id,
         timestamp: r.timestamp,
       })),
+      // feature 013: surface raw attachment refs; the message resolver resolves
+      // them to MessageAttachment (READ-gated). storageBucketId is set later by
+      // producers that have room context; roomID lets the resolver resolve the
+      // bucket from the room on history reads (H1).
+      rawAttachments: msg.attachments,
+      roomID: alkemioRoomId,
     };
+  }
+
+  /**
+   * Map resolved server-side attachments (feature 013) to the matrix-adapter-lib
+   * `AttachmentRef` wire shape. Returns undefined when there are none so the
+   * payload stays identical to the pre-feature shape.
+   *
+   * FIX 7: single shared mapper. Outbound attachments are keyed by `document_id`
+   * and produce exactly the `AttachmentRef` shape. `AttachmentRef` is structurally
+   * assignable to `ReceivedAttachment` (its `document_id` is required, the others
+   * optional/matching), so the same result also feeds the `rawAttachments`
+   * carrier on the send-response IMessage — so the send response carries its own
+   * attachments (consistent with the read path), not just the Matrix echo.
+   */
+  private toAttachmentRefs(
+    attachments?: CommunicationMessageAttachment[]
+  ): AttachmentRef[] | undefined {
+    if (!attachments || attachments.length === 0) {
+      return undefined;
+    }
+    return attachments.map(a => ({
+      document_id: a.documentId,
+      display_name: a.displayName,
+      mime_type: a.mimeType,
+      size: a.size,
+      // Images only, and best-effort: these become the outbound `m.image`
+      // event's `info.w`/`info.h`. Undefined simply omits them.
+      width: a.width,
+      height: a.height,
+    }));
   }
 
   private logInputPayload(topic: string, payload: unknown): number {

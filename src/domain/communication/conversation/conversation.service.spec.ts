@@ -1,5 +1,7 @@
 import { ActorType } from '@common/enums/actor.type';
+import { CONVERSATION_MEDIA_ALLOWED_MIME_TYPES } from '@common/enums/mime.file.type';
 import { RoomType } from '@common/enums/room.type';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -11,12 +13,15 @@ import { RoomService } from '@domain/communication/room/room.service';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { CommunicationAdapterException } from '@services/adapters/communication-adapter/communication.adapter.exception';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
@@ -25,6 +30,7 @@ import { type Mocked, vi } from 'vitest';
 import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
 import { Conversation } from './conversation.entity';
 import { IConversation } from './conversation.interface';
+import { CONVERSATION_MEDIA_MAX_FILE_SIZE } from './conversation.media.constants';
 import { ConversationService } from './conversation.service';
 
 describe('ConversationService', () => {
@@ -35,6 +41,9 @@ describe('ConversationService', () => {
   let userLookupService: Mocked<UserLookupService>;
   let virtualActorLookupService: Mocked<VirtualActorLookupService>;
   let platformWellKnownVCService: Mocked<PlatformWellKnownVirtualContributorsService>;
+  let storageAggregatorService: Mocked<StorageAggregatorService>;
+  let storageAggregatorResolverService: Mocked<StorageAggregatorResolverService>;
+  let storageBucketService: Mocked<StorageBucketService>;
   let communicationAdapter: Mocked<CommunicationAdapter>;
   let conversationRepo: Mocked<Repository<Conversation>>;
   let membershipRepo: Mocked<Repository<ConversationMembership>>;
@@ -71,6 +80,11 @@ describe('ConversationService', () => {
     platformWellKnownVCService = module.get(
       PlatformWellKnownVirtualContributorsService
     );
+    storageAggregatorService = module.get(StorageAggregatorService);
+    storageAggregatorResolverService = module.get(
+      StorageAggregatorResolverService
+    );
+    storageBucketService = module.get(StorageBucketService);
     communicationAdapter = module.get(CommunicationAdapter);
     conversationRepo = module.get(getRepositoryToken(Conversation));
     membershipRepo = module.get(getRepositoryToken(ConversationMembership));
@@ -142,6 +156,93 @@ describe('ConversationService', () => {
       );
       expect(conversationRepo.remove).toHaveBeenCalled();
       expect(result.id).toBe('conv-1');
+    });
+
+    it('deletes the storage aggregator explicitly BEFORE remove (single path, no double-delete)', async () => {
+      const mockConversation = {
+        id: 'conv-1',
+        room: { id: 'room-1', type: RoomType.CONVERSATION_DIRECT },
+        authorization: { id: 'auth-1' },
+        messaging: { id: 'messaging-1' },
+        storageAggregator: { id: 'agg-1' },
+      } as unknown as Conversation;
+
+      conversationRepo.findOne.mockResolvedValue(mockConversation);
+      conversationRepo.remove.mockResolvedValue({
+        ...mockConversation,
+        id: '',
+      } as Conversation);
+
+      await service.deleteConversation('conv-1');
+
+      // FIX 5: aggregator deleted explicitly (cleans its bucket + docs + auth)…
+      expect(storageAggregatorService.delete).toHaveBeenCalledWith('agg-1');
+      // …exactly once (remove no longer cascade-deletes it) …
+      expect(storageAggregatorService.delete).toHaveBeenCalledTimes(1);
+      // …and the in-memory reference is detached before removing the conversation
+      // so the cascade cannot revisit the already-removed aggregator.
+      expect(mockConversation.storageAggregator).toBeUndefined();
+      expect(conversationRepo.remove).toHaveBeenCalled();
+    });
+
+    it('B1: a failed storage teardown leaves the conversation ROOM and AUTHORIZATION intact, so the delete stays retryable', async () => {
+      // storageAggregatorService.delete is a fallible, multi-step REMOTE teardown
+      // (one file-service call per document), so it must run before anything
+      // that destroys the conversation row:
+      //  * deleting the authorization first left the row alive with a NULL
+      //    authorizationId — nothing could authorize a retry;
+      //  * deleting the ROOM first cascade-deleted the conversation row itself
+      //    (Conversation.room is a FK with onDelete: CASCADE), stranding the
+      //    bucket + every attachment with no row left to retry from.
+      const mockConversation = {
+        id: 'conv-1',
+        room: { id: 'room-1', type: RoomType.CONVERSATION_DIRECT },
+        authorization: { id: 'auth-1' },
+        messaging: { id: 'messaging-1' },
+        storageAggregator: { id: 'agg-1' },
+      } as unknown as Conversation;
+
+      conversationRepo.findOne.mockResolvedValue(mockConversation);
+      storageAggregatorService.delete.mockRejectedValue(
+        new Error('file-service unavailable')
+      );
+
+      await expect(service.deleteConversation('conv-1')).rejects.toThrow(
+        'file-service unavailable'
+      );
+
+      expect(roomService.deleteRoom).not.toHaveBeenCalled();
+      expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
+      expect(conversationRepo.remove).not.toHaveBeenCalled();
+    });
+
+    it('tears the remote storage down BEFORE the cascade-deleting room delete', async () => {
+      const order: string[] = [];
+      const mockConversation = {
+        id: 'conv-1',
+        room: { id: 'room-1', type: RoomType.CONVERSATION_DIRECT },
+        authorization: { id: 'auth-1' },
+        messaging: { id: 'messaging-1' },
+        storageAggregator: { id: 'agg-1' },
+      } as unknown as Conversation;
+
+      conversationRepo.findOne.mockResolvedValue(mockConversation);
+      conversationRepo.remove.mockResolvedValue({
+        ...mockConversation,
+        id: '',
+      } as Conversation);
+      storageAggregatorService.delete.mockImplementation(async () => {
+        order.push('storage');
+        return undefined as any;
+      });
+      roomService.deleteRoom.mockImplementation(async () => {
+        order.push('room');
+        return undefined as any;
+      });
+
+      await service.deleteConversation('conv-1');
+
+      expect(order).toEqual(['storage', 'room']);
     });
 
     it('should throw EntityNotInitializedException when room is missing', async () => {
@@ -913,6 +1014,136 @@ describe('ConversationService', () => {
           RoomType.CONVERSATION_DIRECT
         )
       ).rejects.toThrow(ValidationException);
+    });
+
+    it('rolls back the pre-created storage aggregator when a later step fails (FIX 1)', async () => {
+      // Storage is created (own transaction) BEFORE the room RPC. If the room
+      // RPC fails, the aggregator/bucket/auth must be rolled back — no orphan.
+      storageAggregatorService.createStorageAggregator.mockResolvedValue({
+        id: 'agg-1',
+        directStorage: undefined,
+      } as any);
+      roomService.createRoom.mockRejectedValue(
+        new Error('matrix room RPC failed')
+      );
+
+      await expect(
+        service.createConversation(
+          'agent-1',
+          ['agent-2'],
+          RoomType.CONVERSATION_DIRECT
+        )
+      ).rejects.toThrow('matrix room RPC failed');
+
+      expect(storageAggregatorService.delete).toHaveBeenCalledWith('agg-1');
+    });
+
+    it('cleans up the aggregator when the bucket-policy save inside createConversationStorageAggregator fails (FIX 1)', async () => {
+      // createStorageAggregator (step 1) has already committed the aggregator +
+      // bucket + 2 auth rows. The SECOND step — tightening the bucket policy via
+      // storageBucketService.save — then fails. This throws BEFORE the aggregator
+      // is assigned to conversation.storageAggregator and BEFORE the outer
+      // try/catch is entered, so the caller's rollback can't reach it. The method
+      // must therefore clean up its own just-created aggregator (same
+      // StorageAggregatorService.delete) so nothing leaks, then propagate.
+      storageAggregatorService.createStorageAggregator.mockResolvedValue({
+        id: 'agg-1',
+        directStorage: { id: 'bucket-1' },
+      } as any);
+      storageBucketService.save.mockRejectedValue(
+        new Error('bucket policy save failed')
+      );
+
+      await expect(
+        service.createConversation(
+          'agent-1',
+          ['agent-2'],
+          RoomType.CONVERSATION_DIRECT
+        )
+      ).rejects.toThrow('bucket policy save failed');
+
+      // Cleaned up exactly once — the outer rollback never runs because the throw
+      // happens before conversation.storageAggregator is assigned.
+      expect(storageAggregatorService.delete).toHaveBeenCalledWith('agg-1');
+      expect(storageAggregatorService.delete).toHaveBeenCalledTimes(1);
+      // The room RPC is never reached — the failure is in storage creation.
+      expect(roomService.createRoom).not.toHaveBeenCalled();
+    });
+
+    it('ALWAYS provisions the per-conversation storage, attached to the conversation before it is saved', async () => {
+      // Unconditional by design (no feature flag): every new conversation gets
+      // its StorageAggregator + media-policy bucket eagerly, so message
+      // attachments have a membership-authorized home from the moment the
+      // conversation exists. Pre-existing conversations are covered by the
+      // 1782300000002 backfill.
+      const platformAggregator = { id: 'platform-agg' } as any;
+      storageAggregatorResolverService.getPlatformStorageAggregator.mockResolvedValue(
+        platformAggregator
+      );
+      const bucket = { id: 'bucket-1' } as any;
+      storageAggregatorService.createStorageAggregator.mockResolvedValue({
+        id: 'agg-1',
+        directStorage: bucket,
+      } as any);
+      storageBucketService.save.mockResolvedValue(bucket);
+      roomService.createRoom.mockResolvedValue({ id: 'room-1' } as any);
+      conversationRepo.save.mockImplementation(async (c: any) => c);
+      membershipRepo.create.mockImplementation(data => data as any);
+      membershipRepo.save.mockResolvedValue([] as any);
+
+      await service.createConversation(
+        'agent-1',
+        ['agent-2'],
+        RoomType.CONVERSATION_DIRECT
+      );
+
+      expect(
+        storageAggregatorService.createStorageAggregator
+      ).toHaveBeenCalledWith(
+        StorageAggregatorType.CONVERSATION,
+        platformAggregator
+      );
+      // The aggregator must be ON the entity handed to save(), not created and
+      // dropped — that is what gives the conversation storage from the start.
+      const saved = conversationRepo.save.mock.calls[0][0] as any;
+      expect(saved.storageAggregator).toEqual(
+        expect.objectContaining({ id: 'agg-1' })
+      );
+      // And the bucket policy is tightened to the conversation media set.
+      expect(bucket.allowedMimeTypes).toBe(
+        CONVERSATION_MEDIA_ALLOWED_MIME_TYPES
+      );
+      expect(bucket.maxFileSize).toBe(CONVERSATION_MEDIA_MAX_FILE_SIZE);
+    });
+
+    it('B2: does NOT destroy the storage when the conversation row is already committed', async () => {
+      // Rollback is only legitimate while the conversation is UNCOMMITTED. Once
+      // the row is durable (here the membership insert is what fails), deleting
+      // its aggregator is destruction, not rollback: the FK is ON DELETE SET
+      // NULL, so the committed conversation would be permanently left with no
+      // storage and no repair path. Leave it repairable instead.
+      storageAggregatorService.createStorageAggregator.mockResolvedValue({
+        id: 'agg-1',
+        directStorage: undefined,
+      } as any);
+      roomService.createRoom.mockResolvedValue({ id: 'room-1' } as any);
+      conversationRepo.save.mockResolvedValue({
+        id: 'conv-new',
+      } as Conversation);
+      membershipRepo.create.mockImplementation(data => data as any);
+      membershipRepo.save.mockRejectedValue(
+        new Error('membership insert failed')
+      );
+
+      await expect(
+        service.createConversation(
+          'agent-1',
+          ['agent-2'],
+          RoomType.CONVERSATION_DIRECT
+        )
+      ).rejects.toThrow('membership insert failed');
+
+      expect(storageAggregatorService.delete).not.toHaveBeenCalled();
     });
   });
 
