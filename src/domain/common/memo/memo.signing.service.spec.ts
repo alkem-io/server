@@ -9,6 +9,7 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import { SigningAttemptStatus } from '@domain/common/content-signing/signing.attempt.status';
 import { prosemirrorJSONToYDoc } from '@tiptap/y-tiptap';
 import { markdownSchema } from './conversion/markdown.schema';
+import { yjsStateToTiptapHtml } from './conversion/yjs.state.to.tiptap.html';
 import { MemoSigningService } from './memo.signing.service';
 
 describe('MemoSigningService', () => {
@@ -71,17 +72,17 @@ describe('MemoSigningService', () => {
         id: string,
         type: string,
         actorId: string,
-        project: (document: ReturnType<typeof prosemirrorJSONToYDoc>) => string
-      ) => Promise<string>
+        project: (document: ReturnType<typeof prosemirrorJSONToYDoc>) => Buffer
+      ) => Promise<Buffer>
     >(async () => {
       calls.push('live-read');
-      return '# Current content';
+      return Buffer.from('current-state');
     }),
   };
   const renderer = {
     render: vi.fn<
       (
-        markdown: string,
+        state: Buffer,
         storageBucketId: string,
         actor: ActorContext
       ) => Promise<Buffer>
@@ -173,7 +174,7 @@ describe('MemoSigningService', () => {
     });
     collaborationDocumentService.read.mockImplementation(async () => {
       calls.push('live-read');
-      return '# Current content';
+      return Buffer.from('current-state');
     });
     renderer.render.mockImplementation(async () => {
       calls.push('render');
@@ -244,7 +245,7 @@ describe('MemoSigningService', () => {
       expect.any(Function)
     );
     expect(renderer.render).toHaveBeenCalledWith(
-      '# Current content',
+      Buffer.from('current-state'),
       'bucket-1',
       actor
     );
@@ -269,7 +270,7 @@ describe('MemoSigningService', () => {
     });
   });
 
-  it('renders the current projection with its known table span and non-paragraph losses', async () => {
+  it('passes the exact editor state to the structural PDF renderer', async () => {
     const liveDocument = prosemirrorJSONToYDoc(
       markdownSchema,
       {
@@ -345,14 +346,15 @@ describe('MemoSigningService', () => {
       liveDocument.destroy();
     }
 
-    const projection = renderer.render.mock.calls[0][0];
-    expect(projection).toContain('==Projected highlight text==');
-    expect(projection).toContain('1. Projected list item');
-    expect(projection).not.toContain('4. Projected list item');
-    expect(projection).toContain('| Projected header |');
-    expect(projection).not.toContain('Omitted rich block');
-    expect(projection).not.toContain('colspan');
-    expect(projection).not.toContain('120');
+    const state = renderer.render.mock.calls[0][0];
+    expect(Buffer.isBuffer(state)).toBe(true);
+    const html = yjsStateToTiptapHtml(state);
+    expect(html).toContain('<mark>Projected highlight text</mark>');
+    expect(html).toMatch(/<ol start=(?:"4"|4)/);
+    expect(html).toContain('Projected list item');
+    expect(html).toMatch(/colspan=(?:"2"|2)/);
+    expect(html).toContain('colwidth=[120,120]');
+    expect(html).toContain('Omitted rich block');
   });
 
   it('fails an unlinked identity before inserting or rendering', async () => {

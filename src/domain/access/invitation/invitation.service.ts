@@ -259,6 +259,11 @@ export class InvitationService {
     return this.invitationLifecycleService.isFinalState(invitation.lifecycle);
   }
 
+  /** Synchronous state read when the entity (with eager lifecycle) is already loaded. */
+  getInvitationState(invitation: IInvitation): string {
+    return this.invitationLifecycleService.getState(invitation.lifecycle);
+  }
+
   /** Synchronous check when the entity (with eager lifecycle) is already loaded. */
   canAcceptInvitation(invitation: IInvitation): boolean {
     return this.invitationLifecycleService

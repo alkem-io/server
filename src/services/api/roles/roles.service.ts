@@ -1,3 +1,4 @@
+import { RoleSetType } from '@common/enums/role.set.type';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IApplication } from '@domain/access/application';
@@ -102,13 +103,40 @@ export class RolesService {
     );
   }
 
+  /**
+   * The user's Space-shaped pending applications ONLY (R-1/FR-023). The
+   * repository method (`ApplicationService.findApplicationsForUser`) returns
+   * every role-set type — filtering here, not there, because the user- and
+   * organization-deletion flows call the same repository method directly and
+   * must keep seeing (and removing) organization rows.
+   */
   public async getCommunityApplicationsForUser(
     userID: string,
     states?: string[]
   ): Promise<IApplication[]> {
-    return await this.applicationService.findApplicationsForUser(
+    const applications = await this.applicationService.findApplicationsForUser(
       userID,
       states
+    );
+    return applications.filter(
+      application => application.roleSet?.type === RoleSetType.SPACE
+    );
+  }
+
+  /**
+   * The user's OWN pending applications on ORGANIZATION role sets — the
+   * counterpart to {@link getCommunityApplicationsForUser}.
+   */
+  public async getOrganizationApplicationsForUser(
+    userID: string,
+    states?: string[]
+  ): Promise<IApplication[]> {
+    const applications = await this.applicationService.findApplicationsForUser(
+      userID,
+      states
+    );
+    return applications.filter(
+      application => application.roleSet?.type === RoleSetType.ORGANIZATION
     );
   }
 
@@ -163,7 +191,36 @@ export class RolesService {
     return applicationResult;
   }
 
+  /**
+   * The user's Space-shaped pending invitations ONLY (R-1/FR-023). See
+   * {@link getCommunityApplicationsForUser} for why the filter lives here
+   * and not in `InvitationService`.
+   */
   public async getCommunityInvitationsForUser(
+    userID: string,
+    states?: string[]
+  ): Promise<IInvitation[]> {
+    const invitations = await this.getAllInvitationsForUser(userID, states);
+    return invitations.filter(
+      invitation => invitation.roleSet?.type === RoleSetType.SPACE
+    );
+  }
+
+  /**
+   * The user's OWN pending invitations on ORGANIZATION role sets — the
+   * counterpart to {@link getCommunityInvitationsForUser}.
+   */
+  public async getOrganizationInvitationsForUser(
+    userID: string,
+    states?: string[]
+  ): Promise<IInvitation[]> {
+    const invitations = await this.getAllInvitationsForUser(userID, states);
+    return invitations.filter(
+      invitation => invitation.roleSet?.type === RoleSetType.ORGANIZATION
+    );
+  }
+
+  private async getAllInvitationsForUser(
     userID: string,
     states?: string[]
   ): Promise<IInvitation[]> {

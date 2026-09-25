@@ -425,6 +425,11 @@ storage:
     retries: ${FILE_SERVICE_RETRIES}:2
     # Feature flag for gradual rollout
     enabled: ${FILE_SERVICE_ENABLED}:true
+    # Reserved platform-level staging bucket for Matrix media (feature 013).
+    # The Synapse storage provider creates every inbound Matrix media here first
+    # (no room context at upload time); the server re-homes rows out of it on
+    # message.received. Fixed/seeded UUID shared with the Synapse provider.
+    matrix_media_bucket_id: ${STORAGE_MATRIX_MEDIA_BUCKET_ID}:00000000-0000-4000-8000-000000000013
 
   # Collabora / WOPI service configuration
   collabora:

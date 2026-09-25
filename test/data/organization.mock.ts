@@ -198,6 +198,7 @@ export const organizationData: { organization: IOrganization } = {
       membership: {
         allowUsersMatchingDomainToJoin: false,
         allowSpaceInvitations: true,
+        allowApplications: true,
       },
     },
   },

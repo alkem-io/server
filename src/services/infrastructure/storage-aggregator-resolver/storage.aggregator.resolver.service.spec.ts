@@ -317,6 +317,34 @@ describe('StorageAggregatorResolverService', () => {
     });
   });
 
+  describe('getParentConversationForStorageAggregator', () => {
+    it('should return conversation when found', async () => {
+      const mockConversation = { id: 'conversation-1' };
+      entityManager.findOne.mockResolvedValue(mockConversation);
+
+      const result = await service.getParentConversationForStorageAggregator({
+        id: 'sa-1',
+      } as any);
+
+      expect(result).toBe(mockConversation);
+    });
+
+    it('[3] throws EntityNotFoundException with structured details (no id in message)', async () => {
+      // Coding standard: the id must NOT be interpolated into the message — it
+      // belongs in the structured `details` property.
+      entityManager.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.getParentConversationForStorageAggregator({
+          id: 'sa-missing',
+        } as any)
+      ).rejects.toMatchObject({
+        message: 'Unable to retrieve Conversation for storage aggregator',
+        details: { storageAggregatorId: 'sa-missing' },
+      });
+    });
+  });
+
   describe('getPlatformStorageAggregator', () => {
     it('should return storage aggregator from platform query', async () => {
       const mockAggregator = { id: 'sa-platform' };

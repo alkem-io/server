@@ -23,7 +23,7 @@ export class CalloutContributionDefaults
   postDescription? = '';
 
   @Column('text', { nullable: true })
-  whiteboardContent?: string;
+  whiteboardContent?: string | null;
 
   whiteboardContentAvailable!: boolean;
 

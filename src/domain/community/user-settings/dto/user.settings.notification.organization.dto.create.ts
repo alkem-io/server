@@ -32,4 +32,34 @@ export class CreateUserSettingsNotificationOrganizationInput {
   @Type(() => CreateUserSettingsNotificationChannelsInput)
   @IsOptional()
   adminSpaceCommunityInvitation?: CreateUserSettingsNotificationChannelsInput;
+
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
+    nullable: true,
+    description:
+      'Receive a notification when someone responds to an invitation to associate with an organisation you administer',
+  })
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationChannelsInput)
+  @IsOptional()
+  adminAssociateInvitationResponse?: CreateUserSettingsNotificationChannelsInput;
+
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
+    nullable: true,
+    description:
+      'Receive a notification when someone applies to associate with an organisation you administer',
+  })
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationChannelsInput)
+  @IsOptional()
+  adminAssociateApplicationReceived?: CreateUserSettingsNotificationChannelsInput;
+
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
+    nullable: true,
+    description:
+      'Receive a notification when someone joins an organisation you administer as an associate',
+  })
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationChannelsInput)
+  @IsOptional()
+  adminAssociateJoined?: CreateUserSettingsNotificationChannelsInput;
 }

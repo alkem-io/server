@@ -115,6 +115,30 @@ export class OrganizationLookupService {
   }
 
   /**
+   * The organization that owns a given role set. Mirrors
+   * CommunityResolverService.getSpaceForRoleSetOrFail for the ORGANIZATION
+   * side — every membership side-effect that needs to resolve "which
+   * organization is this role set for" goes through this single owner.
+   */
+  async getOrganizationForRoleSetOrFail(
+    roleSetID: string,
+    options?: FindOneOptions<Organization>
+  ): Promise<IOrganization> {
+    const organization = await this.entityManager.findOne(Organization, {
+      ...options,
+      where: { ...options?.where, roleSet: { id: roleSetID } },
+    });
+    if (!organization) {
+      throw new EntityNotFoundException(
+        'Unable to find Organization for RoleSet',
+        LogContext.COMMUNITY,
+        { roleSetID }
+      );
+    }
+    return organization;
+  }
+
+  /**
    * Get the account ID for an organization without loading the full entity.
    * Use when you only need the accountID.
    */

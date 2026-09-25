@@ -91,4 +91,10 @@ export enum AlkemioErrorStatus {
   // read on this code and renders the itemized blocked dialog from the fresh
   // answer.
   ACCOUNT_DELETION_BLOCKED = 'ACCOUNT_DELETION_BLOCKED',
+  // Organization user-associates: applying is switched off by the
+  // organization's own membership setting.
+  ROLE_SET_APPLICATIONS_NOT_ACCEPTED = 'ROLESET_APPLICATIONS_NOT_ACCEPTED',
+  // Organization user-associates: the direct join door (domain match) is not
+  // open for this viewer on this organization at this moment.
+  ROLE_SET_JOIN_NOT_ELIGIBLE = 'ROLESET_JOIN_NOT_ELIGIBLE',
 }

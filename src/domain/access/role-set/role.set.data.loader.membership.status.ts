@@ -1,5 +1,4 @@
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
-import { RoleName } from '@common/enums/role.name';
 import { ActorService } from '@domain/actor/actor/actor.service';
 import { ICredential } from '@domain/actor/credential/credential.interface';
 import { Injectable, Scope } from '@nestjs/common';
@@ -134,13 +133,13 @@ export class RoleSetMembershipStatusDataLoader {
     return results;
   }
 
-  /** Pure in-memory check: does the agent hold the MEMBER role? */
+  /** Pure in-memory check: does the agent hold the role set's entry role? */
   private isMemberInMemory(
     roleSet: IRoleSet,
     credentials: ICredential[]
   ): boolean {
     const memberRole = (roleSet.roles ?? []).find(
-      r => r.name === RoleName.MEMBER
+      r => r.name === roleSet.entryRoleName
     );
     if (!memberRole) return false;
 

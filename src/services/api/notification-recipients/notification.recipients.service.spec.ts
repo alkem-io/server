@@ -489,6 +489,53 @@ describe('NotificationRecipientsService', () => {
       }
     });
 
+    it.each([
+      NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_ACCEPTED,
+      NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_DECLINED,
+      NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_APPLICATION,
+      NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_JOINED,
+    ])('should use ADMIN standing only for %s (061 R17b) — never the associate criterion, and never OWNER', async eventType => {
+      await service.getRecipients({ eventType, organizationID: 'org-1' });
+
+      expect(userLookupService.usersWithCredentials).toHaveBeenCalledWith(
+        [...ORGANIZATION_NOTIFICATION_CREDENTIAL_TYPES].map(type => ({
+          type,
+          resourceID: 'org-1',
+        })),
+        undefined,
+        expect.any(Object)
+      );
+      const [criteria] = vi.mocked(userLookupService.usersWithCredentials).mock
+        .calls[0];
+      for (const excluded of [
+        AuthorizationCredential.ORGANIZATION_ASSOCIATE,
+        AuthorizationCredential.ORGANIZATION_OWNER,
+      ]) {
+        expect(criteria).not.toContainEqual(
+          expect.objectContaining({ type: excluded })
+        );
+      }
+    });
+
+    it.each([
+      NotificationEvent.USER_ORGANIZATION_ASSOCIATE_INVITATION,
+      NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_APPROVED,
+      NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_DECLINED,
+    ])('should use USER_SELF_MANAGEMENT for %s — a single recipient, the invitee/applicant', async eventType => {
+      await service.getRecipients({ eventType, userID: 'user-1' });
+
+      expect(userLookupService.usersWithCredentials).toHaveBeenCalledWith(
+        [
+          {
+            type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+            resourceID: 'user-1',
+          },
+        ],
+        undefined,
+        expect.any(Object)
+      );
+    });
+
     it('should throw ValidationException for ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION without organizationID', async () => {
       await expect(
         service.getRecipients({
@@ -875,6 +922,186 @@ describe('NotificationRecipientsService', () => {
         const result = await service.getRecipients({
           eventType:
             NotificationEvent.ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION,
+          organizationID: 'org-1',
+        });
+
+        expect(result.emailRecipients).toHaveLength(1);
+        expect(result.inAppRecipients).toHaveLength(1);
+        expect(result.pushRecipients).toHaveLength(1);
+      });
+    });
+
+    describe('organization-associate settings channels (062)', () => {
+      it('USER_ORGANIZATION_ASSOCIATE_INVITATION: defend-on-read falls back to the all-on default when the key is absent', async () => {
+        const legacyUser = {
+          id: 'user-1',
+          email: 'user@example.com',
+          settings: {
+            notification: {
+              user: {
+                membership: {
+                  spaceCommunityJoined: {
+                    email: true,
+                    inApp: true,
+                    push: true,
+                  },
+                },
+              },
+            },
+          },
+          credentials: [],
+        } as unknown as IUser;
+
+        vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+          legacyUser,
+        ]);
+        vi.mocked(userLookupService.getUsersByIds).mockImplementation(
+          async (ids: string[]) => (ids.length > 0 ? [legacyUser] : [])
+        );
+
+        const result = await service.getRecipients({
+          eventType: NotificationEvent.USER_ORGANIZATION_ASSOCIATE_INVITATION,
+          userID: 'user-1',
+        });
+
+        expect(result.emailRecipients).toHaveLength(1);
+        expect(result.inAppRecipients).toHaveLength(1);
+        expect(result.pushRecipients).toHaveLength(1);
+      });
+
+      it('USER_ORGANIZATION_ASSOCIATE_APPLICATION_APPROVED and _DECLINED share one settings row (organizationAssociateApplicationDecided)', async () => {
+        const mutedUser = {
+          id: 'user-1',
+          email: 'user@example.com',
+          settings: {
+            notification: {
+              user: {
+                membership: {
+                  organizationAssociateApplicationDecided: {
+                    email: false,
+                    inApp: false,
+                    push: false,
+                  },
+                },
+              },
+            },
+          },
+          credentials: [],
+        } as unknown as IUser;
+
+        vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+          mutedUser,
+        ]);
+        vi.mocked(userLookupService.getUsersByIds).mockImplementation(
+          async (ids: string[]) => (ids.length > 0 ? [mutedUser] : [])
+        );
+
+        for (const eventType of [
+          NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_APPROVED,
+          NotificationEvent.USER_ORGANIZATION_ASSOCIATE_APPLICATION_DECLINED,
+        ]) {
+          const result = await service.getRecipients({
+            eventType,
+            userID: 'user-1',
+          });
+          expect(result.emailRecipients).toHaveLength(0);
+          expect(result.inAppRecipients).toHaveLength(0);
+          expect(result.pushRecipients).toHaveLength(0);
+        }
+      });
+
+      it.each([
+        NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_ACCEPTED,
+        NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_DECLINED,
+      ])('%s: shares one settings row (adminAssociateInvitationResponse), defend-on-read default when absent', async eventType => {
+        const legacyAdmin = {
+          id: 'admin-1',
+          email: 'admin@example.com',
+          settings: {
+            notification: {
+              organization: {
+                adminMentioned: { email: true, inApp: true, push: true },
+              },
+            },
+          },
+          credentials: [],
+        } as unknown as IUser;
+
+        vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+          legacyAdmin,
+        ]);
+        vi.mocked(userLookupService.getUsersByIds).mockImplementation(
+          async (ids: string[]) => (ids.length > 0 ? [legacyAdmin] : [])
+        );
+
+        const result = await service.getRecipients({
+          eventType,
+          organizationID: 'org-1',
+        });
+
+        expect(result.emailRecipients).toHaveLength(1);
+        expect(result.inAppRecipients).toHaveLength(1);
+        expect(result.pushRecipients).toHaveLength(1);
+      });
+
+      it('ORGANIZATION_ADMIN_ASSOCIATE_APPLICATION: a muted admin receives nothing on any channel', async () => {
+        const mutedAdmin = {
+          id: 'admin-1',
+          email: 'admin@example.com',
+          settings: {
+            notification: {
+              organization: {
+                adminAssociateApplicationReceived: {
+                  email: false,
+                  inApp: false,
+                  push: false,
+                },
+              },
+            },
+          },
+          credentials: [],
+        } as unknown as IUser;
+
+        vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+          mutedAdmin,
+        ]);
+        vi.mocked(userLookupService.getUsersByIds).mockImplementation(
+          async (ids: string[]) => (ids.length > 0 ? [mutedAdmin] : [])
+        );
+
+        const result = await service.getRecipients({
+          eventType: NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_APPLICATION,
+          organizationID: 'org-1',
+        });
+
+        expect(result.emailRecipients).toHaveLength(0);
+        expect(result.inAppRecipients).toHaveLength(0);
+        expect(result.pushRecipients).toHaveLength(0);
+      });
+
+      it('ORGANIZATION_ADMIN_ASSOCIATE_JOINED: an admin with all channels on is a full recipient', async () => {
+        const admin = {
+          id: 'admin-1',
+          email: 'admin@example.com',
+          settings: {
+            notification: {
+              organization: {
+                adminAssociateJoined: { email: true, inApp: true, push: true },
+              },
+            },
+          },
+          credentials: [],
+        } as unknown as IUser;
+
+        vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+          admin,
+        ]);
+        vi.mocked(userLookupService.getUsersByIds).mockImplementation(
+          async (ids: string[]) => (ids.length > 0 ? [admin] : [])
+        );
+
+        const result = await service.getRecipients({
+          eventType: NotificationEvent.ORGANIZATION_ADMIN_ASSOCIATE_JOINED,
           organizationID: 'org-1',
         });
 

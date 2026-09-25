@@ -1109,6 +1109,87 @@ describe('CalloutService', () => {
       );
     });
 
+    // Regression: "Clear default" must reach the database as a SQL NULL.
+    // The clear travels to Postgres through this cascading
+    // `calloutRepository.save(callout)`, and TypeORM reads a property set to
+    // `undefined` as "not provided" — it is omitted from the UPDATE's SET
+    // clause, so the stored default survives and every new whiteboard
+    // contribution keeps inheriting the old template content. Only `null`
+    // writes a SQL NULL. This pins the value handed to the persistence layer;
+    // it deliberately runs the real clear branch of
+    // CalloutContributionDefaultsService rather than an auto-mock, because a
+    // mocked clear could not expose the undefined-vs-null distinction.
+    //
+    // What this proves: the entity reaching `save()` carries `null`.
+    // What it does not prove: that Postgres ends up with NULL — that needs a
+    // live round trip, which this repo's unit/integration suites do not have.
+    it('hands a cleared Whiteboard default to the persistence layer as null, not undefined', async () => {
+      const callout = createUpdatableCallout({
+        storageBucket: { id: 'target-bucket' },
+      });
+      callout.contributionDefaults.whiteboardContent =
+        'stored-template-content';
+
+      vi.mocked(repository.findOne).mockResolvedValue(callout);
+      // Snapshot at call time so a later mutation cannot mask the value that
+      // was actually submitted for persistence.
+      let savedWhiteboardContent: unknown = 'not-saved';
+      vi.mocked(repository.save).mockImplementation(async (entity: any) => {
+        savedWhiteboardContent = entity.contributionDefaults.whiteboardContent;
+        return entity;
+      });
+      vi.mocked(
+        _storageAggregatorResolverService.getStorageAggregatorForCallout
+      ).mockResolvedValue({ id: 'agg-1' } as any);
+      vi.mocked(
+        framingService.validateAndNormalizeContributorsSettings
+      ).mockImplementation((_type, settings) => settings as any);
+      vi.mocked(
+        framingService.validateAndNormalizeSelectionSettings
+      ).mockImplementation((_type, settings) => settings as any);
+      // Both collaborators run their real implementations: an auto-mocked
+      // clear could not expose the undefined-vs-null distinction, and an
+      // auto-mocked materialize would hide whether the clear path re-seeds
+      // the old content (the real one returns undefined when there is no
+      // source content, so nothing puts it back).
+      vi.mocked(
+        contributionDefaultsService.updateCalloutContributionDefaults
+      ).mockImplementation((defaults, data) =>
+        CalloutContributionDefaultsService.prototype.updateCalloutContributionDefaults.call(
+          contributionDefaultsService,
+          defaults,
+          data
+        )
+      );
+      vi.mocked(
+        contributionDefaultsService.materializeWhiteboardDefault
+      ).mockImplementation((sourceData, targetStorageBucketID) =>
+        CalloutContributionDefaultsService.prototype.materializeWhiteboardDefault.call(
+          contributionDefaultsService,
+          sourceData,
+          targetStorageBucketID
+        )
+      );
+
+      await service.updateCallout(
+        callout,
+        {
+          contributionDefaults: { clearWhiteboardContent: true },
+        } as any,
+        actorContextData.actorContext,
+        'user-1'
+      );
+
+      // Nothing may put the old content back between the clear and the save.
+      await expect(
+        vi.mocked(contributionDefaultsService.materializeWhiteboardDefault).mock
+          .results[0]?.value
+      ).resolves.toBeUndefined();
+      expect(repository.save).toHaveBeenCalled();
+      expect(savedWhiteboardContent).toBeNull();
+      expect(savedWhiteboardContent).not.toBeUndefined();
+    });
+
     it('rejects a Whiteboard default when the callout genuinely has no storage bucket', async () => {
       const callout = createUpdatableCallout({ id: 'profile-1' });
 

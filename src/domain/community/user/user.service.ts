@@ -331,6 +331,21 @@ export class UserService {
             inApp: true,
             push: true,
           },
+          adminAssociateInvitationResponse: {
+            email: true,
+            inApp: true,
+            push: true,
+          },
+          adminAssociateApplicationReceived: {
+            email: true,
+            inApp: true,
+            push: true,
+          },
+          adminAssociateJoined: {
+            email: true,
+            inApp: true,
+            push: true,
+          },
         },
         platform: {
           forumDiscussionCreated: { email: true, inApp: false, push: false },
@@ -440,6 +455,16 @@ export class UserService {
               push: true,
             },
             spaceCommunityJoined: { email: true, inApp: true, push: true },
+            organizationAssociateInvitationReceived: {
+              email: true,
+              inApp: true,
+              push: true,
+            },
+            organizationAssociateApplicationDecided: {
+              email: true,
+              inApp: true,
+              push: true,
+            },
           },
         },
         virtualContributor: {
