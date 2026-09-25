@@ -1,3 +1,4 @@
+import { AuthorizationRoleGlobal } from '@common/enums/authorization.credential.global';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CalloutTransferService } from '@domain/collaboration/callout-transfer/callout.transfer.service';
@@ -65,6 +66,26 @@ describe('ConversionResolverMutations', () => {
 
   it('should be defined', () => {
     expect(resolver).toBeDefined();
+  });
+
+  // Regression guard for the gate on every conversion/move mutation. The role
+  // list is the whole check: it is an in-memory policy, so nothing in the DB
+  // can widen it. GLOBAL_SUPPORT was dropped here when 'global-admin-spaces'
+  // was renamed to 'global-support', which locked support out of all seven
+  // mutations. Nothing asserted the list, so the rename went unnoticed.
+  describe('authorization policy', () => {
+    it('grants PLATFORM_ADMIN to both global admin and global support', () => {
+      expect(
+        authorizationPolicyService.createGlobalRolesAuthorizationPolicy
+      ).toHaveBeenCalledWith(
+        [
+          AuthorizationRoleGlobal.GLOBAL_ADMIN,
+          AuthorizationRoleGlobal.GLOBAL_SUPPORT,
+        ],
+        [AuthorizationPrivilege.PLATFORM_ADMIN],
+        expect.any(String)
+      );
+    });
   });
 
   describe('convertSpaceL1ToSpaceL0', () => {
