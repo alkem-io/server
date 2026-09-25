@@ -1,14 +1,20 @@
 import { ActorType } from '@common/enums/actor.type';
+import { AlkemioErrorStatus } from '@common/enums/alkemio.error.status';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { RoomType } from '@common/enums/room.type';
 import { ValidationException } from '@common/exceptions';
+import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { RoomService } from '@domain/communication/room/room.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommunicationAdapterException } from '@services/adapters/communication-adapter/communication.adapter.exception';
+import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mocked } from 'vitest';
+import { ConversationRepairService } from './conversation.repair.service';
 import { ConversationResolverMutations } from './conversation.resolver.mutations';
 import { ConversationService } from './conversation.service';
 import { ConversationAuthorizationService } from './conversation.service.authorization';
@@ -19,6 +25,9 @@ describe('ConversationResolverMutations', () => {
   let _authorizationPolicyService: Mocked<AuthorizationPolicyService>;
   let conversationService: Mocked<ConversationService>;
   let conversationAuthorizationService: Mocked<ConversationAuthorizationService>;
+  let conversationRepairService: Mocked<ConversationRepairService>;
+  let roomService: Mocked<RoomService>;
+  let subscriptionPublishService: Mocked<SubscriptionPublishService>;
 
   const actorContext = { actorID: 'user-1' } as ActorContext;
 
@@ -38,6 +47,9 @@ describe('ConversationResolverMutations', () => {
     conversationAuthorizationService = module.get(
       ConversationAuthorizationService
     );
+    conversationRepairService = module.get(ConversationRepairService);
+    roomService = module.get(RoomService);
+    subscriptionPublishService = module.get(SubscriptionPublishService);
   });
 
   it('should be defined', () => {
@@ -116,6 +128,11 @@ describe('ConversationResolverMutations', () => {
         deletedConversation
       );
 
+      conversationService.getConversationMemberActorIds.mockResolvedValue([
+        'a',
+        'b',
+      ]);
+
       const result = await resolver.deleteConversation(actorContext, {
         ID: 'conv-1',
       } as any);
@@ -127,6 +144,15 @@ describe('ConversationResolverMutations', () => {
         AuthorizationPrivilege.DELETE,
         expect.any(String)
       );
+      expect(
+        subscriptionPublishService.publishConversationEvent
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        subscriptionPublishService.publishConversationGovernanceEvent
+      ).toHaveBeenCalledWith(['a', 'b'], {
+        eventType: 'CONVERSATION_DELETED',
+        conversationID: 'conv-1',
+      });
     });
   });
 
@@ -137,6 +163,139 @@ describe('ConversationResolverMutations', () => {
   // on the Alkemio side (including the sec-server-11 local fallback when
   // Matrix refuses the kick), and any rejection propagates as a real GraphQL
   // error instead of being swallowed into an optimistic success.
+  describe('repairConversationRoom', () => {
+    const conversation = {
+      id: 'conv-1',
+      authorization: { id: 'auth-1' },
+      room: { id: 'room-1' },
+    } as any;
+
+    beforeEach(() => {
+      conversationService.getConversationOrFail.mockResolvedValue(conversation);
+    });
+
+    it('denies a non-member before the repair service is invoked', async () => {
+      authorizationService.grantAccessOrFail.mockImplementation(() => {
+        throw new ForbiddenAuthorizationPolicyException(
+          'denied',
+          AuthorizationPrivilege.READ,
+          'auth-1',
+          'user-1'
+        );
+      });
+
+      await expect(
+        resolver.repairConversationRoom(actorContext, {
+          conversationID: 'conv-1',
+        })
+      ).rejects.toThrow(ForbiddenAuthorizationPolicyException);
+      expect(conversationRepairService.repair).not.toHaveBeenCalled();
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        conversation.authorization,
+        AuthorizationPrivilege.READ,
+        expect.any(String)
+      );
+    });
+
+    it('returns the repair result for a member', async () => {
+      authorizationService.grantAccessOrFail.mockReturnValue(undefined as any);
+      const repairResult = { outcome: 'ROOM_VERIFIED', membersAdded: 0 } as any;
+      conversationRepairService.repair.mockResolvedValue(repairResult);
+
+      const result = await resolver.repairConversationRoom(actorContext, {
+        conversationID: 'conv-1',
+      });
+
+      expect(result).toBe(repairResult);
+      expect(conversationRepairService.repair).toHaveBeenCalledWith(
+        conversation
+      );
+    });
+  });
+
+  describe('outcome semantics of the governance mutations', () => {
+    const groupConversation = {
+      id: 'conv-1',
+      authorization: { id: 'auth-1' },
+      room: { id: 'room-1', type: RoomType.CONVERSATION_GROUP },
+    } as any;
+
+    beforeEach(() => {
+      conversationService.getConversationOrFail.mockResolvedValue(
+        groupConversation
+      );
+      authorizationService.grantAccessOrFail.mockReturnValue(undefined as any);
+    });
+
+    it('assignConversationMember returns true only after the awaited adapter call resolved', async () => {
+      let settled = false;
+      conversationService.addMember.mockImplementation(async () => {
+        await new Promise(resolve => setTimeout(resolve, 5));
+        settled = true;
+        return groupConversation;
+      });
+
+      const result = await resolver.assignConversationMember(actorContext, {
+        conversationID: 'conv-1',
+        memberID: 'member-1',
+      } as any);
+
+      expect(settled).toBe(true);
+      expect(result).toBe(true);
+    });
+
+    it('assignConversationMember propagates an adapter rejection as the mapped status', async () => {
+      conversationService.addMember.mockRejectedValue(
+        CommunicationAdapterException.fromTransportError(
+          'batchAddMember',
+          new Error('Failed to receive response within timeout of 30000ms')
+        )
+      );
+
+      await expect(
+        resolver.assignConversationMember(actorContext, {
+          conversationID: 'conv-1',
+          memberID: 'member-1',
+        } as any)
+      ).rejects.toMatchObject({
+        code: AlkemioErrorStatus.COMMUNICATION_ADAPTER_UNAVAILABLE,
+      });
+    });
+
+    it('updateConversation returns true only after the awaited adapter update resolved', async () => {
+      let settled = false;
+      roomService.updateRoomDisplayName.mockImplementation(async () => {
+        await new Promise(resolve => setTimeout(resolve, 5));
+        settled = true;
+      });
+
+      const result = await resolver.updateConversation(actorContext, {
+        conversationID: 'conv-1',
+        displayName: 'renamed',
+      } as any);
+
+      expect(settled).toBe(true);
+      expect(result).toBe(true);
+    });
+
+    it('updateConversation propagates an adapter failure instead of returning true', async () => {
+      roomService.updateRoomDisplayName.mockRejectedValue(
+        CommunicationAdapterException.fromTransportError(
+          'updateRoom',
+          new Error('channel closed')
+        )
+      );
+
+      await expect(
+        resolver.updateConversation(actorContext, {
+          conversationID: 'conv-1',
+          displayName: 'renamed',
+        } as any)
+      ).rejects.toThrow(CommunicationAdapterException);
+    });
+  });
+
   describe('removeConversationMember / leaveConversation (US2-AS4)', () => {
     const mockConversation = {
       id: 'conv-1',

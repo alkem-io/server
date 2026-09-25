@@ -8,12 +8,13 @@ import {
   RoomEventSubscriptionResult,
 } from '@domain/communication/room/dto/subscription';
 import { Inject, LoggerService } from '@nestjs/common';
-import { Args, Resolver } from '@nestjs/graphql';
+import { Args, Context, Resolver } from '@nestjs/graphql';
 import { SubscriptionReadService } from '@services/subscriptions/subscription-service';
 import { RoomEventSubscriptionPayload } from '@services/subscriptions/subscription-service/dto';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { TypedSubscription } from '@src/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ProxySurfaceUsageService } from '../proxy-surface/proxy.surface.usage.service';
 import { RoomService } from './room.service';
 
 @InstrumentResolver()
@@ -24,7 +25,8 @@ export class RoomEventResolverSubscription {
     private roomService: RoomService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private subscriptionService: SubscriptionReadService
+    private subscriptionService: SubscriptionReadService,
+    private proxySurfaceUsage: ProxySurfaceUsageService
   ) {}
 
   @TypedSubscription<RoomEventSubscriptionPayload, RoomEventSubscriptionArgs>(
@@ -65,7 +67,8 @@ export class RoomEventResolverSubscription {
   )
   async roomEvents(
     @CurrentActor() actorContext: ActorContext,
-    @Args({ nullable: false }) { roomID }: RoomEventSubscriptionArgs
+    @Args({ nullable: false }) { roomID }: RoomEventSubscriptionArgs,
+    @Context() context?: IGraphQLContext
   ) {
     const logMsgPrefix = `[User (${actorContext.actorID}) Room Events] - `;
     this.logger.verbose?.(
@@ -80,6 +83,13 @@ export class RoomEventResolverSubscription {
       AuthorizationPrivilege.READ,
       `subscription to room events on: ${room.id}`
     );
+
+    // Counted once at registration, with the kind of the subscribed room.
+    this.proxySurfaceUsage.record({
+      surface: 'Subscription.roomEvents',
+      roomType: room.type,
+      req: context?.req,
+    });
 
     return this.subscriptionService.subscribeToRoomEvents();
   }

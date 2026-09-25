@@ -376,6 +376,28 @@ enum ConversationEventType {
   READ_RECEIPT_UPDATED
 }
 
+"""
+The kind of governance outcome delivered on conversationGovernanceEvents.
+"""
+enum ConversationGovernanceEventType {
+  CONVERSATION_CREATED
+  CONVERSATION_DELETED
+  CONVERSATION_UPDATED
+  MEMBER_ADDED
+  MEMBER_REMOVED
+  ROOM_READINESS_CHANGED
+}
+
+"""
+The outcome of repairing a conversation room: created, verified unchanged, membership converged, or failed.
+"""
+enum ConversationRoomRepairOutcome {
+  FAILED
+  MEMBERSHIP_CONVERGED
+  ROOM_CREATED
+  ROOM_VERIFIED
+}
+
 enum CredentialType {
   ACCOUNT_ADMIN
   ACCOUNT_LICENSE_PLUS
@@ -413,6 +435,16 @@ enum CredentialType {
   USER_GROUP_MEMBER
   USER_SELF_MANAGEMENT
   VC_CAMPAIGN
+}
+
+"""
+Per-recipient outcome of resolving a direct conversation: newly CREATED, an existing one RESOLVED, BLOCKED_NO_CONSENT when the recipient is not a user that accepts messages (including ids that match no user), FAILED when resolving the recipient raised an error.
+"""
+enum DirectConversationResolutionStatus {
+  BLOCKED_NO_CONSENT
+  CREATED
+  FAILED
+  RESOLVED
 }
 
 """
@@ -805,6 +837,29 @@ enum ProfileType {
   WHITEBOARD
 }
 
+"""
+How the caller of a proxy surface was admitted: web (declaring direct backend transport or not), API bearer, service login, MCP key, or anonymous.
+"""
+enum ProxyCallerClass {
+  ANONYMOUS
+  API
+  MCP
+  SERVICE
+  WEB_GRAPHQL
+  WEB_MATRIX
+}
+
+"""
+Where a message-related API surface ends up as browsers read the messaging backend directly.
+"""
+enum ProxySurfaceDisposition {
+  LATER_MATRIX_ROOM_SCOPE
+  MIGRATED_BROWSER_DATA_PLANE
+  RETAINED_BACKEND_INTEGRATION
+  RETAINED_CONTROL_PLANE
+  RETAINED_MEDIA_SEAM
+}
+
 """Status of a push notification subscription."""
 enum PushSubscriptionStatus {
   ACTIVE
@@ -860,6 +915,32 @@ enum RoleSetType {
   ORGANIZATION
   PLATFORM
   SPACE
+}
+
+"""
+Why a Room is in its readiness state: the verification that established it, or the class of failure recorded.
+"""
+enum RoomReadinessReason {
+  ADAPTER_REJECTED
+  ADAPTER_TIMEOUT
+  ADAPTER_UNAVAILABLE
+  AWAITING_CONFIRMATION
+  CONFIRMED
+  LEGACY_UNVERIFIED
+  PROVISIONED
+  ROOM_MISSING
+  UNKNOWN
+  VERIFIED
+}
+
+"""
+Whether the messaging backend room behind this Room is known to exist. UNKNOWN marks rooms created before readiness was recorded.
+"""
+enum RoomReadinessState {
+  FAILED
+  PENDING
+  READY
+  UNKNOWN
 }
 
 """The type of room."""
@@ -2654,6 +2735,28 @@ type ConversationEventSubscriptionResult {
   readReceiptUpdated: ConversationReadReceiptUpdatedEvent
 }
 
+"""
+A governance outcome about one of the subscriber’s conversations: lifecycle, membership or room readiness. Carries no message, reaction or read-receipt data by construction — room events are read from the messaging backend directly.
+"""
+type ConversationGovernanceEvent {
+  """The conversation after the change. Null only for CONVERSATION_DELETED."""
+  conversation: Conversation
+  """The conversation the outcome is about."""
+  conversationID: UUID!
+  """The kind of governance outcome."""
+  eventType: ConversationGovernanceEventType!
+  """The actor that was added. Present for MEMBER_ADDED."""
+  member: Actor
+  """
+  The actor affected by a membership change. Present for MEMBER_ADDED and MEMBER_REMOVED (the removed member may no longer be resolvable).
+  """
+  memberID: UUID
+  """
+  The new readiness of the conversation room. Present for ROOM_READINESS_CHANGED.
+  """
+  readiness: RoomReadiness
+}
+
 """Event fired when a member is added to a group conversation."""
 type ConversationMemberAddedEvent {
   """The actor that was added as a member."""
@@ -2696,6 +2799,26 @@ type ConversationReadReceiptUpdatedEvent {
   lastReadEventId: MessageID!
   """The room ID where the read receipt was updated."""
   roomId: UUID!
+}
+
+"""
+Result of an idempotent conversation room repair: the room is ensured to exist and its backend membership converged to the platform membership.
+"""
+type ConversationRoomRepairResult {
+  """The repaired conversation."""
+  conversation: Conversation!
+  """
+  Sanitized detail of at most 200 characters, naming the step that failed. Never a raw backend payload.
+  """
+  detail: String
+  """Members added to the backend room."""
+  membersAdded: Int!
+  """Members removed from the backend room."""
+  membersRemoved: Int!
+  """What the repair found and did."""
+  outcome: ConversationRoomRepairOutcome!
+  """The readiness of the conversation room after the repair."""
+  readiness: RoomReadiness!
 }
 
 """Event fired when a conversation is updated (displayName, avatarUrl)."""
@@ -3039,6 +3162,19 @@ type CredentialDefinition {
   resourceID: String!
   """The type for this CredentialDefinition"""
   type: String!
+}
+
+"""
+The direct conversation with one recipient, resolved or created without sending any message. A provisioning failure of the room yields CREATED with the conversation room readiness FAILED — the conversation exists and is repairable.
+"""
+type DirectConversationResolutionResult {
+  """
+  The direct conversation with the recipient; null for BLOCKED_NO_CONSENT and FAILED.
+  """
+  conversation: Conversation
+  """The recipient this result is about."""
+  memberID: UUID!
+  status: DirectConversationResolutionStatus!
 }
 
 type DirectMessageDeliveryResult {
@@ -4468,7 +4604,11 @@ type Mutation {
   """
   Create rooms for legacy conversations that were created without one (from lazy room creation era).
   """
-  adminCommunicationMigrateOrphanedConversations: CommunicationAdminMigrateRoomsResult!
+  adminCommunicationMigrateOrphanedConversations: CommunicationAdminMigrateRoomsResult! @deprecated(reason: "REMOVE_AFTER=2026-12-20 | Dead since roomId became NOT NULL; replaced by adminCommunicationReconcileConversationRooms (readiness-based reconciliation).")
+  """
+  Reconcile recorded room readiness with the messaging backend: probes every room whose readiness is not READY (or every room with includeReady), records READY or FAILED/ROOM_MISSING — retiring UNKNOWN — and, with repair, re-creates missing conversation rooms under their existing id and converges membership. Runs as a background task; the returned Task completes with a JSON summary line {scanned, ready, failed, repaired, repairFailed, unknownRemaining} readable through the task query. Idempotent — safe to re-run.
+  """
+  adminCommunicationReconcileConversationRooms(reconcileData: CommunicationAdminReconcileConversationRoomsInput!): Task!
   """
   Reconcile the Matrix space hierarchy that mirrors the forum against the current forum/discussion state — report-first (dryRun defaults true), scoped to categories + the forum space, never a delete. Returns a task id; the pass runs asynchronously and the task completes with the summary.
   """
@@ -4536,7 +4676,7 @@ type Mutation {
   """Apply to join the specified RoleSet in the entry Role."""
   applyForEntryRoleOnRoleSet(applicationData: ApplyForEntryRoleOnRoleSetInput!): Application!
   """
-  Assign a member to a group conversation. Returns true when the RPC is sent. Actual membership change arrives via MEMBER_ADDED subscription event.
+  Assign a member to a group conversation. Returns true once the messaging backend accepted the join; the membership row is written when the backend join event arrives — observe MEMBER_ADDED on conversationGovernanceEvents (or conversationEvents) for completion. Not a group, member cap reached, or caller not a member → VALIDATION; invitee blocks messages → MESSAGING_NOT_ENABLED; not permitted → FORBIDDEN_POLICY; backend unreachable → COMMUNICATION_ADAPTER_UNAVAILABLE; backend rejected → FORBIDDEN. Divergence between platform and backend membership is repairable with repairConversationRoom.
   """
   assignConversationMember(memberData: AssignConversationMemberInput!): Boolean!
   """Assign the specified LicensePlan to an Account."""
@@ -4752,7 +4892,7 @@ type Mutation {
   """
   joinRoleSet(joinData: JoinAsEntryRoleOnRoleSetInput!): RoleSet!
   """
-  Leave a group conversation. Awaits the Matrix kick rather than reporting success merely because the RPC was sent: true means the kick was accepted, and the membership is then removed asynchronously — observe MEMBER_REMOVED for completion. If Matrix rejects the kick this still returns true, because Alkemio is authoritative for its own membership and applies the removal locally instead; on that path the Matrix-side room membership may diverge until an operator reconciles it. If the last member leaves, the conversation is auto-deleted and a CONVERSATION_DELETED event follows.
+  Leave a group conversation. Awaits the Matrix kick rather than reporting success merely because the RPC was sent: true means the kick was accepted, and the membership is then removed asynchronously — observe MEMBER_REMOVED on conversationGovernanceEvents (or conversationEvents) for completion. If Matrix rejects the kick this still returns true, because Alkemio is authoritative for its own membership and applies the removal locally instead; on that path the Matrix-side room membership may diverge — the divergence is repairable with repairConversationRoom. If the last member leaves, the conversation is auto-deleted and a CONVERSATION_DELETED event follows.
   """
   leaveConversation(leaveData: LeaveConversationInput!): Boolean!
   """Reset the License with Entitlements on the specified Account."""
@@ -4808,7 +4948,7 @@ type Mutation {
   """Empties the CommunityGuidelines."""
   removeCommunityGuidelinesContent(communityGuidelinesData: RemoveCommunityGuidelinesContentInput!): CommunityGuidelines!
   """
-  Remove a member from a group conversation. Awaits the Matrix kick rather than reporting success merely because the RPC was sent: true means the kick was accepted, and the membership is then removed asynchronously — observe MEMBER_REMOVED for completion. If Matrix rejects the kick (e.g. insufficient permissions) this still returns true, because Alkemio is authoritative for its own membership and applies the removal locally instead; on that path the Matrix-side room membership may diverge until an operator reconciles it.
+  Remove a member from a group conversation. Awaits the Matrix kick rather than reporting success merely because the RPC was sent: true means the kick was accepted, and the membership is then removed asynchronously — observe MEMBER_REMOVED on conversationGovernanceEvents (or conversationEvents) for completion. If Matrix rejects the kick (e.g. insufficient permissions) this still returns true, because Alkemio is authoritative for its own membership and applies the removal locally instead; on that path the Matrix-side room membership may diverge — the divergence is repairable with repairConversationRoom. Backend unreachable → COMMUNICATION_ADAPTER_UNAVAILABLE.
   """
   removeConversationMember(memberData: RemoveConversationMemberInput!): Boolean!
   """Remove the default callout template from an InnovationFlowState."""
@@ -4852,6 +4992,10 @@ type Mutation {
   """
   reorderPollOptions(optionData: ReorderPollOptionsInput!): Poll!
   """
+  Repair the messaging room of a Conversation the caller can read: ensures the backend room exists (an existing room is reused, never duplicated), converges backend membership to the platform membership, records readiness and reports a typed outcome with counts. Idempotent — repairing a READY room verifies it and changes nothing. Non-members receive FORBIDDEN_POLICY before any backend call; a backend that cannot be reached yields outcome FAILED, never an authorization error; readiness becomes FAILED unless the room was READY, in which case it stays READY because an outage is not evidence the room is missing.
+  """
+  repairConversationRoom(repairData: RepairConversationRoomInput!): ConversationRoomRepairResult!
+  """
   Replace the backing file of an existing CollaboraDocument in place, preserving its identity. Requires UPDATE on the document. The replacement must be an allowed OfficeDocs format, within the size cap, and the SAME document type as the current file. Refused while the document is being edited.
   """
   replaceCollaboraDocument(file: Upload!, replaceData: ReplaceCollaboraDocumentInput!): CollaboraDocument!
@@ -4863,6 +5007,10 @@ type Mutation {
   resetConversationVc(input: ConversationVcResetInput!): Conversation!
   """Reset all license plans on Accounts"""
   resetLicenseOnAccounts: Boolean!
+  """
+  Resolve — reuse or create — the direct Conversation with each of the given recipients, without sending any message. Per recipient: CREATED with the new conversation, RESOLVED with the existing one, BLOCKED_NO_CONSENT when the recipient is not a user that accepts messages from other users (this includes ids that match no user), FAILED when resolving the recipient raised an error. Requires CREATE on the platform messaging; concurrent calls for the same pair converge on one conversation. More than 100 recipients is rejected before any recipient is processed.
+  """
+  resolveDirectConversations(resolutionData: ResolveDirectConversationsInput!): [DirectConversationResolutionResult!]!
   """Revoke a credential from an Actor."""
   revokeCredentialFromActor(actorID: UUID!, credentialType: CredentialType!, resourceID: UUID): Boolean!
   """Removes an authorization credential from an Organization."""
@@ -4960,7 +5108,7 @@ type Mutation {
   """Update the sortOrder field of the Contributions of s Callout."""
   updateContributionsSortOrder(sortOrderData: UpdateContributionCalloutsSortOrderInput!): [CalloutContribution!]!
   """
-  Update a group conversation (display name, avatar). Returns true when the RPC is sent. Actual changes arrive via CONVERSATION_UPDATED subscription events. When both fields are provided, clients may receive separate update events for each.
+  Update a group conversation (display name, avatar). Returns true once the metadata is persisted and the messaging backend accepted the update — observe CONVERSATION_UPDATED on conversationGovernanceEvents (or conversationEvents) for completion; when both fields are provided, clients may receive separate update events for each. Not a group → VALIDATION; not permitted → FORBIDDEN_POLICY; backend unreachable → COMMUNICATION_ADAPTER_UNAVAILABLE.
   """
   updateConversation(updateData: UpdateConversationInput!): Boolean!
   """Updates the specified Discussion."""
@@ -5360,6 +5508,10 @@ type PlatformAdminCommunicationQueryResults {
   adminCommunicationMembership(communicationData: CommunicationAdminMembershipInput!): CommunicationAdminMembershipResult!
   """Usage of the messaging platform that are not tied to the domain model."""
   adminCommunicationOrphanedUsage: CommunicationAdminOrphanedUsageResult!
+  """
+  Per-UTC-day usage of the message proxy surfaces (send, reply, reactions, remove, mark read, direct send, room message reads, room and conversation event subscriptions), split by disposition, caller class, room kind and media flag, with the liveness heartbeat beside it. Days with no ledger data are omitted — never reported as zero. Operators only.
+  """
+  proxySurfaceUsage(usageData: ProxySurfaceUsageInput!): ProxySurfaceUsageResult!
 }
 
 type PlatformAdminIdentityQueryResults {
@@ -5836,6 +5988,50 @@ type PromptGraphNode {
   output: PromptGraphDataStruct
   prompt: String
   system: Boolean!
+}
+
+"""
+One UTC day of the proxy usage ledger. A day with no ledger data at all is absent from the result, never reported as zero.
+"""
+type ProxySurfaceUsageDay {
+  """UTC day, YYYY-MM-DD."""
+  day: String!
+  """
+  Minutes the platform was expected to be up: 1440 for a past day, the elapsed UTC minutes for today.
+  """
+  expectedMinutes: Int!
+  """
+  Minutes of the day in which at least one server instance flushed the ledger — the liveness heartbeat, independent of traffic and replica count.
+  """
+  livenessMinutes: Int!
+  rows: [ProxySurfaceUsageRow!]!
+}
+
+"""Proxy surface usage per UTC day for the requested window."""
+type ProxySurfaceUsageResult {
+  """Days with ledger data, oldest first. Silent days are omitted."""
+  days: [ProxySurfaceUsageDay!]!
+  """First UTC day of the window (inclusive)."""
+  from: String!
+  """Last UTC day of the window (today, inclusive)."""
+  to: String!
+}
+
+"""
+Calls on one proxy surface for one day, by disposition, caller class, room kind and media flag. Counts only — no user identifiers, no content.
+"""
+type ProxySurfaceUsageRow {
+  callerClass: ProxyCallerClass!
+  count: Int!
+  disposition: ProxySurfaceDisposition!
+  """Whether the call carried attachments (the media seam)."""
+  media: Boolean!
+  """
+  The kind of room the call targeted; null for surfaces without a room (the legacy conversation channel).
+  """
+  roomType: RoomType
+  """The surface identifier, e.g. Mutation.sendMessageToRoom."""
+  surface: String!
 }
 
 type PruneInAppNotificationAdminResult {
@@ -6429,6 +6625,10 @@ type Room {
   """The number of messages in the Room."""
   messagesCount: Int!
   """
+  Whether the messaging backend room behind this Room is known to exist, and why. Read from the platform record; never a backend round trip. UNKNOWN means not yet verified — treat as usable and offer repair on failure.
+  """
+  readiness: RoomReadiness!
+  """
   The type of room (e.g., post, callout, conversation_direct, conversation_group).
   """
   type: RoomType!
@@ -6477,6 +6677,22 @@ type RoomMessageReactionEventSubscriptionResult {
   messageID: String
   """The type of event."""
   type: MutationType!
+}
+
+"""
+The recorded provisioning readiness of the messaging backend room behind a Room. Served from the platform record — never a backend round trip.
+"""
+type RoomReadiness {
+  """
+  A sanitized, member-visible summary of at most 200 characters. Never a raw backend payload, hostname, backend identifier or stack trace.
+  """
+  detail: String
+  """How the state was established, or the failure class."""
+  reason: RoomReadinessReason!
+  """Whether the backend room is known to exist."""
+  state: RoomReadinessState!
+  """When the readiness was last written."""
+  updatedDate: DateTime!
 }
 
 """Unread message count for a specific thread in a Room."""
@@ -6987,6 +7203,10 @@ type Subscription {
   Receive conversation events for the authenticated user. Includes conversation lifecycle (created, updated, deleted), messages (received, removed), membership changes (member added, removed), and read receipts.
   """
   conversationEvents: ConversationEventSubscriptionResult!
+  """
+  Receive governance outcomes for the conversations the authenticated user is a member of: created, updated, deleted, member added, member removed, room readiness changed. Carries no message, reaction or read-receipt data — room events are read from the messaging backend directly. Delivered to the members of the affected conversation (a removed member receives their own removal once).
+  """
+  conversationGovernanceEvents: ConversationGovernanceEvent!
   """Receive updates on Discussions"""
   forumDiscussionUpdated(
     """The IDs of the Forum to subscribe to all updates on."""
@@ -8204,6 +8424,17 @@ input CommunicationAdminEnsureAccessInput {
 
 input CommunicationAdminMembershipInput {
   communityID: UUID!
+}
+
+input CommunicationAdminReconcileConversationRoomsInput {
+  """
+  Probe every room, including rooms already recorded READY. By default only rooms whose readiness is not READY are probed.
+  """
+  includeReady: Boolean! = false
+  """
+  Also repair conversation rooms the backend does not have (re-create under the same room id and converge membership). Rooms of other kinds are only marked.
+  """
+  repair: Boolean! = false
 }
 
 input CommunicationAdminRemoveOrphanedRoomInput {
@@ -9525,6 +9756,13 @@ input PromptGraphNodeInput {
   system: Boolean!
 }
 
+input ProxySurfaceUsageInput {
+  """
+  Number of UTC days to read, ending today (1..45 — the ledger retention).
+  """
+  days: Int!
+}
+
 input RefreshVirtualContributorBodyOfKnowledgeInput {
   """The ID of the Virtual Contributor to update."""
   virtualContributorID: UUID!
@@ -9582,6 +9820,11 @@ input ReorderPollOptionsInput {
   pollID: UUID!
 }
 
+input RepairConversationRoomInput {
+  """The ID of the conversation whose room should be repaired."""
+  conversationID: UUID!
+}
+
 input ReplaceCollaboraDocumentInput {
   """
   Optional title chosen in the replace dialog (defaults to the incoming file title). When supplied it is persisted as the CollaboraDocument display name (the same entity), propagating to the editor title and the download filename. Omit to leave the current name unchanged.
@@ -9596,6 +9839,13 @@ input ReplaceWhiteboardContentFromSourceInput {
   sourceWhiteboardID: UUID!
   """The Whiteboard whose content is replaced."""
   targetWhiteboardID: UUID!
+}
+
+input ResolveDirectConversationsInput {
+  """
+  Actor IDs of the recipients to resolve a direct conversation with (1..100). Duplicates and the caller are dropped.
+  """
+  memberIDs: [UUID!]!
 }
 
 input RevokeAuthorizationCredentialInput {

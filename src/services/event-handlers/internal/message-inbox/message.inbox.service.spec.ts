@@ -1,8 +1,10 @@
 import { RoomType } from '@common/enums/room.type';
 import { MutationType } from '@common/enums/subscriptions';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { ConversationService } from '@domain/communication/conversation/conversation.service';
 import { IRoom } from '@domain/communication/room/room.interface';
+import { RoomReadinessService } from '@domain/communication/room/room.readiness.service';
 import { RoomServiceEvents } from '@domain/communication/room/room.service.events';
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -22,6 +24,7 @@ import { RoomCreatedEvent } from './room.created.event';
 import { RoomDmRequestedEvent } from './room.dm.requested.event';
 import { RoomMemberUpdatedEvent } from './room.member.updated.event';
 import { RoomReceiptUpdatedEvent } from './room.receipt.updated.event';
+import { RoomUpdatedEvent } from './room.updated.event';
 import { VcInvocationService } from './vc.invocation.service';
 
 describe('MessageInboxService', () => {
@@ -34,6 +37,8 @@ describe('MessageInboxService', () => {
   let messageNotificationService: Mocked<MessageNotificationService>;
   let vcInvocationService: Mocked<VcInvocationService>;
   let conversationService: Mocked<ConversationService>;
+  let roomReadinessService: Mocked<RoomReadinessService>;
+  let actorService: Mocked<ActorService>;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -53,6 +58,8 @@ describe('MessageInboxService', () => {
     messageNotificationService = module.get(MessageNotificationService);
     vcInvocationService = module.get(VcInvocationService);
     conversationService = module.get(ConversationService);
+    roomReadinessService = module.get(RoomReadinessService);
+    actorService = module.get(ActorService);
   });
 
   const makeRoom = (overrides: Partial<IRoom> = {}): any => ({
@@ -610,8 +617,432 @@ describe('MessageInboxService', () => {
     });
   });
 
+  describe('pending room confirmation (first backend-originated event)', () => {
+    const pending = { state: 'PENDING', reason: 'AWAITING_CONFIRMATION' };
+    const ready = { state: 'READY', reason: 'PROVISIONED' };
+    const failed = { state: 'FAILED', reason: 'ADAPTER_TIMEOUT' };
+
+    const expectConfirmedOnce = (room: any) => {
+      expect(roomReadinessService.record).toHaveBeenCalledTimes(1);
+      expect(roomReadinessService.record).toHaveBeenCalledWith(
+        room,
+        { state: 'READY', reason: 'CONFIRMED' },
+        'BACKEND_CONFIRMATION'
+      );
+    };
+
+    it('room.created confirms a PENDING room exactly once', async () => {
+      const room = makeRoom({
+        type: RoomType.CONVERSATION_GROUP,
+        readiness: pending,
+      } as any);
+      roomLookupService.getRoomOrFail.mockResolvedValue(room);
+
+      await service.handleRoomCreated(
+        new RoomCreatedEvent({
+          roomId: 'room-1',
+          creatorActorID: 'actor-1',
+          roomType: 'conversation_group',
+          timestamp: 1000,
+        })
+      );
+
+      expectConfirmedOnce(room);
+    });
+
+    it('room.created for a room the platform does not know does nothing', async () => {
+      roomLookupService.getRoomOrFail.mockRejectedValue(new Error('no room'));
+
+      await expect(
+        service.handleRoomCreated(
+          new RoomCreatedEvent({
+            roomId: 'unknown',
+            creatorActorID: 'actor-1',
+            roomType: 'conversation_group',
+            timestamp: 1000,
+          })
+        )
+      ).resolves.toBeUndefined();
+      expect(roomReadinessService.record).not.toHaveBeenCalled();
+    });
+
+    it('a member join confirms a PENDING room (also for direct rooms)', async () => {
+      const room = makeRoom({
+        type: RoomType.CONVERSATION_DIRECT,
+        readiness: pending,
+      } as any);
+      roomLookupService.getRoomOrFail.mockResolvedValue(room);
+      conversationService.findConversationByRoomId.mockResolvedValue({
+        id: 'conv-1',
+      } as any);
+
+      await service.handleRoomMemberUpdated(
+        new RoomMemberUpdatedEvent({
+          roomId: 'room-1',
+          memberActorID: 'actor-2',
+          senderActorID: 'actor-2',
+          membership: 'join',
+          timestamp: 1000,
+        })
+      );
+
+      expectConfirmedOnce(room);
+    });
+
+    it('a member leave does not confirm a PENDING room', async () => {
+      const room = makeRoom({
+        type: RoomType.CONVERSATION_GROUP,
+        readiness: pending,
+      } as any);
+      roomLookupService.getRoomOrFail.mockResolvedValue(room);
+      conversationService.findConversationByRoomId.mockResolvedValue({
+        id: 'conv-1',
+      } as any);
+      conversationService.getConversationMemberActorIds.mockResolvedValue([
+        'actor-1',
+        'actor-2',
+      ]);
+      conversationService.persistMemberRemoved.mockResolvedValue(1);
+      conversationService.getConversationOrFail.mockResolvedValue({
+        id: 'conv-1',
+      } as any);
+
+      await service.handleRoomMemberUpdated(
+        new RoomMemberUpdatedEvent({
+          roomId: 'room-1',
+          memberActorID: 'actor-2',
+          senderActorID: 'actor-2',
+          membership: 'leave',
+          timestamp: 1000,
+        })
+      );
+
+      expect(roomReadinessService.record).not.toHaveBeenCalled();
+    });
+
+    it('message.received confirms a PENDING room exactly once', async () => {
+      const room = makeRoom({
+        type: RoomType.CALLOUT,
+        readiness: pending,
+      } as any);
+      roomLookupService.getRoomOrFail.mockResolvedValue(room);
+      roomLookupService.incrementMessagesCount.mockResolvedValue(
+        undefined as any
+      );
+      actorContextService.buildForActor.mockResolvedValue({} as any);
+      messageNotificationService.processMessageNotifications.mockResolvedValue(
+        undefined
+      );
+      vcInvocationService.processNewThread.mockResolvedValue(undefined);
+
+      await service.handleMessageReceived(
+        new MessageReceivedEvent({
+          roomId: 'room-1',
+          actorID: 'actor-1',
+          message: { id: 'msg-1', message: 'Hello', timestamp: 1000 },
+        } as any)
+      );
+
+      expectConfirmedOnce(room);
+    });
+
+    it('room.updated confirms a PENDING room exactly once', async () => {
+      const room = makeRoom({
+        type: RoomType.CALLOUT,
+        readiness: pending,
+      } as any);
+      roomLookupService.updatePartial.mockResolvedValue(undefined);
+      roomLookupService.getRoomOrFail.mockResolvedValue(room);
+
+      await service.handleRoomUpdated(
+        new RoomUpdatedEvent({
+          roomId: 'room-1',
+          displayName: 'renamed',
+          timestamp: 1000,
+        })
+      );
+
+      expectConfirmedOnce(room);
+    });
+
+    it.each([
+      ['READY', ready],
+      ['FAILED', failed],
+      ['none recorded', undefined],
+    ])('leaves a %s room untouched', async (_label, readiness) => {
+      const room = makeRoom({ type: RoomType.CALLOUT, readiness } as any);
+      roomLookupService.updatePartial.mockResolvedValue(undefined);
+      roomLookupService.getRoomOrFail.mockResolvedValue(room);
+
+      await service.handleRoomUpdated(
+        new RoomUpdatedEvent({
+          roomId: 'room-1',
+          displayName: 'renamed',
+          timestamp: 1000,
+        })
+      );
+
+      expect(roomReadinessService.record).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('governance channel', () => {
+    const governance = () =>
+      subscriptionPublishService.publishConversationGovernanceEvent;
+    const legacy = () => subscriptionPublishService.publishConversationEvent;
+    const groupRoom = () =>
+      makeRoom({
+        type: RoomType.CONVERSATION_GROUP,
+        readiness: { state: 'READY' },
+      } as any);
+    const conversation = { id: 'conv-1', room: { id: 'room-1' } } as any;
+
+    it('publishes exactly one MEMBER_ADDED beside the legacy event on a join', async () => {
+      roomLookupService.getRoomOrFail.mockResolvedValue(groupRoom());
+      conversationService.findConversationByRoomId.mockResolvedValue(
+        conversation
+      );
+      conversationService.persistMemberAdded.mockResolvedValue(
+        undefined as any
+      );
+      conversationService.getConversationOrFail.mockResolvedValue(conversation);
+      conversationService.getConversationMemberActorIds.mockResolvedValue([
+        'a',
+        'b',
+        'c',
+      ]);
+      actorService.getActorOrFail.mockResolvedValue({ id: 'c' } as any);
+
+      await service.handleRoomMemberUpdated(
+        new RoomMemberUpdatedEvent({
+          roomId: 'room-1',
+          memberActorID: 'c',
+          senderActorID: 'a',
+          membership: 'join',
+          timestamp: 1,
+        })
+      );
+
+      expect(legacy()).toHaveBeenCalledTimes(1);
+      expect(governance()).toHaveBeenCalledTimes(1);
+      expect(governance()).toHaveBeenCalledWith(['a', 'b', 'c'], {
+        eventType: 'MEMBER_ADDED',
+        conversationID: 'conv-1',
+        conversation,
+        member: { id: 'c' },
+        memberID: 'c',
+      });
+    });
+
+    it('publishes exactly one MEMBER_REMOVED to the members captured before the removal (the removed member included)', async () => {
+      roomLookupService.getRoomOrFail.mockResolvedValue(groupRoom());
+      conversationService.findConversationByRoomId.mockResolvedValue(
+        conversation
+      );
+      conversationService.getConversationMemberActorIds.mockResolvedValue([
+        'a',
+        'b',
+        'c',
+      ]);
+      conversationService.persistMemberRemoved.mockResolvedValue(2);
+      conversationService.getConversationOrFail.mockResolvedValue(conversation);
+
+      await service.handleRoomMemberUpdated(
+        new RoomMemberUpdatedEvent({
+          roomId: 'room-1',
+          memberActorID: 'c',
+          senderActorID: 'a',
+          membership: 'leave',
+          timestamp: 1,
+        })
+      );
+
+      expect(legacy()).toHaveBeenCalledTimes(1);
+      expect(governance()).toHaveBeenCalledTimes(1);
+      expect(governance()).toHaveBeenCalledWith(['a', 'b', 'c'], {
+        eventType: 'MEMBER_REMOVED',
+        conversationID: 'conv-1',
+        conversation,
+        memberID: 'c',
+      });
+    });
+
+    it('publishes MEMBER_REMOVED then CONVERSATION_DELETED (conversation null) when the last member leaves', async () => {
+      roomLookupService.getRoomOrFail.mockResolvedValue(groupRoom());
+      conversationService.findConversationByRoomId.mockResolvedValue(
+        conversation
+      );
+      conversationService.getConversationMemberActorIds.mockResolvedValue([
+        'c',
+      ]);
+      conversationService.persistMemberRemoved.mockResolvedValue(0);
+      conversationService.getConversationOrFail.mockResolvedValue(conversation);
+      conversationService.deleteConversation.mockResolvedValue(conversation);
+
+      await service.handleRoomMemberUpdated(
+        new RoomMemberUpdatedEvent({
+          roomId: 'room-1',
+          memberActorID: 'c',
+          senderActorID: 'c',
+          membership: 'leave',
+          timestamp: 1,
+        })
+      );
+
+      expect(legacy()).toHaveBeenCalledTimes(2);
+      expect(governance()).toHaveBeenCalledTimes(2);
+      expect(governance().mock.calls[0][1]).toMatchObject({
+        eventType: 'MEMBER_REMOVED',
+        memberID: 'c',
+      });
+      expect(governance().mock.calls[1][1]).toEqual({
+        eventType: 'CONVERSATION_DELETED',
+        conversationID: 'conv-1',
+      });
+    });
+
+    it('publishes exactly one CONVERSATION_UPDATED beside the legacy event on room.updated', async () => {
+      roomLookupService.updatePartial.mockResolvedValue(undefined);
+      roomLookupService.getRoomOrFail.mockResolvedValue(groupRoom());
+      conversationService.findConversationByRoomId.mockResolvedValue(
+        conversation
+      );
+      conversationService.getConversationMemberActorIds.mockResolvedValue([
+        'a',
+        'b',
+      ]);
+
+      await service.handleRoomUpdated(
+        new RoomUpdatedEvent({
+          roomId: 'room-1',
+          displayName: 'renamed',
+          timestamp: 1,
+        })
+      );
+
+      expect(legacy()).toHaveBeenCalledTimes(1);
+      expect(governance()).toHaveBeenCalledWith(['a', 'b'], {
+        eventType: 'CONVERSATION_UPDATED',
+        conversationID: 'conv-1',
+        conversation,
+      });
+    });
+
+    describe('never publishes for message, reaction or receipt triggers', () => {
+      beforeEach(() => {
+        const room = makeRoom({
+          type: RoomType.CONVERSATION_DIRECT,
+          readiness: { state: 'READY' },
+        } as any);
+        roomLookupService.getRoomOrFail.mockResolvedValue(room);
+        roomLookupService.incrementMessagesCount.mockResolvedValue(
+          undefined as any
+        );
+        roomLookupService.decrementMessagesCount.mockResolvedValue(
+          undefined as any
+        );
+        roomLookupService.getMessageInRoom.mockResolvedValue({
+          id: 'msg-1',
+          reactions: [],
+          timestamp: 1,
+        } as any);
+        conversationService.findConversationByRoomId.mockResolvedValue(
+          conversation
+        );
+        conversationService.getConversationMemberActorIds.mockResolvedValue([
+          'a',
+          'b',
+        ]);
+        actorContextService.buildForActor.mockResolvedValue({} as any);
+        vcInvocationService.processDirectConversation.mockResolvedValue(
+          undefined
+        );
+      });
+
+      it('message.received', async () => {
+        await service.handleMessageReceived(
+          new MessageReceivedEvent({
+            roomId: 'room-1',
+            actorID: 'a',
+            message: { id: 'msg-1', message: 'hi', timestamp: 1 },
+          } as any)
+        );
+        expect(legacy()).toHaveBeenCalled();
+        expect(governance()).not.toHaveBeenCalled();
+      });
+
+      it('message.edited', async () => {
+        await service.handleMessageEdited(
+          new MessageEditedEvent({
+            roomId: 'room-1',
+            messageId: 'msg-1',
+            actorID: 'a',
+            newContent: 'edited',
+            timestamp: 2,
+          } as any)
+        );
+        expect(governance()).not.toHaveBeenCalled();
+      });
+
+      it('message.redacted', async () => {
+        await service.handleMessageRedacted(
+          new MessageRedactedEvent({
+            roomId: 'room-1',
+            messageId: 'msg-1',
+            actorID: 'a',
+            timestamp: 2,
+          } as any)
+        );
+        expect(legacy()).toHaveBeenCalled();
+        expect(governance()).not.toHaveBeenCalled();
+      });
+
+      it('reaction.added and reaction.removed', async () => {
+        await service.handleReactionAdded(
+          new ReactionAddedEvent({
+            roomId: 'room-1',
+            messageId: 'msg-1',
+            reactionId: 'r-1',
+            actorID: 'a',
+            emoji: '👍',
+            timestamp: 2,
+          } as any)
+        );
+        await service.handleReactionRemoved(
+          new ReactionRemovedEvent({
+            roomId: 'room-1',
+            messageId: 'msg-1',
+            reactionId: 'r-1',
+            actorID: 'a',
+            timestamp: 3,
+          } as any)
+        );
+        expect(governance()).not.toHaveBeenCalled();
+      });
+
+      it('room.receipt.updated', async () => {
+        await service.handleRoomReceiptUpdated(
+          new RoomReceiptUpdatedEvent({
+            roomId: 'room-1',
+            actorID: 'a',
+            eventId: 'msg-1',
+            timestamp: 2,
+          })
+        );
+        expect(legacy()).toHaveBeenCalled();
+        expect(governance()).not.toHaveBeenCalled();
+      });
+    });
+  });
+
   describe('handleRoomCreated', () => {
-    it('should complete without error (logging only)', async () => {
+    it('looks the room up and leaves a room that is not awaiting confirmation untouched', async () => {
+      roomLookupService.getRoomOrFail.mockResolvedValue(
+        makeRoom({
+          readiness: { state: 'READY', reason: 'PROVISIONED' },
+        } as any)
+      );
+
       await service.handleRoomCreated(
         new RoomCreatedEvent({
           roomId: 'room-1',
@@ -621,8 +1052,11 @@ describe('MessageInboxService', () => {
         })
       );
 
-      // No service calls expected - logging only
-      expect(roomLookupService.getRoomOrFail).not.toHaveBeenCalled();
+      expect(roomLookupService.getRoomOrFail).toHaveBeenCalledWith('room-1');
+      expect(roomReadinessService.record).not.toHaveBeenCalled();
+      expect(
+        subscriptionPublishService.publishRoomEvent
+      ).not.toHaveBeenCalled();
     });
   });
 

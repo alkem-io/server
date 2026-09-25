@@ -181,6 +181,16 @@ describe('CommunicationAdapter', () => {
       expect(result).toBe(true);
     });
 
+    it('should throw when the adapter answers createRoom with success=false', async () => {
+      mockAmqpConnection.request.mockResolvedValue(
+        createErrorResponse('MATRIX_ERROR', 'room creation failed')
+      );
+
+      await expect(
+        adapter.createRoom('room-id', AlkemioRoomType.CONVERSATION_DIRECT)
+      ).rejects.toThrow(CommunicationAdapterException);
+    });
+
     it('should map CONVERSATION_DIRECT to RoomTypeDirect', async () => {
       const response = createSuccessResponse({});
       mockAmqpConnection.request.mockResolvedValue(response);

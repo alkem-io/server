@@ -12,6 +12,7 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mocked } from 'vitest';
 import { MessageAttachmentService } from '../message-attachment/message.attachment.service';
+import { ProxySurfaceUsageService } from '../proxy-surface/proxy.surface.usage.service';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { IRoom } from './room.interface';
 import { RoomResolverMutations } from './room.resolver.mutations';
@@ -27,8 +28,10 @@ describe('RoomResolverMutations', () => {
   let roomLookupService: Mocked<RoomLookupService>;
   let userLookupService: Mocked<UserLookupService>;
   let communicationAdapter: Mocked<CommunicationAdapter>;
+  let proxySurfaceUsage: Mocked<ProxySurfaceUsageService>;
 
   const actorContext = { actorID: 'user-1' } as ActorContext;
+  const context = { req: { headers: {} } } as unknown as IGraphQLContext;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -47,6 +50,108 @@ describe('RoomResolverMutations', () => {
     roomLookupService = module.get(RoomLookupService);
     userLookupService = module.get(UserLookupService);
     communicationAdapter = module.get(CommunicationAdapter);
+    proxySurfaceUsage = module.get(ProxySurfaceUsageService);
+  });
+
+  describe('proxy usage counting', () => {
+    const conversationRoom = {
+      id: 'room-1',
+      type: RoomType.CONVERSATION_DIRECT,
+      authorization: { id: 'auth-1' },
+    } as unknown as IRoom;
+
+    beforeEach(() => {
+      roomService.getRoomOrFail.mockResolvedValue(conversationRoom as any);
+      authorizationService.grantAccessOrFail.mockReturnValue(undefined as any);
+      roomAuthorizationService.extendAuthorizationPolicyForMessageSender.mockResolvedValue(
+        { id: 'ext' } as any
+      );
+      roomAuthorizationService.extendAuthorizationPolicyForReactionSender.mockResolvedValue(
+        { id: 'ext' } as any
+      );
+      communicationAdapter.getRoomMembers.mockResolvedValue(['user-1']);
+      roomService.removeRoomMessage.mockResolvedValue('msg-1');
+    });
+
+    it('counts sendMessageToRoom once with the room kind, the media flag and the request', async () => {
+      roomLookupService.sendMessage.mockResolvedValue({ id: 'msg-1' } as any);
+
+      await resolver.sendMessageToRoom(
+        { roomID: 'room-1', message: 'Hello' } as any,
+        actorContext,
+        context
+      );
+
+      expect(proxySurfaceUsage.record).toHaveBeenCalledTimes(1);
+      expect(proxySurfaceUsage.record).toHaveBeenCalledWith({
+        surface: 'Mutation.sendMessageToRoom',
+        roomType: RoomType.CONVERSATION_DIRECT,
+        media: false,
+        req: context.req,
+      });
+    });
+
+    it('counts sendMessageReplyToRoom once', async () => {
+      roomLookupService.sendMessageReply.mockResolvedValue({ id: 'r' } as any);
+      await resolver.sendMessageReplyToRoom(
+        { roomID: 'room-1', message: 'Re', threadID: 't' } as any,
+        actorContext,
+        context
+      );
+      expect(proxySurfaceUsage.record).toHaveBeenCalledWith(
+        expect.objectContaining({ surface: 'Mutation.sendMessageReplyToRoom' })
+      );
+    });
+
+    it('counts reactions, removal and mark-read once each', async () => {
+      roomService.addReactionToMessage.mockResolvedValue({ id: 'x' } as any);
+      roomService.removeReactionToMessage.mockResolvedValue(true);
+      roomService.markMessageAsRead.mockResolvedValue(true);
+
+      await resolver.addReactionToMessageInRoom(
+        { roomID: 'room-1', messageID: 'm', emoji: '👍' } as any,
+        actorContext,
+        context
+      );
+      await resolver.removeReactionToMessageInRoom(
+        { roomID: 'room-1', reactionID: 'r' } as any,
+        actorContext,
+        context
+      );
+      await resolver.removeMessageOnRoom(
+        { roomID: 'room-1', messageID: 'm' } as any,
+        actorContext,
+        context
+      );
+      await resolver.markMessageAsReadInRoom(
+        { roomID: 'room-1', messageID: 'm' } as any,
+        actorContext,
+        context
+      );
+
+      expect(
+        proxySurfaceUsage.record.mock.calls.map(([input]) => input.surface)
+      ).toEqual([
+        'Mutation.addReactionToMessageInRoom',
+        'Mutation.removeReactionToMessageInRoom',
+        'Mutation.removeMessageOnRoom',
+        'Mutation.markMessageAsReadInRoom',
+      ]);
+    });
+
+    it('does not count when authorization fails', async () => {
+      authorizationService.grantAccessOrFail.mockImplementation(() => {
+        throw new Error('denied');
+      });
+      await expect(
+        resolver.sendMessageToRoom(
+          { roomID: 'room-1', message: 'Hello' } as any,
+          actorContext,
+          context
+        )
+      ).rejects.toThrow('denied');
+      expect(proxySurfaceUsage.record).not.toHaveBeenCalled();
+    });
   });
 
   it('should be defined', () => {

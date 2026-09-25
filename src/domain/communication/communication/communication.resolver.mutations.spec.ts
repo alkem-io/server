@@ -14,6 +14,8 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { pubSubEngineMockFactory } from '@test/utils/pub.sub.engine.mock.factory';
 import { type Mocked } from 'vitest';
+import { MessagingService } from '../messaging/messaging.service';
+import { ProxySurfaceUsageService } from '../proxy-surface/proxy.surface.usage.service';
 import { CommunicationResolverMutations } from './communication.resolver.mutations';
 
 describe('CommunicationResolverMutations', () => {
@@ -24,6 +26,8 @@ describe('CommunicationResolverMutations', () => {
   let notificationOrganizationAdapter: Mocked<NotificationOrganizationAdapter>;
   let notificationSpaceAdapter: Mocked<NotificationSpaceAdapter>;
   let platformAuthorizationService: Mocked<PlatformAuthorizationPolicyService>;
+  let messagingService: Mocked<MessagingService>;
+  let proxySurfaceUsage: Mocked<ProxySurfaceUsageService>;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -51,10 +55,56 @@ describe('CommunicationResolverMutations', () => {
     platformAuthorizationService = module.get(
       PlatformAuthorizationPolicyService
     );
+    messagingService = module.get(MessagingService);
+    proxySurfaceUsage = module.get(ProxySurfaceUsageService);
   });
 
   it('should be defined', () => {
     expect(resolver).toBeDefined();
+  });
+
+  describe('sendDirectMessageToUsers', () => {
+    const actorContext = { actorID: 'sender-1' } as ActorContext;
+
+    it('counts the compound proxy once per call with room kind CONVERSATION_DIRECT', async () => {
+      authorizationService.grantAccessOrFail.mockReturnValue(undefined as any);
+      platformAuthorizationService.getPlatformAuthorizationPolicy.mockResolvedValue(
+        { id: 'platform' } as any
+      );
+      messagingService.sendDirectMessageToUsers.mockResolvedValue([]);
+      const context = { req: { headers: {} } } as any;
+
+      await resolver.sendDirectMessageToUsers(
+        actorContext,
+        { receiverIDs: ['u-2'], message: 'hi' } as any,
+        context
+      );
+
+      expect(proxySurfaceUsage.record).toHaveBeenCalledTimes(1);
+      expect(proxySurfaceUsage.record).toHaveBeenCalledWith({
+        surface: 'Mutation.sendDirectMessageToUsers',
+        roomType: 'conversation_direct',
+        req: context.req,
+      });
+    });
+
+    it('does not count when the caller is not permitted', async () => {
+      platformAuthorizationService.getPlatformAuthorizationPolicy.mockResolvedValue(
+        { id: 'platform' } as any
+      );
+      authorizationService.grantAccessOrFail.mockImplementation(() => {
+        throw new Error('denied');
+      });
+
+      await expect(
+        resolver.sendDirectMessageToUsers(
+          actorContext,
+          { receiverIDs: ['u-2'], message: 'hi' } as any,
+          { req: {} } as any
+        )
+      ).rejects.toThrow('denied');
+      expect(proxySurfaceUsage.record).not.toHaveBeenCalled();
+    });
   });
 
   describe('sendMessageToUsers', () => {

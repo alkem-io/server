@@ -29,8 +29,13 @@ import { DirectMessageDeliveryResult } from '../communication/dto/direct.message
 import { IConversation } from '../conversation/conversation.interface';
 import { ConversationService } from '../conversation/conversation.service';
 import { ConversationAuthorizationService } from '../conversation/conversation.service.authorization';
+import { ConversationGovernanceEventType } from '../conversation/dto/conversation.governance.event';
 import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
+import {
+  DirectConversationResolutionResult,
+  DirectConversationResolutionStatus,
+} from './dto/direct.conversation.resolution.result';
 import { Messaging } from './messaging.entity';
 import { IMessaging } from './messaging.interface';
 import { CheckResult } from './types/check.result';
@@ -183,34 +188,11 @@ export class MessagingService {
       //   `manager` into the writes would hide the row from that read-back and
       //   break creation.
       const targetActorId = normalizedMemberActorIds[0];
-      return await this.entityManager.transaction(async manager => {
-        const [first, second] = [
-          conversationData.callerActorId,
-          targetActorId,
-        ].sort();
-        await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
-          `${first}:${second}`,
-        ]);
-
-        const existing =
-          await this.conversationService.findConversationBetweenActors(
-            conversationData.callerActorId,
-            targetActorId,
-            manager
-          );
-        if (existing) {
-          return await this.conversationService.getConversationOrFail(
-            existing.id,
-            { relations: { authorization: true, room: true } }
-          );
-        }
-
-        return await this.persistNewConversation(
-          conversationData,
-          normalizedMemberActorIds,
-          roomType
-        );
-      });
+      const resolution = await this.resolveOrCreateDirectConversation(
+        conversationData.callerActorId,
+        targetActorId
+      );
+      return resolution.conversation;
     }
 
     if (normalizedMemberActorIds.length < 1) {
@@ -248,6 +230,105 @@ export class MessagingService {
       consentedMemberActorIds,
       roomType
     );
+  }
+
+  /**
+   * The atomic dedup-or-create for one actor pair, under the per-pair advisory
+   * lock described above. Reports whether the conversation was created by this
+   * call or already existed — the one thing the plain create cannot tell.
+   */
+  private async resolveOrCreateDirectConversation(
+    callerActorId: string,
+    targetActorId: string
+  ): Promise<{ conversation: IConversation; created: boolean }> {
+    return await this.entityManager.transaction(async manager => {
+      const [first, second] = [callerActorId, targetActorId].sort();
+      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+        `${first}:${second}`,
+      ]);
+
+      const existing =
+        await this.conversationService.findConversationBetweenActors(
+          callerActorId,
+          targetActorId,
+          manager
+        );
+      if (existing) {
+        return {
+          created: false,
+          conversation: await this.conversationService.getConversationOrFail(
+            existing.id,
+            { relations: { authorization: true, room: true } }
+          ),
+        };
+      }
+
+      return {
+        created: true,
+        conversation: await this.persistNewConversation(
+          {
+            type: ConversationCreationType.DIRECT,
+            callerActorId,
+            memberActorIds: [targetActorId],
+          },
+          [targetActorId],
+          RoomType.CONVERSATION_DIRECT
+        ),
+      };
+    });
+  }
+
+  /**
+   * Resolve — reuse or create — the direct conversation with each recipient
+   * without sending anything: the control half of the direct-message flow.
+   * Per recipient: the same consent gate as creation, then the same
+   * advisory-locked dedup-or-create. A provisioning failure of the room
+   * still yields CREATED (the conversation exists; its room readiness says
+   * FAILED); FAILED is reserved for a recipient that cannot be resolved.
+   */
+  public async resolveDirectConversations(
+    callerActorId: string,
+    memberActorIds: string[]
+  ): Promise<DirectConversationResolutionResult[]> {
+    const recipientIds = [...new Set(memberActorIds)].filter(
+      id => id !== callerActorId
+    );
+
+    const results: DirectConversationResolutionResult[] = [];
+    for (const memberID of recipientIds) {
+      try {
+        const { consentingIds } = await this.evaluateMemberConsent([memberID]);
+        if (consentingIds.length === 0) {
+          results.push({
+            memberID,
+            status: DirectConversationResolutionStatus.BLOCKED_NO_CONSENT,
+          });
+          continue;
+        }
+
+        const { conversation, created } =
+          await this.resolveOrCreateDirectConversation(callerActorId, memberID);
+        results.push({
+          memberID,
+          status: created
+            ? DirectConversationResolutionStatus.CREATED
+            : DirectConversationResolutionStatus.RESOLVED,
+          conversation,
+        });
+      } catch (error: unknown) {
+        this.logger.error(
+          'resolveDirectConversations: failed to resolve a recipient',
+          (error as Error)?.stack,
+          LogContext.COMMUNICATION_CONVERSATION
+        );
+        results.push({
+          memberID,
+          status: DirectConversationResolutionStatus.FAILED,
+        });
+      }
+    }
+
+    return results;
   }
 
   /**
@@ -410,6 +491,16 @@ export class MessagingService {
         conversation,
       },
     });
+    // Governance channel: the created conversation carries its creation-time
+    // room readiness, so no separate readiness event is emitted for creation.
+    await this.subscriptionPublishService.publishConversationGovernanceEvent(
+      memberActorIds,
+      {
+        eventType: ConversationGovernanceEventType.CONVERSATION_CREATED,
+        conversationID: conversation.id,
+        conversation,
+      }
+    );
 
     this.logger.verbose?.(
       `Published conversationCreated event for conversation ${conversation.id} to ${memberActorIds.length} members`,

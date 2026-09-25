@@ -43,6 +43,60 @@ describe('AuthInterceptor', () => {
     expect(interceptor).toBeDefined();
   });
 
+  describe('authentication method recording', () => {
+    it('records none on the request when no strategy admitted it', async () => {
+      const mockReq: Record<string, unknown> = {
+        method: 'GET',
+        url: '/graphql',
+        headers: {},
+      };
+      vi.spyOn(passport, 'authenticate').mockImplementation(
+        (_strategies: any, _options: any, callback: any) => {
+          return (_req: any) => {
+            callback(null, false);
+          };
+        }
+      );
+      const context = {
+        getType: vi.fn().mockReturnValue('http'),
+        switchToHttp: vi.fn().mockReturnValue({
+          getRequest: vi.fn().mockReturnValue(mockReq),
+        }),
+      } as unknown as ExecutionContext;
+
+      await interceptor.intercept(context, mockNext);
+
+      expect(mockReq.authenticationMethod).toBe('none');
+      expect((mockReq.user as any).isAnonymous).toBe(true);
+    });
+
+    it('leaves the method to the admitting strategy when a context was returned', async () => {
+      const mockReq: Record<string, unknown> = {
+        method: 'GET',
+        url: '/graphql',
+        headers: { authorization: 'Bearer test-token' },
+      };
+      vi.spyOn(passport, 'authenticate').mockImplementation(
+        (_strategies: any, _options: any, callback: any) => {
+          return (req: any) => {
+            req.authenticationMethod = 'hydra-bearer';
+            callback(null, { actorID: 'user-1', credentials: [] });
+          };
+        }
+      );
+      const context = {
+        getType: vi.fn().mockReturnValue('http'),
+        switchToHttp: vi.fn().mockReturnValue({
+          getRequest: vi.fn().mockReturnValue(mockReq),
+        }),
+      } as unknown as ExecutionContext;
+
+      await interceptor.intercept(context, mockNext);
+
+      expect(mockReq.authenticationMethod).toBe('hydra-bearer');
+    });
+  });
+
   describe('getRequest - context type handling', () => {
     it('should skip RPC contexts and call next.handle directly', async () => {
       const context = {

@@ -13,7 +13,11 @@ import { CommunicationAdapterModule } from '@services/adapters/communication-ada
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { ConversationMembershipModule } from '../conversation-membership/conversation.membership.module';
+import { ProxySurfaceModule } from '../proxy-surface/proxy.surface.module';
 import { Conversation } from './conversation.entity';
+import { ConversationGovernanceResolverSubscription } from './conversation.governance.resolver.subscription';
+import { ConversationReadinessGovernanceListener } from './conversation.readiness.governance.listener';
+import { ConversationRepairService } from './conversation.repair.service';
 import { ConversationResolverFields } from './conversation.resolver.fields';
 import { ConversationResolverMutations } from './conversation.resolver.mutations';
 import { ConversationEventResolverSubscription } from './conversation.resolver.subscription';
@@ -31,6 +35,7 @@ import { ConversationAuthorizationService } from './conversation.service.authori
     VirtualActorLookupModule,
     PlatformWellKnownVirtualContributorsModule,
     ConversationMembershipModule,
+    ProxySurfaceModule,
     SubscriptionServiceModule,
     StorageAggregatorModule,
     StorageBucketModule,
@@ -40,10 +45,17 @@ import { ConversationAuthorizationService } from './conversation.service.authori
   providers: [
     ConversationService,
     ConversationAuthorizationService,
+    ConversationRepairService,
+    ConversationReadinessGovernanceListener,
     ConversationResolverFields,
     ConversationResolverMutations,
     ConversationEventResolverSubscription,
+    ConversationGovernanceResolverSubscription,
   ],
-  exports: [ConversationService, ConversationAuthorizationService],
+  exports: [
+    ConversationService,
+    ConversationAuthorizationService,
+    ConversationRepairService,
+  ],
 })
 export class ConversationModule {}

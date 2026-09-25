@@ -1,6 +1,10 @@
 import { LogContext } from '@common/enums/logging.context';
 import { ActorContext } from '@core/actor-context/actor.context';
 import {
+  AuthenticationMethod,
+  recordAuthenticationMethod,
+} from '@core/auth/authentication.method';
+import {
   AUTH_STRATEGY_NON_INTERACTIVE_LOGIN,
   AUTH_STRATEGY_OIDC_COOKIE_SESSION,
   AUTH_STRATEGY_OIDC_HYDRA_BEARER,
@@ -38,6 +42,34 @@ class NonInteractiveLoginGuard extends AuthGuard(
 
 @Injectable()
 class HydraBearerGuard extends AuthGuard(AUTH_STRATEGY_OIDC_HYDRA_BEARER) {}
+
+type McpStrategyName =
+  | 'mcp-delegation'
+  | 'mcp-api-key'
+  | 'oidc-cookie-session'
+  | 'non-interactive-login'
+  | 'hydra-bearer';
+
+/**
+ * The admitting authentication method per MCP strategy, for caller-class
+ * telemetry. Delegation authenticates with the assistant's MCP API key, so it
+ * is an MCP-key admission whoever it acts on behalf of.
+ */
+export const authenticationMethodForMcpStrategy = (
+  name: McpStrategyName
+): AuthenticationMethod => {
+  switch (name) {
+    case 'mcp-delegation':
+    case 'mcp-api-key':
+      return 'mcp-api-key';
+    case 'oidc-cookie-session':
+      return 'cookie-session';
+    case 'non-interactive-login':
+      return 'non-interactive';
+    case 'hydra-bearer':
+      return 'hydra-bearer';
+  }
+};
 
 /**
  * Guard for MCP server endpoints.
@@ -85,7 +117,7 @@ export class McpAuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const strategies = [
+    const strategies: { name: McpStrategyName; guard: CanActivate }[] = [
       { name: 'mcp-delegation', guard: this.mcpDelegationGuard },
       { name: 'mcp-api-key', guard: this.mcpApiKeyGuard },
       { name: 'oidc-cookie-session', guard: this.oidcCookieSessionGuard },
@@ -104,6 +136,10 @@ export class McpAuthGuard implements CanActivate {
 
           // Check if this is an authenticated (non-anonymous) user
           if (user && user.actorID && !user.isAnonymous) {
+            recordAuthenticationMethod(
+              request,
+              authenticationMethodForMcpStrategy(name)
+            );
             this.logger.verbose?.(
               `MCP auth succeeded with strategy '${name}': userID=${user.actorID}`,
               LogContext.MCP_SERVER
@@ -136,6 +172,7 @@ export class McpAuthGuard implements CanActivate {
     if (!request.user) {
       request.user = this.createAnonymousActorContext();
     }
+    recordAuthenticationMethod(request, 'none');
 
     return true;
   }

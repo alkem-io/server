@@ -140,6 +140,9 @@ When you see an error code:
 | 50117 | EXCALIDRAW_AMQP_RESULT_ERROR       | Whiteboard sync error.               | Refresh and try again                     |
 | 50118 | EXCALIDRAW_REDIS_ADAPTER_INIT      | Whiteboard initialization error.     | Refresh and try again                     |
 | 50119 | EXCALIDRAW_SERVER_INIT             | Whiteboard server error.             | Contact support                           |
+| 14121 | COMMUNICATION_ADAPTER_UNAVAILABLE  | Messaging backend unavailable.       | Try again later; infrastructure issue     |
+
+> **Provenance.** Numeric codes are computed from `ErrorCategory` in `src/common/enums/error.category.ts` (`category * 1000 + specificCode`, registry in `src/common/exceptions/error.status.metadata.ts`). `COMMUNICATION_ADAPTER_UNAVAILABLE` is listed with its live value (`SYSTEM` = 14). The `50xxx` rows above predate the category renumbering and are kept as historical reference; the registry is authoritative.
 
 ### 99xxx - Fallback Errors
 

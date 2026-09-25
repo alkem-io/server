@@ -24,6 +24,7 @@ import {
   sanitizeGraphQLFormattedError,
   UnhandledExceptionFilter,
 } from '@core/error-handling';
+import { createGraphqlContextFactory } from '@core/graphql/context.factory';
 import { HealthModule } from '@core/health/health.module';
 import { AuthInterceptor } from '@core/interceptors';
 import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
@@ -87,7 +88,6 @@ import { WinstonConfigService } from '@src/config/winston.config';
 // FR-025 — SessionExtendMiddleware retired with the Kratos-whoami rolling
 // session. Idle TTL is now driven by express-session rolling cookie.
 
-import { buildGraphqlWsRequest } from '@core/auth/oidc/graphql-ws-auth';
 import {
   getCookieMiddleware,
   getSessionMiddleware,
@@ -104,7 +104,6 @@ import { AdminContributorsModule } from '@src/platform-admin/services/avatars/ad
 import { AdminGeoLocationModule } from '@src/platform-admin/services/geolocation/admin.geolocation.module';
 import {
   AlkemioConfig,
-  ConnectionContext,
   SubscriptionsTransportWsWebsocket,
   WebsocketContext,
 } from '@src/types';
@@ -205,25 +204,13 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
            * graphql-ws requires passing the request object through the context method
            * !!! this is graphql-ws ONLY
            */
-          context: async (ctx: ConnectionContext) => {
-            if (isWebsocketContext(ctx)) {
-              // FR-023 — auth credentials must come from the HTTP upgrade only.
-              // Do NOT merge connectionParams.headers; that allows a client to
-              // smuggle a Bearer token past the upgrade-time Passport check.
-              //
-              // FR-023 (WS addendum) — replay cookie-parser + express-session
-              // against the upgrade IncomingMessage so `req.sessionID` and
-              // `req.cookies` populate the way they do on HTTP requests.
-              // Without this, CookieSessionStrategy returns null on every
-              // subscription and every authenticated user degrades to anonymous.
-              await runUpgradeSessionMiddleware(ctx.extra.request);
-              return {
-                req: buildGraphqlWsRequest(ctx),
-              };
-            }
-
-            return { req: ctx.req };
-          },
+          // Auth credentials come from the HTTP request or the WebSocket
+          // upgrade only — connectionParams.headers is never merged (a client
+          // could otherwise smuggle a Bearer token past the upgrade-time
+          // Passport check). For subscriptions the cookie/session middleware
+          // is replayed against the upgrade IncomingMessage so the
+          // cookie-session strategy sees the same request shape as on HTTP.
+          context: createGraphqlContextFactory({ runUpgradeSessionMiddleware }),
           subscriptions: {
             'subscriptions-transport-ws': {
               /***
@@ -373,9 +360,6 @@ export class AppModule {
     consumer.apply(RequestLoggerMiddleware).forRoutes('/');
   }
 }
-
-const isWebsocketContext = (context: unknown): context is WebsocketContext =>
-  !!(context as WebsocketContext)?.extra;
 
 const runMiddleware = (
   mw: ((req: any, res: any, next: (err?: unknown) => void) => void) | null,

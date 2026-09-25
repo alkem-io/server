@@ -5,6 +5,7 @@ import {
 } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
+import { recordAuthenticationMethod } from '@core/auth/authentication.method';
 import { clearSessionCookie } from '@core/auth/oidc/session-cookie';
 import {
   BearerValidationError,
@@ -212,6 +213,7 @@ export class AuthInterceptor implements NestInterceptor {
           // tears down whatever is left. Continuing as anonymous is what they
           // would do for a first-time visitor anyway.
           if (isAuthEntryPoint(req)) {
+            recordAuthenticationMethod(req, 'none');
             req.user = this.resolveUnauthenticated(req);
             return next.handle();
           }
@@ -273,6 +275,9 @@ export class AuthInterceptor implements NestInterceptor {
       // the allow-list preserves the type; AuthenticationException — rethrow to
       // keep current semantics).
       throw err;
+    }
+    if (!resolved) {
+      recordAuthenticationMethod(req, 'none');
     }
     req.user = resolved ?? this.resolveUnauthenticated(req);
     return next.handle();

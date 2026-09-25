@@ -10,6 +10,7 @@ import { MessageInboxModule } from '@services/event-handlers/internal/message-in
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { ConversationModule } from '../conversation/conversation.module';
 import { MessagingModule } from '../messaging/messaging.module';
+import { ProxySurfaceModule } from '../proxy-surface/proxy.surface.module';
 import { RoomModule } from '../room/room.module';
 import { Communication } from './communication.entity';
 import { CommunicationResolverFields } from './communication.resolver.fields';
@@ -28,6 +29,7 @@ import { CommunicationAuthorizationService } from './communication.service.autho
     PlatformAuthorizationPolicyModule,
     MessagingModule,
     ConversationModule,
+    ProxySurfaceModule,
     UserModule,
     MessageInboxModule,
     TypeOrmModule.forFeature([Communication]),

@@ -1,11 +1,12 @@
 import { AuthorizationPrivilege } from '@common/enums';
 import { LogContext } from '@common/enums/logging.context';
+import { RoomType } from '@common/enums/room.type';
 import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { Inject, LoggerService } from '@nestjs/common';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { NotificationInputOrganizationMessage } from '@services/adapters/notification-adapter/dto/organization/notification.input.organization.message';
 import { NotificationInputCommunicationLeadsMessage } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.communication.leads.message';
@@ -19,6 +20,7 @@ import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ConversationService } from '../conversation/conversation.service';
 import { MessagingService } from '../messaging/messaging.service';
+import { ProxySurfaceUsageService } from '../proxy-surface/proxy.surface.usage.service';
 import { SendDirectMessageToUsersInput } from './dto/communication.dto.send.direct.message.to.users';
 import { CommunicationSendMessageToCommunityLeadsInput } from './dto/communication.dto.send.message.community.leads';
 import { CommunicationSendMessageToOrganizationInput } from './dto/communication.dto.send.message.organization';
@@ -38,6 +40,7 @@ export class CommunicationResolverMutations {
     private readonly conversationService: ConversationService,
     private readonly messagingService: MessagingService,
     private readonly userService: UserService,
+    private readonly proxySurfaceUsage: ProxySurfaceUsageService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -47,7 +50,8 @@ export class CommunicationResolverMutations {
   })
   async sendDirectMessageToUsers(
     @CurrentActor() actorContext: ActorContext,
-    @Args('messageData') messageData: SendDirectMessageToUsersInput
+    @Args('messageData') messageData: SendDirectMessageToUsersInput,
+    @Context() context?: IGraphQLContext
   ): Promise<DirectMessageDeliveryResult[]> {
     await this.authorizationService.grantAccessOrFail(
       actorContext,
@@ -57,6 +61,13 @@ export class CommunicationResolverMutations {
       // grantAccessOrFail already records the acting user id in its error/log.
       'send direct chat message'
     );
+
+    // The compound proxy (resolve + server-side send) counts once per call.
+    this.proxySurfaceUsage.record({
+      surface: 'Mutation.sendDirectMessageToUsers',
+      roomType: RoomType.CONVERSATION_DIRECT,
+      req: context?.req,
+    });
 
     return await this.messagingService.sendDirectMessageToUsers(
       actorContext.actorID,

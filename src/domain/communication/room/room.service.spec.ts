@@ -4,6 +4,7 @@ import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.serv
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { CommunicationAdapterException } from '@services/adapters/communication-adapter/communication.adapter.exception';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
@@ -11,8 +12,10 @@ import { Repository } from 'typeorm';
 import { type Mocked } from 'vitest';
 import { IMessage } from '../message/message.interface';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
+import { RoomReadinessReason, RoomReadinessState } from './dto/room.readiness';
 import { Room } from './room.entity';
 import { IRoom } from './room.interface';
+import { RoomReadinessService } from './room.readiness.service';
 import { RoomService } from './room.service';
 
 describe('RoomService', () => {
@@ -21,6 +24,7 @@ describe('RoomService', () => {
   let roomLookupService: Mocked<RoomLookupService>;
   let _actorLookupService: Mocked<ActorLookupService>;
   let roomRepo: Mocked<Repository<Room>>;
+  let roomReadinessService: Mocked<RoomReadinessService>;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -40,6 +44,12 @@ describe('RoomService', () => {
     roomLookupService = module.get(RoomLookupService);
     _actorLookupService = module.get(ActorLookupService);
     roomRepo = module.get(getRepositoryToken(Room));
+    roomReadinessService = module.get(RoomReadinessService);
+    roomReadinessService.record.mockResolvedValue({
+      applied: true,
+      changed: true,
+      record: {} as any,
+    });
   });
 
   describe('createRoom', () => {
@@ -181,6 +191,126 @@ describe('RoomService', () => {
 
       // Should still return the saved room despite Matrix failure
       expect(result.id).toBe('room-1');
+    });
+
+    describe('readiness outcome', () => {
+      const savedRoom = () =>
+        ({
+          id: 'room-1',
+          displayName: 'DM Room',
+          type: RoomType.CONVERSATION_DIRECT,
+        }) as any;
+      const directInput = {
+        displayName: 'DM Room',
+        type: RoomType.CONVERSATION_DIRECT,
+        senderActorID: 'agent-1',
+        receiverActorID: 'agent-2',
+      };
+
+      it('records READY/PROVISIONED when the adapter created the room', async () => {
+        const room = savedRoom();
+        roomRepo.save.mockResolvedValue(room);
+        communicationAdapter.createRoom.mockResolvedValue(true);
+
+        await service.createRoom(directInput);
+
+        expect(roomReadinessService.record).toHaveBeenCalledWith(
+          room,
+          {
+            state: RoomReadinessState.READY,
+            reason: RoomReadinessReason.PROVISIONED,
+          },
+          'PROVISIONING'
+        );
+      });
+
+      it('records FAILED/ADAPTER_TIMEOUT with a sanitized detail on an RPC timeout, without throwing', async () => {
+        const room = savedRoom();
+        roomRepo.save.mockResolvedValue(room);
+        communicationAdapter.createRoom.mockRejectedValue(
+          CommunicationAdapterException.fromTransportError(
+            'createRoom',
+            new Error('Failed to receive response within timeout of 30000ms')
+          )
+        );
+
+        const result = await service.createRoom(directInput);
+
+        expect(result).toBe(room);
+        expect(roomReadinessService.record).toHaveBeenCalledWith(
+          room,
+          expect.objectContaining({
+            state: RoomReadinessState.FAILED,
+            reason: RoomReadinessReason.ADAPTER_TIMEOUT,
+            detail: expect.any(String),
+          }),
+          'PROVISIONING'
+        );
+      });
+
+      it('records FAILED/ADAPTER_UNAVAILABLE when the adapter cannot be reached', async () => {
+        const room = savedRoom();
+        roomRepo.save.mockResolvedValue(room);
+        communicationAdapter.createRoom.mockRejectedValue(
+          CommunicationAdapterException.fromTransportError(
+            'createRoom',
+            new Error('channel closed')
+          )
+        );
+
+        await service.createRoom(directInput);
+
+        expect(roomReadinessService.record).toHaveBeenCalledWith(
+          room,
+          expect.objectContaining({
+            state: RoomReadinessState.FAILED,
+            reason: RoomReadinessReason.ADAPTER_UNAVAILABLE,
+          }),
+          'PROVISIONING'
+        );
+      });
+
+      it('records FAILED/ADAPTER_REJECTED when the adapter answers but refuses the creation', async () => {
+        const room = savedRoom();
+        roomRepo.save.mockResolvedValue(room);
+        communicationAdapter.createRoom.mockRejectedValue(
+          CommunicationAdapterException.fromAdapterError('createRoom', {
+            code: 'MATRIX_ERROR',
+            message: 'room creation failed',
+          })
+        );
+
+        await service.createRoom(directInput);
+
+        expect(roomReadinessService.record).toHaveBeenCalledWith(
+          room,
+          expect.objectContaining({
+            state: RoomReadinessState.FAILED,
+            reason: RoomReadinessReason.ADAPTER_REJECTED,
+          }),
+          'PROVISIONING'
+        );
+      });
+
+      it('records PENDING/AWAITING_CONFIRMATION for an externally created room and asks the adapter for nothing', async () => {
+        const room = { id: 'ext-1', type: RoomType.CONVERSATION_GROUP } as any;
+        roomRepo.save.mockResolvedValue(room);
+
+        await service.createRoomFromExternal({
+          id: 'ext-1',
+          type: RoomType.CONVERSATION_GROUP,
+        });
+
+        expect(communicationAdapter.createRoom).not.toHaveBeenCalled();
+        expect(roomReadinessService.record).toHaveBeenCalledWith(
+          room,
+          {
+            state: RoomReadinessState.PENDING,
+            reason: RoomReadinessReason.AWAITING_CONFIRMATION,
+          },
+          'PROVISIONING'
+        );
+      });
     });
   });
 

@@ -353,6 +353,13 @@ communications:
     connection_timeout: ${COMMUNICATIONS_MATRIX_CONNECTION_TIMEOUT}:30000
   discussions:
     enabled: ${COMMUNICATIONS_DISCUSSIONS_ENABLED}:true
+  # Ledger of GraphQL proxy-surface usage (messaging Redis, per UTC day).
+  # Disabling stops counting and the liveness heartbeat, so a disabled ledger
+  # reads as "no data", never as zero.
+  proxy_usage:
+    enabled: ${COMMUNICATIONS_PROXY_USAGE_ENABLED}:true
+    # Interval in milliseconds between in-process aggregate flushes to Redis
+    flush_interval_ms: ${COMMUNICATIONS_PROXY_USAGE_FLUSH_INTERVAL_MS}:10000
 
 
 ## storage ##

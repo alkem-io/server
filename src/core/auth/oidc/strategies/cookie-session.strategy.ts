@@ -1,5 +1,6 @@
 import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
+import { recordAuthenticationMethod } from '@core/auth/authentication.method';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { getCorrelationId } from '@core/middleware/correlation-id.middleware';
 import { Inject, Injectable, LoggerService, Optional } from '@nestjs/common';
@@ -230,6 +231,7 @@ export class CookieSessionStrategy extends PassportStrategy(
     const actorContext = await this.authService.createActorContext(
       payload.alkemio_actor_id
     );
+    recordAuthenticationMethod(req, 'cookie-session');
     // Stamp session lifetime onto a REQUEST-SCOPED COPY. createActorContext
     // returns the actorID-keyed cached instance, shared across all of this
     // actor's sessions and concurrent requests — writing per-session values

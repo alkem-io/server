@@ -1,5 +1,6 @@
 export * from './array.random.element';
 export * from './async.filter';
+export * from './async.for.each.bounded';
 export * from './base64.to.buffer';
 export * from './calculate.buffer.hash';
 export * from './compare.enums';

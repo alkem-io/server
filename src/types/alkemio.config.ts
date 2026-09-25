@@ -162,8 +162,9 @@ export type AlkemioConfig = {
     discussions: {
       enabled: boolean;
     };
-    direct_message_rooms: {
+    proxy_usage: {
       enabled: boolean;
+      flush_interval_ms: number;
     };
   };
   storage: {

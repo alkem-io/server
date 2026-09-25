@@ -9,6 +9,7 @@ export enum SubscriptionType {
   IN_APP_NOTIFICATION_RECEIVED = 'in-app-notification-received',
   IN_APP_NOTIFICATION_COUNTER = 'in-app-notification-counter',
   CONVERSATION_EVENTS = 'conversationEvents',
+  CONVERSATION_GOVERNANCE_EVENTS = 'conversationGovernanceEvents',
   POLL_VOTE_UPDATED = 'pollVoteUpdated',
   POLL_OPTIONS_CHANGED = 'pollOptionsChanged',
 }

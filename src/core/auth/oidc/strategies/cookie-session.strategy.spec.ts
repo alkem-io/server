@@ -101,6 +101,33 @@ describe('CookieSessionStrategy session-lifetime stamping', () => {
     expect(result?.isAnonymous).toBe(false);
   });
 
+  const freshRequest = () =>
+    ({
+      sessionID: 'sid-1',
+      cookies: { alkemio_session: 's:sid-1.harness-signature' },
+    }) as any;
+
+  it('records cookie-session as the admitting authentication method on the request', async () => {
+    const { strategy } = await buildStrategy(buildPayload());
+    const req = freshRequest();
+
+    await strategy.validate(req);
+
+    expect(req.authenticationMethod).toBe('cookie-session');
+  });
+
+  it('records no authentication method on the anonymous fall-through', async () => {
+    const { strategy } = await buildStrategy({
+      ...buildPayload(),
+      alkemio_actor_id: null,
+    });
+    const req = freshRequest();
+
+    await strategy.validate(req);
+
+    expect(req.authenticationMethod).toBeUndefined();
+  });
+
   it('never mutates the shared cached ActorContext (per-session values on a per-actor cache race)', async () => {
     const { strategy, cachedContext } = await buildStrategy(buildPayload());
 

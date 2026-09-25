@@ -36,6 +36,11 @@ export enum AlkemioErrorStatus {
   LICENSE_ENTITLEMENT_NOT_SUPPORTED = 'LICENSE_ENTITLEMENT_NOT_SUPPORTED',
   LICENSE_ENTITLEMENT_UNEVALUABLE = 'LICENSE_ENTITLEMENT_UNEVALUABLE',
   MATRIX_ENTITY_NOT_FOUND_ERROR = 'MATRIX_ENTITY_NOT_FOUND_ERROR',
+  // The messaging adapter could not be reached or did not answer (transport
+  // failure, RPC timeout, adapter-internal error). Infrastructure, never an
+  // authorization outcome — distinct from MATRIX_ENTITY_NOT_FOUND_ERROR so a
+  // backend outage is never read as "you don't have the rights".
+  COMMUNICATION_ADAPTER_UNAVAILABLE = 'COMMUNICATION_ADAPTER_UNAVAILABLE',
   BOOTSTRAP_FAILED = 'BOOTSTRAP_FAILED',
   NOTIFICATION_PAYLOAD_BUILDER_ERROR = 'NOTIFICATION_PAYLOAD_BUILDER_ERROR',
   STORAGE_BUCKET_NOT_FOUND = 'STORAGE_BUCKET_NOT_FOUND',

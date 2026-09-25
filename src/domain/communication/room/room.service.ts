@@ -19,8 +19,13 @@ import { RoomMarkMessageReadInput } from './dto/room.dto.mark.message.read';
 import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';
 import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.reaction';
 import { RoomUnreadCounts } from './dto/room.dto.unread.counts';
+import { RoomReadinessReason, RoomReadinessState } from './dto/room.readiness';
 import { Room } from './room.entity';
 import { IRoom } from './room.interface';
+import {
+  describeAdapterFailure,
+  RoomReadinessService,
+} from './room.readiness.service';
 
 @Injectable()
 export class RoomService {
@@ -30,6 +35,7 @@ export class RoomService {
     private readonly communicationAdapter: CommunicationAdapter,
     private readonly roomLookupService: RoomLookupService,
     private readonly actorLookupService: ActorLookupService,
+    private readonly roomReadinessService: RoomReadinessService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -76,7 +82,18 @@ export class RoomService {
     room.authorization = new AuthorizationPolicy(AuthorizationPolicyType.ROOM);
     room.messagesCount = 0;
     room.vcInteractionsByThread = {};
-    return await this.save(room);
+    const savedRoom = await this.save(room);
+    // The backend room is created by Synapse after this row exists; the first
+    // backend-originated event referencing it confirms the room.
+    await this.roomReadinessService.record(
+      savedRoom,
+      {
+        state: RoomReadinessState.PENDING,
+        reason: RoomReadinessReason.AWAITING_CONFIRMATION,
+      },
+      'PROVISIONING'
+    );
+    return savedRoom;
   }
 
   /**
@@ -212,11 +229,54 @@ export class RoomService {
     return messageData.messageID;
   }
 
+  /**
+   * Ask the adapter to create the backend room for an existing platform room.
+   * Conversation rooms are visible in the backend client; every other kind is
+   * hidden. Throws the adapter failure so the caller can record the outcome.
+   */
+  async requestExternalRoomCreation(
+    room: IRoom,
+    options: {
+      displayName: string;
+      initialMembers?: string[];
+      parentContextId?: string;
+      avatarUrl?: string;
+      joinRule?: CreateRoomInput['joinRule'];
+      isPublic?: boolean;
+    }
+  ): Promise<void> {
+    const isConversation =
+      room.type === RoomType.CONVERSATION ||
+      room.type === RoomType.CONVERSATION_DIRECT ||
+      room.type === RoomType.CONVERSATION_GROUP;
+    const customState = {
+      'io.alkemio.visibility': { visible: isConversation },
+    };
+
+    await this.communicationAdapter.createRoom(
+      room.id,
+      room.type,
+      options.displayName, // Empty string = "do not set" (Matrix adapter treats "" as no-op)
+      options.initialMembers,
+      options.parentContextId,
+      options.avatarUrl,
+      options.joinRule,
+      options.isPublic,
+      customState
+    );
+  }
+
+  /**
+   * Provisioning outcome of a platform-created room, recorded on the row:
+   * READY when the adapter created the backend room, FAILED with the failure
+   * class otherwise. Creation never throws for a provisioning failure — the
+   * room row exists and stays repairable — and never reports it as an
+   * authorization outcome.
+   */
   private async createExternalCommunicationRoom(
     room: IRoom,
     roomData: CreateRoomInput
   ): Promise<void> {
-    const isConversationLegacy = roomData.type === RoomType.CONVERSATION;
     const isDirect = roomData.type === RoomType.CONVERSATION_DIRECT;
     const isGroup = roomData.type === RoomType.CONVERSATION_GROUP;
 
@@ -246,29 +306,39 @@ export class RoomService {
         logContext
       );
 
-      // Conversation rooms are visible in Element; all other rooms are hidden
-      const isConversation = isConversationLegacy || isDirect || isGroup;
-      const customState = {
-        'io.alkemio.visibility': { visible: isConversation },
-      };
-
-      await this.communicationAdapter.createRoom(
-        room.id,
-        roomData.type,
-        roomData.displayName, // Empty string = "do not set" (Matrix adapter treats "" as no-op)
+      await this.requestExternalRoomCreation(room, {
+        displayName: roomData.displayName,
         initialMembers,
-        roomData.parentContextId,
-        roomData.avatarUrl,
-        roomData.joinRule,
-        roomData.isPublic,
-        customState
+        parentContextId: roomData.parentContextId,
+        avatarUrl: roomData.avatarUrl,
+        joinRule: roomData.joinRule,
+        isPublic: roomData.isPublic,
+      });
+
+      await this.roomReadinessService.record(
+        room,
+        {
+          state: RoomReadinessState.READY,
+          reason: RoomReadinessReason.PROVISIONED,
+        },
+        'PROVISIONING'
       );
     } catch (error: unknown) {
       const err = error as Error;
       this.logger.error(
-        `Unable to initialize communication room (${roomData.displayName})`,
+        `Unable to initialize communication room (${roomData.displayName}), platform room ${room.id}`,
         err.stack,
         LogContext.COMMUNICATION
+      );
+      const failure = describeAdapterFailure(error);
+      await this.roomReadinessService.record(
+        room,
+        {
+          state: RoomReadinessState.FAILED,
+          reason: failure.reason,
+          detail: failure.detail,
+        },
+        'PROVISIONING'
       );
     }
   }

@@ -1,4 +1,5 @@
 import { ActorContext } from '@core/actor-context/actor.context';
+import { recordAuthenticationMethod } from '@core/auth/authentication.method';
 import { AUTH_STRATEGY_NON_INTERACTIVE_LOGIN } from '@core/auth/oidc/strategies/strategy.names';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import {
@@ -124,6 +125,7 @@ export class NonInteractiveLoginStrategy extends PassportStrategy(
         correlationId;
     }
 
+    recordAuthenticationMethod(req, 'non-interactive');
     return this.authService.createActorContext(actorId);
   }
 

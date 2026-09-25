@@ -13,13 +13,17 @@ import { SubscriptionPublishService } from '@services/subscriptions/subscription
 import { InstrumentResolver } from '@src/apm/decorators';
 import { randomUUID } from 'crypto';
 import { IConversation } from './conversation.interface';
+import { ConversationRepairService } from './conversation.repair.service';
 import { ConversationService } from './conversation.service';
 import { ConversationAuthorizationService } from './conversation.service.authorization';
 import { AssignConversationMemberInput } from './dto/conversation.dto.add-member';
 import { DeleteConversationInput } from './dto/conversation.dto.delete';
 import { LeaveConversationInput } from './dto/conversation.dto.leave';
 import { RemoveConversationMemberInput } from './dto/conversation.dto.remove-member';
+import { RepairConversationRoomInput } from './dto/conversation.dto.repair';
 import { UpdateConversationInput } from './dto/conversation.dto.update';
+import { ConversationGovernanceEventType } from './dto/conversation.governance.event';
+import { ConversationRoomRepairResult } from './dto/conversation.repair.result';
 import { ConversationVcResetInput } from './dto/conversation.vc.dto.reset.input';
 
 @InstrumentResolver()
@@ -31,8 +35,32 @@ export class ConversationResolverMutations {
     private conversationService: ConversationService,
     private conversationAuthorizationService: ConversationAuthorizationService,
     private roomService: RoomService,
-    private subscriptionPublishService: SubscriptionPublishService
+    private subscriptionPublishService: SubscriptionPublishService,
+    private conversationRepairService: ConversationRepairService
   ) {}
+
+  @Mutation(() => ConversationRoomRepairResult, {
+    description:
+      'Repair the messaging room of a Conversation the caller can read: ensures the backend room exists (an existing room is reused, never duplicated), converges backend membership to the platform membership, records readiness and reports a typed outcome with counts. Idempotent — repairing a READY room verifies it and changes nothing. Non-members receive FORBIDDEN_POLICY before any backend call; a backend that cannot be reached yields outcome FAILED, never an authorization error; readiness becomes FAILED unless the room was READY, in which case it stays READY because an outage is not evidence the room is missing.',
+  })
+  async repairConversationRoom(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('repairData') repairData: RepairConversationRoomInput
+  ): Promise<ConversationRoomRepairResult> {
+    const conversation = await this.conversationService.getConversationOrFail(
+      repairData.conversationID,
+      { relations: { authorization: true, room: true } }
+    );
+
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      conversation.authorization,
+      AuthorizationPrivilege.READ,
+      `repair conversation room: ${conversation.id}`
+    );
+
+    return this.conversationRepairService.repair(conversation);
+  }
 
   @Mutation(() => IConversation, {
     description: 'Resets the interaction with the VC by recreating the room.',
@@ -143,14 +171,25 @@ export class ConversationResolverMutations {
         conversationID: conversation.id,
       },
     });
+    await this.subscriptionPublishService.publishConversationGovernanceEvent(
+      memberActorIds,
+      {
+        eventType: ConversationGovernanceEventType.CONVERSATION_DELETED,
+        conversationID: conversation.id,
+      }
+    );
 
     return result;
   }
 
   @Mutation(() => Boolean, {
     description:
-      'Assign a member to a group conversation. Returns true when the RPC is sent. ' +
-      'Actual membership change arrives via MEMBER_ADDED subscription event.',
+      'Assign a member to a group conversation. Returns true once the messaging backend accepted the join; ' +
+      'the membership row is written when the backend join event arrives — observe MEMBER_ADDED on ' +
+      'conversationGovernanceEvents (or conversationEvents) for completion. Not a group, member cap reached, ' +
+      'or caller not a member → VALIDATION; invitee blocks messages → MESSAGING_NOT_ENABLED; not permitted → ' +
+      'FORBIDDEN_POLICY; backend unreachable → COMMUNICATION_ADAPTER_UNAVAILABLE; backend rejected → FORBIDDEN. ' +
+      'Divergence between platform and backend membership is repairable with repairConversationRoom.',
   })
   async assignConversationMember(
     @CurrentActor() actorContext: ActorContext,
@@ -181,10 +220,11 @@ export class ConversationResolverMutations {
       'Remove a member from a group conversation. Awaits the Matrix kick rather than ' +
       'reporting success merely because the RPC was sent: true means the kick was ' +
       'accepted, and the membership is then removed asynchronously — observe ' +
-      'MEMBER_REMOVED for completion. If Matrix rejects the kick (e.g. insufficient ' +
-      'permissions) this still returns true, because Alkemio is authoritative for its ' +
-      'own membership and applies the removal locally instead; on that path the ' +
-      'Matrix-side room membership may diverge until an operator reconciles it.',
+      'MEMBER_REMOVED on conversationGovernanceEvents (or conversationEvents) for completion. ' +
+      'If Matrix rejects the kick (e.g. insufficient permissions) this still returns true, because ' +
+      'Alkemio is authoritative for its own membership and applies the removal locally instead; on ' +
+      'that path the Matrix-side room membership may diverge — the divergence is repairable with ' +
+      'repairConversationRoom. Backend unreachable → COMMUNICATION_ADAPTER_UNAVAILABLE.',
   })
   async removeConversationMember(
     @CurrentActor() actorContext: ActorContext,
@@ -202,12 +242,12 @@ export class ConversationResolverMutations {
     description:
       'Leave a group conversation. Awaits the Matrix kick rather than reporting success ' +
       'merely because the RPC was sent: true means the kick was accepted, and the ' +
-      'membership is then removed asynchronously — observe MEMBER_REMOVED for ' +
-      'completion. If Matrix rejects the kick this still returns true, because Alkemio ' +
-      'is authoritative for its own membership and applies the removal locally instead; ' +
-      'on that path the Matrix-side room membership may diverge until an operator ' +
-      'reconciles it. If the last member leaves, the conversation is auto-deleted and a ' +
-      'CONVERSATION_DELETED event follows.',
+      'membership is then removed asynchronously — observe MEMBER_REMOVED on ' +
+      'conversationGovernanceEvents (or conversationEvents) for completion. If Matrix rejects the ' +
+      'kick this still returns true, because Alkemio is authoritative for its own membership and ' +
+      'applies the removal locally instead; on that path the Matrix-side room membership may ' +
+      'diverge — the divergence is repairable with repairConversationRoom. If the last member ' +
+      'leaves, the conversation is auto-deleted and a CONVERSATION_DELETED event follows.',
   })
   async leaveConversation(
     @CurrentActor() actorContext: ActorContext,
@@ -223,9 +263,11 @@ export class ConversationResolverMutations {
 
   @Mutation(() => Boolean, {
     description:
-      'Update a group conversation (display name, avatar). Returns true when the RPC is sent. ' +
-      'Actual changes arrive via CONVERSATION_UPDATED subscription events. ' +
-      'When both fields are provided, clients may receive separate update events for each.',
+      'Update a group conversation (display name, avatar). Returns true once the metadata is persisted ' +
+      'and the messaging backend accepted the update — observe CONVERSATION_UPDATED on ' +
+      'conversationGovernanceEvents (or conversationEvents) for completion; when both fields are ' +
+      'provided, clients may receive separate update events for each. Not a group → VALIDATION; ' +
+      'not permitted → FORBIDDEN_POLICY; backend unreachable → COMMUNICATION_ADAPTER_UNAVAILABLE.',
   })
   async updateConversation(
     @CurrentActor() actorContext: ActorContext,

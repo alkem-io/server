@@ -235,6 +235,42 @@ describe('SubscriptionPublishService', () => {
     });
   });
 
+  describe('publishConversationGovernanceEvent', () => {
+    it('publishes on the governance trigger with the deduplicated member set for the filter', async () => {
+      await service.publishConversationGovernanceEvent(
+        ['actor-1', 'actor-2', 'actor-1'],
+        {
+          eventType: 'MEMBER_REMOVED' as any,
+          conversationID: 'conv-1',
+          memberID: 'actor-2',
+        }
+      );
+
+      expect(conversationPubSub.publish).toHaveBeenCalledTimes(1);
+      const [trigger, payload] = conversationPubSub.publish.mock.calls[0];
+      expect(trigger).toBe(SubscriptionType.CONVERSATION_GOVERNANCE_EVENTS);
+      expect(payload.memberActorIds).toEqual(['actor-1', 'actor-2']);
+      expect(payload.event).toEqual({
+        eventType: 'MEMBER_REMOVED',
+        conversationID: 'conv-1',
+        memberID: 'actor-2',
+      });
+      expect(payload.eventID).toMatch(/^conversation-governance-event-/);
+    });
+
+    it('never publishes on the legacy conversationEvents trigger', async () => {
+      await service.publishConversationGovernanceEvent(['actor-1'], {
+        eventType: 'CONVERSATION_UPDATED' as any,
+        conversationID: 'conv-1',
+      });
+      expect(
+        conversationPubSub.publish.mock.calls.some(
+          ([trigger]) => trigger === SubscriptionType.CONVERSATION_EVENTS
+        )
+      ).toBe(false);
+    });
+  });
+
   describe('publishConversationEvent', () => {
     it('should publish conversation event with provided payload', async () => {
       const payload = {

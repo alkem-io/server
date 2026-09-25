@@ -8,9 +8,15 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IConversation } from '@domain/communication/conversation/conversation.interface';
 import { ConversationService } from '@domain/communication/conversation/conversation.service';
 import { ConversationAuthorizationService } from '@domain/communication/conversation/conversation.service.authorization';
+import { ConversationGovernanceEventType } from '@domain/communication/conversation/dto/conversation.governance.event';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { MessageAttachmentService } from '@domain/communication/message-attachment/message.attachment.service';
+import {
+  RoomReadinessReason,
+  RoomReadinessState,
+} from '@domain/communication/room/dto/room.readiness';
 import { IRoom } from '@domain/communication/room/room.interface';
+import { RoomReadinessService } from '@domain/communication/room/room.readiness.service';
 import { RoomServiceEvents } from '@domain/communication/room/room.service.events';
 import { isConversationRoom } from '@domain/communication/room/room.utils';
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
@@ -59,9 +65,29 @@ export class MessageInboxService {
     private readonly actorService: ActorService,
     private readonly messageAttachmentService: MessageAttachmentService,
     private readonly conversationNotificationService: ConversationNotificationService,
+    private readonly roomReadinessService: RoomReadinessService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
+
+  /**
+   * Any backend-originated event that references a room proves the room
+   * exists: a room still awaiting confirmation becomes READY. A no-op for
+   * every other readiness state.
+   */
+  private async confirmPendingRoom(room: IRoom): Promise<void> {
+    if (room.readiness?.state !== RoomReadinessState.PENDING) {
+      return;
+    }
+    await this.roomReadinessService.record(
+      room,
+      {
+        state: RoomReadinessState.READY,
+        reason: RoomReadinessReason.CONFIRMED,
+      },
+      'BACKEND_CONFIRMATION'
+    );
+  }
 
   // ============================================================
   // MESSAGE EVENTS
@@ -97,6 +123,7 @@ export class MessageInboxService {
     );
 
     const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
+    await this.confirmPendingRoom(room);
 
     // Atomically increment message count to avoid race conditions
     await this.roomLookupService.incrementMessagesCount(room.id);
@@ -385,7 +412,17 @@ export class MessageInboxService {
       LogContext.COMMUNICATION
     );
 
-    // Currently logging only - Alkemio initiates room creation
+    // The platform row may not exist for rooms the backend created on its
+    // own; the only work here is confirming a room that was awaiting it.
+    try {
+      const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
+      await this.confirmPendingRoom(room);
+    } catch {
+      this.logger.verbose?.(
+        `Room created event for unknown platform room ${payload.roomId} - nothing to confirm`,
+        LogContext.COMMUNICATION
+      );
+    }
   }
 
   @OnEvent('room.dm.requested')
@@ -415,6 +452,10 @@ export class MessageInboxService {
     );
 
     const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
+
+    if (payload.membership === 'join') {
+      await this.confirmPendingRoom(room);
+    }
 
     // Only process membership changes for conversation rooms
     if (!isConversationRoom(room)) {
@@ -498,6 +539,16 @@ export class MessageInboxService {
         addedMember: addedActor,
       },
     });
+    await this.subscriptionPublishService.publishConversationGovernanceEvent(
+      memberActorIds,
+      {
+        eventType: ConversationGovernanceEventType.MEMBER_ADDED,
+        conversationID: conversationId,
+        conversation,
+        member: addedActor,
+        memberID: memberActorId,
+      }
+    );
 
     this.logger.verbose?.(
       `Published MEMBER_ADDED event for conversation ${conversationId}, member ${memberActorId}`,
@@ -541,6 +592,15 @@ export class MessageInboxService {
           removedMemberID: memberActorId,
         },
       });
+      await this.subscriptionPublishService.publishConversationGovernanceEvent(
+        memberActorIdsBefore,
+        {
+          eventType: ConversationGovernanceEventType.MEMBER_REMOVED,
+          conversationID: conversationId,
+          conversation,
+          memberID: memberActorId,
+        }
+      );
 
       // Delete first, then notify — so clients never see a deletion that didn't commit
       await this.conversationService.deleteConversation(conversationId);
@@ -552,6 +612,13 @@ export class MessageInboxService {
           conversationID: conversationId,
         },
       });
+      await this.subscriptionPublishService.publishConversationGovernanceEvent(
+        memberActorIdsBefore,
+        {
+          eventType: ConversationGovernanceEventType.CONVERSATION_DELETED,
+          conversationID: conversationId,
+        }
+      );
 
       this.logger.verbose?.(
         `Auto-deleted empty conversation ${conversationId}, published MEMBER_REMOVED + CONVERSATION_DELETED`,
@@ -574,6 +641,15 @@ export class MessageInboxService {
           removedMemberID: memberActorId,
         },
       });
+      await this.subscriptionPublishService.publishConversationGovernanceEvent(
+        memberActorIdsBefore,
+        {
+          eventType: ConversationGovernanceEventType.MEMBER_REMOVED,
+          conversationID: conversationId,
+          conversation,
+          memberID: memberActorId,
+        }
+      );
 
       this.logger.verbose?.(
         `Published MEMBER_REMOVED event for conversation ${conversationId}, member ${memberActorId}, remaining=${remainingCount}`,
@@ -637,6 +713,7 @@ export class MessageInboxService {
 
     // Re-read room for subscription event (cheap read, after atomic write)
     const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
+    await this.confirmPendingRoom(room);
 
     if (isConversationRoom(room)) {
       await this.publishConversationUpdatedEvent(room);
@@ -748,5 +825,13 @@ export class MessageInboxService {
         conversation,
       },
     });
+    await this.subscriptionPublishService.publishConversationGovernanceEvent(
+      memberActorIds,
+      {
+        eventType: ConversationGovernanceEventType.CONVERSATION_UPDATED,
+        conversationID: conversation.id,
+        conversation,
+      }
+    );
   }
 }

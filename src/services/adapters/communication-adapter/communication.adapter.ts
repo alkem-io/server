@@ -19,11 +19,10 @@ import {
   DeleteRoomRequest,
   DeleteSpaceRequest,
   ErrCodeInternalError,
+  ErrCodeInvalidParam,
   GetLastMessageRequest,
   GetMessageRequest,
   GetReactionRequest,
-  GetRoomAsUserRequest,
-  GetRoomAsUserResponse,
   GetRoomMembersRequest,
   GetRoomRequest,
   // Response type for converter helper
@@ -67,7 +66,6 @@ import { getRandomId } from '@common/utils/random.id.generator.util';
 import { stringifyWithoutAuthorizationMetaInfo } from '@common/utils/stringify.util';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { IMessageReaction } from '@domain/communication/message.reaction/message.reaction.interface';
-import { IRoomWithReadState } from '@domain/communication/room/room.with.read.state.interface';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -310,7 +308,7 @@ export class CommunicationAdapter {
 
     if (!alkemioRoomId) {
       throw CommunicationAdapterException.fromAdapterError('createRoom', {
-        code: 'ErrCodeInvalidParam',
+        code: ErrCodeInvalidParam,
         message:
           'alkemioRoomId is required - ensure room is saved before calling createRoom',
       });
@@ -331,6 +329,9 @@ export class CommunicationAdapter {
         custom_state: customState,
       } satisfies CreateRoomRequest,
       errorContext: { alkemioRoomId, roomType },
+      // A refused creation must reach the caller as a failure, not a `false`
+      // that reads as success.
+      ensureSuccess: true,
     });
 
     if (response?.success) {
@@ -530,45 +531,6 @@ export class CommunicationAdapter {
 
     // Response is guaranteed non-null when ensureSuccess: true (throws on failure)
     return this.convertGetRoomResponseToCommunicationRoomResult(response!);
-  }
-
-  /**
-   * Get room content with read state for a specific user.
-   * Returns messages with isRead flag and unread count.
-   */
-  async getRoomAsUser(
-    alkemioRoomId: AlkemioRoomID,
-    actorID: AlkemioActorID
-  ): Promise<IRoomWithReadState> {
-    if (!this.enabled) {
-      return {
-        id: 'communications-not-enabled',
-        messages: [],
-        displayName: '',
-        messagesCount: 0,
-        members: [],
-        unreadCount: 0,
-      };
-    }
-
-    this.logger.verbose?.(
-      `Getting room as user: roomId=${alkemioRoomId}, actorID=${actorID}`,
-      LogContext.COMMUNICATION
-    );
-
-    const response = await this.sendCommand({
-      operation: 'getRoomAsUser',
-      topic: MatrixAdapterEventType.COMMUNICATION_ROOM_GET_AS_USER,
-      payload: {
-        alkemio_room_id: alkemioRoomId,
-        actor_id: actorID,
-      } satisfies GetRoomAsUserRequest,
-      errorContext: { alkemioRoomId, actorID },
-      ensureSuccess: true,
-    });
-
-    // Response is guaranteed non-null when ensureSuccess: true (throws on failure)
-    return this.convertGetRoomAsUserResponseToResult(response!);
   }
 
   /**
@@ -938,7 +900,7 @@ export class CommunicationAdapter {
   ): Promise<IMessage> {
     if (!sendMessageData.roomID || sendMessageData.roomID.length === 0) {
       throw CommunicationAdapterException.fromAdapterError('sendMessage', {
-        code: 'ErrCodeInvalidParam',
+        code: ErrCodeInvalidParam,
         message: 'Room ID is required to send a message',
       });
     }
@@ -1510,27 +1472,6 @@ export class CommunicationAdapter {
       messages,
       messagesCount: messages.length,
       avatarUrl: response.avatar_url,
-    };
-  }
-
-  /**
-   * Convert GetRoomAsUserResponse to IRoomWithReadState.
-   */
-  private convertGetRoomAsUserResponseToResult(
-    response: GetRoomAsUserResponse
-  ): IRoomWithReadState {
-    const messages = (response.messages ?? []).map(msg =>
-      this.convertMessageDtoToIMessage(msg, response.alkemio_room_id)
-    );
-    return {
-      id: response.alkemio_room_id,
-      displayName: response.display_name,
-      members: response.member_actor_ids ?? [],
-      messages,
-      messagesCount: messages.length,
-      avatarUrl: response.avatar_url,
-      lastReadEventId: response.last_read_event_id,
-      unreadCount: response.unread_count,
     };
   }
 

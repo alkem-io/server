@@ -3,6 +3,7 @@ import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { Field, Int, ObjectType } from '@nestjs/graphql';
 import { VcInteractionsByThread } from '../vc-interaction/vc.interaction.entity';
 import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
+import { RoomReadinessRecord } from './dto/room.readiness';
 
 @ObjectType('Room')
 export abstract class IRoom extends IAuthorizable {
@@ -31,6 +32,9 @@ export abstract class IRoom extends IAuthorizable {
 
   // Internal storage (JSON column)
   vcInteractionsByThread!: VcInteractionsByThread;
+
+  // Internal storage (JSON column); projected by the `readiness` field resolver
+  readiness?: RoomReadinessRecord;
 
   // GraphQL field (computed from JSON)
   vcInteractions?: IVcInteraction[];

@@ -369,6 +369,40 @@ describe('MessagingService', () => {
         );
       };
 
+      it('publishes exactly one CONVERSATION_CREATED governance event to the created member set, beside the legacy event', async () => {
+        stubActorTypes();
+        userLookupService.getUsersByIds.mockResolvedValue([
+          userActor(memberB, true),
+        ]);
+        const created = {
+          id: 'conv-group-1',
+          room: { id: 'room-1', readiness: { state: 'READY' } },
+        } as unknown as IConversation;
+        stubPlatformMessagingAndPersist(created);
+
+        await service.createConversation({
+          type: 'group' as any,
+          callerActorId: callerId,
+          memberActorIds: [memberB],
+        });
+
+        expect(
+          subscriptionPublishService.publishConversationEvent
+        ).toHaveBeenCalledTimes(1);
+        expect(
+          subscriptionPublishService.publishConversationGovernanceEvent
+        ).toHaveBeenCalledTimes(1);
+        const [memberIds, event] =
+          subscriptionPublishService.publishConversationGovernanceEvent.mock
+            .calls[0];
+        expect([...memberIds].sort()).toEqual([callerId, memberB].sort());
+        expect(event).toEqual({
+          eventType: 'CONVERSATION_CREATED',
+          conversationID: 'conv-group-1',
+          conversation: created,
+        });
+      });
+
       it('drops non-consenting USER members before persisting the group (only consenting members become recipients of the notification pipeline)', async () => {
         stubActorTypes();
         userLookupService.getUsersByIds.mockResolvedValue([
@@ -582,6 +616,126 @@ describe('MessagingService', () => {
         { receiverID: consenting, status: 'SENT', conversationID: 'conv-ok' },
         { receiverID: 'recipient-boom', status: 'FAILED' },
       ]);
+    });
+  });
+
+  describe('resolveDirectConversations', () => {
+    const caller = 'caller-1';
+    const consenting = (id: string) =>
+      ({
+        id,
+        settings: { communication: { allowOtherUsersToSendMessages: true } },
+      }) as any;
+    const denying = (id: string) =>
+      ({
+        id,
+        settings: { communication: { allowOtherUsersToSendMessages: false } },
+      }) as any;
+
+    const stubPersist = (created: IConversation) => {
+      entityManager.getRepository.mockReturnValue({
+        createQueryBuilder: vi.fn().mockReturnValue({
+          leftJoinAndSelect: vi.fn().mockReturnThis(),
+          getOne: vi
+            .fn()
+            .mockResolvedValue({ messaging: { id: 'platform-messaging' } }),
+        }),
+      } as any);
+      conversationService.createConversation.mockResolvedValue(created);
+      conversationService.save.mockResolvedValue(created);
+      conversationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
+      authorizationPolicyService.saveAll.mockResolvedValue(undefined);
+    };
+
+    it('reports CREATED, RESOLVED and BLOCKED_NO_CONSENT per recipient and never sends a message', async () => {
+      const created = { id: 'conv-new', room: { id: 'r-new' } } as any;
+      const existing = { id: 'conv-old', room: { id: 'r-old' } } as any;
+      stubPersist(created);
+      userLookupService.getUsersByIds.mockImplementation(
+        async (ids: string[]) =>
+          ids.map(id => (id === 'C' ? denying(id) : consenting(id)))
+      );
+      conversationService.findConversationBetweenActors.mockImplementation(
+        async (_caller: string, target: string) =>
+          target === 'B' ? ({ id: 'conv-old' } as any) : null
+      );
+      conversationService.getConversationOrFail.mockImplementation(
+        async (id: string) => (id === 'conv-old' ? existing : created)
+      );
+
+      const results = await service.resolveDirectConversations(caller, [
+        'A',
+        'B',
+        'C',
+      ]);
+
+      expect(results).toEqual([
+        { memberID: 'A', status: 'CREATED', conversation: created },
+        { memberID: 'B', status: 'RESOLVED', conversation: existing },
+        { memberID: 'C', status: 'BLOCKED_NO_CONSENT' },
+      ]);
+      expect(roomLookupService.sendMessage).not.toHaveBeenCalled();
+      expect(conversationService.createConversation).toHaveBeenCalledTimes(1);
+    });
+
+    it('drops duplicates and the caller before processing', async () => {
+      userLookupService.getUsersByIds.mockResolvedValue([denying('A')]);
+
+      const results = await service.resolveDirectConversations(caller, [
+        'A',
+        caller,
+        'A',
+      ]);
+
+      expect(results.map(r => r.memberID)).toEqual(['A']);
+    });
+
+    it('acquires the per-pair advisory lock so concurrent resolves converge on one conversation', async () => {
+      const created = { id: 'conv-new', room: { id: 'r-new' } } as any;
+      stubPersist(created);
+      userLookupService.getUsersByIds.mockResolvedValue([consenting('A')]);
+      conversationService.findConversationBetweenActors
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ id: 'conv-new' } as any);
+      conversationService.getConversationOrFail.mockResolvedValue(created);
+
+      const [first, second] = await Promise.all([
+        service.resolveDirectConversations(caller, ['A']),
+        service.resolveDirectConversations(caller, ['A']),
+      ]);
+
+      expect(first[0].conversation?.id).toBe('conv-new');
+      expect(second[0].conversation?.id).toBe('conv-new');
+      expect(advisoryLockQuery).toHaveBeenCalledWith(
+        'SELECT pg_advisory_xact_lock(hashtext($1))',
+        ['A:caller-1']
+      );
+      expect(conversationService.createConversation).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports FAILED for a recipient that cannot be resolved, without aborting the rest', async () => {
+      const created = { id: 'conv-new', room: { id: 'r-new' } } as any;
+      stubPersist(created);
+      userLookupService.getUsersByIds.mockImplementation(
+        async (ids: string[]) => ids.map(consenting)
+      );
+      conversationService.findConversationBetweenActors.mockResolvedValue(null);
+      conversationService.getConversationOrFail.mockResolvedValue(created);
+      conversationService.createConversation
+        .mockRejectedValueOnce(
+          new EntityNotFoundException('no actor', LogContext.COMMUNICATION)
+        )
+        .mockResolvedValueOnce(created);
+
+      const results = await service.resolveDirectConversations(caller, [
+        'ghost',
+        'A',
+      ]);
+
+      expect(results[0]).toEqual({ memberID: 'ghost', status: 'FAILED' });
+      expect(results[1].status).toBe('CREATED');
     });
   });
 
