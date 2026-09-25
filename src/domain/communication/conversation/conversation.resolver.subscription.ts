@@ -9,31 +9,11 @@ import { ConversationEventSubscriptionPayload } from '@services/subscriptions/su
 import { InstrumentResolver } from '@src/apm/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ProxySurfaceUsageService } from '../proxy-surface/proxy.surface.usage.service';
-import { IConversation } from './conversation.interface';
+import { rehydrateConversationDates } from './conversation.rehydrate.dates';
 import {
   ConversationEventSubscriptionResult,
   ConversationEventType,
 } from './dto/subscription';
-
-/**
- * Rehydrate Date fields on a conversation (and its room) that were
- * stringified during AMQP serialization. NestJS's DateTime scalar
- * requires actual Date instances — plain ISO strings cause serialize() to return null.
- */
-const rehydrateConversationDates = (
-  conversation: IConversation
-): IConversation => ({
-  ...conversation,
-  createdDate: new Date(conversation.createdDate),
-  updatedDate: new Date(conversation.updatedDate),
-  room: conversation.room
-    ? {
-        ...conversation.room,
-        createdDate: new Date(conversation.room.createdDate),
-        updatedDate: new Date(conversation.room.updatedDate),
-      }
-    : conversation.room,
-});
 
 @InstrumentResolver()
 @Resolver()

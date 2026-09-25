@@ -141,6 +141,15 @@ describe('ProxySurfaceUsageService', () => {
   describe('flush', () => {
     const now = new Date('2026-09-21T10:07:30.000Z');
 
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(now);
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
     it('writes one pipeline with HINCRBY per bucket, the liveness minute and both expiries, then clears the buckets', async () => {
       service.record({
         surface: 'Room.messages',
@@ -177,6 +186,33 @@ describe('ProxySurfaceUsageService', () => {
       );
       expect(pipeline.exec).toHaveBeenCalledTimes(1);
       expect(service.pendingBuckets().size).toBe(0);
+    });
+
+    it('writes a call counted before midnight to that day, even when the flush runs after midnight', async () => {
+      vi.setSystemTime(new Date('2026-09-21T23:59:55.000Z'));
+      service.record({
+        surface: 'Room.messages',
+        roomType: RoomType.CONVERSATION_GROUP,
+        req: webReq,
+      });
+
+      await service.flush(new Date('2026-09-22T00:00:05.000Z'));
+
+      expect(pipeline.hincrby).toHaveBeenCalledTimes(1);
+      expect(pipeline.hincrby).toHaveBeenCalledWith(
+        'msg:proxy:usage:2026-09-21',
+        'Room.messages|MIGRATED_BROWSER_DATA_PLANE|WEB_GRAPHQL|conversation_group|0',
+        1
+      );
+      expect(pipeline.expire).toHaveBeenCalledWith(
+        'msg:proxy:usage:2026-09-21',
+        45 * 24 * 60 * 60
+      );
+      expect(pipeline.hset).toHaveBeenCalledWith(
+        'msg:proxy:live:2026-09-22',
+        '00:00',
+        '1'
+      );
     });
 
     it('marks liveness even when nothing was counted', async () => {

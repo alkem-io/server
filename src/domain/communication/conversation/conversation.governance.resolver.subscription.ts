@@ -9,27 +9,8 @@ import { SubscriptionReadService } from '@services/subscriptions/subscription-se
 import { ConversationGovernanceEventSubscriptionPayload } from '@services/subscriptions/subscription-service/dto';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { IConversation } from './conversation.interface';
+import { rehydrateConversationDates } from './conversation.rehydrate.dates';
 import { ConversationGovernanceEvent } from './dto/conversation.governance.event';
-
-/**
- * Rehydrate Date fields stringified during AMQP serialization; the DateTime
- * scalar needs real Date instances.
- */
-const rehydrateConversationDates = (
-  conversation: IConversation
-): IConversation => ({
-  ...conversation,
-  createdDate: new Date(conversation.createdDate),
-  updatedDate: new Date(conversation.updatedDate),
-  room: conversation.room
-    ? {
-        ...conversation.room,
-        createdDate: new Date(conversation.room.createdDate),
-        updatedDate: new Date(conversation.room.updatedDate),
-      }
-    : conversation.room,
-});
 
 /** Delivery rule: the recipient must be in the member set captured at publish time. */
 export const isGovernanceEventForActor = (

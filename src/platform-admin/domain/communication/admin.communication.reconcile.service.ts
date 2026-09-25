@@ -21,6 +21,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 
 export const RECONCILE_PROBE_CONCURRENCY = 5;
+export const RECONCILE_BATCH_SIZE = 500;
 const PROGRESS_EVERY = 50;
 
 export type ReconcileConversationRoomsInput = {
@@ -82,25 +83,33 @@ export class AdminCommunicationReconcileService {
     };
 
     try {
-      const rooms = await this.loadRooms(input.includeReady);
       await this.taskService.updateTaskResults(
         taskId,
-        `Probing ${rooms.length} rooms (repair=${input.repair}, includeReady=${input.includeReady})`
+        `Probing rooms in batches of ${RECONCILE_BATCH_SIZE} (repair=${input.repair}, includeReady=${input.includeReady})`
       );
 
-      await asyncForEachBounded(
-        rooms,
-        RECONCILE_PROBE_CONCURRENCY,
-        async room => {
-          await this.reconcileRoom(room, input.repair, summary);
-          if (summary.scanned % PROGRESS_EVERY === 0) {
-            await this.taskService.updateTaskResults(
-              taskId,
-              `Probed ${summary.scanned}/${rooms.length} rooms`
-            );
+      // Rooms are read in id-ordered batches rather than all at once: the
+      // table holds a room per callout, post, event and discussion, and a
+      // sweep can run for hours.
+      let afterId: string | undefined;
+      for (;;) {
+        const rooms = await this.loadRoomBatch(input.includeReady, afterId);
+        await asyncForEachBounded(
+          rooms,
+          RECONCILE_PROBE_CONCURRENCY,
+          async room => {
+            await this.reconcileRoom(room, input.repair, summary);
+            if (summary.scanned % PROGRESS_EVERY === 0) {
+              await this.taskService.updateTaskResults(
+                taskId,
+                `Probed ${summary.scanned} rooms`
+              );
+            }
           }
-        }
-      );
+        );
+        if (rooms.length < RECONCILE_BATCH_SIZE) break;
+        afterId = rooms[rooms.length - 1].id;
+      }
 
       await this.taskService.updateTaskResults(taskId, JSON.stringify(summary));
       await this.taskService.complete(taskId);
@@ -123,7 +132,10 @@ export class AdminCommunicationReconcileService {
     }
   }
 
-  private async loadRooms(includeReady: boolean): Promise<Room[]> {
+  private async loadRoomBatch(
+    includeReady: boolean,
+    afterId: string | undefined
+  ): Promise<Room[]> {
     const query = this.roomRepository
       .createQueryBuilder('room')
       .select([
@@ -134,11 +146,15 @@ export class AdminCommunicationReconcileService {
         'room.readiness',
         'room.createdDate',
       ])
-      .orderBy('room.createdDate', 'ASC');
+      .orderBy('room.id', 'ASC')
+      .limit(RECONCILE_BATCH_SIZE);
     if (!includeReady) {
       query.where("room.readiness->>'state' <> :ready", {
         ready: RoomReadinessState.READY,
       });
+    }
+    if (afterId) {
+      query.andWhere('room.id > :afterId', { afterId });
     }
     return query.getMany();
   }

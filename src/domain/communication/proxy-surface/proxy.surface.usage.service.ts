@@ -52,7 +52,9 @@ export class ProxySurfaceUsageService
 {
   private readonly enabled: boolean;
   private readonly flushIntervalMs: number;
-  private buckets = new Map<string, number>();
+  // UTC day at count time → bucket field → count, so calls counted just
+  // before midnight are written to that day even when flushed after it.
+  private buckets = new Map<string, Map<string, number>>();
   private timer?: ReturnType<typeof setInterval>;
   private unknownSurfacesWarned = new Set<string>();
 
@@ -103,7 +105,13 @@ export class ProxySurfaceUsageService
       roomType: input.roomType,
       media,
     });
-    this.buckets.set(field, (this.buckets.get(field) ?? 0) + 1);
+    const day = utcDay(new Date());
+    let dayBuckets = this.buckets.get(day);
+    if (!dayBuckets) {
+      dayBuckets = new Map();
+      this.buckets.set(day, dayBuckets);
+    }
+    dayBuckets.set(field, (dayBuckets.get(field) ?? 0) + 1);
   }
 
   onModuleInit(): void {
@@ -129,9 +137,10 @@ export class ProxySurfaceUsageService
   }
 
   /**
-   * One pipeline: HINCRBY per bucket of the interval, the liveness minute
-   * mark, and the 45-day expiry on both hashes. The liveness mark is written
-   * even when nothing was counted — that is what makes a zero meaningful.
+   * One pipeline: HINCRBY per bucket of the interval into the day it was
+   * counted, the liveness minute mark, and the 45-day expiry on every hash
+   * written. The liveness mark is written even when nothing was counted —
+   * that is what makes a zero meaningful.
    */
   async flush(now: Date = new Date()): Promise<void> {
     if (!this.enabled) return;
@@ -139,14 +148,19 @@ export class ProxySurfaceUsageService
     const day = utcDay(now);
     const snapshot = this.buckets;
     this.buckets = new Map();
+    const usageDays = new Set([day, ...snapshot.keys()]);
 
     try {
       const pipeline = this.redis.pipeline();
-      for (const [field, count] of snapshot) {
-        pipeline.hincrby(usageKey(day), field, count);
+      for (const [countedDay, dayBuckets] of snapshot) {
+        for (const [field, count] of dayBuckets) {
+          pipeline.hincrby(usageKey(countedDay), field, count);
+        }
       }
       pipeline.hset(liveKey(day), utcMinute(now), '1');
-      pipeline.expire(usageKey(day), PROXY_USAGE_TTL_SECONDS);
+      for (const usageDay of usageDays) {
+        pipeline.expire(usageKey(usageDay), PROXY_USAGE_TTL_SECONDS);
+      }
       pipeline.expire(liveKey(day), PROXY_USAGE_TTL_SECONDS);
 
       const results = await pipeline.exec();
@@ -157,15 +171,21 @@ export class ProxySurfaceUsageService
       // counted has long since completed, and the missing liveness minute is
       // what tells the gate consumer this interval is "no data".
       this.logger.error?.(
-        `Proxy usage ledger flush failed; dropped ${snapshot.size} buckets for ${day}: ${error?.message}`,
+        `Proxy usage ledger flush failed; dropped the buckets for ${[...snapshot.keys()].join(', ') || day}: ${error?.message}`,
         error?.stack,
         LogContext.COMMUNICATION
       );
     }
   }
 
-  /** Test seam: the buckets aggregated since the last flush. */
+  /** Test seam: the buckets aggregated since the last flush, across days. */
   pendingBuckets(): ReadonlyMap<string, number> {
-    return this.buckets;
+    const merged = new Map<string, number>();
+    for (const dayBuckets of this.buckets.values()) {
+      for (const [field, count] of dayBuckets) {
+        merged.set(field, (merged.get(field) ?? 0) + count);
+      }
+    }
+    return merged;
   }
 }

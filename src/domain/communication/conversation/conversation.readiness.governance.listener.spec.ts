@@ -71,9 +71,7 @@ describe('ConversationReadinessGovernanceListener', () => {
     );
   });
 
-  it('publishes nothing for a room that belongs to no conversation (a callout room)', async () => {
-    conversationService.findConversationByRoomId.mockResolvedValue(null);
-
+  it('publishes nothing and looks nothing up for a room kind that cannot belong to a conversation (a callout room)', async () => {
     await listener.handleReadinessChanged(
       new RoomReadinessChangedEvent(
         room(RoomType.CALLOUT),
@@ -83,6 +81,7 @@ describe('ConversationReadinessGovernanceListener', () => {
       )
     );
 
+    expect(conversationService.findConversationByRoomId).not.toHaveBeenCalled();
     expect(publish.publishConversationGovernanceEvent).not.toHaveBeenCalled();
   });
 

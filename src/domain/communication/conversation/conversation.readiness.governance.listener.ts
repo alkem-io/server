@@ -1,4 +1,5 @@
 import { LogContext } from '@common/enums';
+import { isConversationKind } from '@domain/communication/proxy-surface/proxy.surface.disposition';
 import {
   ROOM_READINESS_CHANGED_EVENT,
   RoomReadinessChangedEvent,
@@ -33,6 +34,9 @@ export class ConversationReadinessGovernanceListener {
   ): Promise<void> {
     if (event.source === 'PROVISIONING') {
       // Creation-time write: travels inside the created event.
+      return;
+    }
+    if (!isConversationKind(event.room.type)) {
       return;
     }
 

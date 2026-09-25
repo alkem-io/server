@@ -16,6 +16,7 @@ import { repositoryProviderMockFactory } from '@test/utils/repository.provider.m
 import { type Mocked, vi } from 'vitest';
 import {
   AdminCommunicationReconcileService,
+  RECONCILE_BATCH_SIZE,
   RECONCILE_PROBE_CONCURRENCY,
 } from './admin.communication.reconcile.service';
 
@@ -45,11 +46,27 @@ describe('AdminCommunicationReconcileService', () => {
   beforeEach(async () => {
     vi.restoreAllMocks();
     rooms = [];
+    // Keyset paging over `rooms` in array order: each query reads the rows
+    // after the `afterId` it was given, up to its limit.
+    let afterId: string | undefined;
+    let limit = Number.POSITIVE_INFINITY;
     queryBuilder = {
       select: vi.fn().mockReturnThis(),
       orderBy: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
-      getMany: vi.fn(async () => rooms),
+      andWhere: vi.fn((_condition: string, params: { afterId: string }) => {
+        afterId = params.afterId;
+        return queryBuilder;
+      }),
+      limit: vi.fn((n: number) => {
+        limit = n;
+        return queryBuilder;
+      }),
+      getMany: vi.fn(async () => {
+        const start = afterId ? rooms.findIndex(r => r.id === afterId) + 1 : 0;
+        afterId = undefined;
+        return rooms.slice(start, start + limit);
+      }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -224,6 +241,26 @@ describe('AdminCommunicationReconcileService', () => {
       failed: 0,
       unknownRemaining: 1,
     });
+  });
+
+  it('reads rooms in id-ordered batches and probes every one of them', async () => {
+    rooms = Array.from({ length: RECONCILE_BATCH_SIZE + 3 }, (_, i) =>
+      room(`r${i}`, RoomType.CALLOUT)
+    );
+    communicationAdapter.getRoomMembers.mockResolvedValue(['a']);
+
+    const summary = await service.run('task-1', {
+      repair: false,
+      includeReady: true,
+    });
+
+    expect(queryBuilder.limit).toHaveBeenCalledWith(RECONCILE_BATCH_SIZE);
+    expect(queryBuilder.orderBy).toHaveBeenCalledWith('room.id', 'ASC');
+    expect(queryBuilder.getMany).toHaveBeenCalledTimes(2);
+    expect(communicationAdapter.getRoomMembers).toHaveBeenCalledTimes(
+      RECONCILE_BATCH_SIZE + 3
+    );
+    expect(summary?.scanned).toBe(RECONCILE_BATCH_SIZE + 3);
   });
 
   it('probes with bounded concurrency', async () => {
