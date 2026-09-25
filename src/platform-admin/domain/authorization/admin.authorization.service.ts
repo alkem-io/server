@@ -9,6 +9,7 @@ import { CredentialType } from '@common/enums/credential.type';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { RoleSetCacheInvalidationService } from '@domain/access/role-set/role.set.service.cache.invalidation';
 import { IActorFull } from '@domain/actor/actor/actor.interface';
 import { ActorService } from '@domain/actor/actor/actor.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
@@ -36,6 +37,7 @@ export class AdminAuthorizationService {
     private actorLookupService: ActorLookupService,
     private userLookupService: UserLookupService,
     private organizationLookupService: OrganizationLookupService,
+    private roleSetCacheInvalidationService: RoleSetCacheInvalidationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -105,6 +107,11 @@ export class AdminAuthorizationService {
       type: grantCredentialData.type,
       resourceID: grantCredentialData.resourceID,
     });
+    await this.roleSetCacheInvalidationService.invalidateForCredentialChange(
+      user.id,
+      grantCredentialData.type,
+      grantCredentialData.resourceID
+    );
     return user;
   }
 
@@ -129,6 +136,11 @@ export class AdminAuthorizationService {
       type: revokeCredentialData.type,
       resourceID: revokeCredentialData.resourceID,
     });
+    await this.roleSetCacheInvalidationService.invalidateForCredentialChange(
+      user.id,
+      revokeCredentialData.type,
+      revokeCredentialData.resourceID
+    );
 
     return user;
   }
@@ -154,6 +166,11 @@ export class AdminAuthorizationService {
       type: grantCredentialData.type,
       resourceID: grantCredentialData.resourceID,
     });
+    await this.roleSetCacheInvalidationService.invalidateForCredentialChange(
+      organization.id,
+      grantCredentialData.type,
+      grantCredentialData.resourceID
+    );
     return organization;
   }
 
@@ -179,6 +196,11 @@ export class AdminAuthorizationService {
       type: revokeCredentialData.type,
       resourceID: revokeCredentialData.resourceID || '',
     });
+    await this.roleSetCacheInvalidationService.invalidateForCredentialChange(
+      organization.id,
+      revokeCredentialData.type,
+      revokeCredentialData.resourceID
+    );
 
     return organization;
   }

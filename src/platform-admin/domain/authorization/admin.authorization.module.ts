@@ -1,4 +1,5 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { RoleSetCacheModule } from '@domain/access/role-set/role.set.service.cache.module';
 import { ActorModule } from '@domain/actor/actor/actor.module';
 import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { CredentialModule } from '@domain/actor/credential/credential.module';
@@ -27,6 +28,9 @@ import { AdminAuthorizationService } from './admin.authorization.service';
     OrganizationLookupModule,
     CredentialModule,
     PlatformAuthorizationPolicyModule,
+    // Direct credential grant/revoke must drop the role-set membership caches
+    // (a leaf module — no cycle back into platform-admin).
+    RoleSetCacheModule,
     NotificationAdapterModule,
     AuthResetModule,
     SpaceModule,
