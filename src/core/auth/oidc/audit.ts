@@ -56,7 +56,12 @@ export type AuditEventType =
   // the distinction an auditor is looking for.
   | 'session.revocation.initiated'
   | 'session.revoked'
-  | 'session.revocation.completed';
+  | 'session.revocation.completed'
+  // The messaging-side completeness leg of a subject-scoped revocation:
+  // deletion of the actor's Matrix devices (access AND refresh tokens).
+  // Its own record so an auditor can see whether messaging access was
+  // actually removed, separately from the authoritative local teardown.
+  | 'session.revocation.matrix_devices';
 
 export type AuditInput = Omit<AuditEvent, 'timestamp'> & { timestamp?: string };
 

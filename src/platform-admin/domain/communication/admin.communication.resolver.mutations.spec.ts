@@ -5,10 +5,12 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TaskService } from '@services/task';
+import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock, vi } from 'vitest';
 import { AdminCommunicationForumHierarchyReconcileService } from './admin.communication.forum.hierarchy.reconcile.service';
+import { AdminCommunicationReconcileGovernanceService } from './admin.communication.reconcile.governance.service';
 import { AdminCommunicationResolverMutations } from './admin.communication.resolver.mutations';
 import { AdminCommunicationService } from './admin.communication.service';
 
@@ -18,7 +20,9 @@ describe('AdminCommunicationResolverMutations', () => {
   let authorizationPolicyService: Record<string, Mock>;
   let adminCommunicationService: Record<string, Mock>;
   let adminCommunicationForumHierarchyReconcileService: Record<string, Mock>;
+  let adminCommunicationReconcileGovernanceService: Record<string, Mock>;
   let taskService: Record<string, Mock>;
+  let platformOperationsAuditService: Record<string, Mock>;
 
   const actorContext = { actorID: 'actor-1' } as any as ActorContext;
 
@@ -38,7 +42,13 @@ describe('AdminCommunicationResolverMutations', () => {
     adminCommunicationForumHierarchyReconcileService = module.get(
       AdminCommunicationForumHierarchyReconcileService
     ) as any;
+    adminCommunicationReconcileGovernanceService = module.get(
+      AdminCommunicationReconcileGovernanceService
+    ) as any;
     taskService = module.get(TaskService) as any;
+    platformOperationsAuditService = module.get(
+      PlatformOperationsAuditService
+    ) as any;
   });
 
   afterEach(() => {
@@ -198,6 +208,82 @@ describe('AdminCommunicationResolverMutations', () => {
       expect(taskService.create).not.toHaveBeenCalled();
       expect(
         adminCommunicationForumHierarchyReconcileService.reconcile
+      ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('adminCommunicationReconcileGovernance', () => {
+    const reconcileData = {
+      spaceID: 'space-1',
+      dryRun: true,
+      ladder: true,
+      membership: true,
+      force: false,
+      maxOperations: 500,
+    } as any;
+
+    it('checks authorization, validates scope, creates a task, kicks the pass without awaiting it, and returns the task id', async () => {
+      taskService.create.mockResolvedValue({ id: 'task-gov-1' });
+      // Deliberately never resolves — an awaited pass would hang this test,
+      // proving the fire-and-forget contract.
+      adminCommunicationReconcileGovernanceService.reconcile.mockReturnValue(
+        new Promise(() => {})
+      );
+
+      const result = await resolver.adminCommunicationReconcileGovernance(
+        reconcileData,
+        actorContext
+      );
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
+      expect(
+        adminCommunicationReconcileGovernanceService.validateScope
+      ).toHaveBeenCalledWith(reconcileData);
+      expect(taskService.create).toHaveBeenCalled();
+      expect(
+        adminCommunicationReconcileGovernanceService.reconcile
+      ).toHaveBeenCalledWith('task-gov-1', 'actor-1', reconcileData);
+      expect(result).toBe('task-gov-1');
+    });
+
+    it('a non-privileged caller gets an authorization error: no task, no pass, ZERO audit rows', async () => {
+      authorizationService.grantAccessOrFail.mockImplementation(() => {
+        throw new Error('Forbidden');
+      });
+
+      await expect(
+        resolver.adminCommunicationReconcileGovernance(
+          reconcileData,
+          actorContext
+        )
+      ).rejects.toThrow('Forbidden');
+
+      expect(taskService.create).not.toHaveBeenCalled();
+      expect(
+        adminCommunicationReconcileGovernanceService.reconcile
+      ).not.toHaveBeenCalled();
+      expect(
+        platformOperationsAuditService.recordOperation
+      ).not.toHaveBeenCalled();
+    });
+
+    it('a malformed scope fails the mutation synchronously — no task is ever created', async () => {
+      adminCommunicationReconcileGovernanceService.validateScope.mockImplementation(
+        () => {
+          throw new Error('Exactly one of spaceID and conversationID');
+        }
+      );
+
+      await expect(
+        resolver.adminCommunicationReconcileGovernance(
+          { dryRun: true } as any,
+          actorContext
+        )
+      ).rejects.toThrow('Exactly one');
+
+      expect(taskService.create).not.toHaveBeenCalled();
+      expect(
+        adminCommunicationReconcileGovernanceService.reconcile
       ).not.toHaveBeenCalled();
     });
   });

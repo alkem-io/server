@@ -1,6 +1,7 @@
 import { createRedisClient } from '@core/redis/redis.client.factory';
 import { LoggerService, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { AlkemioConfig } from '@src/types';
 import type Redis from 'ioredis';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -22,9 +23,11 @@ import { SESSION_STORE_HANDLE } from './strategies/cookie-session.errors';
  * forbidden — violations require redesign"). `forwardRef` was rejected: it makes
  * the cycle legal rather than absent.
  *
- * This module's only import is `ConfigModule`, so it can be imported from
- * anywhere — `OidcModule` and `UserModule` both do, and Nest instantiates its
- * providers exactly once.
+ * This module's imports are `ConfigModule` and the infrastructure-level
+ * `CommunicationAdapterModule` (RabbitMQ plumbing only, no domain modules —
+ * the revocation service's Matrix device-sweep leg needs it), so it can be
+ * imported from anywhere — `OidcModule` and `UserModule` both do, and Nest
+ * instantiates its providers exactly once.
  *
  * It also removes a latent problem rather than adding one: `OidcService` and
  * `SESSION_STORE_HANDLE` were previously declared inline in `OidcModule`, where
@@ -35,7 +38,7 @@ import { SESSION_STORE_HANDLE } from './strategies/cookie-session.errors';
  * `OidcModule` re-exports this module, so its public surface is unchanged.
  */
 @Module({
-  imports: [ConfigModule],
+  imports: [ConfigModule, CommunicationAdapterModule],
   providers: [
     OidcService,
     {

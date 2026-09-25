@@ -102,6 +102,14 @@ export class MatrixRoomCheckController {
           actor_id: m.actorId,
           display_name: m.displayName,
         })),
+        // Governance extension: this handler serves the
+        // Element room-check reconciliation flow, which only ever concerns
+        // conversation rooms — always thread-class, never space-anchored,
+        // platform-driven membership, shared history. An old adapter simply
+        // ignores these fields.
+        entity_type: 'thread',
+        join_rule: 'invite',
+        visibility: 'shared',
       };
     } catch (error: unknown) {
       const err = error as Error;
@@ -115,6 +123,9 @@ export class MatrixRoomCheckController {
         type: '',
         is_direct: false,
         members: [],
+        entity_type: 'thread',
+        join_rule: 'invite',
+        visibility: 'shared',
       };
     }
   }

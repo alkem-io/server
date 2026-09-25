@@ -109,12 +109,12 @@ export class CommunicationService {
     }
     const roomIds = this.getRoomIds(communication);
     await this.communicationAdapter.batchAddMember(contributorActorID, roomIds);
-    // Add to Matrix space hierarchy so the contributor can access callout/post rooms
-    // (room-level batchAddMember only covers the updates room; space-level access
-    // is needed for rooms placed inside the Matrix space via parentContextId)
-    await this.communicationAdapter.batchAddSpaceMember(contributorActorID, [
-      communication.spaceID,
-    ]);
+    // Space-room membership is NOT handled here. The old space-level batch
+    // add that lived beside the room-level call above never worked —
+    // communication.spaceID is the empty string on the only production path —
+    // and space-room membership is a projection of the space's CURRENT
+    // authorization (SpaceMembershipProjectionService), never a payload-driven
+    // side effect.
     return true;
   }
 
@@ -140,9 +140,8 @@ export class CommunicationService {
   ): Promise<boolean> {
     const roomIds = this.getRoomIds(communication);
     await this.communicationAdapter.batchRemoveMember(actorID, roomIds);
-    await this.communicationAdapter.batchRemoveSpaceMember(actorID, [
-      communication.spaceID,
-    ]);
+    // Space-room removal flows through SpaceMembershipProjectionService —
+    // see addContributorToCommunications.
     return true;
   }
 }

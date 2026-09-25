@@ -522,10 +522,24 @@ export class MessageInboxService {
       );
 
     // Persist membership removal, get remaining count
-    const remainingCount = await this.conversationService.persistMemberRemoved(
-      conversationId,
-      memberActorId
-    );
+    const { deleted, remaining: remainingCount } =
+      await this.conversationService.persistMemberRemoved(
+        conversationId,
+        memberActorId
+      );
+
+    // Idempotency (contract membership-revocation §1): a row already gone
+    // means the removal was performed server-side (the mutation path) and
+    // this event is the bot-kick echo — no second re-apply, no second
+    // MEMBER_REMOVED. Element-originated leaves delete the row here
+    // (deleted === 1) and keep the full workflow below.
+    if (deleted === 0) {
+      this.logger.verbose?.(
+        `Membership of ${memberActorId} in conversation ${conversationId} already removed — skipping duplicate leave processing`,
+        LogContext.COMMUNICATION
+      );
+      return;
+    }
 
     // Load conversation for event payload
     const conversation =

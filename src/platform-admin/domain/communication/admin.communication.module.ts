@@ -8,14 +8,18 @@ import { CommunityModule } from '@domain/community/community/community.module';
 import { User } from '@domain/community/user/user.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { Space } from '@domain/space/space/space.entity';
+import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
+import { SpaceMembershipProjectionModule } from '@domain/space/space-membership-projection/space.membership.projection.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Forum } from '@platform/forum/forum.entity';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { MessagingRedisModule } from '@services/infrastructure/redis-client/messaging-redis.module';
+import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { TaskModule } from '@services/task';
 import { PlatformOperationsAuditModule } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.module';
 import { AdminCommunicationForumHierarchyReconcileService } from './admin.communication.forum.hierarchy.reconcile.service';
+import { AdminCommunicationReconcileGovernanceService } from './admin.communication.reconcile.governance.service';
 import { AdminCommunicationResolverMutations } from './admin.communication.resolver.mutations';
 import { AdminCommunicationService } from './admin.communication.service';
 import { AdminCommunicationSpaceSyncService } from './admin.communication.space.sync.service';
@@ -31,6 +35,9 @@ import { AdminCommunicationSpaceSyncService } from './admin.communication.space.
     CommunicationModule,
     CommunicationAdapterModule,
     ConversationModule,
+    EntityResolverModule,
+    SpaceMembershipProjectionModule,
+    SpaceLookupModule,
     TaskModule,
     TypeOrmModule.forFeature([Space, Forum, Room, User, VirtualContributor]),
   ],
@@ -38,6 +45,7 @@ import { AdminCommunicationSpaceSyncService } from './admin.communication.space.
     AdminCommunicationService,
     AdminCommunicationSpaceSyncService,
     AdminCommunicationForumHierarchyReconcileService,
+    AdminCommunicationReconcileGovernanceService,
     AdminCommunicationResolverMutations,
   ],
   exports: [AdminCommunicationService],

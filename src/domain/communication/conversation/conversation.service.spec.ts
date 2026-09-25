@@ -22,6 +22,7 @@ import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { CommunicationAdapterException } from '@services/adapters/communication-adapter/communication.adapter.exception';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { SubscriptionPublishService } from '@services/subscriptions/subscription-service/subscription.publish.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
@@ -32,6 +33,7 @@ import { Conversation } from './conversation.entity';
 import { IConversation } from './conversation.interface';
 import { CONVERSATION_MEDIA_MAX_FILE_SIZE } from './conversation.media.constants';
 import { ConversationService } from './conversation.service';
+import { ConversationAuthorizationService } from './conversation.service.authorization';
 
 describe('ConversationService', () => {
   let service: ConversationService;
@@ -47,7 +49,7 @@ describe('ConversationService', () => {
   let communicationAdapter: Mocked<CommunicationAdapter>;
   let conversationRepo: Mocked<Repository<Conversation>>;
   let membershipRepo: Mocked<Repository<ConversationMembership>>;
-  let eventEmitter: Mocked<EventEmitter2>;
+  let module: TestingModule;
   let mockManagerFind: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
@@ -60,7 +62,7 @@ describe('ConversationService', () => {
       return entity as any;
     });
 
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [
         ConversationService,
         repositoryProviderMockFactory(Conversation),
@@ -88,7 +90,6 @@ describe('ConversationService', () => {
     communicationAdapter = module.get(CommunicationAdapter);
     conversationRepo = module.get(getRepositoryToken(Conversation));
     membershipRepo = module.get(getRepositoryToken(ConversationMembership));
-    eventEmitter = module.get(EventEmitter2);
 
     // Mock the manager.find used by getConversationMembers to batch-lookup actor types
     mockManagerFind = vi.fn().mockResolvedValue([]);
@@ -461,97 +462,150 @@ describe('ConversationService', () => {
     });
   });
 
-  describe('removeMember (US2-AS4 live-verification fix)', () => {
+  describe('removeMember (069: authoritative synchronous removal, #6329 cause 2)', () => {
     const conversationId = 'conv-1';
     const memberActorId = 'actor-c';
+    let conversationAuthorizationService: Mocked<ConversationAuthorizationService>;
+    let subscriptionPublishService: Mocked<SubscriptionPublishService>;
 
-    const mockGroupConversation = () => {
+    const mockGroupConversation = (remainingAfterRemoval = 2) => {
       conversationRepo.findOne.mockResolvedValue({
         id: conversationId,
         room: { id: 'room-1', type: RoomType.CONVERSATION_GROUP },
       } as any);
-      membershipRepo.count.mockResolvedValue(1); // isConversationMember -> true
+      // 1st count: isConversationMember -> 1; 2nd: remaining after delete
+      membershipRepo.count
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(remainingAfterRemoval);
+      membershipRepo.find.mockResolvedValue([
+        { actorID: 'actor-a' },
+        { actorID: memberActorId },
+      ] as any);
+      membershipRepo.delete.mockResolvedValue({ affected: 1 } as any);
     };
 
-    const matrixKickRejected = () =>
-      CommunicationAdapterException.fromAdapterError('batchRemoveMember', {
-        code: 'NOT_ALLOWED',
-        message: 'insufficient power level',
+    beforeEach(() => {
+      conversationAuthorizationService = module.get(
+        ConversationAuthorizationService
+      );
+      subscriptionPublishService = module.get(SubscriptionPublishService);
+      conversationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
+      authorizationPolicyService.saveAll.mockResolvedValue([] as any);
+      subscriptionPublishService.publishConversationEvent.mockResolvedValue(
+        undefined as any
+      );
+    });
+
+    it('persists the removal, rebuilds authorization and publishes MEMBER_REMOVED BEFORE the Matrix kick resolves', async () => {
+      mockGroupConversation();
+      const orderOfCalls: string[] = [];
+      membershipRepo.delete.mockImplementation((async () => {
+        orderOfCalls.push('persist');
+        return { affected: 1 };
+      }) as any);
+      conversationAuthorizationService.applyAuthorizationPolicy.mockImplementation(
+        async () => {
+          orderOfCalls.push('apply');
+          return [];
+        }
+      );
+      authorizationPolicyService.saveAll.mockImplementation(async () => {
+        orderOfCalls.push('saveAll');
+        return [] as any;
+      });
+      subscriptionPublishService.publishConversationEvent.mockImplementation(
+        (async () => {
+          orderOfCalls.push('publish');
+        }) as any
+      );
+      communicationAdapter.batchRemoveMember.mockImplementation(async () => {
+        orderOfCalls.push('kick');
+        return true;
       });
 
-    it('should send the batchRemoveMember RPC with ensureAllSucceeded and return the conversation on success', async () => {
-      mockGroupConversation();
-      communicationAdapter.batchRemoveMember.mockResolvedValue(true);
+      await service.removeMember(conversationId, memberActorId);
 
-      const result = await service.removeMember(conversationId, memberActorId);
-
-      expect(result.id).toBe(conversationId);
-      expect(communicationAdapter.batchRemoveMember).toHaveBeenCalledWith(
-        memberActorId,
-        ['room-1'],
-        undefined,
-        { ensureAllSucceeded: true }
-      );
+      expect(orderOfCalls).toEqual([
+        'persist',
+        'apply',
+        'saveAll',
+        'publish',
+        'kick',
+      ]);
     });
 
-    it('sec-server-11: falls back to authoritative local removal (never throws) when Matrix rejects the kick', async () => {
+    it('confirms the removal and records a divergence when the Matrix kick is rejected', async () => {
       mockGroupConversation();
       communicationAdapter.batchRemoveMember.mockRejectedValue(
-        matrixKickRejected()
-      );
-      eventEmitter.emitAsync.mockResolvedValue([undefined]); // one listener ran
-
-      const result = await service.removeMember(conversationId, memberActorId);
-
-      expect(result.id).toBe(conversationId);
-      // The removal is completed through the SAME workflow the
-      // Matrix-confirmed path uses (persist + auth re-apply + MEMBER_REMOVED
-      // + last-member conversation deletion), not by deleting the row behind
-      // the event handler's back.
-      expect(eventEmitter.emitAsync).toHaveBeenCalledWith(
-        'room.member.updated',
-        expect.objectContaining({
-          payload: expect.objectContaining({
-            roomId: 'room-1',
-            memberActorID: memberActorId,
-            membership: 'leave',
-          }),
+        CommunicationAdapterException.fromAdapterError('batchRemoveMember', {
+          code: 'NOT_ALLOWED',
+          message: 'insufficient power level',
         })
       );
-      expect(membershipRepo.delete).not.toHaveBeenCalled();
-    });
-
-    it.each([
-      ['the completion workflow fails', () => new Error('listener blew up')],
-      ['no listener is registered at all', () => undefined],
-    ])('sec-server-11: still removes the membership row when %s', async (_case, failure) => {
-      mockGroupConversation();
-      communicationAdapter.batchRemoveMember.mockRejectedValue(
-        matrixKickRejected()
-      );
-      const error = failure();
-      if (error) eventEmitter.emitAsync.mockRejectedValue(error);
-      else eventEmitter.emitAsync.mockResolvedValue([]);
-      membershipRepo.delete.mockResolvedValue({} as any);
 
       const result = await service.removeMember(conversationId, memberActorId);
 
       expect(result.id).toBe(conversationId);
+      // The Alkemio side completed regardless of the kick outcome:
       expect(membershipRepo.delete).toHaveBeenCalledWith({
         conversationId,
         actorID: memberActorId,
       });
+      expect(
+        conversationAuthorizationService.applyAuthorizationPolicy
+      ).toHaveBeenCalledWith(conversationId);
+      expect(authorizationPolicyService.saveAll).toHaveBeenCalled();
+      expect(
+        subscriptionPublishService.publishConversationEvent
+      ).toHaveBeenCalledTimes(1);
     });
 
-    it('sec-server-11: propagates a non-adapter error (e.g. a transport/programming error) rather than swallowing it', async () => {
+    it('confirms the removal when the Matrix leg fails on transport (adapter unreachable)', async () => {
       mockGroupConversation();
-      const unexpected = new Error('unexpected failure');
-      communicationAdapter.batchRemoveMember.mockRejectedValue(unexpected);
+      communicationAdapter.batchRemoveMember.mockRejectedValue(
+        new Error('transport timeout')
+      );
 
-      await expect(
-        service.removeMember(conversationId, memberActorId)
-      ).rejects.toThrow(unexpected);
-      expect(membershipRepo.delete).not.toHaveBeenCalled();
+      const result = await service.removeMember(conversationId, memberActorId);
+
+      expect(result.id).toBe(conversationId);
+      expect(membershipRepo.delete).toHaveBeenCalled();
+    });
+
+    it('publishes MEMBER_REMOVED exactly once', async () => {
+      mockGroupConversation();
+      communicationAdapter.batchRemoveMember.mockResolvedValue(true);
+
+      await service.removeMember(conversationId, memberActorId);
+
+      expect(
+        subscriptionPublishService.publishConversationEvent
+      ).toHaveBeenCalledTimes(1);
+      const event =
+        subscriptionPublishService.publishConversationEvent.mock.calls[0][0];
+      expect(event.memberRemoved?.removedMemberID).toBe(memberActorId);
+    });
+
+    it('auto-deletes the conversation when the last member is removed', async () => {
+      mockGroupConversation(0);
+      const deleteSpy = vi
+        .spyOn(service, 'deleteConversation')
+        .mockResolvedValue({ id: conversationId } as any);
+
+      await service.removeMember(conversationId, memberActorId);
+
+      expect(deleteSpy).toHaveBeenCalledWith(conversationId);
+      // MEMBER_REMOVED then CONVERSATION_DELETED
+      expect(
+        subscriptionPublishService.publishConversationEvent
+      ).toHaveBeenCalledTimes(2);
+      const second =
+        subscriptionPublishService.publishConversationEvent.mock.calls[1][0];
+      expect(second.conversationDeleted?.conversationID).toBe(conversationId);
+      // No Matrix kick needed — deleteConversation tears the room down.
+      expect(communicationAdapter.batchRemoveMember).not.toHaveBeenCalled();
     });
 
     it('should throw ValidationException when the conversation is not a group', async () => {
@@ -563,6 +617,7 @@ describe('ConversationService', () => {
       await expect(
         service.removeMember(conversationId, memberActorId)
       ).rejects.toThrow(ValidationException);
+      expect(membershipRepo.delete).not.toHaveBeenCalled();
       expect(communicationAdapter.batchRemoveMember).not.toHaveBeenCalled();
     });
 
@@ -576,7 +631,7 @@ describe('ConversationService', () => {
       await expect(
         service.removeMember(conversationId, memberActorId)
       ).rejects.toThrow(ValidationException);
-      expect(communicationAdapter.batchRemoveMember).not.toHaveBeenCalled();
+      expect(membershipRepo.delete).not.toHaveBeenCalled();
     });
   });
 

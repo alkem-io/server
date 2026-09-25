@@ -44,8 +44,13 @@ import {
   MatrixAdapterEventType,
   ReceivedAttachment,
   RemoveReactionRequest,
+  RepairReport,
+  RepairRoomGovernanceRequest,
+  RepairSpaceGovernanceRequest,
   RequestFor,
   ResponseFor,
+  RevokeActorDevicesRequest,
+  RevokeSpaceMemberRequest,
   RoomType,
   // Room type constants
   RoomTypeCommunity,
@@ -1460,11 +1465,21 @@ export class CommunicationAdapter {
 
   /**
    * Remove an actor from multiple Matrix spaces.
+   *
+   * Evaluated PER ITEM (the d7fe1a3/36facab rule, same semantics as
+   * batchRemoveMember): the RPC envelope's success only says the batch was
+   * processed — each requested context must be individually accounted for
+   * as a success before this reports true.
+   *
+   * @param options.ensureAllSucceeded - When true, throws a
+   * CommunicationAdapterException (carrying the first per-context adapter
+   * error) instead of silently returning false on partial failure.
    */
   async batchRemoveSpaceMember(
     actorID: AlkemioActorID,
     contextIds: AlkemioContextID[],
-    reason?: string
+    reason?: string,
+    options?: { ensureAllSucceeded?: boolean }
   ): Promise<boolean> {
     if (!this.enabled || contextIds.length === 0) return true;
 
@@ -1479,7 +1494,178 @@ export class CommunicationAdapter {
       errorContext: { actorID, contextCount: contextIds.length },
     });
 
-    return response?.success ?? false;
+    if (!response) return false;
+
+    const batchResult = processBatchResponse(response);
+    const allSucceeded =
+      response.success &&
+      isBatchOperationSuccessful(batchResult, 'all') &&
+      batchResult.successCount === contextIds.length &&
+      contextIds.every(
+        contextId => batchResult.itemResults.get(contextId) === true
+      );
+
+    if (!allSucceeded) {
+      this.logger.warn?.(
+        `batchRemoveSpaceMember: one or more spaces failed to remove actor ${actorID} - ${formatBatchResultForLog(batchResult)}`,
+        LogContext.COMMUNICATION
+      );
+
+      if (options?.ensureAllSucceeded) {
+        const firstError = batchResult.itemErrors.values().next().value;
+        throw CommunicationAdapterException.fromAdapterError(
+          'batchRemoveSpaceMember',
+          firstError ??
+            response.error ?? {
+              code: ErrCodeInternalError,
+              message: 'One or more space removals failed',
+            },
+          { actorID, contextCount: contextIds.length }
+        );
+      }
+    }
+
+    return allSucceeded;
+  }
+
+  /**
+   * Whether the communications integration is on at all. Operator-facing
+   * maintenance passes check this up front so a disabled adapter yields an
+   * honest failed pass instead of a stream of silent no-op "successes".
+   */
+  isEnabled(): boolean {
+    return this.enabled;
+  }
+
+  // ============================================================================
+  // Governance & Revocation
+  //
+  // Every wrapper below returns a distinguishable { disabled: true } sentinel
+  // when the communications integration is off — NEVER a fabricated success
+  // (contract governed-operations-authority §2). A transport failure comes
+  // back as undefined so callers can tell "no drift" apart from "we don't
+  // know" (the setChildren precedent above).
+  // ============================================================================
+
+  /**
+   * Report-first (dry-run capable) governance repair of one room: ladder,
+   * join rules, history visibility, guest access, markers, both aliases.
+   */
+  async repairRoomGovernance(
+    request: RepairRoomGovernanceRequest
+  ): Promise<RepairReport | { disabled: true } | undefined> {
+    if (!this.enabled) return { disabled: true };
+
+    return this.sendCommand({
+      operation: 'repairRoomGovernance',
+      topic: MatrixAdapterEventType.COMMUNICATION_ROOM_GOVERNANCE_REPAIR,
+      payload: request satisfies RepairRoomGovernanceRequest,
+      errorContext: { alkemioRoomId: request.alkemio_room_id },
+      onError: 'silent',
+    });
+  }
+
+  /**
+   * Governance repair of one space room, recomputing the elevated (PL 75)
+   * admin/lead entries. Hierarchy links are report-only on the adapter side.
+   */
+  async repairSpaceGovernance(
+    request: RepairSpaceGovernanceRequest
+  ): Promise<RepairReport | { disabled: true } | undefined> {
+    if (!this.enabled) return { disabled: true };
+
+    return this.sendCommand({
+      operation: 'repairSpaceGovernance',
+      topic: MatrixAdapterEventType.COMMUNICATION_SPACE_GOVERNANCE_REPAIR,
+      payload: request satisfies RepairSpaceGovernanceRequest,
+      errorContext: { alkemioContextId: request.alkemio_context_id },
+      onError: 'silent',
+    });
+  }
+
+  /**
+   * Cascading space-membership revocation: kick the actor from each space
+   * room AND every child room of that space (contract membership-revocation
+   * §3). Evaluated per context — the envelope alone is never trusted.
+   */
+  async revokeSpaceMember(
+    actorID: AlkemioActorID,
+    contextIds: AlkemioContextID[],
+    reason?: string
+  ): Promise<
+    | {
+        allSucceeded: boolean;
+        childRoomsKicked: number;
+        failedContextIds: string[];
+      }
+    | { disabled: true }
+    | undefined
+  > {
+    if (!this.enabled) return { disabled: true };
+    if (contextIds.length === 0) {
+      return { allSucceeded: true, childRoomsKicked: 0, failedContextIds: [] };
+    }
+
+    const response = await this.sendCommand({
+      operation: 'revokeSpaceMember',
+      topic: MatrixAdapterEventType.COMMUNICATION_SPACE_MEMBER_REVOKE,
+      payload: {
+        actor_id: actorID,
+        alkemio_context_ids: contextIds,
+        reason,
+      } satisfies RevokeSpaceMemberRequest,
+      errorContext: { actorID, contextCount: contextIds.length },
+      onError: 'silent',
+    });
+    if (response === undefined) return undefined;
+
+    // Per-item evaluation: every requested context must carry its own
+    // successful result — the envelope alone is never trusted.
+    const results = response.results ?? {};
+    const failedContextIds = contextIds
+      .map(contextId => String(contextId))
+      .filter(contextId => results[contextId]?.success !== true);
+    const allSucceeded =
+      response.success === true && failedContextIds.length === 0;
+
+    if (!allSucceeded) {
+      this.logger.warn?.(
+        `revokeSpaceMember: cascading revocation incomplete for actor ${actorID}: ${failedContextIds.join(', ')}`,
+        LogContext.COMMUNICATION
+      );
+    }
+
+    return {
+      allSucceeded,
+      childRoomsKicked: response.child_rooms_kicked ?? 0,
+      failedContextIds,
+    };
+  }
+
+  /**
+   * Delete ALL of the actor's Matrix devices, invalidating access and
+   * refresh tokens (contract membership-revocation §4). Idempotent: zero
+   * devices is a success with deletedCount 0.
+   */
+  async revokeActorDevices(
+    actorID: AlkemioActorID,
+    reason?: string
+  ): Promise<{ deletedCount: number } | { disabled: true } | undefined> {
+    if (!this.enabled) return { disabled: true };
+
+    const response = await this.sendCommand({
+      operation: 'revokeActorDevices',
+      topic: MatrixAdapterEventType.COMMUNICATION_ACTOR_DEVICES_REVOKE,
+      payload: {
+        actor_id: actorID,
+        reason,
+      } satisfies RevokeActorDevicesRequest,
+      errorContext: { actorID },
+      onError: 'silent',
+    });
+    if (response === undefined || response.success !== true) return undefined;
+
+    return { deletedCount: response.deleted_count ?? 0 };
   }
 
   // ============================================================================

@@ -129,7 +129,10 @@ describe('UserService.deleteUser — session revocation cascade (server#6315)', 
 
     expect(oidcSessionRevocationService.revokeAllForSub).toHaveBeenCalledWith(
       AUTHENTICATION_ID,
-      'account_deleted'
+      'account_deleted',
+      // The actor id rides along so the revocation also sweeps the actor's
+      // Matrix devices — messaging access dies with the account.
+      { actorID: 'user-1' }
     );
     expect(kratosService.invalidateAllIdentitySessions).toHaveBeenCalledWith(
       AUTHENTICATION_ID
@@ -255,7 +258,8 @@ describe('UserService.deleteUser — session revocation cascade (server#6315)', 
       expect(result.id).toBe('user-1');
       expect(oidcSessionRevocationService.revokeAllForSub).toHaveBeenCalledWith(
         AUTHENTICATION_ID,
-        'account_deleted'
+        'account_deleted',
+        { actorID: 'user-1' }
       );
       expect(logger.error).toHaveBeenCalledWith(
         expect.objectContaining({

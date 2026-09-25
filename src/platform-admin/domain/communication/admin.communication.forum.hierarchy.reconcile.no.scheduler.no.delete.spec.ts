@@ -71,4 +71,41 @@ describe('no scheduler, no delete path (risk R-5, contract no-scheduler-no-delet
       'this.adminCommunicationForumHierarchyReconcileService.reconcile('
     );
   });
+
+  // The governance reconcile pass carries the same two prohibitions for the
+  // same reasons: no scheduler (six replicas, no leader election — the pass
+  // is on-demand only) and no delete-shaped operation (orphaned rooms are
+  // reported, never deleted).
+  it('the governance reconcile service source references no prohibited symbol', () => {
+    const source = readFileSync(
+      `${__dirname}/admin.communication.reconcile.governance.service.ts`,
+      'utf-8'
+    );
+    for (const pattern of PROHIBITED_SYMBOLS) {
+      expect(source).not.toMatch(pattern);
+    }
+  });
+
+  it('the governance reconcile mutation handler body references no prohibited symbol', () => {
+    const source = readFileSync(RESOLVER_FILE, 'utf-8');
+    const startMarker = 'async adminCommunicationReconcileGovernance(';
+    const startIndex = source.indexOf(startMarker);
+    expect(startIndex).toBeGreaterThan(-1);
+
+    const tail = source.slice(startIndex);
+    const closingBrace = tail.match(/\n {2}\}\n/);
+    expect(closingBrace).not.toBeNull();
+    const methodBody = tail.slice(
+      0,
+      closingBrace!.index! + closingBrace![0].length
+    );
+
+    for (const pattern of PROHIBITED_SYMBOLS) {
+      expect(methodBody).not.toMatch(pattern);
+    }
+
+    expect(methodBody).toContain(
+      'this.adminCommunicationReconcileGovernanceService.reconcile('
+    );
+  });
 });

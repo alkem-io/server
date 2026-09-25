@@ -20,6 +20,14 @@ export class CreateRoomInput {
   // Parent Matrix space context ID for anchoring this room in the hierarchy
   parentContextId?: string;
 
+  /**
+   * Declares that the room's content is readable by at least every member of
+   * the anchoring space (e.g. a PUBLISHED callout's comments). Combined with
+   * parentContextId this selects the space-entitled membership mode
+   * (restricted join rule); drafts and narrower content stay platform-driven.
+   */
+  contentReadableBySpaceMembers?: boolean;
+
   // Matrix join rule for this room (e.g., JoinRulePublic for forum rooms)
   joinRule?: JoinRule;
 
