@@ -171,4 +171,72 @@ describe('ActorResolverMutations', () => {
       ).resolves.toBe(true);
     });
   });
+
+  // 027-platform-role-redesign (sec-server-9 fix): the twelve new
+  // `platform-*`/`feature-*` role credentials must be rejected outright by
+  // this generic, un-censused mutation — before ANY authorization check or
+  // data write — so a `global-support`/`global-license-manager` holder
+  // (both reach `PLATFORM_ADMIN`) cannot self-grant Platform Roles Admin,
+  // combine it with Platform Audit Reader, or grant Platform Spaces Reader
+  // to an arbitrary account, all with zero audit trail.
+  describe('restricted role-credential rejection (sec-server-9 fix)', () => {
+    it('rejects grantCredentialToActor(platform-roles-admin) before any authorization check or data write', async () => {
+      await expect(
+        resolver.grantCredentialToActor(
+          mockActorContext,
+          'actor-1',
+          CredentialType.PLATFORM_ROLES_ADMIN
+        )
+      ).rejects.toThrow(/may not be granted or revoked through this mutation/);
+
+      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+      expect(actorService.grantCredentialOrFail).not.toHaveBeenCalled();
+    });
+
+    it('rejects revokeCredentialFromActor(platform-audit-reader) before any authorization check or data write', async () => {
+      await expect(
+        resolver.revokeCredentialFromActor(
+          mockActorContext,
+          'actor-1',
+          CredentialType.PLATFORM_AUDIT_READER
+        )
+      ).rejects.toThrow(/may not be granted or revoked through this mutation/);
+
+      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+      expect(actorService.revokeCredential).not.toHaveBeenCalled();
+    });
+
+    it('rejects grantCredentialToActor(platform-spaces-reader) — the service-account-only role', async () => {
+      await expect(
+        resolver.grantCredentialToActor(
+          mockActorContext,
+          'actor-1',
+          CredentialType.PLATFORM_SPACES_READER
+        )
+      ).rejects.toThrow(/may not be granted or revoked through this mutation/);
+    });
+
+    it('rejects a feature-* role too (feature-beta-tester)', async () => {
+      await expect(
+        resolver.grantCredentialToActor(
+          mockActorContext,
+          'actor-1',
+          CredentialType.FEATURE_BETA_TESTER
+        )
+      ).rejects.toThrow(/may not be granted or revoked through this mutation/);
+    });
+
+    it('leaves every other (non-role-family) credential type unaffected — the legacy path stays reachable', async () => {
+      const credential = { id: 'cred-1' };
+      actorService.grantCredentialOrFail.mockResolvedValue(credential);
+
+      await expect(
+        resolver.grantCredentialToActor(
+          mockActorContext,
+          'actor-1',
+          CredentialType.GLOBAL_ADMIN
+        )
+      ).resolves.toBe(credential);
+    });
+  });
 });

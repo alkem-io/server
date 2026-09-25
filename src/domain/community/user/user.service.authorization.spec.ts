@@ -400,4 +400,139 @@ describe('UserAuthorizationService', () => {
       }
     });
   });
+
+  // 027-platform-role-redesign (T060, A4/A5, T070f): PLATFORM_USERS_ADMIN on
+  // the per-USER authorization tree — the union of A4's legacy reachers
+  // (today's PLATFORM_ADMIN) and A5's (today's PLATFORM_SETTINGS_ADMIN).
+  describe('027-platform-role-redesign — PLATFORM_USERS_ADMIN grant-set widening (T060, T070f)', () => {
+    const arrange = () => {
+      const authorization = { credentialRules: [] };
+      const user = {
+        id: 'user-1',
+        authorization,
+        profile: { id: 'profile-1', authorization: {} },
+        storageAggregator: {
+          authorization: {},
+          directStorage: { authorization: {} },
+        },
+        settings: { authorization: {} },
+      };
+      userLookupService.getUserByIdOrFail.mockResolvedValue(user);
+      authorizationPolicyService.reset.mockReturnValue(authorization);
+      platformAuthorizationService.inheritRootAuthorizationPolicy.mockReturnValue(
+        authorization
+      );
+      authorizationPolicyService.createCredentialRuleUsingTypesOnly.mockImplementation(
+        (privileges, types, name) => ({
+          grantedPrivileges: privileges,
+          criterias: types,
+          name,
+          cascade: true,
+        })
+      );
+      authorizationPolicyService.createCredentialRule.mockImplementation(
+        (privileges, criterias, name) => ({
+          grantedPrivileges: privileges,
+          criterias,
+          name,
+          cascade: true,
+        })
+      );
+      authorizationPolicyService.appendCredentialAuthorizationRules.mockReturnValue(
+        authorization
+      );
+      authorizationPolicyService.appendPrivilegeAuthorizationRules.mockReturnValue(
+        authorization
+      );
+      authorizationPolicyService.cloneAuthorizationPolicy.mockReturnValue(
+        authorization
+      );
+      authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess.mockReturnValue(
+        authorization
+      );
+      actorLookupService.getActorCredentialsOrFail.mockResolvedValue([]);
+      profileAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([
+        authorization,
+      ]);
+      userSettingsAuthorizationService.applyAuthorizationPolicy.mockReturnValue(
+        authorization
+      );
+      storageAggregatorAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        [authorization]
+      );
+    };
+
+    it('grants PLATFORM_USERS_ADMIN EXACTLY {platform-users-admin} plus the union of A4 and A5 legacy reachers, non-cascading', async () => {
+      arrange();
+      await service.applyAuthorizationPolicy('user-1');
+
+      const rules =
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly.mock.results
+          .map(r => r.value)
+          .filter(rule =>
+            rule.grantedPrivileges?.includes(
+              AuthorizationPrivilege.PLATFORM_USERS_ADMIN
+            )
+          );
+      expect(rules).toHaveLength(1);
+      expect(rules[0].criterias).toEqual([
+        AuthorizationCredential.PLATFORM_USERS_ADMIN,
+        AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_SUPPORT,
+        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+        AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+      ]);
+      expect(rules[0].cascade).toBe(false);
+    });
+
+    it('extends READ_USER_SETTINGS additively to platform-users-admin, keeping the pre-existing legacy reach (cascading)', async () => {
+      arrange();
+      await service.applyAuthorizationPolicy('user-1');
+
+      const rules =
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly.mock.results
+          .map(r => r.value)
+          .filter(rule =>
+            rule.grantedPrivileges?.includes(
+              AuthorizationPrivilege.READ_USER_SETTINGS
+            )
+          );
+      expect(rules).toHaveLength(1);
+      expect(rules[0].criterias).toEqual([
+        AuthorizationCredential.GLOBAL_COMMUNITY_READ,
+        AuthorizationCredential.GLOBAL_SUPPORT,
+        AuthorizationCredential.PLATFORM_USERS_ADMIN,
+      ]);
+      expect(rules[0].cascade).toBe(true);
+    });
+
+    it('extends READ_USER_PII additively to platform-users-admin (the dynamic per-user credential list), keeping self/global-admin/global-support/global-community-read', async () => {
+      arrange();
+      await service.applyAuthorizationPolicy('user-1');
+
+      const piiRuleCall =
+        authorizationPolicyService.createCredentialRule.mock.calls.find(call =>
+          (call[0] as AuthorizationPrivilege[]).includes(
+            AuthorizationPrivilege.READ_USER_PII
+          )
+        );
+      expect(piiRuleCall).toBeDefined();
+      const piiCredentialTypes = (
+        piiRuleCall![1] as { type: AuthorizationCredential }[]
+      ).map(c => c.type);
+
+      expect(piiCredentialTypes).toContain(
+        AuthorizationCredential.PLATFORM_USERS_ADMIN
+      );
+      expect(piiCredentialTypes).toContain(
+        AuthorizationCredential.GLOBAL_ADMIN
+      );
+      expect(piiCredentialTypes).toContain(
+        AuthorizationCredential.GLOBAL_SUPPORT
+      );
+      expect(piiCredentialTypes).toContain(
+        AuthorizationCredential.GLOBAL_COMMUNITY_READ
+      );
+    });
+  });
 });

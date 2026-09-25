@@ -243,6 +243,21 @@ export class OrganizationResolverFields {
     if (accountVisible) {
       return await this.organizationService.getAccount(organization);
     }
+    // 027 R-F.3 (2026-09-18): the Platform License Manager assigns plans to
+    // organization accounts (A12) but is no organization admin, so the
+    // UPDATE-gated field hid every account it does not own. Open the account
+    // when the actor holds ACCOUNT_LICENSE_MANAGE on the account's OWN policy.
+    const account = await this.organizationService.getAccount(organization);
+    if (
+      account.authorization &&
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        account.authorization,
+        AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE
+      )
+    ) {
+      return account;
+    }
     return undefined;
   }
 

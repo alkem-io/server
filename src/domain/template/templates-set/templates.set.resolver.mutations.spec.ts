@@ -14,7 +14,10 @@ import { TemplatesSetService } from './templates.set.service';
 
 describe('TemplatesSetResolverMutations', () => {
   let resolver: TemplatesSetResolverMutations;
-  let authorizationService: { grantAccessOrFail: ReturnType<typeof vi.fn> };
+  let authorizationService: {
+    grantAccessOrFail: ReturnType<typeof vi.fn>;
+    isAccessGranted: ReturnType<typeof vi.fn>;
+  };
   let authorizationPolicyService: { saveAll: ReturnType<typeof vi.fn> };
   let templatesSetService: {
     getTemplatesSetOrFail: ReturnType<typeof vi.fn>;
@@ -42,7 +45,13 @@ describe('TemplatesSetResolverMutations', () => {
   };
 
   beforeEach(() => {
-    authorizationService = { grantAccessOrFail: vi.fn() };
+    authorizationService = {
+      grantAccessOrFail: vi.fn(),
+      // 027-platform-role-redesign (T042): dual-path checks call
+      // isAccessGranted before falling through to grantAccessOrFail;
+      // default false so grantAccessOrFail's own call assertions hold.
+      isAccessGranted: vi.fn().mockReturnValue(false),
+    };
     authorizationPolicyService = { saveAll: vi.fn() };
     templatesSetService = {
       getTemplatesSetOrFail: vi.fn(),
@@ -117,6 +126,19 @@ describe('TemplatesSetResolverMutations', () => {
       );
       expect(authorizationPolicyService.saveAll).toHaveBeenCalled();
       expect(result).toBe(template);
+      // spec-server-9 fix: A7's dual path is CREATE ∨
+      // PLATFORM_SUPPORT_ORG_RESOURCES — assert the actual gate.
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        actorContext,
+        templatesSet.authorization,
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+      );
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        templatesSet.authorization,
+        AuthorizationPrivilege.CREATE,
+        expect.any(String)
+      );
     });
 
     it('holds an owned framing draft through final creation and deletes it before releasing', async () => {
@@ -378,6 +400,25 @@ describe('TemplatesSetResolverMutations', () => {
         templateData,
         actorContext
       );
+      // spec-server-9 fix: same A7 dual path on the templates-set, plus a
+      // bare READ check on the source space.
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        actorContext,
+        templatesSet.authorization,
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+      );
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        templatesSet.authorization,
+        AuthorizationPrivilege.CREATE,
+        expect.any(String)
+      );
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        space.authorization,
+        AuthorizationPrivilege.READ,
+        expect.any(String)
+      );
     });
   });
 
@@ -415,6 +456,18 @@ describe('TemplatesSetResolverMutations', () => {
       expect(
         templatesSetService.createTemplateFromContentSpace
       ).toHaveBeenCalledWith(templatesSet, templateData, actorContext);
+      // spec-server-9 fix — see createTemplateFromSpace above.
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        actorContext,
+        templatesSet.authorization,
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+      );
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        contentSpace.authorization,
+        AuthorizationPrivilege.READ,
+        expect.any(String)
+      );
     });
   });
 });

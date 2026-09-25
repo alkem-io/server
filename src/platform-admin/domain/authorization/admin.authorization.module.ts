@@ -8,6 +8,7 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
 import { VirtualActorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { SpaceModule } from '@domain/space/space/space.module';
 import { Module } from '@nestjs/common';
+import { PlatformModule } from '@platform/platform/platform.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { AuthResetModule } from '@services/auth-reset/publisher/auth-reset.module';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
@@ -31,6 +32,7 @@ import { AdminAuthorizationService } from './admin.authorization.service';
     AuthResetModule,
     SpaceModule,
     VirtualActorModule,
+    PlatformModule,
   ],
   providers: [
     AdminAuthorizationService,

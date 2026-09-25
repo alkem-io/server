@@ -182,10 +182,16 @@ export class AuditLogAnalyzeTool implements McpTool {
     }
     const platformPolicy =
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
+    // 027-platform-role-redesign (A19 site 1 of 3, T050): re-anchored off the
+    // retiring PLATFORM_ADMIN catch-all onto the dedicated PLATFORM_AUDIT_READ
+    // privilege (FR-028) — a role that performs audited actions may never
+    // review its own trail. Additive in Slice A: the credential rule grants
+    // this privilege to platform-audit-reader UNION every legacy credential
+    // that reaches PLATFORM_ADMIN today, so nothing loses access yet.
     return this.authorizationService.isAccessGranted(
       actorContext,
       platformPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN
+      AuthorizationPrivilege.PLATFORM_AUDIT_READ
     );
   }
 
@@ -219,7 +225,11 @@ export class AuditLogAnalyzeTool implements McpTool {
         (byInitiatorRole[e.initiatorRole] ?? 0) + 1;
       const day = e.createdDate.toISOString().slice(0, 10);
       byDay[day] = (byDay[day] ?? 0) + 1;
-      uniqueSubjects.add(e.subjectUserId);
+      // 027-platform-role-redesign (D13): subjectUserId is nullable — a
+      // platform_role_assignment row targeting an organization has none.
+      if (e.subjectUserId) {
+        uniqueSubjects.add(e.subjectUserId);
+      }
       if (ANOMALY_OUTCOMES.has(e.outcome)) {
         anomalies++;
       }

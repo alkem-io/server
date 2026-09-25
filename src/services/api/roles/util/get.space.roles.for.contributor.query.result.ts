@@ -21,6 +21,25 @@ export const getSpaceRolesForContributorQueryResult = (
   const spacesCredentialsMap = map.get('spaces');
 
   const results = spaces.map(space => {
+    // `about.profile` IS requested by the query (see
+    // get.space.roles.for.contributor.entity.data.ts) — a null here means the
+    // row itself is incomplete, i.e. a credential resolved to a space whose
+    // about/profile no longer exists. `RolesResultSpace`'s constructor
+    // dereferences `space.about.profile.displayName` unguarded, so one such
+    // row threw and took the WHOLE `rolesUser.spaces` query down rather than
+    // omitting a single entry. Skip it exactly as a missing `authorization`
+    // is skipped below. Live-confirmed 2026-07-30 by the gql-live track.
+    if (!space.about?.profile) {
+      logger.warn(
+        {
+          message: 'Space has no about profile',
+          spaceID: space.id,
+        },
+        LogContext.ROLES
+      );
+      return;
+    }
+
     const spaceResult = new RolesResultSpace(space);
 
     spaceResult.roles = spacesCredentialsMap?.get(space.id) ?? [];
@@ -73,6 +92,18 @@ export const getSpaceRolesForContributorQueryResult = (
         AuthorizationPrivilege.READ_ABOUT
       );
       if (!readAccessSubspace) {
+        continue;
+      }
+
+      // Same unguarded dereference as the parent space above.
+      if (!subspace.about?.profile) {
+        logger.warn(
+          {
+            message: 'Subspace has no about profile',
+            subspaceID: subspace.id,
+          },
+          LogContext.ROLES
+        );
         continue;
       }
 

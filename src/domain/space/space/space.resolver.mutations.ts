@@ -1,8 +1,12 @@
+import { GLOBAL_POLICY_SPACE_LEGACY_NAMEID_RENAME } from '@common/constants/authorization/global.policy.constants';
 import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { AuthorizationRoleGlobal } from '@common/enums/authorization.credential.global';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseService } from '@domain/common/license/license.service';
 import {
@@ -16,6 +20,7 @@ import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.ad
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
+import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { CreateSubspaceInput } from './dto/space.dto.create.subspace';
 import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
@@ -30,6 +35,15 @@ import { SpaceLicenseService } from './space.service.license';
 @InstrumentResolver()
 @Resolver()
 export class SpaceResolverMutations {
+  /** corr-server-6 fix: `updateSpacePlatformSettings`'s `nameID` field is
+   * additionally gated against THIS resolver-local, hardcoded
+   * [GLOBAL_ADMIN, GLOBAL_SUPPORT] policy — the exact pre-existing legacy
+   * reach — so re-anchoring the mutation's PRIMARY gate onto
+   * ACCOUNT_LICENSE_MANAGE (T048/A14, additive to platform-license-manager
+   * too) cannot silently hand entity renames to a role spec.md row 2 states
+   * no global role reaches (A17, FR-020). */
+  private legacySpaceNameIdRenamePolicy: IAuthorizationPolicy;
+
   constructor(
     private contributionReporter: ContributionReporterService,
     private activityAdapter: ActivityAdapter,
@@ -40,8 +54,19 @@ export class SpaceResolverMutations {
     @Inject(SUBSCRIPTION_SUBSPACE_CREATED)
     private subspaceCreatedSubscription: PubSubEngine,
     private spaceLicenseService: SpaceLicenseService,
-    private licenseService: LicenseService
-  ) {}
+    private licenseService: LicenseService,
+    private readonly platformResourceAuditService: PlatformResourceAuditService
+  ) {
+    this.legacySpaceNameIdRenamePolicy =
+      this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
+        [
+          AuthorizationRoleGlobal.GLOBAL_ADMIN,
+          AuthorizationRoleGlobal.GLOBAL_SUPPORT,
+        ],
+        [AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE],
+        GLOBAL_POLICY_SPACE_LEGACY_NAMEID_RENAME
+      );
+  }
 
   @Mutation(() => ISpace, {
     description: 'Updates the Space.',
@@ -87,13 +112,50 @@ export class SpaceResolverMutations {
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(deleteData.ID);
 
-    this.authorizationService.grantAccessOrFail(
+    // 027-platform-role-redesign (T043, A8, research D5): dual-path — the
+    // owning space keeps ordinary DELETE, platform-content-full-access
+    // reaches the same mutation via its own privilege (cascaded from the
+    // root policy, T036). Neither check alone is sufficient; either
+    // satisfies the mutation.
+    const canDeleteAsOwner = this.authorizationService.isAccessGranted(
       actorContext,
       space.authorization,
-      AuthorizationPrivilege.DELETE,
-      `deleteSpace: ${space.nameID}`
+      AuthorizationPrivilege.DELETE
     );
-    return await this.spaceService.deleteSpaceOrFail(deleteData);
+    const canDeleteAsContentFullAccess =
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        space.authorization,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS
+      );
+    if (!canDeleteAsOwner && !canDeleteAsContentFullAccess) {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        space.authorization,
+        AuthorizationPrivilege.DELETE,
+        `deleteSpace: ${space.nameID}`
+      );
+    }
+    const deletedSpaceId = space.id;
+    const deleted = await this.spaceService.deleteSpaceOrFail(deleteData);
+    // T058/FR-018a: audit ONLY on the PLATFORM branch — taken from the
+    // authorization RESULT above, never re-derived from the actor's roles.
+    if (canDeleteAsContentFullAccess) {
+      await this.platformResourceAuditService.recordEventForActor(
+        actorContext,
+        [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        {
+          resourceKind: 'space',
+          resourceId: deletedSpaceId,
+          outcome: 'deleted',
+        }
+      );
+    }
+    return deleted;
   }
 
   @Mutation(() => ISpace, {
@@ -144,13 +206,34 @@ export class SpaceResolverMutations {
     let space = await this.spaceService.getSpaceOrFail(updateData.spaceID, {
       relations: { about: { profile: true } },
     });
+    // 027-platform-role-redesign (T048, A14): re-anchored off PLATFORM_ADMIN
+    // onto ACCOUNT_LICENSE_MANAGE (space.service.authorization.ts grants it
+    // additively to platform-license-manager, alongside legacy
+    // global-admin/global-support).
     this.authorizationService.grantAccessOrFail(
       actorContext,
       space.authorization,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE,
       `update platform settings on space: ${space.id}`
     );
 
+    // corr-server-6 fix: `nameID` (the space's URL path) is NOT part of the
+    // ACCOUNT_LICENSE_MANAGE family the gate above admits — spec.md row 2
+    // states no global role reaches entity renames (A17, FR-020), and
+    // `platform-license-manager` must not gain it as a side effect of the
+    // above gate's additive re-anchor. Additionally require the
+    // pre-existing legacy reach (GLOBAL_ADMIN/GLOBAL_SUPPORT only) whenever
+    // `nameID` is present.
+    if (updateData.nameID !== undefined) {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        this.legacySpaceNameIdRenamePolicy,
+        AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE,
+        `rename space (nameID) via platform settings: ${space.id}`
+      );
+    }
+
+    const previousVisibility = space.visibility;
     space = await this.spaceService.updateSpacePlatformSettings(
       space,
       updateData
@@ -160,6 +243,28 @@ export class SpaceResolverMutations {
     const updatedAuthorizations =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+
+    // T058 — single-path surface (no owner branch): every successful call
+    // is, by construction, authorized by ACCOUNT_LICENSE_MANAGE (A14).
+    if (
+      updateData.visibility !== undefined &&
+      updateData.visibility !== previousVisibility
+    ) {
+      await this.platformResourceAuditService.recordEventForActor(
+        actorContext,
+        [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        {
+          resourceKind: 'space-visibility',
+          resourceId: space.id,
+          visibility: updateData.visibility,
+          outcome: 'visibility_changed',
+        }
+      );
+    }
 
     return await this.spaceService.getSpaceOrFail(space.id);
   }

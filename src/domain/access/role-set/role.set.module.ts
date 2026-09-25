@@ -1,3 +1,4 @@
+import { ActorContextModule } from '@core/actor-context/actor.context.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ApplicationModule } from '@domain/access/application/application.module';
 import { InvitationModule } from '@domain/access/invitation/invitation.module';
@@ -47,6 +48,7 @@ import { RoleSetServiceLifecycleInvitation } from './role.set.service.lifecycle.
     LicenseModule,
     FormModule,
     ActorModule,
+    ActorContextModule,
     UserLookupModule,
     UserModule,
     OrganizationLookupModule,

@@ -1,13 +1,17 @@
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import {
   UserEmailChangeErrorCode,
   UserEmailChangeException,
 } from '@domain/community/user-email-change/user.email.change.errors';
 import { UserEmailChangeService } from '@domain/community/user-email-change/user.email.change.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import { AdminUserEmailChangeResolverMutations } from './admin.user.email.change.resolver.mutations';
 
@@ -29,8 +33,6 @@ describe('AdminUserEmailChangeResolverMutations', () => {
     resolver = module.get(AdminUserEmailChangeResolverMutations);
     authorizationService = module.get(AuthorizationService) as any;
     userEmailChangeService = module.get(UserEmailChangeService) as any;
-    // PlatformAuthorizationPolicyService is mocked by defaultMockerFactory
-    module.get(PlatformAuthorizationPolicyService);
   });
 
   it('rewraps a non-admin authorization failure as EMAIL_CHANGE_UNAUTHORIZED', async () => {
@@ -111,5 +113,95 @@ describe('AdminUserEmailChangeResolverMutations', () => {
       'canonical@example.com'
     );
     expect(result.success).toBe(true);
+  });
+
+  // 027-platform-role-redesign (sec-server-7 fix): wires the REAL
+  // AuthorizationPolicyService + AuthorizationService so the constructor's
+  // `emailChangePolicy` is a genuine, hardcoded [PLATFORM_USERS_ADMIN,
+  // GLOBAL_ADMIN, GLOBAL_SUPPORT, GLOBAL_LICENSE_MANAGER] policy — NOT the
+  // shared platform policy, whose PLATFORM_USERS_ADMIN grant set
+  // additively widens to also admit global-platform-manager, who never
+  // held these two mutations' pre-feature PLATFORM_ADMIN gate.
+  describe('emailChangePolicy — real-engine integration', () => {
+    let realResolver: AdminUserEmailChangeResolverMutations;
+    let realUserEmailChangeService: Record<string, Mock>;
+
+    const buildActorContext = (
+      credentialType: AuthorizationCredential
+    ): ActorContext =>
+      ({
+        actorID: 'actor-1',
+        credentials: [{ type: credentialType, resourceID: '' }],
+      }) as any as ActorContext;
+
+    beforeEach(async () => {
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          AdminUserEmailChangeResolverMutations,
+          AuthorizationPolicyService,
+          AuthorizationService,
+          MockWinstonProvider,
+          repositoryProviderMockFactory(AuthorizationPolicy),
+        ],
+      })
+        .useMocker(defaultMockerFactory)
+        .compile();
+
+      realResolver = module.get(AdminUserEmailChangeResolverMutations);
+      realUserEmailChangeService = module.get(UserEmailChangeService) as any;
+      realUserEmailChangeService.applyAdminEmailChange.mockResolvedValue({
+        success: true,
+        email: 'new@example.com',
+      });
+    });
+
+    it('denies a global-platform-manager-only actor (never held this surface pre-feature)', async () => {
+      const actor = buildActorContext(
+        AuthorizationCredential.GLOBAL_PLATFORM_MANAGER
+      );
+      await expect(
+        realResolver.adminUserEmailChange(actor, {
+          userID: 'subject-1',
+          newEmail: 'new@example.com',
+          reason: 'support ticket #4821',
+          approver: {
+            name: 'Jane Approver',
+            role: 'Organization Administrator',
+          },
+        })
+      ).rejects.toBeInstanceOf(UserEmailChangeException);
+    });
+
+    it('allows a global-admin actor (pre-existing legacy reach preserved)', async () => {
+      const actor = buildActorContext(AuthorizationCredential.GLOBAL_ADMIN);
+      await expect(
+        realResolver.adminUserEmailChange(actor, {
+          userID: 'subject-1',
+          newEmail: 'new@example.com',
+          reason: 'support ticket #4821',
+          approver: {
+            name: 'Jane Approver',
+            role: 'Organization Administrator',
+          },
+        })
+      ).resolves.toBeDefined();
+    });
+
+    it('allows a platform-users-admin actor (the new owning role)', async () => {
+      const actor = buildActorContext(
+        AuthorizationCredential.PLATFORM_USERS_ADMIN
+      );
+      await expect(
+        realResolver.adminUserEmailChange(actor, {
+          userID: 'subject-1',
+          newEmail: 'new@example.com',
+          reason: 'support ticket #4821',
+          approver: {
+            name: 'Jane Approver',
+            role: 'Organization Administrator',
+          },
+        })
+      ).resolves.toBeDefined();
+    });
   });
 });

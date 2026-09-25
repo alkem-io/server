@@ -1,6 +1,5 @@
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { RoleName } from '@common/enums/role.name';
-import { NotImplementedException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -160,7 +159,17 @@ describe('PlatformRolesAccessService', () => {
       }
     });
 
-    it('should throw NotImplementedException for unsupported role name', () => {
+    // 027-platform-role-redesign (T009/T010, research D3): ROLE_CREDENTIAL_MAP
+    // is now a TOTAL map over every RoleName, including the space/org-scoped
+    // ones (MEMBER, LEAD, ...) that the old hand-written switch omitted —
+    // that omission was the "hack to avoid loading up the platform roleset"
+    // this feature's canonical map replaces. RoleName.MEMBER therefore no
+    // longer throws; it resolves to its real credential, exactly like every
+    // other role. There is no longer a RoleName value that can reach the
+    // NotImplementedException branch through the public API (Record<RoleName,
+    // ...> is exhaustive at the type level) — the branch remains only as a
+    // defensive guard against a value bypassing the type system.
+    it('resolves RoleName.MEMBER through the canonical map rather than throwing (superseded switch-based behaviour)', () => {
       const platformAccessRoles: IPlatformAccessRole[] = [
         {
           roleName: RoleName.MEMBER,
@@ -168,11 +177,13 @@ describe('PlatformRolesAccessService', () => {
         },
       ];
 
-      expect(() =>
-        service.getCredentialsForRolesWithAccess(platformAccessRoles, [
-          AuthorizationPrivilege.READ,
-        ])
-      ).toThrow(NotImplementedException);
+      const result = service.getCredentialsForRolesWithAccess(
+        platformAccessRoles,
+        [AuthorizationPrivilege.READ]
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe(AuthorizationCredential.SPACE_MEMBER);
     });
   });
 

@@ -15,6 +15,7 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
 import { FileServiceAdapterModule } from '@services/adapters/file-service-adapter/file.service.adapter.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { NotificationExternalAdapterModule } from '@services/adapters/notification-external-adapter/notification.external.adapter.module';
+import { PlatformUserRecordAuditModule } from '@src/platform-admin/platform-user-record-audit/platform.user.record.audit.module';
 import { RegistrationResolverMutations } from './registration.resolver.mutations';
 import { RegistrationService } from './registration.service';
 
@@ -33,6 +34,7 @@ import { RegistrationService } from './registration.service';
     PlatformInvitationModule,
     PlatformAuthorizationPolicyModule,
     ApplicationModule,
+    PlatformUserRecordAuditModule,
     AccountDeletionModule,
     FileServiceAdapterModule,
     StorageBucketModule,

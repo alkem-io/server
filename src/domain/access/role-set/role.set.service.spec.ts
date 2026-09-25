@@ -1760,6 +1760,144 @@ describe('RoleSetService', () => {
 
       expect(result).toBe('actor-1');
     });
+
+    // 027-platform-role-redesign (T057, FR-031/SC-016): a promotion on an
+    // ORGANIZATION role-set must invalidate the actor's cached ActorContext
+    // so the org-inherited feature-* credential expansion (T056) picks up
+    // the new standing on the NEXT request.
+    it('invalidates the actor-context cache on an ORGANIZATION role assignment', async () => {
+      const roleSet = {
+        id: 'rs-org-1',
+        type: RoleSetType.ORGANIZATION,
+        roles: [
+          {
+            name: RoleName.ADMIN,
+            credential: { type: 'organization-admin', resourceID: 'org-1' },
+            userPolicy: { minimum: -1, maximum: -1 },
+            organizationPolicy: { minimum: -1, maximum: -1 },
+            virtualContributorPolicy: { minimum: -1, maximum: -1 },
+          },
+        ],
+      } as any;
+
+      (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+        'user'
+      );
+      vi.spyOn(roleSetRepository, 'findOne').mockResolvedValue({
+        ...roleSet,
+        parentRoleSet: undefined,
+      });
+      (actorService.hasValidCredential as Mock).mockResolvedValue(false);
+      (actorService.grantCredentialOrFail as Mock).mockResolvedValue(undefined);
+
+      const orgLookupService = (service as any).organizationLookupService;
+      (orgLookupService.getOrganizationByIdOrFail as Mock)?.mockResolvedValue?.(
+        { accountID: 'account-1' }
+      );
+
+      await service.assignActorToRole(roleSet, RoleName.ADMIN, 'actor-1');
+
+      const actorContextCacheService = (service as any)
+        .actorContextCacheService;
+      expect(actorContextCacheService.deleteByActorID).toHaveBeenCalledWith(
+        'actor-1'
+      );
+    });
+
+    // spec-server-4 fix (FR-031/SC-016): granting a `Feature …` role to an
+    // ORGANIZATION on the PLATFORM role-set must invalidate the cache of
+    // every ORGANIZATION_ADMIN/OWNER of that org too — not only the
+    // organization's own actor cache (already handled by
+    // `ActorService.grantCredentialOrFail`) — or a standing org admin keeps
+    // the OLD credential set for up to the ActorContext TTL.
+    it('invalidates the cache of every ORGANIZATION_ADMIN/OWNER when a feature-* role is granted to an ORGANIZATION on the PLATFORM role-set', async () => {
+      const roleSet = {
+        id: 'rs-platform-1',
+        type: RoleSetType.PLATFORM,
+        roles: [
+          {
+            name: RoleName.FEATURE_BETA_TESTER,
+            credential: { type: 'feature-beta-tester', resourceID: '' },
+            userPolicy: { minimum: -1, maximum: -1 },
+            organizationPolicy: { minimum: -1, maximum: -1 },
+            virtualContributorPolicy: { minimum: -1, maximum: -1 },
+          },
+        ],
+      } as any;
+
+      (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+        ActorType.ORGANIZATION
+      );
+      vi.spyOn(roleSetRepository, 'findOne').mockResolvedValue({
+        ...roleSet,
+        parentRoleSet: undefined,
+      });
+      (actorService.hasValidCredential as Mock).mockResolvedValue(false);
+      (actorService.grantCredentialOrFail as Mock).mockResolvedValue(undefined);
+      (userLookupService.usersWithCredentials as Mock).mockResolvedValue([
+        { id: 'admin-user-1' },
+        { id: 'owner-user-1' },
+      ]);
+
+      await service.assignActorToRole(
+        roleSet,
+        RoleName.FEATURE_BETA_TESTER,
+        'org-1'
+      );
+
+      expect(userLookupService.usersWithCredentials).toHaveBeenCalledWith([
+        {
+          type: AuthorizationCredential.ORGANIZATION_ADMIN,
+          resourceID: 'org-1',
+        },
+        {
+          type: AuthorizationCredential.ORGANIZATION_OWNER,
+          resourceID: 'org-1',
+        },
+      ]);
+      const actorContextCacheService = (service as any)
+        .actorContextCacheService;
+      expect(actorContextCacheService.deleteByActorID).toHaveBeenCalledWith(
+        'admin-user-1'
+      );
+      expect(actorContextCacheService.deleteByActorID).toHaveBeenCalledWith(
+        'owner-user-1'
+      );
+    });
+
+    it('does NOT invalidate org-admin caches when the PLATFORM role is granted to a USER (not an organization)', async () => {
+      const roleSet = {
+        id: 'rs-platform-1',
+        type: RoleSetType.PLATFORM,
+        roles: [
+          {
+            name: RoleName.FEATURE_BETA_TESTER,
+            credential: { type: 'feature-beta-tester', resourceID: '' },
+            userPolicy: { minimum: -1, maximum: -1 },
+            organizationPolicy: { minimum: -1, maximum: -1 },
+            virtualContributorPolicy: { minimum: -1, maximum: -1 },
+          },
+        ],
+      } as any;
+
+      (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+        ActorType.USER
+      );
+      vi.spyOn(roleSetRepository, 'findOne').mockResolvedValue({
+        ...roleSet,
+        parentRoleSet: undefined,
+      });
+      (actorService.hasValidCredential as Mock).mockResolvedValue(false);
+      (actorService.grantCredentialOrFail as Mock).mockResolvedValue(undefined);
+
+      await service.assignActorToRole(
+        roleSet,
+        RoleName.FEATURE_BETA_TESTER,
+        'user-1'
+      );
+
+      expect(userLookupService.usersWithCredentials).not.toHaveBeenCalled();
+    });
   });
 
   // FR-026 / gql-live regression: joining an organization (any path —
@@ -1879,7 +2017,7 @@ describe('RoleSetService', () => {
         roles: [
           {
             name: RoleName.ASSOCIATE,
-            credential: { type: 'org-associate', resourceID: 'org-1' },
+            credential: { type: 'organization-associate', resourceID: 'org-1' },
             ...policies,
           },
         ],
@@ -1905,7 +2043,7 @@ describe('RoleSetService', () => {
 
       expect(actorService.grantCredentialOrFail).toHaveBeenCalledWith(
         'actor-1',
-        { type: 'org-associate', resourceID: 'org-1' },
+        { type: 'organization-associate', resourceID: 'org-1' },
         undefined
       );
       expect(roleSetCacheService.setMembershipStatusCache).toHaveBeenCalledWith(
@@ -1984,21 +2122,21 @@ describe('RoleSetService', () => {
         roles: [
           {
             name: RoleName.ASSOCIATE,
-            credential: { type: 'org-associate', resourceID: 'org-1' },
+            credential: { type: 'organization-associate', resourceID: 'org-1' },
             userPolicy: { minimum: -1, maximum: -1 },
             organizationPolicy: { minimum: -1, maximum: -1 },
             virtualContributorPolicy: { minimum: -1, maximum: -1 },
           },
           {
             name: RoleName.ADMIN,
-            credential: { type: 'org-admin', resourceID: 'org-1' },
+            credential: { type: 'organization-admin', resourceID: 'org-1' },
             userPolicy: { minimum: -1, maximum: -1 },
             organizationPolicy: { minimum: -1, maximum: -1 },
             virtualContributorPolicy: { minimum: -1, maximum: -1 },
           },
           {
             name: RoleName.OWNER,
-            credential: { type: 'org-owner', resourceID: 'org-1' },
+            credential: { type: 'organization-owner', resourceID: 'org-1' },
             userPolicy: { minimum: -1, maximum: -1 },
             organizationPolicy: { minimum: -1, maximum: -1 },
             virtualContributorPolicy: { minimum: -1, maximum: -1 },
@@ -2053,6 +2191,65 @@ describe('RoleSetService', () => {
       expect(
         roleSetCacheService.cleanActorMembershipCache
       ).toHaveBeenCalledWith('actor-1', 'rs-1');
+      // 027-platform-role-redesign (T057, FR-031/SC-016): a demotion/
+      // departure on an ORGANIZATION role-set must deny the org-inherited
+      // feature-* credentials (T056) on the NEXT request.
+      const actorContextCacheService = (service as any)
+        .actorContextCacheService;
+      expect(actorContextCacheService.deleteByActorID).toHaveBeenCalledWith(
+        'actor-1'
+      );
+    });
+
+    // spec-server-4 fix (FR-031/SC-016) — revoke-direction mirror.
+    it('invalidates the cache of every ORGANIZATION_ADMIN/OWNER when a feature-* role is revoked from an ORGANIZATION on the PLATFORM role-set', async () => {
+      const roleSet = {
+        id: 'rs-platform-1',
+        type: RoleSetType.PLATFORM,
+        roles: [
+          {
+            name: RoleName.FEATURE_BETA_TESTER,
+            credential: { type: 'feature-beta-tester', resourceID: '' },
+            userPolicy: { minimum: -1, maximum: -1 },
+            organizationPolicy: { minimum: -1, maximum: -1 },
+            virtualContributorPolicy: { minimum: -1, maximum: -1 },
+          },
+        ],
+      } as any;
+
+      (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+        ActorType.ORGANIZATION
+      );
+      (actorService.revokeCredential as Mock).mockResolvedValue(undefined);
+      (userLookupService.usersWithCredentials as Mock).mockResolvedValue([
+        { id: 'admin-user-1' },
+      ]);
+      (roleSetCacheService.cleanActorMembershipCache as Mock).mockResolvedValue(
+        undefined
+      );
+
+      await service.removeActorFromRole(
+        roleSet,
+        RoleName.FEATURE_BETA_TESTER,
+        'org-1',
+        false
+      );
+
+      expect(userLookupService.usersWithCredentials).toHaveBeenCalledWith([
+        {
+          type: AuthorizationCredential.ORGANIZATION_ADMIN,
+          resourceID: 'org-1',
+        },
+        {
+          type: AuthorizationCredential.ORGANIZATION_OWNER,
+          resourceID: 'org-1',
+        },
+      ]);
+      const actorContextCacheService = (service as any)
+        .actorContextCacheService;
+      expect(actorContextCacheService.deleteByActorID).toHaveBeenCalledWith(
+        'admin-user-1'
+      );
     });
 
     it('should NOT clean the in-app notifications when only ADMIN is removed (the actor stays an associate)', async () => {
@@ -2068,7 +2265,7 @@ describe('RoleSetService', () => {
       // Only the ASSOCIATE credential remains after the ADMIN revoke.
       (actorService.hasValidCredential as Mock).mockImplementation(
         async (_actorID: string, criteria: { type: string }) =>
-          criteria.type === 'org-associate'
+          criteria.type === 'organization-associate'
       );
 
       const inAppNotificationService = (service as any)
@@ -2103,7 +2300,7 @@ describe('RoleSetService', () => {
       // Remaining-role check after the ASSOCIATE revoke: ADMIN still held.
       (actorService.hasValidCredential as Mock).mockImplementation(
         async (_actorID: string, criteria: { type: string }) =>
-          criteria.type === 'org-admin'
+          criteria.type === 'organization-admin'
       );
 
       const inAppNotificationService = (service as any)
@@ -2124,7 +2321,7 @@ describe('RoleSetService', () => {
 
       expect(result).toBe('actor-1');
       expect(actorService.revokeCredential).toHaveBeenCalledWith('actor-1', {
-        type: 'org-associate',
+        type: 'organization-associate',
         resourceID: 'org-1',
       });
       expect(
@@ -2359,21 +2556,21 @@ describe('RoleSetService', () => {
         roles: [
           {
             name: RoleName.ASSOCIATE,
-            credential: { type: 'org-associate', resourceID: 'org-1' },
+            credential: { type: 'organization-associate', resourceID: 'org-1' },
             userPolicy: { minimum: -1, maximum: -1 },
             organizationPolicy: { minimum: -1, maximum: -1 },
             virtualContributorPolicy: { minimum: -1, maximum: -1 },
           },
           {
             name: RoleName.ADMIN,
-            credential: { type: 'org-admin', resourceID: 'org-1' },
+            credential: { type: 'organization-admin', resourceID: 'org-1' },
             userPolicy: { minimum: -1, maximum: -1 },
             organizationPolicy: { minimum: -1, maximum: -1 },
             virtualContributorPolicy: { minimum: -1, maximum: -1 },
           },
           {
             name: RoleName.OWNER,
-            credential: { type: 'org-owner', resourceID: 'org-1' },
+            credential: { type: 'organization-owner', resourceID: 'org-1' },
             userPolicy: { minimum: -1, maximum: -1 },
             organizationPolicy: { minimum: -1, maximum: -1 },
             virtualContributorPolicy: { minimum: -1, maximum: -1 },

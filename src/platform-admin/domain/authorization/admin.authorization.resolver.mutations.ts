@@ -45,6 +45,24 @@ export class AdminAuthorizationResolverMutations {
     private spaceService: SpaceService,
     private platformOperationsAuditService: PlatformOperationsAuditService
   ) {
+    // 027-platform-role-redesign (T034a, research C10/D24, thirteenth
+    // analyze pass): this is the FR-022 pin, already structural. The four
+    // mutations below (grant/revokeCredentialTo{User,Organization}) check
+    // against THIS resolver-local, hardcoded IN_MEMORY policy — built once,
+    // from a fixed one-element `[GLOBAL_ADMIN]` array — rather than against
+    // the shared platform authorization policy's GRANT_GLOBAL_ADMINS
+    // credential rule that platform.service.authorization.ts (T034)
+    // widens to platform-roles-admin. Widening that shared rule therefore
+    // cannot reach these four: they are not a second assignment surface
+    // gated by the same widened privilege, they are gated by a wholly
+    // separate, deliberately un-widened policy object. Do NOT "simplify"
+    // this by replacing it with `platformAuthorizationPolicyService
+    // .getPlatformAuthorizationPolicy()` — that IS the widened policy, and
+    // doing so would open exactly the hole T034a exists to keep closed.
+    // Verified by admin.authorization.resolver.mutations.spec.ts's
+    // "FR-022 pin" suite using real AuthorizationPolicyService/
+    // AuthorizationService instances. Deleted alongside these four
+    // mutations at T080 (Slice B, FR-022).
     this.authorizationGlobalAdminPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.GLOBAL_ADMIN],

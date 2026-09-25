@@ -192,6 +192,44 @@ describe('OrganizationResolverFields', () => {
       const result = await resolver.account(org, actorContext);
       expect(result).toBeUndefined();
     });
+
+    // 027 R-F.3 (2026-09-18): the Platform License Manager assigns plans to
+    // organization accounts (A12) but is not an organization admin, so the
+    // UPDATE-gated field hid every account it does not own. The account opens
+    // when the actor holds ACCOUNT_LICENSE_MANAGE on the ACCOUNT's own policy.
+    it('returns the account to an actor holding ACCOUNT_LICENSE_MANAGE on the account itself, without UPDATE', async () => {
+      const mockAccount = {
+        id: 'account-1',
+        authorization: { id: 'account-auth' },
+      };
+      const org = { id: 'org-1', authorization: { id: 'auth-1' } } as any;
+      const actorContext = { actorID: 'user-1' } as any;
+
+      authorizationService.isAccessGranted.mockImplementation(
+        (_actor: unknown, policy: any, privilege: AuthorizationPrivilege) =>
+          policy?.id === 'account-auth' &&
+          privilege === AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE
+      );
+      organizationService.getAccount.mockResolvedValue(mockAccount);
+
+      const result = await resolver.account(org, actorContext);
+      expect(result).toBe(mockAccount);
+    });
+
+    it('stays closed when the actor holds neither UPDATE nor license-manage on the account', async () => {
+      const mockAccount = {
+        id: 'account-1',
+        authorization: { id: 'account-auth' },
+      };
+      const org = { id: 'org-1', authorization: { id: 'auth-1' } } as any;
+      const actorContext = { actorID: 'user-1' } as any;
+
+      authorizationService.isAccessGranted.mockReturnValue(false);
+      organizationService.getAccount.mockResolvedValue(mockAccount);
+
+      const result = await resolver.account(org, actorContext);
+      expect(result).toBeUndefined();
+    });
   });
 
   describe('authorization', () => {

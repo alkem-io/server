@@ -1,5 +1,6 @@
 import { GLOBAL_POLICY_CONVERSION_GLOBAL_ADMINS } from '@common/constants/authorization/global.policy.constants';
 import { LogContext } from '@common/enums';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationRoleGlobal } from '@common/enums/authorization.credential.global';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
@@ -25,6 +26,7 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
+import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ConversionService } from './conversion.service';
 import { ConversionVcSpaceToVcKnowledgeBaseInput } from './dto/conversion.dto.vc.space.to.vc.kb';
@@ -52,12 +54,22 @@ export class ConversionResolverMutations {
     private aiServerAdapter: AiServerAdapter,
     private spaceLicenseService: SpaceLicenseService,
     private licenseService: LicenseService,
+    private readonly platformResourceAuditService: PlatformResourceAuditService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
+    // 027-platform-role-redesign (T044, A9): this resolver's whole space/VC
+    // move & convert family — convertSpaceL1ToSpaceL0/L2ToL1/L1ToL2,
+    // moveSpaceL1ToSpaceL0/L1ToL2/L2ToL1 (spec 030's cross-L0 moves) and
+    // convertVirtualContributorToUseKnowledgeBase — shares this ONE
+    // resolver-local policy. Additive: platform-resource-admin gains it
+    // alongside legacy global-admin.
     this.authorizationGlobalAdminPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
-        [AuthorizationRoleGlobal.GLOBAL_ADMIN],
+        [
+          AuthorizationRoleGlobal.GLOBAL_ADMIN,
+          AuthorizationRoleGlobal.PLATFORM_RESOURCE_ADMIN,
+        ],
         [AuthorizationPrivilege.PLATFORM_ADMIN],
         GLOBAL_POLICY_CONVERSION_GLOBAL_ADMINS
       );
@@ -93,6 +105,7 @@ export class ConversionResolverMutations {
 
     await this.spaceService.invalidateUrlCacheForSpaceSubtree(space.id);
 
+    await this.recordResourceMoveAudit(actorContext, 'space', space.id);
     return this.spaceService.getSpaceOrFail(space.id);
   }
 
@@ -128,6 +141,7 @@ export class ConversionResolverMutations {
 
     await this.spaceService.invalidateUrlCacheForSpaceSubtree(spaceL1.id);
 
+    await this.recordResourceMoveAudit(actorContext, 'space', spaceL1.id);
     return await this.spaceService.getSpaceOrFail(spaceL1.id);
   }
 
@@ -167,6 +181,7 @@ export class ConversionResolverMutations {
 
     await this.spaceService.invalidateUrlCacheForSpaceSubtree(spaceL2.id);
 
+    await this.recordResourceMoveAudit(actorContext, 'space', spaceL2.id);
     return await this.spaceService.getSpaceOrFail(spaceL2.id);
   }
 
@@ -231,6 +246,7 @@ export class ConversionResolverMutations {
       );
     }
 
+    await this.recordResourceMoveAudit(actorContext, 'space', savedSpace.id);
     return this.spaceService.getSpaceOrFail(savedSpace.id);
   }
 
@@ -295,6 +311,7 @@ export class ConversionResolverMutations {
       );
     }
 
+    await this.recordResourceMoveAudit(actorContext, 'space', savedSpace.id);
     return this.spaceService.getSpaceOrFail(savedSpace.id);
   }
 
@@ -357,6 +374,7 @@ export class ConversionResolverMutations {
       );
     }
 
+    await this.recordResourceMoveAudit(actorContext, 'space', savedSpace.id);
     return this.spaceService.getSpaceOrFail(savedSpace.id);
   }
 
@@ -469,8 +487,41 @@ export class ConversionResolverMutations {
       );
 
     await this.authorizationPolicyService.saveAll(authorizations);
+
+    await this.recordResourceMoveAudit(
+      actorContext,
+      'virtual-contributor',
+      virtualContributor.id
+    );
     return this.virtualContributorService.getVirtualContributorByIdOrFail(
       virtualContributor.id
+    );
+  }
+
+  /**
+   * T058, widened by corr-server-18: ALL SEVEN mutations on this file share
+   * ONE resolver-local synthetic policy (constructor comment above) rather
+   * than the platform-wide PLATFORM_ADMIN grant set — the census
+   * (a.row.surfaces.ts, A9) declares every one of them, not just the three
+   * cross-L0 moves this helper originally covered, as a `platform-resource-
+   * admin`-owned surface. `intendedOwners`/`legacyReachers` are the
+   * census's declared source of truth for this row. Single-path surface —
+   * no ordinary-owner branch — so every successful call is audited.
+   */
+  private async recordResourceMoveAudit(
+    actorContext: ActorContext,
+    resourceKind: string,
+    resourceId: string
+  ): Promise<void> {
+    await this.platformResourceAuditService.recordEventForActor(
+      actorContext,
+      [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
+      [AuthorizationCredential.GLOBAL_ADMIN],
+      {
+        resourceKind,
+        resourceId,
+        outcome: 'moved',
+      }
     );
   }
 

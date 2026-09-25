@@ -1,3 +1,5 @@
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -330,6 +332,64 @@ describe('CalloutContributionAuthorizationService', () => {
       expect(
         roleSetService.getCredentialsForRoleWithParents
       ).toHaveBeenCalled();
+    });
+
+    // 027-platform-role-redesign (T038, A9; qual-server-10 fix): the
+    // MOVE_CONTRIBUTION credential rule this feature widens to admit
+    // `platform-resource-admin` (alongside legacy `global-admin`) had NO
+    // assertion anywhere in the repo — `unit.coverage.inventory.ts` pointed
+    // at a file that never mentions the privilege. Assert the EXACT
+    // credential set passed to `createCredentialRule` for the
+    // MOVE_CONTRIBUTION rule.
+    it('grants MOVE_CONTRIBUTION to platform-resource-admin alongside legacy global-admin (qual-server-10)', async () => {
+      const contribution = makeContribution();
+
+      vi.mocked(
+        contributionService.getCalloutContributionOrFail
+      ).mockResolvedValue(contribution);
+      vi.mocked(
+        authorizationPolicyService.inheritParentAuthorization
+      ).mockReturnValue(contribution.authorization);
+      vi.mocked(
+        authorizationPolicyService.createCredentialRule
+      ).mockReturnValue({ grantedPrivileges: [] } as any);
+      vi.mocked(
+        authorizationPolicyService.appendCredentialAuthorizationRules
+      ).mockReturnValue(contribution.authorization);
+
+      const platformRolesAccessService = (service as any)
+        .platformRolesAccessService;
+      vi.mocked(
+        platformRolesAccessService.getCredentialsForRolesWithAccess
+      ).mockReturnValue([]);
+
+      await service.applyAuthorizationPolicy(
+        'contrib-1',
+        undefined,
+        platformRolesAccess
+      );
+
+      const moveContributionCall = vi
+        .mocked(authorizationPolicyService.createCredentialRule)
+        .mock.calls.find(call =>
+          (call[0] as AuthorizationPrivilege[]).includes(
+            AuthorizationPrivilege.MOVE_CONTRIBUTION
+          )
+        );
+      expect(moveContributionCall).toBeDefined();
+      const credentials = moveContributionCall?.[1] as {
+        type: AuthorizationCredential;
+      }[];
+      expect(credentials).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+          }),
+          expect.objectContaining({
+            type: AuthorizationCredential.GLOBAL_ADMIN,
+          }),
+        ])
+      );
     });
   });
 });
