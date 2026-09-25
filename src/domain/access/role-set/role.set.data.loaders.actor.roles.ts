@@ -57,7 +57,9 @@ export class RoleSetActorRolesDataLoader {
       await this.roleSetCacheService.getActorRolesBatchFromCache(cacheEntries);
 
     const uncachedIndices: number[] = [];
-    for (let j = 0; j < cachedValues.length; j++) {
+    // Driven by the entries, not by the reply: a store that answers with a
+    // shorter array must read as a miss rather than leave a hole in `results`.
+    for (let j = 0; j < cacheEntries.length; j++) {
       const cached = cachedValues[j];
       if (cached !== undefined) {
         results[cacheIndexMap[j]] = cached;
@@ -79,7 +81,9 @@ export class RoleSetActorRolesDataLoader {
       ),
     ]);
 
-    // 3. Resolve in memory and write back without waiting.
+    // 3. Resolve in memory, then write back before returning: a write that
+    // landed after a concurrent mutation invalidated the key would put the
+    // stale roles back for the whole TTL.
     const cacheWrites: Promise<unknown>[] = [];
     for (const i of uncachedIndices) {
       const { actorContext, roleSet } = keys[i];
@@ -98,7 +102,7 @@ export class RoleSetActorRolesDataLoader {
         );
       }
     }
-    void Promise.all(cacheWrites);
+    await Promise.all(cacheWrites);
 
     return results;
   }

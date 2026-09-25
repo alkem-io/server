@@ -387,5 +387,51 @@ describe('RoleSetActorRolesDataLoader', () => {
       expect(mocks.actorService.getActorCredentials).not.toHaveBeenCalled();
       expect(mocks.roleSetRepository.find).not.toHaveBeenCalled();
     });
+
+    it('resolves only once the write-back has completed', async () => {
+      let written = false;
+      mocks.roleSetCacheService.setActorRolesCache.mockImplementation(
+        () =>
+          new Promise(resolve =>
+            setTimeout(() => {
+              written = true;
+              resolve([RoleName.MEMBER]);
+            }, 10)
+          )
+      );
+      mockActorCredentialsFromMap(
+        mocks.actorService,
+        new Map([['actor-1', [makeCredential('space-member', 'rs-1')]]])
+      );
+      const loader = createLoader(mocks);
+
+      const roles = await loader.loader.load(
+        makeKey('actor-1', memberRoleSet('rs-1'))
+      );
+
+      // A write left in flight can land after a concurrent mutation cleaned the
+      // key, putting the stale roles back for the whole TTL.
+      expect(roles).toEqual([RoleName.MEMBER]);
+      expect(written).toBe(true);
+    });
+
+    it('treats a short cache reply as a miss for the absent slots', async () => {
+      // One value for two keys: the loader must not leave a hole in its result.
+      mocks.roleSetCacheService.getActorRolesBatchFromCache.mockResolvedValue([
+        [RoleName.ADMIN],
+      ]);
+      mockActorCredentialsFromMap(
+        mocks.actorService,
+        new Map([['actor-1', [makeCredential('space-member', 'rs-2')]]])
+      );
+      const loader = createLoader(mocks);
+
+      const results = await Promise.all([
+        loader.loader.load(makeKey('actor-1', makeRoleSet('rs-1'))),
+        loader.loader.load(makeKey('actor-1', memberRoleSet('rs-2'))),
+      ]);
+
+      expect(results).toEqual([[RoleName.ADMIN], [RoleName.MEMBER]]);
+    });
   });
 });
