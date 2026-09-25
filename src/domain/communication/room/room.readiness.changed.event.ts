@@ -1,5 +1,6 @@
 import { RoomReadinessRecord } from './dto/room.readiness';
 import { IRoom } from './room.interface';
+import type { RoomReadinessSource } from './room.readiness.service';
 
 export const ROOM_READINESS_CHANGED_EVENT = 'room.readiness.changed';
 
@@ -12,6 +13,7 @@ export class RoomReadinessChangedEvent {
   constructor(
     public readonly room: IRoom,
     public readonly previous: RoomReadinessRecord | undefined,
-    public readonly current: RoomReadinessRecord
+    public readonly current: RoomReadinessRecord,
+    public readonly source: RoomReadinessSource
   ) {}
 }

@@ -12,7 +12,7 @@ export enum DirectConversationResolutionStatus {
 registerEnumType(DirectConversationResolutionStatus, {
   name: 'DirectConversationResolutionStatus',
   description:
-    'Per-recipient outcome of resolving a direct conversation: newly CREATED, an existing one RESOLVED, BLOCKED_NO_CONSENT when the recipient does not accept messages, FAILED when the recipient could not be resolved at all.',
+    'Per-recipient outcome of resolving a direct conversation: newly CREATED, an existing one RESOLVED, BLOCKED_NO_CONSENT when the recipient is not a user that accepts messages (including ids that match no user), FAILED when resolving the recipient raised an error.',
 });
 
 @ObjectType('DirectConversationResolutionResult', {

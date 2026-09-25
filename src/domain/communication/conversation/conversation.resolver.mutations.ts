@@ -41,7 +41,7 @@ export class ConversationResolverMutations {
 
   @Mutation(() => ConversationRoomRepairResult, {
     description:
-      'Repair the messaging room of a Conversation the caller can read: ensures the backend room exists (an existing room is reused, never duplicated), converges backend membership to the platform membership, records readiness and reports a typed outcome with counts. Idempotent — repairing a READY room verifies it and changes nothing. Non-members receive FORBIDDEN_POLICY before any backend call; a backend that cannot be reached yields outcome FAILED with readiness FAILED, never an authorization error.',
+      'Repair the messaging room of a Conversation the caller can read: ensures the backend room exists (an existing room is reused, never duplicated), converges backend membership to the platform membership, records readiness and reports a typed outcome with counts. Idempotent — repairing a READY room verifies it and changes nothing. Non-members receive FORBIDDEN_POLICY before any backend call; a backend that cannot be reached yields outcome FAILED, never an authorization error; readiness becomes FAILED unless the room was READY, in which case it stays READY because an outage is not evidence the room is missing.',
   })
   async repairConversationRoom(
     @CurrentActor() actorContext: ActorContext,

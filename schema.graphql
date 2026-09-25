@@ -438,7 +438,7 @@ enum CredentialType {
 }
 
 """
-Per-recipient outcome of resolving a direct conversation: newly CREATED, an existing one RESOLVED, BLOCKED_NO_CONSENT when the recipient does not accept messages, FAILED when the recipient could not be resolved at all.
+Per-recipient outcome of resolving a direct conversation: newly CREATED, an existing one RESOLVED, BLOCKED_NO_CONSENT when the recipient is not a user that accepts messages (including ids that match no user), FAILED when resolving the recipient raised an error.
 """
 enum DirectConversationResolutionStatus {
   BLOCKED_NO_CONSENT
@@ -4992,7 +4992,7 @@ type Mutation {
   """
   reorderPollOptions(optionData: ReorderPollOptionsInput!): Poll!
   """
-  Repair the messaging room of a Conversation the caller can read: ensures the backend room exists (an existing room is reused, never duplicated), converges backend membership to the platform membership, records readiness and reports a typed outcome with counts. Idempotent — repairing a READY room verifies it and changes nothing. Non-members receive FORBIDDEN_POLICY before any backend call; a backend that cannot be reached yields outcome FAILED with readiness FAILED, never an authorization error.
+  Repair the messaging room of a Conversation the caller can read: ensures the backend room exists (an existing room is reused, never duplicated), converges backend membership to the platform membership, records readiness and reports a typed outcome with counts. Idempotent — repairing a READY room verifies it and changes nothing. Non-members receive FORBIDDEN_POLICY before any backend call; a backend that cannot be reached yields outcome FAILED, never an authorization error; readiness becomes FAILED unless the room was READY, in which case it stays READY because an outage is not evidence the room is missing.
   """
   repairConversationRoom(repairData: RepairConversationRoomInput!): ConversationRoomRepairResult!
   """
@@ -5008,7 +5008,7 @@ type Mutation {
   """Reset all license plans on Accounts"""
   resetLicenseOnAccounts: Boolean!
   """
-  Resolve — reuse or create — the direct Conversation with each of the given recipients, without sending any message. Per recipient: CREATED with the new conversation, RESOLVED with the existing one, BLOCKED_NO_CONSENT when the recipient does not accept messages from other users, FAILED when the recipient could not be resolved. Same authorization and consent rules as createConversation; concurrent calls for the same pair converge on one conversation. More than 100 recipients is rejected before any recipient is processed.
+  Resolve — reuse or create — the direct Conversation with each of the given recipients, without sending any message. Per recipient: CREATED with the new conversation, RESOLVED with the existing one, BLOCKED_NO_CONSENT when the recipient is not a user that accepts messages from other users (this includes ids that match no user), FAILED when resolving the recipient raised an error. Requires CREATE on the platform messaging; concurrent calls for the same pair converge on one conversation. More than 100 recipients is rejected before any recipient is processed.
   """
   resolveDirectConversations(resolutionData: ResolveDirectConversationsInput!): [DirectConversationResolutionResult!]!
   """Revoke a credential from an Actor."""

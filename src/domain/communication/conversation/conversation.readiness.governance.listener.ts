@@ -31,7 +31,7 @@ export class ConversationReadinessGovernanceListener {
   async handleReadinessChanged(
     event: RoomReadinessChangedEvent
   ): Promise<void> {
-    if (!event.previous) {
+    if (event.source === 'PROVISIONING') {
       // Creation-time write: travels inside the created event.
       return;
     }

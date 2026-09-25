@@ -53,4 +53,34 @@ describe('asyncForEachBounded', () => {
       })
     ).rejects.toThrow('boom');
   });
+
+  it('picks up no new item after a failure and rejects only once in-flight workers settle', async () => {
+    const started: number[] = [];
+    let releaseSlow!: () => void;
+    let slowSettled = false;
+
+    const run = asyncForEachBounded([1, 2, 3, 4, 5], 2, item => {
+      started.push(item);
+      if (item === 1) {
+        return new Promise<void>(resolve => {
+          releaseSlow = () => {
+            slowSettled = true;
+            resolve();
+          };
+        });
+      }
+      return Promise.reject(new Error('boom'));
+    });
+    const outcome = run.then(
+      () => 'resolved',
+      (error: Error) => ({ error: error.message, slowSettled })
+    );
+
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    expect(started).toEqual([1, 2]);
+
+    releaseSlow();
+    expect(await outcome).toEqual({ error: 'boom', slowSettled: true });
+    expect(started).toEqual([1, 2]);
+  });
 });

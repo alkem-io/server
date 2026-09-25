@@ -329,6 +329,9 @@ export class CommunicationAdapter {
         custom_state: customState,
       } satisfies CreateRoomRequest,
       errorContext: { alkemioRoomId, roomType },
+      // A refused creation must reach the caller as a failure, not a `false`
+      // that reads as success.
+      ensureSuccess: true,
     });
 
     if (response?.success) {

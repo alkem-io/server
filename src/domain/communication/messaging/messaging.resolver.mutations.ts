@@ -82,7 +82,7 @@ export class MessagingResolverMutations {
 
   @Mutation(() => [DirectConversationResolutionResult], {
     description:
-      'Resolve — reuse or create — the direct Conversation with each of the given recipients, without sending any message. Per recipient: CREATED with the new conversation, RESOLVED with the existing one, BLOCKED_NO_CONSENT when the recipient does not accept messages from other users, FAILED when the recipient could not be resolved. Same authorization and consent rules as createConversation; concurrent calls for the same pair converge on one conversation. More than 100 recipients is rejected before any recipient is processed.',
+      'Resolve — reuse or create — the direct Conversation with each of the given recipients, without sending any message. Per recipient: CREATED with the new conversation, RESOLVED with the existing one, BLOCKED_NO_CONSENT when the recipient is not a user that accepts messages from other users (this includes ids that match no user), FAILED when resolving the recipient raised an error. Requires CREATE on the platform messaging; concurrent calls for the same pair converge on one conversation. More than 100 recipients is rejected before any recipient is processed.',
   })
   async resolveDirectConversations(
     @CurrentActor() actorContext: ActorContext,

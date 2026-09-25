@@ -54,7 +54,8 @@ describe('ConversationReadinessGovernanceListener', () => {
       new RoomReadinessChangedEvent(
         room(RoomType.CONVERSATION_DIRECT),
         failed,
-        ready
+        ready,
+        'PROBE'
       )
     );
 
@@ -74,18 +75,30 @@ describe('ConversationReadinessGovernanceListener', () => {
     conversationService.findConversationByRoomId.mockResolvedValue(null);
 
     await listener.handleReadinessChanged(
-      new RoomReadinessChangedEvent(room(RoomType.CALLOUT), failed, ready)
+      new RoomReadinessChangedEvent(
+        room(RoomType.CALLOUT),
+        failed,
+        ready,
+        'PROBE'
+      )
     );
 
     expect(publish.publishConversationGovernanceEvent).not.toHaveBeenCalled();
   });
 
-  it('publishes nothing for the creation-time write (no previous record)', async () => {
+  it('publishes nothing for the creation-time write, whose previous record is the column default', async () => {
+    const columnDefault = {
+      state: 'UNKNOWN',
+      reason: 'LEGACY_UNVERIFIED',
+      updatedAt: '2026-09-21T00:00:00.000Z',
+    } as any;
+
     await listener.handleReadinessChanged(
       new RoomReadinessChangedEvent(
         room(RoomType.CONVERSATION_DIRECT),
-        undefined,
-        failed
+        columnDefault,
+        failed,
+        'PROVISIONING'
       )
     );
 
@@ -103,7 +116,8 @@ describe('ConversationReadinessGovernanceListener', () => {
       new RoomReadinessChangedEvent(
         room(RoomType.CONVERSATION_GROUP),
         failed,
-        ready
+        ready,
+        'PROBE'
       )
     );
 

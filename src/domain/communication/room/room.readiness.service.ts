@@ -5,6 +5,7 @@ import { classifyAdapterError } from '@services/adapters/communication-adapter/c
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import {
+  LEGACY_UNVERIFIED_READINESS,
   RoomReadinessReason,
   RoomReadinessRecord,
   RoomReadinessState,
@@ -136,7 +137,7 @@ export class RoomReadinessService {
       try {
         await this.eventEmitter.emitAsync(
           ROOM_READINESS_CHANGED_EVENT,
-          new RoomReadinessChangedEvent(room, previous, record)
+          new RoomReadinessChangedEvent(room, previous, record, source)
         );
       } catch (error: any) {
         // Listeners publish governance events; a publish failure must not undo
@@ -237,10 +238,6 @@ export class RoomReadinessService {
   }
 
   private legacyRecord(): RoomReadinessRecord {
-    return {
-      state: RoomReadinessState.UNKNOWN,
-      reason: RoomReadinessReason.LEGACY_UNVERIFIED,
-      updatedAt: new Date(0).toISOString(),
-    };
+    return { ...LEGACY_UNVERIFIED_READINESS };
   }
 }

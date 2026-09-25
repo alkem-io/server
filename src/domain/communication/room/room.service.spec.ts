@@ -270,6 +270,28 @@ describe('RoomService', () => {
         );
       });
 
+      it('records FAILED/ADAPTER_REJECTED when the adapter answers but refuses the creation', async () => {
+        const room = savedRoom();
+        roomRepo.save.mockResolvedValue(room);
+        communicationAdapter.createRoom.mockRejectedValue(
+          CommunicationAdapterException.fromAdapterError('createRoom', {
+            code: 'MATRIX_ERROR',
+            message: 'room creation failed',
+          })
+        );
+
+        await service.createRoom(directInput);
+
+        expect(roomReadinessService.record).toHaveBeenCalledWith(
+          room,
+          expect.objectContaining({
+            state: RoomReadinessState.FAILED,
+            reason: RoomReadinessReason.ADAPTER_REJECTED,
+          }),
+          'PROVISIONING'
+        );
+      });
+
       it('records PENDING/AWAITING_CONFIRMATION for an externally created room and asks the adapter for nothing', async () => {
         const room = { id: 'ext-1', type: RoomType.CONVERSATION_GROUP } as any;
         roomRepo.save.mockResolvedValue(room);

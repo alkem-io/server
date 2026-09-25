@@ -53,10 +53,12 @@ export type RoomReadinessRecord = {
   updatedAt: string;
 };
 
+// Same value as the readiness column default, so a row that was never
+// written and a missing record read identically.
 export const LEGACY_UNVERIFIED_READINESS: Readonly<RoomReadinessRecord> = {
   state: RoomReadinessState.UNKNOWN,
   reason: RoomReadinessReason.LEGACY_UNVERIFIED,
-  updatedAt: new Date(0).toISOString(),
+  updatedAt: '2026-09-21T00:00:00.000Z',
 };
 
 @ObjectType('RoomReadiness', {
