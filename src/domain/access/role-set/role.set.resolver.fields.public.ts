@@ -91,7 +91,7 @@ export class RoleSetResolverFieldsPublic {
     @Parent() roleSet: RoleSet,
     @CurrentActor() actorContext: ActorContext
   ): Promise<RoleName[]> {
-    // Utilize the loader to batch getRolesForActorContext calls.
+    // Batched per request by the actor-roles dataloader.
     return this.actorRolesLoader.loader.load({ actorContext, roleSet });
   }
 
