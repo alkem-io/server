@@ -28,7 +28,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, LoggerService } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
@@ -36,10 +36,6 @@ import { CommunicationAdapter } from '@services/adapters/communication-adapter/c
 import { CommunicationAdapterException } from '@services/adapters/communication-adapter/communication.adapter.exception';
 import { RoomMemberUpdatedEvent } from '@services/event-handlers/internal/message-inbox/room.member.updated.event';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { forwardRef, Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
-import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service/subscription.publish.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
 import { EntityManager, FindOneOptions, In, Repository } from 'typeorm';

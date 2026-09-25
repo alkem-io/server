@@ -12,7 +12,6 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
-import { Injectable } from '@nestjs/common';
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { ConversationService } from './conversation.service';
 
