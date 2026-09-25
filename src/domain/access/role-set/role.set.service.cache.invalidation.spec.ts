@@ -1,7 +1,12 @@
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { CredentialType } from '@common/enums/credential.type';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import { RoleSetType } from '@common/enums/role.set.type';
+import { organizationRoleDefinitions } from '@domain/community/organization/definitions/organization.role.definitions';
 import { Organization } from '@domain/community/organization/organization.entity';
 import { Space } from '@domain/space/space/space.entity';
+import { spaceCommunityRoles } from '@domain/space/space.defaults/definitions/space.community.roles';
+import { subspaceCommunityRoles } from '@domain/space/space.defaults/definitions/subspace.community.roles';
 import { LoggerService } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -217,6 +222,20 @@ describe('RoleSetCacheInvalidationService', () => {
       expect(cache.cleanActorMembershipCache).not.toHaveBeenCalled();
     });
 
+    it('skips the platform lookup for a resource-scoped credential', async () => {
+      const entityManager = createEntityManager({ platformRoleSet });
+      const service = createService(entityManager, cache, logger);
+
+      await service.invalidateForCredentialChange(
+        'actor-1',
+        LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
+        'account-1'
+      );
+
+      expect(entityManager.findOne).not.toHaveBeenCalled();
+      expect(cache.cleanActorMembershipCache).not.toHaveBeenCalled();
+    });
+
     it('does nothing when there is no platform role set', async () => {
       const entityManager = createEntityManager({});
       const service = createService(entityManager, cache, logger);
@@ -227,6 +246,55 @@ describe('RoleSetCacheInvalidationService', () => {
       );
 
       expect(cache.cleanActorMembershipCache).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * The credential lists are derived from the shipped role definitions, so a
+   * role added to either level is covered without editing this service. These
+   * cases fail if that derivation is ever replaced by a restated list that
+   * falls behind the definitions.
+   */
+  describe('coverage of the declared role definitions', () => {
+    it.each([
+      ...spaceCommunityRoles,
+      ...subspaceCommunityRoles,
+    ])('covers the space role $name', async roleDefinition => {
+      const entityManager = createEntityManager({
+        space: { id: 'space-1', community: { roleSet: { id: 'rs-space' } } },
+      });
+      const service = createService(entityManager, cache, logger);
+
+      await service.invalidateForCredentialChange(
+        'actor-1',
+        roleDefinition.credentialData.type as CredentialType,
+        'space-1'
+      );
+
+      expect(cache.cleanActorMembershipCache).toHaveBeenCalledWith(
+        'actor-1',
+        'rs-space'
+      );
+    });
+
+    it.each(
+      organizationRoleDefinitions
+    )('covers the organization role $name', async roleDefinition => {
+      const entityManager = createEntityManager({
+        organization: { id: 'org-1', roleSet: { id: 'rs-org' } },
+      });
+      const service = createService(entityManager, cache, logger);
+
+      await service.invalidateForCredentialChange(
+        'actor-1',
+        roleDefinition.credentialData.type as CredentialType,
+        'org-1'
+      );
+
+      expect(cache.cleanActorMembershipCache).toHaveBeenCalledWith(
+        'actor-1',
+        'rs-org'
+      );
     });
   });
 
