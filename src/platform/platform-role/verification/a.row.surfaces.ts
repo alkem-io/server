@@ -175,6 +175,17 @@ export const INDIRECT_ENFORCEMENT_FILES: readonly string[] = [
   // R-F.3 (2026-09-18, licensing-section-design.md) — the License Manager's
   // twin: `spaces`, `organizations`, `users` additionally admit
   // `PLATFORM_LICENSING_LISTS_READ`. Same disposition, same reasons.
+  //
+  // QA C1-13 fix (2026-09-25) — `platformAdmin.virtualAssistant` is a NINTH
+  // inventory read, not part of the original eight: it's the read-side
+  // discovery path for A11's `updateAssistantActorCapabilities` (the client
+  // finds the assistant it's about to update through this field), so it now
+  // is gated on `PLATFORM_OPERATIONS_ADMIN` (replacing `PLATFORM_ADMIN`);
+  // legacy GA/GS/GLM holders keep access because they hold both — the same
+  // disposition as every other inventory read above. Classified
+  // `non-admin`'s sibling `inventory-read` in `NON_ADMIN_SURFACES` (see
+  // `non.admin.surfaces.ts`, `surface.completeness.spec.ts`) rather than
+  // censused as an A-row, for the same reason as the other eight.
   'src/platform-admin/admin/platform.admin.resolver.fields.ts',
   'src/platform-admin/core/identity/admin.identity.resolver.fields.ts',
   // R-F.3 sandbox walk (2026-09-18, T108) — `User.account` / `Organization.account`
@@ -184,6 +195,15 @@ export const INDIRECT_ENFORCEMENT_FILES: readonly string[] = [
   // not an A-row: A12's real gates stay on the assign/revoke mutations
   // (`admin.licensing.resolver.mutations.ts`, censused). No census entry, no
   // matrix cell — same disposition as the list reads above.
+  //
+  // QA C2-b fix (2026-09-25): both fields ALSO open to TRANSFER_RESOURCE_ACCEPT
+  // holders — Resource Admin holds it on the account tree (A9), and without
+  // this second clause its own main flow (offering/accepting a transfer)
+  // could not resolve the target account id, blocking the UI. Same
+  // disposition: a read of an id needed to complete an already-censused A9
+  // action, not a new A-row. Deliberately NOT opened to bare READ: accounts
+  // grant READ to anonymous and registered users, so a READ-gated clause here
+  // would expose every account id platform-wide.
   'src/domain/community/user/user.resolver.fields.ts',
   'src/domain/community/organization/organization.resolver.fields.ts',
 ];
@@ -1003,8 +1023,10 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
   ),
 
   // ===== A11 — operational machinery (032, pre-existing) =====
-  // Contract's "~10" corrected to 14 by grepping the tree (the two
-  // collaboration-migration mutations replaced the retired whiteboard one).
+  // Contract's "~10" corrected to 15 by grepping the tree (the two
+  // collaboration-migration mutations replaced the retired whiteboard one;
+  // QA cross-census-1 fix, 2026-09-25, added the workspace#061 forum-sync
+  // reconcile mutation, 14 -> 15).
   A11: (
     [
       [
@@ -1081,6 +1103,16 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
         'adminCommunicationSyncSpaceHierarchy',
         'communication-admin-synthetic',
       ],
+      // QA cross-census-1 fix (2026-09-25): workspace#061's forum↔matrix
+      // hierarchy sync landed this mutation on `develop` after the census
+      // was written — same file, same `communicationGlobalAdminPolicy`
+      // (`communication-admin-synthetic`), same literal
+      // PLATFORM_OPERATIONS_ADMIN check as its five siblings above.
+      [
+        'src/platform-admin/domain/communication/admin.communication.resolver.mutations.ts',
+        'adminCommunicationReconcileForumHierarchy',
+        'communication-admin-synthetic',
+      ],
     ] as const
   ).map(
     ([file, member, tree]): SurfaceRef => ({
@@ -1143,13 +1175,17 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
   ],
 
   // ===== A13 — define license plans + entitlement mappings =====
-  // Contract's "~4" corrected to 5. The gate literally checked at each
-  // resolver is bare DELETE/UPDATE/CREATE, not PLATFORM_SETTINGS_ADMIN —
-  // one of the two documented exceptions (alongside A9's three conversion
-  // mutations) where the enforced call site's own privilege is a bare CRUD
-  // verb rather than this feature's dedicated one. corr-server-7/
-  // corr-server-10 fix: that bare CRUD check is now against a
-  // resolver-local SYNTHETIC in-memory policy
+  // Contract's "~4" corrected to 6 (QA C2-a, 2026-09-25): `createLicensePlan`
+  // was the only A13 surface still gated on the ENTITY's own
+  // (root-cascade-inheriting) `licensing.authorization` rather than the
+  // synthetic definition policy — the one real permission leak QA found in
+  // either PR, since `platform-content-full-access` reaches CREATE there via
+  // T036a's cascade. The gate literally checked at each resolver is bare
+  // DELETE/UPDATE/CREATE, not PLATFORM_SETTINGS_ADMIN — one of the two
+  // documented exceptions (alongside A9's three conversion mutations) where
+  // the enforced call site's own privilege is a bare CRUD verb rather than
+  // this feature's dedicated one. corr-server-7/corr-server-10 fix: that bare
+  // CRUD check is now against a resolver-local SYNTHETIC in-memory policy
   // (`GLOBAL_POLICY_LICENSE_DEFINITION_ADMIN`) granting exactly
   // {platform-settings-admin, global-admin, global-support,
   // global-license-manager, global-platform-manager} — NOT
@@ -1187,6 +1223,11 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       [
         'src/platform/licensing/credential-based/license-policy/license.policy.resolver.mutations.ts',
         'adminLicensePolicyCreateCredentialRule',
+        AuthorizationPrivilege.CREATE,
+      ],
+      [
+        'src/platform/licensing/credential-based/licensing-framework/licensing.framework.resolver.mutations.ts',
+        'createLicensePlan',
         AuthorizationPrivilege.CREATE,
       ],
     ] as const

@@ -46,10 +46,11 @@ const ANOMALY_OUTCOMES = new Set<PlatformAuditOutcome>([
  * timing.
  *
  * This is sensitive security / PII data, so the tool is gated on the
- * `PLATFORM_ADMIN` privilege of the platform authorization policy — a
- * non-admin actor gets an error result and no rows. Raw email addresses from
- * the entry `details` are masked to their domain before leaving the server, so
- * full PII is never piped into an AI client's context.
+ * `platform-audit-read` (Platform Audit Reader) privilege of the platform
+ * authorization policy — a non-admin actor gets an error result and no rows.
+ * Raw email addresses from the entry `details` are masked to their domain
+ * before leaving the server, so full PII is never piped into an AI client's
+ * context.
  */
 @Injectable()
 export class AuditLogAnalyzeTool implements McpTool {
@@ -66,8 +67,8 @@ export class AuditLogAnalyzeTool implements McpTool {
     return {
       name: 'analyze_audit_log',
       description:
-        'Analyze the platform security audit log (email-change and password-change events). ' +
-        'Requires platform-admin access. ' +
+        'Analyze the platform audit log (all categories). ' +
+        'Requires platform-audit-read (Platform Audit Reader) access. ' +
         'Actions: "summary" gives a platform-wide aggregate over a recent window ' +
         '(counts by category and outcome, failures/anomalies, initiator breakdown, daily timeline); ' +
         '"user_history" returns the chronological audit trail for one subject user. ' +
@@ -88,7 +89,10 @@ export class AuditLogAnalyzeTool implements McpTool {
           },
           category: {
             type: 'string',
-            enum: ['email_change', 'password_change'],
+            // server-C1-16 fix: was a hardcoded 2-value enum
+            // (email_change/password_change) that went stale as
+            // PlatformAuditCategory grew — now derived from the enum itself.
+            enum: Object.values(PlatformAuditCategory),
             description: 'Optional filter by audit category.',
           },
           windowDays: {
@@ -125,15 +129,16 @@ export class AuditLogAnalyzeTool implements McpTool {
       includeDetails = false,
     } = args as AuditLogAnalyzeArgs;
 
-    // Hard gate: the audit log is admin-only, sensitive security data.
-    const isAdmin = await this.isPlatformAdmin(actorContext);
-    if (!isAdmin) {
+    // Hard gate: the audit log is sensitive security data, gated on
+    // platform-audit-read.
+    const canRead = await this.canReadAudit(actorContext);
+    if (!canRead) {
       this.logger.warn?.(
-        `Denied analyze_audit_log: actor ${actorContext.actorID || 'anonymous'} is not a platform admin`,
+        `Denied analyze_audit_log: actor ${actorContext.actorID || 'anonymous'} lacks platform-audit-read`,
         LogContext.MCP_SERVER
       );
       return this.errorResult(
-        'Access denied: analyze_audit_log requires platform-admin privileges.'
+        'Access denied: analyze_audit_log requires platform-audit-read (Platform Audit Reader) privileges.'
       );
     }
 
@@ -176,7 +181,7 @@ export class AuditLogAnalyzeTool implements McpTool {
     }
   }
 
-  private async isPlatformAdmin(actorContext: ActorContext): Promise<boolean> {
+  private async canReadAudit(actorContext: ActorContext): Promise<boolean> {
     if (actorContext.isAnonymous || !actorContext.actorID) {
       return false;
     }

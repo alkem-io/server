@@ -1,8 +1,13 @@
 import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { OrganizationAssociateEligibilityReason } from '@common/enums/organization.associate.eligibility.reason';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -228,6 +233,103 @@ describe('OrganizationResolverFields', () => {
       organizationService.getAccount.mockResolvedValue(mockAccount);
 
       const result = await resolver.account(org, actorContext);
+      expect(result).toBeUndefined();
+    });
+  });
+
+  // server-C2-b (advocate/skeptic debate) — Resource Admin holds
+  // TRANSFER_RESOURCE_ACCEPT on the account (A9 transfers) but neither
+  // UPDATE nor READ_USER_PII, so the account() fallback (ACCOUNT_LICENSE_MANAGE
+  // only) left the account closed to it. Wires the REAL AuthorizationService
+  // so the fix's `accountOpenToPlatformRole` OR-check is genuinely
+  // exercised, and that READ staying excluded is proven against the real
+  // credential-matching engine, not a mocked stand-in.
+  describe('account — real-engine integration (server-C2-b)', () => {
+    let realResolver: OrganizationResolverFields;
+    let realOrganizationService: Record<string, Mock>;
+
+    const buildActorContext = (
+      ...credentialTypes: AuthorizationCredential[]
+    ): ActorContext =>
+      ({
+        actorID: 'actor-1',
+        credentials: credentialTypes.map(type => ({ type, resourceID: '' })),
+      }) as any as ActorContext;
+
+    const org = {
+      id: 'org-1',
+      // Denies UPDATE to every actor below — a real, empty IN_MEMORY policy
+      // rather than `undefined`, so isAccessGranted returns false instead
+      // of throwing EntityNotInitializedException.
+      authorization: new AuthorizationPolicy(AuthorizationPolicyType.IN_MEMORY),
+    } as any;
+
+    const account = {
+      id: 'account-1',
+      authorization: (() => {
+        const policy = new AuthorizationPolicy(
+          AuthorizationPolicyType.IN_MEMORY
+        );
+        policy.credentialRules = [
+          new AuthorizationPolicyRuleCredential(
+            [AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT],
+            [
+              {
+                type: AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+                resourceID: '',
+              },
+            ],
+            'account-transfer-resource-accept'
+          ),
+          new AuthorizationPolicyRuleCredential(
+            [AuthorizationPrivilege.READ],
+            [
+              {
+                type: AuthorizationCredential.GLOBAL_REGISTERED,
+                resourceID: '',
+              },
+            ],
+            'account-read-registered'
+          ),
+        ];
+        return policy;
+      })(),
+    };
+
+    beforeEach(async () => {
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          OrganizationResolverFields,
+          AuthorizationService,
+          MockCacheManager,
+          MockWinstonProvider,
+        ],
+      })
+        .useMocker(defaultMockerFactory)
+        .compile();
+
+      realResolver = module.get(OrganizationResolverFields);
+      realOrganizationService = module.get(OrganizationService) as any;
+      realOrganizationService.getAccount.mockResolvedValue(account);
+    });
+
+    it('an actor with only platform-resource-admin (holding neither UPDATE nor READ_USER_PII) gets the account', async () => {
+      const actorContext = buildActorContext(
+        AuthorizationCredential.PLATFORM_RESOURCE_ADMIN
+      );
+
+      const result = await realResolver.account(org, actorContext);
+
+      expect(result).toBe(account);
+    });
+
+    it('an actor with only global-registered gets undefined — READ does not open it', async () => {
+      const actorContext = buildActorContext(
+        AuthorizationCredential.GLOBAL_REGISTERED
+      );
+
+      const result = await realResolver.account(org, actorContext);
+
       expect(result).toBeUndefined();
     });
   });

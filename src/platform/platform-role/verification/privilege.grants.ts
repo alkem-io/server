@@ -431,7 +431,7 @@ export const TREE_SCOPED_PRIVILEGE_GRANTS: {
     // A13 — license-plan / license-policy CRUD, re-anchored (in intent,
     // not in literal gate) onto `platform-settings-admin` (T040).
     // GLOBAL_ADMIN added to each (corr-server-7/corr-server-10 fix): the
-    // five A13 resolvers now check a resolver-local synthetic policy
+    // six A13 resolvers now check a resolver-local synthetic policy
     // (`GLOBAL_POLICY_LICENSE_DEFINITION_ADMIN`) that grants bare
     // CREATE/UPDATE/DELETE to exactly {platform-settings-admin,
     // global-admin, global-support, global-license-manager,

@@ -243,22 +243,40 @@ export class OrganizationResolverFields {
     if (accountVisible) {
       return await this.organizationService.getAccount(organization);
     }
-    // 027 R-F.3 (2026-09-18): the Platform License Manager assigns plans to
-    // organization accounts (A12) but is no organization admin, so the
-    // UPDATE-gated field hid every account it does not own. Open the account
-    // when the actor holds ACCOUNT_LICENSE_MANAGE on the account's OWN policy.
+    // 027 R-F.3 (2026-09-18, server-C2-b advocate/skeptic debate): the
+    // Platform License Manager assigns plans to organization accounts (A12)
+    // but is no organization admin, and Resource Admin accepts
+    // account-transfer targets (A9) but is no organization admin either —
+    // both hold their real privilege on the account's OWN policy, not on
+    // the organization's. Open the account when the actor holds
+    // ACCOUNT_LICENSE_MANAGE or TRANSFER_RESOURCE_ACCEPT on it. READ is
+    // deliberately excluded: accounts grant READ to anonymous and
+    // registered users, so checking it here would expose every account id
+    // to anyone.
     const account = await this.organizationService.getAccount(organization);
-    if (
-      account.authorization &&
-      this.authorizationService.isAccessGranted(
-        actorContext,
-        account.authorization,
-        AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE
-      )
-    ) {
+    if (this.accountOpenToPlatformRole(actorContext, account)) {
       return account;
     }
     return undefined;
+  }
+
+  private accountOpenToPlatformRole(
+    actorContext: ActorContext,
+    account: IAccount
+  ): boolean {
+    return (
+      !!account.authorization &&
+      [
+        AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE,
+        AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT,
+      ].some(privilege =>
+        this.authorizationService.isAccessGranted(
+          actorContext,
+          account.authorization!,
+          privilege
+        )
+      )
+    );
   }
 
   @ResolveField('authorization', () => IAuthorizationPolicy, {

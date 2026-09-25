@@ -7,6 +7,7 @@ import { AuthorizationRoleGlobal } from '@common/enums/authorization.credential.
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import { RoleName } from '@common/enums/role.name';
+import { BaseException } from '@common/exceptions/base.exception';
 import { ForbiddenException } from '@common/exceptions/forbidden.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -69,6 +70,22 @@ const A2_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_ROLES_ADMIN,
 ];
 const A2_LEGACY_REACHERS: readonly AuthorizationCredential[] = [];
+
+/** 027-platform-role-redesign (QA C1-note fix): all four roles carry the
+ * SAME beta/trial `ACCOUNT_LICENSE_PLUS` entitlement (T040a parity — see
+ * the assign/remove call sites below). Used by `syncAccountLicensePlus` to
+ * compute the actor's TRUE post-change entitlement from role-set
+ * membership across ALL FOUR roles, rather than mirroring the single role
+ * event that triggered the call — the previous unconditional grant/revoke
+ * let revoking just one of the four strip PLUS while another was still
+ * held, and let granting a second licence role write a duplicate credential
+ * row. */
+const LICENSE_PLUS_ROLES: readonly RoleName[] = [
+  RoleName.PLATFORM_BETA_TESTER,
+  RoleName.PLATFORM_VC_CAMPAIGN,
+  RoleName.FEATURE_BETA_TESTER,
+  RoleName.FEATURE_VC_CAMPAIGN,
+];
 
 /** Roles the new 027-platform-role-redesign assignment rule engine governs
  * (T030-T032a). Every other RoleName (legacy `global-*` / the pre-existing
@@ -218,32 +235,17 @@ export class PlatformRoleResolverMutations {
     const user = await this.userLookupService.getUserByIdOrFail(
       roleData.actorID
     );
-    if (
-      roleData.role === RoleName.PLATFORM_BETA_TESTER ||
-      roleData.role === RoleName.PLATFORM_VC_CAMPAIGN ||
-      // 027-platform-role-redesign (T040a): Feature Beta Tester carries the
-      // SAME beta/trial license entitlement as the legacy role it replaces
-      // (spec §Target global role model row 11). Without this, the target
-      // role would be inert once Slice B drops platform-beta-tester (FR-009,
-      // SC-007) — this is the one target role whose capability lives in a
-      // manual entitlement grant rather than an authorization policy.
-      roleData.role === RoleName.FEATURE_BETA_TESTER ||
-      // Feature VC Campaign: same parity argument — the legacy
-      // platform-vc-campaign grant wrote this entitlement too, and the
-      // dashboard offer it targets requires role AND entitlement.
-      roleData.role === RoleName.FEATURE_VC_CAMPAIGN
-    ) {
-      // Also assign the user account a license plan
-      // Account IS the Actor - use accountID directly as actorID
-      const accountLicenseCredential: ICredentialDefinition = {
-        type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
-        resourceID: user.accountID,
-      };
-      await this.actorService.grantCredentialOrFail(
-        user.accountID,
-        accountLicenseCredential
-      );
-      await this.resetLicenseForUserAccount(user);
+    // 027-platform-role-redesign (T040a, QA C1-note fix): PLATFORM_BETA_TESTER,
+    // PLATFORM_VC_CAMPAIGN, FEATURE_BETA_TESTER and FEATURE_VC_CAMPAIGN all
+    // carry the SAME beta/trial ACCOUNT_LICENSE_PLUS entitlement — Feature
+    // Beta Tester/VC Campaign are the successors of their legacy twins
+    // (spec §Target global role model row 11; without parity the target role
+    // would be inert once Slice B drops the legacy role, FR-009/SC-007).
+    // Reconcile the credential against the actor's CURRENT membership across
+    // all four, rather than granting unconditionally on this single event —
+    // see `syncAccountLicensePlus`.
+    if (LICENSE_PLUS_ROLES.includes(roleData.role)) {
+      await this.syncAccountLicensePlus(user, roleSet);
     }
 
     this.notifyPlatformGlobalRoleChange(
@@ -356,24 +358,11 @@ export class PlatformRoleResolverMutations {
     const user = await this.userLookupService.getUserByIdOrFail(
       roleData.actorID
     );
-    if (
-      roleData.role === RoleName.PLATFORM_BETA_TESTER ||
-      roleData.role === RoleName.PLATFORM_VC_CAMPAIGN ||
-      roleData.role === RoleName.FEATURE_BETA_TESTER || // T040a
-      roleData.role === RoleName.FEATURE_VC_CAMPAIGN
-    ) {
-      // Also remove the user account a license plan
-      // Account IS the Actor - use accountID directly as actorID
-      const accountLicenseCredential: ICredentialDefinition = {
-        type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
-        resourceID: user.accountID,
-      };
-      await this.actorService.revokeCredential(
-        user.accountID,
-        accountLicenseCredential
-      );
-
-      await this.resetLicenseForUserAccount(user);
+    // QA C1-note fix: see the identical comment on the grant side above —
+    // reconcile against current membership rather than revoking
+    // unconditionally on this single role event.
+    if (LICENSE_PLUS_ROLES.includes(roleData.role)) {
+      await this.syncAccountLicensePlus(user, roleSet);
     }
 
     this.notifyPlatformGlobalRoleChange(
@@ -581,11 +570,14 @@ export class PlatformRoleResolverMutations {
 
     if (!FEATURE_FAMILY_ROLES.has(role)) {
       const message = `Rejected: role ${role} may not be assigned or removed through the organization surface`;
+      // server-C1-14 fix: the audit row stores the STABLE ruleId, not the
+      // free-text message (which still carries the dynamic role name on
+      // the thrown exception below).
       await this.recordOrganizationSurfaceRejection(
         actorContext,
         role,
         targetActorId,
-        message
+        'holder-kind'
       );
       throw new ForbiddenException(message, LogContext.PLATFORM, {
         ruleId: 'holder-kind',
@@ -595,11 +587,12 @@ export class PlatformRoleResolverMutations {
       await this.actorLookupService.getActorTypeByIdOrFail(targetActorId);
     if (actorType !== ActorType.ORGANIZATION) {
       const message = `Rejected: target actor for role ${role} is not an organization`;
+      // server-C1-14 fix: same as above — stable ruleId, not the message.
       await this.recordOrganizationSurfaceRejection(
         actorContext,
         role,
         targetActorId,
-        message
+        'holder-kind'
       );
       throw new ForbiddenException(message, LogContext.PLATFORM, {
         ruleId: 'holder-kind',
@@ -703,8 +696,16 @@ export class PlatformRoleResolverMutations {
         targetKind: targetActorType,
         targetId: targetID,
         role,
+        // server-C1-14 fix: the STABLE ruleId the rule engine attaches to
+        // its `ForbiddenException` (`error.details.ruleId`), not the
+        // free-text `error.message` — the message can carry a dynamic role
+        // name and is unsuitable for grouping/alerting on which rule
+        // rejected the attempt.
         rejectedRule:
-          error instanceof Error ? error.message : 'rule-evaluation-failed',
+          error instanceof BaseException &&
+          typeof error.details?.ruleId === 'string'
+            ? error.details.ruleId
+            : 'rule-evaluation-failed',
       });
       throw error;
     }
@@ -827,8 +828,12 @@ export class PlatformRoleResolverMutations {
         targetKind: targetActorType,
         targetId: targetID,
         role,
+        // server-C1-14 fix: see the identical comment in evaluateGrantOrFail.
         rejectedRule:
-          error instanceof Error ? error.message : 'rule-evaluation-failed',
+          error instanceof BaseException &&
+          typeof error.details?.ruleId === 'string'
+            ? error.details.ruleId
+            : 'rule-evaluation-failed',
       });
       throw error;
     }
@@ -952,6 +957,55 @@ export class PlatformRoleResolverMutations {
       }
     }
     return held;
+  }
+
+  /** 027-platform-role-redesign (QA C1-note fix, 2026-09-25): reconciles the
+   * `ACCOUNT_LICENSE_PLUS` credential against the actor's CURRENT membership
+   * across all four `LICENSE_PLUS_ROLES`, called AFTER the triggering
+   * assign/removeActorFromRole has already landed (so `isInRole` reflects
+   * post-change state, including the role that just changed). The pre-fix
+   * code granted/revoked unconditionally on the single role event that
+   * triggered the call: revoking one of the four while another was still
+   * held stripped PLUS regardless of true membership, and granting a
+   * second licence role while PLUS was already held wrote a duplicate
+   * credential row. Only touches the credential — and only resets the
+   * license policy — when the computed desired state actually differs from
+   * what is held. */
+  private async syncAccountLicensePlus(
+    user: IUser,
+    roleSet: Awaited<ReturnType<PlatformService['getRoleSetOrFail']>>
+  ): Promise<void> {
+    let desired = false;
+    for (const role of LICENSE_PLUS_ROLES) {
+      if (await this.roleSetService.isInRole(user.id, roleSet, role)) {
+        desired = true;
+        break;
+      }
+    }
+
+    // Account IS the Actor - use accountID directly as actorID
+    const accountLicenseCredential: ICredentialDefinition = {
+      type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
+      resourceID: user.accountID,
+    };
+    const held = await this.actorService.hasValidCredential(
+      user.accountID,
+      accountLicenseCredential
+    );
+
+    if (desired && !held) {
+      await this.actorService.grantCredentialOrFail(
+        user.accountID,
+        accountLicenseCredential
+      );
+      await this.resetLicenseForUserAccount(user);
+    } else if (!desired && held) {
+      await this.actorService.revokeCredential(
+        user.accountID,
+        accountLicenseCredential
+      );
+      await this.resetLicenseForUserAccount(user);
+    }
   }
 
   private async resetLicenseForUserAccount(user: IUser) {

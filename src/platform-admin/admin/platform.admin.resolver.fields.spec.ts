@@ -1,6 +1,11 @@
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { VirtualAssistantService } from '@domain/community/virtual-assistant/virtual.assistant.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -176,6 +181,98 @@ describe('PlatformAdminResolverFields', () => {
         'platformAdmin Virtual Contributors'
       );
       expect(result).toEqual(vcs);
+    });
+  });
+
+  // server-C1-13 (advocate/skeptic debate) — updateAssistantActorCapabilities
+  // is gated on PLATFORM_OPERATIONS_ADMIN, but this field, the client's only
+  // discovery path for it, was still gated on the broader PLATFORM_ADMIN
+  // catch-all. Wires the REAL AuthorizationService + a real platform policy
+  // so the fix's `grantAccessOrFail` is genuinely exercised, not just a
+  // mocked pass-through.
+  describe('virtualAssistant — real-engine integration (server-C1-13)', () => {
+    let realResolver: PlatformAdminResolverFields;
+    let realPlatformAuthorizationService: Record<string, Mock>;
+    let realVirtualAssistantService: Record<string, Mock>;
+
+    const buildActorContext = (
+      ...credentialTypes: AuthorizationCredential[]
+    ): ActorContext =>
+      ({
+        actorID: 'actor-1',
+        credentials: credentialTypes.map(type => ({ type, resourceID: '' })),
+      }) as any as ActorContext;
+
+    const buildPlatformPolicy = () => {
+      const policy = new AuthorizationPolicy(AuthorizationPolicyType.IN_MEMORY);
+      policy.credentialRules = [
+        new AuthorizationPolicyRuleCredential(
+          [AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN],
+          [
+            AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
+            AuthorizationCredential.GLOBAL_ADMIN,
+            AuthorizationCredential.GLOBAL_SUPPORT,
+            AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+          ].map(type => ({ type, resourceID: '' })),
+          'platform-operations-admin-rule'
+        ),
+        new AuthorizationPolicyRuleCredential(
+          [AuthorizationPrivilege.PLATFORM_ADMIN],
+          [
+            AuthorizationCredential.GLOBAL_ADMIN,
+            AuthorizationCredential.GLOBAL_SUPPORT,
+            AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+          ].map(type => ({ type, resourceID: '' })),
+          'platform-admin-rule'
+        ),
+      ];
+      return policy;
+    };
+
+    beforeEach(async () => {
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          PlatformAdminResolverFields,
+          AuthorizationService,
+          MockWinstonProvider,
+        ],
+      })
+        .useMocker(defaultMockerFactory)
+        .compile();
+
+      realResolver = module.get(PlatformAdminResolverFields);
+      realPlatformAuthorizationService = module.get(
+        PlatformAuthorizationPolicyService
+      ) as any;
+      realVirtualAssistantService = module.get(VirtualAssistantService) as any;
+      realPlatformAuthorizationService.getPlatformAuthorizationPolicy.mockResolvedValue(
+        buildPlatformPolicy()
+      );
+      realVirtualAssistantService.getSingletonOrFail.mockResolvedValue({
+        id: 'assistant-1',
+      });
+    });
+
+    it('resolves for an actor holding only platform-operations-admin', async () => {
+      const actor = buildActorContext(
+        AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN
+      );
+
+      const result = await realResolver.virtualAssistant(actor);
+
+      expect(result).toEqual({ id: 'assistant-1' });
+      expect(realVirtualAssistantService.getSingletonOrFail).toHaveBeenCalled();
+    });
+
+    it('rejects an actor holding only platform-content-full-access', async () => {
+      const actor = buildActorContext(
+        AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS
+      );
+
+      await expect(realResolver.virtualAssistant(actor)).rejects.toBeDefined();
+      expect(
+        realVirtualAssistantService.getSingletonOrFail
+      ).not.toHaveBeenCalled();
     });
   });
 

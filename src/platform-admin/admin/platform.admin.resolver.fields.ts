@@ -280,15 +280,21 @@ export class PlatformAdminResolverFields {
   @ResolveField(() => IVirtualAssistant, {
     nullable: false,
     description:
-      'The singleton virtual-assistant actor, including its current admin capability grant and ID. This is only available to Platform Admins, and is the discovery path for updateAssistantActorCapabilities.',
+      'The singleton virtual-assistant actor, including its current admin capability grant and ID. Only available to Platform Operations Admins (and legacy holders); the discovery path for updateAssistantActorCapabilities.',
   })
   async virtualAssistant(
     @CurrentActor() actorContext: ActorContext
   ): Promise<IVirtualAssistant> {
+    // 027-platform-role-redesign (server-C1-13, advocate/skeptic debate) —
+    // updateAssistantActorCapabilities is gated on PLATFORM_OPERATIONS_ADMIN,
+    // but this field, the client's only discovery path for it, was still
+    // gated on the broader PLATFORM_ADMIN catch-all. Nobody loses access:
+    // the legacy holders of both privileges are the same {GLOBAL_ADMIN,
+    // GLOBAL_SUPPORT, GLOBAL_LICENSE_MANAGER}.
     this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
       'platformAdmin VirtualAssistant'
     );
 

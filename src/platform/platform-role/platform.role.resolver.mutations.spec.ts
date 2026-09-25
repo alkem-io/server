@@ -95,6 +95,17 @@ describe('PlatformRoleResolverMutations', () => {
       (
         notificationPlatformAdapter.platformGlobalRoleChanged as Mock
       ).mockResolvedValue(undefined);
+      // QA C1-note fix: syncAccountLicensePlus computes `desired` from
+      // roleSetService.isInRole across all four LICENSE_PLUS_ROLES, and
+      // compares it against actorService.hasValidCredential ("held").
+      // Default to "the just-assigned role is now held, PLUS not already
+      // granted" so the pre-existing tests below (which assert on the
+      // grant-credential SIDE EFFECT, not on these two directly) keep
+      // exercising the same behaviour they did before the reconciliation
+      // was introduced. (auto-mocked hasValidCredential otherwise resolves
+      // to a truthy Mock stand-in, not undefined — must be pinned false.)
+      (roleSetService.isInRole as Mock).mockResolvedValue(true);
+      (actorService.hasValidCredential as Mock).mockResolvedValue(false);
     });
 
     it('should assign GLOBAL_ADMIN role with GRANT_GLOBAL_ADMINS privilege, checked against the resolver-local un-widened policy (sec-server-2/corr-server-1 fix), NOT roleSet.authorization', async () => {
@@ -325,6 +336,12 @@ describe('PlatformRoleResolverMutations', () => {
       (
         notificationPlatformAdapter.platformGlobalRoleChanged as Mock
       ).mockResolvedValue(undefined);
+      // QA C1-note fix: default to "none of the four LICENSE_PLUS_ROLES is
+      // still held" (the just-removed role, and no other) with PLUS
+      // previously granted — i.e. the pre-existing single-role revoke case
+      // the tests below were written against.
+      (roleSetService.isInRole as Mock).mockResolvedValue(false);
+      (actorService.hasValidCredential as Mock).mockResolvedValue(true);
     });
 
     it('should remove ADMIN role with GRANT_GLOBAL_ADMINS privilege', async () => {
@@ -456,6 +473,101 @@ describe('PlatformRoleResolverMutations', () => {
         (module.get(PlatformRoleAssignmentAuditService) as any)
           .recordRevokeSuccess
       ).not.toHaveBeenCalled();
+    });
+  });
+
+  // 027-platform-role-redesign (QA C1-note fix, 2026-09-25): all four
+  // LICENSE_PLUS_ROLES carry the SAME ACCOUNT_LICENSE_PLUS entitlement. The
+  // pre-fix code granted/revoked unconditionally on the SINGLE role event
+  // that triggered the call, so revoking one of the four while another was
+  // still held stripped PLUS regardless of the actor's true membership, and
+  // granting a second licence role while PLUS was already held wrote a
+  // duplicate credential row. These pin `syncAccountLicensePlus`'s
+  // reconciliation — computed from `roleSetService.isInRole` across all four
+  // roles, compared against `actorService.hasValidCredential` — rather than
+  // the single triggering role.
+  describe('syncAccountLicensePlus reconciliation (QA C1-note)', () => {
+    beforeEach(() => {
+      (platformService.getRoleSetOrFail as Mock).mockResolvedValue(mockRoleSet);
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+      (roleSetService.assignActorToRole as Mock).mockResolvedValue(undefined);
+      (roleSetService.removeActorFromRole as Mock).mockResolvedValue(undefined);
+      (userLookupService.getUserByIdOrFail as Mock).mockResolvedValue(mockUser);
+      (
+        notificationPlatformAdapter.platformGlobalRoleChanged as Mock
+      ).mockResolvedValue(undefined);
+    });
+
+    it('does NOT revoke PLUS when another LICENSE_PLUS_ROLES role is still held (fails on the head, which revokes unconditionally)', async () => {
+      (roleSetService.isInRole as Mock).mockImplementation(
+        (_actorID: string, _roleSet: unknown, role: RoleName) =>
+          Promise.resolve(role === RoleName.FEATURE_BETA_TESTER)
+      );
+      (actorService.hasValidCredential as Mock).mockResolvedValue(true);
+
+      await resolver.removePlatformRoleFromUser(mockActorContext, {
+        actorID: 'user-target',
+        role: RoleName.PLATFORM_BETA_TESTER,
+      } as any);
+
+      expect(actorService.revokeCredential).not.toHaveBeenCalledWith(
+        'account-1',
+        expect.objectContaining({
+          type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
+        })
+      );
+    });
+
+    it('does NOT grant a duplicate PLUS credential when it is already held (fails on the head, which grants unconditionally)', async () => {
+      // FEATURE_VC_CAMPAIGN is rule-engine-governed, so this needs real
+      // credentials for resolveA1A2InitiatorRole's success-audit attribution
+      // (same as the pre-existing FEATURE_VC_CAMPAIGN tests above).
+      const actorContextWithCredentials = {
+        actorID: 'actor-1',
+        credentials: [{ type: AuthorizationCredential.PLATFORM_USERS_ADMIN }],
+      } as any;
+      (roleSetService.isInRole as Mock).mockImplementation(
+        (_actorID: string, _roleSet: unknown, role: RoleName) =>
+          Promise.resolve(role === RoleName.FEATURE_VC_CAMPAIGN)
+      );
+      (actorService.hasValidCredential as Mock).mockResolvedValue(true);
+
+      await resolver.assignPlatformRoleToUser(actorContextWithCredentials, {
+        actorID: 'user-target',
+        role: RoleName.FEATURE_VC_CAMPAIGN,
+      } as any);
+
+      expect(actorService.grantCredentialOrFail).not.toHaveBeenCalledWith(
+        'account-1',
+        expect.objectContaining({
+          type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
+        })
+      );
+    });
+
+    it('still revokes PLUS when the only held licence role is removed', async () => {
+      (roleSetService.isInRole as Mock).mockResolvedValue(false);
+      (actorService.hasValidCredential as Mock).mockResolvedValue(true);
+      (actorService.revokeCredential as Mock).mockResolvedValue(undefined);
+      (accountService.getAccountOrFail as Mock).mockResolvedValue({
+        id: 'account-1',
+      });
+      (accountLicenseService.applyLicensePolicy as Mock).mockResolvedValue([]);
+      (licenseService.saveAll as Mock).mockResolvedValue([]);
+
+      await resolver.removePlatformRoleFromUser(mockActorContext, {
+        actorID: 'user-target',
+        role: RoleName.PLATFORM_BETA_TESTER,
+      } as any);
+
+      expect(actorService.revokeCredential).toHaveBeenCalledWith(
+        'account-1',
+        expect.objectContaining({
+          type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
+        })
+      );
     });
   });
 
@@ -624,9 +736,11 @@ describe('PlatformRoleResolverMutations', () => {
           targetKind: 'user',
           targetId: 'user-target',
           role: RoleName.PLATFORM_ROLES_ADMIN,
-          rejectedRule: expect.stringContaining(
-            'grant-global-admins required to assign role'
-          ),
+          // server-C1-14 fix: the audit trail stores the STABLE ruleId
+          // (`error.details.ruleId`), not the free-text exception message —
+          // the message can carry a dynamic role name and is unsuitable for
+          // grouping/alerting on the rejected rule.
+          rejectedRule: 'assigner-capability',
         })
       );
       expect(realRoleSetService.assignActorToRole).not.toHaveBeenCalled();
@@ -884,9 +998,9 @@ describe('PlatformRoleResolverMutations', () => {
           targetKind: 'organization',
           targetId: 'org-target',
           role: RoleName.GLOBAL_ADMIN,
-          rejectedRule: expect.stringContaining(
-            'may not be assigned or removed through the organization surface'
-          ),
+          // server-C1-14 fix: the stable ruleId, not the free-text message
+          // (which is kept on the thrown exception itself).
+          rejectedRule: 'holder-kind',
         })
       );
     });
