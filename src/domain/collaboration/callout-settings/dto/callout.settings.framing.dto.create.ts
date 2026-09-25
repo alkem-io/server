@@ -3,6 +3,7 @@ import { Type } from 'class-transformer';
 import { IsOptional, ValidateNested } from 'class-validator';
 import { CreateCalloutContributorsSettingsInput } from './callout.settings.contributors.dto.create';
 import { CreateCalloutSelectionSettingsInput } from './callout.settings.selection.dto.create';
+import { CreateCalloutSpacesSettingsInput } from './callout.settings.spaces.dto.create';
 
 @InputType()
 @ObjectType('CreateCalloutSettingsFramingData')
@@ -32,4 +33,14 @@ export class CreateCalloutSettingsFramingInput {
   @ValidateNested()
   @Type(() => CreateCalloutSelectionSettingsInput)
   selection?: CreateCalloutSelectionSettingsInput;
+
+  @Field(() => CreateCalloutSpacesSettingsInput, {
+    nullable: true,
+    description:
+      'Card-variant settings. Provide only when framing.type = SPACES.',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateCalloutSpacesSettingsInput)
+  spaces?: CreateCalloutSpacesSettingsInput;
 }

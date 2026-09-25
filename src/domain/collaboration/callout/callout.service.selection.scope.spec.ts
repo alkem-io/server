@@ -43,6 +43,13 @@ describe('CalloutService — selection scope guard (T008)', () => {
       }
       return s;
     }),
+    // Pass-through stub: this suite exercises the selection scope guard, not
+    // the card-variant normalizer — leave the settings object otherwise
+    // untouched.
+    validateAndNormalizeSpacesSettings: vi.fn((_, s) => s),
+    // No-op: the up-front off-kind block check is covered with the real
+    // implementation in callout.service.spaces.settings.spec.ts.
+    validateSettingsBlocksForFramingType: vi.fn(),
   };
 
   const mockContributionDefaultsService = {
