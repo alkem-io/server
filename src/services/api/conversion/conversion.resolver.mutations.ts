@@ -57,7 +57,10 @@ export class ConversionResolverMutations {
   ) {
     this.authorizationGlobalAdminPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
-        [AuthorizationRoleGlobal.GLOBAL_ADMIN],
+        [
+          AuthorizationRoleGlobal.GLOBAL_ADMIN,
+          AuthorizationRoleGlobal.GLOBAL_SUPPORT,
+        ],
         [AuthorizationPrivilege.PLATFORM_ADMIN],
         GLOBAL_POLICY_CONVERSION_GLOBAL_ADMINS
       );
