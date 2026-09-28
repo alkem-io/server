@@ -43,7 +43,7 @@ export abstract class IContributorCollectionItem {
   @Field(() => [String], {
     nullable: true,
     description:
-      'All contributor types. The full tag list of the first non-empty profile tagset — Users: skills, then keywords; Organizations and Virtual Contributors: keywords, then capabilities. Never merged, never the default tagset; blank tags removed. Empty list when none. Clients decide how many to show.',
+      'All contributor types. The profile tagsets merged in order — Users: skills, then keywords; Organizations and Virtual Contributors: keywords, then capabilities. Blank tags removed; duplicates (ignoring case) kept once, first occurrence wins; never the default tagset. Empty list when none. Clients decide how many to show.',
   })
   tags?: string[];
 

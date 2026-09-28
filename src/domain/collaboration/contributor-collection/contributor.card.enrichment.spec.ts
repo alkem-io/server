@@ -20,15 +20,18 @@ describe('normalizeTagline', () => {
 });
 
 describe('pickContributorTags', () => {
-  it('USER: skills and keywords both present -> skills only, stored order', () => {
+  it('USER: 2 skills and 4 keywords -> all 6, skills first, stored order', () => {
     const result = pickContributorTags(ActorType.USER, [
+      {
+        name: TagsetReservedName.KEYWORDS,
+        tags: ['k1', 'k2', 'k3', 'k4'],
+      } as any,
       { name: TagsetReservedName.SKILLS, tags: ['b', 'a'] } as any,
-      { name: TagsetReservedName.KEYWORDS, tags: ['k1'] } as any,
     ]);
-    expect(result).toEqual(['b', 'a']);
+    expect(result).toEqual(['b', 'a', 'k1', 'k2', 'k3', 'k4']);
   });
 
-  it('USER: empty skills [] -> falls back to keywords', () => {
+  it('USER: empty skills [] -> keywords only', () => {
     const result = pickContributorTags(ActorType.USER, [
       { name: TagsetReservedName.SKILLS, tags: [] } as any,
       { name: TagsetReservedName.KEYWORDS, tags: ['k1'] } as any,
@@ -36,27 +39,58 @@ describe('pickContributorTags', () => {
     expect(result).toEqual(['k1']);
   });
 
-  it('USER: skills with only blank entries -> falls back to keywords', () => {
+  it('blank entries are dropped from every tagset', () => {
     const result = pickContributorTags(ActorType.USER, [
-      { name: TagsetReservedName.SKILLS, tags: ['', ' '] } as any,
+      { name: TagsetReservedName.SKILLS, tags: ['', ' ', 's1'] } as any,
+      { name: TagsetReservedName.KEYWORDS, tags: ['k1', '  '] } as any,
+    ]);
+    expect(result).toEqual(['s1', 'k1']);
+  });
+
+  it('duplicates across and within tagsets are kept once, ignoring case and surrounding whitespace; first spelling wins', () => {
+    const result = pickContributorTags(ActorType.USER, [
+      {
+        name: TagsetReservedName.SKILLS,
+        tags: ['Policy', 'Energy', 'energy'],
+      } as any,
+      {
+        name: TagsetReservedName.KEYWORDS,
+        tags: ['policy', ' ENERGY ', 'Water'],
+      } as any,
+    ]);
+    expect(result).toEqual(['Policy', 'Energy', 'Water']);
+  });
+
+  it('ORGANIZATION: keywords then capabilities, merged', () => {
+    const result = pickContributorTags(ActorType.ORGANIZATION, [
+      { name: TagsetReservedName.CAPABILITIES, tags: ['Funding'] } as any,
+      { name: TagsetReservedName.KEYWORDS, tags: ['Climate'] } as any,
+    ]);
+    expect(result).toEqual(['Climate', 'Funding']);
+  });
+
+  it('VIRTUAL_CONTRIBUTOR: keywords then capabilities, merged', () => {
+    const result = pickContributorTags(ActorType.VIRTUAL_CONTRIBUTOR, [
+      { name: TagsetReservedName.KEYWORDS, tags: ['Research'] } as any,
+      { name: TagsetReservedName.CAPABILITIES, tags: ['Summaries'] } as any,
+    ]);
+    expect(result).toEqual(['Research', 'Summaries']);
+  });
+
+  it('ORGANIZATION: skills are never included', () => {
+    const result = pickContributorTags(ActorType.ORGANIZATION, [
+      { name: TagsetReservedName.SKILLS, tags: ['x'] } as any,
       { name: TagsetReservedName.KEYWORDS, tags: ['k1'] } as any,
     ]);
     expect(result).toEqual(['k1']);
   });
 
-  it('ORGANIZATION: empty keywords [] -> falls back to capabilities', () => {
-    const result = pickContributorTags(ActorType.ORGANIZATION, [
-      { name: TagsetReservedName.KEYWORDS, tags: [] } as any,
-      { name: TagsetReservedName.CAPABILITIES, tags: ['Funding'] } as any,
-    ]);
-    expect(result).toEqual(['Funding']);
-  });
-
-  it('only a default tagset present -> []', () => {
+  it('the default tagset is never included', () => {
     const result = pickContributorTags(ActorType.USER, [
       { name: TagsetReservedName.DEFAULT, tags: ['x'] } as any,
+      { name: TagsetReservedName.SKILLS, tags: ['s1'] } as any,
     ]);
-    expect(result).toEqual([]);
+    expect(result).toEqual(['s1']);
   });
 
   it('50 tags -> all 50 returned (no cap)', () => {

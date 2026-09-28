@@ -9,8 +9,8 @@ import { ITagset } from '@domain/common/tagset/tagset.interface';
 
 type TagsetLike = Pick<ITagset, 'name' | 'tags'>;
 
-// Per-type preference order for the "first non-empty tagset wins" rule.
-// `default`, `flow-state` and `task` are never candidates.
+// Per-type order in which tagsets are merged into the card's tag list.
+// `default`, `flow-state` and `task` are never included.
 const TAG_PREFERENCE_ORDER: Partial<Record<ActorType, TagsetReservedName[]>> = {
   [ActorType.USER]: [TagsetReservedName.SKILLS, TagsetReservedName.KEYWORDS],
   [ActorType.ORGANIZATION]: [
@@ -32,10 +32,10 @@ export function normalizeTagline(value?: string | null): string | undefined {
 }
 
 /**
- * The full tag list of the first non-empty tagset in the per-type preference
- * order. A tagset is "non-empty" once its blank tags are dropped; blank-only
- * (or no) tags moves on to the next candidate name. Never merges across
- * tagsets, never falls back to the default tagset, and applies no cap.
+ * The per-type tagsets merged in preference order, each in stored order. Blank
+ * tags are dropped and duplicates — compared trimmed and ignoring case — are
+ * kept once, at their first occurrence and with that spelling. Never includes
+ * the default tagset, and applies no cap.
  */
 export function pickContributorTags(
   type: ActorType,
@@ -45,17 +45,20 @@ export function pickContributorTags(
   if (!order) {
     return [];
   }
+  const seen = new Set<string>();
+  const merged: string[] = [];
   for (const name of order) {
     const tagset = tagsets.find(t => t.name === name);
-    if (!tagset) {
-      continue;
-    }
-    const nonBlank = tagset.tags.filter(tag => tag.trim().length > 0);
-    if (nonBlank.length > 0) {
-      return nonBlank;
+    for (const tag of tagset?.tags ?? []) {
+      const key = tag.trim().toLowerCase();
+      if (key.length === 0 || seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      merged.push(tag);
     }
   }
-  return [];
+  return merged;
 }
 
 /**

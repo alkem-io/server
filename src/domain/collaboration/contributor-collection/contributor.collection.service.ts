@@ -35,7 +35,7 @@ import { IContributorCollectionCounts } from './dto/contributor.collection.count
 import { IContributorCollectionItem } from './dto/contributor.collection.item';
 import { IContributorLocation } from './dto/contributor.location';
 
-// Tagset names read for the tags-preference-order enrichment, per contributor
+// Tagset names read for the merged-tags enrichment, per contributor
 // type (data-model.md §1). One narrow read covers whichever names the type
 // needs; unrelated tagsets (default, flow-state, task, …) are never fetched.
 const TAGSET_NAMES_BY_TYPE: Partial<Record<ActorType, TagsetReservedName[]>> = {
