@@ -247,7 +247,6 @@ function buildToggleableSessionStore(): ToggleableSessionStore {
 function buildFakeRedisClient() {
   const strings = new Map<string, string>();
   return {
-    strings,
     eval: vi.fn(async () => 1),
     srem: vi.fn(async () => 1),
     get: vi.fn(async (key: string) => strings.get(key) ?? null),
