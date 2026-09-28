@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'fs';
+import { existsSync, readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 
 describe('typeormCliConfig (run)', () => {
@@ -38,7 +38,7 @@ describe('typeormCliConfig (run)', () => {
     expect(migrationsGlob.endsWith(join('migrations', '*.{ts,js}'))).toBe(true);
   });
 
-  it('mechanical guard: every migration file imports only typeorm and node builtins (no path-aliased imports, which would break the plain-Node compiled CLI path)', () => {
+  it('mechanical guard: every migration file imports only typeorm, node builtins, or a relative module inside src/migrations (no path-aliased or third-party imports, which would break the plain-Node compiled CLI path)', () => {
     const migrationsDir = join(__dirname, '..', 'migrations');
     const migrationFiles = readdirSync(migrationsDir).filter(f =>
       f.endsWith('.ts')
@@ -46,19 +46,74 @@ describe('typeormCliConfig (run)', () => {
     expect(migrationFiles.length).toBeGreaterThan(0);
 
     const allowedImportPattern = /^(typeorm|node:|crypto$)/;
-    const importLineRegex = /^import\s+[^'"]*from\s+['"]([^'"]+)['"];?/gm;
+    const importLineRegex =
+      /^import\s+(?:type\s+)?[^'"]*from\s+['"]([^'"]+)['"];?/gm;
 
     const offenders: string[] = [];
     for (const file of migrationFiles) {
       const content = readFileSync(join(migrationsDir, file), 'utf-8');
       for (const match of content.matchAll(importLineRegex)) {
         const specifier = match[1];
-        if (!allowedImportPattern.test(specifier)) {
-          offenders.push(`${file}: ${specifier}`);
+        if (allowedImportPattern.test(specifier)) {
+          continue;
         }
+
+        // A RELATIVE import is fine — `tsconfig.build.json` includes
+        // `src/**/*` and the Dockerfile copies the whole of `dist/`, so
+        // `./utils/x` compiles to `dist/migrations/utils/x.js` and resolves
+        // under plain Node exactly as it does under ts-node. What breaks the
+        // compiled CLI is a PATH ALIAS (`@common/...`) — tsconfig `paths` are
+        // a compile-time fiction that Node never sees — or a third-party
+        // package that the runtime image does not install.
+        //
+        // Narrowed from "reject everything but typeorm/node" during the
+        // 027-platform-role-redesign merge. That original form would have
+        // forced `platform.role.seed.definitions.ts` to be duplicated into
+        // both the fresh-install seed migration and the upgrade migration,
+        // and the FR-011 anti-drift spec
+        // (`role.credential.map.spec.ts`) can only pin ONE copy against
+        // `RoleName`/`AuthorizationCredential` — so the two would have been
+        // free to diverge silently. Trading a tested invariant for a guard
+        // whose stated hazard does not apply here is a bad trade.
+        if (specifier.startsWith('./') || specifier.startsWith('../')) {
+          // Still prove the target is real AND inside the compiled migrations
+          // tree, so a typo or an escape into `src/` at large still fails.
+          const resolved = join(migrationsDir, file, '..', specifier);
+          const onDisk = ['.ts', '.js', '/index.ts'].some(ext =>
+            existsSync(`${resolved}${ext}`)
+          );
+          if (!onDisk) {
+            offenders.push(`${file}: ${specifier} (unresolvable)`);
+          } else if (!resolved.startsWith(migrationsDir + '/')) {
+            offenders.push(`${file}: ${specifier} (escapes src/migrations)`);
+          }
+          continue;
+        }
+
+        offenders.push(`${file}: ${specifier}`);
       }
     }
 
     expect(offenders).toEqual([]);
+  });
+
+  it('mechanical guard: no migration reaches out of src/migrations via a path alias', () => {
+    // The half of the rule above that must never be relaxed, pinned on its
+    // own so a future edit to the relative-import allowance cannot quietly
+    // take this with it.
+    const migrationsDir = join(__dirname, '..', 'migrations');
+    const files = readdirSync(migrationsDir).filter(f => f.endsWith('.ts'));
+
+    const aliasImports: string[] = [];
+    for (const file of files) {
+      const content = readFileSync(join(migrationsDir, file), 'utf-8');
+      for (const match of content.matchAll(
+        /^import\s+(?:type\s+)?[^'"]*from\s+['"](@[^'"]+)['"];?/gm
+      )) {
+        aliasImports.push(`${file}: ${match[1]}`);
+      }
+    }
+
+    expect(aliasImports).toEqual([]);
   });
 });

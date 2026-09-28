@@ -1,6 +1,7 @@
 import { CREDENTIAL_RULE_SUBSPACE_NON_MEMBER_JOIN } from '@common/constants';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
+import { RoleName } from '@common/enums/role.name';
 import { RoleSetType } from '@common/enums/role.set.type';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
@@ -543,6 +544,118 @@ describe('CommunityAuthorizationService', () => {
       expect(
         authorizationPolicyService.createCredentialRule
       ).toHaveBeenCalled();
+    });
+
+    // QA server-C1-1 (ruling (b′) "mover-only reads"): with platform-resource-
+    // admin's space READ no longer cascading, the conversion panel's member
+    // lists (`usersInRole` / `organizationsInRole` / `virtualContributorsInRole`,
+    // all READ-gated on the roleSet) need a narrow, NON-cascading READ on the
+    // roleSet itself — derived from the space's own platformRolesAccess, so it
+    // appears only where the mover is declared to READ the space.
+    describe('QA server-C1-1 — platform-resource-admin roleSet READ', () => {
+      const arrangeCommunity = () => {
+        const authorization = { credentialRules: [] };
+        const community = {
+          id: 'comm-1',
+          communication: { id: 'comms-1', updates: { id: 'upd-1' } },
+          roleSet: { id: 'rs-1', type: RoleSetType.SPACE },
+          groups: [],
+          authorization,
+        };
+        communityService.getCommunityOrFail.mockResolvedValue(community);
+        authorizationPolicyService.inheritParentAuthorization.mockReturnValue(
+          authorization
+        );
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly.mockImplementation(
+          (privileges: any, types: any, name: any) => ({
+            grantedPrivileges: privileges,
+            criterias: [...types],
+            name,
+            cascade: true,
+          })
+        );
+        authorizationPolicyService.createCredentialRule.mockReturnValue({
+          cascade: false,
+        });
+        authorizationPolicyService.appendCredentialAuthorizationRules.mockReturnValue(
+          authorization
+        );
+        communicationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+          [authorization]
+        );
+        roleSetService.getCredentialsForRoleWithParents.mockResolvedValue([]);
+        platformRolesAccessService.getCredentialsForRolesWithAccess.mockReturnValue(
+          []
+        );
+        roleSetAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([
+          authorization,
+        ]);
+      };
+      const privateSettings = {
+        privacy: { mode: 'private' },
+        membership: {
+          policy: CommunityMembershipPolicy.APPLICATIONS,
+          trustedOrganizations: [],
+          allowSubspaceAdminsToInviteMembers: false,
+        },
+      };
+      const roleSetRulesFor = (credential: AuthorizationCredential) => {
+        const additionalRules =
+          roleSetAuthorizationService.applyAuthorizationPolicy.mock.calls[0][2];
+        return additionalRules.filter((rule: any) =>
+          rule.criterias?.includes(credential)
+        );
+      };
+
+      it('adds EXACTLY one non-cascading READ rule for platform-resource-admin on the roleSet when the space declares READ for it', async () => {
+        arrangeCommunity();
+        await service.applyAuthorizationPolicy(
+          'comm-1',
+          {} as any,
+          {
+            roles: [
+              {
+                roleName: RoleName.PLATFORM_RESOURCE_ADMIN,
+                grantedPrivileges: [
+                  AuthorizationPrivilege.READ,
+                  AuthorizationPrivilege.READ_ABOUT,
+                ],
+              },
+            ],
+          } as any,
+          true,
+          privateSettings as any,
+          false
+        );
+
+        const rules = roleSetRulesFor(
+          AuthorizationCredential.PLATFORM_RESOURCE_ADMIN
+        );
+        expect(rules).toHaveLength(1);
+        expect(rules[0].criterias).toEqual([
+          AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+        ]);
+        expect(rules[0].grantedPrivileges).toEqual([
+          AuthorizationPrivilege.READ,
+        ]);
+        expect(rules[0].cascade).toBe(false);
+      });
+
+      it('adds NO platform-resource-admin rule when the space does not declare READ for it', async () => {
+        arrangeCommunity();
+        await service.applyAuthorizationPolicy(
+          'comm-1',
+          {} as any,
+          { roles: [] } as any,
+          true,
+          privateSettings as any,
+          false
+        );
+
+        expect(
+          roleSetRulesFor(AuthorizationCredential.PLATFORM_RESOURCE_ADMIN)
+        ).toHaveLength(0);
+      });
     });
 
     it('should add allowSubspaceAdminsToInviteMembers rule when enabled', async () => {

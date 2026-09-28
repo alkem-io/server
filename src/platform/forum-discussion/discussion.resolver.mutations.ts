@@ -37,10 +37,21 @@ export class DiscussionResolverMutations {
     const discussion = await this.discussionService.getDiscussionOrFail(
       deleteData.ID
     );
+    // 027-platform-role-redesign (T049, A15, FR-007(e); corr-server-7/
+    // spec-server-7 fix): gated SOLELY on PLATFORM_FORUM_MANAGE — NOT a
+    // dual path with bare DELETE. `PLATFORM_FORUM_MANAGE`'s own grant set
+    // (platform.service.authorization.ts) is already
+    // {platform-support, global-admin, global-support} ∪ legacy, so every
+    // legacy reacher this feature must preserve (T073's GLOBAL_SUPPORT
+    // platform-subtree cascade included) already holds it directly — a
+    // second bare-DELETE branch adds NOTHING for a legitimate legacy
+    // holder, but DOES let `platform-content-full-access` in through the
+    // root cascade's CRUD (T036a), which spec.md explicitly excludes from
+    // the forum family (A15 is NOT covered by the A6/A7 exception).
     await this.authorizationService.grantAccessOrFail(
       actorContext,
       discussion.authorization,
-      AuthorizationPrivilege.DELETE,
+      AuthorizationPrivilege.PLATFORM_FORUM_MANAGE,
       `delete discussion: ${discussion.id}`
     );
     return await this.discussionService.removeDiscussion(deleteData);
@@ -59,21 +70,24 @@ export class DiscussionResolverMutations {
         relations: { profile: true, comments: true, forum: true },
       }
     );
+    // 027-platform-role-redesign (T049, A15, FR-007(e); corr-server-7/
+    // spec-server-7 fix): gated SOLELY on PLATFORM_FORUM_MANAGE — see the
+    // identical comment on deleteDiscussion above.
     await this.authorizationService.grantAccessOrFail(
       actorContext,
       discussion.authorization,
-      AuthorizationPrivilege.UPDATE,
+      AuthorizationPrivilege.PLATFORM_FORUM_MANAGE,
       `Update discussion: ${discussion.id}`
     );
 
     const previousCategory = discussion.category;
 
-    // Data-integrity, not a security fix: every actor who can reach this
-    // UPDATE gate is already a strict subset of the PLATFORM_ADMIN holders
-    // the create path requires for these same
-    // categories — this makes "the active list defines what's allowed"
-    // an invariant the server enforces on category-change too, not only
-    // on create.
+    // Data-integrity, not a security fix: the admin-only category check
+    // below re-asserts the SAME forum-family privilege the UPDATE gate
+    // above already required (027 A15 — the create path requires it for
+    // these same categories) — this makes "the active list defines
+    // what's allowed" an invariant the server enforces on category-change
+    // too, not only on create.
     //
     // Scoped to an actual *change*, not to the field merely being present:
     // the edit dialog always echoes the post's current category back on
@@ -100,12 +114,10 @@ export class DiscussionResolverMutations {
         newCategory
       );
       if (isAdminOnlyForumCategory(newCategory)) {
-        const platformAuthorization =
-          await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
         await this.authorizationService.grantAccessOrFail(
           actorContext,
-          platformAuthorization,
-          AuthorizationPrivilege.PLATFORM_ADMIN,
+          discussion.authorization,
+          AuthorizationPrivilege.PLATFORM_FORUM_MANAGE,
           `User not authorized to move discussion into ${newCategory} category.`
         );
       }

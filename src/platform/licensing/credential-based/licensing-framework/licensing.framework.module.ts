@@ -4,6 +4,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LicensePlanModule } from '@platform/licensing/credential-based/license-plan/license.plan.module';
 import { LicensePolicyModule } from '@platform/licensing/credential-based/license-policy/license.policy.module';
+import { PlatformConfigurationAuditModule } from '@src/platform-admin/platform-configuration-audit/platform.configuration.audit.module';
 import { LicensingFramework } from './licensing.framework.entity';
 import { LicensingFrameworkResolverFields } from './licensing.framework.resolver.fields';
 import { LicensingFrameworkResolverMutations } from './licensing.framework.resolver.mutations';
@@ -16,6 +17,7 @@ import { LicensingFrameworkAuthorizationService } from './licensing.framework.se
     LicensePolicyModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
+    PlatformConfigurationAuditModule,
     TypeOrmModule.forFeature([LicensingFramework]),
   ],
   providers: [

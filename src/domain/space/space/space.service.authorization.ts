@@ -5,6 +5,7 @@ import {
   CREDENTIAL_RULE_SPACE_MEMBERS_READ,
   CREDENTIAL_RULE_SPACE_STORAGE_MEMBER_FILE_UPLOAD,
   CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ,
+  CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_RESOURCE_ADMIN_READ,
   CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS,
   POLICY_RULE_READ_ABOUT,
   POLICY_RULE_SPACE_CREATE_SUBSPACE,
@@ -22,7 +23,10 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
-import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
+import {
+  PlatformRolesAccessService,
+  resolveRoleCredential,
+} from '@domain/access/platform-roles-access/platform.roles.access.service';
 import { IRoleSet } from '@domain/access/role-set';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
@@ -591,13 +595,52 @@ export class SpaceAuthorizationService {
 
     switch (spaceSettings.privacy.mode) {
       case SpacePrivacyMode.PUBLIC: {
+        // QA server-C1-1 (blocking fix): credentialCriteriasWithAccess also
+        // carries platform-resource-admin, added ONLY for READ_ABOUT (the
+        // mover's About card / A9 target resolution — see
+        // getCredentialsWithVisibilityOfSpace). Reusing that same list here
+        // for the PUBLIC-mode rule would hand the mover full CASCADING READ
+        // into every callout, post and whiteboard of a public subspace under
+        // a private parent — ruling (b') is mover-only reads, never content.
+        // Exclude it from the cascading rule; its own non-cascading
+        // READ+READ_ABOUT rule (below) keeps About/profile and the A9
+        // lookups resolving.
+        const publicContentReadCriterias = credentialCriteriasWithAccess.filter(
+          criteria =>
+            criteria.type !== AuthorizationCredential.PLATFORM_RESOURCE_ADMIN
+        );
         const rule = this.authorizationPolicyService.createCredentialRule(
           [AuthorizationPrivilege.READ],
-          credentialCriteriasWithAccess,
+          publicContentReadCriterias,
           'Public spaces content is visible to all'
         );
         rule.cascade = true;
         newRules.push(rule);
+
+        // A PUBLIC L1/L2 space never runs resetToPrivateLevelZeroSpaceAuthorization
+        // (that only fires for L0, or a PRIVATE L1/L2), and inheritParentAuthorization
+        // only carries CASCADING parent rules — so without this, a PUBLIC
+        // subspace would have NO path at all for the mover's own READ. L0 is
+        // already covered unconditionally by resetToPrivateLevelZeroSpaceAuthorization,
+        // so only add it here for L1/L2 (parentSpaceRoleSet is set exactly
+        // then) to avoid a duplicate rule on L0.
+        if (parentSpaceRoleSet) {
+          const privilegesForResourceAdmin =
+            this.platformRolesAccessService.getPrivilegesForRole(
+              platformRolesWithAccess.roles,
+              RoleName.PLATFORM_RESOURCE_ADMIN
+            );
+          if (privilegesForResourceAdmin.length > 0) {
+            const resourceAdminRead =
+              this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+                privilegesForResourceAdmin,
+                [resolveRoleCredential(RoleName.PLATFORM_RESOURCE_ADMIN)],
+                CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_RESOURCE_ADMIN_READ
+              );
+            resourceAdminRead.cascade = false;
+            newRules.push(resourceAdminRead);
+          }
+        }
         break;
       }
       case SpacePrivacyMode.PRIVATE: {
@@ -786,12 +829,19 @@ export class SpaceAuthorizationService {
 
     // Allow global admins to manage platform settings
     // Later: to allow account admins to some settings?
+    // 027-platform-role-redesign (T048, A14): re-anchored off PLATFORM_ADMIN
+    // onto ACCOUNT_LICENSE_MANAGE. In Slice A the space-visibility mutation
+    // is still updateSpacePlatformSettings (renamed to
+    // adminUpdateSpaceVisibility only in Slice B, T078). Additive —
+    // platform-license-manager gains it, GLOBAL_ADMIN/GLOBAL_SUPPORT keep
+    // their pre-existing reach.
     const spacePlatformSettingsAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.PLATFORM_ADMIN],
+        [AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
         ],
         CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS
       );
@@ -815,23 +865,65 @@ export class SpaceAuthorizationService {
       newRules.push(globalRolesReadAbout);
     }
 
-    // Allow Global Spaces Read to view Spaces
-    const privilegesForGlobalSpacesRead =
+    // Allow the spaces-reader roles to view Spaces.
+    //
+    // 027-platform-role-redesign (T038, A16): this rule previously wired ONLY
+    // `GLOBAL_SPACES_READER`, so `platform-spaces-reader` — which
+    // `space.service.platform.roles.access.ts` registers with the SAME
+    // `[READ]` grant — had no path into the space-tree READ cascade at all
+    // and was denied plain READ on private spaces. That breaks the Slice A
+    // additive invariant (every new role must reach what its legacy
+    // counterpart already reaches). Live-confirmed 2026-07-30 by the
+    // role-action-matrix A16 cell. Each role gets its OWN rule derived from
+    // its OWN declared privileges rather than sharing one credential list,
+    // so the two can never silently inherit each other's grants.
+    for (const spacesReaderRole of [
+      RoleName.GLOBAL_SPACES_READER,
+      RoleName.PLATFORM_SPACES_READER,
+    ]) {
+      const privilegesForSpacesRead =
+        this.platformRolesAccessService.getPrivilegesForRole(
+          space.platformRolesAccess.roles,
+          spacesReaderRole
+        );
+      if (privilegesForSpacesRead.length > 0) {
+        const spacesReader =
+          this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+            privilegesForSpacesRead,
+            [resolveRoleCredential(spacesReaderRole)],
+            CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ
+          );
+        newRules.push(spacesReader);
+      }
+    }
+
+    // A9 (live finding F5): the resource mover needs to READ what it may
+    // move. Same per-role derivation as the readers above, so it can only
+    // ever receive the privileges `space.service.platform.roles.access.ts`
+    // declares for it ([READ, READ_ABOUT]).
+    //
+    // QA server-C1-1 (ruling (b′) "mover-only reads"): its OWN rule, and NOT
+    // cascading — the mover resolves the space it moves (A9 target
+    // resolution: the space itself, its account, its community, its
+    // subspaces), never the space's content. Before this ruling it rode the
+    // readers' cascading rule and could read every callout, post and
+    // whiteboard of every private space. The narrow per-child reads the A9
+    // panels still need (roleSet member lists, calloutsSet, a published
+    // callout) are granted on those entities themselves, also non-cascading.
+    const privilegesForResourceAdmin =
       this.platformRolesAccessService.getPrivilegesForRole(
         space.platformRolesAccess.roles,
-        RoleName.GLOBAL_SPACES_READER
+        RoleName.PLATFORM_RESOURCE_ADMIN
       );
-    if (privilegesForGlobalSpacesRead.length > 0) {
-      const globalSpacesReader =
+    if (privilegesForResourceAdmin.length > 0) {
+      const resourceAdminRead =
         this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-          this.platformRolesAccessService.getPrivilegesForRole(
-            space.platformRolesAccess.roles,
-            RoleName.GLOBAL_SPACES_READER
-          ),
-          [AuthorizationCredential.GLOBAL_SPACES_READER],
-          CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ
+          privilegesForResourceAdmin,
+          [resolveRoleCredential(RoleName.PLATFORM_RESOURCE_ADMIN)],
+          CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_RESOURCE_ADMIN_READ
         );
-      newRules.push(globalSpacesReader);
+      resourceAdminRead.cascade = false;
+      newRules.push(resourceAdminRead);
     }
 
     //

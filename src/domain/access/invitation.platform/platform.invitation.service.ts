@@ -26,6 +26,8 @@ export class PlatformInvitationService {
   private acceptedPlatformRoles: RoleName[] = [
     RoleName.PLATFORM_BETA_TESTER,
     RoleName.PLATFORM_VC_CAMPAIGN,
+    // 027: the Feature successor of platform-vc-campaign (Slice A keeps both).
+    RoleName.FEATURE_VC_CAMPAIGN,
   ];
 
   constructor(

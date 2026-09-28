@@ -1,3 +1,4 @@
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ForbiddenException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { LogContext } from '@src/common/enums';
@@ -92,7 +93,7 @@ describe('AdminMcpApiKeyResolverFields / Mutations', () => {
       platformAuthorizationPolicyService as any,
       mcpApiKeyService as any
     );
-    return { resolver, mcpApiKeyService };
+    return { resolver, authorizationService, mcpApiKeyService };
   };
 
   beforeEach(() => vi.clearAllMocks());
@@ -103,6 +104,18 @@ describe('AdminMcpApiKeyResolverFields / Mutations', () => {
       await expect(
         resolver.mcpApiKeys(nonAdminActor(), 'user-a')
       ).rejects.toThrow();
+    });
+
+    it('gates on PLATFORM_USERS_ADMIN over the platform policy (027 A5 — user-credential lifecycle), not PLATFORM_ADMIN', async () => {
+      const { resolver, authorizationService } = buildFields(true);
+      await resolver.mcpApiKeys(adminActor(), 'user-a');
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
+        expect.any(String)
+      );
     });
 
     it('an admin receives metadata with no keyHash (US3-AS4)', async () => {
@@ -138,6 +151,21 @@ describe('AdminMcpApiKeyResolverFields / Mutations', () => {
           keyID: 'k1',
         })
       ).rejects.toThrow();
+    });
+
+    it('gates on PLATFORM_USERS_ADMIN over the platform policy (027 A5), not PLATFORM_ADMIN', async () => {
+      const { resolver, authorizationService } = buildMutations(true);
+      await resolver.adminRevokeMcpApiKey(adminActor(), {
+        userID: 'user-a',
+        keyID: 'k1',
+      });
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
+        expect.any(String)
+      );
     });
 
     it('writes with subjectUserId=owner, initiatorUserId=admin, initiatorRole=PLATFORM_ADMIN (US4-AS2, R-038-6)', async () => {
