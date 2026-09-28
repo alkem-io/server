@@ -156,6 +156,29 @@ reconciling Matrix state should treat the Alkemio `conversation_membership`
 table as the source of truth and expect Matrix rooms to retain members
 Alkemio has already removed.
 
+### Finding 1 resolution: 2026-09-28 — matrix-adapter `KickUser` rework
+
+The adapter-side defect is fixed in alkem-io/matrix-adapter#82. Two causes
+were involved:
+
+- `getIntentForRoom` accepted any ghost at the kick level (PL 50) as the
+  kicker without requiring it to outrank the target, so a same-rank ghost was
+  chosen and Synapse rejected the kick. `KickUser` now picks an intent whose
+  power level is at least the kick level **and** strictly above the target's:
+  the joined bot, else a higher-ranked joined ghost, else the bot
+  admin-joined (PL 100 in rooms it created), which then leaves again.
+- Rooms reconciled from Element set every member, the creator included, to
+  PL 50, so nobody can kick there. In that case a joined, invited or knocking
+  target leaves through its own account; a target with no membership is
+  already out and nothing is sent.
+
+Removal through `batchRemoveMember` is therefore expected to succeed on the
+Matrix side. The authoritative local removal in
+`ConversationService.removeMember` stays as the fallback for genuine
+failures; its warning now reads "Matrix removal rejected". In rooms where
+nobody outranks the removed member, Matrix history shows them as having left
+rather than been removed, and the removal reason is not recorded there.
+
 ---
 
 ### Finding 2: [Date - Author]

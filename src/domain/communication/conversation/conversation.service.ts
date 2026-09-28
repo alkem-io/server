@@ -482,23 +482,22 @@ export class ConversationService {
       );
     } catch (error) {
       if (error instanceof CommunicationAdapterException) {
-        // sec-server-11: group-conversation kicks are known to be rejected
-        // by Matrix with M_FORBIDDEN/insufficient-power-level for rooms
-        // whose Matrix-side creator/power-level holder differs from the
-        // bot account — a matrix-adapter defect, out of scope for this repo
-        // (see docs/matrix-admin-reflection.md, Finding 1). Until that
-        // lands, Alkemio must stay authoritative for its OWN membership and
-        // notification targeting: a user must always have a way to leave
-        // (or be removed from) a group conversation on the Alkemio side,
-        // even when the underlying Matrix kick is rejected — otherwise
-        // consent, once bypassed by enrollment into a group, could never be
-        // withdrawn per-conversation short of a global settings toggle.
-        // Remove the local membership (notification recipients are re-read
-        // from that table at send time — this alone stops all further
-        // targeting) and log the Matrix-side divergence for manual
-        // reconciliation, rather than surfacing the failure to the caller.
+        // The adapter removes a member by kicking with an account that
+        // outranks them, or — in rooms where nobody does — by having the
+        // member leave through their own account, so a rejection here is a
+        // genuine failure rather than a routine one. Alkemio still stays
+        // authoritative for its OWN membership and notification targeting:
+        // a user must always have a way to leave (or be removed from) a
+        // group conversation on the Alkemio side, even when Matrix rejects
+        // the removal — otherwise consent, once bypassed by enrollment into
+        // a group, could never be withdrawn per-conversation short of a
+        // global settings toggle. Remove the local membership (notification
+        // recipients are re-read from that table at send time — this alone
+        // stops all further targeting) and log the Matrix-side divergence
+        // for manual reconciliation, rather than surfacing the failure to
+        // the caller (see docs/matrix-admin-reflection.md, Finding 1).
         this.logger.warn?.(
-          `removeMember: Matrix kick rejected for actor ${memberActorId} in conversation ${conversationId} (${error.message}) — proceeding with authoritative local removal; Matrix-side room membership may now diverge, see docs/matrix-admin-reflection.md`,
+          `removeMember: Matrix removal rejected for actor ${memberActorId} in conversation ${conversationId} (${error.message}) — proceeding with authoritative local removal; Matrix-side room membership may now diverge, see docs/matrix-admin-reflection.md`,
           LogContext.COMMUNICATION_CONVERSATION
         );
         await this.completeLocalMemberRemoval(
