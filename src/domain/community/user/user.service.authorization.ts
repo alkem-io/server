@@ -1,4 +1,5 @@
 import {
+  CREDENTIAL_RULE_TYPES_PLATFORM_USERS_ADMIN,
   CREDENTIAL_RULE_TYPES_USER_AUTHORIZATION_RESET,
   CREDENTIAL_RULE_TYPES_USER_GLOBAL_COMMUNITY_READ,
   CREDENTIAL_RULE_TYPES_USER_PLATFORM_ADMIN,
@@ -205,6 +206,36 @@ export class UserAuthorizationService {
     globalAdminPlatformAdminNotInherited.cascade = false;
     newRules.push(globalAdminPlatformAdminNotInherited);
 
+    // 027-platform-role-redesign (T060, US2): PLATFORM_USERS_ADMIN — the
+    // user-record family (A4/A5): login email change, identity/account
+    // deletion & reset, and reading user personal data to support those.
+    // Additive: {owning role} ∪ legacy (FR-007(d)).
+    //
+    // ⚠ DEVIATION FROM THE LITERAL TASK TEXT, RECORDED (Slice A invariant):
+    // T060 also asks to "narrow READ_USER_PII / READ_USER_SETTINGS ... no
+    // standalone broad-PII reader survives" — that would REMOVE
+    // GLOBAL_COMMUNITY_READ's existing PII-read grant below, which is a
+    // legacy-grant narrowing forbidden in the additive slice. Only the
+    // ADDITIVE half is done here (PLATFORM_USERS_ADMIN gains PLATFORM_ADMIN
+    // and PII/settings read); the narrowing is Slice B's (T076-adjacent)
+    // work, alongside dropping the other legacy credentials.
+    const platformUsersAdmin =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_USERS_ADMIN],
+        [
+          AuthorizationCredential.PLATFORM_USERS_ADMIN,
+          // A4's legacy reachers (today's PLATFORM_ADMIN):
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+          // A5's legacy reachers (today's PLATFORM_SETTINGS_ADMIN):
+          AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+        ],
+        CREDENTIAL_RULE_TYPES_PLATFORM_USERS_ADMIN
+      );
+    platformUsersAdmin.cascade = false;
+    newRules.push(platformUsersAdmin);
+
     const communityAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.READ],
@@ -263,6 +294,8 @@ export class UserAuthorizationService {
     );
     newRules.push(userSelfAdmin);
 
+    // 027-platform-role-redesign (T060): platform-users-admin added
+    // additively for READ_USER_SETTINGS (needed to support A4/A5).
     const communityReader =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [
@@ -272,6 +305,7 @@ export class UserAuthorizationService {
         [
           AuthorizationCredential.GLOBAL_COMMUNITY_READ,
           AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.PLATFORM_USERS_ADMIN,
         ],
         CREDENTIAL_RULE_USER_READ
       );
@@ -297,6 +331,15 @@ export class UserAuthorizationService {
     });
     readUserPiiCredentials.push({
       type: AuthorizationCredential.GLOBAL_COMMUNITY_READ,
+      resourceID: '',
+    });
+    // 027-platform-role-redesign (T060): platform-users-admin needs PII read
+    // to support the user-record family (A4/A5). Additive only — narrowing
+    // this list (dropping GLOBAL_COMMUNITY_READ's standalone broad-PII
+    // access) is Slice B work; see the comment on the PLATFORM_USERS_ADMIN
+    // rule above for why it is not done here.
+    readUserPiiCredentials.push({
+      type: AuthorizationCredential.PLATFORM_USERS_ADMIN,
       resourceID: '',
     });
 

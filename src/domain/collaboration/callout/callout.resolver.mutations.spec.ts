@@ -1,6 +1,7 @@
 import { SUBSCRIPTION_CALLOUT_POST_CREATED } from '@common/constants';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { CalloutAllowedActors } from '@common/enums/callout.allowed.contributors';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
@@ -26,6 +27,7 @@ import { WhiteboardDraftService } from '@domain/common/whiteboard-draft';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
+import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -43,6 +45,7 @@ vi.mock('@common/utils/file.util', () => ({
 }));
 
 describe('CalloutResolverMutations', () => {
+  let module: TestingModule;
   let resolver: CalloutResolverMutations;
   let calloutService: CalloutService;
   let contributionDefaultSourceService: CalloutContributionDefaultSourceService;
@@ -69,7 +72,7 @@ describe('CalloutResolverMutations', () => {
     // the resolved buffer so importCollaboraDocument never touches a real stream.
     vi.mocked(streamToBuffer).mockResolvedValue(Buffer.from('test'));
 
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [
         CalloutResolverMutations,
         MockCacheManager,
@@ -134,6 +137,9 @@ describe('CalloutResolverMutations', () => {
       } as any;
       vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
       vi.mocked(calloutService.deleteCallout).mockResolvedValue(callout);
+      // 027-platform-role-redesign (T043): the dual-path check calls
+      // isAccessGranted before falling through to grantAccessOrFail.
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(false);
 
       const actorContext = { actorID: 'user-1' } as any;
 
@@ -196,6 +202,73 @@ describe('CalloutResolverMutations', () => {
         calloutAuthorizationService.applyAuthorizationPolicy
       ).toHaveBeenCalled();
       expect(authorizationPolicyService.saveAll).toHaveBeenCalled();
+    });
+
+    // 027 A7 (R-F.2 sandbox walk, 2026-09-16): a CALLOUT template's content is
+    // a callout the client edits through THIS mutation (`UpdateCalloutTemplate`
+    // → `updateCallout`), and its policy carries Platform Support's cascaded
+    // PLATFORM_SUPPORT_ORG_RESOURCES — but the gate only ever asked for UPDATE,
+    // so Support could create and delete templates in an organization's pack
+    // and not edit one. Dual path, SCOPED to template content: the same
+    // cascade reaches every callout inside an organization's spaces, and
+    // FR-008(a) keeps Support out of those unless the space opts in.
+    describe('Platform Support on template content (A7 dual path)', () => {
+      const arrangeSupportHolding = (isTemplate: boolean) => {
+        const callout = {
+          id: 'callout-t',
+          isTemplate,
+          authorization: { id: 'auth-t' },
+        } as any;
+        vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+        vi.mocked(calloutService.updateCallout).mockResolvedValue(callout);
+        vi.mocked(
+          (resolver as any).roomResolverService
+            .getRoleSetAndPlatformRolesWithAccessForCallout
+        ).mockResolvedValue({
+          roleSet: { id: 'rs-1' },
+          platformRolesAccess: { roles: [] },
+        });
+        vi.mocked(
+          calloutAuthorizationService.applyAuthorizationPolicy
+        ).mockResolvedValue([]);
+        // Holds ONLY Support's privilege on the callout — never UPDATE.
+        vi.mocked(authorizationService.isAccessGranted).mockImplementation(
+          ((_a: unknown, _p: unknown, privilege: AuthorizationPrivilege) =>
+            privilege ===
+            AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES) as any
+        );
+        return callout;
+      };
+
+      it('PLATFORM_SUPPORT_ORG_RESOURCES alone updates a TEMPLATE callout without UPDATE', async () => {
+        arrangeSupportHolding(true);
+        const actorContext = { actorID: 'support' } as any;
+
+        await resolver.updateCallout(actorContext, {
+          ID: 'callout-t',
+          framing: {},
+        } as any);
+
+        expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+        expect(calloutService.updateCallout).toHaveBeenCalled();
+      });
+
+      it('the same privilege does NOT open a non-template callout — falls through to the owner UPDATE check', async () => {
+        const callout = arrangeSupportHolding(false);
+        const actorContext = { actorID: 'support' } as any;
+
+        await resolver.updateCallout(actorContext, {
+          ID: 'callout-t',
+          framing: {},
+        } as any);
+
+        expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+          actorContext,
+          callout.authorization,
+          AuthorizationPrivilege.UPDATE,
+          expect.any(String)
+        );
+      });
     });
 
     it('resolves an ID-only source Callout into internal default content before update', async () => {
@@ -2234,6 +2307,80 @@ describe('CalloutResolverMutations', () => {
         expect.anything(),
         AuthorizationPrivilege.CONTRIBUTE,
         expect.any(String)
+      );
+    });
+  });
+  // ===================================================================
+  // qual-server-12 + qual-server-13 (2026-07-31) — two `recordEventForActor`
+  // sites here, neither asserted. `deleteCallout` is an A8 DUAL-PATH surface
+  // whose existing suite stubs `isAccessGranted` to `false`, so the PLATFORM
+  // branch (and its FR-018a audit write) never executed;
+  // `updateCalloutPublishInfo` is SINGLE-path, so it must always record.
+  // ===================================================================
+  describe('A8 audit coverage (qual-server-12/13)', () => {
+    const actorContext = { actorID: 'actor-1' } as any;
+    const callout = { id: 'callout-1', authorization: { id: 'auth-1' } } as any;
+
+    const grantOnly = (privilege: AuthorizationPrivilege) =>
+      (authorizationService as any).isAccessGranted.mockImplementation(
+        (_a: any, _p: any, requested: any) => requested === privilege
+      );
+
+    const resourceAudit = () => module.get(PlatformResourceAuditService) as any;
+
+    beforeEach(() => {
+      (calloutService as any).getCalloutOrFail.mockResolvedValue(callout);
+      (calloutService as any).deleteCallout.mockResolvedValue(callout);
+      (calloutService as any).updateCalloutPublishInfo.mockResolvedValue(
+        callout
+      );
+      (authorizationService as any).grantAccessOrFail.mockReturnValue(
+        undefined
+      );
+    });
+
+    it('deleteCallout records a `deleted` event on the PLATFORM branch', async () => {
+      grantOnly(AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS);
+
+      await resolver.deleteCallout(actorContext, { ID: 'callout-1' } as any);
+
+      expect(resourceAudit().recordEventForActor).toHaveBeenCalledWith(
+        actorContext,
+        expect.arrayContaining([
+          AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+        ]),
+        expect.any(Array),
+        expect.objectContaining({
+          resourceKind: 'callout',
+          resourceId: 'callout-1',
+          outcome: 'deleted',
+        })
+      );
+    });
+
+    it('deleteCallout records NOTHING on the OWNER branch', async () => {
+      grantOnly(AuthorizationPrivilege.DELETE);
+
+      await resolver.deleteCallout(actorContext, { ID: 'callout-1' } as any);
+
+      expect(resourceAudit().recordEventForActor).not.toHaveBeenCalled();
+    });
+
+    it('updateCalloutPublishInfo always records — it is single-path', async () => {
+      await resolver.updateCalloutPublishInfo(actorContext, {
+        calloutID: 'callout-1',
+        publisherID: 'user-1',
+      } as any);
+
+      expect(resourceAudit().recordEventForActor).toHaveBeenCalledWith(
+        actorContext,
+        expect.any(Array),
+        expect.any(Array),
+        expect.objectContaining({
+          resourceKind: 'callout-publisher',
+          resourceId: 'callout-1',
+          outcome: 'visibility_changed',
+        })
       );
     });
   });

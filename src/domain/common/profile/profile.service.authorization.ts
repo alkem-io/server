@@ -1,6 +1,7 @@
 import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
@@ -20,7 +21,12 @@ export class ProfileAuthorizationService {
   async applyAuthorizationPolicy(
     profileID: string,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    credentialRulesFromParent: IAuthorizationPolicyRuleCredential[] = []
+    credentialRulesFromParent: IAuthorizationPolicyRuleCredential[] = [],
+    // QA server-C2-c: privilege rules do not cascade, so a rule a caller
+    // wants on the whole profile subtree is threaded down explicitly and
+    // appended to EACH policy below (profile, references, visuals, storage
+    // bucket). Tagsets and the bucket's documents are deliberately excluded.
+    privilegeRulesFromParent: IAuthorizationPolicyRulePrivilege[] = []
   ): Promise<IAuthorizationPolicy[]> {
     const profile = await this.profileService.getProfileOrFail(profileID, {
       loadEagerRelations: false,
@@ -94,15 +100,21 @@ export class ProfileAuthorizationService {
         parentAuthorization
       );
     profile.authorization.credentialRules.push(...credentialRulesFromParent);
+    profile.authorization = this.appendThreadedPrivilegeRules(
+      profile.authorization,
+      privilegeRulesFromParent
+    );
 
     updatedAuthorizations.push(profile.authorization);
 
     for (const reference of profile.references) {
-      reference.authorization =
+      reference.authorization = this.appendThreadedPrivilegeRules(
         this.authorizationPolicyService.inheritParentAuthorization(
           reference.authorization,
           profile.authorization
-        );
+        ),
+        privilegeRulesFromParent
+      );
       updatedAuthorizations.push(reference.authorization);
     }
 
@@ -116,21 +128,37 @@ export class ProfileAuthorizationService {
     }
 
     for (const visual of profile.visuals) {
-      visual.authorization =
+      visual.authorization = this.appendThreadedPrivilegeRules(
         this.visualAuthorizationService.applyAuthorizationPolicy(
           visual,
           profile.authorization
-        );
+        ),
+        privilegeRulesFromParent
+      );
       updatedAuthorizations.push(visual.authorization);
     }
 
     const storageBucketAuthorizations =
       await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
         profile.storageBucket,
-        profile.authorization
+        profile.authorization,
+        privilegeRulesFromParent
       );
     updatedAuthorizations.push(...storageBucketAuthorizations);
 
     return updatedAuthorizations;
+  }
+
+  private appendThreadedPrivilegeRules(
+    authorization: IAuthorizationPolicy,
+    privilegeRules: IAuthorizationPolicyRulePrivilege[]
+  ): IAuthorizationPolicy {
+    if (privilegeRules.length === 0) {
+      return authorization;
+    }
+    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      authorization,
+      privilegeRules
+    );
   }
 }

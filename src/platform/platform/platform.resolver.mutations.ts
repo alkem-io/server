@@ -1,3 +1,4 @@
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -12,10 +13,22 @@ import { IPlatformSettings } from '@platform/platform-settings/platform.settings
 import { PlatformSettingsService } from '@platform/platform-settings/platform.settings.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor, Profiling } from '@src/common/decorators';
+import { PlatformConfigurationAuditService } from '@src/platform-admin/platform-configuration-audit/platform.configuration.audit.service';
 import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
 import { IPlatform } from './platform.interface';
 import { PlatformService } from './platform.service';
 import { PlatformAuthorizationService } from './platform.service.authorization';
+
+/** T058 — A10's declared owner/legacy-reachers (T045's grant, `platform.service.authorization.ts`). */
+const A10_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
+  AuthorizationCredential.PLATFORM_SETTINGS_ADMIN,
+];
+const A10_LEGACY_REACHERS: readonly AuthorizationCredential[] = [
+  AuthorizationCredential.GLOBAL_ADMIN,
+  AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+  AuthorizationCredential.GLOBAL_SUPPORT,
+  AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+];
 
 @InstrumentResolver()
 @Resolver()
@@ -27,7 +40,8 @@ export class PlatformResolverMutations {
     private platformAuthorizationService: PlatformAuthorizationService,
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
     private platformSettingsService: PlatformSettingsService,
-    private platformOperationsAuditService: PlatformOperationsAuditService
+    private platformOperationsAuditService: PlatformOperationsAuditService,
+    private readonly platformConfigurationAuditService: PlatformConfigurationAuditService
   ) {}
 
   @Mutation(() => IPlatform, {
@@ -89,6 +103,19 @@ export class PlatformResolverMutations {
     );
     await this.platformService.savePlatform(platform);
 
+    // T058 — A10, single-path surface: every successful call is, by
+    // construction, authorized by PLATFORM_SETTINGS_ADMIN.
+    await this.platformConfigurationAuditService.recordChangeForActor(
+      actorContext,
+      A10_INTENDED_OWNERS,
+      A10_LEGACY_REACHERS,
+      {
+        setting: 'platformSettings',
+        newValue: settingsData.integration,
+        outcome: 'success',
+      }
+    );
+
     return platform.settings;
   }
 
@@ -104,7 +131,7 @@ export class PlatformResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       platform.authorization,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN, // 027-platform-role-redesign T045: A10, re-anchored off PLATFORM_ADMIN
       `add iframe URL: ${whitelistedURL}`
     );
 
@@ -114,6 +141,17 @@ export class PlatformResolverMutations {
         whitelistedURL
       );
     await this.platformService.savePlatform(platform);
+
+    await this.platformConfigurationAuditService.recordChangeForActor(
+      actorContext,
+      A10_INTENDED_OWNERS,
+      A10_LEGACY_REACHERS,
+      {
+        setting: 'iframeAllowedUrls',
+        newValue: whitelistedURL,
+        outcome: 'success',
+      }
+    );
 
     return platform.settings.integration.iframeAllowedUrls;
   }
@@ -130,7 +168,7 @@ export class PlatformResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       platform.authorization,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN, // 027-platform-role-redesign T045: A10, re-anchored off PLATFORM_ADMIN
       `remove iframe URL: ${whitelistedURL}`
     );
 
@@ -140,6 +178,17 @@ export class PlatformResolverMutations {
         whitelistedURL
       );
     await this.platformService.savePlatform(platform);
+
+    await this.platformConfigurationAuditService.recordChangeForActor(
+      actorContext,
+      A10_INTENDED_OWNERS,
+      A10_LEGACY_REACHERS,
+      {
+        setting: 'iframeAllowedUrls',
+        previousValue: whitelistedURL,
+        outcome: 'success',
+      }
+    );
 
     return platform.settings.integration.iframeAllowedUrls;
   }
@@ -157,7 +206,7 @@ export class PlatformResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       platform.authorization,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN, // 027-platform-role-redesign T045: A10, re-anchored off PLATFORM_ADMIN
       `add notification email to blacklist: ${input.email}`
     );
 
@@ -167,6 +216,17 @@ export class PlatformResolverMutations {
         input.email
       );
     await this.platformService.savePlatform(platform);
+
+    await this.platformConfigurationAuditService.recordChangeForActor(
+      actorContext,
+      A10_INTENDED_OWNERS,
+      A10_LEGACY_REACHERS,
+      {
+        setting: 'notificationEmailBlacklist',
+        newValue: input.email,
+        outcome: 'success',
+      }
+    );
 
     return platform.settings.integration.notificationEmailBlacklist;
   }
@@ -184,7 +244,7 @@ export class PlatformResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       platform.authorization,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN, // 027-platform-role-redesign T045: A10, re-anchored off PLATFORM_ADMIN
       `remove notification email from blacklist: ${input.email}`
     );
 
@@ -194,6 +254,17 @@ export class PlatformResolverMutations {
         input.email
       );
     await this.platformService.savePlatform(platform);
+
+    await this.platformConfigurationAuditService.recordChangeForActor(
+      actorContext,
+      A10_INTENDED_OWNERS,
+      A10_LEGACY_REACHERS,
+      {
+        setting: 'notificationEmailBlacklist',
+        previousValue: input.email,
+        outcome: 'success',
+      }
+    );
 
     return platform.settings.integration.notificationEmailBlacklist;
   }

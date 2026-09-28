@@ -5,6 +5,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IUser } from '@domain/community/user/user.interface';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -22,6 +23,7 @@ export class UserResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
     private homeSpaceValidationService: UserSettingsHomeSpaceValidationService,
@@ -37,13 +39,61 @@ export class UserResolverMutations {
     @Args('userData') userData: UpdateUserInput
   ): Promise<IUser> {
     const user = await this.userService.getUserByIdOrFail(userData.ID);
-    await this.authorizationService.grantAccessOrFail(
-      actorContext,
-      user.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `userUpdate: ${user.id}`
+    // 027-platform-role-redesign (A21, FR-002/FR-003): a call that touches
+    // ONLY the serviceProfile marker is Platform Roles Admin's sole-owned
+    // surface and must not require the ordinary UPDATE privilege it does
+    // NOT hold (FR-003: no user-record CRUD). Skip the blanket UPDATE gate
+    // for that narrow call shape and defer entirely to the SET_SERVICE_PROFILE
+    // check already enforced against the PLATFORM authorization policy in
+    // UserService.updateUser (T052). Any input that ALSO touches another
+    // field still goes through the ordinary UPDATE gate below, so this
+    // cannot be used to smuggle a general user-record edit through.
+    if (!this.isServiceProfileOnlyUpdate(userData)) {
+      await this.authorizationService.grantAccessOrFail(
+        actorContext,
+        user.authorization,
+        AuthorizationPrivilege.UPDATE,
+        `userUpdate: ${user.id}`
+      );
+    } else {
+      // 027-platform-role-redesign (sec-server-11 fix): gate
+      // SET_SERVICE_PROFILE HERE, in the resolver, before delegating to
+      // UserService.updateUser. `grantAccessOrFail` throws immediately, no
+      // DB write — so an unprivileged or anonymous caller (whose
+      // `actorContext.actorID` is `''` for `ActorContextService.
+      // createAnonymous`) is rejected WITHOUT reaching the redundant second
+      // `getUserByIdOrFail` lookup in `UserService.updateUser` or its
+      // fail-closed rejection-audit writer, whose INSERT previously failed
+      // on an empty-string actorID and surfaced as an internal
+      // `PlatformRoleAssignmentAuditException` instead of a clean
+      // `ForbiddenException` — with the rejection going unrecorded either
+      // way. `UserService.updateUser` keeps its OWN SET_SERVICE_PROFILE
+      // check + rejection-audit write as defense in depth for any other
+      // caller of that service method.
+      const platformAuthorization =
+        await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
+      await this.authorizationService.grantAccessOrFail(
+        actorContext,
+        platformAuthorization,
+        AuthorizationPrivilege.SET_SERVICE_PROFILE,
+        `updateUser serviceProfile-only: ${user.id}`
+      );
+    }
+    return await this.userService.updateUser(userData, actorContext);
+  }
+
+  // 027-platform-role-redesign (A21): true only when the sole substantive
+  // field on the input is `serviceProfile` (ID is the addressing field, not
+  // a change).
+  private isServiceProfileOnlyUpdate(userData: UpdateUserInput): boolean {
+    return (
+      userData.serviceProfile !== undefined &&
+      userData.nameID === undefined &&
+      userData.profileData === undefined &&
+      userData.firstName === undefined &&
+      userData.lastName === undefined &&
+      userData.phone === undefined
     );
-    return await this.userService.updateUser(userData);
   }
 
   @Mutation(() => IUser, {

@@ -29,14 +29,14 @@ export class AdminMcpApiKeyResolverMutations {
 
   @Mutation(() => IMcpApiKey, {
     description:
-      "Platform admin: revoke a named user's MCP API key. Idempotent.",
+      "Platform Users Admin: revoke a named user's MCP API key. Idempotent.",
   })
   async adminRevokeMcpApiKey(
     @CurrentActor() actorContext: ActorContext,
     @Args('revokeData') input: AdminRevokeMcpApiKeyInput
   ): Promise<IMcpApiKey> {
     // Static description — see the note in admin.mcp.api.key.resolver.fields.ts.
-    await this.assertPlatformAdmin(actorContext, 'adminRevokeMcpApiKey');
+    await this.assertUsersAdmin(actorContext, 'adminRevokeMcpApiKey');
     const revoked = await this.mcpApiKeyService.adminRevokeApiKey(
       input.keyID,
       input.userID,
@@ -45,14 +45,19 @@ export class AdminMcpApiKeyResolverMutations {
     return toGraphqlMcpApiKey(revoked);
   }
 
-  private async assertPlatformAdmin(
+  // 027-platform-role-redesign (A5): a user's MCP keys are user-credential
+  // lifecycle — the Platform Users Admin family, same as identity reset —
+  // so the gate is PLATFORM_USERS_ADMIN on the platform policy (Slice A:
+  // that rule still unions the legacy broad credentials), never the
+  // retiring PLATFORM_ADMIN catch-all.
+  private async assertUsersAdmin(
     actorContext: ActorContext,
     description: string
   ): Promise<void> {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
       description
     );
   }

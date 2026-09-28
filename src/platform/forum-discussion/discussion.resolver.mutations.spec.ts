@@ -1,6 +1,8 @@
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
 import { EntityNotFoundException } from '@common/exceptions';
 import { ForumDiscussionCategoryException } from '@common/exceptions/forum.discussion.category.exception';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
@@ -9,7 +11,7 @@ import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockNotificationsService } from '@test/mocks/notifications.service.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { type Mocked } from 'vitest';
+import { type Mock, type Mocked } from 'vitest';
 import { DiscussionResolverMutations } from './discussion.resolver.mutations';
 import { DiscussionService } from './discussion.service';
 
@@ -19,6 +21,12 @@ describe('DiscussionResolverMutations', () => {
   let discussionService: Mocked<DiscussionService>;
   let platformAuthorizationService: Mocked<PlatformAuthorizationPolicyService>;
   let platformOperationsAuditService: Mocked<PlatformOperationsAuditService>;
+
+  const mockActorContext = { actorID: 'actor-1' } as ActorContext;
+  const mockDiscussion = {
+    id: 'discussion-1',
+    authorization: { id: 'auth-discussion-1' },
+  };
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -47,10 +55,115 @@ describe('DiscussionResolverMutations', () => {
     platformOperationsAuditService = module.get(
       PlatformOperationsAuditService
     ) as Mocked<PlatformOperationsAuditService>;
+
+    (discussionService.getDiscussionOrFail as Mock).mockResolvedValue(
+      mockDiscussion
+    );
   });
 
   it('should be defined', () => {
     expect(resolver).toBeDefined();
+  });
+
+  // 027-platform-role-redesign (spec-server-9 fix): A15's forum family is
+  // gated SOLELY on PLATFORM_FORUM_MANAGE (corr-server-7/spec-server-7 fix)
+  // — assert the gate directly rather than only that the resolver
+  // constructs, so re-gating this back onto bare UPDATE/DELETE (or
+  // re-adding a dual-CRUD-owner branch) fails this spec.
+  describe('deleteDiscussion — gated on PLATFORM_FORUM_MANAGE', () => {
+    it('checks PLATFORM_FORUM_MANAGE, not a bare CRUD privilege', async () => {
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+      (discussionService.removeDiscussion as Mock).mockResolvedValue(
+        mockDiscussion
+      );
+
+      await resolver.deleteDiscussion(mockActorContext, {
+        ID: mockDiscussion.id,
+      } as any);
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        mockActorContext,
+        mockDiscussion.authorization,
+        AuthorizationPrivilege.PLATFORM_FORUM_MANAGE,
+        expect.any(String)
+      );
+      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalledWith(
+        mockActorContext,
+        mockDiscussion.authorization,
+        AuthorizationPrivilege.DELETE,
+        expect.any(String)
+      );
+    });
+
+    it('denies a caller lacking PLATFORM_FORUM_MANAGE and does not delete', async () => {
+      (authorizationService.grantAccessOrFail as Mock).mockImplementation(
+        () => {
+          throw new Error('Forbidden');
+        }
+      );
+
+      await expect(
+        resolver.deleteDiscussion(mockActorContext, {
+          ID: mockDiscussion.id,
+        } as any)
+      ).rejects.toThrow('Forbidden');
+
+      expect(discussionService.removeDiscussion).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateDiscussion — gated on PLATFORM_FORUM_MANAGE', () => {
+    beforeEach(() => {
+      (discussionService.getDiscussionOrFail as Mock).mockResolvedValue({
+        ...mockDiscussion,
+        profile: {},
+        comments: {},
+      });
+    });
+
+    it('checks PLATFORM_FORUM_MANAGE, not a bare CRUD privilege', async () => {
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+      (discussionService.updateDiscussion as Mock).mockResolvedValue(
+        mockDiscussion
+      );
+
+      await resolver.updateDiscussion(mockActorContext, {
+        ID: mockDiscussion.id,
+      } as any);
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        mockActorContext,
+        mockDiscussion.authorization,
+        AuthorizationPrivilege.PLATFORM_FORUM_MANAGE,
+        expect.any(String)
+      );
+      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalledWith(
+        mockActorContext,
+        mockDiscussion.authorization,
+        AuthorizationPrivilege.UPDATE,
+        expect.any(String)
+      );
+    });
+
+    it('denies a caller lacking PLATFORM_FORUM_MANAGE and does not update', async () => {
+      (authorizationService.grantAccessOrFail as Mock).mockImplementation(
+        () => {
+          throw new Error('Forbidden');
+        }
+      );
+
+      await expect(
+        resolver.updateDiscussion(mockActorContext, {
+          ID: mockDiscussion.id,
+        } as any)
+      ).rejects.toThrow('Forbidden');
+
+      expect(discussionService.updateDiscussion).not.toHaveBeenCalled();
+    });
   });
 
   describe('updateDiscussion', () => {
@@ -124,7 +237,7 @@ describe('DiscussionResolverMutations', () => {
       expect(discussionService.updateDiscussion).not.toHaveBeenCalled();
     });
 
-    it('requires PLATFORM_ADMIN to move a discussion into NEWSLETTER', async () => {
+    it('requires PLATFORM_FORUM_MANAGE on the discussion to move it into NEWSLETTER', async () => {
       const platformAuth = { id: 'plat-auth' } as any;
       platformAuthorizationService.getPlatformAuthorizationPolicy.mockResolvedValue(
         platformAuth
@@ -139,12 +252,24 @@ describe('DiscussionResolverMutations', () => {
         category: ForumDiscussionCategory.NEWSLETTER,
       } as any);
 
-      // Called twice: once for UPDATE on the discussion, once for
-      // PLATFORM_ADMIN on the platform policy.
+      // Called twice: once for PLATFORM_FORUM_MANAGE on the discussion,
+      // once more for the admin-only category — the SAME forum-family
+      // privilege on the same discussion policy (027 A15), never the
+      // retiring PLATFORM_ADMIN catch-all on the platform policy.
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledTimes(2);
+      expect(authorizationService.grantAccessOrFail).toHaveBeenNthCalledWith(
+        2,
+        actorContext,
+        baseDiscussion.authorization,
+        AuthorizationPrivilege.PLATFORM_FORUM_MANAGE,
+        expect.any(String)
+      );
+      expect(
+        platformAuthorizationService.getPlatformAuthorizationPolicy
+      ).not.toHaveBeenCalled();
     });
 
-    it('denies the move into NEWSLETTER when PLATFORM_ADMIN is refused', async () => {
+    it('denies the move into NEWSLETTER when the second PLATFORM_FORUM_MANAGE check is refused', async () => {
       const platformAuth = { id: 'plat-auth' } as any;
       platformAuthorizationService.getPlatformAuthorizationPolicy.mockResolvedValue(
         platformAuth

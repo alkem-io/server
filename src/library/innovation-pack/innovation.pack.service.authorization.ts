@@ -6,6 +6,7 @@ import {
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { createPlatformSupportOrgResourcesProfileEditRule } from '@domain/common/profile/platform.support.org.resources.profile.rule';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { TemplatesSetAuthorizationService } from '@domain/template/templates-set/templates.set.service.authorization';
 import { Injectable } from '@nestjs/common';
@@ -58,7 +59,11 @@ export class InnovationPackAuthorizationService {
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         innovationPack.profile.id,
-        innovationPack.authorization
+        innovationPack.authorization,
+        [],
+        // QA server-C2-c (A7): Support edits an org-owned pack's profile,
+        // media and references — never DELETE.
+        [createPlatformSupportOrgResourcesProfileEditRule()]
       );
     updatedAuthorizations.push(...profileAuthorizations);
 

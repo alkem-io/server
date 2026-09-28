@@ -1,5 +1,6 @@
 import {
   CREDENTIAL_RULE_LICENSE_MANAGER,
+  CREDENTIAL_RULE_LICENSE_PLAN_USAGE,
   CREDENTIAL_RULE_LICENSE_RESET,
 } from '@common/constants/authorization/credential.rule.constants';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
@@ -77,6 +78,10 @@ describe('LicensingFrameworkAuthorizationService', () => {
 
     await service.applyAuthorizationPolicy(licensing, undefined);
 
+    // corr-server-13 fix: GRANT is no longer part of this CRUD bundle — it
+    // used to leak A12's GRANT privilege to PLATFORM_SETTINGS_ADMIN (a
+    // member of this rule's credential list) despite A12 declaring
+    // PLATFORM_LICENSE_MANAGER (∪ legacy) as its only owner/reachers.
     expect(
       authorizationPolicyService.createCredentialRuleUsingTypesOnly
     ).toHaveBeenCalledWith(
@@ -85,13 +90,34 @@ describe('LicensingFrameworkAuthorizationService', () => {
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
-        AuthorizationPrivilege.GRANT,
       ],
       [
         AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
         AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+        // 027-platform-role-redesign (T040, A13): plan/entitlement-mapping
+        // definition re-anchored onto platform-settings-admin, additively.
+        AuthorizationCredential.PLATFORM_SETTINGS_ADMIN,
       ],
       CREDENTIAL_RULE_LICENSE_MANAGER
+    );
+
+    // 027-platform-role-redesign (T046, A12 usage): a separate GRANT-only
+    // rule, kept apart from the CRUD `licensings` bundle above so
+    // PLATFORM_SETTINGS_ADMIN does not also acquire A12's usage GRANT.
+    // corr-server-13 fix: GLOBAL_LICENSE_MANAGER/GLOBAL_PLATFORM_MANAGER's
+    // legacy A12 reach moved HERE (from `licensings`, which no longer
+    // carries GRANT at all) so it is preserved on the one rule A12 is
+    // actually declared against.
+    expect(
+      authorizationPolicyService.createCredentialRuleUsingTypesOnly
+    ).toHaveBeenCalledWith(
+      [AuthorizationPrivilege.GRANT],
+      [
+        AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
+        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+        AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+      ],
+      CREDENTIAL_RULE_LICENSE_PLAN_USAGE
     );
 
     expect(
@@ -111,8 +137,12 @@ describe('LicensingFrameworkAuthorizationService', () => {
       .createCredentialRuleUsingTypesOnly.mock.results[0]
       .value as IAuthorizationPolicyRuleCredential;
     expect(createdRule.cascade).toBe(true);
-    const licenseResetRule = authorizationPolicyService
+    const licensePlanUsageRule = authorizationPolicyService
       .createCredentialRuleUsingTypesOnly.mock.results[1]
+      .value as IAuthorizationPolicyRuleCredential;
+    expect(licensePlanUsageRule.cascade).toBe(true);
+    const licenseResetRule = authorizationPolicyService
+      .createCredentialRuleUsingTypesOnly.mock.results[2]
       .value as IAuthorizationPolicyRuleCredential;
     expect(licenseResetRule.cascade).toBe(false);
     expect(
