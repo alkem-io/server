@@ -349,6 +349,306 @@ describe('SpaceAuthorizationService', () => {
       expect(rules[0].cascade).toBe(false);
     });
 
+    // 027-platform-role-redesign (QA server-C1-1, ruling (b′) "mover-only
+    // reads"): platform-resource-admin's space READ must NOT cascade — it may
+    // resolve the space it moves (A9 target resolution), never read the
+    // space's content. The two spaces-reader roles (A16) keep their
+    // cascading READ unchanged.
+    it('QA server-C1-1: platform-resource-admin gets its OWN non-cascading space READ rule; the spaces-reader rules still cascade', async () => {
+      const mockSpace = createMockSpace({
+        settings: {
+          ...defaultSettings,
+          privacy: {
+            ...defaultSettings.privacy,
+            mode: SpacePrivacyMode.PRIVATE,
+          },
+        },
+      });
+      (spaceLookupService.getSpaceOrFail as any).mockResolvedValue(
+        mockSpace as any
+      );
+      (
+        platformRolesAccessService.getCredentialsForRolesWithAccess as any
+      ).mockReturnValue([
+        { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
+      ]);
+      (
+        platformRolesAccessService.getPrivilegesForRole as any
+      ).mockImplementation((_roles: any, roleName: RoleName) => {
+        if (roleName === RoleName.PLATFORM_RESOURCE_ADMIN) {
+          return [
+            AuthorizationPrivilege.READ,
+            AuthorizationPrivilege.READ_ABOUT,
+          ];
+        }
+        if (
+          roleName === RoleName.GLOBAL_SPACES_READER ||
+          roleName === RoleName.PLATFORM_SPACES_READER
+        ) {
+          return [AuthorizationPrivilege.READ];
+        }
+        return [];
+      });
+      (authorizationPolicyService.reset as any).mockReturnValue(
+        mockSpace.authorization as any
+      );
+      (
+        authorizationPolicyService.inheritParentAuthorization as any
+      ).mockReturnValue(mockSpace.authorization as any);
+      (
+        authorizationPolicyService.appendCredentialAuthorizationRules as any
+      ).mockReturnValue(mockSpace.authorization as any);
+      (authorizationPolicyService.createCredentialRule as any).mockReturnValue({
+        cascade: false,
+      } as any);
+      (
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly as any
+      ).mockImplementation(
+        (privileges: any, types: any, name: any) =>
+          ({
+            grantedPrivileges: privileges,
+            criterias: types,
+            name,
+            cascade: true,
+          }) as any
+      );
+      (
+        authorizationPolicyService.appendPrivilegeAuthorizationRuleMapping as any
+      ).mockReturnValue(mockSpace.authorization as any);
+      (authorizationPolicyService.save as any).mockResolvedValue(
+        mockSpace.authorization as any
+      );
+      (authorizationPolicyService.saveAll as any).mockResolvedValue([] as any);
+      (roleSetService.getCredentialsForRole as any).mockResolvedValue([]);
+      (
+        roleSetService.getCredentialsForRoleWithParents as any
+      ).mockResolvedValue([]);
+      (
+        roleSetService.getDirectParentCredentialForRole as any
+      ).mockResolvedValue(undefined);
+      (
+        communityAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+      (
+        storageAggregatorAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+      (
+        collaborationAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+      (
+        licenseAuthorizationService.applyAuthorizationPolicy as any
+      ).mockReturnValue([]);
+      (
+        templatesManagerAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+      (
+        spaceAboutAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+
+      await service.applyAuthorizationPolicy('space-1');
+
+      const rulesFor = (credential: AuthorizationCredential) =>
+        (
+          authorizationPolicyService.createCredentialRuleUsingTypesOnly as any
+        ).mock.results
+          .map((r: any) => r.value)
+          .filter(
+            (rule: any) =>
+              rule.criterias?.length === 1 && rule.criterias[0] === credential
+          );
+
+      const resourceAdminRules = rulesFor(
+        AuthorizationCredential.PLATFORM_RESOURCE_ADMIN
+      );
+      expect(resourceAdminRules).toHaveLength(1);
+      expect(resourceAdminRules[0].grantedPrivileges).toEqual([
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.READ_ABOUT,
+      ]);
+      expect(resourceAdminRules[0].cascade).toBe(false);
+
+      for (const reader of [
+        AuthorizationCredential.GLOBAL_SPACES_READER,
+        AuthorizationCredential.PLATFORM_SPACES_READER,
+      ]) {
+        const readerRules = rulesFor(reader);
+        expect(readerRules).toHaveLength(1);
+        expect(readerRules[0].cascade).toBe(true);
+      }
+    });
+
+    // 027-platform-role-redesign (QA server-C1-1, blocking fix): a PUBLIC
+    // L1/L2 subspace does NOT go through resetToPrivateLevelZeroSpaceAuthorization
+    // (that only runs for L0, or for a PRIVATE L1/L2) — it inherits the
+    // parent's CASCADING rules only. Ruling (b') ("mover-only reads") means
+    // PRA's space READ must never cascade into content, on any level. Before
+    // the fix, PRA's credential rode the SAME `credentialCriteriasWithAccess`
+    // list (added for READ_ABOUT) into the PUBLIC-mode cascading READ rule,
+    // handing it full cascading content READ on public subspaces of a
+    // private parent. The mover-only rule must still resolve the space
+    // itself and its About card.
+    it('QA server-C1-1 (blocking fix): PUBLIC L1 under a PRIVATE L0 excludes PLATFORM_RESOURCE_ADMIN from the cascading content READ rule, and still grants it its own non-cascading READ+READ_ABOUT', async () => {
+      const mockSpace = createMockSpace({
+        level: SpaceLevel.L1,
+        settings: defaultSettings, // PUBLIC
+        authorization: {
+          id: 'auth-1',
+          credentialRules: [],
+          privilegeRules: [],
+          type: AuthorizationPolicyType.SPACE,
+          parentAuthorizationPolicy: {
+            id: 'parent-auth',
+            credentialRules: [],
+            privilegeRules: [],
+          },
+        },
+        parentSpace: {
+          id: 'parent-space-1',
+          settings: {
+            ...defaultSettings,
+            privacy: {
+              ...defaultSettings.privacy,
+              mode: SpacePrivacyMode.PRIVATE,
+            },
+          },
+          community: {
+            roleSet: { id: 'parent-roleset-1' },
+          },
+        },
+      });
+      (spaceLookupService.getSpaceOrFail as any).mockResolvedValue(
+        mockSpace as any
+      );
+
+      (
+        platformRolesAccessService.getCredentialsForRolesWithAccess as any
+      ).mockImplementation(
+        (_roles: any, privileges: AuthorizationPrivilege[]) => {
+          if (privileges.includes(AuthorizationPrivilege.READ_ABOUT)) {
+            return [
+              {
+                type: AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+                resourceID: '',
+              },
+            ];
+          }
+          return [];
+        }
+      );
+      (
+        platformRolesAccessService.getPrivilegesForRole as any
+      ).mockImplementation((_roles: any, roleName: RoleName) => {
+        if (roleName === RoleName.PLATFORM_RESOURCE_ADMIN) {
+          return [
+            AuthorizationPrivilege.READ,
+            AuthorizationPrivilege.READ_ABOUT,
+          ];
+        }
+        return [];
+      });
+      (authorizationPolicyService.reset as any).mockReturnValue(
+        mockSpace.authorization as any
+      );
+      (
+        authorizationPolicyService.inheritParentAuthorization as any
+      ).mockReturnValue(mockSpace.authorization as any);
+      (
+        authorizationPolicyService.appendCredentialAuthorizationRules as any
+      ).mockReturnValue(mockSpace.authorization as any);
+      (
+        authorizationPolicyService.createCredentialRule as any
+      ).mockImplementation(
+        (privileges: any, criterias: any, name: any) =>
+          ({
+            grantedPrivileges: privileges,
+            criterias,
+            name,
+            cascade: false,
+          }) as any
+      );
+      (
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly as any
+      ).mockImplementation(
+        // Mirror the real service (authorization.policy.service.ts), which
+        // returns cascade: true — so the `cascade === false` assertion below
+        // only passes if the PUBLIC branch explicitly turns cascade off.
+        (privileges: any, types: any, name: any) =>
+          ({
+            grantedPrivileges: privileges,
+            criterias: types,
+            name,
+            cascade: true,
+          }) as any
+      );
+      (
+        authorizationPolicyService.appendPrivilegeAuthorizationRuleMapping as any
+      ).mockReturnValue(mockSpace.authorization as any);
+      (authorizationPolicyService.save as any).mockResolvedValue(
+        mockSpace.authorization as any
+      );
+      (authorizationPolicyService.saveAll as any).mockResolvedValue([] as any);
+      (roleSetService.getCredentialsForRole as any).mockResolvedValue([]);
+      (
+        roleSetService.getCredentialsForRoleWithParents as any
+      ).mockResolvedValue([]);
+      (
+        roleSetService.getDirectParentCredentialForRole as any
+      ).mockResolvedValue(undefined);
+      (
+        communityAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+      (
+        storageAggregatorAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+      (
+        collaborationAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+      (
+        licenseAuthorizationService.applyAuthorizationPolicy as any
+      ).mockReturnValue([]);
+      (
+        spaceAboutAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+
+      await service.applyAuthorizationPolicy('space-1');
+
+      // The PUBLIC-mode cascading content READ rule on the SPACE authorization
+      // must never include PLATFORM_RESOURCE_ADMIN in its criteria.
+      const publicContentReadRules = (
+        authorizationPolicyService.createCredentialRule as any
+      ).mock.results
+        .map((r: any) => r.value)
+        .filter(
+          (rule: any) => rule.name === 'Public spaces content is visible to all'
+        );
+      expect(publicContentReadRules).toHaveLength(1);
+      expect(publicContentReadRules[0].cascade).toBe(true);
+      expect(
+        publicContentReadRules[0].criterias.some(
+          (c: any) => c.type === AuthorizationCredential.PLATFORM_RESOURCE_ADMIN
+        )
+      ).toBe(false);
+
+      // PRA must still get its own non-cascading READ+READ_ABOUT rule on this
+      // PUBLIC L1 — the About card and A9 target resolution still resolve.
+      const resourceAdminRules = (
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly as any
+      ).mock.results
+        .map((r: any) => r.value)
+        .filter(
+          (rule: any) =>
+            rule.criterias?.length === 1 &&
+            rule.criterias[0] ===
+              AuthorizationCredential.PLATFORM_RESOURCE_ADMIN
+        );
+      expect(resourceAdminRules).toHaveLength(1);
+      expect(resourceAdminRules[0].grantedPrivileges).toEqual([
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.READ_ABOUT,
+      ]);
+      expect(resourceAdminRules[0].cascade).toBe(false);
+    });
+
     it('should apply auth policy for ARCHIVED space without membership', async () => {
       const mockSpace = createMockSpace({
         visibility: SpaceVisibility.ARCHIVED,

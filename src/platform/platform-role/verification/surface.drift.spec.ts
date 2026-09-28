@@ -1,5 +1,5 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative, sep } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import {
   A_ROW_SURFACES,
@@ -15,10 +15,10 @@ import {
 } from './gate.model';
 import {
   EXCLUDED_FROM_SCAN,
-  PLATFORM_ADMIN_SCAN_ALLOWLIST,
   privilegeEnumKey,
   SCANNED_PRIVILEGES,
 } from './scanned.privileges';
+import { GATE_CALL_PATTERN, listSourceFiles } from './source.scan';
 
 /**
  * 027-platform-role-redesign (T052a, research D24, FR-010) — the census
@@ -75,48 +75,11 @@ import {
  * whole-file join is the cheapest thing that does not choke on that shape.
  */
 
-const SRC_ROOT = join(process.cwd(), 'src');
-
-/** This whole directory is excluded from the scan — it IS the census (and
- * its declaration/derivation files), not code to be scanned. Its files
- * legitimately reference every `AuthorizationPrivilege` member by name and
- * mention the three gate-call shapes in prose (this very file's own JSDoc
- * does, e.g. `` `isAccessGranted()` `` in `a.row.surfaces.ts`'s comments) —
- * scanning them would make the census a "hit" against itself. */
-const VERIFICATION_DIR = join(
-  SRC_ROOT,
-  'platform',
-  'platform-role',
-  'verification'
-);
-
-const GATE_CALL_PATTERN =
-  /@AuthorizationActorHasPrivilege\(|grantAccessOrFail\(|isAccessGranted\(/;
-
-/** Every `.ts` file under `src/`, repo-relative with forward slashes,
- * excluding this verification directory's own specs (`*.spec.ts`) and this
- * detector's own inventory files (they are the declaration, not a gate
- * site to be scanned). `*.it-spec.ts` lives under `test/`, outside `src/`,
- * so it is excluded by construction (C13). */
-function listSourceFiles(): readonly string[] {
-  const results: string[] = [];
-  const walk = (dir: string) => {
-    if (dir === VERIFICATION_DIR) {
-      return;
-    }
-    for (const entry of readdirSync(dir)) {
-      const full = join(dir, entry);
-      const stat = statSync(full);
-      if (stat.isDirectory()) {
-        walk(full);
-      } else if (entry.endsWith('.ts') && !entry.endsWith('.spec.ts')) {
-        results.push(full);
-      }
-    }
-  };
-  walk(SRC_ROOT);
-  return results.map(f => relative(process.cwd(), f).split(sep).join('/'));
-}
+// `listSourceFiles()` / `GATE_CALL_PATTERN` live in `source.scan.ts` (QA
+// cross-census-3), shared with `surface.completeness.spec.ts`'s census
+// check 3, which is also where every `PLATFORM_ADMIN` gate is now tracked —
+// per member, codebase-wide — replacing this file's former rule 1b and its
+// hand-picked `PLATFORM_ADMIN_SCAN_ALLOWLIST`.
 
 interface FileScan {
   readonly hasGateCall: boolean;
@@ -227,35 +190,6 @@ describe('surface.drift.spec (T052a) — census vs. code', () => {
         continue;
       }
       it(`${file} is declared in A_ROW_SURFACES or INDIRECT_ENFORCEMENT_FILES`, () => {
-        expect(knownFiles.has(file)).toBe(true);
-      });
-    }
-  });
-
-  // sec-server-5 fix (round 2 of 2) — rule 1b: a NARROW, per-file scan for
-  // `PLATFORM_ADMIN` gate-position hits, restricted to
-  // `PLATFORM_ADMIN_SCAN_ALLOWLIST` so it cannot flood the ~24 unrelated
-  // files across the codebase that also reference `PLATFORM_ADMIN`. This is
-  // what would have caught sec-server-9: `grantCredentialToActor`/
-  // `revokeCredentialFromActor` gate on `PLATFORM_ADMIN`, and
-  // `PLATFORM_ADMIN` was — and, for every OTHER file, remains — wholly
-  // excluded from `SCANNED_PRIVILEGES`.
-  describe('rule 1b — PLATFORM_ADMIN hits in the allowlisted credential-admin files are censused', () => {
-    for (const file of PLATFORM_ADMIN_SCAN_ALLOWLIST) {
-      it(`${file}: any PLATFORM_ADMIN gate hit is declared in A_ROW_SURFACES or INDIRECT_ENFORCEMENT_FILES`, () => {
-        const scan = scans.get(file);
-        expect(
-          scan,
-          `PLATFORM_ADMIN_SCAN_ALLOWLIST names "${file}" but it does not exist under src/`
-        ).toBeDefined();
-        const hasPlatformAdminGate =
-          scan!.hasGateCall &&
-          /AuthorizationPrivilege\.PLATFORM_ADMIN/.test(scan!.content);
-        if (!hasPlatformAdminGate) {
-          // Nothing to check — the file no longer gates on PLATFORM_ADMIN
-          // at all (e.g. migrated off it entirely); not a drift failure.
-          return;
-        }
         expect(knownFiles.has(file)).toBe(true);
       });
     }

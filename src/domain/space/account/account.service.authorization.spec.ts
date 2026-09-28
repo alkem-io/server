@@ -380,10 +380,12 @@ describe('AccountAuthorizationService', () => {
       // Should create rules for global roles, auth reset, space reader,
       // resources manage, transfer accept, license manage, and (added by
       // 027-platform-role-redesign T037, A7) platform-support's own-account
-      // innovation pack/hub resources rule.
+      // innovation pack/hub resources rule; plus (QA server-C1-1) the
+      // resource admin's own non-cascading READ split out of the space-reader
+      // rule and (QA server-C1-12) the license manager's CREATE_INNOVATION_HUB.
       expect(
         authorizationPolicyService.createCredentialRuleUsingTypesOnly
-      ).toHaveBeenCalledTimes(7);
+      ).toHaveBeenCalledTimes(9);
       // Should create rules for host manage, create space, create VC, create innovation pack
       expect(
         authorizationPolicyService.createCredentialRule
@@ -634,6 +636,76 @@ describe('AccountAuthorizationService', () => {
       expect(rules[0].cascade).toBe(false);
     });
 
+    // QA server-C1-1 (ruling (b′) "mover-only reads"): platform-resource-admin
+    // is split OUT of the shared (cascading) spaces-reader READ rule into its
+    // own non-cascading account READ — A9 target resolution only, never a
+    // read of the account's packs/hubs/storage/profile subtree.
+    it('READ (QA server-C1-1, A9): platform-resource-admin has its OWN non-cascading account READ rule; the shared spaces-reader rule no longer carries it', async () => {
+      const mockAccount = arrange();
+      await service.applyAuthorizationPolicy(mockAccount);
+
+      const readRules = rulesGranting(AuthorizationPrivilege.READ);
+      const withResourceAdmin = readRules.filter((rule: any) =>
+        rule.criterias.includes(AuthorizationCredential.PLATFORM_RESOURCE_ADMIN)
+      );
+      expect(withResourceAdmin).toHaveLength(1);
+      expect(withResourceAdmin[0].criterias).toEqual([
+        AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+      ]);
+      expect(withResourceAdmin[0].grantedPrivileges).toEqual([
+        AuthorizationPrivilege.READ,
+      ]);
+      expect(withResourceAdmin[0].cascade).toBe(false);
+
+      const spacesReader = readRules.filter((rule: any) =>
+        rule.criterias.includes(AuthorizationCredential.PLATFORM_SPACES_READER)
+      );
+      expect(spacesReader).toHaveLength(1);
+      expect(spacesReader[0].criterias).toEqual([
+        AuthorizationCredential.GLOBAL_SPACES_READER,
+        AuthorizationCredential.PLATFORM_SPACES_READER,
+      ]);
+      expect(spacesReader[0].cascade).toBe(true);
+    });
+
+    // QA server-C1-12 (ruling (a)): CREATE_INNOVATION_HUB was held ONLY by the
+    // legacy GA/GLM/GS manageGlobalRoles rule, so Slice B would have left no
+    // role able to create a hub. Platform License Manager (GLM's successor
+    // for "create space/hub/pack/VC", spec.md row 8) gets it on its own
+    // non-cascading rule; the legacy rule is untouched (Slice A additive).
+    it('CREATE_INNOVATION_HUB (QA server-C1-12, A12): platform-license-manager on its OWN non-cascading rule, legacy GA/GLM/GS rule unchanged', async () => {
+      const mockAccount = arrange();
+      await service.applyAuthorizationPolicy(mockAccount);
+
+      const rules = rulesGranting(AuthorizationPrivilege.CREATE_INNOVATION_HUB);
+      const licenseManagerRules = rules.filter((rule: any) =>
+        rule.criterias.includes(
+          AuthorizationCredential.PLATFORM_LICENSE_MANAGER
+        )
+      );
+      expect(licenseManagerRules).toHaveLength(1);
+      expect(licenseManagerRules[0].criterias).toEqual([
+        AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
+      ]);
+      expect(licenseManagerRules[0].grantedPrivileges).toEqual([
+        AuthorizationPrivilege.CREATE_INNOVATION_HUB,
+      ]);
+      expect(licenseManagerRules[0].cascade).toBe(false);
+
+      const legacy = rules.filter(
+        (rule: any) =>
+          !rule.criterias.includes(
+            AuthorizationCredential.PLATFORM_LICENSE_MANAGER
+          )
+      );
+      expect(legacy).toHaveLength(1);
+      expect(legacy[0].criterias).toEqual([
+        AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+        AuthorizationCredential.GLOBAL_SUPPORT,
+      ]);
+    });
+
     it('ACCOUNT_LICENSE_MANAGE (T037, A12): EXACTLY {global-admin, global-license-manager, platform-license-manager}, non-cascading', async () => {
       const mockAccount = arrange();
       await service.applyAuthorizationPolicy(mockAccount);
@@ -662,6 +734,22 @@ describe('AccountAuthorizationService', () => {
         AuthorizationCredential.PLATFORM_SUPPORT,
       ]);
       expect(rules[0].cascade).toBe(true);
+    });
+
+    // QA server-C2-c (skeptic's precision): PLATFORM_SUPPORT_ORG_RESOURCES
+    // cascades from an org-hosted account into the account's OWN profile and
+    // storage aggregator too. The profile-edit privilege rule is threaded down
+    // only from the pack/hub/template authorization services — never here —
+    // so Support gains no upload/edit on the org account's own profile.
+    it('PLATFORM_SUPPORT_ORG_RESOURCES (QA server-C2-c): the account profile receives NO threaded privilege rules', async () => {
+      const mockAccount = arrange();
+      await service.applyAuthorizationPolicy(mockAccount);
+
+      const accountProfileCalls = (
+        profileAuthorizationService.applyAuthorizationPolicy as any
+      ).mock.calls.filter((call: any[]) => call[0] === 'account-profile-1');
+      expect(accountProfileCalls).toHaveLength(1);
+      expect(accountProfileCalls[0][3] ?? []).toEqual([]);
     });
 
     // spec-server-14 fix: A7 (spec row 7) and FR-008(b) grant Platform

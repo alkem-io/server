@@ -104,9 +104,20 @@ export class SpacePlatformRolesAccessService {
     // observed live 2026-08-10 on a private L0). READ-only, exactly the A16
     // shape, deliberately NOT the CRUD set: this role moves resources, it does
     // not edit their contents.
+    //
+    // QA server-C1-1 (ruling (b′) "mover-only reads"): READ_ABOUT joins, and
+    // `space.service.authorization.ts` stops cascading the mover's READ. The
+    // mover resolves the space itself (READ, non-cascading) and its About
+    // card (READ_ABOUT → the space's own visibility path, which grants READ
+    // on About/profile) — never the space's content. Stored per space, so a
+    // deploy must run `authorizationPlatformRolesAccessReset` and then
+    // `authorizationPolicyResetAll` before the new shape takes effect.
     platformAccessRoles.push({
       roleName: RoleName.PLATFORM_RESOURCE_ADMIN,
-      grantedPrivileges: [AuthorizationPrivilege.READ],
+      grantedPrivileges: [
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.READ_ABOUT,
+      ],
     });
 
     // 027-platform-role-redesign (T049, A15): platform-support's in-space

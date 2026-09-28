@@ -70,6 +70,8 @@ export type ManagedPrivilege =
   | AuthorizationPrivilege.UPDATE_CALLOUT_PUBLISHER
   | AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE
   | AuthorizationPrivilege.CREATE_ORGANIZATION
+  // QA server-C1-12 (ruling (a)) — A12's `createInnovationHub`.
+  | AuthorizationPrivilege.CREATE_INNOVATION_HUB
   | AuthorizationPrivilege.ACCESS_VIRTUAL_ASSISTANT
   // --- T070m additions (reachability.spec.ts) — three purpose-built
   // privileges 032 authored (not this feature), but which gate A3/A11's
@@ -320,6 +322,19 @@ export const PRIVILEGE_GRANTS: Record<ManagedPrivilege, PrivilegeGrant> = {
       AuthorizationCredential.BETA_TESTER,
     ],
   },
+  // --- A12 create-hub half (QA server-C1-12, ruling (a)). Platform License
+  // Manager's own non-cascading account rule; the legacy reach is the
+  // `manageGlobalRoles` account rule (GA/GLM/GS) that was its ONLY holder.
+  // The account admin never held it (unlike CREATE_SPACE/_PACK/_VIRTUAL).
+  [AuthorizationPrivilege.CREATE_INNOVATION_HUB]: {
+    anchor: 'account',
+    owningCredentials: [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
+    legacyCredentials: [
+      AuthorizationCredential.GLOBAL_ADMIN,
+      AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+      AuthorizationCredential.GLOBAL_SUPPORT,
+    ],
+  },
   // --- No A-row of its own (not one of A1-A21) — included for
   // completeness since T035 re-anchors it additively alongside
   // `ACCESS_VIRTUAL_ASSISTANT`'s pre-existing grant. Not consumed by any
@@ -368,9 +383,18 @@ export const PRIVILEGE_GRANTS: Record<ManagedPrivilege, PrivilegeGrant> = {
 
   // --- A16 (T038) — the one bare-READ exception; see the `ManagedPrivilege`
   // doc comment above.
+  // QA server-C1-1 (ruling (b′) "mover-only reads"): platform-resource-admin
+  // ALSO holds READ in every space's platformRolesAccess — A9 target
+  // resolution, on a NON-cascading rule (the space itself + its About card,
+  // never its content). A grant-set fact, so it is declared here and the
+  // derivation reports it; A16 accepts it as a declared extra reacher
+  // (`a.row.surfaces.ts`), not as an owner of the cross-space read family.
   [AuthorizationPrivilege.READ]: {
     anchor: 'space',
-    owningCredentials: [AuthorizationCredential.PLATFORM_SPACES_READER],
+    owningCredentials: [
+      AuthorizationCredential.PLATFORM_SPACES_READER,
+      AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+    ],
     legacyCredentials: [AuthorizationCredential.GLOBAL_SPACES_READER],
   },
 };
@@ -471,6 +495,34 @@ export const TREE_SCOPED_PRIVILEGE_GRANTS: {
         AuthorizationCredential.GLOBAL_SUPPORT,
         AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
         AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
+      ],
+    },
+  },
+  // QA server-C2-d (ruling (a)) — A6's `eventOnOrganizationVerification`.
+  // The verification policy is `reset()` and built from its own rules alone
+  // (`organization.verification.service.authorization.ts`): Platform Support
+  // gets READ + UPDATE + GRANT (UPDATE passes the resolver, GRANT the
+  // MANUALLY_VERIFY / RESET / REOPEN / ARCHIVE lifecycle guards); the legacy
+  // `organizationGlobalAdminsAll` rule grants CRUD+GRANT to GA/GS and — a READ
+  // role holding GRANT — GLOBAL_COMMUNITY_READ, all three dropped at Slice B.
+  // Tree-scoped because UPDATE/GRANT are baseline verbs reused everywhere.
+  'organization-verification': {
+    [AuthorizationPrivilege.UPDATE]: {
+      anchor: 'organization-verification',
+      owningCredentials: [AuthorizationCredential.PLATFORM_SUPPORT],
+      legacyCredentials: [
+        AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_SUPPORT,
+        AuthorizationCredential.GLOBAL_COMMUNITY_READ,
+      ],
+    },
+    [AuthorizationPrivilege.GRANT]: {
+      anchor: 'organization-verification',
+      owningCredentials: [AuthorizationCredential.PLATFORM_SUPPORT],
+      legacyCredentials: [
+        AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_SUPPORT,
+        AuthorizationCredential.GLOBAL_COMMUNITY_READ,
       ],
     },
   },

@@ -5,6 +5,7 @@ import {
   CREDENTIAL_RULE_SPACE_MEMBERS_READ,
   CREDENTIAL_RULE_SPACE_STORAGE_MEMBER_FILE_UPLOAD,
   CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ,
+  CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_RESOURCE_ADMIN_READ,
   CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS,
   POLICY_RULE_READ_ABOUT,
   POLICY_RULE_SPACE_CREATE_SUBSPACE,
@@ -594,13 +595,52 @@ export class SpaceAuthorizationService {
 
     switch (spaceSettings.privacy.mode) {
       case SpacePrivacyMode.PUBLIC: {
+        // QA server-C1-1 (blocking fix): credentialCriteriasWithAccess also
+        // carries platform-resource-admin, added ONLY for READ_ABOUT (the
+        // mover's About card / A9 target resolution — see
+        // getCredentialsWithVisibilityOfSpace). Reusing that same list here
+        // for the PUBLIC-mode rule would hand the mover full CASCADING READ
+        // into every callout, post and whiteboard of a public subspace under
+        // a private parent — ruling (b') is mover-only reads, never content.
+        // Exclude it from the cascading rule; its own non-cascading
+        // READ+READ_ABOUT rule (below) keeps About/profile and the A9
+        // lookups resolving.
+        const publicContentReadCriterias = credentialCriteriasWithAccess.filter(
+          criteria =>
+            criteria.type !== AuthorizationCredential.PLATFORM_RESOURCE_ADMIN
+        );
         const rule = this.authorizationPolicyService.createCredentialRule(
           [AuthorizationPrivilege.READ],
-          credentialCriteriasWithAccess,
+          publicContentReadCriterias,
           'Public spaces content is visible to all'
         );
         rule.cascade = true;
         newRules.push(rule);
+
+        // A PUBLIC L1/L2 space never runs resetToPrivateLevelZeroSpaceAuthorization
+        // (that only fires for L0, or a PRIVATE L1/L2), and inheritParentAuthorization
+        // only carries CASCADING parent rules — so without this, a PUBLIC
+        // subspace would have NO path at all for the mover's own READ. L0 is
+        // already covered unconditionally by resetToPrivateLevelZeroSpaceAuthorization,
+        // so only add it here for L1/L2 (parentSpaceRoleSet is set exactly
+        // then) to avoid a duplicate rule on L0.
+        if (parentSpaceRoleSet) {
+          const privilegesForResourceAdmin =
+            this.platformRolesAccessService.getPrivilegesForRole(
+              platformRolesWithAccess.roles,
+              RoleName.PLATFORM_RESOURCE_ADMIN
+            );
+          if (privilegesForResourceAdmin.length > 0) {
+            const resourceAdminRead =
+              this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+                privilegesForResourceAdmin,
+                [resolveRoleCredential(RoleName.PLATFORM_RESOURCE_ADMIN)],
+                CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_RESOURCE_ADMIN_READ
+              );
+            resourceAdminRead.cascade = false;
+            newRules.push(resourceAdminRead);
+          }
+        }
         break;
       }
       case SpacePrivacyMode.PRIVATE: {
@@ -837,15 +877,9 @@ export class SpaceAuthorizationService {
     // role-action-matrix A16 cell. Each role gets its OWN rule derived from
     // its OWN declared privileges rather than sharing one credential list,
     // so the two can never silently inherit each other's grants.
-    //
-    // A9 (live finding F5) adds `platform-resource-admin` to the same loop:
-    // the resource mover needs to READ what it may move. Same per-role
-    // derivation, so it can only ever receive the privileges
-    // `space.service.platform.roles.access.ts` declares for it ([READ]).
     for (const spacesReaderRole of [
       RoleName.GLOBAL_SPACES_READER,
       RoleName.PLATFORM_SPACES_READER,
-      RoleName.PLATFORM_RESOURCE_ADMIN,
     ]) {
       const privilegesForSpacesRead =
         this.platformRolesAccessService.getPrivilegesForRole(
@@ -861,6 +895,35 @@ export class SpaceAuthorizationService {
           );
         newRules.push(spacesReader);
       }
+    }
+
+    // A9 (live finding F5): the resource mover needs to READ what it may
+    // move. Same per-role derivation as the readers above, so it can only
+    // ever receive the privileges `space.service.platform.roles.access.ts`
+    // declares for it ([READ, READ_ABOUT]).
+    //
+    // QA server-C1-1 (ruling (b′) "mover-only reads"): its OWN rule, and NOT
+    // cascading — the mover resolves the space it moves (A9 target
+    // resolution: the space itself, its account, its community, its
+    // subspaces), never the space's content. Before this ruling it rode the
+    // readers' cascading rule and could read every callout, post and
+    // whiteboard of every private space. The narrow per-child reads the A9
+    // panels still need (roleSet member lists, calloutsSet, a published
+    // callout) are granted on those entities themselves, also non-cascading.
+    const privilegesForResourceAdmin =
+      this.platformRolesAccessService.getPrivilegesForRole(
+        space.platformRolesAccess.roles,
+        RoleName.PLATFORM_RESOURCE_ADMIN
+      );
+    if (privilegesForResourceAdmin.length > 0) {
+      const resourceAdminRead =
+        this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+          privilegesForResourceAdmin,
+          [resolveRoleCredential(RoleName.PLATFORM_RESOURCE_ADMIN)],
+          CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_RESOURCE_ADMIN_READ
+        );
+      resourceAdminRead.cascade = false;
+      newRules.push(resourceAdminRead);
     }
 
     //

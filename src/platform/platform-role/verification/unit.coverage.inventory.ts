@@ -463,6 +463,11 @@ export const PRIVILEGE_COVERAGE: Record<
     ruleSpec: PLATFORM_POLICY_SPEC,
     grantSetSpec: PLATFORM_POLICY_SPEC,
   },
+  // QA server-C1-12 — A12's create-hub half, account-anchored.
+  [AuthorizationPrivilege.CREATE_INNOVATION_HUB]: {
+    ruleSpec: ACCOUNT_POLICY_SPEC,
+    grantSetSpec: ACCOUNT_POLICY_SPEC,
+  },
   [AuthorizationPrivilege.ACCESS_VIRTUAL_ASSISTANT]: {
     ruleSpec: PLATFORM_POLICY_SPEC,
     grantSetSpec: PLATFORM_POLICY_SPEC,

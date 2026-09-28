@@ -6,6 +6,7 @@ import {
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Injectable } from '@nestjs/common';
@@ -21,7 +22,10 @@ export class StorageBucketAuthorizationService {
 
   public async applyAuthorizationPolicy(
     storageBucket: IStorageBucket,
-    parentAuthorization: IAuthorizationPolicy | undefined
+    parentAuthorization: IAuthorizationPolicy | undefined,
+    // QA server-C2-c: privilege rules threaded down from the owning profile
+    // (privilege rules do not cascade) — appended after the built-in ones.
+    privilegeRulesFromParent: IAuthorizationPolicyRulePrivilege[] = []
   ): Promise<IAuthorizationPolicy[]> {
     if (!storageBucket.documents) {
       throw new RelationshipNotFoundException(
@@ -42,7 +46,8 @@ export class StorageBucketAuthorizationService {
       );
 
     storageBucket.authorization = this.appendPrivilegeRules(
-      storageBucket.authorization
+      storageBucket.authorization,
+      privilegeRulesFromParent
     );
 
     updatedAuthorizations.push(storageBucket.authorization);
@@ -71,9 +76,10 @@ export class StorageBucketAuthorizationService {
   }
 
   private appendPrivilegeRules(
-    authorization: IAuthorizationPolicy
+    authorization: IAuthorizationPolicy,
+    privilegeRulesFromParent: IAuthorizationPolicyRulePrivilege[]
   ): IAuthorizationPolicy {
-    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
+    const privilegeRules: IAuthorizationPolicyRulePrivilege[] = [];
 
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.FILE_UPLOAD],
@@ -95,6 +101,8 @@ export class StorageBucketAuthorizationService {
       POLICY_RULE_PLATFORM_DELETE
     );
     privilegeRules.push(deletePrivilege);
+
+    privilegeRules.push(...privilegeRulesFromParent);
 
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
       authorization,

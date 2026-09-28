@@ -105,7 +105,10 @@ describe('SpacePlatformRolesAccessService', () => {
       // Live finding F5: the resource mover could move a Space it was not
       // allowed to look at. READ only — never the CRUD set the in-space
       // support flag grants, because this role does not edit space content.
-      it('grants PLATFORM_RESOURCE_ADMIN plain READ, and nothing more', () => {
+      // QA server-C1-1 (ruling (b′) "mover-only reads"): READ_ABOUT joins, so
+      // the About/profile READ reaches the mover through the space's own
+      // visibility path now that its space READ no longer cascades.
+      it('grants PLATFORM_RESOURCE_ADMIN READ + READ_ABOUT, and nothing more', () => {
         const space = createSpace();
         const result = service.createPlatformRolesAccess(
           space,
@@ -117,6 +120,7 @@ describe('SpacePlatformRolesAccessService', () => {
         );
         expect(resourceAdmin?.grantedPrivileges).toEqual([
           AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.READ_ABOUT,
         ]);
       });
 

@@ -64,6 +64,12 @@ export type TreeId =
   // privilege names (research: two independent grant sets, one privilege
   // pair) — split into its own tree-scoped anchor.
   | 'callouts-set'
+  // QA server-C2-d: the organization verification policy is `reset()` and
+  // built from its own credential rules alone
+  // (`organization.verification.service.authorization.ts`) — it inherits
+  // NEITHER the root cascade nor the organization's policy, so it cannot
+  // share the `organization` tree's cascade reach.
+  | 'organization-verification'
   // Per-resolver SYNTHETIC policies — fixed, in-memory, never persisted,
   // never reset. Named per resolver so a reviewer can find the constructor
   // that builds it.

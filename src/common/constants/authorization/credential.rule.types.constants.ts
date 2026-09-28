@@ -147,6 +147,23 @@ export const CREDENTIAL_RULE_TYPES_PLATFORM_SUPPORT_LISTS_READ =
   'credentialRuleTypes-platformSupportListsRead';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_LICENSING_LISTS_READ =
   'credentialRuleTypes-platformLicensingListsRead';
+// QA server-C1-1 (ruling (b′) "mover-only reads"): platform-resource-admin's
+// own NON-cascading READ rules — A9 target resolution only, one identifier
+// per tree so a stored policy row names which mover read it carries.
+export const CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_RESOURCE_ADMIN_READ =
+  'credentialRuleTypes-spacePlatformResourceAdminRead';
+export const CREDENTIAL_RULE_TYPES_ACCOUNT_PLATFORM_RESOURCE_ADMIN_READ =
+  'credentialRuleTypes-accountPlatformResourceAdminRead';
+export const CREDENTIAL_RULE_TYPES_ROLESET_PLATFORM_RESOURCE_ADMIN_READ =
+  'credentialRuleTypes-roleSetPlatformResourceAdminRead';
+// QA server-C1-12 (ruling (a)): Platform License Manager creates innovation
+// hubs on any account — GLM's successor for spec row 8's "create hub".
+export const CREDENTIAL_RULE_TYPES_ACCOUNT_CREATE_INNOVATION_HUB_PLATFORM_LICENSE_MANAGER =
+  'credentialRuleTypes-accountCreateInnovationHubPlatformLicenseManager';
+// QA server-C2-d (ruling (a)): Platform Support approves/manages an
+// organization's verification (A6, organization lifecycle).
+export const CREDENTIAL_RULE_TYPES_ORGANIZATION_VERIFICATION_PLATFORM_SUPPORT =
+  'credentialRuleTypes-organizationVerificationPlatformSupport';
 export const CREDENTIAL_RULE_TYPES_DELETE_ORGANIZATION =
   'credentialRuleTypes-deleteOrganization';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_USERS_ADMIN =
