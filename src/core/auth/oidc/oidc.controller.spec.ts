@@ -800,10 +800,10 @@ describe('OidcController — app-mode /callback hands off instead of signing in 
     }
     const req = makeReq({ cookies: { [PRE_AUTH_COOKIE_NAME]: cookie } });
     const res = makeRes();
-    const { records } = await captureAudit(() =>
+    await captureAudit(() =>
       controller.callback('state-app', 'auth-code', req, res)
     );
-    return { controller, req, res, records, issuedAt };
+    return { req, res };
   }
 
   it('establishes no session in the auth-browser jar and 302s to the app scheme', async () => {
@@ -981,7 +981,7 @@ describe('OidcController — GET /app-handoff redeems in the WebView (FR-008…F
     controller: any,
     code: string,
     opts: {
-      verifier?: string | string[];
+      verifier?: string;
       session?: any;
       query?: Record<string, unknown>;
     } = {}
