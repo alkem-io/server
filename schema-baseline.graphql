@@ -1529,6 +1529,17 @@ type CalloutSettingsFraming {
   Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Absent / null ⇒ AUTO (full computed set).
   """
   selection: CalloutSelectionSettings
+  """
+  Card-variant settings for a Subspaces collection callout. Present only on SPACES callouts. Absent / null ⇒ COMPACT.
+  """
+  spaces: CalloutSpacesSettings
+}
+
+type CalloutSpacesSettings {
+  """
+  The card variant to render for each subspace: COMPACT (default) or EXPANDED.
+  """
+  cardVariant: SpaceCollectionCardVariant!
 }
 
 enum CalloutVisibility {
@@ -2513,6 +2524,8 @@ type CreateCalloutSettingsFramingData {
   Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
   """
   selection: CreateCalloutSelectionSettingsData
+  """Card-variant settings. Provide only when framing.type = SPACES."""
+  spaces: CreateCalloutSpacesSettingsData
 }
 
 input CreateCalloutSettingsFramingInput {
@@ -2526,6 +2539,8 @@ input CreateCalloutSettingsFramingInput {
   Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
   """
   selection: CreateCalloutSelectionSettingsInput
+  """Card-variant settings. Provide only when framing.type = SPACES."""
+  spaces: CreateCalloutSpacesSettingsInput
 }
 
 input CreateCalloutSettingsInput {
@@ -2533,6 +2548,20 @@ input CreateCalloutSettingsInput {
   framing: CreateCalloutSettingsFramingInput
   """Visibility of the Callout. Defaults to PUBLISHED."""
   visibility: CalloutVisibility
+}
+
+type CreateCalloutSpacesSettingsData {
+  """
+  The card variant (COMPACT or EXPANDED). Defaults to COMPACT when omitted.
+  """
+  cardVariant: SpaceCollectionCardVariant
+}
+
+input CreateCalloutSpacesSettingsInput {
+  """
+  The card variant (COMPACT or EXPANDED). Defaults to COMPACT when omitted.
+  """
+  cardVariant: SpaceCollectionCardVariant
 }
 
 type CreateCalloutTaskBoardData {
@@ -8374,6 +8403,14 @@ type SpaceAboutMembership {
   roleSetID: UUID!
 }
 
+"""
+The card variant of a Subspaces (SPACES) collection callout. COMPACT (default) shows the identity block only; EXPANDED adds the What/Why/Who excerpts.
+"""
+enum SpaceCollectionCardVariant {
+  COMPACT
+  EXPANDED
+}
+
 input SpaceFilterInput {
   """Return Spaces with a Visibility matching one of the provided types."""
   visibilities: [SpaceVisibility!]
@@ -9156,6 +9193,8 @@ input UpdateCalloutSettingsFramingInput {
   Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
   """
   selection: UpdateCalloutSelectionSettingsInput
+  """Card-variant settings. Provide only when framing.type = SPACES."""
+  spaces: UpdateCalloutSpacesSettingsInput
 }
 
 input UpdateCalloutSettingsInput {
@@ -9163,6 +9202,13 @@ input UpdateCalloutSettingsInput {
   framing: UpdateCalloutSettingsFramingInput
   """Visibility of the Callout."""
   visibility: CalloutVisibility
+}
+
+input UpdateCalloutSpacesSettingsInput {
+  """
+  The card variant (COMPACT or EXPANDED). When omitted, the stored value is unchanged.
+  """
+  cardVariant: SpaceCollectionCardVariant
 }
 
 input UpdateCalloutVisibilityInput {
