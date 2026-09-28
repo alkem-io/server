@@ -1,6 +1,7 @@
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutSelectionMode } from '@common/enums/callout.selection.mode';
 import { SidebarWidget } from '@common/enums/sidebar.widget';
+import { SpaceCollectionCardVariant } from '@common/enums/space.collection.card.variant';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
@@ -1003,6 +1004,105 @@ describe('InputCreatorService', () => {
       expect(
         (result!.settings as any)?.framing?.selection?.selectedIds
       ).toEqual([]);
+    });
+  });
+
+  // ─── Template-capture: card-variant settings (SPACES) ──────────────────────
+
+  describe('template capture — spaces card variant on a SPACES callout', () => {
+    const spacesCalloutWithVariant = {
+      id: 'callout-spaces',
+      nameID: 'spaces-callout',
+      sortOrder: 1,
+      framing: {
+        id: 'framing-spaces',
+        type: CalloutFramingType.SPACES,
+        profile: {
+          displayName: 'Subspaces',
+          description: '',
+          tagsets: [],
+        },
+        whiteboard: undefined,
+        link: undefined,
+        memo: undefined,
+        mediaGallery: undefined,
+      },
+      contributionDefaults: {
+        defaultDisplayName: '',
+        postDescription: '',
+        whiteboardContent: '',
+      },
+      settings: {
+        framing: {
+          spaces: { cardVariant: SpaceCollectionCardVariant.EXPANDED },
+          selection: {
+            mode: CalloutSelectionMode.CUSTOM,
+            selectedIds: ['subspace-x'],
+          },
+        },
+      },
+      classification: { tagsets: [] },
+    };
+
+    it('preserves the stored card variant while resetting selection to AUTO (S7)', async () => {
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(
+        spacesCalloutWithVariant
+      );
+
+      const result =
+        await service.buildCreateCalloutInputFromCallout('callout-spaces');
+
+      expect(result).not.toBeNull();
+      expect((result!.settings as any)?.framing?.spaces?.cardVariant).toBe(
+        SpaceCollectionCardVariant.EXPANDED
+      );
+      // 025: selection is still reset to AUTO on every collection kind.
+      expect((result!.settings as any)?.framing?.selection?.mode).toBe(
+        CalloutSelectionMode.AUTO
+      );
+      expect(
+        (result!.settings as any)?.framing?.selection?.selectedIds
+      ).toEqual([]);
+    });
+
+    it('does not invent a spaces block for a SPACES callout that never stored one', async () => {
+      const calloutWithoutSpaces = {
+        ...spacesCalloutWithVariant,
+        settings: {
+          framing: {
+            selection: { mode: CalloutSelectionMode.AUTO, selectedIds: [] },
+            // no spaces key
+          },
+        },
+      };
+
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(
+        calloutWithoutSpaces
+      );
+
+      const result =
+        await service.buildCreateCalloutInputFromCallout('callout-spaces');
+
+      expect(result).not.toBeNull();
+      expect((result!.settings as any)?.framing?.spaces).toBeUndefined();
+    });
+
+    it('does not mutate the live callout object during serialization', async () => {
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(
+        spacesCalloutWithVariant
+      );
+
+      await service.buildCreateCalloutInputFromCallout('callout-spaces');
+
+      // The source fixture's own settings object must be untouched — the
+      // strip deep-copies before resetting selection.
+      expect(spacesCalloutWithVariant.settings.framing.spaces).toEqual({
+        cardVariant: SpaceCollectionCardVariant.EXPANDED,
+      });
+      expect(spacesCalloutWithVariant.settings.framing.selection).toEqual({
+        mode: CalloutSelectionMode.CUSTOM,
+        selectedIds: ['subspace-x'],
+      });
     });
   });
 });
