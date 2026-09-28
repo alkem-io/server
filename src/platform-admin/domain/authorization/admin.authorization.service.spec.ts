@@ -6,6 +6,7 @@ import {
 import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { RoleSetCacheInvalidationService } from '@domain/access/role-set/role.set.service.cache.invalidation';
 import { ActorService } from '@domain/actor/actor/actor.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -40,6 +41,7 @@ describe('AdminAuthorizationService', () => {
   };
   let actorLookupService: { getActorCredentialsOrFail: Mock };
   let authorizationService: { getGrantedPrivileges: Mock };
+  let roleSetCacheInvalidationService: { invalidateForCredentialChange: Mock };
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -71,6 +73,9 @@ describe('AdminAuthorizationService', () => {
     authorizationService = module.get(
       AuthorizationService
     ) as unknown as typeof authorizationService;
+    roleSetCacheInvalidationService = module.get(
+      RoleSetCacheInvalidationService
+    ) as unknown as typeof roleSetCacheInvalidationService;
   });
 
   describe('isGlobalAuthorizationCredential', () => {
@@ -455,6 +460,89 @@ describe('AdminAuthorizationService', () => {
 
       expect(granted).toEqual(
         new Set([AuthorizationPrivilege.AUTHORIZATION_RESET])
+      );
+    });
+  });
+
+  describe('role-set cache invalidation on direct credential changes', () => {
+    // These mutations write credentials straight through ActorService, bypassing
+    // RoleSetService, so nothing else drops the role-set membership caches.
+    beforeEach(() => {
+      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue({
+        id: 'user-1',
+      } as any);
+      vi.mocked(
+        organizationLookupService.getOrganizationByIdOrFail
+      ).mockResolvedValue({ id: 'org-1' } as any);
+      vi.mocked(actorService.grantCredentialOrFail).mockResolvedValue(
+        undefined as any
+      );
+      vi.mocked(actorService.revokeCredential).mockResolvedValue(
+        undefined as any
+      );
+    });
+
+    it('invalidates after granting a credential to a User', async () => {
+      await service.grantCredentialToUser({
+        userID: 'user-1',
+        type: AuthorizationCredential.SPACE_ADMIN,
+        resourceID: 'space-1',
+      });
+
+      expect(
+        roleSetCacheInvalidationService.invalidateForCredentialChange
+      ).toHaveBeenCalledWith(
+        'user-1',
+        AuthorizationCredential.SPACE_ADMIN,
+        'space-1'
+      );
+    });
+
+    it('invalidates after revoking a credential from a User', async () => {
+      await service.revokeCredentialFromUser({
+        userID: 'user-1',
+        type: AuthorizationCredential.SPACE_ADMIN,
+        resourceID: 'space-1',
+      });
+
+      expect(
+        roleSetCacheInvalidationService.invalidateForCredentialChange
+      ).toHaveBeenCalledWith(
+        'user-1',
+        AuthorizationCredential.SPACE_ADMIN,
+        'space-1'
+      );
+    });
+
+    it('invalidates after granting a credential to an Organization', async () => {
+      await service.grantCredentialToOrganization({
+        organizationID: 'org-1',
+        type: AuthorizationCredential.ORGANIZATION_ADMIN,
+        resourceID: 'org-1',
+      });
+
+      expect(
+        roleSetCacheInvalidationService.invalidateForCredentialChange
+      ).toHaveBeenCalledWith(
+        'org-1',
+        AuthorizationCredential.ORGANIZATION_ADMIN,
+        'org-1'
+      );
+    });
+
+    it('invalidates after revoking a credential from an Organization', async () => {
+      await service.revokeCredentialFromOrganization({
+        organizationID: 'org-1',
+        type: AuthorizationCredential.ORGANIZATION_ADMIN,
+        resourceID: 'org-1',
+      });
+
+      expect(
+        roleSetCacheInvalidationService.invalidateForCredentialChange
+      ).toHaveBeenCalledWith(
+        'org-1',
+        AuthorizationCredential.ORGANIZATION_ADMIN,
+        'org-1'
       );
     });
   });
