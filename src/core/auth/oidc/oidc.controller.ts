@@ -261,6 +261,16 @@ export class OidcController {
       // is provably lost on the social sign-up leg. Carry the challenge AND
       // the returnTo: `login()` otherwise rebuilds returnTo from the query
       // alone, silently replacing the user's destination with `/`.
+      //
+      // RESIDUAL (ENG-079-SRV-02): this leg carries no state, nonce or query,
+      // so it is indistinguishable from the re-entry of any OTHER flow live in
+      // the same jar. A web sign-in parked at the IdP while an app sign-in is
+      // started in the same (Android, Chrome-shared) jar therefore CAN come
+      // back through here and inherit the app flow's mode and returnTo. No
+      // discriminator exists at this point to separate them — a second cookie
+      // slot would not help, because the re-entry cannot say which slot it
+      // belongs to either — so the collision is accepted, not guarded. Owed to
+      // spec §4 Q3 as a named residual.
       const cookieRaw = req.cookies?.[PRE_AUTH_COOKIE_NAME];
       if (typeof cookieRaw === 'string' && cookieRaw.length > 0) {
         try {
@@ -281,11 +291,21 @@ export class OidcController {
       typeof appChallengeRaw === 'string' &&
       APP_CHALLENGE_PATTERN.test(appChallengeRaw) &&
       this.appRedirectScheme !== undefined &&
-      this.redis !== undefined
+      this.redis !== undefined &&
+      // SEC-079-02 — app mode establishes no session in THIS jar and clears the
+      // Kratos SSO cookie, so anyone who could put `?app_challenge=` in front of
+      // a signed-in web user could sign them out of SSO with one link. The
+      // shell launches its Custom Tab / ASWebAuthenticationSession as a
+      // browser-initiated navigation (`Sec-Fetch-Site: none`); a link click from
+      // another origin is `cross-site`, and that is the one value refused here.
+      // Absent is ACCEPTED on purpose: Safari on the iOS 15 target sends no
+      // such header, so this binds on Android/Chrome — where the shared Chrome
+      // jar is what makes the attack reach a live session in the first place.
+      req.headers['sec-fetch-site'] !== 'cross-site'
     ) {
       // Any `/login` carrying a query string starts a FRESH mode decision, so
-      // a web sign-in can never inherit app mode from an abandoned app flow
-      // in the same (Android, Chrome-shared) cookie jar.
+      // an abandoned app flow in the same jar cannot bleed into it. The
+      // query-less branch above is the leg where that guarantee does not hold.
       appChallenge = appChallengeRaw;
     }
 
@@ -488,6 +508,7 @@ export class OidcController {
           returnTo: targetReturnTo,
           app_challenge: appMode.challenge,
           issued_at: now,
+          correlation_id: correlationId,
         });
       } catch {
         // An unhandled throw here would 500 inside the auth browser, emit
@@ -501,6 +522,15 @@ export class OidcController {
         );
       }
 
+      // SEC-079-01 — RFC 8252 §8.1: a private-use scheme is not claimed or
+      // verified on Android, and the challenge this code is bound to was chosen
+      // by whoever started the flow. So the verifier binding defeats
+      // INTERCEPTION of a legitimate flow, but not a flow an attacker-installed
+      // app initiates itself against a live Kratos session in the shared Chrome
+      // jar. Owed to spec §9 as a named residual under the existing operator /
+      // security-owner gate — NOT yet recorded there. The narrowing, if it is
+      // ever taken, is an Android-only verified App Link; the iOS 15 target
+      // cannot use one, which is why the scheme stays.
       res.redirect(302, `${appMode.scheme}:/auth/callback?code=${code}`);
       return;
     }
@@ -542,11 +572,23 @@ export class OidcController {
     const rpId = this.oidcService.getClient().metadata.client_id ?? null;
     // FR-012 — this handler runs in the WebView, so a landing the app itself
     // renders is the right destination for every failure.
+    //
+    // SEC-079-04 / NFR-005 — once a record has been redeemed the rejection is
+    // attributable: `sub` and `client_id` name the account whose handoff was
+    // replayed or forged, and `correlation_id` is the ORIGINATING flow's, not
+    // this request's, so the rejection joins to the `/login` it targeted across
+    // the jar boundary. `request_id` stays this request's id, which is the one
+    // distinction between the two fields that this codebase actually needs.
+    // Before a record is in hand (`store_unavailable`, `code_unknown`) there is
+    // nothing to attribute to, and the fields fall back to null / this request.
+    let record: AppHandoffRecord | null = null;
     const reject = (errorCode: string): void => {
       emitAudit({
         event_type: 'auth.app_handoff.rejected',
         outcome: 'failure',
-        correlation_id: correlationId,
+        sub: record?.bundle.sub ?? null,
+        client_id: record?.bundle.client_id ?? null,
+        correlation_id: record?.correlation_id ?? correlationId,
         request_id: correlationId,
         error_code: errorCode,
         rp_id: rpId,
@@ -559,7 +601,6 @@ export class OidcController {
     // a request that spells the verifier as `?verifier=` therefore burns the
     // code and fails the compare below, which is already the behaviour FR-009
     // specifies — and rejecting it earlier would leave a stolen code live.
-    let record: AppHandoffRecord | null;
     try {
       if (!this.redis) return reject('handoff_store_unavailable');
       record = await redeemAppHandoff(

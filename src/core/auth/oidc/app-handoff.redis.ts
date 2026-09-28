@@ -52,6 +52,13 @@ export type AppHandoffRecord = {
   /** Binds the record to the app instance that started the flow (FR-010). */
   app_challenge: string;
   issued_at: number;
+  /**
+   * The correlation id of the `/login` → `/callback` flow that minted this
+   * record. `/app-handoff` runs in the app's WebView — a different jar, a
+   * different request — so this is the only thing that can tie a rejected
+   * redemption back to the sign-in it targeted (NFR-005).
+   */
+  correlation_id: string;
 };
 
 function handoffKey(code: string): string {

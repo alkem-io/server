@@ -21,6 +21,7 @@ const RECORD: AppHandoffRecord = {
   returnTo: '/spaces/alkemio',
   app_challenge: 'challenge-0123456789abcdefghijklmnopqrstuvwx',
   issued_at: 1_800_000_000,
+  correlation_id: 'corr-origin-1',
 };
 
 /**

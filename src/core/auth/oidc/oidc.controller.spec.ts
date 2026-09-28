@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { createHash } from 'crypto';
 import { describe, expect, it, vi } from 'vitest';
+import { CORRELATION_ID_HEADER } from '../../middleware/correlation-id.middleware';
 import { APP_VERIFIER_HEADER } from './constants';
 import { OidcController } from './oidc.controller';
 import { OidcService } from './oidc.service';
@@ -623,6 +624,7 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
       cookie?: string;
       redis?: unknown;
       cookieDomain?: string;
+      headers?: Record<string, string>;
     } = {}
   ) {
     const { redis } = makeHandoffRedis();
@@ -633,6 +635,7 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
     const query = opts.query ?? {};
     const req = makeReq({
       query,
+      headers: opts.headers ?? {},
       cookies: opts.cookie ? { [PRE_AUTH_COOKIE_NAME]: opts.cookie } : {},
     });
     const res = makeRes();
@@ -653,6 +656,36 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
     );
     expect(payload.app_challenge).toBe(APP_CHALLENGE);
     expect(res.statusCode).toBe(302);
+  });
+
+  // SEC-079-02 — app mode establishes no session in THIS jar and clears the
+  // Kratos SSO cookie, so a crafted `?app_challenge=` link would otherwise let
+  // any third party sign a web user out of SSO on one click. The existing test
+  // above covers the header being absent (Safari on the iOS 15 target), which
+  // must keep working.
+  it('ignores app_challenge on a cross-site navigation', async () => {
+    const { res } = await login({
+      query: { app_challenge: APP_CHALLENGE },
+      headers: { 'sec-fetch-site': 'cross-site' },
+    });
+    const payload = await verifyPreAuthCookie(
+      readIssuedPreAuth(res),
+      PRE_AUTH_KEY
+    );
+    expect(payload.app_challenge).toBeUndefined();
+    expect(res.statusCode).toBe(302);
+  });
+
+  it('still enters app mode on the shell Custom Tab launch (Sec-Fetch-Site: none)', async () => {
+    const { res } = await login({
+      query: { app_challenge: APP_CHALLENGE },
+      headers: { 'sec-fetch-site': 'none' },
+    });
+    const payload = await verifyPreAuthCookie(
+      readIssuedPreAuth(res),
+      PRE_AUTH_KEY
+    );
+    expect(payload.app_challenge).toBe(APP_CHALLENGE);
   });
 
   // The two tests below are the M2 contract: they are what lets `/callback`
@@ -945,6 +978,8 @@ describe('OidcController — app-mode /callback hands off instead of signing in 
   });
 });
 
+const MINT_CORRELATION_ID = 'corr-originating-flow';
+
 describe('OidcController — GET /app-handoff redeems in the WebView (FR-008…FR-012, FR-017)', () => {
   /** Drive a real app-mode callback and return the code it handed out. */
   async function mintHandoff(redis: any) {
@@ -967,7 +1002,12 @@ describe('OidcController — GET /app-handoff redeems in the WebView (FR-008…F
     await controller.callback(
       'state-app',
       'auth-code',
-      makeReq({ cookies: { [PRE_AUTH_COOKIE_NAME]: cookie } }),
+      makeReq({
+        cookies: { [PRE_AUTH_COOKIE_NAME]: cookie },
+        header: vi.fn((name: string) =>
+          name === CORRELATION_ID_HEADER ? MINT_CORRELATION_ID : undefined
+        ),
+      }),
       res
     );
     const code = new URL(
@@ -1023,6 +1063,47 @@ describe('OidcController — GET /app-handoff redeems in the WebView (FR-008…F
     // login registers one.
     expect(redis.eval).toHaveBeenCalled();
     expect(store.size).toBe(0);
+  });
+
+  // SEC-079-04 / NFR-005 — `/app-handoff` runs in the app's WebView, a
+  // different jar and a different request from the `/login` it belongs to, so
+  // the record is the only thing that can carry attribution across. Without it
+  // "which accounts had a handoff replayed or forged" is unanswerable.
+  it('attributes a rejection to the account and to the originating flow', async () => {
+    const { redis } = makeHandoffRedis();
+    const { controller, code } = await mintHandoff(redis);
+    const { records } = await redeem(controller, code, { verifier: 'wrong' });
+
+    const rejected = records.find(
+      r => r.event_type === 'auth.app_handoff.rejected'
+    );
+    expect(rejected).toMatchObject({
+      error_code: 'verifier_mismatch',
+      sub: 'sub-app',
+      client_id: 'alkemio-web',
+      correlation_id: MINT_CORRELATION_ID,
+    });
+    // …while `request_id` stays this request's own id, so the two are joinable
+    // rather than conflated.
+    expect(rejected.request_id).not.toBe(MINT_CORRELATION_ID);
+  });
+
+  it('carries no attribution when no record was redeemed', async () => {
+    const { redis } = makeHandoffRedis();
+    const { controller } = await mintHandoff(redis);
+    const { records } = await redeem(controller, 'never-issued', {
+      verifier: APP_VERIFIER,
+    });
+
+    const rejected = records.find(
+      r => r.event_type === 'auth.app_handoff.rejected'
+    );
+    expect(rejected).toMatchObject({
+      error_code: 'code_unknown_or_expired',
+      sub: null,
+      client_id: null,
+    });
+    expect(rejected.correlation_id).toBe(rejected.request_id);
   });
 
   it('rejects a replayed code and audits it', async () => {
