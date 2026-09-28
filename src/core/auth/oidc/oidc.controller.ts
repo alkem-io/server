@@ -11,7 +11,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { LogContext } from '@src/common/enums';
 import { AlkemioConfig } from '@src/types';
-import { randomUUID, timingSafeEqual } from 'crypto';
+import { createHash, randomUUID, timingSafeEqual } from 'crypto';
 import type { Request, Response } from 'express';
 import type { Redis } from 'ioredis';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -22,7 +22,15 @@ import {
   getCorrelationId,
   setCorrelationId,
 } from '../../middleware/correlation-id.middleware';
+import {
+  type AppHandoffRecord,
+  type MintedSessionBundle,
+  redeemAppHandoff,
+  storeAppHandoff,
+} from './app-handoff.redis';
+import { appRedirectSchemeFor } from './app-redirect-scheme';
 import { emitAudit } from './audit';
+import { APP_VERIFIER_HEADER } from './constants';
 import { OidcService } from './oidc.service';
 import { OIDC_REDIS_CLIENT } from './oidc.tokens';
 import {
@@ -48,6 +56,17 @@ declare module 'express-session' {
 }
 
 const OIDC_SCOPE = 'openid profile email offline_access alkemio';
+
+// FR-001 — the unpadded base64url length of a SHA-256 digest. A value that
+// does not match is IGNORED rather than rejected, so a crafted link cannot
+// turn someone's ordinary web login into a failure.
+const APP_CHALLENGE_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+
+// FR-012 — the one place an `app_signin` landing is the right destination:
+// `/app-handoff` runs inside the app's own WebView, so the app renders it.
+// Every app-mode exit from `/callback` goes back through the app scheme
+// instead, because that handler runs in the external auth browser.
+const APP_SIGNIN_FAILED_PATH = '/login?app_signin=failed';
 const ERROR_HTML =
   '<!doctype html><meta charset="utf-8"><title>Authentication failed</title><p>Authentication failed.</p>';
 
@@ -109,6 +128,26 @@ export class OidcController {
    * clear did not.
    */
   private readonly sessionCookieDomain: string | undefined;
+  /**
+   * FR-007 — the KRATOS session cookie's name, read from
+   * `identity.authentication.providers.ory.session_cookie_name`. There is no
+   * `providers.kratos` block in this config; reading one yields `undefined`
+   * and a clear that silently misses.
+   */
+  private readonly kratosSessionCookieName: string;
+  /**
+   * FR-004 — the app's private-use callback scheme for THIS deployment,
+   * derived from the session-cookie domain. `undefined` (every environment
+   * without an app, and local dev) means app mode is unavailable, which is
+   * the only thing `/login` needs to know (FR-002).
+   *
+   * Derived from `this.sessionCookieDomain`, which is already
+   * `cookie.domain || undefined` — and that matters: `configuration.ts:43-59`
+   * coerces an empty `${VAR}` to the NUMBER 0 (`isNaN('')` is false), which
+   * `|| undefined` has already collapsed by the time the lookup runs. Never
+   * add a typed `string` accessor for that value.
+   */
+  private readonly appRedirectScheme: string | undefined;
   constructor(
     private readonly oidcService: OidcService,
     configService: ConfigService<AlkemioConfig, true>,
@@ -142,6 +181,11 @@ export class OidcController {
     this.sessionCookieName = cookie.name;
     this.sessionAbsoluteTtlS = cookie.absolute_ttl_s;
     this.sessionCookieDomain = cookie.domain || undefined;
+    this.kratosSessionCookieName = configService.get(
+      'identity.authentication.providers.ory.session_cookie_name',
+      { infer: true }
+    );
+    this.appRedirectScheme = appRedirectSchemeFor(this.sessionCookieDomain);
   }
 
   /**
@@ -195,6 +239,7 @@ export class OidcController {
   @Get('login')
   async login(
     @Query('returnTo') returnToRaw: string | undefined,
+    @Query('app_challenge') appChallengeRaw: string | undefined,
     @Req() req: Request,
     @Res() res: Response
   ): Promise<void> {
@@ -202,6 +247,47 @@ export class OidcController {
     const validation = validateReturnTo(returnToRaw);
     const client = this.oidcService.getClient();
     const rpId = client.metadata.client_id ?? null;
+
+    // FR-002/FR-003 — app mode is decided HERE and nowhere else, then carried
+    // in the signed pre-auth cookie. Both gating inputs are process-static
+    // (`appRedirectScheme` is constructor-computed, `redis` is an @Optional()
+    // constructor injection), so deciding once at the start of the flow loses
+    // nothing and leaves `/callback` with no availability branch at all.
+    let appChallenge: string | undefined;
+    let carriedReturnTo: string | undefined;
+    if (Object.keys(req.query).length === 0) {
+      // FR-003 — the Kratos `registration.after.oidc` re-entry is a BARE
+      // `/login` with no query string, which is exactly why a query-only flag
+      // is provably lost on the social sign-up leg. Carry the challenge AND
+      // the returnTo: `login()` otherwise rebuilds returnTo from the query
+      // alone, silently replacing the user's destination with `/`.
+      const cookieRaw = req.cookies?.[PRE_AUTH_COOKIE_NAME];
+      if (typeof cookieRaw === 'string' && cookieRaw.length > 0) {
+        try {
+          const carried = await verifyPreAuthCookie(
+            cookieRaw,
+            this.oidcService.getPreAuthSigningKey()
+          );
+          if (carried.app_challenge) {
+            appChallenge = carried.app_challenge;
+            carriedReturnTo = carried.returnTo;
+          }
+        } catch {
+          // An expired or tampered cookie simply does not carry a flow
+          // forward; this is an ordinary web sign-in.
+        }
+      }
+    } else if (
+      typeof appChallengeRaw === 'string' &&
+      APP_CHALLENGE_PATTERN.test(appChallengeRaw) &&
+      this.appRedirectScheme !== undefined &&
+      this.redis !== undefined
+    ) {
+      // Any `/login` carrying a query string starts a FRESH mode decision, so
+      // a web sign-in can never inherit app mode from an abandoned app flow
+      // in the same (Android, Chrome-shared) cookie jar.
+      appChallenge = appChallengeRaw;
+    }
 
     if (validation.rejected) {
       emitAudit({
@@ -226,8 +312,9 @@ export class OidcController {
         state,
         nonce,
         code_verifier: codeVerifier,
-        returnTo: validation.value,
+        returnTo: carriedReturnTo ?? validation.value,
         issued_at: issuedAt,
+        app_challenge: appChallenge,
       },
       this.oidcService.getPreAuthSigningKey()
     );
@@ -300,8 +387,30 @@ export class OidcController {
       );
     }
 
+    // FR-005 — app mode, and the only place it is read. `app_challenge` is
+    // written by `/login` alone, and only when the scheme and the handoff
+    // store were both available (FR-002), so neither narrowing below can fail
+    // on a real call path; they are how TypeScript sees what FR-002 already
+    // guarantees. From here on, EVERY exit out of this handler in app mode
+    // returns to the app scheme — it runs in the external auth browser, so a
+    // page rendered or a session established here reaches nobody.
+    const appMode =
+      preAuth.app_challenge && this.appRedirectScheme && this.redis
+        ? {
+            challenge: preAuth.app_challenge,
+            scheme: this.appRedirectScheme,
+            redis: this.redis,
+          }
+        : undefined;
+
     if (typeof queryState !== 'string' || queryState !== preAuth.state) {
-      return rejectCallback(res, correlationId, rpId, 'state_mismatch');
+      return rejectCallback(
+        res,
+        correlationId,
+        rpId,
+        'state_mismatch',
+        appMode?.scheme
+      );
     }
 
     let tokenSet: TokenSet;
@@ -316,12 +425,24 @@ export class OidcController {
         }
       );
     } catch {
-      return rejectCallback(res, correlationId, rpId, 'token_exchange_failed');
+      return rejectCallback(
+        res,
+        correlationId,
+        rpId,
+        'token_exchange_failed',
+        appMode?.scheme
+      );
     }
 
     const claims = tokenSet.claims();
     if (claims.nonce !== preAuth.nonce) {
-      return rejectCallback(res, correlationId, rpId, 'nonce_mismatch');
+      return rejectCallback(
+        res,
+        correlationId,
+        rpId,
+        'nonce_mismatch',
+        appMode?.scheme
+      );
     }
 
     const now = Math.floor(Date.now() / 1000);
@@ -332,6 +453,166 @@ export class OidcController {
         : null;
     const clientId = client.metadata.client_id ?? '';
     const targetReturnTo = validateReturnTo(preAuth.returnTo).value;
+
+    const bundle: MintedSessionBundle = {
+      access_token: tokenSet.access_token ?? '',
+      id_token: tokenSet.id_token ?? '',
+      refresh_token: tokenSet.refresh_token ?? '',
+      expires_at: tokenSet.expires_at ?? now,
+      scope: tokenSet.scope ?? null,
+      sub,
+      alkemio_actor_id: alkemioActorId,
+      client_id: clientId,
+    };
+
+    if (appMode) {
+      // FR-005 — establish NOTHING in this jar. The session belongs to the
+      // app's WebView, which cannot see the auth browser's cookies.
+      //
+      // FR-007 — clear the Kratos session cookie with the full
+      // {name, domain, path} triple. server#6315: a Set-Cookie that mismatches
+      // any one of the three does not fail, it stores a SECOND cookie and
+      // leaves the original alive — which is how a session survived sign-out
+      // in every environment that configures a domain.
+      res.cookie(this.kratosSessionCookieName, '', {
+        domain: this.sessionCookieDomain,
+        path: '/',
+        maxAge: 0,
+      });
+      this.clearPreAuthCookie(res);
+
+      let code: string;
+      try {
+        code = await storeAppHandoff(appMode.redis, {
+          bundle,
+          returnTo: targetReturnTo,
+          app_challenge: appMode.challenge,
+          issued_at: now,
+        });
+      } catch {
+        // An unhandled throw here would 500 inside the auth browser, emit
+        // nothing, and strand a live Hydra/Kratos session.
+        return rejectCallback(
+          res,
+          correlationId,
+          rpId,
+          'handoff_store_failed',
+          appMode.scheme
+        );
+      }
+
+      res.redirect(302, `${appMode.scheme}:/auth/callback?code=${code}`);
+      return;
+    }
+
+    await this.establishSession(req, res, bundle, {
+      createdAt: now,
+      correlationId,
+      rpId,
+    });
+
+    res.redirect(302, targetReturnTo);
+  }
+
+  /**
+   * workspace#079-app-sso-handoff FR-008…FR-012 — redeem a one-shot handoff
+   * code from inside the app's WebView and establish the session THERE.
+   *
+   * Mounted relative to the `api/auth/oidc` controller prefix, so the wire
+   * path is `/api/auth/oidc/app-handoff`: the shell hard-codes that string,
+   * and the two decorators are what the cross-repo `app-handoff-wire` check
+   * asserts.
+   *
+   * **This handler cannot throw.** Both of its awaits are guarded, and nothing
+   * between them can reject. An unhandled rejection returns a raw Nest 500
+   * into the app's MAIN FRAME — the thing FR-035/US3.3 forbid — with no audit
+   * record and no counter movement, and the code is already burned by then so
+   * there is no retry either. The two guards are separate rather than one
+   * outer `try` because the closed error-code set distinguishes the store
+   * being unreachable from the session store rejecting a save, and one catch
+   * cannot tell those apart without a mutable phase flag.
+   */
+  @Get('app-handoff')
+  async appHandoff(
+    @Query('code') code: string | undefined,
+    @Req() req: Request,
+    @Res() res: Response
+  ): Promise<void> {
+    const correlationId = ensureCorrelationId(req, res);
+    const rpId = this.oidcService.getClient().metadata.client_id ?? null;
+    // FR-012 — this handler runs in the WebView, so a landing the app itself
+    // renders is the right destination for every failure.
+    const reject = (errorCode: string): void => {
+      emitAudit({
+        event_type: 'auth.app_handoff.rejected',
+        outcome: 'failure',
+        correlation_id: correlationId,
+        request_id: correlationId,
+        error_code: errorCode,
+        rp_id: rpId,
+      });
+      res.redirect(302, APP_SIGNIN_FAILED_PATH);
+    };
+
+    // FR-009 — burn the record on ANY attempt, before anything is validated.
+    // Unknown query parameters are ignored exactly as on every other endpoint:
+    // a request that spells the verifier as `?verifier=` therefore burns the
+    // code and fails the compare below, which is already the behaviour FR-009
+    // specifies — and rejecting it earlier would leave a stolen code live.
+    let record: AppHandoffRecord | null;
+    try {
+      if (!this.redis) return reject('handoff_store_unavailable');
+      record = await redeemAppHandoff(
+        this.redis,
+        typeof code === 'string' ? code : ''
+      );
+    } catch {
+      return reject('handoff_store_unavailable');
+    }
+    if (!record) return reject('code_unknown_or_expired');
+
+    // FR-008 — Node lowercases incoming header names.
+    const verifier = req.headers[APP_VERIFIER_HEADER.toLowerCase()];
+    if (typeof verifier !== 'string' || verifier.length === 0) {
+      return reject('verifier_missing');
+    }
+
+    // FR-010 — the app proves it is the instance that started the flow.
+    const digest = createHash('sha256').update(verifier).digest('base64url');
+    if (!constantTimeStringEqual(digest, record.app_challenge)) {
+      return reject('verifier_mismatch');
+    }
+
+    try {
+      // FR-011 — the SAME path a web login takes, with `created_at` pinned to
+      // the handoff's issue time so subject-scoped revocation windows bind to
+      // when the user actually authenticated.
+      await this.establishSession(req, res, record.bundle, {
+        createdAt: record.issued_at,
+        correlationId,
+        rpId,
+      });
+    } catch {
+      // The code was burned in step 1, so the user's retry has to come from a
+      // fresh sign-in rather than a replay of this one.
+      return reject('session_establish_failed');
+    }
+
+    res.redirect(302, record.returnTo);
+  }
+
+  /**
+   * Regenerate, populate, persist, re-index and announce a session — the whole
+   * "the user is now signed in" step, shared verbatim by the web `/callback`
+   * and the app `/app-handoff` (FR-011). The caller owns the redirect.
+   */
+  private async establishSession(
+    req: Request,
+    res: Response,
+    bundle: MintedSessionBundle,
+    ctx: { createdAt: number; correlationId: string; rpId: string | null }
+  ): Promise<void> {
+    const now = Math.floor(Date.now() / 1000);
 
     // server#6315 — `regenerate()` below destroys the current Redis session and
     // mints a fresh sid. Capture the OUTGOING pair first: the old sid is still
@@ -351,17 +632,17 @@ export class OidcController {
       req.session.regenerate(err => {
         if (err) return reject(err);
         const s = req.session;
-        s.access_token = tokenSet.access_token ?? '';
-        s.id_token = tokenSet.id_token ?? '';
-        s.refresh_token = tokenSet.refresh_token ?? '';
-        s.expires_at = tokenSet.expires_at ?? now;
+        s.access_token = bundle.access_token;
+        s.id_token = bundle.id_token;
+        s.refresh_token = bundle.refresh_token;
+        s.expires_at = bundle.expires_at;
         s.absolute_expires_at = now + this.sessionAbsoluteTtlS;
-        s.sub = sub;
-        s.alkemio_actor_id = alkemioActorId;
+        s.sub = bundle.sub;
+        s.alkemio_actor_id = bundle.alkemio_actor_id;
         s.refresh_failure_count = 0;
         s.refresh_failure_streak_started_at = null;
-        s.created_at = now;
-        s.client_id = clientId;
+        s.created_at = ctx.createdAt;
+        s.client_id = bundle.client_id;
         s.request_context_cache = null;
         req.session.save(saveErr => (saveErr ? reject(saveErr) : resolve()));
       });
@@ -379,11 +660,35 @@ export class OidcController {
     // subject to that subject's sessions, which is the whole reason deleting a
     // user could not end their access. Best-effort: never fails the login.
     await this.indexSession(
-      sub,
+      bundle.sub,
       req.sessionID,
       req.session.absolute_expires_at ?? now + this.sessionAbsoluteTtlS
     );
 
+    this.clearPreAuthCookie(res);
+
+    emitAudit({
+      event_type: 'session.regenerated',
+      outcome: 'success',
+      sub: bundle.sub,
+      client_id: bundle.client_id,
+      correlation_id: ctx.correlationId,
+      request_id: ctx.correlationId,
+      rp_id: ctx.rpId,
+    });
+    emitAudit({
+      event_type: 'auth.login.completed',
+      outcome: 'success',
+      sub: bundle.sub,
+      client_id: bundle.client_id,
+      correlation_id: ctx.correlationId,
+      request_id: ctx.correlationId,
+      granted_scope: bundle.scope,
+      rp_id: ctx.rpId,
+    });
+  }
+
+  private clearPreAuthCookie(res: Response): void {
     const attrs = preAuthCookieAttributes(this.oidcService.getCookieSecure());
     res.cookie(PRE_AUTH_COOKIE_NAME, '', {
       path: attrs.path,
@@ -392,28 +697,6 @@ export class OidcController {
       secure: attrs.secure,
       maxAge: 0,
     });
-
-    emitAudit({
-      event_type: 'session.regenerated',
-      outcome: 'success',
-      sub,
-      client_id: clientId,
-      correlation_id: correlationId,
-      request_id: correlationId,
-      rp_id: rpId,
-    });
-    emitAudit({
-      event_type: 'auth.login.completed',
-      outcome: 'success',
-      sub,
-      client_id: clientId,
-      correlation_id: correlationId,
-      request_id: correlationId,
-      granted_scope: tokenSet.scope ?? null,
-      rp_id: rpId,
-    });
-
-    res.redirect(302, targetReturnTo);
   }
 
   @Get('refresh')
@@ -793,11 +1076,26 @@ function constantTimeStringEqual(a: string, b: string): boolean {
   return timingSafeEqual(ab, bb);
 }
 
+/**
+ * FR-013 — the shared rejection exit for `/callback`.
+ *
+ * With `appScheme` given (app mode, decided at `/login`), the 400 HTML page is
+ * replaced by a 302 back into the app: this handler runs in the EXTERNAL AUTH
+ * BROWSER, where a rendered page is a dead end the shell cannot observe.
+ *
+ * **Stated residual.** The two sites that fire before the pre-auth cookie is
+ * verified — `pre_auth_cookie_missing` / `pre_auth_cookie_invalid` — do not
+ * pass a scheme, because app mode is genuinely unknowable there.
+ * `PRE_AUTH_COOKIE_MAX_AGE_S` is 600 s and a first-time IdP sign-up with 2FA
+ * enrolment can exceed it, so a user CAN reach the 400 page in the auth
+ * browser; they dismiss it and the shell counts a cancelled attempt.
+ */
 function rejectCallback(
   res: Response,
   correlationId: string,
   rpId: string | null,
-  errorCode: string
+  errorCode: string,
+  appScheme?: string
 ): void {
   emitAudit({
     event_type: 'auth.login.callback_rejected',
@@ -807,6 +1105,10 @@ function rejectCallback(
     error_code: errorCode,
     rp_id: rpId,
   });
+  if (appScheme) {
+    res.redirect(302, `${appScheme}:/auth/callback?error=${errorCode}`);
+    return;
+  }
   res.status(400).type('html').send(ERROR_HTML);
 }
 

@@ -1,6 +1,7 @@
 import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { OidcController } from '@core/auth/oidc/oidc.controller';
 import { OidcService } from '@core/auth/oidc/oidc.service';
+import { OIDC_REDIS_CLIENT } from '@core/auth/oidc/oidc.tokens';
 import {
   PRE_AUTH_COOKIE_NAME,
   PRE_AUTH_COOKIE_PATH,
@@ -32,6 +33,16 @@ import passport from 'passport';
 import { vi } from 'vitest';
 
 export const PRE_AUTH_KEY_BYTES = new Uint8Array(32).fill(3);
+/**
+ * workspace#079-app-sso-handoff — the cookie domain an app-capable deployment
+ * has. `app-redirect-scheme.ts` maps it to `io.alkem.app`; every other domain
+ * (and the harness default, which is none) leaves app mode unavailable, which
+ * is why a harness that does not opt in cannot reach the app branch at all.
+ */
+export const APP_MODE_COOKIE_DOMAIN = 'alkem.io';
+export const APP_REDIRECT_SCHEME = 'io.alkem.app';
+export const KRATOS_SESSION_COOKIE_NAME = 'ory_kratos_session';
+const SESSION_ABSOLUTE_TTL_S = 2_592_000;
 export const SESSION_SIGNING_KEY = 'test-session-signing-key';
 export const FIXED_STATE = 'state-0123456789abcdef0123456789abcdef';
 export const FIXED_NONCE = 'nonce-0123456789abcdef0123456789abcdef';
@@ -229,11 +240,46 @@ function buildToggleableSessionStore(): ToggleableSessionStore {
   };
 }
 
+/**
+ * In-memory stand-in for the shared ioredis client, covering the per-subject
+ * index write `establishSession()` makes and the two handoff-store commands.
+ */
+function buildFakeRedisClient() {
+  const strings = new Map<string, string>();
+  return {
+    strings,
+    eval: vi.fn(async () => 1),
+    srem: vi.fn(async () => 1),
+    get: vi.fn(async (key: string) => strings.get(key) ?? null),
+    set: vi.fn(async (key: string, value: string) => {
+      strings.set(key, value);
+      return 'OK';
+    }),
+    getdel: vi.fn(async (key: string) => {
+      const value = strings.get(key) ?? null;
+      strings.delete(key);
+      return value;
+    }),
+  };
+}
+
 export async function createOidcHarness(
-  opts: { middleware?: RequestHandler[] } = {}
+  opts: {
+    middleware?: RequestHandler[];
+    /**
+     * workspace#079-app-sso-handoff — wire the three things an app-capable
+     * deployment has and this harness otherwise lacks: a MAPPED cookie domain,
+     * the Kratos session-cookie name, and an OIDC_REDIS_CLIENT. Without all
+     * three, `/login` refuses app mode by FR-002 and no spec can reach the app
+     * branch. Off by default, so every pre-existing spec keeps running against
+     * the exact configuration it was written for.
+     */
+    appMode?: boolean;
+  } = {}
 ): Promise<OidcHarness> {
   const oidcService = buildOidcServiceMock();
   const sessionStore = buildToggleableSessionStore();
+  const redis = buildFakeRedisClient();
 
   const moduleRef = await Test.createTestingModule({
     controllers: [OidcController],
@@ -256,8 +302,15 @@ export async function createOidcHarness(
             identity: {
               authentication: {
                 providers: {
+                  ory: {
+                    session_cookie_name: KRATOS_SESSION_COOKIE_NAME,
+                  },
                   oidc: {
-                    cookie: { name: 'alkemio_session' },
+                    cookie: {
+                      name: 'alkemio_session',
+                      absolute_ttl_s: SESSION_ABSOLUTE_TTL_S,
+                      domain: opts.appMode ? APP_MODE_COOKIE_DOMAIN : '',
+                    },
                   },
                 },
               },
@@ -297,6 +350,9 @@ export async function createOidcHarness(
         },
       },
       CookieSessionStrategy,
+      ...(opts.appMode
+        ? [{ provide: OIDC_REDIS_CLIENT, useValue: redis }]
+        : []),
     ],
   }).compile();
 

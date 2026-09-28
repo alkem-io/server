@@ -1,11 +1,17 @@
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { createHash } from 'crypto';
 import { describe, expect, it, vi } from 'vitest';
+import { APP_VERIFIER_HEADER } from './constants';
 import { OidcController } from './oidc.controller';
 import { OidcService } from './oidc.service';
 import { OIDC_REDIS_CLIENT } from './oidc.tokens';
-import { PRE_AUTH_COOKIE_NAME, signPreAuthCookie } from './pre-auth-cookie';
+import {
+  PRE_AUTH_COOKIE_NAME,
+  signPreAuthCookie,
+  verifyPreAuthCookie,
+} from './pre-auth-cookie';
 import { subIndexKey } from './session-index.redis';
 import { SESSION_STORE_HANDLE } from './strategies/cookie-session.errors';
 
@@ -24,6 +30,10 @@ const COOKIE_CONFIG = {
   absolute_ttl_s: 2_592_000,
   domain: 'alkem.io',
 };
+// FR-007 — the KRATOS cookie the app-mode callback has to clear. It is read
+// from `identity.authentication.providers.ory.session_cookie_name`; there is
+// no `providers.kratos` block in this config.
+const KRATOS_SESSION_COOKIE_NAME = 'ory_kratos_session';
 const PRE_AUTH_KEY = new TextEncoder().encode(
   'test-only-pre-auth-signing-key-0000000000000000'
 );
@@ -120,6 +130,10 @@ function makeReq(overrides: Record<string, unknown> = {}) {
   return {
     sessionID: 'sid-1',
     cookies: {},
+    // Express always populates both; the controller reads `req.query` to
+    // decide app mode and `req.headers` to read the handoff verifier.
+    query: {},
+    headers: {},
     session: makeSession(),
     header: vi.fn(() => undefined),
     ...overrides,
@@ -130,6 +144,8 @@ async function buildController(opts?: {
   redis?: unknown;
   sessionStore?: unknown;
   oidcServiceOverrides?: Record<string, unknown>;
+  /** FR-004 — an unmapped domain means app mode is unavailable. */
+  cookieDomain?: string;
 }) {
   const fakeClient = {
     metadata: { client_id: 'alkemio-web', redirect_uris: ['https://cb'] },
@@ -153,7 +169,19 @@ async function buildController(opts?: {
     MockWinstonProvider,
     OidcController,
     { provide: OidcService, useValue: oidcService },
-    { provide: ConfigService, useValue: { get: vi.fn(() => COOKIE_CONFIG) } },
+    {
+      provide: ConfigService,
+      useValue: {
+        get: vi.fn((path: string) =>
+          path === 'identity.authentication.providers.ory.session_cookie_name'
+            ? KRATOS_SESSION_COOKIE_NAME
+            : {
+                ...COOKIE_CONFIG,
+                domain: opts?.cookieDomain ?? COOKIE_CONFIG.domain,
+              }
+        ),
+      },
+    },
   ];
   if (opts?.sessionStore !== undefined) {
     providers.push({
@@ -504,5 +532,621 @@ describe('OidcController — index failures are swallowed and logged (FR-006)', 
     ).toBe(true);
 
     warnSpy.mockRestore();
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// workspace#079-app-sso-handoff — native sign-in handoff.
+// ───────────────────────────────────────────────────────────────────────────
+
+const APP_VERIFIER = 'app-verifier-0123456789abcdefghijklmnopqrstuvwxyz';
+/** 43 chars — the unpadded base64url length of a SHA-256 digest (FR-001). */
+const APP_CHALLENGE = createHash('sha256')
+  .update(APP_VERIFIER)
+  .digest('base64url');
+const APP_SCHEME = 'io.alkem.app';
+
+/**
+ * ioredis stand-in covering the handoff store's two commands plus the
+ * per-subject index write `establishSession` makes.
+ */
+function makeHandoffRedis(opts?: {
+  setImpl?: () => Promise<unknown>;
+  getdelImpl?: () => Promise<string | null>;
+}) {
+  const store = new Map<string, string>();
+  const redis: any = {
+    eval: vi.fn(() => Promise.resolve(1)),
+    srem: vi.fn(() => Promise.resolve(1)),
+    get: vi.fn(() => Promise.resolve(null)),
+    set: vi.fn((key: string, value: string) => {
+      if (opts?.setImpl) return opts.setImpl();
+      store.set(key, value);
+      return Promise.resolve('OK');
+    }),
+    getdel: vi.fn((key: string) => {
+      if (opts?.getdelImpl) return opts.getdelImpl();
+      const value = store.get(key) ?? null;
+      store.delete(key);
+      return Promise.resolve(value);
+    }),
+  };
+  return { redis, store };
+}
+
+/** Collect the JSON audit records emitted while `run` executes. */
+async function captureAudit<T>(
+  run: () => Promise<T>
+): Promise<{ result: T; records: any[] }> {
+  const records: any[] = [];
+  const spy = vi
+    .spyOn(process.stdout, 'write')
+    .mockImplementation((chunk: any) => {
+      try {
+        records.push(JSON.parse(String(chunk)));
+      } catch {
+        // Not an audit record.
+      }
+      return true;
+    });
+  try {
+    return { result: await run(), records };
+  } finally {
+    spy.mockRestore();
+  }
+}
+
+function readIssuedPreAuth(res: any): string {
+  const issued = res.cookies.find(
+    (c: { name: string; value: string }) =>
+      c.name === PRE_AUTH_COOKIE_NAME && c.value !== ''
+  );
+  expect(issued).toBeDefined();
+  return issued.value;
+}
+
+function appTokenSet(nonce: string, issuedAt: number) {
+  return {
+    access_token: 'at',
+    id_token: 'idt',
+    refresh_token: 'rt',
+    expires_at: issuedAt + 600,
+    scope: 'openid profile',
+    claims: () => ({ sub: 'sub-app', nonce, alkemio_actor_id: 'actor-app' }),
+  };
+}
+
+describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', () => {
+  async function login(
+    opts: {
+      query?: Record<string, unknown>;
+      cookie?: string;
+      redis?: unknown;
+      cookieDomain?: string;
+    } = {}
+  ) {
+    const { redis } = makeHandoffRedis();
+    const { controller } = await buildController({
+      redis: opts.redis === null ? undefined : (opts.redis ?? redis),
+      cookieDomain: opts.cookieDomain,
+    });
+    const query = opts.query ?? {};
+    const req = makeReq({
+      query,
+      cookies: opts.cookie ? { [PRE_AUTH_COOKIE_NAME]: opts.cookie } : {},
+    });
+    const res = makeRes();
+    await controller.login(
+      query.returnTo as string | undefined,
+      query.app_challenge as string | undefined,
+      req,
+      res
+    );
+    return { res };
+  }
+
+  it('enters app mode with a well-formed challenge, a mapped domain and Redis', async () => {
+    const { res } = await login({ query: { app_challenge: APP_CHALLENGE } });
+    const payload = await verifyPreAuthCookie(
+      readIssuedPreAuth(res),
+      PRE_AUTH_KEY
+    );
+    expect(payload.app_challenge).toBe(APP_CHALLENGE);
+    expect(res.statusCode).toBe(302);
+  });
+
+  // The two tests below are the M2 contract: they are what lets `/callback`
+  // carry no availability branch at all.
+  it('does NOT enter app mode when the cookie domain is unmapped', async () => {
+    const web = await login({});
+    const attempted = await login({
+      query: { app_challenge: APP_CHALLENGE },
+      cookieDomain: 'acc-alkem.io',
+    });
+    const payload = await verifyPreAuthCookie(
+      readIssuedPreAuth(attempted.res),
+      PRE_AUTH_KEY
+    );
+    expect(payload.app_challenge).toBeUndefined();
+    expect(attempted.res.statusCode).toBe(web.res.statusCode);
+    expect(attempted.res.redirectedTo).toBe(web.res.redirectedTo);
+  });
+
+  it('does NOT enter app mode when no Redis client is wired', async () => {
+    const web = await login({});
+    const attempted = await login({
+      query: { app_challenge: APP_CHALLENGE },
+      redis: null,
+    });
+    const payload = await verifyPreAuthCookie(
+      readIssuedPreAuth(attempted.res),
+      PRE_AUTH_KEY
+    );
+    expect(payload.app_challenge).toBeUndefined();
+    expect(attempted.res.statusCode).toBe(web.res.statusCode);
+    expect(attempted.res.redirectedTo).toBe(web.res.redirectedTo);
+  });
+
+  it.each([
+    ['42 chars', APP_CHALLENGE.slice(0, 42)],
+    ['44 chars', `${APP_CHALLENGE}x`],
+    ['base64 (not url) alphabet', `${APP_CHALLENGE.slice(0, 41)}+/`],
+    ['non-string', ['a', 'b'] as unknown as string],
+  ])('ignores a malformed challenge (%s) without failing the login', async (_label, challenge) => {
+    const { res } = await login({ query: { app_challenge: challenge } });
+    const payload = await verifyPreAuthCookie(
+      readIssuedPreAuth(res),
+      PRE_AUTH_KEY
+    );
+    expect(payload.app_challenge).toBeUndefined();
+    expect(res.statusCode).toBe(302);
+  });
+
+  // Kratos' registration.after.oidc re-enters a BARE /login with no query
+  // string, so a flag passed only as a query parameter is lost on exactly the
+  // leg stickiness exists for — and `returnTo` is rebuilt from the query
+  // alone, so carrying only the challenge would still drop the destination.
+  it('carries both the challenge and the returnTo across a query-less re-entry', async () => {
+    const cookie = await signPreAuthCookie(
+      {
+        state: 's',
+        nonce: 'n',
+        code_verifier: 'v',
+        returnTo: '/spaces/alkemio',
+        issued_at: Math.floor(Date.now() / 1000),
+        app_challenge: APP_CHALLENGE,
+      },
+      PRE_AUTH_KEY
+    );
+    const { res } = await login({ cookie });
+    const payload = await verifyPreAuthCookie(
+      readIssuedPreAuth(res),
+      PRE_AUTH_KEY
+    );
+    expect(payload.app_challenge).toBe(APP_CHALLENGE);
+    expect(payload.returnTo).toBe('/spaces/alkemio');
+  });
+
+  it('carries nothing forward from a query-less re-entry in web mode', async () => {
+    const cookie = await signPreAuthCookie(
+      {
+        state: 's',
+        nonce: 'n',
+        code_verifier: 'v',
+        returnTo: '/spaces/alkemio',
+        issued_at: Math.floor(Date.now() / 1000),
+      },
+      PRE_AUTH_KEY
+    );
+    const { res } = await login({ cookie });
+    const payload = await verifyPreAuthCookie(
+      readIssuedPreAuth(res),
+      PRE_AUTH_KEY
+    );
+    expect(payload.app_challenge).toBeUndefined();
+    expect(payload.returnTo).toBe('/');
+  });
+
+  // A web sign-in must never inherit app mode from an abandoned app flow in
+  // the same (Android, Chrome-shared) cookie jar.
+  it('starts a fresh decision when any query string is present', async () => {
+    const cookie = await signPreAuthCookie(
+      {
+        state: 's',
+        nonce: 'n',
+        code_verifier: 'v',
+        returnTo: '/spaces/alkemio',
+        issued_at: Math.floor(Date.now() / 1000),
+        app_challenge: APP_CHALLENGE,
+      },
+      PRE_AUTH_KEY
+    );
+    const { res } = await login({ query: { returnTo: '/x' }, cookie });
+    const payload = await verifyPreAuthCookie(
+      readIssuedPreAuth(res),
+      PRE_AUTH_KEY
+    );
+    expect(payload.app_challenge).toBeUndefined();
+    expect(payload.returnTo).toBe('/x');
+  });
+});
+
+describe('OidcController — app-mode /callback hands off instead of signing in (FR-005/FR-007/FR-013)', () => {
+  async function appCallback(opts: {
+    redis: any;
+    tokenSetImpl?: () => Promise<unknown>;
+    challenge?: string;
+  }) {
+    const { controller, fakeClient } = await buildController({
+      redis: opts.redis,
+    });
+    const nonce = 'nonce-app';
+    const issuedAt = Math.floor(Date.now() / 1000);
+    const cookie = await signPreAuthCookie(
+      {
+        state: 'state-app',
+        nonce,
+        code_verifier: 'verifier-app',
+        returnTo: '/dashboard',
+        issued_at: issuedAt,
+        app_challenge: opts.challenge ?? APP_CHALLENGE,
+      },
+      PRE_AUTH_KEY
+    );
+    if (opts.tokenSetImpl) {
+      fakeClient.callback.mockImplementation(opts.tokenSetImpl);
+    } else {
+      fakeClient.callback.mockResolvedValue(appTokenSet(nonce, issuedAt));
+    }
+    const req = makeReq({ cookies: { [PRE_AUTH_COOKIE_NAME]: cookie } });
+    const res = makeRes();
+    const { records } = await captureAudit(() =>
+      controller.callback('state-app', 'auth-code', req, res)
+    );
+    return { controller, req, res, records, issuedAt };
+  }
+
+  it('establishes no session in the auth-browser jar and 302s to the app scheme', async () => {
+    const { redis, store } = makeHandoffRedis();
+    const { req, res } = await appCallback({ redis });
+
+    expect(req.session.regenerate).not.toHaveBeenCalled();
+    expect(
+      res.cookies.some(
+        (c: { name: string; value: string }) =>
+          c.name === COOKIE_CONFIG.name && c.value !== ''
+      )
+    ).toBe(false);
+    expect(res.redirectedTo).toMatch(
+      new RegExp(`^${APP_SCHEME}:/auth/callback\\?code=[A-Za-z0-9_-]{43}$`)
+    );
+    expect(store.size).toBe(1);
+  });
+
+  // A-8, asserted in the one place both values are actually consumed.
+  // server#6315: a clear that mismatches name, domain OR path leaves the
+  // original cookie in place and stores a second one.
+  it('clears the Kratos cookie with the full {name, domain, path, maxAge} quad', async () => {
+    const { redis } = makeHandoffRedis();
+    const { res } = await appCallback({ redis });
+
+    const cleared = res.cookies.find(
+      (c: { name: string; value: string }) =>
+        c.name === KRATOS_SESSION_COOKIE_NAME
+    );
+    expect(cleared).toBeDefined();
+    expect(cleared.value).toBe('');
+    expect(cleared.opts).toEqual({
+      domain: COOKIE_CONFIG.domain,
+      path: '/',
+      maxAge: 0,
+    });
+  });
+
+  it('still clears the pre-auth cookie', async () => {
+    const { redis } = makeHandoffRedis();
+    const { res } = await appCallback({ redis });
+    const cleared = res.cookies.find(
+      (c: { name: string; value: string }) =>
+        c.name === PRE_AUTH_COOKIE_NAME && c.value === ''
+    );
+    expect(cleared).toBeDefined();
+    expect(cleared.opts).toMatchObject({ maxAge: 0 });
+  });
+
+  it('302s to the app scheme on token_exchange_failed instead of rendering HTML', async () => {
+    const { redis } = makeHandoffRedis();
+    const { res } = await appCallback({
+      redis,
+      tokenSetImpl: () => Promise.reject(new Error('hydra said no')),
+    });
+    expect(res.redirectedTo).toBe(
+      `${APP_SCHEME}:/auth/callback?error=token_exchange_failed`
+    );
+    expect(res.send).not.toHaveBeenCalled();
+  });
+
+  it('302s to the app scheme on state_mismatch', async () => {
+    const { redis } = makeHandoffRedis();
+    const { controller } = await buildController({ redis });
+    const cookie = await signPreAuthCookie(
+      {
+        state: 'real-state',
+        nonce: 'n',
+        code_verifier: 'v',
+        returnTo: '/',
+        issued_at: Math.floor(Date.now() / 1000),
+        app_challenge: APP_CHALLENGE,
+      },
+      PRE_AUTH_KEY
+    );
+    const req = makeReq({ cookies: { [PRE_AUTH_COOKIE_NAME]: cookie } });
+    const res = makeRes();
+    await controller.callback('attacker-state', 'code', req, res);
+    expect(res.redirectedTo).toBe(
+      `${APP_SCHEME}:/auth/callback?error=state_mismatch`
+    );
+    expect(res.send).not.toHaveBeenCalled();
+  });
+
+  it('302s to the app scheme on nonce_mismatch', async () => {
+    const { redis } = makeHandoffRedis();
+    const { res } = await appCallback({
+      redis,
+      tokenSetImpl: () =>
+        Promise.resolve(appTokenSet('attacker-nonce', Date.now())),
+    });
+    expect(res.redirectedTo).toBe(
+      `${APP_SCHEME}:/auth/callback?error=nonce_mismatch`
+    );
+    expect(res.send).not.toHaveBeenCalled();
+  });
+
+  // An unhandled throw would 500 inside the auth browser, emit nothing, leave
+  // the pre-auth cookie set and strand a live Hydra/Kratos session.
+  it('302s with ?error=handoff_store_failed when the store rejects, and does not throw', async () => {
+    const { redis } = makeHandoffRedis({
+      setImpl: () => Promise.reject(new Error('redis unreachable')),
+    });
+    const { res } = await appCallback({ redis });
+    expect(res.redirectedTo).toBe(
+      `${APP_SCHEME}:/auth/callback?error=handoff_store_failed`
+    );
+    expect(res.send).not.toHaveBeenCalled();
+  });
+
+  it('leaves the web callback byte-identical when no challenge is present (FR-016)', async () => {
+    const { redis } = makeHandoffRedis();
+    const { controller, fakeClient } = await buildController({ redis });
+    const nonce = 'nonce-web';
+    const issuedAt = Math.floor(Date.now() / 1000);
+    const cookie = await signPreAuthCookie(
+      {
+        state: 'state-web',
+        nonce,
+        code_verifier: 'v',
+        returnTo: '/dashboard',
+        issued_at: issuedAt,
+      },
+      PRE_AUTH_KEY
+    );
+    fakeClient.callback.mockResolvedValue(appTokenSet(nonce, issuedAt));
+    const req = makeReq({ cookies: { [PRE_AUTH_COOKIE_NAME]: cookie } });
+    const res = makeRes();
+    await controller.callback('state-web', 'auth-code', req, res);
+
+    expect(req.session.regenerate).toHaveBeenCalledOnce();
+    expect(res.redirectedTo).toBe('/dashboard');
+    expect(
+      res.cookies.some(
+        (c: { name: string }) => c.name === KRATOS_SESSION_COOKIE_NAME
+      )
+    ).toBe(false);
+  });
+});
+
+describe('OidcController — GET /app-handoff redeems in the WebView (FR-008…FR-012, FR-017)', () => {
+  /** Drive a real app-mode callback and return the code it handed out. */
+  async function mintHandoff(redis: any) {
+    const { controller, fakeClient } = await buildController({ redis });
+    const nonce = 'nonce-app';
+    const issuedAt = Math.floor(Date.now() / 1000);
+    const cookie = await signPreAuthCookie(
+      {
+        state: 'state-app',
+        nonce,
+        code_verifier: 'v',
+        returnTo: '/spaces/alkemio',
+        issued_at: issuedAt,
+        app_challenge: APP_CHALLENGE,
+      },
+      PRE_AUTH_KEY
+    );
+    fakeClient.callback.mockResolvedValue(appTokenSet(nonce, issuedAt));
+    const res = makeRes();
+    await controller.callback(
+      'state-app',
+      'auth-code',
+      makeReq({ cookies: { [PRE_AUTH_COOKIE_NAME]: cookie } }),
+      res
+    );
+    const code = new URL(
+      res.redirectedTo.replace(':/', '://')
+    ).searchParams.get('code');
+    expect(code).toBeTruthy();
+    return { controller, code: code as string, issuedAt };
+  }
+
+  async function redeem(
+    controller: any,
+    code: string,
+    opts: {
+      verifier?: string | string[];
+      session?: any;
+      query?: Record<string, unknown>;
+    } = {}
+  ) {
+    const req = makeReq({
+      query: { code, ...(opts.query ?? {}) },
+      headers:
+        opts.verifier === undefined
+          ? {}
+          : { [APP_VERIFIER_HEADER.toLowerCase()]: opts.verifier },
+      ...(opts.session ? { session: opts.session } : {}),
+    });
+    const res = makeRes();
+    const { records } = await captureAudit(() =>
+      controller.appHandoff(code, req, res)
+    );
+    return { req, res, records };
+  }
+
+  function rejectionCodes(records: any[]): string[] {
+    return records
+      .filter(r => r.event_type === 'auth.app_handoff.rejected')
+      .map(r => r.error_code);
+  }
+
+  it('happy path: establishes the session and 302s to the record returnTo', async () => {
+    const { redis, store } = makeHandoffRedis();
+    const { controller, code, issuedAt } = await mintHandoff(redis);
+    const { req, res } = await redeem(controller, code, {
+      verifier: APP_VERIFIER,
+    });
+
+    expect(req.session.regenerate).toHaveBeenCalledOnce();
+    expect(res.redirectedTo).toBe('/spaces/alkemio');
+    // FR-011 — created_at is the handoff's issue time, so subject-scoped
+    // revocation windows bind to when the user actually authenticated.
+    expect(req.session.created_at).toBe(issuedAt);
+    // …and the session is registered in its subject's index exactly as a web
+    // login registers one.
+    expect(redis.eval).toHaveBeenCalled();
+    expect(store.size).toBe(0);
+  });
+
+  it('rejects a replayed code and audits it', async () => {
+    const { redis } = makeHandoffRedis();
+    const { controller, code } = await mintHandoff(redis);
+    await redeem(controller, code, { verifier: APP_VERIFIER });
+    const { res, records } = await redeem(controller, code, {
+      verifier: APP_VERIFIER,
+    });
+
+    expect(res.redirectedTo).toBe('/login?app_signin=failed');
+    expect(rejectionCodes(records)).toEqual(['code_unknown_or_expired']);
+  });
+
+  it('rejects an unknown or expired code', async () => {
+    const { redis } = makeHandoffRedis();
+    const { controller } = await mintHandoff(redis);
+    const { res, records } = await redeem(controller, 'never-issued', {
+      verifier: APP_VERIFIER,
+    });
+    expect(res.redirectedTo).toBe('/login?app_signin=failed');
+    expect(rejectionCodes(records)).toEqual(['code_unknown_or_expired']);
+  });
+
+  it('rejects a missing verifier header', async () => {
+    const { redis, store } = makeHandoffRedis();
+    const { controller, code } = await mintHandoff(redis);
+    const { res, records } = await redeem(controller, code);
+    expect(res.redirectedTo).toBe('/login?app_signin=failed');
+    expect(rejectionCodes(records)).toEqual(['verifier_missing']);
+    // FR-009 — burned before anything was checked.
+    expect(store.size).toBe(0);
+  });
+
+  it('rejects a wrong verifier, and the code is gone either way (FR-009)', async () => {
+    const { redis, store } = makeHandoffRedis();
+    const { controller, code } = await mintHandoff(redis);
+    const { req, res, records } = await redeem(controller, code, {
+      verifier: 'not-the-verifier',
+    });
+    expect(res.redirectedTo).toBe('/login?app_signin=failed');
+    expect(rejectionCodes(records)).toEqual(['verifier_mismatch']);
+    expect(req.session.regenerate).not.toHaveBeenCalled();
+    expect(store.size).toBe(0);
+    expect(await redis.getdel(`alkemio:apphandoff:${code}`)).toBeNull();
+  });
+
+  // SIMP-079-A05 — unknown query parameters are ignored like everywhere else.
+  // Rejecting `?verifier=` before the redeem would leave a stolen code live,
+  // and could not un-log the URL that the access log already holds.
+  it('ignores a ?verifier= query parameter: the header still decides', async () => {
+    const { redis } = makeHandoffRedis();
+    const { controller, code } = await mintHandoff(redis);
+    const { res } = await redeem(controller, code, {
+      verifier: APP_VERIFIER,
+      query: { verifier: 'decoy' },
+    });
+    expect(res.redirectedTo).toBe('/spaces/alkemio');
+  });
+
+  it('burns the code even when ?verifier= is the only thing supplied', async () => {
+    const { redis, store } = makeHandoffRedis();
+    const { controller, code } = await mintHandoff(redis);
+    const { res, records } = await redeem(controller, code, {
+      verifier: 'wrong',
+      query: { verifier: APP_VERIFIER },
+    });
+    expect(res.redirectedTo).toBe('/login?app_signin=failed');
+    expect(rejectionCodes(records)).toEqual(['verifier_mismatch']);
+    expect(store.size).toBe(0);
+  });
+
+  // COMP-079-2-06 — a raw Nest 500 would land in the app's MAIN FRAME.
+  it('302s to the landing when the store is unreachable, and does not throw', async () => {
+    const { redis } = makeHandoffRedis({
+      getdelImpl: () => Promise.reject(new Error('ECONNREFUSED')),
+    });
+    const { controller, code } = await mintHandoff(redis);
+    const { res, records } = await redeem(controller, code, {
+      verifier: APP_VERIFIER,
+    });
+    expect(res.redirectedTo).toBe('/login?app_signin=failed');
+    expect(rejectionCodes(records)).toEqual(['handoff_store_unavailable']);
+  });
+
+  // COMP-079-R4-07 — the code is already burned by this point, so the retry
+  // has to come from a fresh sign-in rather than a replay of this one.
+  it('302s to the landing when the session store rejects save(), and does not throw', async () => {
+    const { redis, store } = makeHandoffRedis();
+    const { controller, code } = await mintHandoff(redis);
+    const session = makeSession();
+    session.save = vi.fn((cb: (err?: unknown) => void) =>
+      cb(new Error('session store unavailable'))
+    );
+    const { res, records } = await redeem(controller, code, {
+      verifier: APP_VERIFIER,
+      session,
+    });
+    expect(res.redirectedTo).toBe('/login?app_signin=failed');
+    expect(rejectionCodes(records)).toEqual(['session_establish_failed']);
+    expect(store.size).toBe(0);
+  });
+
+  // FR-017 / NFR-002 — the verifier and the code are the two secrets in this
+  // flow; neither may reach a log line at any level.
+  it('writes neither the verifier nor the code to any log', async () => {
+    const { redis } = makeHandoffRedis();
+    const { controller, code } = await mintHandoff(redis);
+    const logger = MockWinstonProvider.useValue as Record<
+      string,
+      ReturnType<typeof vi.fn>
+    >;
+    for (const level of ['log', 'error', 'warn', 'debug', 'verbose']) {
+      logger[level]?.mockClear?.();
+    }
+
+    await redeem(controller, code, { verifier: APP_VERIFIER });
+    await redeem(controller, code, { verifier: APP_VERIFIER });
+
+    const logged = ['log', 'error', 'warn', 'debug', 'verbose']
+      .flatMap(level => logger[level]?.mock?.calls ?? [])
+      .map(call => JSON.stringify(call))
+      .join('\n');
+    expect(logged).not.toContain(APP_VERIFIER);
+    expect(logged).not.toContain(code);
   });
 });
