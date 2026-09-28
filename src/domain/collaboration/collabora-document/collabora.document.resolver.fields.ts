@@ -62,6 +62,16 @@ export class CollaboraDocumentResolverFields {
   async previewUrl(
     @Parent() collaboraDocument: ICollaboraDocument
   ): Promise<string | null> {
+    // The two paths that reach a CollaboraDocument through a Callout — framing
+    // and contribution — already load `document`, so a board of N documents
+    // costs no extra queries here. `undefined` means the relation was NOT
+    // loaded (the direct/root query paths); `null` means it WAS loaded and
+    // there is genuinely no backing file. Only the former may re-query.
+    if (collaboraDocument.document !== undefined) {
+      return CollaboraDocumentService.buildPreviewUrl(
+        collaboraDocument.document?.id
+      );
+    }
     return this.collaboraDocumentService.getPreviewUrl(collaboraDocument.id);
   }
 }

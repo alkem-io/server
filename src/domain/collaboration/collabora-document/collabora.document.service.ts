@@ -268,7 +268,17 @@ export class CollaboraDocumentService {
       collaboraDocumentID,
       { relations: { document: true } }
     );
-    const fileID = collaboraDocument.document?.id;
+    return CollaboraDocumentService.buildPreviewUrl(
+      collaboraDocument.document?.id
+    );
+  }
+
+  /**
+   * The single owner of the preview URL's shape, so the callers that already
+   * hold a loaded `document` relation do not have to re-query just to rebuild
+   * the same string. Pure: no I/O, no side effects.
+   */
+  public static buildPreviewUrl(fileID: string | undefined): string | null {
     if (!fileID) {
       return null;
     }

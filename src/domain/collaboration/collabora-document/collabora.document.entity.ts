@@ -48,5 +48,5 @@ export class CollaboraDocument
     nullable: true,
   })
   @JoinColumn()
-  document?: Document;
+  document?: Document | null;
 }

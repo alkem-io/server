@@ -25,6 +25,8 @@ export abstract class ICollaboraDocument extends IAuthorizable {
   // independently authorized against the current document READ policy.
   previewUrl?: string;
 
-  // Internal relation, not exposed via GraphQL
-  document?: IDocument;
+  // Internal relation, not exposed via GraphQL. `undefined` means not loaded;
+  // `null` means loaded and genuinely absent — previewUrl relies on that
+  // distinction to avoid a per-document re-query.
+  document?: IDocument | null;
 }
