@@ -1,9 +1,8 @@
 import { CredentialType } from '@common/enums/credential.type';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { RoleSetCacheService } from '@domain/access/role-set/role.set.service.cache';
+import { RoleSetCacheInvalidationService } from '@domain/access/role-set/role.set.service.cache.invalidation';
 import { Test } from '@nestjs/testing';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { vi } from 'vitest';
 import { ActorResolverMutations } from './actor.resolver.mutations';
 import { ActorService } from './actor.service';
@@ -13,8 +12,7 @@ describe('ActorResolverMutations', () => {
   let actorService: any;
   let authorizationService: any;
   let platformAuthorizationService: any;
-  let communityResolverService: any;
-  let roleSetCacheService: any;
+  let roleSetCacheInvalidationService: any;
 
   const mockActorContext = { actorID: 'caller-1' } as any;
   const mockPlatformAuth = { id: 'platform-auth' };
@@ -35,12 +33,8 @@ describe('ActorResolverMutations', () => {
         .mockResolvedValue(mockPlatformAuth),
     };
 
-    communityResolverService = {
-      getRoleSetIdForSpace: vi.fn().mockResolvedValue(undefined),
-    };
-
-    roleSetCacheService = {
-      cleanActorMembershipCache: vi.fn().mockResolvedValue(undefined),
+    roleSetCacheInvalidationService = {
+      invalidateForCredentialChange: vi.fn().mockResolvedValue(undefined),
     };
 
     const module = await Test.createTestingModule({
@@ -53,10 +47,9 @@ describe('ActorResolverMutations', () => {
           useValue: platformAuthorizationService,
         },
         {
-          provide: CommunityResolverService,
-          useValue: communityResolverService,
+          provide: RoleSetCacheInvalidationService,
+          useValue: roleSetCacheInvalidationService,
         },
-        { provide: RoleSetCacheService, useValue: roleSetCacheService },
       ],
     }).compile();
 
@@ -120,12 +113,11 @@ describe('ActorResolverMutations', () => {
     });
   });
 
-  describe('role-set membership cache invalidation (space role credentials)', () => {
-    it('cleans the role-set membership cache when a SPACE_MEMBER credential is revoked', async () => {
-      actorService.revokeCredential.mockResolvedValue(true);
-      communityResolverService.getRoleSetIdForSpace.mockResolvedValue('rs-1');
+  describe('role-set membership cache invalidation', () => {
+    it('hands a granted credential to the invalidation service', async () => {
+      actorService.grantCredentialOrFail.mockResolvedValue({ id: 'cred-1' });
 
-      await resolver.revokeCredentialFromActor(
+      await resolver.grantCredentialToActor(
         mockActorContext,
         'actor-1',
         CredentialType.SPACE_MEMBER,
@@ -133,42 +125,41 @@ describe('ActorResolverMutations', () => {
       );
 
       expect(
-        communityResolverService.getRoleSetIdForSpace
-      ).toHaveBeenCalledWith('space-1');
-      expect(
-        roleSetCacheService.cleanActorMembershipCache
-      ).toHaveBeenCalledWith('actor-1', 'rs-1');
+        roleSetCacheInvalidationService.invalidateForCredentialChange
+      ).toHaveBeenCalledWith('actor-1', CredentialType.SPACE_MEMBER, 'space-1');
     });
 
-    it('does not touch the cache for non-space credentials', async () => {
+    it('hands a revoked credential to the invalidation service', async () => {
       actorService.revokeCredential.mockResolvedValue(true);
 
       await resolver.revokeCredentialFromActor(
         mockActorContext,
         'actor-1',
-        CredentialType.GLOBAL_ADMIN,
-        'res-1'
+        CredentialType.ORGANIZATION_ADMIN,
+        'org-1'
       );
 
       expect(
-        roleSetCacheService.cleanActorMembershipCache
-      ).not.toHaveBeenCalled();
+        roleSetCacheInvalidationService.invalidateForCredentialChange
+      ).toHaveBeenCalledWith(
+        'actor-1',
+        CredentialType.ORGANIZATION_ADMIN,
+        'org-1'
+      );
     });
 
-    it('never fails the mutation when the cache clean throws (best-effort)', async () => {
+    it('passes a missing resourceID through unchanged', async () => {
       actorService.revokeCredential.mockResolvedValue(true);
-      communityResolverService.getRoleSetIdForSpace.mockRejectedValue(
-        new Error('lookup down')
+
+      await resolver.revokeCredentialFromActor(
+        mockActorContext,
+        'actor-1',
+        CredentialType.GLOBAL_ADMIN
       );
 
-      await expect(
-        resolver.revokeCredentialFromActor(
-          mockActorContext,
-          'actor-1',
-          CredentialType.SPACE_MEMBER,
-          'space-1'
-        )
-      ).resolves.toBe(true);
+      expect(
+        roleSetCacheInvalidationService.invalidateForCredentialChange
+      ).toHaveBeenCalledWith('actor-1', CredentialType.GLOBAL_ADMIN, undefined);
     });
   });
 });

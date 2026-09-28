@@ -4,6 +4,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AxiosError, AxiosHeaders, AxiosResponse } from 'axios';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { defer, of, throwError } from 'rxjs';
+import { PassThrough, Readable } from 'stream';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import { FileServiceAdapter } from './file.service.adapter';
 import {
@@ -47,6 +48,8 @@ describe('FileServiceAdapter', () => {
           useValue: {
             request: vi.fn(),
             get: vi.fn(),
+            post: vi.fn(),
+            patch: vi.fn(),
           },
         },
         {
@@ -268,6 +271,153 @@ describe('FileServiceAdapter', () => {
       ).rejects.toThrow(FileServiceAdapterException);
 
       expect(subscribeCount).toBe(3);
+    });
+  });
+
+  describe('createDocumentFromStream', () => {
+    const metadata = {
+      displayName: 'holiday.png',
+      mimeType: 'image/png',
+      storageBucketId: 'bucket-1',
+      authorizationId: 'auth-1',
+    };
+
+    const okResponse = {
+      data: { id: 'doc-1', externalID: 'ext', mimeType: 'image/png', size: 4 },
+      status: 201,
+      statusText: 'Created',
+      headers: {},
+      config: { headers: new AxiosHeaders() },
+    } as AxiosResponse;
+
+    // Collect what the multipart body actually emits, proving the bytes were
+    // streamed through rather than buffered by the adapter. The returned
+    // observable settles only AFTER the body is fully read, as a real request
+    // does — the adapter's cleanup must not run before the body is sent.
+    const drain = (form: any): Promise<Buffer> =>
+      new Promise((resolve, reject) => {
+        const chunks: Buffer[] = [];
+        const sink = new PassThrough();
+        sink.on('data', (c: Buffer) => chunks.push(Buffer.from(c)));
+        sink.on('end', () => resolve(Buffer.concat(chunks)));
+        sink.on('error', reject);
+        form.on('error', reject);
+        form.pipe(sink);
+      });
+
+    const postAfterBodyRead = (
+      capture: (body: Promise<Buffer>) => void
+    ): Mock =>
+      vi.fn((_url: string, form: any) => {
+        const body = drain(form);
+        capture(body);
+        return defer(async () => {
+          await body.catch(() => undefined);
+          return okResponse;
+        });
+      }) as unknown as Mock;
+
+    it('streams the source bytes into the multipart body without buffering them first', async () => {
+      let sent: Promise<Buffer> | undefined;
+      (httpService.post as Mock).mockImplementation(
+        postAfterBodyRead(b => (sent = b))
+      );
+
+      const source = Readable.from([Buffer.from('abc'), Buffer.from('de')]);
+      await adapter.createDocumentFromStream(source, metadata, 1024);
+
+      const body = await sent!;
+      expect(body.toString()).toContain('abcde');
+      expect(body.toString()).toContain('filename="holiday.png"');
+      expect(body.toString()).toContain('name="storageBucketId"');
+    });
+
+    it('pins maxRedirects to 0 so axios uses the native transport, not the replaying one', async () => {
+      // follow-redirects (axios' default transport) pushes every written chunk
+      // into `_requestBodyBuffers` so it can replay the body on a redirect,
+      // which holds the whole file in RAM. axios selects the native http
+      // transport ONLY when maxRedirects === 0.
+      let sent: Promise<Buffer> | undefined;
+      (httpService.post as Mock).mockImplementation(
+        postAfterBodyRead(b => (sent = b))
+      );
+
+      await adapter.createDocumentFromStream(
+        Readable.from([Buffer.from('abc')]),
+        metadata,
+        1024
+      );
+      await sent;
+
+      expect(httpService.post).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.anything(),
+        expect.objectContaining({ maxRedirects: 0 })
+      );
+    });
+
+    it('aborts mid-transfer once maxBytes is exceeded, rather than after the whole file arrives', async () => {
+      let seen = 0;
+      let sent: Promise<Buffer> | undefined;
+      (httpService.post as Mock).mockImplementation(
+        postAfterBodyRead(b => (sent = b))
+      );
+
+      // 200 chunks of 64 KiB (12.5 MiB) against a 1 MiB cap. Chunks are larger
+      // than the stream's read-ahead window, so the source CANNOT be drained
+      // before the cap trips — which is the property being proved.
+      const CHUNK = 64 * 1024;
+      const TOTAL_CHUNKS = 200;
+      const source = new Readable({
+        read() {
+          seen += 1;
+          this.push(seen <= TOTAL_CHUNKS ? Buffer.alloc(CHUNK, 'x') : null);
+        },
+      });
+
+      await adapter.createDocumentFromStream(source, metadata, 1024 * 1024);
+      await expect(sent!).rejects.toThrow(/exceeds the maximum allowed size/);
+      // Rejected partway through, not after the whole 12.5 MiB was read.
+      expect(seen).toBeLessThan(TOTAL_CHUNKS);
+    });
+
+    it('issues exactly ONE attempt on a 503 — a consumed stream must never be replayed', async () => {
+      // The shared pipeline retries POST on 503. Replaying here would resend
+      // an exhausted stream as a truncated body, so this path does not retry.
+      const error = new AxiosError('unavailable', 'ERR', undefined, undefined, {
+        status: 503,
+        statusText: 'Service Unavailable',
+        data: {},
+        headers: {},
+        config: { headers: new AxiosHeaders() },
+      } as AxiosResponse);
+      (httpService.post as Mock).mockReturnValue(throwError(() => error));
+
+      await expect(
+        adapter.createDocumentFromStream(
+          Readable.from([Buffer.from('abc')]),
+          metadata,
+          1024
+        )
+      ).rejects.toThrow();
+
+      expect(httpService.post).toHaveBeenCalledTimes(1);
+    });
+
+    it('fails the request when the SOURCE stream errors, instead of sending a short body', async () => {
+      let sent: Promise<Buffer> | undefined;
+      (httpService.post as Mock).mockImplementation(
+        postAfterBodyRead(b => (sent = b))
+      );
+
+      const source = new Readable({
+        read() {
+          this.destroy(new Error('disk read failed'));
+        },
+      });
+
+      await adapter.createDocumentFromStream(source, metadata, 1024);
+      await expect(sent!).rejects.toThrow('disk read failed');
     });
   });
 
@@ -564,6 +714,95 @@ describe('FileServiceAdapter', () => {
     });
   });
 
+  describe('getDocumentByReference', () => {
+    it('[1] issues a GET with ref+bucketId as QUERY params and NO request body', async () => {
+      const responseData = {
+        id: 'doc-ref',
+        externalID: 'media-1',
+        mimeType: 'image/png',
+        size: 2048,
+        storageBucketId: 'bucket-1',
+      };
+      (httpService.request as Mock).mockReturnValue(
+        of(axiosResponse(responseData))
+      );
+
+      const result = await adapter.getDocumentByReference(
+        'media-1',
+        'bucket-1'
+      );
+
+      expect(result).toEqual(responseData);
+      const callArgs = (httpService.request as Mock).mock.calls[0][0];
+      expect(callArgs.method).toBe('get');
+      // ref + bucketId travel as query params in the URL...
+      expect(callArgs.url).toBe(
+        'http://file-service:4003/internal/file/by-reference?ref=media-1&bucketId=bucket-1'
+      );
+      // ...and NOT as a request body: a GET must carry no data (the misplaced
+      // 4th positional arg previously put {ref,bucketId} here).
+      expect(callArgs.data).toBeUndefined();
+    });
+
+    it('[1] global lookup (no bucketId) sends ref-only query and no body', async () => {
+      (httpService.request as Mock).mockReturnValue(
+        of(axiosResponse({ id: 'doc-ref', externalID: 'media-1' }))
+      );
+
+      await adapter.getDocumentByReference('media-1');
+
+      const callArgs = (httpService.request as Mock).mock.calls[0][0];
+      expect(callArgs.url).toBe(
+        'http://file-service:4003/internal/file/by-reference?ref=media-1'
+      );
+      expect(callArgs.data).toBeUndefined();
+    });
+
+    it('returns null on 404 (no match) rather than throwing', async () => {
+      const axiosError = new AxiosError('Not Found', '404', undefined, null, {
+        status: 404,
+        data: { error: 'not found' },
+        statusText: 'Not Found',
+        headers: {},
+        config: { headers: new AxiosHeaders() },
+      });
+      (httpService.request as Mock).mockReturnValue(
+        throwError(() => axiosError)
+      );
+
+      await expect(
+        adapter.getDocumentByReference('media-1', 'bucket-1')
+      ).resolves.toBeNull();
+    });
+
+    it('[1] a non-404 failure surfaces an error whose context carries ref + bucketId', async () => {
+      // 400 is never retried (http-4xx), so this asserts immediately without the
+      // idempotent-GET retry timers a 5xx would incur.
+      const axiosError = new AxiosError('Bad Request', '400', undefined, null, {
+        status: 400,
+        data: { error: 'bad request' },
+        statusText: 'Bad Request',
+        headers: {},
+        config: { headers: new AxiosHeaders() },
+      });
+      (httpService.request as Mock).mockReturnValue(
+        throwError(() => axiosError)
+      );
+
+      const error = await adapter
+        .getDocumentByReference('media-1', 'bucket-1')
+        .catch(e => e);
+
+      expect(error).toBeInstanceOf(FileServiceAdapterException);
+      // The context (6th) arg reaches handleError → the exception details, so a
+      // failure stays diagnosable with the reference that triggered it.
+      expect(error.details).toMatchObject({
+        ref: 'media-1',
+        bucketId: 'bucket-1',
+      });
+    });
+  });
+
   describe('getDocumentContent', () => {
     it('should GET binary content and return Buffer', async () => {
       const fileContent = Buffer.from('file-binary-data');
@@ -684,7 +923,7 @@ describe('FileServiceAdapter', () => {
           FileServiceAdapter,
           {
             provide: HttpService,
-            useValue: { request: vi.fn(), get: vi.fn() },
+            useValue: { request: vi.fn(), get: vi.fn(), patch: vi.fn() },
           },
           {
             provide: ConfigService,

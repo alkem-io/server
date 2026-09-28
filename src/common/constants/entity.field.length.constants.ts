@@ -27,6 +27,8 @@ export const ROLE_SET_INVITE_BATCH_MAX = 100;
 export const ROLE_SET_INVITE_EXTRA_ROLES_MAX = 10;
 // others
 export const ENUM_LENGTH = 128;
+// file-service external reference (feature 013-matrix-media-file-service)
+export const EXTERNAL_REFERENCE_LENGTH = 256;
 // https://www.rfc-editor.org/rfc/rfc1034#section-3.1
 export const SUBDOMAIN_LENGTH = 63;
 export const URI_LENGTH = 2048;

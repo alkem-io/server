@@ -43,7 +43,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { cloneDeep, keyBy, merge, mergeWith } from 'lodash';
+import { cloneDeep, keyBy } from 'lodash';
 import {
   DeepPartial,
   EntityManager,
@@ -65,6 +65,7 @@ import { CollaboraDocumentService } from '../collabora-document/collabora.docume
 import { ImportCollaboraDocumentInput } from '../collabora-document/dto/collabora.document.dto.import';
 import { CreatePostInput } from '../post/dto/post.dto.create';
 import { ReactionService } from '../reaction/reaction.service';
+import { mergeCalloutSettings } from './callout.settings.merge';
 import { CalloutContributionsCountOutput } from './dto/callout.contributions.count.dto';
 import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contribution';
 import { UpdateCalloutInput } from './dto/callout.dto.update';
@@ -104,6 +105,13 @@ export class CalloutService {
     parentSpaceId?: string
   ): Promise<ICallout> {
     this.validateCreateCalloutData(calloutData);
+    // Reject an off-kind selection/spaces block before any framing child
+    // (profile, whiteboard, poll, …) is created: a rejected request persists
+    // nothing. The normalizers below re-apply the same rule.
+    this.calloutFramingService.validateSettingsBlocksForFramingType(
+      calloutData.framing.type ?? CalloutFramingType.NONE,
+      calloutData.settings?.framing
+    );
 
     if (!calloutData.sortOrder) {
       calloutData.sortOrder = 10;
@@ -146,6 +154,15 @@ export class CalloutService {
         callout.framing.type,
         callout.settings.framing,
         calloutData.settings?.framing?.selection
+      );
+
+    // Validate + normalize the card-variant settings (SPACES-only). Runs
+    // after selection normalization so the framing type is stable.
+    callout.settings.framing =
+      this.calloutFramingService.validateAndNormalizeSpacesSettings(
+        callout.framing.type,
+        callout.settings.framing,
+        calloutData.settings?.framing?.spaces
       );
 
     // AC3 host-scope guard: reject any selectedId not in the host's RoleSet
@@ -415,10 +432,7 @@ export class CalloutService {
     settingsData?: CreateCalloutInput['settings']
   ): ICalloutSettings {
     const calloutSettings = cloneDeep(DefaultCalloutSettings);
-    if (settingsData) {
-      merge(calloutSettings, settingsData);
-    }
-    return calloutSettings;
+    return mergeCalloutSettings(calloutSettings, settingsData);
   }
 
   private validateCreateCalloutData(calloutData: CreateCalloutInput) {
@@ -550,6 +564,15 @@ export class CalloutService {
     }
     const targetStorageBucketID = callout.framing.profile?.storageBucket?.id;
 
+    // Reject an off-kind selection/spaces block against the TARGET framing
+    // type before updateCalloutFraming runs: it has side effects (e.g. a type
+    // change deletes the whiteboard) and there is no transaction, so a
+    // rejected request must fail here to persist nothing.
+    this.calloutFramingService.validateSettingsBlocksForFramingType(
+      calloutUpdateData.framing?.type ?? callout.framing.type,
+      calloutUpdateData.settings?.framing
+    );
+
     if (calloutUpdateData.framing) {
       callout.framing = await this.calloutFramingService.updateCalloutFraming(
         callout.framing,
@@ -562,15 +585,11 @@ export class CalloutService {
     }
 
     if (calloutUpdateData.settings) {
-      // Replace arrays wholesale instead of deep-merging them element-by-index:
-      // a default `merge` keeps the longer stored array's tail, so EXCLUDING a
-      // contributor type (sending a shorter `contributorTypes`) would silently
-      // not persist. Arrays in settings are config lists, not positional patches.
-      callout.settings = mergeWith(
+      // Arrays replace wholesale and an explicit null never clears a scalar
+      // leaf — see callout.settings.merge.ts for why both rules matter.
+      callout.settings = mergeCalloutSettings(
         callout.settings,
-        calloutUpdateData.settings,
-        (_existing, incoming) =>
-          Array.isArray(incoming) ? incoming : undefined
+        calloutUpdateData.settings
       );
     }
 
@@ -616,14 +635,25 @@ export class CalloutService {
         calloutUpdateData.settings?.framing?.selection
       );
 
+    // Re-validate + normalize the card-variant settings with partial-update
+    // semantics. No pre-strip here: a SPACES framing can never change kind
+    // (updateCalloutFraming rejects it), and the normalizer itself removes
+    // the block on every non-SPACES framing.
+    callout.settings.framing =
+      this.calloutFramingService.validateAndNormalizeSpacesSettings(
+        callout.framing.type,
+        callout.settings.framing,
+        calloutUpdateData.settings?.framing?.spaces
+      );
+
     // AC3 host-scope guard on update: only validate ids the caller explicitly
     // submitted in this request (FR-008: stale stored ids must be inert — no
     // admin action required to remove a since-departed member/subspace).
-    // The guard still runs in full on the CREATE path (line ~135) where there
-    // are no pre-existing stored ids.
-    if (
-      calloutUpdateData.settings?.framing?.selection?.selectedIds !== undefined
-    ) {
+    // The guard still runs in full on the CREATE path where there are no
+    // pre-existing stored ids. `!= null`: an explicit `selectedIds: null` (or
+    // `selection: null`) keeps the stored list, so there is nothing submitted
+    // to validate — re-checking stale stored ids would reject the update.
+    if (calloutUpdateData.settings?.framing?.selection?.selectedIds != null) {
       const updateParentSpaceId = callout.calloutsSet
         ? await this.getParentSpaceId(callout.calloutsSet.id)
         : undefined;

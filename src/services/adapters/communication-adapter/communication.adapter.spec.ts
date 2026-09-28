@@ -331,6 +331,7 @@ describe('CommunicationAdapter', () => {
     it('should return IMessage with correct structure', async () => {
       const response = createSuccessResponse({
         message_id: 'msg-123',
+        content: 'Test message',
         timestamp: 1234567890123,
       });
       mockAmqpConnection.request.mockResolvedValue(response);
@@ -350,7 +351,64 @@ describe('CommunicationAdapter', () => {
         timestamp: 1234567890123,
         threadID: undefined,
         reactions: [],
+        // feature 013 (FIX 6): the send response carries its own attachments +
+        // room so it resolves attachments like the read path. No attachments
+        // here → rawAttachments undefined; roomID always echoed back.
+        rawAttachments: undefined,
+        roomID: 'room-uuid-123',
       });
+    });
+
+    it('returns the actual sent media reference instead of the requested batch', async () => {
+      const response = createSuccessResponse({
+        message_id: 'msg-att',
+        content: 'pic.png',
+        attachments: [
+          {
+            document_id: 'doc-1',
+            media_id: 'actual-media',
+            display_name: 'pic.png',
+            mime_type: 'image/png',
+            size: 900,
+            width: 10,
+            height: 20,
+          },
+        ],
+        timestamp: 1234567890123,
+      });
+      mockAmqpConnection.request.mockResolvedValue(response);
+
+      const result = await adapter.sendMessage({
+        roomID: 'room-uuid-123',
+        actorID: 'actor-uuid-456',
+        message: '',
+        attachments: [
+          {
+            documentId: 'doc-1',
+            displayName: 'pic.png',
+            mimeType: 'image/png',
+            size: 1000,
+            width: 10,
+            height: 20,
+          },
+        ],
+      });
+
+      expect(result.roomID).toBe('room-uuid-123');
+      expect(result.message).toBe('pic.png');
+      expect(result.rawAttachments).toEqual([
+        {
+          document_id: 'doc-1',
+          media_id: 'actual-media',
+          display_name: 'pic.png',
+          mime_type: 'image/png',
+          size: 900,
+          // Dims must survive the mapper — they become the m.image event's
+          // info.w/info.h, so dropping them is what makes Element reflow.
+          width: 10,
+          height: 20,
+        },
+      ]);
     });
 
     it('should throw when roomID is empty', async () => {

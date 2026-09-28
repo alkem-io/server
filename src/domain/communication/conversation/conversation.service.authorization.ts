@@ -11,6 +11,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 import { Injectable } from '@nestjs/common';
 import { ConversationService } from './conversation.service';
 
@@ -20,6 +21,7 @@ export class ConversationAuthorizationService {
     private conversationService: ConversationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private roomAuthorizationService: RoomAuthorizationService,
+    private storageBucketAuthorizationService: StorageBucketAuthorizationService,
     private userLookupService: UserLookupService
   ) {}
 
@@ -32,6 +34,16 @@ export class ConversationAuthorizationService {
         relations: {
           authorization: true,
           room: true,
+          storageAggregator: {
+            authorization: true,
+            directStorage: {
+              authorization: true,
+              // The document cascade also needs the tagset policy.
+              documents: {
+                tagset: true,
+              },
+            },
+          },
         },
       }
     );
@@ -66,6 +78,11 @@ export class ConversationAuthorizationService {
       // the platform's service credentials, not user credentials.
     }
 
+    // Replace the previous participant snapshot so removed members lose grants.
+    conversation.authorization = this.authorizationPolicyService.reset(
+      conversation.authorization
+    );
+
     // Add READ + CONTRIBUTE access for all user participants
     // T057: Membership grants both read and send message privileges
     // T058: Structured logging with conversation ID and agent IDs in exception details
@@ -91,6 +108,31 @@ export class ConversationAuthorizationService {
           roomAuthorization
         );
       updatedAuthorizations.push(roomAuthorization);
+    }
+
+    // Conversation storage inherits the participant policy, not the generic
+    // storage-aggregator policy that grants registered/anonymous access.
+    const storageAggregator = conversation.storageAggregator;
+    if (storageAggregator?.directStorage && storageAggregator.authorization) {
+      storageAggregator.authorization = this.authorizationPolicyService.reset(
+        storageAggregator.authorization
+      );
+      storageAggregator.authorization =
+        this.authorizationPolicyService.inheritParentAuthorization(
+          storageAggregator.authorization,
+          conversation.authorization
+        );
+      updatedAuthorizations.push(storageAggregator.authorization);
+
+      // The bucket auth service resets+inherits the bucket from the aggregator
+      // auth, appends file-upload/delete privilege rules, cascades to documents,
+      // and persists internally (returns []).
+      // The bucket cascade reads the aggregator to suppress the creator rule.
+      storageAggregator.directStorage.storageAggregator = storageAggregator;
+      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
+        storageAggregator.directStorage,
+        storageAggregator.authorization
+      );
     }
 
     return updatedAuthorizations;
