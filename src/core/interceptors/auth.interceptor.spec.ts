@@ -525,6 +525,10 @@ describe('AuthInterceptor', () => {
         '/api/auth/oidc/login?returnTo=https%3A%2F%2Falkem.io%2Fhome',
         '/api/auth/oidc/callback?code=abc&state=xyz',
         '/api/auth/oidc/logout',
+        // workspace#079-app-sso-handoff — a 401 here renders raw JSON in the
+        // app's MAIN FRAME, and the handler never runs, so the handoff is
+        // neither audited nor retryable.
+        '/api/auth/oidc/app-handoff?code=abc',
       ])('passes through as anonymous: %s', async url => {
         const res = mockRes();
         rejectWith(new CookieSessionInvalidError('account_deleted', 'c'));
@@ -780,6 +784,7 @@ describe('server#6332 — store-unreachable is 503, never 401 (D3)', () => {
     '/api/auth/oidc/login',
     '/api/auth/oidc/callback',
     '/api/auth/oidc/logout',
+    '/api/auth/oidc/app-handoff',
   ])('U9 — %s answers 503 rather than passing through as anonymous', async url => {
     const res = mockRes();
     rejectWith(new SessionStoreUnavailableError(new Error('ECONNREFUSED')));
