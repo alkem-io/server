@@ -85,12 +85,18 @@ export class CalloutsSetAuthorizationService {
     const credentialRules: IAuthorizationPolicyRuleCredential[] = [];
 
     // Two separate rules so can enforce different criterias moving forward.
+    // 027-platform-role-redesign (T044/A9, T066/US4): platform-resource-admin
+    // added additively to both. T066: this is global-support-manager's ONLY
+    // wiring in the whole codebase — re-anchoring it here (additively, never
+    // replacing it in Slice A) is what lets that near-inert legacy role be
+    // deleted in Slice B with zero capability loss.
     const globalAdminTransferCalloutOffer =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT_MANAGER,
+          AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
         ],
         CREDENTIAL_RULE_CALLOUTS_SET_TRANSFER_OFFER
       );
@@ -103,6 +109,7 @@ export class CalloutsSetAuthorizationService {
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT_MANAGER,
+          AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
         ],
         CREDENTIAL_RULE_CALLOUTS_SET_TRANSFER_ACCEPT
       );

@@ -200,9 +200,32 @@ describe('InnovationHubAuthorizationService', () => {
       await service.applyAuthorizationPolicy(hubInput, mockParentAuthorization);
 
       // Assert
+      // QA server-C2-c (ruling (a)): plus the PLATFORM_SUPPORT_ORG_RESOURCES
+      // → UPDATE/CREATE/FILE_UPLOAD privilege rule (never DELETE) — A7,
+      // Platform Support edits an org-owned hub's profile/media/references.
       expect(
         (profileAuthorizationService as any).applyAuthorizationPolicy
-      ).toHaveBeenCalledWith('profile-1', inheritedAuth);
+      ).toHaveBeenCalledWith(
+        'profile-1',
+        inheritedAuth,
+        [],
+        [
+          expect.objectContaining({
+            sourcePrivilege:
+              AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES,
+            grantedPrivileges: [
+              AuthorizationPrivilege.UPDATE,
+              AuthorizationPrivilege.CREATE,
+              AuthorizationPrivilege.FILE_UPLOAD,
+            ],
+          }),
+        ]
+      );
+      const rule = (profileAuthorizationService as any).applyAuthorizationPolicy
+        .mock.calls[0][3][0];
+      expect(rule.grantedPrivileges).not.toContain(
+        AuthorizationPrivilege.DELETE
+      );
     });
 
     it('should handle undefined parent authorization', async () => {

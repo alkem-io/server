@@ -37,3 +37,10 @@ export const POLICY_RULE_COMMUNITY_ADD_VC =
 export const POLICY_RULE_COMMUNITY_APPROVE_APPLICATION =
   'policyRule-communityApproveApplication';
 export const POLICY_RULE_READ_ABOUT = 'policyRule-readAbout';
+// QA server-C2-c (ruling (a)): Platform Support's A7 edit right reaches the
+// profile subtree (profile / references / visuals / storage bucket) of an
+// org-owned innovation pack, innovation hub or template — UPDATE, CREATE and
+// FILE_UPLOAD, never DELETE. A privilege rule, so it only ever fires where
+// PLATFORM_SUPPORT_ORG_RESOURCES is actually held (org-hosted accounts).
+export const POLICY_RULE_PLATFORM_SUPPORT_ORG_RESOURCES_PROFILE_EDIT =
+  'policyRule-platformSupportOrgResourcesProfileEdit';

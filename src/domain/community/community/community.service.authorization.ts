@@ -10,6 +10,7 @@ import {
   CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_TYPES_ROLESET_APPLY_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_INVITE,
+  CREDENTIAL_RULE_TYPES_ROLESET_PLATFORM_RESOURCE_ADMIN_READ,
   CREDENTIAL_RULE_TYPES_SPACE_ROLESET_JOIN_GLOBAL_REGISTERED,
   POLICY_RULE_COMMUNITY_ADD_VC,
 } from '@common/constants';
@@ -24,6 +25,7 @@ import { RoleSetType } from '@common/enums/role.set.type';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { createPlatformResourceAdminMoverReadRule } from '@domain/access/platform-roles-access/platform.resource.admin.mover.read.rule';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
@@ -212,6 +214,18 @@ export class CommunityAuthorizationService {
         );
       spaceAdminsInvite.cascade = false;
       newRules.push(spaceAdminsInvite);
+    }
+
+    // QA server-C1-1 (ruling (b′) "mover-only reads"): the conversion panel's
+    // member lists are READ-gated on this roleSet; the mover's space READ no
+    // longer cascades here, so it gets its own narrow non-cascading READ.
+    const resourceAdminMoverRead = createPlatformResourceAdminMoverReadRule(
+      this.authorizationPolicyService,
+      platformRolesWithAccess,
+      CREDENTIAL_RULE_TYPES_ROLESET_PLATFORM_RESOURCE_ADMIN_READ
+    );
+    if (resourceAdminMoverRead) {
+      newRules.push(resourceAdminMoverRead);
     }
 
     if (entryRoleAllowed && !isSubspace) {
