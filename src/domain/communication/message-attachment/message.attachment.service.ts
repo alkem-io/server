@@ -200,33 +200,59 @@ export class MessageAttachmentService {
       (bucketId
         ? await this.loadDocuments(bucketId, attachments)
         : new Map<string, IDocument>());
-    return attachments.map(raw => {
-      const unavailable: IMessageAttachment = {
-        displayName: raw.display_name || 'attachment',
-      };
-      const document = bucketId
-        ? this.resolveDocument(raw, bucketId, documents)
-        : undefined;
-      if (
-        !document?.authorization ||
-        !this.authorizationService.isAccessGranted(
-          actorContext,
-          document.authorization,
-          AuthorizationPrivilege.READ
-        )
-      ) {
-        return unavailable;
-      }
-      return {
-        id: document.id,
-        url: this.documentService.getPubliclyAccessibleURL(document),
-        displayName: raw.display_name || document.displayName,
-        mimeType: document.mimeType,
-        size: document.size,
-        width: this.imageDimension(raw.width),
-        height: this.imageDimension(raw.height),
-      };
-    });
+    return attachments.map(raw =>
+      this.toMessageAttachment(raw, bucketId, documents, actorContext)
+    );
+  }
+
+  // Media read by a Matrix client rather than through Room.messages: the same
+  // resolution, with one document lookup for the whole batch.
+  public async resolveMediaAttachments(
+    room: IRoom,
+    attachments: ReceivedAttachment[],
+    actorContext: ActorContext
+  ): Promise<IMessageAttachment[]> {
+    if (!attachments.length) return [];
+    const bucketId = (await this.getTargetBucketForRoom(room))?.id;
+    const documents = bucketId
+      ? await this.loadDocuments(bucketId, attachments)
+      : new Map<string, IDocument>();
+    return attachments.map(raw =>
+      this.toMessageAttachment(raw, bucketId, documents, actorContext)
+    );
+  }
+
+  private toMessageAttachment(
+    raw: ReceivedAttachment,
+    bucketId: string | undefined,
+    documents: Map<string, IDocument>,
+    actorContext: ActorContext
+  ): IMessageAttachment {
+    const unavailable: IMessageAttachment = {
+      displayName: raw.display_name || 'attachment',
+    };
+    const document = bucketId
+      ? this.resolveDocument(raw, bucketId, documents)
+      : undefined;
+    if (
+      !document?.authorization ||
+      !this.authorizationService.isAccessGranted(
+        actorContext,
+        document.authorization,
+        AuthorizationPrivilege.READ
+      )
+    ) {
+      return unavailable;
+    }
+    return {
+      id: document.id,
+      url: this.documentService.getPubliclyAccessibleURL(document),
+      displayName: raw.display_name || document.displayName,
+      mimeType: document.mimeType,
+      size: document.size,
+      width: this.imageDimension(raw.width),
+      height: this.imageDimension(raw.height),
+    };
   }
 
   private async loadDocuments(

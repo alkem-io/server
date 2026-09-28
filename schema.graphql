@@ -6508,6 +6508,13 @@ type Room {
   id: UUID!
   """The last message sent to the Room. Useful for conversation previews."""
   lastMessage: Message
+  """
+  Resolves the attachments of media events read directly from Matrix, one entry per input in input order. Unavailable documents retain their event filename without a download URL.
+  """
+  messageAttachments(
+    """The media events to resolve (at most 100)."""
+    media: [MessageAttachmentMediaInput!]!
+  ): [MessageAttachment!]!
   """Messages in this Room."""
   messages: [Message!]!
   """The number of messages in the Room."""
@@ -9438,6 +9445,21 @@ input MemoSigningContinueInput {
 input MemoSigningPrepareInput {
   """The Memo to prepare for signing."""
   memoID: UUID!
+}
+
+input MessageAttachmentMediaInput {
+  """The filename carried by the event."""
+  displayName: String
+  """The file-service document id hint carried by the event."""
+  documentID: UUID
+  """The pixel height carried by the event (images only)."""
+  height: Int
+  """
+  The Synapse media id of the event (the last path segment of its mxc:// URI on this homeserver).
+  """
+  mediaID: String!
+  """The pixel width carried by the event (images only)."""
+  width: Int
 }
 
 input MintMcpApiKeyInput {

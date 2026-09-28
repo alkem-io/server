@@ -1,3 +1,5 @@
+import { AuthorizationPrivilege } from '@common/enums';
+import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -5,6 +7,7 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mocked, vi } from 'vitest';
 import { IMessage } from '../message/message.interface';
+import { MessageAttachmentService } from '../message-attachment/message.attachment.service';
 import { RoomDataLoader } from './room.data.loader';
 import { IRoom } from './room.interface';
 import { RoomResolverFields } from './room.resolver.fields';
@@ -15,6 +18,7 @@ describe('RoomResolverFields', () => {
   let roomService: Mocked<RoomService>;
   let authorizationService: Mocked<AuthorizationService>;
   let roomDataLoader: Mocked<RoomDataLoader>;
+  let messageAttachmentService: Mocked<MessageAttachmentService>;
 
   const actorContext = { actorID: 'user-1' } as ActorContext;
 
@@ -40,6 +44,7 @@ describe('RoomResolverFields', () => {
     resolver = module.get(RoomResolverFields);
     roomService = module.get(RoomService);
     authorizationService = module.get(AuthorizationService);
+    messageAttachmentService = module.get(MessageAttachmentService);
   });
 
   it('should be defined', () => {
@@ -162,6 +167,69 @@ describe('RoomResolverFields', () => {
       const result = await resolver.lastMessage(mockRoom);
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('messageAttachments', () => {
+    const mockRoom = { id: 'room-1' } as IRoom;
+
+    it('is guarded by READ on the room, like messages', () => {
+      const privilege = (method: keyof RoomResolverFields) =>
+        Reflect.getMetadata('privilege', RoomResolverFields.prototype[method]);
+      expect(privilege('messageAttachments')).toBe(AuthorizationPrivilege.READ);
+      expect(privilege('messageAttachments')).toBe(privilege('messages'));
+    });
+
+    it('maps each media input to the adapter attachment shape, in order', async () => {
+      messageAttachmentService.resolveMediaAttachments.mockResolvedValue([]);
+
+      await resolver.messageAttachments(mockRoom, actorContext, [
+        { mediaID: 'a', displayName: 'a.png', width: 4, height: 3 },
+        { mediaID: 'b', documentID: 'doc-b' },
+      ]);
+
+      expect(
+        messageAttachmentService.resolveMediaAttachments
+      ).toHaveBeenCalledWith(
+        mockRoom,
+        [
+          {
+            media_id: 'a',
+            document_id: undefined,
+            display_name: 'a.png',
+            mime_type: '',
+            size: 0,
+            width: 4,
+            height: 3,
+          },
+          {
+            media_id: 'b',
+            document_id: 'doc-b',
+            display_name: '',
+            mime_type: '',
+            size: 0,
+            width: undefined,
+            height: undefined,
+          },
+        ],
+        actorContext
+      );
+    });
+
+    it('accepts 100 entries and rejects 101 without resolving', async () => {
+      messageAttachmentService.resolveMediaAttachments.mockResolvedValue([]);
+      const media = (count: number) =>
+        Array.from({ length: count }, (_, i) => ({ mediaID: `m${i}` }));
+
+      await expect(
+        resolver.messageAttachments(mockRoom, actorContext, media(100))
+      ).resolves.toEqual([]);
+      await expect(
+        resolver.messageAttachments(mockRoom, actorContext, media(101))
+      ).rejects.toThrow(ValidationException);
+      expect(
+        messageAttachmentService.resolveMediaAttachments
+      ).toHaveBeenCalledTimes(1);
     });
   });
 });

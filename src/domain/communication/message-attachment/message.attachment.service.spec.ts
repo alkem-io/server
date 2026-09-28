@@ -303,6 +303,71 @@ describe('MessageAttachmentService', () => {
       expect.anything()
     );
   });
+
+  describe('resolveMediaAttachments', () => {
+    it('resolves media copied into this room to the same fields as Room.messages, in input order, with one lookup', async () => {
+      documentRepository.find.mockResolvedValue([provider, makeDocument()]);
+      const missing = { ...raw, media_id: 'elsewhere', display_name: 'x.png' };
+      const result = await service.resolveMediaAttachments(
+        room,
+        [missing, { ...raw, width: 24, height: 24 }],
+        actor
+      );
+      expect(result).toEqual([
+        { displayName: 'x.png' },
+        {
+          id: documentID,
+          url: expect.any(String),
+          displayName: 'from-element.png',
+          mimeType: 'image/png',
+          size: 10,
+          width: 24,
+          height: 24,
+        },
+      ]);
+      expect(documentRepository.find).toHaveBeenCalledTimes(1);
+      expect(storage.copyDocumentToBucket).not.toHaveBeenCalled();
+    });
+
+    it('media whose copy lives only in another room bucket stays unavailable', async () => {
+      documentRepository.find.mockResolvedValue([
+        provider,
+        makeDocument({ storageBucket: { id: 'other-conversation' } as any }),
+      ]);
+      expect(await service.resolveMediaAttachments(room, [raw], actor)).toEqual(
+        [{ displayName: raw.display_name }]
+      );
+    });
+
+    it('a document hint cannot authorize bytes other than the provider media', async () => {
+      documentRepository.find.mockResolvedValue([
+        provider,
+        makeDocument({ id: 'hinted', externalID: 'different-bytes' }),
+      ]);
+      expect(
+        await service.resolveMediaAttachments(
+          room,
+          [{ ...raw, document_id: 'hinted' }],
+          actor
+        )
+      ).toEqual([{ displayName: raw.display_name }]);
+    });
+
+    it('an unreadable document exposes only the event filename', async () => {
+      documentRepository.find.mockResolvedValue([provider, makeDocument()]);
+      auth.isAccessGranted.mockReturnValue(false);
+      expect(await service.resolveMediaAttachments(room, [raw], actor)).toEqual(
+        [{ displayName: raw.display_name }]
+      );
+    });
+
+    it('an empty batch does no lookup', async () => {
+      expect(await service.resolveMediaAttachments(room, [], actor)).toEqual(
+        []
+      );
+      expect(documentRepository.find).not.toHaveBeenCalled();
+    });
+  });
 });
 
 it('normalizes names to the existing file-service contract without splitting UTF-8', () => {

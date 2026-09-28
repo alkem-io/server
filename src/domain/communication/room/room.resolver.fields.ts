@@ -1,4 +1,5 @@
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -10,9 +11,14 @@ import {
   CurrentActor,
 } from '@src/common/decorators';
 import { IMessage } from '../message/message.interface';
+import { IMessageAttachment } from '../message-attachment/message.attachment.interface';
 import { MessageAttachmentService } from '../message-attachment/message.attachment.service';
 import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
+import { MessageAttachmentMediaInput } from './dto/room.dto.message.attachment.media';
 import { RoomUnreadCounts } from './dto/room.dto.unread.counts';
+
+const MAX_MEDIA_ATTACHMENTS_PER_CALL = 100;
+
 import { RoomDataLoader } from './room.data.loader';
 import { IRoom } from './room.interface';
 import { RoomService } from './room.service';
@@ -38,6 +44,45 @@ export class RoomResolverFields {
     // Share one bucket/document lookup across the history field resolvers.
     await this.messageAttachmentService.stampAttachmentBucket(room, result);
     return result;
+  }
+
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('messageAttachments', () => [IMessageAttachment], {
+    nullable: false,
+    description:
+      'Resolves the attachments of media events read directly from Matrix, one entry per input in input order. Unavailable documents retain their event filename without a download URL.',
+  })
+  async messageAttachments(
+    @Parent() room: IRoom,
+    @CurrentActor() actorContext: ActorContext,
+    @Args('media', {
+      type: () => [MessageAttachmentMediaInput],
+      nullable: false,
+      description: `The media events to resolve (at most ${MAX_MEDIA_ATTACHMENTS_PER_CALL}).`,
+    })
+    media: MessageAttachmentMediaInput[]
+  ): Promise<IMessageAttachment[]> {
+    if (media.length > MAX_MEDIA_ATTACHMENTS_PER_CALL) {
+      throw new ValidationException(
+        `At most ${MAX_MEDIA_ATTACHMENTS_PER_CALL} media entries per call`,
+        LogContext.COMMUNICATION
+      );
+    }
+    return this.messageAttachmentService.resolveMediaAttachments(
+      room,
+      media.map(item => ({
+        media_id: item.mediaID,
+        document_id: item.documentID,
+        display_name: item.displayName ?? '',
+        // The read path takes type and size from the stored document.
+        mime_type: '',
+        size: 0,
+        width: item.width,
+        height: item.height,
+      })),
+      actorContext
+    );
   }
 
   @ResolveField('vcInteractions', () => [IVcInteraction], {
