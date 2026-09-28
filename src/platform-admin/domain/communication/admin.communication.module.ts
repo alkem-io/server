@@ -12,6 +12,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Forum } from '@platform/forum/forum.entity';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
+import { MessagingRedisModule } from '@services/infrastructure/redis-client/messaging-redis.module';
 import { TaskModule } from '@services/task';
 import { PlatformOperationsAuditModule } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.module';
 import { AdminCommunicationForumHierarchyReconcileService } from './admin.communication.forum.hierarchy.reconcile.service';
@@ -21,6 +22,7 @@ import { AdminCommunicationSpaceSyncService } from './admin.communication.space.
 
 @Module({
   imports: [
+    MessagingRedisModule,
     PlatformOperationsAuditModule,
     AuthorizationModule,
     AuthorizationPolicyModule,

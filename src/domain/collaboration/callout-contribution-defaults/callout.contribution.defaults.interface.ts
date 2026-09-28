@@ -21,8 +21,13 @@ export abstract class ICalloutContributionDefaults extends IBaseAlkemio {
   })
   postDescription?: string;
 
-  /** Canonical Yjs-V2 content persisted server-side; never exposed through GraphQL. */
-  whiteboardContent?: string;
+  /**
+   * Canonical Yjs-V2 content persisted server-side; never exposed through
+   * GraphQL. `null` is the cleared state and is meaningful: it is what makes
+   * a clear reach the database, since TypeORM omits `undefined` properties
+   * from the UPDATE's SET clause.
+   */
+  whiteboardContent?: string | null;
 
   @Field(() => Boolean, {
     nullable: false,

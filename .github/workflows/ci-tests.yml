@@ -17,9 +17,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Block non-registry dependency pins on protected branches
-        run: .scripts/check-vendor-lib-pins.sh
-
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -30,6 +27,9 @@ jobs:
         with:
           node-version: '22.22.0'
           cache: 'pnpm'
+
+      - name: Block non-registry dependency pins on protected branches
+        run: .scripts/check-vendor-lib-pins.sh
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

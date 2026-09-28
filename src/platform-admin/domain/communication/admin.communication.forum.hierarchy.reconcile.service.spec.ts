@@ -9,6 +9,7 @@ import { TaskStatus } from '@domain/task/dto';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Forum } from '@platform/forum/forum.entity';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { MESSAGING_REDIS_CLIENT } from '@services/infrastructure/redis-client/messaging-redis.provider';
 import { TaskService } from '@services/task';
 import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -31,6 +32,11 @@ const cleanResponse = (
   unresolved: [],
   parent_pointers_repaired: [],
   parent_pointers_deferred: [],
+  parent_pointers_unprocessable: [],
+  // "clean" means converged: a response with nothing outstanding is the
+  // baseline these tests deviate from, so a test that wants unfinished work
+  // has to say so explicitly rather than get it by omission.
+  converged: true,
   changed: false,
   dry_run: false,
   ...overrides,
@@ -75,6 +81,16 @@ describe('AdminCommunicationForumHierarchyReconcileService', () => {
       providers: [
         AdminCommunicationForumHierarchyReconcileService,
         repositoryProviderMockFactory(Forum),
+        {
+          // A real Redis-backed lease is exercised in the cross-pass spec;
+          // here ownership always succeeds so these tests stay about the
+          // reconcile behaviour rather than the lock.
+          provide: MESSAGING_REDIS_CLIENT,
+          useValue: {
+            set: vi.fn().mockResolvedValue('OK'),
+            eval: vi.fn().mockResolvedValue(1),
+          },
+        },
       ],
     })
       .useMocker(defaultMockerFactory)
@@ -547,9 +563,40 @@ describe('AdminCommunicationForumHierarchyReconcileService', () => {
         service.reconcile('task-1', 'actor-1', defaultInput)
       ).resolves.toBeUndefined();
 
-      // A pass where every category is a natural SPACE_NOT_FOUND skip is a
-      // clean pass, not a failure — this asserts the crash from corr-server-1
-      // is gone, not that the pass reports zero failures for some other reason.
+      // The point of this test is that the crash from corr-server-1 is gone:
+      // the pass survives a wire payload carrying no array fields at all.
+      expect(taskService.completeWithError).not.toHaveBeenCalled();
+
+      // It completes ERRORED rather than COMPLETED because this fixture's
+      // forum holds a discussion, and a category that still holds discussions
+      // while having no Matrix space is incomplete work, not a natural skip:
+      // those rooms have nowhere to be attached. The empty-category case below
+      // is the one that stays clean.
+      expect(taskService.complete).toHaveBeenCalledWith(
+        'task-1',
+        TaskStatus.ERRORED
+      );
+    });
+
+    it('treats SPACE_NOT_FOUND as a clean skip when the category is genuinely empty', async () => {
+      // A retired category resolves to no space on every pass by design. That
+      // has to stay a natural skip, or the termination protocol never ends —
+      // the distinction is whether any discussion is depending on that space.
+      forumRepository.find = vi.fn().mockResolvedValue([
+        {
+          id: FORUM_ID,
+          discussionCategories: ALL_CATEGORIES,
+          discussions: [],
+        },
+      ]);
+      (communicationAdapter.setChildren as Mock).mockResolvedValue(
+        spaceNotFoundResponse()
+      );
+
+      await expect(
+        service.reconcile('task-1', 'actor-1', defaultInput)
+      ).resolves.toBeUndefined();
+
       expect(taskService.completeWithError).not.toHaveBeenCalled();
       expect(taskService.complete).toHaveBeenCalledWith(
         'task-1',

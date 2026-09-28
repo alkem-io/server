@@ -579,21 +579,27 @@ enum MemoSignatureVerificationStatus {
 }
 
 enum MimeType {
+  AAC
   AVIF
   BMP
   CSV
   DOC
   DOCX
+  FLAC
   GIF
   HEIC
   HEIF
   ICS
   JPEG
   JPG
+  MP3
+  MP4
   ODG
   ODP
   ODS
   ODT
+  OGA
+  OGV
   PDF
   PNG
   POTM
@@ -603,8 +609,12 @@ enum MimeType {
   PPT
   PPTM
   PPTX
+  QUICKTIME
   RTF
   SVG
+  WAV
+  WEBA
+  WEBM
   WEBP
   XLS
   XLSX
@@ -974,6 +984,14 @@ enum SigningAttemptStatus {
   SIGNED
 }
 
+"""
+The card variant of a Subspaces (SPACES) collection callout. COMPACT (default) shows the identity block only; EXPANDED adds the What/Why/Who excerpts.
+"""
+enum SpaceCollectionCardVariant {
+  COMPACT
+  EXPANDED
+}
+
 enum SpaceLevel {
   L0
   L1
@@ -999,6 +1017,7 @@ enum SpaceVisibility {
 
 enum StorageAggregatorType {
   ACCOUNT
+  CONVERSATION
   ORGANIZATION
   PLATFORM
   SPACE
@@ -2233,6 +2252,17 @@ type CalloutSettingsFraming {
   Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Absent / null ⇒ AUTO (full computed set).
   """
   selection: CalloutSelectionSettings
+  """
+  Card-variant settings for a Subspaces collection callout. Present only on SPACES callouts. Absent / null ⇒ COMPACT.
+  """
+  spaces: CalloutSpacesSettings
+}
+
+type CalloutSpacesSettings {
+  """
+  The card variant to render for each subspace: COMPACT (default) or EXPANDED.
+  """
+  cardVariant: SpaceCollectionCardVariant!
 }
 
 type CalloutsSet {
@@ -2643,6 +2673,10 @@ type Conversation {
   messaging: Messaging!
   """The room for this Conversation."""
   room: Room!
+  """
+  The storage bucket holding this Conversation's message attachments (feature 013). READ-gated to conversation members; null for a conversation that has no bucket yet (an accepted, backfillable state).
+  """
+  storageBucket: StorageBucket
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
 }
@@ -2882,6 +2916,15 @@ type CreateCalloutSettingsFramingData {
   Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
   """
   selection: CreateCalloutSelectionSettingsData
+  """Card-variant settings. Provide only when framing.type = SPACES."""
+  spaces: CreateCalloutSpacesSettingsData
+}
+
+type CreateCalloutSpacesSettingsData {
+  """
+  The card variant (COMPACT or EXPANDED). Defaults to COMPACT when omitted.
+  """
+  cardVariant: SpaceCollectionCardVariant
 }
 
 type CreateCalloutsSetData {
@@ -4364,6 +4407,10 @@ type MeQueryResults {
 
 """A message that was sent in a chat room"""
 type Message {
+  """
+  Media attachments; unavailable documents retain their event filename without a download URL.
+  """
+  attachments: [MessageAttachment!]!
   """The id for the message event."""
   id: MessageID!
   """The message being sent"""
@@ -4376,6 +4423,23 @@ type Message {
   threadID: MessageID
   """The server timestamp in UTC"""
   timestamp: Float!
+}
+
+type MessageAttachment {
+  """The filename / display name of the attachment."""
+  displayName: String!
+  """The pixel height of the attachment (images only)."""
+  height: Int
+  """The file-service document id of the attachment."""
+  id: UUID
+  """The MIME type of the attachment."""
+  mimeType: String
+  """The size of the attachment in bytes."""
+  size: Int
+  """The Alkemio document URL (authorized via conversation policy)."""
+  url: String
+  """The pixel width of the attachment (images only)."""
+  width: Int
 }
 
 """
@@ -8483,6 +8547,8 @@ input CreateCalloutSettingsFramingInput {
   Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
   """
   selection: CreateCalloutSelectionSettingsInput
+  """Card-variant settings. Provide only when framing.type = SPACES."""
+  spaces: CreateCalloutSpacesSettingsInput
 }
 
 input CreateCalloutSettingsInput {
@@ -8490,6 +8556,13 @@ input CreateCalloutSettingsInput {
   framing: CreateCalloutSettingsFramingInput
   """Visibility of the Callout. Defaults to PUBLISHED."""
   visibility: CalloutVisibility
+}
+
+input CreateCalloutSpacesSettingsInput {
+  """
+  The card variant (COMPACT or EXPANDED). Defaults to COMPACT when omitted.
+  """
+  cardVariant: SpaceCollectionCardVariant
 }
 
 input CreateCalloutsSetInput {
@@ -8572,6 +8645,10 @@ input CreateContributionOnCalloutInput {
   link: CreateLinkInput
   memo: CreateMemoInput
   post: CreatePostInput
+  """
+  Send the space-member and space-admin contribution notifications. Defaults to true; only an explicit false suppresses. The activity log entry is written regardless.
+  """
+  sendNotification: Boolean = true
   """The sort order to assign to this Contribution."""
   sortOrder: Float
   """
@@ -9692,6 +9769,10 @@ input RoomRemoveReactionToMessageInput {
 }
 
 input RoomSendMessageInput {
+  """
+  The file-service document ids of attachments to send with the message (one per event).
+  """
+  attachments: [UUID!]
   """The message being sent"""
   message: String!
   """The Room the message is being sent to"""
@@ -9699,6 +9780,10 @@ input RoomSendMessageInput {
 }
 
 input RoomSendMessageReplyInput {
+  """
+  The file-service document ids of attachments to send with the message (one per event).
+  """
+  attachments: [UUID!]
   """The message being sent"""
   message: String!
   """The Room the message is being sent to"""
@@ -10024,6 +10109,8 @@ input UpdateCalloutSettingsFramingInput {
   Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
   """
   selection: UpdateCalloutSelectionSettingsInput
+  """Card-variant settings. Provide only when framing.type = SPACES."""
+  spaces: UpdateCalloutSpacesSettingsInput
 }
 
 input UpdateCalloutSettingsInput {
@@ -10031,6 +10118,13 @@ input UpdateCalloutSettingsInput {
   framing: UpdateCalloutSettingsFramingInput
   """Visibility of the Callout."""
   visibility: CalloutVisibility
+}
+
+input UpdateCalloutSpacesSettingsInput {
+  """
+  The card variant (COMPACT or EXPANDED). When omitted, the stored value is unchanged.
+  """
+  cardVariant: SpaceCollectionCardVariant
 }
 
 input UpdateCalloutsSortOrderInput {

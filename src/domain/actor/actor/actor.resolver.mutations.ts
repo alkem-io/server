@@ -7,7 +7,7 @@ import { ForbiddenException } from '@common/exceptions/forbidden.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ROLE_CREDENTIAL_MAP } from '@domain/access/platform-roles-access/platform.roles.access.service';
-import { RoleSetCacheService } from '@domain/access/role-set/role.set.service.cache';
+import { RoleSetCacheInvalidationService } from '@domain/access/role-set/role.set.service.cache.invalidation';
 import { ICredential } from '@domain/actor/credential/credential.interface';
 import { UUID } from '@domain/common/scalars';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
@@ -16,7 +16,6 @@ import {
   FEATURE_FAMILY_ROLES,
   PLATFORM_FAMILY_ROLES,
 } from '@platform/platform-role/platform.role.assignment.rules.service';
-import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { ActorService } from './actor.service';
 
 /**
@@ -40,29 +39,13 @@ const RESTRICTED_ROLE_CREDENTIAL_TYPES: ReadonlySet<AuthorizationCredential> =
     )
   );
 
-/**
- * Space role credentials whose direct grant/revoke must invalidate the
- * role-set membership caches: isMember() / membership-status reads are
- * cache-first, so a credential mutation without invalidation leaves stale
- * answers (e.g. a re-application blocked with ROLE_SET_ALREADY_MEMBER after
- * an admin revoked the membership credential).
- */
-const SPACE_ROLE_CREDENTIAL_TYPES: CredentialType[] = [
-  AuthorizationCredential.SPACE_MEMBER,
-  AuthorizationCredential.SPACE_ADMIN,
-  AuthorizationCredential.SPACE_LEAD,
-  AuthorizationCredential.SPACE_SUBSPACE_ADMIN,
-  AuthorizationCredential.SPACE_MEMBER_INVITEE,
-];
-
 @Resolver()
 export class ActorResolverMutations {
   constructor(
     private readonly actorService: ActorService,
     private readonly authorizationService: AuthorizationService,
     private readonly platformAuthorizationService: PlatformAuthorizationPolicyService,
-    private readonly communityResolverService: CommunityResolverService,
-    private readonly roleSetCacheService: RoleSetCacheService
+    private readonly roleSetCacheInvalidationService: RoleSetCacheInvalidationService
   ) {}
 
   @Mutation(() => ICredential, {
@@ -90,7 +73,11 @@ export class ActorResolverMutations {
       type: credentialType,
       resourceID: resourceID ?? '',
     });
-    await this.cleanRoleSetMembershipCache(actorID, credentialType, resourceID);
+    await this.roleSetCacheInvalidationService.invalidateForCredentialChange(
+      actorID,
+      credentialType,
+      resourceID
+    );
     return credential;
   }
 
@@ -119,7 +106,11 @@ export class ActorResolverMutations {
       type: credentialType,
       resourceID,
     });
-    await this.cleanRoleSetMembershipCache(actorID, credentialType, resourceID);
+    await this.roleSetCacheInvalidationService.invalidateForCredentialChange(
+      actorID,
+      credentialType,
+      resourceID
+    );
     return revoked;
   }
 
@@ -143,36 +134,6 @@ export class ActorResolverMutations {
         LogContext.PLATFORM,
         { ruleId: 'holder-kind' }
       );
-    }
-  }
-
-  /**
-   * Best-effort role-set membership-cache invalidation after a direct
-   * credential grant/revoke on a Space. Never fails the mutation — the
-   * credential write is the source of truth; cache TTL is the fallback.
-   */
-  private async cleanRoleSetMembershipCache(
-    actorID: string,
-    credentialType: CredentialType,
-    resourceID?: string
-  ): Promise<void> {
-    if (!resourceID) {
-      return;
-    }
-    if (!SPACE_ROLE_CREDENTIAL_TYPES.includes(credentialType)) {
-      return;
-    }
-    try {
-      const roleSetId =
-        await this.communityResolverService.getRoleSetIdForSpace(resourceID);
-      if (roleSetId) {
-        await this.roleSetCacheService.cleanActorMembershipCache(
-          actorID,
-          roleSetId
-        );
-      }
-    } catch {
-      // best-effort only; cache TTL expiry is the fallback
     }
   }
 }
