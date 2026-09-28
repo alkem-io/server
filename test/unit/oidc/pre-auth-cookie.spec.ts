@@ -64,6 +64,39 @@ describe('pre-auth-cookie (FR-017b)', () => {
     expect(secure.secure).toBe(true);
   });
 
+  // workspace#079-app-sso-handoff FR-002/FR-003 — app mode rides in the signed
+  // cookie, because Kratos' registration.after.oidc re-entry carries no query
+  // string at all.
+  it('round-trips an app_challenge when one is present', async () => {
+    const withChallenge = {
+      ...payload,
+      app_challenge: 'Zm9vYmFyMDEyMzQ1Njc4OWFiY2RlZmdoaWprbG1ub3A',
+    };
+    const jws = await signPreAuthCookie(withChallenge, key);
+    const verified = await verifyPreAuthCookie(jws, key);
+    expect(verified.app_challenge).toBe(withChallenge.app_challenge);
+  });
+
+  it('accepts a payload with no app_challenge at all', async () => {
+    const jws = await signPreAuthCookie(payload, key);
+    const verified = await verifyPreAuthCookie(jws, key);
+    expect(verified.app_challenge).toBeUndefined();
+  });
+
+  // Signed with our own key on purpose, so the rejection can only come from
+  // the shape check — a body edited in place would fail the signature first
+  // and prove nothing about the shape check at all.
+  it('rejects a present-but-non-string app_challenge', async () => {
+    const jws = await signPreAuthCookie(
+      {
+        ...payload,
+        app_challenge: { evil: true },
+      } as unknown as typeof payload,
+      key
+    );
+    await expect(verifyPreAuthCookie(jws, key)).rejects.toThrow();
+  });
+
   it('PRE_AUTH_COOKIE_* constants match the spec', () => {
     expect(PRE_AUTH_COOKIE_NAME).toBe('alkemio_oidc_pre_auth');
     expect(PRE_AUTH_COOKIE_PATH).toBe('/api/auth/oidc');
