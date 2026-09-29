@@ -314,9 +314,38 @@ enum CalloutDescriptionDisplayMode {
   EXPANDED
 }
 
+"""The answer type of a Form question."""
+enum CalloutFormQuestionType {
+  LONG_TEXT
+  MULTIPLE_CHOICE
+  SHORT_TEXT
+  SINGLE_CHOICE
+}
+
+"""Whether a member can submit one or several responses to a Form."""
+enum CalloutFormResponseMode {
+  MULTIPLE
+  SINGLE
+}
+
+"""
+Who can read all responses of a Form. ADMINS: only the space admins. MEMBERS: the members of the space as well.
+"""
+enum CalloutFormResponseVisibility {
+  ADMINS
+  MEMBERS
+}
+
+"""Whether a Form accepts new responses."""
+enum CalloutFormState {
+  CLOSED
+  OPEN
+}
+
 enum CalloutFramingType {
   COLLABORA_DOCUMENT
   CONTRIBUTORS
+  FORM
   LINK
   MEDIA_GALLERY
   MEMO
@@ -644,6 +673,7 @@ enum NotificationEvent {
   PLATFORM_FORUM_DISCUSSION_COMMENT
   PLATFORM_FORUM_DISCUSSION_CREATED
   SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION
+  SPACE_ADMIN_COLLABORATION_CALLOUT_FORM_RESPONSE
   SPACE_ADMIN_COMMUNITY_APPLICATION
   SPACE_ADMIN_COMMUNITY_NEW_MEMBER
   SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED
@@ -665,6 +695,7 @@ enum NotificationEvent {
   SPACE_COMMUNITY_CALENDAR_EVENT_CREATED
   SPACE_COMMUNITY_INVITATION_USER_PLATFORM
   SPACE_LEAD_COMMUNICATION_MESSAGE
+  USER_COLLABORATION_CALLOUT_FORM_RESPONSE_RECEIPT
   USER_COMMENT_REPLY
   USER_CONVERSATION_MESSAGE_DIRECT
   USER_CONVERSATION_MESSAGE_GROUP
@@ -2120,6 +2151,102 @@ type CalloutContributorsSettings {
   mapView: CalloutContributorsMapView
 }
 
+type CalloutForm {
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The ID of the entity"""
+  id: UUID!
+  """The ordered questions of the Form."""
+  questions: [CalloutFormQuestion!]!
+  """The settings of the Form."""
+  settings: CalloutFormSettings!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
+
+type CalloutFormAnswer {
+  """The question text as it was when the response was given (snapshot)."""
+  prompt: String!
+  questionID: UUID!
+  """The selected options of a choice question."""
+  selectedOptions: [CalloutFormAnswerOption!]
+  """The answer to a text question."""
+  text: String
+  """The question type as it was when the response was given (snapshot)."""
+  type: CalloutFormQuestionType!
+}
+
+type CalloutFormAnswerOption {
+  id: UUID!
+  """The label of the option as it was when the response was given."""
+  label: String!
+}
+
+type CalloutFormQuestion {
+  """Optional helper text shown under the question."""
+  explanation: String
+  """The ID of the question, stable across edits of the Form."""
+  id: UUID!
+  """
+  The selectable options. Present for the two choice types, absent for the text types.
+  """
+  options: [CalloutFormQuestionOption!]
+  """The question text."""
+  prompt: String!
+  """Whether an answer is required to submit a response."""
+  required: Boolean!
+  """The answer type of the question."""
+  type: CalloutFormQuestionType!
+}
+
+type CalloutFormQuestionOption {
+  """The ID of the option, stable across edits of the Form."""
+  id: UUID!
+  """The label shown to the respondent."""
+  label: String!
+}
+
+type CalloutFormResponse {
+  """
+  The answers, snapshotted from the Form definition at submission. Unanswered optional questions have no entry.
+  """
+  answers: [CalloutFormAnswer!]!
+  """
+  The member who submitted the response. Null once that account has been deleted.
+  """
+  createdBy: User
+  """When the response was submitted."""
+  createdDate: DateTime!
+  id: UUID!
+}
+
+type CalloutFormResponses {
+  """
+  The responses the viewer may read: every response when canReadAll, otherwise only their own.
+  """
+  all: PaginatedCalloutFormResponses!
+  """
+  Whether the viewer can moderate the Form: edit its definition and delete any response.
+  """
+  canModerate: Boolean!
+  """Whether the viewer can read every response of the Form."""
+  canReadAll: Boolean!
+  formID: UUID!
+  """The viewer's own responses."""
+  mine: [CalloutFormResponse!]!
+}
+
+type CalloutFormSettings {
+  """
+  Whether a member can submit one or several responses. Defaults to SINGLE.
+  """
+  responseMode: CalloutFormResponseMode!
+  """Whether the Form accepts new responses. Defaults to OPEN."""
+  state: CalloutFormState!
+  """Who can read all the responses. Defaults to ADMINS."""
+  visibility: CalloutFormResponseVisibility!
+}
+
 type CalloutFraming {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -2137,6 +2264,10 @@ type CalloutFraming {
   contributors(type: ActorType!): [ContributorCollectionItem!]!
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """
+  The Form attached to this Callout Framing, if any. Present when framing.type = FORM. Only the definition: responses are read through lookup.calloutFormResponses.
+  """
+  form: CalloutForm
   """The ID of the entity"""
   id: UUID!
   """The Link for framing the associated Callout."""
@@ -2876,9 +3007,52 @@ type CreateCalloutData {
   taskBoard: CreateCalloutTaskBoardData
 }
 
+type CreateCalloutFormData {
+  """
+  The ordered questions of the Form. Between 1 and 50; the count is enforced with a reason code.
+  """
+  questions: [CreateCalloutFormQuestionData!]!
+  """
+  The Form settings. Defaults: visibility ADMINS, responseMode SINGLE, state OPEN.
+  """
+  settings: CreateCalloutFormSettingsData
+}
+
+type CreateCalloutFormQuestionData {
+  """Optional helper text. At most 2048 characters."""
+  explanation: String
+  """
+  The options of a choice question (2 to 20). Must be absent for the text types.
+  """
+  options: [CreateCalloutFormQuestionOptionData!]
+  """The question text. Required, at most 512 characters."""
+  prompt: String!
+  """Whether an answer is required. Defaults to false."""
+  required: Boolean
+  type: CalloutFormQuestionType!
+}
+
+type CreateCalloutFormQuestionOptionData {
+  """The label of the option. Unique within the question."""
+  label: String!
+}
+
+type CreateCalloutFormSettingsData {
+  """One or several responses per member. Defaults to SINGLE."""
+  responseMode: CalloutFormResponseMode
+  """Whether the Form accepts responses. Defaults to OPEN."""
+  state: CalloutFormState
+  """Who can read all the responses. Defaults to ADMINS."""
+  visibility: CalloutFormResponseVisibility
+}
+
 type CreateCalloutFramingData {
   """Collabora document input. Required when type = COLLABORA_DOCUMENT."""
   collaboraDocument: CreateCollaboraDocumentData
+  """
+  Form definition to attach to this Callout Framing. Required when type = FORM; rejected for every other type.
+  """
+  form: CreateCalloutFormData
   link: CreateLinkData
   memo: CreateMemoData
   """
@@ -4151,6 +4325,10 @@ type LookupQueryResults {
   calendarEvent(ID: UUID!): CalendarEvent
   """Lookup the specified Callout"""
   callout(ID: UUID!): Callout
+  """
+  Lookup the responses of the specified Form, as far as the current user may read them: every response for a space admin (and for members when the Form shows responses to members), otherwise only the current user's own. Requires READ on the Post that holds the Form. This is the only way to read Form responses.
+  """
+  calloutFormResponses(after: UUID, first: Int, formID: UUID!): CalloutFormResponses!
   """Lookup the specified CalloutsSet"""
   calloutsSet(ID: UUID!): CalloutsSet
   """Lookup the specified Collaboration"""
@@ -4764,6 +4942,10 @@ type Mutation {
   """Delete a Callout."""
   deleteCallout(deleteData: DeleteCalloutInput!): Callout!
   """
+  Delete a Form response. The member who submitted it can always withdraw it (also on a closed Form); otherwise the privilege to create callouts on the collection the Post is in (space admin) is required.
+  """
+  deleteCalloutFormResponse(deleteData: DeleteCalloutFormResponseInput!): CalloutFormResponse!
+  """
   Permanently removes a Classification from a Space. No template and no other Space is affected.
   """
   deleteClassificationEntry(classificationData: DeleteClassificationEntryInput!): ClassificationEntry!
@@ -4998,6 +5180,10 @@ type Mutation {
   """
   setPlatformWellKnownVirtualContributor(mappingData: SetPlatformWellKnownVirtualContributorInput!): PlatformWellKnownVirtualContributors!
   """
+  Submit a response to a Form. Requires CONTRIBUTE on the Post. The Post must be published and the Form open; a single-response Form accepts one response per member. acknowledgedVisibility is the audience the respondent was shown.
+  """
+  submitCalloutFormResponse(responseData: SubmitCalloutFormResponseInput!): CalloutFormResponse!
+  """
   Subscribe the current user's device to push notifications. If the subscription endpoint already exists, it is updated. If the user has reached the maximum number of subscriptions (10), the oldest subscription is automatically replaced.
   """
   subscribeToPushNotifications(subscriptionData: SubscribeToPushNotificationsInput!): PushSubscription!
@@ -5029,6 +5215,10 @@ type Mutation {
   updateCalendarEvent(eventData: UpdateCalendarEventInput!): CalendarEvent!
   """Update a Callout."""
   updateCallout(calloutData: UpdateCalloutEntityInput!): Callout!
+  """
+  Update the definition and/or the settings of a Form. Requires the privilege to create callouts on the collection the Post is in (space admin), the same as creating a Form. Serialized against submissions.
+  """
+  updateCalloutForm(formData: UpdateCalloutFormInput!): CalloutForm!
   """
   Update the information describing the publishing of the specified Callout.
   """
@@ -5357,6 +5547,12 @@ type PageInfo {
   hasPreviousPage: Boolean!
   """The first cursor of the page result"""
   startCursor: String
+}
+
+type PaginatedCalloutFormResponses {
+  pageInfo: PageInfo!
+  responses: [CalloutFormResponse!]!
+  total: Float!
 }
 
 type PaginatedInAppNotifications {
@@ -7750,6 +7946,8 @@ type UserSettingsNotificationSpace {
 type UserSettingsNotificationSpaceAdmin {
   """Receive a notification when a contribution is created (admin)"""
   collaborationCalloutContributionCreated: UserSettingsNotificationChannels!
+  """Receive a notification when a Form response is submitted (admin)"""
+  collaborationCalloutFormResponseReceived: UserSettingsNotificationChannels!
   """Receive a notification when a message is sent to a Space I lead"""
   communicationMessageReceived: UserSettingsNotificationChannels!
   """Receive a notification when an application is received"""
@@ -8291,6 +8489,14 @@ input AssistantCapabilityToggleInput {
   enabled: Boolean!
 }
 
+input CalloutFormAnswerInput {
+  questionID: UUID!
+  """The selected option IDs of a choice question."""
+  selectedOptionIDs: [UUID!]
+  """The answer to a text question."""
+  text: String
+}
+
 input CastPollVoteInput {
   """The ID of the Poll to vote on."""
   pollID: UUID!
@@ -8471,9 +8677,52 @@ input CreateCalloutContributorsSettingsInput {
   mapView: CreateCalloutContributorsMapViewInput
 }
 
+input CreateCalloutFormInput {
+  """
+  The ordered questions of the Form. Between 1 and 50; the count is enforced with a reason code.
+  """
+  questions: [CreateCalloutFormQuestionInput!]!
+  """
+  The Form settings. Defaults: visibility ADMINS, responseMode SINGLE, state OPEN.
+  """
+  settings: CreateCalloutFormSettingsInput
+}
+
+input CreateCalloutFormQuestionInput {
+  """Optional helper text. At most 2048 characters."""
+  explanation: String
+  """
+  The options of a choice question (2 to 20). Must be absent for the text types.
+  """
+  options: [CreateCalloutFormQuestionOptionInput!]
+  """The question text. Required, at most 512 characters."""
+  prompt: String!
+  """Whether an answer is required. Defaults to false."""
+  required: Boolean = false
+  type: CalloutFormQuestionType!
+}
+
+input CreateCalloutFormQuestionOptionInput {
+  """The label of the option. Unique within the question."""
+  label: String!
+}
+
+input CreateCalloutFormSettingsInput {
+  """One or several responses per member. Defaults to SINGLE."""
+  responseMode: CalloutFormResponseMode
+  """Whether the Form accepts responses. Defaults to OPEN."""
+  state: CalloutFormState
+  """Who can read all the responses. Defaults to ADMINS."""
+  visibility: CalloutFormResponseVisibility
+}
+
 input CreateCalloutFramingInput {
   """Collabora document input. Required when type = COLLABORA_DOCUMENT."""
   collaboraDocument: CreateCollaboraDocumentInput
+  """
+  Form definition to attach to this Callout Framing. Required when type = FORM; rejected for every other type.
+  """
+  form: CreateCalloutFormInput
   link: CreateLinkInput
   memo: CreateMemoInput
   """
@@ -9160,6 +9409,10 @@ input DeleteApplicationInput {
 
 input DeleteCalendarEventInput {
   ID: UUID!
+}
+
+input DeleteCalloutFormResponseInput {
+  responseID: UUID!
 }
 
 input DeleteCalloutInput {
@@ -9888,6 +10141,15 @@ input StorageBucketUploadFileOnReferenceInput {
   referenceID: String!
 }
 
+input SubmitCalloutFormResponseInput {
+  """
+  The response visibility the respondent was shown before submitting. The submission is rejected when the Form is now visible to a wider audience.
+  """
+  acknowledgedVisibility: CalloutFormResponseVisibility!
+  answers: [CalloutFormAnswerInput!]!
+  formID: UUID!
+}
+
 input SubscribeToPushNotificationsInput {
   """The auth key from PushSubscription.getKey('auth'), Base64URL-encoded"""
   auth: String!
@@ -10059,6 +10321,41 @@ input UpdateCalloutEntityInput {
   settings: UpdateCalloutSettingsInput
   """The sort order to assign to this Callout."""
   sortOrder: Float
+}
+
+input UpdateCalloutFormInput {
+  formID: UUID!
+  """
+  The complete ordered list of questions. Omit to leave the questions unchanged.
+  """
+  questions: [UpdateCalloutFormQuestionInput!]
+  settings: UpdateCalloutFormSettingsInput
+}
+
+input UpdateCalloutFormQuestionInput {
+  explanation: String
+  """
+  The ID of an existing question. Absent for a new question; an unknown ID is rejected.
+  """
+  id: UUID
+  options: [UpdateCalloutFormQuestionOptionInput!]
+  prompt: String!
+  required: Boolean!
+  type: CalloutFormQuestionType!
+}
+
+input UpdateCalloutFormQuestionOptionInput {
+  """
+  The ID of an existing option. Absent for a new option; an unknown ID is rejected.
+  """
+  id: UUID
+  label: String!
+}
+
+input UpdateCalloutFormSettingsInput {
+  responseMode: CalloutFormResponseMode
+  state: CalloutFormState
+  visibility: CalloutFormResponseVisibility
 }
 
 input UpdateCalloutFramingInput {
@@ -10921,6 +11218,8 @@ input UpdateUserSettingsNotificationSoundInput {
 input UpdateUserSettingsNotificationSpaceAdminInput {
   """Receive a notification when a contribution is added (admin)"""
   collaborationCalloutContributionCreated: NotificationSettingInput
+  """Receive a notification when a Form response is submitted (admin)"""
+  collaborationCalloutFormResponseReceived: NotificationSettingInput
   """Receive a notification when a message is sent to a Space I lead"""
   communicationMessageReceived: NotificationSettingInput
   """Receive a notification when an application is received"""
