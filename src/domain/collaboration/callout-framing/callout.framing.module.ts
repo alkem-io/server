@@ -1,4 +1,5 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { CalloutFormModule } from '@domain/collaboration/callout-form/callout.form.module';
 import { CollaboraDocumentModule } from '@domain/collaboration/collabora-document/collabora.document.module';
 import { ContributorCollectionModule } from '@domain/collaboration/contributor-collection/contributor.collection.module';
 import { LinkModule } from '@domain/collaboration/link/link.module';
@@ -32,6 +33,7 @@ import { CalloutFramingAuthorizationService } from './callout.framing.service.au
     MediaGalleryModule,
     NamingModule,
     PollModule,
+    CalloutFormModule,
     CollaboraDocumentModule,
     ContributorCollectionModule,
     SpaceCollectionModule,

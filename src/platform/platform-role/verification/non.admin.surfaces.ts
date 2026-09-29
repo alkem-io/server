@@ -198,7 +198,7 @@ export const NON_ADMIN_SURFACES: Readonly<
       'AI persona; not yet ruled on.',
   },
 
-  // ===== non-admin (140) — ordinary, owner-gated or self-service mutations =====
+  // ===== non-admin (143) — ordinary, owner-gated or self-service mutations =====
   addClassificationEntryFromTemplate: NON_ADMIN,
   addPollOption: NON_ADMIN,
   addReactionToCallout: NON_ADMIN,
@@ -234,6 +234,7 @@ export const NON_ADMIN_SURFACES: Readonly<
   deleteApplication: NON_ADMIN,
   deleteCalendarEvent: NON_ADMIN,
   deleteClassificationEntry: NON_ADMIN,
+  deleteCalloutFormResponse: NON_ADMIN,
   deleteCollaboraDocument: NON_ADMIN,
   deleteConversation: NON_ADMIN,
   deleteDocument: NON_ADMIN,
@@ -289,10 +290,12 @@ export const NON_ADMIN_SURFACES: Readonly<
   sendMessageToRoom: NON_ADMIN,
   sendMessageToUsers: NON_ADMIN,
   setDefaultCalloutTemplateOnInnovationFlowState: NON_ADMIN,
+  submitCalloutFormResponse: NON_ADMIN,
   subscribeToPushNotifications: NON_ADMIN,
   unsubscribeFromPushNotifications: NON_ADMIN,
   updateApplicationFormOnRoleSet: NON_ADMIN,
   updateCalendarEvent: NON_ADMIN,
+  updateCalloutForm: NON_ADMIN,
   updateCalloutVisibility: NON_ADMIN,
   updateCalloutsSortOrder: NON_ADMIN,
   updateClassificationEntry: NON_ADMIN,

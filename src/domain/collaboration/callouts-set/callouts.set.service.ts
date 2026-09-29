@@ -300,7 +300,8 @@ export class CalloutsSetService {
   public async createCalloutOnCalloutsSet(
     calloutData: CreateCalloutOnCalloutsSetInput,
     actorContext: ActorContext,
-    userID: string
+    userID: string,
+    options?: { allowFormFraming?: boolean }
   ): Promise<ICallout> {
     const collaborationID = calloutData.calloutsSetID;
     const calloutsSet = await this.getCalloutsSetOrFail(collaborationID, {
@@ -350,7 +351,8 @@ export class CalloutsSetService {
       storageAggregator,
       actorContext,
       userID,
-      parentSpaceId
+      parentSpaceId,
+      options
     );
     // this has the effect of adding the callout to the collaboration
     callout.calloutsSet = calloutsSet;

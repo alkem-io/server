@@ -1,4 +1,5 @@
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
+import { ICalloutFormResponses } from '@domain/collaboration/callout-form-response/dto/callout.form.responses.view';
 import { ICollaboration } from '@domain/collaboration/collaboration';
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { IPost } from '@domain/collaboration/post/post.interface';
@@ -18,6 +19,7 @@ export class LookupQueryResults {
   spaceAbout!: ISpaceAbout;
   profile!: IProfile;
   callout!: ICallout;
+  calloutFormResponses!: ICalloutFormResponses;
   post!: IPost;
   room!: IRoom;
   innovationFlow!: IInnovationFlow;

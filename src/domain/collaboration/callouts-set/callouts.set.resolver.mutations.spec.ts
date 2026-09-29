@@ -1179,4 +1179,130 @@ describe('CalloutsSetResolverMutations', () => {
       );
     });
   });
+
+  // FORM framing: admin-only, collaboration-only, and the only caller that
+  // grants the placement capability to the framing factory.
+  describe('FORM framing guards', () => {
+    const setupBaseMocks = (calloutsSet: any) => {
+      vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
+        calloutsSet
+      );
+    };
+
+    it('rejects FORM on a non-COLLABORATION (knowledge base) callouts set', async () => {
+      setupBaseMocks({
+        id: 'cs-kb',
+        type: CalloutsSetType.KNOWLEDGE_BASE,
+        authorization: { id: 'auth-kb' },
+      });
+      vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(
+        undefined as any
+      );
+
+      await expect(
+        resolver.createCalloutOnCalloutsSet(
+          { actorID: 'user-1' } as any,
+          {
+            calloutsSetID: 'cs-kb',
+            framing: { type: CalloutFramingType.FORM },
+          } as any
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).not.toHaveBeenCalled();
+    });
+
+    it('a non-CREATE actor is stopped before the callout is created', async () => {
+      const calloutsSet = {
+        id: 'cs-collab',
+        type: CalloutsSetType.COLLABORATION,
+        authorization: { id: 'auth-collab' },
+      } as any;
+      setupBaseMocks(calloutsSet);
+      // CREATE_CALLOUT passes (members may create callouts), CREATE does not.
+      vi.mocked(authorizationService.grantAccessOrFail)
+        .mockImplementationOnce(() => undefined as any)
+        .mockImplementationOnce(() => {
+          throw new ForbiddenException('forbidden', LogContext.COLLABORATION);
+        });
+
+      await expect(
+        resolver.createCalloutOnCalloutsSet(
+          { actorID: 'member-1' } as any,
+          {
+            calloutsSetID: 'cs-collab',
+            framing: { type: CalloutFramingType.FORM },
+          } as any
+        )
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        expect.anything(),
+        calloutsSet.authorization,
+        AuthorizationPrivilege.CREATE,
+        expect.any(String)
+      );
+      expect(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).not.toHaveBeenCalled();
+    });
+
+    it('an admin passes the guard and the resolver grants the placement capability', async () => {
+      const calloutsSet = {
+        id: 'cs-collab',
+        type: CalloutsSetType.COLLABORATION,
+        authorization: { id: 'auth-collab' },
+      } as any;
+      const callout = {
+        id: 'callout-form',
+        nameID: 'form',
+        framing: { type: CalloutFramingType.FORM },
+        settings: { visibility: CalloutVisibility.DRAFT },
+      } as any;
+      setupBaseMocks(calloutsSet);
+      vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(
+        undefined as any
+      );
+      vi.mocked(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).mockResolvedValue(callout);
+      vi.mocked(calloutService.save).mockResolvedValue(callout);
+      vi.mocked(calloutService.getStorageBucket).mockResolvedValue({
+        id: 'sb-1',
+      } as any);
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(
+        calloutAuthorizationService.applyAuthorizationPolicy
+      ).mockResolvedValue([]);
+      vi.mocked(
+        (resolver as any).temporaryStorageService.moveTemporaryDocuments
+      ).mockResolvedValue(undefined);
+      vi.mocked(
+        (resolver as any).roomResolverService
+          .getRoleSetAndSettingsForCollaborationCalloutsSet
+      ).mockResolvedValue({
+        roleSet: { id: 'rs-1' },
+        platformRolesAccess: { roles: [] },
+        spaceSettings: {},
+      });
+      vi.mocked(
+        (resolver as any).communityResolverService
+          .getLevelZeroSpaceIdForCalloutsSet
+      ).mockResolvedValue('space-1');
+
+      const actorContext = { actorID: 'admin-1' } as any;
+      await resolver.createCalloutOnCalloutsSet(actorContext, {
+        calloutsSetID: 'cs-collab',
+        framing: { type: CalloutFramingType.FORM },
+      } as any);
+
+      expect(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).toHaveBeenCalledWith(expect.anything(), actorContext, 'admin-1', {
+        allowFormFraming: true,
+      });
+    });
+  });
 });

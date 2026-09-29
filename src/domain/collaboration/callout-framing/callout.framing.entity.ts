@@ -1,5 +1,6 @@
 import { ENUM_LENGTH } from '@common/constants';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
+import { CalloutForm } from '@domain/collaboration/callout-form/callout.form.entity';
 import { ICalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.interface';
 import { CollaboraDocument } from '@domain/collaboration/collabora-document/collabora.document.entity';
 import { Link } from '@domain/collaboration/link/link.entity';
@@ -93,4 +94,16 @@ export class CalloutFraming
   })
   @JoinColumn()
   collaboraDocument?: CollaboraDocument;
+
+  // Inverse side only: the column lives on callout_form (framingId, CASCADE).
+  // Saved with the framing through the cascade; loaded on demand.
+  @OneToOne(
+    () => CalloutForm,
+    (form: CalloutForm) => form.framing,
+    {
+      eager: false,
+      cascade: ['insert', 'update'],
+    }
+  )
+  form?: CalloutForm;
 }

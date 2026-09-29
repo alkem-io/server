@@ -4,6 +4,7 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { ICalloutForm } from '@domain/collaboration/callout-form/callout.form.interface';
 import { ICollaboraDocument } from '@domain/collaboration/collabora-document/collabora.document.interface';
 import { ContributorCollectionService } from '@domain/collaboration/contributor-collection/contributor.collection.service';
 import { IContributorCollectionCounts } from '@domain/collaboration/contributor-collection/dto/contributor.collection.counts';
@@ -85,6 +86,17 @@ export class CalloutFramingResolverFields {
   })
   async poll(@Parent() calloutFraming: ICalloutFraming): Promise<IPoll | null> {
     return this.calloutFramingService.getPoll(calloutFraming);
+  }
+
+  @ResolveField('form', () => ICalloutForm, {
+    nullable: true,
+    description:
+      'The Form attached to this Callout Framing, if any. Present when framing.type = FORM. Only the definition: responses are read through lookup.calloutFormResponses.',
+  })
+  async form(
+    @Parent() calloutFraming: ICalloutFraming
+  ): Promise<ICalloutForm | null> {
+    return this.calloutFramingService.getForm(calloutFraming);
   }
 
   @ResolveField('collaboraDocument', () => ICollaboraDocument, {

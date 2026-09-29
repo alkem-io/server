@@ -25,6 +25,9 @@ import {
   CreateCalloutContributionDefaultsInput,
   UpdateCalloutContributionDefaultsInput,
 } from '@domain/collaboration/callout-contribution-defaults/dto';
+import { UpdateCalloutFormInput } from '@domain/collaboration/callout-form/dto/callout.form.dto.update';
+import { DeleteCalloutFormResponseInput } from '@domain/collaboration/callout-form-response/dto/callout.form.response.dto.delete';
+import { SubmitCalloutFormResponseInput } from '@domain/collaboration/callout-form-response/dto/callout.form.response.dto.submit';
 import {
   CreateCalloutFramingInput,
   UpdateCalloutFramingInput,
@@ -250,6 +253,9 @@ export class BaseHandler extends AbstractHandler {
       UpdateClassificationEntrySelectionInput,
       UpdateClassificationEntryDisplayInput,
       DeleteClassificationEntryInput,
+      UpdateCalloutFormInput,
+      SubmitCalloutFormResponseInput,
+      DeleteCalloutFormResponseInput,
     ];
 
     if (types.includes(metatype)) {

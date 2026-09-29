@@ -13,6 +13,11 @@ import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { ICalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.interface';
 import { CalloutContributionService } from '@domain/collaboration/callout-contribution/callout.contribution.service';
+import { CALLOUT_FORM_OWNER_RELATIONS } from '@domain/collaboration/callout-form/callout.form.owner.relations';
+import { FormResponseAccessService } from '@domain/collaboration/callout-form/callout.form.response.access.service';
+import { CalloutFormService } from '@domain/collaboration/callout-form/callout.form.service';
+import { CalloutFormResponseService } from '@domain/collaboration/callout-form-response/callout.form.response.service';
+import { ICalloutFormResponses } from '@domain/collaboration/callout-form-response/dto/callout.form.responses.view';
 import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
@@ -76,7 +81,7 @@ import { ICalendarEvent } from '@domain/timeline/event';
 import { CalendarEventService } from '@domain/timeline/event/event.service';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
-import { Args, ResolveField, Resolver } from '@nestjs/graphql';
+import { Args, Int, ResolveField, Resolver } from '@nestjs/graphql';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { CurrentActor } from '@src/common/decorators';
 import { LookupMyPrivilegesQueryResults } from './dto/lookup.query.my.privileges.results';
@@ -123,7 +128,10 @@ export class LookupResolverFields {
     private licenseService: LicenseService,
     private knowledgeBaseService: KnowledgeBaseService,
     private templateContentSpaceService: TemplateContentSpaceService,
-    private conversationService: ConversationService
+    private conversationService: ConversationService,
+    private calloutFormService: CalloutFormService,
+    private calloutFormResponseService: CalloutFormResponseService,
+    private formResponseAccess: FormResponseAccessService
   ) {}
 
   @ResolveField(() => ISpace, {
@@ -655,6 +663,37 @@ export class LookupResolverFields {
     );
 
     return callout;
+  }
+
+  @ResolveField(() => ICalloutFormResponses, {
+    nullable: false,
+    description:
+      "Lookup the responses of the specified Form, as far as the current user may read them: every response for a space admin (and for members when the Form shows responses to members), otherwise only the current user's own. Requires READ on the Post that holds the Form. This is the only way to read Form responses.",
+  })
+  async calloutFormResponses(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('formID', { type: () => UUID }) formID: string,
+    @Args('first', { type: () => Int, nullable: true }) first?: number,
+    @Args('after', { type: () => UUID, nullable: true }) after?: string
+  ): Promise<ICalloutFormResponses> {
+    const form = await this.calloutFormService.getCalloutFormOrFail(formID);
+    const callout = await this.calloutFormService.getCalloutForFormOrFail(
+      formID,
+      CALLOUT_FORM_OWNER_RELATIONS
+    );
+    const scope = await this.formResponseAccess.resolveScope(
+      actorContext,
+      form,
+      callout
+    );
+    return {
+      formID,
+      scope,
+      actorID: actorContext.actorID,
+      first: this.calloutFormResponseService.clampPageSize(first),
+      after,
+      canModerate: this.formResponseAccess.canModerate(actorContext, callout),
+    };
   }
 
   @ResolveField(() => ICalloutContribution, {

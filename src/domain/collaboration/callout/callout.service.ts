@@ -102,7 +102,8 @@ export class CalloutService {
     storageAggregator: IStorageAggregator,
     actorContext: ActorContext,
     userID?: string,
-    parentSpaceId?: string
+    parentSpaceId?: string,
+    options?: { allowFormFraming?: boolean }
   ): Promise<ICallout> {
     this.validateCreateCalloutData(calloutData);
     // Reject an off-kind selection/spaces block before any framing child
@@ -133,7 +134,8 @@ export class CalloutService {
       calloutData.framing,
       storageAggregator,
       actorContext,
-      userID
+      userID,
+      options
     );
 
     callout.settings = this.createCalloutSettings(calloutData.settings);
@@ -468,6 +470,24 @@ export class CalloutService {
     ) {
       throw new ValidationException(
         'Poll framing can only be used with poll framing type',
+        LogContext.COLLABORATION
+      );
+    }
+
+    if (
+      calloutData.framing.type === CalloutFramingType.FORM &&
+      !calloutData.framing.form
+    ) {
+      throw new ValidationException(
+        'Please provide a form',
+        LogContext.COLLABORATION
+      );
+    } else if (
+      calloutData.framing.type !== CalloutFramingType.FORM &&
+      calloutData.framing.form
+    ) {
+      throw new ValidationException(
+        'Form framing can only be used with form framing type',
         LogContext.COLLABORATION
       );
     }
