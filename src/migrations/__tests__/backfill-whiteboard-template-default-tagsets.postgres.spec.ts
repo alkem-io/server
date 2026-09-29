@@ -56,6 +56,28 @@ describeMigrationPostgres(
       return { profileId, authorizationId };
     };
 
+    const insertOutOfScopeProfile = async (templateType?: string) => {
+      const profileId = randomUUID();
+      const authorizationId = randomUUID();
+      const whiteboardId = randomUUID();
+      await insertPolicy(authorizationId);
+      await queryRunner.query(
+        'INSERT INTO profile (id, "authorizationId") VALUES ($1, $2)',
+        [profileId, authorizationId]
+      );
+      await queryRunner.query(
+        'INSERT INTO whiteboard (id, "profileId") VALUES ($1, $2)',
+        [whiteboardId, profileId]
+      );
+      if (templateType) {
+        await queryRunner.query(
+          'INSERT INTO template (id, type, "whiteboardId") VALUES ($1, $2, $3)',
+          [randomUUID(), templateType, whiteboardId]
+        );
+      }
+      return profileId;
+    };
+
     const insertDefaultTagset = async (profileId: string) => {
       const authorizationId = randomUUID();
       await insertPolicy(authorizationId);
@@ -113,6 +135,9 @@ describeMigrationPostgres(
       const first = await insertTemplateProfile();
       const second = await insertTemplateProfile();
       const existing = await insertTemplateProfile();
+      const ordinaryWhiteboardProfileId = await insertOutOfScopeProfile();
+      const nonWhiteboardTemplateProfileId =
+        await insertOutOfScopeProfile('callout');
       await insertDefaultTagset(existing.profileId);
       const logs = vi.spyOn(console, 'log').mockImplementation(() => undefined);
       let parsedLogs: unknown[] = [];
@@ -139,6 +164,13 @@ describeMigrationPostgres(
         .credentialRules).toEqual([{ credential: 'space-member', cascade: true }]);
       expect(defaults.filter(defaultTagset => defaultTagset.profileId === second.profileId)[0]
         .credentialRules).toEqual([{ credential: 'space-member', cascade: true }]);
+      expect(
+        defaults.some(
+          defaultTagset =>
+            defaultTagset.profileId === ordinaryWhiteboardProfileId ||
+            defaultTagset.profileId === nonWhiteboardTemplateProfileId
+        )
+      ).toBe(false);
 
       expect(parsedLogs).toContainEqual(
         expect.objectContaining({ phase: 'preflight', candidateCount: 2 })
