@@ -16,8 +16,19 @@ export const NAMEID_MAX_LENGTH = 25;
 export const NAMEID_MIN_LENGTH = 5;
 // polls
 export const POLL_OPTIONS_MAX_COUNT = 10;
+// role set invitations: caps EACH invitee field independently
+// (`invitedActorIDs` and `invitedUserEmails` each carry their own
+// `@ArrayMaxSize`), so a single mutation's worst-case fan-out is 2x this
+// value. The bound exists to stop an unbounded number of per-invitee guard
+// checks; it is not a per-operation total.
+export const ROLE_SET_INVITE_BATCH_MAX = 100;
+// Upper bound on extraRoles per invite request: there are only a handful of
+// RoleName values, so anything larger is a malformed or hostile payload.
+export const ROLE_SET_INVITE_EXTRA_ROLES_MAX = 10;
 // others
 export const ENUM_LENGTH = 128;
+// file-service external reference (feature 013-matrix-media-file-service)
+export const EXTERNAL_REFERENCE_LENGTH = 256;
 // https://www.rfc-editor.org/rfc/rfc1034#section-3.1
 export const SUBDOMAIN_LENGTH = 63;
 export const URI_LENGTH = 2048;

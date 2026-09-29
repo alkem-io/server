@@ -17,4 +17,8 @@ export * from './journey/opportunity.joined';
 export * from './journey/space.content.edited';
 export * from './journey/space.joined';
 //
+export * from './task/task.board.created';
+export * from './task/task.comment.created';
+export * from './task/task.created';
+//
 export * from './update.created';

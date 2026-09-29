@@ -161,6 +161,22 @@ export class UserSettingsService {
         settings.notification.organization.adminMessageReceived,
         notificationOrganizationData.adminMessageReceived
       );
+      this.updateNotificationSetting(
+        settings.notification.organization.adminSpaceCommunityInvitation,
+        notificationOrganizationData.adminSpaceCommunityInvitation
+      );
+      this.updateNotificationSetting(
+        settings.notification.organization.adminAssociateInvitationResponse,
+        notificationOrganizationData.adminAssociateInvitationResponse
+      );
+      this.updateNotificationSetting(
+        settings.notification.organization.adminAssociateApplicationReceived,
+        notificationOrganizationData.adminAssociateApplicationReceived
+      );
+      this.updateNotificationSetting(
+        settings.notification.organization.adminAssociateJoined,
+        notificationOrganizationData.adminAssociateJoined
+      );
     }
 
     const notificationSpaceData = updateData.notification?.space;
@@ -176,6 +192,10 @@ export class UserSettingsService {
         this.updateNotificationSetting(
           settings.notification.space.admin.communityNewMember,
           adminData.communityNewMember
+        );
+        this.updateNotificationSetting(
+          settings.notification.space.admin.communityInvitationResponse,
+          adminData.communityInvitationResponse
         );
         this.updateNotificationSetting(
           settings.notification.space.admin.communicationMessageReceived,
@@ -279,6 +299,16 @@ export class UserSettingsService {
         this.updateNotificationSetting(
           settings.notification.user.membership.spaceCommunityJoined,
           membershipData.spaceCommunityJoined
+        );
+        this.updateNotificationSetting(
+          settings.notification.user.membership
+            .organizationAssociateInvitationReceived,
+          membershipData.organizationAssociateInvitationReceived
+        );
+        this.updateNotificationSetting(
+          settings.notification.user.membership
+            .organizationAssociateApplicationDecided,
+          membershipData.organizationAssociateApplicationDecided
         );
       }
     }

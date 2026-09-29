@@ -3,6 +3,7 @@ import { LogContext } from '@common/enums';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { ValidationException } from '@common/exceptions';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
+import { ICalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.interface';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { getSelectableValues } from '@domain/common/tagset-template/tagset.template.utils';
 import { Injectable } from '@nestjs/common';
@@ -32,6 +33,19 @@ export class TaskBoardService {
    */
   public isTaskBoard(callout: ICallout): boolean {
     return this.getTaskTagset(callout) !== undefined;
+  }
+
+  /**
+   * A contribution is a task exactly when its own classification (not the
+   * parent callout's) carries the reserved 'task' tagset — the tagset that
+   * also names the task's column.
+   */
+  public isTask(contribution: ICalloutContribution): boolean {
+    return (
+      contribution.classification?.tagsets?.some(
+        tagset => tagset.name === TagsetReservedName.TASK
+      ) ?? false
+    );
   }
 
   /**

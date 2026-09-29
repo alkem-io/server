@@ -40,6 +40,10 @@ export abstract class IDocument extends IAuthorizable {
   // Not exposed for security reasons
   externalID!: string;
 
+  // Opaque file-service-owned reference (feature 013). Not a GraphQL field;
+  // read-only on the server. Used to enforce the coalesce no-overwrite invariant.
+  externalReference?: string;
+
   /**
    * Post-rotation pixel dimensions for image content, populated by
    * file-service-go on the create/copy/patch responses (read from the

@@ -283,6 +283,16 @@ const STATUS_METADATA: Record<AlkemioErrorStatus, ErrorMetadata> = {
     specificCode: 116,
     userMessage: 'userMessages.operations.roleSetAlreadyMember',
   },
+  [AlkemioErrorStatus.ROLE_SET_APPLICATIONS_NOT_ACCEPTED]: {
+    category: ErrorCategory.OPERATIONS,
+    specificCode: 122,
+    userMessage: 'userMessages.operations.roleSetApplicationsNotAccepted',
+  },
+  [AlkemioErrorStatus.ROLE_SET_JOIN_NOT_ELIGIBLE]: {
+    category: ErrorCategory.OPERATIONS,
+    specificCode: 123,
+    userMessage: 'userMessages.operations.roleSetJoinNotEligible',
+  },
   [AlkemioErrorStatus.ROLE_SET_INVITATION]: {
     category: ErrorCategory.OPERATIONS,
     specificCode: 105,
@@ -337,6 +347,11 @@ const STATUS_METADATA: Record<AlkemioErrorStatus, ErrorMetadata> = {
     category: ErrorCategory.OPERATIONS,
     specificCode: 117,
     userMessage: 'userMessages.operations.accountDeletionBlocked',
+  },
+  [AlkemioErrorStatus.FORUM_DISCUSSION_CATEGORY_NOT_EMPTY]: {
+    category: ErrorCategory.OPERATIONS,
+    specificCode: 118,
+    userMessage: 'userMessages.operations.forumDiscussionCategoryNotEmpty',
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -451,6 +466,20 @@ const STATUS_METADATA: Record<AlkemioErrorStatus, ErrorMetadata> = {
     category: ErrorCategory.SYSTEM,
     specificCode: 118,
     userMessage: 'userMessages.system.excalidrawServerInit',
+  },
+  // 027-platform-role-redesign (FR-027): fail-closed role-assignment audit
+  // write failure — the grant/revoke does not take effect.
+  //
+  // 121, not 119: this branch and 109-redis-session-store-resilience each
+  // claimed the last free SYSTEM slot independently, and 109 merged to develop
+  // first. `SESSION_STORE_UNAVAILABLE = 14119` is by now asserted in
+  // `auth.interceptor.spec.ts` and published across that feature's spec,
+  // data-model and response contract, so it keeps 119 and this one moves.
+  // Nothing outside this file referenced 14119 for the audit failure.
+  [AlkemioErrorStatus.PLATFORM_ROLE_ASSIGNMENT_AUDIT_FAILED]: {
+    category: ErrorCategory.SYSTEM,
+    specificCode: 121,
+    userMessage: 'userMessages.system.platformRoleAssignmentAuditFailed',
   },
   // ═══════════════════════════════════════════════════════════════════════════
   // 99xxx - FALLBACK: Unmapped errors

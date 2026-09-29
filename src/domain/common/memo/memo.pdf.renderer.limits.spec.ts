@@ -12,6 +12,7 @@ import { MAX_MEMO_EDITOR_CONTENT_BYTES } from './conversion/yjs.state.to.tiptap.
 import { MemoPdfRenderer } from './memo.pdf.renderer';
 
 const MAX_IMAGES = 20;
+const PATHOLOGICAL_RENDER_TIMEOUT_MS = 120_000;
 
 vi.mock('@tiptap/static-renderer', async importOriginal => {
   const actual =
@@ -94,37 +95,42 @@ describe('MemoPdfRenderer input bounds', () => {
   const stateFor = (markdown: string) =>
     Buffer.from(markdownToYjsV2State(markdown));
 
-  it('renders a representative near-limit editor fixture inside ten seconds', async () => {
-    const markdown = fitAsciiBytes(
-      [
-        '# Maximum signing preview',
-        '',
-        '- first list item',
-        '- second list item',
-        '',
-        '| Column A | Column B |',
-        '| --- | --- |',
-        '| value A | value B |',
-        '',
-      ].join('\n'),
-      205_000
-    );
-    const state = stateFor(markdown);
-    const jsonBytes = proseMirrorJsonBytes(state);
-    expect(state.byteLength).toBeLessThan(MAX_MEMO_EDITOR_CONTENT_BYTES);
-    expect(jsonBytes).toBeGreaterThan(950_000);
-    expect(jsonBytes).toBeLessThan(MAX_MEMO_EDITOR_CONTENT_BYTES);
+  it(
+    'renders a representative near-limit editor fixture and reports duration',
+    async () => {
+      const markdown = fitAsciiBytes(
+        [
+          '# Maximum signing preview',
+          '',
+          '- first list item',
+          '- second list item',
+          '',
+          '| Column A | Column B |',
+          '| --- | --- |',
+          '| value A | value B |',
+          '',
+        ].join('\n'),
+        205_000
+      );
+      const state = stateFor(markdown);
+      const jsonBytes = proseMirrorJsonBytes(state);
+      expect(state.byteLength).toBeLessThan(MAX_MEMO_EDITOR_CONTENT_BYTES);
+      expect(jsonBytes).toBeGreaterThan(950_000);
+      expect(jsonBytes).toBeLessThan(MAX_MEMO_EDITOR_CONTENT_BYTES);
 
-    const started = performance.now();
-    const pdf = await renderer.render(state, 'bucket-1', actor);
-    const elapsed = performance.now() - started;
-    process.stdout.write(
-      `memo-signing-render editor-state=${state.byteLength} prose-mirror-json=${jsonBytes} source-text=${Buffer.byteLength(markdown)} images=0 pixels=0 ms=${elapsed.toFixed(1)}\n`
-    );
+      const started = performance.now();
+      const pdf = await renderer.render(state, 'bucket-1', actor);
+      const elapsed = performance.now() - started;
+      process.stdout.write(
+        `memo-signing-render editor-state=${state.byteLength} prose-mirror-json=${jsonBytes} source-text=${Buffer.byteLength(markdown)} images=0 pixels=0 ms=${elapsed.toFixed(1)}\n`
+      );
 
-    expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
-    expect(elapsed).toBeLessThan(10_000);
-  }, 15_000);
+      expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
+      // The strict render-time budget runs in the isolated real-services lane.
+      // This shared-runner coverage test only fails on a pathological hang.
+    },
+    PATHOLOGICAL_RENDER_TIMEOUT_MS
+  );
 
   it('rejects encoded editor state larger than 1,000,000 bytes before decoding', async () => {
     await expect(

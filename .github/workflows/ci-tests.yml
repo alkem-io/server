@@ -28,6 +28,9 @@ jobs:
           node-version: '22.22.0'
           cache: 'pnpm'
 
+      - name: Block non-registry dependency pins on protected branches
+        run: .scripts/check-vendor-lib-pins.sh
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 

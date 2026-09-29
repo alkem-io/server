@@ -164,7 +164,12 @@ export class CalloutContributionDefaultsService {
     }
 
     if (calloutContributionDefaultsData.clearWhiteboardContent) {
-      calloutContributionDefaults.whiteboardContent = undefined;
+      // Must be `null`, not `undefined`. This entity is persisted through a
+      // cascading `Repository.save()`, and TypeORM reads an `undefined`
+      // property as "not provided": it is omitted from the UPDATE's SET
+      // clause, leaving the stored default in place while every in-memory
+      // assertion still looks correct. Only `null` writes a SQL NULL.
+      calloutContributionDefaults.whiteboardContent = null;
     }
 
     return calloutContributionDefaults;

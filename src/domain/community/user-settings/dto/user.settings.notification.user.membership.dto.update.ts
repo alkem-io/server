@@ -21,4 +21,22 @@ export class UpdateUserSettingsNotificationUserMembershipInput {
   @ValidateNested()
   @Type(() => NotificationSettingInput)
   spaceCommunityJoined?: NotificationSettingInput;
+
+  @Field(() => NotificationSettingInput, {
+    nullable: true,
+    description:
+      'Receive a notification when I am invited to associate with an organisation',
+  })
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  organizationAssociateInvitationReceived?: NotificationSettingInput;
+
+  @Field(() => NotificationSettingInput, {
+    nullable: true,
+    description:
+      'Receive a notification when an organisation decides on my application to associate',
+  })
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  organizationAssociateApplicationDecided?: NotificationSettingInput;
 }

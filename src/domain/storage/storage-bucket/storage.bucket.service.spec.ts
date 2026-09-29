@@ -6,6 +6,7 @@ import {
 } from '@common/enums/mime.file.type';
 import { MimeTypeDocument } from '@common/enums/mime.file.type.document';
 import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { ValidationException } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
@@ -113,6 +114,7 @@ describe('StorageBucketService', () => {
           provide: FileServiceAdapter,
           useValue: {
             createDocument: vi.fn(),
+            createDocumentFromStream: vi.fn(),
             copyDocument: vi.fn(),
             getDocumentContent: vi.fn(),
             updateDocument: vi.fn(),
@@ -469,6 +471,210 @@ describe('StorageBucketService', () => {
       expect(result).toBe(createdDoc);
     });
 
+    // A1: a conversation bucket is SHARED, and message attachments are
+    // attributed by `createdBy` on both the send and the read path. Per-bucket
+    // CONTENT dedup handed a second uploader the FIRST uploader's (durable)
+    // row, which then failed both the sender-ownership gate and the single-use
+    // gate — so an already-shared file could never be sent again by anyone.
+    describe('A1: conversation buckets never content-dedup', () => {
+      const arrangeUpload = (bucket: IStorageBucket) => {
+        const created = mockDocument({ id: 'doc-created' });
+        (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(
+          bucket
+        );
+        (authorizationPolicyService.save as Mock).mockResolvedValue({
+          id: 'auth-saved',
+        });
+        (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
+          id: 'doc-created',
+          externalID: 'ext-shared',
+          reused: false,
+        });
+        (documentService.getDocumentOrFail as Mock).mockResolvedValue(created);
+      };
+
+      it('forces skipDedup so a SECOND sender gets their OWN row for identical bytes', async () => {
+        arrangeUpload(
+          mockStorageBucket({
+            id: 'bucket-conversation',
+            storageAggregator: {
+              id: 'agg-conversation',
+              type: StorageAggregatorType.CONVERSATION,
+            } as any,
+          })
+        );
+
+        // Bob uploads the exact bytes Alice already sent into this conversation.
+        await service.uploadFileAsDocumentFromBuffer(
+          'bucket-conversation',
+          Buffer.alloc(1024),
+          'logo.png',
+          MimeTypeVisual.PNG,
+          'bob',
+          true // temporaryLocation — an unsent attachment upload
+        );
+
+        expect(fileServiceAdapter.createDocument).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ skipDedup: true, createdBy: 'bob' })
+        );
+      });
+
+      it('does NOT force skipDedup for a DURABLE upload into a CONVERSATION bucket', async () => {
+        // The bucket-type leg was removed with the creator/single-use gates it
+        // existed for. Conversation files are durable on upload and dedup like
+        // any other durable upload; only STAGED uploads still need their own row.
+        const bucket = mockStorageBucket({
+          id: 'bucket-conv',
+          storageAggregator: {
+            type: StorageAggregatorType.CONVERSATION,
+          } as any,
+        });
+        (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(
+          bucket
+        );
+        (authorizationPolicyService.save as Mock).mockResolvedValue({
+          id: 'auth-saved',
+        });
+        (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
+          id: 'doc-conv',
+          externalID: 'ext',
+          mimeType: MimeTypeVisual.PNG,
+          size: 3,
+        });
+        (documentService.getDocumentOrFail as Mock).mockResolvedValue(
+          mockDocument()
+        );
+
+        await service.uploadFileAsDocumentFromBuffer(
+          'bucket-conv',
+          Buffer.from('png'),
+          'photo.png',
+          MimeTypeVisual.PNG,
+          'bob',
+          false
+        );
+
+        const [, metadata] = (fileServiceAdapter.createDocument as Mock).mock
+          .calls[0];
+        expect(metadata.skipDedup).toBeUndefined();
+      });
+
+      it('forces skipDedup for a STAGED upload into a callout collaboration bucket (comment-room attachments)', async () => {
+        // A callout/post comment-room attachment uploads into the parent
+        // callout's collaboration bucket, which hangs off the SPACE aggregator
+        // — so the conversation-bucket rule does not reach it. Without this,
+        // file-service content-dedup hands the sender the callout's own
+        // pre-existing DURABLE row and resolveOutboundAttachments then rejects
+        // an ordinary file with 'Attachment is not owned by the sender' /
+        // 'Attachment has already been sent'.
+        arrangeUpload(
+          mockStorageBucket({
+            id: 'bucket-callout-collaboration',
+            storageAggregator: {
+              id: 'agg-space',
+              type: StorageAggregatorType.SPACE,
+            } as any,
+          })
+        );
+
+        await service.uploadFileAsDocumentFromBuffer(
+          'bucket-callout-collaboration',
+          Buffer.alloc(1024),
+          'logo.png',
+          MimeTypeVisual.PNG,
+          'bob',
+          true // temporaryLocation — an unsent comment-room attachment upload
+        );
+
+        expect(fileServiceAdapter.createDocument).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ skipDedup: true, createdBy: 'bob' })
+        );
+      });
+
+      it('leaves dedup ON for a DURABLE upload into the same collaboration bucket (callout content is untouched)', async () => {
+        // The non-regression half of the rule above: callout/post CONTENT
+        // uploads into the very same bucket are durable from the start and must
+        // keep deduping exactly as before.
+        arrangeUpload(
+          mockStorageBucket({
+            id: 'bucket-callout-content',
+            storageAggregator: {
+              id: 'agg-space',
+              type: StorageAggregatorType.SPACE,
+            } as any,
+          })
+        );
+
+        await service.uploadFileAsDocumentFromBuffer(
+          'bucket-callout-content',
+          Buffer.alloc(1024),
+          'logo.png',
+          MimeTypeVisual.PNG,
+          'bob',
+          false // temporaryLocation — a normal callout content upload
+        );
+
+        expect(fileServiceAdapter.createDocument).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ skipDedup: undefined })
+        );
+      });
+
+      it('leaves dedup ON for every other bucket type', async () => {
+        arrangeUpload(
+          mockStorageBucket({
+            id: 'bucket-space',
+            storageAggregator: {
+              id: 'agg-space',
+              type: StorageAggregatorType.SPACE,
+            } as any,
+          })
+        );
+
+        await service.uploadFileAsDocumentFromBuffer(
+          'bucket-space',
+          Buffer.alloc(1024),
+          'logo.png',
+          MimeTypeVisual.PNG,
+          'bob'
+        );
+
+        expect(fileServiceAdapter.createDocument).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ skipDedup: undefined })
+        );
+      });
+
+      it('still honours an explicitly requested skipDedup on a non-conversation bucket', async () => {
+        arrangeUpload(
+          mockStorageBucket({
+            id: 'bucket-space-explicit',
+            storageAggregator: {
+              id: 'agg-space',
+              type: StorageAggregatorType.SPACE,
+            } as any,
+          })
+        );
+
+        await service.uploadFileAsDocumentFromBuffer(
+          'bucket-space-explicit',
+          Buffer.alloc(1024),
+          'logo.png',
+          MimeTypeVisual.PNG,
+          'bob',
+          false,
+          true // skipDedup
+        );
+
+        expect(fileServiceAdapter.createDocument).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ skipDedup: true })
+        );
+      });
+    });
+
     it('should throw ValidationException when MIME type is not allowed', async () => {
       const bucket = mockStorageBucket({
         id: 'bucket-mime',
@@ -543,7 +749,7 @@ describe('StorageBucketService', () => {
       );
     });
 
-    it('should roll back auth policy + tagset when the adapter create call throws', async () => {
+    it('PRESERVES auth + tagset when the adapter create call throws, since it may have committed first', async () => {
       const bucket = mockStorageBucket({ id: 'bucket-rb-adapter' });
       const buffer = Buffer.alloc(100);
 
@@ -551,7 +757,10 @@ describe('StorageBucketService', () => {
       (authorizationPolicyService.save as Mock).mockResolvedValue({
         id: 'auth-saved',
       });
-      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset-saved' });
+      (tagsetService.save as Mock).mockResolvedValue({
+        id: 'tagset-saved',
+        authorization: { id: 'tagset-saved-auth' },
+      });
       (fileServiceAdapter.createDocument as Mock).mockRejectedValue(
         new Error('adapter failure')
       );
@@ -566,16 +775,15 @@ describe('StorageBucketService', () => {
         )
       ).rejects.toThrow('adapter failure');
 
-      // Go service was never called successfully — no Go-side rollback
+      // The call was INVOKED and then rejected. A lost response is
+      // indistinguishable from a failed insert, so a committed row may already
+      // reference these — releasing them would strand it unauthorized.
       expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
-      // Pre-created server-owned resources must be cleaned up
-      expect(authorizationPolicyService.delete).toHaveBeenCalledWith({
-        id: 'auth-saved',
-      });
-      expect(tagsetService.removeTagset).toHaveBeenCalledWith('tagset-saved');
+      expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
+      expect(tagsetService.removeTagset).not.toHaveBeenCalled();
     });
 
-    it('should roll back Go-side document + auth policy + tagset when the post-upload reload fails', async () => {
+    it('PRESERVES the committed Go-side document when a post-call step fails, and keeps its auth + tagset', async () => {
       const bucket = mockStorageBucket({ id: 'bucket-rb-reload' });
       const buffer = Buffer.alloc(100);
 
@@ -583,15 +791,19 @@ describe('StorageBucketService', () => {
       (authorizationPolicyService.save as Mock).mockResolvedValue({
         id: 'auth-saved',
       });
-      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset-saved' });
+      (tagsetService.save as Mock).mockResolvedValue({
+        id: 'tagset-saved',
+        authorization: { id: 'tagset-saved-auth' },
+      });
       (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
         id: 'doc-created',
         externalID: 'ext-new',
         mimeType: MimeTypeVisual.PNG,
         size: 100,
       });
-      // Reload after Go created the document fails — compensation must clean up
-      // the Go-side document as well as the server-owned resources.
+      // Reload after Go created the document fails. The row may well be
+      // COMMITTED, so deleting it on that suspicion destroys real data. It is
+      // left in place, and so are the auth/tagset it references.
       (documentService.getDocumentOrFail as Mock).mockRejectedValue(
         new Error('reload failed')
       );
@@ -606,13 +818,12 @@ describe('StorageBucketService', () => {
         )
       ).rejects.toThrow('reload failed');
 
-      expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith(
-        'doc-created'
-      );
-      expect(authorizationPolicyService.delete).toHaveBeenCalledWith({
-        id: 'auth-saved',
-      });
-      expect(tagsetService.removeTagset).toHaveBeenCalledWith('tagset-saved');
+      // The Go call SUCCEEDED; only the reload failed. Deleting the row here
+      // would destroy a committed document, and freeing its policy/tagset
+      // would strand it without authorization.
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+      expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
+      expect(tagsetService.removeTagset).not.toHaveBeenCalled();
     });
 
     it('releases pre-created auth + tagset when file-service-go returns reused:true', async () => {
@@ -631,6 +842,7 @@ describe('StorageBucketService', () => {
       });
       (tagsetService.save as Mock).mockResolvedValue({
         id: 'tagset-saved-reuse',
+        authorization: { id: 'tagset-saved-reuse-auth' },
       });
       (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
         id: 'doc-existing',
@@ -674,6 +886,7 @@ describe('StorageBucketService', () => {
       });
       (tagsetService.save as Mock).mockResolvedValue({
         id: 'tagset-saved-fresh',
+        authorization: { id: 'tagset-saved-fresh-auth' },
       });
       (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
         id: 'doc-fresh',
@@ -698,9 +911,10 @@ describe('StorageBucketService', () => {
     });
 
     it('does NOT delete the Go-side document on post-upload failure if reused:true', async () => {
-      // getDocumentOrFail throws AFTER a reuse response. The catch branch
-      // must still clean up the pre-created auth/tagset, but must NOT
-      // delete the Go-side document — it belongs to another caller.
+      // getDocumentOrFail throws AFTER a reuse response. The Go-side document
+      // belongs to ANOTHER caller and must never be deleted. The pre-created
+      // auth/tagset are not freed in this branch either: the Go call already
+      // succeeded, so release is the dedup-reuse path's job, not the catch's.
       const bucket = mockStorageBucket({ id: 'bucket-reuse-reload-fail' });
       const buffer = Buffer.alloc(10);
 
@@ -710,6 +924,7 @@ describe('StorageBucketService', () => {
       });
       (tagsetService.save as Mock).mockResolvedValue({
         id: 'tagset-saved-rrf',
+        authorization: { id: 'tagset-saved-rrf-auth' },
       });
       (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
         id: 'doc-existing-rrf',
@@ -733,12 +948,8 @@ describe('StorageBucketService', () => {
       ).rejects.toThrow('reload failed');
 
       expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
-      expect(authorizationPolicyService.delete).toHaveBeenCalledWith({
-        id: 'auth-saved-rrf',
-      });
-      expect(tagsetService.removeTagset).toHaveBeenCalledWith(
-        'tagset-saved-rrf'
-      );
+      expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
+      expect(tagsetService.removeTagset).not.toHaveBeenCalled();
     });
   });
 
@@ -765,7 +976,10 @@ describe('StorageBucketService', () => {
       (authorizationPolicyService.save as Mock).mockResolvedValue({
         id: 'auth-saved',
       });
-      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset-saved' });
+      (tagsetService.save as Mock).mockResolvedValue({
+        id: 'tagset-saved',
+        authorization: { id: 'tagset-saved-auth' },
+      });
       (fileServiceAdapter.copyDocument as Mock).mockResolvedValue({
         id: 'doc-new',
         externalID: 'ext-shared',
@@ -794,7 +1008,7 @@ describe('StorageBucketService', () => {
       expect(tagsetService.removeTagset).not.toHaveBeenCalled();
     });
 
-    it('applies the destination bucket authorization before returning a fresh copied document', async () => {
+    it('composes and saves the destination-inherited policy BEFORE the Go copy insert', async () => {
       const inheritedReadRule = {
         name: 'destination-read',
         grantedPrivileges: [AuthorizationPrivilege.READ],
@@ -836,7 +1050,10 @@ describe('StorageBucketService', () => {
       (authorizationPolicyService.save as Mock).mockResolvedValue({
         id: 'auth-saved',
       });
-      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset-saved' });
+      (tagsetService.save as Mock).mockResolvedValue({
+        id: 'tagset-saved',
+        authorization: { id: 'tagset-saved-auth' },
+      });
       (fileServiceAdapter.copyDocument as Mock).mockResolvedValue({
         id: 'doc-new',
         externalID: 'ext-shared',
@@ -886,10 +1103,26 @@ describe('StorageBucketService', () => {
         'user-caller'
       );
 
-      expect(
-        documentAuthorizationService.applyAuthorizationPolicy
-      ).toHaveBeenCalledWith(copiedDocument, destinationAuthorization);
-      expect(result.authorization?.credentialRules).toEqual([
+      // ORDERING IS THE POINT: the row must be authorized the instant it
+      // exists, so composition happens against the pre-created policy BEFORE
+      // fileServiceAdapter.copyDocument inserts anything.
+      const composeOrder = (
+        documentAuthorizationService.applyAuthorizationPolicy as Mock
+      ).mock.invocationCallOrder[0];
+      const insertOrder = (fileServiceAdapter.copyDocument as Mock).mock
+        .invocationCallOrder[0];
+      expect(composeOrder).toBeLessThan(insertOrder);
+
+      // Composed against the destination bucket's policy, with the creator
+      // rule appended (bucket-dst is not a CONVERSATION aggregator), and
+      // carrying the caller as createdBy.
+      const [composedDoc, parentAuth, appendCreatorRule] = (
+        documentAuthorizationService.applyAuthorizationPolicy as Mock
+      ).mock.calls[0];
+      expect(parentAuth).toBe(destinationAuthorization);
+      expect(appendCreatorRule).toBe(true);
+      expect(composedDoc.createdBy).toBe('user-caller');
+      expect(composedDoc.authorization.credentialRules).toEqual([
         inheritedReadRule,
         expect.objectContaining({
           grantedPrivileges: [
@@ -901,6 +1134,153 @@ describe('StorageBucketService', () => {
           criterias: [expect.objectContaining({ resourceID: 'user-caller' })],
         }),
       ]);
+      expect(result.id).toBe(copiedDocument.id);
+    });
+
+    it('forwards externalReference and displayName to the Go copy without disturbing positional callers', async () => {
+      const bucket = mockStorageBucket({ id: 'bucket-dst' });
+      const source = makeSourceDoc();
+      const copied = mockDocument({ id: 'doc-new' });
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({
+        id: 'tagset-saved',
+        authorization: { id: 'tagset-saved-auth' },
+      });
+      (fileServiceAdapter.copyDocument as Mock).mockResolvedValue({
+        id: 'doc-new',
+        externalID: 'ext',
+        mimeType: MimeTypeVisual.PNG,
+        size: 10,
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(copied);
+
+      await service.copyDocumentToBucket(
+        'bucket-dst',
+        source,
+        'user-caller',
+        false,
+        {
+          externalReference: 'KnJLupUceCirVxKYoDGsrbdC',
+          displayName: 'holiday.png',
+        }
+      );
+
+      expect(fileServiceAdapter.copyDocument).toHaveBeenCalledWith(
+        expect.objectContaining({
+          externalReference: 'KnJLupUceCirVxKYoDGsrbdC',
+          displayName: 'holiday.png',
+        })
+      );
+
+      // Omitting the options object leaves both fields undefined, so existing
+      // positional callers keep their present request shape.
+      (fileServiceAdapter.copyDocument as Mock).mockClear();
+      await service.copyDocumentToBucket('bucket-dst', source, 'user-caller');
+      const [sentWithoutOptions] = (fileServiceAdapter.copyDocument as Mock)
+        .mock.calls[0];
+      expect(sentWithoutOptions.externalReference).toBeUndefined();
+      expect(sentWithoutOptions.displayName).toBeUndefined();
+    });
+
+    it('PRESERVES auth + tagset when the Go copy call itself REJECTS, since it may have committed first', async () => {
+      // The decisive case: goCall was invoked and threw. A lost response is
+      // indistinguishable from a failed insert, so a row may exist referencing
+      // the pre-created policy/tagset. Freeing them would strand it.
+      const bucket = mockStorageBucket({ id: 'bucket-dst' });
+      const source = makeSourceDoc();
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-lost-response',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({
+        id: 'tagset-lost-response',
+        authorization: { id: 'tagset-lost-response-auth' },
+      });
+      (fileServiceAdapter.copyDocument as Mock).mockRejectedValue(
+        new Error('socket hang up')
+      );
+
+      await expect(
+        service.copyDocumentToBucket('bucket-dst', source, 'user-caller')
+      ).rejects.toThrow('socket hang up');
+
+      expect(fileServiceAdapter.copyDocument).toHaveBeenCalled();
+      expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
+      expect(tagsetService.removeTagset).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+    });
+
+    it('DOES release auth + tagset when the failure happens BEFORE the Go call is invoked', async () => {
+      // Nothing can reference them if the call never started, so the
+      // pre-invocation cleanup is kept rather than leaking on every such error.
+      const bucket = mockStorageBucket({
+        id: 'bucket-dst',
+        authorization: { id: 'dst-auth', credentialRules: [] } as any,
+      });
+      const source = makeSourceDoc();
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-pre',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({
+        id: 'tagset-pre',
+        authorization: { id: 'tagset-pre-auth' },
+      });
+      // Composition runs before the Go call; fail it there.
+      (
+        documentAuthorizationService.applyAuthorizationPolicy as Mock
+      ).mockRejectedValue(new Error('composition failed'));
+
+      await expect(
+        service.copyDocumentToBucket('bucket-dst', source, 'user-caller')
+      ).rejects.toThrow('composition failed');
+
+      expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith({
+        id: 'auth-pre',
+      });
+      expect(tagsetService.removeTagset).toHaveBeenCalledWith('tagset-pre');
+    });
+
+    it('PRESERVES a possibly-committed Go row, its policy and tagset when a post-copy step fails', async () => {
+      // The copy call SUCCEEDED; only the reload failed. Whether the row is
+      // committed is unknown from here, and it may already be referenced, so
+      // deleting it — or freeing the policy/tagset it points at — destroys
+      // data on a suspicion.
+      const bucket = mockStorageBucket({ id: 'bucket-dst' });
+      const source = makeSourceDoc();
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-uncertain',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({
+        id: 'tagset-uncertain',
+        authorization: { id: 'tagset-uncertain-auth' },
+      });
+      (fileServiceAdapter.copyDocument as Mock).mockResolvedValue({
+        id: 'doc-maybe-committed',
+        externalID: 'ext',
+        mimeType: MimeTypeVisual.PNG,
+        size: 10,
+      });
+      (documentService.getDocumentOrFail as Mock).mockRejectedValue(
+        new Error('reload failed')
+      );
+
+      await expect(
+        service.copyDocumentToBucket('bucket-dst', source, 'user-caller')
+      ).rejects.toThrow('reload failed');
+
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+      expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
+      expect(tagsetService.removeTagset).not.toHaveBeenCalled();
     });
 
     it('releases pre-created auth + tagset when Go responds reused:true', async () => {
@@ -915,7 +1295,10 @@ describe('StorageBucketService', () => {
       (authorizationPolicyService.save as Mock).mockResolvedValue({
         id: 'auth-saved',
       });
-      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset-saved' });
+      (tagsetService.save as Mock).mockResolvedValue({
+        id: 'tagset-saved',
+        authorization: { id: 'tagset-saved-auth' },
+      });
       (fileServiceAdapter.copyDocument as Mock).mockResolvedValue({
         id: 'doc-existing',
         externalID: 'ext-shared',
@@ -935,7 +1318,7 @@ describe('StorageBucketService', () => {
       expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
     });
 
-    it('rolls back pre-created resources on copy failure', async () => {
+    it('PRESERVES pre-created resources when the copy call rejects after invocation', async () => {
       // Full compensation when Go's copy call throws: delete the auth and
       // tagset rows we pre-created. No Go-side document was created here so
       // there's nothing to delete on that side.
@@ -946,7 +1329,10 @@ describe('StorageBucketService', () => {
       (authorizationPolicyService.save as Mock).mockResolvedValue({
         id: 'auth-saved',
       });
-      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset-saved' });
+      (tagsetService.save as Mock).mockResolvedValue({
+        id: 'tagset-saved',
+        authorization: { id: 'tagset-saved-auth' },
+      });
       (fileServiceAdapter.copyDocument as Mock).mockRejectedValue(
         new Error('copy failed')
       );
@@ -955,10 +1341,8 @@ describe('StorageBucketService', () => {
         service.copyDocumentToBucket('bucket-dst', source)
       ).rejects.toThrow('copy failed');
 
-      expect(authorizationPolicyService.delete).toHaveBeenCalledWith({
-        id: 'auth-saved',
-      });
-      expect(tagsetService.removeTagset).toHaveBeenCalledWith('tagset-saved');
+      expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
+      expect(tagsetService.removeTagset).not.toHaveBeenCalled();
       expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
     });
 
@@ -971,7 +1355,10 @@ describe('StorageBucketService', () => {
       (authorizationPolicyService.save as Mock).mockResolvedValue({
         id: 'auth-saved',
       });
-      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset-saved' });
+      (tagsetService.save as Mock).mockResolvedValue({
+        id: 'tagset-saved',
+        authorization: { id: 'tagset-saved-auth' },
+      });
       (fileServiceAdapter.copyDocument as Mock).mockResolvedValue({
         id: 'doc-new',
         externalID: 'ext-shared',
@@ -1000,7 +1387,10 @@ describe('StorageBucketService', () => {
       (authorizationPolicyService.save as Mock).mockResolvedValue({
         id: 'auth-saved',
       });
-      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset-saved' });
+      (tagsetService.save as Mock).mockResolvedValue({
+        id: 'tagset-saved',
+        authorization: { id: 'tagset-saved-auth' },
+      });
       (fileServiceAdapter.copyDocument as Mock).mockResolvedValue({
         id: 'doc-new',
         externalID: 'ext-shared',
@@ -1039,7 +1429,7 @@ describe('StorageBucketService', () => {
       (authorizationPolicyService.save as Mock).mockResolvedValue({
         id: 'auth-saved',
       });
-      (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
+      (fileServiceAdapter.createDocumentFromStream as Mock).mockResolvedValue({
         id: 'doc-unnamed',
         externalID: 'ext-unnamed',
         mimeType: MimeTypeVisual.PNG,
@@ -1057,12 +1447,13 @@ describe('StorageBucketService', () => {
         'user-1'
       );
 
-      expect(fileServiceAdapter.createDocument).toHaveBeenCalledWith(
-        expect.any(Buffer),
+      expect(fileServiceAdapter.createDocumentFromStream).toHaveBeenCalledWith(
+        expect.anything(),
         expect.objectContaining({
           displayName: '_unspecified_',
           storageBucketId: 'bucket-unnamed',
-        })
+        }),
+        expect.any(Number)
       );
     });
 
@@ -1072,7 +1463,7 @@ describe('StorageBucketService', () => {
       (authorizationPolicyService.save as Mock).mockResolvedValue({
         id: 'auth-saved',
       });
-      (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
+      (fileServiceAdapter.createDocumentFromStream as Mock).mockResolvedValue({
         id: 'doc-named',
         externalID: 'ext-named',
         mimeType: MimeTypeVisual.PNG,
@@ -1090,10 +1481,176 @@ describe('StorageBucketService', () => {
         'user-1'
       );
 
-      expect(fileServiceAdapter.createDocument).toHaveBeenCalledWith(
-        expect.any(Buffer),
-        expect.objectContaining({ displayName: 'diagram.png' })
+      expect(fileServiceAdapter.createDocumentFromStream).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ displayName: 'diagram.png' }),
+        expect.any(Number)
       );
+    });
+
+    // A conversation attachment is durable and pre-authorized: the caller's
+    // temporary flag is overridden, and the FULL policy is composed before the
+    // row exists, so it is never momentarily unauthorized.
+    describe('CONVERSATION buckets', () => {
+      const arrangeConversationUpload = (): IStorageBucket => {
+        const bucket = mockStorageBucket({
+          id: 'bucket-conversation',
+          authorization: { id: 'bucket-auth' } as any,
+          storageAggregator: {
+            id: 'agg-conversation',
+            type: StorageAggregatorType.CONVERSATION,
+          } as any,
+        });
+        (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(
+          bucket
+        );
+        (authorizationPolicyService.save as Mock).mockResolvedValue({
+          id: 'auth-saved',
+        });
+        (tagsetService.save as Mock).mockResolvedValue({
+          id: 'tagset-saved',
+          authorization: { id: 'tagset-saved-auth' },
+        });
+        (fileServiceAdapter.createDocumentFromStream as Mock).mockResolvedValue(
+          {
+            id: 'doc-conv',
+            externalID: 'ext-conv',
+            mimeType: MimeTypeVisual.PNG,
+            size: 3,
+          }
+        );
+        (documentService.getDocumentOrFail as Mock).mockResolvedValue(
+          mockDocument()
+        );
+        return bucket;
+      };
+
+      it('stores DURABLY even when the caller asked for a temporary location', async () => {
+        arrangeConversationUpload();
+
+        await service.uploadFileAsDocument(
+          'bucket-conversation',
+          makeReadable(Buffer.from('png')),
+          'holiday.png',
+          MimeTypeVisual.PNG,
+          'bob',
+          true // the generic upload mutation's temporaryLocation flag
+        );
+
+        expect(
+          fileServiceAdapter.createDocumentFromStream
+        ).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({
+            temporaryLocation: false,
+            // Durable, so it dedups like any other durable upload.
+            skipDedup: undefined,
+          }),
+          expect.any(Number)
+        );
+      });
+
+      it('composes the full policy BEFORE the row is created, without the creator rule', async () => {
+        const bucket = arrangeConversationUpload();
+
+        await service.uploadFileAsDocument(
+          'bucket-conversation',
+          makeReadable(Buffer.from('png')),
+          'holiday.png',
+          MimeTypeVisual.PNG,
+          'bob'
+        );
+
+        const apply =
+          documentAuthorizationService.applyAuthorizationPolicy as Mock;
+        expect(apply).toHaveBeenCalledWith(
+          expect.objectContaining({
+            authorization: { id: 'auth-saved' },
+            createdBy: 'bob',
+            tagset: expect.objectContaining({ id: 'tagset-saved' }),
+          }),
+          bucket.authorization,
+          // Conversation membership alone grants access; a creator rule would
+          // survive the uploader leaving the conversation.
+          false
+        );
+        // The ordering IS the property: a row that exists before its policy
+        // does is readable by whoever the parent policy has yet to exclude.
+        expect(apply.mock.invocationCallOrder[0]).toBeLessThan(
+          (fileServiceAdapter.createDocumentFromStream as Mock).mock
+            .invocationCallOrder[0]
+        );
+      });
+    });
+
+    it('leaves a NON-conversation upload to the resolver, honouring the requested temporary location', async () => {
+      const bucket = mockStorageBucket({
+        id: 'bucket-generic',
+        authorization: { id: 'bucket-auth' } as any,
+        storageAggregator: { type: StorageAggregatorType.USER } as any,
+      });
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({
+        id: 'tagset-saved',
+        authorization: { id: 'tagset-saved-auth' },
+      });
+      (fileServiceAdapter.createDocumentFromStream as Mock).mockResolvedValue({
+        id: 'doc-generic',
+        externalID: 'ext-generic',
+        mimeType: MimeTypeVisual.PNG,
+        size: 3,
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(
+        mockDocument()
+      );
+
+      await service.uploadFileAsDocument(
+        'bucket-generic',
+        makeReadable(Buffer.from('png')),
+        'diagram.png',
+        MimeTypeVisual.PNG,
+        'user-1',
+        true
+      );
+
+      expect(fileServiceAdapter.createDocumentFromStream).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ temporaryLocation: true, skipDedup: true }),
+        expect.any(Number)
+      );
+      expect(
+        documentAuthorizationService.applyAuthorizationPolicy
+      ).not.toHaveBeenCalled();
+    });
+
+    it('destroys the source when it fails BEFORE the adapter can consume it', async () => {
+      // Validation rejects ahead of the transfer; nothing else will ever read
+      // this stream, so leaving it open leaks the upload's file handle.
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(
+        mockStorageBucket({
+          id: 'bucket-restricted',
+          allowedMimeTypes: [MimeTypeVisual.PNG],
+        })
+      );
+      const source = makeReadable(Buffer.from('%PDF'));
+
+      await expect(
+        service.uploadFileAsDocument(
+          'bucket-restricted',
+          source,
+          'contract.pdf',
+          MimeTypeDocument.PDF,
+          'user-1'
+        )
+      ).rejects.toThrow();
+
+      expect(source.destroyed).toBe(true);
+      expect(
+        fileServiceAdapter.createDocumentFromStream
+      ).not.toHaveBeenCalled();
     });
   });
 

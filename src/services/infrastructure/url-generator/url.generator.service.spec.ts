@@ -572,6 +572,23 @@ describe('UrlGeneratorService', () => {
     });
   });
 
+  describe('getOrganizationSettingsInvitationsUrlPath', () => {
+    it('should generate the relative organization Invitations tab path', () => {
+      const result = service.getOrganizationSettingsInvitationsUrlPath('acme');
+      expect(result).toBe('/organization/acme/settings/invitations');
+    });
+  });
+
+  describe('createUrlForOrganizationSettingsInvitations', () => {
+    it('should generate the absolute organization Invitations tab URL', () => {
+      const result =
+        service.createUrlForOrganizationSettingsInvitations('acme');
+      expect(result).toBe(
+        `${ENDPOINT}/${UrlPathBase.ORGANIZATION}/acme/settings/invitations`
+      );
+    });
+  });
+
   describe('getCalendarEventIcsRestUrl', () => {
     it('should generate the correct ICS REST URL', () => {
       const configService = {

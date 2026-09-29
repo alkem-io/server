@@ -198,6 +198,7 @@ export type AlkemioConfig = {
       timeout: number;
       retries: number;
       enabled: boolean;
+      matrix_media_bucket_id: string;
     };
     collabora: {
       wopi_service_url: string;
@@ -295,6 +296,10 @@ export type AlkemioConfig = {
       enabled: boolean;
       /** Leading-edge email suppression window per (recipient, callout) in seconds. */
       email_suppression_window_seconds: number;
+    };
+    organization_invitations: {
+      /** Destination for the zero-admin escalation email; never required to boot. */
+      support_email: string;
     };
     messaging: {
       enabled: boolean;

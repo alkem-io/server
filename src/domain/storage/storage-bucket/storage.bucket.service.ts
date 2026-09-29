@@ -7,12 +7,13 @@ import {
   MimeFileType,
 } from '@common/enums/mime.file.type';
 import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { VisualType } from '@common/enums/visual.type';
 import { ValidationException } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { StorageUploadFailedException } from '@common/exceptions/storage/storage.upload.failed.exception';
-import { streamToBuffer, tryRollback } from '@common/utils';
+import { tryRollback } from '@common/utils';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -265,22 +266,49 @@ export class StorageBucketService {
     // multipart body always carries a filename attribute.
     const effectiveFilename = filename?.trim() || UNSPECIFIED_FILENAME;
     try {
-      const streamTimeoutMs = this.configService.get<number>(
-        'storage.file.stream_timeout_ms',
-        { infer: true }
-      )!;
-      const buffer = await streamToBuffer(readStream, streamTimeoutMs);
+      const storage = await this.getStorageBucketOrFail(storageBucketId, {
+        relations: { authorization: true, storageAggregator: true },
+      });
+      this.validateMimeTypes(storage, mimeType);
 
-      // Go file-service-go handles image processing (HEIC→JPEG, compression)
-      return await this.uploadFileAsDocumentFromBuffer(
+      // Conversation files are durable on upload, so a caller-requested
+      // temporary placement is overridden, and their policy is composed before
+      // the insert rather than by the resolver afterwards.
+      const isConversation = this.isConversationBucket(storage);
+      const temporaryLocation = isConversation ? false : temporaryDocument;
+
+      // The size limit is enforced DURING the transfer by the adapter: the
+      // body length is not known up front, and buffering the whole file just
+      // to measure it is what this path exists to avoid.
+      return await this.persistDocumentWithPreparedAuth(
         storageBucketId,
-        buffer,
-        effectiveFilename,
-        mimeType,
-        userID,
-        temporaryDocument
+        (authId, tagsetId) =>
+          this.fileServiceAdapter.createDocumentFromStream(
+            readStream,
+            {
+              displayName: effectiveFilename,
+              mimeType,
+              storageBucketId,
+              authorizationId: authId,
+              tagsetId,
+              createdBy: userID || undefined,
+              temporaryLocation,
+              allowedMimeTypes: storage.allowedMimeTypes.join(','),
+              maxFileSize: storage.maxFileSize,
+              skipDedup: temporaryLocation || undefined,
+            },
+            storage.maxFileSize
+          ),
+        isConversation ? storage.authorization : undefined,
+        isConversation
+          ? { createdBy: userID, destinationBucket: storage }
+          : undefined
       );
     } catch (error: any) {
+      // Release the source when we fail BEFORE the adapter consumed it
+      // (validation, bucket load, policy composition); the adapter owns it
+      // from invocation onwards.
+      readStream.destroy();
       if (error instanceof StorageUploadFailedException) {
         throw error;
       }
@@ -324,9 +352,7 @@ export class StorageBucketService {
     skipDedup = false,
     allowedMimeTypesOverride?: string[]
   ): Promise<IDocument> {
-    const storage = await this.getStorageBucketOrFail(storageBucketId, {
-      relations: {},
-    });
+    const storage = await this.getStorageBucketOrFail(storageBucketId);
 
     const effectiveAllowedMimes =
       allowedMimeTypesOverride ?? storage.allowedMimeTypes;
@@ -334,6 +360,12 @@ export class StorageBucketService {
       this.validateMimeTypes(storage, mimeType);
     }
     this.validateSize(storage, buffer.length);
+
+    // A STAGED (temporary) upload must never content-dedup: a staged row is
+    // moved and mutated by the caller that created it, so collapsing two
+    // uploaders onto one row would let one caller's move affect another's
+    // document.
+    const effectiveSkipDedup = skipDedup || temporaryLocation;
 
     return this.persistDocumentWithPreparedAuth(
       storageBucketId,
@@ -348,7 +380,7 @@ export class StorageBucketService {
           temporaryLocation,
           allowedMimeTypes: effectiveAllowedMimes.join(','),
           maxFileSize: storage.maxFileSize,
-          skipDedup: skipDedup || undefined,
+          skipDedup: effectiveSkipDedup || undefined,
         })
     );
   }
@@ -367,14 +399,19 @@ export class StorageBucketService {
     destinationBucketId: string,
     sourceDocument: IDocument,
     userID?: string,
-    skipDedup = false
+    skipDedup = false,
+    options?: { externalReference?: string; displayName?: string }
   ): Promise<IDocument> {
     const destination = await this.getStorageBucketOrFail(destinationBucketId, {
-      relations: { authorization: true },
+      // storageAggregator scopes the document creator rule; see
+      // persistDocumentWithPreparedAuth.
+      relations: { authorization: true, storageAggregator: true },
     });
 
     this.validateMimeTypes(destination, sourceDocument.mimeType);
     this.validateSize(destination, sourceDocument.size);
+
+    const createdBy = userID || sourceDocument.createdBy || undefined;
 
     return this.persistDocumentWithPreparedAuth(
       destinationBucketId,
@@ -384,38 +421,39 @@ export class StorageBucketService {
           destinationBucketId,
           authorizationId: authId,
           tagsetId,
-          createdBy: userID || sourceDocument.createdBy || undefined,
+          createdBy,
           skipDedup: skipDedup || undefined,
+          externalReference: options?.externalReference,
+          displayName: options?.displayName,
         }),
-      destination.authorization
+      destination.authorization,
+      { createdBy, destinationBucket: destination }
     );
   }
 
   /**
-   * Shared scaffolding for any operation that needs to materialize a new
-   * `Document` row in `bucketId`: pre-create the auth-policy + tagset that
-   * the document FK-references, run the caller-supplied file-service-go
-   * call, then either:
-   *   - on dedup-reuse (`result.reused === true`): release the pre-created
-   *     rows since Go ignored them and kept the existing row's values
-   *     authoritative;
-   *   - on error: roll back every pre-created resource AND, if Go did
-   *     create a fresh row before the failure, delete it too. On reuse
-   *     during a later failure, the source row belongs to another caller
-   *     and must be preserved.
+   * Materializes a new `Document` row in `bucketId`: pre-create and fully
+   * compose its auth-policy + tagset, then run the caller's file-service-go
+   * call. On dedup-reuse the pre-created rows are released, since Go kept the
+   * existing row authoritative. Nothing is deleted once the call has been
+   * invoked — see the invocation boundary below.
    *
-   * Both create and copy flows go through here so the auth/tagset
-   * lifecycle and dedup-reuse contract stay consistent across the two.
+   * Both create and copy flow through here so the auth/tagset lifecycle and
+   * the dedup-reuse contract stay identical.
    */
   private async persistDocumentWithPreparedAuth(
     bucketId: string,
     goCall: (authId: string, tagsetId: string) => Promise<CreateDocumentResult>,
-    parentAuthorization?: IAuthorizationPolicy
+    parentAuthorization?: IAuthorizationPolicy,
+    prepared?: { createdBy?: string; destinationBucket?: IStorageBucket }
   ): Promise<IDocument> {
     let savedAuth;
     let savedTagset;
     let result;
     let document;
+    // Invocation boundary: goCall can commit and then throw on a lost
+    // response, so an undefined `result` is not evidence that no row exists.
+    let goInvoked = false;
     try {
       const authorization = new AuthorizationPolicy(
         AuthorizationPolicyType.DOCUMENT
@@ -428,6 +466,24 @@ export class StorageBucketService {
       });
       savedTagset = await this.tagsetService.save(tagset);
 
+      // Compose the FULL policy before the insert, so the row is authorized
+      // the instant it exists. The compositor needs no Go row id.
+      if (parentAuthorization) {
+        const pending = {
+          id: `pending-document-in-${bucketId}`,
+          authorization: savedAuth,
+          createdBy: prepared?.createdBy,
+          tagset: savedTagset,
+        } as unknown as IDocument;
+        await this.documentAuthorizationService.applyAuthorizationPolicy(
+          pending,
+          parentAuthorization,
+          prepared?.destinationBucket?.storageAggregator?.type !==
+            StorageAggregatorType.CONVERSATION
+        );
+      }
+
+      goInvoked = true;
       result = await goCall(savedAuth.id, savedTagset.id);
 
       // Load with relations needed for auth/tagset consumers. On dedup
@@ -439,34 +495,14 @@ export class StorageBucketService {
           storageBucket: true,
         },
       });
-
-      // A copy creates a logical document in the destination bucket. Finish its
-      // inherited policy before its opaque file ID can escape to a whiteboard
-      // snapshot or another caller. Upload mutations apply authorization at
-      // their resolver boundary, so only copy supplies a parent here.
-      if (!result.reused && parentAuthorization) {
-        await this.documentAuthorizationService.applyAuthorizationPolicy(
-          document,
-          parentAuthorization
-        );
-      }
     } catch (error) {
       // Independent rollbacks so one cleanup failure doesn't skip the rest.
       // Bind narrowed values into const locals so the closures don't re-widen.
       //
-      // Important: only delete the Go-side document if this request created
-      // it (reused=false). On a dedup reuse, `result.id` refers to someone
-      // else's existing document — deleting it would corrupt their data.
-      const createdDoc = result;
-      if (createdDoc && !createdDoc.reused) {
-        await tryRollback(
-          () => this.fileServiceAdapter.deleteDocument(createdDoc.id),
-          `Failed to rollback Go-side document ${createdDoc.id}`,
-          this.logger,
-          LogContext.STORAGE_BUCKET
-        );
-      }
-      const createdAuth = savedAuth;
+      // Release only if the call never started: once invoked, a committed row
+      // may reference these even on rejection. No Go-side delete either — an
+      // unreferenced row is recoverable, a deleted referenced one is not.
+      const createdAuth = goInvoked ? undefined : savedAuth;
       if (createdAuth) {
         await tryRollback(
           () => this.authorizationPolicyService.delete(createdAuth),
@@ -475,7 +511,7 @@ export class StorageBucketService {
           LogContext.STORAGE_BUCKET
         );
       }
-      const createdTagset = savedTagset;
+      const createdTagset = goInvoked ? undefined : savedTagset;
       if (createdTagset) {
         await tryRollback(
           () => this.tagsetService.removeTagset(createdTagset.id),
@@ -639,7 +675,8 @@ export class StorageBucketService {
 
     // Policy-less rows are internal collaboration snapshots. They are real
     // file rows for quota and lifecycle purposes, but are not user-facing
-    // Documents and must never enter per-document authorization.
+    // Documents and must never enter per-document authorization — so they are
+    // dropped FIRST, before the privilege test runs.
     const readableDocuments = allDocuments
       .filter(document => this.documentService.isUserFacingDocument(document))
       .filter(document =>
@@ -678,6 +715,19 @@ export class StorageBucketService {
       actorContext,
       document.authorization,
       AuthorizationPrivilege.READ
+    );
+  }
+
+  /**
+   * True for the per-conversation buckets feature 013 creates
+   * (`StorageAggregatorType.CONVERSATION`). Requires the `storageAggregator`
+   * relation to be loaded; an unloaded/absent aggregator reads as "not a
+   * conversation bucket", which keeps the platform-wide default behaviour.
+   */
+  private isConversationBucket(storageBucket: IStorageBucket): boolean {
+    return (
+      storageBucket.storageAggregator?.type ===
+      StorageAggregatorType.CONVERSATION
     );
   }
 

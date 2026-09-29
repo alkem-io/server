@@ -38,7 +38,7 @@ export class AdminMcpApiKeyResolverFields {
   @ResolveField('mcpApiKeys', () => [IMcpApiKey], {
     nullable: false,
     description:
-      'MCP API keys belonging to the named user. Platform admins only. Keys bound to a system actor are never returned.',
+      'MCP API keys belonging to the named user. Platform Users Admin only. Keys bound to a system actor are never returned.',
   })
   async mcpApiKeys(
     @CurrentActor() actorContext: ActorContext,
@@ -49,19 +49,24 @@ export class AdminMcpApiKeyResolverFields {
     // and this repo's convention is that exception messages carry no dynamic
     // data — identifiers belong in structured `details`. The subject is
     // already recorded on the audit row for successful operations.
-    await this.assertPlatformAdmin(actorContext, 'platformAdmin mcpApiKeys');
+    await this.assertUsersAdmin(actorContext, 'platformAdmin mcpApiKeys');
     const rows = await this.mcpApiKeyService.listUserKeysForAdmin(userID);
     return rows.map(toGraphqlMcpApiKey);
   }
 
-  private async assertPlatformAdmin(
+  // 027-platform-role-redesign (A5): a user's MCP keys are user-credential
+  // lifecycle — the Platform Users Admin family, same as identity reset —
+  // so the gate is PLATFORM_USERS_ADMIN on the platform policy (Slice A:
+  // that rule still unions the legacy broad credentials), never the
+  // retiring PLATFORM_ADMIN catch-all.
+  private async assertUsersAdmin(
     actorContext: ActorContext,
     description: string
   ): Promise<void> {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
       description
     );
   }

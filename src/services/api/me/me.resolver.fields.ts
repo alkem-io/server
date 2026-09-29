@@ -24,6 +24,8 @@ import { MeConversationsResult } from './dto/me.conversations.result';
 import { CommunityInvitationResult } from './dto/me.invitation.result';
 import { CommunityMembershipResult } from './dto/me.membership.result';
 import { NotificationEventsFilterInput } from './dto/me.notification.event.filter.dto.input';
+import { OrganizationApplicationResult } from './dto/me.organization.application.result';
+import { OrganizationInvitationResult } from './dto/me.organization.invitation.result';
 import { MySpaceResults } from './dto/my.journeys.results';
 import { MeService } from './me.service';
 
@@ -195,6 +197,95 @@ export class MeResolverFields {
       return [];
     }
     return this.meService.getCommunityApplicationsForUser(
+      actorContext.actorID,
+      states
+    );
+  }
+
+  @ResolveField('organizationInvitationsCount', () => Number, {
+    description:
+      "The number of the current authenticated user's own pending organization invitations.",
+  })
+  public async organizationInvitationsCount(
+    @CurrentActor() actorContext: ActorContext,
+    @Args({
+      name: 'states',
+      nullable: true,
+      type: () => [String],
+      description: 'The state names you want to filter on',
+    })
+    states: string[]
+  ): Promise<number> {
+    if (!actorContext.actorID) {
+      this.logger.verbose?.(
+        'Degrading me.organizationInvitationsCount to its empty value: request has no resolved actor',
+        LogContext.AUTH
+      );
+      return 0;
+    }
+    return this.meService.getOrganizationInvitationsCountForUser(
+      actorContext.actorID,
+      states
+    );
+  }
+
+  @ResolveField(
+    'organizationInvitations',
+    () => [OrganizationInvitationResult],
+    {
+      description:
+        "The current authenticated user's own pending organization invitations.",
+    }
+  )
+  public async organizationInvitations(
+    @CurrentActor() actorContext: ActorContext,
+    @Args({
+      name: 'states',
+      nullable: true,
+      type: () => [String],
+      description: 'The state names you want to filter on',
+    })
+    states: string[]
+  ): Promise<OrganizationInvitationResult[]> {
+    if (!actorContext.actorID) {
+      this.logger.verbose?.(
+        'Degrading me.organizationInvitations to its empty value: request has no resolved actor',
+        LogContext.AUTH
+      );
+      return [];
+    }
+    return this.meService.getOrganizationInvitationsForUser(
+      actorContext.actorID,
+      states
+    );
+  }
+
+  @ResolveField(
+    'organizationApplications',
+    () => [OrganizationApplicationResult],
+    {
+      description:
+        "The current authenticated user's own pending organization applications.",
+    }
+  )
+  public async organizationApplications(
+    @CurrentActor() actorContext: ActorContext,
+    @Args({
+      name: 'states',
+      nullable: true,
+      type: () => [String],
+      description: 'The state names you want to filter on',
+    })
+    states: string[]
+  ): Promise<OrganizationApplicationResult[]> {
+    if (!actorContext.actorID) {
+      this.logger.verbose?.(
+        'Degrading me.organizationApplications to its empty value: request has no resolved actor',
+        LogContext.AUTH
+      );
+      return [];
+    }
+    return this.meService.getOrganizationApplicationsForUser(
       actorContext.actorID,
       states
     );

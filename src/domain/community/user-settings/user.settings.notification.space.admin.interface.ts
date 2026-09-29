@@ -19,6 +19,13 @@ export abstract class IUserSettingsNotificationSpaceAdmin {
   @Field(() => IUserSettingsNotificationChannels, {
     nullable: false,
     description:
+      'Receive a notification when someone responds to an invitation you sent (admin)',
+  })
+  communityInvitationResponse!: IUserSettingsNotificationChannels;
+
+  @Field(() => IUserSettingsNotificationChannels, {
+    nullable: false,
+    description:
       'Receive a notification when a message is sent to a Space I lead',
   })
   communicationMessageReceived!: IUserSettingsNotificationChannels;

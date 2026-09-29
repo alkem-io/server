@@ -14,6 +14,7 @@ import {
   MessageReceivedPayload,
 } from '@alkemio/matrix-adapter-lib';
 import { LogContext } from '@common/enums';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { Nack, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -71,14 +72,22 @@ export class CommunicationAdapterEventService {
         LogContext.COMMUNICATION
       );
 
-      // Publish internal domain event (fire and forget)
-      this.eventEmitter.emit(
-        'message.received',
-        new MessageReceivedEvent(payload)
-      );
+      const event = new MessageReceivedEvent(payload);
+      if (payload.message.attachments?.length) {
+        await this.eventEmitter.emitAsync('message.attachments.prepare', event);
+      }
+      this.eventEmitter.emit('message.received', event);
 
       // Return void for successful ack
     } catch (error) {
+      // A deleted room cannot become placeable through redelivery.
+      if (error instanceof EntityNotFoundException) {
+        this.logger.warn(
+          `Ignoring media receipt for a missing entity: ${error}`,
+          LogContext.COMMUNICATION
+        );
+        return new Nack(false);
+      }
       this.logger.error(
         `Error handling RabbitMQ message: ${error}`,
         error instanceof Error ? error.stack : undefined,

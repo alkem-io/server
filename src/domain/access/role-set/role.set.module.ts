@@ -1,3 +1,4 @@
+import { ActorContextModule } from '@core/actor-context/actor.context.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ApplicationModule } from '@domain/access/application/application.module';
 import { InvitationModule } from '@domain/access/invitation/invitation.module';
@@ -15,7 +16,7 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
 import { VirtualActorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { InAppNotificationModule } from '@platform/in-app-notification/in.app.notification.module';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
@@ -47,6 +48,7 @@ import { RoleSetServiceLifecycleInvitation } from './role.set.service.lifecycle.
     LicenseModule,
     FormModule,
     ActorModule,
+    ActorContextModule,
     UserLookupModule,
     UserModule,
     OrganizationLookupModule,
@@ -54,13 +56,13 @@ import { RoleSetServiceLifecycleInvitation } from './role.set.service.lifecycle.
     VirtualActorLookupModule,
     ActorLookupModule,
     RoleModule,
-    InvitationModule,
+    forwardRef(() => InvitationModule),
     EntityResolverModule,
     ApplicationModule,
     PlatformInvitationModule,
     AccountLookupModule,
     AiServerAdapterModule,
-    NotificationAdapterModule,
+    forwardRef(() => NotificationAdapterModule),
     ContributionReporterModule,
     ActivityAdapterModule,
     LifecycleModule,

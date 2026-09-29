@@ -204,6 +204,33 @@ describe('DiscussionService', () => {
     });
   });
 
+  describe('countInForumByCategory', () => {
+    it('counts discussions in the given forum carrying the given category', async () => {
+      discussionRepository.count!.mockResolvedValue(3);
+
+      const result = await service.countInForumByCategory(
+        'forum-1',
+        'other' as any
+      );
+
+      expect(result).toBe(3);
+      expect(discussionRepository.count).toHaveBeenCalledWith({
+        where: { forum: { id: 'forum-1' }, category: 'other' },
+      });
+    });
+
+    it('returns 0 when no discussion carries the category', async () => {
+      discussionRepository.count!.mockResolvedValue(0);
+
+      const result = await service.countInForumByCategory(
+        'forum-1',
+        'other' as any
+      );
+
+      expect(result).toBe(0);
+    });
+  });
+
   describe('isDiscussionInForum', () => {
     it('should return true when discussion belongs to the forum', async () => {
       const mockQB = {

@@ -1,6 +1,7 @@
 import { JoinRulePublic } from '@alkemio/matrix-adapter-lib';
 import { LogContext, ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
 import { RoomType } from '@common/enums/room.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { EntityNotFoundException } from '@common/exceptions';
@@ -217,6 +218,20 @@ export class DiscussionService {
         LogContext.COMMUNICATION
       );
     return room;
+  }
+
+  /**
+   * Live count of Discussions in the given Forum still carrying the given
+   * category. The server-side check behind `adminForumRemoveDiscussionCategory`
+   * — "empty" is enforced from this count, not assumed.
+   */
+  async countInForumByCategory(
+    forumID: string,
+    category: ForumDiscussionCategory
+  ): Promise<number> {
+    return this.discussionRepository.count({
+      where: { forum: { id: forumID }, category },
+    });
   }
 
   async isDiscussionInForum(

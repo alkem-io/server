@@ -1,5 +1,6 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
+import { TaskBoardModule } from '@domain/collaboration/callout/task-board/task.board.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { VirtualActorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
@@ -14,6 +15,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { MessageModule } from '../message/message.module';
+import { MessageAttachmentModule } from '../message-attachment/message.attachment.module';
 import { RoomLookupModule } from '../room-lookup/room.lookup.module';
 import { VirtualContributorMessageModule } from '../virtual.contributor.message/virtual.contributor.message.module';
 import { RoomDataLoader } from './room.data.loader';
@@ -37,6 +39,7 @@ import { RoomServiceEvents } from './room.service.events';
     CommunicationAdapterModule,
     EntityResolverModule,
     MessageModule,
+    MessageAttachmentModule,
     VirtualActorLookupModule,
     VirtualContributorMessageModule,
     UserLookupModule,
@@ -44,6 +47,7 @@ import { RoomServiceEvents } from './room.service.events';
     TypeOrmModule.forFeature([Room]),
     SubscriptionServiceModule,
     InAppNotificationModule,
+    TaskBoardModule,
   ],
   providers: [
     RoomService,

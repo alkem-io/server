@@ -158,6 +158,37 @@ describe('RoomResolverService', () => {
       expect(result.contribution).toBe(mockContribution);
     });
 
+    it("should widen the findOne relations with the contribution's classification/tagsets and pass a contribution still carrying post + classification through", async () => {
+      const mockPost = { id: 'post-1', profile: { id: 'p-1' } };
+      const mockContribution = {
+        post: mockPost,
+        classification: {
+          tagsets: [{ name: 'task', tags: ['Backlog'] }],
+        },
+      };
+      const mockCallout = { contributions: [mockContribution] };
+      entityManager.findOne.mockResolvedValue(mockCallout);
+
+      const result =
+        await service.getCalloutWithPostContributionForRoom('room-1');
+
+      expect(entityManager.findOne).toHaveBeenCalledWith(
+        Callout,
+        expect.objectContaining({
+          relations: expect.objectContaining({
+            contributions: expect.objectContaining({
+              post: expect.objectContaining({ profile: true }),
+              classification: { tagsets: true },
+            }),
+          }),
+        })
+      );
+      expect(result.contribution.post).toBe(mockPost);
+      expect(result.contribution.classification).toEqual(
+        mockContribution.classification
+      );
+    });
+
     it('should throw EntityNotFoundException when callout is not found for room', async () => {
       entityManager.findOne.mockResolvedValue(null);
 
