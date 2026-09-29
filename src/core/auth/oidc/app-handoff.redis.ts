@@ -70,13 +70,20 @@ export async function storeAppHandoff(
   record: AppHandoffRecord
 ): Promise<string> {
   const code = randomBytes(32).toString('base64url');
-  await redis.set(
+  // `NX` is a safety property, not a hint: ioredis resolves to `null` rather
+  // than throwing when the key already exists, so an unchecked call would hand
+  // back a code whose record was never written and which can only ever fail to
+  // redeem. Throwing routes the caller down its existing store-failure path.
+  const written = await redis.set(
     handoffKey(code),
     JSON.stringify(record),
     'EX',
     APP_HANDOFF_TTL_S,
     'NX'
   );
+  if (written !== 'OK') {
+    throw new Error('app handoff record was not stored');
+  }
   return code;
 }
 

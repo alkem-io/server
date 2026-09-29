@@ -63,6 +63,17 @@ describe('storeAppHandoff (FR-006)', () => {
     expect(data.size).toBe(1);
   });
 
+  it('throws when NX blocks the write, rather than returning an unusable code', async () => {
+    // CodeRabbit, server#6546: ioredis resolves `set … NX` to `null` instead of throwing
+    // when the key exists. An unchecked call hands back a code whose record was never
+    // written, which can only ever fail to redeem — and the file documents NX as a safety
+    // property. Throwing routes the caller down its existing store-failure path.
+    const { redis } = makeFakeRedis();
+    redis.set = vi.fn(async () => null);
+
+    await expect(storeAppHandoff(redis, RECORD)).rejects.toThrow(/not stored/i);
+  });
+
   it('mints a fresh code per call', async () => {
     const { redis } = makeFakeRedis();
     const first = await storeAppHandoff(redis, RECORD);
