@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import { LogContext, ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
@@ -34,6 +35,8 @@ import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { MockType } from '@test/utils/mock.type';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { Repository } from 'typeorm';
+import { CalloutContribution } from '../../collaboration/callout-contribution/callout.contribution.entity';
+import { CalloutContributionService } from '../../collaboration/callout-contribution/callout.contribution.service';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { LicenseService } from '../license/license.service';
 import { ProfileService } from '../profile/profile.service';
@@ -108,6 +111,34 @@ const buildImageSnapshotBase64 = async (opts: {
     }, fork.LOCAL_ORIGIN);
   }
   const b64 = Buffer.from(Y.encodeStateAsUpdateV2(doc)).toString('base64');
+  doc.destroy();
+  return b64;
+};
+
+const buildImageAssetsSnapshotBase64 = async (
+  locators: Record<string, string>
+): Promise<string> => {
+  const fork: any = await whiteboardFork.loadWhiteboardFork();
+  const doc = new Y.Doc();
+  const scene = new fork.Scene(undefined, { doc });
+  for (const fileId of Object.keys(locators)) {
+    const image = fork.newElement({
+      type: 'image',
+      x: 0,
+      y: 0,
+      width: 10,
+      height: 10,
+    });
+    scene.insertElement(image);
+    scene.mutateElement(image, { fileId });
+  }
+  doc.transact(() => {
+    fork.writeAssetLocators(doc.getMap(fork.FILES), locators, {
+      prune: true,
+    });
+  }, fork.LOCAL_ORIGIN);
+  const b64 = Buffer.from(Y.encodeStateAsUpdateV2(doc)).toString('base64');
+  scene.destroy();
   doc.destroy();
   return b64;
 };
@@ -1393,6 +1424,134 @@ describe('WhiteboardService', () => {
       expect(fileServiceAdapter.getContentBatch).not.toHaveBeenCalled();
       expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
       expect(result.contentPointer).toBe('snap-new');
+    });
+
+    it('materializes an image-bearing contribution default into the Callout bucket before creating the contribution Whiteboard', async () => {
+      const calloutBucketID = 'callout-bucket';
+      const templateBucketID = 'template-bucket';
+      const sourceContent = await buildImageAssetsSnapshotBase64({
+        'image-a': 'template-image-a',
+        'image-b': 'template-image-b',
+      });
+      const snapshotWrites: Array<{ snapshot: Uint8Array; bucketID: string }> =
+        [];
+
+      vi.mocked(documentService.getDocumentOrFail).mockImplementation(
+        async documentID => {
+          const isTemplateDocument = documentID.startsWith('template-');
+          return {
+            id: documentID,
+            authorization: { id: `${documentID}-authorization` },
+            storageBucket: {
+              id: isTemplateDocument ? templateBucketID : calloutBucketID,
+            },
+          } as any;
+        }
+      );
+      vi.mocked(storageBucketService.copyDocumentToBucket).mockImplementation(
+        async (targetBucketID, document) =>
+          ({ id: `${targetBucketID}-${document.id}` }) as any
+      );
+      vi.mocked(fileServiceAdapter.createSnapshotInBucket).mockImplementation(
+        async (snapshot, bucketID) => {
+          snapshotWrites.push({ snapshot, bucketID });
+          return {
+            id: 'contribution-snapshot',
+            externalID: 'contribution-snapshot-external',
+            mimeType: 'application/octet-stream',
+            size: snapshot.byteLength,
+            reused: false,
+          };
+        }
+      );
+
+      const defaultContent = await service.materializeContentIntoBucket(
+        sourceContent,
+        calloutBucketID,
+        templateBucketID
+      );
+
+      expect(
+        await readSnapshotAssetLocators(
+          Buffer.from(defaultContent.content, 'base64')
+        )
+      ).toEqual({
+        'image-a': 'callout-bucket-template-image-a',
+        'image-b': 'callout-bucket-template-image-b',
+      });
+
+      vi.spyOn(CalloutContribution, 'create').mockImplementation(
+        (input: any) => {
+          const contribution = new CalloutContribution();
+          Object.assign(contribution, input);
+          return contribution as any;
+        }
+      );
+      const contributionService = new CalloutContributionService(
+        {} as any,
+        {} as any,
+        service,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any
+      );
+
+      const contribution = await contributionService.createCalloutContribution(
+        {
+          type: CalloutContributionType.WHITEBOARD,
+          whiteboard: {
+            profile: { displayName: 'Contribution Whiteboard' },
+            content: defaultContent.content,
+            sourceStorageBucketID: calloutBucketID,
+          },
+        } as any,
+        mockStorageAggregator,
+        { allowedTypes: [CalloutContributionType.WHITEBOARD] } as any,
+        undefined,
+        actorContext,
+        actorContext.actorID
+      );
+
+      expect(contribution.whiteboard?.contentPointer).toBe(
+        'contribution-snapshot'
+      );
+      expect(snapshotWrites).toHaveLength(1);
+      expect(snapshotWrites[0]?.bucketID).toBe(TARGET_BUCKET);
+      expect(
+        await readSnapshotAssetLocators(snapshotWrites[0]!.snapshot)
+      ).toEqual({
+        'image-a': 'sb-target-callout-bucket-template-image-a',
+        'image-b': 'sb-target-callout-bucket-template-image-b',
+      });
+    });
+
+    it('rejects a foreign contribution-default locator without retrying, rewriting, or publishing another snapshot', async () => {
+      const sourceContent = await buildImageAssetsSnapshotBase64({
+        'image-a': 'foreign-image-a',
+      });
+      vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
+        id: 'foreign-image-a',
+        authorization: { id: 'foreign-image-authorization' },
+        storageBucket: { id: 'foreign-bucket' },
+      } as any);
+
+      await expect(
+        service.materializeContentIntoBucket(
+          sourceContent,
+          'callout-bucket',
+          'authorized-template-bucket'
+        )
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(documentService.getDocumentOrFail).toHaveBeenCalledTimes(1);
+      expect(storageBucketService.copyDocumentToBucket).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.createSnapshotInBucket).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+      expect(
+        await readSnapshotAssetLocators(Buffer.from(sourceContent, 'base64'))
+      ).toEqual({ 'image-a': 'foreign-image-a' });
     });
 
     // --- Asset re-home authorization (the exfiltration boundary) ---
