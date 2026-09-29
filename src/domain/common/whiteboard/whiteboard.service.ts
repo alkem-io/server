@@ -5,6 +5,7 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { TagsetType } from '@common/enums/tagset.type';
 import { VisualType } from '@common/enums/visual.type';
 import { WhiteboardPreviewMode } from '@common/enums/whiteboard.preview.mode';
 import {
@@ -185,6 +186,7 @@ export class WhiteboardService {
     );
     await this.profileService.addOrUpdateTagsetOnProfile(whiteboard.profile, {
       name: TagsetReservedName.DEFAULT,
+      type: TagsetType.FREEFORM,
       tags: [],
     });
 
