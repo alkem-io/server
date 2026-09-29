@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { BackfillWhiteboardTemplateDefaultTagsets1790669200000 } from '../1790669200000-BackfillWhiteboardTemplateDefaultTagsets';
 
 describe('BackfillWhiteboardTemplateDefaultTagsets migration', () => {
@@ -24,7 +24,7 @@ describe('BackfillWhiteboardTemplateDefaultTagsets migration', () => {
     expect(typeof migration.down).toBe('function');
   });
 
-  it('selects only Whiteboard Template profiles that lack the default freeform tagset', () => {
+  it('selects every eligible Whiteboard Template profile, for zero, one, or multiple candidates', () => {
     expect(upSource).toMatch(/FROM template t/);
     expect(upSource).toMatch(/JOIN whiteboard w ON w\.id = t\."whiteboardId"/);
     expect(upSource).toMatch(/JOIN profile p ON p\.id = w\."profileId"/);
@@ -33,6 +33,21 @@ describe('BackfillWhiteboardTemplateDefaultTagsets migration', () => {
     expect(upSource).toMatch(/LOWER\(existing\.name\) = 'default'/);
     expect(upSource).toMatch(/existing\.type = 'freeform'/);
     expect(upSource).toMatch(/SELECT DISTINCT ON \(p\.id\)/);
+    expect(upSource).toMatch(/FROM template_profiles/);
+    expect(upSource).not.toMatch(/\b117\b/);
+  });
+
+  it('runs the same set-based preflight, repair, and postflight for any candidate count', async () => {
+    const query = vi.fn().mockResolvedValue([]);
+    const migration =
+      new BackfillWhiteboardTemplateDefaultTagsets1790669200000();
+
+    await migration.up({ query } as any);
+
+    expect(query).toHaveBeenCalledTimes(3);
+    expect(query.mock.calls[0][0]).toContain('DO $$');
+    expect(query.mock.calls[1][0]).toContain('WITH template_profiles');
+    expect(query.mock.calls[2][0]).toContain('DO $$');
   });
 
   it('fails before a write for missing profile authorization or duplicate defaults', () => {
@@ -40,7 +55,6 @@ describe('BackfillWhiteboardTemplateDefaultTagsets migration', () => {
     const preflight = upSource.slice(0, dataWriteIndex);
 
     expect(dataWriteIndex).toBeGreaterThan(0);
-    expect(preflight).toMatch(/missing_default_count NOT IN \(0, 117\)/);
     expect(preflight).toMatch(/profile_auth\.id IS NULL/);
     expect(preflight).toMatch(/HAVING COUNT\(\*\) > 1/);
     expect(preflight).toMatch(/RAISE EXCEPTION/);

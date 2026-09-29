@@ -14,27 +14,7 @@ export class BackfillWhiteboardTemplateDefaultTagsets1790669200000
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       DO $$
-      DECLARE
-        missing_default_count INTEGER;
       BEGIN
-        SELECT COUNT(DISTINCT p.id)
-          INTO missing_default_count
-        FROM template t
-        JOIN whiteboard w ON w.id = t."whiteboardId"
-        JOIN profile p ON p.id = w."profileId"
-        WHERE t.type = 'whiteboard'
-          AND NOT EXISTS (
-            SELECT 1
-            FROM tagset existing
-            WHERE existing."profileId" = p.id
-              AND LOWER(existing.name) = 'default'
-              AND existing.type = 'freeform'
-          );
-
-        IF missing_default_count NOT IN (0, 117) THEN
-          RAISE EXCEPTION 'Unexpected Whiteboard Template default tagset population: %', missing_default_count;
-        END IF;
-
         IF EXISTS (
           SELECT 1
           FROM template t
