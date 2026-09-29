@@ -35,8 +35,10 @@ import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { MockType } from '@test/utils/mock.type';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { Repository } from 'typeorm';
+import { CalloutService } from '../../collaboration/callout/callout.service';
 import { CalloutContribution } from '../../collaboration/callout-contribution/callout.contribution.entity';
 import { CalloutContributionService } from '../../collaboration/callout-contribution/callout.contribution.service';
+import { CalloutContributionDefaultsService } from '../../collaboration/callout-contribution-defaults/callout.contribution.defaults.service';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { LicenseService } from '../license/license.service';
 import { ProfileService } from '../profile/profile.service';
@@ -1465,20 +1467,38 @@ describe('WhiteboardService', () => {
         }
       );
 
-      const defaultContent = await service.materializeContentIntoBucket(
-        sourceContent,
-        calloutBucketID,
-        templateBucketID
+      const defaults = {
+        id: 'contribution-defaults',
+        whiteboardContent: undefined,
+      } as any;
+      const defaultsRepository = {
+        save: vi.fn(async persistedDefaults => persistedDefaults),
+      };
+      const defaultsService = new CalloutContributionDefaultsService(
+        { error: vi.fn() } as any,
+        {} as any,
+        service,
+        defaultsRepository as any
+      );
+      await defaultsService.materializeCalloutContributionDefaultsContent(
+        defaults,
+        { id: calloutBucketID } as any,
+        vi.fn(),
+        {
+          whiteboardContent: sourceContent,
+          sourceStorageBucketID: templateBucketID,
+        }
       );
 
       expect(
         await readSnapshotAssetLocators(
-          Buffer.from(defaultContent.content, 'base64')
+          Buffer.from(defaults.whiteboardContent, 'base64')
         )
       ).toEqual({
         'image-a': 'callout-bucket-template-image-a',
         'image-b': 'callout-bucket-template-image-b',
       });
+      expect(defaultsRepository.save).toHaveBeenCalledWith(defaults);
 
       vi.spyOn(CalloutContribution, 'create').mockImplementation(
         (input: any) => {
@@ -1497,19 +1517,50 @@ describe('WhiteboardService', () => {
         {} as any,
         {} as any
       );
+      vi.spyOn(contributionService, 'save').mockImplementation(
+        async contribution => contribution
+      );
+      const callout = {
+        id: 'callout-1',
+        settings: {
+          contribution: {
+            allowedTypes: [CalloutContributionType.WHITEBOARD],
+          },
+        },
+        contributionDefaults: defaults,
+        framing: { profile: { storageBucket: { id: calloutBucketID } } },
+        contributions: [],
+        classification: { tagsets: [] },
+      } as any;
+      const calloutService = Object.assign(
+        Object.create(CalloutService.prototype),
+        {
+          contributionService,
+          getCalloutOrFail: vi.fn().mockResolvedValue(callout),
+          getStorageAggregator: vi
+            .fn()
+            .mockResolvedValue(mockStorageAggregator),
+          namingService: {
+            createNameIdAvoidingReservedNameIDs: vi
+              .fn()
+              .mockReturnValue('contribution-whiteboard'),
+            getReservedNameIDsInCalloutContributions: vi
+              .fn()
+              .mockResolvedValue([]),
+          },
+          taskBoardService: {
+            getTaskTagset: vi.fn().mockReturnValue(undefined),
+          },
+        }
+      ) as CalloutService;
 
-      const contribution = await contributionService.createCalloutContribution(
+      const contribution = await calloutService.createContributionOnCallout(
         {
           type: CalloutContributionType.WHITEBOARD,
           whiteboard: {
             profile: { displayName: 'Contribution Whiteboard' },
-            content: defaultContent.content,
-            sourceStorageBucketID: calloutBucketID,
           },
         } as any,
-        mockStorageAggregator,
-        { allowedTypes: [CalloutContributionType.WHITEBOARD] } as any,
-        undefined,
         actorContext,
         actorContext.actorID
       );
