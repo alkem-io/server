@@ -1,5 +1,20 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
+type PreflightCounts = {
+  candidateCount: string | number;
+  missingAuthorizationCount: string | number;
+  duplicateDefaultCount: string | number;
+};
+
+type InsertCounts = {
+  insertedCount: string | number;
+};
+
+type PostflightCounts = {
+  remainingCandidateCount: string | number;
+  duplicateDefaultCount: string | number;
+};
+
 /**
  * Restores the default freeform tagset on historical Whiteboard Templates.
  *
@@ -11,41 +26,70 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 export class BackfillWhiteboardTemplateDefaultTagsets1790669200000
   implements MigrationInterface
 {
+  private emit(phase: string, counts: Record<string, number>): void {
+    console.log(
+      JSON.stringify({
+        migration: 'BackfillWhiteboardTemplateDefaultTagsets',
+        phase,
+        ...counts,
+      })
+    );
+  }
+
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`
-      DO $$
-      BEGIN
-        IF EXISTS (
-          SELECT 1
-          FROM template t
-          JOIN whiteboard w ON w.id = t."whiteboardId"
-          JOIN profile p ON p.id = w."profileId"
-          LEFT JOIN authorization_policy profile_auth
-            ON profile_auth.id = p."authorizationId"
-          WHERE t.type = 'whiteboard'
-            AND profile_auth.id IS NULL
-        ) THEN
-          RAISE EXCEPTION 'Whiteboard Template profile is missing its authorization policy';
-        END IF;
+    const [preflight] = (await queryRunner.query(`
+      WITH template_profiles AS (
+        SELECT DISTINCT
+          p.id AS profile_id,
+          profile_auth.id AS profile_authorization_id,
+          (
+            SELECT COUNT(*)
+            FROM tagset ts
+            WHERE ts."profileId" = p.id
+              AND LOWER(ts.name) = 'default'
+              AND ts.type = 'freeform'
+          ) AS default_count
+        FROM template t
+        JOIN whiteboard w ON w.id = t."whiteboardId"
+        JOIN profile p ON p.id = w."profileId"
+        LEFT JOIN authorization_policy profile_auth
+          ON profile_auth.id = p."authorizationId"
+        WHERE t.type = 'whiteboard'
+      )
+      SELECT
+        COUNT(*) FILTER (
+          WHERE profile_authorization_id IS NOT NULL AND default_count = 0
+        ) AS "candidateCount",
+        COUNT(*) FILTER (
+          WHERE profile_authorization_id IS NULL
+        ) AS "missingAuthorizationCount",
+        COUNT(*) FILTER (
+          WHERE default_count > 1
+        ) AS "duplicateDefaultCount"
+      FROM template_profiles
+    `)) as PreflightCounts[];
 
-        IF EXISTS (
-          SELECT 1
-          FROM template t
-          JOIN whiteboard w ON w.id = t."whiteboardId"
-          JOIN profile p ON p.id = w."profileId"
-          JOIN tagset ts ON ts."profileId" = p.id
-          WHERE t.type = 'whiteboard'
-            AND LOWER(ts.name) = 'default'
-            AND ts.type = 'freeform'
-          GROUP BY p.id
-          HAVING COUNT(*) > 1
-        ) THEN
-          RAISE EXCEPTION 'Whiteboard Template profile has duplicate default freeform tagsets';
-        END IF;
-      END $$
-    `);
+    const preflightCounts = {
+      candidateCount: Number(preflight?.candidateCount ?? 0),
+      missingAuthorizationCount: Number(
+        preflight?.missingAuthorizationCount ?? 0
+      ),
+      duplicateDefaultCount: Number(preflight?.duplicateDefaultCount ?? 0),
+    };
+    this.emit('preflight', preflightCounts);
 
-    await queryRunner.query(`
+    if (preflightCounts.missingAuthorizationCount > 0) {
+      throw new Error(
+        'Whiteboard Template profile is missing its authorization policy'
+      );
+    }
+    if (preflightCounts.duplicateDefaultCount > 0) {
+      throw new Error(
+        'Whiteboard Template profile has duplicate default freeform tagsets'
+      );
+    }
+
+    const [inserted] = (await queryRunner.query(`
       WITH template_profiles AS (
         SELECT DISTINCT ON (p.id)
           p.id AS profile_id,
@@ -93,60 +137,81 @@ export class BackfillWhiteboardTemplateDefaultTagsets1790669200000
           'tagset'
         FROM candidates
         RETURNING id
+      ),
+      inserted_tagsets AS (
+        INSERT INTO tagset
+          (id, "createdDate", "updatedDate", version, name, type, tags, "authorizationId", "profileId")
+        SELECT
+          tagset_id,
+          NOW(),
+          NOW(),
+          1,
+          'default',
+          'freeform',
+          '',
+          tagset_authorization_id,
+          profile_id
+        FROM candidates
+        JOIN inserted_authorizations
+          ON inserted_authorizations.id = candidates.tagset_authorization_id
+        RETURNING id
       )
-      INSERT INTO tagset
-        (id, "createdDate", "updatedDate", version, name, type, tags, "authorizationId", "profileId")
+      SELECT COUNT(*) AS "insertedCount"
+      FROM inserted_tagsets
+    `)) as InsertCounts[];
+
+    this.emit('insert', {
+      insertedCount: Number(inserted?.insertedCount ?? 0),
+    });
+
+    const [postflight] = (await queryRunner.query(`
+      WITH template_profiles AS (
+        SELECT DISTINCT p.id AS profile_id
+        FROM template t
+        JOIN whiteboard w ON w.id = t."whiteboardId"
+        JOIN profile p ON p.id = w."profileId"
+        WHERE t.type = 'whiteboard'
+      )
       SELECT
-        tagset_id,
-        NOW(),
-        NOW(),
-        1,
-        'default',
-        'freeform',
-        '',
-        tagset_authorization_id,
-        profile_id
-      FROM candidates
-      JOIN inserted_authorizations
-        ON inserted_authorizations.id = candidates.tagset_authorization_id
-    `);
+        COUNT(*) FILTER (
+          WHERE NOT EXISTS (
+            SELECT 1
+            FROM tagset ts
+            WHERE ts."profileId" = profile_id
+              AND LOWER(ts.name) = 'default'
+              AND ts.type = 'freeform'
+          )
+        ) AS "remainingCandidateCount",
+        COUNT(*) FILTER (
+          WHERE (
+            SELECT COUNT(*)
+            FROM tagset ts
+            WHERE ts."profileId" = profile_id
+              AND LOWER(ts.name) = 'default'
+              AND ts.type = 'freeform'
+          ) > 1
+        ) AS "duplicateDefaultCount"
+      FROM template_profiles
+    `)) as PostflightCounts[];
 
-    await queryRunner.query(`
-      DO $$
-      BEGIN
-        IF EXISTS (
-          SELECT 1
-          FROM template t
-          JOIN whiteboard w ON w.id = t."whiteboardId"
-          JOIN profile p ON p.id = w."profileId"
-          WHERE t.type = 'whiteboard'
-            AND NOT EXISTS (
-              SELECT 1
-              FROM tagset ts
-              WHERE ts."profileId" = p.id
-                AND LOWER(ts.name) = 'default'
-                AND ts.type = 'freeform'
-            )
-        ) THEN
-          RAISE EXCEPTION 'Whiteboard Template profile remains without a default freeform tagset';
-        END IF;
+    const postflightCounts = {
+      remainingCandidateCount: Number(
+        postflight?.remainingCandidateCount ?? 0
+      ),
+      duplicateDefaultCount: Number(postflight?.duplicateDefaultCount ?? 0),
+    };
+    this.emit('postflight', postflightCounts);
 
-        IF EXISTS (
-          SELECT 1
-          FROM template t
-          JOIN whiteboard w ON w.id = t."whiteboardId"
-          JOIN profile p ON p.id = w."profileId"
-          JOIN tagset ts ON ts."profileId" = p.id
-          WHERE t.type = 'whiteboard'
-            AND LOWER(ts.name) = 'default'
-            AND ts.type = 'freeform'
-          GROUP BY p.id
-          HAVING COUNT(*) > 1
-        ) THEN
-          RAISE EXCEPTION 'Whiteboard Template profile has duplicate default freeform tagsets after backfill';
-        END IF;
-      END $$
-    `);
+    if (postflightCounts.remainingCandidateCount > 0) {
+      throw new Error(
+        'Whiteboard Template profile remains without a default freeform tagset'
+      );
+    }
+    if (postflightCounts.duplicateDefaultCount > 0) {
+      throw new Error(
+        'Whiteboard Template profile has duplicate default freeform tagsets after backfill'
+      );
+    }
   }
 
   public async down(_queryRunner: QueryRunner): Promise<void> {
