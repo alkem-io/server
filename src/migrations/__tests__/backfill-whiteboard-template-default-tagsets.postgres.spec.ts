@@ -78,14 +78,17 @@ describeMigrationPostgres(
       return profileId;
     };
 
-    const insertDefaultTagset = async (profileId: string) => {
+    const insertDefaultTagset = async (
+      profileId: string,
+      { name = 'default', type = 'freeform' }: { name?: string; type?: string } = {}
+    ) => {
       const authorizationId = randomUUID();
       await insertPolicy(authorizationId);
       await queryRunner.query(
         `INSERT INTO tagset
           (id, "createdDate", "updatedDate", version, name, type, tags, "authorizationId", "profileId")
-         VALUES ($1, NOW(), NOW(), 1, 'default', 'freeform', '', $2, $3)`,
-        [randomUUID(), authorizationId, profileId]
+         VALUES ($1, NOW(), NOW(), 1, $2, $3, '', $4, $5)`,
+        [randomUUID(), name, type, authorizationId, profileId]
       );
     };
 
@@ -135,10 +138,14 @@ describeMigrationPostgres(
       const first = await insertTemplateProfile();
       const second = await insertTemplateProfile();
       const existing = await insertTemplateProfile();
+      const uppercaseExisting = await insertTemplateProfile();
       const ordinaryWhiteboardProfileId = await insertOutOfScopeProfile();
       const nonWhiteboardTemplateProfileId =
         await insertOutOfScopeProfile('callout');
       await insertDefaultTagset(existing.profileId);
+      await insertDefaultTagset(uppercaseExisting.profileId, {
+        name: 'DEFAULT',
+      });
       const logs = vi.spyOn(console, 'log').mockImplementation(() => undefined);
       let parsedLogs: unknown[] = [];
 
@@ -159,7 +166,7 @@ describeMigrationPostgres(
           WHERE LOWER(ts.name) = 'default' AND ts.type = 'freeform'
           ORDER BY ts."profileId"
         `);
-      expect(defaults).toHaveLength(3);
+      expect(defaults).toHaveLength(4);
       expect(defaults.filter(defaultTagset => defaultTagset.profileId === first.profileId)[0]
         .credentialRules).toEqual([{ credential: 'space-member', cascade: true }]);
       expect(defaults.filter(defaultTagset => defaultTagset.profileId === second.profileId)[0]
@@ -205,7 +212,7 @@ describeMigrationPostgres(
       );
     });
 
-    it('rejects missing authorization and duplicates before writing', async () => {
+    it('rejects missing authorization, invalid default types, and duplicate defaults before writing', async () => {
       await insertTemplateProfile({ withAuthorization: false });
       await expect(
         new BackfillWhiteboardTemplateDefaultTagsets1790669200000().up(queryRunner)
@@ -215,12 +222,22 @@ describeMigrationPostgres(
       await queryRunner.query('DELETE FROM template');
       await queryRunner.query('DELETE FROM whiteboard');
       await queryRunner.query('DELETE FROM profile');
-      const duplicate = await insertTemplateProfile();
-      await insertDefaultTagset(duplicate.profileId);
-      await insertDefaultTagset(duplicate.profileId);
+      const invalidType = await insertTemplateProfile();
+      await insertDefaultTagset(invalidType.profileId, { type: 'select-one' });
       await expect(
         new BackfillWhiteboardTemplateDefaultTagsets1790669200000().up(queryRunner)
-      ).rejects.toThrow('duplicate default freeform tagsets');
+      ).rejects.toThrow('default tagset with an invalid type');
+      expect(await queryRunner.query('SELECT * FROM tagset')).toHaveLength(1);
+
+      await queryRunner.query('DELETE FROM template');
+      await queryRunner.query('DELETE FROM whiteboard');
+      await queryRunner.query('DELETE FROM profile');
+      const duplicate = await insertTemplateProfile();
+      await insertDefaultTagset(duplicate.profileId, { name: 'DEFAULT' });
+      await insertDefaultTagset(duplicate.profileId, { name: 'default' });
+      await expect(
+        new BackfillWhiteboardTemplateDefaultTagsets1790669200000().up(queryRunner)
+      ).rejects.toThrow('duplicate default tagsets');
     });
 
     it('rejects a non-zero postflight remainder', async () => {

@@ -375,6 +375,54 @@ describe('WhiteboardService', () => {
         mockStorageAggregator
       );
     });
+
+    it('keeps unrelated caller tagsets but replaces every default variant with one canonical freeform tagset', async () => {
+      const unrelatedTagset = {
+        name: 'skills',
+        type: TagsetType.FREEFORM,
+        tags: ['TypeScript'],
+      };
+      const profile = {
+        displayName: 'My Whiteboard',
+        tagsets: [
+          {
+            name: 'default',
+            type: TagsetType.SELECT_ONE,
+            tags: ['wrong-type'],
+          },
+          {
+            name: 'DEFAULT',
+            type: TagsetType.FREEFORM,
+            tags: [],
+          },
+          {
+            name: 'DeFaUlT',
+            type: TagsetType.FREEFORM,
+            tags: ['non-empty'],
+          },
+          unrelatedTagset,
+        ],
+      };
+
+      await service.createWhiteboard(
+        { content: validEmptyContent, profile },
+        mockStorageAggregator,
+        actorContext
+      );
+
+      expect(vi.mocked(profileService.createProfile)).toHaveBeenCalledWith(
+        { displayName: 'My Whiteboard', tagsets: [unrelatedTagset] },
+        ProfileType.WHITEBOARD,
+        mockStorageAggregator
+      );
+      expect(
+        vi.mocked(profileService.addOrUpdateTagsetOnProfile)
+      ).toHaveBeenCalledWith(mockProfile, {
+        name: TagsetReservedName.DEFAULT,
+        type: TagsetType.FREEFORM,
+        tags: [],
+      });
+    });
   });
 
   describe('getWhiteboardOrFail', () => {

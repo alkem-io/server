@@ -165,8 +165,18 @@ export class WhiteboardService {
     whiteboard.draftExpiresAt = draftExpiresAt;
     whiteboard.contentUpdatePolicy = ContentUpdatePolicy.CONTRIBUTORS;
 
+    const requestedProfile = whiteboardData.profile ?? {
+      displayName: 'Whiteboard',
+    };
     const profileData = {
-      ...(whiteboardData.profile ?? { displayName: 'Whiteboard' }),
+      ...requestedProfile,
+      ...(requestedProfile.tagsets
+        ? {
+            tagsets: requestedProfile.tagsets.filter(
+              tagset => tagset.name.toLowerCase() !== TagsetReservedName.DEFAULT
+            ),
+          }
+        : {}),
     };
     if (
       sourcePreviewURI &&

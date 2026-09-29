@@ -3,6 +3,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 type PreflightCounts = {
   candidateCount: string | number;
   missingAuthorizationCount: string | number;
+  invalidDefaultTypeCount: string | number;
   duplicateDefaultCount: string | number;
 };
 
@@ -12,6 +13,7 @@ type InsertCounts = {
 
 type PostflightCounts = {
   remainingCandidateCount: string | number;
+  invalidDefaultTypeCount: string | number;
   duplicateDefaultCount: string | number;
 };
 
@@ -47,8 +49,14 @@ export class BackfillWhiteboardTemplateDefaultTagsets1790669200000
             FROM tagset ts
             WHERE ts."profileId" = p.id
               AND LOWER(ts.name) = 'default'
-              AND ts.type = 'freeform'
-          ) AS default_count
+          ) AS default_count,
+          (
+            SELECT COUNT(*)
+            FROM tagset ts
+            WHERE ts."profileId" = p.id
+              AND LOWER(ts.name) = 'default'
+              AND ts.type <> 'freeform'
+          ) AS invalid_default_type_count
         FROM template t
         JOIN whiteboard w ON w.id = t."whiteboardId"
         JOIN profile p ON p.id = w."profileId"
@@ -64,6 +72,9 @@ export class BackfillWhiteboardTemplateDefaultTagsets1790669200000
           WHERE profile_authorization_id IS NULL
         ) AS "missingAuthorizationCount",
         COUNT(*) FILTER (
+          WHERE invalid_default_type_count > 0
+        ) AS "invalidDefaultTypeCount",
+        COUNT(*) FILTER (
           WHERE default_count > 1
         ) AS "duplicateDefaultCount"
       FROM template_profiles
@@ -74,6 +85,9 @@ export class BackfillWhiteboardTemplateDefaultTagsets1790669200000
       missingAuthorizationCount: Number(
         preflight?.missingAuthorizationCount ?? 0
       ),
+      invalidDefaultTypeCount: Number(
+        preflight?.invalidDefaultTypeCount ?? 0
+      ),
       duplicateDefaultCount: Number(preflight?.duplicateDefaultCount ?? 0),
     };
     this.emit('preflight', preflightCounts);
@@ -83,9 +97,14 @@ export class BackfillWhiteboardTemplateDefaultTagsets1790669200000
         'Whiteboard Template profile is missing its authorization policy'
       );
     }
+    if (preflightCounts.invalidDefaultTypeCount > 0) {
+      throw new Error(
+        'Whiteboard Template profile has a default tagset with an invalid type'
+      );
+    }
     if (preflightCounts.duplicateDefaultCount > 0) {
       throw new Error(
-        'Whiteboard Template profile has duplicate default freeform tagsets'
+        'Whiteboard Template profile has duplicate default tagsets'
       );
     }
 
@@ -105,7 +124,6 @@ export class BackfillWhiteboardTemplateDefaultTagsets1790669200000
             FROM tagset existing
             WHERE existing."profileId" = p.id
               AND LOWER(existing.name) = 'default'
-              AND existing.type = 'freeform'
           )
         ORDER BY p.id
       ),
@@ -183,12 +201,20 @@ export class BackfillWhiteboardTemplateDefaultTagsets1790669200000
           )
         ) AS "remainingCandidateCount",
         COUNT(*) FILTER (
+          WHERE EXISTS (
+            SELECT 1
+            FROM tagset ts
+            WHERE ts."profileId" = profile_id
+              AND LOWER(ts.name) = 'default'
+              AND ts.type <> 'freeform'
+          )
+        ) AS "invalidDefaultTypeCount",
+        COUNT(*) FILTER (
           WHERE (
             SELECT COUNT(*)
             FROM tagset ts
             WHERE ts."profileId" = profile_id
               AND LOWER(ts.name) = 'default'
-              AND ts.type = 'freeform'
           ) > 1
         ) AS "duplicateDefaultCount"
       FROM template_profiles
@@ -197,6 +223,9 @@ export class BackfillWhiteboardTemplateDefaultTagsets1790669200000
     const postflightCounts = {
       remainingCandidateCount: Number(
         postflight?.remainingCandidateCount ?? 0
+      ),
+      invalidDefaultTypeCount: Number(
+        postflight?.invalidDefaultTypeCount ?? 0
       ),
       duplicateDefaultCount: Number(postflight?.duplicateDefaultCount ?? 0),
     };
@@ -207,9 +236,14 @@ export class BackfillWhiteboardTemplateDefaultTagsets1790669200000
         'Whiteboard Template profile remains without a default freeform tagset'
       );
     }
+    if (postflightCounts.invalidDefaultTypeCount > 0) {
+      throw new Error(
+        'Whiteboard Template profile has a default tagset with an invalid type after backfill'
+      );
+    }
     if (postflightCounts.duplicateDefaultCount > 0) {
       throw new Error(
-        'Whiteboard Template profile has duplicate default freeform tagsets after backfill'
+        'Whiteboard Template profile has duplicate default tagsets after backfill'
       );
     }
   }

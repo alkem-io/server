@@ -9,10 +9,15 @@ const queryRunner = (
     {
       candidateCount: 0,
       missingAuthorizationCount: 0,
+      invalidDefaultTypeCount: 0,
       duplicateDefaultCount: 0,
     },
     { insertedCount: 0 },
-    { remainingCandidateCount: 0, duplicateDefaultCount: 0 },
+    {
+      remainingCandidateCount: 0,
+      invalidDefaultTypeCount: 0,
+      duplicateDefaultCount: 0,
+    },
   ]
 ) => ({
   query: vi
@@ -33,10 +38,15 @@ describe('BackfillWhiteboardTemplateDefaultTagsets migration', () => {
       {
         candidateCount: 3,
         missingAuthorizationCount: 0,
+        invalidDefaultTypeCount: 0,
         duplicateDefaultCount: 0,
       },
       { insertedCount: 3 },
-      { remainingCandidateCount: 0, duplicateDefaultCount: 0 },
+      {
+        remainingCandidateCount: 0,
+        invalidDefaultTypeCount: 0,
+        duplicateDefaultCount: 0,
+      },
     ]);
 
     await migration().up(runner as any);
@@ -47,7 +57,7 @@ describe('BackfillWhiteboardTemplateDefaultTagsets migration', () => {
     expect(sql).toContain('JOIN profile p ON p.id = w."profileId"');
     expect(sql).toContain("t.type = 'whiteboard'");
     expect(sql).toContain("LOWER(existing.name) = 'default'");
-    expect(sql).toContain("existing.type = 'freeform'");
+    expect(sql).not.toContain("existing.type = 'freeform'");
     expect(sql).not.toMatch(/\b117\b/);
   });
 
@@ -60,10 +70,15 @@ describe('BackfillWhiteboardTemplateDefaultTagsets migration', () => {
       {
         candidateCount: count,
         missingAuthorizationCount: 0,
+        invalidDefaultTypeCount: 0,
         duplicateDefaultCount: 0,
       },
       { insertedCount: count },
-      { remainingCandidateCount: 0, duplicateDefaultCount: 0 },
+      {
+        remainingCandidateCount: 0,
+        invalidDefaultTypeCount: 0,
+        duplicateDefaultCount: 0,
+      },
     ]);
     const output = vi.spyOn(console, 'log').mockImplementation(() => undefined);
 
@@ -76,6 +91,7 @@ describe('BackfillWhiteboardTemplateDefaultTagsets migration', () => {
           phase: 'preflight',
           candidateCount: count,
           missingAuthorizationCount: 0,
+          invalidDefaultTypeCount: 0,
           duplicateDefaultCount: 0,
         },
         {
@@ -87,6 +103,7 @@ describe('BackfillWhiteboardTemplateDefaultTagsets migration', () => {
           migration: 'BackfillWhiteboardTemplateDefaultTagsets',
           phase: 'postflight',
           remainingCandidateCount: 0,
+          invalidDefaultTypeCount: 0,
           duplicateDefaultCount: 0,
         },
       ]);
@@ -100,10 +117,15 @@ describe('BackfillWhiteboardTemplateDefaultTagsets migration', () => {
       {
         candidateCount: 1,
         missingAuthorizationCount: 1,
+        invalidDefaultTypeCount: 0,
         duplicateDefaultCount: 0,
       },
       { insertedCount: 1 },
-      { remainingCandidateCount: 0, duplicateDefaultCount: 0 },
+      {
+        remainingCandidateCount: 0,
+        invalidDefaultTypeCount: 0,
+        duplicateDefaultCount: 0,
+      },
     ]);
     const output = vi.spyOn(console, 'log').mockImplementation(() => undefined);
 
@@ -121,18 +143,42 @@ describe('BackfillWhiteboardTemplateDefaultTagsets migration', () => {
     }
   });
 
-  it('rejects duplicate defaults before insert and a non-zero postflight remainder', async () => {
+  it('rejects wrong-type or duplicate defaults before insert and a non-zero postflight remainder', async () => {
+    const invalidTypeRunner = queryRunner([
+      {
+        candidateCount: 0,
+        missingAuthorizationCount: 0,
+        invalidDefaultTypeCount: 1,
+        duplicateDefaultCount: 0,
+      },
+      { insertedCount: 0 },
+      {
+        remainingCandidateCount: 0,
+        invalidDefaultTypeCount: 0,
+        duplicateDefaultCount: 0,
+      },
+    ]);
+    await expect(migration().up(invalidTypeRunner as any)).rejects.toThrow(
+      'Whiteboard Template profile has a default tagset with an invalid type'
+    );
+    expect(invalidTypeRunner.query).toHaveBeenCalledTimes(1);
+
     const duplicateRunner = queryRunner([
       {
         candidateCount: 0,
         missingAuthorizationCount: 0,
+        invalidDefaultTypeCount: 0,
         duplicateDefaultCount: 1,
       },
       { insertedCount: 0 },
-      { remainingCandidateCount: 0, duplicateDefaultCount: 0 },
+      {
+        remainingCandidateCount: 0,
+        invalidDefaultTypeCount: 0,
+        duplicateDefaultCount: 0,
+      },
     ]);
     await expect(migration().up(duplicateRunner as any)).rejects.toThrow(
-      'Whiteboard Template profile has duplicate default freeform tagsets'
+      'Whiteboard Template profile has duplicate default tagsets'
     );
     expect(duplicateRunner.query).toHaveBeenCalledTimes(1);
 
@@ -140,15 +186,41 @@ describe('BackfillWhiteboardTemplateDefaultTagsets migration', () => {
       {
         candidateCount: 1,
         missingAuthorizationCount: 0,
+        invalidDefaultTypeCount: 0,
         duplicateDefaultCount: 0,
       },
       { insertedCount: 1 },
-      { remainingCandidateCount: 1, duplicateDefaultCount: 0 },
+      {
+        remainingCandidateCount: 1,
+        invalidDefaultTypeCount: 0,
+        duplicateDefaultCount: 0,
+      },
     ]);
     await expect(migration().up(remainderRunner as any)).rejects.toThrow(
       'Whiteboard Template profile remains without a default freeform tagset'
     );
     expect(remainderRunner.query).toHaveBeenCalledTimes(3);
+
+    const postflightInvalidTypeRunner = queryRunner([
+      {
+        candidateCount: 1,
+        missingAuthorizationCount: 0,
+        invalidDefaultTypeCount: 0,
+        duplicateDefaultCount: 0,
+      },
+      { insertedCount: 1 },
+      {
+        remainingCandidateCount: 0,
+        invalidDefaultTypeCount: 1,
+        duplicateDefaultCount: 0,
+      },
+    ]);
+    await expect(
+      migration().up(postflightInvalidTypeRunner as any)
+    ).rejects.toThrow(
+      'Whiteboard Template profile has a default tagset with an invalid type after backfill'
+    );
+    expect(postflightInvalidTypeRunner.query).toHaveBeenCalledTimes(3);
   });
 
   it('creates one authorized empty default tagset by inheriting cascading profile rules', async () => {
