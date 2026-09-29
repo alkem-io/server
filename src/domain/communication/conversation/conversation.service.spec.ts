@@ -543,7 +543,7 @@ describe('ConversationService', () => {
       });
     });
 
-    it('sec-server-11: propagates a non-adapter error (e.g. a transport/programming error) rather than swallowing it', async () => {
+    it('sec-server-11: propagates a non-adapter error (e.g. a programming error) rather than swallowing it', async () => {
       mockGroupConversation();
       const unexpected = new Error('unexpected failure');
       communicationAdapter.batchRemoveMember.mockRejectedValue(unexpected);

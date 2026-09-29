@@ -470,10 +470,9 @@ export class ConversationService {
     try {
       // Send to Matrix only — DB will be updated when room.member.updated
       // event arrives. `ensureAllSucceeded` makes this throw (rather than
-      // silently report a false "success") when Matrix rejects the kick
-      // (e.g. insufficient power level) — the RPC is synchronous and the
-      // failure is already known here, so it must not be swallowed as an
-      // optimistic true.
+      // silently report a false "success") when the Matrix removal fails —
+      // the RPC is synchronous and the failure is already known here, so it
+      // must not be swallowed as an optimistic true.
       await this.communicationAdapter.batchRemoveMember(
         memberActorId,
         [conversation.room.id],
@@ -482,22 +481,24 @@ export class ConversationService {
       );
     } catch (error) {
       if (error instanceof CommunicationAdapterException) {
-        // The adapter removes a member by kicking with an account that
-        // outranks them, or — in rooms where nobody does — by having the
-        // member leave through their own account, so a rejection here is a
-        // genuine failure rather than a routine one. Alkemio still stays
-        // authoritative for its OWN membership and notification targeting:
-        // a user must always have a way to leave (or be removed from) a
-        // group conversation on the Alkemio side, even when Matrix rejects
-        // the removal — otherwise consent, once bypassed by enrollment into
-        // a group, could never be withdrawn per-conversation short of a
-        // global settings toggle. Remove the local membership (notification
-        // recipients are re-read from that table at send time — this alone
-        // stops all further targeting) and log the Matrix-side divergence
-        // for manual reconciliation, rather than surfacing the failure to
-        // the caller (see docs/matrix-admin-reflection.md, Finding 1).
+        // The adapter removes a member by having them leave the room through
+        // their own Matrix account, so Matrix is not expected to reject it.
+        // This path is reached on a genuine failure: a rejection, or an RPC
+        // transport failure such as a timeout, which the adapter also wraps
+        // as a CommunicationAdapterException — in which case the adapter may
+        // still complete the removal. Either way Alkemio stays authoritative
+        // for its OWN membership and notification targeting: a user must
+        // always have a way to leave (or be removed from) a group
+        // conversation on the Alkemio side — otherwise consent, once bypassed
+        // by enrollment into a group, could never be withdrawn
+        // per-conversation short of a global settings toggle. Remove the
+        // local membership (notification recipients are re-read from that
+        // table at send time — this alone stops all further targeting) and
+        // log the possible Matrix-side divergence for manual reconciliation,
+        // rather than surfacing the failure to the caller (see
+        // docs/matrix-admin-reflection.md, Finding 1).
         this.logger.warn?.(
-          `removeMember: Matrix removal rejected for actor ${memberActorId} in conversation ${conversationId} (${error.message}) — proceeding with authoritative local removal; Matrix-side room membership may now diverge, see docs/matrix-admin-reflection.md`,
+          `removeMember: Matrix removal failed for actor ${memberActorId} in conversation ${conversationId} (${error.message}) — proceeding with authoritative local removal; Matrix-side room membership may now diverge, see docs/matrix-admin-reflection.md`,
           LogContext.COMMUNICATION_CONVERSATION
         );
         await this.completeLocalMemberRemoval(
