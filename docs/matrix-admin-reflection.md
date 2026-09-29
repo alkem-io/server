@@ -71,7 +71,7 @@ Operations that require Matrix moderator rights:
 
 - [x] Delete/redact messages (`removeRoomMessage`) - **WORKAROUND APPLIED**
 - [x] Remove reactions (`removeReactionToMessage`) - **WORKAROUND APPLIED**
-- [x] Remove users from rooms - **RESOLVED WITHOUT POWER LEVELS** (the member leaves through their own account; see Finding 1 resolution)
+- [ ] Remove users from rooms - **FIX PENDING DEPLOYMENT**, without power levels (the member leaves through their own account; see Finding 1 resolution)
 - [ ] Ban users from rooms (future)
 
 ## Findings
@@ -102,11 +102,14 @@ as adapter-internal in that repo's own CLAUDE.md), and this repo's room
 creation call. Recommend picking up "Kick users from rooms (future)" as its
 own cross-repo spec (Option A/B/C below) rather than a point patch.
 
-> **Corrected — see the Finding 1 resolution below.** The bot is the Matrix
-> creator of rooms Alkemio creates. The kick was rejected because the bot
-> leaves a room once members join, and every member holds the same power
+> **Corrected — see the Finding 1 resolution below.** For rooms Alkemio
+> creates, the bot is the Matrix creator; the kick was rejected because the
+> bot leaves a room once members join, and every member holds the same power
 > level: Synapse lets a sender kick only a target it strictly outranks, so no
-> member can kick another. No power-level change was needed to fix removal.
+> member can kick another. For rooms created from Element (reconciled by the
+> adapter), the creator is the Element user's account, lowered to the same
+> power level, as this paragraph said. Either way no power-level change was
+> needed to fix removal.
 
 **What *was* fixed in server as part of this same defect report**: the
 `batchRemoveMember` RPC envelope's top-level `success` flag was being trusted
@@ -167,38 +170,68 @@ Alkemio has already removed.
 > release is deployed; until then this paragraph still describes production.
 > Two statements above were also inaccurate from the start: RPC transport
 > failures such as timeouts are wrapped as `CommunicationAdapterException`,
-> so they take the local-removal path rather than surfacing as errors; only
-> non-adapter (programming) errors propagate.
+> so they take the local-removal path rather than surfacing as errors.
+> Authorization, validation, not-found and programming errors still
+> propagate.
 
 ### Finding 1 resolution: 2026-09-29 — members leave rooms themselves
 
 Fixed in alkem-io/matrix-adapter#82, **effective once that adapter release is
-deployed**. The server needs no code change: it completes the removal from
-the Matrix `leave` event, and does not look at who sent it.
+deployed**. Until then the addendum above still describes production.
 
-Cause: the bot creates every Alkemio room (PL 100) but leaves it once members
-join, so users never see it. Every member holds PL 50. Synapse lets a sender
-kick only a target it strictly outranks, so in a room nobody can kick anybody,
-and the adapter's kick was always rejected.
+Cause: the bot creates every room Alkemio creates (PL 100) but leaves it once
+members join, so users never see it; rooms created from Element have the
+Element user as creator, lowered to PL 50. Either way every member holds
+PL 50. Synapse lets a sender kick only a target it strictly outranks, so in a
+room nobody can kick anybody, and the adapter's kick was always rejected.
 
 The adapter's `KickUser` now removes a member as follows:
 
 - **Space:** the bot, which stays a member of spaces, kicks as before.
 - **Room, member joined, invited or knocking:** the member's own account
   leaves the room. The bot is never brought back into the room.
-- **Room, member not in it** (never joined — e.g. a forum discussion — or
-  already left): nothing is sent, and the removal counts as done.
+- **Room, member with no membership** (never joined — e.g. a forum
+  discussion — or already left): nothing is sent, and the removal is reported
+  as forbidden, as the old kick was. No leave event would come, so reporting
+  success would leave the server waiting for one.
 
-Consequences:
+Server changes made with it:
 
-- Removal through `batchRemoveMember` is expected to succeed on the Matrix
-  side. The authoritative local removal in `ConversationService.removeMember`
-  stays as the fallback for genuine failures — a Matrix rejection or an RPC
-  transport failure such as a timeout (in which case the adapter may still
-  complete the removal); its warning reads "Matrix removal failed".
+- `ConversationService.removeMember` completes the removal locally on any
+  failure: a rejection (including the no-membership case above) or an RPC
+  transport failure such as a timeout. Its warning reads "Matrix removal
+  failed". The local completion now always finishes with the idempotent row
+  deletion: the event emitter logs a failing listener's error instead of
+  rethrowing it, so the previous "fall back only if the workflow threw"
+  branch could never run.
+- `handleConversationMemberLeft` acts only when its call actually removed the
+  membership row. After a timeout the adapter may still complete the removal,
+  and its late leave event is then a no-op instead of a second
+  `MEMBER_REMOVED` or a second conversation deletion.
+- `handleRoomMemberUpdated` ignores membership events for rooms that no longer
+  exist. Deleting a room removes its row first, then the Matrix room, and
+  every member's leave arrives afterwards.
+
+Consequences and known limits:
+
 - Matrix history shows a removed member as "X left", never "X was removed",
   and the removal reason is not recorded there. A voluntary
   `leaveConversation` reads the same, which is accurate for that case.
+- A member whose Matrix membership was already gone (e.g. an earlier leave
+  event was lost) is removed locally; their Matrix state was already correct.
+- If the removed member is the room's last *joined* Matrix member while
+  Alkemio still lists others (only invited in Matrix, or their join failed),
+  the Matrix room is left with no joined member and the adapter can no longer
+  act in it. This only arises from an existing Alkemio/Matrix divergence; it
+  is not handled.
+- With communications disabled, `batchRemoveMember` skips the RPC and reports
+  success, so no removal happens and the membership stays. No deployed
+  environment disables communications. An empty RPC reply is likewise
+  reported as `false` without an error; the RPC throws on transport failures,
+  so no known path produces one.
+- A member re-added between a timed-out removal and the adapter's late leave
+  is removed from Matrix by that leave, and their Alkemio membership is not
+  recreated. Not handled.
 
 ---
 

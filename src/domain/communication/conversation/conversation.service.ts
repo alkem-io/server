@@ -482,13 +482,15 @@ export class ConversationService {
     } catch (error) {
       if (error instanceof CommunicationAdapterException) {
         // The adapter removes a member by having them leave the room through
-        // their own Matrix account, so Matrix is not expected to reject it.
-        // This path is reached on a genuine failure: a rejection, or an RPC
-        // transport failure such as a timeout, which the adapter also wraps
-        // as a CommunicationAdapterException — in which case the adapter may
-        // still complete the removal. Either way Alkemio stays authoritative
-        // for its OWN membership and notification targeting: a user must
-        // always have a way to leave (or be removed from) a group
+        // their own Matrix account. This path is reached when that fails: the
+        // member has no Matrix membership left to remove (so no leave event
+        // will come), another rejection, or an RPC transport failure such as
+        // a timeout, which the adapter also wraps as a
+        // CommunicationAdapterException — in which case the adapter may still
+        // complete the removal, and its late leave event is then a no-op
+        // because the row is already gone. Either way Alkemio stays
+        // authoritative for its OWN membership and notification targeting: a
+        // user must always have a way to leave (or be removed from) a group
         // conversation on the Alkemio side — otherwise consent, once bypassed
         // by enrollment into a group, could never be withdrawn
         // per-conversation short of a global settings toggle. Remove the
@@ -520,59 +522,38 @@ export class ConversationService {
   }
 
   /**
-   * sec-server-11: drive the local-only removal through the SAME completion
-   * workflow the Matrix-confirmed path uses, by emitting the internal
-   * `room.member.updated` (leave) event that
-   * `MessageInboxService.handleConversationMemberLeft` consumes: persist the
-   * membership removal, re-apply the conversation authorization policy,
-   * publish MEMBER_REMOVED and — when the last member leaves — delete the
-   * conversation and publish CONVERSATION_DELETED.
+   * Drive the local-only removal through the SAME completion workflow the
+   * Matrix-confirmed path uses, by emitting the internal `room.member.updated`
+   * (leave) event that `MessageInboxService.handleConversationMemberLeft`
+   * consumes: persist the membership removal, re-apply the conversation
+   * authorization policy, publish MEMBER_REMOVED and — when the last member
+   * leaves — delete the conversation and publish CONVERSATION_DELETED.
    *
    * Deleting the membership row directly here would skip all of that: clients
    * would never see the removal, the authorization policy would keep granting
    * the removed member access, and an emptied conversation would linger.
    *
    * The removal itself is authoritative and must not depend on that workflow
-   * succeeding, so a failing listener — or an application context that has no
-   * listener at all — falls back to the row deletion alone (idempotent: the
-   * handler may already have performed it) and is logged for reconciliation.
+   * succeeding. The event emitter logs a failing listener's error instead of
+   * rethrowing it, so the outcome can't be observed here; the row deletion
+   * therefore always runs afterwards. It is idempotent: a no-op when the
+   * workflow already removed the row.
    */
   private async completeLocalMemberRemoval(
     conversationId: string,
     roomId: string,
     memberActorId: string
   ): Promise<void> {
-    try {
-      const listenerResults = await this.eventEmitter.emitAsync(
-        'room.member.updated',
-        new RoomMemberUpdatedEvent({
-          roomId,
-          memberActorID: memberActorId,
-          senderActorID: memberActorId,
-          membership: 'leave',
-          timestamp: Date.now(),
-        })
-      );
-      if (listenerResults.length > 0) {
-        return;
-      }
-      this.logger.warn?.(
-        `removeMember: no listener handled the local removal of ${memberActorId} from conversation ${conversationId} — deleting the membership row directly`,
-        LogContext.COMMUNICATION_CONVERSATION
-      );
-    } catch (error: any) {
-      this.logger.error?.(
-        {
-          message:
-            'removeMember: local removal completion workflow failed — falling back to deleting the membership row only',
-          conversationId,
-          memberActorId,
-          error: error?.message,
-        },
-        error?.stack,
-        LogContext.COMMUNICATION_CONVERSATION
-      );
-    }
+    await this.eventEmitter.emitAsync(
+      'room.member.updated',
+      new RoomMemberUpdatedEvent({
+        roomId,
+        memberActorID: memberActorId,
+        senderActorID: memberActorId,
+        membership: 'leave',
+        timestamp: Date.now(),
+      })
+    );
     await this.persistMemberRemoved(conversationId, memberActorId);
   }
 
@@ -605,13 +586,14 @@ export class ConversationService {
   /**
    * Persist a membership removal. Called from the event handler when
    * a room.member.updated event with membership=leave is received.
-   * @returns The remaining member count.
+   * @returns Whether this call removed the membership (false when it was
+   * already gone), and the remaining member count.
    */
   public async persistMemberRemoved(
     conversationId: string,
     memberActorId: string
-  ): Promise<number> {
-    await this.conversationMembershipRepository.delete({
+  ): Promise<{ removed: boolean; remainingCount: number }> {
+    const result = await this.conversationMembershipRepository.delete({
       conversationId,
       actorID: memberActorId,
     });
@@ -621,9 +603,10 @@ export class ConversationService {
       LogContext.COMMUNICATION_CONVERSATION
     );
 
-    return this.conversationMembershipRepository.count({
+    const remainingCount = await this.conversationMembershipRepository.count({
       where: { conversationId },
     });
+    return { removed: (result.affected ?? 0) > 0, remainingCount };
   }
 
   public async deleteConversation(

@@ -134,9 +134,9 @@ describe('ConversationResolverMutations', () => {
   // never resolve `true` on nothing more than "the RPC was sent". The resolver
   // has no try/catch around conversationService.removeMember, so whatever the
   // service does is what the client sees: `true` means the member was removed
-  // on the Alkemio side (including the sec-server-11 local fallback when
-  // Matrix refuses the kick), and any rejection propagates as a real GraphQL
-  // error instead of being swallowed into an optimistic success.
+  // on the Alkemio side (including the local fallback when the Matrix
+  // removal fails), and any rejection propagates as a real GraphQL error
+  // instead of being swallowed into an optimistic success.
   describe('removeConversationMember / leaveConversation (US2-AS4)', () => {
     const mockConversation = {
       id: 'conv-1',
@@ -180,8 +180,8 @@ describe('ConversationResolverMutations', () => {
     });
 
     it('removeConversationMember propagates a service failure instead of returning true', async () => {
-      // Everything the service does NOT downgrade (transport failures,
-      // programming errors, an adapter exception raised outside the kick
+      // Everything the service does NOT downgrade (validation, not-found and
+      // programming errors, an adapter exception raised outside the removal
       // fallback) must surface as a GraphQL error.
       conversationService.removeMember.mockRejectedValue(
         CommunicationAdapterException.fromAdapterError('batchRemoveMember', {

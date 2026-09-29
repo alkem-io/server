@@ -414,7 +414,17 @@ export class MessageInboxService {
       LogContext.COMMUNICATION
     );
 
-    const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
+    // A room's row is removed before its Matrix room is deleted, and that
+    // deletion makes every member leave, so those leave events arrive for a
+    // room that no longer exists.
+    const room = await this.roomLookupService.getRoom(payload.roomId);
+    if (!room) {
+      this.logger.verbose?.(
+        `Ignoring membership event for deleted room ${payload.roomId}`,
+        LogContext.COMMUNICATION
+      );
+      return;
+    }
 
     // Only process membership changes for conversation rooms
     if (!isConversationRoom(room)) {
@@ -521,11 +531,22 @@ export class MessageInboxService {
         conversationId
       );
 
-    // Persist membership removal, get remaining count
-    const remainingCount = await this.conversationService.persistMemberRemoved(
-      conversationId,
-      memberActorId
-    );
+    // Persist membership removal, get remaining count. A removal can be
+    // reported twice — completed locally after a failed or timed-out RPC,
+    // then confirmed by Matrix's own leave event — so only the call that
+    // actually removed the row carries on.
+    const { removed, remainingCount } =
+      await this.conversationService.persistMemberRemoved(
+        conversationId,
+        memberActorId
+      );
+    if (!removed) {
+      this.logger.verbose?.(
+        `Member ${memberActorId} already removed from conversation ${conversationId} - skipping`,
+        LogContext.COMMUNICATION
+      );
+      return;
+    }
 
     // Load conversation for event payload
     const conversation =

@@ -182,7 +182,8 @@ export class ConversationResolverMutations {
       'than reporting success merely because the RPC was sent: true means Matrix ' +
       'accepted it (the member leaves the room), and the membership is then removed ' +
       'asynchronously — observe MEMBER_REMOVED for completion. If the Matrix removal ' +
-      'fails (rejected, or the RPC times out) this still returns true, because Alkemio ' +
+      'fails (rejected — e.g. the member is no longer in the Matrix room — or the RPC ' +
+      'times out) this still returns true, because Alkemio ' +
       'is authoritative for its own membership and applies the removal locally instead; ' +
       'on that path the Matrix-side room membership may diverge until an operator ' +
       'reconciles it.',
@@ -204,8 +205,9 @@ export class ConversationResolverMutations {
       'Leave a group conversation. Awaits the Matrix removal rather than reporting ' +
       'success merely because the RPC was sent: true means Matrix accepted it (the ' +
       'member leaves the room), and the membership is then removed asynchronously — ' +
-      'observe MEMBER_REMOVED for completion. If the Matrix removal fails (rejected, or ' +
-      'the RPC times out) this still returns true, because Alkemio is authoritative for ' +
+      'observe MEMBER_REMOVED for completion. If the Matrix removal fails (rejected — ' +
+      'e.g. the member is no longer in the Matrix room — or the RPC times out) this ' +
+      'still returns true, because Alkemio is authoritative for ' +
       'its own membership and applies the removal locally instead; on that path the ' +
       'Matrix-side room membership may diverge until an operator reconciles it. If the ' +
       'last member leaves, the conversation is auto-deleted and a CONVERSATION_DELETED ' +
@@ -283,12 +285,17 @@ export class ConversationResolverMutations {
    * this return value:
    *  - Matrix ACCEPTED the removal: the adapter confirms synchronously, the
    *    workflow then runs off the inbound room.member.updated event.
-   *  - The Matrix removal FAILED — rejected by Matrix, or an RPC transport
-   *    failure such as a timeout, both of which surface as a
-   *    CommunicationAdapterException: the service downgrades it to an
-   *    authoritative local removal and drives the same workflow itself.
-   * Anything else (programming errors) propagates as a GraphQL error. There
-   * is no resolver try/catch, deliberately.
+   *  - The Matrix removal FAILED — rejected (including a member with no
+   *    Matrix membership left to remove, for whom no leave event would
+   *    come), or an RPC transport failure such as a timeout, all of which
+   *    surface as a CommunicationAdapterException: the service downgrades it
+   *    to an authoritative local removal and drives the same workflow itself.
+   * With communications disabled the RPC is skipped and reported as success,
+   * so neither path runs and the membership stays; no deployed environment
+   * disables them.
+   * Anything else — authorization, validation and not-found errors, and
+   * programming errors — propagates as a GraphQL error. There is no resolver
+   * try/catch, deliberately.
    */
   private async removeMemberAndSendRpc(
     actorContext: ActorContext,

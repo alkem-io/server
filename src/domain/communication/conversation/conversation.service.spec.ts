@@ -494,12 +494,13 @@ describe('ConversationService', () => {
       );
     });
 
-    it('sec-server-11: falls back to authoritative local removal (never throws) when Matrix rejects the kick', async () => {
+    it('falls back to authoritative local removal (never throws) when the Matrix removal fails', async () => {
       mockGroupConversation();
       communicationAdapter.batchRemoveMember.mockRejectedValue(
         matrixKickRejected()
       );
       eventEmitter.emitAsync.mockResolvedValue([undefined]); // one listener ran
+      membershipRepo.delete.mockResolvedValue({ affected: 0 } as any);
 
       const result = await service.removeMember(conversationId, memberActorId);
 
@@ -518,21 +519,28 @@ describe('ConversationService', () => {
           }),
         })
       );
-      expect(membershipRepo.delete).not.toHaveBeenCalled();
+      // ...and then the idempotent row deletion runs regardless, after it.
+      expect(membershipRepo.delete).toHaveBeenCalledWith({
+        conversationId,
+        actorID: memberActorId,
+      });
+      expect(eventEmitter.emitAsync.mock.invocationCallOrder[0]).toBeLessThan(
+        membershipRepo.delete.mock.invocationCallOrder[0]
+      );
     });
 
     it.each([
-      ['the completion workflow fails', () => new Error('listener blew up')],
-      ['no listener is registered at all', () => undefined],
-    ])('sec-server-11: still removes the membership row when %s', async (_case, failure) => {
+      // The event emitter catches and logs a failing listener's error, so
+      // emitAsync still resolves — with the listener's (undefined) result.
+      ['the completion workflow fails', [undefined]],
+      ['no listener is registered at all', []],
+    ])('still removes the membership row when %s', async (_case, listenerResults) => {
       mockGroupConversation();
       communicationAdapter.batchRemoveMember.mockRejectedValue(
         matrixKickRejected()
       );
-      const error = failure();
-      if (error) eventEmitter.emitAsync.mockRejectedValue(error);
-      else eventEmitter.emitAsync.mockResolvedValue([]);
-      membershipRepo.delete.mockResolvedValue({} as any);
+      eventEmitter.emitAsync.mockResolvedValue(listenerResults);
+      membershipRepo.delete.mockResolvedValue({ affected: 1 } as any);
 
       const result = await service.removeMember(conversationId, memberActorId);
 

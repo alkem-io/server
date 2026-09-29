@@ -654,6 +654,84 @@ describe('MessageInboxService', () => {
 
       expect(roomLookupService.getRoomOrFail).not.toHaveBeenCalled();
     });
+
+    const leaveEvent = () =>
+      new RoomMemberUpdatedEvent({
+        roomId: 'room-1',
+        memberActorID: 'actor-1',
+        senderActorID: 'actor-1',
+        membership: 'leave',
+        timestamp: 10000,
+      });
+
+    const mockGroupConversationRoom = () => {
+      roomLookupService.getRoom.mockResolvedValue(
+        makeRoom({ type: RoomType.CONVERSATION_GROUP })
+      );
+      conversationService.findConversationByRoomId.mockResolvedValue({
+        id: 'conv-1',
+      } as any);
+      conversationService.getConversationMemberActorIds.mockResolvedValue([
+        'actor-1',
+        'actor-2',
+      ]);
+      conversationService.getConversationOrFail.mockResolvedValue({
+        id: 'conv-1',
+      } as any);
+    };
+
+    it('ignores a leave for a room that was already deleted', async () => {
+      roomLookupService.getRoom.mockResolvedValue(null);
+      roomLookupService.getRoomOrFail.mockRejectedValue(
+        new Error('Not able to locate Room')
+      );
+
+      await expect(
+        service.handleRoomMemberUpdated(leaveEvent())
+      ).resolves.toBeUndefined();
+
+      expect(
+        conversationService.findConversationByRoomId
+      ).not.toHaveBeenCalled();
+      expect(conversationService.persistMemberRemoved).not.toHaveBeenCalled();
+    });
+
+    it('publishes MEMBER_REMOVED when the leave removes the membership', async () => {
+      mockGroupConversationRoom();
+      conversationService.persistMemberRemoved.mockResolvedValue({
+        removed: true,
+        remainingCount: 1,
+      });
+
+      await service.handleRoomMemberUpdated(leaveEvent());
+
+      expect(
+        subscriptionPublishService.publishConversationEvent
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          memberRemoved: expect.objectContaining({
+            removedMemberID: 'actor-1',
+          }),
+        })
+      );
+    });
+
+    // A removal completed locally after a failed or timed-out RPC is later
+    // confirmed by Matrix's own leave; that second leave must be a no-op.
+    it('does nothing for a leave whose membership was already removed', async () => {
+      mockGroupConversationRoom();
+      conversationService.persistMemberRemoved.mockResolvedValue({
+        removed: false,
+        remainingCount: 0,
+      });
+
+      await service.handleRoomMemberUpdated(leaveEvent());
+
+      expect(
+        subscriptionPublishService.publishConversationEvent
+      ).not.toHaveBeenCalled();
+      expect(conversationService.deleteConversation).not.toHaveBeenCalled();
+    });
   });
 
   describe('handleMessageRedacted - conversation not found', () => {
