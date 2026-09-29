@@ -195,18 +195,15 @@ export class MessageAttachmentService {
       });
       if (room) bucketId = (await this.getTargetBucketForRoom(room))?.id;
     }
-    const documents =
-      message.attachmentDocuments ??
-      (bucketId
-        ? await this.loadDocuments(bucketId, attachments)
-        : new Map<string, IDocument>());
-    return attachments.map(raw =>
-      this.toMessageAttachment(raw, bucketId, documents, actorContext)
+    return this.resolveInBucket(
+      attachments,
+      bucketId,
+      message.attachmentDocuments,
+      actorContext
     );
   }
 
-  // Media read by a Matrix client rather than through Room.messages: the same
-  // resolution, with one document lookup for the whole batch.
+  // Media read by a Matrix client rather than through Room.messages.
   public async resolveMediaAttachments(
     room: IRoom,
     attachments: ReceivedAttachment[],
@@ -214,9 +211,20 @@ export class MessageAttachmentService {
   ): Promise<IMessageAttachment[]> {
     if (!attachments.length) return [];
     const bucketId = (await this.getTargetBucketForRoom(room))?.id;
-    const documents = bucketId
-      ? await this.loadDocuments(bucketId, attachments)
-      : new Map<string, IDocument>();
+    return this.resolveInBucket(attachments, bucketId, undefined, actorContext);
+  }
+
+  private async resolveInBucket(
+    attachments: ReceivedAttachment[],
+    bucketId: string | undefined,
+    preloaded: Map<string, IDocument> | undefined,
+    actorContext: ActorContext
+  ): Promise<IMessageAttachment[]> {
+    const documents =
+      preloaded ??
+      (bucketId
+        ? await this.loadDocuments(bucketId, attachments)
+        : new Map<string, IDocument>());
     return attachments.map(raw =>
       this.toMessageAttachment(raw, bucketId, documents, actorContext)
     );
