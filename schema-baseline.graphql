@@ -974,6 +974,10 @@ enum AuthorizationCredential {
   ACCOUNT_ADMIN
   ASSISTANT_ACCESS
   BETA_TESTER
+  FEATURE_BETA_TESTER
+  FEATURE_ORGANIZATION_CREATOR
+  FEATURE_VC_CAMPAIGN
+  FEATURE_VIRTUAL_ASSISTANT
   GLOBAL_ADMIN
   GLOBAL_ANONYMOUS
   GLOBAL_COMMUNITY_READ
@@ -987,7 +991,16 @@ enum AuthorizationCredential {
   ORGANIZATION_ADMIN
   ORGANIZATION_ASSOCIATE
   ORGANIZATION_OWNER
+  PLATFORM_AUDIT_READER
+  PLATFORM_CONTENT_FULL_ACCESS
+  PLATFORM_LICENSE_MANAGER
   PLATFORM_OPERATIONS_ADMIN
+  PLATFORM_RESOURCE_ADMIN
+  PLATFORM_ROLES_ADMIN
+  PLATFORM_SETTINGS_ADMIN
+  PLATFORM_SPACES_READER
+  PLATFORM_SUPPORT
+  PLATFORM_USERS_ADMIN
   SPACE_ADMIN
   SPACE_LEAD
   SPACE_MEMBER
@@ -1100,6 +1113,9 @@ enum AuthorizationPrivilege {
   CREATE_VIRTUAL
   CREATE_WHITEBOARD
   DELETE
+  DELETE_ORGANIZATION
+  FEATURE_ROLE_ASSIGN
+  FEATURE_ROLE_HOLDERS_READ
   FILE_DELETE
   FILE_UPLOAD
   GRANT
@@ -1109,8 +1125,16 @@ enum AuthorizationPrivilege {
   MOVE_POST
   MOVE_TASK
   PLATFORM_ADMIN
+  PLATFORM_AUDIT_READ
+  PLATFORM_CONTENT_FULL_ACCESS
+  PLATFORM_FORUM_MANAGE
+  PLATFORM_LICENSING_LISTS_READ
   PLATFORM_OPERATIONS_ADMIN
+  PLATFORM_ROLE_HOLDERS_READ
   PLATFORM_SETTINGS_ADMIN
+  PLATFORM_SUPPORT_LISTS_READ
+  PLATFORM_SUPPORT_ORG_RESOURCES
+  PLATFORM_USERS_ADMIN
   PUBLIC_SHARE
   READ
   READ_ABOUT
@@ -1129,12 +1153,14 @@ enum AuthorizationPrivilege {
   ROLESET_ENTRY_ROLE_INVITE
   ROLESET_ENTRY_ROLE_INVITE_ACCEPT
   ROLESET_ENTRY_ROLE_JOIN
+  SET_SERVICE_PROFILE
   TRANSFER_RESOURCE_ACCEPT
   TRANSFER_RESOURCE_OFFER
   UPDATE
   UPDATE_CALLOUT_PUBLISHER
   UPDATE_CONTENT
   UPDATE_INNOVATION_FLOW
+  UPDATE_NAMEID
 }
 
 type Calendar {
@@ -1529,6 +1555,17 @@ type CalloutSettingsFraming {
   Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Absent / null ⇒ AUTO (full computed set).
   """
   selection: CalloutSelectionSettings
+  """
+  Card-variant settings for a Subspaces collection callout. Present only on SPACES callouts. Absent / null ⇒ COMPACT.
+  """
+  spaces: CalloutSpacesSettings
+}
+
+type CalloutSpacesSettings {
+  """
+  The card variant to render for each subspace: COMPACT (default) or EXPANDED.
+  """
+  cardVariant: SpaceCollectionCardVariant!
 }
 
 enum CalloutVisibility {
@@ -2513,6 +2550,8 @@ type CreateCalloutSettingsFramingData {
   Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
   """
   selection: CreateCalloutSelectionSettingsData
+  """Card-variant settings. Provide only when framing.type = SPACES."""
+  spaces: CreateCalloutSpacesSettingsData
 }
 
 input CreateCalloutSettingsFramingInput {
@@ -2526,6 +2565,8 @@ input CreateCalloutSettingsFramingInput {
   Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
   """
   selection: CreateCalloutSelectionSettingsInput
+  """Card-variant settings. Provide only when framing.type = SPACES."""
+  spaces: CreateCalloutSpacesSettingsInput
 }
 
 input CreateCalloutSettingsInput {
@@ -2533,6 +2574,20 @@ input CreateCalloutSettingsInput {
   framing: CreateCalloutSettingsFramingInput
   """Visibility of the Callout. Defaults to PUBLISHED."""
   visibility: CalloutVisibility
+}
+
+type CreateCalloutSpacesSettingsData {
+  """
+  The card variant (COMPACT or EXPANDED). Defaults to COMPACT when omitted.
+  """
+  cardVariant: SpaceCollectionCardVariant
+}
+
+input CreateCalloutSpacesSettingsInput {
+  """
+  The card variant (COMPACT or EXPANDED). Defaults to COMPACT when omitted.
+  """
+  cardVariant: SpaceCollectionCardVariant
 }
 
 type CreateCalloutTaskBoardData {
@@ -3301,6 +3356,10 @@ enum CredentialType {
   ACCOUNT_LICENSE_PLUS
   ASSISTANT_ACCESS
   BETA_TESTER
+  FEATURE_BETA_TESTER
+  FEATURE_ORGANIZATION_CREATOR
+  FEATURE_VC_CAMPAIGN
+  FEATURE_VIRTUAL_ASSISTANT
   GLOBAL_ADMIN
   GLOBAL_ANONYMOUS
   GLOBAL_COMMUNITY_READ
@@ -3314,7 +3373,16 @@ enum CredentialType {
   ORGANIZATION_ADMIN
   ORGANIZATION_ASSOCIATE
   ORGANIZATION_OWNER
+  PLATFORM_AUDIT_READER
+  PLATFORM_CONTENT_FULL_ACCESS
+  PLATFORM_LICENSE_MANAGER
   PLATFORM_OPERATIONS_ADMIN
+  PLATFORM_RESOURCE_ADMIN
+  PLATFORM_ROLES_ADMIN
+  PLATFORM_SETTINGS_ADMIN
+  PLATFORM_SPACES_READER
+  PLATFORM_SUPPORT
+  PLATFORM_USERS_ADMIN
   SPACE_ADMIN
   SPACE_FEATURE_MEMO_MULTI_USER
   SPACE_FEATURE_MEMO_SIGNING
@@ -5351,7 +5419,7 @@ type Mutation {
   """Allow updating the state flags of a particular rule."""
   adminCommunicationUpdateRoomState(roomStateData: CommunicationAdminUpdateRoomStateInput!): Boolean!
   """
-  Removes one category from the platform Forum's active discussionCategories list. Refuses while any Discussion still carries the category. Idempotent for an already-absent category. The enum member is never removed. Requires PLATFORM_ADMIN. Audited (PLATFORM_OPERATIONS).
+  Removes one category from the platform Forum's active discussionCategories list. Refuses while any Discussion still carries the category. Idempotent for an already-absent category. The enum member is never removed. Requires PLATFORM_FORUM_MANAGE. Audited (PLATFORM_OPERATIONS).
   """
   adminForumRemoveDiscussionCategory(removeData: ForumRemoveDiscussionCategoryInput!): Forum!
   """Delete a Kratos identity by ID."""
@@ -5366,7 +5434,7 @@ type Mutation {
   adminLicensePolicyDeleteCredentialRule(deleteData: DeleteLicensePolicyCredentialRuleInput!): LicensingCredentialBasedPolicyCredentialRule!
   """Updates a CredentialRule on the LicensePolicy."""
   adminLicensePolicyUpdateCredentialRule(updateData: UpdateLicensePolicyCredentialRuleInput!): LicensingCredentialBasedPolicyCredentialRule!
-  """Platform admin: revoke a named user's MCP API key. Idempotent."""
+  """Platform Users Admin: revoke a named user's MCP API key. Idempotent."""
   adminRevokeMcpApiKey(revokeData: AdminRevokeMcpApiKeyInput!): McpApiKey!
   """
   Ingests new data into Elasticsearch from scratch. This will delete all existing data and ingest new data from the source. This is an admin only operation.
@@ -5383,11 +5451,11 @@ type Mutation {
   """
   adminUserAccountDelete(userID: UUID!): User!
   """
-  Change a user's login email synchronously, acting as a platform administrator. The admin is responsible for verifying the subject user's identity out-of-band — the platform does NOT send a confirmation message to the new mailbox and does NOT require the new mailbox to prove ownership. Validates uniqueness, commits Kratos → Alkemio with bounded retry, invalidates the subject's existing sessions, and sends a security-signal notification to the old address. Requires PLATFORM_ADMIN.
+  Change a user's login email synchronously, acting as a platform administrator. The admin is responsible for verifying the subject user's identity out-of-band — the platform does NOT send a confirmation message to the new mailbox and does NOT require the new mailbox to prove ownership. Validates uniqueness, commits Kratos → Alkemio with bounded retry, invalidates the subject's existing sessions, and sends a security-signal notification to the old address. Requires PLATFORM_USERS_ADMIN.
   """
   adminUserEmailChange(adminUserEmailChangeData: AdminUserEmailChangeInput!): UserEmailChangeResult!
   """
-  Reconcile an outstanding drift-detected state for a subject user by force-aligning Alkemio and Kratos to a canonical email chosen by the admin. Requires PLATFORM_ADMIN.
+  Reconcile an outstanding drift-detected state for a subject user by force-aligning Alkemio and Kratos to a canonical email chosen by the admin. Requires PLATFORM_USERS_ADMIN.
   """
   adminUserEmailChangeDriftResolve(adminUserEmailChangeDriftResolveData: AdminUserEmailChangeDriftResolveInput!): UserEmailChangeResult!
   """Create a test customer on wingback."""
@@ -5412,6 +5480,8 @@ type Mutation {
   assignLicensePlanToAccount(planData: AssignLicensePlanToAccount!): Account!
   """Assign the specified LicensePlan to a Space."""
   assignLicensePlanToSpace(planData: AssignLicensePlanToSpace!): Space!
+  """Assigns an Organization to a role on the Platform."""
+  assignPlatformRoleToOrganization(roleData: AssignPlatformRoleInput!): Organization!
   """Assigns a User to a role on the Platform."""
   assignPlatformRoleToUser(roleData: AssignPlatformRoleInput!): User!
   """
@@ -5688,6 +5758,8 @@ type Mutation {
   removeMessageOnRoom(messageData: RoomRemoveMessageInput!): MessageID!
   """Removes an email address from the platform notification blacklist"""
   removeNotificationEmailFromBlacklist(input: NotificationEmailAddressInput!): [String!]!
+  """Removes an Organization from a Role on the Platform."""
+  removePlatformRoleFromOrganization(roleData: RemovePlatformRoleInput!): Organization!
   """Removes a User from a Role on the Platform."""
   removePlatformRoleFromUser(roleData: RemovePlatformRoleInput!): User!
   """
@@ -6474,7 +6546,7 @@ type PlatformAdminQueryResults {
   """
   latestUserEmailChangeAuditEntry(userID: UUID!): UserEmailChangeAuditEntry
   """
-  MCP API keys belonging to the named user. Platform admins only. Keys bound to a system actor are never returned.
+  MCP API keys belonging to the named user. Platform Users Admin only. Keys bound to a system actor are never returned.
   """
   mcpApiKeys(userID: UUID!): [McpApiKey!]!
   """
@@ -6523,7 +6595,7 @@ type PlatformAdminQueryResults {
     withTags: Boolean
   ): PaginatedUsers!
   """
-  The singleton virtual-assistant actor, including its current admin capability grant and ID. This is only available to Platform Admins, and is the discovery path for updateAssistantActorCapabilities.
+  The singleton virtual-assistant actor, including its current admin capability grant and ID. Only available to Platform Operations Admins (and legacy holders); the discovery path for updateAssistantActorCapabilities.
   """
   virtualAssistant: VirtualAssistant!
   """
@@ -7539,6 +7611,10 @@ enum RoleName {
   ADMIN
   ANONYMOUS
   ASSOCIATE
+  FEATURE_BETA_TESTER
+  FEATURE_ORGANIZATION_CREATOR
+  FEATURE_VC_CAMPAIGN
+  FEATURE_VIRTUAL_ASSISTANT
   GLOBAL_ADMIN
   GLOBAL_COMMUNITY_READER
   GLOBAL_LICENSE_MANAGER
@@ -7551,8 +7627,17 @@ enum RoleName {
   MEMBER
   OWNER
   PLATFORM_ASSISTANT_ACCESS
+  PLATFORM_AUDIT_READER
   PLATFORM_BETA_TESTER
+  PLATFORM_CONTENT_FULL_ACCESS
+  PLATFORM_LICENSE_MANAGER
   PLATFORM_OPERATIONS_ADMIN
+  PLATFORM_RESOURCE_ADMIN
+  PLATFORM_ROLES_ADMIN
+  PLATFORM_SETTINGS_ADMIN
+  PLATFORM_SPACES_READER
+  PLATFORM_SUPPORT
+  PLATFORM_USERS_ADMIN
   PLATFORM_VC_CAMPAIGN
   REGISTERED
 }
@@ -8374,6 +8459,14 @@ type SpaceAboutMembership {
   roleSetID: UUID!
 }
 
+"""
+The card variant of a Subspaces (SPACES) collection callout. COMPACT (default) shows the identity block only; EXPANDED adds the What/Why/Who excerpts.
+"""
+enum SpaceCollectionCardVariant {
+  COMPACT
+  EXPANDED
+}
+
 input SpaceFilterInput {
   """Return Spaces with a Visibility matching one of the provided types."""
   visibilities: [SpaceVisibility!]
@@ -9156,6 +9249,8 @@ input UpdateCalloutSettingsFramingInput {
   Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
   """
   selection: UpdateCalloutSelectionSettingsInput
+  """Card-variant settings. Provide only when framing.type = SPACES."""
+  spaces: UpdateCalloutSpacesSettingsInput
 }
 
 input UpdateCalloutSettingsInput {
@@ -9163,6 +9258,13 @@ input UpdateCalloutSettingsInput {
   framing: UpdateCalloutSettingsFramingInput
   """Visibility of the Callout."""
   visibility: CalloutVisibility
+}
+
+input UpdateCalloutSpacesSettingsInput {
+  """
+  The card variant (COMPACT or EXPANDED). When omitted, the stored value is unchanged.
+  """
+  cardVariant: SpaceCollectionCardVariant
 }
 
 input UpdateCalloutVisibilityInput {
