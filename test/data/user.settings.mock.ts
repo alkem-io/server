@@ -46,6 +46,11 @@ export const userSettingsData: { userSettings: IUserSettings } = {
             inApp: false,
             push: false,
           },
+          collaborationCalloutFormResponseReceived: {
+            email: true,
+            inApp: true,
+            push: true,
+          },
         },
 
         communicationUpdates: {

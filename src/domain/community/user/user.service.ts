@@ -395,6 +395,11 @@ export class UserService {
               push: true,
             },
             userEmailChanged: { email: true, inApp: false, push: false },
+            collaborationCalloutFormResponseReceived: {
+              email: true,
+              inApp: true,
+              push: true,
+            },
           },
           communicationUpdates: { email: true, inApp: true, push: true },
           collaborationCalloutContributionCreated: {

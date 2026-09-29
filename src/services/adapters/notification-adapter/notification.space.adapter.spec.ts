@@ -1,5 +1,8 @@
 import { LogContext } from '@common/enums';
 import { CommunityMembershipOrigin } from '@common/enums/community.membership.origin';
+import { NotificationEvent } from '@common/enums/notification.event';
+import { NotificationEventCategory } from '@common/enums/notification.event.category';
+import { NotificationEventPayload } from '@common/enums/notification.event.payload';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { CalloutLookupService } from '@domain/collaboration/callout/callout.lookup/callout.lookup.service';
@@ -13,6 +16,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { vi } from 'vitest';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
+import { NotificationPushAdapter } from '../notification-push-adapter/notification.push.adapter';
 import { CalloutReactionEmailSuppressionService } from './callout.reaction.email.suppression.service';
 import { NotificationAdapter } from './notification.adapter';
 import { NotificationSpaceAdapter } from './notification.space.adapter';
@@ -134,6 +138,152 @@ describe('NotificationSpaceAdapter', () => {
         expect.any(Object),
         expect.any(Object)
       );
+    });
+  });
+
+  describe('spaceCollaborationCalloutFormResponseSubmitted', () => {
+    const eventData = {
+      triggeredBy: 'submitter',
+      callout: {
+        id: 'callout-1',
+        framing: { profile: { displayName: 'Feedback form' } },
+      },
+      formID: 'form-1',
+      response: { id: 'response-1', createdDate: new Date('2026-09-29') },
+      visibility: 'members',
+    } as any;
+
+    const recipientResult = (ids: string[]) => ({
+      emailRecipients: ids.map(id => ({ id })),
+      inAppRecipients: ids.map(id => ({ id })),
+      pushRecipients: ids.map(id => ({ id })),
+    });
+
+    let pushAdapter: NotificationPushAdapter;
+
+    beforeEach(() => {
+      vi.mocked(
+        communityResolverService.getCommunityFromCollaborationCalloutOrFail
+      ).mockResolvedValue({ id: 'community-1' } as any);
+      vi.mocked(
+        communityResolverService.getSpaceForCommunityOrFail
+      ).mockResolvedValue({
+        id: 'space-1',
+        about: { profile: { displayName: 'Space' } },
+      } as any);
+      vi.mocked(
+        externalAdapter.buildSpaceCollaborationCalloutFormResponsePayload
+      ).mockResolvedValue({ built: true } as any);
+      pushAdapter = (adapter as any).notificationPushAdapter;
+    });
+
+    const arrange = (adminIds: string[], receiptIds: string[]) => {
+      vi.mocked(notificationAdapter.getNotificationRecipients)
+        .mockResolvedValueOnce(recipientResult(adminIds) as any)
+        .mockResolvedValueOnce({
+          emailRecipients: receiptIds.map(id => ({ id })),
+          inAppRecipients: [],
+          pushRecipients: [],
+        } as any);
+    };
+
+    it('sends the admin event without the submitter on every channel', async () => {
+      arrange(['admin-1', 'submitter'], []);
+
+      await adapter.spaceCollaborationCalloutFormResponseSubmitted(eventData);
+
+      expect(
+        externalAdapter.buildSpaceCollaborationCalloutFormResponsePayload
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        externalAdapter.buildSpaceCollaborationCalloutFormResponsePayload
+      ).toHaveBeenCalledWith(
+        'SPACE_ADMIN_COLLABORATION_CALLOUT_FORM_RESPONSE',
+        'submitter',
+        [{ id: 'admin-1' }],
+        expect.any(Object),
+        eventData.callout,
+        {
+          id: 'response-1',
+          submittedAt: eventData.response.createdDate,
+          visibility: 'MEMBERS',
+        }
+      );
+      expect(inAppAdapter.sendInAppNotifications).toHaveBeenCalledWith(
+        NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_FORM_RESPONSE,
+        NotificationEventCategory.SPACE_ADMIN,
+        'submitter',
+        ['admin-1'],
+        {
+          type: NotificationEventPayload.SPACE_COLLABORATION_CALLOUT,
+          spaceID: 'space-1',
+          calloutID: 'callout-1',
+        }
+      );
+      expect(pushAdapter.sendPushNotifications).toHaveBeenCalledWith(
+        [{ id: 'admin-1' }],
+        'SPACE_ADMIN_COLLABORATION_CALLOUT_FORM_RESPONSE',
+        expect.objectContaining({
+          title: 'New Form response in Space',
+          body: expect.stringContaining('responded to "Feedback form"'),
+        })
+      );
+    });
+
+    it('sends the receipt to the submitter (never filtered) as email only, with the second routing key', async () => {
+      arrange(['admin-1'], ['submitter']);
+
+      await adapter.spaceCollaborationCalloutFormResponseSubmitted(eventData);
+
+      const calls = vi.mocked(externalAdapter.sendExternalNotifications).mock
+        .calls;
+      expect(calls.map(([event]) => event)).toEqual([
+        'SPACE_ADMIN_COLLABORATION_CALLOUT_FORM_RESPONSE',
+        'USER_COLLABORATION_CALLOUT_FORM_RESPONSE_RECEIPT',
+      ]);
+      // the receipt recipients query resolves the submitter as the target user
+      expect(
+        vi.mocked(notificationAdapter.getNotificationRecipients).mock.calls[1]
+      ).toEqual([
+        'USER_COLLABORATION_CALLOUT_FORM_RESPONSE_RECEIPT',
+        eventData,
+        'space-1',
+        'submitter',
+      ]);
+      // the receipt never goes in-app or push: only the admin event did
+      expect(inAppAdapter.sendInAppNotifications).toHaveBeenCalledTimes(1);
+      expect(pushAdapter.sendPushNotifications).toHaveBeenCalledTimes(1);
+    });
+
+    it('an admin who submits gets the receipt only', async () => {
+      arrange(['submitter'], ['submitter']);
+
+      await adapter.spaceCollaborationCalloutFormResponseSubmitted(eventData);
+
+      expect(
+        vi
+          .mocked(externalAdapter.sendExternalNotifications)
+          .mock.calls.map(([event]) => event)
+      ).toEqual(['USER_COLLABORATION_CALLOUT_FORM_RESPONSE_RECEIPT']);
+      expect(inAppAdapter.sendInAppNotifications).not.toHaveBeenCalled();
+      expect(pushAdapter.sendPushNotifications).not.toHaveBeenCalled();
+    });
+
+    it('still sends the receipt when the admin part fails, and reports the failure', async () => {
+      arrange(['admin-1'], ['submitter']);
+      vi.mocked(inAppAdapter.sendInAppNotifications).mockRejectedValue(
+        new Error('in-app down')
+      );
+
+      await expect(
+        adapter.spaceCollaborationCalloutFormResponseSubmitted(eventData)
+      ).rejects.toThrow('in-app down');
+
+      expect(
+        vi
+          .mocked(externalAdapter.sendExternalNotifications)
+          .mock.calls.map(([event]) => event)
+      ).toContain('USER_COLLABORATION_CALLOUT_FORM_RESPONSE_RECEIPT');
     });
   });
 

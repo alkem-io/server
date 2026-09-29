@@ -498,6 +498,14 @@ export class InAppNotificationService {
         break;
       }
 
+      case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_FORM_RESPONSE: {
+        const typedPayload =
+          payload as InAppNotificationPayloadSpaceCollaborationCallout;
+        result.spaceID = typedPayload.spaceID;
+        result.calloutID = typedPayload.calloutID;
+        break;
+      }
+
       case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION: {
         const typedPayload =
           payload as InAppNotificationPayloadSpaceCollaborationCallout;

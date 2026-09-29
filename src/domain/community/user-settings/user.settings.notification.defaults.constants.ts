@@ -36,6 +36,14 @@ export const DEFAULT_INVITATION_RESPONSE_CHANNELS: IUserSettingsNotificationChan
     push: true,
   });
 
+/** "A Form response was submitted" (space admin) — all channels on. */
+export const DEFAULT_FORM_RESPONSE_CHANNELS: IUserSettingsNotificationChannels =
+  Object.freeze({
+    email: true,
+    inApp: true,
+    push: true,
+  });
+
 // Defend on read — a `user_settings` row that predates the backfill
 // migrations lacks these keys. Same mandated default as the migrations and
 // `UserSettings.applyOrganizationAssociateDefaults` (`@AfterLoad`). Shared

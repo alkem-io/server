@@ -88,6 +88,7 @@ Events are categorized by their target audience:
 
 - `SPACE_ADMIN_COMMUNITY_APPLICATION` - Admin notification for community applications
 - `SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION` - Admin notification for callout contributions
+- `SPACE_ADMIN_COLLABORATION_CALLOUT_FORM_RESPONSE` - Admin notification when a Form response is submitted (link only, never the answers; the submitter is not notified of their own response)
 - `SPACE_LEAD_COMMUNICATION_MESSAGE` - Communication messages to space leads
 - `SPACE_ADMIN_COMMUNITY_NEW_MEMBER` - Admin notification for new community members
 - `SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED` - Admin notification when a virtual contributor invitation is declined
@@ -108,6 +109,7 @@ Events are categorized by their target audience:
 - `USER_SPACE_COMMUNITY_APPLICATION` - User's own community applications
 - `USER_SPACE_COMMUNITY_APPLICATION_DECLINED` - When user's space community application is declined
 - `USER_SIGN_UP_WELCOME` - Welcome message for new users
+- `USER_COLLABORATION_CALLOUT_FORM_RESPONSE_RECEIPT` - Email-only receipt to the member who submitted a Form response (link only, states who can read it)
 - `USER_MENTIONED` - When user is mentioned
 - `USER_MESSAGE` - Direct messages to users
 - `USER_COMMENT_REPLY` - Replies to user's comments

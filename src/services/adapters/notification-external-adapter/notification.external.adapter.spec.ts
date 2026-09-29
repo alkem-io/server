@@ -774,6 +774,95 @@ describe('NotificationExternalAdapter', () => {
     });
   });
 
+  describe('buildSpaceCollaborationCalloutFormResponsePayload', () => {
+    const collectKeys = (value: unknown, keys: string[] = []): string[] => {
+      if (Array.isArray(value)) {
+        value.forEach(item => collectKeys(item, keys));
+      } else if (value && typeof value === 'object') {
+        for (const [key, nested] of Object.entries(value)) {
+          keys.push(key);
+          collectKeys(nested, keys);
+        }
+      }
+      return keys;
+    };
+
+    const build = async () => {
+      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue({
+        id: 'user-1',
+        firstName: 'Test',
+        lastName: 'User',
+        email: 'test@test.com',
+        nameID: 'test-user',
+        profile: { displayName: 'Test User' },
+      } as any);
+      vi.mocked(urlGeneratorService.generateUrlForProfile).mockResolvedValue(
+        '/space/1'
+      );
+      vi.mocked(
+        urlGeneratorService.createSpaceAdminCommunityURL
+      ).mockResolvedValue('/admin/1');
+      vi.mocked(urlGeneratorService.getCalloutUrlPath).mockResolvedValue(
+        '/callout/1'
+      );
+      vi.mocked(urlGeneratorService.createUrlForUserNameID).mockReturnValue(
+        '/user/1'
+      );
+      vi.mocked(configService.get).mockReturnValue('https://platform.test');
+
+      return adapter.buildSpaceCollaborationCalloutFormResponsePayload(
+        NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_FORM_RESPONSE,
+        'user-1',
+        [],
+        {
+          id: 'space-1',
+          level: 1,
+          about: { profile: { displayName: 'Space' } },
+        } as any,
+        {
+          id: 'callout-1',
+          framing: {
+            id: 'framing-1',
+            profile: { displayName: 'Feedback form', description: 'desc' },
+          },
+        } as any,
+        {
+          id: 'response-1',
+          submittedAt: new Date('2026-09-29T10:00:00.000Z'),
+          visibility: 'ADMINS',
+        }
+      );
+    };
+
+    it('is link-only: callout name and url, response id/time/visibility, submitter', async () => {
+      const result = await build();
+      expect(result.callout).toEqual({
+        id: 'callout-1',
+        displayName: 'Feedback form',
+        url: '/callout/1',
+      });
+      expect(result.formResponse).toEqual({
+        id: 'response-1',
+        submittedAt: '2026-09-29T10:00:00.000Z',
+        visibility: 'ADMINS',
+      });
+      expect(result.submitter).toEqual({
+        id: 'user-1',
+        profile: { displayName: 'Test User', url: '/user/1' },
+        type: expect.any(String),
+      });
+      // the submitter is a contributor, not the base payload's user with an email
+      expect(JSON.stringify(result.submitter)).not.toContain('test@test.com');
+    });
+
+    it('carries no key that could hold an answer, prompt, question or text', async () => {
+      const keys = collectKeys(await build());
+      expect(
+        keys.filter(key => /answer|prompt|question|text/i.test(key))
+      ).toEqual([]);
+    });
+  });
+
   describe('buildUserMessageSentNotificationPayload', () => {
     it('should build message payload with sender and receiver', async () => {
       vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue({

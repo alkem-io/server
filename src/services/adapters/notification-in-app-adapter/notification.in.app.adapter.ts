@@ -23,6 +23,8 @@ export class NotificationInAppAdapter {
     // record would be created.
     NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
     NotificationEvent.USER_CONVERSATION_MESSAGE_GROUP,
+    // The Form response receipt is email-only: it is never stored in-app.
+    NotificationEvent.USER_COLLABORATION_CALLOUT_FORM_RESPONSE_RECEIPT,
   ];
 
   constructor(

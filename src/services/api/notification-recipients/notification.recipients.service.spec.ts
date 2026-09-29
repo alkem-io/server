@@ -788,6 +788,151 @@ describe('NotificationRecipientsService', () => {
       });
     });
 
+    describe('Form response events', () => {
+      const userWith = (id: string, notification: object) =>
+        ({
+          id,
+          email: `${id}@example.com`,
+          settings: { notification },
+          credentials: [],
+        }) as unknown as IUser;
+
+      const serve = (...users: IUser[]) => {
+        vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue(
+          users
+        );
+        vi.mocked(userLookupService.getUsersByIds).mockImplementation(
+          async (ids: string[]) => (ids.length > 0 ? users : [])
+        );
+      };
+
+      describe('admin event (SPACE_ADMIN_COLLABORATION_CALLOUT_FORM_RESPONSE)', () => {
+        beforeEach(() => {
+          vi.mocked(spaceLookupService.getSpaceOrFail).mockResolvedValue({
+            id: 'subspace-1',
+            authorization: { id: 'space-auth' },
+          } as any);
+          vi.mocked(
+            authorizationService.isAccessGrantedForCredentials
+          ).mockReturnValue(true);
+        });
+
+        it('targets the admins of the exact (sub)space and requires the admin notification privilege', async () => {
+          serve();
+          await service.getRecipients({
+            eventType:
+              NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_FORM_RESPONSE,
+            spaceID: 'subspace-1',
+          });
+          expect(userLookupService.usersWithCredentials).toHaveBeenCalledWith(
+            [
+              {
+                type: AuthorizationCredential.SPACE_ADMIN,
+                resourceID: 'subspace-1',
+              },
+            ],
+            undefined,
+            expect.any(Object)
+          );
+        });
+
+        it('honours the admin row, per channel', async () => {
+          serve(
+            userWith('admin-1', {
+              space: {
+                admin: {
+                  collaborationCalloutFormResponseReceived: {
+                    email: false,
+                    inApp: true,
+                    push: false,
+                  },
+                },
+              },
+            })
+          );
+          const result = await service.getRecipients({
+            eventType:
+              NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_FORM_RESPONSE,
+            spaceID: 'subspace-1',
+          });
+          expect(result.emailRecipients).toHaveLength(0);
+          expect(result.inAppRecipients).toHaveLength(1);
+          expect(result.pushRecipients).toHaveLength(0);
+        });
+
+        it('defend-on-read: a settings row without the key resolves to all channels on', async () => {
+          serve(
+            userWith('admin-legacy', {
+              space: {
+                admin: {
+                  communityNewMember: {
+                    email: false,
+                    inApp: false,
+                    push: false,
+                  },
+                },
+              },
+            })
+          );
+          const result = await service.getRecipients({
+            eventType:
+              NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_FORM_RESPONSE,
+            spaceID: 'subspace-1',
+          });
+          expect(result.emailRecipients).toHaveLength(1);
+          expect(result.inAppRecipients).toHaveLength(1);
+          expect(result.pushRecipients).toHaveLength(1);
+        });
+      });
+
+      describe('submitter receipt (USER_COLLABORATION_CALLOUT_FORM_RESPONSE_RECEIPT)', () => {
+        it('targets only the submitter', async () => {
+          serve();
+          await service.getRecipients({
+            eventType:
+              NotificationEvent.USER_COLLABORATION_CALLOUT_FORM_RESPONSE_RECEIPT,
+            spaceID: 'subspace-1',
+            userID: 'submitter-1',
+          });
+          expect(userLookupService.usersWithCredentials).toHaveBeenCalledWith(
+            [
+              {
+                type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+                resourceID: 'submitter-1',
+              },
+            ],
+            undefined,
+            expect.any(Object)
+          );
+        });
+
+        it('is email only, whatever the settings row says (no settings key exists)', async () => {
+          serve(
+            userWith('submitter-1', {
+              space: {
+                admin: {
+                  collaborationCalloutFormResponseReceived: {
+                    email: false,
+                    inApp: true,
+                    push: true,
+                  },
+                },
+              },
+            })
+          );
+          const result = await service.getRecipients({
+            eventType:
+              NotificationEvent.USER_COLLABORATION_CALLOUT_FORM_RESPONSE_RECEIPT,
+            spaceID: 'subspace-1',
+            userID: 'submitter-1',
+          });
+          expect(result.emailRecipients).toHaveLength(1);
+          expect(result.inAppRecipients).toHaveLength(0);
+          expect(result.pushRecipients).toHaveLength(0);
+        });
+      });
+    });
+
     describe('organization space-invitation notification (ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION)', () => {
       it('an admin with all channels on is an email + in-app + push recipient', async () => {
         const admin = {
