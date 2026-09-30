@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { EntityNotInitializedException } from '@common/exceptions';
@@ -503,6 +504,93 @@ describe('CalloutAuthorizationService', () => {
           AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
         ]),
         expect.any(String)
+      );
+    });
+  });
+
+  describe('callout-creator rule', () => {
+    const platformRolesAccess = { roles: [] } as any;
+
+    const setup = (framingType: CalloutFramingType) => {
+      const callout = {
+        id: 'callout-1',
+        authorization: {
+          id: 'auth-1',
+          credentialRules: [],
+          privilegeRules: [],
+        },
+        contributions: [],
+        contributionDefaults: { id: 'defaults-1' },
+        settings: {
+          visibility: CalloutVisibility.PUBLISHED,
+          contribution: { allowedTypes: [] },
+          framing: { commentsEnabled: false },
+        },
+        framing: { id: 'framing-1', type: framingType, profile: { id: 'p-1' } },
+        createdBy: 'creator-1',
+        isTemplate: false,
+      } as any;
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(
+        authorizationPolicyService.inheritParentAuthorization
+      ).mockReturnValue(callout.authorization);
+      vi.mocked(
+        authorizationPolicyService.appendPrivilegeAuthorizationRules
+      ).mockReturnValue(callout.authorization);
+      vi.mocked(
+        authorizationPolicyService.appendCredentialAuthorizationRules
+      ).mockReturnValue(callout.authorization);
+      vi.mocked(
+        authorizationPolicyService.createCredentialRule
+      ).mockReturnValue({ grantedPrivileges: [], cascade: true } as any);
+      vi.mocked(
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly
+      ).mockReturnValue({ grantedPrivileges: [], cascade: true } as any);
+      const framingAuthService = (service as any)
+        .calloutFramingAuthorizationService;
+      vi.mocked(framingAuthService.applyAuthorizationPolicy).mockResolvedValue(
+        []
+      );
+    };
+
+    const creatorRuleCalls = () =>
+      vi
+        .mocked(authorizationPolicyService.createCredentialRule)
+        .mock.calls.filter(([, criteria]) =>
+          (criteria as { resourceID: string }[]).some(
+            c => c.resourceID === 'creator-1'
+          )
+        );
+
+    it('grants no creator CRUD on a Form, so a demoted creator cannot delete it', async () => {
+      vi.mocked(authorizationPolicyService.createCredentialRule).mockClear();
+      setup(CalloutFramingType.FORM);
+
+      await service.applyAuthorizationPolicy(
+        'callout-1',
+        undefined,
+        platformRolesAccess
+      );
+
+      expect(creatorRuleCalls()).toHaveLength(0);
+    });
+
+    it('keeps the creator CRUD rule on other framings', async () => {
+      vi.mocked(authorizationPolicyService.createCredentialRule).mockClear();
+      setup(CalloutFramingType.NONE);
+
+      await service.applyAuthorizationPolicy(
+        'callout-1',
+        undefined,
+        platformRolesAccess
+      );
+
+      expect(creatorRuleCalls()).toHaveLength(1);
+      expect(creatorRuleCalls()[0][0]).toEqual(
+        expect.arrayContaining([
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+        ])
       );
     });
   });

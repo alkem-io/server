@@ -12,6 +12,7 @@ import {
   LogContext,
 } from '@common/enums';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { RoleName } from '@common/enums/role.name';
 import { EntityNotInitializedException } from '@common/exceptions';
@@ -279,7 +280,14 @@ export class CalloutAuthorizationService {
       );
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    if (callout.createdBy) {
+    // A Form's creator has no standing of their own (FR-016a): only admins can
+    // create one, so this rule adds nothing while the creator is an admin, and
+    // after a demotion it would still let them delete the Post — and with it every
+    // member's response. Post-level rights on a Form follow current credentials.
+    if (
+      callout.createdBy &&
+      callout.framing?.type !== CalloutFramingType.FORM
+    ) {
       const manageCreatedCalloutPolicy =
         this.authorizationPolicyService.createCredentialRule(
           [
