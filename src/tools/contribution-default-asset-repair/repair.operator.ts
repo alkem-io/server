@@ -203,18 +203,38 @@ export const readPrivateManifest = async (
     'expectedExternalID',
     'externalReference',
   ]);
+  const hasExactKeys = (value: object, keys: Set<string>): boolean => {
+    const actual = Object.keys(value);
+    return actual.length === keys.size && actual.every(key => keys.has(key));
+  };
   if (
     manifest.items.some(
       item =>
         !item ||
         typeof item !== 'object' ||
-        Object.keys(item).some(key => !itemKeys.has(key)) ||
+        !hasExactKeys(item, itemKeys) ||
+        ![
+          item.token,
+          item.defaultId,
+          item.targetBucketId,
+          item.targetAuthorizationId,
+          item.originalContent,
+          item.originalSnapshotDigest,
+          item.templateId,
+          item.templateAssetRefsDigest,
+        ].every(value => typeof value === 'string') ||
         !Array.isArray(item.assets) ||
         item.assets.some(
           asset =>
             !asset ||
             typeof asset !== 'object' ||
-            Object.keys(asset).some(key => !assetKeys.has(key))
+            !hasExactKeys(asset, assetKeys) ||
+            ![
+              asset.fileId,
+              asset.sourceId,
+              asset.expectedExternalID,
+              asset.externalReference,
+            ].every(value => typeof value === 'string')
         )
     )
   ) {

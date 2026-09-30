@@ -1,4 +1,4 @@
-import { mkdtemp, stat } from 'node:fs/promises';
+import { mkdtemp, readFile, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
@@ -188,6 +188,21 @@ describe('private repair manifest', () => {
     await expect(readPrivateManifest(path, digest)).resolves.toEqual(manifest);
     await expect(readPrivateManifest(path, sha256('wrong'))).rejects.toThrow(
       'manifest digest mismatch'
+    );
+  });
+
+  it('rejects an incomplete or extended manifest item', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'repair-manifest-'));
+    const path = join(directory, 'manifest.json');
+    const manifest = createManifest([item]);
+    await writePrivateManifest(path, manifest);
+    const altered = JSON.parse(await readFile(path, 'utf8'));
+    delete altered.items[0].targetAuthorizationId;
+    const bytes = JSON.stringify(altered);
+    await writeFile(path, bytes, { mode: 0o600 });
+
+    await expect(readPrivateManifest(path, sha256(bytes))).rejects.toThrow(
+      'manifest contains an unknown field'
     );
   });
 
