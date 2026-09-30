@@ -600,6 +600,7 @@ describe('FileServiceAdapter', () => {
         authorizationId: 'auth-2',
         tagsetId: 'tagset-2',
         createdBy: 'user-1',
+        externalReference: 'contribution-default-asset-repair/v1/receipt',
       });
 
       expect(result).toEqual(responseData);
@@ -613,6 +614,7 @@ describe('FileServiceAdapter', () => {
         authorizationId: 'auth-2',
         tagsetId: 'tagset-2',
         createdBy: 'user-1',
+        externalReference: 'contribution-default-asset-repair/v1/receipt',
       });
     });
 
@@ -715,67 +717,6 @@ describe('FileServiceAdapter', () => {
   });
 
   describe('getDocumentByReference', () => {
-    it('pins a copy receipt to its reference and destination bucket', async () => {
-      const receipt = 'repair/v1/opaque-receipt';
-      const destinationBucketId = 'bucket-destination';
-      const externalID = 'content-identity';
-
-      (httpService.request as Mock)
-        .mockReturnValueOnce(
-          of(
-            axiosResponse(
-              {
-                id: 'copied-document',
-                externalID,
-                mimeType: 'image/png',
-                size: 1024,
-                reused: false,
-              },
-              201
-            )
-          )
-        )
-        .mockReturnValueOnce(
-          of(
-            axiosResponse({
-              id: 'copied-document',
-              externalID,
-              externalReference: receipt,
-              storageBucketId: destinationBucketId,
-              mimeType: 'image/png',
-              size: 1024,
-            })
-          )
-        );
-
-      const copied = await adapter.copyDocument({
-        sourceId: 'source-document',
-        destinationBucketId,
-        authorizationId: 'destination-authorization',
-        externalReference: receipt,
-      });
-      const reconciled = await adapter.getDocumentByReference(
-        receipt,
-        destinationBucketId
-      );
-
-      expect(copied.externalID).toBe(externalID);
-      expect(reconciled).toMatchObject({
-        externalID,
-        externalReference: receipt,
-        storageBucketId: destinationBucketId,
-      });
-      expect((httpService.request as Mock).mock.calls[0][0].data).toMatchObject(
-        {
-          externalReference: receipt,
-          destinationBucketId,
-        }
-      );
-      expect((httpService.request as Mock).mock.calls[1][0].url).toContain(
-        'by-reference?ref=repair%2Fv1%2Fopaque-receipt&bucketId=bucket-destination'
-      );
-    });
-
     it('[1] issues a GET with ref+bucketId as QUERY params and NO request body', async () => {
       const responseData = {
         id: 'doc-ref',

@@ -1,9 +1,12 @@
 import { createRequire } from 'node:module';
 import { compressText, decompressText } from '@common/utils/compression.util';
 import { loadWhiteboardFork } from '@domain/common/whiteboard/whiteboard.fork';
+import { DocumentService } from '@domain/storage/document/document.service';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Injectable } from '@nestjs/common';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { DataSource } from 'typeorm';
+import type { Doc } from 'yjs';
 import type { RepairCommand } from './repair.command';
 import {
   canonicalJson,
@@ -27,14 +30,31 @@ type CandidateRow = {
   defaultId: string;
   content: string;
   targetBucketId: string | null;
-  targetAuthorizationId: string | null;
+};
+
+const deterministicYjsClientID = (item: RepairItem, document: Doc): number => {
+  const candidate = Number.parseInt(
+    sha256(
+      [item.defaultId, item.originalSnapshotDigest, item.targetBucketId].join(
+        '\u0000'
+      )
+    ).slice(0, 8),
+    16
+  );
+  let clientID = candidate === 0 ? 1 : candidate;
+  while (document.store.clients.has(clientID)) {
+    clientID = clientID === 0xffffffff ? 1 : clientID + 1;
+  }
+  return clientID;
 };
 
 @Injectable()
 export class ContributionDefaultAssetRepairService implements RepairPort {
   constructor(
     private readonly dataSource: DataSource,
-    private readonly fileServiceAdapter: FileServiceAdapter
+    private readonly fileServiceAdapter: FileServiceAdapter,
+    private readonly storageBucketService: StorageBucketService,
+    private readonly documentService: DocumentService
   ) {}
 
   async execute(
@@ -51,6 +71,7 @@ export class ContributionDefaultAssetRepairService implements RepairPort {
     const records: Array<{ token: string; stage: string; reason: string }> = [];
     for (const item of manifest.items) {
       try {
+        await this.validateManifestItem(item);
         const result = await coordinator.apply(item);
         records.push({ token: item.token, stage: 'apply', reason: result.state });
       } catch (error) {
@@ -78,9 +99,9 @@ export class ContributionDefaultAssetRepairService implements RepairPort {
         content: '',
         snapshotDigest: '',
         templateId: '',
+        templateSnapshotDigest: '',
         templateAssetRefsDigest: '',
         targetBucketId: '',
-        targetAuthorizationId: '',
         assets: [],
       };
     }
@@ -88,18 +109,16 @@ export class ContributionDefaultAssetRepairService implements RepairPort {
       Object.fromEntries(item.assets.map(asset => [asset.fileId, asset.sourceId]))
     );
     const sources = await this.readSources(item.assets.map(asset => asset.sourceId));
-    let snapshotDigest = '';
-    if (current.content === item.originalContent) {
-      snapshotDigest = sha256(await decompressText(current.content));
-    }
+    const snapshotDigest = sha256(await this.snapshotBytes(current.content));
     return {
       content: current.content,
       snapshotDigest,
       templateId: templates.length === 1 ? templates[0].id : '',
+      templateSnapshotDigest:
+        templates.length === 1 ? templates[0].snapshotDigest : '',
       templateAssetRefsDigest:
         templates.length === 1 ? templates[0].assetRefsDigest : '',
       targetBucketId: current.targetBucketId ?? '',
-      targetAuthorizationId: current.targetAuthorizationId ?? '',
       assets: item.assets.flatMap(asset => {
         const source = sources.get(asset.sourceId);
         return source
@@ -110,17 +129,18 @@ export class ContributionDefaultAssetRepairService implements RepairPort {
   }
 
   async copy(item: RepairItem, asset: RepairAsset) {
-    const result = await this.fileServiceAdapter.copyDocument({
-      sourceId: asset.sourceId,
-      destinationBucketId: item.targetBucketId,
-      authorizationId: item.targetAuthorizationId,
-      externalReference: asset.externalReference,
-    });
+    const source = await this.documentService.getDocumentOrFail(asset.sourceId);
+    const result = await this.storageBucketService.copyDocumentToBucket(
+      item.targetBucketId,
+      source,
+      undefined,
+      false,
+      { externalReference: asset.externalReference }
+    );
     return {
       ...result,
       externalReference: asset.externalReference,
       storageBucketId: item.targetBucketId,
-      createdDirectly: result.reused === false,
     };
   }
 
@@ -134,11 +154,13 @@ export class ContributionDefaultAssetRepairService implements RepairPort {
     const document = new Y.Doc();
     try {
       Y.applyUpdateV2(document, bytes);
+      document.clientID = deterministicYjsClientID(item, document);
       fork.writeAssetLocators(document.getMap(fork.FILES), locators, { prune: true });
-      const intended = Buffer.from(Y.encodeStateAsUpdateV2(document)).toString('base64');
+      const intendedBytes = Buffer.from(Y.encodeStateAsUpdateV2(document));
+      const intended = intendedBytes.toString('base64');
       return {
         content: await compressText(intended),
-        snapshotDigest: sha256(intended),
+        snapshotDigest: sha256(intendedBytes),
       };
     } finally {
       document.destroy();
@@ -160,31 +182,27 @@ export class ContributionDefaultAssetRepairService implements RepairPort {
     return rows.length === 1;
   }
 
-  async readContent(defaultId: string): Promise<string> {
-    const rows = await this.dataSource.query(
-      'SELECT "whiteboardContent" AS "content" FROM "callout_contribution_defaults" WHERE "id" = $1',
-      [defaultId]
-    );
-    if (rows.length !== 1 || typeof rows[0].content !== 'string') {
-      throw new Error('default is missing');
-    }
-    return rows[0].content;
-  }
-
-  async deleteDocument(documentId: string): Promise<void> {
-    await this.fileServiceAdapter.deleteDocument(documentId);
+  async readCurrent(defaultId: string): Promise<{
+    content: string;
+    snapshotDigest: string;
+  }> {
+    const row = await this.readCandidate(defaultId);
+    if (!row?.content) throw new Error('default is missing');
+    return {
+      content: row.content,
+      snapshotDigest: sha256(await this.snapshotBytes(row.content)),
+    };
   }
 
   private async discover(manifestPath: string): Promise<Record<string, unknown>> {
     const rows = (await this.dataSource.query(
       `SELECT defaults."id" AS "defaultId",
               defaults."whiteboardContent" AS "content",
-              bucket."id" AS "targetBucketId",
-              bucket."authorizationId" AS "targetAuthorizationId"
+              bucket."id" AS "targetBucketId"
          FROM "callout_contribution_defaults" defaults
-         JOIN "callout" callout ON callout."contributionDefaultsId" = defaults."id"
-         JOIN "callout_framing" framing ON callout."framingId" = framing."id"
-         JOIN "profile" profile ON framing."profileId" = profile."id"
+         LEFT JOIN "callout" callout ON callout."contributionDefaultsId" = defaults."id"
+         LEFT JOIN "callout_framing" framing ON callout."framingId" = framing."id"
+         LEFT JOIN "profile" profile ON framing."profileId" = profile."id"
          LEFT JOIN "storage_bucket" bucket ON profile."storageBucketId" = bucket."id"
         WHERE defaults."whiteboardContent" IS NOT NULL
         ORDER BY defaults."id" ASC`
@@ -193,7 +211,7 @@ export class ContributionDefaultAssetRepairService implements RepairPort {
     const records: Array<{ token: string; stage: string; reason: string }> = [];
     for (const row of rows) {
       const token = sha256(row.defaultId).slice(0, 32);
-      const item = await this.buildItem(row.defaultId, row);
+      const item = await this.buildItem(row);
       if (item) {
         items.push(item);
         records.push({ token, stage: 'discover', reason: 'eligible' });
@@ -206,17 +224,8 @@ export class ContributionDefaultAssetRepairService implements RepairPort {
     return projectPublicResult(manifest.runToken, digest, records);
   }
 
-  private async buildItem(
-    defaultId: string,
-    knownRow?: CandidateRow
-  ): Promise<RepairItem | undefined> {
-    const row = knownRow ?? (await this.readCandidate(defaultId));
-    if (
-      !row ||
-      !row.targetBucketId ||
-      !row.targetAuthorizationId ||
-      !row.content
-    ) {
+  private async buildItem(row: CandidateRow): Promise<RepairItem | undefined> {
+    if (!row || !row.targetBucketId || !row.content) {
       return undefined;
     }
     let assetLocators: Record<string, string>;
@@ -239,7 +248,7 @@ export class ContributionDefaultAssetRepairService implements RepairPort {
     ) {
       return undefined;
     }
-    const originalSnapshotDigest = sha256(base64);
+    const originalSnapshotDigest = sha256(Buffer.from(base64, 'base64'));
     const assets: RepairAsset[] = entries
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([fileId, sourceId]) => {
@@ -261,10 +270,10 @@ export class ContributionDefaultAssetRepairService implements RepairPort {
       token: sha256(row.defaultId).slice(0, 32),
       defaultId: row.defaultId,
       targetBucketId: row.targetBucketId,
-      targetAuthorizationId: row.targetAuthorizationId,
       originalContent: row.content,
       originalSnapshotDigest,
       templateId: templates[0].id,
+      templateSnapshotDigest: templates[0].snapshotDigest,
       templateAssetRefsDigest: templates[0].assetRefsDigest,
       assets,
     };
@@ -274,17 +283,36 @@ export class ContributionDefaultAssetRepairService implements RepairPort {
     const rows = (await this.dataSource.query(
       `SELECT defaults."id" AS "defaultId",
               defaults."whiteboardContent" AS "content",
-              bucket."id" AS "targetBucketId",
-              bucket."authorizationId" AS "targetAuthorizationId"
+              bucket."id" AS "targetBucketId"
          FROM "callout_contribution_defaults" defaults
-         JOIN "callout" callout ON callout."contributionDefaultsId" = defaults."id"
-         JOIN "callout_framing" framing ON callout."framingId" = framing."id"
-         JOIN "profile" profile ON framing."profileId" = profile."id"
+         LEFT JOIN "callout" callout ON callout."contributionDefaultsId" = defaults."id"
+         LEFT JOIN "callout_framing" framing ON callout."framingId" = framing."id"
+         LEFT JOIN "profile" profile ON framing."profileId" = profile."id"
          LEFT JOIN "storage_bucket" bucket ON profile."storageBucketId" = bucket."id"
         WHERE defaults."id" = $1`,
       [defaultId]
     )) as CandidateRow[];
     return rows[0];
+  }
+
+  private async validateManifestItem(item: RepairItem): Promise<void> {
+    const bytes = await this.snapshotBytes(item.originalContent);
+    if (sha256(bytes) !== item.originalSnapshotDigest) {
+      throw new Error('manifest original snapshot digest mismatch');
+    }
+    const locators = await this.readAssetLocators(bytes);
+    const locatorEntries = Object.entries(locators);
+    if (
+      locatorEntries.length !== item.assets.length ||
+      new Set(item.assets.map(asset => asset.fileId)).size !== item.assets.length
+    ) {
+      throw new Error('manifest asset map mismatch');
+    }
+    for (const asset of item.assets) {
+      if (locators[asset.fileId] !== asset.sourceId) {
+        throw new Error('manifest asset map mismatch');
+      }
+    }
   }
 
   private async matchingTemplates(assetLocators: Record<string, string>) {
@@ -295,12 +323,17 @@ export class ContributionDefaultAssetRepairService implements RepairPort {
         WHERE template."type" = 'WHITEBOARD'
           AND whiteboard."contentPointer" IS NOT NULL`
     )) as Array<{ id: string; contentPointer: string }>;
-    const matches: Array<{ id: string; assetRefsDigest: string }> = [];
+    const matches: Array<{
+      id: string;
+      snapshotDigest: string;
+      assetRefsDigest: string;
+    }> = [];
     for (const row of rows) {
       try {
-        const templateAssets = await this.readAssetLocators(
-          await this.fileServiceAdapter.getDocumentContent(row.contentPointer)
+        const templateBytes = await this.fileServiceAdapter.getDocumentContent(
+          row.contentPointer
         );
+        const templateAssets = await this.readAssetLocators(templateBytes);
         if (
           Object.entries(assetLocators).every(
             ([fileId, locator]) => templateAssets[fileId] === locator
@@ -308,6 +341,7 @@ export class ContributionDefaultAssetRepairService implements RepairPort {
         ) {
           matches.push({
             id: row.id,
+            snapshotDigest: sha256(templateBytes),
             assetRefsDigest: sha256(canonicalJson(templateAssets)),
           });
         }

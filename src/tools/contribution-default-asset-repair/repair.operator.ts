@@ -14,10 +14,10 @@ export interface RepairItem {
   token: string;
   defaultId: string;
   targetBucketId: string;
-  targetAuthorizationId: string;
   originalContent: string;
   originalSnapshotDigest: string;
   templateId: string;
+  templateSnapshotDigest: string;
   templateAssetRefsDigest: string;
   assets: RepairAsset[];
 }
@@ -34,7 +34,6 @@ export interface Receipt {
   externalReference?: string;
   storageBucketId: string;
   reused?: boolean;
-  createdDirectly?: boolean;
 }
 
 export type RepairFailureCode =
@@ -61,9 +60,9 @@ export interface RepairPort {
     content: string;
     snapshotDigest: string;
     templateId: string;
+    templateSnapshotDigest: string;
     templateAssetRefsDigest: string;
     targetBucketId: string;
-    targetAuthorizationId: string;
     assets: Array<{ sourceId: string; externalID: string }>;
   }>;
   copy(item: RepairItem, asset: RepairAsset): Promise<Receipt>;
@@ -77,8 +76,10 @@ export interface RepairPort {
     originalContent: string,
     intendedContent: string
   ): Promise<boolean>;
-  readContent(defaultId: string): Promise<string>;
-  deleteDocument(documentId: string): Promise<void>;
+  readCurrent(defaultId: string): Promise<{
+    content: string;
+    snapshotDigest: string;
+  }>;
 }
 
 const canonicalize = (value: unknown): unknown => {
@@ -190,10 +191,10 @@ export const readPrivateManifest = async (
     'token',
     'defaultId',
     'targetBucketId',
-    'targetAuthorizationId',
     'originalContent',
     'originalSnapshotDigest',
     'templateId',
+    'templateSnapshotDigest',
     'templateAssetRefsDigest',
     'assets',
   ]);
@@ -217,10 +218,10 @@ export const readPrivateManifest = async (
           item.token,
           item.defaultId,
           item.targetBucketId,
-          item.targetAuthorizationId,
           item.originalContent,
           item.originalSnapshotDigest,
           item.templateId,
+          item.templateSnapshotDigest,
           item.templateAssetRefsDigest,
         ].every(value => typeof value === 'string') ||
         !Array.isArray(item.assets) ||
@@ -239,6 +240,28 @@ export const readPrivateManifest = async (
     )
   ) {
     throw new Error('manifest contains an unknown field');
+  }
+  const references = manifest.items.flatMap(item =>
+    item.assets.map(asset => asset.externalReference)
+  );
+  if (
+    new Set(references).size !== references.length ||
+    manifest.items.some(item =>
+      new Set(item.assets.map(asset => asset.fileId)).size !== item.assets.length ||
+      item.assets.some(
+        asset =>
+          asset.externalReference !==
+          createRepairReference(
+            item.defaultId,
+            item.originalSnapshotDigest,
+            item.targetBucketId,
+            asset.fileId,
+            asset.expectedExternalID
+          )
+      )
+    )
+  ) {
+    throw new Error('manifest contains inconsistent receipts');
   }
   return manifest;
 };
@@ -271,13 +294,13 @@ export class ContributionDefaultRepairCoordinator {
     }
     if (
       evidence.templateId !== item.templateId ||
+      evidence.templateSnapshotDigest !== item.templateSnapshotDigest ||
       evidence.templateAssetRefsDigest !== item.templateAssetRefsDigest
     ) {
       throw new RepairFailure('template_drift');
     }
     if (
-      evidence.targetBucketId !== item.targetBucketId ||
-      evidence.targetAuthorizationId !== item.targetAuthorizationId
+      evidence.targetBucketId !== item.targetBucketId
     ) {
       throw new RepairFailure('target_drift');
     }
@@ -288,64 +311,57 @@ export class ContributionDefaultRepairCoordinator {
       }
     }
 
-    const directlyCreated: string[] = [];
-    try {
-      const locators: Record<string, string> = {};
-      for (const asset of item.assets) {
-        let directlyCreatedId: string | undefined;
+    const locators: Record<string, string> = {};
+    for (const asset of item.assets) {
+      let receipt = await this.port.findReceipt(
+        asset.externalReference,
+        item.targetBucketId
+      );
+      if (!receipt) {
+        if (evidence.snapshotDigest !== item.originalSnapshotDigest) {
+          throw new RepairFailure('divergent');
+        }
         try {
-          const receipt = await this.port.copy(item, asset);
-          if (receipt.createdDirectly === true) directlyCreatedId = receipt.id;
+          await this.port.copy(item, asset);
         } catch (error) {
           if (!isTransportFailure(error)) {
             throw new RepairFailure('copy_failed', error);
           }
         }
-        const receipt = await this.port.findReceipt(
+        receipt = await this.port.findReceipt(
           asset.externalReference,
           item.targetBucketId
         );
-        if (!receipt || !exactReceipt(receipt, asset, item.targetBucketId)) {
-          throw new RepairFailure('receipt_mismatch');
-        }
-        if (directlyCreatedId === receipt.id) directlyCreated.push(receipt.id);
-        locators[asset.fileId] = receipt.id;
       }
-
-      const intended = await this.port.buildIntendedContent(item, locators);
-      if (sha256(evidence.content) === sha256(intended.content)) {
-        return { state: 'intended', intendedSnapshotDigest: intended.snapshotDigest };
+      if (!receipt || !exactReceipt(receipt, asset, item.targetBucketId)) {
+        throw new RepairFailure('receipt_mismatch');
       }
-      if (evidence.content !== item.originalContent) {
-        throw new RepairFailure('divergent');
-      }
-      if (
-        await this.port.replaceContent(
-          item.defaultId,
-          item.originalContent,
-          intended.content
-        )
-      ) {
-        return { state: 'applied', intendedSnapshotDigest: intended.snapshotDigest };
-      }
-      const current = await this.port.readContent(item.defaultId);
-      if (sha256(current) === sha256(intended.content)) {
-        return { state: 'intended', intendedSnapshotDigest: intended.snapshotDigest };
-      }
-      if (current === item.originalContent) {
-        throw new RepairFailure('cas_conflict');
-      }
-      throw new RepairFailure('divergent');
-    } catch (error) {
-      const current = await this.port.readContent(item.defaultId).catch(() => undefined);
-      if (current === item.originalContent) {
-        await Promise.all(
-          directlyCreated.map(documentId =>
-            this.port.deleteDocument(documentId).catch(() => undefined)
-          )
-        );
-      }
-      throw error;
+      locators[asset.fileId] = receipt.id;
     }
+
+    const intended = await this.port.buildIntendedContent(item, locators);
+    if (evidence.snapshotDigest === intended.snapshotDigest) {
+      return { state: 'intended', intendedSnapshotDigest: intended.snapshotDigest };
+    }
+    if (evidence.snapshotDigest !== item.originalSnapshotDigest) {
+      throw new RepairFailure('divergent');
+    }
+    if (
+      await this.port.replaceContent(
+        item.defaultId,
+        item.originalContent,
+        intended.content
+      )
+    ) {
+      return { state: 'applied', intendedSnapshotDigest: intended.snapshotDigest };
+    }
+    const current = await this.port.readCurrent(item.defaultId);
+    if (current.snapshotDigest === intended.snapshotDigest) {
+      return { state: 'intended', intendedSnapshotDigest: intended.snapshotDigest };
+    }
+    if (current.snapshotDigest === item.originalSnapshotDigest) {
+      throw new RepairFailure('cas_conflict');
+    }
+    throw new RepairFailure('divergent');
   }
 }
