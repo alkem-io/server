@@ -60,13 +60,16 @@ export class ForumResolverMutations {
       `create discussion on forum: ${forum.id}`
     );
 
+    // 027-platform-role-redesign (A15, FR-008(d)): admin-only categories
+    // are editorial control of the forum, so they take the forum family's
+    // own privilege — checked on the forum policy `platformForumManage`
+    // cascades to — rather than the retiring PLATFORM_ADMIN catch-all,
+    // which none of the thirteen new roles holds.
     if (isAdminOnlyForumCategory(createData.category)) {
-      const platformAuthorization =
-        await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
       await this.authorizationService.grantAccessOrFail(
         actorContext,
-        platformAuthorization,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        forum.authorization,
+        AuthorizationPrivilege.PLATFORM_FORUM_MANAGE,
         `User not authorized to create discussion with ${createData.category} category.`
       );
     }
@@ -130,7 +133,7 @@ export class ForumResolverMutations {
       "Removes one category from the platform Forum's active discussionCategories " +
       'list. Refuses while any Discussion still carries the category. Idempotent ' +
       'for an already-absent category. The enum member is never removed. ' +
-      'Requires PLATFORM_ADMIN. Audited (PLATFORM_OPERATIONS).',
+      'Requires PLATFORM_FORUM_MANAGE. Audited (PLATFORM_OPERATIONS).',
   })
   async adminForumRemoveDiscussionCategory(
     @CurrentActor() actorContext: ActorContext,
@@ -139,15 +142,20 @@ export class ForumResolverMutations {
     // Authorization runs before the audited block, not inside it: an
     // unauthorized caller must be rejected without triggering a write to the
     // compliance audit table or an error log entry attributable to them.
-    // Only work that happens once the caller is confirmed a platform admin
+    // Only work that happens once the caller is confirmed a forum manager
     // is covered by the try/catch below, so genuine post-authorization
     // failures still get their audited failure row.
+    //
+    // 027-platform-role-redesign (A15): PLATFORM_FORUM_MANAGE is declared on
+    // the platform policy (`platformForumManage`, cascade: true), so it is
+    // checked here before the forum itself is loaded — keeping the
+    // "authorize before any audited work" ordering above intact.
     const platformAuthorization =
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
     await this.authorizationService.grantAccessOrFail(
       actorContext,
       platformAuthorization,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_FORUM_MANAGE,
       `remove forum discussion category: ${removeData.category}`
     );
 

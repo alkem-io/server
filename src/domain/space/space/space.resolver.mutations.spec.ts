@@ -1,20 +1,28 @@
 import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseService } from '@domain/common/license/license.service';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
+import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { type Mock } from 'vitest';
 import { SpaceResolverMutations } from './space.resolver.mutations';
 import { SpaceService } from './space.service';
 import { SpaceAuthorizationService } from './space.service.authorization';
 import { SpaceLicenseService } from './space.service.license';
 
 describe('SpaceResolverMutations', () => {
+  let module: TestingModule;
   let resolver: SpaceResolverMutations;
   let spaceService: SpaceService;
   let authorizationService: AuthorizationService;
@@ -31,7 +39,7 @@ describe('SpaceResolverMutations', () => {
 
     subspaceCreatedSubscription = { publish: vi.fn() };
 
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [
         SpaceResolverMutations,
         MockWinstonProvider,
@@ -99,6 +107,9 @@ describe('SpaceResolverMutations', () => {
       } as any;
 
       vi.mocked(spaceService.getSpaceOrFail).mockResolvedValue(space);
+      // 027-platform-role-redesign (T043): the dual-path check calls
+      // isAccessGranted before falling through to grantAccessOrFail.
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(false);
       vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(
         undefined as any
       );
@@ -205,12 +216,174 @@ describe('SpaceResolverMutations', () => {
 
       await resolver.updateSpacePlatformSettings(actorContext, updateData);
 
+      // 027-platform-role-redesign (T048, A14): re-anchored off
+      // PLATFORM_ADMIN onto ACCOUNT_LICENSE_MANAGE.
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         space.authorization,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE,
         expect.any(String)
       );
+      // corr-server-6 fix: a SECOND, additional check for the nameID
+      // rename — NOT against `space.authorization` (the widened,
+      // platform-license-manager-inclusive policy).
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        expect.not.objectContaining({ id: 'auth-1' }),
+        AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE,
+        expect.any(String)
+      );
+    });
+
+    it('does not perform the additional nameID check when nameID is absent (visibility-only call)', async () => {
+      const actorContext = { actorID: 'actor-1' } as any;
+      const updateData = { spaceID: 'space-1', visibility: 'public' } as any;
+      const space = {
+        id: 'space-1',
+        authorization: { id: 'auth-1' },
+        about: { profile: { displayName: 'Test' } },
+      } as any;
+
+      vi.mocked(spaceService.getSpaceOrFail).mockResolvedValue(space);
+      vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(
+        undefined as any
+      );
+      vi.mocked(spaceService.updateSpacePlatformSettings).mockResolvedValue(
+        space
+      );
+      vi.mocked(spaceService.save).mockResolvedValue(space);
+      vi.mocked(
+        spaceAuthorizationService.applyAuthorizationPolicy
+      ).mockResolvedValue([]);
+      vi.mocked(authorizationPolicyService.saveAll).mockResolvedValue(
+        undefined as any
+      );
+
+      await resolver.updateSpacePlatformSettings(actorContext, updateData);
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // 027-platform-role-redesign (corr-server-6 fix): wires the REAL
+  // AuthorizationPolicyService + AuthorizationService so the constructor's
+  // `legacySpaceNameIdRenamePolicy` is a genuine, hardcoded
+  // `[GLOBAL_ADMIN, GLOBAL_SUPPORT]` IAuthorizationPolicy, and asserts a
+  // `platform-license-manager`-only actor — who now legitimately reaches
+  // the mutation's PRIMARY ACCOUNT_LICENSE_MANAGE gate (T048's additive
+  // re-anchor) — is still denied a `nameID` rename, while GLOBAL_ADMIN
+  // (the pre-existing legacy reacher) is allowed.
+  describe('updateSpacePlatformSettings — nameID legacy pin, real-engine integration', () => {
+    let realResolver: SpaceResolverMutations;
+    let realSpaceService: Record<string, Mock>;
+    let realSpaceAuthorizationService: Record<string, Mock>;
+
+    const space = {
+      id: 'space-1',
+      // The space's OWN policy carries ACCOUNT_LICENSE_MANAGE for
+      // [GLOBAL_ADMIN, GLOBAL_SUPPORT, PLATFORM_LICENSE_MANAGER] — mirrors
+      // `space.service.authorization.ts`'s `spacePlatformSettingsAdmin` rule
+      // (T048) closely enough to exercise the real AuthorizationService.
+      authorization: (() => {
+        const policy = new AuthorizationPolicy(
+          AuthorizationPolicyType.SPACE
+        ) as any;
+        policy.credentialRules = [
+          {
+            grantedPrivileges: [AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE],
+            criterias: [
+              { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
+              { type: AuthorizationCredential.GLOBAL_SUPPORT, resourceID: '' },
+              {
+                type: AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
+                resourceID: '',
+              },
+            ],
+            cascade: false,
+            name: 'space-platform-settings-admin',
+          },
+        ];
+        policy.privilegeRules = [];
+        return policy;
+      })(),
+      about: { profile: { displayName: 'Test' } },
+    };
+
+    const buildActorContext = (
+      credentialType: AuthorizationCredential
+    ): any => ({
+      actorID: 'actor-1',
+      credentials: [{ type: credentialType, resourceID: '' }],
+    });
+
+    beforeEach(async () => {
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          SpaceResolverMutations,
+          AuthorizationPolicyService,
+          AuthorizationService,
+          MockWinstonProvider,
+          repositoryProviderMockFactory(AuthorizationPolicy),
+          {
+            provide: SUBSCRIPTION_SUBSPACE_CREATED,
+            useValue: { publish: vi.fn() },
+          },
+        ],
+      })
+        .useMocker(token => {
+          if (token === ConfigService) {
+            return { get: vi.fn().mockReturnValue(500) };
+          }
+          return defaultMockerFactory(token);
+        })
+        .compile();
+
+      realResolver = module.get(SpaceResolverMutations);
+      realSpaceService = module.get(SpaceService) as any;
+      realSpaceAuthorizationService = module.get(
+        SpaceAuthorizationService
+      ) as any;
+
+      realSpaceService.getSpaceOrFail.mockResolvedValue(space);
+      realSpaceService.updateSpacePlatformSettings.mockResolvedValue(space);
+      realSpaceService.save.mockResolvedValue(space);
+      realSpaceAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
+    });
+
+    it('denies a platform-license-manager-only actor from renaming nameID', async () => {
+      const actor = buildActorContext(
+        AuthorizationCredential.PLATFORM_LICENSE_MANAGER
+      );
+      await expect(
+        realResolver.updateSpacePlatformSettings(actor, {
+          spaceID: 'space-1',
+          nameID: 'squatted-url',
+        } as any)
+      ).rejects.toThrow();
+    });
+
+    it('allows a global-admin actor to rename nameID (pre-existing legacy reach preserved)', async () => {
+      const actor = buildActorContext(AuthorizationCredential.GLOBAL_ADMIN);
+      await expect(
+        realResolver.updateSpacePlatformSettings(actor, {
+          spaceID: 'space-1',
+          nameID: 'new-url',
+        } as any)
+      ).resolves.toBeDefined();
+    });
+
+    it('allows a platform-license-manager-only actor to update visibility (nameID absent)', async () => {
+      const actor = buildActorContext(
+        AuthorizationCredential.PLATFORM_LICENSE_MANAGER
+      );
+      await expect(
+        realResolver.updateSpacePlatformSettings(actor, {
+          spaceID: 'space-1',
+          visibility: 'public',
+        } as any)
+      ).resolves.toBeDefined();
     });
   });
 
@@ -321,6 +494,81 @@ describe('SpaceResolverMutations', () => {
         'sub-1',
         true
       );
+    });
+  });
+  // ===================================================================
+  // qual-server-12 + qual-server-13 (2026-07-31) — the same gap, seen twice.
+  //
+  // `deleteSpace` is an A8 DUAL-PATH surface: the space owner reaches it via
+  // plain DELETE, `platform-content-full-access` via its own privilege. The
+  // `deleteSpace` suite above stubs `isAccessGranted` to `false` for BOTH,
+  // so only the fall-through-to-grantAccessOrFail path was ever executed —
+  // the PLATFORM branch, and therefore the FR-018a audit write that hangs off
+  // it, was never entered by any test (qual-server-13's "DENIED direction
+  // only"; qual-server-12's unasserted `recordEventForActor`).
+  //
+  // These tests drive the ALLOWED direction of each branch and assert the
+  // audit boundary FR-018a actually specifies: audited on the PLATFORM
+  // branch, silent on the owner branch. That asymmetry is the whole point —
+  // an owner deleting their own space is not an administrative act.
+  // ===================================================================
+  describe('A8/A14 platform-branch audit coverage (qual-server-12/qual-server-13)', () => {
+    const actorContext = { actorID: 'actor-1' } as any;
+    const space = {
+      id: 'space-1',
+      nameID: 'test-space',
+      authorization: { id: 'auth-1' },
+    } as any;
+
+    /** Grant exactly one privilege, so which branch authorized the call is
+     *  unambiguous — `mockReturnValue(true)` would satisfy both at once and
+     *  prove nothing about the boundary. */
+    const grantOnly = (privilege: AuthorizationPrivilege) =>
+      vi
+        .mocked(authorizationService.isAccessGranted)
+        .mockImplementation(
+          (_a: any, _p: any, requested: any) => requested === privilege
+        );
+
+    const resourceAudit = () => module.get(PlatformResourceAuditService) as any;
+
+    beforeEach(() => {
+      vi.mocked(spaceService.getSpaceOrFail).mockResolvedValue(space);
+      vi.mocked(spaceService.deleteSpaceOrFail).mockResolvedValue(space);
+      vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(
+        undefined as any
+      );
+    });
+
+    it('deleteSpace on the PLATFORM branch records a `deleted` resource event', async () => {
+      grantOnly(AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS);
+
+      await resolver.deleteSpace(actorContext, { ID: 'space-1' } as any);
+
+      // The gate must NOT have fallen through — that is what makes this the
+      // ALLOWED direction rather than a differently-spelled denial.
+      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+      expect(resourceAudit().recordEventForActor).toHaveBeenCalledWith(
+        actorContext,
+        expect.arrayContaining([
+          AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+        ]),
+        expect.any(Array),
+        expect.objectContaining({
+          resourceKind: 'space',
+          resourceId: 'space-1',
+          outcome: 'deleted',
+        })
+      );
+    });
+
+    it('deleteSpace on the OWNER branch records NOTHING — FR-018a', async () => {
+      grantOnly(AuthorizationPrivilege.DELETE);
+
+      await resolver.deleteSpace(actorContext, { ID: 'space-1' } as any);
+
+      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+      expect(resourceAudit().recordEventForActor).not.toHaveBeenCalled();
     });
   });
 });

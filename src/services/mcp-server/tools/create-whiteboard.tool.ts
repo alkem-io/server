@@ -127,7 +127,11 @@ export class CreateWhiteboardTool implements McpTool {
         profile: { displayName },
         ...(sourceWhiteboardID ? { sourceWhiteboardID } : {}),
       },
-    } as CreateContributionOnCalloutInput;
+      // Bypasses GraphQL default-value substitution — must state its notify
+      // intent explicitly so the suppression gate (explicit-false only) never
+      // silences it.
+      sendNotification: true,
+    };
 
     try {
       // Delegates auth (CONTRIBUTE) + full orchestration to the same path the

@@ -23,6 +23,13 @@ import {
 @Index('ix_platform_audit_entry_correlation', ['correlationId'], {
   where: '"correlationId" IS NOT NULL',
 })
+// 027-platform-role-redesign (D13, T015): the ONE table change this feature
+// spends. Partial index — most rows carry a user subject, not an org one.
+@Index(
+  'ix_platform_audit_entry_subject_org_category_created',
+  ['subjectOrganizationId', 'category', 'createdDate'],
+  { where: '"subjectOrganizationId" IS NOT NULL' }
+)
 export class PlatformAuditEntry
   extends BaseAlkemioEntity
   implements IPlatformAuditEntry
@@ -39,8 +46,19 @@ export class PlatformAuditEntry
   })
   category!: PlatformAuditCategory;
 
-  @Column('uuid', { nullable: false })
-  subjectUserId!: string;
+  // 027-platform-role-redesign (D13): relaxed to nullable — a role grant to
+  // an ORGANIZATION has no subject user. At most one of subjectUserId /
+  // subjectOrganizationId is non-null per row, enforced at the service layer
+  // (T026, not a CHECK constraint — consistent with how outcome subsets are
+  // already enforced), and documented per-category in each writer.
+  @Column('uuid', { nullable: true })
+  subjectUserId?: string;
+
+  // 027-platform-role-redesign (D13): the organization-target counterpart to
+  // subjectUserId, for role grants/revokes whose subject is an organization
+  // (FR-026). Never both non-null on the same row.
+  @Column('uuid', { nullable: true })
+  subjectOrganizationId?: string;
 
   @Column('uuid', { nullable: true })
   initiatorUserId?: string;

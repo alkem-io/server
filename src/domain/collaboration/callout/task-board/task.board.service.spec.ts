@@ -1,6 +1,7 @@
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { ValidationException } from '@common/exceptions';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
+import { ICalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.interface';
 import { TaskBoardService } from './task.board.service';
 
 const oversizedName = 'x'.repeat(129);
@@ -20,6 +21,17 @@ const calloutWithColumns = (columns?: string[]): ICallout => {
       ]
     : [];
   return { classification: { tagsets } } as unknown as ICallout;
+};
+
+/**
+ * Builds a minimal contribution carrying (or not) the reserved task tagset on
+ * its own classification, independent of any callout.
+ */
+const contributionWithTagsets = (
+  tagsetNames?: string[]
+): ICalloutContribution => {
+  const tagsets = tagsetNames?.map(name => ({ name, tags: [] }));
+  return { classification: { tagsets } } as unknown as ICalloutContribution;
 };
 
 describe('TaskBoardService', () => {
@@ -42,6 +54,22 @@ describe('TaskBoardService', () => {
 
     it('treats a callout with no classification as not a board', () => {
       expect(service.isTaskBoard({} as ICallout)).toBe(false);
+    });
+  });
+
+  describe('isTask', () => {
+    it('detects a contribution carrying the reserved task tagset on its own classification', () => {
+      const contribution = contributionWithTagsets([TagsetReservedName.TASK]);
+      expect(service.isTask(contribution)).toBe(true);
+    });
+
+    it('reports a contribution with no classification as not a task', () => {
+      expect(service.isTask({} as ICalloutContribution)).toBe(false);
+    });
+
+    it('reports a contribution whose classification carries only other tagsets as not a task', () => {
+      const contribution = contributionWithTagsets(['some-other-tagset']);
+      expect(service.isTask(contribution)).toBe(false);
     });
   });
 

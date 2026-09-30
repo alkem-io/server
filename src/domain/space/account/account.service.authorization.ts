@@ -4,18 +4,22 @@ import {
   CREDENTIAL_RULE_PLATFORM_CREATE_VC,
   CREDENTIAL_RULE_TYPES_ACCOUNT_AUTH_RESET,
   CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES,
+  CREDENTIAL_RULE_TYPES_ACCOUNT_CREATE_INNOVATION_HUB_PLATFORM_LICENSE_MANAGER,
   CREDENTIAL_RULE_TYPES_ACCOUNT_LICENSE_MANAGE,
   CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE,
   CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE_GLOBAL_ROLES,
+  CREDENTIAL_RULE_TYPES_ACCOUNT_PLATFORM_RESOURCE_ADMIN_READ,
   CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_MANAGE,
   CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_TRANSFER_ACCEPT,
   CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ,
+  CREDENTIAL_RULE_TYPES_PLATFORM_SUPPORT_ORG_RESOURCES,
 } from '@common/constants/authorization/credential.rule.types.constants';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
+import { AccountType } from '@common/enums/account.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -104,7 +108,8 @@ export class AccountAuthorizationService {
 
     account.authorization = await this.extendAuthorizationPolicy(
       account.authorization,
-      accountAdminCredential
+      accountAdminCredential,
+      account.accountType
     );
 
     account.authorization = await this.authorizationPolicyService.save(
@@ -288,7 +293,8 @@ export class AccountAuthorizationService {
 
   private async extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
-    accountAdminCredential: ICredentialDefinition
+    accountAdminCredential: ICredentialDefinition,
+    accountType: AccountType
   ): Promise<IAuthorizationPolicy> {
     if (!authorization) {
       throw new EntityNotInitializedException(
@@ -328,6 +334,25 @@ export class AccountAuthorizationService {
     manageGlobalRoles.cascade = false;
     newRules.push(manageGlobalRoles);
 
+    // QA server-C1-12 (ruling (a)): CREATE_INNOVATION_HUB was held ONLY by the
+    // legacy rule above (GA/GLM/GS) — the account admin never had it — so
+    // Slice B would have left no role able to create a hub. Platform License
+    // Manager is GLM's successor for spec row 8's "create space/hub/pack/VC"
+    // (hubs are the commercial offering, kept platform-curated). Its own,
+    // non-cascading rule: additive in Slice A, the legacy rule untouched.
+    // NOTE: `validateSoftLicenseLimitOrFail` still bypasses the entitlement
+    // limit only for PLATFORM_ADMIN holders, so PLM creates a hub on an
+    // account whose license carries the ACCOUNT_INNOVATION_HUB entitlement
+    // (which PLM itself assigns, A12).
+    const licenseManagerCreateInnovationHub =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.CREATE_INNOVATION_HUB],
+        [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
+        CREDENTIAL_RULE_TYPES_ACCOUNT_CREATE_INNOVATION_HUB_PLATFORM_LICENSE_MANAGER
+      );
+    licenseManagerCreateInnovationHub.cascade = false;
+    newRules.push(licenseManagerCreateInnovationHub);
+
     // Dedicated reset rule: strictly additive. GA/GS/GLM keep the
     // AUTHORIZATION_RESET and LICENSE_RESET they held via manageGlobalRoles
     // before this feature; the Platform Operations Admin joins them. Sole
@@ -349,22 +374,50 @@ export class AccountAuthorizationService {
     platformOperationsAdminReset.cascade = false;
     newRules.push(platformOperationsAdminReset);
 
-    // Allow Global Spaces Read to view Spaces + contents
+    // Allow the spaces-reader roles to view Spaces + contents.
+    // 027-platform-role-redesign (T038, A16): additively extended with
+    // platform-spaces-reader — the account tree is the second half of the
+    // same READ cascade gap found on the space tree; wiring only the space
+    // side would leave the new role able to read a space but not its
+    // account-level contents.
     const globalSpacesReader =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.READ],
-        [AuthorizationCredential.GLOBAL_SPACES_READER],
+        [
+          AuthorizationCredential.GLOBAL_SPACES_READER,
+          AuthorizationCredential.PLATFORM_SPACES_READER,
+        ],
         CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ
       );
     newRules.push(globalSpacesReader);
 
+    // 027-platform-role-redesign (A9, live finding F5): platform-resource-admin
+    // holds TRANSFER_RESOURCE_OFFER/_ACCEPT on this policy (below) but had no
+    // READ, so the Transfer panel could not resolve the account or its host
+    // for a space it is entitled to move. Read-only; the transfer privileges
+    // remain its only write path here.
+    // QA server-C1-1 (ruling (b′) "mover-only reads"): split OUT of the shared
+    // spaces-reader rule above into its own NON-cascading rule — the mover
+    // resolves the account it moves a resource from/to (A9 target
+    // resolution), not the account's packs/hubs/storage/profile subtree.
+    const resourceAdminRead =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.READ],
+        [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
+        CREDENTIAL_RULE_TYPES_ACCOUNT_PLATFORM_RESOURCE_ADMIN_READ
+      );
+    resourceAdminRead.cascade = false;
+    newRules.push(resourceAdminRead);
+
     // Add privileges related to offering and accepting transfer of resources
+    // 027-platform-role-redesign (T037, A9): extended with platform-resource-admin.
     const accountResourcesManage =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT, // Later remove?
+          AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
         ],
         CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_MANAGE
       );
@@ -378,6 +431,7 @@ export class AccountAuthorizationService {
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
         ],
         CREDENTIAL_RULE_TYPES_ACCOUNT_RESOURCES_TRANSFER_ACCEPT
       );
@@ -385,17 +439,47 @@ export class AccountAuthorizationService {
     acceptResourceTransfers.cascade = false;
     newRules.push(acceptResourceTransfers);
 
+    // 027-platform-role-redesign (T037, A12): extended with platform-license-manager.
     const accountLicenseManage =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+          AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
         ],
         CREDENTIAL_RULE_TYPES_ACCOUNT_LICENSE_MANAGE
       );
     accountLicenseManage.cascade = false;
     newRules.push(accountLicenseManage);
+
+    // 027-platform-role-redesign (T037, A7, research C2): update the
+    // account's OWN innovation packs/hubs and full CRUD on the templates
+    // inside them, to assist the owner — genuinely NEW capability (org-owned
+    // packs/hubs sit under the account tree, outside the GLOBAL_SUPPORT
+    // platform-subtree cascade). Cascades to the account's packs/hubs/
+    // templates. Deliberately excludes deleting the pack/hub itself (A8) and
+    // moving it (A9) — FR-008(b). No legacy reacher: this privilege is new,
+    // and the only PLATFORM-side path to this capability today is the root
+    // god-mode grant (which T036 does not extend to CREATE/UPDATE/DELETE).
+    //
+    // spec-server-14 fix: scoped to ORGANIZATION-hosted accounts only. Both
+    // A7 (spec row 7) and FR-008(b) grant Platform Support this right over
+    // resources "belonging to an organization" / "an organization's own
+    // resources" — a USER-hosted account's innovation packs/hubs are not in
+    // scope. Pushing the rule unconditionally (as before) let Platform
+    // Support edit/CRUD a user-hosted account's packs/hubs/templates too,
+    // which no artifact declares as an accepted widening.
+    if (accountType === AccountType.ORGANIZATION) {
+      const platformSupportOrgResources =
+        this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+          [AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES],
+          [AuthorizationCredential.PLATFORM_SUPPORT],
+          CREDENTIAL_RULE_TYPES_PLATFORM_SUPPORT_ORG_RESOURCES
+        );
+      platformSupportOrgResources.cascade = true;
+      newRules.push(platformSupportOrgResources);
+    }
 
     // Allow hosts (users = self mgmt, org = org admin) to manage resources in their account in a way that cascades
     const accountHostManage =

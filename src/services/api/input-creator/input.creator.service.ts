@@ -572,7 +572,9 @@ export class InputCreatorService {
     const result: CreateCalloutContributionDefaultsInput = {
       defaultDisplayName: calloutContributionDefaults.defaultDisplayName,
       postDescription: calloutContributionDefaults.postDescription,
-      whiteboardContent: calloutContributionDefaults.whiteboardContent,
+      // A cleared (null) stored default is absent on this create input.
+      whiteboardContent:
+        calloutContributionDefaults.whiteboardContent ?? undefined,
       sourceStorageBucketID: calloutContributionDefaults.whiteboardContent
         ? sourceStorageBucketID
         : undefined,

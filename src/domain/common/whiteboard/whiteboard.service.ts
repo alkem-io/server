@@ -5,6 +5,7 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { TagsetType } from '@common/enums/tagset.type';
 import { VisualType } from '@common/enums/visual.type';
 import { WhiteboardPreviewMode } from '@common/enums/whiteboard.preview.mode';
 import {
@@ -164,8 +165,18 @@ export class WhiteboardService {
     whiteboard.draftExpiresAt = draftExpiresAt;
     whiteboard.contentUpdatePolicy = ContentUpdatePolicy.CONTRIBUTORS;
 
+    const requestedProfile = whiteboardData.profile ?? {
+      displayName: 'Whiteboard',
+    };
     const profileData = {
-      ...(whiteboardData.profile ?? { displayName: 'Whiteboard' }),
+      ...requestedProfile,
+      ...(requestedProfile.tagsets
+        ? {
+            tagsets: requestedProfile.tagsets.filter(
+              tagset => tagset.name.toLowerCase() !== TagsetReservedName.DEFAULT
+            ),
+          }
+        : {}),
     };
     if (
       sourcePreviewURI &&
@@ -185,6 +196,7 @@ export class WhiteboardService {
     );
     await this.profileService.addOrUpdateTagsetOnProfile(whiteboard.profile, {
       name: TagsetReservedName.DEFAULT,
+      type: TagsetType.FREEFORM,
       tags: [],
     });
 
@@ -327,7 +339,7 @@ export class WhiteboardService {
   }
 
   /** Returns only a non-binary availability signal for persisted defaults/UI cards. */
-  public async hasVisibleContent(content?: string): Promise<boolean> {
+  public async hasVisibleContent(content?: string | null): Promise<boolean> {
     if (!content?.trim()) {
       return false;
     }

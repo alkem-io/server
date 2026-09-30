@@ -17,9 +17,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Block non-registry dependency pins on protected branches
-        run: .scripts/check-vendor-lib-pins.sh
-
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -30,6 +27,9 @@ jobs:
         with:
           node-version: '22.22.0'
           cache: 'pnpm'
+
+      - name: Block non-registry dependency pins on protected branches
+        run: .scripts/check-vendor-lib-pins.sh
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -91,6 +91,46 @@ jobs:
           name: coverage-content-signing
           path: coverage-ci/content-signing/
           retention-days: 1
+
+  migration-whiteboard-default-tagsets-postgres:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:17.5
+        env:
+          POSTGRES_DB: migration_test
+          POSTGRES_USER: migration_test
+          POSTGRES_PASSWORD: migration_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U migration_test -d migration_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      MIGRATION_TEST_DATABASE_URL: postgres://migration_test:migration_test@localhost:5432/migration_test
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22.22.0'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Whiteboard Template tagset migration PostgreSQL contract
+        run: pnpm run test:migration:whiteboard-default-tagsets:postgres
 
   sonarqube:
     needs: test

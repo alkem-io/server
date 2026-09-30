@@ -5,6 +5,7 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { TagsetType } from '@common/enums/tagset.type';
 import { VisualType } from '@common/enums/visual.type';
 import { WhiteboardPreviewMode } from '@common/enums/whiteboard.preview.mode';
 import {
@@ -298,6 +299,7 @@ describe('WhiteboardService', () => {
         vi.mocked(profileService.addOrUpdateTagsetOnProfile)
       ).toHaveBeenCalledWith(mockProfile, {
         name: TagsetReservedName.DEFAULT,
+        type: TagsetType.FREEFORM,
         tags: [],
       });
     });
@@ -372,6 +374,54 @@ describe('WhiteboardService', () => {
         ProfileType.WHITEBOARD,
         mockStorageAggregator
       );
+    });
+
+    it('keeps unrelated caller tagsets but replaces every default variant with one canonical freeform tagset', async () => {
+      const unrelatedTagset = {
+        name: 'skills',
+        type: TagsetType.FREEFORM,
+        tags: ['TypeScript'],
+      };
+      const profile = {
+        displayName: 'My Whiteboard',
+        tagsets: [
+          {
+            name: 'default',
+            type: TagsetType.SELECT_ONE,
+            tags: ['wrong-type'],
+          },
+          {
+            name: 'DEFAULT',
+            type: TagsetType.FREEFORM,
+            tags: [],
+          },
+          {
+            name: 'DeFaUlT',
+            type: TagsetType.FREEFORM,
+            tags: ['non-empty'],
+          },
+          unrelatedTagset,
+        ],
+      };
+
+      await service.createWhiteboard(
+        { content: validEmptyContent, profile },
+        mockStorageAggregator,
+        actorContext
+      );
+
+      expect(vi.mocked(profileService.createProfile)).toHaveBeenCalledWith(
+        { displayName: 'My Whiteboard', tagsets: [unrelatedTagset] },
+        ProfileType.WHITEBOARD,
+        mockStorageAggregator
+      );
+      expect(
+        vi.mocked(profileService.addOrUpdateTagsetOnProfile)
+      ).toHaveBeenCalledWith(mockProfile, {
+        name: TagsetReservedName.DEFAULT,
+        type: TagsetType.FREEFORM,
+        tags: [],
+      });
     });
   });
 
@@ -1720,6 +1770,9 @@ describe('WhiteboardService', () => {
       await expect(service.hasVisibleContent(canonical)).resolves.toBe(true);
       await expect(service.hasVisibleContent(legacy)).resolves.toBe(true);
       await expect(service.hasVisibleContent(undefined)).resolves.toBe(false);
+      // A cleared contribution default is stored as SQL NULL, so the
+      // availability signal has to treat null as "nothing to offer".
+      await expect(service.hasVisibleContent(null)).resolves.toBe(false);
       await expect(service.hasVisibleContent('not-content')).resolves.toBe(
         false
       );

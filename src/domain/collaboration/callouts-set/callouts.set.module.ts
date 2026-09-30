@@ -13,6 +13,7 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
 import { CalloutModule } from '../callout/callout.module';
+import { TaskBoardModule } from '../callout/task-board/task.board.module';
 import { CollaborationLicenseModule } from '../collaboration/collaboration.license.module';
 import { PostModule } from '../post/post.module';
 import { CalloutsSet } from './callouts.set.entity';
@@ -38,6 +39,7 @@ import { CalloutsSetAuthorizationService } from './callouts.set.service.authoriz
     WhiteboardModule,
     WhiteboardDraftModule,
     PostModule,
+    TaskBoardModule,
     TypeOrmModule.forFeature([CalloutsSet]),
   ],
   providers: [

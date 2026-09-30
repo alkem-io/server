@@ -253,6 +253,7 @@ describe('RegistrationService', () => {
       const roleSet = { id: 'rs-1' };
       organizationLookupService.getOrganizationByDomain.mockResolvedValue({
         id: 'org-1',
+        domain: 'company.com',
         settings: { membership: { allowUsersMatchingDomainToJoin: true } },
         verification: {
           status: OrganizationVerificationEnum.VERIFIED_MANUAL_ATTESTATION,

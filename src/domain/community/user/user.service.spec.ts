@@ -6,6 +6,7 @@ import {
 } from '@common/exceptions';
 import { FormatNotSupportedException } from '@common/exceptions/format.not.supported.exception';
 import { ActorContextCacheService } from '@core/actor-context/actor.context.cache.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ActorService } from '@domain/actor/actor/actor.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
@@ -14,8 +15,10 @@ import { StorageAggregatorService } from '@domain/storage/storage-aggregator/sto
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { PlatformRoleAssignmentAuditService } from '@src/platform-admin/platform-role-assignment-audit/platform.role.assignment.audit.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -24,6 +27,7 @@ import { QueryFailedError } from 'typeorm';
 import { type Mock, vi } from 'vitest';
 import { UserLookupService } from '../user-lookup/user.lookup.service';
 import { UserSettingsService } from '../user-settings/user.settings.service';
+import { UpdateUserInput } from './dto/user.dto.update';
 import { User } from './user.entity';
 import { IUser } from './user.interface';
 import { UserService } from './user.service';
@@ -74,6 +78,24 @@ describe('UserService', () => {
     findBy: Mock;
     createQueryBuilder: Mock;
   };
+  let authorizationService: { isAccessGranted: Mock };
+  let platformAuthorizationPolicyService: {
+    getPlatformAuthorizationPolicy: Mock;
+  };
+  let platformRoleAssignmentAuditService: {
+    recordServiceProfileChange: Mock;
+    recordServiceProfileRejected: Mock;
+  };
+
+  // 027-platform-role-redesign (T052): updateUser now requires an
+  // actorContext for the SET_SERVICE_PROFILE check. Carries a legacy
+  // global-admin credential so resolveInitiatorRole's attribution helper
+  // (called whenever serviceProfile is set) has a legitimate reacher to
+  // resolve against, rather than throwing on an empty intersection.
+  const mockActorContext = {
+    actorID: 'actor-1',
+    credentials: [{ type: 'global-admin', resourceID: '' }],
+  } as any;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -110,6 +132,20 @@ describe('UserService', () => {
     actorService = module.get(ActorService) as any;
     kratosService = module.get(KratosService) as any;
     namingService = module.get(NamingService) as any;
+    authorizationService = module.get(AuthorizationService) as any;
+    platformAuthorizationPolicyService = module.get(
+      PlatformAuthorizationPolicyService
+    ) as any;
+    platformRoleAssignmentAuditService = module.get(
+      PlatformRoleAssignmentAuditService
+    ) as any;
+    // Default to authorized so pre-existing tests that don't set
+    // serviceProfile are unaffected, and the happy-path serviceProfile test
+    // below doesn't need its own boilerplate.
+    authorizationService.isAccessGranted.mockReturnValue(true);
+    platformAuthorizationPolicyService.getPlatformAuthorizationPolicy.mockResolvedValue(
+      { id: 'platform-auth' }
+    );
   });
 
   it('should be defined', () => {
@@ -228,7 +264,10 @@ describe('UserService', () => {
       repository.save.mockResolvedValue(existingUser);
       actorContextCacheService.deleteByActorID.mockResolvedValue(undefined);
 
-      await service.updateUser({ ID: 'user-1', firstName: 'NewFirst' } as any);
+      await service.updateUser(
+        { ID: 'user-1', firstName: 'NewFirst' } as any,
+        mockActorContext
+      );
       expect(existingUser.firstName).toBe('NewFirst');
     });
 
@@ -243,7 +282,10 @@ describe('UserService', () => {
       repository.save.mockResolvedValue(existingUser);
       actorContextCacheService.deleteByActorID.mockResolvedValue(undefined);
 
-      await service.updateUser({ ID: 'user-1', lastName: 'NewLast' } as any);
+      await service.updateUser(
+        { ID: 'user-1', lastName: 'NewLast' } as any,
+        mockActorContext
+      );
       expect(existingUser.lastName).toBe('NewLast');
     });
 
@@ -258,7 +300,10 @@ describe('UserService', () => {
       repository.save.mockResolvedValue(existingUser);
       actorContextCacheService.deleteByActorID.mockResolvedValue(undefined);
 
-      await service.updateUser({ ID: 'user-1', phone: '456' } as any);
+      await service.updateUser(
+        { ID: 'user-1', phone: '456' } as any,
+        mockActorContext
+      );
       expect(existingUser.phone).toBe('456');
     });
 
@@ -273,10 +318,130 @@ describe('UserService', () => {
       repository.save.mockResolvedValue(existingUser);
       actorContextCacheService.deleteByActorID.mockResolvedValue(undefined);
 
-      await service.updateUser({
+      await service.updateUser(
+        {
+          ID: 'user-1',
+          serviceProfile: true,
+        } as any,
+        mockActorContext
+      );
+      expect(existingUser.serviceProfile).toBe(true);
+      expect(
+        platformRoleAssignmentAuditService.recordServiceProfileChange
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          targetUserId: 'user-1',
+          previousServiceProfile: false,
+          newServiceProfile: true,
+        })
+      );
+    });
+
+    // 027-platform-role-redesign (T052, A21, FR-002): an unauthorized
+    // attempt MUST NOT silently apply the field, and MUST audit the
+    // rejection.
+    it('should deny changing serviceProfile without SET_SERVICE_PROFILE and audit the rejection', async () => {
+      const existingUser = {
+        id: 'user-1',
+        nameID: 'existing-name',
+        serviceProfile: false,
+        profile: { id: 'profile-1' },
+      } as unknown as IUser;
+      userLookupService.getUserById.mockResolvedValue(existingUser);
+      authorizationService.isAccessGranted.mockReturnValue(false);
+
+      await expect(
+        service.updateUser(
+          { ID: 'user-1', serviceProfile: true } as any,
+          mockActorContext
+        )
+      ).rejects.toThrow(
+        // spec-server-6 fix: matches contracts/graphql-contract.md verbatim.
+        'Forbidden: set-service-profile required to change the service-profile marker'
+      );
+      expect(existingUser.serviceProfile).toBe(false);
+      expect(repository.save).not.toHaveBeenCalled();
+      expect(
+        platformRoleAssignmentAuditService.recordServiceProfileRejected
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          targetUserId: 'user-1',
+          rejectedRule: 'SET_SERVICE_PROFILE',
+          newServiceProfile: true,
+        })
+      );
+    });
+
+    // corr-server-3/qual-server-1 fix: the test above dodges the real
+    // production shape by giving the actor a legacy `global-admin`
+    // credential — a realistic denial is an actor holding NEITHER the
+    // owning role NOR a legacy credential (that is often exactly WHY it
+    // was denied). Before the fix, `resolveInitiatorRole` would throw a raw
+    // `Error` on this empty intersection, escaping as an internal error
+    // rather than `ForbiddenException`, and silently dropping this audit
+    // row for 100% of realistic denials.
+    it('denies an actor with NO owning/legacy credential (the realistic denial shape) with ForbiddenException, and still audits the rejection', async () => {
+      const existingUser = {
+        id: 'user-1',
+        nameID: 'existing-name',
+        serviceProfile: false,
+        profile: { id: 'profile-1' },
+      } as unknown as IUser;
+      userLookupService.getUserById.mockResolvedValue(existingUser);
+      authorizationService.isAccessGranted.mockReturnValue(false);
+
+      const unprivilegedActorContext = {
+        actorID: 'actor-2',
+        credentials: [{ type: 'global-registered', resourceID: '' }],
+      } as any;
+
+      await expect(
+        service.updateUser(
+          { ID: 'user-1', serviceProfile: true } as any,
+          unprivilegedActorContext
+        )
+      ).rejects.toThrow(
+        // spec-server-6 fix: matches contracts/graphql-contract.md verbatim.
+        'Forbidden: set-service-profile required to change the service-profile marker'
+      );
+      expect(existingUser.serviceProfile).toBe(false);
+      expect(repository.save).not.toHaveBeenCalled();
+      expect(
+        platformRoleAssignmentAuditService.recordServiceProfileRejected
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          targetUserId: 'user-1',
+          rejectedRule: 'SET_SERVICE_PROFILE',
+          newServiceProfile: true,
+        })
+      );
+    });
+
+    // 027-platform-role-redesign (T052, A21, T070i): `serviceProfile` MUST
+    // remain a real, typed field on UpdateUserInput — removing it would be
+    // a breaking input-field removal, forbidden in the additive slice
+    // (T059's zero-breaking-changes invariant). Unlike the tests above,
+    // this one constructs a genuine UpdateUserInput (no `as any` escape
+    // hatch), so deleting the field from the DTO fails `tsc` here, not just
+    // at the resolver call site.
+    it('keeps serviceProfile as a real field on UpdateUserInput, authorized end to end', async () => {
+      const existingUser = {
+        id: 'user-1',
+        nameID: 'existing-name',
+        serviceProfile: false,
+        profile: { id: 'profile-1' },
+      } as unknown as IUser;
+      userLookupService.getUserById.mockResolvedValue(existingUser);
+      repository.save.mockResolvedValue(existingUser);
+      actorContextCacheService.deleteByActorID.mockResolvedValue(undefined);
+
+      const input: UpdateUserInput = {
         ID: 'user-1',
         serviceProfile: true,
-      } as any);
+      };
+
+      await service.updateUser(input, mockActorContext);
+
       expect(existingUser.serviceProfile).toBe(true);
     });
 
@@ -295,10 +460,13 @@ describe('UserService', () => {
       });
       actorContextCacheService.deleteByActorID.mockResolvedValue(undefined);
 
-      await service.updateUser({
-        ID: 'user-1',
-        profileData: { displayName: 'Updated' },
-      } as any);
+      await service.updateUser(
+        {
+          ID: 'user-1',
+          profileData: { displayName: 'Updated' },
+        } as any,
+        mockActorContext
+      );
       expect(profileService.updateProfile).toHaveBeenCalled();
     });
 
@@ -313,7 +481,10 @@ describe('UserService', () => {
       repository.save.mockResolvedValue(existingUser);
       actorContextCacheService.deleteByActorID.mockResolvedValue(undefined);
 
-      await service.updateUser({ ID: 'user-1', nameID: 'new-name' } as any);
+      await service.updateUser(
+        { ID: 'user-1', nameID: 'new-name' } as any,
+        mockActorContext
+      );
       expect(existingUser.nameID).toBe('new-name');
     });
 
@@ -327,7 +498,10 @@ describe('UserService', () => {
       repository.save.mockResolvedValue(existingUser);
       actorContextCacheService.deleteByActorID.mockResolvedValue(undefined);
 
-      await service.updateUser({ ID: 'user-1', nameID: 'SAME-NAME' } as any);
+      await service.updateUser(
+        { ID: 'user-1', nameID: 'SAME-NAME' } as any,
+        mockActorContext
+      );
       expect(repository.count).not.toHaveBeenCalled();
     });
 
@@ -341,7 +515,7 @@ describe('UserService', () => {
       repository.save.mockResolvedValue(existingUser);
       actorContextCacheService.deleteByActorID.mockResolvedValue(undefined);
 
-      await service.updateUser({ ID: 'user-1' } as any);
+      await service.updateUser({ ID: 'user-1' } as any, mockActorContext);
       expect(actorContextCacheService.deleteByActorID).toHaveBeenCalledWith(
         'user-1'
       );
@@ -843,7 +1017,10 @@ describe('UserService', () => {
       repository.count.mockResolvedValue(1);
 
       await expect(
-        service.updateUser({ ID: 'user-1', nameID: 'taken-name' } as any)
+        service.updateUser(
+          { ID: 'user-1', nameID: 'taken-name' } as any,
+          mockActorContext
+        )
       ).rejects.toThrow(ValidationException);
     });
 
@@ -857,7 +1034,7 @@ describe('UserService', () => {
       repository.save.mockResolvedValue(existingUser);
       actorContextCacheService.deleteByActorID.mockResolvedValue(undefined);
 
-      await service.updateUser({ ID: 'user-1' } as any);
+      await service.updateUser({ ID: 'user-1' } as any, mockActorContext);
       expect(profileService.updateProfile).not.toHaveBeenCalled();
     });
   });

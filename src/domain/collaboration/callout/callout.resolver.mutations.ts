@@ -1,6 +1,7 @@
 import { SUBSCRIPTION_CALLOUT_POST_CREATED } from '@common/constants';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { CalloutAllowedActors } from '@common/enums/callout.allowed.contributors';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
@@ -47,6 +48,7 @@ import { RoomResolverService } from '@services/infrastructure/entity-resolver/ro
 import { TemporaryStorageService } from '@services/infrastructure/temporary-storage/temporary.storage.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
+import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
@@ -99,6 +101,7 @@ export class CalloutResolverMutations {
     private readonly temporaryStorageService: TemporaryStorageService,
     private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly collaborationLicenseService: CollaborationLicenseService,
+    private readonly platformResourceAuditService: PlatformResourceAuditService,
     private readonly whiteboardService: WhiteboardService,
     private readonly whiteboardDraftService: WhiteboardDraftService,
     private readonly reactionService: ReactionService,
@@ -141,13 +144,50 @@ export class CalloutResolverMutations {
     @Args('deleteData') deleteData: DeleteCalloutInput
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(deleteData.ID);
-    this.authorizationService.grantAccessOrFail(
+    // 027-platform-role-redesign (T043, A8, research D5): dual-path — the
+    // owning space keeps ordinary DELETE, platform-content-full-access
+    // reaches the same mutation via its own privilege (cascaded from the
+    // root policy, T036). Neither check alone is sufficient; either
+    // satisfies the mutation.
+    const canDeleteAsOwner = this.authorizationService.isAccessGranted(
       actorContext,
       callout.authorization,
-      AuthorizationPrivilege.DELETE,
-      `delete callout: ${callout.id}`
+      AuthorizationPrivilege.DELETE
     );
-    return await this.calloutService.deleteCallout(deleteData.ID);
+    const canDeleteAsContentFullAccess =
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        callout.authorization,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS
+      );
+    if (!canDeleteAsOwner && !canDeleteAsContentFullAccess) {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        callout.authorization,
+        AuthorizationPrivilege.DELETE,
+        `delete callout: ${callout.id}`
+      );
+    }
+    const deleted = await this.calloutService.deleteCallout(deleteData.ID);
+    // T058/FR-018a: audit ONLY on the PLATFORM branch — never the ordinary
+    // owner branch — taken from the authorization RESULT above, not
+    // re-derived from the actor's roles.
+    if (canDeleteAsContentFullAccess) {
+      await this.platformResourceAuditService.recordEventForActor(
+        actorContext,
+        [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        {
+          resourceKind: 'callout',
+          resourceId: deleteData.ID,
+          outcome: 'deleted',
+        }
+      );
+    }
+    return deleted;
   }
 
   @Mutation(() => ICallout, {
@@ -164,12 +204,34 @@ export class CalloutResolverMutations {
         calloutsSet: { authorization: true },
       },
     });
-    this.authorizationService.grantAccessOrFail(
-      actorContext,
-      callout.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `update callout: ${callout.id}`
-    );
+    // 027-platform-role-redesign (A7, research D5) — dual path, SCOPED to
+    // template content. A CALLOUT template's content is a callout the client
+    // edits through this mutation (`UpdateCalloutTemplate`), and its policy
+    // carries Platform Support's PLATFORM_SUPPORT_ORG_RESOURCES cascaded from
+    // the owning organization's account (`template.service.authorization.ts`
+    // → `callout.service.authorization.ts`: a template callout takes its
+    // parent's policy verbatim). Without this branch Support could create and
+    // delete templates in an organization's pack but not edit one (sandbox
+    // walk, 2026-09-16). The `isTemplate` guard is load-bearing: the same
+    // account cascade reaches every callout inside an organization's spaces,
+    // and FR-008(a) keeps Support out of those unless the space opts in via
+    // `allowPlatformSupportAsAdmin` — so the privilege must never satisfy
+    // this gate for a non-template callout.
+    const canUpdateAsPlatformSupport =
+      callout.isTemplate &&
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        callout.authorization,
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+      );
+    if (!canUpdateAsPlatformSupport) {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        callout.authorization,
+        AuthorizationPrivilege.UPDATE,
+        `update callout: ${callout.id}`
+      );
+    }
 
     const defaults = calloutData.contributionDefaults;
     const defaultsDraftID = defaults?.draftWhiteboardID;
@@ -461,11 +523,27 @@ export class CalloutResolverMutations {
       AuthorizationPrivilege.UPDATE_CALLOUT_PUBLISHER,
       `update publisher information on callout: ${callout.id}`
     );
-    return this.calloutService.updateCalloutPublishInfo(
+    const updated = await this.calloutService.updateCalloutPublishInfo(
       callout,
       calloutData.publisherID,
       calloutData.publishDate
     );
+    // T058 — single-path surface (no owner branch): every successful call
+    // is, by construction, authorized by UPDATE_CALLOUT_PUBLISHER.
+    await this.platformResourceAuditService.recordEventForActor(
+      actorContext,
+      [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
+      [
+        AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_SUPPORT,
+      ],
+      {
+        resourceKind: 'callout-publisher',
+        resourceId: callout.id,
+        outcome: 'visibility_changed',
+      }
+    );
+    return updated;
   }
 
   @Mutation(() => ICalloutContribution, {
@@ -551,6 +629,10 @@ export class CalloutResolverMutations {
       actorContext.actorID
     );
 
+    // Captured here, before the save below, so the analytics branch cannot
+    // be disturbed by any future change to what the save call returns.
+    const isTask = this.taskBoardService.isTask(contribution);
+
     const { roleSet, platformRolesAccess, spaceSettings } =
       await this.roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout(
         callout.id
@@ -627,7 +709,8 @@ export class CalloutResolverMutations {
             contribution,
             contribution.post,
             levelZeroSpaceID,
-            actorContext
+            actorContext,
+            isTask
           );
         }
       }
@@ -679,6 +762,65 @@ export class CalloutResolverMutations {
             contribution.collaboraDocument,
             levelZeroSpaceID,
             actorContext
+          );
+        }
+      }
+
+      // One notification gate for every contribution type, dispatched after the
+      // activity/analytics work above so a notification failure can never drop
+      // the activity entry. Only an explicit `false` suppresses — an absent
+      // value (every in-process producer that bypasses GraphQL's default-value
+      // substitution) must still notify.
+      const contributionMaterialized =
+        (contributionData.post && contribution.post) ||
+        (contributionData.link && contribution.link) ||
+        (contributionData.whiteboard && contribution.whiteboard) ||
+        (contributionData.memo && contribution.memo) ||
+        (contributionData.collaboraDocument && contribution.collaboraDocument);
+
+      if (
+        callout.settings.visibility === CalloutVisibility.PUBLISHED &&
+        contributionMaterialized
+      ) {
+        if (contributionData.sendNotification !== false) {
+          const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
+            {
+              contribution,
+              callout,
+              contributionType: contributionData.type,
+              triggeredBy: actorContext.actorID,
+            };
+          this.notificationAdapterSpace
+            .spaceCollaborationCalloutContributionCreated(notificationInput)
+            .catch((err: unknown) => {
+              this.logger.error?.(
+                {
+                  message: 'Failed to send contribution-created notification',
+                  calloutId: callout.id,
+                  contributionId: contribution.id,
+                  error: (err as Error)?.message,
+                },
+                (err as Error)?.stack,
+                LogContext.NOTIFICATIONS
+              );
+            });
+        } else {
+          // The only observability for a suppressed emission: distinguishes an
+          // author-suppressed contribution from a genuinely broken delivery.
+          // Logged at warn, not verbose — production's console transport
+          // floor discards verbose, and this record is the sole trace that
+          // silence was chosen rather than a broken delivery pipeline.
+          this.logger.warn?.(
+            {
+              message: 'Contribution notification suppressed by author',
+              calloutID: callout.id,
+              contributionID: contribution.id,
+              contributionType: contributionData.type,
+              triggeredBy: actorContext.actorID,
+              spaceID: levelZeroSpaceID,
+              suppressed: true,
+            },
+            LogContext.NOTIFICATIONS
           );
         }
       }
@@ -799,16 +941,6 @@ export class CalloutResolverMutations {
     levelZeroSpaceID: string,
     actorContext: ActorContext
   ) {
-    const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
-      {
-        contribution: contribution,
-        callout: callout,
-        contributionType: CalloutContributionType.LINK,
-        triggeredBy: actorContext.actorID,
-      };
-    await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
-      notificationInput
-    );
     const activityLogInput: ActivityInputCalloutLinkCreated = {
       triggeredBy: actorContext.actorID,
       link: link,
@@ -833,17 +965,6 @@ export class CalloutResolverMutations {
     levelZeroSpaceID: string,
     actorContext: ActorContext
   ) {
-    const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
-      {
-        contribution: contribution,
-        callout: callout,
-        contributionType: CalloutContributionType.WHITEBOARD,
-        triggeredBy: actorContext.actorID,
-      };
-    await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
-      notificationInput
-    );
-
     this.activityAdapter.calloutWhiteboardCreated({
       triggeredBy: actorContext.actorID,
       whiteboard: whiteboard,
@@ -865,19 +986,9 @@ export class CalloutResolverMutations {
     contribution: ICalloutContribution,
     post: IPost,
     levelZeroSpaceID: string,
-    actorContext: ActorContext
+    actorContext: ActorContext,
+    isTask: boolean
   ) {
-    const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
-      {
-        contribution: contribution,
-        callout: callout,
-        contributionType: CalloutContributionType.POST,
-        triggeredBy: actorContext.actorID,
-      };
-    await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
-      notificationInput
-    );
-
     const activityLogInput: ActivityInputCalloutPostCreated = {
       triggeredBy: actorContext.actorID,
       post: post,
@@ -885,14 +996,25 @@ export class CalloutResolverMutations {
     };
     this.activityAdapter.calloutPostCreated(activityLogInput);
 
-    this.contributionReporter.calloutPostCreated(
-      {
-        id: post.id,
-        name: post.profile.displayName,
-        space: levelZeroSpaceID,
-      },
-      actorContext
-    );
+    if (isTask) {
+      this.contributionReporter.taskCreated(
+        {
+          id: post.id,
+          name: post.profile.displayName,
+          space: levelZeroSpaceID,
+        },
+        actorContext
+      );
+    } else {
+      this.contributionReporter.calloutPostCreated(
+        {
+          id: post.id,
+          name: post.profile.displayName,
+          space: levelZeroSpaceID,
+        },
+        actorContext
+      );
+    }
   }
 
   private async processActivityMemoCreated(
@@ -902,17 +1024,6 @@ export class CalloutResolverMutations {
     levelZeroSpaceID: string,
     actorContext: ActorContext
   ) {
-    const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
-      {
-        contribution: contribution,
-        callout: callout,
-        contributionType: CalloutContributionType.MEMO,
-        triggeredBy: actorContext.actorID,
-      };
-    await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
-      notificationInput
-    );
-
     const activityLogInput: ActivityInputCalloutMemoCreated = {
       triggeredBy: actorContext.actorID,
       memo: memo,
@@ -937,17 +1048,6 @@ export class CalloutResolverMutations {
     levelZeroSpaceID: string,
     actorContext: ActorContext
   ) {
-    const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
-      {
-        contribution: contribution,
-        callout: callout,
-        contributionType: CalloutContributionType.COLLABORA_DOCUMENT,
-        triggeredBy: actorContext.actorID,
-      };
-    await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
-      notificationInput
-    );
-
     this.contributionReporter.calloutCollaboraDocumentCreated(
       {
         id: collaboraDocument.id,

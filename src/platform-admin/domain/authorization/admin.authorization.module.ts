@@ -1,4 +1,5 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { RoleSetCacheModule } from '@domain/access/role-set/role.set.service.cache.module';
 import { ActorModule } from '@domain/actor/actor/actor.module';
 import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { CredentialModule } from '@domain/actor/credential/credential.module';
@@ -8,6 +9,7 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
 import { VirtualActorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { SpaceModule } from '@domain/space/space/space.module';
 import { Module } from '@nestjs/common';
+import { PlatformModule } from '@platform/platform/platform.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { AuthResetModule } from '@services/auth-reset/publisher/auth-reset.module';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
@@ -27,10 +29,14 @@ import { AdminAuthorizationService } from './admin.authorization.service';
     OrganizationLookupModule,
     CredentialModule,
     PlatformAuthorizationPolicyModule,
+    // Direct credential grant/revoke must drop the role-set membership caches
+    // (a leaf module — no cycle back into platform-admin).
+    RoleSetCacheModule,
     NotificationAdapterModule,
     AuthResetModule,
     SpaceModule,
     VirtualActorModule,
+    PlatformModule,
   ],
   providers: [
     AdminAuthorizationService,

@@ -81,6 +81,9 @@ export enum AlkemioErrorStatus {
   STORAGE_SERVICE_UNAVAILABLE = 'STORAGE_SERVICE_UNAVAILABLE',
   SESSION_STORE_UNAVAILABLE = 'SESSION_STORE_UNAVAILABLE',
   URL_RESOLVER_ERROR = 'URL_RESOLVER_ERROR',
+  // 027-platform-role-redesign: fail-closed role-assignment audit write
+  // failure — the grant/revoke does not take effect (FR-027).
+  PLATFORM_ROLE_ASSIGNMENT_AUDIT_FAILED = 'PLATFORM_ROLE_ASSIGNMENT_AUDIT_FAILED',
   // Self-account deletion: the calling session is older than the privileged
   // window (or its issue time is missing/unparseable — fail closed). Distinct
   // from SESSION_EXPIRED so the client can route specifically to the
@@ -91,4 +94,10 @@ export enum AlkemioErrorStatus {
   // read on this code and renders the itemized blocked dialog from the fresh
   // answer.
   ACCOUNT_DELETION_BLOCKED = 'ACCOUNT_DELETION_BLOCKED',
+  // Organization user-associates: applying is switched off by the
+  // organization's own membership setting.
+  ROLE_SET_APPLICATIONS_NOT_ACCEPTED = 'ROLESET_APPLICATIONS_NOT_ACCEPTED',
+  // Organization user-associates: the direct join door (domain match) is not
+  // open for this viewer on this organization at this moment.
+  ROLE_SET_JOIN_NOT_ELIGIBLE = 'ROLESET_JOIN_NOT_ELIGIBLE',
 }

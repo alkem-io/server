@@ -132,7 +132,8 @@ export class MessageNotificationService {
           post,
           room,
           message,
-          actorContext
+          actorContext,
+          contribution
         );
         break;
       }

@@ -23,10 +23,12 @@ function makeRoleSet(
   roles?: Array<{
     name: RoleName;
     credential: { type: string; resourceID: string };
-  }>
+  }>,
+  entryRoleName: RoleName = RoleName.MEMBER
 ): IRoleSet {
   return {
     id,
+    entryRoleName,
     roles: roles?.map((r, i) => ({
       id: `role-${i}`,
       name: r.name,
@@ -207,6 +209,37 @@ describe('RoleSetMembershipStatusDataLoader', () => {
         'rs-1',
         CommunityMembershipStatus.MEMBER
       );
+    });
+
+    it('should detect an organization ASSOCIATE credential as the entry role (entryRoleName generalization)', async () => {
+      const roleSet = makeRoleSet(
+        'org-rs-1',
+        [
+          {
+            name: RoleName.ASSOCIATE,
+            credential: {
+              type: 'organization-associate',
+              resourceID: 'org-1',
+            },
+          },
+        ],
+        RoleName.ASSOCIATE
+      );
+      const key = makeKey('agent-1', 'user-1', roleSet);
+
+      const cred = makeCredential('organization-associate', 'org-1');
+      mockActorCredentialsFromMap(
+        mocks.actorService,
+        new Map([['agent-1', [cred]]])
+      );
+      mocks.roleSetCacheService.getMembershipStatusBatchFromCache.mockResolvedValue(
+        [undefined]
+      );
+
+      const loader = createLoader(mocks);
+      const result = await loader.loader.load(key);
+
+      expect(result).toBe(CommunityMembershipStatus.MEMBER);
     });
 
     it('should not match when credential type differs', async () => {

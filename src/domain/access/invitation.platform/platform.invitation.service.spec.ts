@@ -186,6 +186,24 @@ describe('PlatformInvitationService', () => {
       ).resolves.toBeDefined();
     });
 
+    it('should allow FEATURE_VC_CAMPAIGN (the platform-vc-campaign successor) as an accepted platform role', async () => {
+      const roleSet = { type: RoleSetType.PLATFORM } as IRoleSet;
+      const invitationData = {
+        email: 'user@test.com',
+        createdBy: 'user-1',
+        roleSetInvitedToParent: false,
+        roleSetExtraRoles: [RoleName.FEATURE_VC_CAMPAIGN],
+      };
+
+      vi.spyOn(platformInvitationRepository, 'save').mockImplementation(
+        async (entity: any) => entity
+      );
+
+      await expect(
+        service.createPlatformInvitation(roleSet, invitationData)
+      ).resolves.toBeDefined();
+    });
+
     it('should throw ValidationException when any role in the list is disallowed for platform roleSet', async () => {
       const roleSet = { type: RoleSetType.PLATFORM } as IRoleSet;
       const invitationData = {
