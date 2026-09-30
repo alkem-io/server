@@ -1,6 +1,5 @@
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
-import { EntityNotFoundException } from '@common/exceptions';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileResolverFields } from '@domain/common/profile/profile.resolver.fields';
 import { ProfileService } from '@domain/common/profile/profile.service';
@@ -118,14 +117,14 @@ describe('ProfileResolverFields', () => {
       expect(result).toBe(defaultTagset);
     });
 
-    it('throws EntityNotFoundException when default tagset not found', async () => {
+    it('returns undefined when default tagset is absent', async () => {
       const { resolver } = createResolver();
       const tagsets = [{ name: 'skills', type: TagsetType.FREEFORM }];
       const loader = makeLoader(tagsets);
 
       await expect(
         resolver.tagset(profile, undefined as any, loader as any)
-      ).rejects.toThrow(EntityNotFoundException);
+      ).resolves.toBeUndefined();
     });
 
     it('returns named tagset when tagsetName is provided', async () => {
@@ -152,7 +151,7 @@ describe('ProfileResolverFields', () => {
       expect(result).toBe(skillsTagset);
     });
 
-    it('throws EntityNotFoundException when named tagset not found', async () => {
+    it('returns undefined when named tagset is absent', async () => {
       const { resolver } = createResolver();
       const tagsets = [
         {
@@ -164,7 +163,7 @@ describe('ProfileResolverFields', () => {
 
       await expect(
         resolver.tagset(profile, TagsetReservedName.SKILLS, loader as any)
-      ).rejects.toThrow(EntityNotFoundException);
+      ).resolves.toBeUndefined();
     });
   });
 

@@ -489,7 +489,10 @@ export class CalloutContributionService {
     const calloutContribution = await this.getCalloutContributionOrFail(
       calloutContributionInput.id,
       {
-        relations: { collaboraDocument: true, ...relations },
+        // `document` comes along so the CollaboraDocument.previewUrl field
+        // resolver can build its URL from the already-loaded relation instead
+        // of issuing one query per contribution on a board.
+        relations: { collaboraDocument: { document: true }, ...relations },
       }
     );
     if (!calloutContribution.collaboraDocument) {

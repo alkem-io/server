@@ -1156,7 +1156,10 @@ export class CalloutFramingService {
     const calloutFraming = await this.getCalloutFramingOrFail(
       calloutFramingInput.id,
       {
-        relations: { collaboraDocument: true },
+        // `document` comes along so the CollaboraDocument.previewUrl field
+        // resolver can build its URL from the already-loaded relation instead
+        // of issuing one query per document on a board.
+        relations: { collaboraDocument: { document: true } },
       }
     );
     return calloutFraming.collaboraDocument ?? null;
