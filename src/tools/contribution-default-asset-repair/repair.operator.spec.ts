@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { FileServiceAdapterException } from '@services/adapters/file-service-adapter/file.service.adapter.exception';
 import {
+  canonicalJson,
   ContributionDefaultRepairCoordinator,
   createManifest,
   createRepairReference,
@@ -14,6 +15,14 @@ import {
   sha256,
   writePrivateManifest,
 } from './repair.operator';
+
+describe('canonicalJson', () => {
+  it('orders object keys by code unit rather than the process locale', () => {
+    expect(canonicalJson({ z: 1, 'ä': 2, _: 3, A: 4, a: 5 })).toBe(
+      '{"A":4,"_":3,"a":5,"z":1,"ä":2}'
+    );
+  });
+});
 
 const originalSnapshotDigest = sha256('original-snapshot');
 const externalReference = createRepairReference(

@@ -216,4 +216,24 @@ describe('ContributionDefaultAssetRepairService', () => {
       })
     ).rejects.toThrow('manifest original snapshot digest mismatch');
   });
+
+  it('fails discovery evidence collection when a live template cannot be read', async () => {
+    const query = vi.fn().mockResolvedValue([
+      { id: 'template-1', contentPointer: 'template-document-1' },
+    ]);
+    const failure = new Error('template read unavailable');
+    const service = new ContributionDefaultAssetRepairService(
+      { query } as any,
+      {
+        getDocumentContent: vi.fn().mockRejectedValue(failure),
+        getDocumentByReference: vi.fn(),
+      } as any,
+      { copyDocumentToBucket: vi.fn() } as any,
+      { getDocumentOrFail: vi.fn() } as any
+    );
+
+    await expect(
+      (service as any).matchingTemplates({ 'asset-a': 'source-a' })
+    ).rejects.toBe(failure);
+  });
 });

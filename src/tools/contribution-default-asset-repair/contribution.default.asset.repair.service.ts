@@ -323,24 +323,20 @@ export class ContributionDefaultAssetRepairService implements RepairPort {
       assetRefsDigest: string;
     }> = [];
     for (const row of rows) {
-      try {
-        const templateBytes = await this.fileServiceAdapter.getDocumentContent(
-          row.contentPointer
-        );
-        const templateAssets = await this.readAssetLocators(templateBytes);
-        if (
-          Object.entries(assetLocators).every(
-            ([fileId, locator]) => templateAssets[fileId] === locator
-          )
-        ) {
-          matches.push({
-            id: row.id,
-            snapshotDigest: sha256(templateBytes),
-            assetRefsDigest: sha256(canonicalJson(templateAssets)),
-          });
-        }
-      } catch {
-        continue;
+      const templateBytes = await this.fileServiceAdapter.getDocumentContent(
+        row.contentPointer
+      );
+      const templateAssets = await this.readAssetLocators(templateBytes);
+      if (
+        Object.entries(assetLocators).every(
+          ([fileId, locator]) => templateAssets[fileId] === locator
+        )
+      ) {
+        matches.push({
+          id: row.id,
+          snapshotDigest: sha256(templateBytes),
+          assetRefsDigest: sha256(canonicalJson(templateAssets)),
+        });
       }
     }
     return matches;
