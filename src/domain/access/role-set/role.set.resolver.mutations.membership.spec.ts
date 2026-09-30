@@ -10,6 +10,7 @@ import { RoleSetMembershipException } from '@common/exceptions/role.set.membersh
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ApplicationService } from '@domain/access/application/application.service';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
+import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
@@ -17,6 +18,7 @@ import { OrganizationLookupService } from '@domain/community/organization-lookup
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationOrganizationAdapter } from '@services/adapters/notification-adapter/notification.organization.adapter';
+import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { NotificationUserAdapter } from '@services/adapters/notification-adapter/notification.user.adapter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
@@ -48,6 +50,8 @@ describe('RoleSetResolverMutationsMembership', () => {
   let notificationOrganizationAdapter: NotificationOrganizationAdapter;
   let notificationAdapterSpace: NotificationSpaceAdapter;
   let notificationUserAdapter: NotificationUserAdapter;
+  let notificationPlatformAdapter: NotificationPlatformAdapter;
+  let platformInvitationServiceMock: PlatformInvitationService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -101,6 +105,12 @@ describe('RoleSetResolverMutationsMembership', () => {
     );
     notificationAdapterSpace = module.get<NotificationSpaceAdapter>(
       NotificationSpaceAdapter
+    );
+    notificationPlatformAdapter = module.get<NotificationPlatformAdapter>(
+      NotificationPlatformAdapter
+    );
+    platformInvitationServiceMock = module.get<PlatformInvitationService>(
+      PlatformInvitationService
     );
     communityResolverService = module.get<CommunityResolverService>(
       CommunityResolverService
@@ -770,7 +780,7 @@ describe('RoleSetResolverMutationsMembership', () => {
       ).not.toHaveBeenCalled();
     });
 
-    describe('ORGANIZATION (R1/R2/FR-002)', () => {
+    describe('ORGANIZATION', () => {
       const actorContext = { actorID: 'admin-1' } as any;
       const mockRoleSet = {
         id: 'org-rs-1',
@@ -779,20 +789,221 @@ describe('RoleSetResolverMutationsMembership', () => {
         parentRoleSet: undefined,
       } as any;
 
-      it('rejects invitedUserEmails with a validation error before anything is created', async () => {
-        (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(
-          mockRoleSet
-        );
+      describe('email invitations', () => {
+        const orgPlatformInvitation = {
+          id: 'pinv-1',
+          email: 'new@example.com',
+          roleSetExtraRoles: ['admin'],
+          welcomeMessage: 'Welcome',
+        } as any;
 
-        await expect(
-          resolver.inviteForEntryRoleOnRoleSet(actorContext, {
-            roleSetID: 'org-rs-1',
-            invitedActorIDs: [],
-            invitedUserEmails: ['new@example.com'],
+        const setUpEmailInvite = () => {
+          (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(
+            mockRoleSet
+          );
+          (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+            undefined
+          );
+          (
+            actorLookupService.validateActorsAndGetTypes as Mock
+          ).mockResolvedValue(new Map());
+          (userLookupService.getUserByEmail as Mock).mockResolvedValue(
+            undefined
+          );
+          (
+            platformInvitationServiceMock.getExistingPlatformInvitationForRoleSet as Mock
+          ).mockResolvedValue(undefined);
+          (roleSetService.createPlatformInvitation as Mock).mockResolvedValue(
+            orgPlatformInvitation
+          );
+          (invitationService.getInvitationsOrFail as Mock).mockResolvedValue(
+            []
+          );
+          (
+            roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
+          ).mockResolvedValue([]);
+          (authorizationPolicyService.saveAll as Mock).mockResolvedValue(
+            undefined
+          );
+          (
+            organizationLookupService.getOrganizationForRoleSetOrFail as Mock
+          ).mockResolvedValue({ id: 'org-1' });
+          (
+            notificationOrganizationAdapter.organizationAssociatePlatformInvitationCreated as Mock
+          ).mockResolvedValue(undefined);
+        };
+
+        it('creates an email invitation for an unknown address and dispatches the organization email exactly once', async () => {
+          setUpEmailInvite();
+
+          const result = await resolver.inviteForEntryRoleOnRoleSet(
+            actorContext,
+            {
+              roleSetID: 'org-rs-1',
+              invitedActorIDs: [],
+              invitedUserEmails: ['new@example.com'],
+              extraRoles: ['admin'],
+            } as any
+          );
+
+          expect(result).toHaveLength(1);
+          expect(result[0].type).toBe(
+            RoleSetInvitationResultType.INVITED_TO_PLATFORM_AND_ROLE_SET
+          );
+          expect(result[0].invitedEmail).toBe('new@example.com');
+          expect(result[0].platformInvitation).toBe(orgPlatformInvitation);
+          expect(
+            notificationOrganizationAdapter.organizationAssociatePlatformInvitationCreated
+          ).toHaveBeenCalledTimes(1);
+          expect(
+            notificationOrganizationAdapter.organizationAssociatePlatformInvitationCreated
+          ).toHaveBeenCalledWith({
+            triggeredBy: 'admin-1',
+            organizationID: 'org-1',
+            invitedUserEmail: 'new@example.com',
+            extraRoles: ['admin'],
+            welcomeMessage: 'Welcome',
+          });
+          expect(
+            notificationPlatformAdapter.platformInvitationCreated
+          ).not.toHaveBeenCalled();
+        });
+
+        it('answers ALREADY_INVITED for the same address again and dispatches nothing', async () => {
+          setUpEmailInvite();
+          (
+            platformInvitationServiceMock.getExistingPlatformInvitationForRoleSet as Mock
+          ).mockResolvedValue(orgPlatformInvitation);
+
+          const result = await resolver.inviteForEntryRoleOnRoleSet(
+            actorContext,
+            {
+              roleSetID: 'org-rs-1',
+              invitedActorIDs: [],
+              invitedUserEmails: ['new@example.com'],
+              extraRoles: [],
+            } as any
+          );
+
+          expect(result).toHaveLength(1);
+          expect(result[0].type).toBe(
+            RoleSetInvitationResultType.ALREADY_INVITED_TO_PLATFORM_AND_ROLE_SET
+          );
+          expect(
+            roleSetService.createPlatformInvitation
+          ).not.toHaveBeenCalled();
+          expect(
+            notificationOrganizationAdapter.organizationAssociatePlatformInvitationCreated
+          ).not.toHaveBeenCalled();
+        });
+
+        it('routes the address of a registered user through the actor path', async () => {
+          setUpEmailInvite();
+          const mockInvitation = {
+            id: 'inv-1',
+            invitedActorID: 'user-existing',
             extraRoles: [],
-          } as any)
-        ).rejects.toThrow(ValidationException);
-        expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+          } as any;
+          (
+            actorLookupService.validateActorsAndGetTypes as Mock
+          ).mockResolvedValue(new Map([['user-existing', ActorType.USER]]));
+          (userLookupService.getUserByEmail as Mock).mockResolvedValue({
+            id: 'user-existing',
+          });
+          (roleSetService.findOpenInvitation as Mock).mockResolvedValue(
+            undefined
+          );
+          (roleSetService.findOpenApplication as Mock).mockResolvedValue(
+            undefined
+          );
+          (roleSetService.isMember as Mock).mockResolvedValue(false);
+          (
+            roleSetService.createInvitationExistingActor as Mock
+          ).mockResolvedValue(mockInvitation);
+          (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([
+            mockInvitation,
+          ]);
+          (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+            ActorType.USER
+          );
+
+          const result = await resolver.inviteForEntryRoleOnRoleSet(
+            actorContext,
+            {
+              roleSetID: 'org-rs-1',
+              invitedActorIDs: [],
+              invitedUserEmails: ['registered@example.com'],
+              extraRoles: [],
+            } as any
+          );
+
+          expect(result).toHaveLength(1);
+          expect(result[0].type).toBe(
+            RoleSetInvitationResultType.INVITED_TO_ROLE_SET
+          );
+          expect(result[0].invitedActorID).toBe('user-existing');
+          expect(result[0].invitedEmail).toBe('registered@example.com');
+          expect(
+            roleSetService.createPlatformInvitation
+          ).not.toHaveBeenCalled();
+          expect(
+            notificationOrganizationAdapter.organizationAssociatePlatformInvitationCreated
+          ).not.toHaveBeenCalled();
+        });
+
+        it('creates the email invitation even when the offered role cap is already reached', async () => {
+          setUpEmailInvite();
+          (roleSetService.countActorsWithRole as Mock).mockResolvedValue(6);
+          (roleSetService.getRoleDefinition as Mock).mockResolvedValue({
+            userPolicy: { maximum: 6 },
+            organizationPolicy: { maximum: 0 },
+            virtualContributorPolicy: { maximum: 0 },
+          });
+
+          const result = await resolver.inviteForEntryRoleOnRoleSet(
+            actorContext,
+            {
+              roleSetID: 'org-rs-1',
+              invitedActorIDs: [],
+              invitedUserEmails: ['new@example.com'],
+              extraRoles: ['admin'],
+            } as any
+          );
+
+          expect(result).toHaveLength(1);
+          expect(result[0].type).toBe(
+            RoleSetInvitationResultType.INVITED_TO_PLATFORM_AND_ROLE_SET
+          );
+          expect(roleSetService.createPlatformInvitation).toHaveBeenCalledTimes(
+            1
+          );
+        });
+
+        it('still requires the invite privilege before creating anything', async () => {
+          setUpEmailInvite();
+          (authorizationService.grantAccessOrFail as Mock).mockImplementation(
+            () => {
+              throw new ForbiddenAuthorizationPolicyException(
+                'no',
+                AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE,
+                'auth-1',
+                'admin-1'
+              );
+            }
+          );
+
+          await expect(
+            resolver.inviteForEntryRoleOnRoleSet(actorContext, {
+              roleSetID: 'org-rs-1',
+              invitedActorIDs: [],
+              invitedUserEmails: ['new@example.com'],
+              extraRoles: [],
+            } as any)
+          ).rejects.toThrow(ForbiddenAuthorizationPolicyException);
+          expect(
+            roleSetService.createPlatformInvitation
+          ).not.toHaveBeenCalled();
+        });
       });
 
       it('rejects a non-user invitee with a validation error before anything is created', async () => {
@@ -2275,6 +2486,13 @@ describe('RoleSetResolverMutationsMembership', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].type).toBe('invited-to-platform-and-role-set');
+      // The Space arm dispatches the Space email; the organization one is not involved.
+      expect(
+        notificationPlatformAdapter.platformInvitationCreated
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        notificationOrganizationAdapter.organizationAssociatePlatformInvitationCreated
+      ).not.toHaveBeenCalled();
     });
 
     it('stamps the submitted email on the result when the address is an existing user', async () => {

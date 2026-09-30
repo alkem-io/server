@@ -27,6 +27,7 @@ import {
   IInvitation,
   InvitationEventInput,
 } from '@domain/access/invitation';
+import { IPlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.interface';
 import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -40,6 +41,7 @@ import { VirtualContributorLookupService } from '@domain/community/virtual-contr
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { NotificationInputOrganizationAssociatePlatformInvitation } from '@services/adapters/notification-adapter/dto/organization/notification.dto.input.organization.associate.platform.invitation';
 import { NotificationInputOrganizationSpaceCommunityInvitation } from '@services/adapters/notification-adapter/dto/organization/notification.dto.input.organization.space.community.invitation';
 import { NotificationInputOrganizationSpaceCommunityJoined } from '@services/adapters/notification-adapter/dto/organization/notification.dto.input.organization.space.community.joined';
 import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.application';
@@ -394,20 +396,6 @@ export class RoleSetResolverMutationsMembership {
     ) {
       throw new RoleSetInvitationException(
         `No contributors were provided to invite: ${roleSet.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    // Organizations only invite EXISTING Alkemio users (product email: "no
-    // onboarding via organization invitations, for now"). Rejected before
-    // anything is created — the mutation-wide validation error, not a
-    // per-invitee typed outcome.
-    if (
-      roleSet.type === RoleSetType.ORGANIZATION &&
-      invitationData.invitedUserEmails.length > 0
-    ) {
-      throw new ValidationException(
-        'Organizations can only invite existing Alkemio users to associate',
         LogContext.COMMUNITY
       );
     }
@@ -1179,7 +1167,7 @@ export class RoleSetResolverMutationsMembership {
         actorType !== ActorType.USER
       ) {
         throw new ValidationException(
-          'Organizations can only invite existing Alkemio users to associate',
+          'Only users can be invited to associate with an organization by picking them; other people are invited by email',
           LogContext.COMMUNITY,
           { actorID, actorType }
         );
@@ -1712,10 +1700,78 @@ export class RoleSetResolverMutationsMembership {
   }
 
   /**
+   * Emails the invitation for a platform invitation record (an address that
+   * has no account yet). Shared by the invite flow's organization arm and by
+   * the resend mutation; the Space invite arm keeps its own dispatch.
+   * The dispatch is fire-and-forget: a notification problem never fails the
+   * mutation that triggered it.
+   */
+  private async dispatchPlatformInvitationEmail(
+    roleSet: IRoleSet,
+    platformInvitation: IPlatformInvitation,
+    triggeredBy: string
+  ): Promise<void> {
+    switch (roleSet.type) {
+      case RoleSetType.SPACE: {
+        const community =
+          await this.communityResolverService.getCommunityForRoleSet(
+            roleSet.id
+          );
+        const notificationInput: NotificationInputPlatformInvitation = {
+          triggeredBy,
+          community,
+          invitedUserEmail: platformInvitation.email,
+          welcomeMessage: platformInvitation.welcomeMessage,
+        };
+        this.dispatchNotification(
+          this.notificationPlatformAdapter.platformInvitationCreated(
+            notificationInput
+          ),
+          'platformInvitationCreated'
+        );
+        return;
+      }
+      case RoleSetType.ORGANIZATION: {
+        const organization =
+          await this.organizationLookupService.getOrganizationForRoleSetOrFail(
+            roleSet.id
+          );
+        const notificationInput: NotificationInputOrganizationAssociatePlatformInvitation =
+          {
+            triggeredBy,
+            organizationID: organization.id,
+            invitedUserEmail: platformInvitation.email,
+            extraRoles: platformInvitation.roleSetExtraRoles,
+            welcomeMessage: platformInvitation.welcomeMessage,
+          };
+        this.dispatchNotification(
+          this.notificationOrganizationAdapter.organizationAssociatePlatformInvitationCreated(
+            notificationInput
+          ),
+          'organizationAssociatePlatformInvitationCreated'
+        );
+        return;
+      }
+      default: {
+        this.logger.verbose?.(
+          {
+            message:
+              'No platform invitation email for this role set type; nothing dispatched',
+            roleSetID: roleSet.id,
+            roleSetType: roleSet.type,
+          },
+          LogContext.NOTIFICATIONS
+        );
+      }
+    }
+  }
+
+  /**
    * Notifies each invitee of an organization invitation to associate.
    * Every result type is handled exhaustively (never-guarded `default`):
    * `EXTRA_ROLE_LIMIT_REACHED` and the other advisory outcomes create
-   * nothing and dispatch nothing.
+   * nothing and dispatch nothing. Addresses without an account receive the
+   * email-only invitation.
    */
   private async sendNotificationEventsForInvitationsOnOrganizationRoleSet(
     roleSet: IRoleSet,
@@ -1744,9 +1800,8 @@ export class RoleSetResolverMutationsMembership {
             await this.actorLookupService.getActorTypeByIdOrFail(
               invitation.invitedActorID
             );
-          // Organizations invite existing Alkemio users only (product email;
-          // enforced by `validateInviteesAndRolesOrFail`) — nothing else to
-          // notify.
+          // Only users can be picked as organization invitees (enforced by
+          // `validateInviteesAndRolesOrFail`) — nothing else to notify.
           if (actorType !== ActorType.USER) {
             break;
           }
@@ -1765,7 +1820,22 @@ export class RoleSetResolverMutationsMembership {
           );
           break;
         }
-        case RoleSetInvitationResultType.INVITED_TO_PLATFORM_AND_ROLE_SET:
+        case RoleSetInvitationResultType.INVITED_TO_PLATFORM_AND_ROLE_SET: {
+          // An address without an account: email-only invitation.
+          const platformInvitation = invitationResult.platformInvitation;
+          if (!platformInvitation) {
+            throw new RelationshipNotFoundException(
+              `Unable to load platform invitation for result: ${invitationResult.type}`,
+              LogContext.ROLES
+            );
+          }
+          await this.dispatchPlatformInvitationEmail(
+            roleSet,
+            platformInvitation,
+            actorContext.actorID
+          );
+          break;
+        }
         case RoleSetInvitationResultType.ALREADY_INVITED_TO_PLATFORM_AND_ROLE_SET:
         case RoleSetInvitationResultType.ALREADY_INVITED_TO_ROLE_SET:
         case RoleSetInvitationResultType.INVITATION_TO_PARENT_NOT_AUTHORIZED:
