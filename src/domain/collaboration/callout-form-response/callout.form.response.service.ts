@@ -312,17 +312,24 @@ export class CalloutFormResponseService {
     return this.responseRepository.count({ where: { formId: formID } });
   }
 
-  public findMine(
+  /**
+   * The viewer's own responses, oldest first, capped at the newest
+   * FORM_RESPONSES_PAGE_MAX: MULTIPLE mode has no per-member limit, so the list
+   * must not grow with every submission.
+   */
+  public async findMine(
     formID: string,
     actorID: string
   ): Promise<ICalloutFormResponse[]> {
     if (!actorID) {
-      return Promise.resolve([]);
+      return [];
     }
-    return this.responseRepository.find({
+    const newest = await this.responseRepository.find({
       where: { formId: formID, createdBy: actorID },
-      order: { rowId: 'ASC' },
+      order: { rowId: 'DESC' },
+      take: FORM_RESPONSES_PAGE_MAX,
     });
+    return newest.reverse();
   }
 
   /** first defaults to the relay default page and is clamped to the page cap. */

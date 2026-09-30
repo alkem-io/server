@@ -32,7 +32,8 @@ export class CalloutFormResponsesResolverFields {
 
   @ResolveField('mine', () => [ICalloutFormResponse], {
     nullable: false,
-    description: "The viewer's own responses.",
+    description:
+      "The viewer's own responses, oldest first; at most the 50 newest.",
   })
   mine(@Parent() view: ICalloutFormResponses): Promise<ICalloutFormResponse[]> {
     return this.calloutFormResponseService.findMine(view.formID, view.actorID);

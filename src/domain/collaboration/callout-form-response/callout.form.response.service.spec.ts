@@ -1,3 +1,4 @@
+import { FORM_RESPONSES_PAGE_MAX } from '@common/constants';
 import { ActorType } from '@common/enums/actor.type';
 import { CalloutFormQuestionType } from '@common/enums/callout.form.question.type';
 import { CalloutFormResponseMode } from '@common/enums/callout.form.response.mode';
@@ -473,6 +474,19 @@ describe('CalloutFormResponseService', () => {
     it('is empty for an anonymous viewer', async () => {
       expect(await service.findMine('f', '')).toEqual([]);
       expect(repository.find).not.toHaveBeenCalled();
+    });
+
+    it('returns at most the newest page of own responses, oldest first', async () => {
+      repository.find.mockResolvedValue([{ id: 'r3' }, { id: 'r2' }]);
+
+      const mine = await service.findMine('f', 'actor-1');
+
+      expect(repository.find).toHaveBeenCalledWith({
+        where: { formId: 'f', createdBy: 'actor-1' },
+        order: { rowId: 'DESC' },
+        take: FORM_RESPONSES_PAGE_MAX,
+      });
+      expect(mine.map(r => r.id)).toEqual(['r2', 'r3']);
     });
   });
 

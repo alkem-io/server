@@ -2232,7 +2232,7 @@ type CalloutFormResponses {
   """Whether the viewer can read every response of the Form."""
   canReadAll: Boolean!
   formID: UUID!
-  """The viewer's own responses."""
+  """The viewer's own responses, oldest first; at most the 50 newest."""
   mine: [CalloutFormResponse!]!
 }
 
