@@ -1,3 +1,4 @@
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { TemplateType } from '@common/enums/template.type';
 import {
   EntityNotFoundException,
@@ -108,9 +109,31 @@ describe('TemplateAuthorizationService', () => {
     expect(
       authorizationPolicyService.inheritParentAuthorization
     ).toHaveBeenCalled();
+    // QA server-C2-c (ruling (a)): the template's profile subtree carries the
+    // PLATFORM_SUPPORT_ORG_RESOURCES → UPDATE/CREATE/FILE_UPLOAD privilege
+    // rule (never DELETE) — inert unless the template sits in an org-owned
+    // pack, the only place that privilege is ever granted.
     expect(
       profileAuthorizationService.applyAuthorizationPolicy
-    ).toHaveBeenCalledWith('profile-1', expect.anything());
+    ).toHaveBeenCalledWith(
+      'profile-1',
+      expect.anything(),
+      [],
+      [
+        expect.objectContaining({
+          sourcePrivilege:
+            AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES,
+          grantedPrivileges: [
+            AuthorizationPrivilege.UPDATE,
+            AuthorizationPrivilege.CREATE,
+            AuthorizationPrivilege.FILE_UPLOAD,
+          ],
+        }),
+      ]
+    );
+    const rule =
+      profileAuthorizationService.applyAuthorizationPolicy.mock.calls[0][3]![0];
+    expect(rule.grantedPrivileges).not.toContain(AuthorizationPrivilege.DELETE);
     expect(result.length).toBeGreaterThanOrEqual(2);
   });
 
@@ -127,9 +150,16 @@ describe('TemplateAuthorizationService', () => {
     expect(
       authorizationPolicyService.inheritParentAuthorization
     ).toHaveBeenCalled();
+    // QA server-C2-c: plus the threaded A7 privilege rule (asserted in full
+    // on the POST template case above).
     expect(
       profileAuthorizationService.applyAuthorizationPolicy
-    ).toHaveBeenCalledWith('profile-1', expect.anything());
+    ).toHaveBeenCalledWith(
+      'profile-1',
+      expect.anything(),
+      [],
+      [expect.anything()]
+    );
     expect(
       communityGuidelinesAuthorizationService.applyAuthorizationPolicy
     ).not.toHaveBeenCalled();

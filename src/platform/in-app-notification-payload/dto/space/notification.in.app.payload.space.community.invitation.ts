@@ -9,4 +9,7 @@ import { InAppNotificationPayloadSpaceBase } from './notification.in.app.payload
 export abstract class InAppNotificationPayloadSpaceCommunityInvitation extends InAppNotificationPayloadSpaceBase {
   invitationID!: string;
   declare type: NotificationEventPayload.SPACE_COMMUNITY_INVITATION;
+  // Set only for the organization-invited event, so the in-app item can
+  // name the invited organization and link to its Invitations tab.
+  organizationID?: string;
 }

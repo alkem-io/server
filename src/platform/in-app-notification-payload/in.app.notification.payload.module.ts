@@ -1,9 +1,12 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { OrganizationLoaderCreator } from '@core/dataloader/creators';
+import { ApplicationLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/application.loader.creator';
 import { CalendarEventLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/calendar.event.loader.creator';
 import { MessageDetailsModule } from '@domain/communication/message.details/message.details.module';
 import { Module } from '@nestjs/common';
 import {
+  InAppNotificationPayloadOrganizationAssociateActorResolverFields,
+  InAppNotificationPayloadOrganizationAssociateInvitationResolverFields,
   InAppNotificationPayloadOrganizationMessageDirectResolverFields,
   InAppNotificationPayloadOrganizationMessageRoomResolverFields,
   InAppNotificationPayloadPlatformForumDiscussionResolverFields,
@@ -49,9 +52,12 @@ import { InAppNotificationPayloadSpaceCommunityCalendarEventCommentResolverField
     InAppNotificationPayloadUserMessageDirectResolverFields,
     InAppNotificationPayloadOrganizationMessageDirectResolverFields,
     InAppNotificationPayloadOrganizationMessageRoomResolverFields,
+    InAppNotificationPayloadOrganizationAssociateInvitationResolverFields,
+    InAppNotificationPayloadOrganizationAssociateActorResolverFields,
     InAppNotificationPayloadPlatformGlobalRoleChangeResolverFields,
     InAppNotificationPayloadPlatformForumDiscussionResolverFields,
     OrganizationLoaderCreator,
+    ApplicationLoaderCreator,
     CalendarEventLoaderCreator,
     InAppNotificationPayloadVirtualContributorFieldsResolver,
   ],

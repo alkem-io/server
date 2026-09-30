@@ -498,6 +498,51 @@ export class ContributionReporterService {
     );
   }
 
+  public taskBoardCreated(
+    contribution: ContributionDetails,
+    actorContext: ContributionActorContext
+  ): void {
+    void this.createDocument(
+      {
+        type: CONTRIBUTION_TYPE.TASK_BOARD_CREATED,
+        id: contribution.id,
+        name: contribution.name,
+        space: contribution.space,
+      },
+      actorContext
+    );
+  }
+
+  public taskCreated(
+    contribution: ContributionDetails,
+    actorContext: ContributionActorContext
+  ): void {
+    void this.createDocument(
+      {
+        type: CONTRIBUTION_TYPE.TASK_CREATED,
+        id: contribution.id,
+        name: contribution.name,
+        space: contribution.space,
+      },
+      actorContext
+    );
+  }
+
+  public taskCommentCreated(
+    contribution: ContributionDetails,
+    actorContext: ContributionActorContext
+  ): void {
+    void this.createDocument(
+      {
+        type: CONTRIBUTION_TYPE.TASK_COMMENT_CREATED,
+        id: contribution.id,
+        name: contribution.name,
+        space: contribution.space,
+      },
+      actorContext
+    );
+  }
+
   private async getAuthorDetails(
     actorContext: ContributionActorContext
   ): Promise<ContributionAuthorDetails> {

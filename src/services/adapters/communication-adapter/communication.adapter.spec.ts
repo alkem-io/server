@@ -331,6 +331,7 @@ describe('CommunicationAdapter', () => {
     it('should return IMessage with correct structure', async () => {
       const response = createSuccessResponse({
         message_id: 'msg-123',
+        content: 'Test message',
         timestamp: 1234567890123,
       });
       mockAmqpConnection.request.mockResolvedValue(response);
@@ -350,7 +351,64 @@ describe('CommunicationAdapter', () => {
         timestamp: 1234567890123,
         threadID: undefined,
         reactions: [],
+        // feature 013 (FIX 6): the send response carries its own attachments +
+        // room so it resolves attachments like the read path. No attachments
+        // here → rawAttachments undefined; roomID always echoed back.
+        rawAttachments: undefined,
+        roomID: 'room-uuid-123',
       });
+    });
+
+    it('returns the actual sent media reference instead of the requested batch', async () => {
+      const response = createSuccessResponse({
+        message_id: 'msg-att',
+        content: 'pic.png',
+        attachments: [
+          {
+            document_id: 'doc-1',
+            media_id: 'actual-media',
+            display_name: 'pic.png',
+            mime_type: 'image/png',
+            size: 900,
+            width: 10,
+            height: 20,
+          },
+        ],
+        timestamp: 1234567890123,
+      });
+      mockAmqpConnection.request.mockResolvedValue(response);
+
+      const result = await adapter.sendMessage({
+        roomID: 'room-uuid-123',
+        actorID: 'actor-uuid-456',
+        message: '',
+        attachments: [
+          {
+            documentId: 'doc-1',
+            displayName: 'pic.png',
+            mimeType: 'image/png',
+            size: 1000,
+            width: 10,
+            height: 20,
+          },
+        ],
+      });
+
+      expect(result.roomID).toBe('room-uuid-123');
+      expect(result.message).toBe('pic.png');
+      expect(result.rawAttachments).toEqual([
+        {
+          document_id: 'doc-1',
+          media_id: 'actual-media',
+          display_name: 'pic.png',
+          mime_type: 'image/png',
+          size: 900,
+          // Dims must survive the mapper — they become the m.image event's
+          // info.w/info.h, so dropping them is what makes Element reflow.
+          width: 10,
+          height: 20,
+        },
+      ]);
     });
 
     it('should throw when roomID is empty', async () => {
@@ -751,6 +809,124 @@ describe('CommunicationAdapter', () => {
 
       expect(result).toBe('');
       expect(mockAmqpConnection.request).not.toHaveBeenCalled();
+    });
+
+    it('should return the { disabled: true } sentinel for setChildren when disabled — NEVER a fabricated success', async () => {
+      const result = await disabledAdapter.setChildren({
+        parent_context_id: 'category-1',
+        desired_child_context_ids: ['room-1'],
+        children_are_spaces: false,
+        apply_removals: true,
+        prune_unknown: false,
+        sync_child_parent: false,
+        dry_run: true,
+      });
+
+      expect(result).toEqual({ disabled: true });
+      expect(result).not.toBe(true);
+      expect(mockAmqpConnection.request).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('setChildren', () => {
+    const request = {
+      parent_context_id: 'category-1',
+      desired_child_context_ids: ['room-1', 'room-2'],
+      children_are_spaces: false,
+      apply_removals: true,
+      prune_unknown: false,
+      sync_child_parent: false,
+      dry_run: false,
+    };
+
+    it('should send the request on the hierarchy set_children topic and pass through a typed response', async () => {
+      const response = createSuccessResponse({
+        added: ['room-1'],
+        removed: [],
+        pruned_unknown: [],
+        unknown_kept: [],
+        unresolved: [],
+        parent_pointers_repaired: [],
+        parent_pointers_deferred: [],
+        parent_pointers_unprocessable: [],
+        converged: true,
+        changed: true,
+        dry_run: false,
+      });
+      mockAmqpConnection.request.mockResolvedValue(response);
+
+      const result = await adapter.setChildren(request);
+
+      expect(mockAmqpConnection.request).toHaveBeenCalledWith({
+        exchange: '',
+        routingKey: MatrixAdapterEventType.COMMUNICATION_HIERARCHY_SET_CHILDREN,
+        // The adapter stamps the caller's absolute expiry from the same RPC
+        // timeout that governs this call, so the two cannot drift apart.
+        payload: { ...request, expires_at_unix_ms: expect.any(Number) },
+        timeout: expect.any(Number),
+      });
+      expect(result).toEqual(response);
+    });
+
+    it('should swallow a transport error to undefined rather than throw', async () => {
+      mockAmqpConnection.request.mockRejectedValue(
+        new Error('Connection refused')
+      );
+
+      const result = await adapter.setChildren(request);
+
+      expect(result).toBeUndefined();
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('normalizes every array field to [] when the wire response carries null arrays (the real SPACE_NOT_FOUND shape)', async () => {
+      // The Go adapter's error branch (including the expected
+      // SPACE_NOT_FOUND skip) never populates these arrays — `emptyIfNil`
+      // only runs on the success branch — so the wire payload has no array
+      // fields at all, which JSON round-trips as `null` on the TS side.
+      mockAmqpConnection.request.mockResolvedValue(
+        createErrorResponse('SPACE_NOT_FOUND', 'space not found')
+      );
+
+      const result = await adapter.setChildren(request);
+
+      expect(result).toEqual({
+        success: false,
+        error: { code: 'SPACE_NOT_FOUND', message: 'space not found' },
+        added: [],
+        removed: [],
+        pruned_unknown: [],
+        unknown_kept: [],
+        unresolved: [],
+        parent_pointers_repaired: [],
+        parent_pointers_deferred: [],
+        parent_pointers_unprocessable: [],
+        // An adapter predating the field sends no `converged` at all.
+        // Defaulting it to false keeps the caller's termination condition
+        // conservative under version skew: an old adapter reports "not
+        // finished" rather than a convergence nothing verified.
+        converged: false,
+      });
+    });
+
+    it('stamps an expiry derived from the RPC timeout, and never overwrites one the caller set', async () => {
+      mockAmqpConnection.request.mockResolvedValue(createSuccessResponse({}));
+
+      const before = Date.now();
+      await adapter.setChildren(request);
+      const stamped = mockAmqpConnection.request.mock.calls[0][0].payload
+        .expires_at_unix_ms as number;
+      // Derived from the RPC timeout rather than an independent constant, so
+      // the adapter can never be told to stop waiting at one deadline while
+      // the request it sent claims another.
+      expect(stamped).toBeGreaterThanOrEqual(before);
+
+      mockAmqpConnection.request.mockClear();
+      const explicit = Date.now() + 123456;
+      await adapter.setChildren({ ...request, expires_at_unix_ms: explicit });
+      expect(
+        mockAmqpConnection.request.mock.calls[0][0].payload.expires_at_unix_ms
+      ).toBe(explicit);
     });
   });
 });

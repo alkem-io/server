@@ -4,6 +4,7 @@ import { InvalidUUID } from '@common/exceptions/invalid.uuid';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { KnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.entity';
+import { Conversation } from '@domain/communication/conversation/conversation.entity';
 import { IOrganization, Organization } from '@domain/community/organization';
 import { User } from '@domain/community/user/user.entity';
 import { IUser } from '@domain/community/user/user.interface';
@@ -92,6 +93,29 @@ export class StorageAggregatorResolverService {
       );
     }
     return account;
+  }
+
+  public async getParentConversationForStorageAggregator(
+    storageAggregator: IStorageAggregator
+  ): Promise<Conversation> {
+    const conversation = await this.entityManager.findOne(Conversation, {
+      where: {
+        storageAggregator: {
+          id: storageAggregator.id,
+        },
+      },
+    });
+    if (!conversation) {
+      // Coding standard: no dynamic data (ids) in the exception message — carry it
+      // in the structured `details` property instead. (The sibling resolvers above
+      // pre-date this rule and are intentionally out of scope.)
+      throw new EntityNotFoundException(
+        'Unable to retrieve Conversation for storage aggregator',
+        LogContext.STORAGE_AGGREGATOR,
+        { storageAggregatorId: storageAggregator.id }
+      );
+    }
+    return conversation;
   }
 
   public async getParentSpaceForStorageAggregator(
@@ -422,11 +446,12 @@ export class StorageAggregatorResolverService {
   }
 
   public async getStorageAggregatorForCallout(
-    calloutID: string
+    calloutID: string,
+    options?: FindOneOptions<StorageAggregator>
   ): Promise<IStorageAggregator> {
     const storageAggregatorId =
       await this.getStorageAggregatorIdForCallout(calloutID);
-    return await this.getStorageAggregatorOrFail(storageAggregatorId);
+    return await this.getStorageAggregatorOrFail(storageAggregatorId, options);
   }
 
   private async getStorageAggregatorIdForCallout(

@@ -250,6 +250,8 @@ export class OrganizationService {
     const settings: IOrganizationSettings = {
       membership: {
         allowUsersMatchingDomainToJoin: false,
+        allowSpaceInvitations: true,
+        allowApplications: true,
       },
       privacy: {
         // Note: not currently used but will be near term.

@@ -8,22 +8,23 @@ import {
   EntityNotFoundException,
   EntityNotInitializedException,
 } from '@common/exceptions';
-import { ForumDiscussionCategoryException } from '@common/exceptions/forum.discussion.category.exception';
-import { FORUM_CATEGORY_NAMESPACE } from '@constants/forum.constants';
+import { ForumDiscussionCategoryNotEmptyException } from '@common/exceptions/forum.discussion.category.not.empty.exception';
+import { getForumCategoryContextId } from '@constants/forum.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IUser } from '@domain/community/user/user.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Platform } from '@platform/platform/platform.entity';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { v5 as uuidv5 } from 'uuid';
 import { Discussion } from '../forum-discussion/discussion.entity';
 import { IDiscussion } from '../forum-discussion/discussion.interface';
 import { DiscussionService } from '../forum-discussion/discussion.service';
 import { ForumCreateDiscussionInput } from './dto/forum.dto.create.discussion';
+import { assertForumCategoryAllowed } from './forum.category.allowed';
 import { Forum } from './forum.entity';
 import { IForum } from './forum.interface';
 
@@ -39,6 +40,8 @@ export class ForumService {
     private namingService: NamingService,
     @InjectRepository(Forum)
     private forumRepository: Repository<Forum>,
+    @InjectRepository(Platform)
+    private platformRepository: Repository<Platform>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -73,7 +76,7 @@ export class ForumService {
         undefined,
         undefined,
         JoinRulePublic,
-        true,
+        false,
         INVISIBLE_STATE
       );
 
@@ -85,7 +88,7 @@ export class ForumService {
           forum.id,
           undefined,
           JoinRulePublic,
-          true,
+          false,
           INVISIBLE_STATE
         );
       }
@@ -123,12 +126,10 @@ export class ForumService {
       relations: {},
     });
 
-    if (!forum.discussionCategories.includes(discussionData.category)) {
-      throw new ForumDiscussionCategoryException(
-        `Invalid discussion category supplied ('${discussionData.category}'), allowed categories: ${forum.discussionCategories}`,
-        LogContext.PLATFORM_FORUM
-      );
-    }
+    assertForumCategoryAllowed(
+      forum.discussionCategories,
+      discussionData.category
+    );
 
     const storageAggregator =
       await this.storageAggregatorResolverService.getStorageAggregatorForForum();
@@ -197,10 +198,7 @@ export class ForumService {
    * Generate a deterministic UUID v5 context ID for a forum category.
    */
   private getCategoryContextId(forumId: string, categoryName: string): string {
-    return uuidv5(
-      `${forumId}:category:${categoryName}`,
-      FORUM_CATEGORY_NAMESPACE
-    );
+    return getForumCategoryContextId(forumId, categoryName);
   }
 
   /**
@@ -222,7 +220,7 @@ export class ForumService {
         undefined, // no parent — platform-level
         undefined,
         JoinRulePublic,
-        true,
+        false,
         INVISIBLE_STATE
       );
     }
@@ -237,7 +235,7 @@ export class ForumService {
         forumId,
         undefined,
         JoinRulePublic,
-        true,
+        false,
         INVISIBLE_STATE
       );
     }
@@ -308,6 +306,64 @@ export class ForumService {
         LogContext.PLATFORM_FORUM
       );
     return forum;
+  }
+
+  /**
+   * Loads the Forum the Platform actually points at, by traversing the
+   * `Platform.forum` relation rather than picking an arbitrary row out of
+   * the `forum` table. The relation — not row count — is what makes a Forum
+   * "the platform's": a stray or orphaned Forum row (a partially rolled-back
+   * bootstrap, a restored dump, a future non-platform Forum) would otherwise
+   * be a candidate for an unordered `findOne`, and the category-retirement
+   * mutation would then shrink the wrong row's active list.
+   *
+   * Resolved through the `Platform` repository rather than `PlatformService`
+   * because that service depends on `ForumService`; injecting it back here
+   * would create a module cycle. A repository carries no such cycle.
+   */
+  async getPlatformForumOrFail(): Promise<IForum> {
+    const platform = await this.platformRepository.findOne({
+      where: {},
+      relations: { forum: true },
+    });
+    if (!platform?.forum)
+      throw new EntityNotFoundException(
+        'No platform Forum found!',
+        LogContext.PLATFORM_FORUM
+      );
+    return platform.forum;
+  }
+
+  /**
+   * Removes exactly one category from the forum's active list. Never
+   * touches the `ForumDiscussionCategory` vocabulary — the
+   * category remains a valid tombstone value forever; only the forum's data
+   * row shrinks. Refuses while any Discussion still carries the category
+   * (server-enforced emptiness) and is idempotent for a category already
+   * absent from the list.
+   */
+  async removeDiscussionCategory(
+    forum: IForum,
+    category: ForumDiscussionCategory
+  ): Promise<{ forum: IForum; removed: boolean }> {
+    if (!forum.discussionCategories.includes(category)) {
+      return { forum, removed: false };
+    }
+
+    const remainingPostCount =
+      await this.discussionService.countInForumByCategory(forum.id, category);
+    if (remainingPostCount > 0) {
+      throw new ForumDiscussionCategoryNotEmptyException(
+        category,
+        remainingPostCount
+      );
+    }
+
+    forum.discussionCategories = forum.discussionCategories.filter(
+      existing => existing !== category
+    );
+    const updatedForum = await this.save(forum);
+    return { forum: updatedForum, removed: true };
   }
 
   async removeForum(forumID: string): Promise<boolean> {

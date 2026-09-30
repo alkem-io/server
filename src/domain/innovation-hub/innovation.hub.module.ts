@@ -9,6 +9,7 @@ import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.m
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
+import { PlatformResourceAuditModule } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.module';
 import { InnovationHub } from './innovation.hub.entity';
 import { InnovationHubResolverFields } from './innovation.hub.resolver.fields';
 import { InnovationHubResolverMutations } from './innovation.hub.resolver.mutations';
@@ -24,6 +25,7 @@ import { InnovationHubService } from './innovation.hub.service';
     NamingModule,
     InnovationPackModule,
     VirtualActorLookupModule,
+    PlatformResourceAuditModule,
     TypeOrmModule.forFeature([InnovationHub]),
   ],
   providers: [

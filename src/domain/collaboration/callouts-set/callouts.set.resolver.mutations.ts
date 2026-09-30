@@ -41,6 +41,7 @@ import {
 import { ICallout } from '../callout/callout.interface';
 import { CalloutService } from '../callout/callout.service';
 import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
+import { TaskBoardService } from '../callout/task-board/task.board.service';
 import { CollaborationLicenseService } from '../collaboration/collaboration.service.license';
 import { ICalloutsSet } from './callouts.set.interface';
 import { CalloutsSetService } from './callouts.set.service';
@@ -68,6 +69,7 @@ export class CalloutsSetResolverMutations {
     private whiteboardService: WhiteboardService,
     private whiteboardDraftService: WhiteboardDraftService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
+    private taskBoardService: TaskBoardService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -387,6 +389,17 @@ export class CalloutsSetResolverMutations {
           {
             id: callout.id,
             name: callout.framing.poll.title,
+            space: levelZeroSpaceID,
+          },
+          actorContext
+        );
+      }
+
+      if (this.taskBoardService.isTaskBoard(callout)) {
+        this.contributionReporter.taskBoardCreated(
+          {
+            id: callout.id,
+            name: callout.nameID,
             space: levelZeroSpaceID,
           },
           actorContext

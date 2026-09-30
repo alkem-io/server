@@ -89,6 +89,14 @@ export const applicationLifecycleMachine: ILifecycleDefinition = {
     approved: {
       type: 'final',
     },
+    // `rejected` is deliberately NOT final. `eventOnApplication` takes a
+    // free-text event name, and the Space settings Community tab sends
+    // ARCHIVE on a rejected row (and REJECT-then-ARCHIVE on a new one) to
+    // clear it from the pending list — so removing these transitions strands
+    // the row and fails that action outright. `archived` has no other route
+    // in, either. An applicant who was rejected being free to apply again is
+    // a role-set-type decision and is made where it belongs, in the open
+    // application lookup, not by narrowing a machine both types share.
     rejected: {
       on: {
         REOPEN: {

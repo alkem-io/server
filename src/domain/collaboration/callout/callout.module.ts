@@ -18,6 +18,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
+import { PlatformResourceAuditModule } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.module';
 import { CalloutContributionModule } from '../callout-contribution/callout.contribution.module';
 import { CalloutContributionDefaultsModule } from '../callout-contribution-defaults/callout.contribution.defaults.module';
 import { CalloutFramingModule } from '../callout-framing/callout.framing.module';
@@ -61,6 +62,7 @@ import { TaskBoardResolverMutations } from './task-board/task.board.resolver.mut
     ClassificationModule,
     TemporaryStorageModule,
     RoleSetModule,
+    PlatformResourceAuditModule,
     ReactionModule,
     ActorLookupModule,
     TaskBoardModule,

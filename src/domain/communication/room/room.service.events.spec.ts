@@ -1,4 +1,7 @@
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { TaskBoardService } from '@domain/collaboration/callout/task-board/task.board.service';
+import { ICalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.interface';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
@@ -23,6 +26,7 @@ describe('RoomServiceEvents', () => {
   let notificationUserAdapter: Mocked<NotificationUserAdapter>;
   let communityResolverService: Mocked<CommunityResolverService>;
   let timelineResolverService: Mocked<TimelineResolverService>;
+  let taskBoardService: Mocked<TaskBoardService>;
 
   const mockRoom = { id: 'room-1' } as IRoom;
   const mockMessage = { id: 'msg-1' } as IMessage;
@@ -46,6 +50,7 @@ describe('RoomServiceEvents', () => {
     notificationUserAdapter = module.get(NotificationUserAdapter);
     communityResolverService = module.get(CommunityResolverService);
     timelineResolverService = module.get(TimelineResolverService);
+    taskBoardService = module.get(TaskBoardService);
   });
 
   it('should be defined', () => {
@@ -295,20 +300,62 @@ describe('RoomServiceEvents', () => {
       id: 'post-1',
       profile: { displayName: 'Test Post' },
     } as any;
+    const mockOrdinaryContribution = {
+      id: 'contrib-1',
+    } as unknown as ICalloutContribution;
+    const mockTaskContribution = {
+      id: 'contrib-1',
+      classification: {
+        tagsets: [{ name: TagsetReservedName.TASK, tags: ['Backlog'] }],
+      },
+    } as unknown as ICalloutContribution;
 
-    it('should create activity and report contribution when actorID is present', async () => {
+    it('should report taskCommentCreated (never calloutPostCommentCreated) for a task-marked contribution when actorID is present', async () => {
       communityResolverService.getCommunityFromPostRoomOrFail.mockResolvedValue(
         { id: 'community-1' } as any
       );
       communityResolverService.getLevelZeroSpaceIdForCommunity.mockResolvedValue(
         'space-1'
       );
+      taskBoardService.isTask.mockReturnValue(true);
 
       await service.processActivityPostComment(
         mockPost,
         mockRoom,
         mockMessage,
+        actorContextWithID,
+        mockTaskContribution
+      );
+
+      expect(activityAdapter.calloutPostComment).toHaveBeenCalledWith({
+        triggeredBy: 'user-1',
+        post: mockPost,
+        message: mockMessage,
+      });
+      expect(contributionReporter.taskCommentCreated).toHaveBeenCalledWith(
+        { id: 'post-1', name: 'Test Post', space: 'space-1' },
         actorContextWithID
+      );
+      expect(
+        contributionReporter.calloutPostCommentCreated
+      ).not.toHaveBeenCalled();
+    });
+
+    it("should report calloutPostCommentCreated (never taskCommentCreated) for an ordinary contribution when actorID is present — today's exact payload, unchanged", async () => {
+      communityResolverService.getCommunityFromPostRoomOrFail.mockResolvedValue(
+        { id: 'community-1' } as any
+      );
+      communityResolverService.getLevelZeroSpaceIdForCommunity.mockResolvedValue(
+        'space-1'
+      );
+      taskBoardService.isTask.mockReturnValue(false);
+
+      await service.processActivityPostComment(
+        mockPost,
+        mockRoom,
+        mockMessage,
+        actorContextWithID,
+        mockOrdinaryContribution
       );
 
       expect(activityAdapter.calloutPostComment).toHaveBeenCalledWith({
@@ -322,24 +369,36 @@ describe('RoomServiceEvents', () => {
         { id: 'post-1', name: 'Test Post', space: 'space-1' },
         actorContextWithID
       );
+      expect(contributionReporter.taskCommentCreated).not.toHaveBeenCalled();
     });
 
-    it('should skip activity and contribution when actorID is empty', async () => {
+    // US3-AS3 / T012.1: the empty-actorID guard wraps BOTH arms, so it must be
+    // exercised for a task AND an ordinary post. Covering only the task arm let
+    // a mutation survive (moving the guard inside the isTask arm), under which an
+    // ordinary post comment from an unresolvable actor would start emitting
+    // calloutPostCommentCreated — a regression on the ordinary series (FR-006).
+    it.each([
+      ['a task', true, mockTaskContribution],
+      ['an ordinary post', false, mockOrdinaryContribution],
+    ])('should skip activity and both reporter methods when actorID is empty — %s', async (_label, isTask, contribution) => {
       communityResolverService.getCommunityFromPostRoomOrFail.mockResolvedValue(
         { id: 'community-1' } as any
       );
       communityResolverService.getLevelZeroSpaceIdForCommunity.mockResolvedValue(
         'space-1'
       );
+      taskBoardService.isTask.mockReturnValue(isTask);
 
       await service.processActivityPostComment(
         mockPost,
         mockRoom,
         mockMessage,
-        actorContextEmpty
+        actorContextEmpty,
+        contribution
       );
 
       expect(activityAdapter.calloutPostComment).not.toHaveBeenCalled();
+      expect(contributionReporter.taskCommentCreated).not.toHaveBeenCalled();
       expect(
         contributionReporter.calloutPostCommentCreated
       ).not.toHaveBeenCalled();

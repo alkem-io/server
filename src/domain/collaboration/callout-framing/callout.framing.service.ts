@@ -9,6 +9,7 @@ import {
 } from '@common/enums/contributor.actor.types';
 import { ContributorCollectionView } from '@common/enums/contributor.collection.view';
 import { LogContext } from '@common/enums/logging.context';
+import { SpaceCollectionCardVariant } from '@common/enums/space.collection.card.variant';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { VisualType } from '@common/enums/visual.type';
@@ -51,6 +52,7 @@ import {
   Repository,
 } from 'typeorm';
 import { ICalloutSettingsFraming } from '../callout-settings/callout.settings.framing.interface';
+import { ICalloutSpacesSettings } from '../callout-settings/callout.settings.spaces.interface';
 import { ILink } from '../link/link.interface';
 import { CalloutFraming } from './callout.framing.entity';
 import { ICalloutFraming } from './callout.framing.interface';
@@ -746,11 +748,9 @@ export class CalloutFramingService {
           LogContext.COLLABORATION
         );
       }
-      // A SPACES framing is deliberately CONFIG-FREE
-      // (workspace#013-spaces-collection-callout, FR-004b): it carries no
-      // framing settings block (no contributors object, no counts, no view/map).
-      // The check above already rejects any `contributors` payload on a SPACES
-      // callout; nothing else needs to be persisted for SPACES.
+      // This function only polices the `contributors` block. A SPACES framing
+      // carries no `contributors` block, and its own settings (`selection`,
+      // `spaces`) are handled by the two normalizers below.
       return framingSettings;
     }
 
@@ -844,6 +844,64 @@ export class CalloutFramingService {
   }
 
   /**
+   * Reject a caller-provided `selection` or `spaces` settings block that the
+   * target framing type cannot carry. Pure — no I/O, no mutation — so
+   * CalloutService runs it BEFORE creating or updating the framing: a rejected
+   * request must persist nothing (framing updates have side effects, e.g.
+   * deleting a whiteboard on a type change). The normalizers below enforce
+   * the same rules with the same messages.
+   *
+   * An explicit `null` block is "not provided", never a caller error.
+   */
+  public validateSettingsBlocksForFramingType(
+    framingType: CalloutFramingType,
+    incomingFramingSettings?: {
+      selection?: unknown;
+      spaces?: unknown;
+    } | null
+  ): void {
+    this.assertSelectionSettingsAllowed(
+      framingType,
+      incomingFramingSettings?.selection
+    );
+    this.assertSpacesSettingsAllowed(
+      framingType,
+      incomingFramingSettings?.spaces
+    );
+  }
+
+  // `!= null` (not `!== undefined`) in both assertions: the GraphQL input is
+  // nullable and `@IsOptional()` lets an explicit `null` through, which means
+  // "not provided" — matching the innovation-flow-state settings convention.
+  private assertSelectionSettingsAllowed(
+    framingType: CalloutFramingType,
+    incomingSelection: unknown
+  ): void {
+    if (
+      incomingSelection != null &&
+      framingType !== CalloutFramingType.CONTRIBUTORS &&
+      framingType !== CalloutFramingType.SPACES
+    ) {
+      throw new ValidationException(
+        'Selection settings can only be set when framing.type ∈ {CONTRIBUTORS, SPACES}.',
+        LogContext.COLLABORATION
+      );
+    }
+  }
+
+  private assertSpacesSettingsAllowed(
+    framingType: CalloutFramingType,
+    incomingSpaces: unknown
+  ): void {
+    if (incomingSpaces != null && framingType !== CalloutFramingType.SPACES) {
+      throw new ValidationException(
+        'Card-variant settings can only be set when framing.type = SPACES.',
+        LogContext.COLLABORATION
+      );
+    }
+  }
+
+  /**
    * Validate + normalize the selection settings against the framing type
    * (FR-013/FR-022 — workspace#025-callout-manual-selection). Mutates and
    * returns the framing settings object so the caller can persist the result.
@@ -858,13 +916,20 @@ export class CalloutFramingService {
    * - Partial-update semantics (FR-022): omitted field ⇒ keep stored value;
    *   provided field ⇒ replace whole. Works identically for create (no stored
    *   value → both fields default to AUTO / []).
+   *   An explicit `null` — on the whole block or on a field — is "not
+   *   provided" and keeps the stored value.
    * - `selectedIds` is deduplicated in place (FR-004/T004).
    * - The byte-identical contributors guard above is kept untouched.
    */
   public validateAndNormalizeSelectionSettings(
     framingType: CalloutFramingType,
     framingSettings: ICalloutSettingsFraming,
-    incomingSelection?: { mode?: CalloutSelectionMode; selectedIds?: string[] }
+    // Nullable, not just optional: the GraphQL input is nullable and
+    // `@IsOptional()` passes an explicit `null` through at runtime.
+    incomingSelection?: {
+      mode?: CalloutSelectionMode | null;
+      selectedIds?: string[] | null;
+    } | null
   ): ICalloutSettingsFraming {
     const isCollectionKind =
       framingType === CalloutFramingType.CONTRIBUTORS ||
@@ -872,12 +937,7 @@ export class CalloutFramingService {
 
     if (!isCollectionKind) {
       // Any provided selection on a non-collection kind is a caller error.
-      if (incomingSelection !== undefined) {
-        throw new ValidationException(
-          'Selection settings can only be set when framing.type ∈ {CONTRIBUTORS, SPACES}.',
-          LogContext.COLLABORATION
-        );
-      }
+      this.assertSelectionSettingsAllowed(framingType, incomingSelection);
       // Non-collection framing: strip any stale selection that might linger
       // from a type change (defensive; the merge path in CalloutService strips
       // it too, but belt-and-suspenders).
@@ -886,25 +946,93 @@ export class CalloutFramingService {
     }
 
     // --- Collection kind ---
-    // Materialize the stored block if absent (read-time default — FR-016).
-    if (!framingSettings.selection) {
-      framingSettings.selection = {
-        mode: CalloutSelectionMode.AUTO,
-        selectedIds: [],
-      };
-    }
+    // Materialize the stored block if absent (read-time default — FR-016), and
+    // default each leaf independently of the block's presence: a merged
+    // `selection: {}` or `{ mode: null }` must never persist without a mode,
+    // since both output fields are non-nullable.
+    framingSettings.selection ??= {} as ICalloutSettingsFraming['selection'] &
+      object;
+    framingSettings.selection.mode ??= CalloutSelectionMode.AUTO;
+    framingSettings.selection.selectedIds ??= [];
 
-    if (incomingSelection !== undefined) {
-      // Partial-update: only replace the fields that were explicitly provided.
-      if (incomingSelection.mode !== undefined) {
+    if (incomingSelection != null) {
+      // Partial-update: only replace the fields that were explicitly
+      // provided. `!= null` throughout: an explicit `null` on a nullable input
+      // field is "not provided" and keeps the stored value.
+      if (incomingSelection.mode != null) {
         framingSettings.selection.mode = incomingSelection.mode;
       }
-      if (incomingSelection.selectedIds !== undefined) {
+      if (incomingSelection.selectedIds != null) {
         // Deduplicate, preserving first occurrence (FR-004).
         framingSettings.selection.selectedIds = [
           ...new Set(incomingSelection.selectedIds),
         ];
       }
+    }
+
+    return framingSettings;
+  }
+
+  /**
+   * Validate + normalize the card-variant settings against the framing type.
+   * Mutates and returns the framing settings object so the caller can persist
+   * the normalized result.
+   *
+   * Called AFTER validateAndNormalizeSelectionSettings at both create and
+   * update call sites in CalloutService.
+   *
+   * Rules:
+   * - `spaces` present only iff `framingType === SPACES` — unlike `selection`,
+   *   this block is SPACES-only (CONTRIBUTORS included in the rejection).
+   * - On a SPACES framing: materialize a missing `spaces` to
+   *   `{cardVariant: COMPACT}` (read-time default). A caller-provided `{}`
+   *   never leaves the block without a `cardVariant`.
+   * - Partial-update semantics: omitted `cardVariant` ⇒ keep the stored value
+   *   (or default to COMPACT when nothing is stored); provided `cardVariant`
+   *   ⇒ replace it.
+   *
+   * An explicit `null` from a caller — on `cardVariant` or on the whole
+   * `spaces` block — never reaches a stored value: the settings merge in
+   * CalloutService keeps the stored value in both cases (see
+   * callout.settings.merge.ts). This normalizer still treats a `null`
+   * `incomingSpaces` / `cardVariant` as "not provided" so it is safe on its own.
+   */
+  public validateAndNormalizeSpacesSettings(
+    framingType: CalloutFramingType,
+    framingSettings: ICalloutSettingsFraming,
+    // Both levels are typed as nullable here, not just optional: the GraphQL
+    // input fields are `nullable: true` and class-validator's `@IsOptional()`
+    // lets an explicit `null` through unchanged, so a `null` genuinely
+    // reaches this normalizer at runtime even though the DTO's own TS field
+    // type only declares `?:` (optional, not nullable).
+    incomingSpaces?: { cardVariant?: SpaceCollectionCardVariant | null } | null
+  ): ICalloutSettingsFraming {
+    const isSpaces = framingType === CalloutFramingType.SPACES;
+
+    if (!isSpaces) {
+      // Any provided spaces settings on a non-SPACES kind is a caller error.
+      this.assertSpacesSettingsAllowed(framingType, incomingSpaces);
+      // Strip any stale block that might linger from a type change.
+      delete framingSettings.spaces;
+      return framingSettings;
+    }
+
+    // --- SPACES ---
+    // Materialize the stored block if absent (read-time default).
+    framingSettings.spaces ??= {} as ICalloutSpacesSettings;
+
+    // Default a missing `cardVariant` independently of the block's presence —
+    // a caller-supplied `{}` (already merged into settings before this runs)
+    // must never persist without one, since the field is non-nullable.
+    // `??=` (null or undefined): a `null` that reached this block must
+    // default the same way an omitted field does — the stored value is
+    // non-nullable and must never persist `null`.
+    framingSettings.spaces.cardVariant ??= SpaceCollectionCardVariant.COMPACT;
+
+    // `!= null`: an explicit `cardVariant: null` is "not provided" (keep the
+    // default/stored value just applied above), never a value to persist.
+    if (incomingSpaces?.cardVariant != null) {
+      framingSettings.spaces.cardVariant = incomingSpaces.cardVariant;
     }
 
     return framingSettings;

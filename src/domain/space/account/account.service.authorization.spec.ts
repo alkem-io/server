@@ -1,3 +1,4 @@
+import { AccountType } from '@common/enums/account.type';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import {
@@ -76,6 +77,11 @@ describe('AccountAuthorizationService', () => {
   const createMockAccount = (overrides: Partial<IAccount> = {}): IAccount =>
     ({
       id: 'account-1',
+      // spec-server-14 fix: defaults to ORGANIZATION so the existing suite's
+      // implicit assumption (every account gets PLATFORM_SUPPORT_ORG_RESOURCES)
+      // keeps holding for the org-hosted case it was actually written against;
+      // the new user-hosted exclusion test below overrides this explicitly.
+      accountType: AccountType.ORGANIZATION,
       authorization: {
         id: 'auth-1',
         credentialRules: [],
@@ -363,17 +369,23 @@ describe('AccountAuthorizationService', () => {
 
       const result = await (service as any).extendAuthorizationPolicy(
         mockAuth,
-        credential
+        credential,
+        AccountType.ORGANIZATION
       );
 
       expect(result).toBeDefined();
       expect(
         authorizationPolicyService.appendCredentialAuthorizationRules
       ).toHaveBeenCalled();
-      // Should create rules for global roles, auth reset, space reader, resources manage, transfer accept, license manage
+      // Should create rules for global roles, auth reset, space reader,
+      // resources manage, transfer accept, license manage, and (added by
+      // 027-platform-role-redesign T037, A7) platform-support's own-account
+      // innovation pack/hub resources rule; plus (QA server-C1-1) the
+      // resource admin's own non-cascading READ split out of the space-reader
+      // rule and (QA server-C1-12) the license manager's CREATE_INNOVATION_HUB.
       expect(
         authorizationPolicyService.createCredentialRuleUsingTypesOnly
-      ).toHaveBeenCalledTimes(6);
+      ).toHaveBeenCalledTimes(9);
       // Should create rules for host manage, create space, create VC, create innovation pack
       expect(
         authorizationPolicyService.createCredentialRule
@@ -526,6 +538,231 @@ describe('AccountAuthorizationService', () => {
       ]) {
         expect(granted).not.toContain(excluded);
       }
+    });
+  });
+
+  // 027-platform-role-redesign (T037, T070f): explicit exact-array
+  // assertions for the account-tree grant-set widenings.
+  describe('027-platform-role-redesign — T037 grant-set widenings (T070f)', () => {
+    const arrange = (overrides: Partial<IAccount> = {}) => {
+      const mockAccount = createMockAccount(overrides);
+      (accountService.getAccountOrFail as any).mockResolvedValue(mockAccount);
+      (authorizationPolicyService.reset as any).mockReturnValue(
+        mockAccount.authorization
+      );
+      (
+        authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess as any
+      ).mockReturnValue(mockAccount.authorization);
+      (
+        platformAuthorizationService.inheritRootAuthorizationPolicy as any
+      ).mockReturnValue(mockAccount.authorization);
+      (
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly as any
+      ).mockImplementation((privileges: any, types: any, name: any) => ({
+        grantedPrivileges: privileges,
+        criterias: [...types],
+        name,
+        cascade: true,
+      }));
+      (authorizationPolicyService.createCredentialRule as any).mockReturnValue({
+        criterias: [],
+        cascade: false,
+      });
+      (
+        authorizationPolicyService.appendCredentialAuthorizationRules as any
+      ).mockReturnValue(mockAccount.authorization);
+      (authorizationPolicyService.save as any).mockResolvedValue(
+        mockAccount.authorization
+      );
+      (
+        authorizationPolicyService.cloneAuthorizationPolicy as any
+      ).mockReturnValue(mockAccount.authorization);
+      (
+        licenseAuthorizationService.applyAuthorizationPolicy as any
+      ).mockReturnValue([]);
+      (
+        storageAggregatorAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+      return mockAccount;
+    };
+
+    const rulesGranting = (privilege: AuthorizationPrivilege) =>
+      (
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly as any
+      ).mock.results
+        .map((r: any) => r.value)
+        .filter((rule: any) => rule.grantedPrivileges?.includes(privilege));
+
+    it('TRANSFER_RESOURCE_OFFER (T037, A9): {global-admin, global-support, platform-resource-admin} plus the account-admin credential, non-cascading', async () => {
+      const mockAccount = arrange();
+      await service.applyAuthorizationPolicy(mockAccount);
+
+      const rules = rulesGranting(
+        AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER
+      );
+      expect(rules).toHaveLength(1);
+      const bareCredentials = rules[0].criterias.filter(
+        (c: any) => typeof c === 'string'
+      );
+      expect(bareCredentials).toEqual([
+        AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_SUPPORT,
+        AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+      ]);
+      expect(
+        rules[0].criterias.some(
+          (c: any) => c?.type === AuthorizationCredential.ACCOUNT_ADMIN
+        )
+      ).toBe(true);
+      expect(rules[0].cascade).toBe(false);
+    });
+
+    it('TRANSFER_RESOURCE_ACCEPT (T037, A9): {global-admin, global-support, platform-resource-admin} plus the account-admin credential, non-cascading', async () => {
+      const mockAccount = arrange();
+      await service.applyAuthorizationPolicy(mockAccount);
+
+      const rules = rulesGranting(
+        AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT
+      );
+      expect(rules).toHaveLength(1);
+      const bareCredentials = rules[0].criterias.filter(
+        (c: any) => typeof c === 'string'
+      );
+      expect(bareCredentials).toEqual([
+        AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_SUPPORT,
+        AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+      ]);
+      expect(rules[0].cascade).toBe(false);
+    });
+
+    // QA server-C1-1 (ruling (b′) "mover-only reads"): platform-resource-admin
+    // is split OUT of the shared (cascading) spaces-reader READ rule into its
+    // own non-cascading account READ — A9 target resolution only, never a
+    // read of the account's packs/hubs/storage/profile subtree.
+    it('READ (QA server-C1-1, A9): platform-resource-admin has its OWN non-cascading account READ rule; the shared spaces-reader rule no longer carries it', async () => {
+      const mockAccount = arrange();
+      await service.applyAuthorizationPolicy(mockAccount);
+
+      const readRules = rulesGranting(AuthorizationPrivilege.READ);
+      const withResourceAdmin = readRules.filter((rule: any) =>
+        rule.criterias.includes(AuthorizationCredential.PLATFORM_RESOURCE_ADMIN)
+      );
+      expect(withResourceAdmin).toHaveLength(1);
+      expect(withResourceAdmin[0].criterias).toEqual([
+        AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+      ]);
+      expect(withResourceAdmin[0].grantedPrivileges).toEqual([
+        AuthorizationPrivilege.READ,
+      ]);
+      expect(withResourceAdmin[0].cascade).toBe(false);
+
+      const spacesReader = readRules.filter((rule: any) =>
+        rule.criterias.includes(AuthorizationCredential.PLATFORM_SPACES_READER)
+      );
+      expect(spacesReader).toHaveLength(1);
+      expect(spacesReader[0].criterias).toEqual([
+        AuthorizationCredential.GLOBAL_SPACES_READER,
+        AuthorizationCredential.PLATFORM_SPACES_READER,
+      ]);
+      expect(spacesReader[0].cascade).toBe(true);
+    });
+
+    // QA server-C1-12 (ruling (a)): CREATE_INNOVATION_HUB was held ONLY by the
+    // legacy GA/GLM/GS manageGlobalRoles rule, so Slice B would have left no
+    // role able to create a hub. Platform License Manager (GLM's successor
+    // for "create space/hub/pack/VC", spec.md row 8) gets it on its own
+    // non-cascading rule; the legacy rule is untouched (Slice A additive).
+    it('CREATE_INNOVATION_HUB (QA server-C1-12, A12): platform-license-manager on its OWN non-cascading rule, legacy GA/GLM/GS rule unchanged', async () => {
+      const mockAccount = arrange();
+      await service.applyAuthorizationPolicy(mockAccount);
+
+      const rules = rulesGranting(AuthorizationPrivilege.CREATE_INNOVATION_HUB);
+      const licenseManagerRules = rules.filter((rule: any) =>
+        rule.criterias.includes(
+          AuthorizationCredential.PLATFORM_LICENSE_MANAGER
+        )
+      );
+      expect(licenseManagerRules).toHaveLength(1);
+      expect(licenseManagerRules[0].criterias).toEqual([
+        AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
+      ]);
+      expect(licenseManagerRules[0].grantedPrivileges).toEqual([
+        AuthorizationPrivilege.CREATE_INNOVATION_HUB,
+      ]);
+      expect(licenseManagerRules[0].cascade).toBe(false);
+
+      const legacy = rules.filter(
+        (rule: any) =>
+          !rule.criterias.includes(
+            AuthorizationCredential.PLATFORM_LICENSE_MANAGER
+          )
+      );
+      expect(legacy).toHaveLength(1);
+      expect(legacy[0].criterias).toEqual([
+        AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+        AuthorizationCredential.GLOBAL_SUPPORT,
+      ]);
+    });
+
+    it('ACCOUNT_LICENSE_MANAGE (T037, A12): EXACTLY {global-admin, global-license-manager, platform-license-manager}, non-cascading', async () => {
+      const mockAccount = arrange();
+      await service.applyAuthorizationPolicy(mockAccount);
+
+      const rules = rulesGranting(
+        AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE
+      );
+      expect(rules).toHaveLength(1);
+      expect(rules[0].criterias).toEqual([
+        AuthorizationCredential.GLOBAL_ADMIN,
+        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+        AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
+      ]);
+      expect(rules[0].cascade).toBe(false);
+    });
+
+    it('PLATFORM_SUPPORT_ORG_RESOURCES (T037, A7): EXACTLY {platform-support}, no legacy reacher — cascading to the account packs/hubs/templates', async () => {
+      const mockAccount = arrange();
+      await service.applyAuthorizationPolicy(mockAccount);
+
+      const rules = rulesGranting(
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+      );
+      expect(rules).toHaveLength(1);
+      expect(rules[0].criterias).toEqual([
+        AuthorizationCredential.PLATFORM_SUPPORT,
+      ]);
+      expect(rules[0].cascade).toBe(true);
+    });
+
+    // QA server-C2-c (skeptic's precision): PLATFORM_SUPPORT_ORG_RESOURCES
+    // cascades from an org-hosted account into the account's OWN profile and
+    // storage aggregator too. The profile-edit privilege rule is threaded down
+    // only from the pack/hub/template authorization services — never here —
+    // so Support gains no upload/edit on the org account's own profile.
+    it('PLATFORM_SUPPORT_ORG_RESOURCES (QA server-C2-c): the account profile receives NO threaded privilege rules', async () => {
+      const mockAccount = arrange();
+      await service.applyAuthorizationPolicy(mockAccount);
+
+      const accountProfileCalls = (
+        profileAuthorizationService.applyAuthorizationPolicy as any
+      ).mock.calls.filter((call: any[]) => call[0] === 'account-profile-1');
+      expect(accountProfileCalls).toHaveLength(1);
+      expect(accountProfileCalls[0][3] ?? []).toEqual([]);
+    });
+
+    // spec-server-14 fix: A7 (spec row 7) and FR-008(b) grant Platform
+    // Support this right only over resources "belonging to an
+    // organization" — a USER-hosted account must not get the rule at all.
+    it('PLATFORM_SUPPORT_ORG_RESOURCES (spec-server-14 fix): NOT granted at all on a USER-hosted account', async () => {
+      const mockAccount = arrange({ accountType: AccountType.USER });
+      await service.applyAuthorizationPolicy(mockAccount);
+
+      const rules = rulesGranting(
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+      );
+      expect(rules).toHaveLength(0);
     });
   });
 });

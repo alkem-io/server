@@ -48,8 +48,18 @@ kratos_login() {
 }
 
 # Verify that SESSION_TOKEN is valid via the whoami endpoint.
+#
+# Uses `return`, not `fail` (which `exit`s): callers probe a *cached*
+# token with `if kratos_verify_session; then ...`, expecting a false
+# verdict to fall through to re-login — a `fail`-triggered `exit` inside
+# that conditional would instead kill the whole calling script, since a
+# shell function's `exit` terminates the process it runs in regardless of
+# the conditional context it was called from.
 kratos_verify_session() {
-  [ -n "${SESSION_TOKEN:-}" ] || fail "SESSION_TOKEN is not set"
+  if [ -z "${SESSION_TOKEN:-}" ]; then
+    echo "ERROR: SESSION_TOKEN is not set" >&2
+    return 1
+  fi
 
   local whoami
   whoami=$(curl -sf \
@@ -58,7 +68,8 @@ kratos_verify_session() {
     "$KRATOS_PUBLIC_URL/sessions/whoami" 2>/dev/null || echo "")
 
   if [ -z "$whoami" ] || echo "$whoami" | jq -e '.error' >/dev/null 2>&1; then
-    fail "Session token verification failed"
+    echo "ERROR: Session token verification failed" >&2
+    return 1
   fi
 }
 

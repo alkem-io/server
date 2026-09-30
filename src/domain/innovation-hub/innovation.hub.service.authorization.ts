@@ -6,6 +6,7 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { createPlatformSupportOrgResourcesProfileEditRule } from '@domain/common/profile/platform.support.org.resources.profile.rule';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { Injectable } from '@nestjs/common';
 import { InnovationHubService } from './innovation.hub.service';
@@ -64,7 +65,11 @@ export class InnovationHubAuthorizationService {
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         hub.profile.id,
-        hub.authorization
+        hub.authorization,
+        [],
+        // QA server-C2-c (A7): Support edits an org-owned hub's profile,
+        // media and references — never DELETE.
+        [createPlatformSupportOrgResourcesProfileEditRule()]
       );
     updatedAuthorizations.push(...profileAuthorizations);
 

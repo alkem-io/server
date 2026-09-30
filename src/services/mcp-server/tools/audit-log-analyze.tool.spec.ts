@@ -1,3 +1,4 @@
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PlatformAuditCategory } from '@domain/community/user-email-change/enums/platform.audit.category';
@@ -90,9 +91,46 @@ describe('AuditLogAnalyzeTool', () => {
       expect(def.name).toBe('analyze_audit_log');
       expect(def.inputSchema.required).toContain('action');
     });
+
+    // server-C1-16 fix: the description previously said "Requires
+    // platform-admin access", the retired catch-all — re-anchored onto the
+    // dedicated PLATFORM_AUDIT_READ privilege alongside the runtime gate
+    // (spec-server-9).
+    it('describes the gate as platform-audit-read, not the retired platform-admin catch-all', () => {
+      const def = tool.getDefinition();
+      expect(def.description).not.toContain('platform-admin');
+      expect(def.description).toContain('platform-audit-read');
+    });
+
+    // server-C1-16 fix: the category filter was a hardcoded 2-value enum
+    // (email_change/password_change) that silently went stale as
+    // PlatformAuditCategory grew — it now enumerates every category.
+    it('enumerates every PlatformAuditCategory in the category filter, not a stale hardcoded pair', () => {
+      const def = tool.getDefinition();
+      const categoryProperty = def.inputSchema.properties.category as {
+        enum: string[];
+      };
+      expect(categoryProperty.enum).toEqual(
+        Object.values(PlatformAuditCategory)
+      );
+    });
   });
 
   describe('authorization gate', () => {
+    it('checks PLATFORM_AUDIT_READ, not the retired PLATFORM_ADMIN catch-all', async () => {
+      const actorContext = createActorContext();
+      await tool.execute({ action: 'summary' }, actorContext);
+
+      // spec-server-9 fix: assert the actual privilege named at the gate —
+      // without this, re-anchoring the check back onto PLATFORM_ADMIN (or
+      // any other privilege) would pass this suite unchanged.
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        actorContext,
+        expect.anything(),
+        AuthorizationPrivilege.PLATFORM_AUDIT_READ
+      );
+    });
+
     it('denies a non-admin and never queries the audit log', async () => {
       vi.mocked(authorizationService.isAccessGranted).mockReturnValue(false);
 
@@ -102,7 +140,9 @@ describe('AuditLogAnalyzeTool', () => {
       );
 
       expect(result.isError).toBe(true);
-      expect(result.content[0]?.text).toContain('platform-admin');
+      // server-C1-16 fix: the denial text named the retired 'platform-admin'
+      // catch-all rather than the actual gate this tool checks.
+      expect(result.content[0]?.text).toContain('platform-audit-read');
       expect(auditRepository.createQueryBuilder).not.toHaveBeenCalled();
     });
 
