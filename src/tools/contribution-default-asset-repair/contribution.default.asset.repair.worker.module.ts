@@ -25,8 +25,10 @@ import { ContributionDefaultAssetRepairService } from './contribution.default.as
       name: 'default',
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: async (config: ConfigService<AlkemioConfig, true>) =>
-        buildRuntimeDataSourceOptions(config, join(__dirname, '..', '..', '..')),
+      useFactory: async (config: ConfigService<AlkemioConfig, true>) => ({
+        ...buildRuntimeDataSourceOptions(config, join(__dirname, '..', '..', '..')),
+        logging: false,
+      }),
     }),
     FileServiceAdapterModule,
     CacheModule.register({ isGlobal: true }),
