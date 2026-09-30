@@ -471,6 +471,11 @@ export class RoleSetResolverMutationsMembership {
     // the actor group — so the client can only match it back to the chip the
     // user typed if the originating address travels with it.
     const emailByActorID = new Map<string, string>();
+    // Typed addresses that resolve to an actor already being invited (picked
+    // as an actor, or typed twice). They create no second invitation, but the
+    // client still needs a result carrying each typed address so it can match
+    // the chip back to the single outcome for that person.
+    const duplicateEmailsByActorID = new Map<string, string[]>();
     for (const email of invitationData.invitedUserEmails) {
       // If the user is already registered, then just create a normal invitation
       const existingUser = await this.userLookupService.getUserByEmail(email);
@@ -478,6 +483,11 @@ export class RoleSetResolverMutationsMembership {
         if (!actorIDsToInvite.includes(existingUser.id)) {
           actorIDsToInvite.push(existingUser.id);
           emailByActorID.set(existingUser.id, email);
+        } else {
+          const duplicates =
+            duplicateEmailsByActorID.get(existingUser.id) ?? [];
+          duplicates.push(email);
+          duplicateEmailsByActorID.set(existingUser.id, duplicates);
         }
       } else {
         newUserEmails.push(email);
@@ -535,6 +545,20 @@ export class RoleSetResolverMutationsMembership {
       actorContext,
       invitationResults
     );
+
+    // Echo the outcome of the single invitation back for every duplicate typed
+    // address of that invitee. Appended after notifications are sent so the
+    // person is still notified exactly once.
+    for (const [actorID, emails] of duplicateEmailsByActorID) {
+      const primary = invitationResults.find(
+        result => result.invitedActorID === actorID
+      );
+      if (!primary) continue;
+      for (const email of emails) {
+        if (primary.invitedEmail === email) continue;
+        invitationResults.push({ ...primary, invitedEmail: email });
+      }
+    }
 
     return invitationResults;
   }

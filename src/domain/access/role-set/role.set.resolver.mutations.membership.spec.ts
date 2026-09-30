@@ -956,6 +956,64 @@ describe('RoleSetResolverMutationsMembership', () => {
           ).not.toHaveBeenCalled();
         });
 
+        it('invites a person picked and typed once, and still reports the typed address', async () => {
+          setUpEmailInvite();
+          const mockInvitation = {
+            id: 'inv-1',
+            invitedActorID: 'user-existing',
+            extraRoles: [],
+          } as any;
+          (
+            actorLookupService.validateActorsAndGetTypes as Mock
+          ).mockResolvedValue(new Map([['user-existing', ActorType.USER]]));
+          (userLookupService.getUserByEmail as Mock).mockResolvedValue({
+            id: 'user-existing',
+          });
+          (roleSetService.findOpenInvitation as Mock).mockResolvedValue(
+            undefined
+          );
+          (roleSetService.findOpenApplication as Mock).mockResolvedValue(
+            undefined
+          );
+          (roleSetService.isMember as Mock).mockResolvedValue(false);
+          (
+            roleSetService.createInvitationExistingActor as Mock
+          ).mockResolvedValue(mockInvitation);
+          (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([
+            mockInvitation,
+          ]);
+          (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+            ActorType.USER
+          );
+
+          const result = await resolver.inviteForEntryRoleOnRoleSet(
+            actorContext,
+            {
+              roleSetID: 'org-rs-1',
+              invitedActorIDs: ['user-existing'],
+              invitedUserEmails: ['registered@example.com'],
+              extraRoles: [],
+            } as any
+          );
+
+          expect(
+            roleSetService.createInvitationExistingActor
+          ).toHaveBeenCalledTimes(1);
+          expect(result).toHaveLength(2);
+          expect(result.map(r => r.type)).toEqual([
+            RoleSetInvitationResultType.INVITED_TO_ROLE_SET,
+            RoleSetInvitationResultType.INVITED_TO_ROLE_SET,
+          ]);
+          expect(result.map(r => r.invitedActorID)).toEqual([
+            'user-existing',
+            'user-existing',
+          ]);
+          expect(result.map(r => r.invitedEmail)).toEqual([
+            undefined,
+            'registered@example.com',
+          ]);
+        });
+
         it('creates the email invitation even when the offered role cap is already reached', async () => {
           setUpEmailInvite();
           (roleSetService.countActorsWithRole as Mock).mockResolvedValue(6);
