@@ -365,17 +365,20 @@ describe('RoleSetService', () => {
   });
 
   describe('getPlatformInvitations', () => {
-    it('should return platform invitations for roleSet', async () => {
-      const platformInvitations = [{ id: 'pinv-1' }] as any[];
-      const mockRoleSet = { id: 'rs-1', platformInvitations } as any;
-
-      vi.spyOn(roleSetRepository, 'findOne').mockResolvedValue(mockRoleSet);
+    it('should return the open platform invitations of the roleSet', async () => {
+      const openInvitations = [{ id: 'pinv-1' }] as any[];
+      (platformInvitationService.findOpenForRoleSet as Mock).mockResolvedValue(
+        openInvitations
+      );
 
       const result = await service.getPlatformInvitations({
         id: 'rs-1',
       } as any);
 
-      expect(result).toEqual(platformInvitations);
+      expect(result).toBe(openInvitations);
+      expect(platformInvitationService.findOpenForRoleSet).toHaveBeenCalledWith(
+        'rs-1'
+      );
     });
   });
 
