@@ -1,4 +1,5 @@
 import { CurrentActor } from '@common/decorators/current-actor.decorator';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { NotificationEvent } from '@common/enums/notification.event';
@@ -9,6 +10,7 @@ import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ICalloutFormResponse } from '../callout-form-response/callout.form.response.interface';
 import { CalloutFormResponseService } from '../callout-form-response/callout.form.response.service';
@@ -30,6 +32,7 @@ export class CalloutFormResolverMutations {
     private calloutFormService: CalloutFormService,
     private calloutFormResponseService: CalloutFormResponseService,
     private notificationAdapterSpace: NotificationSpaceAdapter,
+    private platformResourceAuditService: PlatformResourceAuditService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -124,15 +127,49 @@ export class CalloutFormResolverMutations {
       !!response.createdBy &&
       !!actorContext.actorID &&
       response.createdBy === actorContext.actorID;
+    let moderatedAsPlatformRole = false;
+    let calloutID: string | undefined;
     if (!isOwner) {
       const callout = await this.calloutFormService.getCalloutForFormOrFail(
         response.formId,
         CALLOUT_FORM_OWNER_RELATIONS
       );
       this.formResponseAccess.assertCanModerate(actorContext, callout);
+      calloutID = callout.id;
+      // 027-platform-role-redesign (A8): the platform branch is read from the
+      // authorization RESULT — does the callouts set's policy grant the
+      // actor PLATFORM_CONTENT_FULL_ACCESS — never re-derived from the
+      // actor's roles. A space admin moderating their own space does not hold
+      // it, so only platform-derived moderation is audited below.
+      moderatedAsPlatformRole = this.authorizationService.isAccessGranted(
+        actorContext,
+        callout.calloutsSet?.authorization,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS
+      );
     }
 
     await this.calloutFormResponseService.deleteResponse(deleteData.responseID);
+    // Audit ONLY the platform moderation branch (never an owner withdrawal or
+    // ordinary space-admin moderation), after the delete has applied; the
+    // writer is fail-open. The row carries ids only — never an answer.
+    if (moderatedAsPlatformRole) {
+      await this.platformResourceAuditService.recordEventForActor(
+        actorContext,
+        [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        {
+          resourceKind: 'callout-form-response',
+          resourceId: deleteData.responseID,
+          calloutId: calloutID,
+          formId: response.formId,
+          respondentUserId: response.createdBy ?? undefined,
+          outcome: 'deleted',
+        }
+      );
+    }
     return { id: deleteData.responseID };
   }
 }

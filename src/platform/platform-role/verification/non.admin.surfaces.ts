@@ -234,7 +234,6 @@ export const NON_ADMIN_SURFACES: Readonly<
   deleteApplication: NON_ADMIN,
   deleteCalendarEvent: NON_ADMIN,
   deleteClassificationEntry: NON_ADMIN,
-  deleteCalloutFormResponse: NON_ADMIN,
   deleteCollaboraDocument: NON_ADMIN,
   deleteConversation: NON_ADMIN,
   deleteDocument: NON_ADMIN,

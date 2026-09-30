@@ -156,6 +156,12 @@ export interface PlatformResourceAuditDetails {
   toAccountId?: string;
   visibility?: string;
   licensePlan?: string;
+  /** Form-response deletes only: ids that locate the response. Never an
+   * answer or a question prompt. */
+  calloutId?: string;
+  formId?: string;
+  /** The user who submitted the deleted response, when still known. */
+  respondentUserId?: string;
 }
 
 /**

@@ -1,8 +1,13 @@
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CalloutFormResponseVisibility } from '@common/enums/callout.form.response.visibility';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { LogContext } from '@common/enums/logging.context';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
+import { PlatformAuditCategory } from '@domain/community/user-email-change/enums/platform.audit.category';
+import { PlatformAuditInitiatorRole } from '@domain/community/user-email-change/enums/platform.audit.initiator.role';
+import { PlatformAuditOutcome } from '@domain/community/user-email-change/enums/platform.audit.outcome';
+import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { CALLOUT_FORM_OWNER_RELATIONS } from './callout.form.owner.relations';
 import { CalloutFormResolverMutations } from './callout.form.resolver.mutations';
 
@@ -15,7 +20,10 @@ const forbidden = () =>
   );
 
 describe('CalloutFormResolverMutations', () => {
-  const authorizationService = { grantAccessOrFail: vi.fn() };
+  const authorizationService = {
+    grantAccessOrFail: vi.fn(),
+    isAccessGranted: vi.fn(),
+  };
   const formResponseAccess = { assertCanModerate: vi.fn() };
   const calloutFormService = {
     getCalloutForFormOrFail: vi.fn(),
@@ -29,6 +37,7 @@ describe('CalloutFormResolverMutations', () => {
   const notificationAdapter = {
     spaceCollaborationCalloutFormResponseSubmitted: vi.fn(),
   };
+  const platformResourceAuditService = { recordEventForActor: vi.fn() };
   const logger = { error: vi.fn() };
   let resolver: CalloutFormResolverMutations;
 
@@ -51,6 +60,7 @@ describe('CalloutFormResolverMutations', () => {
       calloutFormService as any,
       responseService as any,
       notificationAdapter as any,
+      platformResourceAuditService as any,
       logger as any
     );
   });
@@ -212,6 +222,9 @@ describe('CalloutFormResolverMutations', () => {
       expect(responseService.deleteResponse).toHaveBeenCalledWith('response-1');
       expect(formResponseAccess.assertCanModerate).not.toHaveBeenCalled();
       expect(calloutFormService.getCalloutForFormOrFail).not.toHaveBeenCalled();
+      expect(
+        platformResourceAuditService.recordEventForActor
+      ).not.toHaveBeenCalled();
     });
 
     it('returns only the id, never the deleted response or its answers', async () => {
@@ -241,6 +254,180 @@ describe('CalloutFormResolverMutations', () => {
         callout
       );
       expect(responseService.deleteResponse).toHaveBeenCalledWith('response-1');
+    });
+
+    describe('platform-role moderation audit', () => {
+      const moderatedCallout = {
+        ...callout,
+        calloutsSet: { authorization: { id: 'set-auth' } },
+      };
+      const platformActor = {
+        actorID: 'admin-1',
+        credentials: [
+          {
+            type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+            resourceID: '',
+          },
+        ],
+      } as any;
+
+      beforeEach(() => {
+        calloutFormService.getCalloutForFormOrFail.mockResolvedValue(
+          moderatedCallout
+        );
+        responseService.getResponseOrFail.mockResolvedValue(
+          response('respondent-1')
+        );
+      });
+
+      it('audits exactly once when the moderation authority is the platform privilege, with ids only', async () => {
+        authorizationService.isAccessGranted.mockReturnValue(true);
+
+        await resolver.deleteCalloutFormResponse(platformActor, deleteData);
+
+        expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+          platformActor,
+          moderatedCallout.calloutsSet.authorization,
+          AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS
+        );
+        expect(
+          platformResourceAuditService.recordEventForActor
+        ).toHaveBeenCalledTimes(1);
+        expect(
+          platformResourceAuditService.recordEventForActor
+        ).toHaveBeenCalledWith(
+          platformActor,
+          [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
+          [
+            AuthorizationCredential.GLOBAL_ADMIN,
+            AuthorizationCredential.GLOBAL_SUPPORT,
+          ],
+          {
+            resourceKind: 'callout-form-response',
+            resourceId: 'response-1',
+            calloutId: 'callout-1',
+            formId: 'form-1',
+            respondentUserId: 'respondent-1',
+            outcome: 'deleted',
+          }
+        );
+      });
+
+      it('audits after the delete has applied, and omits the respondent when the account is gone', async () => {
+        authorizationService.isAccessGranted.mockReturnValue(true);
+        responseService.getResponseOrFail.mockResolvedValue(response(null));
+        const order: string[] = [];
+        responseService.deleteResponse.mockImplementation(async () => {
+          order.push('delete');
+        });
+        platformResourceAuditService.recordEventForActor.mockImplementation(
+          async (_a: unknown, _o: unknown, _l: unknown, input: any) => {
+            order.push('audit');
+            expect(input.respondentUserId).toBeUndefined();
+          }
+        );
+
+        await resolver.deleteCalloutFormResponse(platformActor, deleteData);
+
+        expect(order).toEqual(['delete', 'audit']);
+      });
+
+      it('does not audit ordinary space-admin moderation', async () => {
+        authorizationService.isAccessGranted.mockReturnValue(false);
+
+        await resolver.deleteCalloutFormResponse(actor, deleteData);
+
+        expect(responseService.deleteResponse).toHaveBeenCalledWith(
+          'response-1'
+        );
+        expect(
+          platformResourceAuditService.recordEventForActor
+        ).not.toHaveBeenCalled();
+      });
+
+      it('does not audit, nor delete, when moderation is refused', async () => {
+        authorizationService.isAccessGranted.mockReturnValue(true);
+        formResponseAccess.assertCanModerate.mockImplementation(() => {
+          throw forbidden();
+        });
+
+        await expect(
+          resolver.deleteCalloutFormResponse(platformActor, deleteData)
+        ).rejects.toBeInstanceOf(ForbiddenAuthorizationPolicyException);
+        expect(responseService.deleteResponse).not.toHaveBeenCalled();
+        expect(
+          platformResourceAuditService.recordEventForActor
+        ).not.toHaveBeenCalled();
+      });
+
+      describe('with the real audit writer', () => {
+        const build = (save: ReturnType<typeof vi.fn>) => {
+          const repository = { create: vi.fn(entry => entry), save };
+          const auditLogger = { error: vi.fn() };
+          const realAudit = new PlatformResourceAuditService(
+            repository as any,
+            auditLogger as any
+          );
+          const realResolver = new CalloutFormResolverMutations(
+            authorizationService as any,
+            formResponseAccess as any,
+            calloutFormService as any,
+            responseService as any,
+            notificationAdapter as any,
+            realAudit,
+            logger as any
+          );
+          return { repository, auditLogger, realResolver };
+        };
+
+        it('writes one platform_resource row carrying ids and no answer content', async () => {
+          authorizationService.isAccessGranted.mockReturnValue(true);
+          responseService.deleteResponse.mockResolvedValue({
+            id: 'response-1',
+            answers: [{ questionID: 'q1', text: 'secret answer' }],
+          });
+          const save = vi.fn().mockResolvedValue(undefined);
+          const { repository, realResolver } = build(save);
+
+          await realResolver.deleteCalloutFormResponse(
+            platformActor,
+            deleteData
+          );
+
+          expect(save).toHaveBeenCalledTimes(1);
+          const row = repository.create.mock.calls[0][0];
+          expect(row).toMatchObject({
+            category: PlatformAuditCategory.PLATFORM_RESOURCE,
+            outcome: PlatformAuditOutcome.RESOURCE_DELETED,
+            initiatorUserId: 'admin-1',
+            initiatorRole:
+              PlatformAuditInitiatorRole.PLATFORM_CONTENT_FULL_ACCESS,
+            details: {
+              resourceKind: 'callout-form-response',
+              resourceId: 'response-1',
+              calloutId: 'callout-1',
+              formId: 'form-1',
+              respondentUserId: 'respondent-1',
+            },
+          });
+          expect(JSON.stringify(row)).not.toContain('secret');
+          expect(JSON.stringify(row)).not.toContain('answers');
+        });
+
+        it('fails open: an audit write failure neither fails nor undoes the delete', async () => {
+          authorizationService.isAccessGranted.mockReturnValue(true);
+          const save = vi.fn().mockRejectedValue(new Error('DB down'));
+          const { auditLogger, realResolver } = build(save);
+
+          await expect(
+            realResolver.deleteCalloutFormResponse(platformActor, deleteData)
+          ).resolves.toEqual({ id: 'response-1' });
+          expect(responseService.deleteResponse).toHaveBeenCalledWith(
+            'response-1'
+          );
+          expect(auditLogger.error).toHaveBeenCalled();
+        });
+      });
     });
 
     it.each([
