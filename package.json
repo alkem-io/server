@@ -55,6 +55,7 @@
     "schema:sort": "ts-node -r tsconfig-paths/register src/tools/schema/sort-sdl.ts schema.graphql",
     "schema:diff": "ts-node -r tsconfig-paths/register src/tools/schema/diff-schema.ts --old tmp/prev.schema.graphql --new schema.graphql --out change-report.json --deprecations deprecations.json",
     "schema:validate": "ts-node -r tsconfig-paths/register src/tools/schema/validate-artifacts.ts change-report.json deprecations.json",
+    "repair:contribution-default-assets": "ts-node -r tsconfig-paths/register src/main.contribution-default-asset-repair.ts",
     "prepare": "husky || true"
   },
   "dependencies": {
