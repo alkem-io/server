@@ -10,6 +10,7 @@ import { RoleSetMembershipException } from '@common/exceptions/role.set.membersh
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ApplicationService } from '@domain/access/application/application.service';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
+import { PlatformInvitationResendThrottleService } from '@domain/access/invitation.platform/platform.invitation.resend.throttle.service';
 import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -52,6 +53,7 @@ describe('RoleSetResolverMutationsMembership', () => {
   let notificationUserAdapter: NotificationUserAdapter;
   let notificationPlatformAdapter: NotificationPlatformAdapter;
   let platformInvitationServiceMock: PlatformInvitationService;
+  let resendThrottleService: PlatformInvitationResendThrottleService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -111,6 +113,9 @@ describe('RoleSetResolverMutationsMembership', () => {
     );
     platformInvitationServiceMock = module.get<PlatformInvitationService>(
       PlatformInvitationService
+    );
+    resendThrottleService = module.get<PlatformInvitationResendThrottleService>(
+      PlatformInvitationResendThrottleService
     );
     communityResolverService = module.get<CommunityResolverService>(
       CommunityResolverService
@@ -2654,6 +2659,202 @@ describe('RoleSetResolverMutationsMembership', () => {
 
       expect(result).toHaveLength(1);
       expect(authorizationService.isAccessGranted).toHaveBeenCalled();
+    });
+  });
+
+  describe('resendPlatformInvitation', () => {
+    const actorContext = { actorID: 'admin-1' } as any;
+    const buildInvitation = (
+      roleSetType: RoleSetType,
+      overrides: Record<string, unknown> = {}
+    ) =>
+      ({
+        id: 'pinv-1',
+        email: 'new@example.com',
+        profileCreated: false,
+        welcomeMessage: 'Welcome',
+        roleSetExtraRoles: ['admin'],
+        updatedDate: new Date('2024-01-01'),
+        roleSet: {
+          id: 'rs-1',
+          type: roleSetType,
+          authorization: { id: 'auth-1' },
+        },
+        ...overrides,
+      }) as any;
+
+    beforeEach(() => {
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+      (resendThrottleService.claim as Mock).mockResolvedValue(true);
+      (
+        communityResolverService.getCommunityForRoleSet as Mock
+      ).mockResolvedValue({ id: 'comm-1' });
+      (
+        organizationLookupService.getOrganizationForRoleSetOrFail as Mock
+      ).mockResolvedValue({ id: 'org-1' });
+      (
+        notificationPlatformAdapter.platformInvitationCreated as Mock
+      ).mockResolvedValue(undefined);
+      (
+        notificationOrganizationAdapter.organizationAssociatePlatformInvitationCreated as Mock
+      ).mockResolvedValue(undefined);
+    });
+
+    it('re-sends the Space email once, triggered by the resending actor, and returns the record unchanged', async () => {
+      const invitation = buildInvitation(RoleSetType.SPACE);
+      const before = { ...invitation };
+      (
+        platformInvitationServiceMock.getPlatformInvitationOrFail as Mock
+      ).mockResolvedValue(invitation);
+
+      const result = await resolver.resendPlatformInvitation(actorContext, {
+        ID: 'pinv-1',
+      });
+
+      expect(result).toBe(invitation);
+      expect(result).toEqual(before);
+      expect(
+        platformInvitationServiceMock.getPlatformInvitationOrFail
+      ).toHaveBeenCalledWith('pinv-1', {
+        relations: { roleSet: { authorization: true } },
+      });
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        invitation.roleSet.authorization,
+        AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE,
+        expect.any(String)
+      );
+      expect(
+        notificationPlatformAdapter.platformInvitationCreated
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        notificationPlatformAdapter.platformInvitationCreated
+      ).toHaveBeenCalledWith({
+        triggeredBy: 'admin-1',
+        community: { id: 'comm-1' },
+        invitedUserEmail: 'new@example.com',
+        welcomeMessage: 'Welcome',
+      });
+      expect(
+        notificationOrganizationAdapter.organizationAssociatePlatformInvitationCreated
+      ).not.toHaveBeenCalled();
+      expect(platformInvitationServiceMock.save).not.toHaveBeenCalled();
+    });
+
+    it('re-sends the organization email once for an organization role set', async () => {
+      (
+        platformInvitationServiceMock.getPlatformInvitationOrFail as Mock
+      ).mockResolvedValue(buildInvitation(RoleSetType.ORGANIZATION));
+
+      await resolver.resendPlatformInvitation(actorContext, { ID: 'pinv-1' });
+
+      expect(
+        notificationOrganizationAdapter.organizationAssociatePlatformInvitationCreated
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        notificationOrganizationAdapter.organizationAssociatePlatformInvitationCreated
+      ).toHaveBeenCalledWith({
+        triggeredBy: 'admin-1',
+        organizationID: 'org-1',
+        invitedUserEmail: 'new@example.com',
+        extraRoles: ['admin'],
+        welcomeMessage: 'Welcome',
+      });
+      expect(
+        notificationPlatformAdapter.platformInvitationCreated
+      ).not.toHaveBeenCalled();
+    });
+
+    it('fails authorization before claiming the throttle or dispatching anything', async () => {
+      (
+        platformInvitationServiceMock.getPlatformInvitationOrFail as Mock
+      ).mockResolvedValue(buildInvitation(RoleSetType.SPACE));
+      (authorizationService.grantAccessOrFail as Mock).mockImplementation(
+        () => {
+          throw new ForbiddenAuthorizationPolicyException(
+            'no',
+            AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE,
+            'auth-1',
+            'admin-1'
+          );
+        }
+      );
+
+      await expect(
+        resolver.resendPlatformInvitation(actorContext, { ID: 'pinv-1' })
+      ).rejects.toThrow(ForbiddenAuthorizationPolicyException);
+      expect(resendThrottleService.claim).not.toHaveBeenCalled();
+      expect(
+        notificationPlatformAdapter.platformInvitationCreated
+      ).not.toHaveBeenCalled();
+    });
+
+    it('refuses a consumed invitation without claiming the throttle or dispatching', async () => {
+      (
+        platformInvitationServiceMock.getPlatformInvitationOrFail as Mock
+      ).mockResolvedValue(
+        buildInvitation(RoleSetType.SPACE, { profileCreated: true })
+      );
+
+      await expect(
+        resolver.resendPlatformInvitation(actorContext, { ID: 'pinv-1' })
+      ).rejects.toThrow(RoleSetInvitationException);
+      expect(resendThrottleService.claim).not.toHaveBeenCalled();
+      expect(
+        notificationPlatformAdapter.platformInvitationCreated
+      ).not.toHaveBeenCalled();
+    });
+
+    it('refuses a platform role set invitation', async () => {
+      (
+        platformInvitationServiceMock.getPlatformInvitationOrFail as Mock
+      ).mockResolvedValue(buildInvitation(RoleSetType.PLATFORM));
+
+      await expect(
+        resolver.resendPlatformInvitation(actorContext, { ID: 'pinv-1' })
+      ).rejects.toThrow(RoleSetInvitationException);
+      expect(resendThrottleService.claim).not.toHaveBeenCalled();
+    });
+
+    it('answers the typed throttled code inside the window and dispatches nothing', async () => {
+      (
+        platformInvitationServiceMock.getPlatformInvitationOrFail as Mock
+      ).mockResolvedValue(buildInvitation(RoleSetType.SPACE));
+      (resendThrottleService.claim as Mock).mockResolvedValue(false);
+
+      const error = await resolver
+        .resendPlatformInvitation(actorContext, { ID: 'pinv-1' })
+        .catch(e => e);
+
+      expect(error).toBeInstanceOf(RoleSetInvitationException);
+      expect(error.code).toBe('ROLESET_INVITATION_RESEND_THROTTLED');
+      expect(
+        notificationPlatformAdapter.platformInvitationCreated
+      ).not.toHaveBeenCalled();
+      expect(
+        notificationOrganizationAdapter.organizationAssociatePlatformInvitationCreated
+      ).not.toHaveBeenCalled();
+    });
+
+    it('never writes the address into log lines or exception messages', async () => {
+      const verbose = vi.fn();
+      (resolver as any).logger = { verbose, error: vi.fn(), warn: vi.fn() };
+      (
+        platformInvitationServiceMock.getPlatformInvitationOrFail as Mock
+      ).mockResolvedValue(buildInvitation(RoleSetType.SPACE));
+
+      await resolver.resendPlatformInvitation(actorContext, { ID: 'pinv-1' });
+      expect(JSON.stringify(verbose.mock.calls)).not.toContain(
+        'new@example.com'
+      );
+
+      (resendThrottleService.claim as Mock).mockResolvedValue(false);
+      const error = await resolver
+        .resendPlatformInvitation(actorContext, { ID: 'pinv-1' })
+        .catch(e => e);
+      expect(error.message).not.toContain('new@example.com');
     });
   });
 

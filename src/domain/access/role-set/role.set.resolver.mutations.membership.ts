@@ -27,7 +27,9 @@ import {
   IInvitation,
   InvitationEventInput,
 } from '@domain/access/invitation';
+import { ResendPlatformInvitationInput } from '@domain/access/invitation.platform/dto/platform.invitation.dto.resend';
 import { IPlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.interface';
+import { PlatformInvitationResendThrottleService } from '@domain/access/invitation.platform/platform.invitation.resend.throttle.service';
 import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -108,6 +110,7 @@ export class RoleSetResolverMutationsMembership {
     private invitationService: InvitationService,
     private actorLookupService: ActorLookupService,
     private platformInvitationService: PlatformInvitationService,
+    private platformInvitationResendThrottleService: PlatformInvitationResendThrottleService,
     private licenseService: LicenseService,
     private lifecycleService: LifecycleService,
     private roleSetCacheService: RoleSetCacheService,
@@ -597,6 +600,79 @@ export class RoleSetResolverMutationsMembership {
       invitationResults.push(result);
     }
     return invitationResults;
+  }
+
+  @Mutation(() => IPlatformInvitation, {
+    description:
+      'Sends the invitation email of an open platform invitation again (Space or Organization role sets); throttled per invitation.',
+  })
+  async resendPlatformInvitation(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('resendData') resendData: ResendPlatformInvitationInput
+  ): Promise<IPlatformInvitation> {
+    const platformInvitation =
+      await this.platformInvitationService.getPlatformInvitationOrFail(
+        resendData.ID,
+        { relations: { roleSet: { authorization: true } } }
+      );
+    const roleSet = platformInvitation.roleSet;
+    if (!roleSet) {
+      throw new RelationshipNotFoundException(
+        `Unable to load role set of platform invitation: ${platformInvitation.id}`,
+        LogContext.ROLES
+      );
+    }
+
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      roleSet.authorization,
+      AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE,
+      `resend platform invitation: ${platformInvitation.id}`
+    );
+
+    if (platformInvitation.profileCreated) {
+      throw new RoleSetInvitationException(
+        `Platform invitation already consumed: ${platformInvitation.id}`,
+        LogContext.ROLES
+      );
+    }
+    if (
+      roleSet.type !== RoleSetType.SPACE &&
+      roleSet.type !== RoleSetType.ORGANIZATION
+    ) {
+      throw new RoleSetInvitationException(
+        `Platform invitation resend is not available for role set type ${roleSet.type}: ${platformInvitation.id}`,
+        LogContext.ROLES
+      );
+    }
+
+    const allowed = await this.platformInvitationResendThrottleService.claim(
+      platformInvitation.id
+    );
+    if (!allowed) {
+      throw new RoleSetInvitationException(
+        `Platform invitation resent recently: ${platformInvitation.id}`,
+        LogContext.ROLES,
+        AlkemioErrorStatus.ROLE_SET_INVITATION_RESEND_THROTTLED
+      );
+    }
+
+    await this.dispatchPlatformInvitationEmail(
+      roleSet,
+      platformInvitation,
+      actorContext.actorID
+    );
+    this.logger.verbose?.(
+      {
+        message: 'Platform invitation email resent',
+        invitationID: platformInvitation.id,
+        roleSetID: roleSet.id,
+        actorID: actorContext.actorID,
+      },
+      LogContext.ROLES
+    );
+
+    return platformInvitation;
   }
 
   @Mutation(() => IApplication, {
