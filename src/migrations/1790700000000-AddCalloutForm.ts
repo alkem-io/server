@@ -23,8 +23,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * (and back to 'form' afterwards), plus delete the in_app_notification rows of
  * the new notification type.
  */
-export class AddCalloutForm1789100000000 implements MigrationInterface {
-  name = 'AddCalloutForm1789100000000';
+export class AddCalloutForm1790700000000 implements MigrationInterface {
+  name = 'AddCalloutForm1790700000000';
 
   private static readonly DEFAULT_VALUE = JSON.stringify({
     email: true,
@@ -101,7 +101,7 @@ export class AddCalloutForm1789100000000 implements MigrationInterface {
       )
       WHERE notification #> '{space,admin,collaborationCalloutFormResponseReceived}' IS NULL
       `,
-      [AddCalloutForm1789100000000.DEFAULT_VALUE]
+      [AddCalloutForm1790700000000.DEFAULT_VALUE]
     );
   }
 
