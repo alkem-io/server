@@ -1313,4 +1313,43 @@ describe('CalloutFramingService', () => {
       expect(result).toBeNull();
     });
   });
+
+  describe('getCollaboraDocument', () => {
+    it("loads the CollaboraDocument's backing document, so previewUrl resolves without a query per document", async () => {
+      const collaboraDocument = {
+        id: 'collab-doc-1',
+        document: { id: 'file-1' },
+      };
+      vi.mocked(repository.findOne).mockResolvedValue({
+        id: 'framing-1',
+        collaboraDocument,
+      } as CalloutFraming);
+
+      const result = await service.getCollaboraDocument({
+        id: 'framing-1',
+      } as any);
+
+      expect(result).toBe(collaboraDocument);
+      // Dropping `document` here would silently reintroduce one query per
+      // CollaboraDocument on every board that renders previews.
+      expect(repository.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({
+          relations: { collaboraDocument: { document: true } },
+        })
+      );
+    });
+
+    it('returns null when the framing has no CollaboraDocument', async () => {
+      vi.mocked(repository.findOne).mockResolvedValue({
+        id: 'framing-1',
+        collaboraDocument: undefined,
+      } as CalloutFraming);
+
+      const result = await service.getCollaboraDocument({
+        id: 'framing-1',
+      } as any);
+
+      expect(result).toBeNull();
+    });
+  });
 });
