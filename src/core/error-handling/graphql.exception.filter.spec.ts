@@ -1,5 +1,7 @@
 import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { BaseException } from '@common/exceptions/base.exception';
+import { ValidationException } from '@common/exceptions/validation.exception';
+import { CalloutFormErrorCode } from '@domain/collaboration/callout-form/callout.form.error.codes';
 import { LoggerService } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -107,6 +109,61 @@ describe('GraphqlExceptionFilter', () => {
       );
 
       process.env.NODE_ENV = originalEnv;
+    });
+  });
+
+  describe('production mode form reason codes', () => {
+    const originalEnv = process.env.NODE_ENV;
+    beforeEach(() => {
+      process.env.NODE_ENV = 'production';
+    });
+    afterEach(() => {
+      process.env.NODE_ENV = originalEnv;
+    });
+
+    it('keeps the form reason code and question ids', () => {
+      const exception = new ValidationException(
+        'Form answer required',
+        LogContext.COLLABORATION,
+        {
+          code: CalloutFormErrorCode.FORM_ANSWER_REQUIRED,
+          questionIDs: ['q1', 'q2'],
+          cause: 'internal',
+        }
+      );
+
+      const result = filter.catch(exception, createMockHost() as any);
+
+      expect((result as GraphQLError).extensions.details).toEqual({
+        code: 'FORM_ANSWER_REQUIRED',
+        questionIDs: ['q1', 'q2'],
+      });
+    });
+
+    it('keeps only the code when there are no question ids', () => {
+      const exception = new ValidationException(
+        'Form visibility changed',
+        LogContext.COLLABORATION,
+        { code: CalloutFormErrorCode.FORM_VISIBILITY_CHANGED }
+      );
+
+      const result = filter.catch(exception, createMockHost() as any);
+
+      expect((result as GraphQLError).extensions.details).toEqual({
+        code: 'FORM_VISIBILITY_CHANGED',
+      });
+    });
+
+    it('does not expose details that are not a known form reason code', () => {
+      const exception = new ValidationException(
+        'bad',
+        LogContext.COLLABORATION,
+        { code: 'SOMETHING_INTERNAL', cause: 'secret' }
+      );
+
+      const result = filter.catch(exception, createMockHost() as any);
+
+      expect((result as GraphQLError).extensions.details).toBeUndefined();
     });
   });
 
