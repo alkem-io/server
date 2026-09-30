@@ -253,6 +253,39 @@ export class CollaboraDocumentService {
   }
 
   /**
+   * Build the authorized, same-origin preview URL for a CollaboraDocument's
+   * current backing source file, or null when it has none (e.g. a legacy or
+   * orphaned row). The URL carries only the source's stable fileID — the
+   * backing Document itself is never exposed via GraphQL. Every byte request
+   * against the returned URL is independently authorized by WOPI against the
+   * current source READ policy; this method issues no WOPI editor token and
+   * has no side effects.
+   */
+  public async getPreviewUrl(
+    collaboraDocumentID: string
+  ): Promise<string | null> {
+    const collaboraDocument = await this.getCollaboraDocumentOrFail(
+      collaboraDocumentID,
+      { relations: { document: true } }
+    );
+    return CollaboraDocumentService.buildPreviewUrl(
+      collaboraDocument.document?.id
+    );
+  }
+
+  /**
+   * The single owner of the preview URL's shape, so the callers that already
+   * hold a loaded `document` relation do not have to re-query just to rebuild
+   * the same string. Pure: no I/O, no side effects.
+   */
+  public static buildPreviewUrl(fileID: string | undefined): string | null {
+    if (!fileID) {
+      return null;
+    }
+    return `/api/private/wopi/files/${encodeURIComponent(fileID)}/preview`;
+  }
+
+  /**
    * Reverse-resolve a CollaboraDocument by the id of its backing storage
    * `Document` (= `access_tokens.file_id` minted at `getEditorUrl` for
    * `collaboraDocument.document.id`). The Collabora contribution event carries
