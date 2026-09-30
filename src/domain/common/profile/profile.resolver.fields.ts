@@ -1,8 +1,6 @@
-import { LogContext } from '@common/enums';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { VisualType } from '@common/enums/visual.type';
-import { EntityNotFoundException } from '@common/exceptions';
 import {
   ProfileLocationLoaderCreator,
   ProfileReferencesLoaderCreator,
@@ -109,23 +107,10 @@ export class ProfileResolverFields {
           t.type === TagsetType.FREEFORM &&
           t.name.toLowerCase() === TagsetReservedName.DEFAULT
       );
-      if (!defaultTagset) {
-        throw new EntityNotFoundException(
-          `Unable to locate DEFAULT tagset for profile: ${profile.id}`,
-          LogContext.PROFILE
-        );
-      }
       return defaultTagset;
     }
 
     const namedTagset = tagsets.find(t => t.name.toLowerCase() === tagsetName);
-    if (!namedTagset) {
-      throw new EntityNotFoundException(
-        `Unable to locate ${tagsetName} tagset for profile: ${profile.id}`,
-        LogContext.PROFILE
-      );
-    }
-
     return namedTagset;
   }
 
