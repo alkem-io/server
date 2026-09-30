@@ -13,6 +13,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ICalloutFormResponse } from '../callout-form-response/callout.form.response.interface';
 import { CalloutFormResponseService } from '../callout-form-response/callout.form.response.service';
 import { DeleteCalloutFormResponseInput } from '../callout-form-response/dto/callout.form.response.dto.delete';
+import { DeletedCalloutFormResponse } from '../callout-form-response/dto/callout.form.response.dto.deleted';
 import { SubmitCalloutFormResponseInput } from '../callout-form-response/dto/callout.form.response.dto.submit';
 import { ICalloutForm } from './callout.form.interface';
 import { CALLOUT_FORM_OWNER_RELATIONS } from './callout.form.owner.relations';
@@ -107,14 +108,14 @@ export class CalloutFormResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => ICalloutFormResponse, {
+  @Mutation(() => DeletedCalloutFormResponse, {
     description:
       'Delete a Form response. The member who submitted it can always withdraw it (also on a closed Form); otherwise the privilege to create callouts on the collection the Post is in (space admin) is required.',
   })
   async deleteCalloutFormResponse(
     @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteCalloutFormResponseInput
-  ): Promise<ICalloutFormResponse> {
+  ): Promise<DeletedCalloutFormResponse> {
     const response = await this.calloutFormResponseService.getResponseOrFail(
       deleteData.responseID
     );
@@ -131,8 +132,7 @@ export class CalloutFormResolverMutations {
       this.formResponseAccess.assertCanModerate(actorContext, callout);
     }
 
-    return this.calloutFormResponseService.deleteResponse(
-      deleteData.responseID
-    );
+    await this.calloutFormResponseService.deleteResponse(deleteData.responseID);
+    return { id: deleteData.responseID };
   }
 }

@@ -214,6 +214,21 @@ describe('CalloutFormResolverMutations', () => {
       expect(calloutFormService.getCalloutForFormOrFail).not.toHaveBeenCalled();
     });
 
+    it('returns only the id, never the deleted response or its answers', async () => {
+      responseService.getResponseOrFail.mockResolvedValue(response('someone'));
+      responseService.deleteResponse.mockResolvedValue({
+        id: 'response-1',
+        answers: [{ questionID: 'q1', text: 'secret' }],
+      });
+
+      const result = await resolver.deleteCalloutFormResponse(
+        actor,
+        deleteData
+      );
+
+      expect(result).toEqual({ id: 'response-1' });
+    });
+
     it('lets a moderator delete someone else’s response, checked on the Post that owns the Form', async () => {
       responseService.getResponseOrFail.mockResolvedValue(response('someone'));
       await resolver.deleteCalloutFormResponse(actor, deleteData);

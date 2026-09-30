@@ -3313,6 +3313,11 @@ type CredentialDefinition {
   type: String!
 }
 
+type DeletedCalloutFormResponse {
+  """The id of the deleted Form response."""
+  id: UUID!
+}
+
 type DirectMessageDeliveryResult {
   """
   Set when status = SENT — the (existing or newly created) 1:1 conversation the message was delivered to.
@@ -4944,7 +4949,7 @@ type Mutation {
   """
   Delete a Form response. The member who submitted it can always withdraw it (also on a closed Form); otherwise the privilege to create callouts on the collection the Post is in (space admin) is required.
   """
-  deleteCalloutFormResponse(deleteData: DeleteCalloutFormResponseInput!): CalloutFormResponse!
+  deleteCalloutFormResponse(deleteData: DeleteCalloutFormResponseInput!): DeletedCalloutFormResponse!
   """
   Permanently removes a Classification from a Space. No template and no other Space is affected.
   """
