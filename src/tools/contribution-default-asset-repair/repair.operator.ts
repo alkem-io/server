@@ -33,16 +33,15 @@ export interface Receipt {
   externalID: string;
   externalReference?: string;
   storageBucketId: string;
-  reused?: boolean;
 }
 
 export type RepairFailureCode =
-  | 'default_drift'
   | 'template_drift'
   | 'target_drift'
   | 'source_drift'
   | 'receipt_mismatch'
   | 'copy_failed'
+  | 'receipt_lookup_failed'
   | 'cas_conflict'
   | 'divergent';
 
@@ -57,7 +56,6 @@ export class RepairFailure extends Error {
 
 export interface RepairPort {
   revalidate(item: RepairItem): Promise<{
-    content: string;
     snapshotDigest: string;
     templateId: string;
     templateSnapshotDigest: string;
@@ -76,10 +74,7 @@ export interface RepairPort {
     originalContent: string,
     intendedContent: string
   ): Promise<boolean>;
-  readCurrent(defaultId: string): Promise<{
-    content: string;
-    snapshotDigest: string;
-  }>;
+  readCurrent(defaultId: string): Promise<{ snapshotDigest: string }>;
 }
 
 const canonicalize = (value: unknown): unknown => {
@@ -281,17 +276,8 @@ const isTransportFailure = (error: unknown): boolean =>
 export class ContributionDefaultRepairCoordinator {
   constructor(private readonly port: RepairPort) {}
 
-  async apply(item: RepairItem): Promise<{
-    state: 'applied' | 'intended';
-    intendedSnapshotDigest: string;
-  }> {
+  async apply(item: RepairItem): Promise<'applied' | 'intended'> {
     const evidence = await this.port.revalidate(item);
-    if (
-      evidence.content === item.originalContent &&
-      evidence.snapshotDigest !== item.originalSnapshotDigest
-    ) {
-      throw new RepairFailure('default_drift');
-    }
     if (
       evidence.templateId !== item.templateId ||
       evidence.templateSnapshotDigest !== item.templateSnapshotDigest ||
@@ -313,10 +299,7 @@ export class ContributionDefaultRepairCoordinator {
 
     const locators: Record<string, string> = {};
     for (const asset of item.assets) {
-      let receipt = await this.port.findReceipt(
-        asset.externalReference,
-        item.targetBucketId
-      );
+      let receipt = await this.findReceipt(item, asset);
       if (!receipt) {
         if (evidence.snapshotDigest !== item.originalSnapshotDigest) {
           throw new RepairFailure('divergent');
@@ -328,10 +311,7 @@ export class ContributionDefaultRepairCoordinator {
             throw new RepairFailure('copy_failed', error);
           }
         }
-        receipt = await this.port.findReceipt(
-          asset.externalReference,
-          item.targetBucketId
-        );
+        receipt = await this.findReceipt(item, asset);
       }
       if (!receipt || !exactReceipt(receipt, asset, item.targetBucketId)) {
         throw new RepairFailure('receipt_mismatch');
@@ -341,7 +321,7 @@ export class ContributionDefaultRepairCoordinator {
 
     const intended = await this.port.buildIntendedContent(item, locators);
     if (evidence.snapshotDigest === intended.snapshotDigest) {
-      return { state: 'intended', intendedSnapshotDigest: intended.snapshotDigest };
+      return 'intended';
     }
     if (evidence.snapshotDigest !== item.originalSnapshotDigest) {
       throw new RepairFailure('divergent');
@@ -353,15 +333,26 @@ export class ContributionDefaultRepairCoordinator {
         intended.content
       )
     ) {
-      return { state: 'applied', intendedSnapshotDigest: intended.snapshotDigest };
+      return 'applied';
     }
     const current = await this.port.readCurrent(item.defaultId);
     if (current.snapshotDigest === intended.snapshotDigest) {
-      return { state: 'intended', intendedSnapshotDigest: intended.snapshotDigest };
+      return 'intended';
     }
     if (current.snapshotDigest === item.originalSnapshotDigest) {
       throw new RepairFailure('cas_conflict');
     }
     throw new RepairFailure('divergent');
+  }
+
+  private async findReceipt(item: RepairItem, asset: RepairAsset): Promise<Receipt | null> {
+    try {
+      return await this.port.findReceipt(
+        asset.externalReference,
+        item.targetBucketId
+      );
+    } catch (error) {
+      throw new RepairFailure('receipt_lookup_failed', error);
+    }
   }
 }

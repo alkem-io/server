@@ -51,7 +51,6 @@ const receipt = {
 
 const makePort = (): RepairPort => ({
   revalidate: vi.fn().mockResolvedValue({
-    content: item.originalContent,
     snapshotDigest: item.originalSnapshotDigest,
     templateId: item.templateId,
     templateSnapshotDigest: item.templateSnapshotDigest,
@@ -66,10 +65,7 @@ const makePort = (): RepairPort => ({
     snapshotDigest: intendedSnapshotDigest,
   }),
   replaceContent: vi.fn().mockResolvedValue(true),
-  readCurrent: vi.fn().mockResolvedValue({
-    content: item.originalContent,
-    snapshotDigest: item.originalSnapshotDigest,
-  }),
+  readCurrent: vi.fn().mockResolvedValue({ snapshotDigest: item.originalSnapshotDigest }),
 });
 
 describe('ContributionDefaultRepairCoordinator', () => {
@@ -85,13 +81,13 @@ describe('ContributionDefaultRepairCoordinator', () => {
       )
     );
 
-    await expect(new ContributionDefaultRepairCoordinator(port).apply(item)).resolves.toEqual({
-      state: 'applied',
-      intendedSnapshotDigest,
-    });
+    await expect(new ContributionDefaultRepairCoordinator(port).apply(item)).resolves.toBe(
+      'applied'
+    );
     expect(port.buildIntendedContent).toHaveBeenCalledWith(item, {
       'asset-1': 'target-document',
     });
+    expect(port.readCurrent).not.toHaveBeenCalled();
   });
 
   it('fails closed on a mismatched receipt without deleting the conflicting row', async () => {
@@ -108,13 +104,11 @@ describe('ContributionDefaultRepairCoordinator', () => {
   });
 
   it.each([
-    ['default_drift', { snapshotDigest: 'other' }],
     ['template_drift', { templateSnapshotDigest: 'other' }],
     ['source_drift', { assets: [{ sourceId: 'source-1', externalID: 'other' }] }],
   ])('stops before copy on %s', async (code, override) => {
     const port = makePort();
     (port.revalidate as ReturnType<typeof vi.fn>).mockResolvedValue({
-      content: item.originalContent,
       snapshotDigest: item.originalSnapshotDigest,
       templateId: item.templateId,
       templateSnapshotDigest: item.templateSnapshotDigest,
@@ -133,7 +127,6 @@ describe('ContributionDefaultRepairCoordinator', () => {
   it('does not copy a missing receipt when current content is divergent', async () => {
     const port = makePort();
     (port.revalidate as ReturnType<typeof vi.fn>).mockResolvedValue({
-      content: 'other-content',
       snapshotDigest: 'other-snapshot',
       templateId: item.templateId,
       templateSnapshotDigest: item.templateSnapshotDigest,
@@ -165,7 +158,6 @@ describe('ContributionDefaultRepairCoordinator', () => {
   it('accepts a rerun whose current default already equals receipt-derived intended content', async () => {
     const port = makePort();
     (port.revalidate as ReturnType<typeof vi.fn>).mockResolvedValue({
-      content: 'intended:target-document',
       snapshotDigest: intendedSnapshotDigest,
       templateId: item.templateId,
       templateSnapshotDigest: item.templateSnapshotDigest,
@@ -174,9 +166,9 @@ describe('ContributionDefaultRepairCoordinator', () => {
       assets: [{ sourceId: 'source-1', externalID: 'external-1' }],
     });
 
-    await expect(new ContributionDefaultRepairCoordinator(port).apply(item)).resolves.toMatchObject({
-      state: 'intended',
-    });
+    await expect(new ContributionDefaultRepairCoordinator(port).apply(item)).resolves.toBe(
+      'intended'
+    );
     expect(port.copy).not.toHaveBeenCalled();
     expect(port.replaceContent).not.toHaveBeenCalled();
   });
@@ -185,13 +177,39 @@ describe('ContributionDefaultRepairCoordinator', () => {
     const port = makePort();
     (port.replaceContent as ReturnType<typeof vi.fn>).mockResolvedValue(false);
     (port.readCurrent as ReturnType<typeof vi.fn>).mockResolvedValue({
-      content: 'intended:target-document',
       snapshotDigest: intendedSnapshotDigest,
     });
 
-    await expect(new ContributionDefaultRepairCoordinator(port).apply(item)).resolves.toMatchObject({
-      state: 'intended',
+    await expect(new ContributionDefaultRepairCoordinator(port).apply(item)).resolves.toBe(
+      'intended'
+    );
+  });
+
+  it('classifies an initial receipt lookup failure without a CAS', async () => {
+    const port = makePort();
+    const failure = new Error('lookup unavailable');
+    (port.findReceipt as ReturnType<typeof vi.fn>).mockRejectedValue(failure);
+
+    await expect(new ContributionDefaultRepairCoordinator(port).apply(item)).rejects.toMatchObject({
+      code: 'receipt_lookup_failed',
+      cause: failure,
     });
+    expect(port.replaceContent).not.toHaveBeenCalled();
+  });
+
+  it('classifies a post-copy receipt lookup failure without a CAS', async () => {
+    const port = makePort();
+    const failure = new Error('lookup unavailable');
+    (port.findReceipt as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(null)
+      .mockRejectedValueOnce(failure);
+
+    await expect(new ContributionDefaultRepairCoordinator(port).apply(item)).rejects.toMatchObject({
+      code: 'receipt_lookup_failed',
+      cause: failure,
+    });
+    expect(port.copy).toHaveBeenCalledOnce();
+    expect(port.replaceContent).not.toHaveBeenCalled();
   });
 });
 

@@ -73,7 +73,7 @@ export class ContributionDefaultAssetRepairService implements RepairPort {
       try {
         await this.validateManifestItem(item);
         const result = await coordinator.apply(item);
-        records.push({ token: item.token, stage: 'apply', reason: result.state });
+        records.push({ token: item.token, stage: 'apply', reason: result });
       } catch (error) {
         records.push({
           token: item.token,
@@ -96,7 +96,6 @@ export class ContributionDefaultAssetRepairService implements RepairPort {
     const current = await this.readCandidate(item.defaultId);
     if (!current) {
       return {
-        content: '',
         snapshotDigest: '',
         templateId: '',
         templateSnapshotDigest: '',
@@ -111,7 +110,6 @@ export class ContributionDefaultAssetRepairService implements RepairPort {
     const sources = await this.readSources(item.assets.map(asset => asset.sourceId));
     const snapshotDigest = sha256(await this.snapshotBytes(current.content));
     return {
-      content: current.content,
       snapshotDigest,
       templateId: templates.length === 1 ? templates[0].id : '',
       templateSnapshotDigest:
@@ -132,7 +130,7 @@ export class ContributionDefaultAssetRepairService implements RepairPort {
     const source = await this.documentService.getDocumentOrFail(asset.sourceId);
     const result = await this.storageBucketService.copyDocumentToBucket(
       item.targetBucketId,
-      source,
+      { ...source, createdBy: undefined },
       undefined,
       false,
       { externalReference: asset.externalReference }
@@ -172,24 +170,20 @@ export class ContributionDefaultAssetRepairService implements RepairPort {
     originalContent: string,
     intendedContent: string
   ): Promise<boolean> {
-    const rows = await this.dataSource.query(
+    const [returnedRows, affected] = (await this.dataSource.query(
       `UPDATE "callout_contribution_defaults"
           SET "whiteboardContent" = $1
         WHERE "id" = $2 AND "whiteboardContent" = $3
         RETURNING "id"`,
       [intendedContent, defaultId, originalContent]
-    );
-    return rows.length === 1;
+    )) as [Array<{ id: string }>, number];
+    return affected === 1 && returnedRows.length === 1;
   }
 
-  async readCurrent(defaultId: string): Promise<{
-    content: string;
-    snapshotDigest: string;
-  }> {
+  async readCurrent(defaultId: string): Promise<{ snapshotDigest: string }> {
     const row = await this.readCandidate(defaultId);
     if (!row?.content) throw new Error('default is missing');
     return {
-      content: row.content,
       snapshotDigest: sha256(await this.snapshotBytes(row.content)),
     };
   }

@@ -1,6 +1,5 @@
 import configuration from '@config/configuration';
 import { buildRuntimeDataSourceOptions } from '@config/runtime.datasource.options';
-import { WinstonConfigService } from '@config/winston.config';
 import { GraphqlGuardModule } from '@core/authorization/graphql.guard.module';
 import { Module } from '@nestjs/common';
 import { CacheModule } from '@nestjs/cache-manager';
@@ -21,7 +20,7 @@ import { ContributionDefaultAssetRepairService } from './contribution.default.as
       isGlobal: true,
       load: [configuration],
     }),
-    WinstonModule.forRootAsync({ useClass: WinstonConfigService }),
+    WinstonModule.forRoot({ silent: true }),
     TypeOrmModule.forRootAsync({
       name: 'default',
       imports: [ConfigModule],

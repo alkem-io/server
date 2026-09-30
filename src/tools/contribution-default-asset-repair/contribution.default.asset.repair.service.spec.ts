@@ -125,11 +125,13 @@ describe('ContributionDefaultAssetRepairService', () => {
         .mockResolvedValueOnce({ id: 'target-a', externalID: 'external-a' })
         .mockResolvedValueOnce({ id: 'target-b', externalID: 'external-b' }),
     };
+    const sourceA = { id: 'source-a', createdBy: 'foreign-user' };
+    const sourceB = { id: 'source-b', createdBy: 'foreign-user' };
     const document = {
       getDocumentOrFail: vi
         .fn()
-        .mockResolvedValueOnce({ id: 'source-a' })
-        .mockResolvedValueOnce({ id: 'source-b' }),
+        .mockResolvedValueOnce(sourceA)
+        .mockResolvedValueOnce(sourceB),
     };
     const service = makeService(undefined, storageBucket, document);
     const item = await makeItem();
@@ -140,7 +142,7 @@ describe('ContributionDefaultAssetRepairService', () => {
     expect(storageBucket.copyDocumentToBucket).toHaveBeenNthCalledWith(
       1,
       'bucket-1',
-      { id: 'source-a' },
+      { id: 'source-a', createdBy: undefined },
       undefined,
       false,
       { externalReference: item.assets[0].externalReference }
@@ -148,11 +150,13 @@ describe('ContributionDefaultAssetRepairService', () => {
     expect(storageBucket.copyDocumentToBucket).toHaveBeenNthCalledWith(
       2,
       'bucket-1',
-      { id: 'source-b' },
+      { id: 'source-b', createdBy: undefined },
       undefined,
       false,
       { externalReference: item.assets[1].externalReference }
     );
+    expect(sourceA.createdBy).toBe('foreign-user');
+    expect(sourceB.createdBy).toBe('foreign-user');
   });
 
   it('builds byte-identical intended Yjs snapshots and rewrites every locator', async () => {
@@ -176,7 +180,7 @@ describe('ContributionDefaultAssetRepairService', () => {
   });
 
   it('uses default ID and exact original content as the CAS operands', async () => {
-    const query = vi.fn().mockResolvedValue([{ id: 'default-1' }]);
+    const query = vi.fn().mockResolvedValue([[{ id: 'default-1' }], 1]);
     const service = makeService(query);
 
     await expect(
@@ -188,6 +192,10 @@ describe('ContributionDefaultAssetRepairService', () => {
       ),
       ['intended-content', 'default-1', 'original-content'],
     ]);
+    query.mockResolvedValueOnce([[], 0]);
+    await expect(
+      service.replaceContent('default-1', 'original-content', 'intended-content')
+    ).resolves.toBe(false);
   });
 
   it('requires the manifest to exactly represent the original asset map before apply', async () => {
