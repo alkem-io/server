@@ -600,6 +600,7 @@ describe('FileServiceAdapter', () => {
         authorizationId: 'auth-2',
         tagsetId: 'tagset-2',
         createdBy: 'user-1',
+        externalReference: 'contribution-default-asset-repair/v1/receipt',
       });
 
       expect(result).toEqual(responseData);
@@ -613,6 +614,7 @@ describe('FileServiceAdapter', () => {
         authorizationId: 'auth-2',
         tagsetId: 'tagset-2',
         createdBy: 'user-1',
+        externalReference: 'contribution-default-asset-repair/v1/receipt',
       });
     });
 
