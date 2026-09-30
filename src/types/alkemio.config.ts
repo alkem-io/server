@@ -297,6 +297,10 @@ export type AlkemioConfig = {
       /** Leading-edge email suppression window per (recipient, callout) in seconds. */
       email_suppression_window_seconds: number;
     };
+    platform_invitations: {
+      /** Per-invitation cooldown between resends of the invitation email, in seconds. */
+      resend_cooldown_seconds: number;
+    };
     organization_invitations: {
       /** Destination for the zero-admin escalation email; never required to boot. */
       support_email: string;
