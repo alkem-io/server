@@ -1,5 +1,4 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -14,6 +13,7 @@ import { StorageBucketUploadFileInput } from './dto/storage.bucket.dto.upload.fi
 import { StorageBucketUploadFileResult } from './dto/storage.bucket.dto.upload.file.result';
 import { IStorageBucket } from './storage.bucket.interface';
 import { StorageBucketService } from './storage.bucket.service';
+import { isConversationBucket } from './storage.bucket.utils';
 
 @InstrumentResolver()
 @Resolver()
@@ -40,7 +40,7 @@ export class StorageBucketResolverMutations {
     const storageBucket =
       await this.storageBucketService.getStorageBucketOrFail(
         uploadData.storageBucketId,
-        { relations: { storageAggregator: true } }
+        { relations: { directStorageOwner: true } }
       );
 
     this.authorizationService.grantAccessOrFail(
@@ -65,10 +65,7 @@ export class StorageBucketResolverMutations {
     // row was inserted, so it is authorized the instant it exists; recomposing
     // it here would only rewrite the same rules. Every other bucket type keeps
     // the original post-insert composition.
-    if (
-      storageBucket.storageAggregator?.type !==
-      StorageAggregatorType.CONVERSATION
-    ) {
+    if (!isConversationBucket(storageBucket)) {
       const documentAuthorizations =
         await this.documentAuthorizationService.applyAuthorizationPolicy(
           document,

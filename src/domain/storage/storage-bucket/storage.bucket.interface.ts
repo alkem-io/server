@@ -19,4 +19,5 @@ export abstract class IStorageBucket extends IAuthorizable {
   maxFileSize!: number;
 
   storageAggregator?: IStorageAggregator;
+  directStorageOwner?: IStorageAggregator;
 }
