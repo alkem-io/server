@@ -114,4 +114,44 @@ describe('PlatformInvitationResendThrottleService', () => {
     expect(context).toBe(LogContext.ROLES);
     expect(JSON.stringify(payload)).not.toContain('@');
   });
+
+  describe('cooldown configuration validation', () => {
+    const build = (configured: unknown) => {
+      const warn = vi.fn();
+      const setMock = vi.fn().mockResolvedValue('OK');
+      const built = new PlatformInvitationResendThrottleService(
+        { set: setMock } as any,
+        { get: vi.fn().mockReturnValue(configured) } as any,
+        { warn, error: vi.fn() } as any
+      );
+      return { built, warn, setMock };
+    };
+
+    it.each([
+      0,
+      -1,
+      0.5,
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      'abc',
+      undefined,
+    ])('falls back to 300 seconds and warns once for %s', async bad => {
+      const { built, warn, setMock } = build(bad);
+
+      await built.claim('rs-1', 'a@example.com');
+
+      expect(setMock.mock.calls[0][3]).toBe(300);
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(JSON.stringify(warn.mock.calls[0])).not.toContain('a@example.com');
+    });
+
+    it('uses a valid configured value without warning', async () => {
+      const { built, warn, setMock } = build(60);
+
+      await built.claim('rs-1', 'a@example.com');
+
+      expect(setMock.mock.calls[0][3]).toBe(60);
+      expect(warn).not.toHaveBeenCalled();
+    });
+  });
 });

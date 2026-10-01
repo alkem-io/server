@@ -1779,9 +1779,8 @@ export class RoleSetResolverMutationsMembership {
           const platformInvitation = invitationResult.platformInvitation;
           if (!platformInvitation) {
             throw new RelationshipNotFoundException(
-              'Unable to load platform invitation for result',
-              LogContext.ROLES,
-              { invitationResultType: invitationResult.type }
+              `Unable to load platform invitation for result: ${invitationResult.type}`,
+              LogContext.ROLES
             );
           }
           const notificationInput: NotificationInputPlatformInvitation = {

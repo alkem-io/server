@@ -5,10 +5,13 @@ import { MESSAGING_REDIS_CLIENT } from '@services/infrastructure/redis-client/me
 import { AlkemioConfig } from '@src/types';
 import type { Redis } from 'ioredis';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { positiveIntegerOrDefault } from './platform.invitation.config.util';
 
 export type PlatformInvitationEmailBudgetOutcome = 'ok' | 'actor' | 'roleSet';
 
 const WINDOW_SECONDS = 3600;
+const DEFAULT_MAX_PER_ACTOR_PER_HOUR = 200;
+const DEFAULT_MAX_PER_ROLE_SET_PER_HOUR = 300;
 
 /**
  * Both counters are checked and bumped in one script so a refusal consumes
@@ -52,14 +55,39 @@ export class PlatformInvitationEmailBudgetService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
-    this.maxPerActorPerHour = this.configService.get(
+    this.maxPerActorPerHour = this.readLimit(
       'notifications.platform_invitations.email_budget_per_actor_per_hour',
-      { infer: true }
+      DEFAULT_MAX_PER_ACTOR_PER_HOUR
     );
-    this.maxPerRoleSetPerHour = this.configService.get(
+    this.maxPerRoleSetPerHour = this.readLimit(
       'notifications.platform_invitations.email_budget_per_role_set_per_hour',
-      { infer: true }
+      DEFAULT_MAX_PER_ROLE_SET_PER_HOUR
     );
+  }
+
+  // An unusable limit (0, fractional, non-numeric) would refuse every send or
+  // admit unpredictably, so it falls back to the default with one warning.
+  private readLimit(
+    key:
+      | 'notifications.platform_invitations.email_budget_per_actor_per_hour'
+      | 'notifications.platform_invitations.email_budget_per_role_set_per_hour',
+    defaultValue: number
+  ): number {
+    const configured = this.configService.get(key, { infer: true });
+    const { value, valid } = positiveIntegerOrDefault(configured, defaultValue);
+    if (!valid) {
+      this.logger.warn?.(
+        {
+          message:
+            'Invalid platform-invitation email budget configuration — using the default',
+          key,
+          configured: String(configured),
+          defaultValue,
+        },
+        LogContext.ROLES
+      );
+    }
+    return value;
   }
 
   /**

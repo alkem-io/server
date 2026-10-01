@@ -93,4 +93,56 @@ describe('PlatformInvitationEmailBudgetService', () => {
     );
     expect(context).toBe(LogContext.ROLES);
   });
+
+  describe('configuration validation', () => {
+    const ACTOR_KEY =
+      'notifications.platform_invitations.email_budget_per_actor_per_hour';
+    const ROLE_SET_KEY =
+      'notifications.platform_invitations.email_budget_per_role_set_per_hour';
+
+    const build = (config: Record<string, unknown>) => {
+      const warn = vi.fn();
+      const evalMock = vi.fn().mockResolvedValue(0);
+      const built = new PlatformInvitationEmailBudgetService(
+        { eval: evalMock } as any,
+        { get: vi.fn((key: string) => config[key]) } as any,
+        { warn, error: vi.fn() } as any
+      );
+      return { built, warn, evalMock };
+    };
+
+    it.each([
+      0,
+      -5,
+      2.5,
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      'abc',
+      undefined,
+    ])('falls back to the defaults and warns once per bad value: %s', async bad => {
+      const { built, warn, evalMock } = build({
+        [ACTOR_KEY]: bad,
+        [ROLE_SET_KEY]: bad,
+      });
+
+      await built.claim('actor-1', 'rs-1', 1);
+
+      const args = evalMock.mock.calls[0];
+      expect([args[5], args[6]]).toEqual(['200', '300']);
+      expect(warn).toHaveBeenCalledTimes(2);
+    });
+
+    it('keeps valid values (including numeric strings) without warning', async () => {
+      const { built, warn, evalMock } = build({
+        [ACTOR_KEY]: '50',
+        [ROLE_SET_KEY]: 80,
+      });
+
+      await built.claim('actor-1', 'rs-1', 1);
+
+      const args = evalMock.mock.calls[0];
+      expect([args[5], args[6]]).toEqual(['50', '80']);
+      expect(warn).not.toHaveBeenCalled();
+    });
+  });
 });

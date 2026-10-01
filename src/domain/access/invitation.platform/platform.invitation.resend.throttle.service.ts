@@ -6,6 +6,9 @@ import { MESSAGING_REDIS_CLIENT } from '@services/infrastructure/redis-client/me
 import { AlkemioConfig } from '@src/types';
 import type { Redis } from 'ioredis';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { positiveIntegerOrDefault } from './platform.invitation.config.util';
+
+const DEFAULT_RESEND_COOLDOWN_SECONDS = 300;
 
 /**
  * Cooldown for resending a platform invitation email to one address on one
@@ -33,10 +36,28 @@ export class PlatformInvitationResendThrottleService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
-    this.windowSeconds = this.configService.get(
+    const configured = this.configService.get(
       'notifications.platform_invitations.resend_cooldown_seconds',
       { infer: true }
     );
+    const { value, valid } = positiveIntegerOrDefault(
+      configured,
+      DEFAULT_RESEND_COOLDOWN_SECONDS
+    );
+    // An unusable value (0, fractional, non-numeric) would make every marker
+    // write fail and the fail-open path would silently disable the throttle.
+    if (!valid) {
+      this.logger.warn?.(
+        {
+          message:
+            'Invalid platform-invitation resend cooldown configuration — using the default',
+          configured: String(configured),
+          defaultSeconds: DEFAULT_RESEND_COOLDOWN_SECONDS,
+        },
+        LogContext.ROLES
+      );
+    }
+    this.windowSeconds = value;
   }
 
   /**
