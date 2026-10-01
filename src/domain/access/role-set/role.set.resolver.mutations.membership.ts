@@ -501,7 +501,8 @@ export class RoleSetResolverMutationsMembership {
     await this.claimExternalInvitationEmailBudgetOrFail(
       roleSet,
       actorContext,
-      newUserEmails
+      newUserEmails,
+      authorizedToInviteToParentRoleSet
     );
 
     const invitationResults = await this.inviteActorsToEntryRole(
@@ -578,13 +579,19 @@ export class RoleSetResolverMutationsMembership {
    * account against the acting user's and the role set's hourly budgets. Only
    * addresses that will actually get a new invitation are counted: an address
    * typed twice, or one that already has an open invitation on this role set,
-   * sends nothing.
+   * sends nothing. On a role set with a parent, an inviter who lacks the right
+   * to invite to the parent gets every new address refused, so nothing is sent
+   * and nothing is charged.
    */
   private async claimExternalInvitationEmailBudgetOrFail(
     roleSet: IRoleSet,
     actorContext: ActorContext,
-    newUserEmails: string[]
+    newUserEmails: string[],
+    authorizedToInviteToParentRoleSet: boolean
   ): Promise<void> {
+    if (roleSet.parentRoleSet && !authorizedToInviteToParentRoleSet) {
+      return;
+    }
     const uniqueEmails = [
       ...new Set(newUserEmails.map(email => email.trim().toLowerCase())),
     ];

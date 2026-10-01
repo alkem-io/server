@@ -2862,6 +2862,58 @@ describe('RoleSetResolverMutationsMembership', () => {
       expect(result).toHaveLength(1);
       expect(authorizationService.isAccessGranted).toHaveBeenCalled();
     });
+
+    it('does not charge the email budget for addresses refused for the parent role set', async () => {
+      const actorContext = { actorID: 'user-1' } as any;
+      const mockRoleSet = {
+        id: 'rs-1',
+        type: RoleSetType.SPACE,
+        authorization: { id: 'auth-1' },
+        parentRoleSet: {
+          id: 'parent-rs',
+          authorization: { id: 'parent-auth' },
+          parentRoleSet: undefined,
+        },
+      } as any;
+
+      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(mockRoleSet);
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+      // not authorized to invite to the parent role set
+      (authorizationService.isAccessGranted as Mock).mockReturnValue(false);
+      (actorLookupService.validateActorsAndGetTypes as Mock).mockResolvedValue(
+        new Map()
+      );
+      (userLookupService.getUserByEmail as Mock).mockResolvedValue(undefined);
+      (
+        platformInvitationServiceMock.getExistingPlatformInvitationForRoleSet as Mock
+      ).mockResolvedValue(undefined);
+      (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([]);
+      (
+        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
+      ).mockResolvedValue([]);
+      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
+      (
+        communityResolverService.getCommunityForRoleSet as Mock
+      ).mockResolvedValue({ id: 'comm-1' });
+
+      const result = await resolver.inviteForEntryRoleOnRoleSet(actorContext, {
+        roleSetID: 'rs-1',
+        invitedActorIDs: [],
+        invitedUserEmails: ['a@test.com', 'b@test.com', 'c@test.com'],
+        extraRoles: [],
+      } as any);
+
+      expect(result).toHaveLength(3);
+      for (const r of result) {
+        expect(r.type).toBe(
+          RoleSetInvitationResultType.INVITATION_TO_PARENT_NOT_AUTHORIZED
+        );
+      }
+      expect(emailBudgetService.claim).not.toHaveBeenCalled();
+      expect(roleSetService.createPlatformInvitation).not.toHaveBeenCalled();
+    });
   });
 
   describe('resendPlatformInvitation', () => {
