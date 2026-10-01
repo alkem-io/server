@@ -291,17 +291,32 @@ export class OidcController {
       typeof appChallengeRaw === 'string' &&
       APP_CHALLENGE_PATTERN.test(appChallengeRaw) &&
       this.appRedirectScheme !== undefined &&
-      this.redis !== undefined &&
-      // SEC-079-02 — app mode establishes no session in THIS jar and clears the
-      // Kratos SSO cookie, so anyone who could put `?app_challenge=` in front of
-      // a signed-in web user could sign them out of SSO with one link. The
-      // shell launches its Custom Tab / ASWebAuthenticationSession as a
-      // browser-initiated navigation (`Sec-Fetch-Site: none`); a link click from
-      // another origin is `cross-site`, and that is the one value refused here.
-      // Absent is ACCEPTED on purpose: Safari on the iOS 15 target sends no
-      // such header, so this binds on Android/Chrome — where the shared Chrome
-      // jar is what makes the attack reach a live session in the first place.
-      req.headers['sec-fetch-site'] !== 'cross-site'
+      this.redis !== undefined
+      // ⚠️ SECURITY CONTROL DELIBERATELY REMOVED — DO NOT SHIP AS-IS.
+      //
+      // This condition used to also require `sec-fetch-site !== 'cross-site'`
+      // (SEC-079-02: a crafted cross-origin link must not be able to put
+      // `?app_challenge=` in front of a signed-in web user, because app mode
+      // establishes no session in this jar and clears the Kratos SSO cookie).
+      //
+      // It rested on the claim that the shell's Custom Tab arrives as
+      // `Sec-Fetch-Site: none`. **That claim is false.** Measured on sandbox,
+      // 2026-10-01: a Chrome Custom Tab launched by the shell sends
+      // `cross-site`, identically to a link click. The guard therefore refused
+      // app mode for EVERY in-app sign-in on Android — the user completed the
+      // whole IdP chain in the auth browser and was never handed back, because
+      // `/callback` had no challenge to act on. Nothing had ever exercised it:
+      // the remedy was adopted during review and this feature shipped with
+      // verification `not-applicable`.
+      //
+      // Removed by operator decision to unblock end-to-end testing. The risk
+      // posture returns to what was already accepted when SEC-079-01 was
+      // attested — see alkem-io/server#6545, which must resolve BOTH findings
+      // before this reaches production. Android App Links are explicitly NOT
+      // the remedy: a verified https claim is a device-wide behaviour change,
+      // and with this many alkem.io links the path precedence is not worth
+      // fighting. The replacement discriminator has to come from the telemetry
+      // below, measured — not asserted, which is what went wrong the first time.
     ) {
       // Any `/login` carrying a query string starts a FRESH mode decision, so
       // an abandoned app flow in the same jar cannot bleed into it. The
@@ -330,6 +345,15 @@ export class OidcController {
         scheme_configured: this.appRedirectScheme !== undefined,
         handoff_store_available: this.redis !== undefined,
         sec_fetch_site: req.headers['sec-fetch-site'] ?? null,
+        // For choosing the SEC-079-02 replacement from measurement rather than
+        // assumption. `referer_present` is the candidate discriminator: an
+        // intent-launched Custom Tab carries none, a link click from a page
+        // normally does. Recorded as a boolean — the value itself would be a
+        // URL we have no reason to keep.
+        referer_present: req.headers.referer !== undefined,
+        sec_fetch_user: req.headers['sec-fetch-user'] ?? null,
+        sec_fetch_mode: req.headers['sec-fetch-mode'] ?? null,
+        sec_fetch_dest: req.headers['sec-fetch-dest'] ?? null,
       },
       LogContext.AUTH
     );

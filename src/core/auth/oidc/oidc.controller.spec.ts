@@ -663,7 +663,15 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
   // any third party sign a web user out of SSO on one click. The existing test
   // above covers the header being absent (Safari on the iOS 15 target), which
   // must keep working.
-  it('ignores app_challenge on a cross-site navigation', async () => {
+  // ⚠️ This pins a DELIBERATELY REMOVED control (SEC-079-02), not a desired one.
+  // The guard refused `sec-fetch-site: cross-site`, on the claim that the shell's
+  // Custom Tab arrives as `none`. Measured on sandbox 2026-10-01, it arrives as
+  // `cross-site` — so the guard refused every in-app sign-in on Android. Removed
+  // by operator decision to unblock testing; alkem-io/server#6545 owns the
+  // replacement, which must be chosen from measurement. If you are re-adding a
+  // header check here, measure the shell's real headers FIRST — this test exists
+  // to make that failure impossible to repeat silently.
+  it('enters app mode on a cross-site navigation (SEC-079-02 guard removed, server#6545)', async () => {
     const { res } = await login({
       query: { app_challenge: APP_CHALLENGE },
       headers: { 'sec-fetch-site': 'cross-site' },
@@ -672,11 +680,11 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
       readIssuedPreAuth(res),
       PRE_AUTH_KEY
     );
-    expect(payload.app_challenge).toBeUndefined();
+    expect(payload.app_challenge).toBe(APP_CHALLENGE);
     expect(res.statusCode).toBe(302);
   });
 
-  it('still enters app mode on the shell Custom Tab launch (Sec-Fetch-Site: none)', async () => {
+  it('enters app mode when no Sec-Fetch-Site header is sent', async () => {
     const { res } = await login({
       query: { app_challenge: APP_CHALLENGE },
       headers: { 'sec-fetch-site': 'none' },
