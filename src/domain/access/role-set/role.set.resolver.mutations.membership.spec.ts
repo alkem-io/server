@@ -2619,6 +2619,78 @@ describe('RoleSetResolverMutationsMembership', () => {
       expect(result[0].invitedEmail).toBe('bob@existing.com');
     });
 
+    it('echoes the typed address of a person who was also picked, with one invitation and one notification', async () => {
+      // Shared invite path: a person picked by ID and also typed by address is
+      // invited once, notified once, and still reported against the typed
+      // address so the client can match the chip.
+      const actorContext = { actorID: 'user-1' } as any;
+      const mockRoleSet = {
+        id: 'rs-1',
+        type: RoleSetType.SPACE,
+        authorization: { id: 'auth-1' },
+        parentRoleSet: undefined,
+      } as any;
+      const createdInvitation = {
+        id: 'inv-1',
+        invitedActorID: 'user-existing',
+        welcomeMessage: 'Welcome',
+      } as any;
+
+      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(mockRoleSet);
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+      (actorLookupService.validateActorsAndGetTypes as Mock).mockResolvedValue(
+        new Map([['user-existing', ActorType.USER]])
+      );
+      (userLookupService.getUserByEmail as Mock).mockResolvedValue({
+        id: 'user-existing',
+      });
+      (roleSetService.findOpenInvitation as Mock).mockResolvedValue(undefined);
+      (roleSetService.findOpenApplication as Mock).mockResolvedValue(undefined);
+      (roleSetService.isMember as Mock).mockResolvedValue(false);
+      (roleSetService.createInvitationExistingActor as Mock).mockResolvedValue(
+        createdInvitation
+      );
+      (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([
+        createdInvitation,
+      ]);
+      (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+        ActorType.USER
+      );
+      (
+        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
+      ).mockResolvedValue([]);
+      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
+      (
+        communityResolverService.getCommunityForRoleSet as Mock
+      ).mockResolvedValue({ id: 'comm-1' });
+
+      const result = await resolver.inviteForEntryRoleOnRoleSet(actorContext, {
+        roleSetID: 'rs-1',
+        invitedActorIDs: ['user-existing'],
+        invitedUserEmails: ['bob@existing.com'],
+        extraRoles: [],
+      } as any);
+
+      expect(
+        roleSetService.createInvitationExistingActor
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        notificationUserAdapter.userSpaceCommunityInvitationCreated
+      ).toHaveBeenCalledTimes(1);
+      expect(result).toHaveLength(2);
+      expect(result.map(r => r.invitedEmail)).toEqual([
+        undefined,
+        'bob@existing.com',
+      ]);
+      expect(result.map(r => r.invitedActorID)).toEqual([
+        'user-existing',
+        'user-existing',
+      ]);
+      expect(result[1].invitation).toBe(result[0].invitation);
+    });
+
     it('should handle already-invited platform email', async () => {
       const actorContext = { actorID: 'user-1' } as any;
       const mockRoleSet = {
