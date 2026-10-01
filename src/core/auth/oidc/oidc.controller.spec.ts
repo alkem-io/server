@@ -663,15 +663,14 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
   // any third party sign a web user out of SSO on one click. The existing test
   // above covers the header being absent (Safari on the iOS 15 target), which
   // must keep working.
-  // ⚠️ This pins a DELIBERATELY REMOVED control (SEC-079-02), not a desired one.
-  // The guard refused `sec-fetch-site: cross-site`, on the claim that the shell's
-  // Custom Tab arrives as `none`. Measured on sandbox 2026-10-01, it arrives as
-  // `cross-site` — so the guard refused every in-app sign-in on Android. Removed
-  // by operator decision to unblock testing; alkem-io/server#6545 owns the
-  // replacement, which must be chosen from measurement. If you are re-adding a
-  // header check here, measure the shell's real headers FIRST — this test exists
-  // to make that failure impossible to repeat silently.
-  it('enters app mode on a cross-site navigation (SEC-079-02 guard removed, server#6545)', async () => {
+  // SEC-079-02 is gated on `Referer`, and the value of each case below was
+  // MEASURED on a device, not reasoned about. The previous guard tested
+  // `sec-fetch-site !== 'cross-site'` on the assumption that the shell's Custom
+  // Tab arrives as `none`; it arrives as `cross-site`, so that guard refused
+  // every in-app sign-in. If you are changing this, measure the shell's real
+  // headers on a handset first — these tests exist to make that omission
+  // impossible to repeat silently.
+  it('enters app mode on the shell launch: cross-site with no Referer', async () => {
     const { res } = await login({
       query: { app_challenge: APP_CHALLENGE },
       headers: { 'sec-fetch-site': 'cross-site' },
@@ -682,6 +681,37 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
     );
     expect(payload.app_challenge).toBe(APP_CHALLENGE);
     expect(res.statusCode).toBe(302);
+  });
+
+  it('refuses app mode when a Referer is present (SEC-079-02)', async () => {
+    const { res } = await login({
+      query: { app_challenge: APP_CHALLENGE },
+      headers: {
+        'sec-fetch-site': 'cross-site',
+        referer: 'https://attacker.example/landing',
+      },
+    });
+    const payload = await verifyPreAuthCookie(
+      readIssuedPreAuth(res),
+      PRE_AUTH_KEY
+    );
+    expect(payload.app_challenge).toBeUndefined();
+    expect(res.statusCode).toBe(302);
+  });
+
+  it('refuses app mode for a same-origin link click, which carries a Referer', async () => {
+    const { res } = await login({
+      query: { app_challenge: APP_CHALLENGE },
+      headers: {
+        'sec-fetch-site': 'same-origin',
+        referer: 'https://alkem.io/home',
+      },
+    });
+    const payload = await verifyPreAuthCookie(
+      readIssuedPreAuth(res),
+      PRE_AUTH_KEY
+    );
+    expect(payload.app_challenge).toBeUndefined();
   });
 
   it('enters app mode when no Sec-Fetch-Site header is sent', async () => {
