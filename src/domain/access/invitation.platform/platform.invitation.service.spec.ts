@@ -393,12 +393,17 @@ describe('PlatformInvitationService', () => {
         mockInvitations
       );
 
-      await expect(
-        service.getExistingPlatformInvitationForRoleSet(
-          'user@test.com',
-          'roleset-1'
-        )
-      ).rejects.toThrow(RoleSetMembershipException);
+      const error = await service
+        .getExistingPlatformInvitationForRoleSet('user@test.com', 'roleset-1')
+        .catch(e => e);
+
+      expect(error).toBeInstanceOf(RoleSetMembershipException);
+      expect(error.message).not.toContain('user@test.com');
+      expect(JSON.stringify(error.details)).not.toContain('user@test.com');
+      expect(error.details).toEqual({
+        roleSetID: 'roleset-1',
+        platformInvitationIDs: ['inv-1', 'inv-2'],
+      });
     });
 
     it('should search with lowercase email', async () => {

@@ -642,8 +642,9 @@ export class RoleSetResolverMutationsMembership {
     const roleSet = platformInvitation.roleSet;
     if (!roleSet) {
       throw new RelationshipNotFoundException(
-        `Unable to load role set of platform invitation: ${platformInvitation.id}`,
-        LogContext.ROLES
+        'Unable to load role set of platform invitation',
+        LogContext.ROLES,
+        { platformInvitationID: platformInvitation.id }
       );
     }
 
@@ -654,19 +655,45 @@ export class RoleSetResolverMutationsMembership {
       `resend platform invitation: ${platformInvitation.id}`
     );
 
+    const resendLogFields = {
+      invitationID: platformInvitation.id,
+      roleSetID: roleSet.id,
+      actorID: actorContext.actorID,
+    };
     if (platformInvitation.profileCreated) {
-      throw new RoleSetInvitationException(
-        `Platform invitation already consumed: ${platformInvitation.id}`,
+      this.logger.verbose?.(
+        {
+          message: 'Platform invitation resend refused: consumed',
+          ...resendLogFields,
+        },
         LogContext.ROLES
+      );
+      throw new RoleSetInvitationException(
+        'Platform invitation already consumed',
+        LogContext.ROLES,
+        undefined,
+        { platformInvitationID: platformInvitation.id }
       );
     }
     if (
       roleSet.type !== RoleSetType.SPACE &&
       roleSet.type !== RoleSetType.ORGANIZATION
     ) {
-      throw new RoleSetInvitationException(
-        `Platform invitation resend is not available for role set type ${roleSet.type}: ${platformInvitation.id}`,
+      this.logger.verbose?.(
+        {
+          message: 'Platform invitation resend refused: role set type',
+          ...resendLogFields,
+        },
         LogContext.ROLES
+      );
+      throw new RoleSetInvitationException(
+        'Platform invitation resend is not available for this role set type',
+        LogContext.ROLES,
+        undefined,
+        {
+          platformInvitationID: platformInvitation.id,
+          roleSetType: roleSet.type,
+        }
       );
     }
 
@@ -674,10 +701,15 @@ export class RoleSetResolverMutationsMembership {
       platformInvitation.id
     );
     if (!allowed) {
+      this.logger.verbose?.(
+        { message: 'Platform invitation resend throttled', ...resendLogFields },
+        LogContext.ROLES
+      );
       throw new RoleSetInvitationException(
-        `Platform invitation resent recently: ${platformInvitation.id}`,
+        'Platform invitation resent recently',
         LogContext.ROLES,
-        AlkemioErrorStatus.ROLE_SET_INVITATION_RESEND_THROTTLED
+        AlkemioErrorStatus.ROLE_SET_INVITATION_RESEND_THROTTLED,
+        { platformInvitationID: platformInvitation.id }
       );
     }
 
@@ -687,12 +719,7 @@ export class RoleSetResolverMutationsMembership {
       actorContext.actorID
     );
     this.logger.verbose?.(
-      {
-        message: 'Platform invitation email resent',
-        invitationID: platformInvitation.id,
-        roleSetID: roleSet.id,
-        actorID: actorContext.actorID,
-      },
+      { message: 'Platform invitation email resent', ...resendLogFields },
       LogContext.ROLES
     );
 
@@ -1671,8 +1698,9 @@ export class RoleSetResolverMutationsMembership {
           const platformInvitation = invitationResult.platformInvitation;
           if (!platformInvitation) {
             throw new RelationshipNotFoundException(
-              `Unable to load platform invitation for result: ${invitationResult.type}`,
-              LogContext.ROLES
+              'Unable to load platform invitation for result',
+              LogContext.ROLES,
+              { invitationResultType: invitationResult.type }
             );
           }
           const notificationInput: NotificationInputPlatformInvitation = {
@@ -1925,8 +1953,9 @@ export class RoleSetResolverMutationsMembership {
           const platformInvitation = invitationResult.platformInvitation;
           if (!platformInvitation) {
             throw new RelationshipNotFoundException(
-              `Unable to load platform invitation for result: ${invitationResult.type}`,
-              LogContext.ROLES
+              'Unable to load platform invitation for result',
+              LogContext.ROLES,
+              { invitationResultType: invitationResult.type }
             );
           }
           await this.dispatchPlatformInvitationEmail(

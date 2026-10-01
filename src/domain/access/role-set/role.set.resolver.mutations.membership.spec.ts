@@ -2850,15 +2850,27 @@ describe('RoleSetResolverMutationsMembership', () => {
     });
 
     it('refuses a consumed invitation without claiming the throttle or dispatching', async () => {
+      const verbose = vi.fn();
+      (resolver as any).logger = { verbose, error: vi.fn(), warn: vi.fn() };
       (
         platformInvitationServiceMock.getPlatformInvitationOrFail as Mock
       ).mockResolvedValue(
         buildInvitation(RoleSetType.SPACE, { profileCreated: true })
       );
 
-      await expect(
-        resolver.resendPlatformInvitation(actorContext, { ID: 'pinv-1' })
-      ).rejects.toThrow(RoleSetInvitationException);
+      const error = await resolver
+        .resendPlatformInvitation(actorContext, { ID: 'pinv-1' })
+        .catch(e => e);
+      expect(error).toBeInstanceOf(RoleSetInvitationException);
+      expect(error.message).toBe('Platform invitation already consumed');
+      expect(error.details).toEqual({ platformInvitationID: 'pinv-1' });
+      expect(verbose).toHaveBeenCalledTimes(1);
+      expect(verbose.mock.calls[0][0]).toEqual({
+        message: 'Platform invitation resend refused: consumed',
+        invitationID: 'pinv-1',
+        roleSetID: 'rs-1',
+        actorID: 'admin-1',
+      });
       expect(resendThrottleService.claim).not.toHaveBeenCalled();
       expect(
         notificationPlatformAdapter.platformInvitationCreated
@@ -2866,17 +2878,34 @@ describe('RoleSetResolverMutationsMembership', () => {
     });
 
     it('refuses a platform role set invitation', async () => {
+      const verbose = vi.fn();
+      (resolver as any).logger = { verbose, error: vi.fn(), warn: vi.fn() };
       (
         platformInvitationServiceMock.getPlatformInvitationOrFail as Mock
       ).mockResolvedValue(buildInvitation(RoleSetType.PLATFORM));
 
-      await expect(
-        resolver.resendPlatformInvitation(actorContext, { ID: 'pinv-1' })
-      ).rejects.toThrow(RoleSetInvitationException);
+      const error = await resolver
+        .resendPlatformInvitation(actorContext, { ID: 'pinv-1' })
+        .catch(e => e);
+      expect(error).toBeInstanceOf(RoleSetInvitationException);
+      expect(error.message).not.toContain('pinv-1');
+      expect(error.details).toEqual({
+        platformInvitationID: 'pinv-1',
+        roleSetType: RoleSetType.PLATFORM,
+      });
+      expect(verbose).toHaveBeenCalledTimes(1);
+      expect(verbose.mock.calls[0][0]).toEqual({
+        message: 'Platform invitation resend refused: role set type',
+        invitationID: 'pinv-1',
+        roleSetID: 'rs-1',
+        actorID: 'admin-1',
+      });
       expect(resendThrottleService.claim).not.toHaveBeenCalled();
     });
 
     it('answers the typed throttled code inside the window and dispatches nothing', async () => {
+      const verbose = vi.fn();
+      (resolver as any).logger = { verbose, error: vi.fn(), warn: vi.fn() };
       (
         platformInvitationServiceMock.getPlatformInvitationOrFail as Mock
       ).mockResolvedValue(buildInvitation(RoleSetType.SPACE));
@@ -2888,6 +2917,15 @@ describe('RoleSetResolverMutationsMembership', () => {
 
       expect(error).toBeInstanceOf(RoleSetInvitationException);
       expect(error.code).toBe('ROLESET_INVITATION_RESEND_THROTTLED');
+      expect(error.message).toBe('Platform invitation resent recently');
+      expect(error.details).toEqual({ platformInvitationID: 'pinv-1' });
+      expect(verbose).toHaveBeenCalledTimes(1);
+      expect(verbose.mock.calls[0][0]).toEqual({
+        message: 'Platform invitation resend throttled',
+        invitationID: 'pinv-1',
+        roleSetID: 'rs-1',
+        actorID: 'admin-1',
+      });
       expect(
         notificationPlatformAdapter.platformInvitationCreated
       ).not.toHaveBeenCalled();

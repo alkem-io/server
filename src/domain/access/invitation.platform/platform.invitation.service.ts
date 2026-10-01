@@ -158,8 +158,13 @@ export class PlatformInvitationService {
 
     if (existingPlatformInvitations.length > 1) {
       throw new RoleSetMembershipException(
-        `Found roleSet invitations for email ${email} and roleSet ${roleSetID}, but only one is expected!`,
-        LogContext.ROLES
+        'Found multiple open platform invitations for one address and role set, but only one is expected',
+        LogContext.ROLES,
+        undefined,
+        {
+          roleSetID,
+          platformInvitationIDs: existingPlatformInvitations.map(i => i.id),
+        }
       );
     }
     if (existingPlatformInvitations.length === 1) {
