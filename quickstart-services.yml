@@ -470,7 +470,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
-    image: alkemio/matrix-adapter:v0.8.17
+    image: alkemio/matrix-adapter:v0.8.21
     depends_on:
       - rabbitmq
     environment:
@@ -487,6 +487,7 @@ services:
       - LOGGING_CONSOLE_ENABLED
       - LOGGING_LEVEL_CONSOLE=debug
       - ENVIRONMENT=dev
+      - FILE_SERVICE_URL=http://file-service:4003
       - WAIT_HOSTS=host.docker.internal:3000
       - WAIT_TIMEOUT=300
       - WAIT_SLEEP_INTERVAL=30
@@ -626,7 +627,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service:v0.2.6
+    image: alkemio/file-service:v0.3.1
     depends_on:
       postgres:
         condition: service_healthy
