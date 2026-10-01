@@ -1,6 +1,6 @@
 import { MimeFileType } from '@common/enums/mime.file.type';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import { Column, Entity, ManyToOne, OneToMany, OneToOne } from 'typeorm';
 import { Document } from '../document/document.entity';
 import { StorageAggregator } from '../storage-aggregator/storage.aggregator.entity';
 import { IStorageBucket } from './storage.bucket.interface';
@@ -45,6 +45,15 @@ export class StorageBucket
     onDelete: 'SET NULL',
   })
   storageAggregator?: StorageAggregator;
+
+  // The owner of a direct bucket is stored on StorageAggregator.directStorage,
+  // independently of the parent/child storageAggregator relation above.
+  @OneToOne(
+    () => StorageAggregator,
+    aggregator => aggregator.directStorage,
+    { eager: false, cascade: false, persistence: false }
+  )
+  directStorageOwner?: StorageAggregator;
 
   @Column('simple-array')
   allowedMimeTypes!: MimeFileType[];

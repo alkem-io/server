@@ -44,9 +44,8 @@ describe('conversation attachment membership revocation', () => {
       id: 'conversation-bucket',
       authorization: new AuthorizationPolicy(AuthorizationPolicyType.UNKNOWN),
       documents: [document],
-      // Real conversation context: the cascade derives the CONVERSATION case
-      // from the bucket's own aggregator.
-      storageAggregator: { type: StorageAggregatorType.CONVERSATION },
+      storageAggregator: null,
+      directStorageOwner: { type: StorageAggregatorType.CONVERSATION },
     };
 
     await buckets.applyAuthorizationPolicy(bucket as any, parent);
@@ -68,7 +67,7 @@ describe('conversation attachment membership revocation', () => {
     expect(documentPrivileges).not.toContain(AuthorizationPrivilege.DELETE);
 
     // The same creator retains the platform's normal rights in a USER bucket.
-    bucket.storageAggregator.type = StorageAggregatorType.USER;
+    bucket.directStorageOwner.type = StorageAggregatorType.USER;
     await buckets.applyAuthorizationPolicy(bucket as any, parent);
     const ordinaryPrivileges = authorization.getGrantedPrivileges(
       credentials,
