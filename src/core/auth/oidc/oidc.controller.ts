@@ -309,6 +309,31 @@ export class OidcController {
       appChallenge = appChallengeRaw;
     }
 
+    // App mode is the one decision in this flow with no observable trace: both
+    // branches below answer 302 to the same Hydra URL, so a silently-lost app
+    // mode is indistinguishable from a web sign-in until the user is already
+    // stranded in the auth browser. One line here is what makes it diagnosable.
+    //
+    // FR-017 — no verifier (the shell never sends one here) and no code. The
+    // challenge is omitted too: it is public, but it is not needed to answer
+    // "which branch ran", and leaving it out keeps the record uninteresting.
+    this.logger.verbose?.(
+      {
+        message: 'OIDC login app-mode decision',
+        correlation_id: correlationId,
+        app_mode: appChallenge !== undefined,
+        query_empty: Object.keys(req.query).length === 0,
+        challenge_supplied: typeof appChallengeRaw === 'string',
+        challenge_well_formed:
+          typeof appChallengeRaw === 'string' &&
+          APP_CHALLENGE_PATTERN.test(appChallengeRaw),
+        scheme_configured: this.appRedirectScheme !== undefined,
+        handoff_store_available: this.redis !== undefined,
+        sec_fetch_site: req.headers['sec-fetch-site'] ?? null,
+      },
+      LogContext.AUTH
+    );
+
     if (validation.rejected) {
       emitAudit({
         event_type: 'auth.returnTo.rejected',
@@ -422,6 +447,22 @@ export class OidcController {
             redis: this.redis,
           }
         : undefined;
+
+    // The counterpart to the `/login` line above. Between the two sits the whole
+    // Hydra/Kratos/IdP chain, and app mode is carried only by the pre-auth
+    // cookie — so this is where a lost mode becomes visible, and the only place
+    // the loss can be attributed.
+    this.logger.verbose?.(
+      {
+        message: 'OIDC callback app-mode state',
+        correlation_id: correlationId,
+        app_mode: appMode !== undefined,
+        challenge_in_cookie: preAuth.app_challenge !== undefined,
+        scheme_configured: this.appRedirectScheme !== undefined,
+        handoff_store_available: this.redis !== undefined,
+      },
+      LogContext.AUTH
+    );
 
     if (typeof queryState !== 'string' || queryState !== preAuth.state) {
       return rejectCallback(
