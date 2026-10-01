@@ -28,6 +28,7 @@ import {
   InvitationEventInput,
 } from '@domain/access/invitation';
 import { ResendPlatformInvitationInput } from '@domain/access/invitation.platform/dto/platform.invitation.dto.resend';
+import { PlatformInvitationEmailBudgetService } from '@domain/access/invitation.platform/platform.invitation.email.budget.service';
 import { IPlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.interface';
 import { PlatformInvitationResendThrottleService } from '@domain/access/invitation.platform/platform.invitation.resend.throttle.service';
 import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
@@ -111,6 +112,7 @@ export class RoleSetResolverMutationsMembership {
     private actorLookupService: ActorLookupService,
     private platformInvitationService: PlatformInvitationService,
     private platformInvitationResendThrottleService: PlatformInvitationResendThrottleService,
+    private platformInvitationEmailBudgetService: PlatformInvitationEmailBudgetService,
     private licenseService: LicenseService,
     private lifecycleService: LifecycleService,
     private roleSetCacheService: RoleSetCacheService,
@@ -494,6 +496,14 @@ export class RoleSetResolverMutationsMembership {
       }
     }
 
+    // Reserve the external-email budget before anything is created, so a
+    // refusal leaves no half-processed batch behind.
+    await this.claimExternalInvitationEmailBudgetOrFail(
+      roleSet,
+      actorContext,
+      newUserEmails
+    );
+
     const invitationResults = await this.inviteActorsToEntryRole(
       roleSet,
       actorIDsToInvite,
@@ -563,6 +573,70 @@ export class RoleSetResolverMutationsMembership {
     return invitationResults;
   }
 
+  /**
+   * Charges the invitation emails this call would send to addresses without an
+   * account against the acting user's and the role set's hourly budgets. Only
+   * addresses that will actually get a new invitation are counted: an address
+   * typed twice, or one that already has an open invitation on this role set,
+   * sends nothing.
+   */
+  private async claimExternalInvitationEmailBudgetOrFail(
+    roleSet: IRoleSet,
+    actorContext: ActorContext,
+    newUserEmails: string[]
+  ): Promise<void> {
+    const uniqueEmails = [
+      ...new Set(newUserEmails.map(email => email.trim().toLowerCase())),
+    ];
+    let emailsToSend = 0;
+    for (const email of uniqueEmails) {
+      const existing =
+        await this.platformInvitationService.getExistingPlatformInvitationForRoleSet(
+          email,
+          roleSet.id
+        );
+      if (!existing) {
+        emailsToSend++;
+      }
+    }
+    await this.claimPlatformInvitationEmailBudgetOrFail(
+      roleSet,
+      actorContext,
+      emailsToSend
+    );
+  }
+
+  private async claimPlatformInvitationEmailBudgetOrFail(
+    roleSet: IRoleSet,
+    actorContext: ActorContext,
+    count: number
+  ): Promise<void> {
+    const outcome = await this.platformInvitationEmailBudgetService.claim(
+      actorContext.actorID,
+      roleSet.id,
+      count
+    );
+    if (outcome === 'ok') {
+      return;
+    }
+    this.logger.warn?.(
+      {
+        message: 'Platform invitation email budget exceeded',
+        scope: outcome,
+        actorID: actorContext.actorID,
+        roleSetID: roleSet.id,
+        count,
+      },
+      LogContext.ROLES
+    );
+    throw new RoleSetInvitationException(
+      'Too many invitation emails to people without an account; try again later',
+      LogContext.ROLES,
+      AlkemioErrorStatus.ROLE_SET_INVITATION_EMAIL_BUDGET_EXCEEDED,
+      { roleSetID: roleSet.id, scope: outcome }
+    );
+  }
+
   private async inviteNewUsersByEmailToPlatformAndRoleSet(
     roleSet: IRoleSet,
     newUserEmails: string[],
@@ -628,7 +702,7 @@ export class RoleSetResolverMutationsMembership {
 
   @Mutation(() => IPlatformInvitation, {
     description:
-      'Sends the invitation email of an open platform invitation again (Space or Organization role sets); throttled per invitation.',
+      'Sends the invitation email of an open platform invitation again (Space or Organization role sets); throttled per role set and address, and counted against an hourly email budget.',
   })
   async resendPlatformInvitation(
     @CurrentActor() actorContext: ActorContext,
@@ -698,7 +772,8 @@ export class RoleSetResolverMutationsMembership {
     }
 
     const allowed = await this.platformInvitationResendThrottleService.claim(
-      platformInvitation.id
+      roleSet.id,
+      platformInvitation.email
     );
     if (!allowed) {
       this.logger.verbose?.(
@@ -712,6 +787,12 @@ export class RoleSetResolverMutationsMembership {
         { platformInvitationID: platformInvitation.id }
       );
     }
+
+    await this.claimPlatformInvitationEmailBudgetOrFail(
+      roleSet,
+      actorContext,
+      1
+    );
 
     await this.dispatchPlatformInvitationEmail(
       roleSet,

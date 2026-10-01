@@ -4967,7 +4967,7 @@ type Mutation {
   """
   replaceWhiteboardContentFromSource(input: ReplaceWhiteboardContentFromSourceInput!): Whiteboard!
   """
-  Sends the invitation email of an open platform invitation again (Space or Organization role sets); throttled per invitation.
+  Sends the invitation email of an open platform invitation again (Space or Organization role sets); throttled per role set and address, and counted against an hourly email budget.
   """
   resendPlatformInvitation(resendData: ResendPlatformInvitationInput!): PlatformInvitation!
   """Resets the interaction with the VC by recreating the room."""

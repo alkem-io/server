@@ -539,10 +539,15 @@ notifications:
     enabled: ${CALLOUT_REACTION_NOTIFICATIONS_ENABLED}:true
     email_suppression_window_seconds: ${CALLOUT_REACTION_EMAIL_SUPPRESSION_WINDOW_SECONDS}:300
 
-  # Email invitations to people without an account. A resend of the same
-  # invitation is refused inside this per-invitation window (seconds; keep >= 1).
+  # Email invitations to people without an account. A resend to the same
+  # address on the same role set is refused inside this window (seconds; keep
+  # >= 1); revoking and re-inviting does not reset it. The two budgets cap how
+  # many such emails (new invitations plus resends) one acting user, and one
+  # role set, may cause per hour.
   platform_invitations:
     resend_cooldown_seconds: ${PLATFORM_INVITATION_RESEND_COOLDOWN_SECONDS}:300
+    email_budget_per_actor_per_hour: ${PLATFORM_INVITATION_EMAIL_BUDGET_PER_ACTOR_PER_HOUR}:200
+    email_budget_per_role_set_per_hour: ${PLATFORM_INVITATION_EMAIL_BUDGET_PER_ROLE_SET_PER_HOUR}:300
 
   # Organization space-invitation notifications. NOT declared on any
   # deployment manifest this release — the in-code default below governs

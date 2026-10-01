@@ -4,6 +4,7 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MessagingRedisModule } from '@services/infrastructure/redis-client/messaging-redis.module';
+import { PlatformInvitationEmailBudgetService } from './platform.invitation.email.budget.service';
 import { PlatformInvitation } from './platform.invitation.entity';
 import { PlatformInvitationResendThrottleService } from './platform.invitation.resend.throttle.service';
 import { PlatformInvitationResolverFields } from './platform.invitation.resolver.fields';
@@ -22,6 +23,7 @@ import { PlatformInvitationAuthorizationService } from './platform.invitation.se
   providers: [
     PlatformInvitationService,
     PlatformInvitationResendThrottleService,
+    PlatformInvitationEmailBudgetService,
     PlatformInvitationAuthorizationService,
     PlatformInvitationResolverFields,
     PlatformInvitationResolverMutations,
@@ -29,6 +31,7 @@ import { PlatformInvitationAuthorizationService } from './platform.invitation.se
   exports: [
     PlatformInvitationService,
     PlatformInvitationResendThrottleService,
+    PlatformInvitationEmailBudgetService,
     PlatformInvitationAuthorizationService,
     PlatformInvitationResolverMutations,
   ],

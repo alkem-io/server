@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { LogContext } from '@common/enums';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -6,6 +7,9 @@ import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { vi } from 'vitest';
 import { PlatformInvitationResendThrottleService } from './platform.invitation.resend.throttle.service';
+
+const digest = (email: string) =>
+  createHash('sha256').update(email).digest('hex');
 
 describe('PlatformInvitationResendThrottleService', () => {
   let service: PlatformInvitationResendThrottleService;
@@ -41,11 +45,11 @@ describe('PlatformInvitationResendThrottleService', () => {
   it('first claim sets the marker with the window and NX, and allows the resend', async () => {
     redis.set.mockResolvedValue('OK');
 
-    const allowed = await service.claim('inv-1');
+    const allowed = await service.claim('rs-1', 'a@example.com');
 
     expect(allowed).toBe(true);
     expect(redis.set).toHaveBeenCalledWith(
-      'platform-invitation:resend:inv-1',
+      `platform-invitation:resend:rs-1:${digest('a@example.com')}`,
       '1',
       'EX',
       300,
@@ -56,37 +60,46 @@ describe('PlatformInvitationResendThrottleService', () => {
   it('a second claim inside the window is refused', async () => {
     redis.set.mockResolvedValue(null);
 
-    expect(await service.claim('inv-1')).toBe(false);
+    expect(await service.claim('rs-1', 'a@example.com')).toBe(false);
   });
 
-  it('keys the window per invitation', async () => {
+  it('keys the window per role set and address, not per invitation', async () => {
     redis.set.mockResolvedValue('OK');
 
-    await service.claim('inv-1');
-    await service.claim('inv-2');
+    await service.claim('rs-1', 'a@example.com');
+    await service.claim('rs-1', 'b@example.com');
+    await service.claim('rs-2', 'a@example.com');
 
-    expect(redis.set).toHaveBeenNthCalledWith(
-      1,
-      'platform-invitation:resend:inv-1',
-      '1',
-      'EX',
-      300,
-      'NX'
+    const keys = redis.set.mock.calls.map(call => call[0]);
+    expect(new Set(keys).size).toBe(3);
+    expect(keys[0]).toBe(
+      `platform-invitation:resend:rs-1:${digest('a@example.com')}`
     );
-    expect(redis.set).toHaveBeenNthCalledWith(
-      2,
-      'platform-invitation:resend:inv-2',
-      '1',
-      'EX',
-      300,
-      'NX'
-    );
+  });
+
+  it('shares one window across invitation records for the same address (revoke and re-invite)', async () => {
+    redis.set.mockResolvedValueOnce('OK').mockResolvedValueOnce(null);
+
+    expect(await service.claim('rs-1', 'a@example.com')).toBe(true);
+    // A re-created invitation has a new ID but the same (role set, address).
+    expect(await service.claim('rs-1', 'a@example.com')).toBe(false);
+    expect(redis.set.mock.calls[0][0]).toBe(redis.set.mock.calls[1][0]);
+  });
+
+  it('normalizes case and whitespace and never stores the address in the key', async () => {
+    redis.set.mockResolvedValue('OK');
+
+    await service.claim('rs-1', '  A@Example.COM ');
+    await service.claim('rs-1', 'a@example.com');
+
+    expect(redis.set.mock.calls[0][0]).toBe(redis.set.mock.calls[1][0]);
+    expect(redis.set.mock.calls[0][0]).not.toContain('@');
   });
 
   it('fails open on a Redis error and logs without an address', async () => {
     redis.set.mockRejectedValue(new Error('redis down'));
 
-    const allowed = await service.claim('inv-1');
+    const allowed = await service.claim('rs-1', 'a@example.com');
 
     expect(allowed).toBe(true);
     expect(logger.error).toHaveBeenCalledTimes(1);
@@ -95,7 +108,7 @@ describe('PlatformInvitationResendThrottleService', () => {
       expect.objectContaining({
         message:
           'Platform-invitation resend throttle store error — failing open',
-        invitationID: 'inv-1',
+        roleSetID: 'rs-1',
       })
     );
     expect(context).toBe(LogContext.ROLES);

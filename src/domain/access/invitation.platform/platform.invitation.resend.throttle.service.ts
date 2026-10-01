@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { LogContext } from '@common/enums';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -7,12 +8,16 @@ import type { Redis } from 'ioredis';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 /**
- * Per-invitation cooldown for resending a platform invitation email.
+ * Cooldown for resending a platform invitation email to one address on one
+ * role set.
  *
- * The first resend inside a window claims a marker; further resends of the
- * same invitation are refused until it expires. The window is keyed by the
- * invitation, never by the address or the actor, so resending one person's
- * invitation does not affect another's.
+ * The first resend inside a window claims a marker; further resends to the
+ * same address on the same role set are refused until it expires. The window
+ * is keyed by (role set, lowercased address) — never by the invitation ID —
+ * so revoking an invitation and re-inviting the address (which mints a new
+ * invitation ID) does not reset it. The address enters the key only as a
+ * SHA-256 digest, so no address is stored in Redis keys. Resending to one
+ * person does not affect another's window.
  *
  * Fails open: a Redis error admits the resend (and logs), because an extra
  * email during a store outage is preferable to an admin being unable to
@@ -36,10 +41,13 @@ export class PlatformInvitationResendThrottleService {
 
   /**
    * Returns `true` and claims the window when a resend is allowed; returns
-   * `false` when the invitation was resent within the window.
+   * `false` when that address was resent on that role set within the window.
    */
-  async claim(invitationID: string): Promise<boolean> {
-    const key = `platform-invitation:resend:${invitationID}`;
+  async claim(roleSetID: string, email: string): Promise<boolean> {
+    const addressDigest = createHash('sha256')
+      .update(email.trim().toLowerCase())
+      .digest('hex');
+    const key = `platform-invitation:resend:${roleSetID}:${addressDigest}`;
     try {
       // SET EX NX is atomic: the marker and its TTL are written together, and
       // only when no marker exists.
@@ -56,7 +64,7 @@ export class PlatformInvitationResendThrottleService {
         {
           message:
             'Platform-invitation resend throttle store error — failing open',
-          invitationID,
+          roleSetID,
           error: error?.message,
         },
         error?.stack,

@@ -10,6 +10,7 @@ import { RoleSetMembershipException } from '@common/exceptions/role.set.membersh
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ApplicationService } from '@domain/access/application/application.service';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
+import { PlatformInvitationEmailBudgetService } from '@domain/access/invitation.platform/platform.invitation.email.budget.service';
 import { PlatformInvitationResendThrottleService } from '@domain/access/invitation.platform/platform.invitation.resend.throttle.service';
 import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
@@ -54,6 +55,7 @@ describe('RoleSetResolverMutationsMembership', () => {
   let notificationPlatformAdapter: NotificationPlatformAdapter;
   let platformInvitationServiceMock: PlatformInvitationService;
   let resendThrottleService: PlatformInvitationResendThrottleService;
+  let emailBudgetService: PlatformInvitationEmailBudgetService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -117,6 +119,10 @@ describe('RoleSetResolverMutationsMembership', () => {
     resendThrottleService = module.get<PlatformInvitationResendThrottleService>(
       PlatformInvitationResendThrottleService
     );
+    emailBudgetService = module.get<PlatformInvitationEmailBudgetService>(
+      PlatformInvitationEmailBudgetService
+    );
+    (emailBudgetService.claim as Mock).mockResolvedValue('ok');
     communityResolverService = module.get<CommunityResolverService>(
       CommunityResolverService
     );
@@ -900,6 +906,72 @@ describe('RoleSetResolverMutationsMembership', () => {
           expect(
             notificationOrganizationAdapter.organizationAssociatePlatformInvitationCreated
           ).not.toHaveBeenCalled();
+        });
+
+        it('charges the email budget for new addresses only, once per distinct address', async () => {
+          setUpEmailInvite();
+          (
+            platformInvitationServiceMock.getExistingPlatformInvitationForRoleSet as Mock
+          ).mockImplementation(async (email: string) =>
+            email === 'open@example.com' ? orgPlatformInvitation : undefined
+          );
+
+          await resolver.inviteForEntryRoleOnRoleSet(actorContext, {
+            roleSetID: 'org-rs-1',
+            invitedActorIDs: [],
+            invitedUserEmails: [
+              'new@example.com',
+              'NEW@example.com',
+              'open@example.com',
+              'other@example.com',
+            ],
+            extraRoles: [],
+          } as any);
+
+          expect(emailBudgetService.claim).toHaveBeenCalledTimes(1);
+          expect(emailBudgetService.claim).toHaveBeenCalledWith(
+            'admin-1',
+            'org-rs-1',
+            2
+          );
+        });
+
+        it('refuses the whole batch before creating anything when the email budget is exceeded', async () => {
+          setUpEmailInvite();
+          (emailBudgetService.claim as Mock).mockResolvedValue('actor');
+          const warn = vi.fn();
+          (resolver as any).logger = {
+            verbose: vi.fn(),
+            error: vi.fn(),
+            warn,
+          };
+
+          const error = await resolver
+            .inviteForEntryRoleOnRoleSet(actorContext, {
+              roleSetID: 'org-rs-1',
+              invitedActorIDs: [],
+              invitedUserEmails: ['new@example.com'],
+              extraRoles: [],
+            } as any)
+            .catch(e => e);
+
+          expect(error).toBeInstanceOf(RoleSetInvitationException);
+          expect(error.code).toBe('ROLESET_INVITATION_EMAIL_BUDGET_EXCEEDED');
+          expect(error.message).not.toContain('new@example.com');
+          expect(
+            roleSetService.createPlatformInvitation
+          ).not.toHaveBeenCalled();
+          expect(
+            notificationOrganizationAdapter.organizationAssociatePlatformInvitationCreated
+          ).not.toHaveBeenCalled();
+          expect(warn).toHaveBeenCalledTimes(1);
+          expect(warn.mock.calls[0][0]).toEqual({
+            message: 'Platform invitation email budget exceeded',
+            scope: 'actor',
+            actorID: 'admin-1',
+            roleSetID: 'org-rs-1',
+            count: 1,
+          });
         });
 
         it('routes the address of a registered user through the actor path', async () => {
@@ -3004,6 +3076,54 @@ describe('RoleSetResolverMutationsMembership', () => {
       expect(
         notificationOrganizationAdapter.organizationAssociatePlatformInvitationCreated
       ).not.toHaveBeenCalled();
+    });
+
+    it('keys the cooldown on the role set and address and charges one email against the budget', async () => {
+      (
+        platformInvitationServiceMock.getPlatformInvitationOrFail as Mock
+      ).mockResolvedValue(buildInvitation(RoleSetType.ORGANIZATION));
+
+      await resolver.resendPlatformInvitation(actorContext, { ID: 'pinv-1' });
+
+      expect(resendThrottleService.claim).toHaveBeenCalledWith(
+        'rs-1',
+        'new@example.com'
+      );
+      expect(emailBudgetService.claim).toHaveBeenCalledWith(
+        'admin-1',
+        'rs-1',
+        1
+      );
+    });
+
+    it('refuses a resend over the email budget without dispatching', async () => {
+      (emailBudgetService.claim as Mock).mockResolvedValue('roleSet');
+      (
+        platformInvitationServiceMock.getPlatformInvitationOrFail as Mock
+      ).mockResolvedValue(buildInvitation(RoleSetType.ORGANIZATION));
+
+      const error = await resolver
+        .resendPlatformInvitation(actorContext, { ID: 'pinv-1' })
+        .catch(e => e);
+
+      expect(error).toBeInstanceOf(RoleSetInvitationException);
+      expect(error.code).toBe('ROLESET_INVITATION_EMAIL_BUDGET_EXCEEDED');
+      expect(
+        notificationOrganizationAdapter.organizationAssociatePlatformInvitationCreated
+      ).not.toHaveBeenCalled();
+    });
+
+    it('does not charge the budget when the cooldown refuses the resend', async () => {
+      (resendThrottleService.claim as Mock).mockResolvedValue(false);
+      (
+        platformInvitationServiceMock.getPlatformInvitationOrFail as Mock
+      ).mockResolvedValue(buildInvitation(RoleSetType.SPACE));
+
+      await resolver
+        .resendPlatformInvitation(actorContext, { ID: 'pinv-1' })
+        .catch(e => e);
+
+      expect(emailBudgetService.claim).not.toHaveBeenCalled();
     });
 
     it('never writes the address into log lines or exception messages', async () => {
