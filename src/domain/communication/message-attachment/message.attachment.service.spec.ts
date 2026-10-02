@@ -11,6 +11,7 @@ import { ConfigService } from '@nestjs/config';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { AlkemioConfig } from '@src/types/alkemio.config';
+import { In } from 'typeorm';
 import { IMessage } from '../message/message.interface';
 import { IRoom } from '../room/room.interface';
 import {
@@ -340,17 +341,26 @@ describe('MessageAttachmentService', () => {
     });
 
     it('a document hint cannot authorize bytes other than the provider media', async () => {
+      const hintedID = '33333333-3333-4333-8333-333333333333';
       documentRepository.find.mockResolvedValue([
         provider,
-        makeDocument({ id: 'hinted', externalID: 'different-bytes' }),
+        makeDocument({
+          id: hintedID,
+          externalID: 'different-bytes',
+          externalReference: undefined,
+        }),
       ]);
       expect(
         await service.resolveMediaAttachments(
           room,
-          [{ ...raw, document_id: 'hinted' }],
+          [{ ...raw, document_id: hintedID }],
           actor
         )
       ).toEqual([{ displayName: raw.display_name }]);
+      expect(documentRepository.find.mock.calls[0][0].where).toContainEqual({
+        storageBucket: { id: bucket.id },
+        id: In([hintedID]),
+      });
     });
 
     it('an unreadable document exposes only the event filename', async () => {
