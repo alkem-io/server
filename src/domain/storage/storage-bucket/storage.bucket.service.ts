@@ -7,7 +7,6 @@ import {
   MimeFileType,
 } from '@common/enums/mime.file.type';
 import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
-import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { VisualType } from '@common/enums/visual.type';
 import { ValidationException } from '@common/exceptions';
@@ -42,6 +41,7 @@ import { CreateStorageBucketInput } from './dto/storage.bucket.dto.create';
 import { IStorageBucketParent } from './dto/storage.bucket.dto.parent';
 import { StorageBucket } from './storage.bucket.entity';
 import { IStorageBucket } from './storage.bucket.interface';
+import { isConversationBucket } from './storage.bucket.utils';
 
 // Used when an upload arrives with no filename — e.g. a clipboard paste or
 // drag-drop that produces File { name: '' }. An empty multipart filename
@@ -267,14 +267,14 @@ export class StorageBucketService {
     const effectiveFilename = filename?.trim() || UNSPECIFIED_FILENAME;
     try {
       const storage = await this.getStorageBucketOrFail(storageBucketId, {
-        relations: { authorization: true, storageAggregator: true },
+        relations: { authorization: true, directStorageOwner: true },
       });
       this.validateMimeTypes(storage, mimeType);
 
       // Conversation files are durable on upload, so a caller-requested
       // temporary placement is overridden, and their policy is composed before
       // the insert rather than by the resolver afterwards.
-      const isConversation = this.isConversationBucket(storage);
+      const isConversation = isConversationBucket(storage);
       const temporaryLocation = isConversation ? false : temporaryDocument;
 
       // The size limit is enforced DURING the transfer by the adapter: the
@@ -403,9 +403,9 @@ export class StorageBucketService {
     options?: { externalReference?: string; displayName?: string }
   ): Promise<IDocument> {
     const destination = await this.getStorageBucketOrFail(destinationBucketId, {
-      // storageAggregator scopes the document creator rule; see
+      // The direct owner scopes the document creator rule; see
       // persistDocumentWithPreparedAuth.
-      relations: { authorization: true, storageAggregator: true },
+      relations: { authorization: true, directStorageOwner: true },
     });
 
     this.validateMimeTypes(destination, sourceDocument.mimeType);
@@ -478,8 +478,7 @@ export class StorageBucketService {
         await this.documentAuthorizationService.applyAuthorizationPolicy(
           pending,
           parentAuthorization,
-          prepared?.destinationBucket?.storageAggregator?.type !==
-            StorageAggregatorType.CONVERSATION
+          !isConversationBucket(prepared?.destinationBucket)
         );
       }
 
@@ -715,19 +714,6 @@ export class StorageBucketService {
       actorContext,
       document.authorization,
       AuthorizationPrivilege.READ
-    );
-  }
-
-  /**
-   * True for the per-conversation buckets feature 013 creates
-   * (`StorageAggregatorType.CONVERSATION`). Requires the `storageAggregator`
-   * relation to be loaded; an unloaded/absent aggregator reads as "not a
-   * conversation bucket", which keeps the platform-wide default behaviour.
-   */
-  private isConversationBucket(storageBucket: IStorageBucket): boolean {
-    return (
-      storageBucket.storageAggregator?.type ===
-      StorageAggregatorType.CONVERSATION
     );
   }
 

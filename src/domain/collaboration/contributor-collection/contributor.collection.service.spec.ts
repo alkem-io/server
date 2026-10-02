@@ -1,15 +1,59 @@
 import { ActorType } from '@common/enums/actor.type';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { CalloutSelectionMode } from '@common/enums/callout.selection.mode';
+import { RoleName } from '@common/enums/role.name';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { UserInformationVisibility } from '@common/enums/user.information.visibility';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { Actor } from '@domain/actor/actor/actor.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
+import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { Community } from '@domain/community/community/community.entity';
+import { Organization } from '@domain/community/organization/organization.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { EntityManager } from 'typeorm';
 import { ContributorCollectionService } from './contributor.collection.service';
+
+// A minimal chainable query-builder test double covering exactly the methods
+// the service calls (associates count / joined-date queries) — never the
+// real TypeORM query builder.
+type MockQueryBuilder = {
+  innerJoin: ReturnType<typeof vi.fn>;
+  select: ReturnType<typeof vi.fn>;
+  addSelect: ReturnType<typeof vi.fn>;
+  where: ReturnType<typeof vi.fn>;
+  andWhere: ReturnType<typeof vi.fn>;
+  groupBy: ReturnType<typeof vi.fn>;
+  getRawMany: ReturnType<typeof vi.fn>;
+};
+
+// Cast to `any` at the boundary: this stands in for TypeORM's
+// `SelectQueryBuilder<any>`, which the mock deliberately does not implement
+// in full — only the handful of chained methods the service calls.
+const makeQueryBuilder = (rows: unknown[] = []): any => {
+  const qb = {} as MockQueryBuilder;
+  qb.innerJoin = vi.fn().mockReturnValue(qb);
+  qb.select = vi.fn().mockReturnValue(qb);
+  qb.addSelect = vi.fn().mockReturnValue(qb);
+  qb.where = vi.fn().mockReturnValue(qb);
+  qb.andWhere = vi.fn().mockReturnValue(qb);
+  qb.groupBy = vi.fn().mockReturnValue(qb);
+  qb.getRawMany = vi.fn().mockResolvedValue(rows);
+  return qb;
+};
+
+// A profile shaped enough for the enrichment helpers: displayName + tagline
+// come straight off it; `id` is the join key back to its tagsets.
+const profileOf = (id: string, overrides: Record<string, unknown> = {}) => ({
+  id,
+  displayName: overrides.displayName ?? id,
+  tagline: overrides.tagline,
+  location: overrides.location,
+  visuals: overrides.visuals ?? [],
+});
 
 // Privacy-critical server enforcement: type-selection filter (FR-007, SC-003)
 // and members-only user-information visibility (FR-015/FR-017, SC-004).
@@ -57,6 +101,21 @@ describe('ContributorCollectionService', () => {
       .mockImplementation((async (entity: any) =>
         entity === Community ? { id: 'community-1', roleSet } : space) as any);
 
+  // entityManager.find is shared by three enrichment reads (Actor, Tagset,
+  // Organization) plus the pre-existing Actor profile read — dispatch by
+  // entity class so a test only has to name the rows it cares about.
+  const mockEntityFind = (opts: {
+    actors?: unknown[];
+    tagsets?: unknown[];
+    organizations?: unknown[];
+  }) =>
+    vi.spyOn(entityManager, 'find').mockImplementation((async (entity: any) => {
+      if (entity === Actor) return opts.actors ?? [];
+      if (entity === Tagset) return opts.tagsets ?? [];
+      if (entity === Organization) return opts.organizations ?? [];
+      return [];
+    }) as any);
+
   beforeEach(async () => {
     vi.restoreAllMocks();
     const module: TestingModule = await Test.createTestingModule({
@@ -69,6 +128,10 @@ describe('ContributorCollectionService', () => {
             getOrganizationsWithRole: vi.fn(),
             getVirtualContributorsWithRole: vi.fn(),
             isMember: vi.fn(),
+            getCredentialDefinitionForRole: vi.fn().mockResolvedValue({
+              type: AuthorizationCredential.SPACE_MEMBER,
+              resourceID: 'role-set-1',
+            }),
           },
         },
         {
@@ -84,7 +147,11 @@ describe('ContributorCollectionService', () => {
         },
         {
           provide: EntityManager,
-          useValue: { findOne: vi.fn(), find: vi.fn().mockResolvedValue([]) },
+          useValue: {
+            findOne: vi.fn(),
+            find: vi.fn().mockResolvedValue([]),
+            createQueryBuilder: vi.fn().mockReturnValue(makeQueryBuilder([])),
+          },
         },
       ],
     }).compile();
@@ -327,6 +394,496 @@ describe('ContributorCollectionService', () => {
         anon
       );
       expect(result).toEqual([]);
+    });
+  });
+
+  // --- Card enrichment (workspace#077, T004) ---
+  describe('tagline + tags enrichment (US1, T004)', () => {
+    const anon = new ActorContext();
+
+    it('reads tags from a separate Tagset query, never merged into the Actor read', async () => {
+      mockFindOne(spaceWithVisibility());
+      const findSpy = mockEntityFind({
+        actors: [
+          {
+            id: 'u1',
+            nameID: 'u1',
+            profile: profileOf('profile-u1', { tagline: ' Hi ' }),
+          },
+        ],
+        tagsets: [
+          {
+            name: TagsetReservedName.SKILLS,
+            tags: ['b', 'a'],
+            profile: { id: 'profile-u1' },
+          },
+        ],
+      });
+
+      const [result] = await service.getContributors(
+        calloutWith([ActorType.USER]),
+        ActorType.USER,
+        anon
+      );
+
+      expect(result.tagline).toBe('Hi');
+      expect(result.tags).toEqual(['b', 'a']);
+
+      // Exactly one Actor read and one Tagset read; the Actor read's
+      // `relations` argument is unchanged by the enrichment work.
+      const actorCall = findSpy.mock.calls.find(call => call[0] === Actor);
+      const tagsetCalls = findSpy.mock.calls.filter(call => call[0] === Tagset);
+      expect(tagsetCalls).toHaveLength(1);
+      expect(actorCall?.[1]).toEqual({
+        where: { id: expect.anything() },
+        relations: { profile: { location: true, visuals: true } },
+      });
+    });
+
+    it('a profile with no tagset rows ⇒ tags: []', async () => {
+      mockFindOne(spaceWithVisibility());
+      mockEntityFind({
+        actors: [{ id: 'u1', nameID: 'u1', profile: profileOf('profile-u1') }],
+        tagsets: [],
+      });
+
+      const [result] = await service.getContributors(
+        calloutWith([ActorType.USER]),
+        ActorType.USER,
+        anon
+      );
+
+      expect(result.tags).toEqual([]);
+    });
+
+    it('a contributor whose profile failed to load ⇒ tagline undefined, tags: [], no throw', async () => {
+      mockFindOne(spaceWithVisibility());
+      // 'u1' is ranked (default mock) but the Actor read returns nothing for it.
+      mockEntityFind({ actors: [], tagsets: [] });
+
+      const result = await service.getContributors(
+        calloutWith([ActorType.USER]),
+        ActorType.USER,
+        anon
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].tagline).toBeUndefined();
+      expect(result[0].tags).toEqual([]);
+    });
+  });
+
+  // --- Organisation website + associates (US1/US5, T005) ---
+  describe('organisation website + associatesCount enrichment (T005)', () => {
+    const anon = new ActorContext();
+
+    it('neither read is issued for USER or VIRTUAL_CONTRIBUTOR', async () => {
+      mockFindOne(spaceWithVisibility());
+      const cqbSpy = vi
+        .spyOn(entityManager, 'createQueryBuilder')
+        .mockReturnValue(makeQueryBuilder([]));
+      const findSpy = mockEntityFind({
+        actors: [{ id: 'u1', nameID: 'u1', profile: profileOf('p-u1') }],
+      });
+
+      const [result] = await service.getContributors(
+        calloutWith([ActorType.USER]),
+        ActorType.USER,
+        anon
+      );
+
+      expect(result.website).toBeUndefined();
+      expect(result.associatesCount).toBeUndefined();
+      // The organization website read never runs for USER (the query
+      // builder itself is still opened once, for the unrelated
+      // joined-date read — asserted separately in the T006 block).
+      expect(findSpy).not.toHaveBeenCalledWith(Organization, expect.anything());
+      // The associates-count query is the only caller of `innerJoin`; a
+      // USER card never triggers it.
+      expect(cqbSpy).toHaveBeenCalledTimes(1);
+      const qb = cqbSpy.mock.results[0]?.value;
+      expect(qb.innerJoin).not.toHaveBeenCalled();
+    });
+
+    it('an organisation missing from the count result ⇒ 0 (not undefined)', async () => {
+      mockFindOne(spaceWithVisibility());
+      mockEntityFind({
+        organizations: [{ id: 'o1', website: 'https://a.org' }],
+      });
+      vi.spyOn(entityManager, 'createQueryBuilder').mockReturnValue(
+        makeQueryBuilder([]) // no rows ⇒ o1 absent from the count result
+      );
+
+      const [result] = await service.getContributors(
+        calloutWith([ActorType.ORGANIZATION]),
+        ActorType.ORGANIZATION,
+        anon
+      );
+
+      expect(result.website).toBe('https://a.org');
+      expect(result.associatesCount).toBe(0);
+    });
+
+    it('the associates query builder is given the credential type, USER actor type and an inner join', async () => {
+      mockFindOne(spaceWithVisibility());
+      mockEntityFind({
+        organizations: [{ id: 'o1', website: '' }],
+      });
+      const qb = makeQueryBuilder([{ resourceID: 'o1', count: '3' }]);
+      vi.spyOn(entityManager, 'createQueryBuilder').mockReturnValue(qb);
+
+      const [result] = await service.getContributors(
+        calloutWith([ActorType.ORGANIZATION]),
+        ActorType.ORGANIZATION,
+        anon
+      );
+
+      expect(result.associatesCount).toBe(3);
+      expect(qb.innerJoin).toHaveBeenCalledWith('credential.actor', 'actor');
+      expect(qb.where).toHaveBeenCalledWith('credential.type = :type', {
+        type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
+      });
+      expect(qb.andWhere).toHaveBeenCalledWith('actor.type = :actorType', {
+        actorType: ActorType.USER,
+      });
+      expect(qb.groupBy).toHaveBeenCalledWith('credential.resourceID');
+    });
+  });
+
+  // --- Join month (US4, T006) ---
+  describe('joinedDate enrichment (US4, T006)', () => {
+    const anon = new ActorContext();
+
+    it('the read is not issued for ORGANIZATION or VIRTUAL_CONTRIBUTOR', async () => {
+      mockFindOne(spaceWithVisibility());
+      mockEntityFind({
+        organizations: [{ id: 'o1', website: '' }],
+      });
+      const cqbSpy = vi
+        .spyOn(entityManager, 'createQueryBuilder')
+        .mockReturnValue(makeQueryBuilder([]));
+
+      const [result] = await service.getContributors(
+        calloutWith([ActorType.ORGANIZATION]),
+        ActorType.ORGANIZATION,
+        anon
+      );
+
+      expect(result.joinedDate).toBeUndefined();
+      // Only the associates-count query builder call, never a joined-date one:
+      // both share the same Credential entity, so assert via call count.
+      expect(cqbSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('the criteria come from the role-set mock (a subspace credential definition)', async () => {
+      mockFindOne(spaceWithVisibility());
+      mockEntityFind({
+        actors: [{ id: 'u1', nameID: 'u1', profile: profileOf('p-u1') }],
+      });
+      (
+        roleSetService.getCredentialDefinitionForRole as ReturnType<
+          typeof vi.fn
+        >
+      ).mockResolvedValue({ type: 'space-member', resourceID: 'subspace-1' });
+      const qb = makeQueryBuilder([
+        { actorId: 'u1', minCreatedDate: '2023-10-31T23:30:00.000Z' },
+      ]);
+      vi.spyOn(entityManager, 'createQueryBuilder').mockReturnValue(qb);
+
+      const [result] = await service.getContributors(
+        calloutWith([ActorType.USER]),
+        ActorType.USER,
+        anon
+      );
+
+      expect(
+        roleSetService.getCredentialDefinitionForRole
+      ).toHaveBeenCalledWith(roleSet, RoleName.MEMBER);
+      expect(qb.where).toHaveBeenCalledWith('credential.type = :type', {
+        type: 'space-member',
+      });
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'credential.resourceID = :resourceID',
+        { resourceID: 'subspace-1' }
+      );
+      expect(result.joinedDate?.toISOString()).toBe('2023-10-01T00:00:00.000Z');
+    });
+
+    it('an id absent from the result ⇒ joinedDate undefined', async () => {
+      mockFindOne(spaceWithVisibility());
+      mockEntityFind({
+        actors: [{ id: 'u1', nameID: 'u1', profile: profileOf('p-u1') }],
+      });
+      vi.spyOn(entityManager, 'createQueryBuilder').mockReturnValue(
+        makeQueryBuilder([])
+      );
+
+      const [result] = await service.getContributors(
+        calloutWith([ActorType.USER]),
+        ActorType.USER,
+        anon
+      );
+
+      expect(result.joinedDate).toBeUndefined();
+    });
+  });
+
+  // --- Gates, null matrix, read budget, unchanged behaviour (US2, T007) ---
+  describe('service-level enrichment guarantees (T007)', () => {
+    const anon = new ActorContext();
+
+    it('MEMBERS_ONLY + anonymous, type USER ⇒ [] and zero enrichment reads', async () => {
+      mockFindOne(spaceWithVisibility(UserInformationVisibility.MEMBERS_ONLY));
+      const findSpy = mockEntityFind({});
+      const cqbSpy = vi
+        .spyOn(entityManager, 'createQueryBuilder')
+        .mockReturnValue(makeQueryBuilder([]));
+
+      const result = await service.getContributors(
+        calloutWith([ActorType.USER]),
+        ActorType.USER,
+        anon
+      );
+
+      expect(result).toEqual([]);
+      expect(findSpy).not.toHaveBeenCalled();
+      expect(cqbSpy).not.toHaveBeenCalled();
+      expect(
+        roleSetService.getCredentialDefinitionForRole
+      ).not.toHaveBeenCalled();
+    });
+
+    it('a deselected type ⇒ [] and zero enrichment reads', async () => {
+      mockFindOne(spaceWithVisibility());
+      const findSpy = mockEntityFind({});
+      const cqbSpy = vi
+        .spyOn(entityManager, 'createQueryBuilder')
+        .mockReturnValue(makeQueryBuilder([]));
+
+      const result = await service.getContributors(
+        calloutWith([ActorType.ORGANIZATION]),
+        ActorType.USER,
+        anon
+      );
+
+      expect(result).toEqual([]);
+      expect(findSpy).not.toHaveBeenCalled();
+      expect(cqbSpy).not.toHaveBeenCalled();
+      expect(
+        roleSetService.getCredentialDefinitionForRole
+      ).not.toHaveBeenCalled();
+    });
+
+    it('null matrix: USER carries website/associatesCount undefined', async () => {
+      mockFindOne(spaceWithVisibility());
+      mockEntityFind({
+        actors: [{ id: 'u1', nameID: 'u1', profile: profileOf('p-u1') }],
+      });
+
+      const [result] = await service.getContributors(
+        calloutWith([ActorType.USER]),
+        ActorType.USER,
+        anon
+      );
+
+      expect(result.website).toBeUndefined();
+      expect(result.associatesCount).toBeUndefined();
+    });
+
+    it('null matrix: ORGANIZATION carries joinedDate undefined and a numeric associatesCount', async () => {
+      mockFindOne(spaceWithVisibility());
+      mockEntityFind({
+        organizations: [{ id: 'o1', website: '' }],
+      });
+      vi.spyOn(entityManager, 'createQueryBuilder').mockReturnValue(
+        makeQueryBuilder([{ resourceID: 'o1', count: '2' }])
+      );
+
+      const [result] = await service.getContributors(
+        calloutWith([ActorType.ORGANIZATION]),
+        ActorType.ORGANIZATION,
+        anon
+      );
+
+      expect(result.joinedDate).toBeUndefined();
+      expect(result.associatesCount).toBe(2);
+    });
+
+    it('null matrix: VIRTUAL_CONTRIBUTOR carries tagline/tags real, the other three undefined', async () => {
+      mockFindOne(spaceWithVisibility());
+      // Default mock returns [] for VC role lookups, so seed one directly.
+      vi.spyOn(
+        roleSetService,
+        'getVirtualContributorsWithRole'
+      ).mockImplementation(async (_rs, role) =>
+        role === 'member' ? ([{ id: 'vc1' }] as any) : []
+      );
+      mockEntityFind({
+        actors: [{ id: 'vc1', nameID: 'vc1', profile: profileOf('p-vc1') }],
+      });
+
+      const [result] = await service.getContributors(
+        calloutWith([ActorType.VIRTUAL_CONTRIBUTOR]),
+        ActorType.VIRTUAL_CONTRIBUTOR,
+        anon
+      );
+
+      expect(result.joinedDate).toBeUndefined();
+      expect(result.website).toBeUndefined();
+      expect(result.associatesCount).toBeUndefined();
+    });
+
+    // Each case re-spies find/createQueryBuilder fresh and explicitly clears
+    // call history before every measurement — vi.spyOn on an
+    // already-replaced method reuses the same mock function object, so a
+    // stale call count would otherwise leak across the 3-vs-300 comparison.
+    const countEnrichmentReads = (
+      findSpy: ReturnType<typeof vi.fn>,
+      cqbSpy: ReturnType<typeof vi.fn>
+    ) =>
+      findSpy.mock.calls.filter(
+        (call: unknown[]) => call[0] === Tagset || call[0] === Organization
+      ).length + cqbSpy.mock.calls.length;
+
+    it('read budget for USER is identical for 3 and 300 contributors (= 2)', async () => {
+      mockFindOne(spaceWithVisibility());
+      const findSpy = mockEntityFind({});
+      const cqbSpy = vi
+        .spyOn(entityManager, 'createQueryBuilder')
+        .mockReturnValue(makeQueryBuilder([]));
+
+      for (const count of [3, 300]) {
+        findSpy.mockClear();
+        cqbSpy.mockClear();
+        vi.spyOn(roleSetService, 'getUsersWithRole').mockImplementation(
+          async (_rs, role) =>
+            role === 'member'
+              ? (Array.from({ length: count }, (_, i) => ({
+                  id: `u${i}`,
+                })) as any)
+              : []
+        );
+        (findSpy as any).mockImplementation(async (entity: any) => {
+          if (entity === Actor) {
+            return Array.from({ length: count }, (_, i) => ({
+              id: `u${i}`,
+              nameID: `u${i}`,
+              profile: profileOf(`p-u${i}`),
+            }));
+          }
+          return [];
+        });
+
+        await service.getContributors(
+          calloutWith([ActorType.USER]),
+          ActorType.USER,
+          anon
+        );
+        expect(countEnrichmentReads(findSpy, cqbSpy)).toBe(2);
+      }
+    });
+
+    it('read budget for ORGANIZATION is identical for 3 and 300 contributors (= 3)', async () => {
+      mockFindOne(spaceWithVisibility());
+      const findSpy = mockEntityFind({});
+      const cqbSpy = vi
+        .spyOn(entityManager, 'createQueryBuilder')
+        .mockReturnValue(makeQueryBuilder([]));
+
+      for (const count of [3, 300]) {
+        findSpy.mockClear();
+        cqbSpy.mockClear();
+        vi.spyOn(roleSetService, 'getOrganizationsWithRole').mockImplementation(
+          async (_rs, role) =>
+            role === 'member'
+              ? (Array.from({ length: count }, (_, i) => ({
+                  id: `o${i}`,
+                })) as any)
+              : []
+        );
+        (findSpy as any).mockImplementation(async (entity: any) => {
+          if (entity === Organization) {
+            return Array.from({ length: count }, (_, i) => ({
+              id: `o${i}`,
+              website: '',
+            }));
+          }
+          if (entity === Actor) {
+            // Profiles must resolve too, or `loadTagsetsByProfileId` never
+            // fires (empty profile-id list short-circuits it) — the Tagset
+            // read is part of the budget being measured here.
+            return Array.from({ length: count }, (_, i) => ({
+              id: `o${i}`,
+              nameID: `o${i}`,
+              profile: profileOf(`p-o${i}`),
+            }));
+          }
+          return [];
+        });
+
+        await service.getContributors(
+          calloutWith([ActorType.ORGANIZATION]),
+          ActorType.ORGANIZATION,
+          anon
+        );
+        expect(countEnrichmentReads(findSpy, cqbSpy)).toBe(3);
+      }
+    });
+
+    it('read budget for VIRTUAL_CONTRIBUTOR is identical for 3 and 300 contributors (= 1)', async () => {
+      mockFindOne(spaceWithVisibility());
+      const findSpy = mockEntityFind({});
+      const cqbSpy = vi
+        .spyOn(entityManager, 'createQueryBuilder')
+        .mockReturnValue(makeQueryBuilder([]));
+
+      for (const count of [3, 300]) {
+        findSpy.mockClear();
+        cqbSpy.mockClear();
+        vi.spyOn(
+          roleSetService,
+          'getVirtualContributorsWithRole'
+        ).mockImplementation(async (_rs, role) =>
+          role === 'member'
+            ? (Array.from({ length: count }, (_, i) => ({
+                id: `vc${i}`,
+              })) as any)
+            : []
+        );
+        (findSpy as any).mockImplementation(async (entity: any) => {
+          if (entity === Actor) {
+            return Array.from({ length: count }, (_, i) => ({
+              id: `vc${i}`,
+              nameID: `vc${i}`,
+              profile: profileOf(`p-vc${i}`),
+            }));
+          }
+          return [];
+        });
+
+        await service.getContributors(
+          calloutWith([ActorType.VIRTUAL_CONTRIBUTOR]),
+          ActorType.VIRTUAL_CONTRIBUTOR,
+          anon
+        );
+        expect(countEnrichmentReads(findSpy, cqbSpy)).toBe(1);
+      }
+    });
+
+    it('getContributorCounts issues no enrichment read', async () => {
+      mockFindOne(spaceWithVisibility());
+      const findSpy = mockEntityFind({});
+      const cqbSpy = vi
+        .spyOn(entityManager, 'createQueryBuilder')
+        .mockReturnValue(makeQueryBuilder([]));
+
+      await service.getContributorCounts(
+        calloutWith([ActorType.USER, ActorType.ORGANIZATION]),
+        anon
+      );
+
+      expect(findSpy).not.toHaveBeenCalled();
+      expect(cqbSpy).not.toHaveBeenCalled();
     });
   });
 });

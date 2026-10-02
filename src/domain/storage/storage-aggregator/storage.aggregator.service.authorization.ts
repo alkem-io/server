@@ -55,6 +55,7 @@ export class StorageAggregatorAuthorizationService {
       );
     updatedAuthorizations.push(storageAggregator.authorization);
 
+    storageAggregator.directStorage.directStorageOwner = storageAggregator;
     const bucketAuthorizations =
       await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
         storageAggregator.directStorage,
