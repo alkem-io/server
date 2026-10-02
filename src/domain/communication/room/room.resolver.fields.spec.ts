@@ -1,7 +1,9 @@
 import { AuthorizationPrivilege } from '@common/enums';
 import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -178,6 +180,12 @@ describe('RoomResolverFields', () => {
         Reflect.getMetadata('privilege', RoomResolverFields.prototype[method]);
       expect(privilege('messageAttachments')).toBe(AuthorizationPrivilege.READ);
       expect(privilege('messageAttachments')).toBe(privilege('messages'));
+      expect(
+        Reflect.getMetadata(
+          GUARDS_METADATA,
+          RoomResolverFields.prototype.messageAttachments
+        )
+      ).toEqual([GraphqlGuard]);
     });
 
     it('maps each media input to the adapter attachment shape, in order', async () => {
