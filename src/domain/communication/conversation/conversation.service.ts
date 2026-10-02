@@ -535,9 +535,12 @@ export class ConversationService {
    *
    * The removal itself is authoritative and must not depend on that workflow
    * succeeding. The event emitter logs a failing listener's error instead of
-   * rethrowing it, so the outcome can't be observed here; the row deletion
-   * therefore always runs afterwards. It is idempotent: a no-op when the
-   * workflow already removed the row.
+   * rethrowing it, so the row deletion always runs afterwards. It is
+   * idempotent: a no-op when the workflow already removed the row. When it
+   * removes the row itself, the workflow did not complete — MEMBER_REMOVED,
+   * the authorization re-apply and any last-member auto-delete were skipped,
+   * and a later Matrix leave will not redo them — so that is logged for
+   * reconciliation.
    */
   private async completeLocalMemberRemoval(
     conversationId: string,
@@ -554,7 +557,17 @@ export class ConversationService {
         timestamp: Date.now(),
       })
     );
-    await this.persistMemberRemoved(conversationId, memberActorId);
+    const { removed } = await this.persistMemberRemoved(
+      conversationId,
+      memberActorId
+    );
+    if (removed) {
+      this.logger.error?.(
+        `removeMember: local removal workflow did not complete for actor ${memberActorId} in conversation ${conversationId} — membership row deleted directly; MEMBER_REMOVED, authorization re-apply and last-member auto-delete were skipped and need reconciliation`,
+        undefined,
+        LogContext.COMMUNICATION_CONVERSATION
+      );
+    }
   }
 
   /**
@@ -597,16 +610,19 @@ export class ConversationService {
       conversationId,
       actorID: memberActorId,
     });
+    const removed = (result.affected ?? 0) > 0;
 
-    this.logger.verbose?.(
-      `Persisted member ${memberActorId} removed from conversation ${conversationId}`,
-      LogContext.COMMUNICATION_CONVERSATION
-    );
+    if (removed) {
+      this.logger.verbose?.(
+        `Persisted member ${memberActorId} removed from conversation ${conversationId}`,
+        LogContext.COMMUNICATION_CONVERSATION
+      );
+    }
 
     const remainingCount = await this.conversationMembershipRepository.count({
       where: { conversationId },
     });
-    return { removed: (result.affected ?? 0) > 0, remainingCount };
+    return { removed, remainingCount };
   }
 
   public async deleteConversation(
