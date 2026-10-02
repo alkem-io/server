@@ -1918,8 +1918,10 @@ export class RoleSetResolverMutationsMembership {
    * Emails the invitation for a platform invitation record (an address that
    * has no account yet). Shared by the invite flow's organization arm and by
    * the resend mutation; the Space invite arm keeps its own dispatch.
-   * The dispatch is fire-and-forget: a notification problem never fails the
-   * mutation that triggered it.
+   * Only the adapter dispatch is fire-and-forget: a notification problem never
+   * fails the mutation that triggered it. The community / organization lookup
+   * that builds the payload is awaited, exactly as in the Space invite arm, so
+   * a failure to load the role set's own owner (a store outage) does surface.
    */
   private async dispatchPlatformInvitationEmail(
     roleSet: IRoleSet,
