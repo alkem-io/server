@@ -11,6 +11,7 @@ import { ConfigService } from '@nestjs/config';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { AlkemioConfig } from '@src/types/alkemio.config';
+import { In } from 'typeorm';
 import { IMessage } from '../message/message.interface';
 import { IRoom } from '../room/room.interface';
 import {
@@ -302,6 +303,80 @@ describe('MessageAttachmentService', () => {
       false,
       expect.anything()
     );
+  });
+
+  describe('resolveMediaAttachments', () => {
+    it('resolves media copied into this room to the same fields as Room.messages, in input order, with one lookup', async () => {
+      documentRepository.find.mockResolvedValue([provider, makeDocument()]);
+      const missing = { ...raw, media_id: 'elsewhere', display_name: 'x.png' };
+      const result = await service.resolveMediaAttachments(
+        room,
+        [missing, { ...raw, width: 24, height: 24 }],
+        actor
+      );
+      expect(result).toEqual([
+        { displayName: 'x.png' },
+        {
+          id: documentID,
+          url: expect.any(String),
+          displayName: 'from-element.png',
+          mimeType: 'image/png',
+          size: 10,
+          width: 24,
+          height: 24,
+        },
+      ]);
+      expect(documentRepository.find).toHaveBeenCalledTimes(1);
+      expect(storage.copyDocumentToBucket).not.toHaveBeenCalled();
+    });
+
+    it('media whose copy lives only in another room bucket stays unavailable', async () => {
+      documentRepository.find.mockResolvedValue([
+        provider,
+        makeDocument({ storageBucket: { id: 'other-conversation' } as any }),
+      ]);
+      expect(await service.resolveMediaAttachments(room, [raw], actor)).toEqual(
+        [{ displayName: raw.display_name }]
+      );
+    });
+
+    it('a document hint cannot authorize bytes other than the provider media', async () => {
+      const hintedID = '33333333-3333-4333-8333-333333333333';
+      documentRepository.find.mockResolvedValue([
+        provider,
+        makeDocument({
+          id: hintedID,
+          externalID: 'different-bytes',
+          externalReference: undefined,
+        }),
+      ]);
+      expect(
+        await service.resolveMediaAttachments(
+          room,
+          [{ ...raw, document_id: hintedID }],
+          actor
+        )
+      ).toEqual([{ displayName: raw.display_name }]);
+      expect(documentRepository.find.mock.calls[0][0].where).toContainEqual({
+        storageBucket: { id: bucket.id },
+        id: In([hintedID]),
+      });
+    });
+
+    it('an unreadable document exposes only the event filename', async () => {
+      documentRepository.find.mockResolvedValue([provider, makeDocument()]);
+      auth.isAccessGranted.mockReturnValue(false);
+      expect(await service.resolveMediaAttachments(room, [raw], actor)).toEqual(
+        [{ displayName: raw.display_name }]
+      );
+    });
+
+    it('an empty batch does no lookup', async () => {
+      expect(await service.resolveMediaAttachments(room, [], actor)).toEqual(
+        []
+      );
+      expect(documentRepository.find).not.toHaveBeenCalled();
+    });
   });
 });
 

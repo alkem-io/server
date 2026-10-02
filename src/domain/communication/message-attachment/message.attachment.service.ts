@@ -195,8 +195,33 @@ export class MessageAttachmentService {
       });
       if (room) bucketId = (await this.getTargetBucketForRoom(room))?.id;
     }
+    return this.resolveInBucket(
+      attachments,
+      bucketId,
+      message.attachmentDocuments,
+      actorContext
+    );
+  }
+
+  // Media read by a Matrix client rather than through Room.messages.
+  public async resolveMediaAttachments(
+    room: IRoom,
+    attachments: ReceivedAttachment[],
+    actorContext: ActorContext
+  ): Promise<IMessageAttachment[]> {
+    if (!attachments.length) return [];
+    const bucketId = (await this.getTargetBucketForRoom(room))?.id;
+    return this.resolveInBucket(attachments, bucketId, undefined, actorContext);
+  }
+
+  private async resolveInBucket(
+    attachments: ReceivedAttachment[],
+    bucketId: string | undefined,
+    preloaded: Map<string, IDocument> | undefined,
+    actorContext: ActorContext
+  ): Promise<IMessageAttachment[]> {
     const documents =
-      message.attachmentDocuments ??
+      preloaded ??
       (bucketId
         ? await this.loadDocuments(bucketId, attachments)
         : new Map<string, IDocument>());
