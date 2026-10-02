@@ -335,6 +335,10 @@ describe('organization-invitation notification events — exhaustiveness (D14)',
       USER_EMAIL_CHANGE_SPACE_ADMIN_NOTIFICATION:
         'email-only (notification.space.adapter)',
       USER_PASSWORD_CHANGE_SECURITY_SIGNAL: 'email-only (external adapter)',
+      // Organization email invitation: the recipient has no account, so the
+      // event is email-only and listed in NOT_SUPPORTED_IN_APP_EVENTS.
+      ORGANIZATION_ASSOCIATE_INVITATION_USER_PLATFORM:
+        'email-only (notification.organization.adapter) — NOT_SUPPORTED_IN_APP_EVENTS',
     };
 
     it('every NotificationEvent is either handled by the switch or explicitly exempt', () => {
@@ -638,5 +642,36 @@ describe('organization-associate notification events — exhaustiveness (062)', 
       expect(result.organizationID).toBe('org-1');
       expect(result.contributorActorId).toBe('actor-1');
     });
+  });
+});
+
+describe('organization email-invitation event — exhaustiveness', () => {
+  const EVENT =
+    NotificationEvent.ORGANIZATION_ASSOCIATE_INVITATION_USER_PLATFORM;
+
+  it('is declared with its member name equal to its wire value', () => {
+    expect(EVENT).toBe('ORGANIZATION_ASSOCIATE_INVITATION_USER_PLATFORM');
+  });
+
+  it('is listed as not supported in-app', () => {
+    const supported = (
+      NotificationInAppAdapter as unknown as {
+        NOT_SUPPORTED_IN_APP_EVENTS: NotificationEvent[];
+      }
+    ).NOT_SUPPORTED_IN_APP_EVENTS;
+    expect(supported).toContain(EVENT);
+  });
+
+  it('never reaches the in-app payload kinds or the recipients service (no producer routes it there)', () => {
+    const payloadKinds = readFileSync(
+      join(__dirname, '../../../common/enums/notification.event.payload.ts'),
+      'utf-8'
+    );
+    const recipients = readFileSync(
+      join(__dirname, './notification.recipients.service.ts'),
+      'utf-8'
+    );
+    expect(payloadKinds).not.toContain(EVENT);
+    expect(recipients).not.toContain(EVENT);
   });
 });

@@ -1460,6 +1460,79 @@ describe('NotificationExternalAdapter', () => {
     });
   });
 
+  describe('buildOrganizationAssociatePlatformInvitationPayload', () => {
+    const setUpMocks = () => {
+      vi.mocked(actorLookupService.getFullActorByIdOrFail).mockResolvedValue({
+        id: 'org-1',
+        nameID: 'acme',
+        type: ActorType.ORGANIZATION,
+        profile: { displayName: 'Acme' },
+      } as any);
+      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue({
+        id: 'inviter-1',
+        firstName: 'Test',
+        lastName: 'User',
+        email: 'test@test.com',
+        nameID: 'test-user',
+        profile: { displayName: 'Test User' },
+      } as any);
+      vi.mocked(
+        urlGeneratorService.createUrlForOrganizationNameID
+      ).mockReturnValue('https://platform.test/organization/acme');
+      vi.mocked(configService.get).mockReturnValue('https://platform.test');
+    };
+
+    it('carries exactly one synthetic recipient with the address, the offered roles, the message and the organization url, and no invitee', async () => {
+      setUpMocks();
+
+      const result =
+        await adapter.buildOrganizationAssociatePlatformInvitationPayload(
+          NotificationEvent.ORGANIZATION_ASSOCIATE_INVITATION_USER_PLATFORM,
+          'inviter-1',
+          'new@example.com',
+          'org-1',
+          [RoleName.ADMIN],
+          'Welcome aboard'
+        );
+
+      expect(result.recipients).toHaveLength(1);
+      expect(result.recipients[0]).toEqual(
+        expect.objectContaining({
+          email: 'new@example.com',
+          firstName: '',
+          lastName: '',
+          id: '',
+        })
+      );
+      expect(result.extraRoles).toEqual(['admin']);
+      expect(result.welcomeMessage).toBe('Welcome aboard');
+      expect(result.organizationUrl).toBe(
+        'https://platform.test/organization/acme'
+      );
+      expect(result.organization).toBeDefined();
+      expect(result.eventType).toBe(
+        NotificationEvent.ORGANIZATION_ASSOCIATE_INVITATION_USER_PLATFORM
+      );
+      expect('invitee' in result).toBe(false);
+    });
+
+    it('leaves the welcome message undefined when none was given', async () => {
+      setUpMocks();
+
+      const result =
+        await adapter.buildOrganizationAssociatePlatformInvitationPayload(
+          NotificationEvent.ORGANIZATION_ASSOCIATE_INVITATION_USER_PLATFORM,
+          'inviter-1',
+          'new@example.com',
+          'org-1',
+          []
+        );
+
+      expect(result.welcomeMessage).toBeUndefined();
+      expect(result.extraRoles).toEqual([]);
+    });
+  });
+
   describe('buildOrganizationAssociateActorPayload', () => {
     const setUpMocks = () => {
       vi.mocked(actorLookupService.getFullActorByIdOrFail).mockResolvedValue({
