@@ -88,9 +88,26 @@ export class RegistrationService {
       kratosData
     );
 
+    // One read of the open invitations serves both decisions: an organization
+    // the person was explicitly invited to is not auto-joined by domain (the
+    // invitation wins and is converted below), and the same list is converted.
+    const openInvitations =
+      await this.platformInvitationService.findPlatformInvitationsForUser(
+        kratosData.email
+      );
+    const invitedRoleSetIDs = new Set<string>();
+    for (const invitation of openInvitations) {
+      if (invitation.roleSet?.id) {
+        invitedRoleSetIDs.add(invitation.roleSet.id);
+      }
+    }
+
     // New user - finalize registration
-    await this.assignUserToOrganizationByDomain(user);
-    const finalizedUser = await this.finalizeUserRegistration(user);
+    await this.assignUserToOrganizationByDomain(user, invitedRoleSetIDs);
+    const finalizedUser = await this.finalizeUserRegistration(
+      user,
+      openInvitations
+    );
 
     return finalizedUser;
   }
@@ -99,7 +116,10 @@ export class RegistrationService {
    * Finalizes user registration by applying authorization and processing pending invitations.
    * This should be called after user entity creation, regardless of the creation path.
    */
-  public async finalizeUserRegistration(user: IUser): Promise<IUser> {
+  public async finalizeUserRegistration(
+    user: IUser,
+    openInvitations?: IPlatformInvitation[]
+  ): Promise<IUser> {
     // Grant essential credentials to the user
     const userWithCredentials =
       await this.userAuthorizationService.grantCredentialsAllUsersReceive(
@@ -122,7 +142,13 @@ export class RegistrationService {
     await this.authorizationPolicyService.saveAll(accountAuthorizations);
 
     // Process any pending invitations for this user
-    await this.processPendingInvitations(userWithCredentials);
+    await this.processPendingInvitations(
+      userWithCredentials,
+      openInvitations ??
+        (await this.platformInvitationService.findPlatformInvitationsForUser(
+          userWithCredentials.email
+        ))
+    );
 
     // Send notification that user profile was created
     await this.sendUserCreatedNotification(userWithCredentials);
@@ -145,7 +171,10 @@ export class RegistrationService {
     );
   }
 
-  async assignUserToOrganizationByDomain(user: IUser): Promise<boolean> {
+  async assignUserToOrganizationByDomain(
+    user: IUser,
+    skipRoleSetIDs: ReadonlySet<string> = new Set()
+  ): Promise<boolean> {
     const userEmailDomain = getEmailDomain(user.email);
 
     const org = await this.organizationLookupService.getOrganizationByDomain(
@@ -173,6 +202,20 @@ export class RegistrationService {
       );
     }
 
+    if (skipRoleSetIDs.has(org.roleSet.id)) {
+      this.logger.verbose?.(
+        {
+          message:
+            'Domain auto-join skipped: open platform invitation to this organization',
+          userID: user.id,
+          organizationID: org.id,
+          roleSetID: org.roleSet.id,
+        },
+        LogContext.COMMUNITY
+      );
+      return false;
+    }
+
     const eligibility = isDomainJoinEligible(org, userEmailDomain);
     if (!eligibility.eligible) {
       this.logger.verbose?.(
@@ -195,12 +238,10 @@ export class RegistrationService {
     return true;
   }
 
-  public async processPendingInvitations(user: IUser): Promise<IInvitation[]> {
-    const platformInvitations =
-      await this.platformInvitationService.findPlatformInvitationsForUser(
-        user.email
-      );
-
+  public async processPendingInvitations(
+    user: IUser,
+    platformInvitations: IPlatformInvitation[]
+  ): Promise<IInvitation[]> {
     // Seed language from the latest-created platform invitation that carries an
     // eligible suggested language (latest-created wins).
     // Must run before the loop so the settings update is complete before any
@@ -225,6 +266,8 @@ export class RegistrationService {
         createdBy: platformInvitation.createdBy,
         extraRoles: platformInvitation.roleSetExtraRoles,
         invitedToParent: platformInvitation.roleSetInvitedToParent,
+        welcomeMessage: platformInvitation.welcomeMessage,
+        suggestedLanguage: platformInvitation.suggestedLanguage,
       };
       let invitation =
         await this.roleSetService.createInvitationExistingActor(
@@ -377,6 +420,22 @@ export class RegistrationService {
             em
           );
         }
+
+        // Invitations addressed to the account's email (open or consumed) are
+        // personal data of the deleted person and must not outlive the account.
+        const erasedPlatformInvitations =
+          await this.platformInvitationService.deleteAllForEmail(
+            user.email,
+            em
+          );
+        this.logger.verbose?.(
+          {
+            message: 'Platform invitations erased for deleted account',
+            userID,
+            count: erasedPlatformInvitations,
+          },
+          LogContext.COMMUNITY
+        );
 
         const userResult = await this.userService.deleteUserDbOnly(
           deleteData,

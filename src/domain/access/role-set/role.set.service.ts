@@ -1910,10 +1910,7 @@ export class RoleSetService {
   async getPlatformInvitations(
     roleSet: IRoleSet
   ): Promise<IPlatformInvitation[]> {
-    const roleSetInvs = await this.getRoleSetOrFail(roleSet.id, {
-      relations: { platformInvitations: true },
-    });
-    return roleSetInvs?.platformInvitations || [];
+    return await this.platformInvitationService.findOpenForRoleSet(roleSet.id);
   }
 
   async getMembersCount(roleSet: IRoleSet): Promise<number> {
