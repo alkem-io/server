@@ -27,6 +27,7 @@ import { NotificationInputBase } from './dto/notification.dto.input.base';
 import { NotificationInputOrganizationAssociateApplicationCreated } from './dto/organization/notification.dto.input.organization.associate.application.created';
 import { NotificationInputOrganizationAssociateInvitationOutcome } from './dto/organization/notification.dto.input.organization.associate.invitation.outcome';
 import { NotificationInputOrganizationAssociateJoined } from './dto/organization/notification.dto.input.organization.associate.joined';
+import { NotificationInputOrganizationAssociatePlatformInvitation } from './dto/organization/notification.dto.input.organization.associate.platform.invitation';
 import { NotificationInputOrganizationMention } from './dto/organization/notification.dto.input.organization.mention';
 import { NotificationInputOrganizationSpaceCommunityInvitation } from './dto/organization/notification.dto.input.organization.space.community.invitation';
 import { NotificationInputOrganizationSpaceCommunityJoined } from './dto/organization/notification.dto.input.organization.space.community.joined';
@@ -609,6 +610,29 @@ export class NotificationOrganizationAdapter {
         }
       );
     }
+  }
+
+  /**
+   * Email-only invitation for an address that has no account yet: no
+   * recipients lookup, no settings, no in-app or push delivery.
+   */
+  public async organizationAssociatePlatformInvitationCreated(
+    eventData: NotificationInputOrganizationAssociatePlatformInvitation
+  ): Promise<void> {
+    const event =
+      NotificationEvent.ORGANIZATION_ASSOCIATE_INVITATION_USER_PLATFORM;
+
+    const payload =
+      await this.notificationExternalAdapter.buildOrganizationAssociatePlatformInvitationPayload(
+        event,
+        eventData.triggeredBy,
+        eventData.invitedUserEmail,
+        eventData.organizationID,
+        eventData.extraRoles,
+        eventData.welcomeMessage
+      );
+
+    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
   }
 
   public async organizationAdminAssociateInvitationAccepted(

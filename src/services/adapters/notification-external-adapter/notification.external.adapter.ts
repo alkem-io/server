@@ -82,6 +82,7 @@ import { NotificationInputUserEmailChangeSpaceAdmin } from '../notification-adap
 import {
   NotificationEventPayloadOrganizationAssociateActor,
   NotificationEventPayloadOrganizationAssociateInvitation,
+  NotificationEventPayloadOrganizationAssociateInvitationPlatform,
 } from './notification.event.payload.organization.associate.bridge';
 
 interface CalloutContributionPayload {
@@ -1353,6 +1354,56 @@ export class NotificationExternalAdapter {
       ),
       ...organizationPayload,
     };
+    return payload;
+  }
+
+  /**
+   * Organization invitation to an address with no account: one synthetic
+   * recipient carrying only the email (same shape the Space email invitation
+   * uses), no invitee contributor.
+   */
+  async buildOrganizationAssociatePlatformInvitationPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    invitedUserEmail: string,
+    organizationID: string,
+    extraRoles: RoleName[],
+    welcomeMessage?: string
+  ): Promise<NotificationEventPayloadOrganizationAssociateInvitationPlatform> {
+    const recipients: UserPayload[] = [
+      {
+        email: invitedUserEmail,
+        firstName: '',
+        lastName: '',
+        id: '',
+        type: ActorType.USER,
+        profile: {
+          url: '',
+          displayName: '',
+        },
+      },
+    ];
+    const organizationPayload = await this.buildOrganizationPayload(
+      eventType,
+      triggeredBy,
+      [],
+      organizationID
+    );
+    const organization = await this.actorLookupService.getFullActorByIdOrFail(
+      organizationID,
+      { relations: { profile: true } }
+    );
+    const payload: NotificationEventPayloadOrganizationAssociateInvitationPlatform =
+      {
+        extraRoles: extraRoles.map(role => role.toString()),
+        welcomeMessage,
+        organizationUrl:
+          this.urlGeneratorService.createUrlForOrganizationNameID(
+            organization.nameID
+          ),
+        ...organizationPayload,
+        recipients,
+      };
     return payload;
   }
 

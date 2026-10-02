@@ -70,6 +70,10 @@ subscriptions.log
 /.build/synapse/signing.key
 .build/synapse/*.signing.key
 
+# Synapse local media (bind-mounted media_store_path) — uploaded user media, never commit
+.build/synapse/media_store/*
+!.build/synapse/media_store/README.md
+
 # TypeScript cache
 *.tsbuildinfo
 
