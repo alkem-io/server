@@ -56,4 +56,13 @@ export class CreateUserSettingsNotificationSpaceAdminInput {
   @ValidateNested()
   @Type(() => CreateUserSettingsNotificationChannelsInput)
   userEmailChanged!: CreateUserSettingsNotificationChannelsInput;
+
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
+    nullable: false,
+    description:
+      'Receive a notification when a Form response is submitted (admin)',
+  })
+  @ValidateNested()
+  @Type(() => CreateUserSettingsNotificationChannelsInput)
+  collaborationCalloutFormResponseReceived!: CreateUserSettingsNotificationChannelsInput;
 }

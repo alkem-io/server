@@ -18,6 +18,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { IUserSettingsNotificationChannels } from '@domain/community/user-settings/user.settings.notification.channels.interface';
 import {
+  DEFAULT_FORM_RESPONSE_CHANNELS,
   DEFAULT_INVITATION_RESPONSE_CHANNELS,
   DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS,
   DEFAULT_ORGANIZATION_SPACE_INVITATION_CHANNELS,
@@ -368,6 +369,16 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION:
         return notificationSettings.space.admin
           .collaborationCalloutContributionCreated;
+      case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_FORM_RESPONSE:
+        // Defend on read against a row that predates the backfill migration or
+        // was inserted by an old pod during a rolling deploy.
+        // `UserSettings.applyFormResponseNotificationDefaults` (@AfterLoad)
+        // already heals entity-loaded rows; this covers other load paths.
+        return (
+          notificationSettings.space?.admin
+            ?.collaborationCalloutFormResponseReceived ??
+          DEFAULT_FORM_RESPONSE_CHANNELS
+        );
       case NotificationEvent.USER_EMAIL_CHANGE_SPACE_ADMIN_NOTIFICATION:
         return notificationSettings.space.admin.userEmailChanged;
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
@@ -464,6 +475,13 @@ export class NotificationRecipientsService {
           inApp: false,
           push: false,
         };
+      // The submitter's receipt for a Form response: email only, no setting.
+      case NotificationEvent.USER_COLLABORATION_CALLOUT_FORM_RESPONSE_RECEIPT:
+        return {
+          email: true,
+          inApp: false,
+          push: false,
+        };
 
       default:
         throw new NotificationEventException(
@@ -534,7 +552,8 @@ export class NotificationRecipientsService {
         break;
       }
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER:
-      case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION: {
+      case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION:
+      case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_FORM_RESPONSE: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
         credentialCriteria = this.getSpaceAdminCredentialCriteria(spaceID);
         break;
@@ -565,6 +584,7 @@ export class NotificationRecipientsService {
         break;
       }
       case NotificationEvent.USER_SIGN_UP_WELCOME:
+      case NotificationEvent.USER_COLLABORATION_CALLOUT_FORM_RESPONSE_RECEIPT:
       case NotificationEvent.USER_MENTIONED:
       case NotificationEvent.USER_COMMENT_REPLY:
       case NotificationEvent.USER_MESSAGE:
@@ -727,6 +747,7 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION:
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER:
       case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION:
+      case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_FORM_RESPONSE:
       case NotificationEvent.SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED:
       case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED:
       case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED:
@@ -762,6 +783,7 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_COLLABORATION_POLL_MODIFIED_ON_POLL_I_VOTED_ON:
       case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE:
       case NotificationEvent.USER_SIGN_UP_WELCOME:
+      case NotificationEvent.USER_COLLABORATION_CALLOUT_FORM_RESPONSE_RECEIPT:
       case NotificationEvent.USER_MESSAGE:
       case NotificationEvent.ORGANIZATION_MESSAGE_SENDER:
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:

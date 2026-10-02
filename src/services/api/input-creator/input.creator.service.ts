@@ -164,6 +164,18 @@ export class InputCreatorService {
       return null;
     }
 
+    if (callout.framing.type === CalloutFramingType.FORM) {
+      this.logger.debug?.(
+        {
+          message:
+            'Skipping FORM callout during template serialization — form framing is not templatable',
+          calloutId: calloutID,
+        },
+        LogContext.INPUT_CREATOR
+      );
+      return null;
+    }
+
     if (callout.framing.type === CalloutFramingType.COLLABORA_DOCUMENT) {
       this.logger.debug?.(
         {

@@ -20,6 +20,7 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { Repository } from 'typeorm';
+import { CalloutFormService } from '../callout-form/callout.form.service';
 import { LinkService } from '../link/link.service';
 import { PollService } from '../poll/poll.service';
 import { CalloutFraming } from './callout.framing.entity';
@@ -38,6 +39,7 @@ describe('CalloutFramingService', () => {
   let authorizationPolicyService: AuthorizationPolicyService;
   let tagsetService: TagsetService;
   let collaboraDocumentService: CollaboraDocumentService;
+  let calloutFormService: CalloutFormService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -72,6 +74,7 @@ describe('CalloutFramingService', () => {
     authorizationPolicyService = module.get(AuthorizationPolicyService);
     tagsetService = module.get(TagsetService);
     collaboraDocumentService = module.get(CollaboraDocumentService);
+    calloutFormService = module.get(CalloutFormService);
   });
 
   describe('createCalloutFraming', () => {
@@ -430,8 +433,174 @@ describe('CalloutFramingService', () => {
     });
   });
 
+  describe('FORM framing placement (deny by default)', () => {
+    const storageAggregator = { id: 'agg-1' } as any;
+    const formInput = { questions: [{ prompt: 'Q', type: 'short_text' }] };
+    const framingData = () =>
+      ({
+        type: CalloutFramingType.FORM,
+        profile: { displayName: 'Form Framing', tagsets: [] },
+        tags: [],
+        form: formInput,
+      }) as any;
+
+    beforeEach(() => {
+      vi.mocked(tagsetService.updateTagsetInputs).mockReturnValue([]);
+      vi.mocked(profileService.createProfile).mockResolvedValue({
+        id: 'profile-1',
+      } as any);
+    });
+
+    it('rejects a FORM framing without the placement capability, before anything is created', async () => {
+      await expect(
+        service.createCalloutFraming(
+          framingData(),
+          storageAggregator,
+          actorContextData.actorContext
+        )
+      ).rejects.toMatchObject({
+        details: { code: 'FORM_FRAMING_NOT_ALLOWED' },
+      });
+      expect(profileService.createProfile).not.toHaveBeenCalled();
+      expect(calloutFormService.createCalloutForm).not.toHaveBeenCalled();
+    });
+
+    it('rejects when the capability is explicitly false', async () => {
+      await expect(
+        service.createCalloutFraming(
+          framingData(),
+          storageAggregator,
+          actorContextData.actorContext,
+          'user-1',
+          { allowFormFraming: false }
+        )
+      ).rejects.toBeInstanceOf(ValidationException);
+    });
+
+    it('creates the form when the capability is granted', async () => {
+      const form = { questions: [{ id: 'q-1' }] };
+      vi.mocked(calloutFormService.createCalloutForm).mockReturnValue(
+        form as any
+      );
+
+      const result = await service.createCalloutFraming(
+        framingData(),
+        storageAggregator,
+        actorContextData.actorContext,
+        'user-1',
+        { allowFormFraming: true }
+      );
+
+      expect(result.type).toBe(CalloutFramingType.FORM);
+      expect(calloutFormService.createCalloutForm).toHaveBeenCalledWith(
+        formInput
+      );
+      expect(result.form).toBe(form);
+    });
+
+    it('requires the form definition even with the capability', async () => {
+      const data = framingData();
+      data.form = undefined;
+      await expect(
+        service.createCalloutFraming(
+          data,
+          storageAggregator,
+          actorContextData.actorContext,
+          'user-1',
+          { allowFormFraming: true }
+        )
+      ).rejects.toBeInstanceOf(ValidationException);
+    });
+
+    it('does not need the capability for any other framing type', async () => {
+      const result = await service.createCalloutFraming(
+        {
+          type: CalloutFramingType.NONE,
+          profile: { displayName: 'Plain', tagsets: [] },
+          tags: [],
+        } as any,
+        storageAggregator,
+        actorContextData.actorContext
+      );
+      expect(result.type).toBe(CalloutFramingType.NONE);
+    });
+  });
+
+  describe('getForm', () => {
+    it('returns the in-memory form of a freshly created framing', async () => {
+      const form = { id: 'form-1' };
+      expect(
+        await service.getForm({ type: CalloutFramingType.FORM, form } as any)
+      ).toBe(form);
+      expect(calloutFormService.getFormForFraming).not.toHaveBeenCalled();
+    });
+
+    it('loads the form of a FORM framing by framing id', async () => {
+      const form = { id: 'form-1' };
+      vi.mocked(calloutFormService.getFormForFraming).mockResolvedValue(
+        form as any
+      );
+      expect(
+        await service.getForm({
+          id: 'framing-1',
+          type: CalloutFramingType.FORM,
+        } as any)
+      ).toBe(form);
+      expect(calloutFormService.getFormForFraming).toHaveBeenCalledWith(
+        'framing-1'
+      );
+    });
+
+    it('is null without a query for any other framing type', async () => {
+      expect(
+        await service.getForm({
+          id: 'framing-1',
+          type: CalloutFramingType.POLL,
+        } as any)
+      ).toBeNull();
+      expect(calloutFormService.getFormForFraming).not.toHaveBeenCalled();
+    });
+  });
+
   describe('updateCalloutFraming', () => {
     const storageAggregator = { id: 'agg-1' } as any;
+
+    describe('FORM has a fixed kind', () => {
+      const update = (
+        oldType: CalloutFramingType,
+        newType: CalloutFramingType
+      ) =>
+        service.updateCalloutFraming(
+          {
+            id: 'framing-1',
+            type: oldType,
+            profile: { id: 'profile-1' },
+          } as any,
+          { type: newType } as any,
+          storageAggregator,
+          false,
+          actorContextData.actorContext
+        );
+
+      it.each([
+        [CalloutFramingType.FORM, CalloutFramingType.NONE],
+        [CalloutFramingType.FORM, CalloutFramingType.POLL],
+        [CalloutFramingType.NONE, CalloutFramingType.FORM],
+        [CalloutFramingType.WHITEBOARD, CalloutFramingType.FORM],
+      ])('%s -> %s is rejected', async (oldType, newType) => {
+        await expect(update(oldType, newType)).rejects.toMatchObject({
+          details: { code: 'FORM_FRAMING_FIXED_KIND' },
+        });
+      });
+
+      it('FORM -> FORM (same kind) is not a switch', async () => {
+        const result = await update(
+          CalloutFramingType.FORM,
+          CalloutFramingType.FORM
+        );
+        expect(result.type).toBe(CalloutFramingType.FORM);
+      });
+    });
 
     it('should update profile when profile data is provided', async () => {
       const framing = {

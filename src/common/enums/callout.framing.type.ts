@@ -10,6 +10,7 @@ export enum CalloutFramingType {
   COLLABORA_DOCUMENT = 'collabora_document',
   CONTRIBUTORS = 'contributors',
   SPACES = 'spaces',
+  FORM = 'form',
 }
 
 registerEnumType(CalloutFramingType, {

@@ -24,6 +24,10 @@ export interface RecordResourceEventInput {
   toAccountId?: string;
   visibility?: string;
   licensePlan?: string;
+  /** Form-response deletes only — ids, never answer content. */
+  calloutId?: string;
+  formId?: string;
+  respondentUserId?: string;
   outcome:
     | 'moved'
     | 'deleted'
@@ -113,6 +117,9 @@ export class PlatformResourceAuditService {
         toAccountId: input.toAccountId,
         visibility: input.visibility,
         licensePlan: input.licensePlan,
+        calloutId: input.calloutId,
+        formId: input.formId,
+        respondentUserId: input.respondentUserId,
       };
       const outcome = this.mapOutcome(input.outcome);
       const entry = this.auditRepository.create({
