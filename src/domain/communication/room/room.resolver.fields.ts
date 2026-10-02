@@ -16,12 +16,11 @@ import { MessageAttachmentService } from '../message-attachment/message.attachme
 import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
 import { MessageAttachmentMediaInput } from './dto/room.dto.message.attachment.media';
 import { RoomUnreadCounts } from './dto/room.dto.unread.counts';
-
-const MAX_MEDIA_ATTACHMENTS_PER_CALL = 100;
-
 import { RoomDataLoader } from './room.data.loader';
 import { IRoom } from './room.interface';
 import { RoomService } from './room.service';
+
+const MAX_MEDIA_ATTACHMENTS_PER_CALL = 100;
 
 @Resolver(() => IRoom)
 export class RoomResolverFields {
