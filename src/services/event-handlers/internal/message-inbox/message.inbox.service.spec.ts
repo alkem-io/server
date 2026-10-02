@@ -652,6 +652,7 @@ describe('MessageInboxService', () => {
         })
       );
 
+      expect(roomLookupService.getRoom).not.toHaveBeenCalled();
       expect(roomLookupService.getRoomOrFail).not.toHaveBeenCalled();
     });
 
