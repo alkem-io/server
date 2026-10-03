@@ -149,7 +149,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "chore: update schema baseline" -S
+          git commit -m "chore: update schema baseline" -S -s
           branch="schema-baseline/${GITHUB_RUN_ID}"
           git branch --force "$branch"
           echo "BASELINE_FAILURE_PHASE=push" >> "$GITHUB_ENV"
