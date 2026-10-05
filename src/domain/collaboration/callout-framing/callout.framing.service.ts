@@ -471,13 +471,6 @@ export class CalloutFramingService {
     actorContext: ActorContext,
     userID?: string
   ): Promise<ICalloutFraming> {
-    if (calloutFramingData.profile) {
-      calloutFraming.profile = await this.profileService.updateProfile(
-        calloutFraming.profile,
-        calloutFramingData.profile
-      );
-    }
-
     if (calloutFramingData.type) {
       const oldType = calloutFraming.type;
       const newType = calloutFramingData.type;
@@ -519,6 +512,16 @@ export class CalloutFramingService {
         );
       }
       calloutFraming.type = calloutFramingData.type;
+    }
+
+    // The profile is written only after every type-change guard above has
+    // passed: this update is not transactional, so validating first is what
+    // keeps a rejected request from persisting a partial edit.
+    if (calloutFramingData.profile) {
+      calloutFraming.profile = await this.profileService.updateProfile(
+        calloutFraming.profile,
+        calloutFramingData.profile
+      );
     }
 
     await this.deleteInconsistentFramingContent(calloutFraming);

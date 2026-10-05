@@ -593,6 +593,27 @@ describe('CalloutFramingService', () => {
         });
       });
 
+      it.each([
+        [CalloutFramingType.FORM, CalloutFramingType.NONE],
+        [CalloutFramingType.NONE, CalloutFramingType.FORM],
+        [CalloutFramingType.SPACES, CalloutFramingType.NONE],
+      ])('%s -> %s with a profile edit writes nothing', async (oldType, newType) => {
+        await expect(
+          service.updateCalloutFraming(
+            {
+              id: 'framing-1',
+              type: oldType,
+              profile: { id: 'profile-1' },
+            } as any,
+            { type: newType, profile: { displayName: 'Edited' } } as any,
+            storageAggregator,
+            false,
+            actorContextData.actorContext
+          )
+        ).rejects.toThrow(ValidationException);
+        expect(profileService.updateProfile).not.toHaveBeenCalled();
+      });
+
       it('FORM -> FORM (same kind) is not a switch', async () => {
         const result = await update(
           CalloutFramingType.FORM,
