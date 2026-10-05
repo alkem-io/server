@@ -72,11 +72,8 @@ function censusedSurfaces(): ReadonlySet<string> {
   const censused = new Set<string>();
   for (const surfaces of Object.values(A_ROW_SURFACES)) {
     for (const surface of surfaces) {
-      // Slice B: the schema carries each renamed surface's B name (A14).
-      const name =
-        typeof surface.member === 'string' ? surface.member : surface.member.B;
-      censused.add(name);
-      censused.add(`platformAdmin.${name}`);
+      censused.add(surface.member);
+      censused.add(`platformAdmin.${surface.member}`);
     }
   }
   return censused;

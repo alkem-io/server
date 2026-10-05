@@ -48,10 +48,9 @@ export interface SurfaceRef {
    * two differ (A1/A2: the resolver delegates to the shared assignment rule
    * engine; see `INDIRECT_ENFORCEMENT_FILES` below). */
   readonly file: string;
-  /** The resolver method / field name. A single string, except A14 — the
-   * one row whose surface is RENAMED between slices (`updateSpacePlatformSettings`
-   * at A, `adminUpdateSpaceVisibility` at B, T078). */
-  readonly member: string | { readonly A: string; readonly B: string };
+  /** The resolver method / field name. (Slice A carried an `{A, B}` form for
+   * A14, the one surface T078 renamed; at Slice B only the B name exists.) */
+  readonly member: string;
   readonly kind:
     | 'graphql-mutation'
     | 'graphql-query'
@@ -1495,14 +1494,11 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
   ),
 
   // ===== A14 — change space visibility =====
-  // The one row whose `member` moves between slices (T078 renames it).
+  // T078 renamed it from `updateSpacePlatformSettings` (T083a: B form only).
   A14: [
     {
       file: 'src/domain/space/space/space.resolver.mutations.ts',
-      member: {
-        A: 'updateSpacePlatformSettings',
-        B: 'adminUpdateSpaceVisibility',
-      },
+      member: 'adminUpdateSpaceVisibility',
       kind: 'graphql-mutation',
       tree: 'space',
       gate: { requires: AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE },

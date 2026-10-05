@@ -69,11 +69,7 @@ function isLiveInSlice(surface: SurfaceRef, slice: 'A' | 'B'): boolean {
 }
 
 function surfaceLabel(aRow: string, surface: SurfaceRef): string {
-  const member =
-    typeof surface.member === 'string'
-      ? surface.member
-      : JSON.stringify(surface.member);
-  return `${aRow}/${surface.file}#${member}`;
+  return `${aRow}/${surface.file}#${surface.member}`;
 }
 
 function assertReachabilityEquals(
