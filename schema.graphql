@@ -2155,12 +2155,20 @@ type CalloutContributorsSettings {
 type CalloutForm {
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """
+  The optional plain-text description of the Form, at most 2048 characters. Null when not set.
+  """
+  description: String
   """The ID of the entity"""
   id: UUID!
   """The ordered questions of the Form."""
   questions: [CalloutFormQuestion!]!
   """The settings of the Form."""
   settings: CalloutFormSettings!
+  """
+  The optional plain-text title of the Form, at most 512 characters. Null when not set.
+  """
+  title: String
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
 }
@@ -2238,6 +2246,10 @@ type CalloutFormResponses {
 }
 
 type CalloutFormSettings {
+  """
+  Whether the Form box starts collapsed for every viewer. Presentation only. Defaults to false (expanded).
+  """
+  defaultCollapsed: Boolean!
   """
   Whether a member can submit one or several responses. Defaults to SINGLE.
   """
@@ -3014,6 +3026,10 @@ type CreateCalloutData {
 
 type CreateCalloutFormData {
   """
+  The optional plain-text description of the Form, at most 2048 characters. Trimmed; empty or whitespace-only is stored as null.
+  """
+  description: String
+  """
   The ordered questions of the Form. Between 1 and 50; the count is enforced with a reason code.
   """
   questions: [CreateCalloutFormQuestionData!]!
@@ -3021,6 +3037,10 @@ type CreateCalloutFormData {
   The Form settings. Defaults: visibility ADMINS, responseMode SINGLE, state OPEN.
   """
   settings: CreateCalloutFormSettingsData
+  """
+  The optional plain-text title of the Form, at most 512 characters. Trimmed; empty or whitespace-only is stored as null.
+  """
+  title: String
 }
 
 type CreateCalloutFormQuestionData {
@@ -3043,6 +3063,10 @@ type CreateCalloutFormQuestionOptionData {
 }
 
 type CreateCalloutFormSettingsData {
+  """
+  Whether the Form box starts collapsed for every viewer. Defaults to false (expanded).
+  """
+  defaultCollapsed: Boolean
   """One or several responses per member. Defaults to SINGLE."""
   responseMode: CalloutFormResponseMode
   """Whether the Form accepts responses. Defaults to OPEN."""
@@ -5194,7 +5218,7 @@ type Mutation {
   """
   setPlatformWellKnownVirtualContributor(mappingData: SetPlatformWellKnownVirtualContributorInput!): PlatformWellKnownVirtualContributors!
   """
-  Submit a response to a Form. Requires CONTRIBUTE on the Post. The Post must be published and the Form open; a single-response Form accepts one response per member. acknowledgedVisibility is the audience the respondent was shown.
+  Submit a response to a Form. Requires CONTRIBUTE on the Post. The Post must be published and the Form open; a single-response Form rejects the submission while the member holds any response. acknowledgedVisibility is the audience the respondent was shown.
   """
   submitCalloutFormResponse(responseData: SubmitCalloutFormResponseInput!): CalloutFormResponse!
   """
@@ -8693,6 +8717,10 @@ input CreateCalloutContributorsSettingsInput {
 
 input CreateCalloutFormInput {
   """
+  The optional plain-text description of the Form, at most 2048 characters. Trimmed; empty or whitespace-only is stored as null.
+  """
+  description: String
+  """
   The ordered questions of the Form. Between 1 and 50; the count is enforced with a reason code.
   """
   questions: [CreateCalloutFormQuestionInput!]!
@@ -8700,6 +8728,10 @@ input CreateCalloutFormInput {
   The Form settings. Defaults: visibility ADMINS, responseMode SINGLE, state OPEN.
   """
   settings: CreateCalloutFormSettingsInput
+  """
+  The optional plain-text title of the Form, at most 512 characters. Trimmed; empty or whitespace-only is stored as null.
+  """
+  title: String
 }
 
 input CreateCalloutFormQuestionInput {
@@ -8722,6 +8754,10 @@ input CreateCalloutFormQuestionOptionInput {
 }
 
 input CreateCalloutFormSettingsInput {
+  """
+  Whether the Form box starts collapsed for every viewer. Defaults to false (expanded).
+  """
+  defaultCollapsed: Boolean = false
   """One or several responses per member. Defaults to SINGLE."""
   responseMode: CalloutFormResponseMode
   """Whether the Form accepts responses. Defaults to OPEN."""
@@ -10343,12 +10379,20 @@ input UpdateCalloutEntityInput {
 }
 
 input UpdateCalloutFormInput {
+  """
+  The optional plain-text description of the Form, at most 2048 characters. Trimmed; empty or whitespace-only (or null) clears it; omit to leave it unchanged.
+  """
+  description: String
   formID: UUID!
   """
   The complete ordered list of questions. Omit to leave the questions unchanged.
   """
   questions: [UpdateCalloutFormQuestionInput!]
   settings: UpdateCalloutFormSettingsInput
+  """
+  The optional plain-text title of the Form, at most 512 characters. Trimmed; empty or whitespace-only (or null) clears it; omit to leave it unchanged.
+  """
+  title: String
 }
 
 input UpdateCalloutFormQuestionInput {
@@ -10372,6 +10416,10 @@ input UpdateCalloutFormQuestionOptionInput {
 }
 
 input UpdateCalloutFormSettingsInput {
+  """
+  Whether the Form box starts collapsed for every viewer. Omit (or null) to leave it unchanged.
+  """
+  defaultCollapsed: Boolean
   responseMode: CalloutFormResponseMode
   state: CalloutFormState
   visibility: CalloutFormResponseVisibility
