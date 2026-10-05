@@ -3,7 +3,9 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 /**
  * workspace#027-platform-role-redesign (T082, Slice B, FR-007(d)/SC-005) — the
  * subtractive cleanup: every stored grant of a retired legacy platform role
- * goes, then the role rows themselves.
+ * goes, then the role rows themselves, then every other stored reference to
+ * the retired role names (each space's `platformRolesAccess`, and the extra
+ * roles pending invitations would grant).
  *
  * ## Order matters, and this is the only correct one
  *
@@ -111,6 +113,57 @@ export class DropLegacyPlatformRoles1785000000005
          AND "roleSetId" IN (SELECT id FROM role_set WHERE type = 'platform')`,
       [DropLegacyPlatformRoles1785000000005.RETIRED_ROLE_NAMES]
     );
+
+    // 3. Every space stores its `platformRolesAccess` — which platform roles
+    //    reach it, and with what. Until `authorizationPlatformRolesAccessReset`
+    //    recomputes it, it still lists the retired roles, and reading one
+    //    throws `Invalid role name` (`PlatformRolesAccessService`) — so any
+    //    space authorization reset in that window would fail. Drop the retired
+    //    entries here, keeping the order of the rest.
+    await queryRunner.query(
+      `UPDATE space
+       SET "platformRolesAccess" = jsonb_set(
+         "platformRolesAccess",
+         '{roles}',
+         COALESCE(
+           (SELECT jsonb_agg(entry.value ORDER BY entry.ordinality)
+            FROM jsonb_array_elements("platformRolesAccess"->'roles')
+              WITH ORDINALITY AS entry(value, ordinality)
+            WHERE NOT (entry.value->>'roleName' = ANY($1::text[]))),
+           '[]'::jsonb
+         )
+       )
+       WHERE jsonb_typeof("platformRolesAccess"->'roles') = 'array'
+         AND EXISTS (
+           SELECT 1 FROM jsonb_array_elements("platformRolesAccess"->'roles') AS entry
+           WHERE entry->>'roleName' = ANY($1::text[])
+         )`,
+      [DropLegacyPlatformRoles1785000000005.RETIRED_ROLE_NAMES]
+    );
+
+    // 4. Pending invitations name the extra roles they grant on acceptance
+    //    (comma-separated `simple-array`). One still offering a retired role
+    //    would fail when accepted; its other roles stay. Holders of a retired
+    //    role are re-granted by hand (the re-grant window), invitees likewise.
+    for (const [table, column] of [
+      ['invitation', 'extraRoles'],
+      ['platform_invitation', 'roleSetExtraRoles'],
+    ]) {
+      await queryRunner.query(
+        `UPDATE ${table}
+         SET "${column}" = array_to_string(
+           ARRAY(
+             SELECT role FROM unnest(string_to_array("${column}", ','))
+               WITH ORDINALITY AS entry(role, ordinality)
+             WHERE role <> ALL($1::text[])
+             ORDER BY ordinality
+           ),
+           ','
+         )
+         WHERE string_to_array("${column}", ',') && $1::text[]`,
+        [DropLegacyPlatformRoles1785000000005.RETIRED_ROLE_NAMES]
+      );
+    }
   }
 
   public async down(_queryRunner: QueryRunner): Promise<void> {

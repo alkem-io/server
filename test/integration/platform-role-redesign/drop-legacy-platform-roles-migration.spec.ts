@@ -16,6 +16,9 @@
  *     the seed actually stored, and the enum's real value).
  *   - `registered` is in NEITHER list: it is the baseline non-admin role and
  *     survives the redesign.
+ *   - every stored REFERENCE to a retired role name goes too: each space's
+ *     `platformRolesAccess` (reading a retired name throws `Invalid role
+ *     name`) and the extra roles pending invitations would grant.
  *   - `down()` issues no statements at all — it must not present as a
  *     rollback when the grants are unrecoverable.
  *
@@ -51,9 +54,34 @@ describe('DropLegacyPlatformRoles migration (T082)', () => {
   it('deletes credentials BEFORE roles — the only order that fails safe mid-way', async () => {
     const calls = await run();
 
-    expect(calls).toHaveLength(2);
+    expect(calls).toHaveLength(5);
     expect(calls[0].sql).toContain('DELETE FROM credential');
     expect(calls[1].sql).toContain('DELETE FROM role');
+  });
+
+  // Every space stores its `platformRolesAccess`; until
+  // `authorizationPlatformRolesAccessReset` recomputes it, reading a retired
+  // role name out of it throws `Invalid role name` (PlatformRolesAccessService).
+  it('removes the retired roles from every stored space platformRolesAccess, keeping the order of the rest', async () => {
+    const calls = await run();
+    const roleNames = calls[1].params?.[0] as string[];
+
+    expect(calls[2].sql).toContain('UPDATE space');
+    expect(calls[2].sql).toContain('"platformRolesAccess"');
+    expect(calls[2].sql).toContain('WITH ORDINALITY');
+    expect(calls[2].params).toEqual([roleNames]);
+  });
+
+  it('removes the retired roles from the extra roles pending invitations would grant', async () => {
+    const calls = await run();
+    const roleNames = calls[1].params?.[0] as string[];
+
+    expect(calls[3].sql).toMatch(/UPDATE invitation\s/);
+    expect(calls[3].sql).toContain('"extraRoles"');
+    expect(calls[4].sql).toContain('UPDATE platform_invitation');
+    expect(calls[4].sql).toContain('"roleSetExtraRoles"');
+    expect(calls[3].params).toEqual([roleNames]);
+    expect(calls[4].params).toEqual([roleNames]);
   });
 
   it('scopes the role delete to the platform role-set', async () => {
