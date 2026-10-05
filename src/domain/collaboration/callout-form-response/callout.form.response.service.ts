@@ -195,9 +195,18 @@ export class CalloutFormResponseService {
   }
 
   /**
-   * Stores a response. Serialized against definition edits and other
-   * submissions by the form row lock; the checks run in this fixed order:
-   * published, open, acknowledged visibility, single-response, answers.
+   * Stores a response. The checks run in this fixed order: published, open,
+   * acknowledged visibility, single-response, answers.
+   *
+   * The Form-row lock serializes the submission against definition and
+   * settings edits (closing included) and against other submissions, so the
+   * open, visibility and single-response checks see the committed Form.
+   * The published check does NOT run under that lock: `calloutVisibility` is
+   * read by the caller before the transaction, and unpublishing a Post never
+   * takes the Form-row lock nor touches responses. A submission racing an
+   * unpublish is therefore equivalent to the legal order "the submission
+   * commits, then the Post is unpublished" — which keeps the response, as any
+   * unpublish does.
    */
   public async submitResponse(
     actorID: string,
