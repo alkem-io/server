@@ -165,6 +165,30 @@ describe('CalloutFormService', () => {
         expect(result[1].options![1].id).not.toBe(existing[1].options![0].id);
       });
 
+      it('treats an explicit null question or option id as a new item', () => {
+        const result = service.validateDefinition(
+          [
+            { id: existing[0].id, ...text() },
+            { id: null as unknown as string, ...text('Added') },
+            {
+              id: existing[1].id,
+              prompt: 'Pick',
+              type: CalloutFormQuestionType.SINGLE_CHOICE,
+              options: [
+                { id: existing[1].options![0].id, label: 'a' },
+                { id: null as unknown as string, label: 'c' },
+              ],
+            },
+          ],
+          existing,
+          0
+        );
+        expect(result[1].id).toMatch(/^[0-9a-f-]{36}$/);
+        expect([existing[0].id, existing[1].id]).not.toContain(result[1].id);
+        expect(result[2].options![1].id).toMatch(/^[0-9a-f-]{36}$/);
+        expect(result[2].options![1].id).not.toBe(existing[1].options![1].id);
+      });
+
       it('rejects an unknown question id and a repeated one', () => {
         expect(
           codeOf(() =>
@@ -397,6 +421,18 @@ describe('CalloutFormService', () => {
         settings: { state: CalloutFormState.CLOSED },
       } as any);
       expect(locked.state).toBe(CalloutFormState.CLOSED);
+    });
+
+    it('treats explicit null settings as not provided', async () => {
+      arrange({ visibility: CalloutFormResponseVisibility.MEMBERS }, 3);
+      await service.updateCalloutForm({
+        formID,
+        settings: { visibility: null, responseMode: null, state: null },
+      } as any);
+      expect(locked.visibility).toBe(CalloutFormResponseVisibility.MEMBERS);
+      expect(locked.responseMode).toBe(CalloutFormResponseMode.MULTIPLE);
+      expect(locked.state).toBe(CalloutFormState.OPEN);
+      expect(manager.save).toHaveBeenCalledWith(locked);
     });
 
     it('validates the definition against the locked current one', async () => {

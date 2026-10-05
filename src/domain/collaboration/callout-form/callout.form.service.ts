@@ -105,7 +105,7 @@ export class CalloutFormService {
 
     return questions.map(input => {
       let previous: ICalloutFormQuestion | undefined;
-      if (input.id !== undefined) {
+      if (input.id != null) {
         previous = existingByID.get(input.id);
         if (!previous || seenQuestionIDs.has(input.id)) {
           throw this.reject(
@@ -181,7 +181,7 @@ export class CalloutFormService {
 
     return inputOptions.map(option => {
       let optionID: string;
-      if (option.id !== undefined) {
+      if (option.id != null) {
         if (!previousOptionIDs.has(option.id) || seenOptionIDs.has(option.id)) {
           throw this.reject(
             'An option of the update does not belong to this question',
@@ -232,7 +232,7 @@ export class CalloutFormService {
       });
 
       const settings = input.settings;
-      if (settings?.visibility !== undefined) {
+      if (settings?.visibility != null) {
         if (
           widthOf(settings.visibility) > widthOf(locked.visibility) &&
           responseCount > 0
@@ -244,7 +244,7 @@ export class CalloutFormService {
         }
         locked.visibility = settings.visibility;
       }
-      if (settings?.responseMode !== undefined) {
+      if (settings?.responseMode != null) {
         if (
           settings.responseMode === CalloutFormResponseMode.SINGLE &&
           locked.responseMode === CalloutFormResponseMode.MULTIPLE &&
@@ -257,7 +257,7 @@ export class CalloutFormService {
         }
         locked.responseMode = settings.responseMode;
       }
-      if (settings?.state !== undefined) {
+      if (settings?.state != null) {
         locked.state = settings.state;
       }
 
