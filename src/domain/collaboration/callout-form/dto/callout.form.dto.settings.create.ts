@@ -2,7 +2,7 @@ import { CalloutFormResponseMode } from '@common/enums/callout.form.response.mod
 import { CalloutFormResponseVisibility } from '@common/enums/callout.form.response.visibility';
 import { CalloutFormState } from '@common/enums/callout.form.state';
 import { Field, InputType, ObjectType } from '@nestjs/graphql';
-import { IsEnum, IsOptional } from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional } from 'class-validator';
 
 @InputType('CreateCalloutFormSettingsInput')
 @ObjectType('CreateCalloutFormSettingsData')
@@ -30,4 +30,14 @@ export class CreateCalloutFormSettingsInput {
   @IsOptional()
   @IsEnum(CalloutFormState)
   state?: CalloutFormState;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    defaultValue: false,
+    description:
+      'Whether the Form box starts collapsed for every viewer. Defaults to false (expanded).',
+  })
+  @IsOptional()
+  @IsBoolean()
+  defaultCollapsed?: boolean;
 }

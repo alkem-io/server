@@ -56,6 +56,33 @@ describe('Form DTO validation', () => {
       ).toHaveLength(0);
     });
 
+    it.each([
+      ['a 513-character title', { title: 'x'.repeat(513) }],
+      ['a 2049-character description', { description: 'x'.repeat(2049) }],
+      [
+        'a non-boolean defaultCollapsed',
+        { settings: { defaultCollapsed: 'yes' } },
+      ],
+    ])('rejects %s', async (_name, overrides) => {
+      expect(
+        await errorsOf(CreateCalloutFormInput, {
+          questions: [question()],
+          ...overrides,
+        })
+      ).not.toHaveLength(0);
+    });
+
+    it('accepts a 512-character title, a 2048-character description and defaultCollapsed', async () => {
+      expect(
+        await errorsOf(CreateCalloutFormInput, {
+          questions: [question()],
+          title: 'x'.repeat(512),
+          description: 'y'.repeat(2048),
+          settings: { defaultCollapsed: true },
+        })
+      ).toHaveLength(0);
+    });
+
     it('leaves the counts (questions 1-50, options 2-20) to the service, which reports them with reason codes', async () => {
       expect(
         await errorsOf(CreateCalloutFormInput, { questions: [] })
@@ -87,6 +114,39 @@ describe('Form DTO validation', () => {
           questions: [{ id: QUESTION_ID, ...question(), required: true }],
         })
       ).toHaveLength(0);
+    });
+
+    it.each([
+      ['a 513-character title', { title: 'x'.repeat(513) }, false],
+      [
+        'a 2049-character description',
+        { description: 'x'.repeat(2049) },
+        false,
+      ],
+      ['a 512-character title', { title: 'x'.repeat(512) }, true],
+      ['a 2048-character description', { description: 'x'.repeat(2048) }, true],
+      [
+        'a null title and description',
+        { title: null, description: null },
+        true,
+      ],
+      ['an empty title', { title: '' }, true],
+      ['defaultCollapsed', { settings: { defaultCollapsed: false } }, true],
+      [
+        'a null defaultCollapsed',
+        { settings: { defaultCollapsed: null } },
+        true,
+      ],
+    ])('%s -> valid: %s', async (_name, overrides, valid) => {
+      const errors = await errorsOf(UpdateCalloutFormInput, {
+        formID: FORM_ID,
+        ...overrides,
+      });
+      if (valid) {
+        expect(errors).toHaveLength(0);
+      } else {
+        expect(errors).not.toHaveLength(0);
+      }
     });
 
     it('requires the required flag on a question update', async () => {

@@ -26,6 +26,7 @@ export class CalloutFormResolverFields {
       visibility: form.visibility,
       responseMode: form.responseMode,
       state: form.state,
+      defaultCollapsed: form.defaultCollapsed ?? false,
     };
   }
 }

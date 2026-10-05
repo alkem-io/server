@@ -23,4 +23,11 @@ export abstract class ICalloutFormSettings {
     description: 'Whether the Form accepts new responses. Defaults to OPEN.',
   })
   state!: CalloutFormState;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description:
+      'Whether the Form box starts collapsed for every viewer. Presentation only. Defaults to false (expanded).',
+  })
+  defaultCollapsed!: boolean;
 }

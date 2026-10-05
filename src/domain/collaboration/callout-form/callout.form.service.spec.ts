@@ -304,6 +304,45 @@ describe('CalloutFormService', () => {
       expect(form.state).toBe(CalloutFormState.CLOSED);
     });
 
+    it('defaults defaultCollapsed to false and has no title or description', () => {
+      const form = service.createCalloutForm({ questions: [text()] } as any);
+      expect(form.defaultCollapsed).toBe(false);
+      expect(form.title).toBeNull();
+      expect(form.description).toBeNull();
+    });
+
+    it('stores defaultCollapsed from the settings', () => {
+      const form = service.createCalloutForm({
+        questions: [text()],
+        settings: { defaultCollapsed: true },
+      } as any);
+      expect(form.defaultCollapsed).toBe(true);
+    });
+
+    it('trims the title and description', () => {
+      const form = service.createCalloutForm({
+        questions: [text()],
+        title: '  Feedback  ',
+        description: '\n Tell us more \t',
+      } as any);
+      expect(form.title).toBe('Feedback');
+      expect(form.description).toBe('Tell us more');
+    });
+
+    it.each([
+      ['empty', ''],
+      ['whitespace-only', '  \n\t '],
+      ['null', null],
+    ])('stores an %s title and description as null', (_name, value) => {
+      const form = service.createCalloutForm({
+        questions: [text()],
+        title: value,
+        description: value,
+      } as any);
+      expect(form.title).toBeNull();
+      expect(form.description).toBeNull();
+    });
+
     it('validates the definition', () => {
       expect(() => service.createCalloutForm({ questions: [] } as any)).toThrow(
         ValidationException
@@ -433,6 +472,73 @@ describe('CalloutFormService', () => {
       expect(locked.responseMode).toBe(CalloutFormResponseMode.MULTIPLE);
       expect(locked.state).toBe(CalloutFormState.OPEN);
       expect(manager.save).toHaveBeenCalledWith(locked);
+    });
+
+    describe('title and description', () => {
+      it('leaves them unchanged when the keys are absent', async () => {
+        arrange({ title: 'Old title', description: 'Old description' }, 2);
+        await service.updateCalloutForm({ formID, settings: {} } as any);
+        expect(locked.title).toBe('Old title');
+        expect(locked.description).toBe('Old description');
+      });
+
+      it('sets new trimmed values, also while the Form has responses', async () => {
+        arrange({ title: 'Old title', description: null }, 7);
+        await service.updateCalloutForm({
+          formID,
+          title: '  New title ',
+          description: ' New description  ',
+        } as any);
+        expect(locked.title).toBe('New title');
+        expect(locked.description).toBe('New description');
+        expect(manager.save).toHaveBeenCalledWith(locked);
+      });
+
+      it.each([
+        ['empty', ''],
+        ['whitespace-only', '   '],
+        ['null', null],
+      ])('clears them on an %s value', async (_name, value) => {
+        arrange({ title: 'Old title', description: 'Old description' }, 2);
+        await service.updateCalloutForm({
+          formID,
+          title: value,
+          description: value,
+        } as any);
+        expect(locked.title).toBeNull();
+        expect(locked.description).toBeNull();
+      });
+
+      it('updates one without touching the other', async () => {
+        arrange({ title: 'Old title', description: 'Old description' }, 0);
+        await service.updateCalloutForm({ formID, title: 'Only title' } as any);
+        expect(locked.title).toBe('Only title');
+        expect(locked.description).toBe('Old description');
+      });
+    });
+
+    describe('defaultCollapsed', () => {
+      it.each([
+        [false, true],
+        [true, false],
+        [null, true],
+      ])('toggles %s -> %s', async (from, to) => {
+        arrange({ defaultCollapsed: from }, 3);
+        await service.updateCalloutForm({
+          formID,
+          settings: { defaultCollapsed: to },
+        } as any);
+        expect(locked.defaultCollapsed).toBe(to);
+      });
+
+      it.each([
+        ['absent', {}],
+        ['null', { defaultCollapsed: null }],
+      ])('is unchanged when %s', async (_name, settings) => {
+        arrange({ defaultCollapsed: true }, 0);
+        await service.updateCalloutForm({ formID, settings } as any);
+        expect(locked.defaultCollapsed).toBe(true);
+      });
     });
 
     it('validates the definition against the locked current one', async () => {

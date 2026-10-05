@@ -1,4 +1,8 @@
-import { ENUM_LENGTH } from '@common/constants';
+import {
+  ENUM_LENGTH,
+  LONG_TEXT_LENGTH,
+  MID_TEXT_LENGTH,
+} from '@common/constants';
 import { CalloutFormResponseMode } from '@common/enums/callout.form.response.mode';
 import { CalloutFormResponseVisibility } from '@common/enums/callout.form.response.visibility';
 import { CalloutFormState } from '@common/enums/callout.form.state';
@@ -43,4 +47,15 @@ export class CalloutForm extends BaseAlkemioEntity implements ICalloutForm {
     default: CalloutFormState.OPEN,
   })
   state!: CalloutFormState;
+
+  // Optional plain-text heading of the Form (R17); empty is stored as NULL.
+  @Column('varchar', { length: MID_TEXT_LENGTH, nullable: true })
+  title?: string | null;
+
+  @Column('varchar', { length: LONG_TEXT_LENGTH, nullable: true })
+  description?: string | null;
+
+  // Presentation-only initial state of the Form box (R18); NULL reads as false.
+  @Column('boolean', { nullable: true })
+  defaultCollapsed?: boolean | null;
 }

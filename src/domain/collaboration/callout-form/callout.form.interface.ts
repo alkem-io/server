@@ -2,7 +2,7 @@ import { CalloutFormResponseMode } from '@common/enums/callout.form.response.mod
 import { CalloutFormResponseVisibility } from '@common/enums/callout.form.response.visibility';
 import { CalloutFormState } from '@common/enums/callout.form.state';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity/base.alkemio.interface';
-import { ObjectType } from '@nestjs/graphql';
+import { Field, ObjectType } from '@nestjs/graphql';
 import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
 import { ICalloutFormQuestion } from './callout.form.question.interface';
 
@@ -21,6 +21,22 @@ export abstract class ICalloutForm extends IBaseAlkemio {
   responseMode!: CalloutFormResponseMode;
 
   state!: CalloutFormState;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'The optional plain-text title of the Form, at most 512 characters. Null when not set.',
+  })
+  title?: string | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'The optional plain-text description of the Form, at most 2048 characters. Null when not set.',
+  })
+  description?: string | null;
+
+  defaultCollapsed?: boolean | null;
 
   framing?: ICalloutFraming;
 }

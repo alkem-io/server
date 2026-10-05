@@ -47,6 +47,13 @@ export type CalloutFormQuestionInput = {
   options?: { id?: string; label: string }[];
 };
 
+/**
+ * Plain-text Form title/description (R17): trimmed, and empty or
+ * whitespace-only (or null) is stored as NULL.
+ */
+const normalizePlainText = (value: string | null | undefined): string | null =>
+  value?.trim() || null;
+
 const isChoiceType = (type: CalloutFormQuestionType): boolean =>
   type === CalloutFormQuestionType.SINGLE_CHOICE ||
   type === CalloutFormQuestionType.MULTIPLE_CHOICE;
@@ -73,6 +80,9 @@ export class CalloutFormService {
     form.responseMode =
       input.settings?.responseMode ?? CalloutFormResponseMode.SINGLE;
     form.state = input.settings?.state ?? CalloutFormState.OPEN;
+    form.defaultCollapsed = input.settings?.defaultCollapsed ?? false;
+    form.title = normalizePlainText(input.title);
+    form.description = normalizePlainText(input.description);
     return form;
   }
 
@@ -259,6 +269,19 @@ export class CalloutFormService {
       }
       if (settings?.state != null) {
         locked.state = settings.state;
+      }
+      if (settings?.defaultCollapsed != null) {
+        locked.defaultCollapsed = settings.defaultCollapsed;
+      }
+
+      // Title/description: an absent key leaves the value unchanged; null,
+      // empty or whitespace-only clears it (unlike the settings, where null
+      // means "not provided" — clearing is the only way to remove them).
+      if (input.title !== undefined) {
+        locked.title = normalizePlainText(input.title);
+      }
+      if (input.description !== undefined) {
+        locked.description = normalizePlainText(input.description);
       }
 
       if (input.questions) {

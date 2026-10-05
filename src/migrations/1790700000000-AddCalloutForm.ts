@@ -4,7 +4,9 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * Form callout framing.
  *
  *  - `callout_form`: the definition of a Form (ordered questions as jsonb plus
- *    the three settings). The owning FK sits on the form (`framingId`, UNIQUE,
+ *    the three settings), its optional plain-text `title` (512) and
+ *    `description` (2048), and the nullable presentation setting
+ *    `defaultCollapsed` (NULL reads as expanded). The owning FK sits on the form (`framingId`, UNIQUE,
  *    ON DELETE CASCADE) so deleting a callout framing removes its Form, and
  *    the response FK below removes every response with it — no delete code.
  *  - `callout_form_response`: one row per submitted response, with the answer
@@ -15,6 +17,17 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  *    `IS NULL`, safely re-runnable).
  *
  * No existing table is altered.
+ *
+ * Amended in place (workspace#080 R17/R18, 2026-10-05; Form Posts are
+ * unreleased): `title`, `description` and `defaultCollapsed` were added to the
+ * CREATE TABLE below instead of a new migration. A developer database that
+ * already ran the earlier version of this migration needs, once:
+ *   ALTER TABLE "callout_form"
+ *     ADD COLUMN IF NOT EXISTS "title" character varying(512),
+ *     ADD COLUMN IF NOT EXISTS "description" character varying(2048),
+ *     ADD COLUMN IF NOT EXISTS "defaultCollapsed" boolean;
+ * (or `migration:revert` back past it, which drops both Form tables, then
+ * `migration:run`).
  *
  * Roll-forward-only once a FORM row exists: an older server cannot serialize
  * the `form` value of the non-null CalloutFramingType. Emergency image
@@ -43,6 +56,9 @@ export class AddCalloutForm1790700000000 implements MigrationInterface {
         "visibility" character varying(128) NOT NULL DEFAULT 'admins',
         "responseMode" character varying(128) NOT NULL DEFAULT 'single',
         "state" character varying(128) NOT NULL DEFAULT 'open',
+        "title" character varying(512),
+        "description" character varying(2048),
+        "defaultCollapsed" boolean,
         "framingId" uuid NOT NULL,
         CONSTRAINT "REL_321286ea3f8efe406a41b70c9b" UNIQUE ("framingId"),
         CONSTRAINT "PK_ffc4704bfd30735a95ffa6bb3cd" PRIMARY KEY ("id")
