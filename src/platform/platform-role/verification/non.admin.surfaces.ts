@@ -280,6 +280,7 @@ export const NON_ADMIN_SURFACES: Readonly<
   reorderPollOptions: NON_ADMIN,
   replaceCollaboraDocument: NON_ADMIN,
   replaceWhiteboardContentFromSource: NON_ADMIN,
+  resendPlatformInvitation: NON_ADMIN,
   resetConversationVc: NON_ADMIN,
   revokeMcpApiKey: NON_ADMIN,
   sendDirectMessageToUsers: NON_ADMIN,

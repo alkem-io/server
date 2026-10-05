@@ -127,8 +127,8 @@ export class ConversationAuthorizationService {
       // The bucket auth service resets+inherits the bucket from the aggregator
       // auth, appends file-upload/delete privilege rules, cascades to documents,
       // and persists internally (returns []).
-      // The bucket cascade reads the aggregator to suppress the creator rule.
-      storageAggregator.directStorage.storageAggregator = storageAggregator;
+      // Supply the already-loaded owner of this direct bucket to the cascade.
+      storageAggregator.directStorage.directStorageOwner = storageAggregator;
       await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
         storageAggregator.directStorage,
         storageAggregator.authorization

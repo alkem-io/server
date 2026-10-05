@@ -1,5 +1,6 @@
 import { CommunityMembershipOrigin } from '@common/enums/community.membership.origin';
 import { NotificationEvent } from '@common/enums/notification.event';
+import { RoleName } from '@common/enums/role.name';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { MessageDetailsService } from '@domain/communication/message.details/message.details.service';
@@ -906,6 +907,48 @@ describe('NotificationOrganizationAdapter', () => {
       expect(pushAdapter.sendPushNotifications).not.toHaveBeenCalled();
       expect(externalAdapter.sendExternalNotifications).not.toHaveBeenCalled();
       expect(inAppAdapter.sendInAppNotifications).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('organizationAssociatePlatformInvitationCreated', () => {
+    const eventData = {
+      triggeredBy: 'inviter-1',
+      organizationID: 'org-1',
+      invitedUserEmail: 'new@example.com',
+      extraRoles: [RoleName.ADMIN],
+      welcomeMessage: 'Welcome',
+    } as any;
+
+    it('builds the payload and dispatches the email exactly once, with no recipients lookup, in-app or push', async () => {
+      const payload = { organization: { id: 'org-1' } } as any;
+      vi.mocked(
+        externalAdapter.buildOrganizationAssociatePlatformInvitationPayload
+      ).mockResolvedValue(payload);
+
+      await adapter.organizationAssociatePlatformInvitationCreated(eventData);
+
+      expect(
+        externalAdapter.buildOrganizationAssociatePlatformInvitationPayload
+      ).toHaveBeenCalledWith(
+        NotificationEvent.ORGANIZATION_ASSOCIATE_INVITATION_USER_PLATFORM,
+        'inviter-1',
+        'new@example.com',
+        'org-1',
+        [RoleName.ADMIN],
+        'Welcome'
+      );
+      expect(externalAdapter.sendExternalNotifications).toHaveBeenCalledTimes(
+        1
+      );
+      expect(externalAdapter.sendExternalNotifications).toHaveBeenCalledWith(
+        NotificationEvent.ORGANIZATION_ASSOCIATE_INVITATION_USER_PLATFORM,
+        payload
+      );
+      expect(
+        notificationAdapter.getNotificationRecipients
+      ).not.toHaveBeenCalled();
+      expect(inAppAdapter.sendInAppNotifications).not.toHaveBeenCalled();
+      expect(pushAdapter.sendPushNotifications).not.toHaveBeenCalled();
     });
   });
 });
