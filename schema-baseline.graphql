@@ -5822,6 +5822,10 @@ type Mutation {
   Replace a Whiteboard from another Whiteboard through the live collaboration room. Content and media are copied server-side; snapshot bytes never pass through GraphQL.
   """
   replaceWhiteboardContentFromSource(input: ReplaceWhiteboardContentFromSourceInput!): Whiteboard!
+  """
+  Sends the invitation email of an open platform invitation again (Space or Organization role sets); throttled per role set and address, and counted against an hourly email budget.
+  """
+  resendPlatformInvitation(resendData: ResendPlatformInvitationInput!): PlatformInvitation!
   """Resets the interaction with the VC by recreating the room."""
   resetConversationVc(input: ConversationVcResetInput!): Conversation!
   """Reset all license plans on Accounts"""
@@ -6085,6 +6089,7 @@ enum NotificationEvent {
   ORGANIZATION_ADMIN_MESSAGE
   ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION
   ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED
+  ORGANIZATION_ASSOCIATE_INVITATION_USER_PLATFORM
   ORGANIZATION_MESSAGE_SENDER
   PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED
   PLATFORM_ADMIN_SPACE_CREATED
@@ -7562,6 +7567,11 @@ input ReplaceWhiteboardContentFromSourceInput {
   targetWhiteboardID: UUID!
 }
 
+input ResendPlatformInvitationInput {
+  """The open platform invitation whose email is sent again."""
+  ID: UUID!
+}
+
 input RevokeAuthorizationCredentialInput {
   """The resource to which access is being removed."""
   resourceID: String!
@@ -7738,7 +7748,7 @@ type RoleSet {
   """
   organizationsInRoles(roles: [RoleName!]!): [OrganizationsInRolesResponse!]!
   """
-  Invitations to join this RoleSet in an entry role for users not yet on the Alkemio platform.
+  Open (not yet consumed) invitations to join this RoleSet in an entry role for people not yet on the Alkemio platform.
   """
   platformInvitations: [PlatformInvitation!]!
   """The Role Definitions from this RoleSet to return."""
