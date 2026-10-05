@@ -315,7 +315,7 @@ describe('MessageAttachmentService', () => {
         actor
       );
       expect(result).toEqual([
-        { displayName: 'x.png' },
+        { displayName: 'x.png', pending: false },
         {
           id: documentID,
           url: expect.any(String),
@@ -324,6 +324,7 @@ describe('MessageAttachmentService', () => {
           size: 10,
           width: 24,
           height: 24,
+          pending: false,
         },
       ]);
       expect(documentRepository.find).toHaveBeenCalledTimes(1);
@@ -335,9 +336,43 @@ describe('MessageAttachmentService', () => {
         provider,
         makeDocument({ storageBucket: { id: 'other-conversation' } as any }),
       ]);
+      // Placement into this room may still follow, so it is reported pending.
       expect(await service.resolveMediaAttachments(room, [raw], actor)).toEqual(
-        [{ displayName: raw.display_name }]
+        [{ displayName: raw.display_name, pending: true }]
       );
+    });
+
+    it('reports media not yet placed in this room as pending until its copy exists', async () => {
+      documentRepository.find.mockResolvedValue([provider]);
+      expect(await service.resolveMediaAttachments(room, [raw], actor)).toEqual(
+        [{ displayName: raw.display_name, pending: true }]
+      );
+      documentRepository.find.mockResolvedValue([provider, makeDocument()]);
+      expect(await service.resolveMediaAttachments(room, [raw], actor)).toEqual(
+        [expect.objectContaining({ id: documentID, pending: false })]
+      );
+      expect(storage.copyDocumentToBucket).not.toHaveBeenCalled();
+    });
+
+    it('media that placement will never copy is not pending', async () => {
+      provider.size = bucket.maxFileSize + 1;
+      documentRepository.find.mockResolvedValue([provider]);
+      expect(await service.resolveMediaAttachments(room, [raw], actor)).toEqual(
+        [{ displayName: raw.display_name, pending: false }]
+      );
+      documentRepository.find.mockResolvedValue([]);
+      expect(await service.resolveMediaAttachments(room, [raw], actor)).toEqual(
+        [{ displayName: raw.display_name, pending: false }]
+      );
+    });
+
+    it('history reads do not evaluate pending', async () => {
+      documentRepository.find.mockResolvedValue([provider]);
+      const [attachment] = await service.resolveMessageAttachments(
+        message(),
+        actor
+      );
+      expect(attachment).not.toHaveProperty('pending');
     });
 
     it('a document hint cannot authorize bytes other than the provider media', async () => {
@@ -356,7 +391,7 @@ describe('MessageAttachmentService', () => {
           [{ ...raw, document_id: hintedID }],
           actor
         )
-      ).toEqual([{ displayName: raw.display_name }]);
+      ).toEqual([{ displayName: raw.display_name, pending: true }]);
       expect(documentRepository.find.mock.calls[0][0].where).toContainEqual({
         storageBucket: { id: bucket.id },
         id: In([hintedID]),
@@ -367,7 +402,7 @@ describe('MessageAttachmentService', () => {
       documentRepository.find.mockResolvedValue([provider, makeDocument()]);
       auth.isAccessGranted.mockReturnValue(false);
       expect(await service.resolveMediaAttachments(room, [raw], actor)).toEqual(
-        [{ displayName: raw.display_name }]
+        [{ displayName: raw.display_name, pending: false }]
       );
     });
 

@@ -210,15 +210,24 @@ export class MessageAttachmentService {
     actorContext: ActorContext
   ): Promise<IMessageAttachment[]> {
     if (!attachments.length) return [];
-    const bucketId = (await this.getTargetBucketForRoom(room))?.id;
-    return this.resolveInBucket(attachments, bucketId, undefined, actorContext);
+    const bucket = await this.getTargetBucketForRoom(room);
+    return this.resolveInBucket(
+      attachments,
+      bucket?.id,
+      undefined,
+      actorContext,
+      bucket
+    );
   }
 
+  // `placementBucket` reports media that inbound placement has yet to copy:
+  // a Matrix client can read an event before that copy completes.
   private async resolveInBucket(
     attachments: ReceivedAttachment[],
     bucketId: string | undefined,
     preloaded: Map<string, IDocument> | undefined,
-    actorContext: ActorContext
+    actorContext: ActorContext,
+    placementBucket?: IStorageBucket
   ): Promise<IMessageAttachment[]> {
     const documents =
       preloaded ??
@@ -226,12 +235,21 @@ export class MessageAttachmentService {
         ? await this.loadDocuments(bucketId, attachments)
         : new Map<string, IDocument>());
     return attachments.map(raw => {
-      const unavailable: IMessageAttachment = {
-        displayName: raw.display_name || 'attachment',
-      };
       const document = bucketId
         ? this.resolveDocument(raw, bucketId, documents)
         : undefined;
+      const unavailable: IMessageAttachment = {
+        displayName: raw.display_name || 'attachment',
+      };
+      if (placementBucket) {
+        const provider = documents.get(
+          this.referenceKey(this.matrixMediaBucketId, raw.media_id)
+        );
+        unavailable.pending =
+          !document &&
+          !!provider &&
+          this.matchesBucketPolicy(placementBucket, provider);
+      }
       if (
         !document?.authorization ||
         !this.authorizationService.isAccessGranted(
@@ -250,6 +268,7 @@ export class MessageAttachmentService {
         size: document.size,
         width: this.imageDimension(raw.width),
         height: this.imageDimension(raw.height),
+        ...(placementBucket ? { pending: false } : {}),
       };
     });
   }

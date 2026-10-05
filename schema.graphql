@@ -4457,6 +4457,10 @@ type MessageAttachment {
   id: UUID
   """The MIME type of the attachment."""
   mimeType: String
+  """
+  Set by Room.messageAttachments: true when the media is stored but not yet placed in this room, so resolving it again shortly can return the document; false otherwise. Null where not evaluated.
+  """
+  pending: Boolean
   """The size of the attachment in bytes."""
   size: Int
   """The Alkemio document URL (authorized via conversation policy)."""
