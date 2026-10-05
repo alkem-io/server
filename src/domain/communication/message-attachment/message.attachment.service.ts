@@ -1,4 +1,5 @@
 import { ReceivedAttachment } from '@alkemio/matrix-adapter-lib';
+import { EXTERNAL_REFERENCE_LENGTH } from '@common/constants/entity.field.length.constants';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { MimeFileType } from '@common/enums/mime.file.type';
 import { RoomType } from '@common/enums/room.type';
@@ -279,7 +280,12 @@ export class MessageAttachmentService {
   ): Promise<Map<string, IDocument>> {
     const refs = [
       ...new Set(
-        attachments.flatMap(raw => (raw.media_id ? [raw.media_id] : []))
+        // A longer id cannot match the column, so it never reaches the query.
+        attachments.flatMap(raw =>
+          raw.media_id && raw.media_id.length <= EXTERNAL_REFERENCE_LENGTH
+            ? [raw.media_id]
+            : []
+        )
       ),
     ];
     const hints = [

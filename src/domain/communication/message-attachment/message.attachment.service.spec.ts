@@ -406,6 +406,25 @@ describe('MessageAttachmentService', () => {
       );
     });
 
+    it('a media id longer than the stored reference never reaches the lookup', async () => {
+      const tooLong = { ...raw, media_id: 'm'.repeat(257) };
+      expect(
+        await service.resolveMediaAttachments(room, [tooLong], actor)
+      ).toEqual([{ displayName: raw.display_name, pending: false }]);
+      expect(documentRepository.find).not.toHaveBeenCalled();
+
+      const longest = 'm'.repeat(256);
+      await service.resolveMediaAttachments(
+        room,
+        [tooLong, { ...raw, media_id: longest }],
+        actor
+      );
+      expect(documentRepository.find.mock.calls[0][0].where[0]).toEqual({
+        storageBucket: { id: In([bucket.id, 'matrix']) },
+        externalReference: In([longest]),
+      });
+    });
+
     it('an empty batch does no lookup', async () => {
       expect(await service.resolveMediaAttachments(room, [], actor)).toEqual(
         []
