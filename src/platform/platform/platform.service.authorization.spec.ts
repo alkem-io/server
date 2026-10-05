@@ -547,6 +547,32 @@ describe('PlatformAuthorizationService', () => {
       expect(rules[0].cascade).toBe(false);
     });
 
+    it('RECEIVE_NOTIFICATIONS_ADMIN (T076, routing amended 2026-10-05): EXACTLY the union of the per-event recipient roles, non-cascading — content-full-access, audit-reader and spaces-reader are NOT among the reachers', async () => {
+      arrange();
+      await service.applyAuthorizationPolicy();
+
+      const rules = rulesGranting(
+        AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN
+      );
+      expect(rules).toHaveLength(1);
+      expect(rules[0].criterias).toEqual([
+        AuthorizationCredential.PLATFORM_SUPPORT,
+        AuthorizationCredential.PLATFORM_USERS_ADMIN,
+        AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
+        AuthorizationCredential.PLATFORM_ROLES_ADMIN,
+      ]);
+      expect(rules[0].criterias).not.toContain(
+        AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS
+      );
+      expect(rules[0].criterias).not.toContain(
+        AuthorizationCredential.PLATFORM_AUDIT_READER
+      );
+      expect(rules[0].criterias).not.toContain(
+        AuthorizationCredential.PLATFORM_SPACES_READER
+      );
+      expect(rules[0].cascade).toBe(false);
+    });
+
     it('PLATFORM_SETTINGS_ADMIN (T035, A10): EXACTLY the union of both surfaces it re-anchors — including platform-settings-admin itself', async () => {
       arrange();
       await service.applyAuthorizationPolicy();
