@@ -25,7 +25,6 @@ import {
 } from 'typeorm';
 import { Callout } from '../callout/callout.entity';
 import { ICallout } from '../callout/callout.interface';
-import { CalloutFormResponse } from '../callout-form-response/callout.form.response.entity';
 import { CalloutForm } from './callout.form.entity';
 import { CalloutFormErrorCode } from './callout.form.error.codes';
 import { ICalloutForm } from './callout.form.interface';
@@ -33,7 +32,6 @@ import {
   ICalloutFormQuestion,
   ICalloutFormQuestionOption,
 } from './callout.form.question.interface';
-import { widthOf } from './callout.form.width';
 import { CreateCalloutFormInput } from './dto/callout.form.dto.create';
 import { UpdateCalloutFormInput } from './dto/callout.form.dto.update';
 
@@ -72,7 +70,7 @@ export class CalloutFormService {
    * framing's cascade together with the callout.
    */
   public createCalloutForm(input: CreateCalloutFormInput): CalloutForm {
-    const questions = this.validateDefinition(input.questions, undefined, 0);
+    const questions = this.validateDefinition(input.questions, undefined);
     const form = new CalloutForm();
     form.questions = questions;
     form.visibility =
@@ -89,14 +87,15 @@ export class CalloutFormService {
   /**
    * Validates a full ordered question list (invariants I1/I2) and returns the
    * definition to store: server-assigned ids for new questions/options, trimmed
-   * prompts and labels. `existing` is the current definition when updating;
-   * `responseCount` locks the question type once a response exists.
-   * Errors carry a reason code and question ids only.
+   * prompts and labels. `existing` is the current definition when updating.
+   * A question's type may change at any time, with or without responses: the
+   * stored answers keep their own snapshot type (R19c), and the options rules
+   * below apply to the new type. Errors carry a reason code and question ids
+   * only.
    */
   public validateDefinition(
     questions: CalloutFormQuestionInput[],
-    existing: ICalloutFormQuestion[] | undefined,
-    responseCount: number
+    existing: ICalloutFormQuestion[] | undefined
   ): ICalloutFormQuestion[] {
     if (
       questions.length < FORM_QUESTIONS_MIN_COUNT ||
@@ -127,14 +126,6 @@ export class CalloutFormService {
         seenQuestionIDs.add(input.id);
       }
       const questionID = previous?.id ?? randomUUID();
-
-      if (previous && previous.type !== input.type && responseCount > 0) {
-        throw this.reject(
-          'The type of a question cannot change once the Form has responses',
-          CalloutFormErrorCode.FORM_QUESTION_TYPE_LOCKED,
-          [questionID]
-        );
-      }
 
       const question: ICalloutFormQuestion = {
         id: questionID,
@@ -219,7 +210,10 @@ export class CalloutFormService {
 
   /**
    * Applies a definition and/or settings update under the Form row lock so it
-   * serializes against submissions and other edits.
+   * serializes against submissions and other edits. No setting depends on the
+   * existing responses (R19): visibility may widen or narrow (the current value
+   * governs every response, past and future), MULTIPLE -> SINGLE keeps the
+   * responses a member already holds, and question types may change.
    */
   public async updateCalloutForm(
     input: UpdateCalloutFormInput
@@ -237,34 +231,11 @@ export class CalloutFormService {
         );
       }
 
-      const responseCount = await manager.count(CalloutFormResponse, {
-        where: { formId: input.formID },
-      });
-
       const settings = input.settings;
       if (settings?.visibility != null) {
-        if (
-          widthOf(settings.visibility) > widthOf(locked.visibility) &&
-          responseCount > 0
-        ) {
-          throw this.reject(
-            'The response visibility cannot be widened once the Form has responses',
-            CalloutFormErrorCode.FORM_VISIBILITY_WIDENING_BLOCKED
-          );
-        }
         locked.visibility = settings.visibility;
       }
       if (settings?.responseMode != null) {
-        if (
-          settings.responseMode === CalloutFormResponseMode.SINGLE &&
-          locked.responseMode === CalloutFormResponseMode.MULTIPLE &&
-          (await this.hasMemberWithMultipleResponses(manager, input.formID))
-        ) {
-          throw this.reject(
-            'The Form cannot switch to a single response while a member has several',
-            CalloutFormErrorCode.FORM_RESPONSE_MODE_SWITCH_BLOCKED
-          );
-        }
         locked.responseMode = settings.responseMode;
       }
       if (settings?.state != null) {
@@ -287,26 +258,12 @@ export class CalloutFormService {
       if (input.questions) {
         locked.questions = this.validateDefinition(
           input.questions,
-          locked.questions,
-          responseCount
+          locked.questions
         );
       }
 
       return manager.save(locked);
     });
-  }
-
-  private async hasMemberWithMultipleResponses(
-    manager: EntityManager,
-    formID: string
-  ): Promise<boolean> {
-    const rows: unknown[] = await manager.query(
-      `SELECT "createdBy" FROM "callout_form_response"
-        WHERE "formId" = $1 AND "createdBy" IS NOT NULL
-        GROUP BY "createdBy" HAVING COUNT(*) > 1 LIMIT 1`,
-      [formID]
-    );
-    return rows.length > 0;
   }
 
   public async getCalloutFormOrFail(

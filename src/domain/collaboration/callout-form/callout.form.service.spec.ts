@@ -3,7 +3,6 @@ import { CalloutFormResponseMode } from '@common/enums/callout.form.response.mod
 import { CalloutFormResponseVisibility } from '@common/enums/callout.form.response.visibility';
 import { CalloutFormState } from '@common/enums/callout.form.state';
 import { ValidationException } from '@common/exceptions';
-import { CalloutFormResponse } from '../callout-form-response/callout.form.response.entity';
 import { CalloutForm } from './callout.form.entity';
 import { CalloutFormErrorCode } from './callout.form.error.codes';
 import { ICalloutFormQuestion } from './callout.form.question.interface';
@@ -54,13 +53,13 @@ describe('CalloutFormService', () => {
     ])('rejects %i questions', (count, code) => {
       const questions = Array.from({ length: count }, () => text());
       expect(
-        codeOf(() => service.validateDefinition(questions, undefined, 0))
+        codeOf(() => service.validateDefinition(questions, undefined))
       ).toBe(code);
     });
 
     it.each([1, 50])('accepts %i questions', count => {
       const questions = Array.from({ length: count }, () => text());
-      expect(service.validateDefinition(questions, undefined, 0)).toHaveLength(
+      expect(service.validateDefinition(questions, undefined)).toHaveLength(
         count
       );
     });
@@ -71,8 +70,7 @@ describe('CalloutFormService', () => {
       [Array.from({ length: 20 }, (_, i) => `o${i}`), false],
       [Array.from({ length: 21 }, (_, i) => `o${i}`), true],
     ])('choice options %j -> rejected: %s', (labels, rejected) => {
-      const act = () =>
-        service.validateDefinition([choice(labels)], undefined, 0);
+      const act = () => service.validateDefinition([choice(labels)], undefined);
       if (rejected) {
         expect(codeOf(act)).toBe(CalloutFormErrorCode.FORM_OPTIONS_COUNT);
       } else {
@@ -83,19 +81,18 @@ describe('CalloutFormService', () => {
     it('rejects options on a text question', () => {
       const question = { ...text(), options: [{ label: 'a' }, { label: 'b' }] };
       expect(
-        codeOf(() => service.validateDefinition([question], undefined, 0))
+        codeOf(() => service.validateDefinition([question], undefined))
       ).toBe(CalloutFormErrorCode.FORM_OPTIONS_COUNT);
     });
 
     it('rejects duplicate option labels, trimmed and case-sensitive', () => {
       expect(
         codeOf(() =>
-          service.validateDefinition([choice(['a', ' a '])], undefined, 0)
+          service.validateDefinition([choice(['a', ' a '])], undefined)
         )
       ).toBe(CalloutFormErrorCode.FORM_OPTIONS_DUPLICATE);
       expect(
-        service.validateDefinition([choice(['a', 'A'])], undefined, 0)[0]
-          .options
+        service.validateDefinition([choice(['a', 'A'])], undefined)[0].options
       ).toHaveLength(2);
     });
 
@@ -109,8 +106,7 @@ describe('CalloutFormService', () => {
             required: true,
           },
         ],
-        undefined,
-        0
+        undefined
       );
       expect(question.id).toMatch(/^[0-9a-f-]{36}$/);
       expect(question.prompt).toBe('Pick');
@@ -156,8 +152,7 @@ describe('CalloutFormService', () => {
               ],
             },
           ],
-          existing,
-          3
+          existing
         );
         expect(result[0].id).toBe(existing[0].id);
         expect(result[0].prompt).toBe('Renamed');
@@ -180,8 +175,7 @@ describe('CalloutFormService', () => {
               ],
             },
           ],
-          existing,
-          0
+          existing
         );
         expect(result[1].id).toMatch(/^[0-9a-f-]{36}$/);
         expect([existing[0].id, existing[1].id]).not.toContain(result[1].id);
@@ -194,8 +188,7 @@ describe('CalloutFormService', () => {
           codeOf(() =>
             service.validateDefinition(
               [{ id: '99999999-9999-4999-8999-999999999999', ...text() }],
-              existing,
-              0
+              existing
             )
           )
         ).toBe(CalloutFormErrorCode.FORM_UNKNOWN_QUESTION_ID);
@@ -206,8 +199,7 @@ describe('CalloutFormService', () => {
                 { id: existing[0].id, ...text() },
                 { id: existing[0].id, ...text() },
               ],
-              existing,
-              0
+              existing
             )
           )
         ).toBe(CalloutFormErrorCode.FORM_UNKNOWN_QUESTION_ID);
@@ -218,8 +210,7 @@ describe('CalloutFormService', () => {
           codeOf(() =>
             service.validateDefinition(
               [{ id: existing[0].id, ...text() }],
-              undefined,
-              0
+              undefined
             )
           )
         ).toBe(CalloutFormErrorCode.FORM_UNKNOWN_QUESTION_ID);
@@ -238,43 +229,75 @@ describe('CalloutFormService', () => {
                   options: [{ id: existing[0].id, label: 'a' }, { label: 'b' }],
                 },
               ],
-              existing,
-              0
+              existing
             )
           )
         ).toBe(CalloutFormErrorCode.FORM_UNKNOWN_OPTION_ID);
       });
 
-      it.each([
-        [0, false],
-        [1, true],
-      ])('type change with %i responses -> locked: %s', (responseCount, locked) => {
-        const act = () =>
+      it('changes the type of a text question to another text type', () => {
+        const [question] = service.validateDefinition(
+          [
+            {
+              id: existing[0].id,
+              prompt: 'Name',
+              type: CalloutFormQuestionType.LONG_TEXT,
+            },
+          ],
+          existing
+        );
+        expect(question.id).toBe(existing[0].id);
+        expect(question.type).toBe(CalloutFormQuestionType.LONG_TEXT);
+      });
+
+      it('changes text -> choice with 2-20 options, and rejects 1 option', () => {
+        const toChoice = (labels: string[]) => () =>
           service.validateDefinition(
             [
               {
                 id: existing[0].id,
                 prompt: 'Name',
-                type: CalloutFormQuestionType.LONG_TEXT,
+                type: CalloutFormQuestionType.MULTIPLE_CHOICE,
+                options: labels.map(label => ({ label })),
               },
             ],
-            existing,
-            responseCount
+            existing
           );
-        if (locked) {
-          expect(codeOf(act)).toBe(
-            CalloutFormErrorCode.FORM_QUESTION_TYPE_LOCKED
-          );
-        } else {
-          expect(act()[0].type).toBe(CalloutFormQuestionType.LONG_TEXT);
-        }
+        const [question] = toChoice(['x', 'y'])();
+        expect(question.type).toBe(CalloutFormQuestionType.MULTIPLE_CHOICE);
+        expect(question.options?.map(o => o.label)).toEqual(['x', 'y']);
+        expect(codeOf(toChoice(['x']))).toBe(
+          CalloutFormErrorCode.FORM_OPTIONS_COUNT
+        );
       });
 
-      it('allows toggling required even with responses', () => {
+      it('changes choice -> text when the options are dropped, and rejects it with options', () => {
+        const toText = (withOptions: boolean) => () =>
+          service.validateDefinition(
+            [
+              {
+                id: existing[1].id,
+                prompt: 'Pick',
+                type: CalloutFormQuestionType.SHORT_TEXT,
+                ...(withOptions
+                  ? { options: existing[1].options!.map(o => ({ ...o })) }
+                  : {}),
+              },
+            ],
+            existing
+          );
+        const [question] = toText(false)();
+        expect(question.type).toBe(CalloutFormQuestionType.SHORT_TEXT);
+        expect(question.options).toBeUndefined();
+        expect(codeOf(toText(true))).toBe(
+          CalloutFormErrorCode.FORM_OPTIONS_COUNT
+        );
+      });
+
+      it('allows toggling required', () => {
         const [question] = service.validateDefinition(
           [{ id: existing[0].id, ...text(), required: true }],
-          existing,
-          10
+          existing
         );
         expect(question.required).toBe(true);
       });
@@ -400,57 +423,55 @@ describe('CalloutFormService', () => {
         where: { id: formID },
         lock: { mode: 'pessimistic_write' },
       });
-      expect(manager.count).toHaveBeenCalledWith(CalloutFormResponse, {
-        where: { formId: formID },
-      });
     });
 
-    it.each([
-      [0, undefined],
-      [1, CalloutFormErrorCode.FORM_VISIBILITY_WIDENING_BLOCKED],
-    ])('widening ADMINS -> MEMBERS with %i responses -> %s', async (count, code) => {
-      arrange({}, count);
-      expect(
-        await rejection({
-          formID,
-          settings: { visibility: CalloutFormResponseVisibility.MEMBERS },
-        })
-      ).toBe(code);
+    // R19: nothing in an update depends on the existing responses, so the
+    // service never reads them — no count, no per-member query, no row touched.
+    const expectResponsesUntouched = () => {
+      expect(manager.count).not.toHaveBeenCalled();
+      expect(manager.query).not.toHaveBeenCalled();
+      expect(manager.save).toHaveBeenCalledTimes(1);
+      expect(manager.save).toHaveBeenCalledWith(locked);
+    };
+
+    it('widens ADMINS -> MEMBERS while the Form has responses', async () => {
+      arrange({}, 4);
+      await service.updateCalloutForm({
+        formID,
+        settings: { visibility: CalloutFormResponseVisibility.MEMBERS },
+      } as any);
+      expect(locked.visibility).toBe(CalloutFormResponseVisibility.MEMBERS);
+      expectResponsesUntouched();
     });
 
-    it('narrows MEMBERS -> ADMINS whatever the response count', async () => {
+    it('narrows MEMBERS -> ADMINS while the Form has responses', async () => {
       arrange({ visibility: CalloutFormResponseVisibility.MEMBERS }, 9);
       await service.updateCalloutForm({
         formID,
         settings: { visibility: CalloutFormResponseVisibility.ADMINS },
       } as any);
       expect(locked.visibility).toBe(CalloutFormResponseVisibility.ADMINS);
+      expectResponsesUntouched();
     });
 
-    it.each([
-      [[], undefined],
-      [
-        [{ createdBy: 'u1' }],
-        CalloutFormErrorCode.FORM_RESPONSE_MODE_SWITCH_BLOCKED,
-      ],
-    ])('MULTIPLE -> SINGLE with multi-response holders %j -> %s', async (holders, code) => {
-      arrange({}, 3, holders);
-      expect(
-        await rejection({
-          formID,
-          settings: { responseMode: CalloutFormResponseMode.SINGLE },
-        })
-      ).toBe(code);
+    it('switches MULTIPLE -> SINGLE while a member holds several responses', async () => {
+      arrange({}, 3, [{ createdBy: 'u1' }]);
+      await service.updateCalloutForm({
+        formID,
+        settings: { responseMode: CalloutFormResponseMode.SINGLE },
+      } as any);
+      expect(locked.responseMode).toBe(CalloutFormResponseMode.SINGLE);
+      expectResponsesUntouched();
     });
 
-    it('switches SINGLE -> MULTIPLE without looking at responses', async () => {
+    it('switches SINGLE -> MULTIPLE', async () => {
       arrange({ responseMode: CalloutFormResponseMode.SINGLE }, 5);
       await service.updateCalloutForm({
         formID,
         settings: { responseMode: CalloutFormResponseMode.MULTIPLE },
       } as any);
       expect(locked.responseMode).toBe(CalloutFormResponseMode.MULTIPLE);
-      expect(manager.query).not.toHaveBeenCalled();
+      expectResponsesUntouched();
     });
 
     it('opens and closes freely', async () => {
@@ -541,23 +562,26 @@ describe('CalloutFormService', () => {
       });
     });
 
-    it('validates the definition against the locked current one', async () => {
+    describe('definition', () => {
       const questionID = '66666666-6666-4666-8666-666666666666';
-      arrange(
-        {
-          questions: [
-            {
-              id: questionID,
-              prompt: 'Name',
-              type: CalloutFormQuestionType.SHORT_TEXT,
-              required: false,
-            },
-          ],
-        },
-        2
-      );
-      expect(
-        await rejection({
+      const arrangeWithTextQuestion = () =>
+        arrange(
+          {
+            questions: [
+              {
+                id: questionID,
+                prompt: 'Name',
+                type: CalloutFormQuestionType.SHORT_TEXT,
+                required: false,
+              },
+            ],
+          },
+          2
+        );
+
+      it('changes the type of a question while the Form has responses', async () => {
+        arrangeWithTextQuestion();
+        await service.updateCalloutForm({
           formID,
           questions: [
             {
@@ -567,9 +591,49 @@ describe('CalloutFormService', () => {
               required: false,
             },
           ],
-        })
-      ).toBe(CalloutFormErrorCode.FORM_QUESTION_TYPE_LOCKED);
-      expect(manager.save).not.toHaveBeenCalled();
+        } as any);
+        expect(locked.questions).toEqual([
+          {
+            id: questionID,
+            prompt: 'Name',
+            type: CalloutFormQuestionType.LONG_TEXT,
+            required: false,
+          },
+        ]);
+        expectResponsesUntouched();
+      });
+
+      it('validates the definition against the locked current one', async () => {
+        arrangeWithTextQuestion();
+        expect(
+          await rejection({
+            formID,
+            questions: [
+              {
+                id: questionID,
+                prompt: 'Name',
+                type: CalloutFormQuestionType.SINGLE_CHOICE,
+                required: false,
+                options: [{ label: 'only one' }],
+              },
+            ],
+          })
+        ).toBe(CalloutFormErrorCode.FORM_OPTIONS_COUNT);
+        expect(
+          await rejection({
+            formID,
+            questions: [
+              {
+                id: '99999999-9999-4999-8999-999999999999',
+                prompt: 'Name',
+                type: CalloutFormQuestionType.SHORT_TEXT,
+                required: false,
+              },
+            ],
+          })
+        ).toBe(CalloutFormErrorCode.FORM_UNKNOWN_QUESTION_ID);
+        expect(manager.save).not.toHaveBeenCalled();
+      });
     });
   });
 });

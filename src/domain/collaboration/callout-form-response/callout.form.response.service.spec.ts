@@ -9,6 +9,7 @@ import { ValidationException } from '@common/exceptions';
 import { CalloutForm } from '../callout-form/callout.form.entity';
 import { CalloutFormErrorCode } from '../callout-form/callout.form.error.codes';
 import { ICalloutFormQuestion } from '../callout-form/callout.form.question.interface';
+import { CalloutFormService } from '../callout-form/callout.form.service';
 import { CalloutFormResponse } from './callout.form.response.entity';
 import { CalloutFormResponseService } from './callout.form.response.service';
 
@@ -121,6 +122,40 @@ describe('CalloutFormResponseService', () => {
           ],
         },
       ]);
+    });
+
+    it('keeps the snapshot type of a stored answer after the question type changes (R19c)', () => {
+      const definition = questions();
+      const [stored] = service.validateAndSnapshotAnswers(definition, [
+        { questionID: Q_SINGLE, selectedOptionIDs: [O_A] },
+      ]);
+
+      const changed = new CalloutFormService({} as any, {} as any)
+        .validateDefinition(
+          definition.map(question =>
+            question.id === Q_SINGLE
+              ? {
+                  id: Q_SINGLE,
+                  prompt: 'Now free text',
+                  type: CalloutFormQuestionType.LONG_TEXT,
+                }
+              : { ...question, options: question.options?.map(o => ({ ...o })) }
+          ),
+          definition
+        )
+        .find(question => question.id === Q_SINGLE);
+
+      expect(changed).toMatchObject({
+        type: CalloutFormQuestionType.LONG_TEXT,
+        prompt: 'Now free text',
+      });
+      expect(changed?.options).toBeUndefined();
+      expect(stored).toEqual({
+        questionID: Q_SINGLE,
+        prompt: 'Single?',
+        type: CalloutFormQuestionType.SINGLE_CHOICE,
+        selectedOptions: [{ id: O_A, label: 'A' }],
+      });
     });
 
     it('leaves no entry for unanswered optional questions', () => {
@@ -403,6 +438,42 @@ describe('CalloutFormResponseService', () => {
       arrange({ responseMode: CalloutFormResponseMode.MULTIPLE }, 4);
       expect(await codeOf(CalloutVisibility.PUBLISHED)).toBeUndefined();
       expect(manager.count).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      [0, undefined],
+      [1, CalloutFormErrorCode.FORM_RESPONSE_ALREADY_EXISTS],
+      [2, CalloutFormErrorCode.FORM_RESPONSE_ALREADY_EXISTS],
+    ])('SINGLE mode with %i own responses -> %s', async (ownCount, code) => {
+      arrange({ responseMode: CalloutFormResponseMode.SINGLE }, ownCount);
+      expect(await codeOf(CalloutVisibility.PUBLISHED)).toBe(code);
+      expect(manager.count).toHaveBeenCalledWith(CalloutFormResponse, {
+        where: { formId: formID, createdBy: actorID },
+      });
+      expect(manager.save).toHaveBeenCalledTimes(code ? 0 : 1);
+    });
+
+    it('after MULTIPLE -> SINGLE, a member holding several responses keeps them and cannot submit another (R19a)', async () => {
+      arrange({ responseMode: CalloutFormResponseMode.MULTIPLE }, 2);
+      const formService = new CalloutFormService(
+        entityManager as any,
+        {} as any
+      );
+
+      await formService.updateCalloutForm({
+        formID,
+        settings: { responseMode: CalloutFormResponseMode.SINGLE },
+      } as any);
+      expect(locked.responseMode).toBe(CalloutFormResponseMode.SINGLE);
+      // The switch neither read nor touched the member's responses.
+      expect(manager.count).not.toHaveBeenCalled();
+      expect(manager.save).toHaveBeenCalledTimes(1);
+      expect(manager.save).toHaveBeenCalledWith(locked);
+
+      expect(await codeOf(CalloutVisibility.PUBLISHED)).toBe(
+        CalloutFormErrorCode.FORM_RESPONSE_ALREADY_EXISTS
+      );
+      expect(manager.save).toHaveBeenCalledTimes(1);
     });
 
     it('rejects an anonymous or non-user actor before opening a transaction', async () => {

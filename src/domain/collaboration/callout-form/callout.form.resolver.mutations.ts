@@ -57,7 +57,7 @@ export class CalloutFormResolverMutations {
   @UseGuards(GraphqlGuard)
   @Mutation(() => ICalloutFormResponse, {
     description:
-      'Submit a response to a Form. Requires CONTRIBUTE on the Post. The Post must be published and the Form open; a single-response Form accepts one response per member. acknowledgedVisibility is the audience the respondent was shown.',
+      'Submit a response to a Form. Requires CONTRIBUTE on the Post. The Post must be published and the Form open; a single-response Form rejects the submission while the member holds any response. acknowledgedVisibility is the audience the respondent was shown.',
   })
   async submitCalloutFormResponse(
     @CurrentActor() actorContext: ActorContext,
