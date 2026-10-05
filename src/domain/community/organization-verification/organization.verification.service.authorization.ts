@@ -1,6 +1,6 @@
 import {
   CREDENTIAL_RULE_ORGANIZATION_VERIFICATION_ADMIN,
-  CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS_ALL,
+  CREDENTIAL_RULE_TYPES_ORGANIZATION_VERIFICATION_PLATFORM_SUPPORT,
 } from '@common/constants';
 import {
   AuthorizationCredential,
@@ -51,25 +51,29 @@ export class OrganizationVerificationAuthorizationService {
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    // 027-platform-role-redesign (T076, Slice B): re-anchored off
-    // `{global-admin, global-support, global-community-read}` onto Platform
-    // Support, which spec §Target global role model row 7 gives the
-    // "organization lifecycle". Verifying an organization is part of that
-    // lifecycle, and it is the one place on this tree where GRANT is legitimate
-    // — the verification state machine issues the verified credential.
-    const platformSupportVerify =
+    // QA server-C2-d (ruling (a), A6 organization lifecycle): Platform
+    // Support approves / resets / reopens / archives an organization's
+    // verification. UPDATE passes the resolver's gate
+    // (`organization.verification.resolver.mutations.ts`), GRANT passes the
+    // MANUALLY_VERIFY / RESET / REOPEN / ARCHIVE lifecycle guards
+    // (`organization.verification.service.lifecycle.ts`), READ lets it see
+    // the state it acts on. Never CREATE/DELETE. Slice B (T076) deletes the
+    // legacy `{global-admin, global-support, global-community-read}` rule this
+    // sat beside, so this is Platform Support's only rule on the tree. The
+    // client's verify toggle keys on Update && Grant, so it appears for Support
+    // with no client change.
+    const platformSupport =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [
-          AuthorizationPrivilege.CREATE,
-          AuthorizationPrivilege.GRANT,
           AuthorizationPrivilege.READ,
           AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.DELETE,
+          AuthorizationPrivilege.GRANT,
         ],
         [AuthorizationCredential.PLATFORM_SUPPORT],
-        CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS_ALL
+        CREDENTIAL_RULE_TYPES_ORGANIZATION_VERIFICATION_PLATFORM_SUPPORT
       );
-    newRules.push(platformSupportVerify);
+    platformSupport.cascade = false;
+    newRules.push(platformSupport);
 
     const orgAdmin = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.READ, AuthorizationPrivilege.UPDATE],

@@ -64,8 +64,10 @@ export class CalloutContributionDefaultSourceService {
         AuthorizationPrivilege.READ,
         'copy Whiteboard contribution default from source Callout'
       );
+      // A cleared (null) stored default means there is nothing to copy, which
+      // this input expresses as an absent field.
       defaults.whiteboardContent =
-        sourceCallout.contributionDefaults?.whiteboardContent;
+        sourceCallout.contributionDefaults?.whiteboardContent ?? undefined;
       defaults.sourceStorageBucketID = defaults.whiteboardContent
         ? sourceCallout.framing?.profile?.storageBucket?.id
         : undefined;

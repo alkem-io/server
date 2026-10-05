@@ -1,3 +1,4 @@
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
@@ -87,6 +88,65 @@ describe('InnovationPackAuthorizationService', () => {
         authorizationPolicyService.inheritParentAuthorization
       ).toHaveBeenCalledWith(authorization, parentAuth);
       expect(result).toHaveLength(3);
+    });
+
+    // QA server-C2-c (ruling (a)): A7 — Platform Support edits an org-owned
+    // pack. Its PLATFORM_SUPPORT_ORG_RESOURCES (cascaded from the org-hosted
+    // account) is mapped to UPDATE/CREATE/FILE_UPLOAD — never DELETE — on the
+    // pack's profile subtree, threaded down from HERE only.
+    it('QA server-C2-c: threads the PLATFORM_SUPPORT_ORG_RESOURCES → UPDATE/CREATE/FILE_UPLOAD privilege rule (never DELETE) into the pack profile', async () => {
+      const authorization = { id: 'auth-1' };
+      const pack = {
+        id: 'pack-1',
+        profile: { id: 'profile-1' },
+        templatesSet: { id: 'ts-1' },
+        authorization,
+      } as unknown as IInnovationPack;
+      vi.mocked(
+        innovationPackService.getInnovationPackOrFail
+      ).mockResolvedValue(pack);
+      vi.mocked(authorizationPolicyService.reset).mockReturnValue(
+        authorization as any
+      );
+      vi.mocked(
+        authorizationPolicyService.inheritParentAuthorization
+      ).mockReturnValue(authorization as any);
+      vi.mocked(
+        authorizationPolicyService.appendCredentialAuthorizationRules
+      ).mockReturnValue(authorization as any);
+      vi.mocked(
+        profileAuthorizationService.applyAuthorizationPolicy
+      ).mockResolvedValue([]);
+      vi.mocked(
+        templatesSetAuthorizationService.applyAuthorizationPolicy
+      ).mockResolvedValue([]);
+
+      await service.applyAuthorizationPolicy(pack, { id: 'parent' } as any);
+
+      expect(
+        profileAuthorizationService.applyAuthorizationPolicy
+      ).toHaveBeenCalledWith(
+        'profile-1',
+        authorization,
+        [],
+        [
+          expect.objectContaining({
+            sourcePrivilege:
+              AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES,
+            grantedPrivileges: [
+              AuthorizationPrivilege.UPDATE,
+              AuthorizationPrivilege.CREATE,
+              AuthorizationPrivilege.FILE_UPLOAD,
+            ],
+          }),
+        ]
+      );
+      const rule = vi.mocked(
+        profileAuthorizationService.applyAuthorizationPolicy
+      ).mock.calls[0][3]![0];
+      expect(rule.grantedPrivileges).not.toContain(
+        AuthorizationPrivilege.DELETE
+      );
     });
 
     it('should throw RelationshipNotFoundException when profile is missing', async () => {

@@ -1,3 +1,4 @@
+import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -71,6 +72,67 @@ describe('OrganizationVerificationAuthorizationService', () => {
       ).toHaveBeenCalled();
       // The result is the authorization set on the verification object
       expect(result).toBeDefined();
+    });
+
+    // QA server-C2-d (ruling (a)): approving an organization's verification
+    // is organization lifecycle — Platform Support's A6 family. It needs
+    // UPDATE (the resolver gate) AND GRANT (the MANUALLY_VERIFY / RESET /
+    // REOPEN / ARCHIVE lifecycle guards) plus READ, on its OWN rule, never
+    // CREATE/DELETE. Slice B (T076) deletes the legacy
+    // GA/GS/GLOBAL_COMMUNITY_READ rule, so nothing else is appended.
+    it('QA server-C2-d: grants platform-support EXACTLY READ + UPDATE + GRANT on its own non-cascading rule, no legacy rule', async () => {
+      const auth = { id: 'auth-1', credentialRules: [] };
+      authorizationPolicyService.reset.mockReturnValue(auth);
+      authorizationPolicyService.createCredentialRuleUsingTypesOnly.mockImplementation(
+        (privileges: any, types: any, name: any) => ({
+          grantedPrivileges: privileges,
+          criterias: [...types],
+          name,
+          cascade: true,
+        })
+      );
+      authorizationPolicyService.createCredentialRule.mockReturnValue({
+        criterias: [],
+        cascade: true,
+      });
+      // The service appends through its SECOND AuthorizationPolicyService
+      // injection (`authorizationPolicy`), a distinct mock instance here.
+      const appendingPolicyService = (service as any).authorizationPolicy as {
+        appendCredentialAuthorizationRules: Mock;
+      };
+      appendingPolicyService.appendCredentialAuthorizationRules.mockReturnValue(
+        auth
+      );
+
+      await service.applyAuthorizationPolicy(
+        { id: 'ver-1', authorization: auth } as any,
+        'account-1'
+      );
+
+      const appended: any[] =
+        appendingPolicyService.appendCredentialAuthorizationRules.mock
+          .calls[0][1];
+      const supportRules = appended.filter((rule: any) =>
+        rule.criterias?.includes(AuthorizationCredential.PLATFORM_SUPPORT)
+      );
+      expect(supportRules).toHaveLength(1);
+      expect(supportRules[0].criterias).toEqual([
+        AuthorizationCredential.PLATFORM_SUPPORT,
+      ]);
+      expect([...supportRules[0].grantedPrivileges].sort()).toEqual(
+        [
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.GRANT,
+        ].sort()
+      );
+      expect(supportRules[0].grantedPrivileges).not.toContain(
+        AuthorizationPrivilege.DELETE
+      );
+      expect(supportRules[0].cascade).toBe(false);
+
+      // Platform Support's rule + the organization account admin's rule.
+      expect(appended).toHaveLength(2);
     });
 
     it('should throw EntityNotInitializedException when authorization is undefined', async () => {

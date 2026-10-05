@@ -47,6 +47,10 @@ export type ManagedPrivilege =
   // A-rows (see `INDIRECT_ENFORCEMENT_FILES`' F6 note), so `SCANNED_PRIVILEGES`
   // does not grow and `reachability.spec.ts` derives nothing from it.
   | AuthorizationPrivilege.PLATFORM_SUPPORT_LISTS_READ
+  // R-F.3 (2026-09-18) — the License Manager's twin of the above: console
+  // list read for spaces / organizations / users. Same disposition — no
+  // census gate, grant set spec-covered through `PRIVILEGE_COVERAGE`.
+  | AuthorizationPrivilege.PLATFORM_LICENSING_LISTS_READ
   | AuthorizationPrivilege.PLATFORM_FORUM_MANAGE
   | AuthorizationPrivilege.DELETE_ORGANIZATION
   | AuthorizationPrivilege.PLATFORM_AUDIT_READ
@@ -66,6 +70,8 @@ export type ManagedPrivilege =
   | AuthorizationPrivilege.UPDATE_CALLOUT_PUBLISHER
   | AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE
   | AuthorizationPrivilege.CREATE_ORGANIZATION
+  // QA server-C1-12 (ruling (a)) — A12's `createInnovationHub`.
+  | AuthorizationPrivilege.CREATE_INNOVATION_HUB
   | AuthorizationPrivilege.ACCESS_VIRTUAL_ASSISTANT
   // --- T070m additions (reachability.spec.ts) — three purpose-built
   // privileges 032 authored (not this feature), but which gate A3/A11's
@@ -180,6 +186,15 @@ export const PRIVILEGE_GRANTS: Record<ManagedPrivilege, PrivilegeGrant> = {
     owningCredentials: [AuthorizationCredential.PLATFORM_SUPPORT],
     legacyCredentials: [],
   },
+  // --- R-F.3 (2026-09-18, licensing-section-design.md). Platform-anchored
+  // READ for the three console lists the License Manager licenses (spaces /
+  // organizations / users). Slice B: A12's legacy pair, which reached those
+  // lists via PLATFORM_ADMIN, is gone.
+  [AuthorizationPrivilege.PLATFORM_LICENSING_LISTS_READ]: {
+    anchor: 'platform',
+    owningCredentials: [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
+    legacyCredentials: [],
+  },
   // --- A15 forum (T035). Mirrors the reach of the `global-support`
   // platform-subtree cascade it replaces (research D4/D6).
   [AuthorizationPrivilege.PLATFORM_FORUM_MANAGE]: {
@@ -257,6 +272,16 @@ export const PRIVILEGE_GRANTS: Record<ManagedPrivilege, PrivilegeGrant> = {
     ],
     legacyCredentials: [],
   },
+  // --- A12 create-hub half (QA server-C1-12, ruling (a)). Platform License
+  // Manager's own non-cascading account rule. The legacy GA/GLM/GS reach via
+  // `manageGlobalRoles` is gone at Slice B (T076 re-anchored that rule onto
+  // Platform Content Full Access). The account admin never held it (unlike
+  // CREATE_SPACE/_PACK/_VIRTUAL).
+  [AuthorizationPrivilege.CREATE_INNOVATION_HUB]: {
+    anchor: 'account',
+    owningCredentials: [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
+    legacyCredentials: [],
+  },
   // --- No A-row of its own (not one of A1-A21) — included for
   // completeness since T035 re-anchors it additively alongside
   // `ACCESS_VIRTUAL_ASSISTANT`'s pre-existing grant. Not consumed by any
@@ -290,9 +315,18 @@ export const PRIVILEGE_GRANTS: Record<ManagedPrivilege, PrivilegeGrant> = {
 
   // --- A16 (T038) — the one bare-READ exception; see the `ManagedPrivilege`
   // doc comment above.
+  // QA server-C1-1 (ruling (b′) "mover-only reads"): platform-resource-admin
+  // ALSO holds READ in every space's platformRolesAccess — A9 target
+  // resolution, on a NON-cascading rule (the space itself + its About card,
+  // never its content). A grant-set fact, so it is declared here and the
+  // derivation reports it; A16 accepts it as a declared extra reacher
+  // (`a.row.surfaces.ts`), not as an owner of the cross-space read family.
   [AuthorizationPrivilege.READ]: {
     anchor: 'space',
-    owningCredentials: [AuthorizationCredential.PLATFORM_SPACES_READER],
+    owningCredentials: [
+      AuthorizationCredential.PLATFORM_SPACES_READER,
+      AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+    ],
     legacyCredentials: [],
   },
 };
@@ -347,7 +381,7 @@ export const TREE_SCOPED_PRIVILEGE_GRANTS: {
     // A13 — license-plan / license-policy CRUD, re-anchored (in intent,
     // not in literal gate) onto `platform-settings-admin` (T040).
     // GLOBAL_ADMIN added to each (corr-server-7/corr-server-10 fix): the
-    // five A13 resolvers now check a resolver-local synthetic policy
+    // six A13 resolvers now check a resolver-local synthetic policy
     // (`GLOBAL_POLICY_LICENSE_DEFINITION_ADMIN`) that grants bare
     // CREATE/UPDATE/DELETE to exactly {platform-settings-admin,
     // global-admin, global-support, global-license-manager,
@@ -372,6 +406,26 @@ export const TREE_SCOPED_PRIVILEGE_GRANTS: {
     [AuthorizationPrivilege.DELETE]: {
       anchor: 'licensing-framework',
       owningCredentials: [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
+      legacyCredentials: [],
+    },
+  },
+  // QA server-C2-d (ruling (a)) — A6's `eventOnOrganizationVerification`.
+  // The verification policy is `reset()` and built from its own rules alone
+  // (`organization.verification.service.authorization.ts`): Platform Support
+  // gets READ + UPDATE + GRANT (UPDATE passes the resolver, GRANT the
+  // MANUALLY_VERIFY / RESET / REOPEN / ARCHIVE lifecycle guards); the legacy
+  // `organizationGlobalAdminsAll` rule that granted CRUD+GRANT to GA/GS and —
+  // a READ role holding GRANT — GLOBAL_COMMUNITY_READ is deleted (Slice B).
+  // Tree-scoped because UPDATE/GRANT are baseline verbs reused everywhere.
+  'organization-verification': {
+    [AuthorizationPrivilege.UPDATE]: {
+      anchor: 'organization-verification',
+      owningCredentials: [AuthorizationCredential.PLATFORM_SUPPORT],
+      legacyCredentials: [],
+    },
+    [AuthorizationPrivilege.GRANT]: {
+      anchor: 'organization-verification',
+      owningCredentials: [AuthorizationCredential.PLATFORM_SUPPORT],
       legacyCredentials: [],
     },
   },

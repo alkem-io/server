@@ -7,7 +7,6 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
-import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { Actor } from './actor.entity';
 import { ActorFullResolverFields } from './actor.full.resolver.fields';
 import { ActorResolverFields } from './actor.resolver.fields';
@@ -26,9 +25,8 @@ import { ActorAuthorizationService } from './actor.service.authorization';
     CredentialModule,
     PlatformAuthorizationPolicyModule,
     // For the role-set membership-cache invalidation on direct credential
-    // grant/revoke (both are leaf modules — no cycle back into actor).
+    // grant/revoke (a leaf module — no cycle back into actor).
     RoleSetCacheModule,
-    EntityResolverModule,
   ],
   providers: [
     ActorService,

@@ -974,6 +974,10 @@ enum AuthorizationCredential {
   ACCOUNT_ADMIN
   ASSISTANT_ACCESS
   BETA_TESTER
+  FEATURE_BETA_TESTER
+  FEATURE_ORGANIZATION_CREATOR
+  FEATURE_VC_CAMPAIGN
+  FEATURE_VIRTUAL_ASSISTANT
   GLOBAL_ADMIN
   GLOBAL_ANONYMOUS
   GLOBAL_COMMUNITY_READ
@@ -987,7 +991,16 @@ enum AuthorizationCredential {
   ORGANIZATION_ADMIN
   ORGANIZATION_ASSOCIATE
   ORGANIZATION_OWNER
+  PLATFORM_AUDIT_READER
+  PLATFORM_CONTENT_FULL_ACCESS
+  PLATFORM_LICENSE_MANAGER
   PLATFORM_OPERATIONS_ADMIN
+  PLATFORM_RESOURCE_ADMIN
+  PLATFORM_ROLES_ADMIN
+  PLATFORM_SETTINGS_ADMIN
+  PLATFORM_SPACES_READER
+  PLATFORM_SUPPORT
+  PLATFORM_USERS_ADMIN
   SPACE_ADMIN
   SPACE_LEAD
   SPACE_MEMBER
@@ -1100,6 +1113,9 @@ enum AuthorizationPrivilege {
   CREATE_VIRTUAL
   CREATE_WHITEBOARD
   DELETE
+  DELETE_ORGANIZATION
+  FEATURE_ROLE_ASSIGN
+  FEATURE_ROLE_HOLDERS_READ
   FILE_DELETE
   FILE_UPLOAD
   GRANT
@@ -1109,8 +1125,16 @@ enum AuthorizationPrivilege {
   MOVE_POST
   MOVE_TASK
   PLATFORM_ADMIN
+  PLATFORM_AUDIT_READ
+  PLATFORM_CONTENT_FULL_ACCESS
+  PLATFORM_FORUM_MANAGE
+  PLATFORM_LICENSING_LISTS_READ
   PLATFORM_OPERATIONS_ADMIN
+  PLATFORM_ROLE_HOLDERS_READ
   PLATFORM_SETTINGS_ADMIN
+  PLATFORM_SUPPORT_LISTS_READ
+  PLATFORM_SUPPORT_ORG_RESOURCES
+  PLATFORM_USERS_ADMIN
   PUBLIC_SHARE
   READ
   READ_ABOUT
@@ -1129,12 +1153,14 @@ enum AuthorizationPrivilege {
   ROLESET_ENTRY_ROLE_INVITE
   ROLESET_ENTRY_ROLE_INVITE_ACCEPT
   ROLESET_ENTRY_ROLE_JOIN
+  SET_SERVICE_PROFILE
   TRANSFER_RESOURCE_ACCEPT
   TRANSFER_RESOURCE_OFFER
   UPDATE
   UPDATE_CALLOUT_PUBLISHER
   UPDATE_CONTENT
   UPDATE_INNOVATION_FLOW
+  UPDATE_NAMEID
 }
 
 type Calendar {
@@ -1529,6 +1555,17 @@ type CalloutSettingsFraming {
   Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Absent / null ⇒ AUTO (full computed set).
   """
   selection: CalloutSelectionSettings
+  """
+  Card-variant settings for a Subspaces collection callout. Present only on SPACES callouts. Absent / null ⇒ COMPACT.
+  """
+  spaces: CalloutSpacesSettings
+}
+
+type CalloutSpacesSettings {
+  """
+  The card variant to render for each subspace: COMPACT (default) or EXPANDED.
+  """
+  cardVariant: SpaceCollectionCardVariant!
 }
 
 enum CalloutVisibility {
@@ -1674,6 +1711,10 @@ type CollaboraDocument {
   documentType: CollaboraDocumentType!
   """The ID of the entity"""
   id: UUID!
+  """
+  An authorized, same-origin preview image endpoint for the current saved document, or null when there is no backing file to preview. NOT a bearer URL: every request against it is independently authorized against the current document READ policy.
+  """
+  previewUrl: String
   """The Profile for this CollaboraDocument."""
   profile: Profile!
   """The date at which the entity was last updated."""
@@ -2000,17 +2041,35 @@ type ContributorCollectionCounts {
 }
 
 type ContributorCollectionItem {
+  """
+  Organizations only. The count of platform-wide associates of the organization (distinct users holding its associate role) — the same number as the organization's 'associates' metric; NOT the number of members of this space. Null for Users and Virtual Contributors.
+  """
+  associatesCount: Int
   avatarUrl: String
   displayName: String!
   id: UUID!
+  """
+  Users only. The calendar month in which the user's current membership of the space that owns this callout began ("member since"): the creation date of the member credential, truncated to the first day of the month, 00:00 UTC. Leaving and re-joining restarts it. Null for Organizations and Virtual Contributors, and for a user listed without the member role.
+  """
+  joinedDate: DateTime
   """
   Location of the contributor; null for Virtual Contributors or when not readable.
   """
   location: ContributorLocation
   """The role label for this contributor (lead/admin/member)."""
   roleLabel: String
+  """All contributor types. The profile tagline, trimmed; null when empty."""
+  tagline: String
+  """
+  All contributor types. The profile tagsets merged in order — Users: skills, then keywords; Organizations and Virtual Contributors: keywords, then capabilities. Blank tags removed; duplicates (ignoring case) kept once, first occurrence wins; never the default tagset. Empty list when none. Clients decide how many to show.
+  """
+  tags: [String!]
   type: ActorType!
   url: String
+  """
+  Organizations only. The organization's website, trimmed; null when empty or when it is not an absolute http/https URL. Null for Users and Virtual Contributors.
+  """
+  website: String
 }
 
 """The default display mode for a contributor-collection callout framing."""
@@ -2047,6 +2106,10 @@ type Conversation {
   messaging: Messaging!
   """The room for this Conversation."""
   room: Room!
+  """
+  The storage bucket holding this Conversation's message attachments (feature 013). READ-gated to conversation members; null for a conversation that has no bucket yet (an accepted, backfillable state).
+  """
+  storageBucket: StorageBucket
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
 }
@@ -2509,6 +2572,8 @@ type CreateCalloutSettingsFramingData {
   Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
   """
   selection: CreateCalloutSelectionSettingsData
+  """Card-variant settings. Provide only when framing.type = SPACES."""
+  spaces: CreateCalloutSpacesSettingsData
 }
 
 input CreateCalloutSettingsFramingInput {
@@ -2522,6 +2587,8 @@ input CreateCalloutSettingsFramingInput {
   Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
   """
   selection: CreateCalloutSelectionSettingsInput
+  """Card-variant settings. Provide only when framing.type = SPACES."""
+  spaces: CreateCalloutSpacesSettingsInput
 }
 
 input CreateCalloutSettingsInput {
@@ -2529,6 +2596,20 @@ input CreateCalloutSettingsInput {
   framing: CreateCalloutSettingsFramingInput
   """Visibility of the Callout. Defaults to PUBLISHED."""
   visibility: CalloutVisibility
+}
+
+type CreateCalloutSpacesSettingsData {
+  """
+  The card variant (COMPACT or EXPANDED). Defaults to COMPACT when omitted.
+  """
+  cardVariant: SpaceCollectionCardVariant
+}
+
+input CreateCalloutSpacesSettingsInput {
+  """
+  The card variant (COMPACT or EXPANDED). Defaults to COMPACT when omitted.
+  """
+  cardVariant: SpaceCollectionCardVariant
 }
 
 type CreateCalloutTaskBoardData {
@@ -2649,6 +2730,10 @@ input CreateContributionOnCalloutInput {
   link: CreateLinkInput
   memo: CreateMemoInput
   post: CreatePostInput
+  """
+  Send the space-member and space-admin contribution notifications. Defaults to true; only an explicit false suppresses. The activity log entry is written regardless.
+  """
+  sendNotification: Boolean = true
   """The sort order to assign to this Contribution."""
   sortOrder: Float
   """
@@ -3293,6 +3378,10 @@ enum CredentialType {
   ACCOUNT_LICENSE_PLUS
   ASSISTANT_ACCESS
   BETA_TESTER
+  FEATURE_BETA_TESTER
+  FEATURE_ORGANIZATION_CREATOR
+  FEATURE_VC_CAMPAIGN
+  FEATURE_VIRTUAL_ASSISTANT
   GLOBAL_ADMIN
   GLOBAL_ANONYMOUS
   GLOBAL_COMMUNITY_READ
@@ -3306,7 +3395,16 @@ enum CredentialType {
   ORGANIZATION_ADMIN
   ORGANIZATION_ASSOCIATE
   ORGANIZATION_OWNER
+  PLATFORM_AUDIT_READER
+  PLATFORM_CONTENT_FULL_ACCESS
+  PLATFORM_LICENSE_MANAGER
   PLATFORM_OPERATIONS_ADMIN
+  PLATFORM_RESOURCE_ADMIN
+  PLATFORM_ROLES_ADMIN
+  PLATFORM_SETTINGS_ADMIN
+  PLATFORM_SPACES_READER
+  PLATFORM_SUPPORT
+  PLATFORM_USERS_ADMIN
   SPACE_ADMIN
   SPACE_FEATURE_MEMO_MULTI_USER
   SPACE_FEATURE_MEMO_SIGNING
@@ -3833,6 +3931,34 @@ interface InAppNotificationPayload {
   type: NotificationEventPayload!
 }
 
+type InAppNotificationPayloadOrganizationAssociateActor implements InAppNotificationPayload {
+  """The user who applied, responded to an invitation, or joined."""
+  actor: Actor
+  """The underlying application — set for the three application events."""
+  application: Application
+  """
+  Offered extra roles that could not be granted (set only on the accepted-invitation event).
+  """
+  extraRolesWithheld: [RoleName!]
+  """The underlying invitation — set for the two response events."""
+  invitation: Invitation
+  """The organization the actor is associated with."""
+  organization: Organization
+  """The payload type."""
+  type: NotificationEventPayload!
+}
+
+type InAppNotificationPayloadOrganizationAssociateInvitation implements InAppNotificationPayload {
+  """
+  The underlying invitation — offered role(s) and message. Null once the invitation record no longer resolves (e.g. the organization was deleted).
+  """
+  invitation: Invitation
+  """The organization the invitation is for."""
+  organization: Organization
+  """The payload type."""
+  type: NotificationEventPayload!
+}
+
 type InAppNotificationPayloadOrganizationMessageDirect implements InAppNotificationPayload {
   """The message content."""
   message: String!
@@ -4232,6 +4358,10 @@ type Invitation {
   Additional roles to assign to the Actor, in addition to the entry Role.
   """
   extraRoles: [RoleName!]!
+  """
+  Offered extra roles that could not be granted when this invitation was accepted (organizations only, cap consumed in the meantime). Transient: set only on the object returned by the accept mutation, never persisted, and null everywhere else.
+  """
+  extraRolesWithheld: [RoleName!]
   """The ID of the entity"""
   id: UUID!
   """Whether to also add the invited actor to the parent community."""
@@ -4920,6 +5050,25 @@ type MeQueryResults {
   The total number of unread notifications for the current authenticated user across all notification types.
   """
   notificationsUnreadCount: Float!
+  """
+  The current authenticated user's own pending organization applications.
+  """
+  organizationApplications(
+    """The state names you want to filter on"""
+    states: [String!]
+  ): [OrganizationApplicationResult!]!
+  """The current authenticated user's own pending organization invitations."""
+  organizationInvitations(
+    """The state names you want to filter on"""
+    states: [String!]
+  ): [OrganizationInvitationResult!]!
+  """
+  The number of the current authenticated user's own pending organization invitations.
+  """
+  organizationInvitationsCount(
+    """The state names you want to filter on"""
+    states: [String!]
+  ): Float!
   """The Spaces the current user is a member of as a flat list."""
   spaceMembershipsFlat: [CommunityMembershipResult!]!
   """The hierarchy of the Spaces the current user is a member."""
@@ -5021,6 +5170,10 @@ type MemoSigningPrepareResult {
 
 """A message that was sent in a chat room"""
 type Message {
+  """
+  Media attachments; unavailable documents retain their event filename without a download URL.
+  """
+  attachments: [MessageAttachment!]!
   """The id for the message event."""
   id: MessageID!
   """The message being sent"""
@@ -5033,6 +5186,23 @@ type Message {
   threadID: MessageID
   """The server timestamp in UTC"""
   timestamp: Float!
+}
+
+type MessageAttachment {
+  """The filename / display name of the attachment."""
+  displayName: String!
+  """The pixel height of the attachment (images only)."""
+  height: Int
+  """The file-service document id of the attachment."""
+  id: UUID
+  """The MIME type of the attachment."""
+  mimeType: String
+  """The size of the attachment in bytes."""
+  size: Int
+  """The Alkemio document URL (authorized via conversation policy)."""
+  url: String
+  """The pixel width of the attachment (images only)."""
+  width: Int
 }
 
 """
@@ -5084,21 +5254,27 @@ type MigrateEmbeddings {
 }
 
 enum MimeType {
+  AAC
   AVIF
   BMP
   CSV
   DOC
   DOCX
+  FLAC
   GIF
   HEIC
   HEIF
   ICS
   JPEG
   JPG
+  MP3
+  MP4
   ODG
   ODP
   ODS
   ODT
+  OGA
+  OGV
   PDF
   PNG
   POTM
@@ -5108,8 +5284,12 @@ enum MimeType {
   PPT
   PPTM
   PPTX
+  QUICKTIME
   RTF
   SVG
+  WAV
+  WEBA
+  WEBM
   WEBP
   XLS
   XLSX
@@ -5261,7 +5441,7 @@ type Mutation {
   """Allow updating the state flags of a particular rule."""
   adminCommunicationUpdateRoomState(roomStateData: CommunicationAdminUpdateRoomStateInput!): Boolean!
   """
-  Removes one category from the platform Forum's active discussionCategories list. Refuses while any Discussion still carries the category. Idempotent for an already-absent category. The enum member is never removed. Requires PLATFORM_ADMIN. Audited (PLATFORM_OPERATIONS).
+  Removes one category from the platform Forum's active discussionCategories list. Refuses while any Discussion still carries the category. Idempotent for an already-absent category. The enum member is never removed. Requires PLATFORM_FORUM_MANAGE. Audited (PLATFORM_OPERATIONS).
   """
   adminForumRemoveDiscussionCategory(removeData: ForumRemoveDiscussionCategoryInput!): Forum!
   """Delete a Kratos identity by ID."""
@@ -5276,7 +5456,7 @@ type Mutation {
   adminLicensePolicyDeleteCredentialRule(deleteData: DeleteLicensePolicyCredentialRuleInput!): LicensingCredentialBasedPolicyCredentialRule!
   """Updates a CredentialRule on the LicensePolicy."""
   adminLicensePolicyUpdateCredentialRule(updateData: UpdateLicensePolicyCredentialRuleInput!): LicensingCredentialBasedPolicyCredentialRule!
-  """Platform admin: revoke a named user's MCP API key. Idempotent."""
+  """Platform Users Admin: revoke a named user's MCP API key. Idempotent."""
   adminRevokeMcpApiKey(revokeData: AdminRevokeMcpApiKeyInput!): McpApiKey!
   """
   Ingests new data into Elasticsearch from scratch. This will delete all existing data and ingest new data from the source. This is an admin only operation.
@@ -5293,11 +5473,11 @@ type Mutation {
   """
   adminUserAccountDelete(userID: UUID!): User!
   """
-  Change a user's login email synchronously, acting as a platform administrator. The admin is responsible for verifying the subject user's identity out-of-band — the platform does NOT send a confirmation message to the new mailbox and does NOT require the new mailbox to prove ownership. Validates uniqueness, commits Kratos → Alkemio with bounded retry, invalidates the subject's existing sessions, and sends a security-signal notification to the old address. Requires PLATFORM_ADMIN.
+  Change a user's login email synchronously, acting as a platform administrator. The admin is responsible for verifying the subject user's identity out-of-band — the platform does NOT send a confirmation message to the new mailbox and does NOT require the new mailbox to prove ownership. Validates uniqueness, commits Kratos → Alkemio with bounded retry, invalidates the subject's existing sessions, and sends a security-signal notification to the old address. Requires PLATFORM_USERS_ADMIN.
   """
   adminUserEmailChange(adminUserEmailChangeData: AdminUserEmailChangeInput!): UserEmailChangeResult!
   """
-  Reconcile an outstanding drift-detected state for a subject user by force-aligning Alkemio and Kratos to a canonical email chosen by the admin. Requires PLATFORM_ADMIN.
+  Reconcile an outstanding drift-detected state for a subject user by force-aligning Alkemio and Kratos to a canonical email chosen by the admin. Requires PLATFORM_USERS_ADMIN.
   """
   adminUserEmailChangeDriftResolve(adminUserEmailChangeDriftResolveData: AdminUserEmailChangeDriftResolveInput!): UserEmailChangeResult!
   """Create a test customer on wingback."""
@@ -5322,6 +5502,8 @@ type Mutation {
   assignLicensePlanToAccount(planData: AssignLicensePlanToAccount!): Account!
   """Assign the specified LicensePlan to a Space."""
   assignLicensePlanToSpace(planData: AssignLicensePlanToSpace!): Space!
+  """Assigns an Organization to a role on the Platform."""
+  assignPlatformRoleToOrganization(roleData: AssignPlatformRoleInput!): Organization!
   """Assigns a User to a role on the Platform."""
   assignPlatformRoleToUser(roleData: AssignPlatformRoleInput!): User!
   """
@@ -5598,6 +5780,8 @@ type Mutation {
   removeMessageOnRoom(messageData: RoomRemoveMessageInput!): MessageID!
   """Removes an email address from the platform notification blacklist"""
   removeNotificationEmailFromBlacklist(input: NotificationEmailAddressInput!): [String!]!
+  """Removes an Organization from a Role on the Platform."""
+  removePlatformRoleFromOrganization(roleData: RemovePlatformRoleInput!): Organization!
   """Removes a User from a Role on the Platform."""
   removePlatformRoleFromUser(roleData: RemovePlatformRoleInput!): User!
   """
@@ -5638,6 +5822,10 @@ type Mutation {
   Replace a Whiteboard from another Whiteboard through the live collaboration room. Content and media are copied server-side; snapshot bytes never pass through GraphQL.
   """
   replaceWhiteboardContentFromSource(input: ReplaceWhiteboardContentFromSourceInput!): Whiteboard!
+  """
+  Sends the invitation email of an open platform invitation again (Space or Organization role sets); throttled per role set and address, and counted against an hourly email budget.
+  """
+  resendPlatformInvitation(resendData: ResendPlatformInvitationInput!): PlatformInvitation!
   """Resets the interaction with the VC by recreating the room."""
   resetConversationVc(input: ConversationVcResetInput!): Conversation!
   """Reset all license plans on Accounts"""
@@ -5893,10 +6081,15 @@ input NotificationEmailAddressInput {
 }
 
 enum NotificationEvent {
+  ORGANIZATION_ADMIN_ASSOCIATE_APPLICATION
+  ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_ACCEPTED
+  ORGANIZATION_ADMIN_ASSOCIATE_INVITATION_DECLINED
+  ORGANIZATION_ADMIN_ASSOCIATE_JOINED
   ORGANIZATION_ADMIN_MENTIONED
   ORGANIZATION_ADMIN_MESSAGE
   ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION
   ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED
+  ORGANIZATION_ASSOCIATE_INVITATION_USER_PLATFORM
   ORGANIZATION_MESSAGE_SENDER
   PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED
   PLATFORM_ADMIN_SPACE_CREATED
@@ -5935,6 +6128,9 @@ enum NotificationEvent {
   USER_EMAIL_CHANGE_SPACE_ADMIN_NOTIFICATION
   USER_MENTIONED
   USER_MESSAGE
+  USER_ORGANIZATION_ASSOCIATE_APPLICATION_APPROVED
+  USER_ORGANIZATION_ASSOCIATE_APPLICATION_DECLINED
+  USER_ORGANIZATION_ASSOCIATE_INVITATION
   USER_PASSWORD_CHANGE_SECURITY_SIGNAL
   USER_SIGN_UP_WELCOME
   USER_SPACE_COMMUNITY_APPLICATION_DECLINED
@@ -5960,6 +6156,8 @@ enum NotificationEventInAppState {
 }
 
 enum NotificationEventPayload {
+  ORGANIZATION_ASSOCIATE_ACTOR
+  ORGANIZATION_ASSOCIATE_INVITATION
   ORGANIZATION_MESSAGE_DIRECT
   ORGANIZATION_MESSAGE_ROOM
   PLATFORM_FORUM_DISCUSSION
@@ -6080,6 +6278,10 @@ type Organization implements ActorFull & Groupable {
   legalEntityName: String
   """Metrics about the activity within this Organization."""
   metrics: [NVP!]
+  """
+  The viewer's eligibility to apply to, or join, this organization as an associate.
+  """
+  myAssociateEligibility: OrganizationAssociateEligibility!
   """A name identifier of the entity, unique within a given scope."""
   nameID: NameID!
   """The profile for this Actor."""
@@ -6101,6 +6303,39 @@ type Organization implements ActorFull & Groupable {
   website: String
 }
 
+type OrganizationApplicationResult {
+  """The application itself"""
+  application: Application!
+  """ID for the pending organization application"""
+  id: UUID!
+  """The organization the application is for"""
+  organization: Organization!
+}
+
+type OrganizationAssociateEligibility {
+  """
+  Whether the viewer may apply to associate with this organization right now.
+  """
+  canApply: Boolean!
+  """
+  Whether the viewer may join this organization directly, with one click (domain match).
+  """
+  canJoinDirectly: Boolean!
+  """Why the viewer is (or is not) eligible, precedence-ordered."""
+  reason: OrganizationAssociateEligibilityReason!
+}
+
+enum OrganizationAssociateEligibilityReason {
+  ALREADY_ASSOCIATE
+  APPLICATIONS_NOT_ACCEPTED
+  APPLICATION_PENDING
+  APPLY_NOT_GRANTED
+  ELIGIBLE_TO_APPLY
+  ELIGIBLE_TO_JOIN
+  INVITATION_PENDING
+  NOT_AUTHENTICATED
+}
+
 input OrganizationAuthorizationResetInput {
   """
   The identifier of the Organization whose Authorization Policy should be reset.
@@ -6116,6 +6351,15 @@ input OrganizationFilterInput {
   website: String
 }
 
+type OrganizationInvitationResult {
+  """ID for the pending organization invitation"""
+  id: UUID!
+  """The invitation itself"""
+  invitation: Invitation!
+  """The organization the invitation is for"""
+  organization: Organization!
+}
+
 type OrganizationSettings {
   """The membership settings for this Organization."""
   membership: OrganizationSettingsMembership!
@@ -6124,6 +6368,8 @@ type OrganizationSettings {
 }
 
 type OrganizationSettingsMembership {
+  """Allow registered users to apply to associate with this Organization."""
+  allowApplications: Boolean!
   """Allow Spaces to invite this Organization to join them."""
   allowSpaceInvitations: Boolean!
   """
@@ -6327,7 +6573,7 @@ type PlatformAdminQueryResults {
   """
   latestUserEmailChangeAuditEntry(userID: UUID!): UserEmailChangeAuditEntry
   """
-  MCP API keys belonging to the named user. Platform admins only. Keys bound to a system actor are never returned.
+  MCP API keys belonging to the named user. Platform Users Admin only. Keys bound to a system actor are never returned.
   """
   mcpApiKeys(userID: UUID!): [McpApiKey!]!
   """
@@ -6376,7 +6622,7 @@ type PlatformAdminQueryResults {
     withTags: Boolean
   ): PaginatedUsers!
   """
-  The singleton virtual-assistant actor, including its current admin capability grant and ID. This is only available to Platform Admins, and is the discovery path for updateAssistantActorCapabilities.
+  The singleton virtual-assistant actor, including its current admin capability grant and ID. Only available to Platform Operations Admins (and legacy holders); the discovery path for updateAssistantActorCapabilities.
   """
   virtualAssistant: VirtualAssistant!
   """
@@ -7321,6 +7567,11 @@ input ReplaceWhiteboardContentFromSourceInput {
   targetWhiteboardID: UUID!
 }
 
+input ResendPlatformInvitationInput {
+  """The open platform invitation whose email is sent again."""
+  ID: UUID!
+}
+
 input RevokeAuthorizationCredentialInput {
   """The resource to which access is being removed."""
   resourceID: String!
@@ -7392,6 +7643,10 @@ enum RoleName {
   ADMIN
   ANONYMOUS
   ASSOCIATE
+  FEATURE_BETA_TESTER
+  FEATURE_ORGANIZATION_CREATOR
+  FEATURE_VC_CAMPAIGN
+  FEATURE_VIRTUAL_ASSISTANT
   GLOBAL_ADMIN
   GLOBAL_COMMUNITY_READER
   GLOBAL_LICENSE_MANAGER
@@ -7404,8 +7659,17 @@ enum RoleName {
   MEMBER
   OWNER
   PLATFORM_ASSISTANT_ACCESS
+  PLATFORM_AUDIT_READER
   PLATFORM_BETA_TESTER
+  PLATFORM_CONTENT_FULL_ACCESS
+  PLATFORM_LICENSE_MANAGER
   PLATFORM_OPERATIONS_ADMIN
+  PLATFORM_RESOURCE_ADMIN
+  PLATFORM_ROLES_ADMIN
+  PLATFORM_SETTINGS_ADMIN
+  PLATFORM_SPACES_READER
+  PLATFORM_SUPPORT
+  PLATFORM_USERS_ADMIN
   PLATFORM_VC_CAMPAIGN
   REGISTERED
 }
@@ -7484,7 +7748,7 @@ type RoleSet {
   """
   organizationsInRoles(roles: [RoleName!]!): [OrganizationsInRolesResponse!]!
   """
-  Invitations to join this RoleSet in an entry role for users not yet on the Alkemio platform.
+  Open (not yet consumed) invitations to join this RoleSet in an entry role for people not yet on the Alkemio platform.
   """
   platformInvitations: [PlatformInvitation!]!
   """The Role Definitions from this RoleSet to return."""
@@ -7560,6 +7824,7 @@ enum RoleSetInvitationResultType {
   ALREADY_INVITED_TO_PLATFORM_AND_ROLE_SET
   ALREADY_INVITED_TO_ROLE_SET
   ALREADY_MEMBER_OF_ROLE_SET
+  EXTRA_ROLE_LIMIT_REACHED
   INVITATION_TO_PARENT_NOT_AUTHORIZED
   INVITED_TO_PLATFORM_AND_ROLE_SET
   INVITED_TO_ROLE_SET
@@ -7744,6 +8009,10 @@ input RoomRemoveReactionToMessageInput {
 }
 
 input RoomSendMessageInput {
+  """
+  The file-service document ids of attachments to send with the message (one per event).
+  """
+  attachments: [UUID!]
   """The message being sent"""
   message: String!
   """The Room the message is being sent to"""
@@ -7751,6 +8020,10 @@ input RoomSendMessageInput {
 }
 
 input RoomSendMessageReplyInput {
+  """
+  The file-service document ids of attachments to send with the message (one per event).
+  """
+  attachments: [UUID!]
   """The message being sent"""
   message: String!
   """The Room the message is being sent to"""
@@ -8218,6 +8491,14 @@ type SpaceAboutMembership {
   roleSetID: UUID!
 }
 
+"""
+The card variant of a Subspaces (SPACES) collection callout. COMPACT (default) shows the identity block only; EXPANDED adds the What/Why/Who excerpts.
+"""
+enum SpaceCollectionCardVariant {
+  COMPACT
+  EXPANDED
+}
+
 input SpaceFilterInput {
   """Return Spaces with a Visibility matching one of the provided types."""
   visibilities: [SpaceVisibility!]
@@ -8373,6 +8654,7 @@ type StorageAggregatorParent {
 
 enum StorageAggregatorType {
   ACCOUNT
+  CONVERSATION
   ORGANIZATION
   PLATFORM
   SPACE
@@ -8999,6 +9281,8 @@ input UpdateCalloutSettingsFramingInput {
   Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
   """
   selection: UpdateCalloutSelectionSettingsInput
+  """Card-variant settings. Provide only when framing.type = SPACES."""
+  spaces: UpdateCalloutSpacesSettingsInput
 }
 
 input UpdateCalloutSettingsInput {
@@ -9006,6 +9290,13 @@ input UpdateCalloutSettingsInput {
   framing: UpdateCalloutSettingsFramingInput
   """Visibility of the Callout."""
   visibility: CalloutVisibility
+}
+
+input UpdateCalloutSpacesSettingsInput {
+  """
+  The card variant (COMPACT or EXPANDED). When omitted, the stored value is unchanged.
+  """
+  cardVariant: SpaceCollectionCardVariant
 }
 
 input UpdateCalloutVisibilityInput {
@@ -9349,6 +9640,8 @@ input UpdateOrganizationSettingsInput {
 }
 
 input UpdateOrganizationSettingsMembershipInput {
+  """Allow registered users to apply to associate with this Organization."""
+  allowApplications: Boolean
   """Allow Spaces to invite this Organization to join them."""
   allowSpaceInvitations: Boolean
   """
@@ -9717,6 +10010,18 @@ input UpdateUserSettingsNotificationInput {
 
 input UpdateUserSettingsNotificationOrganizationInput {
   """
+  Receive a notification when someone applies to associate with an organisation you administer
+  """
+  adminAssociateApplicationReceived: NotificationSettingInput
+  """
+  Receive a notification when someone responds to an invitation to associate with an organisation you administer
+  """
+  adminAssociateInvitationResponse: NotificationSettingInput
+  """
+  Receive a notification when someone joins an organisation you administer as an associate
+  """
+  adminAssociateJoined: NotificationSettingInput
+  """
   Receive a notification when the organization you are admin of is mentioned
   """
   adminMentioned: NotificationSettingInput
@@ -9837,6 +10142,14 @@ input UpdateUserSettingsNotificationUserInput {
 }
 
 input UpdateUserSettingsNotificationUserMembershipInput {
+  """
+  Receive a notification when an organisation decides on my application to associate
+  """
+  organizationAssociateApplicationDecided: NotificationSettingInput
+  """
+  Receive a notification when I am invited to associate with an organisation
+  """
+  organizationAssociateInvitationReceived: NotificationSettingInput
   """Receive a notification for community invitation"""
   spaceCommunityInvitationReceived: NotificationSettingInput
   """
@@ -10349,6 +10662,18 @@ type UserSettingsNotificationChannels {
 
 type UserSettingsNotificationOrganization {
   """
+  Receive a notification when someone applies to associate with an organisation you administer
+  """
+  adminAssociateApplicationReceived: UserSettingsNotificationChannels!
+  """
+  Receive a notification when someone responds to an invitation to associate with an organisation you administer
+  """
+  adminAssociateInvitationResponse: UserSettingsNotificationChannels!
+  """
+  Receive a notification when someone joins an organisation you administer as an associate
+  """
+  adminAssociateJoined: UserSettingsNotificationChannels!
+  """
   Receive a notification when the organization you are admin of is mentioned
   """
   adminMentioned: UserSettingsNotificationChannels!
@@ -10467,6 +10792,14 @@ type UserSettingsNotificationUser {
 }
 
 type UserSettingsNotificationUserMembership {
+  """
+  Receive a notification when an organisation decides on my application to associate
+  """
+  organizationAssociateApplicationDecided: UserSettingsNotificationChannels!
+  """
+  Receive a notification when I am invited to associate with an organisation
+  """
+  organizationAssociateInvitationReceived: UserSettingsNotificationChannels!
   """Receive a notification when I am invited to join a Space community"""
   spaceCommunityInvitationReceived: UserSettingsNotificationChannels!
   """

@@ -177,7 +177,41 @@ export class UserResolverFields {
     if (accountVisible) {
       return await this.userService.getAccount(user);
     }
+    // 027 R-F.3 (2026-09-18, server-C2-b advocate/skeptic debate): the
+    // Platform License Manager assigns plans to accounts (A12) but holds no
+    // READ_USER_PII, and Resource Admin accepts account-transfer targets
+    // (A9) but holds no READ_USER_PII either — this field, the only place
+    // the console learns the account id, was closed to both. Open the
+    // account when the actor holds ACCOUNT_LICENSE_MANAGE or
+    // TRANSFER_RESOURCE_ACCEPT on the account's OWN policy: each role's
+    // real privilege on the real resource. No PII crosses here; the
+    // email/phone fields keep their own gate. READ is deliberately
+    // excluded: accounts grant READ to anonymous and registered users, so
+    // checking it here would expose every account id to anyone.
+    const account = await this.userService.getAccount(user);
+    if (this.accountOpenToPlatformRole(actorContext, account)) {
+      return account;
+    }
     return undefined;
+  }
+
+  private accountOpenToPlatformRole(
+    actorContext: ActorContext,
+    account: IAccount
+  ): boolean {
+    return (
+      !!account.authorization &&
+      [
+        AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE,
+        AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT,
+      ].some(privilege =>
+        this.authorizationService.isAccessGranted(
+          actorContext,
+          account.authorization!,
+          privilege
+        )
+      )
+    );
   }
 
   @ResolveField('settings', () => IUserSettings, {

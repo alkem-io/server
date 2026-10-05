@@ -1,5 +1,6 @@
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { Room } from '@domain/communication/room/room.entity';
+import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { Entity, JoinColumn, ManyToOne, OneToMany, OneToOne } from 'typeorm';
 import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
 import { Messaging } from '../messaging/messaging.entity';
@@ -38,4 +39,34 @@ export class Conversation extends AuthorizableEntity implements IConversation {
   })
   @JoinColumn()
   room!: Room;
+
+  // Per-conversation storage for message attachments (feature 013). Created
+  // eagerly in ConversationService.createConversation; the bucket auth mirrors
+  // conversation membership. Optional so the relation isn't required to be
+  // loaded on every fetch.
+  //
+  // cascade is insert/update only (NOT remove): the aggregator's own bucket +
+  // documents + auth are not reachable by a plain cascade-remove, so relying on
+  // remove-cascade would delete the aggregator row while orphaning everything
+  // under it. ConversationService.deleteConversation deletes the aggregator
+  // explicitly (StorageAggregatorService.delete, which cleans bucket + docs +
+  // auth) as the single deletion path (FIX 5).
+  //
+  // The FK constraint name is declared EXPLICITLY because migration
+  // 1782300000002 creates it as `FK_conversation_storageAggregatorId`, not as
+  // TypeORM's generated hash. Without this, entity metadata and the database
+  // disagree and the next `migration:generate` silently emits a DROP of the
+  // named constraint plus a re-CREATE under a hash name — verified against the
+  // live schema before/after this declaration. Same hazard, same treatment as
+  // `Document.externalReference`'s index declarations.
+  @OneToOne(() => StorageAggregator, {
+    eager: false,
+    cascade: ['insert', 'update'],
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({
+    name: 'storageAggregatorId',
+    foreignKeyConstraintName: 'FK_conversation_storageAggregatorId',
+  })
+  storageAggregator?: StorageAggregator;
 }

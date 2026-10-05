@@ -185,6 +185,7 @@ export type AlkemioConfig = {
       timeout: number;
       retries: number;
       enabled: boolean;
+      matrix_media_bucket_id: string;
     };
     collabora: {
       wopi_service_url: string;
@@ -282,6 +283,14 @@ export type AlkemioConfig = {
       enabled: boolean;
       /** Leading-edge email suppression window per (recipient, callout) in seconds. */
       email_suppression_window_seconds: number;
+    };
+    platform_invitations: {
+      /** Cooldown between resends of the invitation email to one address on one role set, in seconds. */
+      resend_cooldown_seconds: number;
+      /** Invitation emails (new invitations plus resends) one acting user may cause per hour. */
+      email_budget_per_actor_per_hour: number;
+      /** Invitation emails (new invitations plus resends) one role set may cause per hour. */
+      email_budget_per_role_set_per_hour: number;
     };
     organization_invitations: {
       /** Destination for the zero-admin escalation email; never required to boot. */

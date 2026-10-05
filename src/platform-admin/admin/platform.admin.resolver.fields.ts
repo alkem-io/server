@@ -157,7 +157,18 @@ export class PlatformAdminResolverFields {
   ): Promise<ISpace[]> {
     await this.grantAnyOrFail(
       actorContext,
-      [AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS],
+      [
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
+        // 027 R-F.3 (2026-09-18, licensing-section-design.md) — the License
+        // Manager's half of F1. It owns plan assignment on spaces (A12) and
+        // space visibility (A14), but those privileges are anchored on the
+        // space and licensing-framework trees; on THIS policy it held nothing,
+        // so it could not list what it licenses. A dedicated platform-level
+        // READ admits it to the three lists whose rows it acts on — spaces,
+        // organizations, users — and to no other field here. Each row's
+        // action still meets its own A12/A14 gate.
+        AuthorizationPrivilege.PLATFORM_LICENSING_LISTS_READ,
+      ],
       'platformAdmin Spaces'
     );
 
@@ -182,7 +193,13 @@ export class PlatformAdminResolverFields {
   ): Promise<PaginatedUsers> {
     await this.grantAnyOrFail(
       actorContext,
-      [AuthorizationPrivilege.PLATFORM_USERS_ADMIN],
+      [
+        AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
+        // R-F.3 (2026-09-18): License Manager's console list read — see
+        // `spaces`. Safe on the USERS list only because `User.email` / `phone`
+        // keep their own per-field READ_USER_PII gate (user.resolver.fields.ts).
+        AuthorizationPrivilege.PLATFORM_LICENSING_LISTS_READ,
+      ],
       'platformAdmin Users'
     );
 
@@ -217,6 +234,8 @@ export class PlatformAdminResolverFields {
         // three lists whose rows it acts on — organizations, packs, hubs — and
         // to no other field here. Each row's action still meets its own gate.
         AuthorizationPrivilege.PLATFORM_SUPPORT_LISTS_READ,
+        // R-F.3 (2026-09-18): License Manager's console list read — see `spaces`.
+        AuthorizationPrivilege.PLATFORM_LICENSING_LISTS_READ,
       ],
       'platformAdmin Organizations'
     );
@@ -248,11 +267,15 @@ export class PlatformAdminResolverFields {
   @ResolveField(() => IVirtualAssistant, {
     nullable: false,
     description:
-      'The singleton virtual-assistant actor, including its current admin capability grant and ID. This is only available to Platform Admins, and is the discovery path for updateAssistantActorCapabilities.',
+      'The singleton virtual-assistant actor, including its current admin capability grant and ID. Only available to Platform Operations Admins; the discovery path for updateAssistantActorCapabilities.',
   })
   async virtualAssistant(
     @CurrentActor() actorContext: ActorContext
   ): Promise<IVirtualAssistant> {
+    // 027-platform-role-redesign (server-C1-13, advocate/skeptic debate) —
+    // updateAssistantActorCapabilities is gated on PLATFORM_OPERATIONS_ADMIN,
+    // but this field, the client's only discovery path for it, was still
+    // gated on the broader PLATFORM_ADMIN catch-all (retired at Slice B, T074).
     this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),

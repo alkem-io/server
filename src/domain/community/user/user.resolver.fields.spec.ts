@@ -1,6 +1,11 @@
 import { AuthorizationCredential } from '@common/enums';
 import { AuthenticationType } from '@common/enums/authentication.type';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import {
   DELETED_USER_SENTINEL,
   DELETED_USER_SENTINEL_ID,
@@ -83,6 +88,29 @@ describe('UserResolverFields', () => {
 
       const result = await resolver.email(user, actorContext);
       expect(result).toBe('not accessible');
+    });
+
+    // R-F.3 (2026-09-18): admitting the License Manager to the platformAdmin
+    // users list is safe ONLY because email is gated per field, on the user's
+    // own policy, by READ_USER_PII — never by any platform list-read privilege.
+    it('asks READ_USER_PII on the user policy, and nothing else', async () => {
+      const user = {
+        id: 'user-1',
+        email: 'test@example.com',
+        authorization: { id: 'auth-1' },
+      } as any;
+      const actorContext = { actorID: 'actor-1', credentials: [] } as any;
+
+      authorizationService.isAccessGranted.mockReturnValue(false);
+
+      await resolver.email(user, actorContext);
+
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledTimes(1);
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        actorContext,
+        user.authorization,
+        AuthorizationPrivilege.READ_USER_PII
+      );
     });
   });
 
@@ -176,6 +204,148 @@ describe('UserResolverFields', () => {
       authorizationService.isAccessGranted.mockReturnValue(false);
 
       const result = await resolver.account(user, actorContext);
+      expect(result).toBeUndefined();
+    });
+
+    // 027 R-F.3 (2026-09-18): the Platform License Manager assigns plans to
+    // accounts (A12) but holds no READ_USER_PII — so the field that carries the
+    // account id it needs was closed to it. The account opens when the actor
+    // holds ACCOUNT_LICENSE_MANAGE on the ACCOUNT's own policy: the role's real
+    // privilege on the real resource, never a PII read.
+    it('returns the account to an actor holding ACCOUNT_LICENSE_MANAGE on the account itself, without PII', async () => {
+      const mockAccount = {
+        id: 'account-1',
+        authorization: { id: 'account-auth' },
+      };
+      const user = { id: 'user-1', authorization: { id: 'auth-1' } } as any;
+      const actorContext = { actorID: 'other-user', credentials: [] } as any;
+
+      authorizationService.isAccessGranted.mockImplementation(
+        (_actor: unknown, policy: any, privilege: AuthorizationPrivilege) =>
+          policy?.id === 'account-auth' &&
+          privilege === AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE
+      );
+      userService.getAccount.mockResolvedValue(mockAccount);
+
+      const result = await resolver.account(user, actorContext);
+      expect(result).toBe(mockAccount);
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        actorContext,
+        user.authorization,
+        AuthorizationPrivilege.READ_USER_PII
+      );
+    });
+
+    it('stays closed when the actor holds neither PII nor license-manage on the account', async () => {
+      const mockAccount = {
+        id: 'account-1',
+        authorization: { id: 'account-auth' },
+      };
+      const user = { id: 'user-1', authorization: { id: 'auth-1' } } as any;
+      const actorContext = { actorID: 'other-user', credentials: [] } as any;
+
+      authorizationService.isAccessGranted.mockReturnValue(false);
+      userService.getAccount.mockResolvedValue(mockAccount);
+
+      const result = await resolver.account(user, actorContext);
+      expect(result).toBeUndefined();
+    });
+  });
+
+  // server-C2-b (advocate/skeptic debate) — Resource Admin holds
+  // TRANSFER_RESOURCE_ACCEPT on the account (A9 transfers) but neither
+  // self nor READ_USER_PII, so the account() fallback (ACCOUNT_LICENSE_MANAGE
+  // only) left the account closed to it. Wires the REAL AuthorizationService
+  // so the fix's `accountOpenToPlatformRole` OR-check is genuinely
+  // exercised, and that READ staying excluded is proven against the real
+  // credential-matching engine, not a mocked stand-in.
+  describe('account — real-engine integration (server-C2-b)', () => {
+    let realResolver: UserResolverFields;
+    let realUserService: Record<string, Mock>;
+
+    const buildActorContext = (
+      ...credentialTypes: AuthorizationCredential[]
+    ): ActorContext =>
+      ({
+        actorID: 'other-user',
+        credentials: credentialTypes.map(type => ({ type, resourceID: '' })),
+      }) as any as ActorContext;
+
+    const user = {
+      id: 'user-1',
+      email: 'test@example.com',
+      // Denies READ_USER_PII to every actor below — a real, empty IN_MEMORY
+      // policy rather than `undefined`, so the resolver's private
+      // isAccessGranted() checks it directly instead of reloading the user.
+      authorization: new AuthorizationPolicy(AuthorizationPolicyType.IN_MEMORY),
+    } as any;
+
+    const account = {
+      id: 'account-1',
+      authorization: (() => {
+        const policy = new AuthorizationPolicy(
+          AuthorizationPolicyType.IN_MEMORY
+        );
+        policy.credentialRules = [
+          new AuthorizationPolicyRuleCredential(
+            [AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT],
+            [
+              {
+                type: AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+                resourceID: '',
+              },
+            ],
+            'account-transfer-resource-accept'
+          ),
+          new AuthorizationPolicyRuleCredential(
+            [AuthorizationPrivilege.READ],
+            [
+              {
+                type: AuthorizationCredential.GLOBAL_REGISTERED,
+                resourceID: '',
+              },
+            ],
+            'account-read-registered'
+          ),
+        ];
+        return policy;
+      })(),
+    };
+
+    beforeEach(async () => {
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          UserResolverFields,
+          AuthorizationService,
+          MockCacheManager,
+          MockWinstonProvider,
+        ],
+      })
+        .useMocker(defaultMockerFactory)
+        .compile();
+
+      realResolver = module.get(UserResolverFields);
+      realUserService = module.get(UserService) as any;
+      realUserService.getAccount.mockResolvedValue(account);
+    });
+
+    it('an actor with only platform-resource-admin (holding neither self nor READ_USER_PII) gets the account', async () => {
+      const actorContext = buildActorContext(
+        AuthorizationCredential.PLATFORM_RESOURCE_ADMIN
+      );
+
+      const result = await realResolver.account(user, actorContext);
+
+      expect(result).toBe(account);
+    });
+
+    it('an actor with only global-registered gets undefined — READ does not open it', async () => {
+      const actorContext = buildActorContext(
+        AuthorizationCredential.GLOBAL_REGISTERED
+      );
+
+      const result = await realResolver.account(user, actorContext);
+
       expect(result).toBeUndefined();
     });
   });

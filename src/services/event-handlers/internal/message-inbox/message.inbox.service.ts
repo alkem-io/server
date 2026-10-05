@@ -1,6 +1,7 @@
 import { LogContext } from '@common/enums';
 import { RoomType } from '@common/enums/room.type';
 import { MutationType } from '@common/enums/subscriptions';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { ActorService } from '@domain/actor/actor/actor.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -8,8 +9,10 @@ import { IConversation } from '@domain/communication/conversation/conversation.i
 import { ConversationService } from '@domain/communication/conversation/conversation.service';
 import { ConversationAuthorizationService } from '@domain/communication/conversation/conversation.service.authorization';
 import { IMessage } from '@domain/communication/message/message.interface';
+import { MessageAttachmentService } from '@domain/communication/message-attachment/message.attachment.service';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { RoomServiceEvents } from '@domain/communication/room/room.service.events';
+import { isConversationRoom } from '@domain/communication/room/room.utils';
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
@@ -30,17 +33,6 @@ import { RoomMemberUpdatedEvent } from './room.member.updated.event';
 import { RoomReceiptUpdatedEvent } from './room.receipt.updated.event';
 import { RoomUpdatedEvent } from './room.updated.event';
 import { VcInvocationService } from './vc.invocation.service';
-
-/**
- * Check if a room is a conversation room (direct messaging).
- */
-function isConversationRoom(room: IRoom): boolean {
-  return (
-    room.type === RoomType.CONVERSATION ||
-    room.type === RoomType.CONVERSATION_DIRECT ||
-    room.type === RoomType.CONVERSATION_GROUP
-  );
-}
 
 /**
  * Event handler service for Matrix events.
@@ -65,6 +57,7 @@ export class MessageInboxService {
     private readonly conversationAuthorizationService: ConversationAuthorizationService,
     private readonly authorizationPolicyService: AuthorizationPolicyService,
     private readonly actorService: ActorService,
+    private readonly messageAttachmentService: MessageAttachmentService,
     private readonly conversationNotificationService: ConversationNotificationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
@@ -73,6 +66,26 @@ export class MessageInboxService {
   // ============================================================
   // MESSAGE EVENTS
   // ============================================================
+
+  @OnEvent('message.attachments.prepare', { suppressErrors: false })
+  async prepareMessageAttachments(event: MessageReceivedEvent): Promise<void> {
+    const { payload } = event;
+    const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
+    try {
+      event.storageBucketId =
+        await this.messageAttachmentService.prepareInboundAttachments(
+          room,
+          payload.actorID,
+          payload.message.attachments
+        );
+    } catch (error) {
+      if (!(error instanceof EntityNotFoundException)) throw error;
+      this.logger.warn(
+        `Attachment storage unavailable: roomId=${payload.roomId}, messageId=${payload.message.id}`,
+        LogContext.COMMUNICATION
+      );
+    }
+  }
 
   @OnEvent('message.received')
   async handleMessageReceived(event: MessageReceivedEvent): Promise<void> {
@@ -96,6 +109,13 @@ export class MessageInboxService {
       threadID: payload.message.threadID || '',
       timestamp: payload.message.timestamp,
       reactions: [],
+      // feature 013: carry attachment refs + resolution bucket so the live
+      // subscription payload renders attachments and reads resolve READ-gated.
+      // roomID is the resolver's fallback for resolving the bucket on history
+      // reads (H1).
+      rawAttachments: payload.message.attachments,
+      storageBucketId: event.storageBucketId,
+      roomID: room.id,
     };
 
     // Publish subscription
@@ -232,6 +252,20 @@ export class MessageInboxService {
         threadID: payload.threadId || '',
         timestamp: originalMessage.timestamp,
         reactions: originalMessage.reactions ?? [],
+        // feature 013: an edit changes the message TEXT only — media is a
+        // separate event and is untouched by it. These three fields are what
+        // `Message.attachments` resolves from, and none of them is derivable
+        // from the edit payload, so rebuilding the published IMessage without
+        // them made the UPDATE resolve to `attachments: []` — i.e. editing a
+        // message made its media VANISH for every live subscriber (until a
+        // history re-read). Carry them over from the original message, which
+        // was just fetched and already has them (`rawAttachments` + `roomID`
+        // come from CommunicationAdapter.convertMessageDtoToIMessage;
+        // `storageBucketId` is only set by producers with room context, and is
+        // re-derived from `roomID` on the read path when absent).
+        rawAttachments: originalMessage.rawAttachments,
+        storageBucketId: originalMessage.storageBucketId,
+        roomID: originalMessage.roomID ?? room.id,
       }
     );
   }

@@ -13,6 +13,7 @@ import { StorageBucketUploadFileInput } from './dto/storage.bucket.dto.upload.fi
 import { StorageBucketUploadFileResult } from './dto/storage.bucket.dto.upload.file.result';
 import { IStorageBucket } from './storage.bucket.interface';
 import { StorageBucketService } from './storage.bucket.service';
+import { isConversationBucket } from './storage.bucket.utils';
 
 @InstrumentResolver()
 @Resolver()
@@ -38,7 +39,8 @@ export class StorageBucketResolverMutations {
   ): Promise<StorageBucketUploadFileResult> {
     const storageBucket =
       await this.storageBucketService.getStorageBucketOrFail(
-        uploadData.storageBucketId
+        uploadData.storageBucketId,
+        { relations: { directStorageOwner: true } }
       );
 
     this.authorizationService.grantAccessOrFail(
@@ -59,12 +61,18 @@ export class StorageBucketResolverMutations {
       uploadData.temporaryLocation
     );
 
-    const documentAuthorizations =
-      await this.documentAuthorizationService.applyAuthorizationPolicy(
-        document,
-        storageBucket.authorization
-      );
-    await this.authorizationPolicyService.saveAll(documentAuthorizations);
+    // A conversation upload already had its FULL policy composed before the
+    // row was inserted, so it is authorized the instant it exists; recomposing
+    // it here would only rewrite the same rules. Every other bucket type keeps
+    // the original post-insert composition.
+    if (!isConversationBucket(storageBucket)) {
+      const documentAuthorizations =
+        await this.documentAuthorizationService.applyAuthorizationPolicy(
+          document,
+          storageBucket.authorization
+        );
+      await this.authorizationPolicyService.saveAll(documentAuthorizations);
+    }
 
     return {
       id: document.id,

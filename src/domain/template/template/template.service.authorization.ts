@@ -5,6 +5,7 @@ import { RelationshipNotFoundException } from '@common/exceptions/relationship.n
 import { CalloutAuthorizationService } from '@domain/collaboration/callout/callout.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { createPlatformSupportOrgResourcesProfileEditRule } from '@domain/common/profile/platform.support.org.resources.profile.rule';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
 import { CommunityGuidelinesAuthorizationService } from '@domain/community/community-guidelines/community.guidelines.service.authorization';
@@ -74,7 +75,12 @@ export class TemplateAuthorizationService {
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         template.profile.id,
-        template.authorization
+        template.authorization,
+        [],
+        // QA server-C2-c (A7): Support edits the profile of a template in an
+        // org-owned pack — never DELETE. Inert elsewhere (space templates,
+        // the platform library): the source privilege is never granted there.
+        [createPlatformSupportOrgResourcesProfileEditRule()]
       );
     updatedAuthorizations.push(...profileAuthorizations);
 

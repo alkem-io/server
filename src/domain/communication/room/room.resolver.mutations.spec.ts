@@ -11,6 +11,7 @@ import { RoomResolverService } from '@services/infrastructure/entity-resolver/ro
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mocked } from 'vitest';
+import { MessageAttachmentService } from '../message-attachment/message.attachment.service';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { IRoom } from './room.interface';
 import { RoomResolverMutations } from './room.resolver.mutations';
@@ -80,6 +81,44 @@ describe('RoomResolverMutations', () => {
         AuthorizationPrivilege.CREATE_MESSAGE,
         expect.any(String)
       );
+    });
+
+    it('passes validated media to the one-event send', async () => {
+      const messageAttachmentService = (resolver as any)
+        .messageAttachmentService as Mocked<MessageAttachmentService>;
+      const resolvedRefs = [{ documentId: 'doc-1' }] as any;
+      messageAttachmentService.resolveOutboundAttachments.mockResolvedValue(
+        resolvedRefs
+      );
+      roomLookupService.sendMessage.mockResolvedValue({ id: 'msg-1' } as any);
+
+      await resolver.sendMessageToRoom(
+        { roomID: 'room-1', message: '', attachments: ['doc-1'] } as any,
+        actorContext
+      );
+
+      expect(roomLookupService.sendMessage).toHaveBeenCalledWith(
+        mockRoom,
+        actorContext.actorID,
+        { roomID: 'room-1', message: '', attachments: ['doc-1'] },
+        resolvedRefs
+      );
+    });
+
+    it('propagates an unconfirmed send', async () => {
+      const messageAttachmentService = (resolver as any)
+        .messageAttachmentService as Mocked<MessageAttachmentService>;
+      messageAttachmentService.resolveOutboundAttachments.mockResolvedValue([
+        { documentId: 'doc-1' },
+      ] as any);
+      roomLookupService.sendMessage.mockRejectedValue(new Error('send failed'));
+
+      await expect(
+        resolver.sendMessageToRoom(
+          { roomID: 'room-1', message: '', attachments: ['doc-1'] } as any,
+          actorContext
+        )
+      ).rejects.toThrow('send failed');
     });
 
     it('should throw CalloutClosedException when callout comments are disabled', async () => {

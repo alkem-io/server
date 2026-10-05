@@ -426,40 +426,6 @@ export class RoleSetService {
     }
   }
 
-  async getRolesForActorContext(
-    actorContext: ActorContext,
-    roleSet: IRoleSet
-  ): Promise<RoleName[]> {
-    if (!actorContext.actorID) {
-      return [];
-    }
-
-    const cached = await this.roleSetCacheService.getActorRolesFromCache(
-      actorContext.actorID,
-      roleSet.id
-    );
-    if (cached) {
-      return cached;
-    }
-    const actorID = actorContext.actorID;
-    const roles: RoleName[] = await this.getRoleNames(roleSet);
-    const rolesThatActorHas = await Promise.all(
-      roles.map(async role => {
-        const hasActorRole = await this.isInRole(actorID, roleSet, role);
-        return hasActorRole ? role : undefined;
-      })
-    );
-    const actorRoles = rolesThatActorHas.filter(
-      (role): role is RoleName => role !== undefined
-    );
-    await this.roleSetCacheService.setActorRolesCache(
-      actorID,
-      roleSet.id,
-      actorRoles
-    );
-    return actorRoles;
-  }
-
   public async findOpenApplication(
     userID: string,
     roleSetID: string
@@ -1580,16 +1546,6 @@ export class RoleSetService {
     };
   }
 
-  public async removeCurrentActorFromRolesInRoleSet(
-    roleSet: IRoleSet,
-    actorContext: ActorContext
-  ): Promise<void> {
-    const userRoles = await this.getRolesForActorContext(actorContext, roleSet);
-    for (const role of userRoles) {
-      await this.removeActorFromRole(roleSet, role, actorContext.actorID);
-    }
-  }
-
   private async revokeSpaceTreeCredentials(
     actorID: string,
     descendantSpaceIDs: string[]
@@ -1948,10 +1904,7 @@ export class RoleSetService {
   async getPlatformInvitations(
     roleSet: IRoleSet
   ): Promise<IPlatformInvitation[]> {
-    const roleSetInvs = await this.getRoleSetOrFail(roleSet.id, {
-      relations: { platformInvitations: true },
-    });
-    return roleSetInvs?.platformInvitations || [];
+    return await this.platformInvitationService.findOpenForRoleSet(roleSet.id);
   }
 
   async getMembersCount(roleSet: IRoleSet): Promise<number> {

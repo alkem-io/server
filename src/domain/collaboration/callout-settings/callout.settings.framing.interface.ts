@@ -1,6 +1,7 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ICalloutContributorsSettings } from './callout.settings.contributors.interface';
 import { ICalloutSelectionSettings } from './callout.settings.selection.interface';
+import { ICalloutSpacesSettings } from './callout.settings.spaces.interface';
 
 @ObjectType('CalloutSettingsFraming')
 export abstract class ICalloutSettingsFraming {
@@ -23,4 +24,11 @@ export abstract class ICalloutSettingsFraming {
       'Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Absent / null ⇒ AUTO (full computed set).',
   })
   selection?: ICalloutSelectionSettings;
+
+  @Field(() => ICalloutSpacesSettings, {
+    nullable: true,
+    description:
+      'Card-variant settings for a Subspaces collection callout. Present only on SPACES callouts. Absent / null ⇒ COMPACT.',
+  })
+  spaces?: ICalloutSpacesSettings;
 }

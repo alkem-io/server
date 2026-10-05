@@ -1,6 +1,11 @@
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { VirtualAssistantService } from '@domain/community/virtual-assistant/virtual.assistant.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -179,6 +184,99 @@ describe('PlatformAdminResolverFields', () => {
     });
   });
 
+  // server-C1-13 (advocate/skeptic debate) — updateAssistantActorCapabilities
+  // is gated on PLATFORM_OPERATIONS_ADMIN, but this field, the client's only
+  // discovery path for it, was still gated on the broader PLATFORM_ADMIN
+  // catch-all. Wires the REAL AuthorizationService + a real platform policy
+  // so the fix's `grantAccessOrFail` is genuinely exercised, not just a
+  // mocked pass-through.
+  describe('virtualAssistant — real-engine integration (server-C1-13)', () => {
+    let realResolver: PlatformAdminResolverFields;
+    let realPlatformAuthorizationService: Record<string, Mock>;
+    let realVirtualAssistantService: Record<string, Mock>;
+
+    const buildActorContext = (
+      ...credentialTypes: AuthorizationCredential[]
+    ): ActorContext =>
+      ({
+        actorID: 'actor-1',
+        credentials: credentialTypes.map(type => ({ type, resourceID: '' })),
+      }) as any as ActorContext;
+
+    const buildPlatformPolicy = () => {
+      const policy = new AuthorizationPolicy(AuthorizationPolicyType.IN_MEMORY);
+      policy.credentialRules = [
+        new AuthorizationPolicyRuleCredential(
+          [AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN],
+          [
+            {
+              type: AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
+              resourceID: '',
+            },
+          ],
+          'platform-operations-admin-rule'
+        ),
+        new AuthorizationPolicyRuleCredential(
+          [AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS],
+          [
+            {
+              type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+              resourceID: '',
+            },
+          ],
+          'platform-content-full-access-rule'
+        ),
+      ];
+      return policy;
+    };
+
+    beforeEach(async () => {
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          PlatformAdminResolverFields,
+          AuthorizationService,
+          MockWinstonProvider,
+        ],
+      })
+        .useMocker(defaultMockerFactory)
+        .compile();
+
+      realResolver = module.get(PlatformAdminResolverFields);
+      realPlatformAuthorizationService = module.get(
+        PlatformAuthorizationPolicyService
+      ) as any;
+      realVirtualAssistantService = module.get(VirtualAssistantService) as any;
+      realPlatformAuthorizationService.getPlatformAuthorizationPolicy.mockResolvedValue(
+        buildPlatformPolicy()
+      );
+      realVirtualAssistantService.getSingletonOrFail.mockResolvedValue({
+        id: 'assistant-1',
+      });
+    });
+
+    it('resolves for an actor holding only platform-operations-admin', async () => {
+      const actor = buildActorContext(
+        AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN
+      );
+
+      const result = await realResolver.virtualAssistant(actor);
+
+      expect(result).toEqual({ id: 'assistant-1' });
+      expect(realVirtualAssistantService.getSingletonOrFail).toHaveBeenCalled();
+    });
+
+    it('rejects an actor holding only platform-content-full-access', async () => {
+      const actor = buildActorContext(
+        AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS
+      );
+
+      await expect(realResolver.virtualAssistant(actor)).rejects.toBeDefined();
+      expect(
+        realVirtualAssistantService.getSingletonOrFail
+      ).not.toHaveBeenCalled();
+    });
+  });
+
   describe('communication', () => {
     it('should check authorization and return empty result', async () => {
       const result = await resolver.communication(actorContext);
@@ -349,6 +447,96 @@ describe('PlatformAdminResolverFields', () => {
         platformAdminService.getAllAccounts.mockResolvedValue([]);
         platformAdminService.getAllVirtualContributors.mockResolvedValue([]);
         platformAdminService.getAllUsers.mockResolvedValue({ items: [] });
+
+        await call();
+
+        expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+          actorContext,
+          platformPolicy,
+          primary,
+          msg
+        );
+      });
+    });
+
+    // R-F.3 (2026-09-18, licensing-section-design.md) — the License Manager's
+    // half of F1. Its owning privileges (ACCOUNT_LICENSE_MANAGE @account/@space,
+    // GRANT @licensing-framework) live off the platform policy, so the three
+    // lists whose rows it licenses — spaces, organizations, users — refused
+    // it. A dedicated platform-level READ admits it to exactly those three,
+    // and to nothing else here. `User.email` keeps its own READ_USER_PII field
+    // gate (user.resolver.fields.spec.ts), which is what makes admitting the
+    // users list safe.
+    describe('PLATFORM_LICENSING_LISTS_READ (R-F.3)', () => {
+      beforeEach(() => {
+        admits(AuthorizationPrivilege.PLATFORM_LICENSING_LISTS_READ);
+      });
+
+      it('alone reaches the space list', async () => {
+        platformAdminService.getAllSpaces.mockResolvedValue([]);
+
+        await resolver.spaces(actorContext, {} as any);
+
+        expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+        expect(platformAdminService.getAllSpaces).toHaveBeenCalled();
+      });
+
+      it('alone reaches the organization list', async () => {
+        platformAdminService.getAllOrganizations.mockResolvedValue({
+          items: [],
+        });
+
+        await resolver.organizations(actorContext, { first: 10 } as any);
+
+        expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+        expect(platformAdminService.getAllOrganizations).toHaveBeenCalled();
+      });
+
+      it('alone reaches the user list', async () => {
+        platformAdminService.getAllUsers.mockResolvedValue({ items: [] });
+
+        await resolver.users(actorContext, { first: 10 } as any);
+
+        expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+        expect(platformAdminService.getAllUsers).toHaveBeenCalled();
+      });
+
+      it.each([
+        [
+          'accounts',
+          'platformAdmin Accounts',
+          AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
+          () => resolver.accounts(actorContext),
+        ],
+        [
+          'innovationPacks',
+          'platformAdmin InnovationPacks',
+          AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
+          () => resolver.innovationPacks(actorContext),
+        ],
+        [
+          'innovationHubs',
+          'platformAdmin InnovationHubs',
+          AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
+          () => resolver.innovationHubs(actorContext),
+        ],
+        [
+          'virtualContributors',
+          'platformAdmin Virtual Contributors',
+          AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
+          () => resolver.virtualContributors(actorContext, {} as any),
+        ],
+        [
+          'identity',
+          'platformAdmin Identity',
+          AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
+          () => resolver.identity(actorContext),
+        ],
+      ])('does NOT reach %s — falls through to the family primary privilege', async (_field, msg, primary, call) => {
+        platformAdminService.getAllAccounts.mockResolvedValue([]);
+        platformAdminService.getAllInnovationPacks.mockResolvedValue([]);
+        platformAdminService.getAllInnovationHubs.mockResolvedValue([]);
+        platformAdminService.getAllVirtualContributors.mockResolvedValue([]);
 
         await call();
 

@@ -46,6 +46,7 @@ import { CreateReferenceOnProfileInput } from '@domain/common/profile/dto/profil
 import { VisualUploadImageInput } from '@domain/common/visual/dto/visual.dto.upload.image';
 import { UpdateWhiteboardEntityInput } from '@domain/common/whiteboard/types';
 import { RoomSendMessageInput } from '@domain/communication/room/dto/room.dto.send.message';
+import { RoomSendMessageReplyInput } from '@domain/communication/room/dto/room.dto.send.message.reply';
 import { UpdateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.update';
 import {
   CreateOrganizationInput,
@@ -150,6 +151,14 @@ export class BaseHandler extends AbstractHandler {
       InviteForEntryRoleOnRoleSetInput,
       UpdateInnovationFlowInput,
       RoomSendMessageInput,
+      // The match below is `types.includes(metatype)` — REFERENCE equality on
+      // the constructor, so a SUBCLASS is not covered by its parent's entry.
+      // RoomSendMessageReplyInput extends RoomSendMessageInput, so without its
+      // own entry NONE of the inherited validators ran on the reply mutation:
+      // `attachments` had no <=1 cap (@ArrayMaxSize), no uniqueness
+      // (@ArrayUnique) and no UUID check (@IsUUID), and `message` no
+      // @MaxLength. Any new subclass of a listed input needs its own entry too.
+      RoomSendMessageReplyInput,
       CreateCalloutFramingInput,
       CreateCalloutContributionDefaultsInput,
       CreateSpaceAboutInput,

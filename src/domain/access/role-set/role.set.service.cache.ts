@@ -38,7 +38,8 @@ export class RoleSetCacheService {
    */
   private async cacheGet<T>(key: string): Promise<T | undefined> {
     try {
-      return await this.cacheManager.get<T>(key);
+      // The Redis store reports a missing key as null; callers rely on undefined.
+      return (await this.cacheManager.get<T>(key)) ?? undefined;
     } catch (error) {
       this.logger.warn?.(
         `RoleSet cache read failed for key ${key}: ${error}`,
@@ -57,7 +58,9 @@ export class RoleSetCacheService {
     const mget = this.cacheManager.store.mget;
     if (mget) {
       try {
-        return await mget<T>(...keys);
+        const values = await mget<T>(...keys);
+        // The Redis store reports a missing key as null; callers rely on undefined.
+        return values.map((v: T | null | undefined) => v ?? undefined);
       } catch (error) {
         this.logger.warn?.(
           `RoleSet cache mget failed, treating as cache miss: ${error}`,

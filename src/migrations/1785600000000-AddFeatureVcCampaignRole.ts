@@ -10,13 +10,19 @@ const FEATURE_VC_CAMPAIGN = 'feature-vc-campaign';
  * RoleSet. It is the successor of the legacy `platform-vc-campaign`, which
  * the audit had recorded as inert: server-side it grants no privilege, but
  * the client gates the dashboard Virtual Contributor offer on it, so it is
- * the targeting half of that offer (legacy-role-migration-runbook §2b).
+ * the targeting half of that offer (workspace#027
+ * specs/027-platform-role-redesign/legacy-role-migration-runbook.md — §1
+ * captures holders of all ten legacy roles incl. AI Assistant Access; §2
+ * maps them, §2b this role).
  *
  * Same shape as `1784999999999-AddPlatformRolesRedesign`: fresh bootstraps
  * seed the row from the shared definitions module; this migration covers
  * already-bootstrapped databases, idempotently (skip-if-present). The legacy
  * row is untouched — Slice A never removes, and FR-012 forbids migrating
- * holders automatically; the runbook re-grants them.
+ * holders automatically; workspace#027
+ * specs/027-platform-role-redesign/legacy-role-migration-runbook.md (§1
+ * captures holders of all ten legacy roles incl. AI Assistant Access; §2
+ * maps them, §2b this role) re-grants them.
  */
 export class AddFeatureVcCampaignRole1785600000000
   implements MigrationInterface

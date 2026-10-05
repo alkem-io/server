@@ -9,6 +9,7 @@ import {
   CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET,
   CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER,
   CREDENTIAL_RULE_TYPES_PLATFORM_FORUM_MANAGE,
+  CREDENTIAL_RULE_TYPES_PLATFORM_LICENSING_LISTS_READ,
   CREDENTIAL_RULE_TYPES_PLATFORM_OPERATIONS_ADMIN,
   CREDENTIAL_RULE_TYPES_PLATFORM_READ_REGISTERED,
   CREDENTIAL_RULE_TYPES_PLATFORM_ROLE_HOLDERS_READ,
@@ -383,12 +384,33 @@ export class PlatformAuthorizationService {
     platformSupportListsRead.cascade = false;
     credentialRules.push(platformSupportListsRead);
 
+    // 027-platform-role-redesign, R-F.3 (2026-09-18, licensing-section-design.md)
+    // — the License Manager's console LIST READ, Support's twin. Its owning
+    // privileges (ACCOUNT_LICENSE_MANAGE @account/@space, GRANT
+    // @licensing-framework) live off this policy, so the
+    // `platformAdmin.{spaces,organizations,users}` lists — the rows it
+    // licenses — refused it, and the role had no browser path to A12 or A14.
+    // A read, not a write: every plan assign/revoke and visibility change off
+    // a list keeps its own A12/A14 gate, and `User.email` keeps its per-field
+    // READ_USER_PII gate. Slice B (T076): the legacy pair Slice A mirrored
+    // from A12 (global-admin, global-license-manager) is gone. Deliberately NOT
+    // platform-settings-admin: it DEFINES plans (A13) and must not get the
+    // usage lists for free. Non-cascading: the lists live here.
+    const platformLicensingListsRead =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_LICENSING_LISTS_READ],
+        [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
+        CREDENTIAL_RULE_TYPES_PLATFORM_LICENSING_LISTS_READ
+      );
+    platformLicensingListsRead.cascade = false;
+    credentialRules.push(platformLicensingListsRead);
+
     // 027-platform-role-redesign (T073, Slice B): the `global-support`
     // platform-SUBTREE cascade that stood here — cascading CRUD over
     // platform, forum, library, templates-manager, role-set, storage,
     // messaging and (transitively) the licensing tree — is DELETED. Support's
     // reach is now A6, A7 and A15 only, each through its own named
-    // privilege, plus the non-cascading list read immediately above.
+    // privilege, plus its non-cascading list read above (R-F.2).
     // Everything that rode this cascade was re-anchored in Slice A: the forum
     // onto `PLATFORM_FORUM_MANAGE` (T035 + T049), the rest onto the
     // per-family privileges. Do not reintroduce a subtree cascade to

@@ -171,8 +171,41 @@ export const INDIRECT_ENFORCEMENT_FILES: readonly string[] = [
   // services. Same disposition as above: a read, not an A-row, no census
   // entry, no matrix cell; the privilege is mirrored in `privilege.grants.ts`
   // so its grant set is spec-covered, and names no census gate by design.
+  //
+  // R-F.3 (2026-09-18, licensing-section-design.md) — the License Manager's
+  // twin: `spaces`, `organizations`, `users` additionally admit
+  // `PLATFORM_LICENSING_LISTS_READ`. Same disposition, same reasons.
+  //
+  // QA C1-13 fix (2026-09-25) — `platformAdmin.virtualAssistant` is a NINTH
+  // inventory read, not part of the original eight: it's the read-side
+  // discovery path for A11's `updateAssistantActorCapabilities` (the client
+  // finds the assistant it's about to update through this field), so it now
+  // is gated on `PLATFORM_OPERATIONS_ADMIN` (replacing `PLATFORM_ADMIN`);
+  // legacy GA/GS/GLM holders keep access because they hold both — the same
+  // disposition as every other inventory read above. Classified
+  // `non-admin`'s sibling `inventory-read` in `NON_ADMIN_SURFACES` (see
+  // `non.admin.surfaces.ts`, `surface.completeness.spec.ts`) rather than
+  // censused as an A-row, for the same reason as the other eight.
   'src/platform-admin/admin/platform.admin.resolver.fields.ts',
   'src/platform-admin/core/identity/admin.identity.resolver.fields.ts',
+  // R-F.3 sandbox walk (2026-09-18, T108) — `User.account` / `Organization.account`
+  // FIELD VISIBILITY: both resolvers additionally return the account when the
+  // actor holds ACCOUNT_LICENSE_MANAGE on the account's own policy, so the
+  // License Manager can learn the account id it licenses. A read of an id,
+  // not an A-row: A12's real gates stay on the assign/revoke mutations
+  // (`admin.licensing.resolver.mutations.ts`, censused). No census entry, no
+  // matrix cell — same disposition as the list reads above.
+  //
+  // QA C2-b fix (2026-09-25): both fields ALSO open to TRANSFER_RESOURCE_ACCEPT
+  // holders — Resource Admin holds it on the account tree (A9), and without
+  // this second clause its own main flow (offering/accepting a transfer)
+  // could not resolve the target account id, blocking the UI. Same
+  // disposition: a read of an id needed to complete an already-censused A9
+  // action, not a new A-row. Deliberately NOT opened to bare READ: accounts
+  // grant READ to anonymous and registered users, so a READ-gated clause here
+  // would expose every account id platform-wide.
+  'src/domain/community/user/user.resolver.fields.ts',
+  'src/domain/community/organization/organization.resolver.fields.ts',
 ];
 
 // 027-platform-role-redesign (T083a, Slice B): the GA/GS/GSM/GLM/GPM aliases
@@ -601,6 +634,33 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       legacyReachers: [],
       lifecycle: { declarationOnly: true },
     },
+    // R-F.3 sandbox walk (T108) + QA C2-b: `User.account` resolves the
+    // account id for an ACCOUNT_LICENSE_MANAGE (A12, License Manager) or
+    // TRANSFER_RESOURCE_ACCEPT (A9, Resource Admin) holder on the account's own
+    // policy. Slice A kept it out of the census (INDIRECT_ENFORCEMENT_FILES:
+    // a read of an id, not an A-row). Censused at Slice B only because the
+    // `authentication` entry above makes this file a census file, and rule 2
+    // of `surface.drift.spec.ts` requires its scanned and declared privileges
+    // to agree. `declarationOnly` for the same reason as the rest of this
+    // block: a denied read yields `null`, not an error.
+    {
+      file: 'src/domain/community/user/user.resolver.fields.ts',
+      member: 'account',
+      kind: 'graphql-field',
+      tree: 'account',
+      gate: {
+        anyOf: [
+          AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE,
+          AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT,
+        ],
+      },
+      intendedOwners: [
+        AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
+        AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+      ],
+      legacyReachers: [],
+      lifecycle: { declarationOnly: true },
+    },
     // workspace#038 (MCP API-key lifecycle) landed on develop AFTER the
     // census was written, gated on PLATFORM_ADMIN. A user's keys are
     // user-credential lifecycle — this family — so both admin surfaces are
@@ -665,6 +725,32 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
             'SC-004 accepted exception — FR-004 cascades full CRUD from the inheritance root, which satisfies the owner branch of this dual-path gate exactly as an organization owner would.',
         },
       ],
+      legacyReachers: [],
+    },
+    // QA server-C2-d (ruling (a), 2026-09-25): approving / resetting /
+    // reopening / archiving an organization's verification is organization
+    // lifecycle — Platform Support's A6 family. The resolver gates UPDATE;
+    // MANUALLY_VERIFY / RESET / REOPEN / ARCHIVE additionally require GRANT
+    // (`organization.verification.service.lifecycle.ts`), so both are named —
+    // AND, not OR (GateExpr has no `allOf`); `anyOf` is the closest shape and
+    // does not change the derived set because both privileges resolve to the
+    // IDENTICAL credential set on this tree (the A9 transfer idiom). The
+    // verification policy is `reset()` — it inherits NO root cascade, hence
+    // its own tree. The organization's own account admin keeps READ/UPDATE
+    // (owner path, not a global credential — never modelled here).
+    // The unguarded REJECT transition (lifecycle :100) is a separate
+    // pre-existing /bugfix, deliberately not fixed here.
+    {
+      file: 'src/domain/community/organization-verification/organization.verification.resolver.mutations.ts',
+      member: 'eventOnOrganizationVerification',
+      kind: 'graphql-mutation',
+      tree: 'organization-verification',
+      gate: {
+        anyOf: [AuthorizationPrivilege.UPDATE, AuthorizationPrivilege.GRANT],
+      },
+      intendedOwners: [AuthorizationCredential.PLATFORM_SUPPORT],
+      // Slice B (T076): the legacy {GA, GS, GLOBAL_COMMUNITY_READ} CRUD+GRANT
+      // rule on this policy is deleted.
       legacyReachers: [],
     },
   ],
@@ -873,6 +959,22 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
     {
       file: 'src/platform-admin/admin/platform.admin.resolver.fields.ts',
       member: 'spaces',
+      kind: 'graphql-field',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS },
+      intendedOwners: [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
+      legacyReachers: [],
+      lifecycle: { declarationOnly: true },
+    },
+    // Re-added in the 2026-10-05 develop merge: §7's fold dropped Slice B's
+    // PLATFORM_SUPPORT_ORG_RESOURCES-gated entry as superseded by R-F.2, and
+    // Slice A's `inventory-read` classification is gone, so without this the
+    // field had no home (surface.completeness.spec.ts). Primary privilege, as
+    // for its siblings; Support / License Manager reach it through their
+    // R-F.2 / R-F.3 list reads, which name no census gate.
+    {
+      file: 'src/platform-admin/admin/platform.admin.resolver.fields.ts',
+      member: 'organizations',
       kind: 'graphql-field',
       tree: 'platform',
       gate: { requires: AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS },
@@ -1093,8 +1195,10 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
   ],
 
   // ===== A11 — operational machinery (032, pre-existing) =====
-  // Contract's "~10" corrected to 14 by grepping the tree (the two
-  // collaboration-migration mutations replaced the retired whiteboard one).
+  // Contract's "~10" corrected to 15 by grepping the tree (the two
+  // collaboration-migration mutations replaced the retired whiteboard one;
+  // QA cross-census-1 fix, 2026-09-25, added the workspace#061 forum-sync
+  // reconcile mutation, 14 -> 15).
   A11: [
     ...(
       [
@@ -1170,6 +1274,16 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
         [
           'src/platform-admin/domain/communication/admin.communication.resolver.mutations.ts',
           'adminCommunicationSyncSpaceHierarchy',
+          'communication-admin-synthetic',
+        ],
+        // QA cross-census-1 fix (2026-09-25): workspace#061's forum↔matrix
+        // hierarchy sync landed this mutation on `develop` after the census
+        // was written — same file, same `communicationGlobalAdminPolicy`
+        // (`communication-admin-synthetic`), same literal
+        // PLATFORM_OPERATIONS_ADMIN check as its five siblings above.
+        [
+          'src/platform-admin/domain/communication/admin.communication.resolver.mutations.ts',
+          'adminCommunicationReconcileForumHierarchy',
           'communication-admin-synthetic',
         ],
       ] as const
@@ -1285,6 +1399,21 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
         legacyReachers: [],
       })
     ),
+    // QA server-C1-12 (ruling (a), 2026-09-25): CREATE_INNOVATION_HUB was
+    // held ONLY by the legacy manageGlobalRoles rule (GA/GLM/GS) on the
+    // account tree — no 027 role held it, so Slice B would leave nobody able
+    // to create a hub. Platform License Manager owns it (GLM's successor for
+    // spec row 8's "create space/hub/pack/VC"), via its own non-cascading
+    // account rule (`account.service.authorization.ts`).
+    {
+      file: 'src/domain/space/account/account.resolver.mutations.ts',
+      member: 'createInnovationHub',
+      kind: 'graphql-mutation',
+      tree: 'account',
+      gate: { requires: AuthorizationPrivilege.CREATE_INNOVATION_HUB },
+      intendedOwners: [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
+      legacyReachers: [],
+    },
     {
       file: 'src/domain/space/account/account.resolver.mutations.ts',
       member: 'updateBaselineLicensePlanOnAccount',
@@ -1297,13 +1426,17 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
   ],
 
   // ===== A13 — define license plans + entitlement mappings =====
-  // Contract's "~4" corrected to 5. The gate literally checked at each
-  // resolver is bare DELETE/UPDATE/CREATE, not PLATFORM_SETTINGS_ADMIN —
-  // one of the two documented exceptions (alongside A9's three conversion
-  // mutations) where the enforced call site's own privilege is a bare CRUD
-  // verb rather than this feature's dedicated one. corr-server-7/
-  // corr-server-10 fix: that bare CRUD check is now against a
-  // resolver-local SYNTHETIC in-memory policy
+  // Contract's "~4" corrected to 6 (QA C2-a, 2026-09-25): `createLicensePlan`
+  // was the only A13 surface still gated on the ENTITY's own
+  // (root-cascade-inheriting) `licensing.authorization` rather than the
+  // synthetic definition policy — the one real permission leak QA found in
+  // either PR, since `platform-content-full-access` reaches CREATE there via
+  // T036a's cascade. The gate literally checked at each resolver is bare
+  // DELETE/UPDATE/CREATE, not PLATFORM_SETTINGS_ADMIN — one of the two
+  // documented exceptions (alongside A9's three conversion mutations) where
+  // the enforced call site's own privilege is a bare CRUD verb rather than
+  // this feature's dedicated one. corr-server-7/corr-server-10 fix: that bare
+  // CRUD check is now against a resolver-local SYNTHETIC in-memory policy
   // (`GLOBAL_POLICY_LICENSE_DEFINITION_ADMIN`) granting exactly
   // {platform-settings-admin, global-admin, global-support,
   // global-license-manager, global-platform-manager} — NOT
@@ -1341,6 +1474,11 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       [
         'src/platform/licensing/credential-based/license-policy/license.policy.resolver.mutations.ts',
         'adminLicensePolicyCreateCredentialRule',
+        AuthorizationPrivilege.CREATE,
+      ],
+      [
+        'src/platform/licensing/credential-based/licensing-framework/licensing.framework.resolver.mutations.ts',
+        'createLicensePlan',
         AuthorizationPrivilege.CREATE,
       ],
     ] as const
@@ -1461,6 +1599,11 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
           credential: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
           reason:
             'FR-010 read-family exception — the root cascade grants READ on the space tree; A16 holds no admin-family cell so this is accepted, not a defect.',
+        },
+        {
+          credential: AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+          reason:
+            'A9 target resolution — QA server-C1-1 ruling (b′) "mover-only reads": the resource mover holds READ + READ_ABOUT in every space\'s platformRolesAccess so it can resolve the space it moves, but its space READ is NON-cascading (space.service.authorization.ts): the space itself and its About card, never its content.',
         },
       ],
       // T070m finding: Slice A's legacy root cascade

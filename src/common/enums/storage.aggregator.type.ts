@@ -6,6 +6,7 @@ export enum StorageAggregatorType {
   USER = 'user',
   ORGANIZATION = 'organization',
   PLATFORM = 'platform',
+  CONVERSATION = 'conversation',
 }
 
 registerEnumType(StorageAggregatorType, {

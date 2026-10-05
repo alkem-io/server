@@ -239,6 +239,7 @@ enum AuthorizationPrivilege {
   PLATFORM_AUDIT_READ
   PLATFORM_CONTENT_FULL_ACCESS
   PLATFORM_FORUM_MANAGE
+  PLATFORM_LICENSING_LISTS_READ
   PLATFORM_OPERATIONS_ADMIN
   PLATFORM_ROLE_HOLDERS_READ
   PLATFORM_ROLES_ASSIGN
@@ -557,21 +558,27 @@ enum MemoSignatureVerificationStatus {
 }
 
 enum MimeType {
+  AAC
   AVIF
   BMP
   CSV
   DOC
   DOCX
+  FLAC
   GIF
   HEIC
   HEIF
   ICS
   JPEG
   JPG
+  MP3
+  MP4
   ODG
   ODP
   ODS
   ODT
+  OGA
+  OGV
   PDF
   PNG
   POTM
@@ -581,8 +588,12 @@ enum MimeType {
   PPT
   PPTM
   PPTX
+  QUICKTIME
   RTF
   SVG
+  WAV
+  WEBA
+  WEBM
   WEBP
   XLS
   XLSX
@@ -604,6 +615,7 @@ enum NotificationEvent {
   ORGANIZATION_ADMIN_MESSAGE
   ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION
   ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED
+  ORGANIZATION_ASSOCIATE_INVITATION_USER_PLATFORM
   ORGANIZATION_MESSAGE_SENDER
   PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED
   PLATFORM_ADMIN_SPACE_CREATED
@@ -942,6 +954,14 @@ enum SigningAttemptStatus {
   SIGNED
 }
 
+"""
+The card variant of a Subspaces (SPACES) collection callout. COMPACT (default) shows the identity block only; EXPANDED adds the What/Why/Who excerpts.
+"""
+enum SpaceCollectionCardVariant {
+  COMPACT
+  EXPANDED
+}
+
 enum SpaceLevel {
   L0
   L1
@@ -967,6 +987,7 @@ enum SpaceVisibility {
 
 enum StorageAggregatorType {
   ACCOUNT
+  CONVERSATION
   ORGANIZATION
   PLATFORM
   SPACE
@@ -2201,6 +2222,17 @@ type CalloutSettingsFraming {
   Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Absent / null ⇒ AUTO (full computed set).
   """
   selection: CalloutSelectionSettings
+  """
+  Card-variant settings for a Subspaces collection callout. Present only on SPACES callouts. Absent / null ⇒ COMPACT.
+  """
+  spaces: CalloutSpacesSettings
+}
+
+type CalloutSpacesSettings {
+  """
+  The card variant to render for each subspace: COMPACT (default) or EXPANDED.
+  """
+  cardVariant: SpaceCollectionCardVariant!
 }
 
 type CalloutsSet {
@@ -2322,6 +2354,10 @@ type CollaboraDocument {
   documentType: CollaboraDocumentType!
   """The ID of the entity"""
   id: UUID!
+  """
+  An authorized, same-origin preview image endpoint for the current saved document, or null when there is no backing file to preview. NOT a bearer URL: every request against it is independently authorized against the current document READ policy.
+  """
+  previewUrl: String
   """The Profile for this CollaboraDocument."""
   profile: Profile!
   """The date at which the entity was last updated."""
@@ -2575,17 +2611,35 @@ type ContributorCollectionCounts {
 }
 
 type ContributorCollectionItem {
+  """
+  Organizations only. The count of platform-wide associates of the organization (distinct users holding its associate role) — the same number as the organization's 'associates' metric; NOT the number of members of this space. Null for Users and Virtual Contributors.
+  """
+  associatesCount: Int
   avatarUrl: String
   displayName: String!
   id: UUID!
+  """
+  Users only. The calendar month in which the user's current membership of the space that owns this callout began ("member since"): the creation date of the member credential, truncated to the first day of the month, 00:00 UTC. Leaving and re-joining restarts it. Null for Organizations and Virtual Contributors, and for a user listed without the member role.
+  """
+  joinedDate: DateTime
   """
   Location of the contributor; null for Virtual Contributors or when not readable.
   """
   location: ContributorLocation
   """The role label for this contributor (lead/admin/member)."""
   roleLabel: String
+  """All contributor types. The profile tagline, trimmed; null when empty."""
+  tagline: String
+  """
+  All contributor types. The profile tagsets merged in order — Users: skills, then keywords; Organizations and Virtual Contributors: keywords, then capabilities. Blank tags removed; duplicates (ignoring case) kept once, first occurrence wins; never the default tagset. Empty list when none. Clients decide how many to show.
+  """
+  tags: [String!]
   type: ActorType!
   url: String
+  """
+  Organizations only. The organization's website, trimmed; null when empty or when it is not an absolute http/https URL. Null for Users and Virtual Contributors.
+  """
+  website: String
 }
 
 type ContributorLocation {
@@ -2611,6 +2665,10 @@ type Conversation {
   messaging: Messaging!
   """The room for this Conversation."""
   room: Room!
+  """
+  The storage bucket holding this Conversation's message attachments (feature 013). READ-gated to conversation members; null for a conversation that has no bucket yet (an accepted, backfillable state).
+  """
+  storageBucket: StorageBucket
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
 }
@@ -2850,6 +2908,15 @@ type CreateCalloutSettingsFramingData {
   Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
   """
   selection: CreateCalloutSelectionSettingsData
+  """Card-variant settings. Provide only when framing.type = SPACES."""
+  spaces: CreateCalloutSpacesSettingsData
+}
+
+type CreateCalloutSpacesSettingsData {
+  """
+  The card variant (COMPACT or EXPANDED). Defaults to COMPACT when omitted.
+  """
+  cardVariant: SpaceCollectionCardVariant
 }
 
 type CreateCalloutsSetData {
@@ -4332,6 +4399,10 @@ type MeQueryResults {
 
 """A message that was sent in a chat room"""
 type Message {
+  """
+  Media attachments; unavailable documents retain their event filename without a download URL.
+  """
+  attachments: [MessageAttachment!]!
   """The id for the message event."""
   id: MessageID!
   """The message being sent"""
@@ -4344,6 +4415,23 @@ type Message {
   threadID: MessageID
   """The server timestamp in UTC"""
   timestamp: Float!
+}
+
+type MessageAttachment {
+  """The filename / display name of the attachment."""
+  displayName: String!
+  """The pixel height of the attachment (images only)."""
+  height: Int
+  """The file-service document id of the attachment."""
+  id: UUID
+  """The MIME type of the attachment."""
+  mimeType: String
+  """The size of the attachment in bytes."""
+  size: Int
+  """The Alkemio document URL (authorized via conversation policy)."""
+  url: String
+  """The pixel width of the attachment (images only)."""
+  width: Int
 }
 
 """
@@ -4839,6 +4927,10 @@ type Mutation {
   Replace a Whiteboard from another Whiteboard through the live collaboration room. Content and media are copied server-side; snapshot bytes never pass through GraphQL.
   """
   replaceWhiteboardContentFromSource(input: ReplaceWhiteboardContentFromSourceInput!): Whiteboard!
+  """
+  Sends the invitation email of an open platform invitation again (Space or Organization role sets); throttled per role set and address, and counted against an hourly email budget.
+  """
+  resendPlatformInvitation(resendData: ResendPlatformInvitationInput!): PlatformInvitation!
   """Resets the interaction with the VC by recreating the room."""
   resetConversationVc(input: ConversationVcResetInput!): Conversation!
   """Reset all license plans on Accounts"""
@@ -5413,7 +5505,7 @@ type PlatformAdminQueryResults {
     withTags: Boolean
   ): PaginatedUsers!
   """
-  The singleton virtual-assistant actor, including its current admin capability grant and ID. This is only available to Platform Admins, and is the discovery path for updateAssistantActorCapabilities.
+  The singleton virtual-assistant actor, including its current admin capability grant and ID. Only available to Platform Operations Admins (and legacy holders); the discovery path for updateAssistantActorCapabilities.
   """
   virtualAssistant: VirtualAssistant!
   """
@@ -6258,7 +6350,7 @@ type RoleSet {
   """
   organizationsInRoles(roles: [RoleName!]!): [OrganizationsInRolesResponse!]!
   """
-  Invitations to join this RoleSet in an entry role for users not yet on the Alkemio platform.
+  Open (not yet consumed) invitations to join this RoleSet in an entry role for people not yet on the Alkemio platform.
   """
   platformInvitations: [PlatformInvitation!]!
   """The Role Definitions from this RoleSet to return."""
@@ -8442,6 +8534,8 @@ input CreateCalloutSettingsFramingInput {
   Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
   """
   selection: CreateCalloutSelectionSettingsInput
+  """Card-variant settings. Provide only when framing.type = SPACES."""
+  spaces: CreateCalloutSpacesSettingsInput
 }
 
 input CreateCalloutSettingsInput {
@@ -8449,6 +8543,13 @@ input CreateCalloutSettingsInput {
   framing: CreateCalloutSettingsFramingInput
   """Visibility of the Callout. Defaults to PUBLISHED."""
   visibility: CalloutVisibility
+}
+
+input CreateCalloutSpacesSettingsInput {
+  """
+  The card variant (COMPACT or EXPANDED). Defaults to COMPACT when omitted.
+  """
+  cardVariant: SpaceCollectionCardVariant
 }
 
 input CreateCalloutsSetInput {
@@ -8531,6 +8632,10 @@ input CreateContributionOnCalloutInput {
   link: CreateLinkInput
   memo: CreateMemoInput
   post: CreatePostInput
+  """
+  Send the space-member and space-admin contribution notifications. Defaults to true; only an explicit false suppresses. The activity log entry is written regardless.
+  """
+  sendNotification: Boolean = true
   """The sort order to assign to this Contribution."""
   sortOrder: Float
   """
@@ -9557,6 +9662,11 @@ input ReplaceWhiteboardContentFromSourceInput {
   targetWhiteboardID: UUID!
 }
 
+input ResendPlatformInvitationInput {
+  """The open platform invitation whose email is sent again."""
+  ID: UUID!
+}
+
 input RevokeLicensePlanFromAccount {
   """The ID of the Account to assign the LicensePlan to."""
   accountID: UUID!
@@ -9619,6 +9729,10 @@ input RoomRemoveReactionToMessageInput {
 }
 
 input RoomSendMessageInput {
+  """
+  The file-service document ids of attachments to send with the message (one per event).
+  """
+  attachments: [UUID!]
   """The message being sent"""
   message: String!
   """The Room the message is being sent to"""
@@ -9626,6 +9740,10 @@ input RoomSendMessageInput {
 }
 
 input RoomSendMessageReplyInput {
+  """
+  The file-service document ids of attachments to send with the message (one per event).
+  """
+  attachments: [UUID!]
   """The message being sent"""
   message: String!
   """The Room the message is being sent to"""
@@ -9958,6 +10076,8 @@ input UpdateCalloutSettingsFramingInput {
   Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
   """
   selection: UpdateCalloutSelectionSettingsInput
+  """Card-variant settings. Provide only when framing.type = SPACES."""
+  spaces: UpdateCalloutSpacesSettingsInput
 }
 
 input UpdateCalloutSettingsInput {
@@ -9965,6 +10085,13 @@ input UpdateCalloutSettingsInput {
   framing: UpdateCalloutSettingsFramingInput
   """Visibility of the Callout."""
   visibility: CalloutVisibility
+}
+
+input UpdateCalloutSpacesSettingsInput {
+  """
+  The card variant (COMPACT or EXPANDED). When omitted, the stored value is unchanged.
+  """
+  cardVariant: SpaceCollectionCardVariant
 }
 
 input UpdateCalloutsSortOrderInput {

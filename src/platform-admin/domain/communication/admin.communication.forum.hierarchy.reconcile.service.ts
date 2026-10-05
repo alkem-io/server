@@ -10,11 +10,19 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Forum } from '@platform/forum/forum.entity';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { MESSAGING_REDIS_CLIENT } from '@services/infrastructure/redis-client/messaging-redis.provider';
 import { TaskService } from '@services/task';
 import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
+import type Redis from 'ioredis';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { AdminCommunicationReconcileForumHierarchyInput } from './dto/admin.communication.dto.reconcile.forum.hierarchy';
+import {
+  acquireReconcileLease,
+  ReconcileLease,
+  releaseReconcileLease,
+  renewReconcileLease,
+} from './forum.hierarchy.reconcile.lease';
 
 /** Per-parent bookkeeping for one reconcile invocation — keyed by context id so a
  * parent touched by both the add-only and the converge phase is counted once. */
@@ -30,7 +38,18 @@ export interface ForumHierarchyReconcilePassSummary {
   failed: number;
   unknownKept: number;
   parentPointersDeferred: number;
-  aborted: 'circuit-breaker' | 'budget-exhausted' | null;
+  /**
+   * Pointer repairs no pass can ever complete under the adapter's current
+   * per-call budget, as opposed to the transient deferrals above. Reported
+   * separately because the response is to raise the budget, not to run again.
+   */
+  parentPointersUnprocessable: number;
+  /**
+   * Parents the final sweep did not report as converged. Zero is the real
+   * completion condition; `failed` only reports execution errors.
+   */
+  unconverged: number;
+  aborted: 'circuit-breaker' | 'budget-exhausted' | 'ownership-lost' | null;
   adapterDisabled: boolean;
 }
 
@@ -63,6 +82,7 @@ const normalizeArrays = (
   unresolved: response.unresolved ?? [],
   parent_pointers_repaired: response.parent_pointers_repaired ?? [],
   parent_pointers_deferred: response.parent_pointers_deferred ?? [],
+  parent_pointers_unprocessable: response.parent_pointers_unprocessable ?? [],
 });
 
 const emptySummary = (): ForumHierarchyReconcilePassSummary => ({
@@ -73,6 +93,8 @@ const emptySummary = (): ForumHierarchyReconcilePassSummary => ({
   failed: 0,
   unknownKept: 0,
   parentPointersDeferred: 0,
+  parentPointersUnprocessable: 0,
+  unconverged: 0,
   aborted: null,
   adapterDisabled: false,
 });
@@ -107,6 +129,8 @@ export class AdminCommunicationForumHierarchyReconcileService {
     private forumRepository: Repository<Forum>,
     private taskService: TaskService,
     private platformOperationsAuditService: PlatformOperationsAuditService,
+    @Inject(MESSAGING_REDIS_CLIENT)
+    private readonly redis: Redis,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -121,8 +145,51 @@ export class AdminCommunicationForumHierarchyReconcileService {
     actorID: string,
     input: AdminCommunicationReconcileForumHierarchyInput
   ): Promise<void> {
+    // Ownership is taken before anything else, including reading the forum: a
+    // second pass must be refused without first repeating the work the first
+    // pass is already doing.
+    let lease: ReconcileLease | null = null;
     try {
-      await this.runReconcilePass(taskId, actorID, input);
+      lease = await acquireReconcileLease(this.redis);
+    } catch (error) {
+      this.logger.error?.(
+        `Could not reach Redis to take forum hierarchy reconcile ownership: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        error instanceof Error ? error.stack : undefined,
+        LogContext.COMMUNICATION
+      );
+      await this.recordAudit(actorID, taskId, input, erroredSummary());
+      await this.taskService
+        .completeWithError(
+          taskId,
+          'Could not take forum hierarchy reconcile ownership (Redis unreachable) — refusing to start, because an unowned pass cannot be prevented from racing another'
+        )
+        .catch(() => undefined);
+      return;
+    }
+
+    if (!lease) {
+      this.logger.warn?.(
+        {
+          message:
+            'Forum hierarchy reconcile already owned by another pass — refusing to start a second overlapping pass',
+          taskId,
+        },
+        LogContext.COMMUNICATION
+      );
+      await this.recordAudit(actorID, taskId, input, erroredSummary());
+      await this.taskService
+        .completeWithError(
+          taskId,
+          'A forum hierarchy reconcile pass is already running — wait for it to finish before starting another'
+        )
+        .catch(() => undefined);
+      return;
+    }
+
+    try {
+      await this.runReconcilePass(taskId, actorID, input, lease);
     } catch (error) {
       // Nothing above this line may ever throw out of the fire-and-forget
       // call site in the resolver: an uncaught rejection here would leave
@@ -155,13 +222,35 @@ export class AdminCommunicationForumHierarchyReconcileService {
           LogContext.COMMUNICATION
         );
       }
+    } finally {
+      // Released here rather than at the end of the try, so a pass that threw
+      // does not hold ownership until the lease expires. Compare-and-delete,
+      // so a pass whose lease already expired and was taken over cannot
+      // delete the new owner's lease on its way out. A release that fails is
+      // survivable — the lease expires on its own — so it must never mask the
+      // original error.
+      await releaseReconcileLease(this.redis, lease).catch(releaseError => {
+        this.logger.warn?.(
+          {
+            message:
+              'Failed to release forum hierarchy reconcile ownership; it will expire on its own',
+            taskId,
+            error:
+              releaseError instanceof Error
+                ? releaseError.message
+                : String(releaseError),
+          },
+          LogContext.COMMUNICATION
+        );
+      });
     }
   }
 
   private async runReconcilePass(
     taskId: string,
     actorID: string,
-    input: AdminCommunicationReconcileForumHierarchyInput
+    input: AdminCommunicationReconcileForumHierarchyInput,
+    lease: ReconcileLease
   ): Promise<void> {
     const forums = await this.forumRepository.find({
       relations: { discussions: { comments: true } },
@@ -192,7 +281,11 @@ export class AdminCommunicationForumHierarchyReconcileService {
     let parentPointersDeferredCount = 0;
     let consecutiveTimeouts = 0;
     let cumulativeWrites = 0;
-    let aborted: 'circuit-breaker' | 'budget-exhausted' | null = null;
+    let aborted:
+      | 'circuit-breaker'
+      | 'budget-exhausted'
+      | 'ownership-lost'
+      | null = null;
     let adapterDisabled = false;
 
     // Per-sweep call accounting (data-model.md: "failed = calls with
@@ -205,6 +298,51 @@ export class AdminCommunicationForumHierarchyReconcileService {
     let sweepIssued = 0;
     let sweepExplicitFailures = 0;
     let callBasedFailed = 0;
+    // Per-sweep count of parents the adapter did not report as converged.
+    // Only the final sweep's value is meaningful for completion: an add-only
+    // phase A is expected to leave extras attached, and a dry run is expected
+    // to report drift rather than fix it.
+    let sweepUnconverged = 0;
+    let lastSweepUnconverged = 0;
+    let unprocessablePointerCount = 0;
+
+    // established[categoryContextId] = the rooms this pass has positively
+    // confirmed are attached under that category. It is the sole source of
+    // removal authorization: a room may lose its edge to some other category
+    // only because it has been established under this one.
+    //
+    // A call that failed contributes nothing, even partially. The response
+    // reports which desired ids did not resolve, but not which individual
+    // writes were rejected, so after a failure the pass cannot tell an
+    // established room from one whose add was refused — and guessing in the
+    // permissive direction is what authorizes removing a room's last edge.
+    const established = new Map<string, Set<string>>();
+
+    // The same shape taken straight from the database snapshot, used only by
+    // the dry run — which performs no writes, so nothing it authorizes can be
+    // acted on.
+    const snapshotByCategory = new Map<string, Set<string>>(
+      [...desiredByCategory].map(([categoryId, rooms]) => [
+        categoryId,
+        new Set(rooms),
+      ])
+    );
+
+    const recordEstablished = (
+      categoryContextId: string,
+      desired: string[],
+      response: SetChildrenResponse | undefined
+    ): void => {
+      if (response === undefined || response.success !== true) {
+        established.set(categoryContextId, new Set());
+        return;
+      }
+      const unresolved = new Set(response.unresolved);
+      established.set(
+        categoryContextId,
+        new Set(desired.filter(id => !unresolved.has(id)))
+      );
+    };
 
     const isAborted = () => aborted !== null || adapterDisabled;
     const markFailed = (parentContextId: string) => {
@@ -222,9 +360,40 @@ export class AdminCommunicationForumHierarchyReconcileService {
       desired: string[],
       childrenAreSpaces: boolean,
       applyRemovals: boolean,
-      passDryRun: boolean
+      passDryRun: boolean,
+      removable: string[] = []
     ): Promise<SetChildrenResponse | undefined> => {
       if (isAborted()) return undefined;
+
+      // Ownership is re-confirmed immediately before any call that can
+      // remove an edge, and the call is abandoned if it has been lost.
+      //
+      // This is what makes the removal authorization safe across passes. The
+      // `established` confirmations this call's authorization list is built
+      // from are historical observations: another pass holding ownership
+      // could have moved the room since, and removing on the strength of a
+      // confirmation that is no longer true is how a room ends up attached to
+      // nothing while both passes report a clean result. Renewing here proves
+      // no other pass has owned the forum in the meantime, so every
+      // confirmation gathered under this lease is still the current truth.
+      //
+      // Read-only work does not need this: a dry run writes nothing, and an
+      // add-only phase can only ever create an edge the desired state asks
+      // for.
+      if (applyRemovals && !passDryRun) {
+        const stillOwned = await renewReconcileLease(this.redis, lease).catch(
+          () => false
+        );
+        if (!stillOwned) {
+          this.logger.error?.(
+            'Lost forum hierarchy reconcile ownership mid-pass — abandoning before any further removal',
+            undefined,
+            LogContext.COMMUNICATION
+          );
+          aborted = 'ownership-lost';
+          return undefined;
+        }
+      }
 
       sweepIssued++;
       const rawResponse = await this.communicationAdapter.setChildren({
@@ -232,9 +401,27 @@ export class AdminCommunicationForumHierarchyReconcileService {
         desired_child_context_ids: desired,
         children_are_spaces: childrenAreSpaces,
         apply_removals: applyRemovals,
+        // Removal is authorized, never inferred. `removable` names only the
+        // rooms a preceding add phase positively established under their
+        // current category, so a room whose destination could not be
+        // established keeps the edge it already has. Absence from `desired`
+        // authorizes nothing: a discussion created or recategorised after the
+        // snapshot above was read is missing from it while being entirely
+        // correct in Matrix.
+        removable_child_context_ids: removable,
         prune_unknown: input.pruneUnknown,
         sync_child_parent: input.repairRoomParentPointers,
         dry_run: passDryRun,
+        // Correlates the adapter's log lines with this pass's task and audit
+        // row.
+        operation_id: taskId,
+        // Expiry is the lease's own, which is what fences execution against a
+        // previous owner. A new owner can only acquire after the previous
+        // lease fully expired, so every request the previous owner issued has
+        // expired too — and the adapter rejects an expired request before
+        // performing any read or write. That removes the need for any
+        // hand-off protocol or waiting period between owners.
+        expires_at_unix_ms: lease.expiresAt,
       });
 
       // The disabled sentinel carries no `success` field at all — it is
@@ -266,9 +453,39 @@ export class AdminCommunicationForumHierarchyReconcileService {
 
       // A retired category legitimately resolves to no space every single
       // pass — that is a natural skip, not a failure, and must never block
-      // the "repeat until failed==0" termination protocol.
-      if (response.success === false && !spaceNotFound) {
+      // the termination protocol.
+      //
+      // But that only holds for a category with nothing in it. A category
+      // that still holds discussions and has no Matrix space is incomplete
+      // work, not an expected skip: its rooms have nowhere to be attached,
+      // so treating it as benign would let the pass report a clean result
+      // while those discussions sit outside the hierarchy entirely — and, in
+      // the two-phase sweep, would let their old edges be removed on the
+      // strength of a destination that does not exist. Space creation belongs
+      // to the provisioning/sync path, so this is reported rather than fixed
+      // here.
+      const emptyCategorySkip = spaceNotFound && desired.length === 0;
+      if (response.success === false && !emptyCategorySkip) {
         markFailed(parentContextId);
+      }
+      if (spaceNotFound && !emptyCategorySkip) {
+        this.logger.warn?.(
+          {
+            message:
+              'Forum category has discussions but no Matrix space — run the space sync before reconciling',
+            taskId,
+            parentContextId,
+            desiredCount: desired.length,
+          },
+          LogContext.COMMUNICATION
+        );
+      }
+
+      // Convergence is reported per call and is stricter than success: a call
+      // can execute without error and still leave a desired child unresolved,
+      // an extra edge attached, or a pointer repair outstanding.
+      if (!emptyCategorySkip && response.converged !== true) {
+        sweepUnconverged++;
       }
 
       drifted +=
@@ -285,6 +502,8 @@ export class AdminCommunicationForumHierarchyReconcileService {
       unresolvedCount += response.unresolved.length;
       unknownKeptCount += response.unknown_kept.length;
       parentPointersDeferredCount += response.parent_pointers_deferred.length;
+      unprocessablePointerCount +=
+        response.parent_pointers_unprocessable.length;
 
       if (!passDryRun) {
         cumulativeWrites +=
@@ -327,6 +546,7 @@ export class AdminCommunicationForumHierarchyReconcileService {
     ): Promise<void> => {
       sweepIssued = 0;
       sweepExplicitFailures = 0;
+      sweepUnconverged = 0;
 
       const resolvedCategoryContextIds: string[] = [];
 
@@ -339,22 +559,41 @@ export class AdminCommunicationForumHierarchyReconcileService {
           desired,
           false,
           applyRemovals,
-          passDryRun
+          passDryRun,
+          // A dry run writes nothing, so it authorizes from the snapshot and
+          // reports the drift in full — including the removals a real pass
+          // would only reach once it had established their destinations.
+          // Authorizing a dry run from `established` instead would make the
+          // preview depend on how far through the sweep each category sat,
+          // and under-report exactly the work the operator is previewing.
+          this.removableForCategory(
+            contextId,
+            passDryRun ? snapshotByCategory : established
+          )
         );
+        recordEstablished(contextId, desired, response);
         if (shouldIncludeInDesiredSet(response)) {
           resolvedCategoryContextIds.push(contextId);
         }
       }
 
       if (!isAborted()) {
+        // The forum-level call authorizes no removals. Its children are the
+        // category spaces themselves, and every category space that exists
+        // resolves and therefore stays desired — so the only edges a removal
+        // could reach here are children this pass knows nothing about, which
+        // is exactly the class that must be reported rather than deleted.
         await attempt(
           forum.id,
           resolvedCategoryContextIds,
           true,
           applyRemovals,
-          passDryRun
+          passDryRun,
+          []
         );
       }
+
+      lastSweepUnconverged = sweepUnconverged;
 
       const neverIssuedThisSweep = totalIntendedParents - sweepIssued;
       callBasedFailed += sweepExplicitFailures + neverIssuedThisSweep;
@@ -382,6 +621,8 @@ export class AdminCommunicationForumHierarchyReconcileService {
       failed,
       unknownKept: unknownKeptCount,
       parentPointersDeferred: parentPointersDeferredCount,
+      parentPointersUnprocessable: unprocessablePointerCount,
+      unconverged: lastSweepUnconverged,
       aborted,
       adapterDisabled,
     };
@@ -406,10 +647,52 @@ export class AdminCommunicationForumHierarchyReconcileService {
       `Reconcile pass complete: ${JSON.stringify(summary)}`,
       false
     );
+    // A pass is complete only when the hierarchy actually converged, not
+    // merely when nothing errored. Unresolved desired rooms, extra edges kept
+    // because nothing authorized removing them, and outstanding pointer
+    // repairs all leave `failed` at zero while leaving real work undone — so
+    // completing on `failed === 0` would tell an operator following a
+    // repeat-until-clean runbook to stop while the forum is still drifted.
+    //
+    // A dry run is exempt: reporting drift is its entire purpose, so
+    // unconverged parents are its expected result rather than a failure.
+    const converged = input.dryRun || lastSweepUnconverged === 0;
     await this.taskService.complete(
       taskId,
-      failed > 0 ? TaskStatus.ERRORED : TaskStatus.COMPLETED
+      failed > 0 || !converged ? TaskStatus.ERRORED : TaskStatus.COMPLETED
     );
+  }
+
+  /**
+   * The rooms this parent category is authorized to let go of: every room
+   * established under a *different* category by the preceding add phase.
+   *
+   * This is the whole safety property of the removal half. A room is
+   * removable from here only because it has been confirmed to be attached
+   * somewhere else, so the two failure modes that used to lose a discussion
+   * both become impossible rather than merely unlikely:
+   *
+   *   - a discussion created or recategorised after the desired snapshot was
+   *     read is in no category's established set, so nothing authorizes
+   *     removing it, and its correct edge survives;
+   *   - a discussion whose move failed — the destination space is missing, or
+   *     the add was rejected — is likewise unestablished, so its old edge is
+   *     kept rather than removed in favour of a destination that never
+   *     materialised.
+   *
+   * The worst residual is a discussion that stays under its previous category
+   * for one pass and converges on the next. It can never end up under none.
+   */
+  private removableForCategory(
+    categoryContextId: string,
+    established: Map<string, Set<string>>
+  ): string[] {
+    const removable: string[] = [];
+    for (const [otherCategoryId, rooms] of established) {
+      if (otherCategoryId === categoryContextId) continue;
+      removable.push(...rooms);
+    }
+    return removable;
   }
 
   private buildDesiredByCategory(forum: Forum): Map<string, string[]> {

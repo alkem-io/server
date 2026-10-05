@@ -502,7 +502,7 @@ export class RoleSetResolverFields {
   @ResolveField('platformInvitations', () => [IPlatformInvitation], {
     nullable: false,
     description:
-      'Invitations to join this RoleSet in an entry role for users not yet on the Alkemio platform.',
+      'Open (not yet consumed) invitations to join this RoleSet in an entry role for people not yet on the Alkemio platform.',
   })
   async platformInvitations(
     @Parent() roleSet: IRoleSet

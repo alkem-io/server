@@ -105,8 +105,40 @@ describe('StorageBucketAuthorizationService', () => {
       );
       expect(
         documentAuthorizationService.applyAuthorizationPolicy
-      ).toHaveBeenCalledWith(doc1, privilegeAuth);
+      ).toHaveBeenCalledWith(doc1, privilegeAuth, true);
       expect(authorizationPolicyService.saveAll).toHaveBeenCalled();
+    });
+
+    // QA server-C2-c (ruling (a)): a privilege rule threaded down from the
+    // pack/hub/template profile is appended to the bucket's own privilege
+    // rules (privilege rules do not cascade), after the built-in three.
+    it('QA server-C2-c: appends privilege rules threaded down from the parent profile', async () => {
+      const storageBucket = {
+        id: 'bucket-1',
+        authorization: { id: 'bucket-auth' },
+        documents: [],
+      } as unknown as IStorageBucket;
+      const threaded = { name: 'support-org-resources' } as any;
+      (authorizationPolicyService.reset as Mock).mockReturnValue({});
+      (
+        authorizationPolicyService.inheritParentAuthorization as Mock
+      ).mockReturnValue({ id: 'inherited' });
+      (
+        authorizationPolicyService.appendPrivilegeAuthorizationRules as Mock
+      ).mockImplementation((auth: any) => auth);
+      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
+
+      await service.applyAuthorizationPolicy(
+        storageBucket,
+        { id: 'parent' } as any,
+        [threaded]
+      );
+
+      const rules = (
+        authorizationPolicyService.appendPrivilegeAuthorizationRules as Mock
+      ).mock.calls.flatMap(call => call[1]);
+      expect(rules).toContain(threaded);
+      expect(rules).toHaveLength(4);
     });
 
     it('should handle empty documents array without cascading', async () => {

@@ -10,6 +10,7 @@ import {
   CurrentActor,
 } from '@src/common/decorators';
 import { IMessage } from '../message/message.interface';
+import { MessageAttachmentService } from '../message-attachment/message.attachment.service';
 import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
 import { RoomUnreadCounts } from './dto/room.dto.unread.counts';
 import { RoomDataLoader } from './room.data.loader';
@@ -21,7 +22,8 @@ export class RoomResolverFields {
   constructor(
     private readonly roomService: RoomService,
     private readonly authorizationService: AuthorizationService,
-    private readonly roomDataLoader: RoomDataLoader
+    private readonly roomDataLoader: RoomDataLoader,
+    private readonly messageAttachmentService: MessageAttachmentService
   ) {}
 
   @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
@@ -33,6 +35,8 @@ export class RoomResolverFields {
   async messages(@Parent() room: IRoom): Promise<IMessage[]> {
     const result = await this.roomService.getMessages(room);
     if (!result) return [];
+    // Share one bucket/document lookup across the history field resolvers.
+    await this.messageAttachmentService.stampAttachmentBucket(room, result);
     return result;
   }
 

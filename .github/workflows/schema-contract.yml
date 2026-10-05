@@ -20,8 +20,9 @@ jobs:
       # Always run schema generation with the lightweight bootstrap inside CI builds.
       # See specs/002-schema-contract-diffing/spec.md (FR-021).
       SCHEMA_BOOTSTRAP_LIGHT: '1'
-      # Override evaluation reads CODEOWNERS from this path.
-      SCHEMA_OVERRIDE_CODEOWNERS_PATH: '.github/CODEOWNERS'
+      # Override evaluation reads CODEOWNERS from this path. The file is named
+      # _CODEOWNERS so GitHub does not auto-request reviews from it.
+      SCHEMA_OVERRIDE_CODEOWNERS_PATH: '.github/_CODEOWNERS'
     steps:
       - name: Checkout
         uses: actions/checkout@v7

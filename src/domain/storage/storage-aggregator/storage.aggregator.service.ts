@@ -342,6 +342,26 @@ export class StorageAggregatorService {
         result.url = this.urlGeneratorService.generateUrlForPlatform();
         break;
       }
+      case StorageAggregatorType.CONVERSATION: {
+        // Conversation storage aggregators (feature 013). CONVERSATION was
+        // previously unhandled (it fell through to the default → NotSupportedException);
+        // it is now handled like the other parent types. A Conversation has no
+        // display name / URL of its own — Matrix renders the peer / group name
+        // client-side — so resolve to a stable literal like the ACCOUNT case, and the
+        // platform URL as the best available target (no per-conversation URL
+        // generator exists). Exactly like the sibling cases (Account/Space/Org/User),
+        // a genuinely-missing backing Conversation row throws EntityNotFoundException
+        // (a real data inconsistency): getParentEntity lets that propagate for every
+        // type, so this is deliberately NOT wrapped in a swallowing try/catch.
+        const conversation =
+          await this.storageAggregatorResolverService.getParentConversationForStorageAggregator(
+            storageAggregator
+          );
+        result.id = conversation.id;
+        result.displayName = 'conversation';
+        result.url = this.urlGeneratorService.generateUrlForPlatform();
+        break;
+      }
       default:
         throw new NotSupportedException(
           `Retrieval of parent entity information for storage aggregator on ${storageAggregator.id} of type ${storageAggregator.type} not yet implemented`,

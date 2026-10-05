@@ -7,15 +7,14 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { MessageID } from '@domain/common/scalars';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IMessage } from '../message/message.interface';
 import { IMessageReaction } from '../message.reaction/message.reaction.interface';
+import { MessageAttachmentService } from '../message-attachment/message.attachment.service';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.message';
 import { RoomMarkMessageReadInput } from './dto/room.dto.mark.message.read';
@@ -38,7 +37,7 @@ export class RoomResolverMutations {
     private roomLookupService: RoomLookupService,
     private userLookupService: UserLookupService,
     private communicationAdapter: CommunicationAdapter,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    private messageAttachmentService: MessageAttachmentService
   ) {}
 
   @Mutation(() => IMessage, {
@@ -63,10 +62,20 @@ export class RoomResolverMutations {
     await this.validateMessageOnCalloutOrFail(room);
     await this.validateMessageOnDirectConversationOrFail(room, actorContext);
 
+    // feature 013: resolve + validate attachments (READ + type/size per the
+    // conversation bucket policy), then thread them to the matrix-adapter.
+    const attachments =
+      await this.messageAttachmentService.resolveOutboundAttachments(
+        room,
+        actorContext,
+        messageData.attachments
+      );
+
     const message = await this.roomLookupService.sendMessage(
       room,
       actorContext.actorID,
-      messageData
+      messageData,
+      attachments
     );
 
     // All post-send processing (notifications, activities, subscriptions)
@@ -74,6 +83,16 @@ export class RoomResolverMutations {
     return message;
   }
 
+  // [2] Accepted double-resolve: on a CALLOUT comment-room send WITH attachments
+  // the owning callout is resolved here (for commentsEnabled) and again inside
+  // resolveOutboundAttachments → getTargetBucketForRoom → resolveParentCalloutId.
+  // Left deliberately un-threaded: this validation is a resolver-layer concern
+  // that needs the FULL callout and THROWS on miss, whereas the attachment path
+  // is a generic best-effort (catch-EntityNotFound→undefined) bucket resolver in
+  // the service layer that covers callout AND post AND conversation rooms — only
+  // one of which is pre-resolved here. Passing this callout down through four
+  // nested private methods, for one branch, with divergent error contracts,
+  // would couple the layers worse than the redundant load on this non-hot path.
   private async validateMessageOnCalloutOrFail(room: IRoom) {
     if (room.type === RoomType.CALLOUT) {
       const callout = await this.roomResolverService.getCalloutForRoom(room.id);
@@ -168,10 +187,19 @@ export class RoomResolverMutations {
     await this.validateMessageOnCalloutOrFail(room);
     await this.validateMessageOnDirectConversationOrFail(room, actorContext);
 
+    // feature 013: resolve + validate attachments before threading to adapter.
+    const attachments =
+      await this.messageAttachmentService.resolveOutboundAttachments(
+        room,
+        actorContext,
+        messageData.attachments
+      );
+
     const reply = await this.roomLookupService.sendMessageReply(
       room,
       actorContext.actorID,
-      messageData
+      messageData,
+      attachments
     );
 
     // All post-send processing (notifications, activities, subscriptions)

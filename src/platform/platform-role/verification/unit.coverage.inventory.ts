@@ -430,6 +430,11 @@ export const PRIVILEGE_COVERAGE: Record<
     ruleSpec: PLATFORM_POLICY_SPEC,
     grantSetSpec: PLATFORM_POLICY_SPEC,
   },
+  // R-F.3 (2026-09-18) — the License Manager's console list read, platform-anchored.
+  [AuthorizationPrivilege.PLATFORM_LICENSING_LISTS_READ]: {
+    ruleSpec: PLATFORM_POLICY_SPEC,
+    grantSetSpec: PLATFORM_POLICY_SPEC,
+  },
   [AuthorizationPrivilege.DELETE_ORGANIZATION]: {
     ruleSpec: ORGANIZATION_POLICY_SPEC,
     grantSetSpec: ORGANIZATION_POLICY_SPEC,
@@ -469,6 +474,11 @@ export const PRIVILEGE_COVERAGE: Record<
   [AuthorizationPrivilege.CREATE_ORGANIZATION]: {
     ruleSpec: PLATFORM_POLICY_SPEC,
     grantSetSpec: PLATFORM_POLICY_SPEC,
+  },
+  // QA server-C1-12 — A12's create-hub half, account-anchored.
+  [AuthorizationPrivilege.CREATE_INNOVATION_HUB]: {
+    ruleSpec: ACCOUNT_POLICY_SPEC,
+    grantSetSpec: ACCOUNT_POLICY_SPEC,
   },
   [AuthorizationPrivilege.ACCESS_VIRTUAL_ASSISTANT]: {
     ruleSpec: PLATFORM_POLICY_SPEC,

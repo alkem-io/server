@@ -110,6 +110,92 @@ describe('ProfileAuthorizationService', () => {
       expect(credentialRules).toContain(parentRule);
     });
 
+    // QA server-C2-c (ruling (a)): privilege rules do NOT cascade, so a rule
+    // threaded down by the pack/hub/template authorization service must land
+    // on EACH policy of the profile subtree — the profile, every reference,
+    // every visual and the storage bucket — to reach the shared
+    // profile/reference/visual/storage mutations.
+    it('QA server-C2-c: threads privilege rules from parent onto the profile, every reference, every visual and the storage bucket', async () => {
+      const profile = createProfile({
+        references: [
+          { id: 'ref-1', authorization: { id: 'ref-auth-1' } },
+          { id: 'ref-2', authorization: { id: 'ref-auth-2' } },
+        ],
+        visuals: [
+          { id: 'vis-1', authorization: { id: 'vis-auth-1' } },
+          { id: 'vis-2', authorization: { id: 'vis-auth-2' } },
+        ],
+      });
+      const privilegeRule = { name: 'support-org-resources' } as any;
+      const inheritedByTarget = new Map<string, any>();
+      (profileService.getProfileOrFail as Mock).mockResolvedValue(profile);
+      (
+        authorizationPolicyService.inheritParentAuthorization as Mock
+      ).mockImplementation((child: any) => {
+        const inherited = { id: `inherited-${child?.id}`, credentialRules: [] };
+        inheritedByTarget.set(child?.id, inherited);
+        return inherited;
+      });
+      (
+        visualAuthorizationService.applyAuthorizationPolicy as Mock
+      ).mockImplementation((visual: any) => ({
+        id: `visual-policy-${visual.id}`,
+      }));
+      (
+        authorizationPolicyService.appendPrivilegeAuthorizationRules as Mock
+      ).mockImplementation((auth: any) => auth);
+      (
+        storageBucketAuthorizationService.applyAuthorizationPolicy as Mock
+      ).mockResolvedValue([]);
+
+      await service.applyAuthorizationPolicy(
+        'profile-1',
+        undefined,
+        [],
+        [privilegeRule]
+      );
+
+      const appendedTo = (
+        authorizationPolicyService.appendPrivilegeAuthorizationRules as Mock
+      ).mock.calls
+        .filter(call => call[1].includes(privilegeRule))
+        .map(call => call[0].id);
+      expect(appendedTo.sort()).toEqual(
+        [
+          'inherited-auth-1',
+          'inherited-ref-auth-1',
+          'inherited-ref-auth-2',
+          'visual-policy-vis-1',
+          'visual-policy-vis-2',
+        ].sort()
+      );
+      expect(
+        storageBucketAuthorizationService.applyAuthorizationPolicy
+      ).toHaveBeenCalledWith(profile.storageBucket, expect.anything(), [
+        privilegeRule,
+      ]);
+    });
+
+    it('QA server-C2-c: appends NO privilege rules when none are threaded down (the default)', async () => {
+      const profile = createProfile();
+      (profileService.getProfileOrFail as Mock).mockResolvedValue(profile);
+      (
+        authorizationPolicyService.inheritParentAuthorization as Mock
+      ).mockReturnValue(profile.authorization);
+      (
+        visualAuthorizationService.applyAuthorizationPolicy as Mock
+      ).mockReturnValue({ id: 'vis-auth' });
+      (
+        storageBucketAuthorizationService.applyAuthorizationPolicy as Mock
+      ).mockResolvedValue([]);
+
+      await service.applyAuthorizationPolicy('profile-1', undefined);
+
+      expect(
+        authorizationPolicyService.appendPrivilegeAuthorizationRules
+      ).not.toHaveBeenCalled();
+    });
+
     it('should throw RelationshipNotFoundException when references not loaded', async () => {
       const profile = createProfile({ references: undefined });
 

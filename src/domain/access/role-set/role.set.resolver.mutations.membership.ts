@@ -27,6 +27,10 @@ import {
   IInvitation,
   InvitationEventInput,
 } from '@domain/access/invitation';
+import { ResendPlatformInvitationInput } from '@domain/access/invitation.platform/dto/platform.invitation.dto.resend';
+import { PlatformInvitationEmailBudgetService } from '@domain/access/invitation.platform/platform.invitation.email.budget.service';
+import { IPlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.interface';
+import { PlatformInvitationResendThrottleService } from '@domain/access/invitation.platform/platform.invitation.resend.throttle.service';
 import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -40,6 +44,7 @@ import { VirtualContributorLookupService } from '@domain/community/virtual-contr
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { NotificationInputOrganizationAssociatePlatformInvitation } from '@services/adapters/notification-adapter/dto/organization/notification.dto.input.organization.associate.platform.invitation';
 import { NotificationInputOrganizationSpaceCommunityInvitation } from '@services/adapters/notification-adapter/dto/organization/notification.dto.input.organization.space.community.invitation';
 import { NotificationInputOrganizationSpaceCommunityJoined } from '@services/adapters/notification-adapter/dto/organization/notification.dto.input.organization.space.community.joined';
 import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.application';
@@ -106,6 +111,8 @@ export class RoleSetResolverMutationsMembership {
     private invitationService: InvitationService,
     private actorLookupService: ActorLookupService,
     private platformInvitationService: PlatformInvitationService,
+    private platformInvitationResendThrottleService: PlatformInvitationResendThrottleService,
+    private platformInvitationEmailBudgetService: PlatformInvitationEmailBudgetService,
     private licenseService: LicenseService,
     private lifecycleService: LifecycleService,
     private roleSetCacheService: RoleSetCacheService,
@@ -398,20 +405,6 @@ export class RoleSetResolverMutationsMembership {
       );
     }
 
-    // Organizations only invite EXISTING Alkemio users (product email: "no
-    // onboarding via organization invitations, for now"). Rejected before
-    // anything is created — the mutation-wide validation error, not a
-    // per-invitee typed outcome.
-    if (
-      roleSet.type === RoleSetType.ORGANIZATION &&
-      invitationData.invitedUserEmails.length > 0
-    ) {
-      throw new ValidationException(
-        'Organizations can only invite existing Alkemio users to associate',
-        LogContext.COMMUNITY
-      );
-    }
-
     this.authorizationService.grantAccessOrFail(
       actorContext,
       roleSet.authorization,
@@ -480,6 +473,11 @@ export class RoleSetResolverMutationsMembership {
     // the actor group — so the client can only match it back to the chip the
     // user typed if the originating address travels with it.
     const emailByActorID = new Map<string, string>();
+    // Typed addresses that resolve to an actor already being invited (picked
+    // as an actor, or typed twice). They create no second invitation, but the
+    // client still needs a result carrying each typed address so it can match
+    // the chip back to the single outcome for that person.
+    const duplicateEmailsByActorID = new Map<string, string[]>();
     for (const email of invitationData.invitedUserEmails) {
       // If the user is already registered, then just create a normal invitation
       const existingUser = await this.userLookupService.getUserByEmail(email);
@@ -487,11 +485,25 @@ export class RoleSetResolverMutationsMembership {
         if (!actorIDsToInvite.includes(existingUser.id)) {
           actorIDsToInvite.push(existingUser.id);
           emailByActorID.set(existingUser.id, email);
+        } else {
+          const duplicates =
+            duplicateEmailsByActorID.get(existingUser.id) ?? [];
+          duplicates.push(email);
+          duplicateEmailsByActorID.set(existingUser.id, duplicates);
         }
       } else {
         newUserEmails.push(email);
       }
     }
+
+    // Reserve the external-email budget before anything is created, so a
+    // refusal leaves no half-processed batch behind.
+    await this.claimExternalInvitationEmailBudgetOrFail(
+      roleSet,
+      actorContext,
+      newUserEmails,
+      authorizedToInviteToParentRoleSet
+    );
 
     const invitationResults = await this.inviteActorsToEntryRole(
       roleSet,
@@ -545,7 +557,91 @@ export class RoleSetResolverMutationsMembership {
       invitationResults
     );
 
+    // Echo the outcome of the single invitation back for every duplicate typed
+    // address of that invitee. Appended after notifications are sent so the
+    // person is still notified exactly once.
+    for (const [actorID, emails] of duplicateEmailsByActorID) {
+      const primary = invitationResults.find(
+        result => result.invitedActorID === actorID
+      );
+      if (!primary) continue;
+      for (const email of emails) {
+        if (primary.invitedEmail === email) continue;
+        invitationResults.push({ ...primary, invitedEmail: email });
+      }
+    }
+
     return invitationResults;
+  }
+
+  /**
+   * Charges the invitation emails this call would send to addresses without an
+   * account against the acting user's and the role set's hourly budgets. Only
+   * addresses that will actually get a new invitation are counted: an address
+   * typed twice, or one that already has an open invitation on this role set,
+   * sends nothing. On a role set with a parent, an inviter who lacks the right
+   * to invite to the parent gets every new address refused, so nothing is sent
+   * and nothing is charged.
+   */
+  private async claimExternalInvitationEmailBudgetOrFail(
+    roleSet: IRoleSet,
+    actorContext: ActorContext,
+    newUserEmails: string[],
+    authorizedToInviteToParentRoleSet: boolean
+  ): Promise<void> {
+    if (roleSet.parentRoleSet && !authorizedToInviteToParentRoleSet) {
+      return;
+    }
+    const uniqueEmails = [
+      ...new Set(newUserEmails.map(email => email.trim().toLowerCase())),
+    ];
+    let emailsToSend = 0;
+    for (const email of uniqueEmails) {
+      const existing =
+        await this.platformInvitationService.getExistingPlatformInvitationForRoleSet(
+          email,
+          roleSet.id
+        );
+      if (!existing) {
+        emailsToSend++;
+      }
+    }
+    await this.claimPlatformInvitationEmailBudgetOrFail(
+      roleSet,
+      actorContext,
+      emailsToSend
+    );
+  }
+
+  private async claimPlatformInvitationEmailBudgetOrFail(
+    roleSet: IRoleSet,
+    actorContext: ActorContext,
+    count: number
+  ): Promise<void> {
+    const outcome = await this.platformInvitationEmailBudgetService.claim(
+      actorContext.actorID,
+      roleSet.id,
+      count
+    );
+    if (outcome === 'ok') {
+      return;
+    }
+    this.logger.warn?.(
+      {
+        message: 'Platform invitation email budget exceeded',
+        scope: outcome,
+        actorID: actorContext.actorID,
+        roleSetID: roleSet.id,
+        count,
+      },
+      LogContext.ROLES
+    );
+    throw new RoleSetInvitationException(
+      'Too many invitation emails to people without an account; try again later',
+      LogContext.ROLES,
+      AlkemioErrorStatus.ROLE_SET_INVITATION_EMAIL_BUDGET_EXCEEDED,
+      { roleSetID: roleSet.id, scope: outcome }
+    );
   }
 
   private async inviteNewUsersByEmailToPlatformAndRoleSet(
@@ -609,6 +705,113 @@ export class RoleSetResolverMutationsMembership {
       invitationResults.push(result);
     }
     return invitationResults;
+  }
+
+  @Mutation(() => IPlatformInvitation, {
+    description:
+      'Sends the invitation email of an open platform invitation again (Space or Organization role sets); throttled per role set and address, and counted against an hourly email budget.',
+  })
+  async resendPlatformInvitation(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('resendData') resendData: ResendPlatformInvitationInput
+  ): Promise<IPlatformInvitation> {
+    const platformInvitation =
+      await this.platformInvitationService.getPlatformInvitationOrFail(
+        resendData.ID,
+        { relations: { roleSet: { authorization: true } } }
+      );
+    const roleSet = platformInvitation.roleSet;
+    if (!roleSet) {
+      throw new RelationshipNotFoundException(
+        'Unable to load role set of platform invitation',
+        LogContext.ROLES,
+        { platformInvitationID: platformInvitation.id }
+      );
+    }
+
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      roleSet.authorization,
+      AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE,
+      `resend platform invitation: ${platformInvitation.id}`
+    );
+
+    const resendLogFields = {
+      invitationID: platformInvitation.id,
+      roleSetID: roleSet.id,
+      actorID: actorContext.actorID,
+    };
+    if (platformInvitation.profileCreated) {
+      this.logger.verbose?.(
+        {
+          message: 'Platform invitation resend refused: consumed',
+          ...resendLogFields,
+        },
+        LogContext.ROLES
+      );
+      throw new RoleSetInvitationException(
+        'Platform invitation already consumed',
+        LogContext.ROLES,
+        undefined,
+        { platformInvitationID: platformInvitation.id }
+      );
+    }
+    if (
+      roleSet.type !== RoleSetType.SPACE &&
+      roleSet.type !== RoleSetType.ORGANIZATION
+    ) {
+      this.logger.verbose?.(
+        {
+          message: 'Platform invitation resend refused: role set type',
+          ...resendLogFields,
+        },
+        LogContext.ROLES
+      );
+      throw new RoleSetInvitationException(
+        'Platform invitation resend is not available for this role set type',
+        LogContext.ROLES,
+        undefined,
+        {
+          platformInvitationID: platformInvitation.id,
+          roleSetType: roleSet.type,
+        }
+      );
+    }
+
+    const allowed = await this.platformInvitationResendThrottleService.claim(
+      roleSet.id,
+      platformInvitation.email
+    );
+    if (!allowed) {
+      this.logger.verbose?.(
+        { message: 'Platform invitation resend throttled', ...resendLogFields },
+        LogContext.ROLES
+      );
+      throw new RoleSetInvitationException(
+        'Platform invitation resent recently',
+        LogContext.ROLES,
+        AlkemioErrorStatus.ROLE_SET_INVITATION_RESEND_THROTTLED,
+        { platformInvitationID: platformInvitation.id }
+      );
+    }
+
+    await this.claimPlatformInvitationEmailBudgetOrFail(
+      roleSet,
+      actorContext,
+      1
+    );
+
+    await this.dispatchPlatformInvitationEmail(
+      roleSet,
+      platformInvitation,
+      actorContext.actorID
+    );
+    this.logger.verbose?.(
+      { message: 'Platform invitation email resent', ...resendLogFields },
+      LogContext.ROLES
+    );
+
+    return platformInvitation;
   }
 
   @Mutation(() => IApplication, {
@@ -1179,7 +1382,7 @@ export class RoleSetResolverMutationsMembership {
         actorType !== ActorType.USER
       ) {
         throw new ValidationException(
-          'Organizations can only invite existing Alkemio users to associate',
+          'Only users can be invited to associate with an organization by picking them; other people are invited by email',
           LogContext.COMMUNITY,
           { actorID, actorType }
         );
@@ -1712,10 +1915,80 @@ export class RoleSetResolverMutationsMembership {
   }
 
   /**
+   * Emails the invitation for a platform invitation record (an address that
+   * has no account yet). Shared by the invite flow's organization arm and by
+   * the resend mutation; the Space invite arm keeps its own dispatch.
+   * Only the adapter dispatch is fire-and-forget: a notification problem never
+   * fails the mutation that triggered it. The community / organization lookup
+   * that builds the payload is awaited, exactly as in the Space invite arm, so
+   * a failure to load the role set's own owner (a store outage) does surface.
+   */
+  private async dispatchPlatformInvitationEmail(
+    roleSet: IRoleSet,
+    platformInvitation: IPlatformInvitation,
+    triggeredBy: string
+  ): Promise<void> {
+    switch (roleSet.type) {
+      case RoleSetType.SPACE: {
+        const community =
+          await this.communityResolverService.getCommunityForRoleSet(
+            roleSet.id
+          );
+        const notificationInput: NotificationInputPlatformInvitation = {
+          triggeredBy,
+          community,
+          invitedUserEmail: platformInvitation.email,
+          welcomeMessage: platformInvitation.welcomeMessage,
+        };
+        this.dispatchNotification(
+          this.notificationPlatformAdapter.platformInvitationCreated(
+            notificationInput
+          ),
+          'platformInvitationCreated'
+        );
+        return;
+      }
+      case RoleSetType.ORGANIZATION: {
+        const organization =
+          await this.organizationLookupService.getOrganizationForRoleSetOrFail(
+            roleSet.id
+          );
+        const notificationInput: NotificationInputOrganizationAssociatePlatformInvitation =
+          {
+            triggeredBy,
+            organizationID: organization.id,
+            invitedUserEmail: platformInvitation.email,
+            extraRoles: platformInvitation.roleSetExtraRoles,
+            welcomeMessage: platformInvitation.welcomeMessage,
+          };
+        this.dispatchNotification(
+          this.notificationOrganizationAdapter.organizationAssociatePlatformInvitationCreated(
+            notificationInput
+          ),
+          'organizationAssociatePlatformInvitationCreated'
+        );
+        return;
+      }
+      default: {
+        this.logger.verbose?.(
+          {
+            message:
+              'No platform invitation email for this role set type; nothing dispatched',
+            roleSetID: roleSet.id,
+            roleSetType: roleSet.type,
+          },
+          LogContext.NOTIFICATIONS
+        );
+      }
+    }
+  }
+
+  /**
    * Notifies each invitee of an organization invitation to associate.
    * Every result type is handled exhaustively (never-guarded `default`):
    * `EXTRA_ROLE_LIMIT_REACHED` and the other advisory outcomes create
-   * nothing and dispatch nothing.
+   * nothing and dispatch nothing. Addresses without an account receive the
+   * email-only invitation.
    */
   private async sendNotificationEventsForInvitationsOnOrganizationRoleSet(
     roleSet: IRoleSet,
@@ -1744,9 +2017,8 @@ export class RoleSetResolverMutationsMembership {
             await this.actorLookupService.getActorTypeByIdOrFail(
               invitation.invitedActorID
             );
-          // Organizations invite existing Alkemio users only (product email;
-          // enforced by `validateInviteesAndRolesOrFail`) — nothing else to
-          // notify.
+          // Only users can be picked as organization invitees (enforced by
+          // `validateInviteesAndRolesOrFail`) — nothing else to notify.
           if (actorType !== ActorType.USER) {
             break;
           }
@@ -1765,7 +2037,23 @@ export class RoleSetResolverMutationsMembership {
           );
           break;
         }
-        case RoleSetInvitationResultType.INVITED_TO_PLATFORM_AND_ROLE_SET:
+        case RoleSetInvitationResultType.INVITED_TO_PLATFORM_AND_ROLE_SET: {
+          // An address without an account: email-only invitation.
+          const platformInvitation = invitationResult.platformInvitation;
+          if (!platformInvitation) {
+            throw new RelationshipNotFoundException(
+              'Unable to load platform invitation for result',
+              LogContext.ROLES,
+              { invitationResultType: invitationResult.type }
+            );
+          }
+          await this.dispatchPlatformInvitationEmail(
+            roleSet,
+            platformInvitation,
+            actorContext.actorID
+          );
+          break;
+        }
         case RoleSetInvitationResultType.ALREADY_INVITED_TO_PLATFORM_AND_ROLE_SET:
         case RoleSetInvitationResultType.ALREADY_INVITED_TO_ROLE_SET:
         case RoleSetInvitationResultType.INVITATION_TO_PARENT_NOT_AUTHORIZED:

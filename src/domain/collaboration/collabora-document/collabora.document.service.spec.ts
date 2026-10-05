@@ -617,4 +617,47 @@ describe('CollaboraDocumentService', () => {
       expect(repository.save).toHaveBeenCalled();
     });
   });
+
+  describe('getPreviewUrl', () => {
+    it('returns the same-origin preview URL built from the backing file stable fileID', async () => {
+      repository.findOne.mockResolvedValue({
+        id: 'collab-doc-1',
+        document: { id: 'file-1' },
+      } as any);
+
+      const result = await service.getPreviewUrl('collab-doc-1');
+
+      expect(result).toBe('/api/private/wopi/files/file-1/preview');
+      expect(repository.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'collab-doc-1' },
+          relations: { document: true },
+        })
+      );
+    });
+
+    it('returns null when the CollaboraDocument has no backing file relation', async () => {
+      repository.findOne.mockResolvedValue({
+        id: 'collab-doc-1',
+        document: undefined,
+      } as any);
+
+      const result = await service.getPreviewUrl('collab-doc-1');
+
+      expect(result).toBeNull();
+    });
+
+    it('URL-encodes a fileID so the resulting path stays a single stable segment', async () => {
+      repository.findOne.mockResolvedValue({
+        id: 'collab-doc-1',
+        document: { id: 'file/needs encoding' },
+      } as any);
+
+      const result = await service.getPreviewUrl('collab-doc-1');
+
+      expect(result).toBe(
+        '/api/private/wopi/files/file%2Fneeds%20encoding/preview'
+      );
+    });
+  });
 });
