@@ -312,7 +312,7 @@ services:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_kratos_mailslurper
-    image: oryd/mailslurper:latest-smtps
+    image: ghcr.io/alkem-io/test-suites/mailslurper:smtps-4c6aecc-p2
     restart: always
     ports:
       - 4436
