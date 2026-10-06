@@ -554,16 +554,26 @@ export class PollService {
 
   async getCalloutContextForPoll(
     pollId: string
-  ): Promise<{ calloutID: string; createdBy: string }> {
+  ): Promise<{ calloutID: string; createdBy: string; isTemplate: boolean }> {
     const result = await this.pollRepository
       .createQueryBuilder('poll')
       .innerJoin('callout_framing', 'framing', 'framing."pollId" = poll.id')
       .innerJoin('callout', 'callout', 'callout."framingId" = framing.id')
       .select('callout.id', 'calloutID')
       .addSelect('callout."createdBy"', 'createdBy')
+      .addSelect('callout."isTemplate"', 'isTemplate')
       .where('poll.id = :pollId', { pollId })
-      .getRawOne<{ calloutID: string; createdBy: string }>();
+      .getRawOne<{
+        calloutID: string;
+        createdBy: string;
+        isTemplate: boolean;
+      }>();
 
+    // A template callout may have no creator (a callout template is created
+    // without one); its context is only used to skip space-scoped side effects.
+    if (result?.calloutID && result.isTemplate) {
+      return { ...result, isTemplate: true };
+    }
     if (!result?.calloutID || !result?.createdBy) {
       throw new EntityNotFoundException(
         'Could not resolve callout context for poll',
