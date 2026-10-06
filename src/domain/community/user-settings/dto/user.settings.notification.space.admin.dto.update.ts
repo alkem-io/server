@@ -56,4 +56,13 @@ export class UpdateUserSettingsNotificationSpaceAdminInput {
   @ValidateNested()
   @Type(() => NotificationSettingInput)
   userEmailChanged?: NotificationSettingInput;
+
+  @Field(() => NotificationSettingInput, {
+    nullable: true,
+    description:
+      'Receive a notification when a Form response is submitted (admin)',
+  })
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  collaborationCalloutFormResponseReceived?: NotificationSettingInput;
 }

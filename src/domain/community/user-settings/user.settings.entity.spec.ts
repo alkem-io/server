@@ -274,3 +274,50 @@ describe('UserSettings entity — applyOrganizationAssociateDefaults (@AfterLoad
     expect(() => settings.applyOrganizationAssociateDefaults()).not.toThrow();
   });
 });
+
+/**
+ * Form callout framing: `space.admin.collaborationCalloutFormResponseReceived`
+ * is a non-null GraphQL field added after the column shipped.
+ */
+describe('UserSettings entity — applyFormResponseNotificationDefaults (@AfterLoad)', () => {
+  const build = (notification: unknown) => {
+    const settings = new UserSettings();
+    settings.notification = notification as never;
+    return settings;
+  };
+
+  it('fills the key with all channels on when a legacy row lacks it', () => {
+    const settings = build({ space: { admin: {} } });
+    settings.applyFormResponseNotificationDefaults();
+    expect(
+      settings.notification.space.admin.collaborationCalloutFormResponseReceived
+    ).toEqual({ email: true, inApp: true, push: true });
+  });
+
+  it('never overwrites a stored choice', () => {
+    const settings = build({
+      space: {
+        admin: {
+          collaborationCalloutFormResponseReceived: {
+            email: false,
+            inApp: true,
+            push: false,
+          },
+        },
+      },
+    });
+    settings.applyFormResponseNotificationDefaults();
+    expect(
+      settings.notification.space.admin.collaborationCalloutFormResponseReceived
+    ).toEqual({ email: false, inApp: true, push: false });
+  });
+
+  it('does not throw on a row without the space/admin objects', () => {
+    expect(() =>
+      build({}).applyFormResponseNotificationDefaults()
+    ).not.toThrow();
+    expect(() =>
+      build(undefined).applyFormResponseNotificationDefaults()
+    ).not.toThrow();
+  });
+});

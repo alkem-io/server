@@ -2,6 +2,7 @@ import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { LogContext } from '@common/enums';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import {
   RelationshipNotFoundException,
   ValidationException,
@@ -9,6 +10,7 @@ import {
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { introducesCollaboraDocument } from '@domain/collaboration/callout/callout.collabora.gate.util';
+import { CalloutFormErrorCode } from '@domain/collaboration/callout-form/callout.form.error.codes';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
@@ -54,6 +56,7 @@ export class CalloutTransferResolverMutations {
       {
         relations: {
           calloutsSet: true,
+          framing: true,
         },
       }
     );
@@ -86,6 +89,17 @@ export class CalloutTransferResolverMutations {
       AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT,
       `callouts set transfer callout: ${callout.id}`
     );
+
+    // A Form stays where it was created: moving it would carry its responses
+    // (personal data) across a space boundary, and the target would apply a
+    // different audience. Rejected before anything is written.
+    if (callout.framing?.type === CalloutFramingType.FORM) {
+      throw new ValidationException(
+        'A callout with a Form cannot be transferred',
+        LogContext.COLLABORATION,
+        { code: CalloutFormErrorCode.FORM_TRANSFER_NOT_ALLOWED }
+      );
+    }
 
     // Office Docs entitlement gate (FR-001/FR-004/FR-006/FR-009): transfer is an
     // introduction path. If the source Callout has Collabora framing or allows

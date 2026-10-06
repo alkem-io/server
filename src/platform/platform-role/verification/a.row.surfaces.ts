@@ -900,6 +900,26 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
         legacyReachers: [],
       })
     ),
+    // A Form response's moderation delete. The owner branch is CREATE on the
+    // callouts set (Form moderation = the same authority that creates a Form
+    // on the Post's set — space admins, and platform support only where the
+    // Space allows it); the platform branch is PLATFORM_CONTENT_FULL_ACCESS,
+    // the same privilege A8's other deletes use, audited the same way. An
+    // owner withdrawing their own response needs neither and is not audited.
+    {
+      file: 'src/domain/collaboration/callout-form/callout.form.resolver.mutations.ts',
+      member: 'deleteCalloutFormResponse',
+      kind: 'graphql-mutation',
+      tree: 'callouts-set',
+      gate: {
+        anyOf: [
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
+        ],
+      },
+      intendedOwners: [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
+      legacyReachers: [],
+    },
     {
       file: 'src/domain/collaboration/callout/callout.resolver.mutations.ts',
       member: 'updateCalloutPublishInfo',
