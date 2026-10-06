@@ -317,8 +317,10 @@ export class SpaceService {
     }
     updatedCollaborationData.parentSpaceId = space.id;
     // The creator of a space or subspace is assigned its admin role once the
-    // space exists, so Form Posts from the template (or the request) are
-    // created on the authority of the space's own administrator.
+    // space exists, so Form Posts copied from the template are created on the
+    // authority of the space's own administrator. Form framings sent in the
+    // request itself are refused earlier, in
+    // SpaceDefaultsService.createCollaborationInput.
     space.collaboration = await this.collaborationService.createCollaboration(
       updatedCollaborationData,
       space.storageAggregator!,
