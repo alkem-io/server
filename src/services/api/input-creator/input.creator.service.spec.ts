@@ -630,7 +630,7 @@ describe('InputCreatorService', () => {
       );
     });
 
-    it('should return null for a POLL framing callout (not templatable)', async () => {
+    it('serializes a POLL framing as its definition: title, options in order, settings — never votes, status or deadline', async () => {
       vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue({
         id: 'poll-callout-1',
         nameID: 'my-poll',
@@ -643,6 +643,25 @@ describe('InputCreatorService', () => {
             description: '',
             tagsets: [],
           },
+          poll: {
+            id: 'poll-1',
+            title: 'Lunch?',
+            status: 'closed',
+            deadline: new Date('2026-01-01'),
+            settings: {
+              minResponses: 1,
+              maxResponses: 2,
+              resultsVisibility: 'visible',
+              resultsDetail: 'full',
+              allowContributorsAddOptions: true,
+            },
+            // Stored out of order: the serializer follows sortOrder.
+            options: [
+              { id: 'o-2', text: 'Pizza', sortOrder: 2, voteCount: 7 },
+              { id: 'o-1', text: 'Salad', sortOrder: 1, voteCount: 3 },
+            ],
+            votes: [{ id: 'v-1' }],
+          },
         },
         contributionDefaults: {},
         settings: {},
@@ -652,10 +671,33 @@ describe('InputCreatorService', () => {
       const result =
         await service.buildCreateCalloutInputFromCallout('poll-callout-1');
 
-      expect(result).toBeNull();
+      expect(result?.framing.type).toBe(CalloutFramingType.POLL);
+      expect(result?.framing.poll).toEqual({
+        title: 'Lunch?',
+        options: ['Salad', 'Pizza'],
+        settings: {
+          minResponses: 1,
+          maxResponses: 2,
+          resultsVisibility: 'visible',
+          resultsDetail: 'full',
+          allowContributorsAddOptions: true,
+        },
+      });
+      expect(result?.framing.form).toBeUndefined();
+      expect(calloutService.getCalloutOrFail).toHaveBeenCalledWith(
+        'poll-callout-1',
+        expect.objectContaining({
+          relations: expect.objectContaining({
+            framing: expect.objectContaining({
+              poll: { options: true },
+              form: true,
+            }),
+          }),
+        })
+      );
     });
 
-    it('should return null for a FORM framing callout (not templatable) and log the skip', async () => {
+    it('serializes a FORM framing as its definition without question/option ids or responses', async () => {
       vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue({
         id: 'form-callout-1',
         nameID: 'my-form',
@@ -668,24 +710,75 @@ describe('InputCreatorService', () => {
             description: '',
             tagsets: [],
           },
+          form: {
+            id: 'form-1',
+            title: 'Sign-up',
+            description: 'Tell us about you',
+            questions: [
+              {
+                id: 'q-1',
+                prompt: 'Name',
+                explanation: 'Full name',
+                type: 'short_text',
+                required: true,
+              },
+              {
+                id: 'q-2',
+                prompt: 'Diet',
+                type: 'single_choice',
+                required: false,
+                options: [
+                  { id: 'opt-1', label: 'Vegan' },
+                  { id: 'opt-2', label: 'Omnivore' },
+                ],
+              },
+            ],
+            visibility: 'members',
+            responseMode: 'multiple',
+            state: 'closed',
+            defaultCollapsed: true,
+            responses: [{ id: 'r-1' }],
+          },
         },
         contributionDefaults: {},
         settings: {},
         classification: { tagsets: [] },
       });
-      const logger = (service as any).logger;
 
       const result =
         await service.buildCreateCalloutInputFromCallout('form-callout-1');
 
-      expect(result).toBeNull();
-      expect(logger.debug).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: expect.stringContaining('Skipping FORM callout'),
-          calloutId: 'form-callout-1',
-        }),
-        expect.any(String)
+      expect(result?.framing.type).toBe(CalloutFramingType.FORM);
+      expect(result?.framing.form).toEqual({
+        title: 'Sign-up',
+        description: 'Tell us about you',
+        questions: [
+          {
+            prompt: 'Name',
+            explanation: 'Full name',
+            type: 'short_text',
+            required: true,
+            options: undefined,
+          },
+          {
+            prompt: 'Diet',
+            explanation: undefined,
+            type: 'single_choice',
+            required: false,
+            options: [{ label: 'Vegan' }, { label: 'Omnivore' }],
+          },
+        ],
+        settings: {
+          visibility: 'members',
+          responseMode: 'multiple',
+          state: 'closed',
+          defaultCollapsed: true,
+        },
+      });
+      expect(JSON.stringify(result?.framing.form)).not.toMatch(
+        /"id"|"responses"/
       );
+      expect(result?.framing.poll).toBeUndefined();
     });
 
     it('should return null for a COLLABORA_DOCUMENT framing callout (not templatable)', async () => {
@@ -749,49 +842,62 @@ describe('InputCreatorService', () => {
       expect(calloutService.getCalloutOrFail).toHaveBeenCalledTimes(2);
     });
 
-    it('should skip POLL callouts and return only non-POLL callout inputs', async () => {
-      const regularCallout = {
-        id: 'callout-1',
-        nameID: 'regular',
+    it('keeps POLL and FORM callouts alongside the others', async () => {
+      const base = (id: string, type: CalloutFramingType, extra = {}) => ({
+        id,
+        nameID: id,
         sortOrder: 1,
         framing: {
-          id: 'f-1',
-          type: CalloutFramingType.NONE,
-          profile: { displayName: 'Regular', description: '', tagsets: [] },
-        },
-        contributionDefaults: {
-          defaultDisplayName: '',
-          postDescription: '',
-          whiteboardContent: '',
-        },
-        settings: {},
-        classification: { tagsets: [] },
-      };
-      const pollCallout = {
-        id: 'callout-2',
-        nameID: 'poll-callout',
-        sortOrder: 2,
-        framing: {
-          id: 'f-2',
-          type: CalloutFramingType.POLL,
-          profile: { displayName: 'Poll', description: '', tagsets: [] },
+          id: `f-${id}`,
+          type,
+          profile: { displayName: id, description: '', tagsets: [] },
+          ...extra,
         },
         contributionDefaults: {},
         settings: {},
         classification: { tagsets: [] },
-      };
-
+      });
       vi.mocked(calloutService.getCalloutOrFail)
-        .mockResolvedValueOnce(regularCallout)
-        .mockResolvedValueOnce(pollCallout);
+        .mockResolvedValueOnce(base('regular', CalloutFramingType.NONE))
+        .mockResolvedValueOnce(
+          base('poll', CalloutFramingType.POLL, {
+            poll: {
+              id: 'p',
+              title: '',
+              settings: {},
+              options: [
+                { text: 'A', sortOrder: 1 },
+                { text: 'B', sortOrder: 2 },
+              ],
+            },
+          })
+        )
+        .mockResolvedValueOnce(
+          base('form', CalloutFramingType.FORM, {
+            form: {
+              id: 'f',
+              questions: [
+                { id: 'q', prompt: 'Q', type: 'long_text', required: false },
+              ],
+              visibility: 'admins',
+              responseMode: 'single',
+              state: 'open',
+              defaultCollapsed: false,
+            },
+          })
+        );
 
       const result = await service.buildCreateCalloutInputsFromCallouts([
-        { id: 'callout-1' } as any,
-        { id: 'callout-2' } as any,
+        { id: 'regular' } as any,
+        { id: 'poll' } as any,
+        { id: 'form' } as any,
       ]);
 
-      expect(result).toHaveLength(1);
-      expect(result[0].nameID).toBe('regular');
+      expect(result.map(input => input.nameID)).toEqual([
+        'regular',
+        'poll',
+        'form',
+      ]);
     });
 
     it('should skip COLLABORA_DOCUMENT callouts and return only non-document callout inputs', async () => {
