@@ -94,8 +94,11 @@ export class CalloutFormResolverMutations {
       `respond to Form on callout: ${callout.id}`
     );
     // A template's Form (a callout template or a Post inside a space
-    // template) is a definition: it never collects responses.
-    if (callout.isTemplate) {
+    // template) is a definition: it never collects responses. The owning
+    // collaboration is the authoritative owner; the callout's own flag can
+    // lag it (callouts added to a template set outside createCollaboration,
+    // legacy rows).
+    if (callout.isTemplate || callout.calloutsSet?.collaboration?.isTemplate) {
       throw new ValidationException(
         'A Form in a template does not accept responses',
         LogContext.COLLABORATION,

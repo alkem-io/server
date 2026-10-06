@@ -726,6 +726,13 @@ export class TemplateService {
         await this.inputCreatorService.buildCreateCalloutInputsFromCallouts(
           space.collaboration.calloutsSet.callouts ?? []
         );
+      // The target is a template's content space, so its callouts are template
+      // callouts — the same flag createCollaboration stamps when a template is
+      // created from a space. It is what keeps a template Form/Poll from
+      // collecting responses or firing space side effects.
+      calloutsFromSourceCollaboration.forEach(
+        callout => (callout.isTemplate = true)
+      );
 
       const newCallouts = await this.calloutsSetService.addCallouts(
         templateContentSpace.collaboration.calloutsSet,

@@ -819,6 +819,48 @@ describe('TemplateService', () => {
         allowFormFraming: true,
       });
     });
+
+    it('flags every copied callout as a template callout, like a template created from a space', async () => {
+      const innovationFlowService = (service as any)
+        .innovationFlowService as Mocked<InnovationFlowService>;
+      const inputCreatorService = (service as any)
+        .inputCreatorService as Mocked<InputCreatorService>;
+      innovationFlowService.updateInnovationFlowStates.mockResolvedValue({
+        states: [],
+      } as any);
+      inputCreatorService.buildCreateCalloutInputsFromCallouts.mockResolvedValue(
+        [{ framing: { type: 'form' } }, { framing: { type: 'poll' } }] as any
+      );
+      calloutsSetService.addCallouts.mockResolvedValue([]);
+      templateContentSpaceService.save.mockImplementation(
+        async (entity: any) => entity
+      );
+
+      await (service as any).updateTemplateContentSpaceFromSpace(
+        {
+          id: 'space-1',
+          collaboration: {
+            innovationFlow: { states: [] },
+            calloutsSet: { callouts: [{ id: 'form-callout' }] },
+          },
+        },
+        {
+          id: 'tcs-1',
+          collaboration: {
+            id: 'collab-1',
+            innovationFlow: { states: [] },
+            calloutsSet: { callouts: [] },
+          },
+        },
+        true,
+        actorContextData.actorContext,
+        'user-1'
+      );
+
+      const inputs = calloutsSetService.addCallouts.mock.lastCall?.[1] as any[];
+      expect(inputs).toHaveLength(2);
+      expect(inputs.every(input => input.isTemplate === true)).toBe(true);
+    });
   });
 
   describe('ensureCalloutsInValidGroupsAndStates', () => {

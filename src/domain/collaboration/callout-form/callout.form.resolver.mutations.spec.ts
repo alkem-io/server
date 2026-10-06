@@ -202,6 +202,34 @@ describe('CalloutFormResolverMutations', () => {
       expect(contributionReporter.formResponseSubmitted).not.toHaveBeenCalled();
     });
 
+    it('rejects a response when the Post carries no template flag but its collaboration is a template (legacy or directly created rows)', async () => {
+      calloutFormService.getCalloutForFormOrFail.mockResolvedValue({
+        ...callout,
+        isTemplate: false,
+        calloutsSet: { collaboration: { isTemplate: true } },
+      });
+      responseService.submitResponse.mockResolvedValue(stored);
+
+      await expect(
+        resolver.submitCalloutFormResponse(actor, responseData)
+      ).rejects.toMatchObject({
+        details: { code: CalloutFormErrorCode.FORM_TEMPLATE_NOT_RESPONDABLE },
+      });
+      expect(responseService.submitResponse).not.toHaveBeenCalled();
+    });
+
+    it('still accepts a response on a live Post (neither the Post nor its collaboration is a template)', async () => {
+      calloutFormService.getCalloutForFormOrFail.mockResolvedValue({
+        ...callout,
+        isTemplate: false,
+        calloutsSet: { collaboration: { isTemplate: false, space: {} } },
+      });
+      responseService.submitResponse.mockResolvedValue(stored);
+
+      await resolver.submitCalloutFormResponse(actor, responseData);
+      expect(responseService.submitResponse).toHaveBeenCalled();
+    });
+
     it('requires CONTRIBUTE on the Post', async () => {
       authorizationService.grantAccessOrFail.mockImplementation(() => {
         throw forbidden();

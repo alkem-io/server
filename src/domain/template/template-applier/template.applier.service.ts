@@ -167,6 +167,11 @@ export class TemplateApplierService {
         await this.inputCreatorService.buildCreateCalloutInputsFromCallouts(
           sourceCollaboration.calloutsSet.callouts ?? []
         );
+      // Follow the target: callouts added to a template's collaboration are
+      // template callouts, exactly as createCollaboration stamps them.
+      calloutsFromSourceCollaboration.forEach(
+        callout => (callout.isTemplate = !!targetCollaboration.isTemplate)
+      );
 
       const newCallouts = await this.calloutsSetService.addCallouts(
         targetCollaboration.calloutsSet,

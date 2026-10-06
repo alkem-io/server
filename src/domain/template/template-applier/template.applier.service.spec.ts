@@ -311,6 +311,68 @@ describe('TemplateApplierService', () => {
       });
     });
 
+    describe.each([
+      { targetIsTemplate: true, expected: true },
+      { targetIsTemplate: false, expected: false },
+    ])('callout inputs when the target collaboration isTemplate=$targetIsTemplate', ({
+      targetIsTemplate,
+      expected,
+    }) => {
+      it(`sets isTemplate=${expected} on the created callout inputs`, async () => {
+        templateService.getTemplateOrFail.mockResolvedValue({
+          id: 'tpl-1',
+          contentSpace: {
+            id: 'tcs-1',
+            collaboration: {
+              innovationFlow: { states: [{ displayName: 'New' }] },
+              calloutsSet: { callouts: [{ id: 'src-callout-1' }] },
+            },
+          },
+        } as any);
+        const targetCollab = {
+          id: 'collab-1',
+          isTemplate: targetIsTemplate,
+          innovationFlow: { states: [{ displayName: 'Old' }] },
+          calloutsSet: { callouts: [] },
+        } as any;
+        inputCreatorService.buildCreateInnovationFlowStateInputFromInnovationFlowState.mockReturnValue(
+          [{ displayName: 'New' }] as any
+        );
+        innovationFlowService.updateInnovationFlowStatesFromTemplate.mockResolvedValue(
+          {} as any
+        );
+        storageAggregatorResolverService.getStorageAggregatorForCollaboration.mockResolvedValue(
+          {} as any
+        );
+        inputCreatorService.buildCreateCalloutInputsFromCallouts.mockResolvedValue(
+          [{ nameID: 'a' }, { nameID: 'b' }] as any
+        );
+        calloutsSetService.addCallouts.mockResolvedValue([] as any);
+        templateService.ensureCalloutsInValidGroupsAndStates.mockReturnValue(
+          undefined as any
+        );
+        collaborationService.save.mockResolvedValue(targetCollab);
+
+        await service.updateCollaborationFromSpaceTemplate(
+          {
+            collaborationID: 'collab-1',
+            spaceTemplateID: 'tpl-1',
+            addCallouts: true,
+            deleteExistingCallouts: false,
+          },
+          targetCollab,
+          actorContextData.actorContext
+        );
+
+        const inputs = calloutsSetService.addCallouts.mock
+          .lastCall?.[1] as any[];
+        expect(inputs).toHaveLength(2);
+        expect(inputs.every(input => !!input.isTemplate === expected)).toBe(
+          true
+        );
+      });
+    });
+
     it('should update innovation flow states from source template', async () => {
       const sourceStates = [
         { displayName: 'Explore' },

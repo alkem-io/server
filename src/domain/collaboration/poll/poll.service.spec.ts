@@ -926,6 +926,7 @@ describe('PollService — getCalloutContextForPoll', () => {
   const getRawOne = vi.fn();
   const queryBuilder = {
     innerJoin: vi.fn().mockReturnThis(),
+    leftJoin: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
     addSelect: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
@@ -964,6 +965,44 @@ describe('PollService — getCalloutContextForPoll', () => {
     expect(queryBuilder.addSelect).toHaveBeenCalledWith(
       'callout."isTemplate"',
       'isTemplate'
+    );
+  });
+
+  it('treats a poll on a callout inside a template collaboration as a template poll even when the callout flag is false', async () => {
+    getRawOne.mockResolvedValue({
+      calloutID: 'callout-in-template',
+      createdBy: null,
+      isTemplate: false,
+      collaborationIsTemplate: true,
+    });
+
+    await expect(service.getCalloutContextForPoll('poll-1')).resolves.toEqual(
+      expect.objectContaining({
+        calloutID: 'callout-in-template',
+        isTemplate: true,
+      })
+    );
+    expect(queryBuilder.leftJoin).toHaveBeenCalledWith(
+      'collaboration',
+      'collab',
+      'collab."calloutsSetId" = callout."calloutsSetId"'
+    );
+    expect(queryBuilder.addSelect).toHaveBeenCalledWith(
+      'collab."isTemplate"',
+      'collaborationIsTemplate'
+    );
+  });
+
+  it('keeps a poll on a live callout in a live collaboration non-template', async () => {
+    getRawOne.mockResolvedValue({
+      calloutID: 'callout-1',
+      createdBy: 'user-1',
+      isTemplate: false,
+      collaborationIsTemplate: false,
+    });
+
+    await expect(service.getCalloutContextForPoll('poll-1')).resolves.toEqual(
+      expect.objectContaining({ calloutID: 'callout-1', isTemplate: false })
     );
   });
 

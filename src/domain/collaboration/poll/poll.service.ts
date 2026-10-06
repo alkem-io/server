@@ -555,24 +555,40 @@ export class PollService {
   async getCalloutContextForPoll(
     pollId: string
   ): Promise<{ calloutID: string; createdBy: string; isTemplate: boolean }> {
-    const result = await this.pollRepository
+    // A callout is a template one when it is flagged so itself or when the
+    // collaboration it sits in is a template's; the collaboration is the
+    // authoritative owner, the callout flag can lag it.
+    const raw = await this.pollRepository
       .createQueryBuilder('poll')
       .innerJoin('callout_framing', 'framing', 'framing."pollId" = poll.id')
       .innerJoin('callout', 'callout', 'callout."framingId" = framing.id')
+      .leftJoin(
+        'collaboration',
+        'collab',
+        'collab."calloutsSetId" = callout."calloutsSetId"'
+      )
       .select('callout.id', 'calloutID')
       .addSelect('callout."createdBy"', 'createdBy')
       .addSelect('callout."isTemplate"', 'isTemplate')
+      .addSelect('collab."isTemplate"', 'collaborationIsTemplate')
       .where('poll.id = :pollId', { pollId })
       .getRawOne<{
         calloutID: string;
         createdBy: string;
         isTemplate: boolean;
+        collaborationIsTemplate: boolean | null;
       }>();
+
+    const result = raw && {
+      calloutID: raw.calloutID,
+      createdBy: raw.createdBy,
+      isTemplate: !!raw.isTemplate || !!raw.collaborationIsTemplate,
+    };
 
     // A template callout may have no creator (a callout template is created
     // without one); its context is only used to skip space-scoped side effects.
     if (result?.calloutID && result.isTemplate) {
-      return { ...result, isTemplate: true };
+      return result;
     }
     if (!result?.calloutID || !result?.createdBy) {
       throw new EntityNotFoundException(
